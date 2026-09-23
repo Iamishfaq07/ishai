@@ -19,6 +19,8 @@ import { applyPanelMode, setAlwaysOnTop, toggleMainWindow } from "../windowing";
 export interface DesktopLaunch {
   micDeviceId?: string;
   systemAudio: boolean;
+  /** Capture only this app's audio (process tree); undefined = all system audio. */
+  systemProcessId?: number;
 }
 
 /**
@@ -75,7 +77,11 @@ export function LiveScreen({
     setCaptureNote(null);
     try {
       const info = await startCapture(
-        { systemAudio: launch.systemAudio, ...(launch.micDeviceId ? { micDeviceId: launch.micDeviceId } : {}) },
+        {
+          systemAudio: launch.systemAudio,
+          ...(launch.micDeviceId ? { micDeviceId: launch.micDeviceId } : {}),
+          ...(launch.systemProcessId ? { systemProcessId: launch.systemProcessId } : {}),
+        },
         (ev) => {
           if (ev.kind === "frame") {
             if (!pausedRef.current) client.sendAudioBytes(ev.channel, base64ToBytes(ev.pcm));
@@ -88,7 +94,7 @@ export function LiveScreen({
     } catch (err) {
       setCaptureNote(`Audio capture failed: ${String(err)}`);
     }
-  }, [client, launch.micDeviceId, launch.systemAudio]);
+  }, [client, launch.micDeviceId, launch.systemAudio, launch.systemProcessId]);
 
   useEffect(() => {
     void startAudio();

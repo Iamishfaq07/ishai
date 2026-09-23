@@ -4,7 +4,7 @@ import { AUDIO_CHANNEL } from "@orbit/types";
 import { cx, focusRing } from "@orbit/ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { WEB_URL, api } from "../api";
-import { listAudioDevices, startCapture, stopCapture, type NativeAudioDevice } from "../native";
+import { listAudioApps, listAudioDevices, startCapture, stopCapture, type AudioApp, type NativeAudioDevice } from "../native";
 import { TitleBar } from "../TitleBar";
 import { UpdateBanner } from "../UpdateBanner";
 import type { DesktopLaunch } from "./Live";
@@ -18,6 +18,8 @@ const TYPES: Array<{ value: SessionType; label: string }> = [
 ];
 
 export const IS_MAC = /Mac/i.test(navigator.userAgent);
+/** Meeting apps pre-selected as the interviewer audio source when they're running. */
+const MEETING_APPS = new Set(["zoom.exe", "ms-teams.exe", "teams.exe", "webexmta.exe", "ciscocollabhost.exe", "skype.exe", "slack.exe", "discord.exe"]);
 
 const control =
   "block w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-sm dark:border-zinc-800 dark:bg-zinc-900";
@@ -45,6 +47,22 @@ export function SetupScreen({
   const [devices, setDevices] = useState<NativeAudioDevice[]>([]);
   const [micId, setMicId] = useState("");
   const [systemAudio, setSystemAudio] = useState(!IS_MAC);
+  const [apps, setApps] = useState<AudioApp[]>([]);
+  const [appPid, setAppPid] = useState<string>(""); // "" = all system audio
+  const appTouched = useRef(false);
+
+  const refreshApps = () => {
+    void listAudioApps().then((list) => {
+      setApps(list);
+      if (appTouched.current) {
+        // keep the user's choice unless that app has gone away
+        setAppPid((pid) => (pid && !list.some((a) => String(a.pid) === pid) ? "" : pid));
+        return;
+      }
+      const meeting = list.find((a) => MEETING_APPS.has(a.exe.toLowerCase()));
+      setAppPid(meeting ? String(meeting.pid) : "");
+    });
+  };
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
 
@@ -58,6 +76,7 @@ export function SetupScreen({
         );
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : "Couldn’t load documents."));
+    if (!IS_MAC) refreshApps();
     listAudioDevices()
       .then(setDevices)
       .catch((err: unknown) => setError(`Couldn’t list audio devices: ${String(err)}`));
@@ -82,7 +101,11 @@ export function SetupScreen({
         auto_answer: autoAnswer,
         document_ids: [...selected],
       });
-      onStart(session, { systemAudio, ...(micId ? { micDeviceId: micId } : {}) });
+      onStart(session, {
+        systemAudio,
+        ...(micId ? { micDeviceId: micId } : {}),
+        ...(systemAudio && appPid ? { systemProcessId: Number(appPid) } : {}),
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn’t start the session.");
       setStarting(false);
@@ -194,11 +217,43 @@ export function SetupScreen({
                     ? "macOS system audio capture (ScreenCaptureKit) isn’t implemented yet — Orbit will listen through your microphone."
                     : type === "phone"
                       ? "Phone / room mode uses your microphone only."
-                      : "Captures what your speakers play (WASAPI loopback), kept separate from your mic."}
+                      : "Kept separate from your mic, so Orbit knows who's speaking."}
                 </span>
               </span>
             </label>
-            <AudioTest micId={micId || undefined} systemAudio={systemAudio} />
+            {systemAudio && !IS_MAC && (
+              <div className="space-y-1">
+                <span className="text-xs font-medium">Listen to</span>
+                <div className="flex gap-1.5">
+                  <select
+                    value={appPid}
+                    onChange={(e) => {
+                      appTouched.current = true;
+                      setAppPid(e.target.value);
+                    }}
+                    aria-label="Interviewer audio source"
+                    className={cx(control, focusRing)}
+                  >
+                    <option value="">All system audio</option>
+                    {apps.map((a) => (
+                      <option key={a.pid} value={String(a.pid)}>
+                        {a.name}
+                        {a.active ? " — playing" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={refreshApps} title="Refresh app list" aria-label="Refresh app list" className={cx("rounded-lg border border-zinc-200 px-2 text-xs dark:border-zinc-800", focusRing)}>
+                    ↻
+                  </button>
+                </div>
+                <p className="text-[11px] text-zinc-500">
+                  {appPid
+                    ? "Only this app is captured — games, music and notifications are ignored."
+                    : "Everything your PC plays is captured. Pick your meeting app to ignore other sounds."}
+                </p>
+              </div>
+            )}
+            <AudioTest micId={micId || undefined} systemAudio={systemAudio} systemProcessId={appPid ? Number(appPid) : undefined} />
           </div>
 
           {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
@@ -225,7 +280,7 @@ export function SetupScreen({
   );
 }
 
-function AudioTest({ micId, systemAudio }: { micId?: string; systemAudio: boolean }) {
+function AudioTest({ micId, systemAudio, systemProcessId }: { micId?: string; systemAudio: boolean; systemProcessId?: number | undefined }) {
   const [running, setRunning] = useState(false);
   const [levels, setLevels] = useState<[number, number]>([0, 0]);
   const [note, setNote] = useState<string | null>(null);
@@ -242,7 +297,7 @@ function AudioTest({ micId, systemAudio }: { micId?: string; systemAudio: boolea
     setNote(null);
     try {
       runningRef.current = true;
-      const info = await startCapture({ ...(micId ? { micDeviceId: micId } : {}), systemAudio }, (ev) => {
+      const info = await startCapture({ ...(micId ? { micDeviceId: micId } : {}), systemAudio, ...(systemProcessId ? { systemProcessId } : {}) }, (ev) => {
         if (!runningRef.current) return;
         if (ev.kind === "frame") {
           setLevels((prev) => {

@@ -33,8 +33,21 @@ export function listAudioDevices(): Promise<NativeAudioDevice[]> {
   return invoke<NativeAudioDevice[]>("list_audio_devices");
 }
 
+/** An app with an audio session (Windows). `pid` is the root of its process tree. */
+export interface AudioApp {
+  pid: number;
+  exe: string;
+  name: string;
+  active: boolean;
+}
+
+/** Apps currently able to play sound — the candidates for per-app interviewer capture. */
+export function listAudioApps(): Promise<AudioApp[]> {
+  return invoke<AudioApp[]>("list_audio_apps").catch(() => []);
+}
+
 export function startCapture(
-  options: { micDeviceId?: string; systemAudio: boolean },
+  options: { micDeviceId?: string; systemAudio: boolean; systemProcessId?: number },
   onEvent: (event: CaptureEvent) => void,
 ): Promise<CaptureInfo> {
   const channel = new Channel<CaptureEvent>();
@@ -42,6 +55,7 @@ export function startCapture(
   return invoke<CaptureInfo>("start_capture", {
     micDeviceId: options.micDeviceId ?? null,
     systemAudio: options.systemAudio,
+    systemProcessId: options.systemProcessId ?? null,
     onEvent: channel,
   });
 }

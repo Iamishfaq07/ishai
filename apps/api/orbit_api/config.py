@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     jwt_secret: SecretStr = Field(SecretStr(_DEV_SECRET), validation_alias=AliasChoices("ORBIT_JWT_SECRET"))
     jwt_ttl_minutes: int = 60 * 24 * 7
     cors_origins: list[str] = Field(
-        ["http://localhost:5173", "http://tauri.localhost", "tauri://localhost"],
+        ["http://localhost:5173", "http://localhost:1420", "http://tauri.localhost", "tauri://localhost"],
         validation_alias=AliasChoices("ORBIT_CORS_ORIGINS"),
     )
     upload_dir: str = Field("./uploads", validation_alias=AliasChoices("ORBIT_UPLOAD_DIR"))

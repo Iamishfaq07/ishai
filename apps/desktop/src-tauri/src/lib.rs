@@ -1,4 +1,6 @@
 mod audio;
+#[cfg(target_os = "windows")]
+mod process_loopback;
 mod screen;
 mod secrets;
 mod updater;
@@ -47,6 +49,8 @@ pub fn run() {
             audio::list_audio_devices,
             audio::start_capture,
             audio::stop_capture,
+            #[cfg(target_os = "windows")]
+            process_loopback::list_audio_apps,
             screen::capture_screen,
             screen::capture_region,
             screen::open_region_selector,

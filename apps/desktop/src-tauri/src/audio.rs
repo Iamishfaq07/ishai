@@ -20,11 +20,11 @@ use cpal::{FromSample, Sample, SizedSample};
 use serde::Serialize;
 use tauri::ipc::Channel;
 
-const TARGET_RATE: u32 = 16_000;
+pub(crate) const TARGET_RATE: u32 = 16_000;
 /// 50 ms of 16 kHz audio per frame.
-const FRAME_SAMPLES: usize = 800;
+pub(crate) const FRAME_SAMPLES: usize = 800;
 const CHANNEL_MIC: u8 = 0;
-const CHANNEL_SYSTEM: u8 = 1;
+pub(crate) const CHANNEL_SYSTEM: u8 = 1;
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -90,6 +90,8 @@ pub fn start_capture(
     state: tauri::State<'_, CaptureState>,
     mic_device_id: Option<String>,
     system_audio: bool,
+    // Windows: capture only this app's process tree (Zoom, Teams, the browser…). None = all system audio.
+    system_process_id: Option<u32>,
     on_event: Channel<CaptureEvent>,
 ) -> Result<CaptureInfo, String> {
     state.stop_existing();
@@ -113,7 +115,23 @@ pub fn start_capture(
             streams.push(mic);
 
             let mut info = CaptureInfo { mic: true, system: false, system_error: None };
+            let app_stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+            let mut app_thread: Option<thread::JoinHandle<()>> = None;
+            #[cfg(target_os = "windows")]
             if system_audio {
+                if let Some(pid) = system_process_id {
+                    match crate::process_loopback::spawn(pid, on_event.clone(), app_stop.clone()) {
+                        Ok(handle) => {
+                            app_thread = Some(handle);
+                            info.system = true;
+                        }
+                        Err(e) => info.system_error = Some(e),
+                    }
+                }
+            }
+            #[cfg(not(target_os = "windows"))]
+            let _ = system_process_id;
+            if system_audio && app_thread.is_none() && info.system_error.is_none() {
                 match open_system(&host, on_event.clone()) {
                     Ok(stream) => {
                         streams.push(stream);
@@ -134,6 +152,10 @@ pub fn start_capture(
             // Park until stop_capture (or the sender is dropped); dropping the streams stops them.
             let _ = stop_rx.recv();
             drop(streams);
+            app_stop.store(true, std::sync::atomic::Ordering::Relaxed);
+            if let Some(handle) = app_thread {
+                let _ = handle.join();
+            }
         })
         .map_err(|e| e.to_string())?;
 
@@ -234,7 +256,7 @@ where
         .map_err(|e| e.to_string())
 }
 
-fn to_i16(v: f32) -> i16 {
+pub(crate) fn to_i16(v: f32) -> i16 {
     let clamped = v.clamp(-1.0, 1.0);
     if clamped < 0.0 {
         (clamped * 32768.0) as i16
@@ -243,7 +265,7 @@ fn to_i16(v: f32) -> i16 {
     }
 }
 
-fn encode_frame(channel: u8, samples: &[i16]) -> CaptureEvent {
+pub(crate) fn encode_frame(channel: u8, samples: &[i16]) -> CaptureEvent {
     let mut bytes = Vec::with_capacity(samples.len() * 2);
     let mut sum_sq = 0.0f32;
     for &s in samples {
@@ -261,7 +283,7 @@ fn encode_frame(channel: u8, samples: &[i16]) -> CaptureEvent {
 
 /// Linear-interpolating resampler with a one-pole low-pass ahead of decimation.
 /// Good enough for speech-to-text; not intended for music playback.
-struct Resampler {
+pub(crate) struct Resampler {
     step: f64,
     pos: f64,
     prev: f32,
@@ -271,7 +293,7 @@ struct Resampler {
 }
 
 impl Resampler {
-    fn new(from_rate: u32, to_rate: u32) -> Self {
+    pub(crate) fn new(from_rate: u32, to_rate: u32) -> Self {
         let from = f64::from(from_rate.max(1));
         let cutoff = f64::from(to_rate) * 0.45;
         let alpha = 1.0 - (-2.0 * std::f64::consts::PI * cutoff / from).exp();
@@ -285,7 +307,7 @@ impl Resampler {
         }
     }
 
-    fn push(&mut self, sample: f32, mut out: impl FnMut(f32)) {
+    pub(crate) fn push(&mut self, sample: f32, mut out: impl FnMut(f32)) {
         let x = if self.step > 1.0 {
             self.lp += self.alpha * (sample - self.lp);
             self.lp
