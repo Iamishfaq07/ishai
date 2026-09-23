@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
@@ -55,10 +55,25 @@ def _user_out(u: User) -> UserOut:
                    store_screenshots=u.store_screenshots)
 
 
+def _cookie_policy() -> tuple[bool, Literal["lax", "none"]]:
+    """(secure, samesite). In production the web app and API are usually on different sites
+    (e.g. Cloudflare + Render), so the session cookie must be SameSite=None; Secure to be sent
+    cross-site. Locally (same-site over http) SameSite=Lax without Secure works."""
+    cross_site = get_settings().env == "production"
+    return (True, "none") if cross_site else (False, "lax")
+
+
 def _set_cookie(response: Response, token: str) -> None:
     s = get_settings()
-    response.set_cookie(COOKIE_NAME, token, httponly=True, secure=s.env == "production", samesite="lax",
+    secure, samesite = _cookie_policy()
+    response.set_cookie(COOKIE_NAME, token, httponly=True, secure=secure, samesite=samesite,
                         max_age=s.jwt_ttl_minutes * 60, path="/")
+
+
+def _clear_cookie(response: Response) -> None:
+    # delete_cookie must repeat the attributes the browser stored it with, or it won't be cleared.
+    secure, samesite = _cookie_policy()
+    response.delete_cookie(COOKIE_NAME, path="/", secure=secure, samesite=samesite, httponly=True)
 
 
 def _ip(request: Request) -> str | None:
@@ -98,7 +113,7 @@ async def login(body: LoginIn, request: Request, response: Response,
 
 @router.post("/logout", status_code=204)
 async def logout(response: Response) -> Response:
-    response.delete_cookie(COOKIE_NAME, path="/")
+    _clear_cookie(response)
     response.status_code = 204
     return response
 
@@ -135,7 +150,7 @@ async def delete_account(request: Request, response: Response, user: Annotated[U
         await db.delete(u)
         db.add(AuditLog(user_id=None, action="auth.delete_account", target=user.id, ip=_ip(request)))
         await db.commit()
-    response.delete_cookie(COOKIE_NAME, path="/")
+    _clear_cookie(response)
     response.status_code = 204
     return response
 
@@ -250,6 +265,6 @@ async def logout_everywhere(request: Request, response: Response, user: Annotate
     u.token_version += 1
     db.add(AuditLog(user_id=u.id, action="auth.logout_all", ip=_ip(request)))
     await db.commit()
-    response.delete_cookie(COOKIE_NAME, path="/")
+    _clear_cookie(response)
     response.status_code = 204
     return response
