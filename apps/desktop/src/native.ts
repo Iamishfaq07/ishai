@@ -86,3 +86,23 @@ export const REGION_CAPTURED_EVENT = "region-captured";
 export interface RegionCapturedPayload {
   pngBase64: string;
 }
+
+// ── Auto-update (src-tauri/src/updater.rs) ──────────────────────────────────
+export interface UpdateInfo {
+  version: string;
+  currentVersion: string;
+  notes: string | null;
+  date: string | null;
+}
+export type UpdateProgress = { kind: "downloading"; downloaded: number; total: number | null } | { kind: "installing" };
+
+export function checkUpdate(apiUrl: string): Promise<UpdateInfo | null> {
+  return invoke<UpdateInfo | null>("check_update", { apiUrl });
+}
+
+/** Downloads, verifies the signature, and hands off to the installer (which relaunches Orbit). */
+export function installUpdate(onProgress: (p: UpdateProgress) => void): Promise<void> {
+  const channel = new Channel<UpdateProgress>();
+  channel.onmessage = onProgress;
+  return invoke<void>("install_update", { onEvent: channel });
+}

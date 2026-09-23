@@ -42,6 +42,7 @@ class Settings(BaseSettings):
         "deepseek-reasoner", validation_alias=AliasChoices("DEEPSEEK_REASONING_MODEL")
     )
 
+    desktop_updates_dir: str | None = Field(None, validation_alias=AliasChoices("ORBIT_DESKTOP_UPDATES_DIR"))
     web_url: str = Field("http://localhost:5173", validation_alias=AliasChoices("ORBIT_WEB_URL"))
     smtp_host: str | None = Field(None, validation_alias=AliasChoices("ORBIT_SMTP_HOST"))
     smtp_port: int = Field(587, validation_alias=AliasChoices("ORBIT_SMTP_PORT"))

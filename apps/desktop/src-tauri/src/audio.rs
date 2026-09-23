@@ -56,6 +56,11 @@ pub struct CaptureState {
 }
 
 impl CaptureState {
+    /// True while a capture thread is running (a live session is recording).
+    pub fn is_active(&self) -> bool {
+        self.stop.lock().map(|g| g.is_some()).unwrap_or(false)
+    }
+
     fn stop_existing(&self) {
         if let Ok(mut guard) = self.stop.lock() {
             if let Some(tx) = guard.take() {

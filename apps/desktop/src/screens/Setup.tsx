@@ -6,6 +6,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { WEB_URL, api } from "../api";
 import { listAudioDevices, startCapture, stopCapture, type NativeAudioDevice } from "../native";
 import { TitleBar } from "../TitleBar";
+import { UpdateBanner } from "../UpdateBanner";
 import type { DesktopLaunch } from "./Live";
 
 const TYPES: Array<{ value: SessionType; label: string }> = [
@@ -95,6 +96,7 @@ export function SetupScreen({
           Sign out
         </button>
       </TitleBar>
+      <UpdateBanner />
       <form onSubmit={(e) => void start(e)} className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 text-sm">
           <p className="text-xs text-zinc-500">{user ? `Signed in as ${user.email}` : "Offline — some data may be unavailable."}</p>

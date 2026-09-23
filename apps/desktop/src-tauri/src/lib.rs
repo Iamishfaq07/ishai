@@ -1,6 +1,7 @@
 mod audio;
 mod screen;
 mod secrets;
+mod updater;
 
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
@@ -20,7 +21,9 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(audio::CaptureState::default())
+        .manage(updater::PendingUpdate::default())
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "Show Orbit", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit Orbit", true, None::<&str>)?;
@@ -50,6 +53,8 @@ pub fn run() {
             secrets::save_token,
             secrets::load_token,
             secrets::clear_token,
+            updater::check_update,
+            updater::install_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Orbit");

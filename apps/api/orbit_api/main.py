@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from orbit_api import db
 from orbit_api.auth.routes import router as auth_router
 from orbit_api.config import get_settings
+from orbit_api.desktop_updates import router as desktop_router
 from orbit_api.documents.routes import router as documents_router
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.stt import create_stt_provider
@@ -59,6 +60,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(documents_router)
     app.include_router(sessions_router)
+    app.include_router(desktop_router)
     return app
 
 
