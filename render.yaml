@@ -1,0 +1,34 @@
+# Render Blueprint for the Orbit API (free tier, no credit card required).
+# Deploy: Render dashboard → New → Blueprint → pick this repo.
+# The web app is hosted separately on Cloudflare Pages; the DB is Neon (set ORBIT_DATABASE_URL below).
+services:
+  - type: web
+    name: orbit-api
+    runtime: docker
+    plan: free
+    region: ohio # closest to a us-east-2 Neon database; change if your Neon region differs
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: ./apps/api
+    healthCheckPath: /ready
+    autoDeploy: true
+    envVars:
+      - key: ORBIT_ENV
+        value: production
+      # Secrets — set these in the Render dashboard (sync:false = prompted, never stored in git):
+      - key: ORBIT_DATABASE_URL # Neon string as postgresql+asyncpg://... (direct endpoint, no -pooler)
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: ORBIT_ADMIN_EMAIL # the account allowed to edit Advanced settings
+        sync: false
+      - key: ORBIT_WEB_URL # your Cloudflare Pages URL, e.g. https://orbit-web.pages.dev
+        sync: false
+      - key: ORBIT_CORS_ORIGINS # JSON array incl. the Pages URL + tauri origins
+        sync: false
+      # Generated once by Render and kept stable across deploys:
+      - key: ORBIT_JWT_SECRET
+        generateValue: true
+      - key: ORBIT_CONFIG_SECRET
+        generateValue: true
