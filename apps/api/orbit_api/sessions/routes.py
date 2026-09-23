@@ -223,6 +223,7 @@ async def _load_index(db: AsyncSession, session_id: str) -> tuple[SessionIndex, 
         .join(Document, Document.id == DocumentChunk.document_id)
         .join(SessionDocument, SessionDocument.document_id == Document.id)
         .where(SessionDocument.session_id == session_id)
+        .order_by(Document.created_at, DocumentChunk.ordinal)  # keep resume order: most recent role first
     )).all()
     chunks = [IndexedChunk(c.id, kind, c.category, c.label, c.text, c.verified, c.embedding or [])
               for c, kind in rows]

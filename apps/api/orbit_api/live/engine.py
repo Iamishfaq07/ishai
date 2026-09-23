@@ -35,7 +35,13 @@ from orbit_api.live.events import (
 )
 from orbit_api.live.finalizer import QuestionFinalizer
 from orbit_api.live.question_detector import DetectorContext, classify_type, detect, normalize
-from orbit_api.live.routing import CODE_MAX_TOKENS, MAX_TOKENS, choose_reasoning_level, estimate_complexity
+from orbit_api.live.routing import (
+    CODE_MAX_TOKENS,
+    MAX_TALKING_POINTS,
+    MAX_TOKENS,
+    choose_reasoning_level,
+    estimate_complexity,
+)
 from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMProvider, LLMRequest, Usage
 from orbit_api.providers.stt.base import STTConfig, STTProvider, STTSession, TranscriptEvent
 from orbit_api.providers.stt.mock import MockSTTProvider, load_fixture, replay
@@ -134,7 +140,7 @@ class LiveEngine:
         self._seq = 0
         self.state = LiveState.idle
         self.memory = SessionMemory()
-        self._finalizer = QuestionFinalizer()
+        self._finalizer = QuestionFinalizer(provider_endpoints=stt.provides_endpoints)
         self._dedup = Deduplicator()
         self._stt_sessions: dict[Channel, STTSession] = {}
         self._turns: dict[Channel, _ChannelTurn | None] = {"mic": None, "system": None}
@@ -333,6 +339,11 @@ class LiveEngine:
         turn = self._turns[channel]
         if ev.kind == "utterance_end":
             if turn and turn.text:
+                if self._speaker_overrides.get(turn.turn_id, speaker) == "interviewer":
+                    fired = self._finalizer.on_transcript(turn.turn_id, turn.text, self.now_ms(),
+                                                          is_final=True, endpoint=True)
+                    if fired:
+                        await self._on_question(fired.turn_id, fired.detection.question_text)
                 await self._commit_turn(channel, turn)
             return
 
@@ -491,7 +502,8 @@ class LiveEngine:
                                            "reasoning": reasoning, "source": source})
         await self._set_state(LiveState.generating)
 
-        parser = AnswerStreamParser(question, qtype, built.context_used)
+        parser = AnswerStreamParser(question, qtype, built.context_used,
+                                    max_points=MAX_TALKING_POINTS[self.settings.length])
         first_token_ms: int | None = None
         usage = Usage()
         last_emit = 0.0

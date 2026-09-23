@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { splitPlaceholders } from "../live/placeholders";
 import type { AnswerView } from "../live/reducer";
 import { CodeBlock } from "./CodeBlock";
 import { cx, focusRing } from "./cx";
@@ -11,6 +12,28 @@ export interface AnswerCardProps {
   compact?: boolean;
   /** Whether the session is waiting on a question (drives the empty state copy). */
   autoAnswer: boolean;
+}
+
+/** Answer text with "[fill in]" prompts rendered as distinct chips so they're never read out verbatim. */
+function Spoken({ text }: { text: string }) {
+  return (
+    <>
+      {splitPlaceholders(text).map((part, i) =>
+        part.kind === "text" ? (
+          <span key={i}>{part.text}</span>
+        ) : (
+          <span
+            key={i}
+            title="Fill this in from your own experience"
+            className="rounded bg-amber-500/15 px-1 text-amber-800 underline decoration-amber-500/60 decoration-dashed underline-offset-2 dark:text-amber-200"
+          >
+            <span className="sr-only">Fill in: </span>
+            {part.text}
+          </span>
+        ),
+      )}
+    </>
+  );
 }
 
 export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, autoAnswer }: AnswerCardProps) {
@@ -89,7 +112,7 @@ export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, au
 
         {a.direct_answer && (
           <p className={cx("font-medium text-zinc-900 dark:text-zinc-50", compact ? "text-sm" : "text-[15px] leading-snug")}>
-            {a.direct_answer}
+            <Spoken text={a.direct_answer} />
           </p>
         )}
 
@@ -98,7 +121,9 @@ export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, au
             {a.talking_points.map((point, i) => (
               <li key={i} className="flex gap-2 leading-snug text-zinc-800 dark:text-zinc-200">
                 <span className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-indigo-500" aria-hidden="true" />
-                <span>{point}</span>
+                <span>
+                  <Spoken text={point} />
+                </span>
               </li>
             ))}
           </ul>
@@ -125,7 +150,7 @@ export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, au
           <div className="mt-3">
             {showExample ? (
               <p className="rounded-lg bg-zinc-50 p-3 text-sm leading-relaxed text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-                {a.example}
+                <Spoken text={a.example} />
               </p>
             ) : (
               <button

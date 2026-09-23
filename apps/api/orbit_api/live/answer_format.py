@@ -29,8 +29,10 @@ _FENCE = re.compile(r"^\s*```\s*([\w+#-]*)\s*$")
 
 
 class AnswerStreamParser:
-    def __init__(self, question: str, qtype: QuestionType, context_used: list[str]) -> None:
+    def __init__(self, question: str, qtype: QuestionType, context_used: list[str], *,
+                 max_points: int | None = None) -> None:
         self._buf = ""
+        self._max_points = max_points  # hard cap for the chosen answer length; prompts alone don't enforce it
         self._question = question
         self._qtype = qtype
         self._context_used = context_used
@@ -84,7 +86,7 @@ class AnswerStreamParser:
             bullet = _BULLET.match(line)
             if bullet and section in (None, "ANSWER"):
                 point = bullet.group(1).strip()
-                if point:
+                if point and (self._max_points is None or len(ans.talking_points) < self._max_points):
                     ans.talking_points.append(point)
                 continue
 

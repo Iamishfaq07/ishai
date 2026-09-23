@@ -251,3 +251,90 @@ def test_token_bucket_limits_bursts() -> None:
     b = TokenBucket(rate_per_s=0.001, burst=3)
     assert [b.allow("ip") for _ in range(4)] == [True, True, True, False]
     assert b.allow("other-ip")
+
+
+# ---- regressions found with real Deepgram + DeepSeek -----------------------------------------------------
+
+
+def test_vad_provider_mode_never_fires_on_interim_gaps() -> None:
+    """Deepgram interims arrive ~1.25 s apart; a gap between them is not the speaker stopping."""
+    f = QuestionFinalizer(provider_endpoints=True)
+    assert f.on_transcript("t1", "How would you integrate security", 0, is_final=False) is None
+    assert f.tick(1300) is None  # the old timer rules fired here, mid-sentence
+    assert f.on_transcript("t1", "How would you integrate security into a", 1300, is_final=False) is None
+    fired = f.on_transcript("t1", "How would you integrate security into a CI/CD pipeline?", 2600,
+                            is_final=True, endpoint=True)
+    assert fired and fired.trigger == "endpoint"
+    assert fired.detection.question_text.endswith("pipeline?")
+
+
+def test_vad_provider_mode_has_a_fallback_if_the_endpoint_is_lost() -> None:
+    f = QuestionFinalizer(provider_endpoints=True)
+    f.on_transcript("t1", "What is dependency injection?", 0, is_final=True)
+    assert f.tick(2000) is None
+    fired = f.tick(2600)
+    assert fired and fired.trigger == "max_silence"
+
+
+def test_tell_me_about_yourself_is_anchored_on_summary_and_latest_role() -> None:
+    embed = get_embedder().embed
+    chunks = [
+        IndexedChunk("s", "resume", "summary", "resume: Summary", "AppSec engineer with 6 years securing cloud", True,
+                     embed("AppSec engineer with 6 years securing cloud")),
+        IndexedChunk("n", "resume", "experience", "resume: Senior Security Engineer — Northwind (2021–2025)",
+                     "Led application security reviews", True, embed("Led application security reviews")),
+        IndexedChunk("c", "resume", "experience", "resume: Security Engineer — Contoso (2018–2021)",
+                     "Told stories about yourself to the team", True, embed("Told stories about yourself to the team")),
+    ]
+    built = build_prompt(SessionIndex(chunks), _inputs("Tell me about yourself.", qtype=QuestionType.resume),
+                         SessionMemory())
+    assert built.context_used[:2] == ["resume: Summary", "resume: Senior Security Engineer — Northwind (2021–2025)"]
+
+
+def test_parser_caps_talking_points_for_the_chosen_length() -> None:
+    p = AnswerStreamParser("Q?", QuestionType.technical, [], max_points=3)
+    ans = p.feed("ANSWER: x\n- one\n- two\n- three\n- four\n- five\nFOLLOWUP: next?")
+    assert ans.talking_points == ["one", "two", "three"] and ans.follow_up == "next?"
+
+
+def test_personal_questions_carry_the_bracketed_placeholder_rule() -> None:
+    behavioral = build_prompt(_index(), _inputs("What was your biggest challenge there?",
+                                                qtype=QuestionType.behavioral), SessionMemory())
+    technical = build_prompt(_index(), _inputs("What is dependency injection?"), SessionMemory())
+    assert "bracketed prompt" in behavioral.messages[1].content
+    assert "bracketed prompt" not in technical.messages[1].content
+
+
+# ---- sentence-level extraction (real loopback audio merges fillers, pleasantries and other apps' audio) ----
+
+@pytest.mark.parametrize(
+    ("turn", "question"),
+    [
+        ("Thanks for joining us today. So tell me about yourself.", "So tell me about yourself."),
+        ("Interesting. What was the biggest challenge you faced there?",
+         "What was the biggest challenge you faced there?"),
+        ("Okay. How would you integrate security into a CICD pipeline? My weapon.",
+         "How would you integrate security into a CICD pipeline?"),
+        ("Let's talk about your time at Northwind. What was your biggest win?",
+         "Let's talk about your time at Northwind. What was your biggest win?"),
+        ("Attack an enemy shield. How would you design a rate limiter?", "How would you design a rate limiter?"),
+    ],
+)
+def test_extracts_the_question_sentence(turn: str, question: str) -> None:
+    d = detect(turn, "interviewer")
+    assert d.should_generate and d.question_text == question
+
+
+@pytest.mark.parametrize("turn", [
+    "Right. Okay. Give me one second. Attack an enemy shield.",  # the real false positive
+    "Thanks for joining us today.",
+    "Give me a second. Let me pull up your resume.",
+    "Nice. Already in the next ring. Time for a gelato.",
+])
+def test_merged_fillers_and_background_audio_do_not_trigger(turn: str) -> None:
+    assert not detect(turn, "interviewer").should_generate, turn
+
+
+def test_partial_second_question_waits_for_completion() -> None:
+    d = detect("Thanks for joining. So tell me about", "interviewer")
+    assert d.question_text == "So tell me about" and not d.should_generate

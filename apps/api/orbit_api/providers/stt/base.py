@@ -38,6 +38,8 @@ class STTSession(ABC):
 
 class STTProvider(ABC):
     name: str
+    # True when the provider emits reliable end-of-speech events (VAD endpointing / utterance end).
+    provides_endpoints: bool = False
 
     def __init__(self) -> None:
         self._sessions: list[STTSession] = []

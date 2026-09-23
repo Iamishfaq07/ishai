@@ -11,15 +11,15 @@ from pathlib import Path
 
 from orbit_api.live.events import AnswerLength, AnswerStyle, QuestionType, SessionType, Speaker
 from orbit_api.providers.llm.base import LLMMessage
-from orbit_api.retrieval.index import Hit, SessionIndex
+from orbit_api.retrieval.index import Hit, IndexedChunk, SessionIndex
 
 RECENT_TURNS = 6
 MAX_TURN_CHARS = 500
 MAX_CONTEXT_CHARS = 5000  # ≈1.2k tokens of retrieved context
 
 _LENGTH_RULES: dict[AnswerLength, str] = {
-    "short": "Length: 20–30 seconds spoken. ANSWER line plus 3 short talking points.",
-    "standard": "Length: 45–75 seconds spoken. ANSWER line plus 4–5 talking points.",
+    "short": "Length: 20–30 seconds spoken. ANSWER line plus AT MOST 3 talking points. No EXAMPLE line.",
+    "standard": "Length: 45–75 seconds spoken. ANSWER line plus at most 5 talking points.",
     "detailed": "Length: 90–150 seconds spoken. ANSWER line plus 6–8 talking points and an EXAMPLE.",
 }
 _STYLE_RULES: dict[AnswerStyle, str] = {
@@ -90,11 +90,35 @@ class BuiltPrompt:
     hits: list[Hit]
 
 
+# Question types that ask for the user's own story, where invented specifics are most tempting.
+_PERSONAL_TYPES = {QuestionType.behavioral, QuestionType.leadership, QuestionType.follow_up, QuestionType.resume}
+_GROUNDING_RULE = (
+    "Grounding: state only what VERIFIED CANDIDATE FACT lines say the user did. Where the question needs a "
+    "detail those lines don't give (the specific challenge, conflict, mistake, or what they felt), write a "
+    "short bracketed prompt the user fills in from memory, e.g. \"[the pushback you got from developers]\" — "
+    "never invent it."
+)
+
+# "Tell me about yourself" is about the whole arc, not the facts that happen to share words with it,
+# so these always get the profile summary and the most recent roles (resumes list newest first).
+_ANCHORED_TYPES = {QuestionType.resume}
+
+
+def _anchor_hits(index: SessionIndex) -> list[Hit]:
+    anchors: list[IndexedChunk] = index.by_category("resume", ("summary",), 2)
+    anchors += index.by_category("resume", ("experience",), 4)
+    return [Hit(c, 1.0) for c in anchors]
+
+
 def retrieve(index: SessionIndex, inputs: PromptInputs, memory: SessionMemory) -> list[Hit]:
     query = inputs.question
     if inputs.is_follow_up and memory.questions:
         query = f"{memory.questions[-1]} {inputs.question}"  # follow-ups inherit the prior topic
     hits = index.search(query, inputs.qtype, k=6)
+    if inputs.qtype in _ANCHORED_TYPES:
+        anchored = _anchor_hits(index)
+        seen = {h.chunk.id for h in anchored}
+        hits = anchored + [h for h in hits if h.chunk.id not in seen]
     if not any(h.chunk.doc_kind == "job_description" for h in hits):
         hits += index.search(query, inputs.qtype, k=2, doc_kind="job_description")
     return hits
@@ -120,9 +144,10 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
         [
             _SESSION_RULES[inputs.session_type],
             f"Target role: {inputs.role}" if inputs.role else "",
-            _LENGTH_RULES[inputs.length],
+            _LENGTH_RULES[inputs.length] + " Pick the strongest points; more context does not mean more bullets.",
             _STYLE_RULES[inputs.style] if inputs.qtype != QuestionType.coding else "",
             f"Answer language: {inputs.answer_language}",
+            _GROUNDING_RULE if inputs.qtype in _PERSONAL_TYPES or inputs.is_follow_up else "",
             f"Question type: {inputs.qtype.value}" + (" (follow-up to the previous question)" if inputs.is_follow_up
                                                      else ""),
         ]

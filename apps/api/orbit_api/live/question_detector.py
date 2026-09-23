@@ -23,6 +23,9 @@ _FILLERS = {
     "go ahead", "no worries", "fair enough", "understood",
 }
 
+_FILLER_TOKENS = frozenset({"okay", "ok", "right", "so", "yeah", "great", "um", "uh", "hmm", "cool", "nice",
+                            "alright", "interesting", "perfect", "sure", "yes", "yep", "got", "it", "thanks"})
+
 _WH = ("what", "what's", "whats", "why", "how", "how's", "when", "where", "which", "who", "whom", "whose")
 _AUX = (
     "can", "could", "would", "will", "do", "does", "did", "is", "are", "was", "were", "have", "has",
@@ -151,7 +154,51 @@ def is_complete(text: str) -> bool:
     return toks[-1] not in _TRAILING
 
 
+_SENTENCE = re.compile(r"(?<=[.?!])\s+")
+_PLEASANTRIES = (
+    "thanks for joining", "thank you for joining", "thanks for having", "thank you for having",
+    "thanks for coming", "thank you for coming", "nice to meet you", "good to meet you", "great to meet you",
+    "welcome", "great to have you", "good to see you", "glad you could make it",
+)
+_WAIT_PHRASE = re.compile(r"^(give me|just|hold on|wait) (a|one|1) (second|sec|moment|minute)")
+# A short sentence right before the question that frames it ("Let's talk about your time at Acme.").
+_LEAD_IN = ("let's talk about", "lets talk about", "moving on", "switching gears", "you mentioned", "i see you",
+            "i noticed", "on your resume", "looking at your", "in your last role", "at your last company")
+
+
+def _is_noise(sentence: str) -> bool:
+    n = normalize(sentence)
+    toks = n.split()
+    return (not toks or n in _FILLERS or bool(_WAIT_PHRASE.match(n))
+            or any(n.startswith(p) for p in _PLEASANTRIES)
+            or (len(toks) <= 3 and all(t in _FILLER_TOKENS for t in toks)))
+
+
+def extract_question(text: str) -> str:
+    """The question inside a multi-sentence turn: drops fillers, pleasantries and trailing fragments.
+
+    Real system audio merges things into one turn ("Right. Okay. Give me one second. <other app audio>",
+    "Thanks for joining us today. So tell me about yourself."), so detection is per sentence.
+    """
+    raw = text.strip()
+    sentences = [x.strip() for x in _SENTENCE.split(raw) if x.strip()]
+    if len(sentences) <= 1:
+        return raw
+    for i in range(len(sentences) - 1, -1, -1):
+        if not _is_noise(sentences[i]) and _detect_one(sentences[i], "interviewer", DetectorContext()).is_question:
+            start = i
+            if i > 0 and not _is_noise(sentences[i - 1]) and normalize(sentences[i - 1]).startswith(_LEAD_IN):
+                start = i - 1
+            return " ".join(sentences[start : i + 1])
+    kept = [x for x in sentences if not _is_noise(x)]
+    return " ".join(kept) if kept else sentences[-1]
+
+
 def detect(text: str, speaker: Speaker, ctx: DetectorContext | None = None) -> Detection:
+    return _detect_one(extract_question(text), speaker, ctx)
+
+
+def _detect_one(text: str, speaker: Speaker, ctx: DetectorContext | None = None) -> Detection:
     ctx = ctx or DetectorContext()
     raw = text.strip()
     norm = normalize(raw)
@@ -184,9 +231,7 @@ def detect(text: str, speaker: Speaker, ctx: DetectorContext | None = None) -> D
         reasons.append("speaker_not_interviewer")
         return result(0.0, QuestionType.non_question)
 
-    if norm in _FILLERS or (len(toks) <= 3 and all(t in {"okay", "ok", "right", "so", "yeah", "great", "um",
-                                                          "uh", "hmm", "cool", "nice", "alright"}
-                                                         for t in toks)):
+    if norm in _FILLERS or _WAIT_PHRASE.match(norm) or (len(toks) <= 3 and all(t in _FILLER_TOKENS for t in toks)):
         reasons.append("filler")
         return result(0.02, QuestionType.small_talk)
 

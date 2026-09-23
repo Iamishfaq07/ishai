@@ -28,3 +28,4 @@ def choose_reasoning_level(
 
 MAX_TOKENS: dict[AnswerLength, int] = {"short": 220, "standard": 420, "detailed": 800}
 CODE_MAX_TOKENS = 1400
+MAX_TALKING_POINTS: dict[AnswerLength, int] = {"short": 3, "standard": 5, "detailed": 8}

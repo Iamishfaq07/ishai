@@ -169,6 +169,7 @@ class DeepgramSession(STTSession):
 
 class DeepgramProvider(STTProvider):
     name = "deepgram"
+    provides_endpoints = True
 
     def __init__(self, api_key: str, model: str) -> None:
         super().__init__()
