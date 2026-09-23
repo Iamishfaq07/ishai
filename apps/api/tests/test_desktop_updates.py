@@ -63,3 +63,20 @@ def test_download_rejects_traversal_and_other_files(client: TestClient, updates:
                 "/v1/desktop/download/0.2.0/Orbit_0.2.0_x64-setup.exe.sig",
                 "/v1/desktop/download/0.2.0/Missing_x64-setup.exe"):
         assert client.get(bad).status_code == 404, bad
+
+
+def test_stage_release_copies_signed_installer_once(tmp_path: Path) -> None:
+    from orbit_api.stage_release import stage
+
+    art = tmp_path / "artifact" / "bundle" / "nsis"
+    art.mkdir(parents=True)
+    (art / "Orbit_0.1.1_x64-setup.exe").write_bytes(b"MZ")
+    updates = tmp_path / "updates"
+    with pytest.raises(SystemExit, match="missing or empty"):
+        stage(tmp_path / "artifact", updates, None)  # unsigned → refused
+    (art / "Orbit_0.1.1_x64-setup.exe.sig").write_text("sig")
+    dest = stage(tmp_path / "artifact", updates, "Fixes")
+    assert sorted(p.name for p in dest.iterdir()) == ["Orbit_0.1.1_x64-setup.exe", "Orbit_0.1.1_x64-setup.exe.sig",
+                                                      "notes.md"]
+    with pytest.raises(SystemExit, match="already exists"):
+        stage(tmp_path / "artifact", updates, None)  # never overwrite a published version

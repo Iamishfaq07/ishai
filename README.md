@@ -7,7 +7,7 @@ grounds its answers in your resume, the job description, and your documents, and
 - **Desktop:** Tauri 2 (Rust audio/screen capture) + React — `apps/desktop`
 - **Web:** React + Vite — `apps/web` · shared live UI in `packages/ui`, types in `packages/types`
 
-Docs: [Architecture](docs/ARCHITECTURE.md) · [Live protocol](docs/PROTOCOL.md) · [Decisions](docs/DECISIONS.md)
+Docs: [Architecture](docs/ARCHITECTURE.md) · [Live protocol](docs/PROTOCOL.md) · [Decisions](docs/DECISIONS.md) · [Windows release & updates](docs/WINDOWS_RELEASE.md)
 
 ## Quick start (backend, no API keys needed)
 
