@@ -1,0 +1,31 @@
+# Orbit API on Fly.io. Deploy from this directory: `fly deploy`.
+# Rename `app` to your own unique name first. Set secrets (never commit them) — see docs/DEPLOY.md.
+app = "orbit-api"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  ORBIT_ENV = "production"
+  # Set these to your real web origin once Cloudflare Pages is up:
+  ORBIT_WEB_URL = "https://orbit-web.pages.dev"
+  ORBIT_CORS_ORIGINS = '["https://orbit-web.pages.dev","tauri://localhost","http://tauri.localhost"]'
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/ready"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "20s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

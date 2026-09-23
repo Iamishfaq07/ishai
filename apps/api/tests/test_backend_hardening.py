@@ -27,8 +27,21 @@ def test_production_requires_real_providers_and_postgres() -> None:
         Settings(**_prod(ORBIT_LLM_PROVIDER="mock"))
     with pytest.raises(ValueError, match="Postgres"):
         Settings(**_prod(ORBIT_DATABASE_URL="sqlite+aiosqlite:///./x.db"))
-    with pytest.raises(ValueError, match="SMTP"):
-        Settings(**_prod(ORBIT_SMTP_HOST=None))
+    # SMTP is optional in production (email features just turn off) — must NOT raise.
+    Settings(**_prod(ORBIT_SMTP_HOST=None))
+
+
+def test_production_without_smtp_disables_email_instead_of_leaking_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
+    from orbit_api.config import get_settings
+    from orbit_api.providers.email import DevOutbox, NoEmailSender, get_email_sender
+
+    get_email_sender.cache_clear()
+    monkeypatch.setattr(get_settings(), "env", "production")
+    monkeypatch.setattr(get_settings(), "smtp_host", None)
+    sender = get_email_sender()
+    # Prod without SMTP → NoEmailSender (drops + logs, never logs the token), not DevOutbox.
+    assert isinstance(sender, NoEmailSender) and not isinstance(sender, DevOutbox)
+    get_email_sender.cache_clear()
 
 
 def test_ready_probe_checks_db(client: TestClient) -> None:
