@@ -198,6 +198,34 @@ export interface Usage {
   screenshots_limit: number | null;
 }
 
+// ─── Admin / advanced settings ─────────────────────────────────────────────────
+
+export interface AdminConfig {
+  /** False when ORBIT_CONFIG_SECRET isn't set, so API keys can't be stored in-app. */
+  secrets_editable: boolean;
+  llm_provider: string;
+  stt_provider: string;
+  deepseek_base_url: string;
+  deepseek_model: string;
+  deepseek_reasoning_model: string;
+  deepgram_model: string;
+  /** Whether a key is present; the plaintext is never returned. */
+  deepseek_api_key_set: boolean;
+  deepgram_api_key_set: boolean;
+}
+
+/** Omit a field to leave it unchanged; send "" for a secret to clear it (revert to env). */
+export interface AdminConfigUpdate {
+  llm_provider?: string;
+  stt_provider?: string;
+  deepseek_base_url?: string;
+  deepseek_model?: string;
+  deepseek_reasoning_model?: string;
+  deepgram_model?: string;
+  deepseek_api_key?: string;
+  deepgram_api_key?: string;
+}
+
 // ─── Errors ──────────────────────────────────────────────────────────────────
 
 /** FastAPI returns { detail: string | ValidationError[] }; Orbit errors use { error: { code, message } }. */
