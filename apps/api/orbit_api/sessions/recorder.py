@@ -30,7 +30,9 @@ class DbRecorder:
                 return
             try:
                 async with sessionmaker()() as db:
-                    await db.merge(obj)
+                    # add(), not merge(): every row has a fresh PK and is written once, so merge's
+                    # pre-INSERT SELECT is pure overhead on the live recording hot path.
+                    db.add(obj)
                     await db.commit()
             except Exception:
                 log.exception("recorder write failed (%s)", type(obj).__name__)
