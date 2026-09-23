@@ -13,6 +13,9 @@ RUN uv sync --frozen --no-dev
 
 RUN useradd --system --uid 10001 orbit
 USER orbit
+# Run the venv's binaries directly at runtime. Going through `uv run` would try to write a cache
+# under $HOME, which the non-root `orbit` user can't create on some platforms (e.g. Render).
+ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
 # Honor $PORT when the platform injects one (e.g. Render); default to 8000 (Fly/local).
-CMD ["sh", "-c", "uv run --no-sync alembic upgrade head && uv run --no-sync uvicorn orbit_api.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers"]
+CMD ["sh", "-c", "alembic upgrade head && uvicorn orbit_api.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers"]
