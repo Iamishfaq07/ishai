@@ -3,7 +3,7 @@
 // uploads that directory as static assets. `single-page-application` routes unknown paths to
 // index.html so client-side routing (React Router) works on refresh/deep links.
 {
-  "name": "orbit-web",
+  "name": "orbit",
   "compatibility_date": "2026-09-01",
   "assets": {
     "directory": "apps/web/dist",
