@@ -1,0 +1,6 @@
+{"turns": [
+  {"speaker": "interviewer", "text": "Let's get started with the roadmap review.", "pause_ms": 200},
+  {"speaker": "interviewer", "text": "What are the main risks for the Q3 launch?", "pause_ms": 300},
+  {"speaker": "candidate", "text": "The main risk is the vendor integration timeline.", "pause_ms": 1500},
+  {"speaker": "interviewer", "text": "I agree.", "pause_ms": 300}
+]}
