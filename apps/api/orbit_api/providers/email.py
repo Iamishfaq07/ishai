@@ -78,6 +78,16 @@ class SmtpSender(EmailSender):
         await asyncio.to_thread(self._send_sync, email)
 
 
+class NoEmailSender(EmailSender):
+    """Production without SMTP: email features are disabled. Drops mail and logs a notice — crucially it
+    never logs the link/token (unlike the dev outbox), so verification/reset tokens don't leak to logs."""
+
+    name = "disabled"
+
+    async def send(self, email: OutgoingEmail) -> None:
+        log.info("email disabled (no SMTP configured); dropping %r to %s", email.subject, email.to)
+
+
 @lru_cache
 def get_email_sender() -> EmailSender:
     s = get_settings()
@@ -85,7 +95,8 @@ def get_email_sender() -> EmailSender:
         return SmtpSender(s.smtp_host, s.smtp_port, s.smtp_username,
                           s.smtp_password.get_secret_value() if s.smtp_password else None,
                           s.smtp_starttls, s.email_from)
-    return DevOutbox()
+    # Dev outbox logs the link (handy locally); never do that in production.
+    return DevOutbox() if s.env != "production" else NoEmailSender()
 
 
 async def send_safely(email: OutgoingEmail) -> None:

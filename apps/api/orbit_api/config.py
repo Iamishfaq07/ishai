@@ -65,10 +65,10 @@ class Settings(BaseSettings):
                 raise ValueError("DEEPSEEK_API_KEY is required in production (no mock LLM fallback)")
             if self.stt_provider == "mock" or (self.stt_provider == "auto" and not self.deepgram_api_key):
                 raise ValueError("DEEPGRAM_API_KEY is required in production (no mock STT fallback)")
-            if not self.smtp_host:
-                raise ValueError("ORBIT_SMTP_HOST is required in production (verification and reset emails)")
             if self.is_sqlite:
                 raise ValueError("ORBIT_DATABASE_URL must be Postgres in production, not SQLite")
+        # SMTP is optional: without it, email verification / password reset are disabled (fine for a
+        # private single-user deploy). It's never faked to the dev outbox in production (see email.py).
         return self
 
     @property
