@@ -240,9 +240,14 @@ def test_follow_up_uses_previous_question_and_answer() -> None:
     assert "Gate on critical findings" in user and "GitHub Actions" in user
 
 
-def test_no_context_means_no_invented_experience_instruction() -> None:
+def test_no_context_still_answers_fully_without_inventing_experience() -> None:
     built = build_prompt(SessionIndex([]), _inputs("What is a B-tree?"), SessionMemory())
-    assert "do not invent personal experience" in built.messages[1].content
+    user = built.messages[1].content
+    # No resume match must instruct a full answer, not a refusal/deflection.
+    assert "Answer it fully" in user
+    assert "didn't provide" in user  # the only guardrail: no fabricated personal history
+    # The system prompt makes "always answer" the top priority.
+    assert "ALWAYS answer the question" in built.messages[0].content
 
 
 def test_token_bucket_limits_bursts() -> None:
@@ -297,12 +302,16 @@ def test_parser_caps_talking_points_for_the_chosen_length() -> None:
     assert ans.talking_points == ["one", "two", "three"] and ans.follow_up == "next?"
 
 
-def test_personal_questions_carry_the_bracketed_placeholder_rule() -> None:
+def test_personal_questions_get_grounding_rule_but_still_demand_a_full_answer() -> None:
     behavioral = build_prompt(_index(), _inputs("What was your biggest challenge there?",
                                                 qtype=QuestionType.behavioral), SessionMemory())
     technical = build_prompt(_index(), _inputs("What is dependency injection?"), SessionMemory())
-    assert "bracketed prompt" in behavioral.messages[1].content
-    assert "bracketed prompt" not in technical.messages[1].content
+    # Behavioral questions carry the grounding cue (bracketed fill-in allowed) ...
+    assert "bracketed cue" in behavioral.messages[1].content
+    assert "bracketed cue" not in technical.messages[1].content
+    # ... but the rule must never let placeholders replace a real answer.
+    assert "never let placeholders replace a real answer" in behavioral.messages[1].content
+    assert "complete, ready-to-say answer" in behavioral.messages[1].content
 
 
 # ---- sentence-level extraction (real loopback audio merges fillers, pleasantries and other apps' audio) ----
