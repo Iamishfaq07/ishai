@@ -1,5 +1,6 @@
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import type { AdminConfig, AdminConfigUpdate } from "@orbit/types";
 import {
   DEFAULT_HOTKEYS,
   HOTKEY_LABELS,
@@ -12,10 +13,11 @@ import {
   type HotkeyAction,
   type HotkeyMap,
 } from "@orbit/ui";
-import { Button, Card, ErrorNote, PageHeader, Select, Toggle } from "../components/ui";
+import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Spinner, Toggle } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { errorText } from "../lib/format";
+import { useAsync } from "../lib/useAsync";
 import { useTheme, type ThemePref } from "../lib/theme";
 
 export function SettingsPage() {
@@ -40,7 +42,211 @@ export function SettingsPage() {
       </Card>
       <HotkeysCard />
       <PrivacyCard />
+      <AdvancedSettingsCard />
     </div>
+  );
+}
+
+/** Admin-only. Rotate provider API keys / models without a redeploy. */
+function AdvancedSettingsCard() {
+  const status = useAsync(() => api.adminStatus().catch(() => ({ is_admin: false })), []);
+  if (status.loading || !status.data?.is_admin) return null;
+  return <AdvancedConfig />;
+}
+
+const PROVIDER_OPTS: Record<"llm" | "stt", Array<{ value: string; label: string }>> = {
+  llm: [
+    { value: "auto", label: "Auto (DeepSeek if a key is set)" },
+    { value: "deepseek", label: "DeepSeek" },
+    { value: "mock", label: "Mock (no real answers)" },
+  ],
+  stt: [
+    { value: "auto", label: "Auto (Deepgram if a key is set)" },
+    { value: "deepgram", label: "Deepgram" },
+    { value: "mock", label: "Mock (no real transcription)" },
+  ],
+};
+
+function AdvancedConfig() {
+  const cfg = useAsync(() => api.getAdminConfig(), []);
+  const [form, setForm] = useState<AdminConfig | null>(null);
+  const [deepseekKey, setDeepseekKey] = useState("");
+  const [deepgramKey, setDeepgramKey] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (cfg.data) setForm(cfg.data);
+  }, [cfg.data]);
+
+  const set = (patch: Partial<AdminConfig>) => setForm((f) => (f ? { ...f, ...patch } : f));
+
+  const save = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!form) return;
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+    const update: AdminConfigUpdate = {
+      llm_provider: form.llm_provider,
+      stt_provider: form.stt_provider,
+      deepseek_base_url: form.deepseek_base_url,
+      deepseek_model: form.deepseek_model,
+      deepseek_reasoning_model: form.deepseek_reasoning_model,
+      deepgram_model: form.deepgram_model,
+    };
+    if (deepseekKey.trim()) update.deepseek_api_key = deepseekKey.trim();
+    if (deepgramKey.trim()) update.deepgram_api_key = deepgramKey.trim();
+    try {
+      const next = await api.updateAdminConfig(update);
+      setForm(next);
+      setDeepseekKey("");
+      setDeepgramKey("");
+      setSaved(true);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const clearKey = async (which: "deepseek_api_key" | "deepgram_api_key") => {
+    if (!window.confirm("Remove this key? Orbit will fall back to the key from the server environment.")) return;
+    setError(null);
+    try {
+      setForm(await api.updateAdminConfig({ [which]: "" }));
+    } catch (err) {
+      setError(errorText(err));
+    }
+  };
+
+  return (
+    <Card>
+      <div className="mb-1 flex items-center justify-between">
+        <h2 className="font-semibold">Advanced (admin)</h2>
+        {saved && <span className="text-xs text-emerald-600 dark:text-emerald-400">Saved</span>}
+      </div>
+      <p className="mb-4 text-sm text-zinc-500">
+        Provider keys and models for the whole workspace. Changes apply to new answers immediately.
+      </p>
+      {cfg.loading || !form ? (
+        <Spinner />
+      ) : cfg.error ? (
+        <ErrorNote onRetry={cfg.reload}>{errorText(cfg.error)}</ErrorNote>
+      ) : (
+        <form onSubmit={(e) => void save(e)} className="space-y-5">
+          {error && <ErrorNote>{error}</ErrorNote>}
+          {!form.secrets_editable && (
+            <div className="rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+              Set <code>ORBIT_CONFIG_SECRET</code> on the server to store API keys here. Until then, keys come from the
+              server environment and can’t be edited in-app.
+            </div>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Answer provider" htmlFor="llm-provider">
+              <Select id="llm-provider" value={form.llm_provider} onChange={(e) => set({ llm_provider: e.target.value })}>
+                {PROVIDER_OPTS.llm.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Transcription provider" htmlFor="stt-provider">
+              <Select id="stt-provider" value={form.stt_provider} onChange={(e) => set({ stt_provider: e.target.value })}>
+                {PROVIDER_OPTS.stt.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+
+          <SecretField
+            label="DeepSeek API key"
+            id="deepseek-key"
+            isSet={form.deepseek_api_key_set}
+            disabled={!form.secrets_editable}
+            value={deepseekKey}
+            onChange={setDeepseekKey}
+            onClear={() => void clearKey("deepseek_api_key")}
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="DeepSeek model" htmlFor="deepseek-model">
+              <Input id="deepseek-model" value={form.deepseek_model} onChange={(e) => set({ deepseek_model: e.target.value })} />
+            </Field>
+            <Field label="DeepSeek reasoning model" htmlFor="deepseek-reasoning">
+              <Input id="deepseek-reasoning" value={form.deepseek_reasoning_model}
+                     onChange={(e) => set({ deepseek_reasoning_model: e.target.value })} />
+            </Field>
+          </div>
+          <Field label="DeepSeek base URL" htmlFor="deepseek-url">
+            <Input id="deepseek-url" value={form.deepseek_base_url} onChange={(e) => set({ deepseek_base_url: e.target.value })} />
+          </Field>
+
+          <SecretField
+            label="Deepgram API key"
+            id="deepgram-key"
+            isSet={form.deepgram_api_key_set}
+            disabled={!form.secrets_editable}
+            value={deepgramKey}
+            onChange={setDeepgramKey}
+            onClear={() => void clearKey("deepgram_api_key")}
+          />
+          <Field label="Deepgram model" htmlFor="deepgram-model">
+            <Input id="deepgram-model" value={form.deepgram_model} onChange={(e) => set({ deepgram_model: e.target.value })} />
+          </Field>
+
+          <div className="flex justify-end">
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving…" : "Save advanced settings"}
+            </Button>
+          </div>
+        </form>
+      )}
+    </Card>
+  );
+}
+
+function SecretField({
+  label,
+  id,
+  isSet,
+  disabled,
+  value,
+  onChange,
+  onClear,
+}: {
+  label: string;
+  id: string;
+  isSet: boolean;
+  disabled: boolean;
+  value: string;
+  onChange: (v: string) => void;
+  onClear: () => void;
+}) {
+  return (
+    <Field
+      label={label}
+      htmlFor={id}
+      hint={isSet ? "A key is set. Enter a new one to rotate it." : "No key set — enter one to enable this provider."}
+    >
+      <div className="flex items-center gap-2">
+        <Input
+          id={id}
+          type="password"
+          autoComplete="off"
+          placeholder={isSet ? "•••••••• (unchanged)" : "Paste API key"}
+          value={value}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        {isSet && (
+          <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={onClear}>
+            Clear
+          </Button>
+        )}
+      </div>
+    </Field>
   );
 }
 

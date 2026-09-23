@@ -34,6 +34,20 @@ class User(TimestampMixin, Base):
     store_screenshots: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+class AppConfig(Base):
+    """Key/value overrides for runtime settings the admin edits in-app (e.g. provider API keys).
+
+    Secret values (is_secret=True) are stored encrypted with ORBIT_CONFIG_SECRET; plaintext is
+    never persisted. A missing key means "use the environment/default".
+    """
+
+    __tablename__ = "app_config"
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str | None] = mapped_column(Text)  # encrypted when is_secret
+    is_secret: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class EmailToken(TimestampMixin, Base):
     """Single-use email-verification / password-reset token. Only the SHA-256 of the token is stored."""
 

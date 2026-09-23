@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     deepgram_api_key: SecretStr | None = Field(None, validation_alias=AliasChoices("DEEPGRAM_API_KEY"))
     deepgram_model: str = Field("nova-3", validation_alias=AliasChoices("DEEPGRAM_MODEL"))
 
+    # Admin (advanced settings). The admin can edit provider keys/models in-app; the override is
+    # encrypted at rest with config_secret. If admin_email is unset, the first registered user is admin.
+    admin_email: str | None = Field(None, validation_alias=AliasChoices("ORBIT_ADMIN_EMAIL"))
+    config_secret: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_CONFIG_SECRET"))
+
     @model_validator(mode="after")
     def _reject_insecure_production(self) -> "Settings":
         if self.env == "production":
