@@ -51,7 +51,8 @@ class MockLLMProvider(LLMProvider):
         if self._script:
             return self._script.pop(0)
         if request.request_type == "summary":
-            return '{"summary": "[mock] Session summary.", "topics": [], "weak_areas": [], "preparation": []}'
+            return ('{"summary": "[mock] Session summary.", "topics": [], "important_follow_ups": [], '
+                    '"potential_weak_areas": [], "suggested_preparation": []}')
         if request.request_type == "classify":
             return '{"is_question": true, "confidence": 0.7}'
         user = request.messages[-1].content if request.messages else ""

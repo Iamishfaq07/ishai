@@ -306,15 +306,40 @@ def test_personal_questions_get_grounding_rule_but_still_demand_a_full_answer() 
     behavioral = build_prompt(_index(), _inputs("What was your biggest challenge there?",
                                                 qtype=QuestionType.behavioral), SessionMemory())
     technical = build_prompt(_index(), _inputs("What is dependency injection?"), SessionMemory())
-    # Behavioral questions carry the grounding cue (bracketed fill-in allowed) ...
-    assert "bracketed cue" in behavioral.messages[1].content
-    assert "bracketed cue" not in technical.messages[1].content
-    # ... but the rule must never let placeholders/caveats replace a real answer, or add meta-commentary.
-    assert "never let placeholders or caveats replace a real answer" in behavioral.messages[1].content
+    # Behavioral questions carry the grounding cue (one bracketed fill-in allowed) ...
+    assert "[bracketed] cue" in behavioral.messages[1].content
+    assert "[bracketed] cue" not in technical.messages[1].content
+    # ... but the rule must never let a cue/caveat replace a real answer.
+    assert "never let a bracketed cue or caveat replace a real answer" in behavioral.messages[1].content
     assert "complete, ready-to-say answer" in behavioral.messages[1].content
-    assert "no disclaimers or meta-commentary" in behavioral.messages[1].content
-    # The system prompt bans spoken disclaimers about grounding/the resume.
-    assert "spoken text only" in behavioral.messages[0].content
+    # The system prompt bans spoken grounding disclaimers but explicitly allows factual hedging.
+    assert "meta-commentary about grounding is banned" in behavioral.messages[0].content
+
+
+def test_salary_and_culture_questions_carry_the_grounding_rule() -> None:
+    for q, qt in [("What are your salary expectations?", QuestionType.salary),
+                  ("Why do you want to work here?", QuestionType.culture)]:
+        built = build_prompt(SessionIndex([]), _inputs(q, qtype=qt), SessionMemory())
+        assert "negotiation-safe framing" in built.messages[1].content, qt
+    # And the system prompt has explicit salary guidance.
+    sysmsg = build_prompt(SessionIndex([]), _inputs("x", qtype=QuestionType.salary), SessionMemory()).messages[0]
+    assert "never state a specific number as the user's own" in sysmsg.content
+
+
+def test_system_design_classification_and_deep_routing() -> None:
+    from orbit_api.live.routing import choose_reasoning_level, estimate_complexity
+    for q in ["Design Twitter.", "How would you build a chat backend?", "Design a URL shortener."]:
+        d = detect(q, "interviewer")
+        assert d.question_type == QuestionType.system_design, q
+        assert choose_reasoning_level(d.question_type, estimate_complexity(q)) == "deep", q
+
+
+def test_bare_pronoun_questions_are_not_follow_ups() -> None:
+    ctx = DetectorContext(previous_question="Tell me about your Kafka work.", seconds_since_previous_answer=10)
+    # A fresh topic that merely contains "that" must not inherit the Kafka topic.
+    assert not detect("How does that work in Go?", "interviewer", ctx).is_follow_up
+    # A genuine reference-back still is a follow-up.
+    assert detect("Why did you choose that approach?", "interviewer", ctx).is_follow_up
 
 
 # ---- sentence-level extraction (real loopback audio merges fillers, pleasantries and other apps' audio) ----
@@ -350,3 +375,34 @@ def test_merged_fillers_and_background_audio_do_not_trigger(turn: str) -> None:
 def test_partial_second_question_waits_for_completion() -> None:
     d = detect("Thanks for joining. So tell me about", "interviewer")
     assert d.question_text == "So tell me about" and not d.should_generate
+
+
+# ---- answer parser hardening (F8): fences and budget ------------------------------------------------------
+
+def test_parser_ignores_stray_fence_in_example_prose() -> None:
+    p = AnswerStreamParser("Q?", QuestionType.behavioral, [])
+    ans = p.feed("ANSWER: Here's the gist.\n- point one\nEXAMPLE: I once wrote ```code``` inline in a doc.\n"
+                 "FOLLOWUP: next?")
+    assert ans.code is None  # a ``` in EXAMPLE prose is not a code block
+    assert ans.follow_up == "next?" and ans.talking_points == ["point one"]
+
+
+def test_parser_code_block_terminated_by_tag_without_closing_fence() -> None:
+    p = AnswerStreamParser("Two sum?", QuestionType.coding, [])
+    ans = p.feed("ANSWER: hash map\nCODE: python\n```python\ndef f():\n    return 1\nTIME: O(n)\nSPACE: O(1)")
+    assert ans.code and "return 1" in ans.code.content
+    assert ans.time_complexity == "O(n)" and ans.space_complexity == "O(1)"  # tags after code still parse
+    assert "TIME" not in ans.code.content
+
+
+def test_context_budget_truncates_top_fact_instead_of_skipping() -> None:
+    embed = get_embedder().embed
+    big = "ci cd pipeline security " * 400  # ~9600 chars, over the 5000 budget
+    chunks = [
+        IndexedChunk("big", "resume", "experience", "resume: Big role", big, True, embed("ci cd pipeline security")),
+        IndexedChunk("small", "resume", "experience", "resume: Small role", "Built CI/CD security gates", True,
+                     embed("ci cd pipeline security")),
+    ]
+    built = build_prompt(SessionIndex(chunks), _inputs("CI/CD pipeline security?"), SessionMemory())
+    # The highest-ranked (big) fact is truncated and kept, not skipped in favor of the smaller one.
+    assert "resume: Big role" in built.context_used[0]

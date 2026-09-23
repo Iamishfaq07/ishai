@@ -90,15 +90,22 @@ class BuiltPrompt:
     hits: list[Hit]
 
 
-# Question types that ask for the user's own story, where invented specifics are most tempting.
-_PERSONAL_TYPES = {QuestionType.behavioral, QuestionType.leadership, QuestionType.follow_up, QuestionType.resume}
+# Question types that ask for the user's own story/position, where invented specifics are most tempting.
+_PERSONAL_TYPES = {
+    QuestionType.behavioral,
+    QuestionType.leadership,
+    QuestionType.follow_up,
+    QuestionType.resume,
+    QuestionType.salary,
+    QuestionType.culture,
+}
 _GROUNDING_RULE = (
     "Give a complete, ready-to-say answer. Use VERIFIED CANDIDATE FACT lines to make it specific when they "
-    "fit; if they don't, still answer fully with a strong general structure. Don't invent specific personal "
-    "history (employer, project, metric, 'I did X'), but don't announce that either — no disclaimers or "
-    "meta-commentary about the resume or your grounding. For a genuinely personal detail you can't know (the "
-    "exact conflict or what they felt), you may leave ONE short inline bracketed cue like \"[the pushback you "
-    "hit]\"; never let placeholders or caveats replace a real answer."
+    "fit; if they don't, answer fully with a generic, adaptable structure — never a fabricated specific "
+    "(employer, project, metric, 'I did X'), and never announce the absence (no grounding disclaimers). For a "
+    "genuinely personal detail you can't know, you may leave AT MOST ONE inline [bracketed] cue the UI shows "
+    "as a dim non-spoken hint; never let a bracketed cue or caveat replace a real answer. For salary/comp, "
+    "never state a number as the user's own unless verified — use a negotiation-safe framing."
 )
 
 # "Tell me about yourself" is about the whole arc, not the facts that happen to share words with it,
@@ -134,9 +141,13 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
     budget = MAX_CONTEXT_CHARS
     for h in hits:
         tag = "VERIFIED CANDIDATE FACT" if h.chunk.verified else h.chunk.doc_kind.upper()
-        line = f"[{tag}] ({h.chunk.label}) {h.chunk.text}"
-        if len(line) > budget:
-            continue
+        prefix = f"[{tag}] ({h.chunk.label}) "
+        # Hits are ranked, so once we can't fit a fact, truncate it rather than skipping to a
+        # lower-ranked one (which would invert priority). Keep a little headroom for the tag.
+        avail = budget - len(prefix)
+        if avail < 120:
+            break
+        line = prefix + h.chunk.text[:avail]
         budget -= len(line)
         ctx_lines.append(line)
         if h.chunk.label not in used:
@@ -148,7 +159,7 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
             f"Target role: {inputs.role}" if inputs.role else "",
             _LENGTH_RULES[inputs.length] + " Pick the strongest points; more context does not mean more bullets.",
             _STYLE_RULES[inputs.style] if inputs.qtype != QuestionType.coding else "",
-            f"Answer language: {inputs.answer_language}",
+            f"Answer language: {(inputs.answer_language or '').strip() or 'English'}",
             _GROUNDING_RULE if inputs.qtype in _PERSONAL_TYPES or inputs.is_follow_up else "",
             f"Question type: {inputs.qtype.value}" + (" (follow-up to the previous question)" if inputs.is_follow_up
                                                      else ""),

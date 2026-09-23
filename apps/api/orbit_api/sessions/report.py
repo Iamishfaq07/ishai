@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import select
 
 from orbit_api.db import sessionmaker
+from orbit_api.live.context_builder import fence
 from orbit_api.models import LiveSessionRow, ProviderRequest, Question, SessionSummary, SessionTurn
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMRequest, estimate_cost
@@ -52,7 +53,7 @@ async def generate_report(session_id: str) -> dict[str, Any]:
             req = LLMRequest(
                 messages=[LLMMessage("system", _SYSTEM),
                           LLMMessage("user", f"Session type: {row.type}. Role: {row.role or 'n/a'}.\n"
-                                             f"<reference_data>\n{convo}\n</reference_data>")],
+                                             f"<reference_data>\n{fence(convo)}\n</reference_data>")],
                 json_mode=llm.supports_structured_output(), max_tokens=600, request_type="summary",
             )
             try:

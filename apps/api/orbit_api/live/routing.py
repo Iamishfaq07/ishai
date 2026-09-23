@@ -6,7 +6,6 @@ from orbit_api.live.events import AnswerLength, QuestionType, SessionType
 
 ReasoningLevel = Literal["light", "deep"]
 
-_DEEP_TYPES = {QuestionType.coding, QuestionType.system_design}
 _COMPLEX_MARKERS = ("optimi", "debug", "race condition", "deadlock", "distributed", "trade-off", "tradeoff",
                     "scale to", "million", "billion", "consisten", "concurren", "dynamic programming")
 
@@ -21,7 +20,13 @@ def estimate_complexity(text: str) -> float:
 def choose_reasoning_level(
     question_type: QuestionType, complexity: float, session_type: SessionType = "interview"
 ) -> ReasoningLevel:
-    if question_type in _DEEP_TYPES and (complexity >= 0.3 or session_type in ("coding", "assessment")):
+    # System design is architectural — always deep, even for a terse "Design Twitter."
+    if question_type == QuestionType.system_design:
+        return "deep"
+    if question_type == QuestionType.coding and (complexity >= 0.3 or session_type in ("coding", "assessment")):
+        return "deep"
+    # A hard technical question (long or many complexity markers) also warrants deep reasoning.
+    if question_type == QuestionType.technical and complexity >= 0.5:
         return "deep"
     return "light"
 
