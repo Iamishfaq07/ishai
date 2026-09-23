@@ -29,9 +29,16 @@ fly secrets set \
   ORBIT_DATABASE_URL='postgresql+asyncpg://...neon.tech/orbit' \
   ORBIT_JWT_SECRET="$(openssl rand -hex 32)" \
   DEEPSEEK_API_KEY='sk-...' \
-  DEEPGRAM_API_KEY='...'
+  DEEPGRAM_API_KEY='...' \
+  ORBIT_ADMIN_EMAIL='you@example.com' \
+  ORBIT_CONFIG_SECRET="$(openssl rand -hex 32)"
 fly deploy
 ```
+
+`ORBIT_ADMIN_EMAIL` is the account allowed to open **Settings → Advanced** and rotate provider keys
+in-app (defaults to the first registered user if unset). `ORBIT_CONFIG_SECRET` (32+ random chars)
+encrypts those stored keys at rest — without it, in-app key editing is read-only and keys come only from
+these Fly secrets. Both are optional to boot, but set them if you want to manage keys from the web UI.
 
 Then edit `fly.toml` `[env]` so `ORBIT_WEB_URL` and `ORBIT_CORS_ORIGINS` point at your Cloudflare Pages
 URL (step 3), and `fly deploy` again. The container runs `alembic upgrade head` on boot, so the schema is
