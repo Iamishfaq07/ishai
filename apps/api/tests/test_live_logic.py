@@ -309,9 +309,12 @@ def test_personal_questions_get_grounding_rule_but_still_demand_a_full_answer() 
     # Behavioral questions carry the grounding cue (bracketed fill-in allowed) ...
     assert "bracketed cue" in behavioral.messages[1].content
     assert "bracketed cue" not in technical.messages[1].content
-    # ... but the rule must never let placeholders replace a real answer.
-    assert "never let placeholders replace a real answer" in behavioral.messages[1].content
+    # ... but the rule must never let placeholders/caveats replace a real answer, or add meta-commentary.
+    assert "never let placeholders or caveats replace a real answer" in behavioral.messages[1].content
     assert "complete, ready-to-say answer" in behavioral.messages[1].content
+    assert "no disclaimers or meta-commentary" in behavioral.messages[1].content
+    # The system prompt bans spoken disclaimers about grounding/the resume.
+    assert "spoken text only" in behavioral.messages[0].content
 
 
 # ---- sentence-level extraction (real loopback audio merges fillers, pleasantries and other apps' audio) ----
