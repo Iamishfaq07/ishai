@@ -93,10 +93,11 @@ class BuiltPrompt:
 # Question types that ask for the user's own story, where invented specifics are most tempting.
 _PERSONAL_TYPES = {QuestionType.behavioral, QuestionType.leadership, QuestionType.follow_up, QuestionType.resume}
 _GROUNDING_RULE = (
-    "Grounding: state only what VERIFIED CANDIDATE FACT lines say the user did. Where the question needs a "
-    "detail those lines don't give (the specific challenge, conflict, mistake, or what they felt), write a "
-    "short bracketed prompt the user fills in from memory, e.g. \"[the pushback you got from developers]\" — "
-    "never invent it."
+    "Give a complete, ready-to-say answer. Use VERIFIED CANDIDATE FACT lines to make it specific when they "
+    "fit; if they don't, still answer fully with a strong general structure. Don't invent specific personal "
+    "history (employer, project, metric, 'I did X'). For a genuinely personal detail you can't know (the exact "
+    "conflict or what they felt), you may leave one short bracketed cue like \"[the pushback you hit]\" for the "
+    "user to fill in — but never let placeholders replace a real answer."
 )
 
 # "Tell me about yourself" is about the whole arc, not the facts that happen to share words with it,
@@ -157,8 +158,9 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
     if ctx_lines:
         parts.append("<reference_data source=\"documents\">\n" + fence("\n".join(ctx_lines)) + "\n</reference_data>")
     else:
-        parts.append("No verified personal context matched this question — answer generally; do not invent "
-                     "personal experience.")
+        parts.append("No resume/document context matched this question — that's fine. Answer it fully from "
+                     "professional knowledge; just don't claim specific personal experience the user "
+                     "didn't provide.")
     if memory.rolling_summary:
         parts.append("<reference_data source=\"session_summary\">\n" + fence(memory.rolling_summary)
                      + "\n</reference_data>")
