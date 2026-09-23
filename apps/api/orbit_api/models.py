@@ -68,6 +68,9 @@ class Document(TimestampMixin, Base):
     size_bytes: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[str] = mapped_column(String(16), default="processing")
     error: Mapped[str | None] = mapped_column(Text)
+    # Extracted plain text, retained so text documents (and parsed files) can be edited in place
+    # and re-chunked. Original binary uploads are still never stored.
+    source_text: Mapped[str | None] = mapped_column(Text)
     extracted: Mapped[dict[str, Any] | None] = mapped_column(JSON)  # structured resume/JD profile
     chunks: Mapped[list["DocumentChunk"]] = relationship(
         back_populates="document", cascade="all, delete-orphan", passive_deletes=True
