@@ -60,6 +60,15 @@ _CHAT_MODIFIERS = ("make", "rewrite", "shorter", "longer", "simpler", "simplify"
                    "give an example", "add an example", "in star", "star format", "more detail", "less detail",
                    "more technical", "what should i say")
 
+# User-facing answer.failed messages, keyed by LLMError.code — never expose raw upstream bodies.
+_USER_ERROR = {
+    "rate_limited": "The AI is rate-limited right now. Try again in a moment.",
+    "timeout": "That took too long. Try again.",
+    "network": "Couldn't reach the AI service. Check your connection.",
+    "vision_unsupported": "This provider can't analyze images.",
+}
+_USER_ERROR_DEFAULT = "The answer couldn't be generated. Try again."
+
 
 class Recorder(Protocol):
     async def turn(self, turn_id: str, speaker: Speaker, text: str, start_ms: int, end_ms: int) -> None: ...
@@ -147,6 +156,7 @@ class LiveEngine:
         self._last_interviewer_text = ""
         self._gens: dict[str, _Generation] = {}
         self._active: str | None = None  # answer id currently shown/streaming
+        self._answer_lock = asyncio.Lock()  # serializes _start_answer (no double generations)
         self._tasks: set[asyncio.Task[Any]] = set()
         self._paused = False
         self._ended = False
@@ -468,11 +478,15 @@ class LiveEngine:
         self, qid: str | None, question: str, qtype: QuestionType, is_follow_up: bool, source: str,
         instruction: str | None = None,
     ) -> None:
-        await self._cancel_active("superseded")
-        aid = str(uuid.uuid4())
-        task = asyncio.ensure_future(self._run_answer(aid, qid, question, qtype, is_follow_up, source, instruction))
-        self._gens[aid] = _Generation(aid, qid, task)
-        self._active = aid
+        # Serialize: _cancel_active() awaits, so without this lock a manual answer racing auto-answer could
+        # both pass cancellation before either registers its generation → two billed LLM streams at once.
+        async with self._answer_lock:
+            await self._cancel_active("superseded")
+            aid = str(uuid.uuid4())
+            task = asyncio.ensure_future(
+                self._run_answer(aid, qid, question, qtype, is_follow_up, source, instruction))
+            self._gens[aid] = _Generation(aid, qid, task)
+            self._active = aid
         # keep only recent generation handles
         if len(self._gens) > 20:
             for old in list(self._gens)[:-20]:
@@ -542,8 +556,13 @@ class LiveEngine:
             raise
         except LLMError as e:
             total = int((self._clock() - started) * 1000)
-            await self.send("answer.failed", {"answer_id": aid, "error": {"code": e.code, "message": str(e)[:300],
-                                                                          "retryable": e.retryable}})
+            # Log the upstream detail server-side; send the user a generic message (raw provider bodies can
+            # carry account/quota internals).
+            log.warning("answer %s failed: %s: %s", aid, e.code, e)
+            user_msg = _USER_ERROR.get(e.code, _USER_ERROR_DEFAULT)
+            await self.send("answer.failed", {"answer_id": aid,
+                                              "error": {"code": e.code, "message": user_msg,
+                                                        "retryable": e.retryable}})
             await self._rec.answer(aid, qid, "failed", None, self._llm.name, model, first_token_ms, total)
             await self._rec.provider_request(self._llm.name, model, request.request_type, usage, total, False)
             await self._set_state(LiveState.error)

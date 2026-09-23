@@ -36,12 +36,15 @@ from orbit_api.models import (
 )
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.stt import create_stt_provider
+from orbit_api.ratelimit import limit
 from orbit_api.retrieval.index import IndexedChunk, SessionIndex
 from orbit_api.sessions.recorder import DbRecorder
 from orbit_api.sessions.report import generate_report
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1", tags=["sessions"])
+
+session_limit = limit("session", rate_per_s=0.2, burst=10)
 
 MAX_WS_TEXT_BYTES = 64 * 1024
 MAX_WS_AUDIO_BYTES = 64 * 1024
@@ -105,7 +108,7 @@ async def _session_out(db: AsyncSession, row: LiveSessionRow) -> SessionOut:
     )
 
 
-@router.post("/sessions", response_model=SessionOut, status_code=201)
+@router.post("/sessions", response_model=SessionOut, status_code=201, dependencies=[Depends(session_limit)])
 async def create_session(body: SessionIn, user: Annotated[User, Depends(current_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> SessionOut:
     remaining = await live_minutes_remaining(db, user.id)
@@ -138,7 +141,7 @@ async def get_session(session_id: str, user: Annotated[User, Depends(current_use
                       db: Annotated[AsyncSession, Depends(get_db)]) -> SessionDetail:
     row = await _owned(db, session_id, user)
     turns = (await db.scalars(select(SessionTurn).where(SessionTurn.session_id == row.id)
-                              .order_by(SessionTurn.start_ms))).all()
+                              .order_by(SessionTurn.created_at, SessionTurn.start_ms))).all()
     questions = (await db.scalars(select(Question).where(Question.session_id == row.id)
                                   .order_by(Question.created_at))).all()
     answers = (await db.scalars(select(Answer).where(Answer.session_id == row.id, Answer.status == "completed")
@@ -161,10 +164,14 @@ async def end_session(session_id: str, user: Annotated[User, Depends(current_use
                       db: Annotated[AsyncSession, Depends(get_db)], background: BackgroundTasks) -> SessionOut:
     row = await _owned(db, session_id, user)
     if row.status != "ended":
+        was_live = row.status == "live"
         row.status = "ended"
         row.ended_at = datetime.now(UTC)
         await db.commit()
-        background.add_task(generate_report, row.id)
+        # If a live WS engine is (or was) running, it generates the report on its own teardown; generating
+        # here too would double the LLM call. Only generate for sessions ended without a live connection.
+        if not was_live:
+            background.add_task(generate_report, row.id)
     return await _session_out(db, row)
 
 
@@ -198,6 +205,11 @@ async def live_ticket(session_id: str, user: Annotated[User, Depends(current_use
     row = await _owned(db, session_id, user)
     if row.status == "ended":
         raise HTTPException(status.HTTP_409_CONFLICT, "Session has ended")
+    # Enforce the monthly live-minute quota here (not just at session create) so reconnects can't stream
+    # unlimited after the cap is hit.
+    remaining = await live_minutes_remaining(db, user.id)
+    if remaining is not None and remaining <= 0:
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, "You've used this month's live minutes.")
     return {"ticket": issue_ticket(user.id, session_id), "expires_in": TICKET_TTL_S}
 
 
@@ -246,6 +258,10 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             return
         if row.status == "ended":
             await ws.close(code=4009, reason="session has ended")
+            return
+        remaining = await live_minutes_remaining(db, user_id)
+        if remaining is not None and remaining <= 0:
+            await ws.close(code=4003, reason="live minutes exhausted")
             return
         index, keyterms = await _load_index(db, session_id)
         row.status = "live"

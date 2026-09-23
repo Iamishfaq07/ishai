@@ -59,10 +59,16 @@ class Settings(BaseSettings):
         if self.env == "production":
             if self.jwt_secret.get_secret_value() == _DEV_SECRET or len(self.jwt_secret.get_secret_value()) < 32:
                 raise ValueError("ORBIT_JWT_SECRET must be set to a random value of 32+ chars in production")
-            if self.llm_provider == "mock" or self.stt_provider == "mock":
-                raise ValueError("mock providers are not allowed in production")
+            # Reject mock explicitly AND the "auto" fallback-to-mock case: a missing key must fail loudly,
+            # not silently serve canned answers / fake transcription in production.
+            if self.llm_provider == "mock" or (self.llm_provider == "auto" and not self.deepseek_api_key):
+                raise ValueError("DEEPSEEK_API_KEY is required in production (no mock LLM fallback)")
+            if self.stt_provider == "mock" or (self.stt_provider == "auto" and not self.deepgram_api_key):
+                raise ValueError("DEEPGRAM_API_KEY is required in production (no mock STT fallback)")
             if not self.smtp_host:
                 raise ValueError("ORBIT_SMTP_HOST is required in production (verification and reset emails)")
+            if self.is_sqlite:
+                raise ValueError("ORBIT_DATABASE_URL must be Postgres in production, not SQLite")
         return self
 
     @property

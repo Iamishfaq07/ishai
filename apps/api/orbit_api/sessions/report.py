@@ -6,6 +6,7 @@ from collections import Counter
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from orbit_api.db import sessionmaker
 from orbit_api.live.context_builder import fence
@@ -32,7 +33,7 @@ async def generate_report(session_id: str) -> dict[str, Any]:
         questions = (await db.scalars(select(Question).where(Question.session_id == session_id)
                                       .order_by(Question.created_at))).all()
         turns = (await db.scalars(select(SessionTurn).where(SessionTurn.session_id == session_id)
-                                  .order_by(SessionTurn.start_ms))).all()
+                                  .order_by(SessionTurn.created_at, SessionTurn.start_ms))).all()
 
         report: dict[str, Any] = {
             "questions_asked": [q.text for q in questions],
@@ -74,7 +75,16 @@ async def generate_report(session_id: str) -> dict[str, Any]:
         existing = await db.scalar(select(SessionSummary).where(SessionSummary.session_id == session_id))
         if existing:
             existing.content = report
+            await db.commit()
         else:
             db.add(SessionSummary(session_id=session_id, content=report))
-        await db.commit()
+            try:
+                await db.commit()
+            except IntegrityError:
+                # A concurrent run (recorder + REST /end) inserted first; update its row instead of crashing.
+                await db.rollback()
+                row2 = await db.scalar(select(SessionSummary).where(SessionSummary.session_id == session_id))
+                if row2 is not None:
+                    row2.content = report
+                    await db.commit()
         return report

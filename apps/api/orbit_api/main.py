@@ -53,9 +53,26 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
+        # Liveness only: is the process up. Cheap, never touches the DB.
         llm = get_llm_provider()
         stt = create_stt_provider()
         return {"status": "ok", "env": s.env, "providers": {"llm": llm.name, "stt": stt.name}}
+
+    @app.get("/ready")
+    async def ready(response: Response) -> dict[str, Any]:
+        # Readiness: can the app actually serve — DB reachable. Used to gate rollouts / load balancers.
+        from sqlalchemy import text
+
+        checks: dict[str, str] = {}
+        try:
+            async with db.sessionmaker()() as session:
+                await session.execute(text("SELECT 1"))
+            checks["database"] = "ok"
+        except Exception as e:
+            checks["database"] = f"error: {type(e).__name__}"
+        ok = all(v == "ok" for v in checks.values())
+        response.status_code = 200 if ok else 503
+        return {"status": "ready" if ok else "not_ready", "checks": checks}
 
     app.include_router(auth_router)
     app.include_router(documents_router)

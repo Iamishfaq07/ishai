@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from orbit_api.db import Base, EmbeddingType
@@ -162,6 +162,8 @@ class SessionSummary(TimestampMixin, Base):
 
 class UsageEvent(TimestampMixin, Base):
     __tablename__ = "usage"
+    # Metering reads filter by (user_id, metric, created_at) on every session-create and /usage call.
+    __table_args__ = (Index("ix_usage_user_metric_created", "user_id", "metric", "created_at"),)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     session_id: Mapped[str | None] = mapped_column(String(36))
