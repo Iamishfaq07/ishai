@@ -9,6 +9,7 @@ import {
   focusRing,
   loadHotkeys,
   useLiveSession,
+  VISION_ENABLED,
   type PanelMode,
 } from "@orbit/ui";
 import { ErrorNote, Spinner } from "../components/ui";
@@ -223,8 +224,8 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       onModeChange={setMode}
       onEnd={endSession}
       onReconnect={() => client.connect()}
-      onScreenshot={supportsDisplayAudio() ? () => void takeScreenshot() : undefined}
-      screenshotUnavailableReason="This browser can’t capture the screen."
+      onScreenshot={VISION_ENABLED && supportsDisplayAudio() ? () => void takeScreenshot() : undefined}
+      screenshotUnavailableReason={!VISION_ENABLED ? "Screenshot analysis isn’t enabled yet." : "This browser can’t capture the screen."}
       hotkeys={hotkeys}
       title={session.title}
       notice={notice}

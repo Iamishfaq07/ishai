@@ -84,6 +84,7 @@ export class LiveClient {
 
   connect(): void {
     this.closedByUser = false;
+    this.attempts = 0; // user-initiated (re)connect: clear the give-up counter so backoff starts fresh
     if (this.socket || this.retryTimer || this.opening) return;
     void this.open();
   }
