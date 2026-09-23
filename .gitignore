@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+# Public production config (VITE_ vars are shipped to the browser anyway — no secrets here).
+!apps/web/.env.production
 
 # python
 __pycache__/
