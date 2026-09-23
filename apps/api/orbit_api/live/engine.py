@@ -145,6 +145,7 @@ class LiveEngine:
         self._paused = False
         self._ended = False
         self._audio_bytes = 0
+        self.channel_bytes: dict[Channel, int] = {"mic": 0, "system": 0}
         self._turns_since_summary = 0
         self._last_answer_at_ms: int | None = None
         self._speaker_overrides: dict[str, Speaker] = {}
@@ -211,6 +212,8 @@ class LiveEngine:
             t.cancel()
         await asyncio.gather(*self._tasks, return_exceptions=True)
         stats = (self.now_ms() // 1000, self._audio_bytes / 32_000, self.memory.rolling_summary)
+        log.info("session %s audio received: mic=%.1fs system=%.1fs", self.profile.session_id,
+                 self.channel_bytes["mic"] / 32_000, self.channel_bytes["system"] / 32_000)
         if not final:
             await self._rec.detached(*stats)
             return
@@ -223,9 +226,15 @@ class LiveEngine:
     async def handle_audio(self, frame: bytes) -> None:
         if self._paused or self._ended or len(frame) < 3:
             return
+        if frame[0] not in (0, 1) or (len(frame) - 1) % 2:
+            return  # unknown channel or not whole PCM16 samples
         channel: Channel = "mic" if frame[0] == 0 else "system"
         pcm = frame[1:]
         self._audio_bytes += len(pcm)
+        if self.channel_bytes[channel] == 0:
+            # First audio on this channel: tell the client the server is actually hearing it.
+            await self.send(f"audio.{channel}_status", {"state": "connected", "detail": "receiving"})
+        self.channel_bytes[channel] += len(pcm)
         session = self._stt_sessions.get(channel)
         if session:
             await session.send_audio(pcm)

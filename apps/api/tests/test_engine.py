@@ -160,3 +160,18 @@ async def test_simulation_forbidden_without_dev_mode() -> None:
     await eng.handle_client({"type": "dev.simulate", "data": {"fixture": "../../etc/passwd"}})
     assert sink.of("error")[1]["code"] == "invalid_event"
     await eng.end()
+
+
+async def test_audio_frames_are_routed_per_channel_and_acknowledged() -> None:
+    eng, sink = await _engine(MockLLMProvider())
+    pcm = b"\x01\x00" * 800  # 50 ms of PCM16 @ 16 kHz
+    await eng.handle_audio(b"\x00" + pcm)
+    await eng.handle_audio(b"\x00" + pcm)
+    await eng.handle_audio(b"\x01" + pcm)
+    await eng.handle_audio(b"\x07" + pcm)  # unknown channel → dropped
+    await eng.handle_audio(b"\x00" + pcm + b"\x00")  # odd byte count → dropped
+    assert eng.channel_bytes == {"mic": 3200, "system": 1600}
+    acks = [e for e in sink.events if e["type"] in ("audio.mic_status", "audio.system_status")
+            and e["data"].get("detail") == "receiving"]
+    assert [e["type"] for e in acks] == ["audio.mic_status", "audio.system_status"]  # once per channel
+    await eng.end()

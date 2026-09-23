@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import type { User } from "@orbit/types";
 import { cx, focusRing } from "@orbit/ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { WEB_URL, api, setAccessToken } from "../api";
+import { API_URL, DEFAULT_API_URL, WEB_URL, api, normalizeApiUrl, setAccessToken, setApiUrl } from "../api";
 import { saveToken } from "../native";
 import { TitleBar } from "../TitleBar";
 
@@ -14,6 +14,9 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [editingServer, setEditingServer] = useState(false);
+  const [server, setServer] = useState(API_URL);
+  const serverValid = normalizeApiUrl(server) !== null;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -71,6 +74,34 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
         >
           Create an account in the browser
         </button>
+        <div className="mt-6 text-center text-[11px] text-zinc-500">
+          {editingServer ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const url = normalizeApiUrl(server);
+                if (url) setApiUrl(url === DEFAULT_API_URL ? null : url);
+              }}
+              className="flex items-center gap-1.5"
+            >
+              <label className="sr-only" htmlFor="server-url">Server URL</label>
+              <input
+                id="server-url"
+                value={server}
+                onChange={(e) => setServer(e.target.value)}
+                aria-invalid={!serverValid}
+                className={cx(input, "py-1 text-[11px]", focusRing)}
+              />
+              <button type="submit" disabled={!serverValid} className={cx("rounded px-2 py-1 font-medium text-indigo-600 disabled:opacity-40 dark:text-indigo-400", focusRing)}>
+                Save
+              </button>
+            </form>
+          ) : (
+            <button type="button" onClick={() => setEditingServer(true)} className={cx("hover:underline", focusRing)}>
+              Server: {API_URL} · change
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

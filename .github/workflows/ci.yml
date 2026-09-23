@@ -53,29 +53,33 @@ jobs:
       - run: pnpm -r test
       - run: pnpm --filter @orbit/web build
 
-  desktop:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+  # Windows-first (macOS deferred). Builds a runnable orbit-desktop.exe + NSIS installer artifact.
+  desktop-windows:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      # tauri::generate_context! embeds frontendDist at compile time, so it must exist first
-      - run: pnpm --filter @orbit/desktop exec vite build
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with: { workspaces: apps/desktop/src-tauri }
-      - name: cargo check
-        working-directory: apps/desktop/src-tauri
-        run: cargo check --all-targets
-      - name: cargo test (resampler etc.)
+      # tauri::generate_context! embeds frontendDist at compile time, so build the frontend first
+      - run: pnpm --filter @orbit/desktop build
+      - name: cargo test
         working-directory: apps/desktop/src-tauri
         run: cargo test
+      - name: tauri build (release exe + NSIS installer, unsigned)
+        run: pnpm --filter @orbit/desktop tauri build --bundles nsis
+      - uses: actions/upload-artifact@v4
+        with:
+          name: orbit-windows
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            apps/desktop/src-tauri/target/release/orbit-desktop.exe
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
 
   secrets:
     runs-on: ubuntu-latest
