@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env: { POSTGRES_USER: orbit, POSTGRES_PASSWORD: orbit, POSTGRES_DB: orbit }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U orbit" --health-interval 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with: { python-version: "3.12", enable-cache: true }
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run mypy orbit_api
+      - name: Tests (SQLite)
+        run: uv run pytest -q
+      - name: Migrations on Postgres + pgvector
+        env: { ORBIT_DATABASE_URL: "postgresql+asyncpg://orbit:orbit@localhost:5432/orbit" }
+        run: |
+          uv run alembic upgrade head
+          uv run alembic downgrade base
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4  # version comes from package.json "packageManager"
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r typecheck
+      - run: pnpm -r lint
+      - run: pnpm -r test
+      - run: pnpm --filter @orbit/web build
+
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      # tauri::generate_context! embeds frontendDist at compile time, so it must exist first
+      - run: pnpm --filter @orbit/desktop exec vite build
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: apps/desktop/src-tauri }
+      - name: cargo check
+        working-directory: apps/desktop/src-tauri
+        run: cargo check --all-targets
+      - name: cargo test (resampler etc.)
+        working-directory: apps/desktop/src-tauri
+        run: cargo test
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

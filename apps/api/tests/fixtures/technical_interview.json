@@ -1,0 +1,6 @@
+{"turns": [
+  {"speaker": "interviewer", "text": "How would you integrate security into a CI/CD pipeline?", "pause_ms": 200},
+  {"speaker": "candidate", "text": "I would start with static analysis at pull request time.", "pause_ms": 1500},
+  {"speaker": "interviewer", "text": "How do you prevent security gates from slowing engineering?", "pause_ms": 300},
+  {"speaker": "interviewer", "text": "What is dependency injection?", "pause_ms": 1500}
+]}

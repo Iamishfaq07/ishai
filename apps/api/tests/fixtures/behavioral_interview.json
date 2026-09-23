@@ -1,0 +1,11 @@
+{"turns": [
+  {"speaker": "interviewer", "text": "Thanks for joining today.", "pause_ms": 200},
+  {"speaker": "candidate", "text": "Thanks for having me.", "pause_ms": 300},
+  {"speaker": "interviewer", "text": "Okay.", "pause_ms": 300},
+  {"speaker": "interviewer", "text": "Tell me about yourself.", "pause_ms": 300},
+  {"speaker": "candidate", "text": "Sure. I've spent the last few years in application security.", "pause_ms": 1500},
+  {"speaker": "interviewer", "text": "Interesting.", "pause_ms": 300},
+  {"speaker": "interviewer", "text": "What was your biggest challenge there?", "pause_ms": 300},
+  {"speaker": "candidate", "text": "The biggest challenge was scaling security reviews.", "pause_ms": 1500},
+  {"speaker": "interviewer", "text": "Right. Let's continue.", "pause_ms": 300}
+]}

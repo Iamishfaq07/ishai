@@ -1,0 +1,5 @@
+{"turns": [
+  {"speaker": "interviewer", "text": "Let's do a coding problem.", "pause_ms": 200},
+  {"speaker": "interviewer", "text": "Write a function that solves two sum and returns the indices.", "pause_ms": 300},
+  {"speaker": "interviewer", "text": "Can you optimize this code?", "pause_ms": 1500}
+]}
