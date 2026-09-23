@@ -4,6 +4,7 @@ import type {
   CreateSessionRequest,
   CreateTextDocumentRequest,
   DocumentKind,
+  DocumentText,
   LiveTicket,
   LoginRequest,
   OrbitDocument,
@@ -12,6 +13,7 @@ import type {
   RegisterRequest,
   ScreenshotAccepted,
   SessionDetail,
+  UpdateDocumentRequest,
   Usage,
   User,
 } from "@orbit/types";
@@ -116,6 +118,10 @@ export function createApiClient(options: ApiClientOptions) {
     },
     createTextDocument: (req: CreateTextDocumentRequest) =>
       json<OrbitDocument>("/v1/documents/text", { method: "POST", body: body(req) }),
+    getDocumentText: (id: string) =>
+      json<DocumentText>(`/v1/documents/${encodeURIComponent(id)}/text`),
+    updateDocument: (id: string, req: UpdateDocumentRequest) =>
+      json<OrbitDocument>(`/v1/documents/${encodeURIComponent(id)}`, { method: "PATCH", body: body(req) }),
     deleteDocument: (id: string) => json<void>(`/v1/documents/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
     // Sessions

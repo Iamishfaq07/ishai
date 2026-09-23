@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { DOCUMENT_ACCEPT, type DocumentKind, type OrbitDocument } from "@orbit/types";
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../components/ui";
@@ -28,8 +28,11 @@ export function DocumentsPage() {
   const [pasteKind, setPasteKind] = useState<DocumentKind>("job_description");
   const [pasteText, setPasteText] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<OrbitDocument | null>(null);
 
   const add = (doc: OrbitDocument) => docs.setData((prev) => [doc, ...(prev ?? [])]);
+  const replace = (doc: OrbitDocument) =>
+    docs.setData((prev) => (prev ?? []).map((d) => (d.id === doc.id ? doc : d)));
 
   const upload = async (file: File) => {
     setError(null);
@@ -186,9 +189,14 @@ export function DocumentsPage() {
                   </td>
                   <td className="hidden px-5 py-3 text-zinc-500 md:table-cell">{formatDate(d.created_at)}</td>
                   <td className="px-5 py-3 text-right">
-                    <Button variant="danger" size="sm" onClick={() => void remove(d)}>
-                      Delete
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => setEditing(d)}>
+                        Edit
+                      </Button>
+                      <Button variant="danger" size="sm" onClick={() => void remove(d)}>
+                        Delete
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -200,6 +208,128 @@ export function DocumentsPage() {
         <Button variant="ghost" size="sm" onClick={docs.reload}>
           Refresh
         </Button>
+      </div>
+
+      {editing && (
+        <EditModal
+          doc={editing}
+          onClose={() => setEditing(null)}
+          onSaved={(updated) => {
+            replace(updated);
+            setEditing(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function EditModal({
+  doc,
+  onClose,
+  onSaved,
+}: {
+  doc: OrbitDocument;
+  onClose: () => void;
+  onSaved: (doc: OrbitDocument) => void;
+}) {
+  const loaded = useAsync(() => api.getDocumentText(doc.id), [doc.id]);
+  const [title, setTitle] = useState(doc.title);
+  const [kind, setKind] = useState<DocumentKind>(doc.kind);
+  const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (loaded.data) {
+      setTitle(loaded.data.title);
+      setKind(loaded.data.kind);
+      setText(loaded.data.text);
+    }
+  }, [loaded.data]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const editable = loaded.data?.editable ?? false;
+
+  const save = async (e: FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await api.updateDocument(doc.id, {
+        title: title.trim() || doc.title,
+        kind,
+        ...(editable && text.trim() ? { text } : {}),
+      });
+      onSaved(updated);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Edit ${doc.title}`}
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-900"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="mb-4 text-lg font-semibold">Edit document</h2>
+        {loaded.loading ? (
+          <Spinner />
+        ) : loaded.error ? (
+          <ErrorNote onRetry={loaded.reload}>{errorText(loaded.error)}</ErrorNote>
+        ) : (
+          <form onSubmit={(e) => void save(e)} className="space-y-4">
+            {error && <ErrorNote>{error}</ErrorNote>}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Title" htmlFor="edit-title">
+                <Input id="edit-title" value={title} onChange={(e) => setTitle(e.target.value)} />
+              </Field>
+              <Field label="Type" htmlFor="edit-kind">
+                <Select id="edit-kind" value={kind} onChange={(e) => setKind(e.target.value as DocumentKind)}>
+                  {Object.entries(KIND_LABEL).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+            {editable ? (
+              <Field label="Content" htmlFor="edit-text" hint="Saving re-reads this into the facts Orbit can cite.">
+                <Textarea id="edit-text" rows={14} value={text} onChange={(e) => setText(e.target.value)} />
+              </Field>
+            ) : (
+              <p className="text-sm text-zinc-500">
+                This file was uploaded before in-place editing; its text isn’t stored, so only the title and type can be
+                changed here. Re-upload the file to change its content.
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : "Save changes"}
+              </Button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

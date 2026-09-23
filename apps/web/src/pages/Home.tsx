@@ -118,8 +118,41 @@ export function HomePage() {
             <h2 className="mb-3 font-semibold">Usage</h2>
             <UsageSummary />
           </Card>
+          <DesktopPromo />
         </div>
       </div>
     </div>
+  );
+}
+
+/** The web app captures a shared browser tab; the desktop app captures whole-system and per-app audio. */
+const DESKTOP_DOWNLOAD_URL: string =
+  import.meta.env.VITE_DESKTOP_DOWNLOAD_URL ?? "https://github.com/Iamishfaq07/ishai/releases/latest";
+
+function DesktopPromo() {
+  return (
+    <Card>
+      <h2 className="mb-1 font-semibold">Orbit for Windows</h2>
+      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        You’re on the browser version. The desktop app hears more:
+      </p>
+      <ul className="mt-2 space-y-1 text-sm text-zinc-600 dark:text-zinc-300">
+        <li>• Whole-system audio — any call app, not just a browser tab</li>
+        <li>• Per-app capture — pick the exact window to listen to</li>
+        <li>• Screenshots for coding questions, global hotkeys</li>
+      </ul>
+      <a
+        href={DESKTOP_DOWNLOAD_URL}
+        target="_blank"
+        rel="noreferrer"
+        className={cx(
+          "mt-4 inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500",
+          focusRing,
+        )}
+      >
+        Download desktop app
+      </a>
+      <p className="mt-2 text-xs text-zinc-400">The web version still works great for tab-based calls.</p>
+    </Card>
   );
 }

@@ -66,6 +66,20 @@ export interface CreateTextDocumentRequest {
   text: string;
 }
 
+export interface DocumentText {
+  id: string;
+  title: string;
+  kind: DocumentKind;
+  editable: boolean;
+  text: string;
+}
+
+export interface UpdateDocumentRequest {
+  title?: string;
+  kind?: DocumentKind;
+  text?: string;
+}
+
 export const DOCUMENT_ACCEPT = ".pdf,.docx,.txt,.md";
 
 // ─── Sessions ────────────────────────────────────────────────────────────────

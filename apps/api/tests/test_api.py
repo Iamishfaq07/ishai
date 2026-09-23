@@ -69,6 +69,33 @@ def test_document_upload_validation_and_ownership(client: TestClient) -> None:
     assert client.delete(f"/v1/documents/{doc_id}", headers=h).status_code == 204
 
 
+def test_document_edit_rechunks_and_enforces_ownership(client: TestClient) -> None:
+    h = _register(client)
+    r = client.post("/v1/documents/text", headers=h,
+                    json={"title": "JD", "kind": "job_description", "text": "Backend role. " + "Python. " * 10})
+    assert r.status_code == 201, r.text
+    doc_id = r.json()["id"]
+
+    # Text docs are editable and round-trip their source text.
+    got = client.get(f"/v1/documents/{doc_id}/text", headers=h)
+    assert got.status_code == 200
+    assert got.json()["editable"] is True and "Python" in got.json()["text"]
+
+    # Editing content re-chunks (status stays ready, chunks recomputed) and edits title/kind.
+    new_text = "Senior data engineering role. " + "Spark and Airflow. " * 12
+    patched = client.patch(f"/v1/documents/{doc_id}", headers=h,
+                           json={"title": "Data JD", "kind": "notes", "text": new_text})
+    assert patched.status_code == 200, patched.text
+    assert patched.json()["title"] == "Data JD" and patched.json()["kind"] == "notes"
+    assert patched.json()["status"] == "ready" and patched.json()["chunk_count"] > 0
+    assert "Spark" in client.get(f"/v1/documents/{doc_id}/text", headers=h).json()["text"]
+
+    # Another user can neither read nor edit it (same 404 as "not found").
+    other = _register(client)
+    assert client.get(f"/v1/documents/{doc_id}/text", headers=other).status_code == 404
+    assert client.patch(f"/v1/documents/{doc_id}", headers=other, json={"title": "hijack"}).status_code == 404
+
+
 def test_free_plan_document_quota(client: TestClient) -> None:
     h = _register(client)
     for i in range(3):

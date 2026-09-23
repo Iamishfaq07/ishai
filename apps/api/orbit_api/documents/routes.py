@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Annotated, Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user
@@ -43,6 +43,20 @@ class TextDocIn(BaseModel):
     text: str = Field(min_length=20, max_length=200_000)
 
 
+class DocPatchIn(BaseModel):
+    title: str | None = Field(None, min_length=1, max_length=300)
+    kind: DocKind | None = None
+    text: str | None = Field(None, min_length=20, max_length=200_000)
+
+
+class DocTextOut(BaseModel):
+    id: str
+    title: str
+    kind: str
+    editable: bool  # false when the extracted text wasn't retained (legacy uploads)
+    text: str
+
+
 async def _out(db: AsyncSession, d: Document) -> DocumentOut:
     count = await db.scalar(select(func.count()).select_from(DocumentChunk).where(DocumentChunk.document_id == d.id))
     return DocumentOut(id=d.id, title=d.title, kind=d.kind, filename=d.filename, size_bytes=d.size_bytes,
@@ -67,10 +81,13 @@ def _chunk_and_embed(text: str, kind: str, title: str) -> list[tuple[int, "Chunk
 
 
 async def _ingest(db: AsyncSession, doc: Document, text: str) -> None:
+    # Drop any prior chunks first so re-ingest (an edit) replaces rather than appends.
+    await db.execute(delete(DocumentChunk).where(DocumentChunk.document_id == doc.id))
     prepared = await asyncio.to_thread(_chunk_and_embed, text, doc.kind, doc.title)
     for i, c, embedding in prepared:
         db.add(DocumentChunk(document_id=doc.id, user_id=doc.user_id, ordinal=i, category=c.category,
                              label=c.label, text=c.text, verified=c.verified, embedding=embedding))
+    doc.source_text = text
     doc.status = "ready"
     doc.extracted = {"chunk_categories": sorted({c.category for _, c, _ in prepared})}
 
@@ -124,11 +141,44 @@ async def create_text_document(body: TextDocIn, user: Annotated[User, Depends(cu
     return await _out(db, doc)
 
 
-@router.delete("/{doc_id}", status_code=204)
-async def delete_document(doc_id: str, user: Annotated[User, Depends(current_user)],
-                          db: Annotated[AsyncSession, Depends(get_db)]) -> None:
+async def _owned(db: AsyncSession, doc_id: str, user: User) -> Document:
     doc = await db.get(Document, doc_id)
     if doc is None or doc.user_id != user.id:  # same 404 for "not yours" — no existence oracle
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Document not found")
+    return doc
+
+
+@router.get("/{doc_id}/text", response_model=DocTextOut)
+async def get_document_text(doc_id: str, user: Annotated[User, Depends(current_user)],
+                            db: Annotated[AsyncSession, Depends(get_db)]) -> DocTextOut:
+    doc = await _owned(db, doc_id, user)
+    return DocTextOut(id=doc.id, title=doc.title, kind=doc.kind,
+                      editable=doc.source_text is not None, text=doc.source_text or "")
+
+
+@router.patch("/{doc_id}", response_model=DocumentOut, dependencies=[Depends(upload_limit)])
+async def update_document(doc_id: str, body: DocPatchIn, user: Annotated[User, Depends(current_user)],
+                          db: Annotated[AsyncSession, Depends(get_db)]) -> DocumentOut:
+    doc = await _owned(db, doc_id, user)
+    kind_changed = body.kind is not None and body.kind != doc.kind
+    if body.title is not None:
+        doc.title = body.title
+    if body.kind is not None:
+        doc.kind = body.kind
+    # Re-chunk when the content changes, or when the kind changes (chunking is kind-aware).
+    new_text = body.text if body.text is not None else (doc.source_text if kind_changed else None)
+    if new_text is not None:
+        if doc.source_text is None and body.text is None:
+            raise HTTPException(422, "This document can't be re-chunked; re-upload it to change its type.")
+        doc.size_bytes = len(new_text.encode())
+        await _ingest(db, doc, new_text)
+    await db.commit()
+    return await _out(db, doc)
+
+
+@router.delete("/{doc_id}", status_code=204)
+async def delete_document(doc_id: str, user: Annotated[User, Depends(current_user)],
+                          db: Annotated[AsyncSession, Depends(get_db)]) -> None:
+    doc = await _owned(db, doc_id, user)
     await db.delete(doc)
     await db.commit()
