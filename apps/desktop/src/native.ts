@@ -14,6 +14,8 @@ export interface NativeAudioDevice {
 export interface CaptureInfo {
   mic: boolean;
   system: boolean;
+  /** Why the mic isn't running (e.g. in use by another app), if requested. */
+  micError: string | null;
   /** Why system audio isn't running (e.g. macOS not yet supported), if requested. */
   systemError: string | null;
 }

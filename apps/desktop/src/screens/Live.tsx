@@ -90,7 +90,10 @@ export function LiveScreen({
           }
         },
       );
-      if (launch.systemAudio && info.systemError) setCaptureNote(`${info.systemError} Listening through your microphone only.`);
+      const notes: string[] = [];
+      if (launch.systemAudio && info.systemError) notes.push(`${info.systemError} Listening through your microphone only.`);
+      if (info.micError) notes.push(`${info.micError} The interviewer is still captured.`);
+      if (notes.length) setCaptureNote(notes.join(" "));
     } catch (err) {
       setCaptureNote(`Audio capture failed: ${String(err)}`);
     }

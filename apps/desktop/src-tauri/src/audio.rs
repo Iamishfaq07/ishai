@@ -39,6 +39,7 @@ pub struct AudioDevice {
 pub struct CaptureInfo {
     mic: bool,
     system: bool,
+    mic_error: Option<String>,
     system_error: Option<String>,
 }
 
@@ -105,16 +106,15 @@ pub fn start_capture(
             let host = cpal::default_host();
             let mut streams: Vec<cpal::Stream> = Vec::new();
 
-            let mic = match open_mic(&host, mic_device_id.as_deref(), on_event.clone()) {
-                Ok(stream) => stream,
-                Err(e) => {
-                    let _ = ready_tx.send(Err(format!("Microphone unavailable: {e}")));
-                    return;
+            // Mic and system audio are independent: a busy mic must not stop Orbit from hearing the interviewer.
+            let mut info = CaptureInfo { mic: false, system: false, mic_error: None, system_error: None };
+            match open_mic(&host, mic_device_id.as_deref(), on_event.clone()) {
+                Ok(stream) => {
+                    streams.push(stream);
+                    info.mic = true;
                 }
-            };
-            streams.push(mic);
-
-            let mut info = CaptureInfo { mic: true, system: false, system_error: None };
+                Err(e) => info.mic_error = Some(format!("Microphone unavailable: {e}")),
+            }
             let app_stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
             let mut app_thread: Option<thread::JoinHandle<()>> = None;
             #[cfg(target_os = "windows")]
@@ -146,6 +146,12 @@ pub fn start_capture(
                     let _ = ready_tx.send(Err(format!("Couldn't start audio: {e}")));
                     return;
                 }
+            }
+            if !info.mic && !info.system {
+                let mic_msg = info.mic_error.clone().unwrap_or_default();
+                let sys_msg = info.system_error.clone().unwrap_or_default();
+                let _ = ready_tx.send(Err(if !mic_msg.is_empty() { mic_msg } else if !sys_msg.is_empty() { sys_msg } else { "No audio available".into() }));
+                return;
             }
             let _ = ready_tx.send(Ok(info));
 
