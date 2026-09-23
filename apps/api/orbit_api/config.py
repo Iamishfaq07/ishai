@@ -42,6 +42,14 @@ class Settings(BaseSettings):
         "deepseek-reasoner", validation_alias=AliasChoices("DEEPSEEK_REASONING_MODEL")
     )
 
+    web_url: str = Field("http://localhost:5173", validation_alias=AliasChoices("ORBIT_WEB_URL"))
+    smtp_host: str | None = Field(None, validation_alias=AliasChoices("ORBIT_SMTP_HOST"))
+    smtp_port: int = Field(587, validation_alias=AliasChoices("ORBIT_SMTP_PORT"))
+    smtp_username: str | None = Field(None, validation_alias=AliasChoices("ORBIT_SMTP_USERNAME"))
+    smtp_password: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_SMTP_PASSWORD"))
+    smtp_starttls: bool = Field(True, validation_alias=AliasChoices("ORBIT_SMTP_STARTTLS"))
+    email_from: str = Field("Orbit <no-reply@localhost>", validation_alias=AliasChoices("ORBIT_EMAIL_FROM"))
+
     deepgram_api_key: SecretStr | None = Field(None, validation_alias=AliasChoices("DEEPGRAM_API_KEY"))
     deepgram_model: str = Field("nova-3", validation_alias=AliasChoices("DEEPGRAM_MODEL"))
 
@@ -52,6 +60,8 @@ class Settings(BaseSettings):
                 raise ValueError("ORBIT_JWT_SECRET must be set to a random value of 32+ chars in production")
             if self.llm_provider == "mock" or self.stt_provider == "mock":
                 raise ValueError("mock providers are not allowed in production")
+            if not self.smtp_host:
+                raise ValueError("ORBIT_SMTP_HOST is required in production (verification and reset emails)")
         return self
 
     @property

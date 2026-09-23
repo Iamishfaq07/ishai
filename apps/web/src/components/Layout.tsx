@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { cx, focusRing } from "@orbit/ui";
+import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { errorText } from "../lib/format";
 
 const NAV = [
   { to: "/", label: "Home", end: true },
@@ -10,6 +13,39 @@ const NAV = [
   { to: "/billing", label: "Billing" },
   { to: "/settings", label: "Settings" },
 ];
+
+function VerifyEmailBanner({ email }: { email: string }) {
+  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
+  const [error, setError] = useState<string | null>(null);
+  const resend = () => {
+    setState("sending");
+    setError(null);
+    api
+      .requestVerification()
+      .then(() => setState("sent"))
+      .catch((err: unknown) => {
+        setError(errorText(err));
+        setState("idle");
+      });
+  };
+  return (
+    <div role="status" className="border-b border-amber-200 bg-amber-50 px-6 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-1">
+        <span>
+          Confirm <strong>{email}</strong> — we sent you a verification link.
+        </span>
+        {state === "sent" ? (
+          <span className="font-medium">New link sent.</span>
+        ) : (
+          <button type="button" onClick={resend} disabled={state === "sending"} className={cx("font-medium underline disabled:opacity-50", focusRing)}>
+            {state === "sending" ? "Sending…" : "Resend link"}
+          </button>
+        )}
+        {error && <span className="text-rose-700 dark:text-rose-300">{error}</span>}
+      </div>
+    </div>
+  );
+}
 
 export function Layout() {
   const { user, logout } = useAuth();
@@ -58,6 +94,7 @@ export function Layout() {
           </div>
         </div>
       </header>
+      {user && !user.email_verified && <VerifyEmailBanner email={user.email} />}
       <main id="main" className="mx-auto max-w-6xl px-6 py-8">
         <Outlet />
       </main>

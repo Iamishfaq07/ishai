@@ -7,7 +7,7 @@ import { BillingPage } from "./pages/Billing";
 import { DocumentsPage } from "./pages/Documents";
 import { HomePage } from "./pages/Home";
 import { LivePage } from "./pages/Live";
-import { LoginPage, RegisterPage } from "./pages/Auth";
+import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage, VerifyEmailPage } from "./pages/Auth";
 import { MockPage } from "./pages/Mock";
 import { SessionDetailPage } from "./pages/SessionDetail";
 import { SessionSetupPage } from "./pages/SessionSetup";
@@ -33,6 +33,9 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route
         path="/live/:sessionId"
         element={

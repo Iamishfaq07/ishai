@@ -122,6 +122,17 @@ function PrivacyCard() {
     }
   };
 
+  const signOutEverywhere = async () => {
+    if (!window.confirm("Sign out of Orbit on every device, including the desktop app and this browser?")) return;
+    try {
+      await api.logoutAll();
+      await logout().catch(() => undefined);
+      navigate("/login", { replace: true });
+    } catch (err) {
+      setError(errorText(err));
+    }
+  };
+
   const deleteAccount = async () => {
     const typed = window.prompt('This permanently deletes your account, documents, and all sessions. Type "DELETE" to confirm.');
     if (typed !== "DELETE") return;
@@ -154,7 +165,10 @@ function PrivacyCard() {
         />
         <p className="text-xs text-zinc-500">Raw audio is never stored. Transcript content is never sent to analytics.</p>
         {error && <ErrorNote>{error}</ErrorNote>}
-        <div className="border-t border-zinc-100 pt-4 dark:border-zinc-800">
+        <div className="flex flex-wrap gap-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+          <Button variant="secondary" onClick={() => void signOutEverywhere()}>
+            Sign out of all devices
+          </Button>
           <Button variant="danger" onClick={() => void deleteAccount()}>
             Delete account
           </Button>

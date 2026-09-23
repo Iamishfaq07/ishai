@@ -17,11 +17,11 @@ to preserve — Orbit was built from scratch here.
 | Session report, transcript, Markdown export, privacy toggles, account deletion | ✅ tested |
 | Entitlements (free/pro/unlimited), usage metering, provider cost records | ✅ basic |
 | Alembic migrations (incl. `vector` extension + HNSW index) | ✅ |
-| Web app, shared live UI, Tauri desktop shell | 🚧 see `apps/web`, `apps/desktop`, `packages/ui` |
+| Web app, shared live UI, Tauri desktop app (Windows) | ✅ driven end-to-end in Chrome and the real Windows exe |
 
 ## C. Missing core features (next)
 Vision provider for screenshots (DeepSeek chat API takes no images — needs a real vision provider),
-macOS system audio via ScreenCaptureKit, email verification / password reset, Stripe billing,
+macOS system audio via ScreenCaptureKit (deferred: Windows-first), Stripe billing,
 OpenTelemetry/Sentry, Redis-backed rate limits and WS tickets for multi-instance deploys,
 LLM fallback classifier for the ambiguous question band, mock-interview question generation, TTS.
 
@@ -72,13 +72,13 @@ line-format parser → `answer.chunk` snapshots every ≥40 ms → `answer.compl
 ## I. Phases
 | Phase | Scope | Status |
 |---|---|---|
-| 0 Foundation | monorepo, API, compose, CI, env | ✅ API · 🚧 web/desktop need Node/Rust to verify |
-| 1 Auth + Documents | auth, upload, parsing, chunking | ✅ (verification/reset pending) |
+| 0 Foundation | monorepo, API, compose, CI, env | ✅ (Windows release exe + NSIS installer built in CI) |
+| 1 Auth + Documents | auth, email verification, password reset, sign-out-everywhere, upload, parsing | ✅ |
 | 2 AI backend | DeepSeek, streaming, context builder, retrieval, mock | ✅ |
 | 3 Session engine | protocol, transcript/question/answer models, history | ✅ |
-| 4 Audio + STT | Deepgram server side ✅ · native capture 🚧 |
+| 4 Audio + STT | Windows mic + WASAPI loopback ✅ verified on hardware · Deepgram ✅ (untested with a real key) · macOS ⏳ deferred |
 | 5 Auto answer | detection, finalization, dedup, auto trigger | ✅ |
-| 6 Floating live UI | 🚧 |
+| 6 Floating live UI | ✅ compact always-on-top window, verified on Windows |
 | 7 Screenshot/vision | ⏳ needs vision provider |
 | 8 Coding copilot | prompts/format/routing ✅ · screenshot input ⏳ |
 | 9 Memory + follow-ups | ✅ |

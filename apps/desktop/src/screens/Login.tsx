@@ -74,6 +74,13 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
         >
           Create an account in the browser
         </button>
+        <button
+          type="button"
+          onClick={() => void openUrl(`${WEB_URL}/forgot-password`)}
+          className={cx("mx-auto mt-2 text-xs text-zinc-500 hover:underline", focusRing)}
+        >
+          Forgot your password?
+        </button>
         <div className="mt-6 text-center text-[11px] text-zinc-500">
           {editingServer ? (
             <form

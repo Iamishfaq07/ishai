@@ -96,6 +96,14 @@ export function createApiClient(options: ApiClientOptions) {
     logout: () => json<void>("/v1/auth/logout", { method: "POST" }),
     updatePrivacy: (req: PrivacyUpdate) => json<User>("/v1/auth/me/privacy", { method: "PATCH", body: body(req) }),
     deleteAccount: () => json<void>("/v1/auth/me", { method: "DELETE" }),
+    logoutAll: () => json<void>("/v1/auth/logout-all", { method: "POST" }),
+    requestVerification: () => json<{ status: string }>("/v1/auth/verify-email/request", { method: "POST" }),
+    confirmVerification: (token: string) =>
+      json<User>("/v1/auth/verify-email/confirm", { method: "POST", body: body({ token }) }),
+    requestPasswordReset: (email: string) =>
+      json<{ status: string }>("/v1/auth/password-reset/request", { method: "POST", body: body({ email }) }),
+    confirmPasswordReset: (token: string, password: string) =>
+      json<AuthResponse>("/v1/auth/password-reset/confirm", { method: "POST", body: body({ token, password }) }),
 
     // Documents
     listDocuments: () => json<OrbitDocument[]>("/v1/documents"),

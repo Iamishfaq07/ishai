@@ -15,6 +15,7 @@ export interface User {
   id: string;
   email: string;
   name: string | null;
+  email_verified: boolean;
   /** Privacy controls (spec §65), account-wide. */
   store_transcripts: boolean;
   store_screenshots: boolean;

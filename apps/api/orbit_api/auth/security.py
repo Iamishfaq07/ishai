@@ -31,21 +31,25 @@ def verify_password(password: str, hashed: str | None) -> bool:
         return False
 
 
-def create_access_token(user_id: str) -> str:
+def create_access_token(user_id: str, token_version: int = 0) -> str:
     s = get_settings()
     now = int(time.time())
-    payload = {"sub": user_id, "iat": now, "exp": now + s.jwt_ttl_minutes * 60, "jti": uuid.uuid4().hex}
+    payload = {"sub": user_id, "ver": token_version, "iat": now, "exp": now + s.jwt_ttl_minutes * 60,
+               "jti": uuid.uuid4().hex}
     return jwt.encode(payload, s.jwt_secret.get_secret_value(), algorithm="HS256")
 
 
-def decode_access_token(token: str) -> str | None:
+def decode_access_token(token: str) -> tuple[str, int] | None:
+    """Returns (user_id, token_version) for a valid, unexpired token."""
     try:
         payload = jwt.decode(token, get_settings().jwt_secret.get_secret_value(), algorithms=["HS256"],
                              options={"require": ["sub", "exp"]})
     except jwt.PyJWTError:
         return None
-    sub = payload.get("sub")
-    return sub if isinstance(sub, str) else None
+    sub, ver = payload.get("sub"), payload.get("ver", 0)
+    if not isinstance(sub, str) or not isinstance(ver, int):
+        return None
+    return sub, ver
 
 
 def token_from_request(request: Request) -> str | None:
@@ -57,9 +61,10 @@ def token_from_request(request: Request) -> str | None:
 
 async def current_user(request: Request, db: Annotated[AsyncSession, Depends(get_db)]) -> User:
     token = token_from_request(request)
-    user_id = decode_access_token(token) if token else None
-    user = await db.get(User, user_id) if user_id else None
-    if user is None:
+    claims = decode_access_token(token) if token else None
+    user = await db.get(User, claims[0]) if claims else None
+    # A token minted before the last password reset / sign-out-everywhere is dead.
+    if user is None or claims is None or claims[1] != user.token_version:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
     return user
 

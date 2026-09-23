@@ -29,3 +29,12 @@ proctoring (spec §64). Screenshots are only taken on explicit user action. Audi
 
 **D9 — Mock providers are labelled, never disguised.** `/health` and `provider.status` report `mock`, and mock
 answers are prefixed `[mock]`. Production config refuses to start with mock providers or the dev JWT secret.
+
+**D10 — Token versioning for revocation.** JWTs carry the user's `token_version`, and `current_user`
+rejects any mismatch. A password reset or "sign out of all devices" bumps the version, which revokes every
+web cookie and desktop keychain token immediately, with no token denylist to maintain.
+
+**D11 — Email tokens.** Tokens are random, single-use and expiring (48 h to verify, 1 h to reset), and only their
+SHA-256 is stored. Issuing a new token voids the older unused ones. Reset requests always return the same 202
+body, and the email is sent *after* the response, so neither the content nor the timing reveals whether an
+account exists. The web pages strip `?token=` from the URL on load and send `no-referrer`.

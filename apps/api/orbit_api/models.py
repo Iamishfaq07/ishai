@@ -27,9 +27,23 @@ class User(TimestampMixin, Base):
     name: Mapped[str | None] = mapped_column(String(200))
     password_hash: Mapped[str] = mapped_column(String(255))
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Bumped on password reset / "sign out everywhere"; JWTs carry it, so old tokens stop working.
+    token_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     # Privacy controls (spec §65)
     store_transcripts: Mapped[bool] = mapped_column(Boolean, default=True)
     store_screenshots: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class EmailToken(TimestampMixin, Base):
+    """Single-use email-verification / password-reset token. Only the SHA-256 of the token is stored."""
+
+    __tablename__ = "email_tokens"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    purpose: Mapped[str] = mapped_column(String(16))  # verify_email | reset_password
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Subscription(TimestampMixin, Base):
