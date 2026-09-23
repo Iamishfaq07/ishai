@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import type { AnswerLength, OrbitDocument, OrbitSession, SessionType, User } from "@orbit/types";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import type { AnswerLength, AnswerStyle, DocumentKind, OrbitDocument, OrbitSession, SessionType, User } from "@orbit/types";
 import { AUDIO_CHANNEL } from "@orbit/types";
 import { cx, focusRing } from "@orbit/ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -16,6 +16,35 @@ const TYPES: Array<{ value: SessionType; label: string }> = [
   { value: "assessment", label: "Online assessment practice" },
   { value: "phone", label: "Phone / room audio" },
 ];
+
+const STYLES: Array<{ value: AnswerStyle; label: string }> = [
+  { value: "bullets", label: "Bullets" },
+  { value: "star", label: "STAR (behavioral)" },
+  { value: "technical", label: "Technical depth" },
+  { value: "executive", label: "Executive" },
+];
+
+const LANGUAGES: Array<{ value: string; label: string }> = [
+  { value: "en", label: "English" },
+  { value: "hi", label: "Hindi" },
+  { value: "es", label: "Spanish" },
+  { value: "fr", label: "French" },
+  { value: "de", label: "German" },
+  { value: "pt", label: "Portuguese" },
+];
+
+const DOC_KINDS: Array<{ value: DocumentKind; label: string }> = [
+  { value: "resume", label: "Resume" },
+  { value: "job_description", label: "Job description" },
+  { value: "notes", label: "Notes" },
+  { value: "other", label: "Other" },
+];
+
+const MAX_UPLOAD_MB = 10;
+
+function docError(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
 
 export const IS_MAC = /Mac/i.test(navigator.userAgent);
 /** Meeting apps pre-selected as the interviewer audio source when they're running. */
@@ -41,9 +70,17 @@ export function SetupScreen({
   const [type, setType] = useState<SessionType>("interview");
   const [role, setRole] = useState("");
   const [length, setLength] = useState<AnswerLength>("short");
+  const [style, setStyle] = useState<AnswerStyle>("bullets");
+  const [language, setLanguage] = useState("en");
   const [autoAnswer, setAutoAnswer] = useState(true);
   const [docs, setDocs] = useState<OrbitDocument[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [uploadKind, setUploadKind] = useState<DocumentKind>("resume");
+  const [uploading, setUploading] = useState(false);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteTitle, setPasteTitle] = useState("");
+  const [pasteText, setPasteText] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [devices, setDevices] = useState<NativeAudioDevice[]>([]);
   const [micId, setMicId] = useState("");
   const [systemAudio, setSystemAudio] = useState(!IS_MAC);
@@ -86,6 +123,76 @@ export function SetupScreen({
     if (type === "phone") setSystemAudio(false);
   }, [type]);
 
+  const refreshDocs = async (selectId?: string): Promise<void> => {
+    const list = await api.listDocuments();
+    setDocs(list);
+    if (selectId) setSelected((prev) => new Set(prev).add(selectId));
+  };
+
+  const onFilePicked = async (e: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = e.target.files?.[0];
+    if (fileInputRef.current) fileInputRef.current.value = ""; // allow re-picking the same file
+    if (!file) return;
+    if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+      setError(`That file is over ${MAX_UPLOAD_MB} MB.`);
+      return;
+    }
+    setUploading(true);
+    setError(null);
+    try {
+      const doc = await api.uploadDocument(file, uploadKind, file.name);
+      await refreshDocs(doc.id);
+    } catch (err) {
+      setError(`Upload failed: ${docError(err)}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onPasteSave = async (): Promise<void> => {
+    if (pasteText.trim().length < 20) {
+      setError("Paste at least a few sentences (20+ characters).");
+      return;
+    }
+    setUploading(true);
+    setError(null);
+    try {
+      const kindLabel = DOC_KINDS.find((k) => k.value === uploadKind)?.label ?? "Document";
+      const doc = await api.createTextDocument({ title: pasteTitle.trim() || kindLabel, kind: uploadKind, text: pasteText });
+      await refreshDocs(doc.id);
+      setPasteText("");
+      setPasteTitle("");
+      setPasteOpen(false);
+    } catch (err) {
+      setError(`Couldn't save: ${docError(err)}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onDeleteDoc = async (id: string): Promise<void> => {
+    setError(null);
+    try {
+      await api.deleteDocument(id);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      await refreshDocs();
+    } catch (err) {
+      setError(`Couldn't delete: ${docError(err)}`);
+    }
+  };
+
+  const toggleDoc = (id: string): void =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   const start = async (e: FormEvent) => {
     e.preventDefault();
     setStarting(true);
@@ -95,9 +202,9 @@ export function SetupScreen({
         title: `${TYPES.find((t) => t.value === type)?.label ?? "Session"}${role.trim() ? ` — ${role.trim()}` : ""}`,
         type,
         ...(role.trim() ? { role: role.trim() } : {}),
-        language: "en",
+        language,
         length,
-        style: "bullets",
+        style,
         auto_answer: autoAnswer,
         document_ids: [...selected],
       });
@@ -140,37 +247,105 @@ export function SetupScreen({
             <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Senior Security Engineer" className={cx(control, focusRing)} />
           </label>
 
-          <fieldset className="space-y-1.5">
-            <legend className="text-xs font-medium">Context documents</legend>
+          <fieldset className="space-y-2 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
+            <legend className="px-1 text-xs font-medium">Context documents</legend>
+            <p className="text-[11px] text-zinc-500">Add your resume and the job description so answers are specific to you. Checked documents are used this session.</p>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <select
+                value={uploadKind}
+                onChange={(e) => setUploadKind(e.target.value as DocumentKind)}
+                aria-label="Document type"
+                className={cx(control, focusRing, "w-auto flex-none")}
+              >
+                {DOC_KINDS.map((k) => (
+                  <option key={k.value} value={k.value}>
+                    {k.label}
+                  </option>
+                ))}
+              </select>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.docx,.txt,.md"
+                onChange={(e) => void onFilePicked(e)}
+                className="hidden"
+                id="doc-file"
+              />
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={() => fileInputRef.current?.click()}
+                className={cx("rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50", focusRing)}
+              >
+                {uploading ? "Uploading…" : "Upload file"}
+              </button>
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={() => setPasteOpen((v) => !v)}
+                className={cx("rounded-lg border border-zinc-200 px-2.5 py-1.5 text-xs dark:border-zinc-800", focusRing)}
+              >
+                Paste text
+              </button>
+            </div>
+            <p className="text-[11px] text-zinc-400">PDF, DOCX, TXT or MD, up to {MAX_UPLOAD_MB} MB.</p>
+
+            {pasteOpen && (
+              <div className="space-y-1.5 rounded-lg bg-zinc-50 p-2 dark:bg-zinc-900">
+                <input
+                  value={pasteTitle}
+                  onChange={(e) => setPasteTitle(e.target.value)}
+                  placeholder="Title (optional)"
+                  className={cx(control, focusRing, "text-xs")}
+                />
+                <textarea
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                  placeholder="Paste the job description, your resume text, or notes…"
+                  rows={4}
+                  className={cx(control, focusRing, "text-xs")}
+                />
+                <button
+                  type="button"
+                  disabled={uploading || pasteText.trim().length < 20}
+                  onClick={() => void onPasteSave()}
+                  className={cx("rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50", focusRing)}
+                >
+                  Save
+                </button>
+              </div>
+            )}
+
             {docs === null ? (
               <p className="text-xs text-zinc-500">Loading…</p>
             ) : docs.length === 0 ? (
-              <p className="text-xs text-zinc-500">
-                No documents yet.{" "}
-                <button type="button" onClick={() => void openUrl(`${WEB_URL}/documents`)} className="text-indigo-600 underline dark:text-indigo-400">
-                  Upload your resume
-                </button>
-              </p>
+              <p className="text-xs text-zinc-500">No documents yet — upload your resume above.</p>
             ) : (
-              docs.map((d) => (
-                <label key={d.id} className="flex items-center gap-2 text-xs">
-                  <input
-                    type="checkbox"
-                    disabled={d.status !== "ready"}
-                    checked={selected.has(d.id)}
-                    onChange={() =>
-                      setSelected((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(d.id)) next.delete(d.id);
-                        else next.add(d.id);
-                        return next;
-                      })
-                    }
-                  />
-                  <span className="flex-1 truncate">{d.title}</span>
-                  <span className="text-zinc-500">{d.kind.replace("_", " ")}</span>
-                </label>
-              ))
+              <ul className="space-y-1">
+                {docs.map((d) => (
+                  <li key={d.id} className="flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      disabled={d.status !== "ready"}
+                      checked={selected.has(d.id)}
+                      onChange={() => toggleDoc(d.id)}
+                      aria-label={`Use ${d.title}`}
+                    />
+                    <span className="flex-1 truncate">{d.title}</span>
+                    <span className="text-zinc-500">{d.status === "ready" ? d.kind.replace("_", " ") : d.status}</span>
+                    <button
+                      type="button"
+                      onClick={() => void onDeleteDoc(d.id)}
+                      aria-label={`Delete ${d.title}`}
+                      title="Delete"
+                      className={cx("rounded px-1 text-zinc-400 hover:text-rose-600", focusRing)}
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
           </fieldset>
 
@@ -186,6 +361,29 @@ export function SetupScreen({
             <label className="flex items-end gap-2 pb-1.5 text-xs font-medium">
               <input type="checkbox" checked={autoAnswer} onChange={(e) => setAutoAnswer(e.target.checked)} />
               Auto answer
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block space-y-1">
+              <span className="text-xs font-medium">Answer style</span>
+              <select value={style} onChange={(e) => setStyle(e.target.value as AnswerStyle)} className={cx(control, focusRing)}>
+                {STYLES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block space-y-1">
+              <span className="text-xs font-medium">Language</span>
+              <select value={language} onChange={(e) => setLanguage(e.target.value)} className={cx(control, focusRing)}>
+                {LANGUAGES.map((l) => (
+                  <option key={l.value} value={l.value}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
 
