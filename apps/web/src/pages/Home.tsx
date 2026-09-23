@@ -12,7 +12,6 @@ const QUICK_START: Array<{ type: SessionType; title: string; body: string }> = [
   { type: "interview", title: "Interview", body: "Live answers grounded in your resume and the JD." },
   { type: "coding", title: "Coding", body: "Screenshot a problem — approach, code, complexity." },
   { type: "meeting", title: "Meeting", body: "Stay sharp in professional calls." },
-  { type: "mock", title: "Mock", body: "Practice with an AI interviewer." },
 ];
 
 export function HomePage() {

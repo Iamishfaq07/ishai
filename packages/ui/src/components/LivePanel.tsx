@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { DEV_FIXTURES } from "@orbit/types";
 import { formatElapsed, useElapsed } from "../hooks/useElapsed";
+import { useStickyScroll } from "../hooks/useStickyScroll";
 import { DEFAULT_HOTKEYS, useHotkeys, type HotkeyMap } from "../live/hotkeys";
 import {
   selectDisplayedAnswer,
@@ -311,6 +312,11 @@ function Banners({
 }
 
 function ChatLog({ live }: { live: LiveViewState }) {
+  // Follow new replies like the transcript does — key on chat length + streamed length of the last reply.
+  const last = live.chat[live.chat.length - 1];
+  const lastLen =
+    last?.kind === "answer" ? (live.answers[last.answer_id]?.answer.talking_points.length ?? 0) : 0;
+  const { ref, onScroll } = useStickyScroll<HTMLOListElement>(`${live.chat.length}:${lastLen}`);
   if (live.chat.length === 0) {
     return (
       <p className="flex-1 px-4 py-6 text-center text-sm text-zinc-500">
@@ -319,7 +325,12 @@ function ChatLog({ live }: { live: LiveViewState }) {
     );
   }
   return (
-    <ol className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 text-sm" aria-label="Chat">
+    <ol
+      ref={ref}
+      onScroll={onScroll}
+      className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 text-sm"
+      aria-label="Chat"
+    >
       {live.chat.map((entry) =>
         entry.kind === "user" ? (
           <li key={entry.id} className="ml-8 rounded-lg bg-indigo-600 px-3 py-2 text-white">

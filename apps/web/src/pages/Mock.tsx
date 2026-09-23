@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import type { MockDifficulty, MockInterviewType } from "@orbit/types";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select } from "../components/ui";
+import { MOCK_INTERVIEW_ENABLED } from "@orbit/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -20,6 +21,22 @@ const TYPES: Array<{ value: MockInterviewType; label: string }> = [
  * Deliberately simple — setup here, the live screen does the rest.
  */
 export function MockPage() {
+  // The AI interviewer isn't built yet — show a coming-soon state instead of a form that dead-ends.
+  if (!MOCK_INTERVIEW_ENABLED) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center">
+        <PageHeader title="Mock interview" subtitle="Coming soon" />
+        <p className="mt-4 text-sm text-zinc-500">
+          The AI interviewer that asks you questions is still in the works. For now, start a normal session and
+          use Orbit live, or practice by pasting questions into Chat.
+        </p>
+      </div>
+    );
+  }
+  return <MockSetup />;
+}
+
+function MockSetup() {
   const navigate = useNavigate();
   const docs = useAsync(() => api.listDocuments(), []);
   const [role, setRole] = useState("");

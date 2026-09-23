@@ -47,10 +47,12 @@ export function StatusPill({ state, connection }: StatusPillProps) {
   const tone = TONE_CLASSES[meta.tone];
 
   return (
+    // Not an aria-live region: this label changes on every state transition (listening → hearing →
+    // detected → thinking → answering …); announcing each one would talk over the answer. The answer
+    // card's result region carries aria-live instead. `title` keeps it discoverable on hover.
     <span
       className={cx("inline-flex items-center gap-1.5 text-xs font-medium tracking-wide", tone.text)}
-      role="status"
-      aria-live="polite"
+      title={meta.label}
     >
       <span className="relative flex h-2 w-2" aria-hidden="true">
         {meta.pulse && (

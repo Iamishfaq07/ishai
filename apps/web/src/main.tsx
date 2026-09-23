@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
+import { ErrorBoundary } from "@orbit/ui";
 import { App } from "./App";
 import { AuthProvider } from "./lib/auth";
 import "./index.css";
@@ -10,10 +11,12 @@ if (!root) throw new Error("#root missing");
 
 createRoot(root).render(
   <StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   </StrictMode>,
 );

@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { Spinner } from "./components/ui";
 import { useAuth } from "./lib/auth";
+import { useDocumentTitle } from "./lib/useDocumentTitle";
 import { BillingPage } from "./pages/Billing";
 import { DocumentsPage } from "./pages/Documents";
 import { HomePage } from "./pages/Home";
@@ -28,7 +29,30 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+const ROUTE_TITLES: Array<[RegExp, string]> = [
+  [/^\/$/, "Home"],
+  [/^\/start/, "New session"],
+  [/^\/sessions\/[^/]+/, "Session"],
+  [/^\/sessions/, "Sessions"],
+  [/^\/documents/, "Documents"],
+  [/^\/mock/, "Mock interview"],
+  [/^\/billing/, "Billing"],
+  [/^\/settings/, "Settings"],
+  [/^\/live\//, "Live session"],
+  [/^\/login/, "Sign in"],
+  [/^\/register/, "Create account"],
+  [/^\/forgot-password/, "Reset password"],
+  [/^\/reset-password/, "Reset password"],
+  [/^\/verify-email/, "Verify email"],
+];
+
+function useRouteTitle(): void {
+  const { pathname } = useLocation();
+  useDocumentTitle(ROUTE_TITLES.find(([re]) => re.test(pathname))?.[1] ?? null);
+}
+
 export function App() {
+  useRouteTitle();
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />

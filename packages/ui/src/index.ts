@@ -1,3 +1,5 @@
+export { ErrorBoundary } from "./components/ErrorBoundary";
+export { VISION_ENABLED, MOCK_INTERVIEW_ENABLED } from "./features";
 export { ApiError, base64ToBlob, createApiClient, type ApiAuth, type ApiClient, type ApiClientOptions } from "./api/client";
 export {
   LiveClient,

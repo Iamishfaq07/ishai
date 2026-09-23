@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OrbitSession } from "@orbit/types";
-import { ApiError, LivePanel, base64ToBlob, cx, focusRing, loadHotkeys, useLiveSession, type PanelMode } from "@orbit/ui";
+import { ApiError, LivePanel, base64ToBlob, cx, focusRing, loadHotkeys, useLiveSession, type PanelMode, VISION_ENABLED } from "@orbit/ui";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
@@ -172,6 +172,8 @@ export function LiveScreen({
   // ── End ───────────────────────────────────────────────────────────────
   const [ending, setEnding] = useState(false);
   const end = () => {
+    // Ending finalizes the session + report; the compact always-on-top window makes End easy to misclick.
+    if (!window.confirm("End this session? The transcript and summary will be saved to History.")) return;
     setEnding(true);
     actions.end();
   };
@@ -220,7 +222,8 @@ export function LiveScreen({
       onModeChange={changeMode}
       onEnd={end}
       onReconnect={() => client.connect()}
-      onScreenshot={screenshot}
+      onScreenshot={VISION_ENABLED ? screenshot : undefined}
+      screenshotUnavailableReason="Screenshot analysis isn’t enabled yet."
       hotkeys={hotkeys}
       title={session.title}
       dragRegion
