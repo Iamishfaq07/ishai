@@ -1,4 +1,6 @@
 import type {
+  AdminConfig,
+  AdminConfigUpdate,
   ApiErrorBody,
   AuthResponse,
   CreateSessionRequest,
@@ -145,6 +147,12 @@ export function createApiClient(options: ApiClientOptions) {
 
     // Usage
     usage: () => json<Usage>("/v1/usage"),
+
+    // Admin / advanced settings
+    adminStatus: () => json<{ is_admin: boolean }>("/v1/admin/status"),
+    getAdminConfig: () => json<AdminConfig>("/v1/admin/config"),
+    updateAdminConfig: (req: AdminConfigUpdate) =>
+      json<AdminConfig>("/v1/admin/config", { method: "PUT", body: body(req) }),
   };
 }
 
