@@ -54,19 +54,28 @@ class AnswerStreamParser:
         stray: list[str] = []
 
         for line in self._buf.split("\n"):
-            fence = _FENCE.match(line)
-            if fence:
-                if in_code:
+            tag = _TAG.match(line.strip())
+            if in_code:
+                # A real tag line (TIME/SPACE/FOLLOWUP/…) ends the code block even if the model's closing
+                # fence is missing or mismatched — otherwise trailing sections would be swallowed as code.
+                if tag:
                     in_code = False
+                elif _FENCE.match(line):
+                    in_code = False
+                    continue
                 else:
+                    code_lines.append(line)
+                    continue
+            elif _FENCE.match(line):
+                fence = _FENCE.match(line)
+                assert fence is not None
+                # Only a fence inside a CODE section (or a coding question) opens a code block — a stray ```
+                # in EXAMPLE prose must not be mistaken for code.
+                if section == "CODE" or self._qtype == QuestionType.coding:
                     in_code = True
                     code_lang = fence.group(1) or code_lang
                 continue
-            if in_code:
-                code_lines.append(line)
-                continue
 
-            tag = _TAG.match(line.strip())
             if tag:
                 section, value = tag.group(1).upper(), tag.group(2).strip()
                 if section == "ANSWER":

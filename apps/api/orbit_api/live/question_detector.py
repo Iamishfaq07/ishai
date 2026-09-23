@@ -59,9 +59,12 @@ _TYPE_RULES: list[tuple[QuestionType, tuple[str, ...]]] = [
                            "linked list", "binary tree", "time complexity", "big o", "optimize this code",
                            "optimise this code", "this code", "the code", "string reversal", "two sum",
                            "hash map", "recursion", "sql query", "write a query", "debug this")),
-    (QuestionType.system_design, ("design a", "design an", "design the", "how would you design", "scale",
-                                  "architecture", "distributed", "throughput", "high availability",
-                                  "load balancer", "sharding", "rate limiter", "microservice")),
+    (QuestionType.system_design, ("design a", "design an", "design the", "how would you design",
+                                  "how would you build", "build a system", "let's design", "scale",
+                                  "architecture", "architect", "distributed", "throughput",
+                                  "high availability", "load balancer", "sharding", "rate limiter",
+                                  "microservice", "capacity", "qps", "requests per second",
+                                  "design twitter", "design instagram", "design a url", "design youtube")),
     (QuestionType.resume, ("tell me about yourself", "introduce yourself", "walk me through your",
                            "your background", "your resume", "your experience", "your current role",
                            "your last role", "your previous role", "your role at", "at your last",
@@ -77,12 +80,14 @@ _TYPE_RULES: list[tuple[QuestionType, tuple[str, ...]]] = [
                             "why should we hire")),
 ]
 
-# Short utterances that only make sense relative to the previous answer.
+# Phrases that only make sense relative to the previous answer. Deliberately NOT bare pronouns
+# ("it"/"that"/"they"/"there"): a new short question that merely contains one ("how does that work in Go?")
+# is usually a fresh topic, and flagging it as a follow-up pollutes retrieval with the prior question.
 _FOLLOW_UP_MARKERS = (
     "why did you", "why that", "why not", "how so", "what about", "and then", "what was your",
     "what was the", "how did you", "how did that", "can you go deeper", "go deeper", "more detail",
-    "for example", "such as", "what happened", "what would you do differently", "that database",
-    "that approach", "that decision", "that project", "there", "it", "that", "those", "they",
+    "such as", "what happened", "what would you do differently", "that database", "that approach",
+    "that decision", "that project", "that one", "that role", "there instead", "tell me more",
 )
 
 
