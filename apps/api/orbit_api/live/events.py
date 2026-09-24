@@ -140,6 +140,7 @@ CLIENT_EVENT_TYPES = frozenset(
         "session.resume",
         "session.end",
         "answer.request",
+        "mock.next",
         "answer.pin",
         "answer.clear",
         "chat.message",

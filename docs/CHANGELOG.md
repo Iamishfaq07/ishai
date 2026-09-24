@@ -1,5 +1,20 @@
 # Implementation log
 
+## Phase 5d — AI mock interviewer (2026-09-25)
+
+- New session type **Mock interview** (desktop Setup + web): pick interviewer (recruiter, hiring manager, senior/staff
+  engineer, executive), focus (mixed, behavioral, technical, system design, coding), difficulty and length. The AI
+  asks out loud, listens, follows up on what you actually said, moves on, and ends the session when the plan or time
+  is used up; the normal report/review then grades the answers (D27). Migration `b7d2e4f6a8c1` (`sessions.mock_config`).
+- Real DeepSeek run: a natural opener, a follow-up on a specific claim ("You mentioned leading the move to an
+  event-sourced ledger…"), a push for specifics on a vague answer ("You said it went fine, but I'd like specifics"),
+  a topic change after two follow-ups, and it caught an off-topic answer.
+- Real desktop app: mock options shown, interviewer audio off, first question displayed and spoken
+  (`speechSynthesis.speaking`), status moves from "Interviewer speaking…" to "Your turn", "I'm done" produced the next
+  question, session recorded with its questions; no console errors.
+- Not exercised end-to-end here: a full spoken answer through the real mic (the silence-after-answer path is covered by
+  engine tests with the injected clock).
+
 ## Phase 5c — coding workspace (2026-09-25)
 
 - Coding answers render as **Problem → Say (talk track) → Code → Edge cases → Tests**, plus complexity and key

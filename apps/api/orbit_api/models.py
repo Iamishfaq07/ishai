@@ -127,6 +127,8 @@ class LiveSessionRow(TimestampMixin, Base):
     rolling_summary: Mapped[str | None] = mapped_column(Text)
     # Latency samples in ms, per metric (live/metrics.py). Timings only — never transcript content.
     metrics: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    # Mock interviews: interview type, difficulty, duration, persona (orbit_api.live.mock_interviewer.MockConfig).
+    mock_config: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     # The saved setup this session was started from (kept if the workspace is later deleted, as NULL).
     workspace_id: Mapped[str | None] = mapped_column(ForeignKey("workspaces.id", ondelete="SET NULL"), index=True)
 

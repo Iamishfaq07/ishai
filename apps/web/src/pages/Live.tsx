@@ -89,6 +89,11 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
 
   // ── Audio capture ──────────────────────────────────────────────────────
   const pausedRef = useRef(false);
+  // Mock interviews: the mic is muted while the AI interviewer speaks (its voice comes out of the speakers).
+  const interviewerSpeakingRef = useRef(false);
+  const onInterviewerSpeaking = useCallback((speaking: boolean) => {
+    interviewerSpeakingRef.current = speaking;
+  }, []);
   pausedRef.current = live.state === "paused" || live.state === "ended";
   const micRef = useRef<AudioCapture | null>(null);
   const sysRef = useRef<AudioCapture | null>(null);
@@ -103,7 +108,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
     try {
       const stream = await openMicrophone(launch.micDeviceId);
       micRef.current = await captureStream(stream, (f) => {
-        if (!pausedRef.current) client.sendAudio(AUDIO_CHANNEL.mic, f.pcm);
+        if (!pausedRef.current && !interviewerSpeakingRef.current) client.sendAudio(AUDIO_CHANNEL.mic, f.pcm);
       });
       setMicOn(true);
       stream.getAudioTracks()[0]?.addEventListener("ended", () => {
@@ -136,7 +141,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
     try {
       const stream = await openDisplayAudio();
       sysRef.current = await captureStream(stream, (f) => {
-        if (!pausedRef.current) client.sendAudio(AUDIO_CHANNEL.system, f.pcm);
+        if (!pausedRef.current && !interviewerSpeakingRef.current) client.sendAudio(AUDIO_CHANNEL.system, f.pcm);
       });
       stream.getAudioTracks()[0]?.addEventListener("ended", () => {
         sysRef.current?.stop();
@@ -228,6 +233,8 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
 
   const panel = (
     <LivePanel
+      mockInterview={session.type === "mock"}
+      onInterviewerSpeaking={onInterviewerSpeaking}
       live={live}
       actions={actions}
       mode={mode}

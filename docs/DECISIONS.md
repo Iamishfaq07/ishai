@@ -125,3 +125,13 @@ TESTS. PROBLEM comes after the talk track in the stream so it never delays the f
 language (`LiveSettings.coding_language`, remembered per device) goes into the prompt; changing it on an answer's
 code re-asks the same question in that language (not for screenshots, whose image isn't kept). Highlighting is a small
 built-in tokenizer rendered as React nodes (no dependency, no HTML injection).
+
+**D27 — The mock interviewer lives in the live engine and speaks with the platform voice.** Mock sessions reuse the
+whole live pipeline: mic → STT → transcript. A `MockInterviewer` asks one question at a time (one JSON call, thinking
+off; persona, focus, difficulty, role, resume/JD as reference), decides follow-up vs new topic (at most two follow-ups
+per topic), and moves on after 3 s of candidate silence following 3+ words, or on "I'm done". Questions are recorded as
+interviewer turns + questions (source "mock"), so the existing report and review scorecard grade the practice. Speech
+uses the built-in `speechSynthesis` (Windows voices; WebView2 exposes no voice list but speaks with the default
+voice) — free and local. The mic is muted while the interviewer speaks so its voice isn't transcribed as the answer.
+Practice mode never answers for the candidate: the answer controls are hidden and `answer.request` means "I'm done".
+If the model fails, a fallback question list keeps the interview going.

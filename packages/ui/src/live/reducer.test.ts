@@ -252,3 +252,14 @@ describe("usage status", () => {
     expect(s.usage?.limitReached).toBe(true);
   });
 });
+
+describe("mock interview", () => {
+  it("tracks the interviewer's current question and completion", () => {
+    let s = run([ev("mock.question", { question_id: "m1", text: "Tell me about yourself.", is_follow_up: false, index: 1, total: 4 })]);
+    expect(s.mock).toEqual({ questionId: "m1", text: "Tell me about yourself.", isFollowUp: false, index: 1, total: 4 });
+    s = run([ev("mock.question", { question_id: "m2", text: "What was the hardest part?", is_follow_up: true, index: 1, total: 4 })], s);
+    expect(s.mock?.isFollowUp).toBe(true);
+    s = run([ev("mock.completed", { questions: 2 })], s);
+    expect(s.mockCompleted).toBe(true);
+  });
+});

@@ -90,10 +90,13 @@ export type SessionStatus = "created" | "live" | "ended";
 export type MockDifficulty = "easy" | "medium" | "hard";
 export type MockInterviewType = "behavioral" | "technical" | "system_design" | "coding" | "mixed";
 
+export type MockPersona = "recruiter" | "hiring_manager" | "engineer" | "staff_engineer" | "executive";
+
 export interface MockConfig {
   interview_type: MockInterviewType;
   difficulty: MockDifficulty;
   duration_minutes: number;
+  persona?: MockPersona;
 }
 
 export interface CreateSessionRequest {

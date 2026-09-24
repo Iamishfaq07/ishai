@@ -26,6 +26,8 @@ export interface LiveActions {
   setThinking: (level: ThinkingLevel) => void;
   /** Preferred code language; with `regenerateFor`, re-answers that question in it right away. */
   setCodingLanguage: (lang: CodingLanguage, regenerateFor?: string) => void;
+  /** Mock interview: done answering — the interviewer asks the next question now. */
+  mockNext: () => void;
   /** Browse an earlier answer; null returns to the live one. */
   viewAnswer: (answerId: string | null) => void;
   pause: () => void;
@@ -130,6 +132,7 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
         saveResponseTiming(response_timing);
         updateSettings({ response_timing });
       },
+      mockNext: () => client.send("mock.next", {}),
       viewAnswer: (answer_id) => dispatch({ type: "local/view", answer_id }),
       setThinking: (thinking) => {
         saveThinking(thinking);

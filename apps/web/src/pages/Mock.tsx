@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import type { MockDifficulty, MockInterviewType } from "@orbit/types";
+import type { MockDifficulty, MockInterviewType, MockPersona } from "@orbit/types";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select } from "../components/ui";
 import { MOCK_INTERVIEW_ENABLED } from "@orbit/ui";
 import { api } from "../lib/api";
@@ -17,7 +17,7 @@ const TYPES: Array<{ value: MockInterviewType; label: string }> = [
 ];
 
 /**
- * Mock interview: the AI plays interviewer (text, TTS later), you answer by voice.
+ * Mock interview: the AI plays interviewer (spoken with the browser's voice), you answer by voice.
  * Deliberately simple — setup here, the live screen does the rest.
  */
 export function MockPage() {
@@ -43,6 +43,7 @@ function MockSetup() {
   const [interviewType, setInterviewType] = useState<MockInterviewType>("mixed");
   const [difficulty, setDifficulty] = useState<MockDifficulty>("medium");
   const [duration, setDuration] = useState(20);
+  const [persona, setPersona] = useState<MockPersona>("hiring_manager");
   const [language, setLanguage] = useState("en");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -64,7 +65,7 @@ function MockSetup() {
         style: "natural",
         auto_answer: false,
         document_ids: contextDocs,
-        mock: { interview_type: interviewType, difficulty, duration_minutes: duration },
+        mock: { interview_type: interviewType, difficulty, duration_minutes: duration, persona },
       });
       const launch: LiveLaunchState = { systemAudio: false };
       navigate(`/live/${session.id}`, { state: launch });
@@ -90,6 +91,15 @@ function MockSetup() {
                     {t.label}
                   </option>
                 ))}
+              </Select>
+            </Field>
+            <Field label="Interviewer" htmlFor="mock-persona">
+              <Select id="mock-persona" value={persona} onChange={(e) => setPersona(e.target.value as MockPersona)}>
+                <option value="recruiter">Recruiter</option>
+                <option value="hiring_manager">Hiring manager</option>
+                <option value="engineer">Senior engineer</option>
+                <option value="staff_engineer">Staff engineer</option>
+                <option value="executive">Executive</option>
               </Select>
             </Field>
             <Field label="Difficulty" htmlFor="mock-difficulty">

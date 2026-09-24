@@ -35,6 +35,7 @@ from orbit_api.live.events import (
     LiveSettings,
     SessionType,
 )
+from orbit_api.live.mock_interviewer import MockConfig
 from orbit_api.models import (
     Answer,
     Document,
@@ -92,6 +93,8 @@ class SessionIn(BaseModel):
     document_ids: list[str] = Field(default_factory=list, max_length=20)
     # Started from a saved setup: recorded on the session, and its documents are used when none are given.
     workspace_id: str | None = Field(None, max_length=36)
+    # Mock interviews only (type "mock"): what the AI interviewer asks and for how long.
+    mock: MockConfig | None = None
 
 
 class SessionOut(BaseModel):
@@ -181,7 +184,8 @@ async def create_session(body: SessionIn, user: Annotated[User, Depends(current_
                                                             Document.user_id == user.id))).all()
         if len(set(owned)) != len(set(document_ids)):
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Document not found")
-    row = LiveSessionRow(user_id=user.id, **body.model_dump(exclude={"document_ids"}))
+    row = LiveSessionRow(user_id=user.id, **body.model_dump(exclude={"document_ids", "mock"}),
+                         mock_config=(body.mock or MockConfig()).model_dump() if body.type == "mock" else None)
     db.add(row)
     await db.flush()
     for doc_id in dict.fromkeys(document_ids):
@@ -457,6 +461,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             session_id=row.id, session_type=row.type,  # type: ignore[arg-type]
             role=row.role, language=row.language, answer_language=row.answer_language or row.language,
             keyterms=keyterms, dev_mode=get_settings().env != "production",
+            mock=MockConfig.model_validate(row.mock_config) if row.mock_config else None,
         )
         settings = LiveSettings(auto_answer=row.auto_answer, length=row.length,
                                 style=row.style)
