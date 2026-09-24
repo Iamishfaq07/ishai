@@ -1,5 +1,18 @@
 # Implementation log
 
+## Phase 6d — installer lifecycle (2026-09-25)
+
+- Tested install → upgrade → uninstall → reinstall on a real machine with the published installer (0.1.6 → 0.1.15).
+  - Upgrade: sign-in and every setting kept.
+  - Reinstall: signed in, settings byte-identical.
+  - Uninstall removes the program, the Start-menu shortcut and the Add/Remove Programs entry.
+- **Fixed:** "Delete the application data" in the uninstaller removed the settings and window state but left the
+  **sign-in token** in Windows Credential Manager. A Tauri NSIS hook (`apps/desktop/src-tauri/windows/hooks.nsh`)
+  now removes it under the same conditions: box ticked, and a real uninstall rather than an update. Covered by
+  `scripts/test-uninstall-hook.ps1` (4 cases, throwaway credential).
+- Documented where each piece of user state lives and what upgrade and uninstall do to it (WINDOWS_RELEASE.md). Also
+  documented a WebView2 gotcha: an *empty* `WEBVIEW2_USER_DATA_FOLDER` silently swaps in a blank profile.
+
 ## Phase 6c — icon library (2026-09-25)
 
 - Replaced every emoji / Unicode-glyph icon (📌 ◐ × ✕ ↻ ← ↓ ✓ → ○ ✎ ▾ ‹ ›) and the four hand-drawn SVGs with
