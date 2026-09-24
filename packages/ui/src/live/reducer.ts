@@ -73,6 +73,8 @@ export interface LiveViewState {
   currentAnswerId: string | null;
   /** A pinned answer freezes the display and is never auto-cancelled server-side. */
   pinnedAnswerId: string | null;
+  /** Browsing an earlier answer (local only); null = follow the live answer. */
+  viewedAnswerId: string | null;
   chat: ChatEntry[];
   mic: AudioStatus;
   system: AudioStatus;
@@ -84,6 +86,7 @@ export type LocalAction =
   | { type: "local/connection"; status: ConnectionStatus; detail?: string }
   | { type: "local/pin"; answer_id: string; pinned: boolean }
   | { type: "local/clear" }
+  | { type: "local/view"; answer_id: string | null }
   | { type: "local/chat_sent"; id: string; text: string; ts: number }
   | { type: "local/settings"; settings: Partial<LiveSettings> }
   | { type: "local/speaker"; turn_id: string; speaker: Speaker }
@@ -106,6 +109,7 @@ export function initialLiveState(settings: Partial<LiveSettings> = {}): LiveView
     answers: {},
     currentQuestionId: null,
     currentAnswerId: null,
+    viewedAnswerId: null,
     pinnedAnswerId: null,
     chat: [],
     mic: { state: "idle" },
@@ -115,16 +119,32 @@ export function initialLiveState(settings: Partial<LiveSettings> = {}): LiveView
   };
 }
 
-/** Answer the panel should display: the pinned one if any, else the latest. */
+/** Answer the panel should display: the pinned one, else the one being browsed, else the latest. */
 export function selectDisplayedAnswer(s: LiveViewState): AnswerView | null {
-  const id = s.pinnedAnswerId ?? s.currentAnswerId;
+  const id = s.pinnedAnswerId ?? s.viewedAnswerId ?? s.currentAnswerId;
   return id ? (s.answers[id] ?? null) : null;
 }
 
 export function selectDisplayedQuestion(s: LiveViewState): QuestionView | null {
   const answer = selectDisplayedAnswer(s);
-  if (s.pinnedAnswerId && answer) return s.questions[answer.question_id] ?? null;
+  if ((s.pinnedAnswerId || s.viewedAnswerId) && answer) return s.questions[answer.question_id] ?? null;
   return s.currentQuestionId ? (s.questions[s.currentQuestionId] ?? null) : null;
+}
+
+/**
+ * Answers you can flip back through, oldest first: one entry per question (its latest answer with content —
+ * a regenerated answer replaces the earlier one), plus each chat reply. Cancelled-empty answers are skipped.
+ */
+export function selectAnswerHistory(s: LiveViewState): string[] {
+  const latest = new Map<string, string>();
+  for (const id of s.answerOrder) {
+    const a = s.answers[id];
+    if (!a || !a.has_content || a.status === "failed") continue;
+    const key = a.question_id ? `q:${a.question_id}` : `a:${id}`;
+    latest.delete(key); // re-insert so ordering follows the newest version
+    latest.set(key, id);
+  }
+  return [...latest.values()];
 }
 
 /** Latest interviewer utterance (partial or final) — what the manual Answer button targets. */
@@ -180,7 +200,10 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
     }
 
     case "local/clear":
-      return { ...s, currentQuestionId: null, currentAnswerId: null, pinnedAnswerId: null };
+      return { ...s, currentQuestionId: null, currentAnswerId: null, pinnedAnswerId: null, viewedAnswerId: null };
+
+    case "local/view":
+      return { ...s, viewedAnswerId: action.answer_id && action.answer_id in s.answers ? action.answer_id : null };
 
     case "local/chat_sent":
       return { ...s, chat: [...s.chat, { kind: "user", id: action.id, text: action.text, ts: action.ts }] };

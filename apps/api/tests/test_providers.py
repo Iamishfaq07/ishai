@@ -119,3 +119,23 @@ def test_thinking_is_explicit_on_every_request() -> None:
 
     assert mx["max_tokens"] == 420 + REASONING_HEADROOM
 
+
+
+def test_images_ride_on_the_last_user_message_for_vision_models() -> None:
+    import base64
+
+    msgs = [LLMMessage("system", "s"), LLMMessage("user", "What does this show?")]
+    flash = DeepSeekProvider("sk-test", "https://api.deepseek.test", "deepseek-flash", "deepseek-flash")
+    assert flash.supports_vision()
+    payload = flash._payload(LLMRequest(messages=msgs, images=[LLMImage(b"\x89PNGfake", "image/png")]))
+    user = payload["messages"][-1]
+    assert user["content"][0] == {"type": "text", "text": "What does this show?"}
+    url = user["content"][1]["image_url"]["url"]
+    assert url == "data:image/png;base64," + base64.b64encode(b"\x89PNGfake").decode()
+    assert payload["messages"][0] == {"role": "system", "content": "s"}  # untouched
+
+    legacy = DeepSeekProvider("sk-test", "https://api.deepseek.test", "deepseek-chat", "deepseek-reasoner")
+    assert not legacy.supports_vision()
+    with pytest.raises(LLMError) as e:
+        legacy._payload(LLMRequest(messages=msgs, images=[LLMImage(b"x")]))
+    assert e.value.code == "vision_unsupported"

@@ -16,6 +16,8 @@ export interface LiveActions {
   setAutoAnswer: (on: boolean) => void;
   setResponseTiming: (timing: ResponseTiming) => void;
   setThinking: (level: ThinkingLevel) => void;
+  /** Browse an earlier answer; null returns to the live one. */
+  viewAnswer: (answerId: string | null) => void;
   pause: () => void;
   resume: () => void;
   togglePause: () => void;
@@ -118,6 +120,7 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
         saveResponseTiming(response_timing);
         updateSettings({ response_timing });
       },
+      viewAnswer: (answer_id) => dispatch({ type: "local/view", answer_id }),
       setThinking: (thinking) => {
         saveThinking(thinking);
         updateSettings({ thinking });

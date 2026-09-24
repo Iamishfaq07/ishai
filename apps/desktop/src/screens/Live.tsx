@@ -3,19 +3,22 @@ import type { OrbitSession } from "@orbit/types";
 import {
   ApiError,
   LivePanel,
+  answerAsText,
   base64ToBlob,
   cx,
   focusRing,
   loadHotkeys,
   loadResponseTiming,
   loadThinking,
+  selectDisplayedAnswer,
+  useAnswerHistory,
   useLiveSession,
   type PanelMode,
   VISION_ENABLED,
 } from "@orbit/ui";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { API_URL, api } from "../api";
 import {
   REGION_CAPTURED_EVENT,
@@ -26,9 +29,10 @@ import {
   type RegionCapturedPayload,
 } from "../native";
 import { requestClose } from "../CloseDialog";
+import { useShortcutHandler, type GlobalAction } from "../globalShortcuts";
 import { GlassButton } from "../GlassControls";
 import { WindowButtons } from "../TitleBar";
-import { applyPanelMode, setAlwaysOnTop, toggleMainWindow } from "../windowing";
+import { applyPanelMode, setAlwaysOnTop } from "../windowing";
 
 export interface DesktopLaunch {
   micDeviceId?: string;
@@ -36,16 +40,6 @@ export interface DesktopLaunch {
   /** Capture only this app's audio (process tree); undefined = all system audio. */
   systemProcessId?: number;
 }
-
-/**
- * System-wide shortcuts (work while another app is focused). Kept distinct from the in-window
- * hotkeys (Mod+Enter etc.) so Orbit never steals common shortcuts like Ctrl+Enter from other apps.
- */
-const GLOBAL_SHORTCUTS = {
-  answer: "CommandOrControl+Shift+Enter",
-  screenshot: "CommandOrControl+Shift+2",
-  toggleWindow: "CommandOrControl+Shift+O",
-} as const;
 
 const MODE_KEY = "orbit.desktop.panelMode";
 const PIN_KEY = "orbit.desktop.alwaysOnTop";
@@ -156,38 +150,24 @@ export function LiveScreen({
     openRegionSelector().catch((err: unknown) => setShotNote(`Screenshot failed: ${String(err)}`));
   }, []);
 
-  // ── Global shortcuts ──────────────────────────────────────────────────
-  const actionsRef = useRef(actions);
-  actionsRef.current = actions;
-  const screenshotRef = useRef(screenshot);
-  screenshotRef.current = screenshot;
-
-  useEffect(() => {
-    const bindings: Array<[string, () => void]> = [
-      [GLOBAL_SHORTCUTS.answer, () => actionsRef.current.answer()],
-      [GLOBAL_SHORTCUTS.screenshot, () => screenshotRef.current()],
-      [GLOBAL_SHORTCUTS.toggleWindow, () => void toggleMainWindow()],
-    ];
-    let disposed = false;
-    const registered: string[] = [];
-    (async () => {
-      for (const [shortcut, run] of bindings) {
-        try {
-          await register(shortcut, (event) => {
-            if (event.state === "Pressed") run();
-          });
-          if (disposed) await unregister(shortcut);
-          else registered.push(shortcut);
-        } catch (err) {
-          console.warn(`Global shortcut ${shortcut} unavailable`, err);
-        }
-      }
-    })();
-    return () => {
-      disposed = true;
-      for (const s of registered) void unregister(s).catch(() => undefined);
-    };
+  // ── Global shortcuts (registered app-wide; see globalShortcuts.ts) ────
+  const answerHistory = useAnswerHistory(live, actions);
+  const shortcutState = useRef({ actions, screenshot, answerHistory, live });
+  shortcutState.current = { actions, screenshot, answerHistory, live };
+  const onShortcut = useCallback((action: GlobalAction) => {
+    const { actions: a, screenshot: shot, answerHistory: h, live: l } = shortcutState.current;
+    if (action === "answer") a.answer();
+    else if (action === "screenshot") shot();
+    else if (action === "prevAnswer") h.step(-1);
+    else if (action === "nextAnswer") h.step(1);
+    else if (action === "togglePause") a.togglePause();
+    else if (action === "copyAnswer") {
+      const shown = selectDisplayedAnswer(l);
+      // Tauri clipboard: works while another app is focused (navigator.clipboard needs page focus).
+      if (shown?.has_content) void writeText(answerAsText(shown.answer)).catch(() => undefined);
+    }
   }, []);
+  useShortcutHandler(onShortcut);
 
   // ── End ───────────────────────────────────────────────────────────────
   const [ending, setEnding] = useState(false);

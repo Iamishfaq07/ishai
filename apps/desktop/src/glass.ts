@@ -40,8 +40,25 @@ export function initGlass(): void {
   applyGlass(loadGlass());
 }
 
+const CHANGED = "orbit:glass-changed";
+
+/** Global hotkeys: nudge transparency by `delta` (e.g. -0.1 = more see-through). */
+export function stepGlass(delta: number): void {
+  const p = loadGlass();
+  const opacity = Math.round(Math.min(1, Math.max(GLASS_MIN, p.opacity + delta)) * 100) / 100;
+  const next = { ...p, opacity };
+  localStorage.setItem(KEY, JSON.stringify(next));
+  applyGlass(next);
+  window.dispatchEvent(new Event(CHANGED));
+}
+
 export function useGlass(): [GlassPrefs, (patch: Partial<GlassPrefs>) => void] {
   const [prefs, setPrefs] = useState<GlassPrefs>(loadGlass);
+  useEffect(() => {
+    const sync = () => setPrefs(loadGlass());
+    window.addEventListener(CHANGED, sync);
+    return () => window.removeEventListener(CHANGED, sync);
+  }, []);
   useEffect(() => {
     applyGlass(prefs);
     localStorage.setItem(KEY, JSON.stringify(prefs));

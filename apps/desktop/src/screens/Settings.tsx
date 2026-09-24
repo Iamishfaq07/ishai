@@ -16,6 +16,7 @@ import {
 import { API_URL, api } from "../api";
 import { loadCloseAction, saveCloseAction, type CloseAction } from "../CloseDialog";
 import { GlassControls } from "../GlassControls";
+import { GlobalShortcutsCard } from "../GlobalShortcutsCard";
 import { useTheme, type ThemePref } from "../theme";
 import { TitleBar } from "../TitleBar";
 
@@ -45,6 +46,7 @@ export function SettingsScreen({
         <div className="mx-auto max-w-3xl space-y-6">
           <PageHeader title="Settings" />
           <AppearanceCard />
+          <GlobalShortcutsCard />
           <PrivacyCard user={user} onUser={onUser} onSignOut={onSignOut} />
           <UsageCard />
           <AdvancedCard />

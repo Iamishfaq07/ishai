@@ -2,7 +2,12 @@
 //! Windows Credential Manager, Secret Service on Linux) — never in localStorage or on disk.
 //! Provider API keys (DeepSeek, Deepgram) never reach the desktop app at all.
 
-const SERVICE: &str = "ai.orbit.desktop";
+// Test/dev builds can set ORBIT_KEYRING_SERVICE at compile time so they never read (or, on a 401, delete)
+// the real app's saved sign-in.
+const SERVICE: &str = match option_env!("ORBIT_KEYRING_SERVICE") {
+    Some(service) => service,
+    None => "ai.orbit.desktop",
+};
 const ACCOUNT: &str = "access_token";
 
 fn entry() -> Result<keyring::Entry, String> {

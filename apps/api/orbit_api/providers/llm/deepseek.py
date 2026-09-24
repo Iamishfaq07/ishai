@@ -1,5 +1,6 @@
 """DeepSeek via its OpenAI-compatible Chat Completions API (server-side only)."""
 
+import base64
 import json
 from collections.abc import AsyncIterator
 from typing import Any
@@ -8,6 +9,9 @@ import httpx
 
 from orbit_api.live.routing import ReasoningLevel
 from orbit_api.providers.llm.base import LLMChunk, LLMError, LLMProvider, LLMRequest, Usage
+
+# Models that accept image input (DeepSeek-V4.1-Flash reports input_modalities ["text", "image"]).
+VISION_MODELS = frozenset({"deepseek-flash"})
 
 # Extra max_tokens for chain-of-thought, which counts against max_tokens (max effort used ~1.6k tokens on a
 # multi-part design question; the old reasoner ~2.5k).
@@ -39,19 +43,21 @@ class DeepSeekProvider(LLMProvider):
     def model_for(self, reasoning: ReasoningLevel) -> str:
         return self._reasoning_model if reasoning == "deep" else self._model
 
+    def supports_vision(self) -> bool:
+        return self._model in VISION_MODELS
+
     def supports_structured_output(self) -> bool:
         return True  # json_object response_format
 
     def _payload(self, request: LLMRequest) -> dict[str, Any]:
-        if request.images:
-            # The DeepSeek chat API does not accept image input; vision is routed to a vision
-            # provider by the caller. Refuse rather than silently dropping the image.
-            raise LLMError("vision_unsupported", "DeepSeek provider does not accept images")
         model = self.model_for(request.reasoning)
+        if request.images and model not in VISION_MODELS:
+            # Refuse rather than silently dropping the image (spec §62: never fake vision).
+            raise LLMError("vision_unsupported", f"{model} does not accept images")
         thinking = request.thinking if request.thinking != "off" else ("high" if request.reasoning == "deep" else None)
         payload: dict[str, Any] = {
             "model": model,
-            "messages": [{"role": m.role, "content": m.content} for m in request.messages],
+            "messages": _messages(request),
             # Chain-of-thought counts against max_tokens: with an answer-sized budget the model thinks until
             # the cap and returns no content at all (finish_reason=length).
             "max_tokens": request.max_tokens + (REASONING_HEADROOM if thinking else 0),
@@ -106,3 +112,16 @@ class DeepSeekProvider(LLMProvider):
 
     async def aclose(self) -> None:
         await self._client.aclose()
+
+
+def _messages(request: LLMRequest) -> list[dict[str, Any]]:
+    """Chat messages; images ride on the last user message as OpenAI-style content parts."""
+    msgs: list[dict[str, Any]] = [{"role": m.role, "content": m.content} for m in request.messages]
+    if request.images:
+        last_user = max(i for i, m in enumerate(msgs) if m["role"] == "user")
+        parts: list[dict[str, Any]] = [{"type": "text", "text": msgs[last_user]["content"]}]
+        for img in request.images:
+            data = base64.b64encode(img.data).decode("ascii")
+            parts.append({"type": "image_url", "image_url": {"url": f"data:{img.media_type};base64,{data}"}})
+        msgs[last_user] = {"role": "user", "content": parts}
+    return msgs

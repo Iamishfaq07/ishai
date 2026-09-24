@@ -5,7 +5,17 @@ import logging
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
@@ -32,9 +42,11 @@ from orbit_api.models import (
     SessionDocument,
     SessionSummary,
     SessionTurn,
+    UsageEvent,
     User,
 )
 from orbit_api.providers.llm import get_llm_provider
+from orbit_api.providers.llm.base import LLMImage
 from orbit_api.providers.stt import create_stt_provider
 from orbit_api.ratelimit import limit
 from orbit_api.retrieval.index import IndexedChunk, SessionIndex
@@ -56,6 +68,9 @@ CLOSE_REPLACED = 4010
 CLOSE_TOO_MANY = 4029
 # In-process like the ticket store: fine for one API instance.
 _live_sockets: dict[str, dict[str, WebSocket]] = {}
+# The engine behind each live socket, so HTTP uploads (screenshots) can feed the running session.
+_live_engines: dict[str, LiveEngine] = {}
+MAX_SCREENSHOT_BYTES = 8 * 1024 * 1024
 
 
 class SessionIn(BaseModel):
@@ -254,6 +269,40 @@ async def live_ticket(session_id: str, user: Annotated[User, Depends(current_use
     return {"ticket": issue_ticket(user.id, session_id), "expires_in": TICKET_TTL_S}
 
 
+def _image_type(head: bytes) -> str | None:
+    if head.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if head.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    return None
+
+
+@router.post("/sessions/{session_id}/screenshots", status_code=202, dependencies=[Depends(session_limit)])
+async def upload_screenshot(session_id: str, image: Annotated[UploadFile, File()],
+                            user: Annotated[User, Depends(current_user)],
+                            db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, str]:
+    """Answer what a screenshot shows; the answer streams over the session's live socket. The image is only
+    sent to the model — never stored."""
+    await _owned(db, session_id, user)
+    engine = _live_engines.get(session_id)
+    if engine is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Start or rejoin the live session to analyse screenshots.")
+    if not get_llm_provider().supports_vision():
+        raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, "The configured AI model can't read images.")
+    plan = await plan_for(db, user.id)
+    if plan.screenshots is not None and await usage_this_month(db, user.id, "screenshots") >= plan.screenshots:
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, "You've used this month's screenshots.")
+    data = await image.read(MAX_SCREENSHOT_BYTES + 1)
+    if len(data) > MAX_SCREENSHOT_BYTES:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Screenshot is too large (max 8 MB).")
+    media_type = _image_type(data[:8])
+    if media_type is None:
+        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Screenshot must be a PNG or JPEG image.")
+    db.add(UsageEvent(user_id=user.id, session_id=session_id, metric="screenshots", quantity=1))
+    await db.commit()
+    return {"screenshot_id": await engine.answer_screenshot(LLMImage(data, media_type))}
+
+
 @router.get("/usage")
 async def usage(user: Annotated[User, Depends(current_user)],
                 db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
@@ -341,6 +390,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
     recorder = DbRecorder(session_id, user_id, store_transcripts=store_transcripts)
     engine = LiveEngine(profile, settings, send=send, llm=get_llm_provider(), stt=create_stt_provider(),
                         index=index, recorder=recorder)
+    _live_engines[session_id] = engine
     explicit_end = False
     try:
         await engine.start()
@@ -374,6 +424,8 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             del mine[session_id]
             if not mine:
                 _live_sockets.pop(user_id, None)
+        if _live_engines.get(session_id) is engine:
+            del _live_engines[session_id]
         await engine.end(final=explicit_end)
         await recorder.close()
         with contextlib.suppress(Exception):

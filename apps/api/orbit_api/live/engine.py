@@ -42,7 +42,7 @@ from orbit_api.live.routing import (
     choose_reasoning_level,
     estimate_complexity,
 )
-from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMProvider, LLMRequest, Usage
+from orbit_api.providers.llm.base import LLMError, LLMImage, LLMMessage, LLMProvider, LLMRequest, Usage
 from orbit_api.providers.stt.base import STTConfig, STTProvider, STTSession, TranscriptEvent
 from orbit_api.providers.stt.mock import MockSTTProvider, load_fixture, replay
 from orbit_api.retrieval.index import SessionIndex
@@ -80,6 +80,16 @@ class Recorder(Protocol):
                                latency_ms: int, ok: bool) -> None: ...
     async def ended(self, duration_s: int, stt_seconds: float, summary: str) -> None: ...
     async def detached(self, duration_s: int, stt_seconds: float, summary: str) -> None: ...
+
+
+SCREENSHOT_LABEL = "📷 Screenshot"
+SCREENSHOT_PROMPT = (
+    "The user captured a screenshot of their screen (it's attached). Read it carefully and answer exactly what "
+    "it asks. A coding problem: say the approach, then the code, time/space complexity and edge cases. A "
+    "multiple-choice question: the correct option first, then briefly why. An error message or log: what it "
+    "means and the fix. A diagram or task: what it shows and the answer. If it isn't legible, say what you "
+    "can read and what you'd need."
+)
 
 
 class NullRecorder:
@@ -488,9 +498,20 @@ class LiveEngine:
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await gen.task
 
+    async def answer_screenshot(self, image: LLMImage) -> str:
+        """Answer whatever the captured screenshot shows (coding problem, MCQ, error, diagram…). Returns the
+        question id; the answer streams like any other."""
+        qid = str(uuid.uuid4())
+        qtype = QuestionType.coding if self.profile.session_type in ("coding", "assessment") else QuestionType.technical
+        await self.send("question.detected", {"question_id": qid, "turn_id": None, "text": SCREENSHOT_LABEL,
+                                              "type": qtype.value, "confidence": 1.0, "is_follow_up": False})
+        await self._rec.question(qid, None, SCREENSHOT_LABEL, qtype.value, 1.0, False, "screenshot")
+        await self._start_answer(qid, SCREENSHOT_PROMPT, qtype, False, "screenshot", images=[image])
+        return qid
+
     async def _start_answer(
         self, qid: str | None, question: str, qtype: QuestionType, is_follow_up: bool, source: str,
-        instruction: str | None = None,
+        instruction: str | None = None, images: list[LLMImage] | None = None,
     ) -> None:
         # Serialize: _cancel_active() awaits, so without this lock a manual answer racing auto-answer could
         # both pass cancellation before either registers its generation → two billed LLM streams at once.
@@ -498,7 +519,7 @@ class LiveEngine:
             await self._cancel_active("superseded")
             aid = str(uuid.uuid4())
             task = asyncio.ensure_future(
-                self._run_answer(aid, qid, question, qtype, is_follow_up, source, instruction))
+                self._run_answer(aid, qid, question, qtype, is_follow_up, source, instruction, images or []))
             self._gens[aid] = _Generation(aid, qid, task)
             self._active = aid
         # keep only recent generation handles
@@ -509,7 +530,7 @@ class LiveEngine:
 
     async def _run_answer(
         self, aid: str, qid: str | None, question: str, qtype: QuestionType, is_follow_up: bool, source: str,
-        instruction: str | None,
+        instruction: str | None, images: list[LLMImage],
     ) -> None:
         started = self._clock()
         is_code = qtype == QuestionType.coding or self.profile.session_type == "coding"
@@ -525,7 +546,7 @@ class LiveEngine:
         # first visible token ~3.7 s out (measured, vs ~0.7 s) — too late mid-conversation. `reasoning` is
         # still reported so the UI can flag in-depth questions.
         request = LLMRequest(
-            messages=built.messages, reasoning="light", thinking=self.settings.thinking,
+            messages=built.messages, reasoning="light", thinking=self.settings.thinking, images=images,
             max_tokens=CODE_MAX_TOKENS if is_code else MAX_TOKENS[self.settings.length],
             request_type="chat" if source == "chat" else "answer",
         )
