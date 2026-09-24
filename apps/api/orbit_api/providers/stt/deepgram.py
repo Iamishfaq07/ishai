@@ -1,14 +1,13 @@
 """Deepgram live streaming STT. One socket per audio channel; the API key never leaves the server.
 
-Note: written against Deepgram's documented `/v1/listen` streaming API; exercise it with a real key
-before relying on it (tests cover the message parsing via `parse_message`).
+Unit tests cover message parsing (`parse_message`); the real API is exercised by the opt-in smoke suite
+(`RUN_PROVIDER_SMOKE=true uv run pytest tests/smoke`).
 """
 
 import asyncio
 import contextlib
 import json
 import logging
-import time
 from collections.abc import AsyncIterator
 from typing import Any
 from urllib.parse import urlencode
@@ -21,9 +20,12 @@ from orbit_api.providers.stt.base import STTConfig, STTProvider, STTSession, Tra
 log = logging.getLogger(__name__)
 
 KEEPALIVE_S = 4.0
+BYTES_PER_MS = 32  # PCM16 mono 16 kHz
 MAX_BUFFERED_AUDIO_BYTES = 16_000 * 2 * 5  # 5 s of PCM16 retained while reconnecting
-# Handshake rejections that retrying can't fix: bad/revoked key (401/403), out of credit (402).
-FATAL_HANDSHAKE = {401: "the Deepgram API key was rejected", 402: "the Deepgram account is out of credit",
+# Handshake rejections that retrying can't fix: invalid stream settings (400, e.g. a language the model doesn't
+# support), bad/revoked key (401/403), out of credit (402).
+FATAL_HANDSHAKE = {400: "Deepgram rejected the transcription settings (unsupported language?)",
+                   401: "the Deepgram API key was rejected", 402: "the Deepgram account is out of credit",
                    403: "the Deepgram API key was rejected"}
 
 
@@ -40,7 +42,9 @@ def build_url(model: str, cfg: STTConfig) -> str:
         ("utterance_end_ms", "1000"),
         ("vad_events", "true"),
     ]
-    params.append(("language", cfg.language) if cfg.language != "auto" else ("detect_language", "true"))
+    # Streaming has no `detect_language` (Deepgram answers HTTP 400); nova-3's multilingual mode is
+    # `language=multi`, which also handles code-switching mid-sentence.
+    params.append(("language", "multi" if cfg.language == "auto" else cfg.language))
     if cfg.diarize:
         params.append(("diarize", "true"))
     for term in cfg.keyterms[:50]:
@@ -85,8 +89,11 @@ class DeepgramSession(STTSession):
         self._backlog: list[bytes] = []
         self._runner: asyncio.Task[None] | None = None
         self._connected = asyncio.Event()
-        self.latency_ms: list[int] = []
-        self._last_audio_at = 0.0
+        # Deepgram timestamps count audio received on the CURRENT socket, so each reconnect restarts them at 0.
+        # Shift every event by the audio that went to earlier sockets to keep one continuous session timeline
+        # (what transcripts and latency are measured against).
+        self._audio_ms_total = 0.0  # all audio passed to send_audio
+        self._offset_ms = 0.0
 
     async def connect(self) -> None:
         self._runner = asyncio.create_task(self._run())
@@ -104,6 +111,7 @@ class DeepgramSession(STTSession):
                     self._connected.set()
                     await self._queue.put(TranscriptEvent(kind="status", status="connected"))
                     backoff = 0.25
+                    self._start_socket_timeline()
                     for chunk in self._backlog:
                         await ws.send(chunk)
                     self._backlog.clear()
@@ -114,9 +122,7 @@ class DeepgramSession(STTSession):
                                 continue
                             ev = parse_message(json.loads(raw))
                             if ev:
-                                if ev.kind in ("partial", "final") and self._last_audio_at:
-                                    self.latency_ms.append(int((time.monotonic() - self._last_audio_at) * 1000))
-                                await self._queue.put(ev)
+                                await self._queue.put(self.shift(ev))
                     finally:
                         keepalive.cancel()
                         self._ws = None
@@ -141,13 +147,23 @@ class DeepgramSession(STTSession):
             backoff = min(backoff * 2, 5.0)
         await self._queue.put(None)
 
+    def _start_socket_timeline(self) -> None:
+        """A new socket's audio starts with the backlog, so its t=0 is where the backlog begins."""
+        self._offset_ms = self._audio_ms_total - sum(len(c) for c in self._backlog) / BYTES_PER_MS
+
+    def shift(self, ev: TranscriptEvent) -> TranscriptEvent:
+        if ev.kind in ("partial", "final") and self._offset_ms:
+            ev.start_ms += int(self._offset_ms)
+            ev.end_ms += int(self._offset_ms)
+        return ev
+
     async def _keepalive(self, ws: Any) -> None:
         while True:
             await asyncio.sleep(KEEPALIVE_S)
             await ws.send(json.dumps({"type": "KeepAlive"}))
 
     async def send_audio(self, pcm16: bytes) -> None:
-        self._last_audio_at = time.monotonic()
+        self._audio_ms_total += len(pcm16) / BYTES_PER_MS
         ws = self._ws
         if ws is None:
             self._backlog.append(pcm16)

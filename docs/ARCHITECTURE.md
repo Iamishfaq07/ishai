@@ -22,8 +22,8 @@ to preserve — Orbit was built from scratch here.
 | Web app, shared live UI, Tauri desktop app (Windows) | ✅ driven end-to-end in Chrome and the real Windows exe |
 
 ## C. Missing core features (next)
-Stripe billing (plans exist but can't be bought), Sentry/OpenTelemetry, Redis-backed live state for multi-instance
-deploys (production is single-instance by design until then — DECISIONS D12), opt-in provider smoke tests,
+Stripe billing (plans exist but can't be bought — D17), Redis-backed live state for multi-instance deploys
+(production is single-instance by design until then — D12), OpenTelemetry tracing (Sentry is built in but off — D18),
 LLM fallback classifier for the ambiguous question band, semantic (neural) retrieval, mock-interview question
 generation, TTS. macOS is deferred (Windows-first).
 

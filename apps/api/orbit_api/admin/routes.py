@@ -6,16 +6,19 @@ Secret values are never returned in plaintext (only a "set" flag); they're store
 ORBIT_CONFIG_SECRET and applied to live providers immediately after saving.
 """
 
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user
 from orbit_api.db import get_db
 from orbit_api.entitlements import is_admin
-from orbit_api.models import AppConfig, User
+from orbit_api.live.metrics import summarize
+from orbit_api.models import AppConfig, LiveSessionRow, User
 from orbit_api.runtime_config import (
     EDITABLE_KEYS,
     ConfigSecretMissing,
@@ -133,3 +136,20 @@ async def admin_status(user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> AdminStatus:
     """Cheap check so the UI can decide whether to show Advanced settings (no 403 noise)."""
     return AdminStatus(is_admin=await is_admin(db, user))
+
+
+class LatencyOut(BaseModel):
+    days: int
+    sessions: int
+    # metric → {n, p50, p95, p99} in ms (see orbit_api/live/metrics.py for what each metric measures)
+    metrics: dict[str, dict[str, int]]
+
+
+@router.get("/latency", response_model=LatencyOut)
+async def latency(_: Annotated[User, Depends(require_admin)], db: Annotated[AsyncSession, Depends(get_db)],
+                  days: Annotated[int, Query(ge=1, le=90)] = 7) -> LatencyOut:
+    """Live-latency percentiles across recent sessions (diagnostics; timings only)."""
+    since = datetime.now(UTC) - timedelta(days=days)
+    rows = (await db.scalars(select(LiveSessionRow.metrics).where(
+        LiveSessionRow.created_at >= since, LiveSessionRow.metrics.is_not(None)))).all()
+    return LatencyOut(days=days, sessions=len(rows), metrics=summarize(r for r in rows if r))

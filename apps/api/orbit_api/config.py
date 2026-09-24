@@ -44,6 +44,9 @@ class Settings(BaseSettings):
         "deepseek-flash", validation_alias=AliasChoices("DEEPSEEK_REASONING_MODEL")
     )
 
+    # Observability. Logs default to JSON lines in production. Sentry stays off unless a DSN is set.
+    log_format: Literal["json", "text"] | None = Field(None, validation_alias=AliasChoices("ORBIT_LOG_FORMAT"))
+    sentry_dsn: str | None = Field(None, validation_alias=AliasChoices("ORBIT_SENTRY_DSN"))
     # How often an idle durable-job worker polls for due jobs (reports), seconds.
     job_poll_s: float = Field(2.0, validation_alias=AliasChoices("ORBIT_JOB_POLL_S"))
     # Live-minute metering: usage is committed (and the plan limit enforced) this often during a session.

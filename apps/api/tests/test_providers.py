@@ -61,7 +61,8 @@ async def test_deepseek_refuses_images_instead_of_faking_vision() -> None:
 def test_deepgram_url_and_parsing() -> None:
     url = build_url("nova-3", STTConfig(language="en", keyterms=["Kubernetes"]))
     assert "interim_results=true" in url and "endpointing=300" in url and "keyterm=Kubernetes" in url
-    assert "detect_language=true" in build_url("nova-3", STTConfig(language="auto"))
+    auto = build_url("nova-3", STTConfig(language="auto"))
+    assert "language=multi" in auto and "detect_language" not in auto  # streaming rejects detect_language (400)
 
     partial = parse_message({"type": "Results", "is_final": False, "speech_final": False, "start": 1.0,
                              "duration": 0.5, "channel": {"alternatives": [{"transcript": "tell me"}]}})

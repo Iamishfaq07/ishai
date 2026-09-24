@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api.db import Base, sessionmaker
 from orbit_api.jobs import enqueue_now, report_key
 from orbit_api.live.events import Speaker
+from orbit_api.live.metrics import merge as merge_metrics
 from orbit_api.models import (
     Answer,
     FailedWrite,
@@ -230,13 +231,16 @@ class DbRecorder:
         self._put(UsageEvent(user_id=self.user_id, session_id=self.session_id, metric=metric, quantity=quantity,
                              idempotency_key=key, created_at=datetime.now(UTC)))
 
-    async def detached(self, duration_s: int, stt_seconds: float, summary: str) -> None:
-        await self._finish(duration_s, stt_seconds, summary, end=False)
+    async def detached(self, duration_s: int, stt_seconds: float, summary: str,
+                       metrics: dict[str, list[int]] | None = None) -> None:
+        await self._finish(duration_s, stt_seconds, summary, metrics, end=False)
 
-    async def ended(self, duration_s: int, stt_seconds: float, summary: str) -> None:
-        await self._finish(duration_s, stt_seconds, summary, end=True)
+    async def ended(self, duration_s: int, stt_seconds: float, summary: str,
+                    metrics: dict[str, list[int]] | None = None) -> None:
+        await self._finish(duration_s, stt_seconds, summary, metrics, end=True)
 
-    async def _finish(self, duration_s: int, stt_seconds: float, summary: str, *, end: bool) -> None:
+    async def _finish(self, duration_s: int, stt_seconds: float, summary: str,
+                      metrics: dict[str, list[int]] | None, *, end: bool) -> None:
         await self.usage("live_seconds", duration_s, self.usage_key)
         if stt_seconds:
             await self.usage("stt_seconds", stt_seconds, f"stt:{self.usage_key}" if self.usage_key else None)
@@ -251,6 +255,8 @@ class DbRecorder:
                         row.ended_at = row.ended_at or datetime.now(UTC)
                     row.duration_s = (row.duration_s or 0) + duration_s
                     row.rolling_summary = summary or row.rolling_summary
+                    if metrics:  # accumulate across reconnects
+                        row.metrics = merge_metrics(row.metrics, metrics)
                     await db.commit()
 
         await _with_retries(close_row, "session row update")

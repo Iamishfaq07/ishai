@@ -15,8 +15,9 @@ os.environ.update(
     ORBIT_JOB_POLL_S="0.05",
     ORBIT_SPOOL_DIR=str(_tmp),
 )
-for key in ("DEEPSEEK_API_KEY", "DEEPGRAM_API_KEY"):
-    os.environ.pop(key, None)
+if os.environ.get("RUN_PROVIDER_SMOKE", "").lower() != "true":  # tests/smoke needs the real keys
+    for key in ("DEEPSEEK_API_KEY", "DEEPGRAM_API_KEY"):
+        os.environ.pop(key, None)
 
 
 @pytest.fixture

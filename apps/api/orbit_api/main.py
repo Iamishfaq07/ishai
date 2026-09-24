@@ -13,6 +13,7 @@ from orbit_api.auth.routes import router as auth_router
 from orbit_api.config import get_settings
 from orbit_api.desktop_updates import router as desktop_router
 from orbit_api.documents.routes import router as documents_router
+from orbit_api.observability import configure_logging, init_sentry, request_id_middleware
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.stt import create_stt_provider
 from orbit_api.runtime_config import refresh as refresh_runtime_config
@@ -20,9 +21,8 @@ from orbit_api.sessions.recorder import replay_failed_writes
 from orbit_api.sessions.routes import drain_teardowns
 from orbit_api.sessions.routes import router as sessions_router
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-# httpx logs every request URL at INFO; GitHub signed download URLs (and provider URLs) do not belong in logs.
-logging.getLogger("httpx").setLevel(logging.WARNING)
+_boot = get_settings()
+configure_logging(_boot.log_format or ("json" if _boot.env == "production" else "text"))
 
 
 @asynccontextmanager
@@ -55,8 +55,11 @@ def running_commit() -> str | None:
 
 def create_app() -> FastAPI:
     s = get_settings()
+    if init_sentry(s.sentry_dsn, s.env, running_commit()):
+        logging.getLogger(__name__).info("sentry error reporting enabled")
     app = FastAPI(title="Orbit API", version="0.1.0", lifespan=lifespan,
                   docs_url="/docs" if s.env != "production" else None, redoc_url=None)
+    app.middleware("http")(request_id_middleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=s.cors_origins,

@@ -1,0 +1,27 @@
+# Real-provider smoke tests (paid API calls). Manual only — never runs on push/PR.
+# Needs repo secrets DEEPSEEK_API_KEY and DEEPGRAM_API_KEY.
+name: Provider smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with: { python-version: "3.12", enable-cache: true }
+      - run: uv sync --frozen
+      - name: DeepSeek + Deepgram smoke
+        env:
+          RUN_PROVIDER_SMOKE: "true"
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
+        run: uv run pytest tests/smoke -v
