@@ -55,6 +55,7 @@ from orbit_api.ratelimit import limit
 from orbit_api.retrieval.index import IndexedChunk, SessionIndex
 from orbit_api.sessions.recorder import DbRecorder, upsert_usage
 from orbit_api.sessions.report import generate_report
+from orbit_api.workspaces.routes import owned_workspace, workspace_document_ids
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1", tags=["sessions"])
@@ -89,6 +90,8 @@ class SessionIn(BaseModel):
     style: AnswerStyle = "natural"
     auto_answer: bool = True
     document_ids: list[str] = Field(default_factory=list, max_length=20)
+    # Started from a saved setup: recorded on the session, and its documents are used when none are given.
+    workspace_id: str | None = Field(None, max_length=36)
 
 
 class SessionOut(BaseModel):
@@ -110,6 +113,7 @@ class SessionOut(BaseModel):
     document_ids: list[str] = Field(default_factory=list)
     # Ended sessions: "pending" while the report job runs, "ready" once written, "failed" if it gave up.
     report_status: Literal["pending", "ready", "failed"] | None = None
+    workspace_id: str | None = None
 
 
 class SessionDetail(BaseModel):
@@ -134,7 +138,7 @@ def _to_out(row: LiveSessionRow, question_count: int, doc_ids: list[str],
         answer_language=row.answer_language, length=row.length, style=row.style, auto_answer=row.auto_answer,
         status=row.status, created_at=row.created_at, started_at=row.started_at, ended_at=row.ended_at,
         duration_seconds=row.duration_s, question_count=question_count, document_ids=doc_ids,
-        report_status=report_status,
+        report_status=report_status, workspace_id=row.workspace_id,
     )
 
 
@@ -166,15 +170,21 @@ async def create_session(body: SessionIn, user: Annotated[User, Depends(current_
     remaining = await live_minutes_remaining(db, user.id)
     if remaining is not None and remaining <= 0:
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, "You've used this month's live minutes.")
-    if body.document_ids:
-        owned = (await db.scalars(select(Document.id).where(Document.id.in_(body.document_ids),
+    document_ids = list(body.document_ids)
+    if body.workspace_id:
+        ws = await owned_workspace(db, body.workspace_id, user)
+        ws.last_used_at = datetime.now(UTC)
+        if not document_ids:
+            document_ids = await workspace_document_ids(db, ws.id)
+    if document_ids:
+        owned = (await db.scalars(select(Document.id).where(Document.id.in_(document_ids),
                                                             Document.user_id == user.id))).all()
-        if len(set(owned)) != len(set(body.document_ids)):
+        if len(set(owned)) != len(set(document_ids)):
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Document not found")
     row = LiveSessionRow(user_id=user.id, **body.model_dump(exclude={"document_ids"}))
     db.add(row)
     await db.flush()
-    for doc_id in dict.fromkeys(body.document_ids):
+    for doc_id in dict.fromkeys(document_ids):
         db.add(SessionDocument(session_id=row.id, document_id=doc_id))
     await db.commit()
     return await _session_out(db, row)

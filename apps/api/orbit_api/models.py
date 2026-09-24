@@ -127,6 +127,37 @@ class LiveSessionRow(TimestampMixin, Base):
     rolling_summary: Mapped[str | None] = mapped_column(Text)
     # Latency samples in ms, per metric (live/metrics.py). Timings only — never transcript content.
     metrics: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    # The saved setup this session was started from (kept if the workspace is later deleted, as NULL).
+    workspace_id: Mapped[str | None] = mapped_column(ForeignKey("workspaces.id", ondelete="SET NULL"), index=True)
+
+
+class Workspace(TimestampMixin, Base):
+    """A saved interview setup ("Google — Senior Security Engineer"): documents + answer preferences, so a
+    session starts without re-selecting everything. Not a job tracker."""
+
+    __tablename__ = "workspaces"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    company: Mapped[str | None] = mapped_column(String(200))
+    role: Mapped[str | None] = mapped_column(String(300))
+    session_type: Mapped[str] = mapped_column(String(32), default="interview")
+    language: Mapped[str] = mapped_column(String(16), default="en")
+    answer_language: Mapped[str | None] = mapped_column(String(16))
+    length: Mapped[str] = mapped_column(String(16), default="short")
+    style: Mapped[str] = mapped_column(String(16), default="natural")
+    auto_answer: Mapped[bool] = mapped_column(Boolean, default=True)
+    notes: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class WorkspaceDocument(Base):
+    __tablename__ = "workspace_documents"
+    __table_args__ = (UniqueConstraint("workspace_id", "document_id", name="uq_workspace_document"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), index=True)
 
 
 class SessionDocument(Base):
