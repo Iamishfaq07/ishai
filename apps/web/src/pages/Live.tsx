@@ -9,6 +9,7 @@ import {
   focusRing,
   loadHotkeys,
   loadResponseTiming,
+  loadCodingLanguage,
   loadThinking,
   useLiveSession,
   VISION_ENABLED,
@@ -80,6 +81,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       style: session.style,
       response_timing: loadResponseTiming(),
       thinking: loadThinking(),
+      ...(loadCodingLanguage() ? { coding_language: loadCodingLanguage()! } : {}),
     },
   });
 

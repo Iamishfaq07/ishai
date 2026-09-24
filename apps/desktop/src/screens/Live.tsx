@@ -9,6 +9,7 @@ import {
   focusRing,
   loadHotkeys,
   loadResponseTiming,
+  loadCodingLanguage,
   loadThinking,
   selectDisplayedAnswer,
   useAnswerHistory,
@@ -72,6 +73,7 @@ export function LiveScreen({
       style: session.style,
       response_timing: loadResponseTiming(),
       thinking: loadThinking(),
+      ...(loadCodingLanguage() ? { coding_language: loadCodingLanguage()! } : {}),
     },
   });
 

@@ -42,6 +42,8 @@ _STYLE_RULES: dict[AnswerStyle, str] = {
     "star": _STORY,
     "executive": _CONCISE,
 }
+_LANGUAGE_NAMES = {"cpp": "C++", "csharp": "C#", "javascript": "JavaScript", "typescript": "TypeScript",
+                   "python": "Python", "java": "Java", "go": "Go", "rust": "Rust", "sql": "SQL"}
 _SESSION_RULES: dict[SessionType, str] = {
     "interview": "Context: job interview. The user is the candidate.",
     "phone": "Context: phone/room-audio interview. The user is the candidate.",
@@ -95,6 +97,7 @@ class PromptInputs:
     style: AnswerStyle
     answer_language: str
     instruction: str | None = None  # chat-mode instruction ("make this shorter")
+    coding_language: str | None = None  # preferred language for code, if the user picked one
 
 
 @dataclass
@@ -174,6 +177,8 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
             _LENGTH_RULES[inputs.length],
             _STYLE_RULES[inputs.style] if inputs.qtype != QuestionType.coding else "",
             f"Answer language: {(inputs.answer_language or '').strip() or 'English'}",
+            (f"Write any code in {_LANGUAGE_NAMES.get(inputs.coding_language, inputs.coding_language)} unless the "
+             "question names a different language.") if inputs.coding_language else "",
             _GROUNDING_RULE if inputs.qtype in _PERSONAL_TYPES or inputs.is_follow_up else "",
             f"Question type: {inputs.qtype.value}" + (" (follow-up to the previous question)" if inputs.is_follow_up
                                                      else ""),

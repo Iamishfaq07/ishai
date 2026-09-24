@@ -1,4 +1,4 @@
-import type { AnswerStyle, ResponseTiming, ThinkingLevel } from "@orbit/types";
+import type { AnswerStyle, CodingLanguage, ResponseTiming, ThinkingLevel } from "@orbit/types";
 
 /** "Wait before answering" presets — the server holds a detected question this long (finalizer.GRACE_MS). */
 export const RESPONSE_TIMINGS: Array<{ value: ResponseTiming; label: string; hint: string }> = [
@@ -56,6 +56,32 @@ export function loadThinking(): ThinkingLevel {
 export function saveThinking(level: ThinkingLevel): void {
   try {
     localStorage.setItem(THINKING_KEY, level);
+  } catch {
+    // storage unavailable — still applies to this session
+  }
+}
+
+/** Languages offered for coding answers (value = server CodingLanguage). */
+export const CODING_LANGUAGES: Array<{ value: CodingLanguage; label: string }> = [
+  { value: "python", label: "Python" }, { value: "java", label: "Java" }, { value: "javascript", label: "JavaScript" },
+  { value: "typescript", label: "TypeScript" }, { value: "cpp", label: "C++" }, { value: "csharp", label: "C#" },
+  { value: "go", label: "Go" }, { value: "rust", label: "Rust" }, { value: "sql", label: "SQL" },
+];
+
+const CODING_KEY = "orbit.codingLanguage";
+
+export function loadCodingLanguage(): CodingLanguage | undefined {
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(CODING_KEY) : null;
+    return CODING_LANGUAGES.find((l) => l.value === raw)?.value;
+  } catch {
+    return undefined;
+  }
+}
+
+export function saveCodingLanguage(lang: CodingLanguage): void {
+  try {
+    localStorage.setItem(CODING_KEY, lang);
   } catch {
     // storage unavailable — still applies to this session
   }

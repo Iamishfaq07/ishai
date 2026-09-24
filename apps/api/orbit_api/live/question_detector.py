@@ -199,7 +199,13 @@ def _imperative_strength(norm: str) -> float:
     return best
 
 
+# "Second highest salary from an Employee table" is a SQL problem, not a pay negotiation.
+_DATA_CUES = re.compile(r"\b(?:table|tables|query|queries|sql|column|columns|rows|select|join|schema)\b")
+
+
 def classify_type(norm: str) -> QuestionType:
+    if _DATA_CUES.search(norm) and any(n in norm for n in ("salary", "salaries", "compensation", "pay")):
+        return QuestionType.coding
     for qtype, needles in _TYPE_RULES:
         if any(n in norm for n in needles):
             return qtype

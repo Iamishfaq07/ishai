@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { CodingLanguage } from "@orbit/types";
 import type { KeyPointProgress } from "../live/coverage";
 import { splitPlaceholders } from "../live/placeholders";
 import type { AnswerView } from "../live/reducer";
@@ -15,6 +16,8 @@ export interface AnswerCardProps {
   autoAnswer: boolean;
   /** Key points ticked off from the candidate's speech ("NEXT" guidance). */
   progress?: KeyPointProgress | null;
+  /** Rewrite a coding answer in another language (shows the language picker on the code). */
+  onCodeLanguage?: (lang: CodingLanguage) => void;
 }
 
 /** Answer text with "[fill in]" prompts rendered as distinct chips so they're never read out verbatim. */
@@ -124,7 +127,14 @@ function KeyPoints({ progress, compact }: { progress: KeyPointProgress; compact:
   );
 }
 
-export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, autoAnswer, progress }: AnswerCardProps) {
+function SectionLabel({ children, block = false }: { children: string; block?: boolean }) {
+  const cls = "text-xs font-semibold uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400";
+  return block ? <h3 className={cx(cls, "mb-1")}>{children}</h3> : <span className={cls}>{children}</span>;
+}
+
+export function AnswerCard({
+  answer, pinned, onPin, onRetry, compact = false, autoAnswer, progress, onCodeLanguage,
+}: AnswerCardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showExample, setShowExample] = useState(false);
   const answerId = answer?.answer_id ?? null;
@@ -147,6 +157,8 @@ export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, au
 
   const a = answer.answer;
   const thinking = answer.status === "streaming" && !answer.has_content;
+  // Coding layout: what to SAY (the talk track) is kept apart from what to CODE.
+  const coding = Boolean(a.code || a.problem || a.edge_cases?.length || a.tests?.length);
   const hasComplexity = Boolean(a.time_complexity || a.space_complexity);
 
   return (
@@ -215,6 +227,13 @@ export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, au
           </div>
         )}
 
+        {coding && a.problem && (
+          <p className="mb-2 rounded-md bg-zinc-100 px-2.5 py-1.5 text-sm text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+            <SectionLabel>Problem</SectionLabel> {a.problem}
+          </p>
+        )}
+        {coding && a.direct_answer && <SectionLabel block>Say</SectionLabel>}
+
         {a.direct_answer && (
           <div className={cx("space-y-2.5", compact ? "text-sm" : "text-[15px] leading-relaxed")}>
             {a.direct_answer.split(/\n{2,}/).map((para, i) => (
@@ -260,7 +279,33 @@ export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, au
 
         {a.code && (
           <div className="mt-3">
-            <CodeBlock code={a.code} />
+            {coding && <SectionLabel block>Code</SectionLabel>}
+            <CodeBlock code={a.code} {...(onCodeLanguage ? { onLanguage: onCodeLanguage } : {})} />
+          </div>
+        )}
+
+        {coding && (a.edge_cases?.length ?? 0) > 0 && (
+          <div className="mt-3">
+            <SectionLabel block>Edge cases</SectionLabel>
+            <ul className="space-y-1 text-sm text-zinc-800 dark:text-zinc-200">
+              {a.edge_cases!.map((e, i) => (
+                <li key={i} className="flex gap-2">
+                  <span className="text-zinc-400" aria-hidden="true">•</span>
+                  {e}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {coding && (a.tests?.length ?? 0) > 0 && (
+          <div className="mt-3">
+            <SectionLabel block>Tests</SectionLabel>
+            <ul className="space-y-1 font-mono text-[13px] text-zinc-700 dark:text-zinc-300">
+              {a.tests!.map((t, i) => (
+                <li key={i}>{t}</li>
+              ))}
+            </ul>
           </div>
         )}
 

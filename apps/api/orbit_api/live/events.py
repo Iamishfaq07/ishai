@@ -16,6 +16,7 @@ AnswerStyle = Literal["natural", "concise", "story", "bullets", "star", "technic
 # How long to wait after the interviewer stops before auto-answering (finalizer.GRACE_MS).
 ResponseTiming = Literal["quick", "balanced", "patient"]
 Thinking = Literal["off", "low", "high", "max"]
+CodingLanguage = Literal["python", "java", "javascript", "typescript", "cpp", "csharp", "go", "rust", "sql"]
 SessionType = Literal["interview", "meeting", "coding", "assessment", "phone", "mock"]
 
 
@@ -57,6 +58,7 @@ class LiveSettings(BaseModel):
     answer_language: str | None = None
     response_timing: ResponseTiming = "balanced"
     thinking: Thinking = "off"
+    coding_language: CodingLanguage | None = None  # None = the model picks (usually Python)
 
 
 class LiveSettingsPatch(BaseModel):
@@ -66,6 +68,7 @@ class LiveSettingsPatch(BaseModel):
     answer_language: str | None = None
     response_timing: ResponseTiming | None = None
     thinking: Thinking | None = None
+    coding_language: CodingLanguage | None = None
 
 
 class CodeBlock(BaseModel):
@@ -90,6 +93,10 @@ class LiveAnswer(BaseModel):
     # 3–6 short labels for the points the answer makes, in order — the UI ticks them off as the candidate
     # covers them ("NEXT" guidance).
     key_points: list[str] = Field(default_factory=list)
+    # Coding answers: the task restated in one line, edge cases to mention, and example tests (input → expected).
+    problem: str | None = None
+    edge_cases: list[str] = Field(default_factory=list)
+    tests: list[str] = Field(default_factory=list)
 
 
 class Envelope(BaseModel):

@@ -595,7 +595,7 @@ class LiveEngine:
             question=question, qtype=qtype, is_follow_up=is_follow_up, session_type=self.profile.session_type,
             role=self.profile.role, length=self.settings.length, style=self.settings.style,
             answer_language=self.settings.answer_language or self.profile.answer_language or "en",
-            instruction=instruction,
+            instruction=instruction, coding_language=self.settings.coding_language,
         )
         built = build_prompt(self._index, inputs, self.memory)
         # Live answers always run on the fast model. The reasoning model's hidden chain-of-thought put its

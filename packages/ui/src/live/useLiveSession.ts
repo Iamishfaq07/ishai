@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
-import type { AnswerLength, AnswerStyle, LiveSettings, ResponseTiming, Speaker, ThinkingLevel } from "@orbit/types";
+import type {
+  AnswerLength,
+  AnswerStyle,
+  CodingLanguage,
+  LiveSettings,
+  ResponseTiming,
+  Speaker,
+  ThinkingLevel,
+} from "@orbit/types";
 import { LiveClient, type LiveClientOptions } from "./client";
-import { saveResponseTiming, saveThinking } from "./preferences";
+import { saveCodingLanguage, saveResponseTiming, saveThinking } from "./preferences";
 import { initialLiveState, liveReducer, type LiveViewState } from "./reducer";
 
 export interface LiveActions {
@@ -16,6 +24,8 @@ export interface LiveActions {
   setAutoAnswer: (on: boolean) => void;
   setResponseTiming: (timing: ResponseTiming) => void;
   setThinking: (level: ThinkingLevel) => void;
+  /** Preferred code language; with `regenerateFor`, re-answers that question in it right away. */
+  setCodingLanguage: (lang: CodingLanguage, regenerateFor?: string) => void;
   /** Browse an earlier answer; null returns to the live one. */
   viewAnswer: (answerId: string | null) => void;
   pause: () => void;
@@ -124,6 +134,11 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
       setThinking: (thinking) => {
         saveThinking(thinking);
         updateSettings({ thinking });
+      },
+      setCodingLanguage: (coding_language, regenerateFor) => {
+        saveCodingLanguage(coding_language);
+        updateSettings({ coding_language });
+        if (regenerateFor) client.send("answer.request", { question_text: regenerateFor });
       },
       pause: () => client.send("session.pause", {}),
       resume: () => client.send("session.resume", {}),

@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import { DEV_FIXTURES } from "@orbit/types";
+import { DEV_FIXTURES, type CodingLanguage } from "@orbit/types";
 import { formatElapsed, useElapsed } from "../hooks/useElapsed";
 import { useStickyScroll } from "../hooks/useStickyScroll";
 import { DEFAULT_HOTKEYS, useHotkeys, type HotkeyMap } from "../live/hotkeys";
@@ -168,6 +168,10 @@ export function LivePanel(props: LivePanelProps) {
             compact={compact}
             autoAnswer={live.settings.auto_answer}
             progress={keyPoints}
+            // Screenshots can't be re-run (the image isn't kept), so their code has no language picker.
+            {...(answer && answer.source !== "screenshot" && question && !ended
+              ? { onCodeLanguage: (lang: CodingLanguage) => actions.setCodingLanguage(lang, question.text) }
+              : {})}
           />
         </main>
 
