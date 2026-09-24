@@ -226,6 +226,8 @@ export function LivePanel(props: LivePanelProps) {
         length={live.settings.length}
         autoAnswer={live.settings.auto_answer}
         responseTiming={live.settings.response_timing ?? "balanced"}
+        style={live.settings.style}
+        thinking={live.settings.thinking ?? "off"}
         paused={paused}
         ended={ended}
         hotkeys={hotkeys}
@@ -239,6 +241,8 @@ export function LivePanel(props: LivePanelProps) {
         onLength={actions.setLength}
         onAutoAnswer={actions.setAutoAnswer}
         onResponseTiming={actions.setResponseTiming}
+        onStyle={actions.setStyle}
+        onThinking={actions.setThinking}
         onTogglePause={actions.togglePause}
         onEnd={props.onEnd}
       />
@@ -357,7 +361,7 @@ function ChatAnswer({ answer }: { answer: AnswerView | undefined }) {
   const a = answer.answer;
   return (
     <div className="space-y-1">
-      {a.direct_answer && <p>{a.direct_answer}</p>}
+      {a.direct_answer && <p className="whitespace-pre-line">{a.direct_answer}</p>}
       {a.talking_points.length > 0 && (
         <ul className="list-disc space-y-0.5 pl-4">
           {a.talking_points.map((p, i) => (

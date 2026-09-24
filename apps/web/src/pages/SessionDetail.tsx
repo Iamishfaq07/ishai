@@ -211,7 +211,7 @@ function QuestionsView({ detail }: { detail: SessionDetail }) {
             <p className="font-medium">{q.text}</p>
             {(answersByQuestion.get(q.id) ?? []).map((a) => (
               <div key={a.id} className="mt-3 border-t border-zinc-100 pt-3 text-sm dark:border-zinc-800">
-                {a.content.direct_answer && <p className="font-medium">{a.content.direct_answer}</p>}
+                {a.content.direct_answer && <p className="whitespace-pre-line">{a.content.direct_answer}</p>}
                 <ul className="mt-1 space-y-1 text-zinc-700 dark:text-zinc-300">
                   {a.content.talking_points.map((p, i) => (
                     <li key={i}>· {p}</li>

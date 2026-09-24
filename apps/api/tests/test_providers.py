@@ -104,3 +104,18 @@ def test_reasoner_gets_chain_of_thought_headroom() -> None:
     assert p._payload(LLMRequest(messages=msgs, max_tokens=420))["max_tokens"] == 420
     deep = p._payload(LLMRequest(messages=msgs, max_tokens=420, reasoning="deep"))
     assert deep["model"] == "deepseek-reasoner" and deep["max_tokens"] == 420 + REASONING_HEADROOM
+
+
+def test_thinking_is_explicit_on_every_request() -> None:
+    p = DeepSeekProvider("sk-test", "https://api.deepseek.test", "deepseek-flash", "deepseek-flash")
+    msgs = [LLMMessage("user", "q")]
+    off = p._payload(LLMRequest(messages=msgs, max_tokens=420))
+    # V4 models think by default, so "off" must be sent, not implied
+    assert off["thinking"] == {"type": "disabled"} and "reasoning_effort" not in off
+    assert off["max_tokens"] == 420 and off["temperature"] == 0.3
+    mx = p._payload(LLMRequest(messages=msgs, max_tokens=420, thinking="max"))
+    assert mx["reasoning_effort"] == "max" and "thinking" not in mx and "temperature" not in mx
+    from orbit_api.providers.llm.deepseek import REASONING_HEADROOM
+
+    assert mx["max_tokens"] == 420 + REASONING_HEADROOM
+

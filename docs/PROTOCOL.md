@@ -47,7 +47,9 @@ context (recent turns, rolling summary) does not yet survive a reconnect.
 | `speaker.correct` | `{ turn_id, speaker }` |
 | `dev.simulate` | `{ fixture, speed?: number (0.5–50) }` — replays a transcript fixture; only when the mock STT provider is active |
 
-`LiveSettings = { auto_answer: boolean, length: "short"|"standard"|"detailed", style: "bullets"|"star"|"technical"|"executive", answer_language?: string, response_timing?: "quick"|"balanced"|"patient" }`
+`LiveSettings = { auto_answer: boolean, length: "short"|"standard"|"detailed", style: "natural"|"concise"|"story", answer_language?: string, response_timing?: "quick"|"balanced"|"patient", thinking?: "off"|"low"|"high"|"max" }`
+
+Answers are spoken first-person prose (`direct_answer`, paragraphs separated by a blank line); `talking_points` is only filled if a model lists anyway. Legacy styles (`bullets`, `star`, `technical`, `executive`) are still accepted and mapped onto the new ones. `thinking` sets the model's reasoning effort (off answers in under a second; low/high/max add ~3–6 s before the first word).
 
 `response_timing` is how long a detected question is held after the interviewer stops before it auto-fires (quick ≈ 0, balanced ≈ 0.8 s default, patient ≈ 1.6 s). If the interviewer keeps talking inside that window, the continuation is stitched onto the question; the candidate speaking ends the wait immediately. `answer.request` without `question_text` answers that held/stitched question if there is one.
 

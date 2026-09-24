@@ -525,7 +525,7 @@ class LiveEngine:
         # first visible token ~3.7 s out (measured, vs ~0.7 s) — too late mid-conversation. `reasoning` is
         # still reported so the UI can flag in-depth questions.
         request = LLMRequest(
-            messages=built.messages, reasoning="light",
+            messages=built.messages, reasoning="light", thinking=self.settings.thinking,
             max_tokens=CODE_MAX_TOKENS if is_code else MAX_TOKENS[self.settings.length],
             request_type="chat" if source == "chat" else "answer",
         )

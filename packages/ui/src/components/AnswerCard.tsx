@@ -111,9 +111,14 @@ export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, au
         )}
 
         {a.direct_answer && (
-          <p className={cx("font-medium text-zinc-900 dark:text-zinc-50", compact ? "text-sm" : "text-[15px] leading-snug")}>
-            <Spoken text={a.direct_answer} />
-          </p>
+          <div className={cx("space-y-2.5", compact ? "text-sm" : "text-[15px] leading-relaxed")}>
+            {a.direct_answer.split(/\n{2,}/).map((para, i) => (
+              // The opening sentence carries the answer, so it reads a touch stronger for a quick glance.
+              <p key={i} className={i === 0 ? "font-medium text-zinc-900 dark:text-zinc-50" : "text-zinc-800 dark:text-zinc-200"}>
+                <Spoken text={para} />
+              </p>
+            ))}
+          </div>
         )}
 
         {a.talking_points.length > 0 && (

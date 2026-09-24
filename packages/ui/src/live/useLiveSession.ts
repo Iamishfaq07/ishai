@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
-import type { AnswerLength, AnswerStyle, LiveSettings, ResponseTiming, Speaker } from "@orbit/types";
+import type { AnswerLength, AnswerStyle, LiveSettings, ResponseTiming, Speaker, ThinkingLevel } from "@orbit/types";
 import { LiveClient, type LiveClientOptions } from "./client";
-import { saveResponseTiming } from "./preferences";
+import { saveResponseTiming, saveThinking } from "./preferences";
 import { initialLiveState, liveReducer, type LiveViewState } from "./reducer";
 
 export interface LiveActions {
@@ -15,6 +15,7 @@ export interface LiveActions {
   setStyle: (style: AnswerStyle) => void;
   setAutoAnswer: (on: boolean) => void;
   setResponseTiming: (timing: ResponseTiming) => void;
+  setThinking: (level: ThinkingLevel) => void;
   pause: () => void;
   resume: () => void;
   togglePause: () => void;
@@ -116,6 +117,10 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
       setResponseTiming: (response_timing) => {
         saveResponseTiming(response_timing);
         updateSettings({ response_timing });
+      },
+      setThinking: (thinking) => {
+        saveThinking(thinking);
+        updateSettings({ thinking });
       },
       pause: () => client.send("session.pause", {}),
       resume: () => client.send("session.resume", {}),

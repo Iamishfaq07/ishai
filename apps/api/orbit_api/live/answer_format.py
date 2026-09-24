@@ -3,9 +3,10 @@
 JSON is a poor streaming format for a live UI (nothing is renderable until keys close), so the
 model emits tagged lines and fenced code; we parse deltas into a `LiveAnswer` after every chunk:
 
-    ANSWER: one-sentence direct answer
-    - talking point
-    - talking point
+    ANSWER:
+    the spoken answer, in short paragraphs
+    (blank line between paragraphs — kept as "\n\n" in direct_answer)
+    - talking point            (legacy / if the model lists anyway)
     EXAMPLE: optional grounded example
     CODE: python
     ```python
@@ -52,6 +53,7 @@ class AnswerStreamParser:
         code_lang = ""
         code_lines: list[str] = []
         stray: list[str] = []
+        para_break = False  # a blank line inside the spoken answer starts a new paragraph
 
         for line in self._buf.split("\n"):
             tag = _TAG.match(line.strip())
@@ -101,19 +103,23 @@ class AnswerStreamParser:
 
             text = line.strip()
             if not text:
+                para_break = para_break or (section == "ANSWER" and bool(ans.direct_answer)) or (
+                    section is None and bool(stray))
                 continue
+            sep = "\n\n" if para_break else " "
+            para_break = False
             # continuation lines extend the current section
             if section == "ANSWER":
-                ans.direct_answer = f"{ans.direct_answer} {text}".strip()
+                ans.direct_answer = f"{ans.direct_answer}{sep}{text}".strip() if ans.direct_answer else text
             elif section == "EXAMPLE":
                 ans.example = f"{ans.example or ''} {text}".strip()
             elif section == "FOLLOWUP":
                 ans.follow_up = f"{ans.follow_up or ''} {text}".strip()
             elif section is None:
-                stray.append(text)
+                stray.append(f"\n\n{text}" if sep == "\n\n" else text)
 
         if stray and not ans.direct_answer:
-            ans.direct_answer = " ".join(stray)
+            ans.direct_answer = " ".join(stray).replace(" \n\n", "\n\n")
         if code_lines or code_lang:
             ans.code = CodeBlock(language=code_lang or "text", content="\n".join(code_lines).rstrip())
         return ans

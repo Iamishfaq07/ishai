@@ -36,7 +36,7 @@ export function Teleprompter({ answer }: TeleprompterProps) {
   const answerId = answer?.answer_id ?? null;
 
   const lines = answer
-    ? [answer.answer.direct_answer, ...answer.answer.talking_points].filter((l) => l.trim().length > 0)
+    ? [...answer.answer.direct_answer.split(/\n{2,}/), ...answer.answer.talking_points].filter((l) => l.trim().length > 0)
     : [];
 
   useEffect(() => {

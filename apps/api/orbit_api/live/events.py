@@ -10,9 +10,12 @@ PROTOCOL_VERSION = 1
 
 Speaker = Literal["interviewer", "candidate", "other"]
 AnswerLength = Literal["short", "standard", "detailed"]
-AnswerStyle = Literal["bullets", "star", "technical", "executive"]
+# natural / concise / story are the offered styles; the rest are legacy values still stored on older
+# sessions (mapped onto the new ones in context_builder).
+AnswerStyle = Literal["natural", "concise", "story", "bullets", "star", "technical", "executive"]
 # How long to wait after the interviewer stops before auto-answering (finalizer.GRACE_MS).
 ResponseTiming = Literal["quick", "balanced", "patient"]
+Thinking = Literal["off", "low", "high", "max"]
 SessionType = Literal["interview", "meeting", "coding", "assessment", "phone", "mock"]
 
 
@@ -50,9 +53,10 @@ class LiveState(StrEnum):
 class LiveSettings(BaseModel):
     auto_answer: bool = True
     length: AnswerLength = "standard"
-    style: AnswerStyle = "bullets"
+    style: AnswerStyle = "natural"
     answer_language: str | None = None
     response_timing: ResponseTiming = "balanced"
+    thinking: Thinking = "off"
 
 
 class LiveSettingsPatch(BaseModel):
@@ -61,6 +65,7 @@ class LiveSettingsPatch(BaseModel):
     style: AnswerStyle | None = None
     answer_language: str | None = None
     response_timing: ResponseTiming | None = None
+    thinking: Thinking | None = None
 
 
 class CodeBlock(BaseModel):

@@ -1,12 +1,14 @@
-import type { AnswerLength, ResponseTiming } from "@orbit/types";
+import type { AnswerLength, AnswerStyle, ResponseTiming, ThinkingLevel } from "@orbit/types";
 import { formatHotkey, type HotkeyMap } from "../live/hotkeys";
-import { RESPONSE_TIMINGS } from "../live/preferences";
+import { ANSWER_STYLES, RESPONSE_TIMINGS, THINKING_LEVELS } from "../live/preferences";
 import { cx, focusRing } from "./cx";
 
 export interface ControlBarProps {
   length: AnswerLength;
   autoAnswer: boolean;
   responseTiming: ResponseTiming;
+  style: AnswerStyle;
+  thinking: ThinkingLevel;
   paused: boolean;
   ended: boolean;
   hotkeys: HotkeyMap;
@@ -21,6 +23,8 @@ export interface ControlBarProps {
   onLength: (length: AnswerLength) => void;
   onAutoAnswer: (on: boolean) => void;
   onResponseTiming: (timing: ResponseTiming) => void;
+  onStyle: (style: AnswerStyle) => void;
+  onThinking: (level: ThinkingLevel) => void;
   onTogglePause: () => void;
   onEnd: () => void;
 }
@@ -34,6 +38,8 @@ const LENGTHS: Array<{ value: AnswerLength; label: string; hint: string }> = [
 const btn =
   "inline-flex items-center justify-center rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40";
 const ghost = "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800";
+const miniSelect =
+  "rounded-md bg-transparent py-1 pl-1 pr-5 text-[11px] font-medium text-zinc-600 disabled:opacity-40 dark:text-zinc-300";
 
 export function ControlBar(props: ControlBarProps) {
   const { hotkeys, ended } = props;
@@ -124,12 +130,37 @@ export function ControlBar(props: ControlBarProps) {
             value={props.responseTiming}
             disabled={ended || !props.autoAnswer}
             onChange={(e) => props.onResponseTiming(e.target.value as ResponseTiming)}
-            className={cx(
-              "rounded-md bg-transparent py-1 pl-1 pr-5 text-[11px] font-medium text-zinc-600 disabled:opacity-40 dark:text-zinc-300",
-              focusRing,
-            )}
+            className={cx(miniSelect, focusRing)}
           >
             {RESPONSE_TIMINGS.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Answer style"
+            title={ANSWER_STYLES.find((s) => s.value === props.style)?.hint ?? "Answer style"}
+            value={ANSWER_STYLES.some((s) => s.value === props.style) ? props.style : "natural"}
+            disabled={ended}
+            onChange={(e) => props.onStyle(e.target.value as AnswerStyle)}
+            className={cx(miniSelect, focusRing)}
+          >
+            {ANSWER_STYLES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Thinking"
+            title={THINKING_LEVELS.find((t) => t.value === props.thinking)?.hint}
+            value={props.thinking}
+            disabled={ended}
+            onChange={(e) => props.onThinking(e.target.value as ThinkingLevel)}
+            className={cx(miniSelect, focusRing)}
+          >
+            {THINKING_LEVELS.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
               </option>
