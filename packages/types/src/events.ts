@@ -138,7 +138,8 @@ export interface AudioStatus {
 }
 
 export type ProviderKind = "stt" | "llm";
-export type ProviderState = "ok" | "reconnecting" | "down" | "mock";
+/** "connecting": the provider socket isn't open yet (audio is buffered) — never reported as ok prematurely. */
+export type ProviderState = "connecting" | "ok" | "reconnecting" | "down" | "mock";
 export interface ProviderStatus {
   provider: ProviderKind;
   name: string;

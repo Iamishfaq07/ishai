@@ -49,7 +49,12 @@ const TERMINAL_CLOSE_CODES = new Set([1000, 4001, 4003, 4004, 4009, 4010, 4029])
 const MAX_QUEUED_CONTROL = 64;
 
 type EventListener = (event: ServerEvent) => void;
-type StatusListener = (status: ConnectionStatus, detail?: string) => void;
+/** Why the connection closed for good, when the server said (e.g. `live_session_active` + the running session). */
+export interface CloseInfo {
+  code: string;
+  sessionId?: string;
+}
+type StatusListener = (status: ConnectionStatus, detail?: string, info?: CloseInfo) => void;
 
 export class LiveClient {
   private readonly opts: Required<Omit<LiveClientOptions, "onOpen">> & Pick<LiveClientOptions, "onOpen">;
@@ -148,10 +153,16 @@ export class LiveClient {
     } catch (err) {
       if (gen !== this.generation || this.closedByUser) return;
       this.opening = false;
-      // 401/403/404 from the ticket endpoint are not retryable.
-      const status = (err as { status?: number } | null)?.status;
-      if (status === 401 || status === 403 || status === 404) {
-        this.setStatus("closed", "Not authorized for this session");
+      // Auth, verification, quota, missing/ended session, another live session: retrying can't fix these. Keep
+      // the server's message ("Verify your email…", "You already have a live session…") instead of a generic one.
+      const e = err as { status?: number; message?: string; code?: string; details?: Record<string, unknown> } | null;
+      const status = e?.status;
+      if (status === 401 || status === 402 || status === 403 || status === 404 || status === 409) {
+        const sessionId = typeof e?.details?.session_id === "string" ? e.details.session_id : undefined;
+        this.setStatus("closed", e?.message || "Not authorized for this session", {
+          code: e?.code ?? `http_${status}`,
+          ...(sessionId ? { sessionId } : {}),
+        });
         return;
       }
       this.scheduleRetry(errorMessage(err));
@@ -211,9 +222,9 @@ export class LiveClient {
     }, delay);
   }
 
-  private setStatus(status: ConnectionStatus, detail?: string): void {
+  private setStatus(status: ConnectionStatus, detail?: string, info?: CloseInfo): void {
     this.status = status;
-    for (const listener of this.statusListeners) listener(status, detail);
+    for (const listener of this.statusListeners) listener(status, detail, info);
   }
 }
 

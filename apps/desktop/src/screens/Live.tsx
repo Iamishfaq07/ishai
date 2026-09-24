@@ -246,6 +246,9 @@ export function LiveScreen({
       onModeChange={changeMode}
       onEnd={end}
       onReconnect={() => client.connect()}
+          onEndOtherSession={async (id) => {
+            await api.endSession(id);
+          }}
       onScreenshot={VISION_ENABLED ? screenshot : undefined}
       screenshotUnavailableReason="Screenshot analysis isn’t enabled yet."
       hotkeys={hotkeys}

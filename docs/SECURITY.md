@@ -84,6 +84,30 @@ The API refuses to boot in production with:
 - verification required for non-admin users but no SMTP (nobody could verify);
 - Turnstile selected without keys.
 
+## Hostile uploads (`documents/parsing.py`)
+- **Limits:**
+  - 10 MB per upload;
+  - magic bytes must match the extension;
+  - 40 PDF pages;
+  - 200k extracted characters.
+- **Archive inspection, before any parser runs.** A DOCX is a ZIP, and its central directory alone is checked
+  (nothing is decompressed):
+  - at most 1,000 entries;
+  - no entry over 25 MB;
+  - no more than 50 MB uncompressed in total;
+  - compression ratio at most 100:1 on entries over 1 MB;
+  - no absolute paths, `..` or drive letters;
+  - `word/document.xml` must be present.
+- **Isolation.** PDF and DOCX extraction runs in a short-lived child process (spawned, never forked):
+  - 20 s timeout;
+  - on Linux, `RLIMIT_AS` 768 MB and `RLIMIT_CPU` 30 s.
+
+  A parser that hangs, runs out of memory or crashes kills only the child, and the user gets a clear message.
+  Plain text is decoded in-process.
+- **Boot self-test.** At boot the API parses a tiny generated DOCX through the isolated path. If child processes
+  don't work on the host, it logs a critical error (which reaches Sentry when enabled) and parses in-process, with
+  the archive checks still applied, rather than rejecting every upload.
+
 ## Data handling
 - Screenshots are analysed and discarded, and audio is never written to disk.
 - Uploaded files are parsed and dropped, and only extracted text chunks are stored.
@@ -99,5 +123,13 @@ The API refuses to boot in production with:
 - per-IP, per-email and per-user limits;
 - CAPTCHA;
 - production fail-fast rules.
+
+`tests/test_upload_hardening.py` covers:
+- ZIP bombs, oversized parts and too many entries;
+- traversal paths;
+- archives that aren't real DOCX files;
+- malformed PDFs;
+- the timeout kill;
+- an API-level bomb upload.
 
 `packages/ui/src/api/client.test.ts` covers the client's CSRF header and structured errors.

@@ -1,3 +1,5 @@
+import asyncio
+import contextlib
 import logging
 import os
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -14,6 +16,7 @@ from orbit_api.config import get_settings
 from orbit_api.csrf import HEADER as CSRF_HEADER
 from orbit_api.csrf import csrf_middleware
 from orbit_api.desktop_updates import router as desktop_router
+from orbit_api.documents.parsing import isolation_selftest
 from orbit_api.documents.routes import router as documents_router
 from orbit_api.observability import configure_logging, init_sentry, request_id_middleware
 from orbit_api.preflight import router as preflight_router
@@ -39,6 +42,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             await refresh_runtime_config(session)  # load admin API-key overrides into providers
     except Exception:
         logging.getLogger(__name__).exception("failed to load runtime config; using environment defaults")
+    # Checked off the boot path: a host where child-process parsing fails degrades to in-process parsing.
+    selftest = asyncio.create_task(asyncio.to_thread(isolation_selftest))
     try:
         await replay_failed_writes()  # dead-lettered live-session writes from a previous outage
     except Exception:
@@ -46,6 +51,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     async with jobs.running_worker(s.job_poll_s):
         yield
         await drain_teardowns()
+    with contextlib.suppress(Exception):
+        await selftest
     await get_llm_provider().aclose()
     await db.dispose()
 

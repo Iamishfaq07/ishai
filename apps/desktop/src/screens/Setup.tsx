@@ -325,11 +325,16 @@ export function SetupScreen({
       : id && id !== "default"
         ? outputs.find((o) => o.id === id)?.name
         : outputs.find((o) => o.isDefault)?.name;
+  const selectedApp = appPid ? apps.find((a) => String(a.pid) === appPid) : undefined;
+  // Browsers run every tab in one process tree, so "this app only" would overpromise for Chrome/Edge/Firefox.
+  const selectedIsBrowser = selectedApp ? isBrowserExe(selectedApp.exe) : false;
   const localState: LocalAudioState = {
     micName: (micDevice ?? devices.find((d) => d.isDefault) ?? devices[0])?.name ?? null,
     systemAudio,
     interviewerSource: appPid
-      ? `Capturing ${apps.find((a) => String(a.pid) === appPid)?.name ?? "the selected app"} only`
+      ? selectedIsBrowser
+        ? `Capturing ${selectedApp?.name ?? "the browser"} (all its tabs)`
+        : `Capturing ${selectedApp?.name ?? "the selected app"} only`
       : `Capturing ${outputName(systemDevice) ?? "the default output"}`,
     hasResume: selectedDocs.some((d) => d.kind === "resume"),
     hasJobDescription: selectedDocs.some((d) => d.kind === "job_description"),
@@ -706,7 +711,9 @@ export function SetupScreen({
                   </button>
                 </div>
                 <p className="text-xs text-zinc-500">
-                  {appPid
+                  {appPid && selectedIsBrowser
+                    ? "Captures this browser's audio. Other tabs playing sound in the same browser will be heard too — close or mute them."
+                    : appPid
                     ? "Only this app is captured — games, music and notifications are ignored."
                     : systemDevice === "communications"
                       ? "Captures the device Windows uses for calls (often your headset). Everything it plays is heard."
@@ -843,4 +850,9 @@ function LevelRow({ label, level }: { label: string; level: number }) {
       </div>
     </div>
   );
+}
+
+const BROWSER_EXES = new Set(["chrome.exe", "msedge.exe", "firefox.exe", "brave.exe", "opera.exe", "vivaldi.exe", "arc.exe"]);
+function isBrowserExe(exe: string): boolean {
+  return BROWSER_EXES.has(exe.split(/[\\/]/).pop()?.toLowerCase() ?? "");
 }
