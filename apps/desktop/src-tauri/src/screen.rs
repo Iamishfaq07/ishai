@@ -36,7 +36,8 @@ fn target_monitor(app: &AppHandle, window_label: &str) -> Result<TargetMonitor, 
     let size = monitor.size();
     let cx = pos.x + (size.width / 2) as i32;
     let cy = pos.y + (size.height / 2) as i32;
-    let xcap = xcap::Monitor::from_point(cx, cy).map_err(|e| format!("Screen capture unavailable: {e}"))?;
+    let xcap = xcap::Monitor::from_point(cx, cy)
+        .map_err(|e| format!("Screen capture unavailable: {e}"))?;
     Ok(TargetMonitor {
         xcap,
         physical_width: size.width,
@@ -58,7 +59,15 @@ fn encode_png(width: u32, height: u32, rgba: &[u8]) -> Result<String, String> {
 }
 
 /// Crops an RGBA buffer. Coordinates are clamped to the image bounds.
-fn crop_rgba(src: &[u8], src_width: u32, src_height: u32, x: u32, y: u32, w: u32, h: u32) -> (Vec<u8>, u32, u32) {
+fn crop_rgba(
+    src: &[u8],
+    src_width: u32,
+    src_height: u32,
+    x: u32,
+    y: u32,
+    w: u32,
+    h: u32,
+) -> (Vec<u8>, u32, u32) {
     let x = x.min(src_width.saturating_sub(1));
     let y = y.min(src_height.saturating_sub(1));
     let w = w.min(src_width - x).max(1);
@@ -75,28 +84,60 @@ fn crop_rgba(src: &[u8], src_width: u32, src_height: u32, x: u32, y: u32, w: u32
 #[tauri::command]
 pub async fn capture_screen(app: AppHandle) -> Result<Capture, String> {
     let target = target_monitor(&app, "main")?;
-    let image = target.xcap.capture_image().map_err(|e| format!("Screenshot failed: {e}"))?;
+    let image = target
+        .xcap
+        .capture_image()
+        .map_err(|e| format!("Screenshot failed: {e}"))?;
     let (width, height) = (image.width(), image.height());
-    Ok(Capture { png_base64: encode_png(width, height, image.as_raw())?, width, height })
+    Ok(Capture {
+        png_base64: encode_png(width, height, image.as_raw())?,
+        width,
+        height,
+    })
 }
 
 /// `x/y/width/height` are logical (CSS) pixels relative to the overlay's monitor origin.
 #[tauri::command]
-pub async fn capture_region(app: AppHandle, x: f64, y: f64, width: f64, height: f64) -> Result<Capture, String> {
+pub async fn capture_region(
+    app: AppHandle,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+) -> Result<Capture, String> {
     if width < 1.0 || height < 1.0 {
         return Err("Selection is empty".into());
     }
     let target = target_monitor(&app, OVERLAY_LABEL)?;
-    let image = target.xcap.capture_image().map_err(|e| format!("Screenshot failed: {e}"))?;
+    let image = target
+        .xcap
+        .capture_image()
+        .map_err(|e| format!("Screenshot failed: {e}"))?;
     let (img_w, img_h) = (image.width(), image.height());
 
     // logical → physical, then physical → image pixels (the capture may differ from the reported size).
-    let ratio = if target.physical_width > 0 { f64::from(img_w) / f64::from(target.physical_width) } else { 1.0 };
+    let ratio = if target.physical_width > 0 {
+        f64::from(img_w) / f64::from(target.physical_width)
+    } else {
+        1.0
+    };
     let k = target.scale_factor * ratio;
     let to_px = |v: f64| (v * k).round().max(0.0) as u32;
 
-    let (rgba, w, h) = crop_rgba(image.as_raw(), img_w, img_h, to_px(x), to_px(y), to_px(width), to_px(height));
-    Ok(Capture { png_base64: encode_png(w, h, &rgba)?, width: w, height: h })
+    let (rgba, w, h) = crop_rgba(
+        image.as_raw(),
+        img_w,
+        img_h,
+        to_px(x),
+        to_px(y),
+        to_px(width),
+        to_px(height),
+    );
+    Ok(Capture {
+        png_base64: encode_png(w, h, &rgba)?,
+        width: w,
+        height: h,
+    })
 }
 
 /// Opens (or focuses) the transparent full-monitor region-selection window.
@@ -106,7 +147,9 @@ pub async fn open_region_selector(app: AppHandle) -> Result<(), String> {
         existing.set_focus().map_err(|e| e.to_string())?;
         return Ok(());
     }
-    let main = app.get_webview_window("main").ok_or("Orbit window not found")?;
+    let main = app
+        .get_webview_window("main")
+        .ok_or("Orbit window not found")?;
     let monitor = main
         .current_monitor()
         .map_err(|e| e.to_string())?
@@ -141,6 +184,9 @@ mod tests {
         let src: Vec<u8> = (0..6u8).flat_map(|i| [i, i, i, 255]).collect();
         let (out, w, h) = crop_rgba(&src, 3, 2, 1, 0, 5, 5);
         assert_eq!((w, h), (2, 2));
-        assert_eq!(out.chunks(4).map(|p| p[0]).collect::<Vec<_>>(), vec![1, 2, 4, 5]);
+        assert_eq!(
+            out.chunks(4).map(|p| p[0]).collect::<Vec<_>>(),
+            vec![1, 2, 4, 5]
+        );
     }
 }
