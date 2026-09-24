@@ -23,6 +23,7 @@
         "minHeight": 360,
         "resizable": true,
         "decorations": false,
+        "transparent": true,
         "alwaysOnTop": true,
         "visible": true,
         "center": true

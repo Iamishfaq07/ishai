@@ -9,6 +9,12 @@ use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::Manager;
 
+/// "Quit Orbit" from the close dialog (the tray menu quits the same way).
+#[tauri::command]
+fn quit_app(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
 fn show_main(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
@@ -59,6 +65,7 @@ pub fn run() {
             secrets::clear_token,
             updater::check_update,
             updater::install_update,
+            quit_app,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Orbit");

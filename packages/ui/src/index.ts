@@ -1,4 +1,19 @@
 export { ErrorBoundary } from "./components/ErrorBoundary";
+export { AppearanceControls } from "./components/AppearanceControls";
+export { OrbitLogo } from "./components/OrbitLogo";
+export {
+  ACCENTS,
+  DEFAULT_DESIGN,
+  TEXT_SIZES,
+  applyDesign,
+  initDesign,
+  loadDesign,
+  saveDesign,
+  useDesign,
+  type AccentName,
+  type DesignPrefs,
+  type TextSize,
+} from "./design/design";
 export { VISION_ENABLED, MOCK_INTERVIEW_ENABLED } from "./features";
 export { ApiError, base64ToBlob, createApiClient, type ApiAuth, type ApiClient, type ApiClientOptions } from "./api/client";
 export {

@@ -1,7 +1,21 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { AdminConfig, AdminConfigUpdate, Usage, User } from "@orbit/types";
-import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Spinner, Toggle } from "@orbit/ui";
+import {
+  AppearanceControls,
+  Button,
+  Card,
+  ErrorNote,
+  Field,
+  Input,
+  PageHeader,
+  Select,
+  Spinner,
+  Toggle,
+  useDesign,
+} from "@orbit/ui";
 import { API_URL, api } from "../api";
+import { loadCloseAction, saveCloseAction, type CloseAction } from "../CloseDialog";
+import { GlassControls } from "../GlassControls";
 import { useTheme, type ThemePref } from "../theme";
 import { TitleBar } from "../TitleBar";
 
@@ -42,19 +56,47 @@ export function SettingsScreen({
 
 function AppearanceCard() {
   const [theme, setTheme] = useTheme();
+  const [design, setDesign] = useDesign();
+  const [closeAction, setCloseAction] = useState<CloseAction>(loadCloseAction);
   return (
     <Card>
       <h2 className="mb-4 font-semibold">Appearance</h2>
-      <div className="flex items-center justify-between gap-4">
-        <label htmlFor="theme" className="text-sm font-medium">
-          Theme
-        </label>
-        <div className="w-40">
-          <Select id="theme" value={theme} onChange={(e) => setTheme(e.target.value as ThemePref)}>
-            <option value="dark">Dark</option>
-            <option value="light">Light</option>
-            <option value="system">System</option>
-          </Select>
+      <div className="space-y-5">
+        <div className="flex items-center justify-between gap-4">
+          <label htmlFor="theme" className="text-sm font-medium">
+            Theme
+          </label>
+          <div className="w-40">
+            <Select id="theme" value={theme} onChange={(e) => setTheme(e.target.value as ThemePref)}>
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+              <option value="system">System</option>
+            </Select>
+          </div>
+        </div>
+        <AppearanceControls prefs={design} onChange={setDesign} />
+        <div className="border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <GlassControls />
+        </div>
+        <div className="flex items-center justify-between gap-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <label htmlFor="close-action" className="text-sm font-medium">
+            When closing the window
+          </label>
+          <div className="w-44">
+            <Select
+              id="close-action"
+              value={closeAction}
+              onChange={(e) => {
+                const v = e.target.value as CloseAction;
+                setCloseAction(v);
+                saveCloseAction(v);
+              }}
+            >
+              <option value="ask">Ask every time</option>
+              <option value="tray">Hide to tray</option>
+              <option value="quit">Quit Orbit</option>
+            </Select>
+          </div>
         </div>
       </div>
     </Card>

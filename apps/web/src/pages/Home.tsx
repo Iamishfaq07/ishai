@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import type { SessionType } from "@orbit/types";
-import { cx, focusRing } from "@orbit/ui";
+import { OrbitLogo, cx, focusRing } from "@orbit/ui";
 import { Button, Card, ErrorNote, Spinner } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -25,7 +25,10 @@ export function HomePage() {
 
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-3xl border border-zinc-200 bg-gradient-to-br from-indigo-500/10 via-transparent to-violet-500/10 p-8 dark:border-zinc-800">
+      <section className="relative overflow-hidden rounded-3xl border border-zinc-200 bg-gradient-to-br from-indigo-500/10 via-transparent to-indigo-500/5 p-8 dark:border-zinc-800">
+        <span className="pointer-events-none absolute -right-8 -top-8 opacity-80 motion-safe:animate-float" aria-hidden="true">
+          <OrbitLogo size={160} />
+        </span>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           {user?.name ? `Hi ${user.name.split(" ")[0]} —` : "Hi —"} ready when you are.
         </p>
@@ -132,7 +135,7 @@ const DESKTOP_DOWNLOAD_URL: string =
 
 function DesktopPromo() {
   return (
-    <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-600 p-6 text-white shadow-sm">
+    <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 text-white shadow-sm">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="max-w-2xl">
           <h2 className="text-lg font-semibold">Get Orbit for Windows</h2>

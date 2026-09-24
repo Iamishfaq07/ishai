@@ -12,6 +12,8 @@ import {
   saveHotkeys,
   type HotkeyAction,
   type HotkeyMap,
+  AppearanceControls,
+  useDesign,
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Spinner, Toggle } from "../components/ui";
 import { api } from "../lib/api";
@@ -22,6 +24,7 @@ import { useTheme, type ThemePref } from "../lib/theme";
 
 export function SettingsPage() {
   const [theme, setTheme] = useTheme();
+  const [design, setDesign] = useDesign();
   return (
     <div className="max-w-3xl space-y-6">
       <PageHeader title="Settings" />
@@ -38,6 +41,9 @@ export function SettingsPage() {
               <option value="system">System</option>
             </Select>
           </div>
+        </div>
+        <div className="mt-5">
+          <AppearanceControls prefs={design} onChange={setDesign} />
         </div>
       </Card>
       <HotkeysCard />

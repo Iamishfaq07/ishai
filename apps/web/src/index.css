@@ -1,3 +1,4 @@
+@import "../../../packages/ui/src/design/base.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

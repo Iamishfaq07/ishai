@@ -32,3 +32,12 @@ describe("response timing preference", () => {
     expect(() => saveResponseTiming("quick")).not.toThrow();
   });
 });
+
+describe("answer copy text", () => {
+  it("joins the spoken answer, any points, code and example", async () => {
+    const { answerAsText } = await import("../components/AnswerCard");
+    const { emptyLiveAnswer } = await import("@orbit/types");
+    const a = { ...emptyLiveAnswer("q"), direct_answer: "First para.\n\nSecond para.", talking_points: ["one"] };
+    expect(answerAsText(a)).toBe("First para.\n\nSecond para.\n- one");
+  });
+});

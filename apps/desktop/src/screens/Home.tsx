@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { OrbitSession, SessionType, User } from "@orbit/types";
-import { Button, Card, cx, focusRing, Spinner } from "@orbit/ui";
+import { Button, Card, cx, focusRing, OrbitLogo, Spinner } from "@orbit/ui";
 import { api } from "../api";
 import { formatDate, formatDuration, SESSION_TYPE_LABEL } from "../format";
 import { TitleBar } from "../TitleBar";
@@ -59,7 +59,10 @@ export function HomeScreen({
       </TitleBar>
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-4xl space-y-6">
-          <section className="overflow-hidden rounded-3xl border border-zinc-200 bg-gradient-to-br from-indigo-500/10 via-transparent to-violet-500/10 p-6 dark:border-zinc-800">
+          <section className="relative animate-fade-up overflow-hidden rounded-3xl border border-zinc-200 bg-gradient-to-br from-indigo-500/10 via-transparent to-indigo-500/5 p-6 dark:border-zinc-800">
+            <span className="pointer-events-none absolute -right-6 -top-6 opacity-80 motion-safe:animate-float" aria-hidden="true">
+              <OrbitLogo size={120} />
+            </span>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">{firstName ? `Hi ${firstName} —` : "Hi —"} ready when you are.</p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">Start a live session</h1>
             <p className="mt-2 max-w-xl text-sm text-zinc-600 dark:text-zinc-400">
