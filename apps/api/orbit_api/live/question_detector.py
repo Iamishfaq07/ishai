@@ -26,19 +26,57 @@ _FILLERS = {
 _FILLER_TOKENS = frozenset({"okay", "ok", "right", "so", "yeah", "great", "um", "uh", "hmm", "cool", "nice",
                             "alright", "interesting", "perfect", "sure", "yes", "yep", "got", "it", "thanks"})
 
+# Stripped from the front before judging the rest ("Hmm, and the database layer?"); "and" is kept on purpose,
+# it's what marks a follow-up fragment.
+_LEAD_FILLERS = _FILLER_TOKENS | {"um", "uh", "hmm", "well", "but", "so"}
+
 _WH = ("what", "what's", "whats", "why", "how", "how's", "when", "where", "which", "who", "whom", "whose")
 _AUX = (
     "can", "could", "would", "will", "do", "does", "did", "is", "are", "was", "were", "have", "has",
     "had", "should", "shall", "may", "might",
 )
+# Multi-word requests: unambiguous at the start of a clause.
 _IMPERATIVE = (
-    "tell me", "walk me through", "walk us through", "describe", "explain", "give me", "give us",
-    "talk about", "talk me through", "talk us through", "share", "design", "implement", "write",
-    "optimize", "optimise", "compare", "define", "list", "outline", "summarize", "summarise",
-    "elaborate", "expand on", "go over", "take me through", "show me", "debug", "solve", "estimate",
+    "tell me", "walk me through", "walk us through", "give me", "give us",
+    "talk about", "talk me through", "talk us through", "expand on", "go over", "take me through", "show me",
     "introduce yourself", "let's talk about", "i'd like to hear", "i'd love to hear", "i want to hear",
     "i'm curious", "i am curious", "help me understand",
+    # asks for more on the current topic ("A little more on the security side.")
+    "say more", "tell me more", "a little more on", "a little more about", "a bit more on", "a bit more about",
+    "a little more detail", "a bit more detail", "more detail on", "go deeper", "dig into", "dig deeper",
+    "run me through", "run us through", "take us through", "break down", "go into",
 )
+# One-word verbs double as nouns/statements ("Design is a big part of our culture", "Share price is up"): they
+# only count as a request when followed by what they act on.
+_VERB_IMPERATIVE = (
+    "describe", "explain", "share", "design", "implement", "write", "optimize", "optimise", "compare", "define",
+    "list", "outline", "summarize", "summarise", "elaborate", "debug", "solve", "estimate", "clarify", "unpack",
+    "build", "sketch", "code", "model", "reverse", "sort", "calculate", "prove", "evaluate", "justify",
+)
+_OBJECT_START = frozenset({
+    "your", "you", "yourself", "me", "us", "a", "an", "the", "this", "that", "these", "those", "how", "what", "why",
+    "when", "where", "which", "who", "some", "one", "two", "three", "each", "every", "any", "on", "for", "it",
+})
+# A verb right after the "imperative" means it was the subject of a statement ("Tell me is what my manager says").
+_COPULA = frozenset({"is", "are", "was", "were", "has", "have", "had", "will", "would", "can", "could", "ups", "up",
+                     "s", "took", "takes", "went", "goes"})
+# Indirect asks anywhere in the sentence ("So the next thing I wanted to ask is how you handle secrets").
+_INDIRECT = (
+    "wanted to ask", "want to ask", "like to ask", "i'd like to know", "i would like to know", "want to know",
+    "love to know", "question for you is", "my question is",
+)
+_WONDERING = re.compile(r"\b(?:wondering|curious) (?:if|whether|how|what|why|when|where|which|who|about)\b")
+# Explicit open floors for the candidate.
+_DIRECT_ASKS = ("any questions for", "questions for me", "questions for us", "anything you'd like to ask",
+                "anything you want to ask", "anything else you'd like to add", "anything to add")
+# Bare continuers: a request ONLY when a question was just discussed ("Go on." after an answer).
+_CONTINUERS = {"go on", "keep going", "continue", "and", "and then", "why", "how so", "how", "such as", "like what",
+               "for example", "for instance", "meaning", "why not", "and why", "what else", "anything else", "more"}
+# Coding prompts are often statements ("Two sum, given an array of integers.").
+_CODING_PROMPT = re.compile(r"\bgiven (?:a|an|two|the|n|k)\b|\breturn (?:the|all|true|a)\b|\bfind (?:the|all)\b")
+# Screen-share / call logistics that start like requests but aren't interview questions.
+_LOGISTICS = ("share your screen", "share my screen", "let me share", "can you see my screen", "can you hear me",
+              "you're on mute", "you are on mute", "turn on your camera", "let me know when")
 # Phrases that turn a statement into a question even mid-sentence.
 _EMBEDDED = ("could you", "can you", "would you", "do you", "have you", "are you", "what would", "how would")
 
@@ -88,6 +126,8 @@ _FOLLOW_UP_MARKERS = (
     "what was the", "how did you", "how did that", "can you go deeper", "go deeper", "more detail",
     "such as", "what happened", "what would you do differently", "that database", "that approach",
     "that decision", "that project", "that one", "that role", "there instead", "tell me more",
+    "and the", "and your", "and what", "and how", "and why", "expand on that", "more on that", "that part",
+    "that side", "your thinking", "when it failed",
 )
 
 
@@ -138,6 +178,25 @@ def _clause_starts(norm: str, prefixes: tuple[str, ...]) -> bool:
         if _starts_with(clause.strip(), prefixes):
             return True
     return False
+
+
+def _imperative_strength(norm: str) -> float:
+    """Score for a request phrased as a command, judged per clause. 0.6 = clearly a request, 0.45 = maybe
+    (ambiguous band → classifier), 0 = not a request."""
+    best = 0.0
+    for clause in re.split(r"\b(?:so|and|okay|ok|now|alright|great)\b", norm):
+        toks = clause.split()
+        if not toks:
+            continue
+        for phrase in _IMPERATIVE:
+            n = len(phrase.split())
+            if toks[:n] == phrase.split():
+                nxt = toks[n] if len(toks) > n else ""
+                best = max(best, 0.0 if nxt in _COPULA else 0.6)
+        if toks[0] in _VERB_IMPERATIVE:
+            nxt = toks[1] if len(toks) > 1 else ""
+            best = max(best, 0.0 if nxt in _COPULA else 0.6 if nxt in _OBJECT_START else 0.45)
+    return best
 
 
 def classify_type(norm: str) -> QuestionType:
@@ -253,9 +312,22 @@ def _detect_one(text: str, speaker: Speaker, ctx: DetectorContext | None = None)
         reasons.append("speaker_not_interviewer")
         return result(0.0, QuestionType.non_question)
 
+    recent_question = bool(ctx.previous_question) and (ctx.seconds_since_previous_answer or 0) < 600
+    # "Hmm, and the database layer?" → judge "and the database layer" (leading fillers carry no meaning).
+    core = toks
+    while len(core) > 1 and core[0] in _LEAD_FILLERS:
+        core = core[1:]
+    core_norm = " ".join(core)
+    if recent_question and core_norm.rstrip(" ?") in _CONTINUERS:
+        reasons.append("continuer_after_question")
+        return result(0.7, QuestionType.follow_up, is_follow_up=True)
+
     if norm in _FILLERS or _WAIT_PHRASE.match(norm) or (len(toks) <= 3 and all(t in _FILLER_TOKENS for t in toks)):
         reasons.append("filler")
         return result(0.02, QuestionType.small_talk)
+    if any(p in norm for p in _LOGISTICS):
+        reasons.append("call_logistics")
+        return result(0.05, QuestionType.small_talk)
 
     score = 0.0
     if raw.endswith("?"):
@@ -267,12 +339,20 @@ def _detect_one(text: str, speaker: Speaker, ctx: DetectorContext | None = None)
     elif _clause_starts(norm, _AUX):
         score += 0.3
         reasons.append("aux_inversion")
-    if _clause_starts(norm, _IMPERATIVE):
-        score += 0.55
-        reasons.append("imperative_request")
+    # An explicit request ("Expand on that.") is a question without a question mark.
+    imperative = max(_imperative_strength(core_norm), _imperative_strength(norm))
+    if imperative:
+        score += imperative
+        reasons.append("imperative_request" if imperative >= 0.6 else "possible_request")
     if any(p in norm for p in _EMBEDDED):
         score += 0.2
         reasons.append("embedded_request")
+    if any(p in norm for p in _INDIRECT) or _WONDERING.search(norm):
+        score += 0.55
+        reasons.append("indirect_request")
+    if any(p in norm for p in _DIRECT_ASKS):
+        score += 0.3
+        reasons.append("open_floor")
     if len(toks) < 3:
         score -= 0.25
         reasons.append("very_short")
@@ -282,14 +362,19 @@ def _detect_one(text: str, speaker: Speaker, ctx: DetectorContext | None = None)
     qtype = classify_type(norm)
     if qtype is not QuestionType.technical:
         score += 0.1  # a recognised interview category is itself evidence
+    if qtype is QuestionType.coding and _CODING_PROMPT.search(norm):
+        score += 0.5  # "Two sum, given an array of integers…" is the problem statement itself
+        reasons.append("coding_prompt")
 
     # Follow-up: short-ish, refers back, and there was a recent question.
     follow_up = False
-    if ctx.previous_question and (ctx.seconds_since_previous_answer or 0) < 600 and len(toks) <= 14:
-        padded = f" {norm} "
-        if any(f" {m} " in padded or norm.startswith(m) for m in _FOLLOW_UP_MARKERS):
+    if recent_question and len(toks) <= 14:
+        padded = f" {core_norm} "
+        if any(f" {m} " in padded or core_norm.startswith(m) for m in _FOLLOW_UP_MARKERS):
             follow_up = True
             reasons.append("follow_up_reference")
+            if raw.endswith("?"):
+                score += 0.2  # "…and the database layer?" only reads as a question next to the last one
             if qtype in (QuestionType.technical,):
                 qtype = QuestionType.follow_up
 

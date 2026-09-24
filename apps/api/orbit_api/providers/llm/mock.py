@@ -1,6 +1,7 @@
 """Deterministic offline LLM for development and tests. Clearly labelled — never presented as real."""
 
 import asyncio
+import json
 from collections.abc import AsyncIterator
 
 from orbit_api.live.routing import ReasoningLevel
@@ -69,7 +70,13 @@ class MockLLMProvider(LLMProvider):
         if request.request_type == "summary":
             return _mock_report(request.messages[-1].content if request.messages else "")
         if request.request_type == "classify":
-            return '{"is_question": true, "confidence": 0.7}'
+            # Deterministic stand-in for the ambiguous-question classifier: statements about prices/values are
+            # not questions; anything else in the band is answered as-is.
+            body = request.messages[-1].content if request.messages else ""
+            utterance = body.split('source="utterance">', 1)[-1].split("</reference_data>", 1)[0].strip()
+            statement = any(w in utterance.lower() for w in ("price", "we value", "our culture"))
+            return json.dumps({"kind": "non_question" if statement else "question", "should_answer": not statement,
+                               "normalized_question": "" if statement else utterance})
         user = request.messages[-1].content if request.messages else ""
         q = ""
         for line in user.splitlines():

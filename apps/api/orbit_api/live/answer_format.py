@@ -24,7 +24,10 @@ import re
 
 from orbit_api.live.events import CodeBlock, LiveAnswer, QuestionType
 
-_TAG = re.compile(r"^(ANSWER|EXAMPLE|CODE|TIME|SPACE|FOLLOWUP)\s*:\s*(.*)$", re.IGNORECASE)
+_TAG = re.compile(r"^(GROUNDED|ANSWER|EXAMPLE|CODE|TIME|SPACE|FOLLOWUP)\s*:\s*(.*)$", re.IGNORECASE)
+# The model's own label for its personal claims (see live_system.md): only "example" is surfaced to the user.
+_GROUNDING = {"verified": "verified", "example": "example", "general": "general"}
+_PERSONAL = frozenset({QuestionType.behavioral, QuestionType.resume, QuestionType.leadership, QuestionType.culture})
 _BULLET = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+(.*)$")
 _FENCE = re.compile(r"^\s*```\s*([\w+#-]*)\s*$")
 
@@ -80,7 +83,11 @@ class AnswerStreamParser:
 
             if tag:
                 section, value = tag.group(1).upper(), tag.group(2).strip()
-                if section == "ANSWER":
+                if section == "GROUNDED":
+                    label = value.lower().strip(" .")
+                    ans.grounding = _GROUNDING.get(label)  # type: ignore[assignment]
+                    section = None  # a one-line tag: nothing continues it
+                elif section == "ANSWER":
                     ans.direct_answer = value
                 elif section == "EXAMPLE":
                     ans.example = value or None
@@ -120,6 +127,11 @@ class AnswerStreamParser:
 
         if stray and not ans.direct_answer:
             ans.direct_answer = " ".join(stray).replace(" \n\n", "\n\n")
+        if (ans.grounding is None and ans.direct_answer and self._qtype in _PERSONAL
+                and not any(c.startswith("resume") for c in self._context_used)):
+            # Model skipped the label on a question about the user's own past with no verified facts to draw
+            # on: whatever it said about "me" is illustrative.
+            ans.grounding = "example"
         if code_lines or code_lang:
             ans.code = CodeBlock(language=code_lang or "text", content="\n".join(code_lines).rstrip())
         return ans

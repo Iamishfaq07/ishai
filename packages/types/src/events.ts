@@ -81,6 +81,11 @@ export interface LiveAnswer {
   space_complexity: string | null;
   follow_up: string | null;
   context_used: string[];
+  /**
+   * Where the answer's claims about the user come from: "verified" (their documents), "example" (an
+   * illustrative story/details to swap for their real experience — shown as a badge), "general" (none).
+   */
+  grounding?: "verified" | "example" | "general" | null;
 }
 
 export interface Envelope<TType extends string = string, TData = unknown> {

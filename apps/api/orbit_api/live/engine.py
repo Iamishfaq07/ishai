@@ -16,6 +16,7 @@ from typing import Any, Literal, Protocol
 from pydantic import ValidationError
 
 from orbit_api.live.answer_format import AnswerStreamParser
+from orbit_api.live.classifier import classify
 from orbit_api.live.context_builder import PromptInputs, SessionMemory, build_prompt, fence
 from orbit_api.live.dedup import DedupDecision, Deduplicator
 from orbit_api.live.events import (
@@ -33,7 +34,7 @@ from orbit_api.live.events import (
     Speaker,
     SpeakerCorrect,
 )
-from orbit_api.live.finalizer import GRACE_MS, QuestionFinalizer
+from orbit_api.live.finalizer import GRACE_MS, FinalizedQuestion, QuestionFinalizer
 from orbit_api.live.metrics import AudioClock, LatencySamples
 from orbit_api.live.question_detector import DetectorContext, classify_type, detect, normalize
 from orbit_api.live.routing import (
@@ -385,7 +386,7 @@ class LiveEngine:
                     fired = self._finalizer.on_transcript(turn.turn_id, turn.text, self.now_ms(),
                                                           is_final=True, endpoint=True)
                     if fired:
-                        await self._on_question(fired.turn_id, fired.detection.question_text)
+                        await self._on_fired(fired)
                 await self._commit_turn(channel, turn)
             return
 
@@ -413,11 +414,11 @@ class LiveEngine:
                 turn.turn_id, turn.text, self.now_ms(), is_final=ev.kind == "final", endpoint=ev.endpoint
             )
             if fired:
-                await self._on_question(fired.turn_id, fired.detection.question_text)
+                await self._on_fired(fired)
         elif spk == "candidate" and ev.text:
             fired = self._finalizer.on_candidate_speech(self.now_ms(), turn.text)
             if fired:
-                await self._on_question(fired.turn_id, fired.detection.question_text)
+                await self._on_fired(fired)
         if ev.kind == "final" and ev.endpoint:
             await self._commit_turn(channel, turn)
 
@@ -454,7 +455,7 @@ class LiveEngine:
                 continue
             fired = self._finalizer.tick(self.now_ms())
             if fired:
-                await self._on_question(fired.turn_id, fired.detection.question_text)
+                await self._on_fired(fired)
 
     def _detector_context(self) -> DetectorContext:
         since = None
@@ -467,6 +468,27 @@ class LiveEngine:
         )
 
     # ---- questions & answers ----------------------------------------------------------------------------
+
+    async def _on_fired(self, fired: FinalizedQuestion) -> None:
+        if fired.trigger != "classify":
+            await self._on_question(fired.turn_id, fired.detection.question_text)
+        elif self.settings.auto_answer:  # click-to-answer mode never auto-answers, so don't pay to classify
+            self._spawn(self._classify_then_answer(fired.turn_id, fired.detection.question_text))
+
+    async def _classify_then_answer(self, turn_id: str, text: str) -> None:
+        started = self._clock()
+        previous = self.memory.questions[-1] if self.memory.questions else None
+        recent = [f"{t.speaker}: {t.text}" for t in self.memory.recent_turns(4)]
+        result = await classify(self._llm, text, previous, recent)
+        latency = int((self._clock() - started) * 1000)
+        if result is not None and result.response is not None:
+            await self._rec.provider_request(self._llm.name, result.response.model, "classify",
+                                             result.response.usage, latency, True)
+        log.info("classifier: %s answer=%s in %d ms", result.kind if result else "unavailable",
+                 bool(result and result.should_answer), latency)
+        if result is None or not result.should_answer or self._ended:
+            return
+        await self._on_question(turn_id, result.normalized_question or text)
 
     async def _on_question(self, turn_id: str, text: str) -> None:
         if not self.settings.auto_answer:
