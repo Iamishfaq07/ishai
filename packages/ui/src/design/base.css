@@ -45,3 +45,15 @@ html.reduce-motion *::after {
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
 }
+
+/* Accessibility (WCAG AA 4.5:1): zinc-500 secondary text is 3.1–4.1:1 on the dark surfaces (measured with axe).
+   In dark mode, secondary text without its own dark colour uses zinc-400 (~7.8:1 on zinc-950). */
+.dark .text-zinc-500:not([class*="dark:text-"]) {
+  color: rgb(161 161 170);
+}
+/* Light mode: zinc-400 is 2.6:1 on white and zinc-500 4.4:1 on the zinc-100 panels. Secondary text uses a slightly
+   darker grey that passes on every light surface (white 5.9:1, zinc-100 5.4:1, zinc-200 4.7:1). */
+html:not(.dark) .text-zinc-500,
+html:not(.dark) .text-zinc-400 {
+  color: rgb(99 99 107);
+}

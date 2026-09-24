@@ -201,7 +201,7 @@ export function AnswerCard({
           </p>
         )}
         {thinking && (
-          <div className="animate-fade-in space-y-2.5" aria-label="Thinking">
+          <div className="animate-fade-in space-y-2.5" role="status" aria-label="Thinking">
             <p className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
               <span className="inline-flex gap-1" aria-hidden="true">
                 <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 motion-safe:animate-bounce" />
