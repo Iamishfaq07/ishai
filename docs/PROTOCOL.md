@@ -47,7 +47,9 @@ context (recent turns, rolling summary) does not yet survive a reconnect.
 | `speaker.correct` | `{ turn_id, speaker }` |
 | `dev.simulate` | `{ fixture, speed?: number (0.5–50) }` — replays a transcript fixture; only when the mock STT provider is active |
 
-`LiveSettings = { auto_answer: boolean, length: "short"|"standard"|"detailed", style: "bullets"|"star"|"technical"|"executive", answer_language?: string }`
+`LiveSettings = { auto_answer: boolean, length: "short"|"standard"|"detailed", style: "bullets"|"star"|"technical"|"executive", answer_language?: string, response_timing?: "quick"|"balanced"|"patient" }`
+
+`response_timing` is how long a detected question is held after the interviewer stops before it auto-fires (quick ≈ 0, balanced ≈ 0.8 s default, patient ≈ 1.6 s). If the interviewer keeps talking inside that window, the continuation is stitched onto the question; the candidate speaking ends the wait immediately. `answer.request` without `question_text` answers that held/stitched question if there is one.
 
 ## Server → client
 

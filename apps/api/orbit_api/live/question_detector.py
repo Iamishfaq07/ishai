@@ -199,6 +199,12 @@ def extract_question(text: str) -> str:
     return " ".join(kept) if kept else sentences[-1]
 
 
+def continue_question(question: str, more: str) -> str:
+    """A held question plus what the interviewer added after pausing, minus fillers ("okay", "um")."""
+    kept = [x.strip() for x in _SENTENCE.split(more.strip()) if x.strip() and not _is_noise(x)]
+    return " ".join([question.strip(), *kept]).strip()
+
+
 def detect(text: str, speaker: Speaker, ctx: DetectorContext | None = None) -> Detection:
     return _detect_one(extract_question(text), speaker, ctx)
 

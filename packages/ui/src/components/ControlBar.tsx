@@ -1,10 +1,12 @@
-import type { AnswerLength } from "@orbit/types";
+import type { AnswerLength, ResponseTiming } from "@orbit/types";
 import { formatHotkey, type HotkeyMap } from "../live/hotkeys";
+import { RESPONSE_TIMINGS } from "../live/preferences";
 import { cx, focusRing } from "./cx";
 
 export interface ControlBarProps {
   length: AnswerLength;
   autoAnswer: boolean;
+  responseTiming: ResponseTiming;
   paused: boolean;
   ended: boolean;
   hotkeys: HotkeyMap;
@@ -18,6 +20,7 @@ export interface ControlBarProps {
   onClear: () => void;
   onLength: (length: AnswerLength) => void;
   onAutoAnswer: (on: boolean) => void;
+  onResponseTiming: (timing: ResponseTiming) => void;
   onTogglePause: () => void;
   onEnd: () => void;
 }
@@ -78,6 +81,11 @@ export function ControlBar(props: ControlBarProps) {
         >
           Clear
         </button>
+        {props.compact && (
+          <span className="ml-auto">
+            <AutoSwitch on={props.autoAnswer} disabled={ended} onChange={props.onAutoAnswer} />
+          </span>
+        )}
       </div>
 
       {!props.compact && (
@@ -105,31 +113,28 @@ export function ControlBar(props: ControlBarProps) {
             ))}
           </div>
 
-          <button
-            type="button"
-            role="switch"
-            aria-checked={props.autoAnswer}
-            disabled={ended}
-            onClick={() => props.onAutoAnswer(!props.autoAnswer)}
-            title="Automatically answer detected questions"
-            className={cx(btn, ghost, "gap-1.5", focusRing)}
+          <AutoSwitch on={props.autoAnswer} disabled={ended} onChange={props.onAutoAnswer} />
+          <select
+            aria-label="Wait before answering"
+            title={
+              props.autoAnswer
+                ? RESPONSE_TIMINGS.find((t) => t.value === props.responseTiming)?.hint
+                : "Only applies to auto answer"
+            }
+            value={props.responseTiming}
+            disabled={ended || !props.autoAnswer}
+            onChange={(e) => props.onResponseTiming(e.target.value as ResponseTiming)}
+            className={cx(
+              "rounded-md bg-transparent py-1 pl-1 pr-5 text-[11px] font-medium text-zinc-600 disabled:opacity-40 dark:text-zinc-300",
+              focusRing,
+            )}
           >
-            <span
-              aria-hidden="true"
-              className={cx(
-                "relative inline-block h-3.5 w-6 shrink-0 rounded-full transition-colors",
-                props.autoAnswer ? "bg-indigo-500" : "bg-zinc-300 dark:bg-zinc-700",
-              )}
-            >
-              <span
-                className={cx(
-                  "absolute left-0 top-0.5 h-2.5 w-2.5 rounded-full bg-white transition-transform motion-reduce:transition-none",
-                  props.autoAnswer ? "translate-x-3" : "translate-x-0.5",
-                )}
-              />
-            </span>
-            Auto
-          </button>
+            {RESPONSE_TIMINGS.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
 
           <div className="ml-auto flex items-center gap-1">
             <button
@@ -153,5 +158,36 @@ export function ControlBar(props: ControlBarProps) {
         </div>
       )}
     </div>
+  );
+}
+
+/** Auto answer on/off. Off = click-to-answer: nothing is generated until Answer (or its hotkey) is pressed. */
+function AutoSwitch({ on, disabled, onChange }: { on: boolean; disabled: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      disabled={disabled}
+      onClick={() => onChange(!on)}
+      title={on ? "Auto answer: answers detected questions automatically" : "Click to answer: press Answer when ready"}
+      className={cx(btn, ghost, "gap-1.5", focusRing)}
+    >
+      <span
+        aria-hidden="true"
+        className={cx(
+          "relative inline-block h-3.5 w-6 shrink-0 rounded-full transition-colors",
+          on ? "bg-indigo-500" : "bg-zinc-300 dark:bg-zinc-700",
+        )}
+      >
+        <span
+          className={cx(
+            "absolute left-0 top-0.5 h-2.5 w-2.5 rounded-full bg-white transition-transform motion-reduce:transition-none",
+            on ? "translate-x-3" : "translate-x-0.5",
+          )}
+        />
+      </span>
+      Auto
+    </button>
   );
 }

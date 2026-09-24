@@ -30,6 +30,7 @@ class Sink:
 
 
 async def _engine(llm: LLMProvider, **settings: Any) -> tuple[LiveEngine, Sink]:
+    settings.setdefault("response_timing", "quick")  # these tests are about cancel/pin/retry, not patience
     sink = Sink()
     eng = LiveEngine(
         SessionProfile("s1", "interview", "Engineer", "en", "en", dev_mode=True),
@@ -210,4 +211,15 @@ async def test_deep_questions_still_use_the_fast_model_live() -> None:
     await sink.wait_for("answer.completed")
     assert sink.of("answer.started")[0]["reasoning"] == "deep"  # still flagged for the UI
     assert llm.requests and all(r.reasoning == "light" for r in llm.requests)  # never the slow reasoner
+    await eng.handle_client({"type": "session.end", "data": {}})
+
+
+async def test_response_timing_waits_before_answering_and_is_live_adjustable() -> None:
+    eng, sink = await _engine(MockLLMProvider(), response_timing="balanced")
+    await _ask(eng, "What is dependency injection?")
+    await asyncio.sleep(0.4)
+    assert sink.of("question.detected") == []  # still listening in case the interviewer continues
+    await sink.wait_for("question.detected")
+    await eng.handle_client({"type": "settings.update", "data": {"response_timing": "patient"}})
+    assert eng._finalizer.grace_ms == 1600 and eng.settings.response_timing == "patient"
     await eng.handle_client({"type": "session.end", "data": {}})

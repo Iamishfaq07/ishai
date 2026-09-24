@@ -33,7 +33,7 @@ from orbit_api.live.events import (
     Speaker,
     SpeakerCorrect,
 )
-from orbit_api.live.finalizer import QuestionFinalizer
+from orbit_api.live.finalizer import GRACE_MS, QuestionFinalizer
 from orbit_api.live.question_detector import DetectorContext, classify_type, detect, normalize
 from orbit_api.live.routing import (
     CODE_MAX_TOKENS,
@@ -149,7 +149,8 @@ class LiveEngine:
         self._seq = 0
         self.state = LiveState.idle
         self.memory = SessionMemory()
-        self._finalizer = QuestionFinalizer(provider_endpoints=stt.provides_endpoints)
+        self._finalizer = QuestionFinalizer(provider_endpoints=stt.provides_endpoints,
+                                            grace_ms=GRACE_MS[self.settings.response_timing])
         self._dedup = Deduplicator()
         self._stt_sessions: dict[Channel, STTSession] = {}
         self._turns: dict[Channel, _ChannelTurn | None] = {"mic": None, "system": None}
@@ -310,6 +311,7 @@ class LiveEngine:
 
     async def _apply_settings(self, patch: LiveSettingsPatch) -> None:
         self.settings = self.settings.model_copy(update=patch.model_dump(exclude_none=True))
+        self._finalizer.grace_ms = GRACE_MS[self.settings.response_timing]
 
     # ---- STT --------------------------------------------------------------------------------------------
 
@@ -387,6 +389,10 @@ class LiveEngine:
             )
             if fired:
                 await self._on_question(fired.turn_id, fired.detection.question_text)
+        elif spk == "candidate" and ev.text:
+            fired = self._finalizer.on_candidate_speech(self.now_ms())
+            if fired:
+                await self._on_question(fired.turn_id, fired.detection.question_text)
         if ev.kind == "final" and ev.endpoint:
             await self._commit_turn(channel, turn)
 
@@ -449,7 +455,8 @@ class LiveEngine:
         await self._start_answer(qid, text, det.question_type, det.is_follow_up, "auto")
 
     async def _manual_answer(self, question_text: str | None) -> None:
-        text = (question_text or self._last_interviewer_text or
+        # Prefer the question being listened to (it may span a pause) over just the latest utterance.
+        text = (question_text or self._finalizer.pending_question() or self._last_interviewer_text or
                 next((t.text for t in reversed(self.memory.recent) if t.speaker == "interviewer"), "")).strip()
         if not text:
             await self.send("error", {"code": "no_question", "message": "No interviewer question to answer yet."})

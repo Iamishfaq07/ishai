@@ -40,12 +40,15 @@ export type LiveState = (typeof LIVE_STATES)[number];
 
 export type AnswerLength = "short" | "standard" | "detailed";
 export type AnswerStyle = "bullets" | "star" | "technical" | "executive";
+/** How long to wait after the interviewer stops before auto-answering (quick ≈ 0, balanced ≈ 0.8 s, patient ≈ 1.6 s). */
+export type ResponseTiming = "quick" | "balanced" | "patient";
 
 export interface LiveSettings {
   auto_answer: boolean;
   length: AnswerLength;
   style: AnswerStyle;
   answer_language?: string;
+  response_timing?: ResponseTiming;
 }
 
 /**
@@ -194,6 +197,7 @@ export const DEFAULT_LIVE_SETTINGS: LiveSettings = {
   auto_answer: true,
   length: "standard",
   style: "bullets",
+  response_timing: "balanced",
 };
 
 export function emptyLiveAnswer(question = ""): LiveAnswer {

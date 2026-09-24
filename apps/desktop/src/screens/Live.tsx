@@ -1,6 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OrbitSession } from "@orbit/types";
-import { ApiError, LivePanel, base64ToBlob, cx, focusRing, loadHotkeys, useLiveSession, type PanelMode, VISION_ENABLED } from "@orbit/ui";
+import {
+  ApiError,
+  LivePanel,
+  base64ToBlob,
+  cx,
+  focusRing,
+  loadHotkeys,
+  loadResponseTiming,
+  useLiveSession,
+  type PanelMode,
+  VISION_ENABLED,
+} from "@orbit/ui";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
@@ -55,7 +66,12 @@ export function LiveScreen({
     apiBaseUrl: API_URL,
     sessionId: session.id,
     getTicket: async () => (await api.liveTicket(session.id)).ticket,
-    initialSettings: { auto_answer: session.auto_answer, length: session.length, style: session.style },
+    initialSettings: {
+      auto_answer: session.auto_answer,
+      length: session.length,
+      style: session.style,
+      response_timing: loadResponseTiming(),
+    },
   });
 
   // ── Window behaviour ──────────────────────────────────────────────────
