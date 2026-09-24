@@ -79,6 +79,10 @@ CODE: <language>            (coding only)
 TIME: <time complexity>      (coding only)
 SPACE: <space complexity>    (coding only)
 FOLLOWUP: <the most likely next question, or omit>
+POINTS: <3 to 6 short labels (2–6 words each) for the points the answer makes, in the same order, separated by " | ">
+
+POINTS is REQUIRED on every answer (it's the last line). It's a glanceable checklist of the answer while the user speaks (e.g. "Start at PR and build | SAST + SCA +
+secret scanning | Risk-based blocking | Measurable outcome"). Use the answer's own key words, not new ideas.
 
 GROUNDED comes first, one word, honestly:
 - verified: every claim about the user's own past comes from the verified facts, with nothing added;

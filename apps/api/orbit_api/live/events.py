@@ -87,6 +87,9 @@ class LiveAnswer(BaseModel):
     # Where the answer's personal claims come from: "verified" (the user's own documents), "example" (an
     # illustrative story/details the user must swap for their real experience), "general" (no personal claims).
     grounding: Literal["verified", "example", "general"] | None = None
+    # 3–6 short labels for the points the answer makes, in order — the UI ticks them off as the candidate
+    # covers them ("NEXT" guidance).
+    key_points: list[str] = Field(default_factory=list)
 
 
 class Envelope(BaseModel):

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { KeyPointProgress } from "../live/coverage";
 import { splitPlaceholders } from "../live/placeholders";
 import type { AnswerView } from "../live/reducer";
 import { CodeBlock } from "./CodeBlock";
@@ -12,6 +13,8 @@ export interface AnswerCardProps {
   compact?: boolean;
   /** Whether the session is waiting on a question (drives the empty state copy). */
   autoAnswer: boolean;
+  /** Key points ticked off from the candidate's speech ("NEXT" guidance). */
+  progress?: KeyPointProgress | null;
 }
 
 /** Answer text with "[fill in]" prompts rendered as distinct chips so they're never read out verbatim. */
@@ -74,7 +77,54 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, autoAnswer }: AnswerCardProps) {
+const NEXT_PREF = "orbit.adaptiveNext";
+
+/** The answer's key points, ticked off as the candidate says them, with the one to say next highlighted. */
+function KeyPoints({ progress, compact }: { progress: KeyPointProgress; compact: boolean }) {
+  const [on, setOn] = useState(() => localStorage.getItem(NEXT_PREF) !== "off");
+  const toggle = () => {
+    localStorage.setItem(NEXT_PREF, on ? "off" : "on");
+    setOn(!on);
+  };
+  const done = progress.next === null;
+  return (
+    <section aria-label="Key points" className="mt-3 animate-fade-in rounded-lg border border-zinc-200/70 p-2.5 dark:border-zinc-800">
+      <div className="mb-1 flex items-center justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400">
+          {done ? "All points covered" : "Key points"}
+        </h3>
+        <button type="button" onClick={toggle} className={cx("text-xs text-zinc-500 hover:underline", focusRing)}
+                aria-pressed={on} title="Tick points off as you say them">
+          {on ? "Hide" : "Show"}
+        </button>
+      </div>
+      {on && (
+        <ul className={cx("space-y-1", compact ? "text-sm" : "text-[15px]")}>
+          {progress.points.map((p, i) => {
+            const isNext = i === progress.next;
+            return (
+              <li key={i} className={cx("flex items-start gap-2 leading-snug transition-colors",
+                p.covered ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200",
+                isNext && "font-semibold text-indigo-700 dark:text-indigo-300")}>
+                <span aria-hidden="true" className={cx("w-4 flex-none text-center",
+                  p.covered ? "text-emerald-500" : isNext ? "text-indigo-500" : "text-zinc-400")}>
+                  {p.covered ? "✓" : isNext ? "→" : "○"}
+                </span>
+                <span>
+                  {isNext && <span className="sr-only">Next: </span>}
+                  {p.covered && <span className="sr-only">Covered: </span>}
+                  {p.label}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, autoAnswer, progress }: AnswerCardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showExample, setShowExample] = useState(false);
   const answerId = answer?.answer_id ?? null;
@@ -181,6 +231,8 @@ export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, au
             ))}
           </div>
         )}
+
+        {progress && answer.status !== "failed" && <KeyPoints progress={progress} compact={compact} />}
 
         {a.talking_points.length > 0 && (
           <ul className={cx("mt-2 space-y-1.5", compact ? "text-sm" : "text-[15px]")}>

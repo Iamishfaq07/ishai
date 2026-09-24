@@ -109,3 +109,12 @@ trip) run in the desktop.
 **D24 — Workspaces are saved setups, not a job tracker.** A workspace stores documents + answer preferences (role,
 type, language, length, style, auto-answer). Audio devices stay per-machine (localStorage), since a setup may be used
 on another PC. Deleting a workspace keeps its sessions (link set to NULL) and never touches documents.
+
+**D25 — "NEXT" guidance is local and deterministic.** The model ends each answer with `POINTS:` (3–6 short labels, in
+order) — after the answer, so the first word isn't delayed (+80 tokens of headroom so long answers still reach it;
+a paragraph-opening fallback covers the rare answer without it). Coverage runs in the client on every transcript
+update, with no model call: the candidate's words since the answer appeared are matched against each label (plus
+common abbreviations, e.g. PR ↔ pull request) and against the answer sentence it summarises, by 5-letter stems. A
+loose sentence match must also include one of the point's own words, so shared topic vocabulary alone ("build",
+"scan") never ticks a point. Ticks are sticky per answer (no flicker); NEXT is the first unticked point after the
+last ticked one. Chat and screenshot answers get no checklist. The user can hide it.

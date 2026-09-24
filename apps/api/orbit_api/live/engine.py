@@ -87,6 +87,8 @@ class Recorder(Protocol):
                        metrics: dict[str, list[int]] | None = None) -> None: ...
 
 
+TRAILER_TOKENS = 80
+
 SCREENSHOT_LABEL = "📷 Screenshot"
 SCREENSHOT_PROMPT = (
     "The user captured a screenshot of their screen (it's attached). Read it carefully and answer exactly what "
@@ -601,7 +603,9 @@ class LiveEngine:
         # still reported so the UI can flag in-depth questions.
         request = LLMRequest(
             messages=built.messages, reasoning="light", thinking=self.settings.thinking, images=images,
-            max_tokens=CODE_MAX_TOKENS if is_code else MAX_TOKENS[self.settings.length],
+            # + room for the FOLLOWUP/POINTS trailer, which comes after the answer: a design answer that used its whole
+            # budget otherwise lost its key points.
+            max_tokens=(CODE_MAX_TOKENS if is_code else MAX_TOKENS[self.settings.length]) + TRAILER_TOKENS,
             request_type={"chat": "chat", "screenshot": "vision"}.get(source, "answer"),
         )
         model = self._llm.model_for(request.reasoning)
