@@ -45,6 +45,7 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1", tags=["sessions"])
 
 session_limit = limit("session", rate_per_s=0.2, burst=10)
+review_limit = limit("review", rate_per_s=0.05, burst=3)  # each review is one sizeable LLM call
 
 MAX_WS_TEXT_BYTES = 64 * 1024
 MAX_WS_AUDIO_BYTES = 64 * 1024
@@ -197,6 +198,22 @@ async def end_session(session_id: str, user: Annotated[User, Depends(current_use
         if not was_live:
             background.add_task(generate_report, row.id)
     return await _session_out(db, row)
+
+
+@router.post("/sessions/{session_id}/review", dependencies=[Depends(review_limit)])
+async def review_session(session_id: str, user: Annotated[User, Depends(current_user)],
+                         db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
+    """(Re)generate the post-session report + review scorecard for an ended session."""
+    row = await _owned(db, session_id, user)
+    if row.status != "ended":
+        raise HTTPException(status.HTTP_409_CONFLICT, "End the session first — reviews cover finished sessions.")
+    try:
+        report = await asyncio.wait_for(generate_report(row.id), timeout=90)
+    except TimeoutError as e:
+        raise HTTPException(status.HTTP_504_GATEWAY_TIMEOUT, "The review took too long — try again.") from e
+    if not report.get("review"):
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Couldn't generate a review for this session.")
+    return report
 
 
 @router.delete("/sessions/{session_id}", status_code=204)

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { OrbitSession, SessionAnswer, SessionDetail, SessionSummary } from "@orbit/types";
-import { Button, Card, CodeBlock, cx, EmptyState, ErrorNote, focusRing, Input, PageHeader, Spinner } from "@orbit/ui";
+import { Button, Card, CodeBlock, cx, EmptyState, ErrorNote, focusRing, Input, PageHeader, SessionReview, Spinner } from "@orbit/ui";
 import { api } from "../api";
 import { downloadText, errText, formatClock, formatDate, formatDuration, SESSION_TYPE_LABEL } from "../format";
 import { TitleBar } from "../TitleBar";
@@ -96,12 +96,12 @@ function SessionList({ onOpen, onResume }: { onOpen: (id: string) => void; onRes
   );
 }
 
-type Tab = "summary" | "transcript" | "questions";
+type Tab = "review" | "summary" | "transcript" | "questions";
 
 function SessionDetailView({ id, onDeleted }: { id: string; onDeleted: () => void }) {
   const [detail, setDetail] = useState<SessionDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("summary");
+  const [tab, setTab] = useState<Tab>("review");
   const [actionError, setActionError] = useState<string | null>(null);
 
   const load = () => {
@@ -161,6 +161,7 @@ function SessionDetailView({ id, onDeleted }: { id: string; onDeleted: () => voi
       <div role="tablist" className="mb-6 flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
         {(
           [
+            ["review", "Review"],
             ["summary", "Summary"],
             ["transcript", `Transcript (${detail.turns.length})`],
             ["questions", `Questions & answers (${detail.questions.length})`],
@@ -183,6 +184,16 @@ function SessionDetailView({ id, onDeleted }: { id: string; onDeleted: () => voi
         ))}
       </div>
 
+      {tab === "review" && (
+        <SessionReview
+          review={detail.summary?.review}
+          ended={session.status === "ended"}
+          onGenerate={async () => {
+            await api.reviewSession(session.id);
+            setDetail(await api.getSession(session.id));
+          }}
+        />
+      )}
       {tab === "summary" && <SummaryView summary={detail.summary} />}
       {tab === "transcript" && <TranscriptTimeline detail={detail} />}
       {tab === "questions" && <QuestionsView detail={detail} />}

@@ -1,6 +1,7 @@
 export { ErrorBoundary } from "./components/ErrorBoundary";
 export { AppearanceControls } from "./components/AppearanceControls";
 export { OrbitLogo } from "./components/OrbitLogo";
+export { SessionReview } from "./components/SessionReview";
 export {
   ACCENTS,
   DEFAULT_DESIGN,
