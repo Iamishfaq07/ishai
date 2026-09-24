@@ -106,3 +106,34 @@ variable unset. 0.1.11 was built with the variable left at an empty string and l
 an empty service name; `secrets.rs` now also treats an empty value as unset. To verify any built exe, run it with
 an isolated `WEBVIEW2_USER_DATA_FOLDER` and call `load_token` over CDP: a real build finds the installed app's
 saved sign-in (read-only).
+
+## Install, upgrade, uninstall
+
+Orbit installs per-user to `%LOCALAPPDATA%\Orbit` (no admin prompt). User state lives outside the install folder:
+
+| What | Where | Upgrade | Uninstall | Uninstall + "Delete the application data" |
+|---|---|---|---|---|
+| Program + uninstaller | `%LOCALAPPDATA%\Orbit` | replaced | removed | removed |
+| Settings (theme, design, glass, devices…) | WebView profile, `%LOCALAPPDATA%\ai.orbit.desktop\EBWebView` | kept | kept | removed |
+| Window position | `%APPDATA%\ai.orbit.desktop` | kept | kept | removed |
+| Sign-in token | Credential Manager, `access_token.ai.orbit.desktop` | kept | kept | removed (`windows/hooks.nsh`) |
+| Install dir / language | `HKCU\Software\orbit\Orbit` | kept | kept | removed |
+| Start-menu shortcut, Add/Remove Programs entry | | kept | removed | removed |
+
+The checkbox is in the interactive uninstaller only; silent uninstalls (`uninstall.exe /S`) keep user data.
+Sessions and documents are stored on the server and aren't affected by any of this.
+
+Verified end-to-end on 2026-09-25 with the published installer:
+- 0.1.6 → 0.1.15 silent upgrade: sign-in and every setting kept.
+- Silent uninstall: leftovers exactly as in the table.
+- Reinstall: signed in, settings byte-identical.
+
+After changing `windows/hooks.nsh`, run `scripts/test-uninstall-hook.ps1`. It compiles the hook against a throwaway
+credential and checks four cases: removed (box ticked), kept (box not ticked), kept (update), and no error when
+nothing is saved.
+
+**Testing gotcha:** WebView2 honours `WEBVIEW2_USER_DATA_FOLDER` even when it's set to an *empty* string. It then
+ignores Orbit's profile and creates a blank one next to the exe (`Orbit\orbit-desktop.exe.WebView2`), so the app
+looks like it lost its settings. Explorer and the Start menu never set it, but a shell left over from test runs can.
+In PowerShell, clear it with `Remove-Item Env:WEBVIEW2_USER_DATA_FOLDER`. `[Environment]::SetEnvironmentVariable(…,
+$null)` and `$env:X = ""` can leave it present but empty.
