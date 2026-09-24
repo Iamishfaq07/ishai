@@ -1,4 +1,5 @@
 import logging
+import os
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Any
@@ -18,6 +19,8 @@ from orbit_api.runtime_config import refresh as refresh_runtime_config
 from orbit_api.sessions.routes import router as sessions_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+# httpx logs every request URL at INFO; GitHub signed download URLs (and provider URLs) do not belong in logs.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 @asynccontextmanager
@@ -33,6 +36,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
     await get_llm_provider().aclose()
     await db.dispose()
+
+
+def running_commit() -> str | None:
+    """The deployed git commit (short), so a deploy can be confirmed from outside. Render sets
+    RENDER_GIT_COMMIT for every deploy; ORBIT_GIT_COMMIT covers other hosts."""
+    sha = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("ORBIT_GIT_COMMIT")
+    return sha[:7] if sha else None
 
 
 def create_app() -> FastAPI:
@@ -63,7 +73,8 @@ def create_app() -> FastAPI:
         # Liveness only: is the process up. Cheap, never touches the DB.
         llm = get_llm_provider()
         stt = create_stt_provider()
-        return {"status": "ok", "env": s.env, "providers": {"llm": llm.name, "stt": stt.name}}
+        return {"status": "ok", "env": s.env, "commit": running_commit(),
+                "providers": {"llm": llm.name, "stt": stt.name}}
 
     @app.get("/ready")
     async def ready(response: Response) -> dict[str, Any]:

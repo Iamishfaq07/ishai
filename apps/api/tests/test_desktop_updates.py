@@ -80,3 +80,81 @@ def test_stage_release_copies_signed_installer_once(tmp_path: Path) -> None:
                                                       "notes.md"]
     with pytest.raises(SystemExit, match="already exists"):
         stage(tmp_path / "artifact", updates, None)  # never overwrite a published version
+
+
+# ---- GitHub Releases source (hosts without a disk, e.g. Render free) ----------------------------------
+
+def _github(monkeypatch: pytest.MonkeyPatch, releases_latest: dict | None, *, status: int = 200) -> list[str]:
+    import httpx
+
+    from orbit_api import desktop_updates
+
+    calls: list[str] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append(f"{req.method} {req.url.path} {req.headers.get('accept')}")
+        assert req.headers["authorization"] == "Bearer ghp-test"
+        if req.url.path == "/repos/me/orbit/releases/latest":
+            return httpx.Response(status, json=releases_latest or {})
+        if req.url.path.endswith("/assets/2"):  # the .sig
+            return httpx.Response(200, text="sig-from-github\n")
+        if req.url.path.endswith("/assets/1"):  # the installer → signed CDN URL
+            return httpx.Response(302, headers={"location": "https://objects.example/orbit.exe?sig=abc"})
+        return httpx.Response(404)
+
+    monkeypatch.setattr(desktop_updates, "_http",
+                        lambda **kw: httpx.AsyncClient(transport=httpx.MockTransport(handler), **kw))
+    monkeypatch.setattr(desktop_updates, "_gh_cache", None)
+    s = get_settings()
+    monkeypatch.setattr(s, "desktop_updates_dir", None)
+    monkeypatch.setattr(s, "updates_github_repo", "me/orbit")
+    from pydantic import SecretStr
+    monkeypatch.setattr(s, "updates_github_token", SecretStr("ghp-test"))
+    return calls
+
+
+_REL = {
+    "tag_name": "v0.1.4", "draft": False, "prerelease": False, "body": "Better listening",
+    "published_at": "2026-09-25T10:00:00Z",
+    "assets": [
+        {"name": "Orbit_0.1.4_x64-setup.exe", "url": "https://api.github.com/repos/me/orbit/releases/assets/1"},
+        {"name": "Orbit_0.1.4_x64-setup.exe.sig", "url": "https://api.github.com/repos/me/orbit/releases/assets/2"},
+    ],
+}
+
+
+def test_github_release_is_offered_and_download_redirects(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = _github(monkeypatch, _REL)
+    r = client.get("/v1/desktop/update/windows/x86_64/0.1.3", headers={"x-forwarded-proto": "https"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["version"] == "0.1.4" and body["signature"] == "sig-from-github" and body["notes"] == "Better listening"
+    assert body["url"].startswith("https://")
+    assert body["url"].endswith("/v1/desktop/download/0.1.4/Orbit_0.1.4_x64-setup.exe")
+    assert client.get("/v1/desktop/update/windows/x86_64/0.1.4").status_code == 204  # already current
+    assert client.get("/v1/desktop/update/windows/x86_64/0.2.0").status_code == 204
+    assert sum("releases/latest" in c for c in calls) == 1  # cached, not one GitHub call per check
+
+    d = client.get("/v1/desktop/download/0.1.4/Orbit_0.1.4_x64-setup.exe", follow_redirects=False)
+    assert d.status_code == 302 and d.headers["location"] == "https://objects.example/orbit.exe?sig=abc"
+    assert client.get("/v1/desktop/download/0.1.3/Orbit_0.1.3_x64-setup.exe", follow_redirects=False).status_code == 404
+    assert client.get("/v1/desktop/download/0.1.4/other-setup.exe", follow_redirects=False).status_code == 404
+
+
+def test_github_unsigned_draft_or_failing_release_is_never_offered(client: TestClient,
+                                                                   monkeypatch: pytest.MonkeyPatch) -> None:
+    unsigned = {**_REL, "assets": _REL["assets"][:1]}
+    _github(monkeypatch, unsigned)
+    assert client.get("/v1/desktop/update/windows/x86_64/0.1.3").status_code == 204
+    _github(monkeypatch, {**_REL, "prerelease": True})
+    assert client.get("/v1/desktop/update/windows/x86_64/0.1.3").status_code == 204
+    _github(monkeypatch, None, status=401)  # bad/expired token → quietly "up to date", never a crash
+    assert client.get("/v1/desktop/update/windows/x86_64/0.1.3").status_code == 204
+
+
+def test_health_reports_the_running_commit(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ORBIT_GIT_COMMIT", raising=False)
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "1ba8f00c0ffee1234567890")
+    assert client.get("/health").json()["commit"] == "1ba8f00"
+    monkeypatch.delenv("RENDER_GIT_COMMIT")
+    assert client.get("/health").json()["commit"] is None
