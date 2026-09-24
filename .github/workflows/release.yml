@@ -43,7 +43,23 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: pnpm --filter @orbit/desktop tauri build --bundles nsis --config "{\"version\":\"${{ steps.ver.outputs.version }}\"}"
+          # Authenticode signing (fixes SmartScreen "unknown publisher"). Set the `WINDOWS_SIGN_COMMAND`
+          # repo *variable* to your provider's CLI with a `%1` placeholder for the file path, e.g.
+          #   azuresigntool sign -kvu <vault> -kvc <cert> -tr http://timestamp.acs.microsoft.com -td sha256 %1
+          # and add that CLI + its credentials to this job (see docs/WINDOWS_RELEASE.md).
+          # Unset → unsigned build (current behaviour). Tauri runs signCommand on each binary before it
+          # produces the updater signature, so the order is correct within a single build.
+          WINDOWS_SIGN_COMMAND: ${{ vars.WINDOWS_SIGN_COMMAND }}
+        run: |
+          if [[ -n "$WINDOWS_SIGN_COMMAND" ]]; then
+            CONFIG=$(jq -nc --arg v "${{ steps.ver.outputs.version }}" --arg s "$WINDOWS_SIGN_COMMAND" \
+              '{version:$v, bundle:{windows:{signCommand:$s}}}')
+            echo "Authenticode signing enabled."
+          else
+            CONFIG=$(jq -nc --arg v "${{ steps.ver.outputs.version }}" '{version:$v}')
+            echo "No WINDOWS_SIGN_COMMAND set — building unsigned (SmartScreen will warn)."
+          fi
+          pnpm --filter @orbit/desktop tauri build --bundles nsis --config "$CONFIG"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2

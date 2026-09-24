@@ -46,14 +46,34 @@ signatures don't help with this. It needs a code-signing certificate.
 | OV certificate with cloud/HSM signing (e.g. SSL.com eSigner, Certum SimplySign) | anyone, after identity validation | CA rules require the key to live on hardware or HSM, so pick a provider with a cloud API usable from CI. |
 | EV certificate | an organization | No longer gives instant SmartScreen reputation. |
 
-With any of these, SmartScreen reputation builds over time as you sign releases with the same identity. The first
-releases may still warn.
+With any of these, SmartScreen reputation builds over time as you sign releases with the **same identity**.
+EV certs get instant reputation; OV certs (and Azure Trusted Signing) may still warn on the first few
+downloads, but the installer already shows your **verified name** instead of "Unknown publisher".
 
-**Wiring it in (once you have a certificate):** Tauri runs `bundle.windows.signCommand` for every binary it
-bundles. Add the provider's CLI to the CI job, put its credentials in repo secrets, and pass for example
-`--config '{"bundle":{"windows":{"signCommand":"<provider-cli> sign ... %1"}}}'` to `tauri build`. Do this
-**before** `createUpdaterArtifacts` signs the installer, which Tauri already does in the right order within one
-`tauri build`. This step is intentionally not in CI yet: it can't be tested without a real certificate.
+**Recommended for an individual (e.g. outside the US/Canada): Certum "Open Source Code Signing"** — a cloud
+(SimplySign) OV certificate aimed at individual open-source developers, ~€70/year, usable from CI. SSL.com
+eSigner (individual OV) is a comparable alternative. Azure Trusted Signing is cheapest and most CI-native but,
+at the time of writing, only issues public-trust certs to US/Canada individuals or organizations.
+
+**Wiring is already in `release.yml` — it's off until you provide a signer.** Tauri runs
+`bundle.windows.signCommand` on every binary it bundles, before it writes the updater signature. To turn it on:
+
+1. Buy a certificate (above) and complete identity validation.
+2. Add the provider's signing CLI (and its credentials as repo **secrets**) to the `windows` job in
+   `.github/workflows/release.yml` — e.g. install [`AzureSignTool`](https://github.com/vcsjones/AzureSignTool)
+   for KeyVault/HSM-backed certs, or your CA's tool (Certum SimplySign, SSL.com `CodeSignTool`).
+3. Set a repo **variable** named `WINDOWS_SIGN_COMMAND` to the sign command with a `%1` placeholder for the
+   file, for example:
+   ```
+   azuresigntool sign -kvu "$AZURE_KEY_VAULT_URL" -kvc "$AZURE_CERT_NAME" \
+     -kvi "$AZURE_CLIENT_ID" -kvs "$AZURE_CLIENT_SECRET" --azure-key-vault-tenant-id "$AZURE_TENANT_ID" \
+     -tr http://timestamp.acs.microsoft.com -td sha256 %1
+   ```
+   The next tagged release (`git tag vX.Y.Z && git push origin vX.Y.Z`) then produces a **signed** installer
+   automatically. Leave the variable unset and releases stay unsigned, exactly as now.
+
+The command is a repo variable, not committed, because it's provider- and account-specific and can't be
+tested here without a real certificate.
 
 Sources: [Artifact Signing FAQ](https://learn.microsoft.com/en-us/azure/artifact-signing/faq),
 [Code signing options for Windows apps](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options).
