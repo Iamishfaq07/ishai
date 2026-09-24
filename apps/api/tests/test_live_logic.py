@@ -442,7 +442,8 @@ def test_vad_noise_does_not_hold_a_question_forever() -> None:
 def test_candidate_speaking_ends_the_wait_and_blocks_stitching() -> None:
     f = QuestionFinalizer(provider_endpoints=True, grace_ms=1600)
     f.on_transcript("t1", "What is dependency injection?", 0, is_final=True, endpoint=True)
-    fired = f.on_candidate_speech(400)  # the candidate starts answering: the question is over
+    assert f.on_candidate_speech(300, "Mm-hmm.") is None  # a backchannel doesn't end the question
+    fired = f.on_candidate_speech(400, "So I would start")  # the candidate starts answering: it's over
     assert fired and fired.detection.question_text == "What is dependency injection?"
     nxt = f.on_transcript("t2", "And how would you test it?", 900, is_final=True, endpoint=True)
     assert nxt is None and f.tick(2500)
@@ -459,8 +460,30 @@ def test_a_new_question_after_the_window_is_not_stitched() -> None:
     f = QuestionFinalizer(provider_endpoints=True, grace_ms=800)
     f.on_transcript("t1", "What is dependency injection?", 0, is_final=True, endpoint=True)
     assert f.tick(800)
-    f.on_transcript("t2", "How would you test it?", 3000, is_final=True, endpoint=True)
-    fired = f.tick(3800)
+    f.on_transcript("t2", "How would you test it?", 9000, is_final=True, endpoint=True)
+    fired = f.tick(9800)
+    assert fired and fired.detection.question_text == "How would you test it?"
+
+
+def test_interviewer_continuing_after_the_answer_fired_refires_the_whole_question() -> None:
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=800)
+    f.on_transcript("t1", "Walk me through an image classification pipeline.", 0, is_final=True, endpoint=True)
+    assert f.tick(800)  # a long pause: the first part fired
+    f.on_transcript("t2", "Start with data, then preprocessing and failure modes.", 3500, is_final=True,
+                    endpoint=True)
+    fired = f.tick(4300)
+    assert fired and fired.detection.question_text == (
+        "Walk me through an image classification pipeline. Start with data, then preprocessing and failure modes.")
+    assert f.pending_question() == fired.detection.question_text  # a manual Answer gets it all too
+
+
+def test_a_real_candidate_answer_ends_the_question_for_good() -> None:
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=800)
+    f.on_transcript("t1", "What is dependency injection?", 0, is_final=True, endpoint=True)
+    assert f.tick(800)
+    f.on_candidate_speech(1500, "It's a way of passing dependencies in")
+    f.on_transcript("t2", "How would you test it?", 4000, is_final=True, endpoint=True)
+    fired = f.tick(4800)
     assert fired and fired.detection.question_text == "How would you test it?"
 
 
@@ -495,3 +518,21 @@ def test_parser_keeps_spoken_paragraphs_while_streaming() -> None:
     assert done.direct_answer == ("I'd start with the data and split it early.\n\n"
                                   "Then preprocessing: resize and normalize.")
     assert done.talking_points == [] and done.follow_up == "Which metric?"
+
+
+def test_a_question_stitched_across_several_turns_still_fires() -> None:
+    # Real Deepgram run: part A fired, the interviewer went on (part B), then added "Go ahead." as its own
+    # turn. The detector scores only B's sentence (0.55 < 0.6), so without carrying A's confidence the
+    # stitched question was held forever.
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=1500)
+    a = "Walk me through, step by step, how you'd build and evaluate an end to end image classification pipeline."
+    b = ("Start with data, then pre processing, model choice, training, evaluation metrics, and what failure "
+         "modes you'd look for.")
+    f.on_transcript("t1", a, 0, is_final=True, endpoint=True)
+    assert any(f.tick(t) for t in range(0, 2000, 50))
+    f.on_transcript("t2", "Start with data,", 4060, is_final=False)
+    f.on_transcript("t2", b, 12230, is_final=True, endpoint=True)
+    f.on_transcript("t3", "Go ahead.", 13200, is_final=False)  # arrives inside B's patience window
+    f.on_transcript("t3", "Go ahead.", 13710, is_final=True, endpoint=True)
+    fired = next((x for t in range(13710, 16000, 50) if (x := f.tick(t))), None)
+    assert fired and fired.detection.question_text == f"{a} {b}"

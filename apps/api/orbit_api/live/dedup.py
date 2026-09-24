@@ -55,7 +55,8 @@ class Deduplicator:
         for s in reversed(self._seen):
             if s.toks == toks:
                 return DedupDecision.duplicate, s.question_id
-            if _is_prefix(s.toks, toks) and (s.turn_id == turn_id or now_ms - s.at_ms < 3000):
+            # A stitched continuation starts with the exact earlier question, however long the pause was.
+            if _is_prefix(s.toks, toks):
                 return DedupDecision.extends, s.question_id
             if _is_prefix(toks, s.toks):
                 return DedupDecision.duplicate, s.question_id  # a fragment of what we already answered

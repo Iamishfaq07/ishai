@@ -3,8 +3,8 @@ import type { AnswerStyle, ResponseTiming, ThinkingLevel } from "@orbit/types";
 /** "Wait before answering" presets — the server holds a detected question this long (finalizer.GRACE_MS). */
 export const RESPONSE_TIMINGS: Array<{ value: ResponseTiming; label: string; hint: string }> = [
   { value: "quick", label: "Quick", hint: "Answer the moment the interviewer pauses" },
-  { value: "balanced", label: "Balanced", hint: "Wait ~1 s after they stop, in case the question continues" },
-  { value: "patient", label: "Patient", hint: "Wait ~2 s — for interviewers who pause mid-question" },
+  { value: "balanced", label: "Balanced", hint: "Wait ~1.5 s after they stop, in case the question continues" },
+  { value: "patient", label: "Patient", hint: "Wait ~3 s — for interviewers who pause mid-question" },
 ];
 
 const STORAGE_KEY = "orbit.responseTiming";

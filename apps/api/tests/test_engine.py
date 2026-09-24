@@ -48,6 +48,9 @@ async def test_new_question_cancels_stale_generation() -> None:
     eng, sink = await _engine(MockLLMProvider(chunk_delay_s=0.02))
     await _ask(eng, "What is dependency injection?")
     await sink.wait_for("answer.chunk")
+    # the candidate answers, so the interviewer's next words are a new question (not a continuation)
+    await eng.on_transcript("mic", TranscriptEvent("final", "So dependency injection means passing", 0, 100,
+                                                   endpoint=True))
     await _ask(eng, "How would you design a rate limiter?")
     await sink.wait_for("answer.completed")
     cancelled = sink.of("answer.cancelled")
@@ -221,7 +224,7 @@ async def test_response_timing_waits_before_answering_and_is_live_adjustable() -
     assert sink.of("question.detected") == []  # still listening in case the interviewer continues
     await sink.wait_for("question.detected")
     await eng.handle_client({"type": "settings.update", "data": {"response_timing": "patient"}})
-    assert eng._finalizer.grace_ms == 1600 and eng.settings.response_timing == "patient"
+    assert eng._finalizer.grace_ms == 3000 and eng.settings.response_timing == "patient"
     await eng.handle_client({"type": "session.end", "data": {}})
 
 
@@ -232,4 +235,31 @@ async def test_live_thinking_setting_reaches_the_model() -> None:
     await sink.wait_for("answer.completed")
     answers = [r for r in llm.requests if r.request_type == "answer"]
     assert answers and all(r.thinking == "max" for r in answers)
+    await eng.handle_client({"type": "session.end", "data": {}})
+
+
+async def test_question_continued_after_it_fired_is_answered_whole() -> None:
+    eng, sink = await _engine(MockLLMProvider())
+    await _ask(eng, "Walk me through how you'd build an image classification pipeline.")
+    await sink.wait_for("answer.completed")
+    # interviewer keeps going after a pause; the candidate hasn't answered yet
+    await _ask(eng, "Start with data, then preprocessing, and what failure modes you'd look for.")
+    await sink.wait_for("question.updated")
+    updated = sink.of("question.updated")[-1]["text"]
+    assert updated.startswith("Walk me through") and updated.endswith("look for.")
+    await sink.wait_for("answer.completed", n=2)
+    assert sink.of("answer.completed")[-1]["answer"]["question"] == updated
+    await eng.handle_client({"type": "session.end", "data": {}})
+
+
+async def test_manual_answer_with_auto_off_gets_the_whole_question() -> None:
+    eng, sink = await _engine(MockLLMProvider(), auto_answer=False)
+    await _ask(eng, "Walk me through how you'd build an image classification pipeline.")
+    await _ask(eng, "Start with data, then preprocessing, and what failure modes you'd look for.")
+    await asyncio.sleep(0.1)
+    assert sink.of("question.detected") == []  # auto answer off: nothing fires on its own
+    await eng.handle_client({"type": "answer.request", "data": {}})
+    await sink.wait_for("answer.completed")
+    q = sink.of("question.detected")[0]["text"]
+    assert q.startswith("Walk me through") and "failure modes" in q
     await eng.handle_client({"type": "session.end", "data": {}})

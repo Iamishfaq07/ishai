@@ -390,7 +390,7 @@ class LiveEngine:
             if fired:
                 await self._on_question(fired.turn_id, fired.detection.question_text)
         elif spk == "candidate" and ev.text:
-            fired = self._finalizer.on_candidate_speech(self.now_ms())
+            fired = self._finalizer.on_candidate_speech(self.now_ms(), turn.text)
             if fired:
                 await self._on_question(fired.turn_id, fired.detection.question_text)
         if ev.kind == "final" and ev.endpoint:
