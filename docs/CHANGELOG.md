@@ -1,5 +1,17 @@
 # Implementation log
 
+## Release incident — 0.1.11 forgot sign-ins (2026-09-25)
+
+- **What happened:** 0.1.11 was built while `ORBIT_KEYRING_SERVICE` (a compile-time switch for test builds) was set
+  to an empty string instead of unset; the app looked for the saved sign-in under an empty service name, so anyone
+  who updated to it was signed out.
+- **Found** before the next release: rustc's dep-info showed `ORBIT_KEYRING_SERVICE=`; a read-only `load_token` probe
+  of every published installer confirmed only 0.1.11 was affected (0.1.7–0.1.10 and 0.1.12 find the saved sign-in).
+  The owner's installed app (0.1.6) never took it.
+- **Fixed:** 0.1.12 published (verified the same way), so the updater no longer offers 0.1.11; `secrets.rs` treats an
+  empty value as unset (proved by building under the exact 0.1.11 condition); `scripts/release-desktop.ps1` refuses
+  to release unless the variable is unset in the build.
+
 ## Phase 5d — AI mock interviewer (2026-09-25)
 
 - New session type **Mock interview** (desktop Setup + web): pick interviewer (recruiter, hiring manager, senior/staff

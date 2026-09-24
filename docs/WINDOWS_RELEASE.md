@@ -97,3 +97,12 @@ tested here without a real certificate.
 
 Sources: [Artifact Signing FAQ](https://learn.microsoft.com/en-us/azure/artifact-signing/faq),
 [Code signing options for Windows apps](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options).
+
+## Releasing from a workstation
+
+Use `scripts/release-desktop.ps1 -Version X.Y.Z [-Publish -NotesFile notes.md]`. It clears `ORBIT_KEYRING_SERVICE`
+(only test builds set it), builds the signed installer, and refuses to continue unless rustc's dep-info shows the
+variable unset. 0.1.11 was built with the variable left at an empty string and looked for the saved sign-in under
+an empty service name; `secrets.rs` now also treats an empty value as unset. To verify any built exe, run it with
+an isolated `WEBVIEW2_USER_DATA_FOLDER` and call `load_token` over CDP: a real build finds the installed app's
+saved sign-in (read-only).
