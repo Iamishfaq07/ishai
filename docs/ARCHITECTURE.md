@@ -30,7 +30,6 @@ Built from scratch in this repo, starting 2026-09-23 (it held only a generated R
 - **Multi-instance live state** (Redis). Production runs one instance by design (D12).
 - **Neural retrieval.** Embeddings are local feature-hashing; DeepSeek has no embeddings endpoint. A neural embedder
   can be swapped in behind `Embedder`.
-- **Backup LLM provider.** DeepSeek only.
 - **Tracing** (OpenTelemetry).
 - **Code signing** (SmartScreen); see WINDOWS_RELEASE.md.
 - **macOS and Linux desktop builds**, deferred because Orbit is Windows-first.

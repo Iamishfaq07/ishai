@@ -1,5 +1,30 @@
 # Implementation log
 
+## Phase 2 — LLM failover and provider health (2026-09-25)
+
+- **Backup LLM (§12):** `OpenAICompatibleProvider` (OpenAI, Gemini, OpenRouter, Groq…) behind
+  `FallbackProvider`.
+  - It takes over only when DeepSeek fails **before its first token**: 429, 5xx, timeout, network, a bad key or
+    no credit, or no first token within the budget (10 s, +12 s with thinking).
+  - It never switches mid-answer, and a circuit breaker opens after 3 straight failures.
+  - It's gated by the plan feature `provider_fallback`.
+  - The provider and model that actually served are recorded, so cost is attributed correctly; unpriced means
+    unknown, never zero.
+  - DeepSeek and the backup share one SSE reader.
+- **Provider health (§13):** healthy / degraded / down / unknown, with last success and failure, p95 and failure
+  rate, for the LLMs, Deepgram, the database and email. Admins see it at `GET /v1/admin/providers`.
+- **Fallback UX (§24):** a failover shows the user nothing technical ("AI connection recovered").
+- **Preflight** pings DeepSeek directly (not through the failover, which would hide an outage) and reports "the
+  backup AI is answering" as a warning.
+- **Bugs found while building:**
+  - 5xx errors (the most common outage) weren't in the failover list; it now keys on retryability.
+  - A thinking-by-default backup spent its whole budget on hidden reasoning, which led to
+    `ORBIT_FALLBACK_LLM_EXTRA_JSON` for provider options.
+- **Verified live:** the primary pointed at a dead address, and the backup client streamed a real answer from an
+  OpenAI-compatible API in 3.0 s.
+- Tests: 23 new (failover rules, breaker, budget, vision and plan gating, OpenAI-compatible parsing and errors,
+  engine attribution, subtle UX, preflight, config). New `docs/AI_PROVIDER.md`.
+
 ## Launch hardening 1d — Authenticode pipeline, release config split, single-instance guard (2026-09-25)
 
 - **Authenticode signing pipeline (§8):**

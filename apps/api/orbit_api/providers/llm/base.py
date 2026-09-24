@@ -32,6 +32,8 @@ class LLMRequest:
     json_mode: bool = False
     images: list[LLMImage] = field(default_factory=list)
     request_type: str = "answer"  # answer | chat | classify | summary | vision — for cost tracking
+    # May a backup provider answer if the primary fails before its first token? (plan feature "provider_fallback")
+    allow_fallback: bool = True
 
 
 @dataclass
@@ -45,6 +47,9 @@ class Usage:
 class LLMChunk:
     delta: str = ""
     usage: Usage | None = None  # set on the final chunk when the provider reports it
+    # Who actually served this stream (set on its first chunk by FallbackProvider), for cost and diagnostics.
+    provider: str | None = None
+    model: str | None = None
 
 
 @dataclass
@@ -52,6 +57,7 @@ class LLMResponse:
     text: str
     model: str
     usage: Usage
+    provider: str | None = None  # the provider that served it, when it wasn't the configured primary
 
 
 class LLMError(Exception):
@@ -73,11 +79,15 @@ class LLMProvider(ABC):
     async def generate(self, request: LLMRequest) -> LLMResponse:
         parts: list[str] = []
         usage = Usage()
+        provider: str | None = None
+        model = self.model_for(request.reasoning)
         async for chunk in self.stream(request):
             parts.append(chunk.delta)
             if chunk.usage:
                 usage = chunk.usage
-        return LLMResponse(text="".join(parts), model=self.model_for(request.reasoning), usage=usage)
+            if chunk.provider:
+                provider, model = chunk.provider, chunk.model or model
+        return LLMResponse(text="".join(parts), model=model, usage=usage, provider=provider)
 
     def supports_vision(self) -> bool:
         return False

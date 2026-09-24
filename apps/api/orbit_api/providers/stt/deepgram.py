@@ -8,6 +8,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import time
 from collections.abc import AsyncIterator
 from typing import Any
 from urllib.parse import urlencode
@@ -15,6 +16,7 @@ from urllib.parse import urlencode
 import websockets
 from websockets.exceptions import InvalidStatus
 
+from orbit_api.providers import health
 from orbit_api.providers.stt.base import STTConfig, STTProvider, STTSession, TranscriptEvent
 
 log = logging.getLogger(__name__)
@@ -107,12 +109,14 @@ class DeepgramSession(STTSession):
     async def _run(self) -> None:
         backoff = 0.25
         while not self._closed:
+            attempt_at = time.monotonic()
             try:
                 async with websockets.connect(
                     self._url, additional_headers=self._headers, open_timeout=5, max_size=2**20
                 ) as ws:
                     self._ws = ws
                     self.state = "connected"
+                    health.record("deepgram", "stt", True, int((time.monotonic() - attempt_at) * 1000))
                     self._connected.set()
                     await self._queue.put(TranscriptEvent(kind="status", status="connected"))
                     backoff = 0.25
@@ -135,6 +139,7 @@ class DeepgramSession(STTSession):
                 raise
             except InvalidStatus as e:
                 code = e.response.status_code
+                health.record("deepgram", "stt", False, error=f"http_{code}")
                 if code in FATAL_HANDSHAKE:
                     log.error("deepgram handshake rejected (%s); not retrying", code)
                     self.state = "down"
@@ -144,6 +149,7 @@ class DeepgramSession(STTSession):
                     break
                 log.warning("deepgram handshake failed: HTTP %s", code)
             except Exception as e:
+                health.record("deepgram", "stt", False, error=type(e).__name__)
                 log.warning("deepgram socket error: %s", type(e).__name__)
             if self._closed:
                 break

@@ -128,6 +128,8 @@ class SessionProfile:
     keyterms: list[str] = field(default_factory=list)
     dev_mode: bool = False
     mock: MockConfig | None = None  # session_type "mock": the AI plays the interviewer
+    # The plan's "provider_fallback" feature: may a backup LLM answer when DeepSeek fails before its first token?
+    allow_fallback: bool = True
 
 
 @dataclass
@@ -547,7 +549,8 @@ class LiveEngine:
         self._finishing = asyncio.ensure_future(self.end(final=True))
 
     async def _record_mock_usage(self, resp: LLMResponse, latency_ms: int) -> None:
-        await self._rec.provider_request(self._llm.name, resp.model, "mock_question", resp.usage, latency_ms, True)
+        await self._rec.provider_request(resp.provider or self._llm.name, resp.model, "mock_question", resp.usage,
+                                         latency_ms, True)
 
     # ---- questions & answers ----------------------------------------------------------------------------
 
@@ -564,8 +567,8 @@ class LiveEngine:
         result = await classify(self._llm, text, previous, recent)
         latency = int((self._clock() - started) * 1000)
         if result is not None and result.response is not None:
-            await self._rec.provider_request(self._llm.name, result.response.model, "classify",
-                                             result.response.usage, latency, True)
+            await self._rec.provider_request(result.response.provider or self._llm.name, result.response.model,
+                                             "classify", result.response.usage, latency, True)
         log.info("classifier: %s answer=%s in %d ms", result.kind if result else "unavailable",
                  bool(result and result.should_answer), latency)
         if result is None or not result.should_answer or self._ended:
@@ -690,8 +693,10 @@ class LiveEngine:
             # budget otherwise lost its key points.
             max_tokens=(CODE_MAX_TOKENS if is_code else MAX_TOKENS[self.settings.length]) + TRAILER_TOKENS,
             request_type={"chat": "chat", "screenshot": "vision"}.get(source, "answer"),
+            allow_fallback=self.profile.allow_fallback,
         )
         model = self._llm.model_for(request.reasoning)
+        provider = self._llm.name  # replaced by whoever actually serves the stream (the backup, on failover)
         await self.send("answer.started", {"answer_id": aid, "question_id": qid, "length": self.settings.length,
                                            "reasoning": reasoning, "source": source})
         await self._set_state(LiveState.generating)
@@ -706,6 +711,12 @@ class LiveEngine:
             while True:
                 try:
                     async for chunk in self._llm.stream(request):
+                        if chunk.provider:
+                            provider, model = chunk.provider, chunk.model or model
+                            if provider != self._llm.name:
+                                # Served by the backup: subtle for the user (no provider names, no error codes).
+                                await self.send("provider.status", {"provider": "llm", "name": provider,
+                                                                    "state": "ok", "detail": "AI connection recovered"})
                         if chunk.usage:
                             usage = chunk.usage
                         if not chunk.delta:
@@ -735,7 +746,7 @@ class LiveEngine:
             gen = self._gens.get(aid)
             reason = gen.cancel_reason if gen else "superseded"
             await self.send("answer.cancelled", {"answer_id": aid, "reason": reason})
-            await self._rec.answer(aid, qid, "cancelled", parser.snapshot().model_dump(), self._llm.name, model,
+            await self._rec.answer(aid, qid, "cancelled", parser.snapshot().model_dump(), provider, model,
                                    first_token_ms, None)
             raise
         except LLMError as e:
@@ -747,8 +758,8 @@ class LiveEngine:
             await self.send("answer.failed", {"answer_id": aid,
                                               "error": {"code": e.code, "message": user_msg,
                                                         "retryable": e.retryable}})
-            await self._rec.answer(aid, qid, "failed", None, self._llm.name, model, first_token_ms, total)
-            await self._rec.provider_request(self._llm.name, model, request.request_type, usage, total, False)
+            await self._rec.answer(aid, qid, "failed", None, provider, model, first_token_ms, total)
+            await self._rec.provider_request(provider, model, request.request_type, usage, total, False)
             if source == "screenshot":
                 await self._rec.usage("screenshot_failures", 1, f"shotfail:{aid}")
             await self._set_state(LiveState.error)
@@ -764,9 +775,9 @@ class LiveEngine:
         if source != "chat" or instruction is None:
             self.memory.questions.append(question)
         self.memory.last_answer_brief = (final.direct_answer + " " + " | ".join(final.talking_points))[:600]
-        await self._rec.answer(aid, qid, "completed", final.model_dump(), self._llm.name, model, first_token_ms,
+        await self._rec.answer(aid, qid, "completed", final.model_dump(), provider, model, first_token_ms,
                                total_ms)
-        await self._rec.provider_request(self._llm.name, model, request.request_type, usage, total_ms, True)
+        await self._rec.provider_request(provider, model, request.request_type, usage, total_ms, True)
         if source == "screenshot":
             # A screenshot credit is spent only on a delivered answer (failed/cancelled ones are free). Keyed
             # by question, so a regenerated answer for the same screenshot isn't charged twice.
@@ -790,5 +801,5 @@ class LiveEngine:
         except LLMError:
             return
         self.memory.rolling_summary = resp.text.strip()[:1200]
-        await self._rec.provider_request(self._llm.name, resp.model, "summary", resp.usage,
+        await self._rec.provider_request(resp.provider or self._llm.name, resp.model, "summary", resp.usage,
                                          int((self._clock() - started) * 1000), True)

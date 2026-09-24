@@ -7,7 +7,7 @@ ORBIT_CONFIG_SECRET and applied to live providers immediately after saving.
 """
 
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -153,3 +153,18 @@ async def latency(_: Annotated[User, Depends(require_admin)], db: Annotated[Asyn
     rows = (await db.scalars(select(LiveSessionRow.metrics).where(
         LiveSessionRow.created_at >= since, LiveSessionRow.metrics.is_not(None)))).all()
     return LatencyOut(days=days, sessions=len(rows), metrics=summarize(r for r in rows if r))
+
+
+@router.get("/providers")
+async def provider_health(_: Annotated[User, Depends(require_admin)]) -> dict[str, Any]:
+    """Admin diagnostics: every dependency's recent health, and the LLM failover state. Never shown to users."""
+    from orbit_api.providers import health
+    from orbit_api.providers.llm import get_llm_provider
+    from orbit_api.providers.llm.fallback import FallbackProvider
+
+    llm = get_llm_provider()
+    failover: dict[str, Any] | None = None
+    if isinstance(llm, FallbackProvider):
+        failover = {"primary": llm.primary.name, "backup": llm.fallback.name if llm.fallback else None,
+                    "breaker": llm.breaker.state, "first_token_timeout_s": llm.first_token_timeout_s}
+    return {"dependencies": health.snapshot(), "llm_failover": failover}
