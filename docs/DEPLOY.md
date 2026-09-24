@@ -40,6 +40,11 @@ in-app (defaults to the first registered user if unset). `ORBIT_CONFIG_SECRET` (
 encrypts those stored keys at rest — without it, in-app key editing is read-only and keys come only from
 these Fly secrets. Both are optional to boot, but set them if you want to manage keys from the web UI.
 
+**Who can sign in.** The server spends one shared provider key, so in production only `ORBIT_ADMIN_EMAIL`
+can register or sign in by default — a public web URL doesn't mean public usage. To let others in, set
+`ORBIT_ALLOWED_EMAILS` to a comma-separated list of emails and/or `@domain` entries (or `*` for anyone).
+It's re-checked on every request, so removing someone cuts off their existing sessions too.
+
 Then edit `fly.toml` `[env]` so `ORBIT_WEB_URL` and `ORBIT_CORS_ORIGINS` point at your Cloudflare Pages
 URL (step 3), and `fly deploy` again. The container runs `alembic upgrade head` on boot, so the schema is
 created automatically. Health: `https://<app>.fly.dev/ready`.

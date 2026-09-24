@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api.auth import email_tokens
 from orbit_api.auth.security import (
     COOKIE_NAME,
+    NOT_ALLOWED,
     create_access_token,
     current_user,
     hash_password,
@@ -84,6 +85,8 @@ def _ip(request: Request) -> str | None:
 async def register(body: RegisterIn, request: Request, response: Response,
                    db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut:
     email = body.email.lower()
+    if not get_settings().email_allowed(email):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, NOT_ALLOWED)
     if await db.scalar(select(func.count()).select_from(User).where(User.email == email)):
         raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists.")
     user = User(email=email, name=body.name, password_hash=hash_password(body.password))
@@ -104,6 +107,8 @@ async def login(body: LoginIn, request: Request, response: Response,
     user = await db.scalar(select(User).where(User.email == body.email.lower()))
     if not verify_password(body.password, user.password_hash if user else None) or user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password.")
+    if not get_settings().email_allowed(user.email):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, NOT_ALLOWED)
     db.add(AuditLog(user_id=user.id, action="auth.login", ip=_ip(request)))
     await db.commit()
     token = create_access_token(user.id, user.token_version)

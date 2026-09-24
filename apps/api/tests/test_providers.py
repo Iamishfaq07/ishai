@@ -71,3 +71,26 @@ def test_deepgram_url_and_parsing() -> None:
     assert final and final.kind == "final" and final.endpoint
     assert parse_message({"type": "UtteranceEnd"}).kind == "utterance_end"  # type: ignore[union-attr]
     assert parse_message({"type": "Metadata"}) is None
+
+
+async def test_deepgram_rejected_key_goes_down_without_retrying(monkeypatch: pytest.MonkeyPatch) -> None:
+    from websockets.datastructures import Headers
+    from websockets.exceptions import InvalidStatus
+    from websockets.http11 import Response
+
+    from orbit_api.providers.stt import deepgram
+
+    attempts = 0
+
+    def reject(*_a: object, **_k: object) -> object:
+        nonlocal attempts
+        attempts += 1
+        raise InvalidStatus(Response(401, "Unauthorized", Headers()))
+
+    monkeypatch.setattr(deepgram.websockets, "connect", reject)
+    session = deepgram.DeepgramSession("bad-key", "nova-3", STTConfig())
+    await session.connect()
+    events = [ev async for ev in session.events()]
+    assert [(e.kind, e.status) for e in events] == [("status", "down")]
+    assert "rejected" in events[0].text and attempts == 1
+    await session.close()

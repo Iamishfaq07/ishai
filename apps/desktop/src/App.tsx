@@ -46,7 +46,8 @@ export function App() {
         setUser(await api.me());
         setScreen({ name: "home" });
       } catch (err) {
-        if (err instanceof ApiError && err.status === 401) await signOut();
+        // 401: dead token. 403: this server no longer allows the account (ORBIT_ALLOWED_EMAILS).
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) await signOut();
         else setScreen({ name: "home" }); // offline — keep the token; screens show their own errors
       }
     })();

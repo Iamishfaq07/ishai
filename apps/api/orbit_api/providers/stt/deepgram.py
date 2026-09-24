@@ -14,6 +14,7 @@ from typing import Any
 from urllib.parse import urlencode
 
 import websockets
+from websockets.exceptions import InvalidStatus
 
 from orbit_api.providers.stt.base import STTConfig, STTProvider, STTSession, TranscriptEvent
 
@@ -21,6 +22,9 @@ log = logging.getLogger(__name__)
 
 KEEPALIVE_S = 4.0
 MAX_BUFFERED_AUDIO_BYTES = 16_000 * 2 * 5  # 5 s of PCM16 retained while reconnecting
+# Handshake rejections that retrying can't fix: bad/revoked key (401/403), out of credit (402).
+FATAL_HANDSHAKE = {401: "the Deepgram API key was rejected", 402: "the Deepgram account is out of credit",
+                   403: "the Deepgram API key was rejected"}
 
 
 def build_url(model: str, cfg: STTConfig) -> str:
@@ -118,6 +122,15 @@ class DeepgramSession(STTSession):
                         self._ws = None
             except asyncio.CancelledError:
                 raise
+            except InvalidStatus as e:
+                code = e.response.status_code
+                if code in FATAL_HANDSHAKE:
+                    log.error("deepgram handshake rejected (%s); not retrying", code)
+                    self._connected.set()  # unblock connect(); the session is down, not pending
+                    await self._queue.put(TranscriptEvent(kind="status", status="down",
+                                                          text=FATAL_HANDSHAKE[code]))
+                    break
+                log.warning("deepgram handshake failed: HTTP %s", code)
             except Exception as e:
                 log.warning("deepgram socket error: %s", type(e).__name__)
             if self._closed:

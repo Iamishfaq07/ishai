@@ -175,3 +175,18 @@ async def test_audio_frames_are_routed_per_channel_and_acknowledged() -> None:
             and e["data"].get("detail") == "receiving"]
     assert [e["type"] for e in acks] == ["audio.mic_status", "audio.system_status"]  # once per channel
     await eng.end()
+
+
+async def test_stt_status_reconnect_clears_and_down_is_reported() -> None:
+    eng, sink = await _engine(MockLLMProvider())
+    await eng.on_transcript("system", TranscriptEvent("status", status="reconnecting"))
+    await eng.on_transcript("system", TranscriptEvent("status", status="connected"))
+    stt = [p for p in sink.of("provider.status") if p["provider"] == "stt"]
+    assert [p["state"] for p in stt][-2:] == ["reconnecting", "ok"]  # banner clears after reconnect
+    assert eng.state.value == "listening"
+
+    await eng.on_transcript("mic", TranscriptEvent("status", "the Deepgram API key was rejected", status="down"))
+    down = [p for p in sink.of("provider.status") if p["provider"] == "stt"][-1]
+    assert down["state"] == "down" and "key was rejected" in down["detail"]
+    assert sink.of("audio.mic_status")[-1]["state"] == "error"
+    await eng.handle_client({"type": "session.end", "data": {}})

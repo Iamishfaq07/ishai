@@ -15,6 +15,7 @@ from orbit_api.db import get_db
 from orbit_api.models import User
 
 COOKIE_NAME = "orbit_session"
+NOT_ALLOWED = "This Orbit server is private. Ask the owner to add your email."
 _hasher = PasswordHasher()
 # Verified against when the email doesn't exist so login timing doesn't reveal account existence.
 _DUMMY_HASH = _hasher.hash(secrets.token_hex(16))
@@ -66,6 +67,9 @@ async def current_user(request: Request, db: Annotated[AsyncSession, Depends(get
     # A token minted before the last password reset / sign-out-everywhere is dead.
     if user is None or claims is None or claims[1] != user.token_version:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
+    # Re-checked per request so tightening ORBIT_ALLOWED_EMAILS cuts off existing accounts too.
+    if not get_settings().email_allowed(user.email):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, NOT_ALLOWED)
     return user
 
 

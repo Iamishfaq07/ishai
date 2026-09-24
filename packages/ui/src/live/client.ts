@@ -43,8 +43,9 @@ export interface LiveClientOptions {
 }
 
 const OPEN = 1;
-/** Server close codes that mean "don't retry" (auth / session gone / ended). */
-const TERMINAL_CLOSE_CODES = new Set([1000, 4001, 4003, 4004, 4009]);
+/** Server close codes that mean "don't retry" (auth / session gone / ended / taken over elsewhere /
+ * too many live sessions). Retrying 4010 would make two windows steal the session back and forth. */
+const TERMINAL_CLOSE_CODES = new Set([1000, 4001, 4003, 4004, 4009, 4010, 4029]);
 const MAX_QUEUED_CONTROL = 64;
 
 type EventListener = (event: ServerEvent) => void;

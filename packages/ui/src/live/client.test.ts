@@ -168,13 +168,13 @@ describe("LiveClient", () => {
     expect(client.connectionStatus).toBe("open");
   });
 
-  it("does not reconnect after a terminal close code", async () => {
+  it.each([4004, 4010, 4029])("does not reconnect after terminal close code %i", async (code) => {
     vi.useFakeTimers();
     const client = makeClient();
     client.connect();
     await flush();
     (FakeSocket.instances[0] as FakeSocket).open();
-    (FakeSocket.instances[0] as FakeSocket).drop(4004);
+    (FakeSocket.instances[0] as FakeSocket).drop(code);
     await advance(5000);
     expect(FakeSocket.instances).toHaveLength(1);
     expect(client.connectionStatus).toBe("closed");
