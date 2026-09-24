@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { cx, focusRing } from "@orbit/ui";
+import { Contrast, cx, focusRing } from "@orbit/ui";
 import { GLASS_MIN, useGlass } from "./glass";
 
 /** Transparency slider + blur toggle (Settings → Appearance, and the live window's quick popover). */
@@ -69,9 +69,10 @@ export function GlassButton() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         title="Transparency"
-        className={cx("rounded px-1.5 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800", focusRing)}
+        aria-label="Transparency"
+        className={cx("inline-flex items-center rounded px-1.5 py-1 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800", focusRing)}
       >
-        ◐
+        <Contrast className="h-3.5 w-3.5" />
       </button>
       {open && (
         <div className="glass-solid absolute right-0 top-7 z-50 w-60 origin-top-right animate-scale-in rounded-xl border border-zinc-200 bg-white p-3 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">

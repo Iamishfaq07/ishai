@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OrbitSession } from "@orbit/types";
 import {
+  Pin,
+  PinOff,
+  X,
   ApiError,
   LivePanel,
   answerAsText,
@@ -226,7 +229,7 @@ export function LiveScreen({
           <div className="flex items-center gap-2 bg-rose-50 px-4 py-1.5 text-xs text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">
             <span className="flex-1">{shotNote}</span>
             <button type="button" onClick={() => setShotNote(null)} aria-label="Dismiss" className={cx("px-1", focusRing)}>
-              ×
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
         )}
@@ -257,13 +260,13 @@ export function LiveScreen({
             aria-pressed={onTop}
             title={onTop ? "Always on top: on" : "Always on top: off"}
             className={cx(
-              "rounded px-1.5 text-xs",
+              "inline-flex items-center rounded px-1.5 py-1 text-xs",
               onTop ? "text-indigo-600 dark:text-indigo-300" : "text-zinc-400",
               "hover:bg-zinc-100 dark:hover:bg-zinc-800",
               focusRing,
             )}
           >
-            📌
+            {onTop ? <Pin className="h-3.5 w-3.5" /> : <PinOff className="h-3.5 w-3.5" />}
           </button>
           <GlassButton />
           <WindowButtons minimize={() => void win.minimize()} hide={requestClose} />

@@ -23,6 +23,7 @@ import { QuestionCard } from "./QuestionCard";
 import { StatusPill } from "./StatusPill";
 import { Teleprompter } from "./Teleprompter";
 import { TranscriptView } from "./TranscriptView";
+import { ChevronLeft, ChevronRight, X } from "../icons";
 
 export type PanelMode = "compact" | "expanded";
 type SideTab = "transcript" | "chat" | "reading";
@@ -347,7 +348,7 @@ function Banners({
       text: live.lastError.message,
       action: (
         <button type="button" onClick={onDismiss} aria-label="Dismiss" className={cx("px-1", focusRing)}>
-          ×
+          <X className="h-3.5 w-3.5" />
         </button>
       ),
     });
@@ -437,21 +438,21 @@ function HistoryNav(props: {
   onLive: () => void;
 }) {
   const navBtn = cx(
-    "rounded-md px-1.5 py-0.5 text-sm text-zinc-500 hover:bg-zinc-100 disabled:opacity-30 dark:hover:bg-zinc-800",
+    "inline-flex items-center rounded-md px-1 py-0.5 text-sm text-zinc-500 hover:bg-zinc-100 disabled:opacity-30 dark:hover:bg-zinc-800",
     focusRing,
   );
   return (
     <div className="flex animate-fade-in items-center gap-1 px-4 pt-2 text-xs text-zinc-500 dark:text-zinc-400">
       <button type="button" className={navBtn} onClick={() => props.onStep(-1)} disabled={props.index <= 0}
               title="Previous answer (Alt+←)" aria-label="Previous answer">
-        ‹
+        <ChevronLeft className="h-4 w-4" />
       </button>
       <span className="tabular-nums" aria-live="polite">
         {props.index + 1} of {props.total}
       </span>
       <button type="button" className={navBtn} onClick={() => props.onStep(1)} disabled={props.index >= props.total - 1}
               title="Next answer (Alt+→)" aria-label="Next answer">
-        ›
+        <ChevronRight className="h-4 w-4" />
       </button>
       <span className="flex-1" />
       {props.browsing && (

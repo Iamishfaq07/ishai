@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { AdminConfig, AdminConfigUpdate, Usage, User } from "@orbit/types";
 import {
+  ArrowLeft,
   AppearanceControls,
   Button,
   Card,
@@ -39,7 +40,8 @@ export function SettingsScreen({
     <div className="flex h-full flex-col">
       <TitleBar title="Settings">
         <Button variant="ghost" size="sm" onClick={onBack}>
-          ← Back
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back
         </Button>
       </TitleBar>
       <div className="flex-1 overflow-y-auto p-6">

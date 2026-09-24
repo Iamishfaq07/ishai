@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import type { SessionType } from "@orbit/types";
-import { OrbitLogo, cx, focusRing } from "@orbit/ui";
+import { Download, OrbitLogo, cx, focusRing } from "@orbit/ui";
 import { Button, Card, ErrorNote, Spinner } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -153,7 +153,8 @@ function DesktopPromo() {
             focusRing,
           )}
         >
-          ↓ Download for Windows
+          <Download className="h-4 w-4" />
+          Download for Windows
         </a>
       </div>
     </section>

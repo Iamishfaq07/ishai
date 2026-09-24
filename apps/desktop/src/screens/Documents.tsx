@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { DOCUMENT_ACCEPT, type DocumentKind, type OrbitDocument } from "@orbit/types";
 import {
+  ArrowLeft,
   Button,
   Card,
   EmptyState,
@@ -104,7 +105,8 @@ export function DocumentsScreen({ onBack }: { onBack: () => void }) {
     <div className="flex h-full flex-col">
       <TitleBar title="Documents">
         <Button variant="ghost" size="sm" onClick={onBack}>
-          ← Back
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back
         </Button>
       </TitleBar>
       <div className="flex-1 overflow-y-auto p-6">
