@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { OrbitSession, SessionAnswer, SessionDetail, SessionSummary } from "@orbit/types";
 import {
+  ArrowLeft,
   Button,
   Card,
   CodeBlock,
@@ -26,7 +27,8 @@ export function HistoryScreen({ onBack, onResume }: { onBack: () => void; onResu
     <div className="flex h-full flex-col">
       <TitleBar title="History">
         <Button variant="ghost" size="sm" onClick={() => (selected ? setSelected(null) : onBack())}>
-          ← Back
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back
         </Button>
       </TitleBar>
       <div className="flex-1 overflow-y-auto p-6">

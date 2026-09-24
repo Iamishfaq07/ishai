@@ -5,6 +5,7 @@ import { splitPlaceholders } from "../live/placeholders";
 import type { AnswerView } from "../live/reducer";
 import { CodeBlock } from "./CodeBlock";
 import { cx, focusRing } from "./cx";
+import { ArrowRight, Check, Circle, PenLine } from "../icons";
 
 export interface AnswerCardProps {
   answer: AnswerView | null;
@@ -75,7 +76,7 @@ function CopyButton({ text }: { text: string }) {
         focusRing,
       )}
     >
-      {copied ? <span className="inline-block animate-pop">Copied ✓</span> : "Copy"}
+      {copied ? <span className="inline-flex animate-pop items-center gap-1">Copied <Check className="h-3.5 w-3.5" /></span> : "Copy"}
     </button>
   );
 }
@@ -109,9 +110,9 @@ function KeyPoints({ progress, compact }: { progress: KeyPointProgress; compact:
               <li key={i} className={cx("flex items-start gap-2 leading-snug transition-colors",
                 p.covered ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200",
                 isNext && "font-semibold text-indigo-700 dark:text-indigo-300")}>
-                <span aria-hidden="true" className={cx("w-4 flex-none text-center",
+                <span aria-hidden="true" className={cx("mt-0.5 flex w-4 flex-none justify-center",
                   p.covered ? "text-emerald-500" : isNext ? "text-indigo-500" : "text-zinc-400")}>
-                  {p.covered ? "✓" : isNext ? "→" : "○"}
+                  {p.covered ? <Check className="h-3.5 w-3.5" /> : isNext ? <ArrowRight className="h-3.5 w-3.5" /> : <Circle className="mt-0.5 h-2.5 w-2.5" />}
                 </span>
                 <span>
                   {isNext && <span className="sr-only">Next: </span>}
@@ -196,7 +197,7 @@ export function AnswerCard({
             className="mb-2 flex animate-fade-in items-start gap-1.5 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-800 dark:text-amber-200"
             title="Parts of this answer describe experience that isn't in your documents"
           >
-            <span aria-hidden="true">✎</span>
+            <PenLine className="mt-px h-3.5 w-3.5 flex-none" />
             <span>Suggested details — check they match your real experience before you say them.</span>
           </p>
         )}

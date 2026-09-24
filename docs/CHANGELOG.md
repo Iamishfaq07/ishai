@@ -1,5 +1,16 @@
 # Implementation log
 
+## Phase 6c — icon library (2026-09-25)
+
+- Replaced every emoji / Unicode-glyph icon (📌 ◐ × ✕ ↻ ← ↓ ✓ → ○ ✎ ▾ ‹ ›) and the four hand-drawn SVGs with
+  **lucide** icons, via one curated module (`packages/ui/src/icons.ts`) shared by desktop and web. Icons now share
+  one stroke weight and render the same regardless of Windows emoji font; decorative icons are `aria-hidden`, and
+  every icon-only button has an accessible name.
+- Checklist status icons carry a spoken label ("OK" / "Warning" / "Problem") instead of the raw status id.
+- **Fixed:** at the default 380 px Setup window, the title bar's text links pushed the transparency, minimize and
+  **close** buttons off-screen. Documents / History / Settings / Sign out are now icon buttons with tooltips.
+- axe (WCAG 2.1 AA): still 0 violations on all 8 screens in both themes. Web bundle +2 kB gzipped.
+
 ## Phase 6b — accessibility (2026-09-25)
 
 - Audited every desktop screen with **axe-core (WCAG 2.1 A/AA)** in the real app, in both themes: Sign in, Home,

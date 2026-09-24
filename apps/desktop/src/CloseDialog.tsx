@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { OrbitLogo, cx, focusRing } from "@orbit/ui";
+import { ArrowDownToLine, Power, OrbitLogo, cx, focusRing } from "@orbit/ui";
 
 /** What the × / Alt+F4 does. "ask" shows the dialog; the others are a remembered choice. */
 export type CloseAction = "ask" | "tray" | "quit";
@@ -113,7 +113,7 @@ export function CloseDialog({ liveActive }: { liveActive: boolean }) {
               focusRing,
             )}
           >
-            <TrayIcon />
+            <ArrowDownToLine className="h-5 w-5 shrink-0" />
             <span>
               Hide to tray
               <span className="block text-xs font-normal text-indigo-100">Reopen from the tray or its shortcut</span>
@@ -127,7 +127,7 @@ export function CloseDialog({ liveActive }: { liveActive: boolean }) {
               focusRing,
             )}
           >
-            <PowerIcon />
+            <Power className="h-5 w-5 shrink-0" />
             Quit Orbit
           </button>
           <button
@@ -148,20 +148,4 @@ export function CloseDialog({ liveActive }: { liveActive: boolean }) {
   );
 }
 
-function TrayIcon() {
-  return (
-    <svg viewBox="0 0 20 20" className="h-5 w-5 shrink-0" aria-hidden="true">
-      <path d="M3 13h14v3H3z" fill="currentColor" opacity="0.35" />
-      <path d="M10 3v7m0 0-3-3m3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
-function PowerIcon() {
-  return (
-    <svg viewBox="0 0 20 20" className="h-5 w-5 shrink-0" aria-hidden="true">
-      <path d="M10 3v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M6 5.5a6 6 0 1 0 8 0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}

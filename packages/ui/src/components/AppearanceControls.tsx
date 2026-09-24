@@ -1,5 +1,6 @@
 import { ACCENTS, TEXT_SIZES, type AccentName, type DesignPrefs } from "../design/design";
 import { cx, focusRing } from "./cx";
+import { Check } from "../icons";
 
 export interface AppearanceControlsProps {
   prefs: DesignPrefs;
@@ -34,9 +35,7 @@ export function AppearanceControls({ prefs, onChange }: AppearanceControlsProps)
                 style={{ background: `linear-gradient(135deg, rgb(${ACCENTS[name].palette[3]}), rgb(${ACCENTS[name].palette[6]}))` }}
               >
                 {selected && (
-                  <svg viewBox="0 0 16 16" className="mx-auto h-3.5 w-3.5 animate-pop text-white" aria-hidden="true">
-                    <path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <Check className="mx-auto h-3.5 w-3.5 animate-pop text-white" strokeWidth={3} />
                 )}
               </button>
             );

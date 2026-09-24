@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { OrbitLogo, cx, focusRing } from "@orbit/ui";
+import { Minus, X, OrbitLogo, cx, focusRing } from "@orbit/ui";
 import { requestClose } from "./CloseDialog";
 import { GlassButton } from "./GlassControls";
 
@@ -31,18 +31,18 @@ export function WindowButtons({ minimize, hide }: { minimize: () => void; hide: 
         type="button"
         onClick={minimize}
         aria-label="Minimize"
-        className={cx("rounded px-1.5 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800", focusRing)}
+        className={cx("inline-flex items-center rounded px-1.5 py-1 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800", focusRing)}
       >
-        —
+        <Minus className="h-3.5 w-3.5" />
       </button>
       <button
         type="button"
         onClick={hide}
         aria-label="Close"
         title="Close — hide to tray or quit"
-        className={cx("rounded px-1.5 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800", focusRing)}
+        className={cx("inline-flex items-center rounded px-1.5 py-1 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800", focusRing)}
       >
-        ×
+        <X className="h-3.5 w-3.5" />
       </button>
     </span>
   );

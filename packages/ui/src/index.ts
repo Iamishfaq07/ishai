@@ -103,3 +103,4 @@ export { useKeyPointProgress } from "./live/useKeyPointProgress";
 export { useInterviewerVoice, type InterviewerVoice } from "./live/useInterviewerVoice";
 export { MockPanel } from "./components/MockPanel";
 export { ConfirmHost, confirmDialog, type ConfirmOptions } from "./components/ConfirmDialog";
+export * from "./icons";

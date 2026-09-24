@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { AUDIO_CHANNEL, type OrbitSession } from "@orbit/types";
 import {
+  ArrowLeft,
   ApiError,
   LivePanel,
   ScreenshotPreview,
@@ -266,8 +267,9 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   return (
     <div className="flex h-full flex-col bg-zinc-100 dark:bg-black">
       <div className="flex items-center gap-3 px-4 py-2 text-xs text-zinc-500">
-        <Link to="/" className={cx("hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
-          ← Orbit
+        <Link to="/" className={cx("inline-flex items-center gap-1 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Orbit
         </Link>
         <span className="ml-auto">
           Mic {micOn ? "on" : "off"} · Interviewer audio {sysState === "on" ? "on" : "off"}

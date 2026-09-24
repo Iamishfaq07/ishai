@@ -16,6 +16,13 @@ import type {
 } from "@orbit/types";
 import { AUDIO_CHANNEL } from "@orbit/types";
 import {
+  ArrowLeft,
+  FileText,
+  HistoryIcon,
+  LogOut,
+  SettingsIcon,
+  RefreshCw,
+  Trash2,
   ANSWER_STYLES,
   RESPONSE_TIMINGS,
   THINKING_LEVELS,
@@ -359,20 +366,21 @@ export function SetupScreen({
   return (
     <div className="flex h-full flex-col">
       <TitleBar>
-        <button type="button" onClick={onBack} className={cx("rounded px-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
-          ← Home
+        <button type="button" onClick={onBack} className={cx("inline-flex items-center gap-1 rounded px-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Home
         </button>
-        <button type="button" onClick={onOpenDocuments} className={cx("rounded px-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
-          Documents
+        <button type="button" onClick={onOpenDocuments} title="Documents" aria-label="Documents" className={cx("rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+          <FileText className="h-4 w-4" />
         </button>
-        <button type="button" onClick={onOpenHistory} className={cx("rounded px-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
-          History
+        <button type="button" onClick={onOpenHistory} title="History" aria-label="History" className={cx("rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+          <HistoryIcon className="h-4 w-4" />
         </button>
-        <button type="button" onClick={onOpenSettings} className={cx("rounded px-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
-          Settings
+        <button type="button" onClick={onOpenSettings} title="Settings" aria-label="Settings" className={cx("rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+          <SettingsIcon className="h-4 w-4" />
         </button>
-        <button type="button" onClick={onSignOut} className={cx("rounded px-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
-          Sign out
+        <button type="button" onClick={onSignOut} title="Sign out" aria-label="Sign out" className={cx("rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+          <LogOut className="h-4 w-4" />
         </button>
       </TitleBar>
       <UpdateBanner />
@@ -525,9 +533,9 @@ export function SetupScreen({
                       onClick={() => void onDeleteDoc(d.id)}
                       aria-label={`Delete ${d.title}`}
                       title="Delete"
-                      className={cx("rounded px-1 text-zinc-400 hover:text-rose-600", focusRing)}
+                      className={cx("rounded p-1 text-zinc-400 hover:text-rose-600", focusRing)}
                     >
-                      ✕
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </li>
                 ))}
@@ -689,8 +697,8 @@ export function SetupScreen({
                         )}
                     </optgroup>
                   </select>
-                  <button type="button" onClick={refreshApps} title="Refresh app list" aria-label="Refresh app list" className={cx("rounded-lg border border-zinc-200 px-2 text-xs dark:border-zinc-800", focusRing)}>
-                    ↻
+                  <button type="button" onClick={refreshApps} title="Refresh app list" aria-label="Refresh app list" className={cx("inline-flex items-center rounded-lg border border-zinc-200 px-2 text-xs dark:border-zinc-800", focusRing)}>
+                    <RefreshCw className="h-3.5 w-3.5" />
                   </button>
                 </div>
                 <p className="text-xs text-zinc-500">
