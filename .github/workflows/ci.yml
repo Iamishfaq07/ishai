@@ -84,9 +84,20 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           VERSION_OVERRIDE: ${{ inputs.version_override }}
         run: |
+          overrides=()
           if [[ -n "$VERSION_OVERRIDE" ]]; then
             [[ "$VERSION_OVERRIDE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "bad version: $VERSION_OVERRIDE"; exit 1; }
-            pnpm --filter @orbit/desktop tauri build --bundles nsis --config "{\"version\":\"$VERSION_OVERRIDE\"}"
+            overrides+=("\"version\":\"$VERSION_OVERRIDE\"")
+          fi
+          # Dependabot and fork PRs don't get repo secrets: still prove the app builds, just without the
+          # updater .sig (which needs the key) instead of failing the job.
+          if [[ -z "$TAURI_SIGNING_PRIVATE_KEY" ]]; then
+            echo "::notice::No updater signing key available; building without updater artifacts"
+            overrides+=("\"bundle\":{\"createUpdaterArtifacts\":false}")
+          fi
+          if (( ${#overrides[@]} )); then
+            config="{$(IFS=,; echo "${overrides[*]}")}"
+            pnpm --filter @orbit/desktop tauri build --bundles nsis --config "$config"
           else
             pnpm --filter @orbit/desktop tauri build --bundles nsis
           fi
