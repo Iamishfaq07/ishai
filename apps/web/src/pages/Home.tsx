@@ -38,6 +38,8 @@ export function HomePage() {
         </Button>
       </section>
 
+      <DesktopPromo />
+
       <section aria-labelledby="quick-start">
         <h2 id="quick-start" className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-500">
           Quick start
@@ -118,7 +120,6 @@ export function HomePage() {
             <h2 className="mb-3 font-semibold">Usage</h2>
             <UsageSummary />
           </Card>
-          <DesktopPromo />
         </div>
       </div>
     </div>
@@ -131,28 +132,27 @@ const DESKTOP_DOWNLOAD_URL: string =
 
 function DesktopPromo() {
   return (
-    <Card>
-      <h2 className="mb-1 font-semibold">Orbit for Windows</h2>
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">
-        You’re on the browser version. The desktop app hears more:
-      </p>
-      <ul className="mt-2 space-y-1 text-sm text-zinc-600 dark:text-zinc-300">
-        <li>• Whole-system audio — any call app, not just a browser tab</li>
-        <li>• Per-app capture — pick the exact window to listen to</li>
-        <li>• Screenshots for coding questions, global hotkeys</li>
-      </ul>
-      <a
-        href={DESKTOP_DOWNLOAD_URL}
-        target="_blank"
-        rel="noreferrer"
-        className={cx(
-          "mt-4 inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500",
-          focusRing,
-        )}
-      >
-        Download desktop app
-      </a>
-      <p className="mt-2 text-xs text-zinc-400">The web version still works great for tab-based calls.</p>
-    </Card>
+    <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-600 p-6 text-white shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="max-w-2xl">
+          <h2 className="text-lg font-semibold">Get Orbit for Windows</h2>
+          <p className="mt-1 text-sm text-indigo-100">
+            You’re on the browser version. The desktop app hears far more — whole-system audio (any call
+            app, not just a tab), per-app capture to target one window, plus screenshots and global hotkeys.
+          </p>
+        </div>
+        <a
+          href={DESKTOP_DOWNLOAD_URL}
+          target="_blank"
+          rel="noreferrer"
+          className={cx(
+            "inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-indigo-700 shadow hover:bg-indigo-50",
+            focusRing,
+          )}
+        >
+          ↓ Download for Windows
+        </a>
+      </div>
+    </section>
   );
 }
