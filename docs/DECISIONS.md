@@ -135,3 +135,25 @@ uses the built-in `speechSynthesis` (Windows voices; WebView2 exposes no voice l
 voice) — free and local. The mic is muted while the interviewer speaks so its voice isn't transcribed as the answer.
 Practice mode never answers for the candidate: the answer controls are hidden and `answer.request` means "I'm done".
 If the model fails, a fallback question list keeps the interview going.
+
+**D28 — Releases are built by a script that proves they use the real sign-in store.** 0.1.11 was compiled with
+`ORBIT_KEYRING_SERVICE=""` (left over from a test build), so it looked for the sign-in under an empty service name,
+and every user appeared signed out. Now `secrets.rs` treats an empty value as unset, and
+`scripts/release-desktop.ps1` clears the variable before building. After the build, the script reads rustc's
+dep-info and refuses to publish if the variable was seen with a value. Each published installer is also
+spot-checked by downloading it from GitHub and confirming it finds the installed app's sign-in (read-only).
+
+**D29 — Accessibility contrast is fixed once in shared CSS, not class by class.** Secondary grey text (`zinc-400/500`)
+failed WCAG AA (2.6–4.4:1) across both apps. Rather than editing dozens of call sites, `base.css` maps those
+utilities to the lightest greys that pass on every surface in each theme: zinc-400 in dark mode, `#63636b` in light.
+The result is verified by an axe audit of every real desktop screen in both themes.
+
+**D30 — One icon library, curated.** Emoji and Unicode glyphs rendered differently per Windows font and couldn't be
+styled. Icons come from lucide (tree-shaken, MIT), but only through `packages/ui/src/icons.ts`, so both apps share
+one set. Lucide hides icons from screen readers by default, and every icon-only button carries an `aria-label` and a
+tooltip.
+
+**D31 — "Delete the application data" means all of it, including the sign-in.** The token is in Windows Credential
+Manager, outside the folders Tauri's uninstaller deletes. An NSIS post-uninstall hook removes it under exactly
+Tauri's conditions: the box is ticked, and this is not an update. Silent uninstalls and updates keep everything, so
+a reinstall comes back signed in.

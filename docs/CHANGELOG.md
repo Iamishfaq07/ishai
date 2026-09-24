@@ -1,5 +1,23 @@
 # Implementation log
 
+## Phase 6e — docs pass (2026-09-25)
+
+Every doc was checked against the code, and stale statements were fixed:
+- **README:** a "What Orbit does" overview and a download link.
+- **ARCHITECTURE:** the status table, the "not built" list, the diagram, the data model (19 tables) and the phases
+  are all current. The finalizer section had wrong timings: with Deepgram, questions fire on its endpoint, with a
+  2.5 s fallback. The response-timing grace is a hold before firing.
+- **PROTOCOL:** documents `mock.next`, `mock.question`, `mock.completed`, `coding_language`, and the answer fields
+  `grounding`, `key_points`, `problem`, `edge_cases` and `tests`.
+- **Desktop README:** rewritten.
+  - Covers the WASAPI and per-app capture commands, updater, close dialog and all 9 global shortcuts.
+  - Explains the test-build isolation.
+  - Removed the macOS permission sections (deferred) and the "auto-update not wired" note.
+- **Web README:** screenshots and mock interviews described as they work now.
+- **DEPLOY:** `wrangler.jsonc` is at the repo root, and Workers Builds deploys `main`.
+- **DECISIONS:** D28 (verified release script), D29 (contrast fixed in shared CSS), D30 (one curated icon set) and
+  D31 ("delete app data" includes the sign-in).
+
 ## Phase 6d — installer lifecycle (2026-09-25)
 
 - Tested install → upgrade → uninstall → reinstall on a real machine with the published installer (0.1.6 → 0.1.15).

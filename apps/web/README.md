@@ -1,7 +1,8 @@
 # @orbit/web
 
 Browser app for Orbit: account, documents (resume / JD / notes), session setup, the live copilot,
-mock interviews, history + reports, billing, and settings. The live screen is the shared
+mock interviews (the AI interviewer speaks with the browser's voice), history + reports, plan and usage (plans
+can't be purchased yet), and settings. The live screen is the shared
 `LivePanel` from `@orbit/ui`, the same component the desktop app uses.
 
 ## Run
@@ -50,9 +51,10 @@ to 16 kHz, and converts to PCM16. Frames are sent every 50 ms as `[channel byte]
 ## Screenshots
 
 The **Screenshot** button asks the browser for a one-frame screen/window/tab capture, previews it,
-and uploads only on **Analyze** (`POST /v1/sessions/{id}/screenshots`). The answer streams back
-over the live socket. If the server doesn't implement the endpoint yet, the preview says so
-plainly. It never pretends the image was analyzed.
+and uploads only on **Analyze** (`POST /v1/sessions/{id}/screenshots`). The server answers it with the vision
+model, streams the answer back over the live socket, and discards the image. A screenshot credit is spent only
+when the answer completes. Errors (no credits, vision unavailable) are shown as they are, and the app never
+pretends an image was analysed.
 
 ## Dev: simulate an interview
 

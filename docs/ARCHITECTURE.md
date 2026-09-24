@@ -1,54 +1,66 @@
 # Orbit AI — Architecture
 
-## A. Repository audit (2026-09-23)
-`Iamishfaq07/ishai` contained only an auto-generated `README.md` (one commit). No existing architecture
-to preserve — Orbit was built from scratch here.
+Built from scratch in this repo, starting 2026-09-23 (it held only a generated README). This page is kept current;
+[CHANGELOG.md](CHANGELOG.md) has the history and [DECISIONS.md](DECISIONS.md) the reasoning.
 
-## B. What exists now
+## A. What exists
 | Area | Status |
 |---|---|
-| Monorepo layout, env config, docker-compose (Postgres+pgvector, Redis), CI, Dependabot, gitleaks | ✅ |
-| FastAPI backend: auth (argon2 + JWT cookie/Bearer), documents, sessions, usage, health | ✅ tested |
-| Live engine: STT → turns → question detection → finalization → dedup → retrieval → streamed answer | ✅ tested |
-| DeepSeek provider (SSE streaming, usage incl. cache hits, error mapping, thinking control, **vision**) | ✅ tested + run against the real API (DeepSeek-V4.1-Flash) |
-| Deepgram streaming STT (reconnect, keepalive, backlog, keyterms) | ✅ tested + run against the real API |
-| Screenshot → vision answer (analysed and discarded; credit spent only on success) | ✅ tested + real API + real desktop build |
-| Mock LLM / STT / fixture replay (keyless dev + E2E) | ✅ |
-| Session memory, follow-ups, chat mode, manual answer, pin/clear, cancellation | ✅ tested |
-| Session report, transcript, Markdown export, privacy toggles, account deletion | ✅ tested |
-| Entitlements (free/pro/unlimited), live-minute heartbeat metering + mid-session enforcement, config-driven LLM cost (cache hit/miss, peak/off-peak) | ✅ tested (plans are not yet purchasable — no billing) |
-| Durable persistence: recorder retries → dead letters → replay; reports as DB-backed jobs | ✅ tested |
-| Alembic migrations (incl. `vector` extension + HNSW index) | ✅ |
-| Web app, shared live UI, Tauri desktop app (Windows) | ✅ driven end-to-end in Chrome and the real Windows exe |
+| Monorepo, env config, docker-compose (Postgres + pgvector), CI (lint, types, tests, cargo fmt + clippy, gitleaks), Dependabot | ✅ |
+| Auth: argon2 + JWT (httpOnly cookie for web, Bearer + OS keyring for desktop), email verification, password reset, sign-out-everywhere, allowlist, account deletion | ✅ tested |
+| Documents (resume / JD / notes: upload, parse, chunk, embed) and **workspaces** (saved setups per job: role, documents, settings) | ✅ tested |
+| Live engine: per-channel STT → turns → question detector (+ AI classifier for the ambiguous band) → finalizer → dedup → retrieval → streamed answer | ✅ tested + real providers |
+| DeepSeek provider: SSE streaming, cache-hit usage, error mapping, thinking levels, **vision** (DeepSeek-V4.1-Flash) | ✅ tested + real API |
+| Deepgram nova-3 streaming STT: reconnect with timestamp continuity, keepalive, backlog, keyterms, `language=multi` for auto | ✅ tested + real API |
+| Answers: spoken first-person prose, **key points** (ticked off as the candidate covers them), grounding label (*Suggested details*), coding sections (problem / code / complexity / edge cases / tests) in a chosen language | ✅ tested |
+| Screenshot → vision answer (analysed and discarded; credit spent only on success) | ✅ tested + real desktop build |
+| **Mock interviewer**: persona / type / difficulty / duration, follow-ups, spoken questions (browser TTS), review | ✅ tested + real voice path |
+| **Preflight** (`GET /v1/preflight` + local device checks) before a session starts | ✅ |
+| Session memory, follow-up stitching, chat mode, manual answer, pin / clear, cancellation, answer history | ✅ tested |
+| Session report (background DB job), review scores, transcript, Markdown export, privacy toggles | ✅ tested |
+| Entitlements (free / pro / unlimited), live-minute heartbeat metering + mid-session enforcement, config-driven LLM cost (cache hit/miss, peak/off-peak) | ✅ tested; plans can't be bought yet (no billing, D17) |
+| Durable persistence: recorder retries → `failed_writes` dead letters → spool → replay on boot | ✅ tested |
+| Observability: JSON logs with request / user / session ids and redaction, latency metrics per session (`GET /v1/admin/latency`), optional Sentry | ✅ (Sentry off until `ORBIT_SENTRY_DSN` is set, D18) |
+| Windows desktop (Tauri 2): native WASAPI mic + loopback + per-app capture, device follow / reopen, region screenshots, tray, global shortcuts, signed auto-update, per-user NSIS installer | ✅ driven end-to-end on real hardware |
+| Web app on the same shared live UI (`packages/ui`) | ✅ |
+| Accessibility: axe WCAG 2.1 AA clean on every desktop screen, light + dark; rem-based text sizes; one icon set (lucide) | ✅ |
 
-## C. Missing core features (next)
-Stripe billing (plans exist but can't be bought — D17), Redis-backed live state for multi-instance deploys
-(production is single-instance by design until then — D12), OpenTelemetry tracing (Sentry is built in but off — D18),
-LLM fallback classifier for the ambiguous question band, semantic (neural) retrieval, mock-interview question
-generation, TTS. macOS is deferred (Windows-first).
+## B. Not built (by choice, for now)
+- **Billing** (Stripe). Plans exist, but nothing can be purchased yet (D17).
+- **Multi-instance live state** (Redis). Production runs one instance by design (D12).
+- **Neural retrieval.** Embeddings are local feature-hashing; DeepSeek has no embeddings endpoint. A neural embedder
+  can be swapped in behind `Embedder`.
+- **Backup LLM provider.** DeepSeek only.
+- **Tracing** (OpenTelemetry).
+- **Code signing** (SmartScreen); see WINDOWS_RELEASE.md.
+- **macOS and Linux desktop builds**, deferred because Orbit is Windows-first.
 
-## D. Architecture
+## C. Architecture
 ```
-Desktop (Tauri: Rust capture + React)   Web (React)
-   mic ─┐  system ─┐                        │
-        └─ PCM16 16k frames [chan byte] ────┤  WS /v1/sessions/{id}/live  (JSON events + binary audio)
-                                            ▼
+Desktop (Tauri: Rust WASAPI capture + React)     Web (React)
+   mic ─┐  interviewer (output or one app) ─┐        │
+        └─ PCM16 16 kHz frames [chan byte] ─────────┤  WS /v1/sessions/{id}/live  (JSON events + binary audio)
+                                                    ▼
                          FastAPI ── LiveEngine (per connection)
-                           │   ├─ STTProvider (Deepgram | Mock) — one stream per channel
-                           │   ├─ QuestionFinalizer + detector + Deduplicator
-                           │   ├─ SessionIndex (selected docs, in-memory) + SessionMemory
-                           │   ├─ ContextBuilder → LLMProvider (DeepSeek | Mock) stream
-                           │   └─ DbRecorder (async queue → Postgres)
-                           └─ Postgres + pgvector, Redis (planned: limits/tickets)
+                           │   ├─ STTProvider (Deepgram | Mock), one stream per channel
+                           │   ├─ detect() → classify() (ambiguous band) → QuestionFinalizer → Deduplicator
+                           │   ├─ MockInterviewer (session_type "mock": the AI asks the questions)
+                           │   ├─ SessionIndex (selected docs) + SessionMemory
+                           │   ├─ build_prompt() → LLMProvider (DeepSeek | Mock) stream → AnswerStreamParser
+                           │   ├─ LatencySamples (AudioClock-based) → sessions.metrics
+                           │   └─ DbRecorder (async queue → retries → dead letters)
+                           ├─ jobs.worker (reports), usage heartbeat, preflight, admin
+                           └─ Postgres + pgvector
 ```
-All provider keys live only in the API process. The desktop app streams audio to the API, and the API relays it to Deepgram.
+All provider keys live only in the API process. Clients stream audio to the API, and the API relays it to Deepgram.
 
-## E. Data model
-`users, subscriptions, documents, document_chunks(embedding vector(384)), sessions, session_documents,
-session_turns, questions, answers, session_summaries, usage, provider_requests, audit_logs` —
-see `apps/api/orbit_api/models.py`. Every row hangs off `users.id` with `ON DELETE CASCADE`, so deleting an account deletes all of that user's data.
+## D. Data model
+`users, app_config, email_tokens, subscriptions, documents, document_chunks (embedding: pgvector on Postgres, JSON on
+SQLite), workspaces, workspace_documents, sessions, session_documents, session_turns, questions, answers,
+session_summaries, usage, failed_writes, jobs, provider_requests, audit_logs`. See `apps/api/orbit_api/models.py`.
+User-owned rows hang off `users.id` with `ON DELETE CASCADE`, so deleting an account deletes all of that user's data.
 
-## F. Live session state machine
+## E. Live session state machine
 ```
 idle → listening → speech_detected → question_detected|follow_up_detected → generating → streaming
      → answer_complete → (speech) speech_detected …
@@ -56,33 +68,47 @@ any → paused → listening        STT drop → stt_reconnecting → listening
 LLM retryable error → ai_reconnecting → (retry once) → streaming | error → listening
 session.end → ended
 ```
-New speech during streaming doesn't change the state, so the UI doesn't flicker. When a new question arrives, any unpinned in-flight answer is cancelled
-(`answer.cancelled{reason:"superseded"}`).
+New speech during streaming doesn't change the state, so the UI doesn't flicker. When a new question arrives, any
+unpinned in-flight answer is cancelled (`answer.cancelled{reason:"superseded"}`).
 
-## G. Audio / STT pipeline
-Separate channels (mic → candidate, system → interviewer) instead of diarization. Deepgram runs with
-`interim_results`, `endpointing=300`, `utterance_end_ms=1000`, `vad_events`, and resume/JD skills as `keyterm`s.
-Partials are accumulated per turn and the UI replaces partials by `turn_id`. The finalizer fires on the first of:
-STT endpoint on a complete question · `?` + 250 ms silence · complete question + 650 ms · 1.3 s max silence.
+## F. Audio / STT pipeline
+Separate channels (mic → candidate, system → interviewer) instead of diarization.
+- **Capture:** on Windows, the "interviewer" channel is the default output device, the communications device, a
+  specific output device, or one app's audio (process loopback). Capture is supervised: when a device is unplugged or
+  the default changes, it reopens and follows, and fills silence so timestamps stay continuous.
+- **Deepgram** runs with `interim_results`, `endpointing=300`, `utterance_end_ms=1000` and `vad_events`, with
+  resume/JD skills sent as `keyterm`s.
+- **Partials** are accumulated per turn, and the UI replaces them by `turn_id`.
+- **The finalizer**, with Deepgram, fires on Deepgram's endpoint for a complete question. If that endpoint event is
+  lost (noisy audio, a dropped message), it falls back after 2.5 s of silence.
+- **Without provider endpoints** (mock STT), it fires on the first of:
+  - `?` plus 250 ms of silence;
+  - a complete question plus 650 ms;
+  - 1.3 s of silence.
+- **Response timing:** before firing, it holds a detected question for a grace period after the interviewer stops
+  (quick 0, balanced 1.5 s, patient 3 s).
+- **Follow-on speech:** until the candidate starts answering, anything the interviewer adds within 8 s extends the
+  same question and regenerates the answer.
 
-## H. DeepSeek pipeline
-detect → classify (heuristic) → `choose_reasoning_level` (reasoner only for complex coding/system design)
-→ retrieve top facts (question type boosts, verified facts, JD guaranteed slot) → compact prompt (≤ ~1.2k
-tokens of context, last 6 turns, rolling summary, fenced `<reference_data>`) → stream → incremental
-line-format parser → `answer.chunk` snapshots every ≥40 ms → `answer.completed` with latency.
+## G. Answer pipeline
+1. Detect.
+2. Classify: a heuristic first, and an AI classifier (2.5 s budget) only for the ambiguous 0.35–0.6 band.
+3. Choose the thinking level.
+4. Retrieve the top facts. Question type boosts the relevant ones, verified facts rank higher, and the JD is
+   guaranteed a slot.
+5. Build a compact prompt: at most ~1.2k tokens of context, the last 6 turns, a rolling summary, and fenced
+   `<reference_data>`.
+6. Stream the answer through an incremental line-format parser. The model writes tagged sections: `GROUNDED:`
+   first, then `PROBLEM` / `ANSWER` / `CODE` / `TIME` / `SPACE` / `EDGE` / `TESTS` / `FOLLOWUP`, and a trailing
+   `POINTS:` line so the first spoken word isn't delayed. The parser sends `answer.chunk` snapshots every ≥40 ms and
+   finishes with `answer.completed`, which carries the latency.
 
-## I. Phases
+## H. Phases (upgrade brief, 2026-09)
 | Phase | Scope | Status |
 |---|---|---|
-| 0 Foundation | monorepo, API, compose, CI, env | ✅ (Windows release exe + NSIS installer built in CI) |
-| 1 Auth + Documents | auth, email verification, password reset, sign-out-everywhere, upload, parsing | ✅ |
-| 2 AI backend | DeepSeek, streaming, context builder, retrieval, mock | ✅ |
-| 3 Session engine | protocol, transcript/question/answer models, history | ✅ |
-| 4 Audio + STT | Windows mic + WASAPI loopback ✅ verified on hardware · Deepgram ✅ (untested with a real key) · macOS ⏳ deferred |
-| 5 Auto answer | detection, finalization, dedup, auto trigger | ✅ |
-| 6 Floating live UI | ✅ compact always-on-top window, verified on Windows |
-| 7 Screenshot/vision | ⏳ needs vision provider |
-| 8 Coding copilot | prompts/format/routing ✅ · screenshot input ⏳ |
-| 9 Memory + follow-ups | ✅ |
-| 10 Mock + reports | reports ✅ · mock interviewer ⏳ |
-| 11 Billing + prod | entitlements/usage ✅ · Stripe, telemetry ⏳ |
+| 1 Critical fixes | metering, durable writes, report jobs, admin config, pricing, server-URL safety | ✅ #53 |
+| 2 Platform | real-provider smoke suite, Deepgram fixes, latency metrics, structured logs, Sentry, clippy | ✅ #54 |
+| 3 Windows audio | WASAPI endpoints, device follow / reopen, per-app capture | ✅ #55 |
+| 4 AI quality | detector overhaul, ambiguous-band classifier, grounding labels | ✅ #56 |
+| 5 UX features | preflight + workspaces, key points, coding answers, mock interviewer | ✅ #57–#60 |
+| 6 Polish | text scale + in-app dialogs, accessibility, icon library, installer lifecycle, docs | ✅ #62–#66 |
