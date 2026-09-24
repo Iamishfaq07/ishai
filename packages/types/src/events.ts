@@ -114,6 +114,8 @@ export interface ClientEventMap {
   "session.resume": Record<string, never>;
   "session.end": Record<string, never>;
   "answer.request": { question_text?: string };
+  /** Mock interview: the candidate is done answering — ask the next question now. */
+  "mock.next": Record<string, never>;
   "answer.pin": { answer_id: string; pinned: boolean };
   "answer.clear": Record<string, never>;
   "chat.message": { text: string };
@@ -202,6 +204,10 @@ export interface ServerEventMap {
   "answer.cancelled": { answer_id: string; reason: CancelReason };
   "answer.failed": { answer_id: string; error: ProtocolError };
   "provider.status": ProviderStatus;
+  /** Mock interview: the AI interviewer's next question (the client speaks it). */
+  "mock.question": { question_id: string; text: string; is_follow_up: boolean; index: number; total: number };
+  /** Mock interview finished (planned questions or time used up); session.ended follows. */
+  "mock.completed": { questions: number };
   /** Live-minute quota (server-enforced): a warning when few minutes remain; at the limit the session ends. */
   "usage.status": { minutes_remaining: number; limit_reached: boolean };
   error: { code: string; message: string };
@@ -256,6 +262,8 @@ const SERVER_EVENT_TYPES: ReadonlySet<string> = new Set<ServerEventType>([
   "answer.failed",
   "provider.status",
   "usage.status",
+  "mock.question",
+  "mock.completed",
   "error",
 ]);
 

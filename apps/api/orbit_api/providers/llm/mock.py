@@ -71,6 +71,12 @@ class MockLLMProvider(LLMProvider):
             return self._script.pop(0)
         if request.request_type == "summary":
             return _mock_report(request.messages[-1].content if request.messages else "")
+        if request.request_type == "mock_question":
+            body = request.messages[-1].content if request.messages else ""
+            n = body.count("Interviewer:") + 1
+            follow = "follow-up on the last answer" in body and n > 1 and n % 2 == 0
+            return json.dumps({"question": f"[mock] Question {n}: tell me about a project you're proud of.",
+                               "is_follow_up": follow})
         if request.request_type == "classify":
             # Deterministic stand-in for the ambiguous-question classifier: statements about prices/values are
             # not questions; anything else in the band is answered as-is.

@@ -84,6 +84,9 @@ export interface LiveViewState {
   lastError: { code: string; message: string } | null;
   /** Server-reported live-minute status: set when few minutes remain or the limit ended the session. */
   usage: { minutesRemaining: number; limitReached: boolean } | null;
+  /** Mock interview: the AI interviewer's current question, and whether the interview is over. */
+  mock: { questionId: string; text: string; isFollowUp: boolean; index: number; total: number } | null;
+  mockCompleted: boolean;
 }
 
 export type LocalAction =
@@ -121,6 +124,8 @@ export function initialLiveState(settings: Partial<LiveSettings> = {}): LiveView
     providers: {},
     lastError: null,
     usage: null,
+    mock: null,
+    mockCompleted: false,
   };
 }
 
@@ -248,6 +253,15 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
 
     case "provider.status":
       return { ...s, providers: { ...s.providers, [action.data.provider]: action.data } };
+
+    case "mock.question":
+      return {
+        ...s,
+        mock: { questionId: action.data.question_id, text: action.data.text, isFollowUp: action.data.is_follow_up,
+                index: action.data.index, total: action.data.total },
+      };
+    case "mock.completed":
+      return { ...s, mockCompleted: true };
 
     case "usage.status":
       return {

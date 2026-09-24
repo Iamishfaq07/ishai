@@ -1,9 +1,10 @@
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { DEV_FIXTURES, type CodingLanguage } from "@orbit/types";
 import { formatElapsed, useElapsed } from "../hooks/useElapsed";
 import { useStickyScroll } from "../hooks/useStickyScroll";
 import { DEFAULT_HOTKEYS, useHotkeys, type HotkeyMap } from "../live/hotkeys";
 import { useAnswerHistory } from "../live/useAnswerHistory";
+import { useInterviewerVoice } from "../live/useInterviewerVoice";
 import { useKeyPointProgress } from "../live/useKeyPointProgress";
 import {
   selectDisplayedAnswer,
@@ -16,6 +17,7 @@ import type { LiveActions } from "../live/useLiveSession";
 import { AnswerCard } from "./AnswerCard";
 import { ChatInput } from "./ChatInput";
 import { ControlBar } from "./ControlBar";
+import { MockPanel } from "./MockPanel";
 import { cx, focusRing } from "./cx";
 import { QuestionCard } from "./QuestionCard";
 import { StatusPill } from "./StatusPill";
@@ -46,6 +48,10 @@ export interface LivePanelProps {
   overlay?: ReactNode;
   /** Transcript fixtures offered when the server runs the mock STT provider (defaults to DEV_FIXTURES). */
   devFixtures?: readonly string[];
+  /** Mock interview session: the AI interviewer's questions are shown and spoken instead of suggested answers. */
+  mockInterview?: boolean;
+  /** Mock interview: the interviewer's voice started/stopped — mute the microphone while it speaks. */
+  onInterviewerSpeaking?: (speaking: boolean) => void;
 }
 
 export function LivePanel(props: LivePanelProps) {
@@ -62,6 +68,13 @@ export function LivePanel(props: LivePanelProps) {
   const elapsed = useElapsed(live.startedAt, !ended && !paused);
   const answer = selectDisplayedAnswer(live);
   const question = selectDisplayedQuestion(live);
+  const mockQuestion = useMemo(
+    () => (live.mock && !live.mockCompleted ? { id: live.mock.questionId, text: live.mock.text } : null),
+    [live.mock, live.mockCompleted],
+  );
+  const voice = useInterviewerVoice(mockQuestion, { enabled: Boolean(props.mockInterview) });
+  const { onInterviewerSpeaking } = props;
+  useEffect(() => onInterviewerSpeaking?.(voice.speaking), [voice.speaking, onInterviewerSpeaking]);
   // Chat replies and screenshot answers aren't spoken to the interviewer: no checklist for those.
   const keyPoints = useKeyPointProgress(live, answer && (answer.source === "auto" || answer.source === "manual")
     ? answer : null);
@@ -90,7 +103,7 @@ export function LivePanel(props: LivePanelProps) {
   useHotkeys(
     hotkeys,
     {
-      answer: () => !ended && actions.answer(),
+      answer: () => !ended && (props.mockInterview ? actions.mockNext() : actions.answer()),
       clear: () => !ended && actions.clear(),
       toggleListening: () => !ended && actions.togglePause(),
       focusChat,
@@ -148,6 +161,10 @@ export function LivePanel(props: LivePanelProps) {
 
       <div className={cx("flex min-h-0 flex-1", !compact && "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]")}>
         <main className="flex min-h-0 flex-1 flex-col">
+          {props.mockInterview ? (
+            <MockPanel live={live} actions={actions} voice={voice} ended={ended} />
+          ) : (
+          <>
           <QuestionCard question={question} liveTurn={liveInterviewerTurn} compact={compact} />
           <div className="mx-4 border-t border-zinc-100 dark:border-zinc-900" />
           {history.length > 1 && !live.pinnedAnswerId && (
@@ -173,6 +190,8 @@ export function LivePanel(props: LivePanelProps) {
               ? { onCodeLanguage: (lang: CodingLanguage) => actions.setCodingLanguage(lang, question.text) }
               : {})}
           />
+          </>
+          )}
         </main>
 
         {!compact && (
@@ -246,7 +265,8 @@ export function LivePanel(props: LivePanelProps) {
         </div>
       )}
 
-      <ControlBar
+      {/* Practice mode: no answer/screenshot/chat controls (Orbit never answers for you); End is in the header. */}
+      {!props.mockInterview && <ControlBar
         length={live.settings.length}
         autoAnswer={live.settings.auto_answer}
         responseTiming={live.settings.response_timing ?? "balanced"}
@@ -269,7 +289,7 @@ export function LivePanel(props: LivePanelProps) {
         onThinking={actions.setThinking}
         onTogglePause={actions.togglePause}
         onEnd={props.onEnd}
-      />
+      />}
 
       {props.overlay}
     </div>

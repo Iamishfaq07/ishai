@@ -100,3 +100,5 @@ export { ReportStatusNote } from "./components/ReportStatusNote";
 export { LatencyDiagnostics } from "./components/LatencyDiagnostics";
 export { scoreKeyPoints, type KeyPointProgress, type PointProgress } from "./live/coverage";
 export { useKeyPointProgress } from "./live/useKeyPointProgress";
+export { useInterviewerVoice, type InterviewerVoice } from "./live/useInterviewerVoice";
+export { MockPanel } from "./components/MockPanel";

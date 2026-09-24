@@ -36,6 +36,7 @@ from orbit_api.live.events import (
 )
 from orbit_api.live.finalizer import GRACE_MS, FinalizedQuestion, QuestionFinalizer
 from orbit_api.live.metrics import AudioClock, LatencySamples
+from orbit_api.live.mock_interviewer import MockConfig, MockInterviewer
 from orbit_api.live.question_detector import DetectorContext, classify_type, detect, normalize
 from orbit_api.live.routing import (
     CODE_MAX_TOKENS,
@@ -44,7 +45,15 @@ from orbit_api.live.routing import (
     choose_reasoning_level,
     estimate_complexity,
 )
-from orbit_api.providers.llm.base import LLMError, LLMImage, LLMMessage, LLMProvider, LLMRequest, Usage
+from orbit_api.providers.llm.base import (
+    LLMError,
+    LLMImage,
+    LLMMessage,
+    LLMProvider,
+    LLMRequest,
+    LLMResponse,
+    Usage,
+)
 from orbit_api.providers.stt.base import STTConfig, STTProvider, STTSession, TranscriptEvent
 from orbit_api.providers.stt.mock import MockSTTProvider, load_fixture, replay
 from orbit_api.retrieval.index import SessionIndex
@@ -118,6 +127,7 @@ class SessionProfile:
     answer_language: str
     keyterms: list[str] = field(default_factory=list)
     dev_mode: bool = False
+    mock: MockConfig | None = None  # session_type "mock": the AI plays the interviewer
 
 
 @dataclass
@@ -190,6 +200,12 @@ class LiveEngine:
         self._speech_end_ms: int | None = None  # server time the latest interviewer speech ended
         self._question_speech_end: dict[str, int] = {}
         self._partial_seen: set[str] = set()
+        self._mock: MockInterviewer | None = None
+        self._finishing: asyncio.Task[None] | None = None
+        if profile.session_type == "mock":
+            self._mock = MockInterviewer(profile.mock or MockConfig(), llm=llm, index=index, role=profile.role,
+                                         send=self.send, on_question=self._on_mock_question,
+                                         on_finish=self._on_mock_finish, record_usage=self._record_mock_usage)
 
     # ---- plumbing ---------------------------------------------------------------------------------------
 
@@ -226,6 +242,8 @@ class LiveEngine:
             self._stt_sessions[channel] = session
             self._spawn(self._pump_stt(channel, session))
         self._spawn(self._ticker())
+        if self._mock is not None:
+            self._spawn(self._mock.start(self.now_ms()))
         await self.send("session.started", {"state": LiveState.listening.value,
                                             "settings": self.settings.model_dump()})
         stt_state = "mock" if isinstance(self._stt, MockSTTProvider) else "ok"
@@ -326,6 +344,9 @@ class LiveEngine:
             case "speaker.correct":
                 sc = SpeakerCorrect.model_validate(data)
                 self._speaker_overrides[sc.turn_id] = sc.speaker
+            case "mock.next":
+                if self._mock is not None:
+                    self._spawn(self._mock.next(self.now_ms()))
             case "dev.simulate":
                 sim = DevSimulate.model_validate(data)
                 if not (self.profile.dev_mode and isinstance(self._stt, MockSTTProvider)):
@@ -376,6 +397,8 @@ class LiveEngine:
         if self._paused or self._ended:
             return
         speaker = CHANNEL_SPEAKER[channel]
+        if self._mock is not None and speaker == "candidate" and ev.kind in ("partial", "final"):
+            self._mock.on_candidate(ev.text, self.now_ms(), final=ev.kind == "final")
         if ev.kind == "speech_started":
             if speaker == "interviewer":
                 self._finalizer.on_speech_activity(self.now_ms())
@@ -455,6 +478,8 @@ class LiveEngine:
             await asyncio.sleep(TICK_S)
             if self._paused:
                 continue
+            if self._mock is not None:
+                await self._mock.tick(self.now_ms())
             fired = self._finalizer.tick(self.now_ms())
             if fired:
                 await self._on_fired(fired)
@@ -468,6 +493,27 @@ class LiveEngine:
             previous_question=self.memory.questions[-1] if self.memory.questions else None,
             seconds_since_previous_answer=since,
         )
+
+    # ---- mock interview ---------------------------------------------------------------------------------------
+
+    async def _on_mock_question(self, qid: str, text: str, is_follow_up: bool) -> None:
+        """Record the AI interviewer's question like a real interviewer turn (transcript, questions, report)."""
+        turn_id = str(uuid.uuid4())
+        now = self.now_ms()
+        await self.send("transcript.final", {"turn_id": turn_id, "speaker": "interviewer", "text": text,
+                                             "start_ms": now, "end_ms": now})
+        self.memory.add_turn("interviewer", text)
+        self.memory.questions.append(text)
+        qtype = QuestionType.follow_up if is_follow_up else classify_type(normalize(text))
+        await self._rec.turn(turn_id, "interviewer", text, now, now)
+        await self._rec.question(qid, turn_id, text, qtype.value, 1.0, is_follow_up, "mock")
+
+    async def _on_mock_finish(self) -> None:
+        # Not self._spawn: end() cancels the engine's own tasks, and this may be running inside the ticker.
+        self._finishing = asyncio.ensure_future(self.end(final=True))
+
+    async def _record_mock_usage(self, resp: LLMResponse, latency_ms: int) -> None:
+        await self._rec.provider_request(self._llm.name, resp.model, "mock_question", resp.usage, latency_ms, True)
 
     # ---- questions & answers ----------------------------------------------------------------------------
 
@@ -521,6 +567,9 @@ class LiveEngine:
         await self._start_answer(qid, text, det.question_type, det.is_follow_up, "auto")
 
     async def _manual_answer(self, question_text: str | None) -> None:
+        if self._mock is not None:  # practice: Orbit never answers for the candidate; "Answer" means "I'm done"
+            await self._mock.next(self.now_ms())
+            return
         # Prefer the question being listened to (it may span a pause) over just the latest utterance.
         text = (question_text or self._finalizer.pending_question() or self._last_interviewer_text or
                 next((t.text for t in reversed(self.memory.recent) if t.speaker == "interviewer"), "")).strip()

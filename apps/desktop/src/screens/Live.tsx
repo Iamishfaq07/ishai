@@ -90,6 +90,11 @@ export function LiveScreen({
 
   // ── Native audio capture → live socket ────────────────────────────────
   const pausedRef = useRef(false);
+  // Mock interviews: the mic is muted while the AI interviewer speaks (its voice comes out of the speakers).
+  const interviewerSpeakingRef = useRef(false);
+  const onInterviewerSpeaking = useCallback((speaking: boolean) => {
+    interviewerSpeakingRef.current = speaking;
+  }, []);
   pausedRef.current = live.state === "paused" || live.state === "ended";
 
   const startAudio = useCallback(async () => {
@@ -104,7 +109,7 @@ export function LiveScreen({
         },
         (ev) => {
           if (ev.kind === "frame") {
-            if (!pausedRef.current) client.sendAudioBytes(ev.channel, base64ToBytes(ev.pcm));
+            if (!pausedRef.current && !interviewerSpeakingRef.current) client.sendAudioBytes(ev.channel, base64ToBytes(ev.pcm));
           } else if (ev.kind === "status") {
             // Device came back / switched: clear the "disconnected" note after a moment.
             const text = deviceStatusText(ev);
@@ -229,6 +234,8 @@ export function LiveScreen({
 
   return (
     <LivePanel
+      mockInterview={session.type === "mock"}
+      onInterviewerSpeaking={onInterviewerSpeaking}
       live={live}
       actions={actions}
       mode={mode}

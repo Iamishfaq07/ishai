@@ -3,6 +3,9 @@ import type {
   AnswerLength,
   AnswerStyle,
   DocumentKind,
+  MockDifficulty,
+  MockInterviewType,
+  MockPersona,
   OrbitDocument,
   OrbitSession,
   ResponseTiming,
@@ -47,6 +50,22 @@ const TYPES: Array<{ value: SessionType; label: string }> = [
   { value: "meeting", label: "Professional meeting" },
   { value: "assessment", label: "Online assessment practice" },
   { value: "phone", label: "Phone / room audio" },
+  { value: "mock", label: "Mock interview — the AI asks, you practise" },
+];
+
+const PERSONAS: Array<{ value: MockPersona; label: string }> = [
+  { value: "recruiter", label: "Recruiter" },
+  { value: "hiring_manager", label: "Hiring manager" },
+  { value: "engineer", label: "Senior engineer" },
+  { value: "staff_engineer", label: "Staff engineer" },
+  { value: "executive", label: "Executive" },
+];
+const MOCK_TYPES: Array<{ value: MockInterviewType; label: string }> = [
+  { value: "mixed", label: "Mixed" },
+  { value: "behavioral", label: "Behavioral" },
+  { value: "technical", label: "Technical" },
+  { value: "system_design", label: "System design" },
+  { value: "coding", label: "Coding" },
 ];
 
 const LANGUAGES: Array<{ value: string; label: string }> = [
@@ -166,6 +185,11 @@ export function SetupScreen({
   };
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [mockPersona, setMockPersona] = useState<MockPersona>("hiring_manager");
+  const [mockType, setMockType] = useState<MockInterviewType>("mixed");
+  const [mockDifficulty, setMockDifficulty] = useState<MockDifficulty>("medium");
+  const [mockMinutes, setMockMinutes] = useState(20);
+  const isMock = type === "mock";
   const [workspaceId, setWorkspaceId] = useState<string | null>(() => localStorage.getItem(WORKSPACE_KEY));
   const [preflightFailed, setPreflightFailed] = useState(false);
 
@@ -210,7 +234,7 @@ export function SetupScreen({
   }, []);
 
   useEffect(() => {
-    if (type === "phone") setSystemAudio(false);
+    if (type === "phone" || type === "mock") setSystemAudio(false);
   }, [type]);
 
   const refreshDocs = async (selectId?: string): Promise<void> => {
@@ -313,9 +337,12 @@ export function SetupScreen({
         language,
         length,
         style,
-        auto_answer: autoAnswer,
+        auto_answer: isMock ? false : autoAnswer,
         document_ids: [...selected],
         ...(workspaceId ? { workspace_id: workspaceId } : {}),
+        ...(isMock
+          ? { mock: { interview_type: mockType, difficulty: mockDifficulty, duration_minutes: mockMinutes, persona: mockPersona } }
+          : {}),
       });
       onStart(session, {
         systemAudio,
@@ -377,6 +404,29 @@ export function SetupScreen({
               ))}
             </select>
           </label>
+
+          {isMock && (
+            <fieldset className="grid grid-cols-2 gap-2 rounded-xl border border-indigo-200/60 bg-indigo-50/40 p-3 dark:border-indigo-900/50 dark:bg-indigo-950/20">
+              <legend className="px-1 text-xs font-medium">Mock interview</legend>
+              <p className="col-span-2 text-[11px] text-zinc-500">The AI interviewer asks out loud, follows up on what you say, and you get a graded review at the end. Only your microphone is used.</p>
+              <label className="space-y-1"><span className="text-xs">Interviewer</span>
+                <select value={mockPersona} onChange={(e) => setMockPersona(e.target.value as MockPersona)} className={cx(control, focusRing)}>
+                  {PERSONAS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                </select></label>
+              <label className="space-y-1"><span className="text-xs">Focus</span>
+                <select value={mockType} onChange={(e) => setMockType(e.target.value as MockInterviewType)} className={cx(control, focusRing)}>
+                  {MOCK_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select></label>
+              <label className="space-y-1"><span className="text-xs">Difficulty</span>
+                <select value={mockDifficulty} onChange={(e) => setMockDifficulty(e.target.value as MockDifficulty)} className={cx(control, focusRing)}>
+                  <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option>
+                </select></label>
+              <label className="space-y-1"><span className="text-xs">Length</span>
+                <select value={mockMinutes} onChange={(e) => setMockMinutes(Number(e.target.value))} className={cx(control, focusRing)}>
+                  {[10, 20, 30, 45].map((m) => <option key={m} value={m}>{m} minutes</option>)}
+                </select></label>
+            </fieldset>
+          )}
 
           <label className="block space-y-1">
             <span className="text-xs font-medium">Role / goal</span>
