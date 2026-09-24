@@ -1,5 +1,17 @@
 # Implementation log
 
+## Phase 5c — coding workspace (2026-09-25)
+
+- Coding answers render as **Problem → Say (talk track) → Code → Edge cases → Tests**, plus complexity and key
+  points. New `LiveAnswer.problem / edge_cases / tests` from `PROBLEM:` / `EDGE:` / `TESTS:` lines (D26).
+- Code view: line numbers, syntax highlighting (Python, Java, JavaScript, TypeScript, C++, C#, Go, Rust, SQL),
+  copy, remembered wrap toggle, and a language picker that regenerates the answer in the chosen language.
+- Fixed while testing with real DeepSeek: "Find the second highest salary from an Employee table" was classified as
+  a salary negotiation (no code). Pay words next to data cues (table, query, SQL, column…) are now coding.
+- Real DeepSeek: two sum (auto → Python), reverse a linked list (Java), NPE debug (Java) produced every section in the
+  requested language; first spoken words 0.51–0.86 s. In the real desktop app, the coding fixture showed all sections
+  and switching Python → Java regenerated the code in Java; no console errors.
+
 ## Phase 5b — adaptive "NEXT" guidance (2026-09-25)
 
 - Answers carry 3–6 key points (`LiveAnswer.key_points`, from a `POINTS:` line); the answer card shows them as a

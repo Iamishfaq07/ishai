@@ -53,7 +53,11 @@ export interface LiveSettings {
   answer_language?: string;
   response_timing?: ResponseTiming;
   thinking?: ThinkingLevel;
+  /** Preferred language for code in coding answers (unset: the model picks). */
+  coding_language?: CodingLanguage;
 }
+
+export type CodingLanguage = "python" | "java" | "javascript" | "typescript" | "cpp" | "csharp" | "go" | "rust" | "sql";
 
 /**
  * Speaker labels. PROTOCOL.md leaves the value set open; the mic channel maps to
@@ -88,6 +92,10 @@ export interface LiveAnswer {
   grounding?: "verified" | "example" | "general" | null;
   /** 3–6 short labels for the answer's points, in order (drives the "NEXT" checklist). */
   key_points?: string[];
+  /** Coding answers: the task in one line, edge cases to mention, example tests (`input → expected`). */
+  problem?: string | null;
+  edge_cases?: string[];
+  tests?: string[];
 }
 
 export interface Envelope<TType extends string = string, TData = unknown> {

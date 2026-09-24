@@ -118,3 +118,10 @@ common abbreviations, e.g. PR ↔ pull request) and against the answer sentence 
 loose sentence match must also include one of the point's own words, so shared topic vocabulary alone ("build",
 "scan") never ticks a point. Ticks are sticky per answer (no flicker); NEXT is the first unticked point after the
 last ticked one. Chat and screenshot answers get no checklist. The user can hide it.
+
+**D26 — Coding answers separate what to say from what to code.** For coding the spoken ANSWER is the talk track
+(approach and why, never code read aloud), followed by PROBLEM (the task in one line), CODE, TIME/SPACE, EDGE and
+TESTS. PROBLEM comes after the talk track in the stream so it never delays the first spoken word. A preferred code
+language (`LiveSettings.coding_language`, remembered per device) goes into the prompt; changing it on an answer's
+code re-asks the same question in that language (not for screenshots, whose image isn't kept). Highlighting is a small
+built-in tokenizer rendered as React nodes (no dependency, no HTML injection).

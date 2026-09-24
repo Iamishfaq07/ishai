@@ -188,3 +188,44 @@ def test_key_points_are_parsed_capped_and_kept_out_of_the_answer() -> None:
         "FOLLOWUP: What about DAST?\nPOINTS: Start at PR | SAST + SCA | Risk-based blocking | - | x | y | z | extra")
     assert a.key_points == ["Start at PR", "SAST + SCA", "Risk-based blocking", "x", "y", "z"]  # blanks dropped, cap 6
     assert "POINTS" not in a.direct_answer and a.follow_up == "What about DAST?"
+
+
+def test_coding_sections_are_parsed() -> None:
+    from orbit_api.live.answer_format import AnswerStreamParser
+    from orbit_api.live.events import QuestionType
+
+    raw = ("GROUNDED: general\nANSWER: I'd use a hash map of complements so it's one pass.\n"
+           "PROBLEM: Return indices of two numbers that sum to target\nCODE: python\n```python\n"
+           "def two_sum(nums, t):\n    seen = {}\n    return []\n```\nTIME: O(n)\nSPACE: O(n)\n"
+           "EDGE: Empty array | Duplicates | No solution\nTESTS: [2,7,11,15], 9 → [0,1] | [3,3], 6 → [0,1]\n"
+           "FOLLOWUP: What if it's sorted?\nPOINTS: Hash map | One pass")
+    a = AnswerStreamParser("Two sum", QuestionType.coding, []).feed(raw)
+    assert a.problem == "Return indices of two numbers that sum to target"
+    assert a.code and a.code.language == "python" and "def two_sum" in a.code.content
+    assert a.edge_cases == ["Empty array", "Duplicates", "No solution"]
+    assert a.tests == ["[2,7,11,15], 9 → [0,1]", "[3,3], 6 → [0,1]"]
+    assert a.direct_answer.startswith("I'd use a hash map") and "PROBLEM" not in a.direct_answer
+
+
+def test_preferred_coding_language_reaches_the_prompt() -> None:
+    from orbit_api.live.context_builder import PromptInputs, SessionMemory, build_prompt
+    from orbit_api.live.events import QuestionType
+    from orbit_api.retrieval.index import SessionIndex
+
+    inputs = PromptInputs("Reverse a linked list", QuestionType.coding, False, "coding", None, "standard", "natural",
+                          "en", coding_language="cpp")
+    user = build_prompt(SessionIndex([]), inputs, SessionMemory()).messages[-1].content
+    assert "Write any code in C++" in user
+    plain = PromptInputs("Reverse a linked list", QuestionType.coding, False, "coding", None, "standard", "natural",
+                         "en")
+    assert "Write any code in" not in build_prompt(SessionIndex([]), plain, SessionMemory()).messages[-1].content
+
+
+@pytest.mark.parametrize(("text", "expected"), [
+    ("Find the second highest salary from an Employee table.", "coding"),
+    ("Write a query to get the top 3 salaries per department.", "coding"),
+    ("What are your salary expectations?", "salary"),
+    ("What compensation are you looking for?", "salary"),
+])
+def test_salary_sql_problems_are_coding_not_negotiation(text: str, expected: str) -> None:
+    assert detect(text, "interviewer", FRESH).question_type.value == expected

@@ -24,7 +24,9 @@ import re
 
 from orbit_api.live.events import CodeBlock, LiveAnswer, QuestionType
 
-_TAG = re.compile(r"^(GROUNDED|ANSWER|EXAMPLE|CODE|TIME|SPACE|FOLLOWUP|POINTS)\s*:\s*(.*)$", re.IGNORECASE)
+_TAG = re.compile(r"^(GROUNDED|PROBLEM|ANSWER|EXAMPLE|CODE|TIME|SPACE|EDGE|TESTS|FOLLOWUP|POINTS)\s*:\s*(.*)$",
+                  re.IGNORECASE)
+MAX_LIST_ITEMS = 8
 MAX_KEY_POINTS = 6
 MAX_KEY_POINT_CHARS = 60
 # The model's own label for its personal claims (see live_system.md): only "example" is surfaced to the user.
@@ -101,6 +103,16 @@ class AnswerStreamParser:
                     ans.space_complexity = value or None
                 elif section == "FOLLOWUP":
                     ans.follow_up = value or None
+                elif section == "PROBLEM":
+                    ans.problem = value[:300] or None
+                    section = None
+                elif section in ("EDGE", "TESTS"):
+                    items = [p.strip(" .•-")[:200] for p in value.split("|") if p.strip(" .•-")][:MAX_LIST_ITEMS]
+                    if section == "EDGE":
+                        ans.edge_cases = items
+                    else:
+                        ans.tests = items
+                    section = None
                 elif section == "POINTS":
                     ans.key_points = [p.strip(" .•-")[:MAX_KEY_POINT_CHARS]
                                       for p in value.split("|") if p.strip(" .•-")][:MAX_KEY_POINTS]
