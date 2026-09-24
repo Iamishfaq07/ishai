@@ -75,25 +75,41 @@ downloads, but the installer already shows your **verified name** instead of "Un
 eSigner (individual OV) is a comparable alternative. Azure Trusted Signing is cheapest and most CI-native but,
 at the time of writing, only issues public-trust certs to US/Canada individuals or organizations.
 
-**Wiring is already in `release.yml` — it's off until you provide a signer.** Tauri runs
-`bundle.windows.signCommand` on every binary it bundles, before it writes the updater signature. To turn it on:
+**The signing pipeline is built and tested; it needs only a certificate.** It was checked end-to-end with a
+throwaway self-signed certificate. Every binary was signed and timestamped (app exe, NSIS plugins, uninstaller,
+installer), verification passed with `-AllowTestCertificate`, and it correctly **failed** without that flag
+(untrusted root) and on unsigned files.
 
-1. Buy a certificate (above) and complete identity validation.
-2. Add the provider's signing CLI (and its credentials as repo **secrets**) to the `windows` job in
-   `.github/workflows/release.yml` — e.g. install [`AzureSignTool`](https://github.com/vcsjones/AzureSignTool)
-   for KeyVault/HSM-backed certs, or your CA's tool (Certum SimplySign, SSL.com `CodeSignTool`).
-3. Set a repo **variable** named `WINDOWS_SIGN_COMMAND` to the sign command with a `%1` placeholder for the
-   file, for example:
-   ```
-   azuresigntool sign -kvu "$AZURE_KEY_VAULT_URL" -kvc "$AZURE_CERT_NAME" \
-     -kvi "$AZURE_CLIENT_ID" -kvs "$AZURE_CLIENT_SECRET" --azure-key-vault-tenant-id "$AZURE_TENANT_ID" \
-     -tr http://timestamp.acs.microsoft.com -td sha256 %1
-   ```
-   The next tagged release (`git tag vX.Y.Z && git push origin vX.Y.Z`) then produces a **signed** installer
-   automatically. Leave the variable unset and releases stay unsigned, exactly as now.
+- `scripts/sign-windows.ps1 <file>` signs with signtool (SHA-256 + RFC 3161 timestamp). Credentials come only from
+  the environment:
+  - `ORBIT_SIGN_CERT_SHA1`: a certificate in the Windows store. This covers **Certum SimplySign** (a virtual
+    card) and hardware tokens; the private key never leaves the card or HSM.
+  - `ORBIT_SIGN_DLIB` + `ORBIT_SIGN_METADATA`: Azure Trusted Signing (plus `AZURE_*` credentials).
+  - `ORBIT_SIGN_PFX` + `ORBIT_SIGN_PFX_PASSWORD`: a certificate file.
+- `scripts/release-desktop.ps1 -Version X.Y.Z -Sign [-Publish]`:
+  - makes Tauri run the signer on every binary before it writes the updater signature;
+  - extracts the installer and verifies the installer, `orbit-desktop.exe` and `uninstall.exe` with
+    `scripts/verify-authenticode.ps1` (valid chain, intact hash, timestamp present);
+  - refuses to publish if any check fails;
+  - with `ORBIT_REQUIRE_SIGNING=1`, refuses to build without `-Sign`.
+- **CI** (`release.yml`):
+  - set the repo variable `WINDOWS_SIGN_COMMAND` (and the signer's credentials as secrets);
+  - signed builds are verified the same way before publishing;
+  - the repo variable `ORBIT_REQUIRE_SIGNING=true` makes an unsigned release fail.
 
-The command is a repo variable, not committed, because it's provider- and account-specific and can't be
-tested here without a real certificate.
+**To switch it on with Certum SimplySign:**
+1. Buy the Open Source Code Signing certificate and complete identity validation.
+2. Install SimplySign Desktop and sign in, so the certificate appears in `Cert:\CurrentUser\My`.
+3. `$env:ORBIT_SIGN_CERT_SHA1 = "<thumbprint>"; $env:ORBIT_REQUIRE_SIGNING = "1"`.
+4. Run `scripts/release-desktop.ps1 -Version X.Y.Z -Sign -Publish`.
+
+**SmartScreen:** a signed installer shows your **verified name** instead of "Unknown publisher" immediately.
+Reputation still builds over the first downloads for OV certificates, so a warning can appear at first; it fades
+as releases are signed with the same identity. EV certificates no longer skip this.
+
+**Release config:** `tauri.conf.json` (release) never allows plain-http updates. `tauri.dev.conf.json` enables it
+for localhost development (`pnpm dev:desktop` passes it), and CI plus the release script fail if the release config
+ever allows it.
 
 Sources: [Artifact Signing FAQ](https://learn.microsoft.com/en-us/azure/artifact-signing/faq),
 [Code signing options for Windows apps](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options).

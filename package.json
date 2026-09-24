@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev:web": "pnpm --filter @orbit/web dev",
-    "dev:desktop": "pnpm --filter @orbit/desktop tauri dev",
+    "dev:desktop": "pnpm --filter @orbit/desktop tauri dev --config src-tauri/tauri.dev.conf.json",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",

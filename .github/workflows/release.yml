@@ -50,7 +50,13 @@ jobs:
           # Unset → unsigned build (current behaviour). Tauri runs signCommand on each binary before it
           # produces the updater signature, so the order is correct within a single build.
           WINDOWS_SIGN_COMMAND: ${{ vars.WINDOWS_SIGN_COMMAND }}
+          # Set the repo variable ORBIT_REQUIRE_SIGNING=true once a certificate exists: unsigned releases then fail.
+          REQUIRE_SIGNING: ${{ vars.ORBIT_REQUIRE_SIGNING }}
         run: |
+          if [[ "$REQUIRE_SIGNING" == "true" && -z "$WINDOWS_SIGN_COMMAND" ]]; then
+            echo "::error::ORBIT_REQUIRE_SIGNING=true but WINDOWS_SIGN_COMMAND is not set; refusing an unsigned release."
+            exit 1
+          fi
           if [[ -n "$WINDOWS_SIGN_COMMAND" ]]; then
             CONFIG=$(jq -nc --arg v "${{ steps.ver.outputs.version }}" --arg s "$WINDOWS_SIGN_COMMAND" \
               '{version:$v, bundle:{windows:{signCommand:$s}}}')
@@ -60,6 +66,14 @@ jobs:
             echo "No WINDOWS_SIGN_COMMAND set — building unsigned (SmartScreen will warn)."
           fi
           pnpm --filter @orbit/desktop tauri build --bundles nsis --config "$CONFIG"
+
+      - name: Verify Authenticode signatures (installer, app exe, uninstaller)
+        if: ${{ vars.WINDOWS_SIGN_COMMAND != '' }}
+        shell: pwsh
+        run: |
+          $inst = Get-ChildItem apps/desktop/src-tauri/target/release/bundle/nsis -Filter "*-setup.exe" | Select-Object -First 1
+          7z x -y $inst.FullName -o"$env:RUNNER_TEMP/sigcheck" | Out-Null
+          ./scripts/verify-authenticode.ps1 -Files $inst.FullName, "$env:RUNNER_TEMP/sigcheck/orbit-desktop.exe", "$env:RUNNER_TEMP/sigcheck/uninstall.exe"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2

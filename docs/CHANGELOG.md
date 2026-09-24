@@ -1,5 +1,26 @@
 # Implementation log
 
+## Launch hardening 1d — Authenticode pipeline, release config split, single-instance guard (2026-09-25)
+
+- **Authenticode signing pipeline (§8):**
+  - `scripts/sign-windows.ps1` (signtool, SHA-256, RFC 3161 timestamp) supports three credential sources: a
+    certificate in the Windows store (Certum SimplySign or a hardware token), Azure Trusted Signing, or a PFX.
+  - `release-desktop.ps1 -Sign` makes Tauri sign every binary before the updater signature is written.
+  - `verify-authenticode.ps1` then checks the installer and the exe + uninstaller inside it: valid chain,
+    intact hash, timestamp present.
+  - `ORBIT_REQUIRE_SIGNING=1` refuses unsigned builds; CI's `release.yml` got the same verification and an
+    `ORBIT_REQUIRE_SIGNING` repo variable.
+  - Tested end-to-end with a throwaway self-signed certificate: every binary was signed and timestamped, and
+    verification passed only in test-certificate mode. It correctly failed on the untrusted root, on unsigned
+    files and on the published 0.1.16. The test certificate was deleted afterwards.
+- **Release config split (§9):** `tauri.conf.json` no longer sets `dangerousInsecureTransportProtocol`.
+  `tauri.dev.conf.json` enables it for localhost development (`pnpm dev:desktop`). The release script and CI fail
+  if the release config ever allows it.
+- **Single instance, explicit (§10):**
+  - `render.yaml` pins `numInstances: 1`;
+  - `ORBIT_API_REPLICAS` (default 1) stops a production boot if it's set above 1, because live-session state is
+    in-process until it moves to Redis.
+
 ## Launch hardening 1b — configurable plans, entitlements, session ceiling (2026-09-25)
 
 - **One plan table in server config** (`entitlements.py`), overridable with `ORBIT_PLANS_JSON` and

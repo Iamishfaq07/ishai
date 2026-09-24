@@ -267,3 +267,9 @@ def test_production_refuses_unverifiable_or_unsafe_signup() -> None:
     prod_captcha = _prod(ORBIT_CAPTCHA_PROVIDER="turnstile", TURNSTILE_SITE_KEY="k", TURNSTILE_SECRET_KEY="s",
                          CAPTCHA_ENABLED="false")
     assert prod_captcha.captcha_active
+
+
+def test_production_refuses_more_than_one_replica() -> None:
+    assert _prod().api_replicas == 1
+    with pytest.raises(ValueError, match="ORBIT_API_REPLICAS must be 1"):
+        _prod(ORBIT_API_REPLICAS=2)
