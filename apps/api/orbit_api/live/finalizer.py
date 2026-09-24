@@ -12,9 +12,13 @@ and the timer rules would fire mid-sentence ("How would you integrate security�
 for providers without endpointing.
 
 Patience (`grace_ms`, the user's "wait before answering"): after the endpoint the question is *held*
-for grace_ms more. If the interviewer starts talking again inside that window ("Tell me about a hard
-bug. <pause> Specifically, how you found it."), the next turn is stitched onto the held question and the
-whole thing waits for its own endpoint - so we answer the full question, not its first half.
+for grace_ms more before it fires.
+
+Continuation: real interviewers pause for seconds mid-question ("Walk me through an image pipeline.
+<2 s> Start with data, then preprocessing…"). Until the CANDIDATE starts talking, anything the
+interviewer says within CONTINUE_WINDOW_MS of their last endpoint is stitched onto the question —
+even if it already fired — and the combined question fires again (dedup treats it as `extends`, so the
+answer is regenerated for the whole question). A manual "Answer" likewise gets the whole question.
 
 `tick(now_ms)` must be called periodically (the engine does every ~50 ms); the clock is injected so
 this is fully deterministic under test.
@@ -39,12 +43,14 @@ PROVIDER_FALLBACK_SILENCE_MS = 2500
 # A fired turn may fire again once it has grown by this many words (dedup marks it `extends`).
 REFIRE_EXTRA_WORDS = 4
 # "Wait before answering" presets: extra silence after the provider endpoint before a question fires.
-GRACE_MS = {"quick": 0, "balanced": 800, "patient": 1600}
+GRACE_MS = {"quick": 0, "balanced": 1500, "patient": 3000}
+# Interviewer speech this soon after their last endpoint continues the same question (until the candidate talks).
+CONTINUE_WINDOW_MS = 8000
+# Candidate speech shorter than this is a backchannel ("mm-hmm", "okay"), not the start of their answer.
+CANDIDATE_ANSWER_MIN_WORDS = 3
 # Interim transcripts trail speech by ~1 s, so after the interviewer resumes (VAD) keep holding until
 # their words arrive - bounded, in case the VAD event was just noise.
 RESUME_HOLD_MS = 2000
-# Slack for stitching: the next turn's first words may land a little after the grace window.
-STITCH_SLACK_MS = 400
 MAX_STITCHED_WORDS = 120
 
 
@@ -63,6 +69,7 @@ class _Pending:
     endpointed: bool = False
     fired_text: str | None = None
     held_question: str = ""  # earlier part(s) of this question, from before a pause
+    held_confidence: float = 0.0  # best question-confidence of those earlier parts (carried across stitches)
     endpoint_ms: int | None = None
     resumed_ms: int | None = None  # VAD heard the interviewer again after the endpoint
 
@@ -85,7 +92,9 @@ class QuestionFinalizer:
         p = self._pending
         if p is None or p.turn_id != turn_id:
             held = self._held_question(p, now_ms)
-            p = self._pending = _Pending(turn_id=turn_id, text=text, last_speech_ms=now_ms, held_question=held)
+            held_conf = self._confidence_of(p) if held and p is not None else 0.0
+            p = self._pending = _Pending(turn_id=turn_id, text=text, last_speech_ms=now_ms, held_question=held,
+                                         held_confidence=held_conf)
         else:
             if text != p.text:
                 p.last_speech_ms = now_ms
@@ -104,37 +113,49 @@ class QuestionFinalizer:
             if self._pending.endpointed:
                 self._pending.resumed_ms = now_ms
 
-    def on_candidate_speech(self, now_ms: int) -> FinalizedQuestion | None:
-        """The candidate started talking: the interviewer's question is over. Stop holding it (fire now if
-        it's complete) and never stitch the interviewer's next words onto it."""
+    def on_candidate_speech(self, now_ms: int, text: str = "") -> FinalizedQuestion | None:
+        """The candidate is talking. A real start of their answer (not "mm-hmm") ends the interviewer's
+        question: stop holding it (fire now if complete) and never stitch later interviewer words onto it."""
         p = self._pending
-        if p is None or p.fired_text is not None or not p.endpointed:
+        if p is None or len(tokens(text)) < CANDIDATE_ANSWER_MIN_WORDS:
             return None
-        p.resumed_ms = None
-        p.endpoint_ms = now_ms - self.grace_ms
-        fired = self._evaluate(now_ms)
-        if fired is None:
-            self._pending = None  # not answerable, but still must not absorb the next question
+        fired = None
+        if p.fired_text is None and p.endpointed:
+            p.resumed_ms = None
+            p.endpoint_ms = now_ms - self.grace_ms
+            fired = self._evaluate(now_ms)
+        self._pending = None
         return fired
 
     def pending_question(self) -> str | None:
-        """The question currently being listened to / held (for a manual "Answer now")."""
+        """The whole question currently being listened to (for a manual "Answer"), including any parts said
+        before a pause — whether or not it already auto-fired."""
         p = self._pending
-        if p is None or p.fired_text is not None:
+        if p is None:
             return None
         return p.full_text if detect(p.full_text, "interviewer", self.context).is_question else None
 
     def _held_question(self, p: _Pending | None, now_ms: int) -> str:
-        """If `p` is a question still held in its grace window, its text: the new turn continues it."""
-        if p is None or p.fired_text is not None or not p.endpointed or p.endpoint_ms is None or not self.grace_ms:
+        """If the interviewer's previous turn was a question and they're still going (no candidate answer in
+        between, within the continuation window), its text: the new turn continues it."""
+        if p is None or not (p.endpointed or p.fired_text is not None):
             return ""
+        since = p.endpoint_ms if p.endpoint_ms is not None else p.last_speech_ms
         resumed = p.resumed_ms is not None and now_ms - p.resumed_ms <= RESUME_HOLD_MS
-        if not resumed and now_ms - p.endpoint_ms > self.grace_ms + STITCH_SLACK_MS:
+        if not resumed and now_ms - since > CONTINUE_WINDOW_MS:
             return ""
         full = p.full_text
         if len(tokens(full)) > MAX_STITCHED_WORDS or not detect(full, "interviewer", self.context).is_question:
             return ""
         return full
+
+    def _confidence_of(self, p: _Pending) -> float:
+        """How surely `p` (with everything stitched into it) is a question. The detector scores only the last
+        question sentence, so a stitched question keeps the best score of its parts; one that already fired
+        was a confirmed question."""
+        conf = max(p.held_confidence, detect(p.full_text, "interviewer", self.context).confidence,
+                   detect(p.text, "interviewer", self.context).confidence)
+        return max(conf, 0.6) if p.fired_text is not None else conf
 
     def tick(self, now_ms: int) -> FinalizedQuestion | None:
         return self._evaluate(now_ms)
@@ -154,7 +175,7 @@ class QuestionFinalizer:
             # extract_question keeps only the last question sentence; a stitched question keeps both parts,
             # and is at least as much a question as the part we were already holding.
             complete = is_complete(full)
-            conf = max(d.confidence, detect(p.held_question, "interviewer", self.context).confidence)
+            conf = max(d.confidence, p.held_confidence)
             d = replace(d, question_text=full, is_complete=complete, confidence=conf, is_question=conf >= 0.5,
                         should_generate=conf >= 0.6 and complete)
         if not d.is_question:

@@ -51,7 +51,7 @@ context (recent turns, rolling summary) does not yet survive a reconnect.
 
 Answers are spoken first-person prose (`direct_answer`, paragraphs separated by a blank line); `talking_points` is only filled if a model lists anyway. Legacy styles (`bullets`, `star`, `technical`, `executive`) are still accepted and mapped onto the new ones. `thinking` sets the model's reasoning effort (off answers in under a second; low/high/max add ~3–6 s before the first word).
 
-`response_timing` is how long a detected question is held after the interviewer stops before it auto-fires (quick ≈ 0, balanced ≈ 0.8 s default, patient ≈ 1.6 s). If the interviewer keeps talking inside that window, the continuation is stitched onto the question; the candidate speaking ends the wait immediately. `answer.request` without `question_text` answers that held/stitched question if there is one.
+`response_timing` is how long a detected question is held after the interviewer stops before it auto-fires (quick ≈ 0, balanced ≈ 1.5 s default, patient ≈ 3 s). Until the candidate actually starts answering (3+ words), anything the interviewer says within 8 s of their last pause continues the same question — even after it fired: the combined question is re-sent as `question.updated` and the answer regenerated. `answer.request` without `question_text` answers that whole (stitched) question.
 
 ## Server → client
 

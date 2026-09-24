@@ -43,7 +43,7 @@ export type AnswerLength = "short" | "standard" | "detailed";
 export type AnswerStyle = "natural" | "concise" | "story" | "bullets" | "star" | "technical" | "executive";
 /** Model thinking effort: off answers immediately; low/high/max add seconds of reasoning before the first word. */
 export type ThinkingLevel = "off" | "low" | "high" | "max";
-/** How long to wait after the interviewer stops before auto-answering (quick ≈ 0, balanced ≈ 0.8 s, patient ≈ 1.6 s). */
+/** How long to wait after the interviewer stops before auto-answering (quick ≈ 0, balanced ≈ 1.5 s, patient ≈ 3 s). */
 export type ResponseTiming = "quick" | "balanced" | "patient";
 
 export interface LiveSettings {
