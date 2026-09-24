@@ -1,6 +1,13 @@
 import { useEffect, useRef } from "react";
 
-export type HotkeyAction = "answer" | "screenshot" | "toggleListening" | "focusChat" | "clear";
+export type HotkeyAction =
+  | "answer"
+  | "screenshot"
+  | "toggleListening"
+  | "focusChat"
+  | "clear"
+  | "prevAnswer"
+  | "nextAnswer";
 
 /** Combos use "Mod" for Cmd on macOS and Ctrl elsewhere, e.g. "Mod+Shift+S". */
 export type HotkeyMap = Record<HotkeyAction, string>;
@@ -11,6 +18,8 @@ export const DEFAULT_HOTKEYS: HotkeyMap = {
   toggleListening: "Mod+L",
   focusChat: "Mod+K",
   clear: "Mod+Shift+C",
+  prevAnswer: "Alt+ArrowLeft",
+  nextAnswer: "Alt+ArrowRight",
 };
 
 export const HOTKEY_LABELS: Record<HotkeyAction, string> = {
@@ -19,6 +28,8 @@ export const HOTKEY_LABELS: Record<HotkeyAction, string> = {
   toggleListening: "Pause / resume listening",
   focusChat: "Focus chat",
   clear: "Clear answer",
+  prevAnswer: "Previous answer",
+  nextAnswer: "Next answer",
 };
 
 export function isMacPlatform(): boolean {

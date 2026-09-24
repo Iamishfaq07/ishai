@@ -10,6 +10,7 @@ import {
 import {
   initialLiveState,
   liveReducer,
+  selectAnswerHistory,
   selectDisplayedAnswer,
   selectDisplayedQuestion,
   selectLatestInterviewerTurn,
@@ -198,5 +199,47 @@ describe("session + status", () => {
     ]);
     expect(s.providers.stt?.state).toBe("mock");
     expect(s.system.detail).toBe("Loopback unavailable");
+  });
+});
+
+describe("answer history", () => {
+  const chunk = (answerId: string, text: string) =>
+    ev("answer.chunk", { answer_id: answerId, partial: answer([], { direct_answer: text }) });
+  const done = (answerId: string, text: string) =>
+    ev("answer.completed", {
+      answer_id: answerId,
+      answer: answer([], { direct_answer: text }),
+      latency: { first_token_ms: 1, total_ms: 2 },
+    });
+
+  it("keeps one entry per question (latest version) and lets you browse back without losing live", () => {
+    let s = run([
+      detected("q1"), started("a1", "q1"), done("a1", "first"),
+      detected("q2"), started("a2", "q2"), done("a2", "second (part)"),
+      started("a2b", "q2"), done("a2b", "second (whole question)"), // regenerated for the same question
+      started("empty", "q2"), // superseded before any content → not browsable
+    ]);
+    s = run([ev("answer.cancelled", { answer_id: "empty", reason: "superseded" })], s);
+    expect(selectAnswerHistory(s)).toEqual(["a1", "a2b"]);
+
+    s = run([{ type: "local/view", answer_id: "a1" }], s);
+    expect(selectDisplayedAnswer(s)?.answer_id).toBe("a1");
+    expect(selectDisplayedQuestion(s)?.question_id).toBe("q1");
+
+    // a new answer arrives while browsing: the view stays put, live moves on underneath
+    s = run([detected("q3"), started("a3", "q3"), chunk("a3", "third")], s);
+    expect(selectDisplayedAnswer(s)?.answer_id).toBe("a1");
+    expect(s.currentAnswerId).toBe("a3");
+
+    s = run([{ type: "local/view", answer_id: null }], s);
+    expect(selectDisplayedAnswer(s)?.answer_id).toBe("a3");
+  });
+
+  it("a pin wins over browsing, and clear resets the view", () => {
+    let s = run([detected("q1"), started("a1", "q1"), done("a1", "x"), detected("q2"), started("a2", "q2"), done("a2", "y")]);
+    s = run([{ type: "local/view", answer_id: "a1" }, { type: "local/pin", answer_id: "a2", pinned: true }], s);
+    expect(selectDisplayedAnswer(s)?.answer_id).toBe("a2");
+    s = run([{ type: "local/clear" }], s);
+    expect(s.viewedAnswerId).toBeNull();
   });
 });

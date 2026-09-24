@@ -135,7 +135,7 @@ export interface SessionStateData {
 }
 
 export type ReasoningLevel = "light" | "deep";
-export type AnswerSource = "auto" | "manual" | "chat";
+export type AnswerSource = "auto" | "manual" | "chat" | "screenshot";
 export type CancelReason = "superseded" | "cleared" | "session_ended";
 
 export interface AnswerLatency {

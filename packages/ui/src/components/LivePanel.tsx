@@ -3,6 +3,7 @@ import { DEV_FIXTURES } from "@orbit/types";
 import { formatElapsed, useElapsed } from "../hooks/useElapsed";
 import { useStickyScroll } from "../hooks/useStickyScroll";
 import { DEFAULT_HOTKEYS, useHotkeys, type HotkeyMap } from "../live/hotkeys";
+import { useAnswerHistory } from "../live/useAnswerHistory";
 import {
   selectDisplayedAnswer,
   selectDisplayedQuestion,
@@ -60,6 +61,8 @@ export function LivePanel(props: LivePanelProps) {
   const elapsed = useElapsed(live.startedAt, !ended && !paused);
   const answer = selectDisplayedAnswer(live);
   const question = selectDisplayedQuestion(live);
+  const { history, index: historyIndex, browsing, newAnswer: newSinceBrowsing, step, backToLive } =
+    useAnswerHistory(live, actions);
   const turns = useMemo(
     () => live.turnOrder.map((id) => live.turns[id]).filter((t): t is TurnView => Boolean(t)),
     [live.turnOrder, live.turns],
@@ -87,6 +90,8 @@ export function LivePanel(props: LivePanelProps) {
       clear: () => !ended && actions.clear(),
       toggleListening: () => !ended && actions.togglePause(),
       focusChat,
+      prevAnswer: () => step(-1),
+      nextAnswer: () => step(1),
       ...(props.onScreenshot ? { screenshot: props.onScreenshot } : {}),
     },
     !ended,
@@ -141,6 +146,16 @@ export function LivePanel(props: LivePanelProps) {
         <main className="flex min-h-0 flex-1 flex-col">
           <QuestionCard question={question} liveTurn={liveInterviewerTurn} compact={compact} />
           <div className="mx-4 border-t border-zinc-100 dark:border-zinc-900" />
+          {history.length > 1 && !live.pinnedAnswerId && (
+            <HistoryNav
+              index={historyIndex}
+              total={history.length}
+              browsing={browsing}
+              newAnswer={newSinceBrowsing}
+              onStep={step}
+              onLive={backToLive}
+            />
+          )}
           <AnswerCard
             answer={answer}
             pinned={Boolean(answer && live.pinnedAnswerId === answer.answer_id)}
@@ -368,6 +383,53 @@ function ChatAnswer({ answer }: { answer: AnswerView | undefined }) {
             <li key={i}>{p}</li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+/** "‹ 3 of 5 ›" through earlier answers, with a way back to the live one. */
+function HistoryNav(props: {
+  index: number;
+  total: number;
+  browsing: boolean;
+  newAnswer: boolean;
+  onStep: (delta: number) => void;
+  onLive: () => void;
+}) {
+  const navBtn = cx(
+    "rounded-md px-1.5 py-0.5 text-sm text-zinc-500 hover:bg-zinc-100 disabled:opacity-30 dark:hover:bg-zinc-800",
+    focusRing,
+  );
+  return (
+    <div className="flex animate-fade-in items-center gap-1 px-4 pt-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+      <button type="button" className={navBtn} onClick={() => props.onStep(-1)} disabled={props.index <= 0}
+              title="Previous answer (Alt+←)" aria-label="Previous answer">
+        ‹
+      </button>
+      <span className="tabular-nums" aria-live="polite">
+        {props.index + 1} of {props.total}
+      </span>
+      <button type="button" className={navBtn} onClick={() => props.onStep(1)} disabled={props.index >= props.total - 1}
+              title="Next answer (Alt+→)" aria-label="Next answer">
+        ›
+      </button>
+      <span className="flex-1" />
+      {props.browsing && (
+        <button
+          type="button"
+          onClick={props.onLive}
+          className={cx(
+            "flex items-center gap-1.5 rounded-full px-2 py-0.5 font-medium",
+            props.newAnswer
+              ? "animate-fade-up bg-indigo-600 text-white hover:bg-indigo-500"
+              : "text-indigo-700 hover:bg-indigo-500/10 dark:text-indigo-300",
+            focusRing,
+          )}
+        >
+          <span className={cx("h-1.5 w-1.5 rounded-full", props.newAnswer ? "animate-ping bg-white" : "bg-emerald-500")} />
+          {props.newAnswer ? "New answer — back to live" : "Back to live"}
+        </button>
       )}
     </div>
   );

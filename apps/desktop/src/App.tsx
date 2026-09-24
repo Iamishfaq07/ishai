@@ -3,6 +3,8 @@ import type { OrbitSession, SessionType, User } from "@orbit/types";
 import { ApiError, OrbitLogo } from "@orbit/ui";
 import { api, setAccessToken, setUnauthorizedHandler } from "./api";
 import { CloseDialog } from "./CloseDialog";
+import { stepGlass } from "./glass";
+import { useGlobalShortcuts, useShortcutHandler, type GlobalAction } from "./globalShortcuts";
 import { clearToken, loadToken } from "./native";
 import { DocumentsScreen } from "./screens/Documents";
 import { HistoryScreen } from "./screens/History";
@@ -11,7 +13,13 @@ import { LiveScreen, type DesktopLaunch } from "./screens/Live";
 import { LoginScreen } from "./screens/Login";
 import { SettingsScreen } from "./screens/Settings";
 import { IS_MAC, SetupScreen } from "./screens/Setup";
-import { applyPanelMode } from "./windowing";
+import { applyPanelMode, toggleMainWindow } from "./windowing";
+
+function onAppShortcut(action: GlobalAction): void {
+  if (action === "toggleWindow") void toggleMainWindow();
+  else if (action === "moreTransparent") stepGlass(-0.1);
+  else if (action === "lessTransparent") stepGlass(0.1);
+}
 
 type Screen =
   | { name: "boot" }
@@ -24,6 +32,8 @@ type Screen =
   | { name: "live"; session: OrbitSession; launch: DesktopLaunch };
 
 export function App() {
+  useGlobalShortcuts();
+  useShortcutHandler(onAppShortcut);
   const [screen, setScreen] = useState<Screen>({ name: "boot" });
   const [user, setUser] = useState<User | null>(null);
 

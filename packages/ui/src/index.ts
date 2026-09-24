@@ -48,6 +48,8 @@ export {
   saveResponseTiming,
   saveThinking,
 } from "./live/preferences";
+export { useAnswerHistory, type AnswerHistory } from "./live/useAnswerHistory";
+export { answerAsText } from "./components/AnswerCard";
 export { useLiveSession, type LiveActions, type UseLiveSessionOptions, type UseLiveSessionResult } from "./live/useLiveSession";
 export {
   DEFAULT_HOTKEYS,

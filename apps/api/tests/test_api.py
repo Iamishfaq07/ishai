@@ -309,3 +309,29 @@ def test_live_socket_takeover_and_per_user_cap(client: TestClient) -> None:
                 _collect(ws_b, lambda ev: any(e["type"] == "session.ended" for e in ev))
             with _live(client, h, c) as ws_c:  # a slot freed up
                 _collect(ws_c, lambda ev: any(e["type"] == "session.started" for e in ev))
+
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+
+
+def test_screenshot_is_answered_over_the_live_socket(client: TestClient) -> None:
+    h = _register(client)
+    sid = client.post("/v1/sessions", headers=h, json={"title": "coding", "type": "coding"}).json()["id"]
+    files = {"image": ("shot.png", PNG, "image/png")}
+    # not live yet → nothing to stream the answer to
+    assert client.post(f"/v1/sessions/{sid}/screenshots", headers=h, files=files).status_code == 409
+    with _live(client, h, sid) as ws:
+        _collect(ws, lambda ev: any(e["type"] == "session.started" for e in ev))
+        bad = client.post(f"/v1/sessions/{sid}/screenshots", headers=h,
+                          files={"image": ("x.png", b"not an image", "image/png")})
+        assert bad.status_code == 415
+        r = client.post(f"/v1/sessions/{sid}/screenshots", headers=h, files=files)
+        assert r.status_code == 202 and r.json()["screenshot_id"]
+        events = _collect(ws, lambda ev: any(e["type"] == "answer.completed" for e in ev))
+        detected = next(e["data"] for e in events if e["type"] == "question.detected")
+        started = next(e["data"] for e in events if e["type"] == "answer.started")
+        assert detected["question_id"] == r.json()["screenshot_id"] and "Screenshot" in detected["text"]
+        assert started["source"] == "screenshot"
+        ws.send_text(json.dumps({"type": "session.end", "data": {}}))
+        _collect(ws, lambda ev: any(e["type"] == "session.ended" for e in ev))
+    assert client.get("/v1/usage", headers=h).json()["screenshots_used"] == 1

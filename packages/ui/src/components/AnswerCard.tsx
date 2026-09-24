@@ -103,7 +103,7 @@ export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, au
     <section aria-label="Suggested answer" className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center justify-between px-4 pt-3">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
-          {answer.source === "chat" ? "Reply" : "Answer"}
+          {answer.source === "chat" ? "Reply" : answer.source === "screenshot" ? "Screenshot answer" : "Answer"}
           {answer.reasoning === "deep" && (
             <span className="ml-2 normal-case tracking-normal text-indigo-600 dark:text-indigo-300">in-depth</span>
           )}
