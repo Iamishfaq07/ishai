@@ -31,6 +31,8 @@ export class ApiError extends Error {
     readonly status: number,
     message: string,
     readonly code: string = "http_error",
+    /** Extra fields of a structured error (e.g. `session_id` for "live_session_active"). */
+    readonly details: Record<string, unknown> = {},
   ) {
     super(message);
     this.name = "ApiError";
@@ -217,7 +219,12 @@ async function toApiError(response: Response): Promise<ApiError> {
   if (typeof detail === "string") return new ApiError(response.status, detail);
   // Structured errors: { detail: { code, message } } (e.g. "email_unverified", "captcha_failed").
   if (detail && !Array.isArray(detail) && typeof detail === "object" && typeof detail.message === "string") {
-    return new ApiError(response.status, detail.message, typeof detail.code === "string" ? detail.code : "http_error");
+    return new ApiError(
+      response.status,
+      detail.message,
+      typeof detail.code === "string" ? detail.code : "http_error",
+      detail as Record<string, unknown>,
+    );
   }
   if (Array.isArray(detail) && detail.length > 0) {
     return new ApiError(response.status, detail.map((d) => d.msg).join("; "), "validation_error");

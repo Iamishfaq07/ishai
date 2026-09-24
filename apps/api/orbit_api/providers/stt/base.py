@@ -25,7 +25,14 @@ class TranscriptEvent:
     status: str | None = None  # connected | reconnecting | down (kind == "status")
 
 
+SessionState = Literal["connecting", "connected", "reconnecting", "down"]
+
+
 class STTSession(ABC):
+    # The provider connection's real state. Local/mock sessions are connected as soon as they exist; networked
+    # ones (Deepgram) start "connecting" and only report "connected" once the streaming socket is actually open.
+    state: SessionState = "connected"
+
     @abstractmethod
     async def send_audio(self, pcm16: bytes) -> None: ...
 

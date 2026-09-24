@@ -196,6 +196,40 @@ describe("LiveClient", () => {
     expect(FakeSocket.instances).toHaveLength(0);
   });
 
+  it("keeps the server's message and details for non-retryable ticket errors (another live session, unverified)", async () => {
+    const statuses: Array<[string, string | undefined, unknown]> = [];
+    const conflict = Object.assign(new Error("You already have a live session running (Acme loop)."), {
+      status: 409,
+      code: "live_session_active",
+      details: { session_id: "s-running" },
+    });
+    const client = makeClient({ getTicket: async () => Promise.reject(conflict) });
+    client.onStatus((s, d, info) => statuses.push([s, d, info]));
+    client.connect();
+    await flush();
+    expect(FakeSocket.instances).toHaveLength(0); // no socket, no retry storm
+    expect(statuses.at(-1)).toEqual([
+      "closed",
+      "You already have a live session running (Acme loop).",
+      { code: "live_session_active", sessionId: "s-running" },
+    ]);
+
+    const unverified = Object.assign(new Error("Verify your email to use this."), { status: 403, code: "email_unverified" });
+    const c2 = makeClient({ getTicket: async () => Promise.reject(unverified) });
+    const s2: Array<string | undefined> = [];
+    c2.onStatus((_s, d) => s2.push(d));
+    c2.connect();
+    await flush();
+    expect(s2.at(-1)).toBe("Verify your email to use this.");
+  });
+
+  it("does not retry when the minutes are used up (402)", async () => {
+    const client = makeClient({ getTicket: async () => Promise.reject(Object.assign(new Error("Out of minutes"), { status: 402 })) });
+    client.connect();
+    await flush();
+    expect(client.connectionStatus).toBe("closed");
+  });
+
   it("close() is final — no reconnect", async () => {
     vi.useFakeTimers();
     const client = makeClient();

@@ -181,6 +181,10 @@ class LiveEngine:
                                             grace_ms=GRACE_MS[self.settings.response_timing])
         self._dedup = Deduplicator()
         self._stt_sessions: dict[Channel, STTSession] = {}
+        # Real provider connection state per channel, and the combined status last sent to the client.
+        self._stt_state: dict[Channel, str] = {}
+        self._stt_published: str | None = None
+        self._stt_down_detail: str | None = None
         self._turns: dict[Channel, _ChannelTurn | None] = {"mic": None, "system": None}
         self._last_interviewer_text = ""
         self._gens: dict[str, _Generation] = {}
@@ -236,18 +240,27 @@ class LiveEngine:
     async def start(self) -> None:
         cfg = STTConfig(language=self.profile.language, keyterms=self.profile.keyterms)
         channels: tuple[Channel, Channel] = ("mic", "system")
+        is_mock = isinstance(self._stt, MockSTTProvider)
+        if not is_mock:  # truthful from the first frame: nothing is "ok" until the provider says so
+            self._stt_published = "connecting"
+            await self.send("provider.status", {"provider": "stt", "name": self._stt.name, "state": "connecting",
+                                                "detail": "Connecting to transcription…"})
         # Both provider sockets handshake concurrently: sequential connects doubled time-to-ready.
         sessions = await asyncio.gather(*(self._stt.start(cfg) for _ in channels))
         for channel, session in zip(channels, sessions, strict=True):
             self._stt_sessions[channel] = session
+            self._stt_state[channel] = session.state
             self._spawn(self._pump_stt(channel, session))
         self._spawn(self._ticker())
         if self._mock is not None:
             self._spawn(self._mock.start(self.now_ms()))
         await self.send("session.started", {"state": LiveState.listening.value,
                                             "settings": self.settings.model_dump()})
-        stt_state = "mock" if isinstance(self._stt, MockSTTProvider) else "ok"
-        await self.send("provider.status", {"provider": "stt", "name": self._stt.name, "state": stt_state})
+        if is_mock:
+            self._stt_published = "mock"
+            await self.send("provider.status", {"provider": "stt", "name": self._stt.name, "state": "mock"})
+        else:
+            await self._publish_stt_state()
         await self.send("provider.status", {"provider": "llm", "name": self._llm.name,
                                             "state": "mock" if self._llm.name == "mock" else "ok"})
         await self._set_state(LiveState.listening)
@@ -376,23 +389,44 @@ class LiveEngine:
             channel: Channel = "mic" if speaker == "candidate" else "system"
             await self.on_transcript(channel, ev)
 
+    def _stt_aggregate(self) -> tuple[str, str | None]:
+        """One STT status for the UI from both channels' real connection states."""
+        states = [self._stt_state.get(ch, "connecting") for ch in ("mic", "system")]
+        if "down" in states:
+            return "down", self._stt_down_detail
+        if all(s == "connected" for s in states):
+            return "ok", None
+        if "reconnecting" in states:
+            return "reconnecting", "Transcription reconnecting…"
+        return "connecting", "Connecting to transcription…"
+
+    async def _publish_stt_state(self) -> None:
+        state, detail = self._stt_aggregate()
+        if state == self._stt_published:
+            return
+        self._stt_published = state
+        payload: dict[str, Any] = {"provider": "stt", "name": self._stt.name, "state": state}
+        if detail:
+            payload["detail"] = detail
+        await self.send("provider.status", payload)
+        if state == "reconnecting":
+            await self._set_state(LiveState.stt_reconnecting)
+        elif state == "ok" and self.state == LiveState.stt_reconnecting:
+            await self._set_state(LiveState.listening)
+
     async def on_transcript(self, channel: Channel, ev: TranscriptEvent) -> None:
         if ev.kind == "status":
             if ev.status == "reconnecting":
+                self._stt_state[channel] = "reconnecting"
                 await self.send(f"audio.{channel}_status", {"state": "reconnecting"})
-                await self.send("provider.status", {"provider": "stt", "name": self._stt.name,
-                                                    "state": "reconnecting"})
-                await self._set_state(LiveState.stt_reconnecting)
             elif ev.status == "connected":
+                self._stt_state[channel] = "connected"
                 await self.send(f"audio.{channel}_status", {"state": "connected"})
-                if self.state == LiveState.stt_reconnecting:
-                    await self.send("provider.status", {"provider": "stt", "name": self._stt.name, "state": "ok"})
-                    await self._set_state(LiveState.listening)
             elif ev.status == "down":
-                detail = f"Transcription is down: {ev.text or 'the provider refused the connection'}."
-                await self.send(f"audio.{channel}_status", {"state": "error", "detail": detail})
-                await self.send("provider.status", {"provider": "stt", "name": self._stt.name,
-                                                    "state": "down", "detail": detail})
+                self._stt_state[channel] = "down"
+                self._stt_down_detail = f"Transcription is down: {ev.text or 'the provider refused the connection'}."
+                await self.send(f"audio.{channel}_status", {"state": "error", "detail": self._stt_down_detail})
+            await self._publish_stt_state()
             return
         if self._paused or self._ended:
             return
