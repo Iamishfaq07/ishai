@@ -36,6 +36,44 @@ function Spoken({ text }: { text: string }) {
   );
 }
 
+/** Plain-text version of an answer for the clipboard. */
+export function answerAsText(a: AnswerView["answer"]): string {
+  return [
+    a.direct_answer,
+    ...a.talking_points.map((p) => `- ${p}`),
+    a.code ? `\n${a.code.content}` : "",
+    a.example ? `\nExample: ${a.example}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(false), 1500);
+    return () => clearTimeout(t);
+  }, [copied]);
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void navigator.clipboard?.writeText(text).then(() => setCopied(true));
+      }}
+      title="Copy this answer"
+      className={cx(
+        "rounded-md px-2 py-0.5 text-[11px] font-medium",
+        copied ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800",
+        focusRing,
+      )}
+    >
+      {copied ? <span className="inline-block animate-pop">Copied ✓</span> : "Copy"}
+    </button>
+  );
+}
+
 export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, autoAnswer }: AnswerCardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showExample, setShowExample] = useState(false);
@@ -49,7 +87,7 @@ export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, au
 
   if (!answer) {
     return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
+      <div className="flex flex-1 animate-fade-in items-center justify-center px-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
         {autoAnswer
           ? "Answers appear here as soon as a question is detected."
           : "Auto answer is off — press Answer when you’re ready."}
@@ -70,33 +108,41 @@ export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, au
             <span className="ml-2 normal-case tracking-normal text-indigo-600 dark:text-indigo-300">in-depth</span>
           )}
         </h2>
-        <button
-          type="button"
-          onClick={() => onPin(!pinned)}
-          aria-pressed={pinned}
-          title={pinned ? "Unpin — follow new questions again" : "Pin — keep this answer on screen"}
-          className={cx(
-            "rounded-md px-2 py-0.5 text-[11px] font-medium",
-            pinned
-              ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
-              : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800",
-            focusRing,
-          )}
-        >
-          {pinned ? "Pinned" : "Pin"}
-        </button>
+        <span className="flex items-center gap-1">
+          {answer.has_content && answer.status !== "failed" && <CopyButton text={answerAsText(a)} />}
+          <button
+            type="button"
+            onClick={() => onPin(!pinned)}
+            aria-pressed={pinned}
+            title={pinned ? "Unpin — follow new questions again" : "Pin — keep this answer on screen"}
+            className={cx(
+              "rounded-md px-2 py-0.5 text-[11px] font-medium",
+              pinned
+                ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800",
+              focusRing,
+            )}
+          >
+            {pinned ? "Pinned" : "Pin"}
+          </button>
+        </span>
       </div>
 
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-2" tabIndex={0}>
         {thinking && (
-          <p className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-            <span className="inline-flex gap-1" aria-hidden="true">
-              <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 motion-safe:animate-bounce" />
-              <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 motion-safe:animate-bounce [animation-delay:120ms]" />
-              <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 motion-safe:animate-bounce [animation-delay:240ms]" />
-            </span>
-            Thinking…
-          </p>
+          <div className="animate-fade-in space-y-2.5" aria-label="Thinking">
+            <p className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+              <span className="inline-flex gap-1" aria-hidden="true">
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 motion-safe:animate-bounce" />
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 motion-safe:animate-bounce [animation-delay:120ms]" />
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 motion-safe:animate-bounce [animation-delay:240ms]" />
+              </span>
+              Thinking…
+            </p>
+            <div className="skeleton-line h-3 w-11/12 motion-safe:animate-shimmer" aria-hidden="true" />
+            <div className="skeleton-line h-3 w-9/12 motion-safe:animate-shimmer" aria-hidden="true" />
+            <div className="skeleton-line h-3 w-10/12 motion-safe:animate-shimmer" aria-hidden="true" />
+          </div>
         )}
 
         {answer.status === "failed" && (
@@ -114,7 +160,13 @@ export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, au
           <div className={cx("space-y-2.5", compact ? "text-sm" : "text-[15px] leading-relaxed")}>
             {a.direct_answer.split(/\n{2,}/).map((para, i) => (
               // The opening sentence carries the answer, so it reads a touch stronger for a quick glance.
-              <p key={i} className={i === 0 ? "font-medium text-zinc-900 dark:text-zinc-50" : "text-zinc-800 dark:text-zinc-200"}>
+              <p
+                key={i}
+                className={cx(
+                  "animate-fade-up",
+                  i === 0 ? "font-medium text-zinc-900 dark:text-zinc-50" : "text-zinc-800 dark:text-zinc-200",
+                )}
+              >
                 <Spoken text={para} />
               </p>
             ))}

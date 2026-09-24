@@ -25,6 +25,8 @@ import {
   stopCapture,
   type RegionCapturedPayload,
 } from "../native";
+import { requestClose } from "../CloseDialog";
+import { GlassButton } from "../GlassControls";
 import { WindowButtons } from "../TitleBar";
 import { applyPanelMode, setAlwaysOnTop, toggleMainWindow } from "../windowing";
 
@@ -262,7 +264,8 @@ export function LiveScreen({
           >
             📌
           </button>
-          <WindowButtons minimize={() => void win.minimize()} hide={() => void win.hide()} />
+          <GlassButton />
+          <WindowButtons minimize={() => void win.minimize()} hide={requestClose} />
         </>
       }
     />

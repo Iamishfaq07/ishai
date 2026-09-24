@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { cx, focusRing } from "@orbit/ui";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { OrbitLogo, cx, focusRing } from "@orbit/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { errorText } from "../lib/format";
@@ -48,6 +48,7 @@ function VerifyEmailBanner({ email }: { email: string }) {
 
 export function Layout() {
   const { user, logout } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
 
   return (
@@ -58,7 +59,7 @@ export function Layout() {
       <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800/80 dark:bg-zinc-950/80">
         <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-3">
           <NavLink to="/" className={cx("flex items-center gap-2 font-semibold tracking-tight", focusRing)}>
-            <span className="h-5 w-5 rounded-full bg-gradient-to-br from-indigo-400 to-violet-600 ring-2 ring-indigo-400/30" aria-hidden="true" />
+            <OrbitLogo size={22} />
             Orbit
           </NavLink>
           <nav aria-label="Main" className="flex flex-1 gap-1 overflow-x-auto">
@@ -95,7 +96,10 @@ export function Layout() {
       </header>
       {user && !user.email_verified && <VerifyEmailBanner email={user.email} />}
       <main id="main" className="mx-auto max-w-6xl px-6 py-8">
-        <Outlet />
+        {/* Keyed on the route so each page fades up in. */}
+        <div key={location.pathname} className="animate-fade-up">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

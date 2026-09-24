@@ -1,0 +1,47 @@
+/* Shared look & feel for the web and desktop apps. Plain CSS (no @apply) so either app can @import it. */
+
+/* Default accent = Tailwind indigo; applyDesign() overrides these per user. */
+:root {
+  --accent-50: 238 242 255;
+  --accent-100: 224 231 255;
+  --accent-200: 199 210 254;
+  --accent-300: 165 180 252;
+  --accent-400: 129 140 248;
+  --accent-500: 99 102 241;
+  --accent-600: 79 70 229;
+  --accent-700: 67 56 202;
+  --accent-800: 55 48 163;
+  --accent-900: 49 46 129;
+  --accent-950: 30 27 75;
+}
+
+/* Tactile buttons: a quick press-in on click. */
+button:not(:disabled) {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/* Shimmering placeholder lines ("Thinking…"). */
+.skeleton-line {
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    rgb(var(--accent-500) / 0.08) 0%,
+    rgb(var(--accent-500) / 0.22) 50%,
+    rgb(var(--accent-500) / 0.08) 100%
+  );
+  background-size: 200% 100%;
+}
+
+/* User switched animations off (Settings → Appearance) — same effect as the OS reduced-motion setting. */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}

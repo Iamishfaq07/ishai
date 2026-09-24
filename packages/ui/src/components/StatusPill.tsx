@@ -4,13 +4,15 @@ import { cx } from "./cx";
 
 type Tone = "idle" | "live" | "busy" | "warn" | "error" | "done";
 
-const STATE_META: Record<LiveState, { label: string; tone: Tone; pulse?: boolean }> = {
+type Motion = "pulse" | "wave" | "spin";
+
+const STATE_META: Record<LiveState, { label: string; tone: Tone; pulse?: boolean; motion?: Motion }> = {
   idle: { label: "Ready", tone: "idle" },
   listening: { label: "Listening", tone: "live", pulse: true },
-  speech_detected: { label: "Hearing speech", tone: "live", pulse: true },
+  speech_detected: { label: "Hearing speech", tone: "live", pulse: true, motion: "wave" },
   question_detected: { label: "Question detected", tone: "busy" },
-  generating: { label: "Thinking…", tone: "busy", pulse: true },
-  streaming: { label: "Answering", tone: "busy", pulse: true },
+  generating: { label: "Thinking…", tone: "busy", pulse: true, motion: "spin" },
+  streaming: { label: "Answering", tone: "busy", pulse: true, motion: "spin" },
   answer_complete: { label: "Listening", tone: "live", pulse: true },
   follow_up_detected: { label: "Follow-up detected", tone: "busy" },
   stt_reconnecting: { label: "Reconnecting audio…", tone: "warn", pulse: true },
@@ -54,15 +56,43 @@ export function StatusPill({ state, connection }: StatusPillProps) {
       className={cx("inline-flex items-center gap-1.5 text-xs font-medium tracking-wide", tone.text)}
       title={meta.label}
     >
-      <span className="relative flex h-2 w-2" aria-hidden="true">
-        {meta.pulse && (
-          <span
-            className={cx("absolute inline-flex h-full w-full rounded-full opacity-60 motion-safe:animate-ping", tone.dot)}
-          />
-        )}
-        <span className={cx("relative inline-flex h-2 w-2 rounded-full", tone.dot)} />
+      <Indicator motion={"motion" in meta ? meta.motion : undefined} pulse={Boolean(meta.pulse)} dot={tone.dot} />
+      <span key={meta.label} className="animate-fade-in">
+        {meta.label}
       </span>
-      {meta.label}
+    </span>
+  );
+}
+
+/** Listening: a breathing dot. Hearing speech: a live sound wave. Thinking/answering: an orbiting spinner. */
+function Indicator({ motion, pulse, dot }: { motion?: Motion; pulse: boolean; dot: string }) {
+  if (motion === "wave") {
+    return (
+      <span className="flex h-3 items-center gap-[2px]" aria-hidden="true">
+        {[0, 150, 300, 450].map((delay) => (
+          <span
+            key={delay}
+            className={cx("h-3 w-[2px] origin-center rounded-full motion-safe:animate-wave", dot)}
+            style={{ animationDelay: `${delay}ms` }}
+          />
+        ))}
+      </span>
+    );
+  }
+  if (motion === "spin") {
+    return (
+      <span
+        className="h-2.5 w-2.5 rounded-full border-2 border-indigo-500/25 border-t-indigo-500 motion-safe:animate-orbit-fast"
+        aria-hidden="true"
+      />
+    );
+  }
+  return (
+    <span className="relative flex h-2 w-2" aria-hidden="true">
+      {pulse && (
+        <span className={cx("absolute inline-flex h-full w-full rounded-full opacity-60 motion-safe:animate-ping", dot)} />
+      )}
+      <span className={cx("relative inline-flex h-2 w-2 rounded-full", dot)} />
     </span>
   );
 }

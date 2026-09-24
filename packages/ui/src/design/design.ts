@@ -1,0 +1,80 @@
+import { useCallback, useEffect, useState } from "react";
+
+/** User-chosen look & feel, shared by the web and desktop apps (stored per device). */
+export type AccentName = "indigo" | "violet" | "sky" | "emerald" | "rose" | "amber";
+export type TextSize = "sm" | "md" | "lg";
+
+export interface DesignPrefs {
+  accent: AccentName;
+  textSize: TextSize;
+  /** Interface animations. Off also applies when the OS asks for reduced motion. */
+  motion: boolean;
+}
+
+export const DEFAULT_DESIGN: DesignPrefs = { accent: "indigo", textSize: "md", motion: true };
+
+type Palette = [string, string, string, string, string, string, string, string, string, string, string];
+const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
+
+/** Tailwind palettes as RGB triplets (50 → 950). */
+export const ACCENTS: Record<AccentName, { label: string; palette: Palette }> = {
+  indigo: { label: "Indigo", palette: ["238 242 255", "224 231 255", "199 210 254", "165 180 252", "129 140 248", "99 102 241", "79 70 229", "67 56 202", "55 48 163", "49 46 129", "30 27 75"] },
+  violet: { label: "Violet", palette: ["245 243 255", "237 233 254", "221 214 254", "196 181 253", "167 139 250", "139 92 246", "124 58 237", "109 40 217", "91 33 182", "76 29 149", "46 16 101"] },
+  sky: { label: "Sky", palette: ["240 249 255", "224 242 254", "186 230 253", "125 211 252", "56 189 248", "14 165 233", "2 132 199", "3 105 161", "7 89 133", "12 74 110", "8 47 73"] },
+  emerald: { label: "Emerald", palette: ["236 253 245", "209 250 229", "167 243 208", "110 231 183", "52 211 153", "16 185 129", "5 150 105", "4 120 87", "6 95 70", "6 78 59", "2 44 34"] },
+  rose: { label: "Rose", palette: ["255 241 242", "255 228 230", "254 205 211", "253 164 175", "251 113 133", "244 63 94", "225 29 72", "190 18 60", "159 18 57", "136 19 55", "76 5 25"] },
+  amber: { label: "Amber", palette: ["255 251 235", "254 243 199", "253 230 138", "252 211 77", "251 191 36", "245 158 11", "217 119 6", "180 83 9", "146 64 14", "120 53 15", "69 26 3"] },
+};
+
+export const TEXT_SIZES: Array<{ value: TextSize; label: string; px: number }> = [
+  { value: "sm", label: "Small", px: 14 },
+  { value: "md", label: "Default", px: 16 },
+  { value: "lg", label: "Large", px: 18 },
+];
+
+const STORAGE_KEY = "orbit.design";
+
+export function loadDesign(): DesignPrefs {
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+    const parsed = raw ? (JSON.parse(raw) as Partial<DesignPrefs>) : {};
+    return {
+      accent: parsed.accent && parsed.accent in ACCENTS ? parsed.accent : DEFAULT_DESIGN.accent,
+      textSize: TEXT_SIZES.some((t) => t.value === parsed.textSize) ? (parsed.textSize as TextSize) : "md",
+      motion: typeof parsed.motion === "boolean" ? parsed.motion : true,
+    };
+  } catch {
+    return DEFAULT_DESIGN;
+  }
+}
+
+export function saveDesign(prefs: DesignPrefs): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+  } catch {
+    // storage unavailable — still applied for this session
+  }
+}
+
+/** Applies accent (CSS variables behind every `indigo-*` class), root text size and the motion switch. */
+export function applyDesign(prefs: DesignPrefs, root: HTMLElement = document.documentElement): void {
+  const palette = ACCENTS[prefs.accent].palette;
+  SHADES.forEach((shade, i) => root.style.setProperty(`--accent-${shade}`, palette[i] as string));
+  root.style.fontSize = `${TEXT_SIZES.find((t) => t.value === prefs.textSize)?.px ?? 16}px`;
+  root.classList.toggle("reduce-motion", !prefs.motion);
+}
+
+/** Call before React renders so the saved look applies without a flash. */
+export function initDesign(): void {
+  applyDesign(loadDesign());
+}
+
+export function useDesign(): [DesignPrefs, (patch: Partial<DesignPrefs>) => void] {
+  const [prefs, setPrefs] = useState<DesignPrefs>(loadDesign);
+  useEffect(() => {
+    applyDesign(prefs);
+    saveDesign(prefs);
+  }, [prefs]);
+  const update = useCallback((patch: Partial<DesignPrefs>) => setPrefs((p) => ({ ...p, ...patch })), []);
+  return [prefs, update];
+}

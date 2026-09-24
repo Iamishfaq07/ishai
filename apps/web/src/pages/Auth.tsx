@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { OrbitLogo } from "@orbit/ui";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button, ErrorNote, Field, Input } from "../components/ui";
 import { api } from "../lib/api";
@@ -10,7 +11,9 @@ function AuthShell({ title, subtitle, children }: { title: string; subtitle: str
     <div className="flex min-h-full items-center justify-center bg-gradient-to-b from-indigo-500/5 to-transparent px-6 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <span className="mx-auto mb-4 block h-10 w-10 rounded-full bg-gradient-to-br from-indigo-400 to-violet-600 ring-4 ring-indigo-400/20" aria-hidden="true" />
+          <span className="mb-4 flex justify-center">
+            <OrbitLogo size={48} />
+          </span>
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>
         </div>

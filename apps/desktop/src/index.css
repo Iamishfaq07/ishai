@@ -1,3 +1,4 @@
+@import "../../../packages/ui/src/design/base.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -21,4 +22,40 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/*
+ * See-through window (glass.ts). The window itself is transparent (tauri.conf "transparent": true); here
+ * only BACKGROUNDS take the --glass alpha — text, icons and borders stay fully opaque. Popovers and
+ * dialogs opt out with .glass-solid so menus stay crisp.
+ */
+html.glass {
+  background: transparent;
+}
+html.glass body,
+html.glass .bg-white:not(.glass-solid) {
+  background-color: rgb(255 255 255 / var(--glass, 1)) !important;
+}
+html.glass .bg-zinc-50:not(.glass-solid) {
+  background-color: rgb(250 250 250 / var(--glass, 1)) !important;
+}
+html.glass .bg-zinc-100:not(.glass-solid) {
+  background-color: rgb(244 244 245 / var(--glass, 1)) !important;
+}
+html.dark.glass body,
+html.dark.glass .dark\:bg-zinc-950:not(.glass-solid) {
+  background-color: rgb(9 9 11 / var(--glass, 1)) !important;
+}
+html.dark.glass .dark\:bg-zinc-900:not(.glass-solid) {
+  background-color: rgb(24 24 27 / var(--glass, 1)) !important;
+}
+html.dark.glass .dark\:bg-zinc-800:not(.glass-solid) {
+  background-color: rgb(39 39 42 / var(--glass, 1)) !important;
+}
+/* Very see-through: a soft halo keeps text legible over any desktop. */
+html.glass-low body {
+  text-shadow: 0 0 2px rgb(255 255 255 / 0.95);
+}
+html.dark.glass-low body {
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.9);
 }

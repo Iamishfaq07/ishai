@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import type { OrbitSession, SessionType, User } from "@orbit/types";
-import { ApiError } from "@orbit/ui";
+import { ApiError, OrbitLogo } from "@orbit/ui";
 import { api, setAccessToken, setUnauthorizedHandler } from "./api";
+import { CloseDialog } from "./CloseDialog";
 import { clearToken, loadToken } from "./native";
 import { DocumentsScreen } from "./screens/Documents";
 import { HistoryScreen } from "./screens/History";
@@ -67,59 +68,76 @@ export function App() {
   // Rejoin an existing (live/created) session with default audio (system on Windows, default mic).
   const resume = (session: OrbitSession) => setScreen({ name: "live", session, launch: { systemAudio: !IS_MAC } });
 
-  switch (screen.name) {
-    case "boot":
-      return <div className="flex h-full items-center justify-center text-sm text-zinc-500">Starting Orbit…</div>;
-    case "login":
-      return (
-        <LoginScreen
-          onSignedIn={(u) => {
-            setUser(u);
-            home();
-          }}
-        />
-      );
-    case "home":
-      return (
-        <HomeScreen
-          user={user}
-          onNewSession={(type) => setScreen({ name: "setup", ...(type ? { initialType: type } : {}) })}
-          onResume={resume}
-          onOpenDocuments={() => setScreen({ name: "documents" })}
-          onOpenHistory={() => setScreen({ name: "history" })}
-          onOpenSettings={() => setScreen({ name: "settings" })}
-          onSignOut={() => void signOut()}
-        />
-      );
-    case "setup":
-      return (
-        <SetupScreen
-          user={user}
-          initialType={screen.initialType}
-          onSignOut={() => void signOut()}
-          onBack={home}
-          onStart={(session, launch) => setScreen({ name: "live", session, launch })}
-          onOpenDocuments={() => setScreen({ name: "documents" })}
-          onOpenHistory={() => setScreen({ name: "history" })}
-          onOpenSettings={() => setScreen({ name: "settings" })}
-        />
-      );
-    case "documents":
-      return <DocumentsScreen onBack={home} />;
-    case "history":
-      return <HistoryScreen onBack={home} onResume={resume} />;
-    case "settings":
-      return user ? (
-        <SettingsScreen user={user} onUser={setUser} onSignOut={() => void signOut()} onBack={home} />
-      ) : (
-        <div className="flex h-full items-center justify-center p-6 text-center text-sm text-zinc-500">
-          Reconnect to load your account, then open Settings again.
-          <button type="button" className="ml-2 underline" onClick={home}>
-            Back
-          </button>
-        </div>
-      );
-    case "live":
-      return <LiveScreen session={screen.session} launch={screen.launch} onExit={home} />;
+  return (
+    <>
+      {/* Keyed on the screen so every navigation fades the new screen in. */}
+      <div key={screen.name} className="h-full animate-fade-in">
+        {renderScreen()}
+      </div>
+      <CloseDialog liveActive={screen.name === "live"} />
+    </>
+  );
+
+  function renderScreen() {
+    switch (screen.name) {
+      case "boot":
+        return (
+          <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-zinc-500">
+            <OrbitLogo size={40} busy />
+            Starting Orbit…
+          </div>
+        );
+      case "login":
+        return (
+          <LoginScreen
+            onSignedIn={(u) => {
+              setUser(u);
+              home();
+            }}
+          />
+        );
+      case "home":
+        return (
+          <HomeScreen
+            user={user}
+            onNewSession={(type) => setScreen({ name: "setup", ...(type ? { initialType: type } : {}) })}
+            onResume={resume}
+            onOpenDocuments={() => setScreen({ name: "documents" })}
+            onOpenHistory={() => setScreen({ name: "history" })}
+            onOpenSettings={() => setScreen({ name: "settings" })}
+            onSignOut={() => void signOut()}
+          />
+        );
+      case "setup":
+        return (
+          <SetupScreen
+            user={user}
+            initialType={screen.initialType}
+            onSignOut={() => void signOut()}
+            onBack={home}
+            onStart={(session, launch) => setScreen({ name: "live", session, launch })}
+            onOpenDocuments={() => setScreen({ name: "documents" })}
+            onOpenHistory={() => setScreen({ name: "history" })}
+            onOpenSettings={() => setScreen({ name: "settings" })}
+          />
+        );
+      case "documents":
+        return <DocumentsScreen onBack={home} />;
+      case "history":
+        return <HistoryScreen onBack={home} onResume={resume} />;
+      case "settings":
+        return user ? (
+          <SettingsScreen user={user} onUser={setUser} onSignOut={() => void signOut()} onBack={home} />
+        ) : (
+          <div className="flex h-full items-center justify-center p-6 text-center text-sm text-zinc-500">
+            Reconnect to load your account, then open Settings again.
+            <button type="button" className="ml-2 underline" onClick={home}>
+              Back
+            </button>
+          </div>
+        );
+      case "live":
+        return <LiveScreen session={screen.session} launch={screen.launch} onExit={home} />;
+    }
   }
 }
