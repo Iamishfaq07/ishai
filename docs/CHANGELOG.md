@@ -1,5 +1,30 @@
 # Implementation log
 
+## Phase 4 — answer quality (2026-09-24)
+
+- **Question detection** (measured on the brief's phrases plus a monologue/filler corpus):
+  - Before: missed "A little more on the security side.", "Go on.", "Say more about the rollout.", "Two sum, given an
+    array of integers.", "So the next thing I wanted to ask is how you handle secrets"; "Expand on that.", "Talk me
+    through your thinking.", "Hmm, and the database layer?" sat in the never-used LLM band. It also auto-answered 12
+    statements such as "Design is a big part of our culture here." and "Tell me is what my manager always says."
+  - After: all 22 required phrases trigger, 0 of 23 statements/fillers/logistics do (with and without a recent
+    question). Bare continuers ("Go on.", "Why?") count only right after a question.
+- **Ambiguous-band classifier** (`live/classifier.py`, D21). Real DeepSeek: 9/10 correct on hard cases, resisted an
+  injected instruction, median 0.67 s (only for ambiguous utterances), and resolves references ("Hmm, the caching
+  layer." → "How did you design the caching layer of the payments service?").
+- **Fact safety** (D22): `GROUNDED` label + "Suggested details" badge; sharper rule that a verified fact anchors only
+  what it says. Audit before: a fully invented failure story (7 unsupported claims) and invented rollout steps, both
+  presented as fact. After: invented detail still appears for questions the resume can't support, but every such
+  answer was labelled `example` (12/12 over two runs). Technical/design/coding answers are labelled `general`, first
+  words unchanged (0.52–0.73 s).
+- **Duplicate suppression**: the brief's "Tell me… / Tell me about… / Tell me about yourself" case is pinned by a test
+  (one question, one answer).
+- Real-audio regression run (Deepgram + DeepSeek): filler ignored, three questions answered, latency unchanged.
+
+**Verified:** API 233 tests (+56) + 15 smoke (new: real classifier); ruff, strict mypy; UI 42 tests, typecheck, lint.
+**Not done in this phase:** neural/hybrid retrieval (current lexical retrieval kept), token-level context budget
+(a character budget exists), prepared/cached answers.
+
 ## Phase 3 — Windows audio reliability (2026-09-24)
 
 - **Stable device identity:** microphones and outputs are listed and opened by MMDevice endpoint id (legacy saved

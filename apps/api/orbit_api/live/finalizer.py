@@ -67,7 +67,8 @@ MAX_STITCHED_WORDS = 120
 class FinalizedQuestion:
     turn_id: str
     detection: Detection
-    trigger: str  # endpoint | question_mark | silence | max_silence
+    # endpoint | question_mark | silence | max_silence | classify (ambiguous: ask the classifier before answering)
+    trigger: str
 
 
 @dataclass
@@ -234,25 +235,33 @@ class QuestionFinalizer:
             complete = is_complete(full)
             conf = max(d.confidence, p.held_confidence)
             d = replace(d, question_text=full, is_complete=complete, confidence=conf, is_question=conf >= 0.5,
-                        should_generate=conf >= 0.6 and complete)
-        if not d.is_question:
+                        should_generate=conf >= 0.6 and complete, needs_llm=0.35 <= conf < 0.6 and complete)
+        if not d.is_question and not d.needs_llm:
             return None
         silence = now_ms - p.last_speech_ms
+        answerable = d.should_generate or d.needs_llm
         trigger: str | None = None
         if p.endpointed and d.is_complete:
             if not self._holding(p, now_ms):
                 trigger = "endpoint"
         elif self.provider_endpoints:
-            if silence >= PROVIDER_FALLBACK_SILENCE_MS and d.is_complete and d.should_generate:
+            if silence >= PROVIDER_FALLBACK_SILENCE_MS and d.is_complete and answerable:
                 trigger = "max_silence"
-        elif p.text.rstrip().endswith("?") and silence >= QUESTION_MARK_SILENCE_MS:
+        elif d.is_question and p.text.rstrip().endswith("?") and silence >= QUESTION_MARK_SILENCE_MS:
             trigger = "question_mark"
-        elif d.is_complete and d.should_generate and silence >= COMPLETE_SILENCE_MS:
+        elif d.is_complete and answerable and silence >= COMPLETE_SILENCE_MS:
             trigger = "silence"
         elif silence >= MAX_SILENCE_MS and d.confidence >= 0.6:
             trigger = "max_silence"
-        if trigger is None or (not d.should_generate and trigger != "max_silence"):
+        if trigger is None:
             return None
+        if not d.should_generate:
+            # Ambiguous ("Compare REST and gRPC." / "Share price is up."): the interviewer has finished, so ask
+            # the classifier once instead of guessing either way.
+            if d.needs_llm:
+                trigger = "classify"
+            elif trigger != "max_silence":
+                return None
         p.fired_text = full
         p.fired_question = d.question_text
         return FinalizedQuestion(turn_id=p.turn_id, detection=d, trigger=trigger)

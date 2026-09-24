@@ -129,6 +129,15 @@ export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, au
       </div>
 
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-2" tabIndex={0}>
+        {a.grounding === "example" && answer.has_content && (
+          <p
+            className="mb-2 flex animate-fade-in items-start gap-1.5 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-800 dark:text-amber-200"
+            title="Parts of this answer describe experience that isn't in your documents"
+          >
+            <span aria-hidden="true">✎</span>
+            <span>Suggested details — check they match your real experience before you say them.</span>
+          </p>
+        )}
         {thinking && (
           <div className="animate-fade-in space-y-2.5" aria-label="Thinking">
             <p className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">

@@ -84,6 +84,9 @@ class LiveAnswer(BaseModel):
     space_complexity: str | None = None
     follow_up: str | None = None
     context_used: list[str] = Field(default_factory=list)
+    # Where the answer's personal claims come from: "verified" (the user's own documents), "example" (an
+    # illustrative story/details the user must swap for their real experience), "general" (no personal claims).
+    grounding: Literal["verified", "example", "general"] | None = None
 
 
 class Envelope(BaseModel):

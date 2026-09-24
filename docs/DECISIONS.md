@@ -85,3 +85,17 @@ device is reopened with backoff (same device if it returns, else the default), a
 the default *communications* device) re-targets within ~1 s when Windows switches it, and an explicitly chosen device
 that was missing is switched back to as soon as it reappears. Output loopback delivers no packets while nothing
 plays, so silence is synthesized after 100 ms — the transcriber needs to hear the pause to end the utterance.
+
+**D21 — A classifier only for the ambiguous band.** The heuristic detector decides almost every utterance instantly.
+One-word verbs double as nouns ("Design is a big part of our culture"), so they count as a request only when followed
+by what they act on; the rest land in the 0.35–0.6 band. Utterances in that band go to one small JSON call (thinking
+off, 2.5 s timeout, fenced transcript) only once the interviewer has finished (endpoint or long silence), never on
+partials, and never in click-to-answer mode. It also rewrites references ("Expand on that.") into a standalone
+question. If it's unavailable, the band is not auto-answered (the user can still press Answer).
+
+**D22 — Answers declare where their personal claims come from.** The model starts every answer with
+`GROUNDED: verified | example | general` (a few tokens, no extra call). "example" (a story, or details of a real
+project that the documents don't contain) shows a "Suggested details" badge. A fabrication audit (real DeepSeek +
+an LLM judge labelling each claim VERIFIED / INFERRED / GENERAL / UNSUPPORTED) showed invented personal detail can't be
+fully prevented for questions the documents don't cover, but with the label every answer containing it was flagged
+(12/12 across two runs). A personal question with no verified facts and no label defaults to "example".
