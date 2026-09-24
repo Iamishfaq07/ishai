@@ -247,9 +247,14 @@ describe("answer history", () => {
 describe("usage status", () => {
   it("records the low-minutes warning and the limit", () => {
     let s = run([ev("usage.status", { minutes_remaining: 4.6, limit_reached: false })]);
-    expect(s.usage).toEqual({ minutesRemaining: 4.6, limitReached: false });
+    expect(s.usage).toEqual({ minutesRemaining: 4.6, limitReached: false, reason: "monthly" }); // older servers: no reason
     s = run([ev("usage.status", { minutes_remaining: 0, limit_reached: true })], s);
     expect(s.usage?.limitReached).toBe(true);
+  });
+
+  it("keeps which limit it was (this session's maximum length vs the month)", () => {
+    const s = run([ev("usage.status", { minutes_remaining: 3, limit_reached: false, reason: "session" })]);
+    expect(s.usage).toEqual({ minutesRemaining: 3, limitReached: false, reason: "session" });
   });
 });
 

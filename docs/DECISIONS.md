@@ -172,3 +172,11 @@ fail.
 **D34 — Rate limits key on the account as well as the IP.** IPs are cheap to rotate, and accounts are gated by
 email verification, so provider-cost endpoints are limited per user. Login is also limited per target email, which
 throttles password guessing spread over many IPs.
+**D35 — Limits are server configuration, checked by name.** Plans live in one table, with defaults in code and
+overrides in env (`ORBIT_PLANS_JSON`), validated at boot, so prices and limits change without a release. Call
+sites ask `plan.has("vision")`, never "is this the pro plan". The billing page renders `/v1/plans`, so the page
+can't drift from what's enforced.
+
+**D36 — Every session has a hard ceiling, even on Unlimited.** A session left running (a forgotten tab, a laptop
+that never slept) would stream paid audio indefinitely. The ceiling counts time across reconnects, warns 5
+minutes ahead, and ends through the normal end path, so nothing is lost.

@@ -95,7 +95,7 @@ Answers are spoken first-person prose (`direct_answer`, paragraphs separated by 
 | `answer.cancelled` | `{ answer_id, reason: "superseded"\|"cleared"\|"session_ended" }` |
 | `answer.failed` | `{ answer_id, error: { code, message, retryable } }` |
 | `provider.status` | `{ provider: "stt"\|"llm", name, state: "connecting"\|"ok"\|"reconnecting"\|"down"\|"mock", detail? }` — STT starts `connecting` and reports `ok` only once **both** channel sockets are really open (audio is buffered meanwhile); it reports `down` if a handshake is rejected |
-| `usage.status` | `{ minutes_remaining, limit_reached }` — low-minutes warning, or the limit ended the session |
+| `usage.status` | `{ minutes_remaining, limit_reached, reason: "monthly"\|"session" }` — 5-minute warning, or a limit ended the session: this month's allowance (live or mock minutes) or this session's maximum length (see BILLING.md) |
 | `mock.question` | `{ question_id, text, is_follow_up, index, total }` — the AI interviewer asks (clients may speak it aloud) |
 | `mock.completed` | `{ questions }` — the mock interview is over (question budget or duration reached) |
 | `error` | `{ code, message }` |

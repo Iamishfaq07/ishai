@@ -182,10 +182,12 @@ async def replay_failed_writes() -> int:
 
 class DbRecorder:
     def __init__(self, session_id: str, user_id: str, *, store_transcripts: bool,
-                 usage_key: str | None = None) -> None:
+                 usage_key: str | None = None, usage_metric: str = "live_seconds") -> None:
         self.session_id = session_id
         self.user_id = user_id
         self.store_transcripts = store_transcripts
+        # "live_seconds", or "mock_seconds" for mock interviews (their own monthly allowance).
+        self.usage_metric = usage_metric
         # Idempotency key of this connection's live_seconds row (shared with the live-minute heartbeat).
         self.usage_key = usage_key
         self._queue: asyncio.Queue[Any] = asyncio.Queue()
@@ -241,7 +243,7 @@ class DbRecorder:
 
     async def _finish(self, duration_s: int, stt_seconds: float, summary: str,
                       metrics: dict[str, list[int]] | None, *, end: bool) -> None:
-        await self.usage("live_seconds", duration_s, self.usage_key)
+        await self.usage(self.usage_metric, duration_s, self.usage_key)
         if stt_seconds:
             await self.usage("stt_seconds", stt_seconds, f"stt:{self.usage_key}" if self.usage_key else None)
         await self.flush()

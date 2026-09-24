@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     live_heartbeat_s: float = Field(15.0, validation_alias=AliasChoices("ORBIT_LIVE_HEARTBEAT_S"))
     # Extra/override LLM prices for internal cost estimates (see providers/llm/pricing.py).
     llm_pricing_json: str | None = Field(None, validation_alias=AliasChoices("ORBIT_LLM_PRICING_JSON"))
+    # Plan limits/features/prices overrides (see entitlements.py). Validated at startup.
+    plans_json: str | None = Field(None, validation_alias=AliasChoices("ORBIT_PLANS_JSON"))
 
     desktop_updates_dir: str | None = Field(None, validation_alias=AliasChoices("ORBIT_DESKTOP_UPDATES_DIR"))
     # Or serve desktop updates straight from GitHub Releases (for hosts without a persistent disk). The token

@@ -1,5 +1,27 @@
 # Implementation log
 
+## Launch hardening 1b — configurable plans, entitlements, session ceiling (2026-09-25)
+
+- **One plan table in server config** (`entitlements.py`), overridable with `ORBIT_PLANS_JSON` and
+  `*_MAX_SESSION_MINUTES`. Invalid config stops the API at boot.
+- **Plan fields:** live minutes, mock minutes, screenshots, documents, max session length, features, display
+  price, Stripe price id.
+- **Entitlement service** `for_user()` behind `GET /v1/entitlements`, plus a public `GET /v1/plans`. The web
+  Billing page and desktop Settings render from them instead of hard-coded copy.
+- **Mock interviews have their own monthly allowance** (`mock_seconds`); before, they spent live minutes.
+- **Feature flags are enforced** (before, they were defined but never checked):
+  - screenshots need `vision` and mock sessions need `mock`, otherwise `403 feature_unavailable`;
+  - the old defaults contradicted themselves: Free had screenshot credits but no `vision`.
+- **Per-session ceiling (§7), even on Unlimited:**
+  - Free 60 min, Pro 180, Unlimited 240, counted across reconnects;
+  - a 5-minute warning (`usage.status {reason: "session"}`), then a graceful end (transcript, usage and report
+    are all kept);
+  - a capped session can't reopen (`409 session_time_limit`);
+  - the live banner says which limit it hit.
+- New `docs/BILLING.md`.
+- Tests: 14 entitlement tests (config, fail-fast, endpoints, mock allowance, feature gates, ceiling) and 1
+  reducer test. The Billing page was checked in Edge against a local API with price overrides.
+
 ## Launch hardening 1a, part 2 — one live session, truthful STT status, upload hardening (2026-09-25)
 
 - **One live session per account.** A second one is refused at the ticket (`409 live_session_active`, naming the

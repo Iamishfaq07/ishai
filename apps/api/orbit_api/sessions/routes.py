@@ -27,7 +27,7 @@ from orbit_api.auth.guards import require_verified_user
 from orbit_api.auth.security import TICKET_TTL_S, current_user, issue_ticket, redeem_ticket
 from orbit_api.config import get_settings
 from orbit_api.db import get_db, sessionmaker
-from orbit_api.entitlements import live_minutes_remaining, plan_for, usage_this_month
+from orbit_api.entitlements import minutes_metric, minutes_remaining, plan_for, usage_this_month
 from orbit_api.live.engine import LiveEngine, SessionProfile
 from orbit_api.live.events import (
     CLIENT_EVENT_TYPES,
@@ -87,6 +87,8 @@ _live_engines: dict[str, LiveEngine] = {}
 MAX_SCREENSHOT_BYTES = 8 * 1024 * 1024
 _teardowns: set[asyncio.Task[None]] = set()  # strong refs so an in-flight teardown isn't garbage-collected
 LOW_MINUTES_WARNING_S = 5 * 60
+_OUT_OF_MINUTES = {False: "You've used this month's live minutes.", True: "You've used this month's mock minutes."}
+SESSION_TIME_LIMIT = "session_time_limit"
 ReportStatus = Literal["pending", "ready", "failed"] | None
 
 
@@ -180,9 +182,13 @@ async def _session_out(db: AsyncSession, row: LiveSessionRow) -> SessionOut:
              dependencies=[Depends(session_limit), Depends(session_user_limit)])
 async def create_session(body: SessionIn, user: Annotated[User, Depends(require_verified_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> SessionOut:
-    remaining = await live_minutes_remaining(db, user.id)
+    plan = await plan_for(db, user.id)
+    if body.type == "mock" and not plan.has("mock"):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail={
+            "code": "feature_unavailable", "message": "Mock interviews aren't included in your plan."})
+    remaining = await minutes_remaining(db, user.id, body.type)
     if remaining is not None and remaining <= 0:
-        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, "You've used this month's live minutes.")
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, _OUT_OF_MINUTES[body.type == "mock"])
     document_ids = list(body.document_ids)
     if body.workspace_id:
         ws = await owned_workspace(db, body.workspace_id, user)
@@ -329,11 +335,16 @@ async def live_ticket(session_id: str, user: Annotated[User, Depends(require_ver
             "message": f"You already have a live session running ({running.title if running else 'another window'})."
                        " End it first — or end it here and use this one.",
         })
-    # Enforce the monthly live-minute quota here (not just at session create) so reconnects can't stream
-    # unlimited after the cap is hit.
-    remaining = await live_minutes_remaining(db, user.id)
+    # Enforce the monthly quota here (not just at session create) so reconnects can't stream unlimited after
+    # the cap is hit — and the per-session ceiling, so a session that already ran its maximum can't reopen.
+    remaining = await minutes_remaining(db, user.id, row.type)
     if remaining is not None and remaining <= 0:
-        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, "You've used this month's live minutes.")
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, _OUT_OF_MINUTES[row.type == "mock"])
+    plan = await plan_for(db, user.id)
+    if (row.duration_s or 0) >= plan.max_session_minutes * 60:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={
+            "code": SESSION_TIME_LIMIT,
+            "message": f"This session reached the {plan.max_session_minutes}-minute limit. Start a new one."})
     return {"ticket": issue_ticket(user.id, session_id), "expires_in": TICKET_TTL_S}
 
 
@@ -359,6 +370,9 @@ async def upload_screenshot(session_id: str, image: Annotated[UploadFile, File()
     if not get_llm_provider().supports_vision():
         raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, "The configured AI model can't read images.")
     plan = await plan_for(db, user.id)
+    if not plan.has("vision"):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail={
+            "code": "feature_unavailable", "message": "Screenshot answers aren't included in your plan."})
     if plan.screenshots is not None and await usage_this_month(db, user.id, "screenshots") >= plan.screenshots:
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, "You've used this month's screenshots.")
     data = await image.read(MAX_SCREENSHOT_BYTES + 1)
@@ -377,6 +391,7 @@ async def upload_screenshot(session_id: str, image: Annotated[UploadFile, File()
 @router.get("/usage")
 async def usage(user: Annotated[User, Depends(current_user)],
                 db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
+    """Legacy summary (older clients). New clients read GET /v1/entitlements."""
     plan = await plan_for(db, user.id)
     return {
         "plan": plan.name,
@@ -411,50 +426,59 @@ async def drain_teardowns(timeout_s: float = 15) -> None:
         await asyncio.wait(set(_teardowns), timeout=timeout_s)
 
 
-async def _commit_live_seconds(user_id: str, session_id: str, usage_key: str, seconds: int) -> float | None:
-    """Commit this connection's running live time (idempotent upsert) and return the user's remaining
-    live seconds this month across ALL their sessions (None = unlimited)."""
+async def _commit_live_seconds(user_id: str, session_id: str, usage_key: str, seconds: int,
+                               session_type: str = "interview") -> float | None:
+    """Commit this connection's running time (idempotent upsert) and return the user's remaining seconds this
+    month for this kind of session, across ALL their sessions (None = unlimited)."""
     async with sessionmaker()() as db:
-        await upsert_usage(db, UsageEvent(user_id=user_id, session_id=session_id, metric="live_seconds",
-                                          quantity=seconds, idempotency_key=usage_key,
-                                          created_at=datetime.now(UTC)))
+        await upsert_usage(db, UsageEvent(user_id=user_id, session_id=session_id,
+                                          metric=minutes_metric(session_type), quantity=seconds,
+                                          idempotency_key=usage_key, created_at=datetime.now(UTC)))
         await db.commit()
-        remaining = await live_minutes_remaining(db, user_id)
+        remaining = await minutes_remaining(db, user_id, session_type)
     return None if remaining is None else remaining * 60
 
 
 async def _meter_live_minutes(ws: WebSocket, engine: LiveEngine, user_id: str, session_id: str,
-                              usage_key: str, limit_ending: asyncio.Event) -> None:
-    """Server-side live-minute enforcement. Usage is committed every heartbeat (so a crash loses at most one
-    interval), the client is warned when little time is left, and at the limit the session ends gracefully.
-    With several concurrent sessions each sees the others' committed time, so any overshoot is bounded by
-    one heartbeat per session."""
+                              usage_key: str, limit_ending: asyncio.Event, *, session_type: str = "interview",
+                              prior_session_s: int = 0, max_session_s: int | None = None) -> None:
+    """Server-side enforcement of two limits: the monthly allowance (live or mock minutes) and the per-session
+    ceiling (plan.max_session_minutes, including earlier connections of this session). Usage is committed every
+    heartbeat (a crash loses at most one interval), the client is warned 5 minutes before either limit with
+    `usage.status {reason}`, and at a limit the session ends gracefully: transcript and usage are written and the
+    report is queued, exactly like a normal end. One live session per account bounds any overshoot to one
+    heartbeat."""
     heartbeat = get_settings().live_heartbeat_s
-    warned = False
+    warned: set[str] = set()
     while True:
+        now_s = engine.now_ms() // 1000
         try:
-            remaining_s = await _commit_live_seconds(user_id, session_id, usage_key, engine.now_ms() // 1000)
+            month_s = await _commit_live_seconds(user_id, session_id, usage_key, now_s, session_type)
         except Exception:
             # Fail open for this beat (never cut a live interview off on a DB blip), but loudly; the final
             # usage is still written durably by the recorder at teardown.
             log.exception("live-minute heartbeat failed for session %s", session_id)
             await asyncio.sleep(heartbeat)
             continue
-        if remaining_s is None:
+        session_s = None if max_session_s is None else max_session_s - (prior_session_s + now_s)
+        limits = [(r, s) for r, s in (("monthly", month_s), ("session", session_s)) if s is not None]
+        if not limits:
             await asyncio.sleep(heartbeat)
             continue
+        reason, remaining_s = min(limits, key=lambda x: x[1])
         if remaining_s <= 0:
-            log.info("session %s: live-minute limit reached; ending", session_id)
+            log.info("session %s: %s limit reached; ending", session_id, reason)
             limit_ending.set()
-            await engine.send("usage.status", {"minutes_remaining": 0, "limit_reached": True})
+            await engine.send("usage.status", {"minutes_remaining": 0, "limit_reached": True, "reason": reason})
             await engine.end(final=True)
             with contextlib.suppress(Exception):
-                await ws.close(code=4003, reason="live minutes exhausted")
+                await ws.close(code=4003, reason="session time limit reached" if reason == "session"
+                               else "live minutes exhausted")
             return
-        if remaining_s <= LOW_MINUTES_WARNING_S and not warned:
-            warned = True
+        if remaining_s <= LOW_MINUTES_WARNING_S and reason not in warned:
+            warned.add(reason)
             await engine.send("usage.status", {"minutes_remaining": round(remaining_s / 60, 1),
-                                               "limit_reached": False})
+                                               "limit_reached": False, "reason": reason})
         # Wake exactly at the limit when it falls before the next beat.
         await asyncio.sleep(max(1.0, min(heartbeat, remaining_s)))
 
@@ -478,9 +502,12 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
         if row.status == "ended":
             await ws.close(code=4009, reason="session has ended")
             return
-        remaining = await live_minutes_remaining(db, user_id)
-        if remaining is not None and remaining <= 0:
-            await ws.close(code=4003, reason="live minutes exhausted")
+        remaining = await minutes_remaining(db, user_id, row.type)
+        plan = await plan_for(db, user_id)
+        prior_session_s = row.duration_s or 0
+        if (remaining is not None and remaining <= 0) or prior_session_s >= plan.max_session_minutes * 60:
+            await ws.close(code=4003, reason="live minutes exhausted" if remaining is not None and remaining <= 0
+                           else "session time limit reached")
             return
         index, keyterms = await _load_index(db, session_id)
         row.status = "live"
@@ -519,13 +546,16 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
 
     # One live_seconds row per connection, keyed so heartbeats and the final write all set the same row.
     usage_key = f"live:{uuid.uuid4()}"
-    recorder = DbRecorder(session_id, user_id, store_transcripts=store_transcripts, usage_key=usage_key)
+    recorder = DbRecorder(session_id, user_id, store_transcripts=store_transcripts, usage_key=usage_key,
+                          usage_metric=minutes_metric(profile.session_type))
     engine = LiveEngine(profile, settings, send=send, llm=get_llm_provider(), stt=create_stt_provider(),
                         index=index, recorder=recorder)
     _live_engines[session_id] = engine
     explicit_end = False
     limit_ending = asyncio.Event()
-    meter = asyncio.create_task(_meter_live_minutes(ws, engine, user_id, session_id, usage_key, limit_ending))
+    meter = asyncio.create_task(_meter_live_minutes(
+        ws, engine, user_id, session_id, usage_key, limit_ending, session_type=profile.session_type,
+        prior_session_s=prior_session_s, max_session_s=plan.max_session_minutes * 60))
     try:
         await engine.start()
         while True:

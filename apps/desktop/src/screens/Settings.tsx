@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import type { AdminConfig, AdminConfigUpdate, Usage, User } from "@orbit/types";
+import type { AdminConfig, AdminConfigUpdate, Entitlements, User } from "@orbit/types";
 import {
   ArrowLeft,
   AppearanceControls,
@@ -153,13 +153,13 @@ function PrivacyCard({ user, onUser, onSignOut }: { user: User; onUser: (u: User
 }
 
 function UsageCard() {
-  const [usage, setUsage] = useState<Usage | null>(null);
+  const [usage, setUsage] = useState<Entitlements | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = () => {
     setError(null);
     api
-      .usage()
+      .entitlements()
       .then(setUsage)
       .catch((e) => setError(errText(e)));
   };
@@ -180,10 +180,12 @@ function UsageCard() {
       ) : (
         <div className="space-y-1 text-sm text-zinc-600 dark:text-zinc-300">
           <p>
-            Plan: <span className="font-medium capitalize text-zinc-900 dark:text-white">{usage.plan}</span>
+            Plan: <span className="font-medium text-zinc-900 dark:text-white">{usage.label}</span>
           </p>
-          <p>{line(usage.live_minutes_used, usage.live_minutes_limit, "live minutes")}</p>
-          <p>{line(usage.screenshots_used, usage.screenshots_limit, "screenshots")}</p>
+          <p>{line(Math.round(usage.usage.live_minutes), usage.limits.live_minutes, "live minutes")}</p>
+          <p>{line(Math.round(usage.usage.mock_minutes), usage.limits.mock_minutes, "mock interview minutes")}</p>
+          <p>{line(usage.usage.screenshots, usage.limits.screenshots, "screenshots")}</p>
+          <p className="text-xs text-zinc-500">Sessions can run up to {usage.limits.max_session_minutes} minutes.</p>
         </div>
       )}
     </Card>

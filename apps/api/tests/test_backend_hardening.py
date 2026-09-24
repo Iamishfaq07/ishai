@@ -100,10 +100,10 @@ def test_live_ticket_and_ws_enforce_quota(client: TestClient, monkeypatch: pytes
     sid = client.post("/v1/sessions", headers=h, json={"title": "quota"}).json()["id"]
     ticket = client.post(f"/v1/sessions/{sid}/live-ticket", headers=h).json()["ticket"]  # ok while under cap
 
-    async def _exhausted(_db: object, _uid: str) -> float:
+    async def _exhausted(_db: object, _uid: str, _type: str = "interview") -> float:
         return 0.0
 
-    monkeypatch.setattr(routes, "live_minutes_remaining", _exhausted)
+    monkeypatch.setattr(routes, "minutes_remaining", _exhausted)
     # H2: over quota → ticket issuance blocked (was only checked at session create).
     assert client.post(f"/v1/sessions/{sid}/live-ticket", headers=h).status_code == 402
     # ...and the WS accept re-checks too (a pre-issued ticket can't stream after the cap).
