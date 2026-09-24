@@ -118,7 +118,7 @@ class LiveSessionRow(TimestampMixin, Base):
     language: Mapped[str] = mapped_column(String(16), default="en")
     answer_language: Mapped[str | None] = mapped_column(String(16))
     length: Mapped[str] = mapped_column(String(16), default="standard")
-    style: Mapped[str] = mapped_column(String(16), default="bullets")
+    style: Mapped[str] = mapped_column(String(16), default="natural")
     auto_answer: Mapped[bool] = mapped_column(Boolean, default=True)
     status: Mapped[str] = mapped_column(String(16), default="created")  # created|live|ended
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

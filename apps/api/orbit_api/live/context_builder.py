@@ -17,16 +17,30 @@ RECENT_TURNS = 6
 MAX_TURN_CHARS = 500
 MAX_CONTEXT_CHARS = 5000  # ≈1.2k tokens of retrieved context
 
+# Word targets, not item counts: ~150 spoken words per minute.
 _LENGTH_RULES: dict[AnswerLength, str] = {
-    "short": "Length: 20–30 seconds spoken. ANSWER line plus AT MOST 3 talking points. No EXAMPLE line.",
-    "standard": "Length: 45–75 seconds spoken. ANSWER line plus at most 5 talking points.",
-    "detailed": "Length: 90–150 seconds spoken. ANSWER line plus 6–8 talking points and an EXAMPLE.",
+    "short": "Length: SHORT — about 60–80 words (20–30 seconds out loud), one paragraph. Multi-part question: "
+             "one tight sentence per part.",
+    "standard": "Length: STANDARD — about 130–180 words (45–75 seconds out loud), two or three short paragraphs.",
+    "detailed": "Length: DETAILED — about 250–350 words (90–150 seconds out loud), three to five short "
+                "paragraphs with a concrete example.",
 }
+_NATURAL = ("Style: NATURAL — sound like a thoughtful person talking: first person, contractions, flowing "
+            "sentences, light signposting (\"First…\", \"Then…\", \"The thing I'd watch most is…\").")
+_CONCISE = ("Style: CONCISE — confident and to the point: the direct answer in the first sentence, then only the "
+            "essentials, in short crisp sentences. No warm-up, no filler.")
+_STORY = ("Style: STORY — make it concrete: walk through one example start to finish. For experience questions "
+          "tell it as a story (the situation, what you did, how it turned out) in plain speech, never labelled "
+          "as Situation/Task/Action/Result — and with no invented specifics beyond the verified facts.")
 _STYLE_RULES: dict[AnswerStyle, str] = {
-    "bullets": "Style: crisp bullets.",
-    "star": "Style: STAR — talking points labelled Situation, Task, Action, Result.",
-    "technical": "Style: technical depth — precise terms, trade-offs, one concrete mechanism.",
-    "executive": "Style: executive — outcome and business impact first, minimal jargon.",
+    "natural": _NATURAL,
+    "concise": _CONCISE,
+    "story": _STORY,
+    # legacy values on older sessions
+    "bullets": _NATURAL,
+    "technical": _NATURAL,
+    "star": _STORY,
+    "executive": _CONCISE,
 }
 _SESSION_RULES: dict[SessionType, str] = {
     "interview": "Context: job interview. The user is the candidate.",
@@ -157,7 +171,7 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
         [
             _SESSION_RULES[inputs.session_type],
             f"Target role: {inputs.role}" if inputs.role else "",
-            _LENGTH_RULES[inputs.length] + " Pick the strongest points; more context does not mean more bullets.",
+            _LENGTH_RULES[inputs.length],
             _STYLE_RULES[inputs.style] if inputs.qtype != QuestionType.coding else "",
             f"Answer language: {(inputs.answer_language or '').strip() or 'English'}",
             _GROUNDING_RULE if inputs.qtype in _PERSONAL_TYPES or inputs.is_follow_up else "",

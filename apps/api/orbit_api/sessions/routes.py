@@ -64,7 +64,7 @@ class SessionIn(BaseModel):
     language: str = Field("en", max_length=16)
     answer_language: str | None = Field(None, max_length=16)
     length: AnswerLength = "standard"
-    style: AnswerStyle = "bullets"
+    style: AnswerStyle = "natural"
     auto_answer: bool = True
     document_ids: list[str] = Field(default_factory=list, max_length=20)
 

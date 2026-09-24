@@ -9,6 +9,7 @@ import {
   focusRing,
   loadHotkeys,
   loadResponseTiming,
+  loadThinking,
   useLiveSession,
   VISION_ENABLED,
   type PanelMode,
@@ -78,6 +79,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       length: session.length,
       style: session.style,
       response_timing: loadResponseTiming(),
+      thinking: loadThinking(),
     },
   });
 

@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { AnswerLength, AnswerStyle, DocumentKind, ResponseTiming, SessionType } from "@orbit/types";
-import { RESPONSE_TIMINGS, loadResponseTiming, saveResponseTiming } from "@orbit/ui";
+import type { AnswerLength, AnswerStyle, DocumentKind, ResponseTiming, SessionType, ThinkingLevel } from "@orbit/types";
+import {
+  ANSWER_STYLES,
+  RESPONSE_TIMINGS,
+  THINKING_LEVELS,
+  loadResponseTiming,
+  loadThinking,
+  saveResponseTiming,
+  saveThinking,
+} from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, Meter, PageHeader, Select, Spinner, Toggle } from "../components/ui";
 import { api } from "../lib/api";
 import {
@@ -31,14 +39,11 @@ export const LANGUAGES: Array<{ code: string; label: string }> = [
   { code: "ko", label: "Korean" },
 ];
 
-/** "Answer style" presets from the setup screen, mapped onto protocol length + style. */
-const STYLE_PRESETS: Record<string, { label: string; length: AnswerLength; style: AnswerStyle }> = {
-  concise: { label: "Concise bullets", length: "short", style: "bullets" },
-  standard: { label: "Standard bullets", length: "standard", style: "bullets" },
-  star: { label: "STAR stories", length: "standard", style: "star" },
-  technical: { label: "Technical depth", length: "detailed", style: "technical" },
-  executive: { label: "Executive summary", length: "short", style: "executive" },
-};
+const LENGTHS: Array<{ value: AnswerLength; label: string }> = [
+  { value: "short", label: "Short (~30 s spoken)" },
+  { value: "standard", label: "Standard (~1 min)" },
+  { value: "detailed", label: "Detailed (~2 min)" },
+];
 
 const SELECTABLE_TYPES: SessionType[] = ["interview", "meeting", "coding", "assessment", "phone"];
 const KIND_ORDER: Record<DocumentKind, number> = { resume: 0, job_description: 1, notes: 2, other: 3 };
@@ -59,7 +64,9 @@ export function SessionSetupPage() {
   const [role, setRole] = useState("");
   const [language, setLanguage] = useState("en");
   const [answerLanguage, setAnswerLanguage] = useState("en");
-  const [preset, setPreset] = useState("concise");
+  const [length, setLength] = useState<AnswerLength>("standard");
+  const [style, setStyle] = useState<AnswerStyle>("natural");
+  const [thinking, setThinking] = useState<ThinkingLevel>(loadThinking);
   const [autoAnswer, setAutoAnswer] = useState(true);
   const [responseTiming, setResponseTiming] = useState<ResponseTiming>(loadResponseTiming);
   const [systemAudio, setSystemAudio] = useState(type !== "phone");
@@ -106,7 +113,6 @@ export function SessionSetupPage() {
     e.preventDefault();
     setStarting(true);
     setError(null);
-    const p = STYLE_PRESETS[preset] ?? STYLE_PRESETS.concise!;
     try {
       const session = await api.createSession({
         title: title.trim() || `${SESSION_TYPE_LABEL[type]}${role.trim() ? ` — ${role.trim()}` : ""}`,
@@ -114,8 +120,8 @@ export function SessionSetupPage() {
         ...(role.trim() ? { role: role.trim() } : {}),
         language,
         ...(answerLanguage !== language ? { answer_language: answerLanguage } : {}),
-        length: p.length,
-        style: p.style,
+        length,
+        style,
         auto_answer: autoAnswer,
         document_ids: [...(selectedDocs ?? [])],
       });
@@ -151,11 +157,37 @@ export function SessionSetupPage() {
               <Field label="Role / goal" htmlFor="role">
                 <Input id="role" value={role} onChange={(e) => setRole(e.target.value)} placeholder="Senior Security Engineer" />
               </Field>
-              <Field label="Answer style" htmlFor="preset">
-                <Select id="preset" value={preset} onChange={(e) => setPreset(e.target.value)}>
-                  {Object.entries(STYLE_PRESETS).map(([key, v]) => (
-                    <option key={key} value={key}>
-                      {v.label}
+              <Field label="Answer style" htmlFor="style">
+                <Select id="style" value={style} onChange={(e) => setStyle(e.target.value as AnswerStyle)}>
+                  {ANSWER_STYLES.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label} — {s.hint}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Answer length" htmlFor="length">
+                <Select id="length" value={length} onChange={(e) => setLength(e.target.value as AnswerLength)}>
+                  {LENGTHS.map((l) => (
+                    <option key={l.value} value={l.value}>
+                      {l.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Thinking" htmlFor="thinking">
+                <Select
+                  id="thinking"
+                  value={thinking}
+                  onChange={(e) => {
+                    const t = e.target.value as ThinkingLevel;
+                    setThinking(t);
+                    saveThinking(t);
+                  }}
+                >
+                  {THINKING_LEVELS.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label} — {t.hint}
                     </option>
                   ))}
                 </Select>

@@ -5,6 +5,10 @@ from typing import Literal
 
 from orbit_api.live.routing import ReasoningLevel
 
+# Model "thinking" (chain-of-thought) effort. "off" answers immediately; the rest trade seconds of silence
+# before the first word for more reasoning (measured on V4.1-Flash: off ~0.65 s, low ~3.5 s, max ~5-6 s).
+ThinkingLevel = Literal["off", "low", "high", "max"]
+
 
 @dataclass(frozen=True)
 class LLMMessage:
@@ -22,6 +26,7 @@ class LLMImage:
 class LLMRequest:
     messages: list[LLMMessage]
     reasoning: ReasoningLevel = "light"
+    thinking: ThinkingLevel = "off"
     max_tokens: int = 600
     temperature: float = 0.3
     json_mode: bool = False

@@ -39,7 +39,10 @@ export const LIVE_STATES = [
 export type LiveState = (typeof LIVE_STATES)[number];
 
 export type AnswerLength = "short" | "standard" | "detailed";
-export type AnswerStyle = "bullets" | "star" | "technical" | "executive";
+/** Offered styles are natural / concise / story (all spoken prose); the rest are legacy values on older sessions. */
+export type AnswerStyle = "natural" | "concise" | "story" | "bullets" | "star" | "technical" | "executive";
+/** Model thinking effort: off answers immediately; low/high/max add seconds of reasoning before the first word. */
+export type ThinkingLevel = "off" | "low" | "high" | "max";
 /** How long to wait after the interviewer stops before auto-answering (quick ≈ 0, balanced ≈ 0.8 s, patient ≈ 1.6 s). */
 export type ResponseTiming = "quick" | "balanced" | "patient";
 
@@ -49,6 +52,7 @@ export interface LiveSettings {
   style: AnswerStyle;
   answer_language?: string;
   response_timing?: ResponseTiming;
+  thinking?: ThinkingLevel;
 }
 
 /**
@@ -196,8 +200,9 @@ export const DEV_FIXTURES = ["behavioral_interview", "technical_interview", "cod
 export const DEFAULT_LIVE_SETTINGS: LiveSettings = {
   auto_answer: true,
   length: "standard",
-  style: "bullets",
+  style: "natural",
   response_timing: "balanced",
+  thinking: "off",
 };
 
 export function emptyLiveAnswer(question = ""): LiveAnswer {

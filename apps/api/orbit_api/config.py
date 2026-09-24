@@ -37,9 +37,11 @@ class Settings(BaseSettings):
     deepseek_base_url: str = Field(
         "https://api.deepseek.com", validation_alias=AliasChoices("DEEPSEEK_BASE_URL")
     )
-    deepseek_model: str = Field("deepseek-chat", validation_alias=AliasChoices("DEEPSEEK_MODEL"))
+    # DeepSeek-V4.1-Flash. "deepseek-chat"/"deepseek-reasoner" are now aliases of it; thinking is chosen per
+    # request (LLMRequest.thinking), not by switching models.
+    deepseek_model: str = Field("deepseek-flash", validation_alias=AliasChoices("DEEPSEEK_MODEL"))
     deepseek_reasoning_model: str = Field(
-        "deepseek-reasoner", validation_alias=AliasChoices("DEEPSEEK_REASONING_MODEL")
+        "deepseek-flash", validation_alias=AliasChoices("DEEPSEEK_REASONING_MODEL")
     )
 
     desktop_updates_dir: str | None = Field(None, validation_alias=AliasChoices("ORBIT_DESKTOP_UPDATES_DIR"))

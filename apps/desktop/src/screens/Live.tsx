@@ -8,6 +8,7 @@ import {
   focusRing,
   loadHotkeys,
   loadResponseTiming,
+  loadThinking,
   useLiveSession,
   type PanelMode,
   VISION_ENABLED,
@@ -71,6 +72,7 @@ export function LiveScreen({
       length: session.length,
       style: session.style,
       response_timing: loadResponseTiming(),
+      thinking: loadThinking(),
     },
   });
 

@@ -7,10 +7,21 @@ import type {
   OrbitSession,
   ResponseTiming,
   SessionType,
+  ThinkingLevel,
   User,
 } from "@orbit/types";
 import { AUDIO_CHANNEL } from "@orbit/types";
-import { RESPONSE_TIMINGS, cx, focusRing, loadResponseTiming, saveResponseTiming } from "@orbit/ui";
+import {
+  ANSWER_STYLES,
+  RESPONSE_TIMINGS,
+  THINKING_LEVELS,
+  cx,
+  focusRing,
+  loadResponseTiming,
+  loadThinking,
+  saveResponseTiming,
+  saveThinking,
+} from "@orbit/ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { WEB_URL, api } from "../api";
 import { listAudioApps, listAudioDevices, startCapture, stopCapture, type AudioApp, type NativeAudioDevice } from "../native";
@@ -24,13 +35,6 @@ const TYPES: Array<{ value: SessionType; label: string }> = [
   { value: "meeting", label: "Professional meeting" },
   { value: "assessment", label: "Online assessment practice" },
   { value: "phone", label: "Phone / room audio" },
-];
-
-const STYLES: Array<{ value: AnswerStyle; label: string }> = [
-  { value: "bullets", label: "Bullets" },
-  { value: "star", label: "STAR (behavioral)" },
-  { value: "technical", label: "Technical depth" },
-  { value: "executive", label: "Executive" },
 ];
 
 const LANGUAGES: Array<{ value: string; label: string }> = [
@@ -89,7 +93,8 @@ export function SetupScreen({
   const [type, setType] = useState<SessionType>(initialType ?? "interview");
   const [role, setRole] = useState("");
   const [length, setLength] = useState<AnswerLength>("short");
-  const [style, setStyle] = useState<AnswerStyle>("bullets");
+  const [style, setStyle] = useState<AnswerStyle>("natural");
+  const [thinking, setThinking] = useState<ThinkingLevel>(loadThinking);
   const [language, setLanguage] = useState("en");
   const [autoAnswer, setAutoAnswer] = useState(true);
   const [responseTiming, setResponseTiming] = useState<ResponseTiming>(loadResponseTiming);
@@ -403,6 +408,25 @@ export function SetupScreen({
             </label>
           </div>
 
+          <label className="block space-y-1">
+            <span className="text-xs font-medium">Thinking</span>
+            <select
+              value={thinking}
+              onChange={(e) => {
+                const t = e.target.value as ThinkingLevel;
+                setThinking(t);
+                saveThinking(t);
+              }}
+              className={cx(control, focusRing)}
+            >
+              {THINKING_LEVELS.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label} — {t.hint}
+                </option>
+              ))}
+            </select>
+          </label>
+
           {autoAnswer && (
             <label className="block space-y-1">
               <span className="text-xs font-medium">Wait before answering</span>
@@ -428,9 +452,9 @@ export function SetupScreen({
             <label className="block space-y-1">
               <span className="text-xs font-medium">Answer style</span>
               <select value={style} onChange={(e) => setStyle(e.target.value as AnswerStyle)} className={cx(control, focusRing)}>
-                {STYLES.map((s) => (
+                {ANSWER_STYLES.map((s) => (
                   <option key={s.value} value={s.value}>
-                    {s.label}
+                    {s.label} — {s.hint}
                   </option>
                 ))}
               </select>

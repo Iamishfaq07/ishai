@@ -9,7 +9,8 @@ import httpx
 from orbit_api.live.routing import ReasoningLevel
 from orbit_api.providers.llm.base import LLMChunk, LLMError, LLMProvider, LLMRequest, Usage
 
-# Extra max_tokens for the reasoner's chain-of-thought (a system-design question used ~2.5k).
+# Extra max_tokens for chain-of-thought, which counts against max_tokens (max effort used ~1.6k tokens on a
+# multi-part design question; the old reasoner ~2.5k).
 REASONING_HEADROOM = 4000
 
 
@@ -47,16 +48,22 @@ class DeepSeekProvider(LLMProvider):
             # provider by the caller. Refuse rather than silently dropping the image.
             raise LLMError("vision_unsupported", "DeepSeek provider does not accept images")
         model = self.model_for(request.reasoning)
+        thinking = request.thinking if request.thinking != "off" else ("high" if request.reasoning == "deep" else None)
         payload: dict[str, Any] = {
             "model": model,
             "messages": [{"role": m.role, "content": m.content} for m in request.messages],
-            # The reasoner's chain-of-thought counts against max_tokens: with an answer-sized budget it
-            # thinks until the cap and returns no content at all (finish_reason=length).
-            "max_tokens": request.max_tokens + (REASONING_HEADROOM if model == self._reasoning_model else 0),
+            # Chain-of-thought counts against max_tokens: with an answer-sized budget the model thinks until
+            # the cap and returns no content at all (finish_reason=length).
+            "max_tokens": request.max_tokens + (REASONING_HEADROOM if thinking else 0),
             "stream": True,
             "stream_options": {"include_usage": True},
         }
-        if model != self._reasoning_model:  # reasoner ignores sampling params
+        if thinking:
+            payload["reasoning_effort"] = thinking  # sampling params are ignored while thinking
+        else:
+            # V4 models think by DEFAULT — always switch it off explicitly, or every summary/report/answer
+            # silently waits ~5 s on hidden reasoning.
+            payload["thinking"] = {"type": "disabled"}
             payload["temperature"] = request.temperature
         if request.json_mode:
             payload["response_format"] = {"type": "json_object"}

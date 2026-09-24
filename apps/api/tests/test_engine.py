@@ -223,3 +223,13 @@ async def test_response_timing_waits_before_answering_and_is_live_adjustable() -
     await eng.handle_client({"type": "settings.update", "data": {"response_timing": "patient"}})
     assert eng._finalizer.grace_ms == 1600 and eng.settings.response_timing == "patient"
     await eng.handle_client({"type": "session.end", "data": {}})
+
+
+async def test_live_thinking_setting_reaches_the_model() -> None:
+    llm = RecordingLLM()
+    eng, sink = await _engine(llm, thinking="max")
+    await _ask(eng, "What is dependency injection?")
+    await sink.wait_for("answer.completed")
+    answers = [r for r in llm.requests if r.request_type == "answer"]
+    assert answers and all(r.thinking == "max" for r in answers)
+    await eng.handle_client({"type": "session.end", "data": {}})

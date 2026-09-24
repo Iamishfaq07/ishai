@@ -61,7 +61,7 @@ function MockSetup() {
         ...(role.trim() ? { role: role.trim() } : {}),
         language,
         length: "standard",
-        style: "bullets",
+        style: "natural",
         auto_answer: false,
         document_ids: contextDocs,
         mock: { interview_type: interviewType, difficulty, duration_minutes: duration },

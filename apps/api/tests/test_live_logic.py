@@ -205,7 +205,7 @@ def _index() -> SessionIndex:
 def _inputs(q: str, **kw: object) -> PromptInputs:
     base: dict[str, object] = dict(question=q, qtype=QuestionType.technical, is_follow_up=False,
                                    session_type="interview", role="Senior AppSec Engineer", length="standard",
-                                   style="bullets", answer_language="en")
+                                   style="natural", answer_language="en")
     base.update(kw)
     return PromptInputs(**base)  # type: ignore[arg-type]
 
@@ -247,7 +247,7 @@ def test_no_context_still_answers_fully_without_inventing_experience() -> None:
     assert "Answer it fully" in user
     assert "didn't provide" in user  # the only guardrail: no fabricated personal history
     # The system prompt makes "always answer" the top priority.
-    assert "ALWAYS answer the question" in built.messages[0].content
+    assert "ALWAYS give a complete, expert answer" in built.messages[0].content
 
 
 def test_token_bucket_limits_bursts() -> None:
@@ -313,7 +313,8 @@ def test_personal_questions_get_grounding_rule_but_still_demand_a_full_answer() 
     assert "never let a bracketed cue or caveat replace a real answer" in behavioral.messages[1].content
     assert "complete, ready-to-say answer" in behavioral.messages[1].content
     # The system prompt bans spoken grounding disclaimers but explicitly allows factual hedging.
-    assert "meta-commentary about grounding is banned" in behavioral.messages[0].content
+    assert "Never narrate your grounding" in behavioral.messages[0].content
+    assert "hedging a genuinely uncertain fact" in behavioral.messages[0].content
 
 
 def test_salary_and_culture_questions_carry_the_grounding_rule() -> None:
@@ -323,7 +324,7 @@ def test_salary_and_culture_questions_carry_the_grounding_rule() -> None:
         assert "negotiation-safe framing" in built.messages[1].content, qt
     # And the system prompt has explicit salary guidance.
     sysmsg = build_prompt(SessionIndex([]), _inputs("x", qtype=QuestionType.salary), SessionMemory()).messages[0]
-    assert "never state a specific number as the user's own" in sysmsg.content
+    assert "never state a number as the user's own" in sysmsg.content
 
 
 def test_system_design_classification_and_deep_routing() -> None:
@@ -461,3 +462,36 @@ def test_a_new_question_after_the_window_is_not_stitched() -> None:
     f.on_transcript("t2", "How would you test it?", 3000, is_final=True, endpoint=True)
     fired = f.tick(3800)
     assert fired and fired.detection.question_text == "How would you test it?"
+
+
+def test_answers_are_spoken_prose_that_cover_every_part_of_the_question() -> None:
+    built = build_prompt(SessionIndex([]), _inputs("Walk me through an image classification pipeline"),
+                         SessionMemory())
+    system, user = built.messages[0].content, built.messages[1].content
+    assert "COVER THE WHOLE QUESTION" in system and "in the order they asked" in system
+    assert "Don't add sections they didn't ask for" in system
+    assert "No bullet points" in system and "- <talking point" not in system
+    # background only where it belongs — no persona lines on general technical questions
+    assert "do NOT tack on a line about the user's background" in system
+    assert "Style: NATURAL" in user and "130–180 words" in user
+
+
+def test_length_and_style_change_the_instructions() -> None:
+    def user_msg(**kw: object) -> str:
+        return build_prompt(SessionIndex([]), _inputs("What is dependency injection?", **kw),
+                            SessionMemory()).messages[1].content
+
+    assert "60–80 words" in user_msg(length="short") and "250–350 words" in user_msg(length="detailed")
+    assert "Style: CONCISE" in user_msg(style="concise") and "Style: STORY" in user_msg(style="story")
+    # sessions created before the new styles still get a spoken style, never bullets
+    assert "Style: NATURAL" in user_msg(style="bullets") and "Style: STORY" in user_msg(style="star")
+
+
+def test_parser_keeps_spoken_paragraphs_while_streaming() -> None:
+    p = AnswerStreamParser("Q?", QuestionType.technical, [])
+    mid = p.feed("ANSWER:\nI'd start with the data")
+    assert mid.direct_answer == "I'd start with the data"
+    done = p.feed(" and split it early.\n\nThen preprocessing:\nresize and normalize.\n\nFOLLOWUP: Which metric?")
+    assert done.direct_answer == ("I'd start with the data and split it early.\n\n"
+                                  "Then preprocessing: resize and normalize.")
+    assert done.talking_points == [] and done.follow_up == "Which metric?"
