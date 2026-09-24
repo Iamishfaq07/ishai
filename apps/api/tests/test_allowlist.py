@@ -51,3 +51,32 @@ def test_register_login_and_existing_sessions_are_gated(monkeypatch: pytest.Monk
             assert c.post("/v1/auth/login", json={"email": friend, "password": "wrong password"}).status_code == 401
     finally:
         get_settings.cache_clear()
+
+
+def test_legacy_password_hash_upgraded_on_login(client: TestClient) -> None:
+    import asyncio
+
+    from argon2 import PasswordHasher
+    from sqlalchemy import select
+
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import User
+
+    email = f"legacy-{uuid.uuid4().hex[:6]}@example.com"
+    assert client.post("/v1/auth/register", json={"email": email, "password": "legacy password"}).status_code == 201
+    legacy = PasswordHasher().hash("legacy password")  # library defaults, as before the tuning
+
+    async def set_and_get(value: str | None) -> str:
+        async with sessionmaker()() as db:
+            user = await db.scalar(select(User).where(User.email == email))
+            assert user is not None
+            if value:
+                user.password_hash = value
+                await db.commit()
+            return user.password_hash
+
+    asyncio.run(set_and_get(legacy))
+    client.cookies.clear()
+    assert client.post("/v1/auth/login", json={"email": email, "password": "legacy password"}).status_code == 200
+    upgraded = asyncio.run(set_and_get(None))
+    assert upgraded != legacy and "m=19456,t=2,p=1" in upgraded

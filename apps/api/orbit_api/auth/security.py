@@ -1,3 +1,4 @@
+import asyncio
 import secrets
 import time
 import uuid
@@ -16,20 +17,32 @@ from orbit_api.models import User
 
 COOKIE_NAME = "orbit_session"
 NOT_ALLOWED = "This Orbit server is private. Ask the owner to add your email."
-_hasher = PasswordHasher()
+# OWASP's argon2id baseline (19 MiB, t=2, p=1): ~5x less CPU than the library default, which took ~2 s
+# per sign-in on a 0.1-CPU host. Older hashes carry their own parameters, verify fine, and are upgraded
+# on the next sign-in (needs_rehash).
+_hasher = PasswordHasher(time_cost=2, memory_cost=19 * 1024, parallelism=1)
 # Verified against when the email doesn't exist so login timing doesn't reveal account existence.
 _DUMMY_HASH = _hasher.hash(secrets.token_hex(16))
 
 
-def hash_password(password: str) -> str:
-    return _hasher.hash(password)
+# Hashing is deliberately CPU-heavy: run it off the event loop so a sign-in never stalls live sessions.
+async def hash_password(password: str) -> str:
+    return await asyncio.to_thread(_hasher.hash, password)
 
 
-def verify_password(password: str, hashed: str | None) -> bool:
+def _verify(password: str, hashed: str | None) -> bool:
     try:
         return _hasher.verify(hashed or _DUMMY_HASH, password) and hashed is not None
     except (VerificationError, InvalidHashError):
         return False
+
+
+async def verify_password(password: str, hashed: str | None) -> bool:
+    return await asyncio.to_thread(_verify, password, hashed)
+
+
+def needs_rehash(hashed: str) -> bool:
+    return _hasher.check_needs_rehash(hashed)
 
 
 def create_access_token(user_id: str, token_version: int = 0) -> str:

@@ -194,9 +194,10 @@ class LiveEngine:
 
     async def start(self) -> None:
         cfg = STTConfig(language=self.profile.language, keyterms=self.profile.keyterms)
-        for ch in ("mic", "system"):
-            channel: Channel = ch
-            session = await self._stt.start(cfg)
+        channels: tuple[Channel, Channel] = ("mic", "system")
+        # Both provider sockets handshake concurrently: sequential connects doubled time-to-ready.
+        sessions = await asyncio.gather(*(self._stt.start(cfg) for _ in channels))
+        for channel, session in zip(channels, sessions, strict=True):
             self._stt_sessions[channel] = session
             self._spawn(self._pump_stt(channel, session))
         self._spawn(self._ticker())
@@ -513,12 +514,15 @@ class LiveEngine:
             instruction=instruction,
         )
         built = build_prompt(self._index, inputs, self.memory)
+        # Live answers always run on the fast model. The reasoning model's hidden chain-of-thought put its
+        # first visible token ~3.7 s out (measured, vs ~0.7 s) — too late mid-conversation. `reasoning` is
+        # still reported so the UI can flag in-depth questions.
         request = LLMRequest(
-            messages=built.messages, reasoning=reasoning,
+            messages=built.messages, reasoning="light",
             max_tokens=CODE_MAX_TOKENS if is_code else MAX_TOKENS[self.settings.length],
             request_type="chat" if source == "chat" else "answer",
         )
-        model = self._llm.model_for(reasoning)
+        model = self._llm.model_for(request.reasoning)
         await self.send("answer.started", {"answer_id": aid, "question_id": qid, "length": self.settings.length,
                                            "reasoning": reasoning, "source": source})
         await self._set_state(LiveState.generating)

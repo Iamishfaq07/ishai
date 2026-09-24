@@ -9,6 +9,9 @@ import httpx
 from orbit_api.live.routing import ReasoningLevel
 from orbit_api.providers.llm.base import LLMChunk, LLMError, LLMProvider, LLMRequest, Usage
 
+# Extra max_tokens for the reasoner's chain-of-thought (a system-design question used ~2.5k).
+REASONING_HEADROOM = 4000
+
 
 class DeepSeekProvider(LLMProvider):
     name = "deepseek"
@@ -47,7 +50,9 @@ class DeepSeekProvider(LLMProvider):
         payload: dict[str, Any] = {
             "model": model,
             "messages": [{"role": m.role, "content": m.content} for m in request.messages],
-            "max_tokens": request.max_tokens,
+            # The reasoner's chain-of-thought counts against max_tokens: with an answer-sized budget it
+            # thinks until the cap and returns no content at all (finish_reason=length).
+            "max_tokens": request.max_tokens + (REASONING_HEADROOM if model == self._reasoning_model else 0),
             "stream": True,
             "stream_options": {"include_usage": True},
         }

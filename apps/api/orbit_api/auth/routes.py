@@ -12,6 +12,7 @@ from orbit_api.auth.security import (
     create_access_token,
     current_user,
     hash_password,
+    needs_rehash,
     verify_password,
 )
 from orbit_api.config import get_settings
@@ -89,7 +90,7 @@ async def register(body: RegisterIn, request: Request, response: Response,
         raise HTTPException(status.HTTP_403_FORBIDDEN, NOT_ALLOWED)
     if await db.scalar(select(func.count()).select_from(User).where(User.email == email)):
         raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists.")
-    user = User(email=email, name=body.name, password_hash=hash_password(body.password))
+    user = User(email=email, name=body.name, password_hash=await hash_password(body.password))
     db.add(user)
     await db.flush()
     db.add(AuditLog(user_id=user.id, action="auth.register", ip=_ip(request)))
@@ -105,10 +106,12 @@ async def register(body: RegisterIn, request: Request, response: Response,
 async def login(body: LoginIn, request: Request, response: Response,
                 db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut:
     user = await db.scalar(select(User).where(User.email == body.email.lower()))
-    if not verify_password(body.password, user.password_hash if user else None) or user is None:
+    if not await verify_password(body.password, user.password_hash if user else None) or user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password.")
     if not get_settings().email_allowed(user.email):
         raise HTTPException(status.HTTP_403_FORBIDDEN, NOT_ALLOWED)
+    if needs_rehash(user.password_hash):
+        user.password_hash = await hash_password(body.password)
     db.add(AuditLog(user_id=user.id, action="auth.login", ip=_ip(request)))
     await db.commit()
     token = create_access_token(user.id, user.token_version)
@@ -252,7 +255,7 @@ async def confirm_password_reset(body: ResetConfirmIn, request: Request, respons
     user = await db.get(User, user_id) if user_id else None
     if user is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "This reset link is invalid or has expired.")
-    user.password_hash = hash_password(body.password)
+    user.password_hash = await hash_password(body.password)
     user.token_version += 1  # every existing session (web + desktop) is signed out
     user.email_verified = True  # they just proved control of the inbox
     db.add(AuditLog(user_id=user.id, action="auth.password_reset", ip=_ip(request)))

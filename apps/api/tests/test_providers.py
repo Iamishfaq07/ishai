@@ -94,3 +94,13 @@ async def test_deepgram_rejected_key_goes_down_without_retrying(monkeypatch: pyt
     assert [(e.kind, e.status) for e in events] == [("status", "down")]
     assert "rejected" in events[0].text and attempts == 1
     await session.close()
+
+
+def test_reasoner_gets_chain_of_thought_headroom() -> None:
+    from orbit_api.providers.llm.deepseek import REASONING_HEADROOM
+
+    p = DeepSeekProvider("sk-test", "https://api.deepseek.test", "deepseek-chat", "deepseek-reasoner")
+    msgs = [LLMMessage("user", "q")]
+    assert p._payload(LLMRequest(messages=msgs, max_tokens=420))["max_tokens"] == 420
+    deep = p._payload(LLMRequest(messages=msgs, max_tokens=420, reasoning="deep"))
+    assert deep["model"] == "deepseek-reasoner" and deep["max_tokens"] == 420 + REASONING_HEADROOM
