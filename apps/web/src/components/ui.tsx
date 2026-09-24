@@ -164,7 +164,14 @@ export function EmptyState({ title, body, action }: { title: string; body?: stri
 
 export function Meter({ level, label }: { level: number; label: string }) {
   return (
-    <div className="flex items-center gap-2" aria-label={`${label} level`}>
+    <div
+      className="flex items-center gap-2"
+      role="meter"
+      aria-label={`${label} level`}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(level * 100)}
+    >
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
         <div
           className="h-full rounded-full bg-emerald-500 transition-[width] duration-75 motion-reduce:transition-none"

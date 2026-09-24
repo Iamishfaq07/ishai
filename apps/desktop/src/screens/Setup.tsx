@@ -819,7 +819,14 @@ function LevelRow({ label, level }: { label: string; level: number }) {
   return (
     <div className="flex items-center gap-2 text-xs text-zinc-500">
       <span className="w-12">{label}</span>
-      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800" aria-label={`${label} level`}>
+      <div
+        role="meter"
+        aria-label={`${label} level`}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(level * 100)}
+        className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
+      >
         <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.round(level * 100)}%` }} />
       </div>
     </div>

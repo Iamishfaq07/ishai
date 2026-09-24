@@ -1,5 +1,16 @@
 # Implementation log
 
+## Phase 6b — accessibility (2026-09-25)
+
+- Audited every desktop screen with **axe-core (WCAG 2.1 A/AA)** in the real app, in both themes: Sign in, Home,
+  Setup, Live (coding answer), End dialog, History, Settings, Documents.
+- **Before:** 46 colour-contrast failures (grey secondary text at 2.6–4.4:1 against the 4.5:1 minimum) and 2 invalid
+  ARIA attributes (level meters labelled without a role).
+- **Fixed:** secondary text uses zinc-400 in dark mode (5.8–7.8:1) and a slightly darker grey in light mode (4.7–5.9:1
+  on every light surface) — shared CSS, so web gets it too; level meters are `role="meter"` with values; the answer
+  "Thinking…" placeholder is a `status`.
+- **After: 0 violations on all 8 screens, light and dark.**
+
 ## Phase 6a — readable text, in-app dialogs, performance baseline (2026-09-25)
 
 - **Text size setting now works everywhere:** 49 fixed-pixel text sizes (43 labels at 10–11 px, the question, the
