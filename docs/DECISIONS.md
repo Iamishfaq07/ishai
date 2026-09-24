@@ -63,3 +63,17 @@ a report.
 
 **D16 — Remote servers must be HTTPS.** The desktop "Server" override accepts plain `http://` only for this
 machine (`localhost`, `127.0.0.1`, `[::1]`) or in a development build; an insecure saved override is ignored.
+
+**D17 — No billing or backup AI provider yet.** Orbit is a private, single-user deployment, so there is nobody to
+charge: plans and limits are enforced server-side, but nothing is purchasable (no Stripe). A second LLM provider
+would need another paid key; DeepSeek errors are retried once before the first token. Revisit both before opening
+Orbit to other users.
+
+**D18 — Crash reporting is built in but off.** Sentry starts only when `ORBIT_SENTRY_DSN` is set, with PII,
+request bodies/headers/query strings and breadcrumbs stripped. Without it, structured JSON logs with correlation IDs
+(and secret redaction) are the record.
+
+**D19 — Latency is measured on the audio timeline.** Each STT channel keeps a map from "audio position sent to the
+provider" to "server time it was sent", so speech-start/speech-end timestamps from Deepgram become server times even
+across pauses. Deepgram timestamps restart at 0 on every socket, so each reconnect's events are shifted by the audio
+sent to earlier sockets, giving one continuous session timeline.

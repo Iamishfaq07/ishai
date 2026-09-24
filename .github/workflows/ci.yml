@@ -69,10 +69,17 @@ jobs:
         with: { node-version: 20, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - uses: dtolnay/rust-toolchain@stable
+        with: { components: "rustfmt, clippy" }
       - uses: Swatinem/rust-cache@v2
         with: { workspaces: apps/desktop/src-tauri }
       # tauri::generate_context! embeds frontendDist at compile time, so build the frontend first
       - run: pnpm --filter @orbit/desktop build
+      - name: cargo fmt
+        working-directory: apps/desktop/src-tauri
+        run: cargo fmt --check
+      - name: cargo clippy
+        working-directory: apps/desktop/src-tauri
+        run: cargo clippy --all-targets -- -D warnings
       - name: cargo test
         working-directory: apps/desktop/src-tauri
         run: cargo test

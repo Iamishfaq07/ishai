@@ -1,5 +1,30 @@
 # Implementation log
 
+## Phase 2 — platform (2026-09-24)
+
+Decisions for a private deployment: one API instance (D12), no Stripe or backup provider yet (D17), Sentry built in
+but off (D18).
+
+- **Real-provider smoke suite** (`tests/smoke`, opt-in with `RUN_PROVIDER_SMOKE=true`; manual GitHub workflow).
+  DeepSeek: text + priced usage, streaming, JSON mode, vision, timeout mapping. Deepgram: interim → final + endpoint,
+  reconnect, every language in the app. **It found two real bugs**, both fixed:
+  - `language: "auto"` sent `detect_language=true`, which Deepgram streaming rejects (HTTP 400) → now `language=multi`.
+  - HTTP 400 handshakes were retried forever → now fatal ("unsupported transcription settings").
+- **Deepgram reconnects keep one timeline:** timestamps restart at 0 on each socket; events are now shifted by the
+  audio sent to earlier sockets (unit-tested). The unused "last packet → transcript" metric was removed.
+- **Real latency metrics** (`live/metrics.py`): speech start → first partial, speech end → final / question /
+  first AI word, question → first AI word; stored per session (`sessions.metrics`, migration `9d5e2f8a1b47`),
+  p50/p95/p99 via `GET /v1/admin/latency` and desktop **Settings → Latency**. First real run: speech end → final
+  326 ms, → question 1.88 s (mostly the Balanced 1.5 s wait), question → first word 679 ms, speech end → first word
+  2.58 s.
+- **Observability:** JSON logs in production with `request_id` / `user_id` / `session_id`, `X-Request-ID`
+  propagation, secret redaction (keys, bearer tokens, JWTs, WS tickets, Deepgram tokens), optional Sentry with
+  scrubbing.
+- **CI:** `cargo fmt --check` + `cargo clippy -D warnings` added (the tree was formatted in a separate commit).
+
+**Verified:** API 177 tests (+9) + 14 smoke (all green against the real providers), ruff, strict mypy; UI 42 tests,
+typecheck, lint; Rust 17 tests, fmt, clippy -D warnings; migration round trip + `alembic check` on SQLite.
+
 ## Phase 1 — critical correctness & security (2026-09-24)
 
 Audit of the upgrade brief's P0 list against `main` @ cab0d95; every item below was confirmed in code first.

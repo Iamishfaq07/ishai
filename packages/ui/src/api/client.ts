@@ -7,6 +7,7 @@ import type {
   CreateTextDocumentRequest,
   DocumentKind,
   DocumentText,
+  LatencyReport,
   LiveTicket,
   LoginRequest,
   OrbitDocument,
@@ -154,6 +155,7 @@ export function createApiClient(options: ApiClientOptions) {
 
     // Admin / advanced settings
     adminStatus: () => json<{ is_admin: boolean }>("/v1/admin/status"),
+    getLatency: (days = 7) => json<LatencyReport>(`/v1/admin/latency?days=${days}`),
     getAdminConfig: () => json<AdminConfig>("/v1/admin/config"),
     updateAdminConfig: (req: AdminConfigUpdate) =>
       json<AdminConfig>("/v1/admin/config", { method: "PUT", body: body(req) }),

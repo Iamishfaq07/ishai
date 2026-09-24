@@ -15,24 +15,32 @@ use tauri::ipc::Channel;
 use windows::core::{implement, Interface, Ref, HRESULT};
 use windows::Win32::Foundation::{CloseHandle, HANDLE, WAIT_OBJECT_0};
 use windows::Win32::Media::Audio::{
-    eConsole, eRender, ActivateAudioInterfaceAsync, AudioSessionStateActive, IActivateAudioInterfaceAsyncOperation,
-    IActivateAudioInterfaceCompletionHandler, IActivateAudioInterfaceCompletionHandler_Impl, IAudioCaptureClient,
-    IAudioClient, IAudioSessionControl2, IAudioSessionManager2, IMMDeviceEnumerator, MMDeviceEnumerator,
+    eConsole, eRender, ActivateAudioInterfaceAsync, AudioSessionStateActive,
+    IActivateAudioInterfaceAsyncOperation, IActivateAudioInterfaceCompletionHandler,
+    IActivateAudioInterfaceCompletionHandler_Impl, IAudioCaptureClient, IAudioClient,
+    IAudioSessionControl2, IAudioSessionManager2, IMMDeviceEnumerator, MMDeviceEnumerator,
     AUDCLNT_BUFFERFLAGS_SILENT, AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM,
-    AUDCLNT_STREAMFLAGS_EVENTCALLBACK, AUDCLNT_STREAMFLAGS_LOOPBACK, AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY,
-    AUDIOCLIENT_ACTIVATION_PARAMS, AUDIOCLIENT_ACTIVATION_PARAMS_0, AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK,
+    AUDCLNT_STREAMFLAGS_EVENTCALLBACK, AUDCLNT_STREAMFLAGS_LOOPBACK,
+    AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY, AUDIOCLIENT_ACTIVATION_PARAMS,
+    AUDIOCLIENT_ACTIVATION_PARAMS_0, AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK,
     AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS, PROCESS_LOOPBACK_MODE_INCLUDE_TARGET_PROCESS_TREE,
     VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK, WAVEFORMATEX, WAVE_FORMAT_PCM,
 };
-use windows::Win32::System::Com::StructuredStorage::{PROPVARIANT, PROPVARIANT_0, PROPVARIANT_0_0, PROPVARIANT_0_0_0};
-use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CoUninitialize, BLOB, CLSCTX_ALL, COINIT_MULTITHREADED};
+use windows::Win32::System::Com::StructuredStorage::{
+    PROPVARIANT, PROPVARIANT_0, PROPVARIANT_0_0, PROPVARIANT_0_0_0,
+};
+use windows::Win32::System::Com::{
+    CoCreateInstance, CoInitializeEx, CoUninitialize, BLOB, CLSCTX_ALL, COINIT_MULTITHREADED,
+};
 use windows::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS,
 };
 use windows::Win32::System::Threading::{CreateEventW, SetEvent, WaitForSingleObject};
 use windows::Win32::System::Variant::VT_BLOB;
 
-use crate::audio::{encode_frame, to_i16, CaptureEvent, Resampler, CHANNEL_SYSTEM, FRAME_SAMPLES, TARGET_RATE};
+use crate::audio::{
+    encode_frame, to_i16, CaptureEvent, Resampler, CHANNEL_SYSTEM, FRAME_SAMPLES, TARGET_RATE,
+};
 
 const CAPTURE_RATE: u32 = 48_000;
 const CAPTURE_CHANNELS: u16 = 2;
@@ -69,18 +77,31 @@ fn friendly_name(exe: &str) -> String {
         .iter()
         .find(|(e, _)| *e == lower)
         .map(|(_, n)| (*n).to_string())
-        .unwrap_or_else(|| exe.trim_end_matches(".exe").trim_end_matches(".EXE").to_string())
+        .unwrap_or_else(|| {
+            exe.trim_end_matches(".exe")
+                .trim_end_matches(".EXE")
+                .to_string()
+        })
 }
 
 /// pid → (parent pid, exe name) for every running process.
 fn process_table() -> HashMap<u32, (u32, String)> {
     let mut table = HashMap::new();
     unsafe {
-        let Ok(snapshot) = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) else { return table };
-        let mut entry = PROCESSENTRY32W { dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32, ..Default::default() };
+        let Ok(snapshot) = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) else {
+            return table;
+        };
+        let mut entry = PROCESSENTRY32W {
+            dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32,
+            ..Default::default()
+        };
         if Process32FirstW(snapshot, &mut entry).is_ok() {
             loop {
-                let len = entry.szExeFile.iter().position(|&c| c == 0).unwrap_or(entry.szExeFile.len());
+                let len = entry
+                    .szExeFile
+                    .iter()
+                    .position(|&c| c == 0)
+                    .unwrap_or(entry.szExeFile.len());
                 let exe = String::from_utf16_lossy(&entry.szExeFile[..len]);
                 table.insert(entry.th32ProcessID, (entry.th32ParentProcessID, exe));
                 if Process32NextW(snapshot, &mut entry).is_err() {
@@ -100,10 +121,15 @@ fn process_table() -> HashMap<u32, (u32, String)> {
 pub fn root_process(pid: u32, table: &HashMap<u32, (u32, String)>) -> u32 {
     let mut current = pid;
     for _ in 0..8 {
-        let Some((parent, exe)) = table.get(&current) else { break };
-        let Some((_, parent_exe)) = table.get(parent) else { break };
+        let Some((parent, exe)) = table.get(&current) else {
+            break;
+        };
+        let Some((_, parent_exe)) = table.get(parent) else {
+            break;
+        };
         let same_program = parent_exe.eq_ignore_ascii_case(exe);
-        let embedded_webview = exe.eq_ignore_ascii_case("msedgewebview2.exe") && !parent_exe.eq_ignore_ascii_case("explorer.exe");
+        let embedded_webview = exe.eq_ignore_ascii_case("msedgewebview2.exe")
+            && !parent_exe.eq_ignore_ascii_case("explorer.exe");
         if *parent <= 4 || !(same_program || embedded_webview) {
             break;
         }
@@ -118,7 +144,8 @@ pub fn list_audio_apps() -> Result<Vec<AudioApp>, String> {
     unsafe {
         let com = CoInitializeEx(None, COINIT_MULTITHREADED);
         let result = (|| -> windows::core::Result<Vec<AudioApp>> {
-            let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
+            let enumerator: IMMDeviceEnumerator =
+                CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
             let device = enumerator.GetDefaultAudioEndpoint(eRender, eConsole)?;
             let manager: IAudioSessionManager2 = device.Activate(CLSCTX_ALL, None)?;
             let sessions = manager.GetSessionEnumerator()?;
@@ -135,11 +162,22 @@ pub fn list_audio_apps() -> Result<Vec<AudioApp>, String> {
                 if root == own_root {
                     continue; // never offer to capture Orbit itself
                 }
-                let exe = table.get(&root).map(|(_, e)| e.clone()).unwrap_or_else(|| format!("pid {root}"));
-                let active = control.GetState().map(|s| s == AudioSessionStateActive).unwrap_or(false);
+                let exe = table
+                    .get(&root)
+                    .map(|(_, e)| e.clone())
+                    .unwrap_or_else(|| format!("pid {root}"));
+                let active = control
+                    .GetState()
+                    .map(|s| s == AudioSessionStateActive)
+                    .unwrap_or(false);
                 apps.entry(root)
                     .and_modify(|a| a.active |= active)
-                    .or_insert(AudioApp { pid: root, name: friendly_name(&exe), exe, active });
+                    .or_insert(AudioApp {
+                        pid: root,
+                        name: friendly_name(&exe),
+                        exe,
+                        active,
+                    });
             }
             let mut list: Vec<AudioApp> = apps.into_values().collect();
             list.sort_by(|a, b| b.active.cmp(&a.active).then_with(|| a.name.cmp(&b.name)));
@@ -160,7 +198,10 @@ struct ActivationHandler {
 }
 
 impl IActivateAudioInterfaceCompletionHandler_Impl for ActivationHandler_Impl {
-    fn ActivateCompleted(&self, _op: Ref<'_, IActivateAudioInterfaceAsyncOperation>) -> windows::core::Result<()> {
+    fn ActivateCompleted(
+        &self,
+        _op: Ref<'_, IActivateAudioInterfaceAsyncOperation>,
+    ) -> windows::core::Result<()> {
         unsafe { SetEvent(self.done) }
     }
 }
@@ -210,15 +251,25 @@ unsafe fn activate_process_loopback(pid: u32) -> Result<IAudioClient, String> {
     }
     let mut hr = HRESULT(0);
     let mut unknown = None;
-    operation.GetActivateResult(&mut hr, &mut unknown).map_err(|e| e.to_string())?;
-    hr.ok().map_err(|e| format!("App audio capture was refused: {e}"))?;
+    operation
+        .GetActivateResult(&mut hr, &mut unknown)
+        .map_err(|e| e.to_string())?;
+    hr.ok()
+        .map_err(|e| format!("App audio capture was refused: {e}"))?;
     // `params`/`prop` (referenced by the blob) have outlived the completed async activation.
-    unknown.ok_or("No audio client returned")?.cast::<IAudioClient>().map_err(|e| e.to_string())
+    unknown
+        .ok_or("No audio client returned")?
+        .cast::<IAudioClient>()
+        .map_err(|e| e.to_string())
 }
 
 /// Starts capturing `pid`'s process tree on its own COM thread. Returns once capture is running
 /// (or failed); the thread exits when `stop` is set.
-pub fn spawn(pid: u32, sink: Channel<CaptureEvent>, stop: Arc<AtomicBool>) -> Result<thread::JoinHandle<()>, String> {
+pub fn spawn(
+    pid: u32,
+    sink: Channel<CaptureEvent>,
+    stop: Arc<AtomicBool>,
+) -> Result<thread::JoinHandle<()>, String> {
     let (ready_tx, ready_rx) = mpsc::channel::<Result<(), String>>();
     let handle = thread::Builder::new()
         .name("orbit-app-audio".into())
@@ -250,7 +301,8 @@ pub fn spawn(pid: u32, sink: Channel<CaptureEvent>, stop: Arc<AtomicBool>) -> Re
                     .map_err(|e| format!("App audio init failed: {e}"))?;
                 let event = CreateEventW(None, false, false, None).map_err(|e| e.to_string())?;
                 client.SetEventHandle(event).map_err(|e| e.to_string())?;
-                let capture: IAudioCaptureClient = client.GetService().map_err(|e| e.to_string())?;
+                let capture: IAudioCaptureClient =
+                    client.GetService().map_err(|e| e.to_string())?;
                 client.Start().map_err(|e| e.to_string())?;
                 let _ = ready_tx.send(Ok(()));
 
@@ -268,24 +320,31 @@ pub fn spawn(pid: u32, sink: Channel<CaptureEvent>, stop: Arc<AtomicBool>) -> Re
                         let mut data: *mut u8 = std::ptr::null_mut();
                         let mut frames = 0u32;
                         let mut flags = 0u32;
-                        if capture.GetBuffer(&mut data, &mut frames, &mut flags, None, None).is_err() {
+                        if capture
+                            .GetBuffer(&mut data, &mut frames, &mut flags, None, None)
+                            .is_err()
+                        {
                             break;
                         }
                         let silent = flags & (AUDCLNT_BUFFERFLAGS_SILENT.0 as u32) != 0;
                         let frame_count = frames as usize;
                         // Only build a slice over a real buffer: a silent packet may come with a null (or
                         // stale) pointer, and from_raw_parts on null is UB even if never read.
-                        let samples: Option<&[i16]> = if silent || data.is_null() || frame_count == 0 {
-                            None
-                        } else {
-                            Some(std::slice::from_raw_parts(
-                                data as *const i16,
-                                frame_count * usize::from(CAPTURE_CHANNELS),
-                            ))
-                        };
-                        packet_to_mono(samples, frame_count, usize::from(CAPTURE_CHANNELS), |mono| {
-                            resampler.push(mono, |v| pending.push(to_i16(v)))
-                        });
+                        let samples: Option<&[i16]> =
+                            if silent || data.is_null() || frame_count == 0 {
+                                None
+                            } else {
+                                Some(std::slice::from_raw_parts(
+                                    data as *const i16,
+                                    frame_count * usize::from(CAPTURE_CHANNELS),
+                                ))
+                            };
+                        packet_to_mono(
+                            samples,
+                            frame_count,
+                            usize::from(CAPTURE_CHANNELS),
+                            |mono| resampler.push(mono, |v| pending.push(to_i16(v))),
+                        );
                         let _ = capture.ReleaseBuffer(frames);
                         while pending.len() >= FRAME_SAMPLES {
                             let chunk: Vec<i16> = pending.drain(..FRAME_SAMPLES).collect();
@@ -299,7 +358,10 @@ pub fn spawn(pid: u32, sink: Channel<CaptureEvent>, stop: Arc<AtomicBool>) -> Re
             };
             if let Err(e) = run() {
                 let _ = ready_tx.send(Err(e.clone()));
-                let _ = sink.send(CaptureEvent::Error { channel: CHANNEL_SYSTEM, message: e });
+                let _ = sink.send(CaptureEvent::Error {
+                    channel: CHANNEL_SYSTEM,
+                    message: e,
+                });
             }
             if com.is_ok() {
                 CoUninitialize();
@@ -316,7 +378,12 @@ pub fn spawn(pid: u32, sink: Channel<CaptureEvent>, stop: Arc<AtomicBool>) -> Re
 /// Down-mix one WASAPI packet of interleaved PCM16 to mono. `None` (silent flag / null buffer) yields
 /// `frames` zeros, so silence keeps the stream's timing. A buffer shorter than `frames * channels` is only
 /// read as far as it goes, the rest padded with silence.
-fn packet_to_mono(samples: Option<&[i16]>, frames: usize, channels: usize, mut out: impl FnMut(f32)) {
+fn packet_to_mono(
+    samples: Option<&[i16]>,
+    frames: usize,
+    channels: usize,
+    mut out: impl FnMut(f32),
+) {
     let Some(samples) = samples.filter(|_| channels > 0) else {
         for _ in 0..frames {
             out(0.0);
@@ -354,7 +421,10 @@ mod packet_tests {
 
     #[test]
     fn stereo_is_averaged_and_mono_passes_through() {
-        assert_eq!(run(Some(&[16384, 0, -16384, -16384]), 2, 2), vec![0.25, -0.5]);
+        assert_eq!(
+            run(Some(&[16384, 0, -16384, -16384]), 2, 2),
+            vec![0.25, -0.5]
+        );
         assert_eq!(run(Some(&[16384, -32768]), 2, 1), vec![0.5, -1.0]);
     }
 
@@ -371,27 +441,44 @@ mod tests {
     use std::collections::HashMap;
 
     fn table(rows: &[(u32, u32, &str)]) -> HashMap<u32, (u32, String)> {
-        rows.iter().map(|(pid, ppid, exe)| (*pid, (*ppid, (*exe).to_string()))).collect()
+        rows.iter()
+            .map(|(pid, ppid, exe)| (*pid, (*ppid, (*exe).to_string())))
+            .collect()
     }
 
     #[test]
     fn browser_helpers_map_to_the_main_browser_process() {
-        let t = table(&[(1, 0, "explorer.exe"), (10, 1, "chrome.exe"), (11, 10, "chrome.exe"), (12, 11, "chrome.exe")]);
+        let t = table(&[
+            (1, 0, "explorer.exe"),
+            (10, 1, "chrome.exe"),
+            (11, 10, "chrome.exe"),
+            (12, 11, "chrome.exe"),
+        ]);
         assert_eq!(root_process(12, &t), 10);
     }
 
     #[test]
     fn teams_webview_maps_to_teams() {
-        let t = table(&[(1, 0, "explorer.exe"), (20, 1, "ms-teams.exe"), (21, 20, "msedgewebview2.exe"),
-                        (22, 21, "msedgewebview2.exe")]);
+        let t = table(&[
+            (1, 0, "explorer.exe"),
+            (20, 1, "ms-teams.exe"),
+            (21, 20, "msedgewebview2.exe"),
+            (22, 21, "msedgewebview2.exe"),
+        ]);
         assert_eq!(root_process(22, &t), 20);
     }
 
     #[test]
     fn never_climbs_into_an_unrelated_launcher() {
         // zoom started from a terminal must not be grouped with the terminal (or Orbit, or a game)
-        let t = table(&[(1, 0, "explorer.exe"), (30, 1, "WindowsTerminal.exe"), (31, 30, "pwsh.exe"),
-                        (32, 31, "Zoom.exe"), (33, 31, "orbit-desktop.exe"), (34, 33, "msedgewebview2.exe")]);
+        let t = table(&[
+            (1, 0, "explorer.exe"),
+            (30, 1, "WindowsTerminal.exe"),
+            (31, 30, "pwsh.exe"),
+            (32, 31, "Zoom.exe"),
+            (33, 31, "orbit-desktop.exe"),
+            (34, 33, "msedgewebview2.exe"),
+        ]);
         assert_eq!(root_process(32, &t), 32);
         assert_eq!(root_process(34, &t), 33); // Orbit's own webview maps to Orbit, which the list skips
     }

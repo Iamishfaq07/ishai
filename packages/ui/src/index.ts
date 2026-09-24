@@ -94,3 +94,4 @@ export { TranscriptView, type TranscriptViewProps } from "./components/Transcrip
 export { checkServerUrl, type ServerUrlCheck } from "./serverUrl";
 export { useReportPolling } from "./hooks/useReportPolling";
 export { ReportStatusNote } from "./components/ReportStatusNote";
+export { LatencyDiagnostics } from "./components/LatencyDiagnostics";

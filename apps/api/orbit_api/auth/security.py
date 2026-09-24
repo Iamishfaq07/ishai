@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.models import User
+from orbit_api.observability import user_id_var
 
 COOKIE_NAME = "orbit_session"
 NOT_ALLOWED = "This Orbit server is private. Ask the owner to add your email."
@@ -83,6 +84,7 @@ async def current_user(request: Request, db: Annotated[AsyncSession, Depends(get
     # Re-checked per request so tightening ORBIT_ALLOWED_EMAILS cuts off existing accounts too.
     if not get_settings().email_allowed(user.email):
         raise HTTPException(status.HTTP_403_FORBIDDEN, NOT_ALLOWED)
+    user_id_var.set(user.id)  # correlation id for this request's log lines
     return user
 
 

@@ -47,8 +47,15 @@ pub struct CaptureInfo {
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum CaptureEvent {
     /// `pcm`: base64 PCM16LE mono 16 kHz. `rms`: 0..1 for level meters.
-    Frame { channel: u8, pcm: String, rms: f32 },
-    Error { channel: u8, message: String },
+    Frame {
+        channel: u8,
+        pcm: String,
+        rms: f32,
+    },
+    Error {
+        channel: u8,
+        message: String,
+    },
 }
 
 #[derive(Default)]
@@ -107,7 +114,12 @@ pub fn start_capture(
             let mut streams: Vec<cpal::Stream> = Vec::new();
 
             // Mic and system audio are independent: a busy mic must not stop Orbit from hearing the interviewer.
-            let mut info = CaptureInfo { mic: false, system: false, mic_error: None, system_error: None };
+            let mut info = CaptureInfo {
+                mic: false,
+                system: false,
+                mic_error: None,
+                system_error: None,
+            };
             match open_mic(&host, mic_device_id.as_deref(), on_event.clone()) {
                 Ok(stream) => {
                     streams.push(stream);
@@ -150,7 +162,13 @@ pub fn start_capture(
             if !info.mic && !info.system {
                 let mic_msg = info.mic_error.clone().unwrap_or_default();
                 let sys_msg = info.system_error.clone().unwrap_or_default();
-                let _ = ready_tx.send(Err(if !mic_msg.is_empty() { mic_msg } else if !sys_msg.is_empty() { sys_msg } else { "No audio available".into() }));
+                let _ = ready_tx.send(Err(if !mic_msg.is_empty() {
+                    mic_msg
+                } else if !sys_msg.is_empty() {
+                    sys_msg
+                } else {
+                    "No audio available".into()
+                }));
                 return;
             }
             let _ = ready_tx.send(Ok(info));
@@ -165,7 +183,9 @@ pub fn start_capture(
         })
         .map_err(|e| e.to_string())?;
 
-    let info = ready_rx.recv().map_err(|_| "audio thread exited unexpectedly".to_string())??;
+    let info = ready_rx
+        .recv()
+        .map_err(|_| "audio thread exited unexpectedly".to_string())??;
     if let Ok(mut guard) = state.stop.lock() {
         *guard = Some(stop_tx);
     }
@@ -177,7 +197,11 @@ pub fn stop_capture(state: tauri::State<'_, CaptureState>) {
     state.stop_existing();
 }
 
-fn open_mic(host: &cpal::Host, device_id: Option<&str>, sink: Channel<CaptureEvent>) -> Result<cpal::Stream, String> {
+fn open_mic(
+    host: &cpal::Host,
+    device_id: Option<&str>,
+    sink: Channel<CaptureEvent>,
+) -> Result<cpal::Stream, String> {
     let device = match device_id {
         Some(id) => host
             .input_devices()
@@ -193,9 +217,12 @@ fn open_mic(host: &cpal::Host, device_id: Option<&str>, sink: Channel<CaptureEve
 #[cfg(target_os = "windows")]
 fn open_system(host: &cpal::Host, sink: Channel<CaptureEvent>) -> Result<cpal::Stream, String> {
     // WASAPI loopback: an input stream on the render (output) device.
-    let device = host.default_output_device().ok_or("no default output device")?;
+    let device = host
+        .default_output_device()
+        .ok_or("no default output device")?;
     let config = device.default_output_config().map_err(|e| e.to_string())?;
-    open_stream(&device, config, CHANNEL_SYSTEM, sink).map_err(|e| format!("System audio loopback failed: {e}"))
+    open_stream(&device, config, CHANNEL_SYSTEM, sink)
+        .map_err(|e| format!("System audio loopback failed: {e}"))
 }
 
 #[cfg(target_os = "macos")]
@@ -255,7 +282,10 @@ where
                 }
             },
             move |err| {
-                let _ = err_sink.send(CaptureEvent::Error { channel, message: err.to_string() });
+                let _ = err_sink.send(CaptureEvent::Error {
+                    channel,
+                    message: err.to_string(),
+                });
             },
             None,
         )
@@ -378,7 +408,9 @@ mod tests {
             panic!("expected frame");
         };
         assert_eq!(channel, 1);
-        let bytes = base64::engine::general_purpose::STANDARD.decode(pcm).unwrap();
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(pcm)
+            .unwrap();
         assert_eq!(bytes, vec![0x01, 0x00, 0xfe, 0xff]);
     }
 }

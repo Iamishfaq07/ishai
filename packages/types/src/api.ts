@@ -250,6 +250,20 @@ export interface AdminConfigUpdate {
   deepgram_api_key?: string;
 }
 
+export type LatencyMetric =
+  | "stt_first_partial"
+  | "stt_final"
+  | "question_after_speech"
+  | "first_token_after_speech"
+  | "first_token_after_question";
+
+/** GET /v1/admin/latency — live-latency percentiles (ms) across recent sessions. */
+export interface LatencyReport {
+  days: number;
+  sessions: number;
+  metrics: Partial<Record<LatencyMetric, { n: number; p50: number; p95: number; p99: number }>>;
+}
+
 // ─── Errors ──────────────────────────────────────────────────────────────────
 
 /** FastAPI returns { detail: string | ValidationError[] }; Orbit errors use { error: { code, message } }. */

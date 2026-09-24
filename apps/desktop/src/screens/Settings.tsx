@@ -7,6 +7,7 @@ import {
   ErrorNote,
   Field,
   Input,
+  LatencyDiagnostics,
   PageHeader,
   Select,
   Spinner,
@@ -200,7 +201,14 @@ function AdvancedCard() {
   }, []);
 
   if (isAdmin === null || isAdmin === false) return null;
-  return <AdvancedConfig />;
+  return (
+    <>
+      <AdvancedConfig />
+      <Card>
+        <LatencyDiagnostics load={api.getLatency} />
+      </Card>
+    </>
+  );
 }
 
 const PROVIDER_OPTS: Record<"llm" | "stt", Array<{ value: string; label: string }>> = {

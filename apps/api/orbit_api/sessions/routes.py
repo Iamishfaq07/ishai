@@ -47,6 +47,7 @@ from orbit_api.models import (
     UsageEvent,
     User,
 )
+from orbit_api.observability import request_id_var, session_id_var, user_id_var
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMImage
 from orbit_api.providers.stt import create_stt_provider
@@ -418,6 +419,10 @@ async def _meter_live_minutes(ws: WebSocket, engine: LiveEngine, user_id: str, s
 @router.websocket("/sessions/{session_id}/live")
 async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
     user_id = redeem_ticket(ticket, session_id)
+    # Correlation ids for every log line of this live session (tasks created below inherit them).
+    session_id_var.set(session_id)
+    user_id_var.set(user_id)
+    request_id_var.set(f"ws-{uuid.uuid4().hex[:12]}")
     if user_id is None:
         await ws.close(code=4001, reason="invalid or expired ticket")
         return

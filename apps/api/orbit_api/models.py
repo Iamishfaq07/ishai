@@ -125,6 +125,8 @@ class LiveSessionRow(TimestampMixin, Base):
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     duration_s: Mapped[int] = mapped_column(Integer, default=0)
     rolling_summary: Mapped[str | None] = mapped_column(Text)
+    # Latency samples in ms, per metric (live/metrics.py). Timings only — never transcript content.
+    metrics: Mapped[dict[str, Any] | None] = mapped_column(JSON)
 
 
 class SessionDocument(Base):

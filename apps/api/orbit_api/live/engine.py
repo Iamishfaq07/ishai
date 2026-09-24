@@ -34,6 +34,7 @@ from orbit_api.live.events import (
     SpeakerCorrect,
 )
 from orbit_api.live.finalizer import GRACE_MS, QuestionFinalizer
+from orbit_api.live.metrics import AudioClock, LatencySamples
 from orbit_api.live.question_detector import DetectorContext, classify_type, detect, normalize
 from orbit_api.live.routing import (
     CODE_MAX_TOKENS,
@@ -79,8 +80,10 @@ class Recorder(Protocol):
     async def provider_request(self, provider: str, model: str, request_type: str, usage: Usage,
                                latency_ms: int, ok: bool) -> None: ...
     async def usage(self, metric: str, quantity: float, key: str | None = None) -> None: ...
-    async def ended(self, duration_s: int, stt_seconds: float, summary: str) -> None: ...
-    async def detached(self, duration_s: int, stt_seconds: float, summary: str) -> None: ...
+    async def ended(self, duration_s: int, stt_seconds: float, summary: str,
+                    metrics: dict[str, list[int]] | None = None) -> None: ...
+    async def detached(self, duration_s: int, stt_seconds: float, summary: str,
+                       metrics: dict[str, list[int]] | None = None) -> None: ...
 
 
 SCREENSHOT_LABEL = "📷 Screenshot"
@@ -178,6 +181,12 @@ class LiveEngine:
         self._turns_since_summary = 0
         self._last_answer_at_ms: int | None = None
         self._speaker_overrides: dict[str, Speaker] = {}
+        # Latency, measured from the interviewer's actual speech (see live/metrics.py).
+        self.latency = LatencySamples()
+        self._audio_clock: dict[Channel, AudioClock] = {"mic": AudioClock(), "system": AudioClock()}
+        self._speech_end_ms: int | None = None  # server time the latest interviewer speech ended
+        self._question_speech_end: dict[str, int] = {}
+        self._partial_seen: set[str] = set()
 
     # ---- plumbing ---------------------------------------------------------------------------------------
 
@@ -244,10 +253,11 @@ class LiveEngine:
         stats = (self.now_ms() // 1000, self._audio_bytes / 32_000, self.memory.rolling_summary)
         log.info("session %s audio received: mic=%.1fs system=%.1fs", self.profile.session_id,
                  self.channel_bytes["mic"] / 32_000, self.channel_bytes["system"] / 32_000)
+        metrics = self.latency.as_dict()
         if not final:
-            await self._rec.detached(*stats)
+            await self._rec.detached(*stats, metrics=metrics)
             return
-        await self._rec.ended(*stats)
+        await self._rec.ended(*stats, metrics=metrics)
         await self._set_state(LiveState.ended)
         await self.send("session.ended", {"state": LiveState.ended.value, "settings": self.settings.model_dump()})
 
@@ -268,6 +278,7 @@ class LiveEngine:
         session = self._stt_sessions.get(channel)
         if session:
             await session.send_audio(pcm)
+            self._audio_clock[channel].sent(len(pcm), self.now_ms())
 
     async def handle_client(self, raw: dict[str, Any]) -> None:
         type_ = raw.get("type")
@@ -389,6 +400,8 @@ class LiveEngine:
             turn.partial = ev.text
         turn.end_ms = max(turn.end_ms, ev.end_ms)
         spk = self._speaker_overrides.get(turn.turn_id, speaker)
+        if spk == "interviewer" and ev.text:
+            self._track_stt_latency(channel, turn, ev)
 
         await self.send("transcript.partial", {"turn_id": turn.turn_id, "speaker": spk, "text": turn.text})
         if spk == "interviewer":
@@ -407,6 +420,18 @@ class LiveEngine:
                 await self._on_question(fired.turn_id, fired.detection.question_text)
         if ev.kind == "final" and ev.endpoint:
             await self._commit_turn(channel, turn)
+
+    def _track_stt_latency(self, channel: Channel, turn: _ChannelTurn, ev: TranscriptEvent) -> None:
+        clock = self._audio_clock[channel]
+        now = self.now_ms()
+        if turn.turn_id not in self._partial_seen:
+            self._partial_seen.add(turn.turn_id)
+            if (started := clock.server_time(ev.start_ms)) is not None:
+                self.latency.add("stt_first_partial", now - started)
+        if (ended := clock.server_time(turn.end_ms)) is not None:
+            self._speech_end_ms = ended
+            if ev.kind == "final":
+                self.latency.add("stt_final", now - ended)
 
     async def _commit_turn(self, channel: Channel, turn: _ChannelTurn) -> None:
         self._turns[channel] = None
@@ -453,11 +478,16 @@ class LiveEngine:
         det = detect(text, "interviewer", self._detector_context())
         if decision == DedupDecision.extends and prior_qid:
             self._dedup.replace(prior_qid, text, now)
+            if self._speech_end_ms is not None:  # the answer now responds to the longer question's end
+                self._question_speech_end[prior_qid] = self._speech_end_ms
             await self.send("question.updated", {"question_id": prior_qid, "text": text})
             await self._start_answer(prior_qid, text, det.question_type, det.is_follow_up, "auto")
             return
         qid = str(uuid.uuid4())
         self._dedup.record(qid, turn_id, text, now)
+        if self._speech_end_ms is not None:
+            self.latency.add("question_after_speech", now - self._speech_end_ms)
+            self._question_speech_end[qid] = self._speech_end_ms
         await self.send("question.detected", {"question_id": qid, "turn_id": turn_id, "text": text,
                                               "type": det.question_type.value,
                                               "confidence": round(det.confidence, 3),
@@ -574,6 +604,11 @@ class LiveEngine:
                         if first_token_ms is None:
                             first_token_ms = int((self._clock() - started) * 1000)
                             await self._set_state(LiveState.streaming)
+                            if source == "auto":
+                                self.latency.add("first_token_after_question", first_token_ms)
+                                if qid and (spoken := self._question_speech_end.get(qid)) is not None:
+                                    after_speech = self.now_ms() - spoken
+                                    self.latency.add("first_token_after_speech", after_speech)
                         partial = parser.feed(chunk.delta)
                         now = self._clock()
                         if now - last_emit >= CHUNK_EMIT_INTERVAL_S or "\n" in chunk.delta:

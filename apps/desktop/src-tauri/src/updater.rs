@@ -35,7 +35,12 @@ pub enum UpdateProgress {
 }
 
 /// Builds `{api}/v1/desktop/update/{target}/{arch}/{version}` and enforces the transport policy.
-pub fn endpoint_for(api_url: &str, target: &str, arch: &str, current_version: &str) -> Result<Url, String> {
+pub fn endpoint_for(
+    api_url: &str,
+    target: &str,
+    arch: &str,
+    current_version: &str,
+) -> Result<Url, String> {
     let base = Url::parse(api_url.trim()).map_err(|_| "Invalid server URL".to_string())?;
     let local = matches!(base.host_str(), Some("localhost" | "127.0.0.1"));
     match base.scheme() {
@@ -44,8 +49,10 @@ pub fn endpoint_for(api_url: &str, target: &str, arch: &str, current_version: &s
         _ => return Err("Updates need an https server".to_string()),
     }
     let root = base.as_str().trim_end_matches('/');
-    Url::parse(&format!("{root}/v1/desktop/update/{target}/{arch}/{current_version}"))
-        .map_err(|e| format!("Invalid update URL: {e}"))
+    Url::parse(&format!(
+        "{root}/v1/desktop/update/{target}/{arch}/{current_version}"
+    ))
+    .map_err(|e| format!("Invalid update URL: {e}"))
 }
 
 #[tauri::command]
@@ -63,7 +70,10 @@ pub async fn check_update(
         .timeout(Duration::from_secs(15))
         .build()
         .map_err(|e| e.to_string())?;
-    let update = updater.check().await.map_err(|e| format!("Update check failed: {e}"))?;
+    let update = updater
+        .check()
+        .await
+        .map_err(|e| format!("Update check failed: {e}"))?;
     let info = update.as_ref().map(|u| UpdateInfo {
         version: u.version.clone(),
         current_version: u.current_version.clone(),
@@ -114,7 +124,10 @@ mod tests {
     #[test]
     fn https_endpoint_is_built() {
         let url = endpoint_for("https://api.orbit.example/", "windows", "x86_64", "0.1.0").unwrap();
-        assert_eq!(url.as_str(), "https://api.orbit.example/v1/desktop/update/windows/x86_64/0.1.0");
+        assert_eq!(
+            url.as_str(),
+            "https://api.orbit.example/v1/desktop/update/windows/x86_64/0.1.0"
+        );
     }
 
     #[test]
@@ -129,6 +142,9 @@ mod tests {
     #[test]
     fn keeps_a_base_path() {
         let url = endpoint_for("https://example.com/orbit", "windows", "x86_64", "1.2.3").unwrap();
-        assert_eq!(url.as_str(), "https://example.com/orbit/v1/desktop/update/windows/x86_64/1.2.3");
+        assert_eq!(
+            url.as_str(),
+            "https://example.com/orbit/v1/desktop/update/windows/x86_64/1.2.3"
+        );
     }
 }
