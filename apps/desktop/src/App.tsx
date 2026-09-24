@@ -4,6 +4,7 @@ import { ApiError } from "@orbit/ui";
 import { api, setAccessToken, setUnauthorizedHandler } from "./api";
 import { clearToken, loadToken } from "./native";
 import { DocumentsScreen } from "./screens/Documents";
+import { HistoryScreen } from "./screens/History";
 import { LiveScreen, type DesktopLaunch } from "./screens/Live";
 import { LoginScreen } from "./screens/Login";
 import { SettingsScreen } from "./screens/Settings";
@@ -15,6 +16,7 @@ type Screen =
   | { name: "login" }
   | { name: "setup" }
   | { name: "documents" }
+  | { name: "history" }
   | { name: "settings" }
   | { name: "live"; session: OrbitSession; launch: DesktopLaunch };
 
@@ -51,7 +53,7 @@ export function App() {
 
   // Documents/Settings need room; the session screens stay compact. Live manages its own sizing.
   useEffect(() => {
-    if (screen.name === "documents" || screen.name === "settings") void applyPanelMode("expanded");
+    if (screen.name === "documents" || screen.name === "settings" || screen.name === "history") void applyPanelMode("expanded");
     else if (screen.name === "setup" || screen.name === "login") void applyPanelMode("compact");
   }, [screen.name]);
 
@@ -74,11 +76,14 @@ export function App() {
           onSignOut={() => void signOut()}
           onStart={(session, launch) => setScreen({ name: "live", session, launch })}
           onOpenDocuments={() => setScreen({ name: "documents" })}
+          onOpenHistory={() => setScreen({ name: "history" })}
           onOpenSettings={() => setScreen({ name: "settings" })}
         />
       );
     case "documents":
       return <DocumentsScreen onBack={() => setScreen({ name: "setup" })} />;
+    case "history":
+      return <HistoryScreen onBack={() => setScreen({ name: "setup" })} />;
     case "settings":
       return user ? (
         <SettingsScreen
