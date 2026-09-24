@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
-import type { AnswerLength, AnswerStyle, LiveSettings, Speaker } from "@orbit/types";
+import type { AnswerLength, AnswerStyle, LiveSettings, ResponseTiming, Speaker } from "@orbit/types";
 import { LiveClient, type LiveClientOptions } from "./client";
-import { initialLiveState, liveReducer, selectLatestInterviewerTurn, type LiveViewState } from "./reducer";
+import { saveResponseTiming } from "./preferences";
+import { initialLiveState, liveReducer, type LiveViewState } from "./reducer";
 
 export interface LiveActions {
-  /** Manual answer. With no text, the server answers the latest interviewer utterance. */
+  /** Manual answer. With no text, the server answers the question it's listening to (which may span a
+   * pause), else the latest interviewer utterance. */
   answer: (questionText?: string) => void;
   clear: () => void;
   pin: (answerId: string, pinned: boolean) => void;
@@ -12,6 +14,7 @@ export interface LiveActions {
   setLength: (length: AnswerLength) => void;
   setStyle: (style: AnswerStyle) => void;
   setAutoAnswer: (on: boolean) => void;
+  setResponseTiming: (timing: ResponseTiming) => void;
   pause: () => void;
   resume: () => void;
   togglePause: () => void;
@@ -87,7 +90,9 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
   const actions = useMemo<LiveActions>(
     () => ({
       answer: (questionText) => {
-        const text = questionText?.trim() || selectLatestInterviewerTurn(liveRef.current)?.text;
+        // Only send explicit text: the server knows the full (possibly paused-and-continued) question,
+        // while the latest transcript turn may be just its second half.
+        const text = questionText?.trim();
         client.send("answer.request", text ? { question_text: text } : {});
       },
       clear: () => {
@@ -108,6 +113,10 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
       setLength: (length) => updateSettings({ length }),
       setStyle: (style) => updateSettings({ style }),
       setAutoAnswer: (auto_answer) => updateSettings({ auto_answer }),
+      setResponseTiming: (response_timing) => {
+        saveResponseTiming(response_timing);
+        updateSettings({ response_timing });
+      },
       pause: () => client.send("session.pause", {}),
       resume: () => client.send("session.resume", {}),
       togglePause: () =>

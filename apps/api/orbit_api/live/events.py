@@ -11,6 +11,8 @@ PROTOCOL_VERSION = 1
 Speaker = Literal["interviewer", "candidate", "other"]
 AnswerLength = Literal["short", "standard", "detailed"]
 AnswerStyle = Literal["bullets", "star", "technical", "executive"]
+# How long to wait after the interviewer stops before auto-answering (finalizer.GRACE_MS).
+ResponseTiming = Literal["quick", "balanced", "patient"]
 SessionType = Literal["interview", "meeting", "coding", "assessment", "phone", "mock"]
 
 
@@ -50,6 +52,7 @@ class LiveSettings(BaseModel):
     length: AnswerLength = "standard"
     style: AnswerStyle = "bullets"
     answer_language: str | None = None
+    response_timing: ResponseTiming = "balanced"
 
 
 class LiveSettingsPatch(BaseModel):
@@ -57,6 +60,7 @@ class LiveSettingsPatch(BaseModel):
     length: AnswerLength | None = None
     style: AnswerStyle | None = None
     answer_language: str | None = None
+    response_timing: ResponseTiming | None = None
 
 
 class CodeBlock(BaseModel):

@@ -225,6 +225,7 @@ export function LivePanel(props: LivePanelProps) {
       <ControlBar
         length={live.settings.length}
         autoAnswer={live.settings.auto_answer}
+        responseTiming={live.settings.response_timing ?? "balanced"}
         paused={paused}
         ended={ended}
         hotkeys={hotkeys}
@@ -237,6 +238,7 @@ export function LivePanel(props: LivePanelProps) {
         onClear={actions.clear}
         onLength={actions.setLength}
         onAutoAnswer={actions.setAutoAnswer}
+        onResponseTiming={actions.setResponseTiming}
         onTogglePause={actions.togglePause}
         onEnd={props.onEnd}
       />

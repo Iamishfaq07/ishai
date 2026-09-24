@@ -24,6 +24,7 @@ export {
   type QuestionView,
   type TurnView,
 } from "./live/reducer";
+export { RESPONSE_TIMINGS, loadResponseTiming, saveResponseTiming } from "./live/preferences";
 export { useLiveSession, type LiveActions, type UseLiveSessionOptions, type UseLiveSessionResult } from "./live/useLiveSession";
 export {
   DEFAULT_HOTKEYS,

@@ -406,3 +406,58 @@ def test_context_budget_truncates_top_fact_instead_of_skipping() -> None:
     built = build_prompt(SessionIndex(chunks), _inputs("CI/CD pipeline security?"), SessionMemory())
     # The highest-ranked (big) fact is truncated and kept, not skipped in favor of the smaller one.
     assert "resume: Big role" in built.context_used[0]
+
+
+def test_patience_holds_the_question_after_the_endpoint() -> None:
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=800)
+    assert f.on_transcript("t1", "What is dependency injection?", 0, is_final=True, endpoint=True) is None
+    assert f.tick(700) is None  # still listening in case there's more
+    fired = f.tick(800)
+    assert fired and fired.trigger == "endpoint" and fired.detection.question_text == "What is dependency injection?"
+
+
+def test_a_question_continued_after_a_pause_is_answered_whole() -> None:
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=800)
+    assert f.on_transcript("t1", "Tell me about a difficult bug you fixed.", 0, is_final=True, endpoint=True) is None
+    f.on_speech_activity(500)  # VAD: the interviewer is talking again, words not transcribed yet
+    assert f.tick(1400) is None  # past the grace window, but held: the resumed words haven't arrived
+    assert f.on_transcript("t2", "Specifically, how did you", 1500, is_final=False) is None
+    fired = f.on_transcript("t2", "Um. Specifically, how did you track it down?", 2400, is_final=True, endpoint=True)
+    assert fired is None  # the stitched question gets its own patience window
+    fired = f.tick(3200)
+    assert fired and fired.turn_id == "t2"
+    assert fired.detection.question_text == (
+        "Tell me about a difficult bug you fixed. Specifically, how did you track it down?")
+
+
+def test_vad_noise_does_not_hold_a_question_forever() -> None:
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=800)
+    f.on_transcript("t1", "What is dependency injection?", 0, is_final=True, endpoint=True)
+    f.on_speech_activity(300)  # e.g. a cough; no words follow
+    assert f.tick(2200) is None
+    assert f.tick(2300) is not None
+
+
+def test_candidate_speaking_ends_the_wait_and_blocks_stitching() -> None:
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=1600)
+    f.on_transcript("t1", "What is dependency injection?", 0, is_final=True, endpoint=True)
+    fired = f.on_candidate_speech(400)  # the candidate starts answering: the question is over
+    assert fired and fired.detection.question_text == "What is dependency injection?"
+    nxt = f.on_transcript("t2", "And how would you test it?", 900, is_final=True, endpoint=True)
+    assert nxt is None and f.tick(2500)
+    assert f.tick(2500) is None  # already fired once
+
+
+def test_quick_timing_keeps_the_old_instant_behaviour() -> None:
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=0)
+    fired = f.on_transcript("t1", "What is dependency injection?", 0, is_final=True, endpoint=True)
+    assert fired and fired.trigger == "endpoint"
+
+
+def test_a_new_question_after_the_window_is_not_stitched() -> None:
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=800)
+    f.on_transcript("t1", "What is dependency injection?", 0, is_final=True, endpoint=True)
+    assert f.tick(800)
+    f.on_transcript("t2", "How would you test it?", 3000, is_final=True, endpoint=True)
+    fired = f.tick(3800)
+    assert fired and fired.detection.question_text == "How would you test it?"

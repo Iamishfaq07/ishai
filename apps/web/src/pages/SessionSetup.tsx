@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { AnswerLength, AnswerStyle, DocumentKind, SessionType } from "@orbit/types";
+import type { AnswerLength, AnswerStyle, DocumentKind, ResponseTiming, SessionType } from "@orbit/types";
+import { RESPONSE_TIMINGS, loadResponseTiming, saveResponseTiming } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, Meter, PageHeader, Select, Spinner, Toggle } from "../components/ui";
 import { api } from "../lib/api";
 import {
@@ -60,6 +61,7 @@ export function SessionSetupPage() {
   const [answerLanguage, setAnswerLanguage] = useState("en");
   const [preset, setPreset] = useState("concise");
   const [autoAnswer, setAutoAnswer] = useState(true);
+  const [responseTiming, setResponseTiming] = useState<ResponseTiming>(loadResponseTiming);
   const [systemAudio, setSystemAudio] = useState(type !== "phone");
   const [selectedDocs, setSelectedDocs] = useState<Set<string> | null>(null);
   const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
@@ -187,9 +189,30 @@ export function SessionSetupPage() {
                 checked={autoAnswer}
                 onChange={setAutoAnswer}
                 label="Auto answer"
-                description="Generate an answer as soon as a complete interviewer question is detected."
+                description="On: answer each complete interviewer question automatically. Off: nothing is generated until you press Answer."
               />
             </div>
+            {autoAnswer && (
+              <div className="mt-4 max-w-sm">
+                <Field label="Wait before answering" htmlFor="response-timing">
+                  <Select
+                    id="response-timing"
+                    value={responseTiming}
+                    onChange={(e) => {
+                      const t = e.target.value as ResponseTiming;
+                      setResponseTiming(t);
+                      saveResponseTiming(t);
+                    }}
+                  >
+                    {RESPONSE_TIMINGS.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label} — {t.hint}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+            )}
           </Card>
 
           <Card>

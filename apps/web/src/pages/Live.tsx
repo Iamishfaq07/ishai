@@ -8,6 +8,7 @@ import {
   cx,
   focusRing,
   loadHotkeys,
+  loadResponseTiming,
   useLiveSession,
   VISION_ENABLED,
   type PanelMode,
@@ -72,7 +73,12 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
     apiBaseUrl: API_URL,
     sessionId: session.id,
     getTicket: async () => (await api.liveTicket(session.id)).ticket,
-    initialSettings: { auto_answer: session.auto_answer, length: session.length, style: session.style },
+    initialSettings: {
+      auto_answer: session.auto_answer,
+      length: session.length,
+      style: session.style,
+      response_timing: loadResponseTiming(),
+    },
   });
 
   useEffect(() => localStorage.setItem(MODE_KEY, mode), [mode]);

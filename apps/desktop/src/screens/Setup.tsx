@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import type { AnswerLength, AnswerStyle, DocumentKind, OrbitDocument, OrbitSession, SessionType, User } from "@orbit/types";
+import type {
+  AnswerLength,
+  AnswerStyle,
+  DocumentKind,
+  OrbitDocument,
+  OrbitSession,
+  ResponseTiming,
+  SessionType,
+  User,
+} from "@orbit/types";
 import { AUDIO_CHANNEL } from "@orbit/types";
-import { cx, focusRing } from "@orbit/ui";
+import { RESPONSE_TIMINGS, cx, focusRing, loadResponseTiming, saveResponseTiming } from "@orbit/ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { WEB_URL, api } from "../api";
 import { listAudioApps, listAudioDevices, startCapture, stopCapture, type AudioApp, type NativeAudioDevice } from "../native";
@@ -83,6 +92,7 @@ export function SetupScreen({
   const [style, setStyle] = useState<AnswerStyle>("bullets");
   const [language, setLanguage] = useState("en");
   const [autoAnswer, setAutoAnswer] = useState(true);
+  const [responseTiming, setResponseTiming] = useState<ResponseTiming>(loadResponseTiming);
   const [docs, setDocs] = useState<OrbitDocument[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [uploadKind, setUploadKind] = useState<DocumentKind>("resume");
@@ -380,11 +390,39 @@ export function SetupScreen({
                 <option value="detailed">Detailed</option>
               </select>
             </label>
-            <label className="flex items-end gap-2 pb-1.5 text-xs font-medium">
-              <input type="checkbox" checked={autoAnswer} onChange={(e) => setAutoAnswer(e.target.checked)} />
-              Auto answer
+            <label className="block space-y-1">
+              <span className="text-xs font-medium">Answering</span>
+              <select
+                value={autoAnswer ? "auto" : "manual"}
+                onChange={(e) => setAutoAnswer(e.target.value === "auto")}
+                className={cx(control, focusRing)}
+              >
+                <option value="auto">Automatic</option>
+                <option value="manual">When I click Answer</option>
+              </select>
             </label>
           </div>
+
+          {autoAnswer && (
+            <label className="block space-y-1">
+              <span className="text-xs font-medium">Wait before answering</span>
+              <select
+                value={responseTiming}
+                onChange={(e) => {
+                  const t = e.target.value as ResponseTiming;
+                  setResponseTiming(t);
+                  saveResponseTiming(t);
+                }}
+                className={cx(control, focusRing)}
+              >
+                {RESPONSE_TIMINGS.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label} — {t.hint}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block space-y-1">
