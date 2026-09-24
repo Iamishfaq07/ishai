@@ -364,15 +364,25 @@ function Banners({
   else if (stt?.state === "reconnecting")
     items.push({ key: "stt", tone: "warn", text: stt.detail ?? "Transcription reconnecting…" });
   if (live.usage?.limitReached)
-    items.push({ key: "usage", tone: "error", text: "You've used this month's live minutes — the session has ended." });
-  else if (live.usage && live.state !== "ended")
+    items.push({
+      key: "usage",
+      tone: "error",
+      text:
+        live.usage.reason === "session"
+          ? "This session reached its maximum length and has ended. Start a new session to continue."
+          : "You've used this month's minutes — the session has ended.",
+    });
+  else if (live.usage && live.state !== "ended") {
+    const n = Math.max(1, Math.round(live.usage.minutesRemaining));
     items.push({
       key: "usage",
       tone: "warn",
-      text: `${Math.max(1, Math.round(live.usage.minutesRemaining))} live minute${
-        Math.round(live.usage.minutesRemaining) === 1 ? "" : "s"
-      } left this month — the session ends when they run out.`,
+      text:
+        live.usage.reason === "session"
+          ? `${n} minute${n === 1 ? "" : "s"} left in this session — it ends automatically at your plan's maximum length.`
+          : `${n} minute${n === 1 ? "" : "s"} left this month — the session ends when they run out.`,
     });
+  }
   if (live.lastError)
     items.push({
       key: "err",

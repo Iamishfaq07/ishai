@@ -85,7 +85,7 @@ export interface LiveViewState {
   providers: Partial<Record<ProviderKind, ProviderStatus>>;
   lastError: { code: string; message: string } | null;
   /** Server-reported live-minute status: set when few minutes remain or the limit ended the session. */
-  usage: { minutesRemaining: number; limitReached: boolean } | null;
+  usage: { minutesRemaining: number; limitReached: boolean; reason: "monthly" | "session" } | null;
   /** Mock interview: the AI interviewer's current question, and whether the interview is over. */
   mock: { questionId: string; text: string; isFollowUp: boolean; index: number; total: number } | null;
   mockCompleted: boolean;
@@ -269,7 +269,11 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
     case "usage.status":
       return {
         ...s,
-        usage: { minutesRemaining: action.data.minutes_remaining, limitReached: action.data.limit_reached },
+        usage: {
+          minutesRemaining: action.data.minutes_remaining,
+          limitReached: action.data.limit_reached,
+          reason: action.data.reason ?? "monthly",
+        },
       };
 
     // ── transcript ───────────────────────────────────────────────────────

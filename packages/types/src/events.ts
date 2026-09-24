@@ -210,7 +210,8 @@ export interface ServerEventMap {
   /** Mock interview finished (planned questions or time used up); session.ended follows. */
   "mock.completed": { questions: number };
   /** Live-minute quota (server-enforced): a warning when few minutes remain; at the limit the session ends. */
-  "usage.status": { minutes_remaining: number; limit_reached: boolean };
+  /** `reason`: which limit — this month's allowance ("monthly") or this session's maximum length ("session"). */
+  "usage.status": { minutes_remaining: number; limit_reached: boolean; reason?: "monthly" | "session" };
   error: { code: string; message: string };
 }
 export type ServerEventType = keyof ServerEventMap;

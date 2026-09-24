@@ -1,5 +1,48 @@
 # Implementation log
 
+## Launch hardening 1d — Authenticode pipeline, release config split, single-instance guard (2026-09-25)
+
+- **Authenticode signing pipeline (§8):**
+  - `scripts/sign-windows.ps1` (signtool, SHA-256, RFC 3161 timestamp) supports three credential sources: a
+    certificate in the Windows store (Certum SimplySign or a hardware token), Azure Trusted Signing, or a PFX.
+  - `release-desktop.ps1 -Sign` makes Tauri sign every binary before the updater signature is written.
+  - `verify-authenticode.ps1` then checks the installer and the exe + uninstaller inside it: valid chain,
+    intact hash, timestamp present.
+  - `ORBIT_REQUIRE_SIGNING=1` refuses unsigned builds; CI's `release.yml` got the same verification and an
+    `ORBIT_REQUIRE_SIGNING` repo variable.
+  - Tested end-to-end with a throwaway self-signed certificate: every binary was signed and timestamped, and
+    verification passed only in test-certificate mode. It correctly failed on the untrusted root, on unsigned
+    files and on the published 0.1.16. The test certificate was deleted afterwards.
+- **Release config split (§9):** `tauri.conf.json` no longer sets `dangerousInsecureTransportProtocol`.
+  `tauri.dev.conf.json` enables it for localhost development (`pnpm dev:desktop`). The release script and CI fail
+  if the release config ever allows it.
+- **Single instance, explicit (§10):**
+  - `render.yaml` pins `numInstances: 1`;
+  - `ORBIT_API_REPLICAS` (default 1) stops a production boot if it's set above 1, because live-session state is
+    in-process until it moves to Redis.
+
+## Launch hardening 1b — configurable plans, entitlements, session ceiling (2026-09-25)
+
+- **One plan table in server config** (`entitlements.py`), overridable with `ORBIT_PLANS_JSON` and
+  `*_MAX_SESSION_MINUTES`. Invalid config stops the API at boot.
+- **Plan fields:** live minutes, mock minutes, screenshots, documents, max session length, features, display
+  price, Stripe price id.
+- **Entitlement service** `for_user()` behind `GET /v1/entitlements`, plus a public `GET /v1/plans`. The web
+  Billing page and desktop Settings render from them instead of hard-coded copy.
+- **Mock interviews have their own monthly allowance** (`mock_seconds`); before, they spent live minutes.
+- **Feature flags are enforced** (before, they were defined but never checked):
+  - screenshots need `vision` and mock sessions need `mock`, otherwise `403 feature_unavailable`;
+  - the old defaults contradicted themselves: Free had screenshot credits but no `vision`.
+- **Per-session ceiling (§7), even on Unlimited:**
+  - Free 60 min, Pro 180, Unlimited 240, counted across reconnects;
+  - a 5-minute warning (`usage.status {reason: "session"}`), then a graceful end (transcript, usage and report
+    are all kept);
+  - a capped session can't reopen (`409 session_time_limit`);
+  - the live banner says which limit it hit.
+- New `docs/BILLING.md`.
+- Tests: 14 entitlement tests (config, fail-fast, endpoints, mock allowance, feature gates, ceiling) and 1
+  reducer test. The Billing page was checked in Edge against a local API with price overrides.
+
 ## Launch hardening 1a, part 2 — one live session, truthful STT status, upload hardening (2026-09-25)
 
 - **One live session per account.** A second one is refused at the ticket (`409 live_session_active`, naming the

@@ -28,6 +28,7 @@ Render dashboard → New → Blueprint → this repo (`render.yaml`). Set the pr
 | `ORBIT_WEB_URL`, `ORBIT_CORS_ORIGINS` | yes | the web URL; CORS is a JSON array incl. `http://tauri.localhost` |
 | `ORBIT_ALLOWED_EMAILS` | no | who else may sign in (emails, `@domain`, or `*`). Unset = admin only. Re-checked per request. Anyone besides the admin needs SMTP (below) to verify their email. |
 | `ORBIT_UPDATES_GITHUB_TOKEN` | no | fine-grained PAT (this repo, Contents read) so desktop auto-update works |
+| `ORBIT_PLANS_JSON`, `FREE_/PRO_/UNLIMITED_MAX_SESSION_MINUTES` | no | plan limits, features, prices and the per-session ceiling. See [BILLING.md](BILLING.md) |
 | `ORBIT_LLM_PRICING_JSON` | no | extra/override LLM prices for internal cost estimates (see `providers/llm/pricing.py`) |
 | `ORBIT_LIVE_HEARTBEAT_S` | no | live-minute commit/enforcement interval, default 15 |
 | `ORBIT_SPOOL_DIR` | no | where dead-lettered writes spool if the DB is unreachable (default: temp dir) |
@@ -44,8 +45,9 @@ The container runs `alembic upgrade head` on boot (Postgres DDL is transactional
 and the previous deploy keeps serving). Health: `/health` (liveness + deployed `commit`), `/ready` (DB).
 
 **Run exactly one instance.** Live-session state (WS tickets, socket ownership, rate limits) is in process memory
-(`docs/DECISIONS.md` D12). Don't scale the service out until that moves to Redis. Durable state — usage, cost,
-report jobs, dead-lettered writes — is in Postgres.
+(`docs/DECISIONS.md` D12). Don't scale the service out until that moves to Redis. `render.yaml` pins
+`numInstances: 1`, and `ORBIT_API_REPLICAS` above 1 stops a production boot. Durable state (usage, cost, report
+jobs, dead-lettered writes) is in Postgres.
 
 **Background work runs in the API process.** Session reports are DB-backed jobs picked up by a worker inside each
 API process; there's no separate worker service to deploy. Dead-lettered live-session writes are replayed on boot.

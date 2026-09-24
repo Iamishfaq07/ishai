@@ -10,6 +10,9 @@ services:
     dockerfilePath: ./apps/api/Dockerfile
     dockerContext: ./apps/api
     healthCheckPath: /ready
+    # Exactly one instance: live-session state (WS tickets, socket ownership, rate limits) is in process memory.
+    # Scaling out before that state moves to Redis would break live sessions (docs/DECISIONS.md D12).
+    numInstances: 1
     autoDeploy: true
     envVars:
       - key: ORBIT_ENV

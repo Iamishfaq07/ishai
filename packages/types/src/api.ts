@@ -268,6 +268,34 @@ export interface ScreenshotAccepted {
 
 export type PlanId = "free" | "pro" | "unlimited";
 
+/** GET /v1/plans (public) — what each plan includes. The server is the only source of limits and prices. */
+export interface PlanInfo {
+  name: PlanId;
+  label: string;
+  live_minutes: number | null;
+  mock_minutes: number | null;
+  screenshots: number | null;
+  documents: number | null;
+  max_session_minutes: number;
+  features: string[];
+  price_usd_month: number | null;
+}
+
+/** GET /v1/entitlements — the signed-in user's plan, limits, this month's usage and features. */
+export interface Entitlements {
+  plan: PlanId;
+  label: string;
+  limits: {
+    live_minutes: number | null;
+    mock_minutes: number | null;
+    screenshots: number | null;
+    documents: number | null;
+    max_session_minutes: number;
+  };
+  usage: { live_minutes: number; mock_minutes: number; screenshots: number; documents: number };
+  features: Record<string, boolean>;
+}
+
 export interface Usage {
   plan: PlanId;
   live_minutes_used: number;

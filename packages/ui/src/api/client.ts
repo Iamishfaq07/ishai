@@ -3,6 +3,8 @@ import type {
   AdminConfigUpdate,
   ApiErrorBody,
   AuthConfig,
+  Entitlements,
+  PlanInfo,
   AuthResponse,
   CreateSessionRequest,
   CreateTextDocumentRequest,
@@ -197,6 +199,10 @@ export function createApiClient(options: ApiClientOptions) {
       const qs = q.toString();
       return json<PreflightReport>(`/v1/preflight${qs ? `?${qs}` : ""}`);
     },
+
+    // Plans / entitlements
+    listPlans: () => json<PlanInfo[]>("/v1/plans"),
+    entitlements: () => json<Entitlements>("/v1/entitlements"),
 
     // Admin / advanced settings
     adminStatus: () => json<{ is_admin: boolean }>("/v1/admin/status"),

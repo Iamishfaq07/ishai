@@ -12,12 +12,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from orbit_api import db, jobs
 from orbit_api.admin.routes import router as admin_router
 from orbit_api.auth.routes import router as auth_router
+from orbit_api.billing.routes import router as billing_router
 from orbit_api.config import get_settings
 from orbit_api.csrf import HEADER as CSRF_HEADER
 from orbit_api.csrf import csrf_middleware
 from orbit_api.desktop_updates import router as desktop_router
 from orbit_api.documents.parsing import isolation_selftest
 from orbit_api.documents.routes import router as documents_router
+from orbit_api.entitlements import plans as configured_plans
 from orbit_api.observability import configure_logging, init_sentry, request_id_middleware
 from orbit_api.preflight import router as preflight_router
 from orbit_api.providers.llm import get_llm_provider
@@ -66,6 +68,7 @@ def running_commit() -> str | None:
 
 def create_app() -> FastAPI:
     s = get_settings()
+    configured_plans()  # fail fast on a bad ORBIT_PLANS_JSON / *_MAX_SESSION_MINUTES instead of at first use
     if init_sentry(s.sentry_dsn, s.env, running_commit()):
         logging.getLogger(__name__).info("sentry error reporting enabled")
     app = FastAPI(title="Orbit API", version="0.1.0", lifespan=lifespan,
@@ -124,6 +127,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_router)
     app.include_router(workspaces_router)
     app.include_router(preflight_router)
+    app.include_router(billing_router)
     return app
 
 

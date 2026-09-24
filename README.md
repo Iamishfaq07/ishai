@@ -37,6 +37,7 @@ Docs:
 - [Decisions](docs/DECISIONS.md)
 - [Deploy](docs/DEPLOY.md)
 - [Security](docs/SECURITY.md)
+- [Plans & billing](docs/BILLING.md)
 - [Windows release & updates](docs/WINDOWS_RELEASE.md)
 - [Changelog](docs/CHANGELOG.md)
 

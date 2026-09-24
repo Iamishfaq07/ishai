@@ -62,7 +62,6 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNBOThENTFFMTQ2QzYyRUUKUldUdVltd1VIdFdZT25yU1BJdDFSejhmUFNRQm4vbVRYbG9MSUMvOFRXbWwxOW9KTEdET1hpRUEK",
       "endpoints": [],
-      "dangerousInsecureTransportProtocol": true,
       "windows": {
         "installMode": "passive"
       }

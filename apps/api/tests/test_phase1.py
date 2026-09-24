@@ -180,7 +180,7 @@ def test_session_is_warned_then_ended_at_the_live_minute_limit(fast_client: Test
         pass
     statuses = [e["data"] for e in events if e["type"] == "usage.status"]
     assert statuses[0]["limit_reached"] is False and statuses[0]["minutes_remaining"] <= 0.1  # the warning
-    assert statuses[-1] == {"minutes_remaining": 0, "limit_reached": True}
+    assert statuses[-1] == {"minutes_remaining": 0, "limit_reached": True, "reason": "monthly"}
     assert fast_client.get(f"/v1/sessions/{sid}", headers=h).json()["session"]["status"] == "ended"
     usage = fast_client.get("/v1/usage", headers=h).json()
     assert 30.0 <= usage["live_minutes_used"] <= 30.1  # stopped at the limit, not minutes past it

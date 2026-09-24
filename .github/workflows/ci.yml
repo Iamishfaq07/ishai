@@ -74,6 +74,11 @@ jobs:
         with: { workspaces: apps/desktop/src-tauri }
       # tauri::generate_context! embeds frontendDist at compile time, so build the frontend first
       - run: pnpm --filter @orbit/desktop build
+      - name: Release config must not allow http updates
+        shell: pwsh
+        run: |
+          $c = Get-Content -Raw apps/desktop/src-tauri/tauri.conf.json | ConvertFrom-Json
+          if ($c.plugins.updater.dangerousInsecureTransportProtocol) { throw "dangerousInsecureTransportProtocol belongs in tauri.dev.conf.json only" }
       - name: cargo fmt
         working-directory: apps/desktop/src-tauri
         run: cargo fmt --check

@@ -17,6 +17,10 @@ class Settings(BaseSettings):
         "sqlite+aiosqlite:///./orbit.db", validation_alias=AliasChoices("ORBIT_DATABASE_URL")
     )
     redis_url: str | None = Field(None, validation_alias=AliasChoices("ORBIT_REDIS_URL"))
+    # How many API processes serve this deployment. Live-session state (WS tickets, socket ownership, the engine
+    # a screenshot is routed to, rate limits) is in process memory, so only 1 is supported until it moves to
+    # Redis. Declared so a scaled-out deploy fails loudly at boot instead of breaking sessions at random.
+    api_replicas: int = Field(1, ge=1, validation_alias=AliasChoices("ORBIT_API_REPLICAS", "API_REPLICAS"))
     jwt_secret: SecretStr = Field(SecretStr(_DEV_SECRET), validation_alias=AliasChoices("ORBIT_JWT_SECRET"))
     jwt_ttl_minutes: int = 60 * 24 * 7
     cors_origins: list[str] = Field(
@@ -53,6 +57,8 @@ class Settings(BaseSettings):
     live_heartbeat_s: float = Field(15.0, validation_alias=AliasChoices("ORBIT_LIVE_HEARTBEAT_S"))
     # Extra/override LLM prices for internal cost estimates (see providers/llm/pricing.py).
     llm_pricing_json: str | None = Field(None, validation_alias=AliasChoices("ORBIT_LLM_PRICING_JSON"))
+    # Plan limits/features/prices overrides (see entitlements.py). Validated at startup.
+    plans_json: str | None = Field(None, validation_alias=AliasChoices("ORBIT_PLANS_JSON"))
 
     desktop_updates_dir: str | None = Field(None, validation_alias=AliasChoices("ORBIT_DESKTOP_UPDATES_DIR"))
     # Or serve desktop updates straight from GitHub Releases (for hosts without a persistent disk). The token
@@ -120,6 +126,9 @@ class Settings(BaseSettings):
                 raise ValueError("ORBIT_DATABASE_URL must be Postgres in production, not SQLite")
             # Without an explicit admin, sign-up would be open and "first user = admin" would hand unlimited
             # use of the shared provider keys to whoever registers first.
+            if self.api_replicas != 1:
+                raise ValueError("ORBIT_API_REPLICAS must be 1: live-session state is process-local (tickets, "
+                                 "socket ownership, screenshot routing, rate limits). See docs/DECISIONS.md D12.")
             if not (self.admin_email and "@" in self.admin_email):
                 raise ValueError("ORBIT_ADMIN_EMAIL must be set in production (the admin is never inferred)")
             # Anyone other than the admin can sign in → they must be able to prove their inbox, or turn
