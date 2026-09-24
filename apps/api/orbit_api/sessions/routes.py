@@ -2,12 +2,13 @@ import asyncio
 import contextlib
 import json
 import logging
+import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     File,
     HTTPException,
@@ -21,6 +22,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from orbit_api import jobs
 from orbit_api.auth.security import TICKET_TTL_S, current_user, issue_ticket, redeem_ticket
 from orbit_api.config import get_settings
 from orbit_api.db import get_db, sessionmaker
@@ -50,7 +52,7 @@ from orbit_api.providers.llm.base import LLMImage
 from orbit_api.providers.stt import create_stt_provider
 from orbit_api.ratelimit import limit
 from orbit_api.retrieval.index import IndexedChunk, SessionIndex
-from orbit_api.sessions.recorder import DbRecorder
+from orbit_api.sessions.recorder import DbRecorder, upsert_usage
 from orbit_api.sessions.report import generate_report
 
 log = logging.getLogger(__name__)
@@ -71,6 +73,9 @@ _live_sockets: dict[str, dict[str, WebSocket]] = {}
 # The engine behind each live socket, so HTTP uploads (screenshots) can feed the running session.
 _live_engines: dict[str, LiveEngine] = {}
 MAX_SCREENSHOT_BYTES = 8 * 1024 * 1024
+_teardowns: set[asyncio.Task[None]] = set()  # strong refs so an in-flight teardown isn't garbage-collected
+LOW_MINUTES_WARNING_S = 5 * 60
+ReportStatus = Literal["pending", "ready", "failed"] | None
 
 
 class SessionIn(BaseModel):
@@ -102,6 +107,8 @@ class SessionOut(BaseModel):
     duration_seconds: int
     question_count: int = 0
     document_ids: list[str] = Field(default_factory=list)
+    # Ended sessions: "pending" while the report job runs, "ready" once written, "failed" if it gave up.
+    report_status: Literal["pending", "ready", "failed"] | None = None
 
 
 class SessionDetail(BaseModel):
@@ -119,20 +126,37 @@ async def _owned(db: AsyncSession, session_id: str, user: User) -> LiveSessionRo
     return row
 
 
-def _to_out(row: LiveSessionRow, question_count: int, doc_ids: list[str]) -> SessionOut:
+def _to_out(row: LiveSessionRow, question_count: int, doc_ids: list[str],
+            report_status: ReportStatus = None) -> SessionOut:
     return SessionOut(
         id=row.id, title=row.title, type=row.type, role=row.role, language=row.language,
         answer_language=row.answer_language, length=row.length, style=row.style, auto_answer=row.auto_answer,
         status=row.status, created_at=row.created_at, started_at=row.started_at, ended_at=row.ended_at,
         duration_seconds=row.duration_s, question_count=question_count, document_ids=doc_ids,
+        report_status=report_status,
     )
+
+
+async def _report_statuses(db: AsyncSession, rows: Sequence[LiveSessionRow]) -> dict[str, ReportStatus]:
+    ended = [r.id for r in rows if r.status == "ended"]
+    if not ended:
+        return {}
+    have = set((await db.scalars(select(SessionSummary.session_id)
+                                 .where(SessionSummary.session_id.in_(ended)))).all())
+    js = await jobs.job_status(db, [jobs.report_key(sid) for sid in ended])
+    out: dict[str, ReportStatus] = {}
+    for sid in ended:
+        job = js.get(jobs.report_key(sid))
+        out[sid] = ("pending" if job in ("queued", "running") else "ready" if sid in have
+                    else "failed" if job == "failed" else None)
+    return out
 
 
 async def _session_out(db: AsyncSession, row: LiveSessionRow) -> SessionOut:
     qcount = await db.scalar(select(func.count()).select_from(Question).where(Question.session_id == row.id))
     doc_ids = (await db.scalars(select(SessionDocument.document_id)
                                 .where(SessionDocument.session_id == row.id))).all()
-    return _to_out(row, int(qcount or 0), list(doc_ids))
+    return _to_out(row, int(qcount or 0), list(doc_ids), (await _report_statuses(db, [row])).get(row.id))
 
 
 @router.post("/sessions", response_model=SessionOut, status_code=201, dependencies=[Depends(session_limit)])
@@ -173,13 +197,16 @@ async def list_sessions(user: Annotated[User, Depends(current_user)],
     for sid, did in (await db.execute(select(SessionDocument.session_id, SessionDocument.document_id)
                                       .where(SessionDocument.session_id.in_(ids)))).all():
         docs.setdefault(sid, []).append(did)
-    return [_to_out(r, counts.get(r.id, 0), docs.get(r.id, [])) for r in rows]
+    reports = await _report_statuses(db, rows)
+    return [_to_out(r, counts.get(r.id, 0), docs.get(r.id, []), reports.get(r.id)) for r in rows]
 
 
 @router.get("/sessions/{session_id}", response_model=SessionDetail)
 async def get_session(session_id: str, user: Annotated[User, Depends(current_user)],
                       db: Annotated[AsyncSession, Depends(get_db)]) -> SessionDetail:
     row = await _owned(db, session_id, user)
+    # Status before summary: the report job may finish in between, and "ready" must imply a summary.
+    session_out = await _session_out(db, row)
     turns = (await db.scalars(select(SessionTurn).where(SessionTurn.session_id == row.id)
                               .order_by(SessionTurn.created_at, SessionTurn.start_ms))).all()
     questions = (await db.scalars(select(Question).where(Question.session_id == row.id)
@@ -188,7 +215,7 @@ async def get_session(session_id: str, user: Annotated[User, Depends(current_use
                                 .order_by(Answer.created_at))).all()
     summary = await db.scalar(select(SessionSummary).where(SessionSummary.session_id == row.id))
     return SessionDetail(
-        session=await _session_out(db, row),
+        session=session_out,
         turns=[{"id": t.id, "speaker": t.speaker, "text": t.text, "start_ms": t.start_ms, "end_ms": t.end_ms}
                for t in turns],
         questions=[{"id": q.id, "text": q.text, "type": q.type, "is_follow_up": q.is_follow_up,
@@ -201,17 +228,15 @@ async def get_session(session_id: str, user: Annotated[User, Depends(current_use
 
 @router.post("/sessions/{session_id}/end", response_model=SessionOut)
 async def end_session(session_id: str, user: Annotated[User, Depends(current_user)],
-                      db: Annotated[AsyncSession, Depends(get_db)], background: BackgroundTasks) -> SessionOut:
+                      db: Annotated[AsyncSession, Depends(get_db)]) -> SessionOut:
     row = await _owned(db, session_id, user)
     if row.status != "ended":
-        was_live = row.status == "live"
         row.status = "ended"
         row.ended_at = datetime.now(UTC)
+        # Durable report job, deduped per session: a live connection ending at the same moment re-arms the
+        # same job instead of adding a second LLM call.
+        await jobs.enqueue(db, "report", {"session_id": row.id}, jobs.report_key(row.id))
         await db.commit()
-        # If a live WS engine is (or was) running, it generates the report on its own teardown; generating
-        # here too would double the LLM call. Only generate for sessions ended without a live connection.
-        if not was_live:
-            background.add_task(generate_report, row.id)
     return await _session_out(db, row)
 
 
@@ -298,7 +323,9 @@ async def upload_screenshot(session_id: str, image: Annotated[UploadFile, File()
     media_type = _image_type(data[:8])
     if media_type is None:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Screenshot must be a PNG or JPEG image.")
-    db.add(UsageEvent(user_id=user.id, session_id=session_id, metric="screenshots", quantity=1))
+    # Internal metric only: the user's screenshot credit ("screenshots") is spent by the engine when the
+    # answer is actually delivered.
+    db.add(UsageEvent(user_id=user.id, session_id=session_id, metric="screenshot_attempts", quantity=1))
     await db.commit()
     return {"screenshot_id": await engine.answer_screenshot(LLMImage(data, media_type))}
 
@@ -332,6 +359,60 @@ async def _load_index(db: AsyncSession, session_id: str) -> tuple[SessionIndex, 
     # skills from resume/JD become STT key terms (custom vocabulary)
     keyterms = [c.text for c in chunks if c.category == "skill" and len(c.text) < 40][:30]
     return SessionIndex(chunks), keyterms
+
+
+async def drain_teardowns(timeout_s: float = 15) -> None:
+    """On shutdown: let in-flight live-session teardowns finish writing before the DB goes away."""
+    if _teardowns:
+        await asyncio.wait(set(_teardowns), timeout=timeout_s)
+
+
+async def _commit_live_seconds(user_id: str, session_id: str, usage_key: str, seconds: int) -> float | None:
+    """Commit this connection's running live time (idempotent upsert) and return the user's remaining
+    live seconds this month across ALL their sessions (None = unlimited)."""
+    async with sessionmaker()() as db:
+        await upsert_usage(db, UsageEvent(user_id=user_id, session_id=session_id, metric="live_seconds",
+                                          quantity=seconds, idempotency_key=usage_key,
+                                          created_at=datetime.now(UTC)))
+        await db.commit()
+        remaining = await live_minutes_remaining(db, user_id)
+    return None if remaining is None else remaining * 60
+
+
+async def _meter_live_minutes(ws: WebSocket, engine: LiveEngine, user_id: str, session_id: str,
+                              usage_key: str, limit_ending: asyncio.Event) -> None:
+    """Server-side live-minute enforcement. Usage is committed every heartbeat (so a crash loses at most one
+    interval), the client is warned when little time is left, and at the limit the session ends gracefully.
+    With several concurrent sessions each sees the others' committed time, so any overshoot is bounded by
+    one heartbeat per session."""
+    heartbeat = get_settings().live_heartbeat_s
+    warned = False
+    while True:
+        try:
+            remaining_s = await _commit_live_seconds(user_id, session_id, usage_key, engine.now_ms() // 1000)
+        except Exception:
+            # Fail open for this beat (never cut a live interview off on a DB blip), but loudly; the final
+            # usage is still written durably by the recorder at teardown.
+            log.exception("live-minute heartbeat failed for session %s", session_id)
+            await asyncio.sleep(heartbeat)
+            continue
+        if remaining_s is None:
+            await asyncio.sleep(heartbeat)
+            continue
+        if remaining_s <= 0:
+            log.info("session %s: live-minute limit reached; ending", session_id)
+            limit_ending.set()
+            await engine.send("usage.status", {"minutes_remaining": 0, "limit_reached": True})
+            await engine.end(final=True)
+            with contextlib.suppress(Exception):
+                await ws.close(code=4003, reason="live minutes exhausted")
+            return
+        if remaining_s <= LOW_MINUTES_WARNING_S and not warned:
+            warned = True
+            await engine.send("usage.status", {"minutes_remaining": round(remaining_s / 60, 1),
+                                               "limit_reached": False})
+        # Wake exactly at the limit when it falls before the next beat.
+        await asyncio.sleep(max(1.0, min(heartbeat, remaining_s)))
 
 
 @router.websocket("/sessions/{session_id}/live")
@@ -387,11 +468,15 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
         async with send_lock:
             await ws.send_text(json.dumps(msg, separators=(",", ":")))
 
-    recorder = DbRecorder(session_id, user_id, store_transcripts=store_transcripts)
+    # One live_seconds row per connection, keyed so heartbeats and the final write all set the same row.
+    usage_key = f"live:{uuid.uuid4()}"
+    recorder = DbRecorder(session_id, user_id, store_transcripts=store_transcripts, usage_key=usage_key)
     engine = LiveEngine(profile, settings, send=send, llm=get_llm_provider(), stt=create_stt_provider(),
                         index=index, recorder=recorder)
     _live_engines[session_id] = engine
     explicit_end = False
+    limit_ending = asyncio.Event()
+    meter = asyncio.create_task(_meter_live_minutes(ws, engine, user_id, session_id, usage_key, limit_ending))
     try:
         await engine.start()
         while True:
@@ -426,7 +511,20 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
                 _live_sockets.pop(user_id, None)
         if _live_engines.get(session_id) is engine:
             del _live_engines[session_id]
-        await engine.end(final=explicit_end)
-        await recorder.close()
-        with contextlib.suppress(Exception):
-            await ws.close()
+
+        async def teardown() -> None:
+            if not limit_ending.is_set():
+                meter.cancel()  # else let it finish ending the session (report enqueue included)
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await meter
+            await engine.end(final=explicit_end)
+            await recorder.close()
+            with contextlib.suppress(Exception):
+                await ws.close()
+
+        # Its own task, shielded: if the server cancels this handler (shutdown, or a test client that cancels on
+        # disconnect), usage, transcript and report writes still complete instead of dying mid-write.
+        task = asyncio.create_task(teardown())
+        _teardowns.add(task)
+        task.add_done_callback(_teardowns.discard)
+        await asyncio.shield(task)

@@ -80,6 +80,8 @@ export interface LiveViewState {
   system: AudioStatus;
   providers: Partial<Record<ProviderKind, ProviderStatus>>;
   lastError: { code: string; message: string } | null;
+  /** Server-reported live-minute status: set when few minutes remain or the limit ended the session. */
+  usage: { minutesRemaining: number; limitReached: boolean } | null;
 }
 
 export type LocalAction =
@@ -116,6 +118,7 @@ export function initialLiveState(settings: Partial<LiveSettings> = {}): LiveView
     system: { state: "idle" },
     providers: {},
     lastError: null,
+    usage: null,
   };
 }
 
@@ -242,6 +245,12 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
 
     case "provider.status":
       return { ...s, providers: { ...s.providers, [action.data.provider]: action.data } };
+
+    case "usage.status":
+      return {
+        ...s,
+        usage: { minutesRemaining: action.data.minutes_remaining, limitReached: action.data.limit_reached },
+      };
 
     // ── transcript ───────────────────────────────────────────────────────
     case "transcript.partial": {

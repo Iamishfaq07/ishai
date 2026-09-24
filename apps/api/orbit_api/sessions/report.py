@@ -16,11 +16,13 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from orbit_api import jobs
 from orbit_api.db import sessionmaker
 from orbit_api.live.context_builder import fence
 from orbit_api.models import LiveSessionRow, ProviderRequest, Question, SessionSummary, SessionTurn
 from orbit_api.providers.llm import get_llm_provider
-from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMRequest, estimate_cost
+from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMRequest
+from orbit_api.providers.llm.pricing import estimate_cost
 
 log = logging.getLogger(__name__)
 
@@ -154,6 +156,7 @@ async def generate_report(session_id: str) -> dict[str, Any]:
             "generated_by": None,
         }
 
+        narrative_failed = False
         if questions or turns:
             pairs = pair_questions_with_answers(questions, turns)[-MAX_REVIEW_QUESTIONS:]
             convo = "\n".join(f"{t.speaker}: {t.text}" for t in turns)[-12_000:] or "\n".join(
@@ -181,9 +184,11 @@ async def generate_report(session_id: str) -> dict[str, Any]:
                 db.add(ProviderRequest(user_id=row.user_id, session_id=session_id, provider=llm.name,
                                        model=resp.model, request_type="report",
                                        input_tokens=resp.usage.input_tokens, output_tokens=resp.usage.output_tokens,
+                                       cached_input_tokens=resp.usage.cached_input_tokens,
                                        estimated_cost_usd=estimate_cost(resp.model, resp.usage)))
             except (LLMError, json.JSONDecodeError, ValueError) as e:
                 log.warning("report narrative unavailable: %s", e)
+                narrative_failed = True
 
         existing = await db.scalar(select(SessionSummary).where(SessionSummary.session_id == session_id))
         if existing:
@@ -200,4 +205,14 @@ async def generate_report(session_id: str) -> dict[str, Any]:
                 if row2 is not None:
                     row2.content = report
                     await db.commit()
-        return report
+        # Not stored: tells the durable job to retry the narrative.
+        return {**report, "narrative_failed": True} if narrative_failed else report
+
+
+@jobs.handler("report")
+async def run_report_job(payload: dict[str, Any]) -> None:
+    """Durable-job entry point. The facts-only report is saved even when the narrative fails; raising then
+    lets the job retry the narrative (a transient provider error shouldn't leave a report without it)."""
+    report = await generate_report(str(payload["session_id"]))
+    if report.get("narrative_failed"):
+        raise RuntimeError("report narrative unavailable (provider error); will retry")

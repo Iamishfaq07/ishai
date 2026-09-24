@@ -271,19 +271,21 @@ pub fn spawn(pid: u32, sink: Channel<CaptureEvent>, stop: Arc<AtomicBool>) -> Re
                         if capture.GetBuffer(&mut data, &mut frames, &mut flags, None, None).is_err() {
                             break;
                         }
-                        let silent = flags & (AUDCLNT_BUFFERFLAGS_SILENT.0 as u32) != 0 || data.is_null();
-                        let samples = std::slice::from_raw_parts(data as *const i16,
-                                                                 frames as usize * usize::from(CAPTURE_CHANNELS));
-                        for i in 0..frames as usize {
-                            let mono = if silent {
-                                0.0
-                            } else {
-                                let l = f32::from(samples[i * 2]) / 32768.0;
-                                let r = f32::from(samples[i * 2 + 1]) / 32768.0;
-                                (l + r) * 0.5
-                            };
-                            resampler.push(mono, |v| pending.push(to_i16(v)));
-                        }
+                        let silent = flags & (AUDCLNT_BUFFERFLAGS_SILENT.0 as u32) != 0;
+                        let frame_count = frames as usize;
+                        // Only build a slice over a real buffer: a silent packet may come with a null (or
+                        // stale) pointer, and from_raw_parts on null is UB even if never read.
+                        let samples: Option<&[i16]> = if silent || data.is_null() || frame_count == 0 {
+                            None
+                        } else {
+                            Some(std::slice::from_raw_parts(
+                                data as *const i16,
+                                frame_count * usize::from(CAPTURE_CHANNELS),
+                            ))
+                        };
+                        packet_to_mono(samples, frame_count, usize::from(CAPTURE_CHANNELS), |mono| {
+                            resampler.push(mono, |v| pending.push(to_i16(v)))
+                        });
                         let _ = capture.ReleaseBuffer(frames);
                         while pending.len() >= FRAME_SAMPLES {
                             let chunk: Vec<i16> = pending.drain(..FRAME_SAMPLES).collect();
@@ -308,6 +310,58 @@ pub fn spawn(pid: u32, sink: Channel<CaptureEvent>, stop: Arc<AtomicBool>) -> Re
         Ok(Ok(())) => Ok(handle),
         Ok(Err(e)) => Err(e),
         Err(_) => Err("App audio capture didn't start".into()),
+    }
+}
+
+/// Down-mix one WASAPI packet of interleaved PCM16 to mono. `None` (silent flag / null buffer) yields
+/// `frames` zeros, so silence keeps the stream's timing. A buffer shorter than `frames * channels` is only
+/// read as far as it goes, the rest padded with silence.
+fn packet_to_mono(samples: Option<&[i16]>, frames: usize, channels: usize, mut out: impl FnMut(f32)) {
+    let Some(samples) = samples.filter(|_| channels > 0) else {
+        for _ in 0..frames {
+            out(0.0);
+        }
+        return;
+    };
+    for i in 0..frames {
+        let frame = samples.get(i * channels..(i + 1) * channels);
+        out(frame.map_or(0.0, |f| {
+            f.iter().map(|&s| f32::from(s) / 32768.0).sum::<f32>() / channels as f32
+        }));
+    }
+}
+
+#[cfg(test)]
+mod packet_tests {
+    use super::packet_to_mono;
+
+    fn run(samples: Option<&[i16]>, frames: usize, channels: usize) -> Vec<f32> {
+        let mut v = Vec::new();
+        packet_to_mono(samples, frames, channels, |m| v.push(m));
+        v
+    }
+
+    #[test]
+    fn silent_or_null_packet_yields_zeros_without_reading() {
+        assert_eq!(run(None, 3, 2), vec![0.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn zero_frames_yields_nothing() {
+        assert!(run(Some(&[]), 0, 2).is_empty());
+        assert!(run(None, 0, 2).is_empty());
+    }
+
+    #[test]
+    fn stereo_is_averaged_and_mono_passes_through() {
+        assert_eq!(run(Some(&[16384, 0, -16384, -16384]), 2, 2), vec![0.25, -0.5]);
+        assert_eq!(run(Some(&[16384, -32768]), 2, 1), vec![0.5, -1.0]);
+    }
+
+    #[test]
+    fn short_buffer_and_zero_channels_never_panic() {
+        assert_eq!(run(Some(&[16384, 16384, 100]), 3, 2), vec![0.5, 0.0, 0.0]);
+        assert_eq!(run(Some(&[1, 2]), 2, 0), vec![0.0, 0.0]);
     }
 }
 

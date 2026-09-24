@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import type { User } from "@orbit/types";
 import { cx, focusRing } from "@orbit/ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { API_URL, DEFAULT_API_URL, WEB_URL, api, normalizeApiUrl, setAccessToken, setApiUrl } from "../api";
+import { API_URL, DEFAULT_API_URL, WEB_URL, api, setAccessToken, setApiUrl, validateApiUrl } from "../api";
 import { saveToken } from "../native";
 import { TitleBar } from "../TitleBar";
 
@@ -16,7 +16,8 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
   const [busy, setBusy] = useState(false);
   const [editingServer, setEditingServer] = useState(false);
   const [server, setServer] = useState(API_URL);
-  const serverValid = normalizeApiUrl(server) !== null;
+  const serverCheck = validateApiUrl(server);
+  const serverValid = serverCheck.ok;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -86,10 +87,9 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                const url = normalizeApiUrl(server);
-                if (url) setApiUrl(url === DEFAULT_API_URL ? null : url);
+                if (serverCheck.ok) setApiUrl(serverCheck.url === DEFAULT_API_URL ? null : serverCheck.url);
               }}
-              className="flex items-center gap-1.5"
+              className="flex flex-wrap items-center gap-1.5"
             >
               <label className="sr-only" htmlFor="server-url">Server URL</label>
               <input
@@ -97,11 +97,17 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
                 value={server}
                 onChange={(e) => setServer(e.target.value)}
                 aria-invalid={!serverValid}
-                className={cx(input, "py-1 text-[11px]", focusRing)}
+                aria-describedby={serverCheck.ok ? undefined : "server-url-error"}
+                className={cx(input, "min-w-0 flex-1 py-1 text-[11px]", focusRing)}
               />
               <button type="submit" disabled={!serverValid} className={cx("rounded px-2 py-1 font-medium text-indigo-600 disabled:opacity-40 dark:text-indigo-400", focusRing)}>
                 Save
               </button>
+              {!serverCheck.ok && server.trim() && (
+                <p id="server-url-error" role="alert" className="w-full text-left text-[11px] text-rose-600 dark:text-rose-400">
+                  {serverCheck.reason}
+                </p>
+              )}
             </form>
           ) : (
             <button type="button" onClick={() => setEditingServer(true)} className={cx("hover:underline", focusRing)}>

@@ -29,10 +29,13 @@ PLANS: dict[str, Plan] = {
 
 
 async def is_admin(db: AsyncSession, user: User) -> bool:
-    """ORBIT_ADMIN_EMAIL if set, else the first-registered user."""
-    admin_email = get_settings().admin_email
-    if admin_email:
-        return user.email.lower() == admin_email.lower()
+    """ORBIT_ADMIN_EMAIL. Only outside production (where it's optional) does the first-registered user stand
+    in: production refuses to start without it, and admin is never inferred from registration order there."""
+    settings = get_settings()
+    if settings.admin_email:
+        return user.email.strip().lower() == settings.admin_email.strip().lower()
+    if settings.env == "production":
+        return False
     first_id = await db.scalar(select(User.id).order_by(User.created_at.asc(), User.id.asc()).limit(1))
     return first_id == user.id
 

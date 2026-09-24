@@ -18,13 +18,13 @@ export interface User {
   email_verified: boolean;
   /** Privacy controls (spec §65), account-wide. */
   store_transcripts: boolean;
+  /** Always false: screenshots are analyzed and discarded, never stored. */
   store_screenshots: boolean;
 }
 
 /** PATCH /v1/auth/me/privacy → User */
 export interface PrivacyUpdate {
   store_transcripts?: boolean;
-  store_screenshots?: boolean;
 }
 
 export interface RegisterRequest {
@@ -127,6 +127,8 @@ export interface OrbitSession {
   ended_at: string | null;
   duration_seconds: number | null;
   created_at: string;
+  /** Ended sessions: the report is written by a background job after the session ends. */
+  report_status?: "pending" | "ready" | "failed" | null;
 }
 
 export interface SessionTurn {

@@ -12,6 +12,8 @@ os.environ.update(
     ORBIT_LLM_PROVIDER="mock",
     ORBIT_STT_PROVIDER="mock",
     ORBIT_JWT_SECRET="test-secret-" + "x" * 32,
+    ORBIT_JOB_POLL_S="0.05",
+    ORBIT_SPOOL_DIR=str(_tmp),
 )
 for key in ("DEEPSEEK_API_KEY", "DEEPGRAM_API_KEY"):
     os.environ.pop(key, None)
@@ -25,3 +27,4 @@ def client() -> Iterator["TestClient"]:  # type: ignore[name-defined]  # noqa: F
 
     with TestClient(create_app()) as c:
         yield c
+

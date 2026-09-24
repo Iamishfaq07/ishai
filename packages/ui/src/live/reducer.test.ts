@@ -243,3 +243,12 @@ describe("answer history", () => {
     expect(s.viewedAnswerId).toBeNull();
   });
 });
+
+describe("usage status", () => {
+  it("records the low-minutes warning and the limit", () => {
+    let s = run([ev("usage.status", { minutes_remaining: 4.6, limit_reached: false })]);
+    expect(s.usage).toEqual({ minutesRemaining: 4.6, limitReached: false });
+    s = run([ev("usage.status", { minutes_remaining: 0, limit_reached: true })], s);
+    expect(s.usage?.limitReached).toBe(true);
+  });
+});

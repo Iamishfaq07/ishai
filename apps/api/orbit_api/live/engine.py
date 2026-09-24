@@ -78,6 +78,7 @@ class Recorder(Protocol):
                      provider: str, model: str, first_token_ms: int | None, total_ms: int | None) -> None: ...
     async def provider_request(self, provider: str, model: str, request_type: str, usage: Usage,
                                latency_ms: int, ok: bool) -> None: ...
+    async def usage(self, metric: str, quantity: float, key: str | None = None) -> None: ...
     async def ended(self, duration_s: int, stt_seconds: float, summary: str) -> None: ...
     async def detached(self, duration_s: int, stt_seconds: float, summary: str) -> None: ...
 
@@ -97,6 +98,7 @@ class NullRecorder:
     async def question(self, *a: Any, **k: Any) -> None: ...
     async def answer(self, *a: Any, **k: Any) -> None: ...
     async def provider_request(self, *a: Any, **k: Any) -> None: ...
+    async def usage(self, *a: Any, **k: Any) -> None: ...
     async def ended(self, *a: Any, **k: Any) -> None: ...
     async def detached(self, *a: Any, **k: Any) -> None: ...
 
@@ -548,7 +550,7 @@ class LiveEngine:
         request = LLMRequest(
             messages=built.messages, reasoning="light", thinking=self.settings.thinking, images=images,
             max_tokens=CODE_MAX_TOKENS if is_code else MAX_TOKENS[self.settings.length],
-            request_type="chat" if source == "chat" else "answer",
+            request_type={"chat": "chat", "screenshot": "vision"}.get(source, "answer"),
         )
         model = self._llm.model_for(request.reasoning)
         await self.send("answer.started", {"answer_id": aid, "question_id": qid, "length": self.settings.length,
@@ -603,6 +605,8 @@ class LiveEngine:
                                                         "retryable": e.retryable}})
             await self._rec.answer(aid, qid, "failed", None, self._llm.name, model, first_token_ms, total)
             await self._rec.provider_request(self._llm.name, model, request.request_type, usage, total, False)
+            if source == "screenshot":
+                await self._rec.usage("screenshot_failures", 1, f"shotfail:{aid}")
             await self._set_state(LiveState.error)
             await self._set_state(LiveState.listening)
             return
@@ -619,6 +623,10 @@ class LiveEngine:
         await self._rec.answer(aid, qid, "completed", final.model_dump(), self._llm.name, model, first_token_ms,
                                total_ms)
         await self._rec.provider_request(self._llm.name, model, request.request_type, usage, total_ms, True)
+        if source == "screenshot":
+            # A screenshot credit is spent only on a delivered answer (failed/cancelled ones are free). Keyed
+            # by question, so a regenerated answer for the same screenshot isn't charged twice.
+            await self._rec.usage("screenshots", 1, f"shot:{qid}")
 
     async def _update_summary(self) -> None:
         convo = "\n".join(f"{t.speaker}: {t.text}" for t in self.memory.recent_turns(12))

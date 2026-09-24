@@ -301,6 +301,16 @@ function Banners({
     items.push({ key: "stt", tone: "error", text: stt.detail ?? "Transcription is down." });
   else if (stt?.state === "reconnecting")
     items.push({ key: "stt", tone: "warn", text: stt.detail ?? "Transcription reconnecting…" });
+  if (live.usage?.limitReached)
+    items.push({ key: "usage", tone: "error", text: "You've used this month's live minutes — the session has ended." });
+  else if (live.usage && live.state !== "ended")
+    items.push({
+      key: "usage",
+      tone: "warn",
+      text: `${Math.max(1, Math.round(live.usage.minutesRemaining))} live minute${
+        Math.round(live.usage.minutesRemaining) === 1 ? "" : "s"
+      } left this month — the session ends when they run out.`,
+    });
   if (live.lastError)
     items.push({
       key: "err",

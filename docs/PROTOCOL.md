@@ -11,12 +11,24 @@ Source of truth: `apps/api/orbit_api/live/events.py` (Pydantic). TypeScript mirr
 Tickets are single-use and short-lived, so a long-lived access token never goes in a URL.
 
 **Close codes** (terminal: the client must not auto-reconnect): `1000` normal · `4001` invalid/expired ticket ·
-`4003` forbidden · `4004` session not found · `4009` session has ended · `4010` the session was opened in
+`4003` live minutes used up (at connect, or mid-session after `usage.status { limit_reached: true }`) · `4004` session not found · `4009` session has ended · `4010` the session was opened in
 another window/device (the newer connection wins) · `4029` too many live sessions for this user (max 2). Any other close means the client
 should fetch a new ticket and reconnect with backoff.
 
 **Reconnect semantics.** Only `session.end` (or `POST /v1/sessions/{id}/end`) ends a session and
-generates its report. A dropped socket just detaches: usage is recorded and the session stays `live`.
+queues its report. A dropped socket just detaches: usage is recorded and the session stays `live`.
+
+**Ending is immediate; the report is a background job.** `session.ended` is sent as soon as live state is
+persisted — it never waits for the report. The report is a durable DB job (survives restarts, retries a failed
+AI narrative). `GET /v1/sessions[/{id}]` exposes `report_status`: `"pending"` while it runs, `"ready"`, or
+`"failed"`; clients poll while pending.
+
+**Live-minute metering (server-authoritative).** Each connection's live time is committed every
+`ORBIT_LIVE_HEARTBEAT_S` (15 s) as one idempotent usage row, so a crash loses at most one interval and a retried
+write never double-counts. Remaining minutes are computed across all of the user's sessions at every beat: under
+5 minutes the server sends `usage.status { minutes_remaining, limit_reached: false }` once; at zero it sends
+`usage.status { minutes_remaining: 0, limit_reached: true }`, ends the session (report included) and closes with
+`4003`. Concurrent sessions can overshoot by at most about one heartbeat each.
 Clients send `session.start` with their current settings on every (re)connect. In-memory conversation
 context (recent turns, rolling summary) does not yet survive a reconnect.
 
@@ -64,13 +76,18 @@ Answers are spoken first-person prose (`direct_answer`, paragraphs separated by 
 | `transcript.final` | `{ turn_id, speaker, text, start_ms, end_ms }` |
 | `question.detected` | `{ question_id, turn_id, text, type, confidence, is_follow_up }` |
 | `question.updated` | `{ question_id, text }` |
-| `answer.started` | `{ answer_id, question_id, length, reasoning: "light"\|"deep", source: "auto"\|"manual"\|"chat" }` |
+| `answer.started` | `{ answer_id, question_id, length, reasoning: "light"\|"deep", source: "auto"\|"manual"\|"chat"\|"screenshot" }` |
 | `answer.chunk` | `{ answer_id, partial: LiveAnswer }` — full parsed state so far (idempotent; render directly) |
 | `answer.completed` | `{ answer_id, answer: LiveAnswer, latency: { first_token_ms, total_ms } }` |
 | `answer.cancelled` | `{ answer_id, reason: "superseded"\|"cleared"\|"session_ended" }` |
 | `answer.failed` | `{ answer_id, error: { code, message, retryable } }` |
 | `provider.status` | `{ provider: "stt"\|"llm", name, state: "ok"\|"reconnecting"\|"down"\|"mock", detail? }` |
+| `usage.status` | `{ minutes_remaining, limit_reached }` — low-minutes warning, or the limit ended the session |
 | `error` | `{ code, message }` |
+
+**Screenshots** (`POST /v1/sessions/{id}/screenshots`, multipart `image`, PNG/JPEG ≤ 8 MB, needs a live socket)
+are answered like a question (`source: "screenshot"`) and then discarded — never stored. A screenshot credit is
+spent only when the answer completes; failed or cancelled analyses are free.
 
 `answer.chunk` carries the whole parsed answer rather than a text delta, so the UI never
 re-parses partial markup and renders are stable (no flicker, no scroll jumps).

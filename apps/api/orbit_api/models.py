@@ -180,12 +180,45 @@ class SessionSummary(TimestampMixin, Base):
 class UsageEvent(TimestampMixin, Base):
     __tablename__ = "usage"
     # Metering reads filter by (user_id, metric, created_at) on every session-create and /usage call.
-    __table_args__ = (Index("ix_usage_user_metric_created", "user_id", "metric", "created_at"),)
+    __table_args__ = (Index("ix_usage_user_metric_created", "user_id", "metric", "created_at"),
+                      Index("uq_usage_idempotency_key", "idempotency_key", unique=True))
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     session_id: Mapped[str | None] = mapped_column(String(36))
     metric: Mapped[str] = mapped_column(String(32))  # live_seconds | stt_seconds | screenshots | ...
     quantity: Mapped[float] = mapped_column(Float)
+    # Set for events written more than once (retries, live-minute heartbeats): writers upsert on it, so a
+    # retry or a repeated heartbeat never double-counts. e.g. "live:<connection id>", "shot:<question id>".
+    idempotency_key: Mapped[str | None] = mapped_column(String(128))
+
+
+class FailedWrite(TimestampMixin, Base):
+    """Dead letter: a live-session row that still couldn't be written after retries. Replayed on startup."""
+
+    __tablename__ = "failed_writes"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    kind: Mapped[str] = mapped_column(String(64))  # model class name, e.g. "UsageEvent"
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+    error: Mapped[str] = mapped_column(Text)
+    replayed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+
+
+class Job(TimestampMixin, Base):
+    """Durable background work (session reports). Survives restarts; a worker in each API process claims
+    due jobs. `dedupe_key` makes enqueueing idempotent (one pending report per session)."""
+
+    __tablename__ = "jobs"
+    __table_args__ = (Index("ix_jobs_status_run_after", "status", "run_after"),
+                      Index("uq_jobs_dedupe_key", "dedupe_key", unique=True))
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    kind: Mapped[str] = mapped_column(String(32))
+    dedupe_key: Mapped[str | None] = mapped_column(String(128))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(16), default="queued")  # queued | running | done | failed
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    run_after: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
 class ProviderRequest(TimestampMixin, Base):
@@ -198,8 +231,10 @@ class ProviderRequest(TimestampMixin, Base):
     request_type: Mapped[str] = mapped_column(String(32))
     input_tokens: Mapped[int] = mapped_column(Integer, default=0)
     output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    cached_input_tokens: Mapped[int] = mapped_column(Integer, default=0)  # subset of input_tokens
     latency_ms: Mapped[int] = mapped_column(Integer, default=0)
-    estimated_cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
+    # None = no price configured for the model (see providers/llm/pricing.py) — never silently $0.
+    estimated_cost_usd: Mapped[float | None] = mapped_column(Float, default=None)
     ok: Mapped[bool] = mapped_column(Boolean, default=True)
 
 

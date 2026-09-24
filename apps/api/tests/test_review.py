@@ -58,7 +58,7 @@ def _collect(ws: Any, until: Any, timeout_s: float = 20) -> list[dict[str, Any]]
 
 
 def test_review_endpoint_and_report_after_a_live_session(client: TestClient) -> None:
-    from tests.test_api import _register
+    from tests.test_api import _register, _wait_report
 
     h = _register(client)
     sid = client.post("/v1/sessions", headers=h, json={"title": "Review me"}).json()["id"]
@@ -71,7 +71,7 @@ def test_review_endpoint_and_report_after_a_live_session(client: TestClient) -> 
         ws.send_text(json.dumps({"type": "session.end", "data": {}}))
         _collect(ws, lambda ev: any(e["type"] == "session.ended" for e in ev))
 
-    review = client.get(f"/v1/sessions/{sid}", headers=h).json()["summary"]["review"]
+    review = _wait_report(client, h, sid)["summary"]["review"]
     assert review["overall_score"] == 4 and review["strengths"] == ["[mock] clear structure"]
     first = review["items"][0]
     assert first["question"] == "Tell me about yourself." and first["you_said"] and first["score"] == 4

@@ -1,6 +1,7 @@
 """Admin-only advanced settings: rotate provider API keys / models in-app.
 
-Access is limited to the admin — ORBIT_ADMIN_EMAIL, or the first registered user when that's unset.
+Access is limited to the admin: ORBIT_ADMIN_EMAIL (required in production; in development/test the first
+registered user stands in when it's unset).
 Secret values are never returned in plaintext (only a "set" flag); they're stored encrypted via
 ORBIT_CONFIG_SECRET and applied to live providers immediately after saving.
 """

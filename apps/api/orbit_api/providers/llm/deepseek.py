@@ -97,7 +97,8 @@ class DeepSeekProvider(LLMProvider):
                     usage = None
                     if obj.get("usage"):
                         u = obj["usage"]
-                        usage = Usage(u.get("prompt_tokens", 0), u.get("completion_tokens", 0))
+                        usage = Usage(u.get("prompt_tokens") or 0, u.get("completion_tokens") or 0,
+                                      cached_input_tokens=u.get("prompt_cache_hit_tokens") or 0)
                     delta = ""
                     choices = obj.get("choices") or []
                     if choices:
