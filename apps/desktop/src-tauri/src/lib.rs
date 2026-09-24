@@ -4,6 +4,8 @@ mod process_loopback;
 mod screen;
 mod secrets;
 mod updater;
+#[cfg(target_os = "windows")]
+mod wasapi_capture;
 
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
@@ -54,6 +56,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             audio::list_audio_devices,
+            audio::list_output_devices,
             audio::start_capture,
             audio::stop_capture,
             #[cfg(target_os = "windows")]
