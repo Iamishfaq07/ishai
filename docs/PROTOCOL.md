@@ -44,6 +44,7 @@ context (recent turns, rolling summary) does not yet survive a reconnect.
 
 `[1 byte channel][PCM16LE mono 16 kHz samples...]`, channel `0` = mic (candidate), `1` = system
 (interviewer / others). Send ~20–100 ms per frame. Separate channels are preferred over diarization.
+Desktop channel 1 is the chosen output device or one app's audio; web channel 1 is a shared tab.
 
 ## Client → server
 
@@ -52,6 +53,7 @@ context (recent turns, rolling summary) does not yet survive a reconnect.
 | `session.start` | `{ settings?: Partial<LiveSettings> }` |
 | `session.pause` / `session.resume` / `session.end` | `{}` |
 | `answer.request` | `{ question_text?: string }` — manual answer; defaults to latest interviewer utterance |
+| `mock.next` | `{}`. Mock interviews only: "I'm done", so the interviewer moves on without waiting for silence |
 | `answer.pin` | `{ answer_id, pinned: boolean }` — a pinned answer is never auto-cancelled |
 | `answer.clear` | `{}` |
 | `chat.message` | `{ text }` — shares live context ("make this shorter", "give an example") |
@@ -59,9 +61,11 @@ context (recent turns, rolling summary) does not yet survive a reconnect.
 | `speaker.correct` | `{ turn_id, speaker }` |
 | `dev.simulate` | `{ fixture, speed?: number (0.5–50) }` — replays a transcript fixture; only when the mock STT provider is active |
 
-`LiveSettings = { auto_answer: boolean, length: "short"|"standard"|"detailed", style: "natural"|"concise"|"story", answer_language?: string, response_timing?: "quick"|"balanced"|"patient", thinking?: "off"|"low"|"high"|"max" }`
+`LiveSettings = { auto_answer: boolean, length: "short"|"standard"|"detailed", style: "natural"|"concise"|"story", answer_language?: string, response_timing?: "quick"|"balanced"|"patient", thinking?: "off"|"low"|"high"|"max", coding_language?: "python"|"java"|"javascript"|"typescript"|"cpp"|"csharp"|"go"|"rust"|"sql" }`
 
 Answers are spoken first-person prose (`direct_answer`, paragraphs separated by a blank line); `talking_points` is only filled if a model lists anyway. Legacy styles (`bullets`, `star`, `technical`, `executive`) are still accepted and mapped onto the new ones. `thinking` sets the model's reasoning effort (off answers in under a second; low/high/max add ~3–6 s before the first word).
+
+`coding_language` fixes the language of code in coding answers (unset: the model picks, usually Python).
 
 `response_timing` is how long a detected question is held after the interviewer stops before it auto-fires (quick ≈ 0, balanced ≈ 1.5 s default, patient ≈ 3 s). Until the candidate actually starts answering (3+ words), anything the interviewer says within 8 s of their last pause continues the same question — even after it fired: the combined question is re-sent as `question.updated` and the answer regenerated. `answer.request` without `question_text` answers that whole (stitched) question.
 
@@ -71,7 +75,7 @@ Answers are spoken first-person prose (`direct_answer`, paragraphs separated by 
 |---|---|
 | `session.started` / `paused` / `resumed` / `ended` | `{ state, settings }` |
 | `state.changed` | `{ state: LiveState }` |
-| `audio.mic_status` / `audio.system_status` | `{ state: "idle"\|"connected"\|"reconnecting"\|"error", detail? }` |
+| `audio.mic_status` / `audio.system_status` | `{ state: "idle"\|"connected"\|"reconnecting"\|"error", detail? }` — sent when a channel's first audio arrives |
 | `transcript.partial` | `{ turn_id, speaker, text }` — replaces the previous partial for `turn_id` |
 | `transcript.final` | `{ turn_id, speaker, text, start_ms, end_ms }` |
 | `question.detected` | `{ question_id, turn_id, text, type, confidence, is_follow_up }` |
@@ -83,6 +87,8 @@ Answers are spoken first-person prose (`direct_answer`, paragraphs separated by 
 | `answer.failed` | `{ answer_id, error: { code, message, retryable } }` |
 | `provider.status` | `{ provider: "stt"\|"llm", name, state: "ok"\|"reconnecting"\|"down"\|"mock", detail? }` |
 | `usage.status` | `{ minutes_remaining, limit_reached }` — low-minutes warning, or the limit ended the session |
+| `mock.question` | `{ question_id, text, is_follow_up, index, total }` — the AI interviewer asks (clients may speak it aloud) |
+| `mock.completed` | `{ questions }` — the mock interview is over (question budget or duration reached) |
 | `error` | `{ code, message }` |
 
 **Screenshots** (`POST /v1/sessions/{id}/screenshots`, multipart `image`, PNG/JPEG ≤ 8 MB, needs a live socket)
@@ -105,9 +111,18 @@ plus `follow_up_detected`, `stt_reconnecting`, `ai_reconnecting`, `error`, `paus
   "talking_points": [], "example": null,
   "code": { "language": "python", "content": "" },
   "time_complexity": null, "space_complexity": null,
-  "follow_up": null, "context_used": []
+  "follow_up": null, "context_used": [],
+  "grounding": "verified", "key_points": [],
+  "problem": null, "edge_cases": [], "tests": []
 }
 ```
+
+- `grounding`: `"verified"` (claims come from your documents), `"example"` (illustrative details you must swap for
+  your real experience; the UI shows *Suggested details*), `"general"` (no personal claims), or `null`.
+- `key_points`: 3–6 short labels for the points the answer makes, in order. The client ticks them off as the
+  candidate says them ("NEXT" guidance, local and deterministic, D25).
+- `problem`, `edge_cases`, `tests`: coding answers only. The task restated in one line, edge cases to mention, and
+  example tests (`input → expected`).
 
 `code` may be `null`. `context_used` lists source labels (e.g. `"resume: Acme Corp — AppSec lead"`),
 never raw document text.

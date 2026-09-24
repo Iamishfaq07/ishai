@@ -1,16 +1,21 @@
 # @orbit/desktop
 
-Tauri 2 desktop app for Orbit: a compact floating copilot window (≈380×520) with native
-microphone + system-audio capture, a native region-screenshot overlay, a system tray, and
-global shortcuts. The UI is `LivePanel` from `@orbit/ui`, shared with the web app.
+Tauri 2 desktop app for Orbit (Windows). It's a compact floating copilot window (380×520, expandable to 920×680).
+Features:
+- native microphone and interviewer-audio capture;
+- a native region-screenshot overlay;
+- a system tray;
+- rebindable global shortcuts;
+- signed auto-updates.
+
+The live UI is `LivePanel` from `@orbit/ui`, shared with the web app.
 
 ## Prerequisites
 
 - Node ≥ 20.11 + pnpm 9
-- Rust stable (≥ 1.77.2) — <https://rustup.rs>
-- Platform deps: <https://v2.tauri.app/start/prerequisites/>
-  - Windows: WebView2 (preinstalled on Windows 11) and the MSVC build tools
-  - macOS: Xcode command-line tools
+- Rust stable (≥ 1.77.2): <https://rustup.rs>. On this machine cargo is in `%USERPROFILE%\.cargo\bin`.
+- Windows: WebView2 (preinstalled on Windows 11) and the MSVC build tools. See
+  <https://v2.tauri.app/start/prerequisites/>.
 
 ## Run
 
@@ -21,79 +26,88 @@ pnpm dev:desktop                                  # = pnpm --filter @orbit/deskt
 ```
 
 ```bash
-cd apps/desktop/src-tauri && cargo test           # resampler / PCM / crop unit tests
-pnpm --filter @orbit/desktop tauri build          # installers in src-tauri/target/release/bundle
+cd apps/desktop/src-tauri && cargo test && cargo clippy -- -D warnings
 ```
 
-The icons in `src-tauri/icons/` are generated placeholders. Replace them with the real logo using
-`pnpm --filter @orbit/desktop tauri icon path/to/logo.png`.
+Releases go through `scripts/release-desktop.ps1`; see [docs/WINDOWS_RELEASE.md](../../docs/WINDOWS_RELEASE.md). Don't
+run a bare `tauri build` for a release.
+
+**Test builds** that must not touch your real sign-in: compile with `ORBIT_KEYRING_SERVICE=ai.orbit.desktop.test` and
+run with `WEBVIEW2_USER_DATA_FOLDER` pointing at a temp folder. Clear both afterwards with
+`Remove-Item Env:NAME`, because an empty-but-set value still takes effect.
 
 ## What's native (Rust, `src-tauri/src`)
 
 | Command | What it does |
 |---|---|
-| `list_audio_devices` | Input devices via cpal (the device name is the id) |
-| `start_capture(micDeviceId?, systemAudio, onEvent)` | Opens the mic (channel 0) and, if requested, system audio (channel 1). Each is mixed down to mono, resampled to 16 kHz, and streamed as base64 PCM16LE frames every 50 ms over a Tauri `Channel`. The webview forwards the bytes to the API socket |
+| `list_audio_devices` / `list_output_devices` | Microphones and output devices (WASAPI endpoint ids, with default / communications flags) |
+| `list_audio_apps` | Apps currently playing audio, grouped by process tree (for "listen to one app") |
+| `start_capture(micDeviceId?, systemAudio, systemProcessId?, systemDevice?, onEvent)` | Mic → channel 0. Interviewer → channel 1, from one app (process loopback) or an output device (`"default"`, `"communications"`, or an endpoint id). Mixed to mono, resampled to 16 kHz, and sent as base64 PCM16LE frames every 50 ms over a Tauri `Channel`, which the webview forwards to the API socket |
 | `stop_capture` | Stops and drops both streams |
-| `open_region_selector` | Opens a transparent, always-on-top window over the current monitor |
-| `capture_region(x,y,w,h)` / `capture_screen` | One-shot capture with xcap, cropped and PNG-encoded |
-| `save_token` / `load_token` / `clear_token` | Orbit session token in the OS credential store (keyring) |
+| `open_region_selector` / `capture_region(x,y,w,h)` / `capture_screen` | Transparent always-on-top selector over the current monitor; one-shot capture with xcap, cropped and PNG-encoded |
+| `save_token` / `load_token` / `clear_token` | Orbit session token in Windows Credential Manager (`access_token.ai.orbit.desktop`) |
+| `check_update` / `install_update` | Signed update check against the API's manifest; install refuses while a live session is running |
+| `quit_app` | Real quit (the close button can hide to the tray instead) |
 
-**System audio**
+**Audio capture** is native WASAPI (`wasapi_capture.rs`, `process_loopback.rs`) and supervised:
+- **Unplugged device or changed default:** capture reopens and follows the new device, and fills the gap with
+  silence so the transcript timeline stays continuous.
+- **Status:** the UI gets `status` events for each change.
 
-- **Windows:** WASAPI loopback. cpal opens an input stream on the default output device, so Orbit
-  hears whatever your speakers or headset play, kept separate from your mic.
-- **macOS:** not implemented yet. It needs ScreenCaptureKit (macOS 12.3+). `start_capture` returns
-  `systemError: "macOS system audio requires ScreenCaptureKit — not implemented yet."` and the
-  session continues with the mic only. The UI says this; it's never faked.
-- **Linux:** not supported yet (a PulseAudio/PipeWire monitor source would be the route).
+No audio is written to disk. Provider API keys (DeepSeek, Deepgram) never reach the desktop app: audio goes to the
+Orbit API, which relays it to STT server-side.
 
-No audio is written to disk. Provider API keys (DeepSeek, Deepgram) never reach the desktop app.
-Audio goes to the Orbit API, which relays it to STT server-side.
+macOS and Linux builds are deferred (Windows-first). The Rust code keeps cpal fallbacks, but they aren't shipped or
+tested.
 
 ## Window behaviour
 
-- Compact (380×520) ⇄ expanded (920×680) from the ⤢ button. Position and size persist via
-  `tauri-plugin-window-state`, and multi-monitor positions are restored.
-- 📌 toggles always-on-top (on by default).
-- The window is frameless. Drag it by the header. × hides to the tray, and **Quit** lives in the tray menu.
-- There's intentionally **no** content-protection, capture-exclusion, or "undetectable" mode.
+- Compact ⇄ expanded from the title bar. Position and size persist (`tauri-plugin-window-state`), including
+  multi-monitor.
+- The pin button toggles always-on-top (on by default), and the transparency button adjusts window opacity and blur.
+  Text always stays fully visible.
+- The window is frameless; drag it by the title bar. Close (×, or Alt+F4) asks whether to hide to the tray or quit,
+  and can remember the choice. A remembered "quit" still asks during a live session.
+- There's intentionally **no** content protection, capture exclusion, or "undetectable" mode.
 
 ## Shortcuts
 
-In-window (a configurable `HotkeyMap` from `@orbit/ui`, stored in `localStorage["orbit.hotkeys"]`. The web app has a Settings editor; the desktop settings UI isn't built yet, so desktop uses the defaults):
+In-window shortcuts (`@orbit/ui` `HotkeyMap`, desktop uses the defaults):
 
 | Action | Default |
 |---|---|
-| Answer | Ctrl/⌘ + Enter |
-| Screenshot region | Ctrl/⌘ + Shift + S |
-| Pause / resume listening | Ctrl/⌘ + L |
-| Focus chat | Ctrl/⌘ + K |
-| Clear | Ctrl/⌘ + Shift + C |
+| Answer (in mock interviews: next question) | Ctrl + Enter |
+| Screenshot region | Ctrl + Shift + S |
+| Pause / resume listening | Ctrl + L |
+| Focus chat | Ctrl + K |
+| Clear | Ctrl + Shift + C |
 
-System-wide (work while another app is focused). These are deliberately different so Orbit never
-steals Ctrl+Enter or Ctrl+Shift+S (Save As) from other apps:
+System-wide shortcuts work while another app is focused. They're rebindable in **Settings → Global shortcuts**, and
+deliberately avoid combos other apps rely on (Ctrl+Enter, Ctrl+Shift+S, Teams' Ctrl+Shift+M…):
 
 | Action | Default |
 |---|---|
-| Answer | Ctrl/⌘ + Shift + Enter |
-| Screenshot region | Ctrl/⌘ + Shift + 2 |
-| Show / hide Orbit | Ctrl/⌘ + Shift + O |
+| Show / hide Orbit | Ctrl + Shift + O |
+| Answer | Ctrl + Shift + Enter |
+| Screenshot region | Ctrl + Shift + 2 |
+| Previous / next answer | Ctrl + Alt + ← / → |
+| Copy answer | Ctrl + Shift + Y |
+| Pause / resume | Ctrl + Alt + P |
+| More / less transparent | Ctrl + Alt + ↓ / ↑ |
 
-## Permission onboarding
+## Before a session
 
-- **macOS microphone:** the first capture triggers the system prompt using
-  `NSMicrophoneUsageDescription` (`src-tauri/Info.plist`). If it's denied, the live screen shows
-  *Audio capture failed* with **Retry**. The user must re-enable Orbit in System Settings → Privacy &
-  Security → Microphone.
-- **macOS screenshots:** the first capture triggers **Screen Recording** permission. macOS requires
-  an app restart after granting it.
-- **Windows microphone:** Settings → Privacy & security → Microphone → “Let desktop apps access your
-  microphone” must be on. WASAPI loopback needs no extra permission.
-- Setup has a **Test audio** button with live mic/system meters, so problems show up before the call.
+Setup shows a **Checklist** (preflight). Local checks cover the microphone, interviewer audio, resume, job
+description and network. The server checks (`GET /v1/preflight`) cover the Orbit server, AI, transcription, vision,
+minutes left, screenshot credits and the app version.
 
-## Auto-update (architecture)
+Problems come with a one-line fix. **Test audio** shows live meters for both channels. Windows microphone access
+must be on: Settings → Privacy & security → Microphone → "Let desktop apps access your microphone". Loopback capture
+needs no extra permission.
 
-Not wired yet. The intended path is `tauri-plugin-updater` with signed update manifests served by
-the API/CDN, a check on launch plus every few hours, and install on the next restart. Updates never
-install mid-session.
+## Auto-update
+
+`tauri-plugin-updater` with minisign-signed manifests served by the API (`/v1/desktop/update/...`, from GitHub
+Releases). Setup shows **Update & restart** when a new version is available; updates never install mid-session. See
+[docs/WINDOWS_RELEASE.md](../../docs/WINDOWS_RELEASE.md) for signing keys, publishing, and what install, upgrade
+and uninstall do to user data.

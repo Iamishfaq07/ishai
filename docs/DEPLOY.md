@@ -1,7 +1,7 @@
 # Deploying Orbit (free tier, private)
 
 The live deployment is: API + WebSocket on **Render** (Docker, `render.yaml`), Postgres on **Neon**, and the
-web app on **Cloudflare Workers static assets** (`apps/web/wrangler.jsonc`). AI keys are shared server
+web app on **Cloudflare Workers static assets** (`wrangler.jsonc` at the repo root). AI keys are shared server
 secrets; the desktop app talks to the same API.
 
 ```
@@ -58,8 +58,10 @@ measured from the interviewer's actual speech.
 
 ## 3. Web app — Cloudflare
 
-`apps/web/.env.production` bakes `VITE_API_URL`. Deploy with `pnpm --filter @orbit/web build` then
-`wrangler deploy` from `apps/web` (static assets + a cron that keeps the free Render instance warm).
+`apps/web/.env.production` bakes `VITE_API_URL`. Cloudflare Workers Builds deploys on every push to `main`.
+Manually: `pnpm --filter @orbit/web build`, then `wrangler deploy` from the repo root. That uploads `apps/web/dist`
+as static assets (SPA fallback) plus `apps/web/worker/index.js`, whose 10-minute cron pings the API so the free
+Render instance doesn't sleep.
 
 ## 4. Desktop app
 
