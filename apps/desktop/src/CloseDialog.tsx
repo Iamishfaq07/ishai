@@ -116,7 +116,7 @@ export function CloseDialog({ liveActive }: { liveActive: boolean }) {
             <TrayIcon />
             <span>
               Hide to tray
-              <span className="block text-[11px] font-normal text-indigo-100">Reopen from the tray or its shortcut</span>
+              <span className="block text-xs font-normal text-indigo-100">Reopen from the tray or its shortcut</span>
             </span>
           </button>
           <button

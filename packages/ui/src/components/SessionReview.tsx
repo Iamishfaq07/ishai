@@ -180,7 +180,7 @@ function QuestionReview({ index, item }: { index: number; item: ReviewItem }) {
       {item.feedback && <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">{item.feedback}</p>}
       {item.better && (
         <div className="mt-3 rounded-lg border-l-2 border-indigo-500 bg-indigo-500/5 px-3 py-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Try saying</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Try saying</p>
           <p className="mt-0.5 text-sm text-zinc-800 dark:text-zinc-200">{item.better}</p>
         </div>
       )}

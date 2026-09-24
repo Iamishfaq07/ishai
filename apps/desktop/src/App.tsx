@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { OrbitSession, SessionType, User } from "@orbit/types";
-import { ApiError, OrbitLogo } from "@orbit/ui";
+import { ApiError, ConfirmHost, OrbitLogo } from "@orbit/ui";
 import { api, setAccessToken, setUnauthorizedHandler } from "./api";
 import { CloseDialog } from "./CloseDialog";
 import { stepGlass } from "./glass";
@@ -85,6 +85,7 @@ export function App() {
         {renderScreen()}
       </div>
       <CloseDialog liveActive={screen.name === "live"} />
+      <ConfirmHost />
     </>
   );
 

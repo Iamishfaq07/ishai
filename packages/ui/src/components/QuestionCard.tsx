@@ -30,18 +30,18 @@ export function QuestionCard({ question, liveTurn, compact = false }: QuestionCa
     <section aria-label="Interviewer question" className={cx("px-4", compact ? "py-2.5" : "py-3")}>
       {!compact && (
         <div className="mb-1 flex items-center gap-2">
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
             Interviewer
           </h2>
           {typeLabel && (
-            <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300">
+            <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
               {typeLabel}
             </span>
           )}
         </div>
       )}
       {question ? (
-        <p className={cx("font-medium leading-snug text-zinc-900 dark:text-zinc-50", compact ? "text-sm" : "text-[15px]")}>
+        <p className={cx("font-medium leading-snug text-zinc-900 dark:text-zinc-50", compact ? "text-[0.9375rem]" : "text-[1.0625rem]")}>
           {question.text}
         </p>
       ) : !showLive ? (

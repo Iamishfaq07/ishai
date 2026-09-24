@@ -359,19 +359,19 @@ export function SetupScreen({
   return (
     <div className="flex h-full flex-col">
       <TitleBar>
-        <button type="button" onClick={onBack} className={cx("rounded px-1.5 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+        <button type="button" onClick={onBack} className={cx("rounded px-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
           ← Home
         </button>
-        <button type="button" onClick={onOpenDocuments} className={cx("rounded px-1.5 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+        <button type="button" onClick={onOpenDocuments} className={cx("rounded px-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
           Documents
         </button>
-        <button type="button" onClick={onOpenHistory} className={cx("rounded px-1.5 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+        <button type="button" onClick={onOpenHistory} className={cx("rounded px-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
           History
         </button>
-        <button type="button" onClick={onOpenSettings} className={cx("rounded px-1.5 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+        <button type="button" onClick={onOpenSettings} className={cx("rounded px-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
           Settings
         </button>
-        <button type="button" onClick={onSignOut} className={cx("rounded px-1.5 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+        <button type="button" onClick={onSignOut} className={cx("rounded px-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
           Sign out
         </button>
       </TitleBar>
@@ -408,7 +408,7 @@ export function SetupScreen({
           {isMock && (
             <fieldset className="grid grid-cols-2 gap-2 rounded-xl border border-indigo-200/60 bg-indigo-50/40 p-3 dark:border-indigo-900/50 dark:bg-indigo-950/20">
               <legend className="px-1 text-xs font-medium">Mock interview</legend>
-              <p className="col-span-2 text-[11px] text-zinc-500">The AI interviewer asks out loud, follows up on what you say, and you get a graded review at the end. Only your microphone is used.</p>
+              <p className="col-span-2 text-xs text-zinc-500">The AI interviewer asks out loud, follows up on what you say, and you get a graded review at the end. Only your microphone is used.</p>
               <label className="space-y-1"><span className="text-xs">Interviewer</span>
                 <select value={mockPersona} onChange={(e) => setMockPersona(e.target.value as MockPersona)} className={cx(control, focusRing)}>
                   {PERSONAS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
@@ -435,7 +435,7 @@ export function SetupScreen({
 
           <fieldset className="space-y-2 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
             <legend className="px-1 text-xs font-medium">Context documents</legend>
-            <p className="text-[11px] text-zinc-500">Add your resume and the job description so answers are specific to you. Checked documents are used this session.</p>
+            <p className="text-xs text-zinc-500">Add your resume and the job description so answers are specific to you. Checked documents are used this session.</p>
 
             <div className="flex flex-wrap items-center gap-1.5">
               <select
@@ -475,7 +475,7 @@ export function SetupScreen({
                 Paste text
               </button>
             </div>
-            <p className="text-[11px] text-zinc-400">PDF, DOCX, TXT or MD, up to {MAX_UPLOAD_MB} MB.</p>
+            <p className="text-xs text-zinc-400">PDF, DOCX, TXT or MD, up to {MAX_UPLOAD_MB} MB.</p>
 
             {pasteOpen && (
               <div className="space-y-1.5 rounded-lg bg-zinc-50 p-2 dark:bg-zinc-900">
@@ -693,7 +693,7 @@ export function SetupScreen({
                     ↻
                   </button>
                 </div>
-                <p className="text-[11px] text-zinc-500">
+                <p className="text-xs text-zinc-500">
                   {appPid
                     ? "Only this app is captured — games, music and notifications are ignored."
                     : systemDevice === "communications"
@@ -726,7 +726,7 @@ export function SetupScreen({
           <button
             type="button"
             onClick={() => void openUrl(`${WEB_URL}/sessions`)}
-            className={cx("mt-2 w-full text-center text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}
+            className={cx("mt-2 w-full text-center text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}
           >
             History, documents & billing open in your browser
           </button>
@@ -810,14 +810,14 @@ function AudioTest({
       </button>
       <LevelRow label="Mic" level={levels[0]} />
       {systemAudio && <LevelRow label="System" level={levels[1]} />}
-      {note && <p className="text-[11px] text-amber-600 dark:text-amber-400">{note}</p>}
+      {note && <p className="text-xs text-amber-600 dark:text-amber-400">{note}</p>}
     </div>
   );
 }
 
 function LevelRow({ label, level }: { label: string; level: number }) {
   return (
-    <div className="flex items-center gap-2 text-[11px] text-zinc-500">
+    <div className="flex items-center gap-2 text-xs text-zinc-500">
       <span className="w-12">{label}</span>
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800" aria-label={`${label} level`}>
         <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.round(level * 100)}%` }} />

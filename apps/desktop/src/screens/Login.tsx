@@ -82,7 +82,7 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
         >
           Forgot your password?
         </button>
-        <div className="mt-6 text-center text-[11px] text-zinc-500">
+        <div className="mt-6 text-center text-xs text-zinc-500">
           {editingServer ? (
             <form
               onSubmit={(e) => {
@@ -98,13 +98,13 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
                 onChange={(e) => setServer(e.target.value)}
                 aria-invalid={!serverValid}
                 aria-describedby={serverCheck.ok ? undefined : "server-url-error"}
-                className={cx(input, "min-w-0 flex-1 py-1 text-[11px]", focusRing)}
+                className={cx(input, "min-w-0 flex-1 py-1 text-xs", focusRing)}
               />
               <button type="submit" disabled={!serverValid} className={cx("rounded px-2 py-1 font-medium text-indigo-600 disabled:opacity-40 dark:text-indigo-400", focusRing)}>
                 Save
               </button>
               {!serverCheck.ok && server.trim() && (
-                <p id="server-url-error" role="alert" className="w-full text-left text-[11px] text-rose-600 dark:text-rose-400">
+                <p id="server-url-error" role="alert" className="w-full text-left text-xs text-rose-600 dark:text-rose-400">
                   {serverCheck.reason}
                 </p>
               )}

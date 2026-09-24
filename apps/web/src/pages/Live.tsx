@@ -14,6 +14,7 @@ import {
   useLiveSession,
   VISION_ENABLED,
   type PanelMode,
+  confirmDialog,
 } from "@orbit/ui";
 import { ErrorNote, Spinner } from "../components/ui";
 import { API_URL, api } from "../lib/api";
@@ -190,8 +191,8 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
 
   // ── End session ────────────────────────────────────────────────────────
   const [ending, setEnding] = useState(false);
-  const endSession = () => {
-    if (!window.confirm("End this session? The transcript and summary will be saved to History.")) return;
+  const endSession = async () => {
+    if (!(await confirmDialog({ title: "End this session?", body: "The transcript and report are saved to History.", confirmLabel: "End session", danger: true }))) return;
     setEnding(true);
     actions.end();
   };

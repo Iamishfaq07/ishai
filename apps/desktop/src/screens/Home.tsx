@@ -118,7 +118,7 @@ export function HomeScreen({
                           <p className="truncate font-medium">
                             {s.title}
                             {active && (
-                              <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+                              <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
                                 {s.status === "live" ? "Live" : "Not started"}
                               </span>
                             )}
@@ -149,4 +149,4 @@ export function HomeScreen({
   );
 }
 
-const navBtn = cx("rounded px-1.5 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing);
+const navBtn = cx("rounded px-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing);

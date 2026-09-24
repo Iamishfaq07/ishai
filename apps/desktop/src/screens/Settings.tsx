@@ -12,8 +12,7 @@ import {
   Select,
   Spinner,
   Toggle,
-  useDesign,
-} from "@orbit/ui";
+  useDesign, confirmDialog } from "@orbit/ui";
 import { API_URL, api } from "../api";
 import { loadCloseAction, saveCloseAction, type CloseAction } from "../CloseDialog";
 import { GlassControls } from "../GlassControls";
@@ -273,7 +272,7 @@ function AdvancedConfig() {
   };
 
   const clearKey = async (which: "deepseek_api_key" | "deepgram_api_key") => {
-    if (!window.confirm("Remove this key? Orbit falls back to the key from the server environment.")) return;
+    if (!(await confirmDialog({ title: "Remove this key?", body: "Orbit falls back to the key from the server environment.", confirmLabel: "Remove", danger: true }))) return;
     setError(null);
     try {
       setForm(await api.updateAdminConfig({ [which]: "" }));

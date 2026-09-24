@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { DOCUMENT_ACCEPT, type DocumentKind, type OrbitDocument } from "@orbit/types";
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../components/ui";
+import { confirmDialog } from "@orbit/ui";
 import { api } from "../lib/api";
 import { errorText, formatBytes, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -67,7 +68,7 @@ export function DocumentsPage() {
   };
 
   const remove = async (doc: OrbitDocument) => {
-    if (!window.confirm(`Delete “${doc.title}”? This removes it and its extracted facts permanently.`)) return;
+    if (!(await confirmDialog({ title: `Delete “${doc.title}”?`, body: "This removes it and its extracted facts permanently.", confirmLabel: "Delete", danger: true }))) return;
     try {
       await api.deleteDocument(doc.id);
       docs.setData((prev) => (prev ?? []).filter((d) => d.id !== doc.id));

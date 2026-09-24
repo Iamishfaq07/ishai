@@ -13,8 +13,7 @@ import {
   ReportStatusNote,
   SessionReview,
   Spinner,
-  useReportPolling,
-} from "@orbit/ui";
+  useReportPolling, confirmDialog } from "@orbit/ui";
 import { api } from "../api";
 import { downloadText, errText, formatClock, formatDate, formatDuration, SESSION_TYPE_LABEL } from "../format";
 import { TitleBar } from "../TitleBar";
@@ -79,7 +78,7 @@ function SessionList({ onOpen, onResume }: { onOpen: (id: string) => void; onRes
                     <p className="truncate font-medium">
                       {s.title}
                       {s.status !== "ended" && (
-                        <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+                        <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
                           {s.status === "live" ? "Live" : "Not started"}
                         </span>
                       )}
@@ -142,7 +141,7 @@ function SessionDetailView({ id, onDeleted }: { id: string; onDeleted: () => voi
   };
 
   const remove = async () => {
-    if (!window.confirm("Delete this session, its transcript, answers, and screenshots? This can’t be undone.")) return;
+    if (!(await confirmDialog({ title: "Delete this session?", body: "Its transcript, questions, answers and review are deleted. This can’t be undone.", confirmLabel: "Delete", danger: true }))) return;
     try {
       await api.deleteSession(session.id);
       onDeleted();
@@ -340,7 +339,7 @@ function QuestionsView({ detail }: { detail: SessionDetail }) {
                   </div>
                 )}
                 {a.first_token_ms !== null && (
-                  <p className="mt-2 text-[11px] text-zinc-400">
+                  <p className="mt-2 text-xs text-zinc-400">
                     {a.model ?? "model"} · first token {Math.round(a.first_token_ms)} ms
                   </p>
                 )}

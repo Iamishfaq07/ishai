@@ -10,8 +10,7 @@ import {
   PageHeader,
   Select,
   Spinner,
-  Textarea,
-} from "@orbit/ui";
+  Textarea, confirmDialog } from "@orbit/ui";
 import { api } from "../api";
 import { TitleBar } from "../TitleBar";
 
@@ -92,7 +91,7 @@ export function DocumentsScreen({ onBack }: { onBack: () => void }) {
   };
 
   const remove = async (doc: OrbitDocument) => {
-    if (!window.confirm(`Delete “${doc.title}”? This removes it and its extracted facts permanently.`)) return;
+    if (!(await confirmDialog({ title: `Delete “${doc.title}”?`, body: "This removes it and its extracted facts permanently.", confirmLabel: "Delete", danger: true }))) return;
     try {
       await api.deleteDocument(doc.id);
       setDocs((prev) => (prev ?? []).filter((d) => d.id !== doc.id));

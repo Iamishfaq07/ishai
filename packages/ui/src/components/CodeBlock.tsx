@@ -81,7 +81,7 @@ export function CodeBlock({ code, onLanguage }: { code: LiveAnswerCode; onLangua
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <pre className="max-h-96 overflow-auto py-2 text-[13px] leading-relaxed">
+      <pre className="max-h-96 overflow-auto py-2 text-[0.8125rem] leading-relaxed">
         <code className="grid font-mono text-zinc-800 dark:text-zinc-200" style={{ gridTemplateColumns: "auto 1fr" }}>
           {lines.map((line, n) => (
             <span key={n} className="contents">

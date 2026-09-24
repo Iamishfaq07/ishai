@@ -234,7 +234,7 @@ export function LivePanel(props: LivePanelProps) {
       )}
 
       {mockStt && !ended && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-dashed border-zinc-200 px-4 py-1.5 text-[11px] text-zinc-500 dark:border-zinc-800">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-dashed border-zinc-200 px-4 py-1.5 text-xs text-zinc-500 dark:border-zinc-800">
           <span title="The server is using the mock speech-to-text provider — replay a scripted conversation">
             Dev · simulate:
           </span>
@@ -253,7 +253,7 @@ export function LivePanel(props: LivePanelProps) {
             <select
               value={simSpeed}
               onChange={(e) => setSimSpeed(Number(e.target.value))}
-              className="rounded bg-transparent text-[11px]"
+              className="rounded bg-transparent text-xs"
             >
               {[1, 2, 5, 10].map((s) => (
                 <option key={s} value={s}>
@@ -441,7 +441,7 @@ function HistoryNav(props: {
     focusRing,
   );
   return (
-    <div className="flex animate-fade-in items-center gap-1 px-4 pt-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+    <div className="flex animate-fade-in items-center gap-1 px-4 pt-2 text-xs text-zinc-500 dark:text-zinc-400">
       <button type="button" className={navBtn} onClick={() => props.onStep(-1)} disabled={props.index <= 0}
               title="Previous answer (Alt+←)" aria-label="Previous answer">
         ‹
