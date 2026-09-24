@@ -10,6 +10,7 @@ import os
 import smtplib
 import ssl
 import tempfile
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from email.message import EmailMessage
@@ -17,6 +18,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from orbit_api.config import get_settings
+from orbit_api.providers import health
 
 log = logging.getLogger(__name__)
 
@@ -112,7 +114,12 @@ def get_email_sender() -> EmailSender:
 
 async def send_safely(email: OutgoingEmail) -> None:
     """Email failures must never leak into auth responses (that would reveal account existence)."""
+    sender = get_email_sender()
+    started = time.monotonic()
     try:
-        await get_email_sender().send(email)
-    except Exception:
+        await sender.send(email)
+    except Exception as e:
+        health.record(sender.name, "email", False, error=type(e).__name__)
         log.exception("failed to send %r email", email.subject)
+    else:
+        health.record(sender.name, "email", True, int((time.monotonic() - started) * 1000))

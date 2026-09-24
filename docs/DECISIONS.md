@@ -185,3 +185,8 @@ unavailable), so `sign-windows.ps1` and `verify-authenticode.ps1` run the same w
 release is refused unless the shipped installer, exe and uninstaller all verify with a timestamp. Store-based
 certificates (Certum SimplySign, hardware tokens) are the default path for an individual developer outside the
 US/Canada, where Azure Trusted Signing isn't available to individuals.
+**D38 — Fail over only before the first token.** Switching models mid-answer would splice two voices and two
+sets of facts into one spoken answer. Failing over before any text costs at most the first-token budget. After
+text has streamed, a failure is shown as a failed answer, which the user can re-ask. The backup is any
+OpenAI-compatible API, so no vendor-specific client code is needed. Provider quirks (reasoning effort, thinking)
+are configuration, not code.

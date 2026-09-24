@@ -1,14 +1,13 @@
 """DeepSeek via its OpenAI-compatible Chat Completions API (server-side only)."""
 
-import base64
-import json
 from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
 
 from orbit_api.live.routing import ReasoningLevel
-from orbit_api.providers.llm.base import LLMChunk, LLMError, LLMProvider, LLMRequest, Usage
+from orbit_api.providers.llm.base import LLMChunk, LLMError, LLMProvider, LLMRequest
+from orbit_api.providers.llm.openai_compat import chat_messages, stream_chat_completions
 
 # Models that accept image input (DeepSeek-V4.1-Flash reports input_modalities ["text", "image"]).
 VISION_MODELS = frozenset({"deepseek-flash"})
@@ -57,7 +56,7 @@ class DeepSeekProvider(LLMProvider):
         thinking = request.thinking if request.thinking != "off" else ("high" if request.reasoning == "deep" else None)
         payload: dict[str, Any] = {
             "model": model,
-            "messages": _messages(request),
+            "messages": chat_messages(request),
             # Chain-of-thought counts against max_tokens: with an answer-sized budget the model thinks until
             # the cap and returns no content at all (finish_reason=length).
             "max_tokens": request.max_tokens + (REASONING_HEADROOM if thinking else 0),
@@ -75,54 +74,8 @@ class DeepSeekProvider(LLMProvider):
             payload["response_format"] = {"type": "json_object"}
         return payload
 
-    async def stream(self, request: LLMRequest) -> AsyncIterator[LLMChunk]:
-        payload = self._payload(request)
-        try:
-            async with self._client.stream("POST", "/chat/completions", json=payload) as resp:
-                if resp.status_code != 200:
-                    body = (await resp.aread())[:500].decode(errors="replace")
-                    retryable = resp.status_code in (429, 500, 502, 503, 504)
-                    code = "rate_limited" if resp.status_code == 429 else f"http_{resp.status_code}"
-                    raise LLMError(code, f"DeepSeek returned {resp.status_code}: {body}", retryable=retryable)
-                async for line in resp.aiter_lines():
-                    if not line.startswith("data:"):
-                        continue
-                    data = line[5:].strip()
-                    if data == "[DONE]":
-                        break
-                    try:
-                        obj = json.loads(data)
-                    except json.JSONDecodeError:
-                        continue
-                    usage = None
-                    if obj.get("usage"):
-                        u = obj["usage"]
-                        usage = Usage(u.get("prompt_tokens") or 0, u.get("completion_tokens") or 0,
-                                      cached_input_tokens=u.get("prompt_cache_hit_tokens") or 0)
-                    delta = ""
-                    choices = obj.get("choices") or []
-                    if choices:
-                        # `reasoning_content` (reasoner chain-of-thought) is deliberately not surfaced.
-                        delta = (choices[0].get("delta") or {}).get("content") or ""
-                    if delta or usage:
-                        yield LLMChunk(delta=delta, usage=usage)
-        except httpx.TimeoutException as e:
-            raise LLMError("timeout", "DeepSeek request timed out", retryable=True) from e
-        except httpx.TransportError as e:
-            raise LLMError("network", f"DeepSeek network error: {e}", retryable=True) from e
+    def stream(self, request: LLMRequest) -> AsyncIterator[LLMChunk]:
+        return stream_chat_completions(self._client, self._payload(request), "DeepSeek")
 
     async def aclose(self) -> None:
         await self._client.aclose()
-
-
-def _messages(request: LLMRequest) -> list[dict[str, Any]]:
-    """Chat messages; images ride on the last user message as OpenAI-style content parts."""
-    msgs: list[dict[str, Any]] = [{"role": m.role, "content": m.content} for m in request.messages]
-    if request.images:
-        last_user = max(i for i, m in enumerate(msgs) if m["role"] == "user")
-        parts: list[dict[str, Any]] = [{"type": "text", "text": msgs[last_user]["content"]}]
-        for img in request.images:
-            data = base64.b64encode(img.data).decode("ascii")
-            parts.append({"type": "image_url", "image_url": {"url": f"data:{img.media_type};base64,{data}"}})
-        msgs[last_user] = {"role": "user", "content": parts}
-    return msgs

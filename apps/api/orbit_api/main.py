@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 import logging
 import os
+import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Any
@@ -22,6 +23,7 @@ from orbit_api.documents.routes import router as documents_router
 from orbit_api.entitlements import plans as configured_plans
 from orbit_api.observability import configure_logging, init_sentry, request_id_middleware
 from orbit_api.preflight import router as preflight_router
+from orbit_api.providers import health as dependency_health
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.stt import create_stt_provider
 from orbit_api.runtime_config import refresh as refresh_runtime_config
@@ -110,12 +112,15 @@ def create_app() -> FastAPI:
         from sqlalchemy import text
 
         checks: dict[str, str] = {}
+        started = time.monotonic()
         try:
             async with db.sessionmaker()() as session:
                 await session.execute(text("SELECT 1"))
             checks["database"] = "ok"
+            dependency_health.record("postgres", "database", True, int((time.monotonic() - started) * 1000))
         except Exception as e:
             checks["database"] = f"error: {type(e).__name__}"
+            dependency_health.record("postgres", "database", False, error=type(e).__name__)
         ok = all(v == "ok" for v in checks.values())
         response.status_code = 200 if ok else 503
         return {"status": "ready" if ok else "not_ready", "checks": checks}

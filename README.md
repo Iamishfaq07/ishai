@@ -38,6 +38,7 @@ Docs:
 - [Deploy](docs/DEPLOY.md)
 - [Security](docs/SECURITY.md)
 - [Plans & billing](docs/BILLING.md)
+- [AI providers & failover](docs/AI_PROVIDER.md)
 - [Windows release & updates](docs/WINDOWS_RELEASE.md)
 - [Changelog](docs/CHANGELOG.md)
 

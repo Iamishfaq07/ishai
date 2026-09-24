@@ -48,6 +48,20 @@ class Settings(BaseSettings):
         "deepseek-flash", validation_alias=AliasChoices("DEEPSEEK_REASONING_MODEL")
     )
 
+    # Backup LLM: any OpenAI-compatible Chat Completions API (OpenAI, Gemini's OpenAI endpoint, OpenRouter, Groq…).
+    # Used only when DeepSeek fails before its first token (see providers/llm/fallback.py). Unset = no backup.
+    fallback_llm_base_url: str | None = Field(None, validation_alias=AliasChoices("ORBIT_FALLBACK_LLM_BASE_URL"))
+    fallback_llm_api_key: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_FALLBACK_LLM_API_KEY"))
+    fallback_llm_model: str | None = Field(None, validation_alias=AliasChoices("ORBIT_FALLBACK_LLM_MODEL"))
+    fallback_llm_name: str = Field("backup", validation_alias=AliasChoices("ORBIT_FALLBACK_LLM_NAME"))
+    fallback_llm_vision: bool = Field(False, validation_alias=AliasChoices("ORBIT_FALLBACK_LLM_VISION"))
+    # JSON object merged into every backup request (provider-specific options such as reasoning effort).
+    fallback_llm_extra_json: str | None = Field(None, validation_alias=AliasChoices("ORBIT_FALLBACK_LLM_EXTRA_JSON"))
+    # No first token from the primary within this many seconds (plus headroom when "thinking") counts as a failure.
+    llm_first_token_timeout_s: float = Field(
+        10.0, gt=0, validation_alias=AliasChoices("ORBIT_LLM_FIRST_TOKEN_TIMEOUT_S")
+    )
+
     # Observability. Logs default to JSON lines in production. Sentry stays off unless a DSN is set.
     log_format: Literal["json", "text"] | None = Field(None, validation_alias=AliasChoices("ORBIT_LOG_FORMAT"))
     sentry_dsn: str | None = Field(None, validation_alias=AliasChoices("ORBIT_SENTRY_DSN"))
@@ -126,6 +140,16 @@ class Settings(BaseSettings):
                 raise ValueError("ORBIT_DATABASE_URL must be Postgres in production, not SQLite")
             # Without an explicit admin, sign-up would be open and "first user = admin" would hand unlimited
             # use of the shared provider keys to whoever registers first.
+            if self.fallback_llm_base_url:
+                if not (self.fallback_llm_api_key and self.fallback_llm_model):
+                    raise ValueError("ORBIT_FALLBACK_LLM_BASE_URL needs ORBIT_FALLBACK_LLM_API_KEY and _MODEL")
+                if not self.fallback_llm_base_url.startswith("https://"):
+                    raise ValueError("ORBIT_FALLBACK_LLM_BASE_URL must be https:// in production")
+            if self.fallback_llm_extra_json:
+                import json
+
+                if not isinstance(json.loads(self.fallback_llm_extra_json), dict):
+                    raise ValueError("ORBIT_FALLBACK_LLM_EXTRA_JSON must be a JSON object")
             if self.api_replicas != 1:
                 raise ValueError("ORBIT_API_REPLICAS must be 1: live-session state is process-local (tickets, "
                                  "socket ownership, screenshot routing, rate limits). See docs/DECISIONS.md D12.")

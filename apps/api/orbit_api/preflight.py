@@ -23,7 +23,8 @@ from orbit_api.desktop_updates import _root, github_latest_release, latest_relea
 from orbit_api.entitlements import is_admin, plan_for, usage_this_month
 from orbit_api.models import User
 from orbit_api.providers.llm import get_llm_provider
-from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMRequest
+from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMProvider, LLMRequest
+from orbit_api.providers.llm.fallback import FallbackProvider
 from orbit_api.ratelimit import limit
 from orbit_api.runtime_config import get_effective_config
 
@@ -68,23 +69,39 @@ async def _cached(key: str, ttl: float, run: Any) -> Check:
     return check
 
 
+async def _ping(llm: LLMProvider) -> int:
+    started = time.monotonic()
+    await asyncio.wait_for(llm.generate(LLMRequest(messages=[LLMMessage("user", "Reply with OK.")], max_tokens=3,
+                                                   request_type="preflight", allow_fallback=False)), timeout=8)
+    return int((time.monotonic() - started) * 1000)
+
+
 async def _llm_check() -> Check:
     llm = get_llm_provider()
     if llm.name == "mock":
         return Check(id="llm", label="AI answers", status="warn", detail="Demo mode: answers are canned examples.",
                      fix="Set DEEPSEEK_API_KEY on the server (or in Settings → Advanced) for real answers.")
-    started = time.monotonic()
+    # Ping DeepSeek itself (not through the failover wrapper, which would hide an outage behind the backup).
+    primary = llm.primary if isinstance(llm, FallbackProvider) else llm
+    backup = llm.fallback if isinstance(llm, FallbackProvider) else None
     try:
-        await asyncio.wait_for(llm.generate(LLMRequest(messages=[LLMMessage("user", "Reply with OK.")], max_tokens=3,
-                                                       request_type="preflight")), timeout=8)
+        ms = await _ping(primary)
     except (TimeoutError, LLMError) as e:
         code = getattr(e, "code", "timeout")
+        if backup is not None:
+            try:
+                backup_ms = await _ping(backup)
+            except (TimeoutError, LLMError):
+                pass
+            else:
+                return Check(id="llm", label="AI answers", status="warn", latency_ms=backup_ms,
+                             detail=f"DeepSeek unavailable ({code}); the backup AI is answering ({backup_ms} ms).",
+                             fix="Answers still work. Quality may differ slightly until DeepSeek is back.")
         fix = {"http_401": "The DeepSeek API key was rejected — update it in Settings → Advanced.",
                "http_402": "The DeepSeek account is out of credit — top it up.",
                "rate_limited": "DeepSeek is rate-limiting right now — wait a minute and re-check."}.get(
             code, "DeepSeek isn't responding. Re-check in a minute; answers will retry automatically.")
         return Check(id="llm", label="AI answers", status="fail", detail=f"DeepSeek unavailable ({code}).", fix=fix)
-    ms = int((time.monotonic() - started) * 1000)
     slow = ms > 3000
     return Check(id="llm", label="AI answers", status="warn" if slow else "ok", latency_ms=ms,
                  detail=f"DeepSeek responding ({ms} ms).",
