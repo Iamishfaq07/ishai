@@ -62,10 +62,14 @@ export function SetupScreen({
   user,
   onSignOut,
   onStart,
+  onOpenDocuments,
+  onOpenSettings,
 }: {
   user: User | null;
   onSignOut: () => void;
   onStart: (session: OrbitSession, launch: DesktopLaunch) => void;
+  onOpenDocuments: () => void;
+  onOpenSettings: () => void;
 }) {
   const [type, setType] = useState<SessionType>("interview");
   const [role, setRole] = useState("");
@@ -222,6 +226,12 @@ export function SetupScreen({
   return (
     <div className="flex h-full flex-col">
       <TitleBar>
+        <button type="button" onClick={onOpenDocuments} className={cx("rounded px-1.5 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+          Documents
+        </button>
+        <button type="button" onClick={onOpenSettings} className={cx("rounded px-1.5 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+          Settings
+        </button>
         <button type="button" onClick={onSignOut} className={cx("rounded px-1.5 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
           Sign out
         </button>
