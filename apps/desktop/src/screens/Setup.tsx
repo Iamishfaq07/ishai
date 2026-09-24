@@ -63,12 +63,14 @@ export function SetupScreen({
   onSignOut,
   onStart,
   onOpenDocuments,
+  onOpenHistory,
   onOpenSettings,
 }: {
   user: User | null;
   onSignOut: () => void;
   onStart: (session: OrbitSession, launch: DesktopLaunch) => void;
   onOpenDocuments: () => void;
+  onOpenHistory: () => void;
   onOpenSettings: () => void;
 }) {
   const [type, setType] = useState<SessionType>("interview");
@@ -228,6 +230,9 @@ export function SetupScreen({
       <TitleBar>
         <button type="button" onClick={onOpenDocuments} className={cx("rounded px-1.5 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
           Documents
+        </button>
+        <button type="button" onClick={onOpenHistory} className={cx("rounded px-1.5 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+          History
         </button>
         <button type="button" onClick={onOpenSettings} className={cx("rounded px-1.5 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
           Settings
