@@ -24,6 +24,7 @@ answer is regenerated for the whole question). A manual "Answer" likewise gets t
 this is fully deterministic under test.
 """
 
+from collections import deque
 from dataclasses import dataclass, replace
 
 from orbit_api.live.question_detector import (
@@ -32,6 +33,7 @@ from orbit_api.live.question_detector import (
     continue_question,
     detect,
     is_complete,
+    lead_in,
     tokens,
 )
 
@@ -48,6 +50,13 @@ GRACE_MS = {"quick": 0, "balanced": 1500, "patient": 3000}
 CONTINUE_WINDOW_MS = 8000
 # Candidate speech shorter than this is a backchannel ("mm-hmm", "okay"), not the start of their answer.
 CANDIDATE_ANSWER_MIN_WORDS = 3
+# "Candidate" speech made mostly of the interviewer's own words is the interviewer's voice leaking into the
+# mic (speakers, no headphones) — not the candidate answering. The mic copy can be transcribed BEFORE the
+# interviewer channel's, so a candidate "answer" only counts once it has survived ECHO_CONFIRM_MS without
+# matching what the interviewer said around it.
+ECHO_OVERLAP = 0.7
+ECHO_CONFIRM_MS = 1500
+RECENT_INTERVIEWER_MS = 8000
 # Interim transcripts trail speech by ~1 s, so after the interviewer resumes (VAD) keep holding until
 # their words arrive - bounded, in case the VAD event was just noise.
 RESUME_HOLD_MS = 2000
@@ -68,6 +77,7 @@ class _Pending:
     last_speech_ms: int
     endpointed: bool = False
     fired_text: str | None = None
+    fired_question: str | None = None  # the cleaned question text that was actually sent when it fired
     held_question: str = ""  # earlier part(s) of this question, from before a pause
     held_confidence: float = 0.0  # best question-confidence of those earlier parts (carried across stitches)
     endpoint_ms: int | None = None
@@ -84,11 +94,15 @@ class QuestionFinalizer:
         self.grace_ms = grace_ms
         self._pending: _Pending | None = None
         self.context = DetectorContext()
+        self._claim: tuple[int, str] | None = None  # candidate speech that may be the start of their answer
+        self._recent: deque[tuple[int, list[str]]] = deque()  # recent interviewer words, for echo checks
 
     def on_transcript(
         self, turn_id: str, text: str, now_ms: int, *, is_final: bool, endpoint: bool = False
     ) -> FinalizedQuestion | None:
         """Feed interviewer transcript (partial or final). Returns a question if it should fire now."""
+        self._remember(text, now_ms)
+        early = self._settle_claim(now_ms)
         p = self._pending
         if p is None or p.turn_id != turn_id:
             held = self._held_question(p, now_ms)
@@ -104,7 +118,7 @@ class QuestionFinalizer:
             p.endpointed = True
             p.endpoint_ms = now_ms
             p.resumed_ms = None
-        return self._evaluate(now_ms)
+        return early or self._evaluate(now_ms)
 
     def on_speech_activity(self, now_ms: int) -> None:
         """VAD says the interviewer is still talking — push the silence window out."""
@@ -114,10 +128,51 @@ class QuestionFinalizer:
                 self._pending.resumed_ms = now_ms
 
     def on_candidate_speech(self, now_ms: int, text: str = "") -> FinalizedQuestion | None:
-        """The candidate is talking. A real start of their answer (not "mm-hmm") ends the interviewer's
-        question: stop holding it (fire now if complete) and never stitch later interviewer words onto it."""
+        """The candidate is talking. A real start of their answer (not "mm-hmm", not the interviewer's voice
+        leaking into the mic) ends the interviewer's question: stop holding it (fire if complete) and never
+        stitch later interviewer words onto it. Confirmed after ECHO_CONFIRM_MS (see tick)."""
         p = self._pending
         if p is None or len(tokens(text)) < CANDIDATE_ANSWER_MIN_WORDS:
+            return self._settle_claim(now_ms)
+        if self._is_echo(text):
+            return None
+        if p.endpointed and p.resumed_ms is None:
+            # The interviewer is quiet (hasn't resumed since their last pause), so this can't be their voice
+            # leaking in: the candidate is answering.
+            self._claim = None
+            return self._close(now_ms)
+        # The interviewer is talking right now: this may be their voice in the mic, transcribed before the
+        # interviewer channel. Only count it once it survives ECHO_CONFIRM_MS.
+        self._claim = (self._claim[0] if self._claim else now_ms, text)
+        return self._settle_claim(now_ms)
+
+    def _remember(self, text: str, now_ms: int) -> None:
+        self._recent.append((now_ms, tokens(text)))
+        while self._recent and now_ms - self._recent[0][0] > RECENT_INTERVIEWER_MS:
+            self._recent.popleft()
+
+    def _is_echo(self, text: str) -> bool:
+        words = tokens(text)
+        heard = {w for _, ws in self._recent for w in ws}
+        if self._pending is not None:
+            heard |= set(tokens(self._pending.full_text))
+        return bool(words) and sum(w in heard for w in words) >= ECHO_OVERLAP * len(words)
+
+    def _settle_claim(self, now_ms: int) -> FinalizedQuestion | None:
+        claim = self._claim
+        if claim is None:
+            return None
+        if self._is_echo(claim[1]):
+            self._claim = None  # it was the interviewer's own voice
+            return None
+        if now_ms - claim[0] < ECHO_CONFIRM_MS:
+            return None
+        self._claim = None
+        return self._close(now_ms)
+
+    def _close(self, now_ms: int) -> FinalizedQuestion | None:
+        p = self._pending
+        if p is None:
             return None
         fired = None
         if p.fired_text is None and p.endpointed:
@@ -136,18 +191,20 @@ class QuestionFinalizer:
         return p.full_text if detect(p.full_text, "interviewer", self.context).is_question else None
 
     def _held_question(self, p: _Pending | None, now_ms: int) -> str:
-        """If the interviewer's previous turn was a question and they're still going (no candidate answer in
-        between, within the continuation window), its text: the new turn continues it."""
+        """If the interviewer is still going (no candidate answer in between, within the continuation window),
+        what they said before: the new turn continues it. A question carries over whole; a non-question
+        set-up ("Let's talk about image classification.") carries over as a cleaned lead-in."""
         if p is None or not (p.endpointed or p.fired_text is not None):
             return ""
         since = p.endpoint_ms if p.endpoint_ms is not None else p.last_speech_ms
         resumed = p.resumed_ms is not None and now_ms - p.resumed_ms <= RESUME_HOLD_MS
         if not resumed and now_ms - since > CONTINUE_WINDOW_MS:
             return ""
-        full = p.full_text
-        if len(tokens(full)) > MAX_STITCHED_WORDS or not detect(full, "interviewer", self.context).is_question:
-            return ""
-        return full
+        # What already fired carries over exactly as it was shown/answered (so the refire is a clean
+        # extension of it); anything else is cleaned of fillers and bare acknowledgements.
+        if p.fired_question and p.fired_text == p.full_text:
+            return p.fired_question
+        return lead_in(p.full_text, MAX_STITCHED_WORDS)
 
     def _confidence_of(self, p: _Pending) -> float:
         """How surely `p` (with everything stitched into it) is a question. The detector scores only the last
@@ -158,7 +215,7 @@ class QuestionFinalizer:
         return max(conf, 0.6) if p.fired_text is not None else conf
 
     def tick(self, now_ms: int) -> FinalizedQuestion | None:
-        return self._evaluate(now_ms)
+        return self._settle_claim(now_ms) or self._evaluate(now_ms)
 
     def reset(self) -> None:
         self._pending = None
@@ -197,6 +254,7 @@ class QuestionFinalizer:
         if trigger is None or (not d.should_generate and trigger != "max_silence"):
             return None
         p.fired_text = full
+        p.fired_question = d.question_text
         return FinalizedQuestion(turn_id=p.turn_id, detection=d, trigger=trigger)
 
     def _holding(self, p: _Pending, now_ms: int) -> bool:

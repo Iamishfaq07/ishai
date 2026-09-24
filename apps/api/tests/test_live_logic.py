@@ -443,11 +443,11 @@ def test_candidate_speaking_ends_the_wait_and_blocks_stitching() -> None:
     f = QuestionFinalizer(provider_endpoints=True, grace_ms=1600)
     f.on_transcript("t1", "What is dependency injection?", 0, is_final=True, endpoint=True)
     assert f.on_candidate_speech(300, "Mm-hmm.") is None  # a backchannel doesn't end the question
-    fired = f.on_candidate_speech(400, "So I would start")  # the candidate starts answering: it's over
+    fired = f.on_candidate_speech(400, "So I would start")  # interviewer quiet: the candidate is answering
     assert fired and fired.detection.question_text == "What is dependency injection?"
-    nxt = f.on_transcript("t2", "And how would you test it?", 900, is_final=True, endpoint=True)
-    assert nxt is None and f.tick(2500)
-    assert f.tick(2500) is None  # already fired once
+    nxt = f.on_transcript("t2", "And how would you test it?", 2000, is_final=True, endpoint=True)
+    fired2 = next((x for t in range(2000, 4500, 50) if (x := f.tick(t))), None)
+    assert nxt is None and fired2 and fired2.detection.question_text == "And how would you test it?"
 
 
 def test_quick_timing_keeps_the_old_instant_behaviour() -> None:
@@ -536,3 +536,40 @@ def test_a_question_stitched_across_several_turns_still_fires() -> None:
     f.on_transcript("t3", "Go ahead.", 13710, is_final=True, endpoint=True)
     fired = next((x for t in range(13710, 16000, 50) if (x := f.tick(t))), None)
     assert fired and fired.detection.question_text == f"{a} {b}"
+
+
+def test_a_statement_lead_in_stays_part_of_the_question() -> None:
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=800)
+    assert f.on_transcript("t1", "Okay, great. Let's talk about image classification for a bit.", 0,
+                           is_final=True, endpoint=True) is None  # not a question: nothing fires
+    f.on_transcript("t2", "How would you build and evaluate the pipeline?", 2500, is_final=True, endpoint=True)
+    fired = f.tick(3300)
+    # the card shows the whole thing the interviewer said (bare acknowledgement dropped), not just the last part
+    assert fired and fired.detection.question_text == (
+        "Let's talk about image classification for a bit. How would you build and evaluate the pipeline?")
+
+
+def test_interviewer_voice_leaking_into_the_mic_does_not_end_the_question() -> None:
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=800)
+    a = "Walk me through how you'd build an image classification pipeline."
+    f.on_transcript("t1", a, 0, is_final=True, endpoint=True)
+    # no headphones: the mic hears the interviewer's own words
+    assert f.on_candidate_speech(300, "how you'd build an image classification") is None
+    f.on_transcript("t2", "Start with data and what failure modes you'd look for.", 2500, is_final=True,
+                    endpoint=True)
+    fired = f.tick(3300)
+    assert fired and fired.detection.question_text.startswith(a)
+
+
+def test_mic_echo_transcribed_before_the_interviewer_channel_is_not_an_answer() -> None:
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=800)
+    a = "Walk me through how you'd build an image classification pipeline."
+    f.on_transcript("t1", a, 0, is_final=True, endpoint=True)
+    assert f.tick(800)
+    # the interviewer resumes (VAD) and the mic's copy of their words lands before their own transcript
+    f.on_speech_activity(2400)
+    f.on_candidate_speech(3000, "start with data and what failure modes")
+    f.on_transcript("t2", "Start with data and what failure modes you'd look for.", 3400, is_final=True,
+                    endpoint=True)
+    fired = next((x for t in range(3400, 6000, 50) if (x := f.tick(t))), None)
+    assert fired and fired.detection.question_text.startswith(a)  # still stitched: the echo didn't close it
