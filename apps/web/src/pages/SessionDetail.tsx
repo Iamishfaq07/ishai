@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { SessionAnswer, SessionDetail, SessionSummary } from "@orbit/types";
-import { CodeBlock, SessionReview, cx, focusRing } from "@orbit/ui";
+import { CodeBlock, ReportStatusNote, SessionReview, cx, focusRing, useReportPolling } from "@orbit/ui";
 import { Button, Card, ErrorNote, Input, PageHeader, Spinner } from "../components/ui";
 import { api } from "../lib/api";
 import { SESSION_TYPE_LABEL, downloadText, errorText, formatClock, formatDate, formatDuration } from "../lib/format";
@@ -15,8 +15,13 @@ export function SessionDetailPage() {
   const detail = useAsync(() => api.getSession(sessionId), [sessionId]);
   const [tab, setTab] = useState<Tab>("review");
   const [actionError, setActionError] = useState<string | null>(null);
+  const { setData } = detail;
+  useReportPolling(detail.data?.session.report_status, async () => {
+    const fresh = await api.getSession(sessionId);
+    setData(() => fresh);
+  });
 
-  if (detail.loading) return <Spinner />;
+  if (detail.loading && !detail.data) return <Spinner />;
   if (detail.error || !detail.data) {
     return <ErrorNote onRetry={detail.reload}>{errorText(detail.error ?? new Error("Session not found."))}</ErrorNote>;
   }
@@ -64,6 +69,7 @@ export function SessionDetailPage() {
         </div>
       )}
 
+      <ReportStatusNote status={session.report_status} />
       <div role="tablist" className="mb-6 flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
         {(
           [

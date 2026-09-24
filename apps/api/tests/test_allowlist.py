@@ -14,7 +14,8 @@ def _s(**kw: object) -> Settings:
 
 def test_email_allowed_rules() -> None:
     assert _s().email_allowed("anyone@x.com")  # dev/test default: open
-    assert _s(env="production").email_allowed("anyone@x.com")  # no admin configured: nothing to lock to
+    # production never falls open (it can't even start without an admin; this guards the rule itself)
+    assert not _s(env="production").email_allowed("anyone@x.com")
     prod = _s(env="production", admin_email="Me@Mine.com")
     assert prod.email_allowed(" me@mine.COM ") and not prod.email_allowed("stranger@x.com")
     listed = _s(env="production", admin_email="me@mine.com", allowed_emails="friend@a.com, @team.io")

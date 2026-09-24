@@ -43,7 +43,9 @@ class UserOut(BaseModel):
     name: str | None
     email_verified: bool
     store_transcripts: bool
-    store_screenshots: bool
+    # Always false: screenshots are analysed and discarded, never stored (the old toggle did nothing). Kept in
+    # the response so older clients still parse it.
+    store_screenshots: bool = False
 
 
 class AuthOut(BaseModel):
@@ -53,8 +55,7 @@ class AuthOut(BaseModel):
 
 def _user_out(u: User) -> UserOut:
     return UserOut(id=u.id, email=u.email, name=u.name, email_verified=u.email_verified,
-                   store_transcripts=u.store_transcripts,
-                   store_screenshots=u.store_screenshots)
+                   store_transcripts=u.store_transcripts)
 
 
 def _cookie_policy() -> tuple[bool, Literal["lax", "none"]]:
@@ -133,6 +134,7 @@ async def me(user: Annotated[User, Depends(current_user)]) -> UserOut:
 
 class PrivacyIn(BaseModel):
     store_transcripts: bool | None = None
+    # Accepted from older clients and ignored: screenshots are never stored (see UserOut).
     store_screenshots: bool | None = None
 
 
@@ -143,8 +145,6 @@ async def update_privacy(body: PrivacyIn, user: Annotated[User, Depends(current_
     assert u is not None
     if body.store_transcripts is not None:
         u.store_transcripts = body.store_transcripts
-    if body.store_screenshots is not None:
-        u.store_screenshots = body.store_screenshots
     await db.commit()
     return _user_out(u)
 

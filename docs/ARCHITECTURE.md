@@ -10,20 +10,22 @@ to preserve — Orbit was built from scratch here.
 | Monorepo layout, env config, docker-compose (Postgres+pgvector, Redis), CI, Dependabot, gitleaks | ✅ |
 | FastAPI backend: auth (argon2 + JWT cookie/Bearer), documents, sessions, usage, health | ✅ tested |
 | Live engine: STT → turns → question detection → finalization → dedup → retrieval → streamed answer | ✅ tested |
-| DeepSeek provider (SSE streaming, usage, error mapping, reasoner routing) | ✅ tested against a mock HTTP transport — **not yet run against the real API** |
-| Deepgram streaming STT (reconnect, keepalive, backlog, keyterms) | ✅ parsing tested — **not yet run against the real API** |
+| DeepSeek provider (SSE streaming, usage incl. cache hits, error mapping, thinking control, **vision**) | ✅ tested + run against the real API (DeepSeek-V4.1-Flash) |
+| Deepgram streaming STT (reconnect, keepalive, backlog, keyterms) | ✅ tested + run against the real API |
+| Screenshot → vision answer (analysed and discarded; credit spent only on success) | ✅ tested + real API + real desktop build |
 | Mock LLM / STT / fixture replay (keyless dev + E2E) | ✅ |
 | Session memory, follow-ups, chat mode, manual answer, pin/clear, cancellation | ✅ tested |
 | Session report, transcript, Markdown export, privacy toggles, account deletion | ✅ tested |
-| Entitlements (free/pro/unlimited), usage metering, provider cost records | ✅ basic |
+| Entitlements (free/pro/unlimited), live-minute heartbeat metering + mid-session enforcement, config-driven LLM cost (cache hit/miss, peak/off-peak) | ✅ tested (plans are not yet purchasable — no billing) |
+| Durable persistence: recorder retries → dead letters → replay; reports as DB-backed jobs | ✅ tested |
 | Alembic migrations (incl. `vector` extension + HNSW index) | ✅ |
 | Web app, shared live UI, Tauri desktop app (Windows) | ✅ driven end-to-end in Chrome and the real Windows exe |
 
 ## C. Missing core features (next)
-Vision provider for screenshots (DeepSeek chat API takes no images — needs a real vision provider),
-macOS system audio via ScreenCaptureKit (deferred: Windows-first), Stripe billing,
-OpenTelemetry/Sentry, Redis-backed rate limits and WS tickets for multi-instance deploys,
-LLM fallback classifier for the ambiguous question band, mock-interview question generation, TTS.
+Stripe billing (plans exist but can't be bought), Sentry/OpenTelemetry, Redis-backed live state for multi-instance
+deploys (production is single-instance by design until then — DECISIONS D12), opt-in provider smoke tests,
+LLM fallback classifier for the ambiguous question band, semantic (neural) retrieval, mock-interview question
+generation, TTS. macOS is deferred (Windows-first).
 
 ## D. Architecture
 ```

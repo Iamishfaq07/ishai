@@ -44,6 +44,13 @@ class Settings(BaseSettings):
         "deepseek-flash", validation_alias=AliasChoices("DEEPSEEK_REASONING_MODEL")
     )
 
+    # How often an idle durable-job worker polls for due jobs (reports), seconds.
+    job_poll_s: float = Field(2.0, validation_alias=AliasChoices("ORBIT_JOB_POLL_S"))
+    # Live-minute metering: usage is committed (and the plan limit enforced) this often during a session.
+    live_heartbeat_s: float = Field(15.0, validation_alias=AliasChoices("ORBIT_LIVE_HEARTBEAT_S"))
+    # Extra/override LLM prices for internal cost estimates (see providers/llm/pricing.py).
+    llm_pricing_json: str | None = Field(None, validation_alias=AliasChoices("ORBIT_LLM_PRICING_JSON"))
+
     desktop_updates_dir: str | None = Field(None, validation_alias=AliasChoices("ORBIT_DESKTOP_UPDATES_DIR"))
     # Or serve desktop updates straight from GitHub Releases (for hosts without a persistent disk). The token
     # only needs read access to this one repo's contents (fine-grained PAT: Contents → Read-only).
@@ -63,7 +70,8 @@ class Settings(BaseSettings):
     deepgram_model: str = Field("nova-3", validation_alias=AliasChoices("DEEPGRAM_MODEL"))
 
     # Admin (advanced settings). The admin can edit provider keys/models in-app; the override is
-    # encrypted at rest with config_secret. If admin_email is unset, the first registered user is admin.
+    # encrypted at rest with config_secret. Required in production (the server refuses to start without it);
+    # only in development/test does the first registered user stand in for an unset admin.
     admin_email: str | None = Field(None, validation_alias=AliasChoices("ORBIT_ADMIN_EMAIL"))
     config_secret: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_CONFIG_SECRET"))
     # Who may sign up / sign in: comma-separated emails and/or "@domain" entries, or "*" for anyone.
@@ -84,6 +92,10 @@ class Settings(BaseSettings):
                 raise ValueError("DEEPGRAM_API_KEY is required in production (no mock STT fallback)")
             if self.is_sqlite:
                 raise ValueError("ORBIT_DATABASE_URL must be Postgres in production, not SQLite")
+            # Without an explicit admin, sign-up would be open and "first user = admin" would hand unlimited
+            # use of the shared provider keys to whoever registers first.
+            if not (self.admin_email and "@" in self.admin_email):
+                raise ValueError("ORBIT_ADMIN_EMAIL must be set in production (the admin is never inferred)")
         # SMTP is optional: without it, email verification / password reset are disabled (fine for a
         # private single-user deploy). It's never faked to the dev outbox in production (see email.py).
         return self
@@ -97,7 +109,7 @@ class Settings(BaseSettings):
         if self.admin_email and email == self.admin_email.strip().lower():
             return True
         if self.allowed_emails is None:
-            return self.env != "production" or not self.admin_email
+            return self.env != "production"
         entries = {e.strip().lower() for e in self.allowed_emails.split(",") if e.strip()}
         if "*" in entries:
             return True

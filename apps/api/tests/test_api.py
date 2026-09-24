@@ -191,8 +191,8 @@ def test_core_acceptance_flow(client: TestClient) -> None:
         ws.send_text(json.dumps({"type": "session.end", "data": {}}))
         _collect(ws, lambda ev: any(e["type"] == "session.ended" for e in ev))
 
-    detail = client.get(f"/v1/sessions/{sid}", headers=h).json()
-    assert detail["session"]["status"] == "ended"
+    detail = _wait_report(client, h, sid)
+    assert detail["session"]["status"] == "ended" and detail["session"]["report_status"] == "ready"
     assert detail["session"]["question_count"] == 2
     # the batched list endpoint agrees with the per-session detail
     other = client.post("/v1/sessions", headers=h, json={"title": "empty"}).json()["id"]
@@ -256,7 +256,7 @@ def test_network_drop_does_not_end_session_and_client_can_reconnect(client: Test
         _collect(ws, lambda ev: any(e["type"] == "session.started" for e in ev))
         ws.send_text(json.dumps({"type": "session.end", "data": {}}))
         _collect(ws, lambda ev: any(e["type"] == "session.ended" for e in ev))
-    detail = client.get(f"/v1/sessions/{sid}", headers=h).json()
+    detail = _wait_report(client, h, sid)
     assert detail["session"]["status"] == "ended" and detail["summary"] is not None
     assert "duration_seconds" in detail["session"]
 
@@ -264,11 +264,55 @@ def test_network_drop_does_not_end_session_and_client_can_reconnect(client: Test
     assert ticket3.status_code == 409  # ended sessions are closed for good
 
 
+def _wait_report(client: TestClient, h: dict[str, str], sid: str, timeout_s: float = 10) -> dict[str, Any]:
+    """Reports are a durable background job: poll the session until the job has written it."""
+    deadline = time.monotonic() + timeout_s
+    while True:
+        detail: dict[str, Any] = client.get(f"/v1/sessions/{sid}", headers=h).json()
+        if detail["session"]["report_status"] in ("ready", "failed") or time.monotonic() > deadline:
+            return detail
+        time.sleep(0.05)
+
+
 def test_rest_end_generates_report_for_detached_session(client: TestClient) -> None:
     h = _register(client)
     sid = client.post("/v1/sessions", headers=h, json={"title": "closed from history page"}).json()["id"]
-    assert client.post(f"/v1/sessions/{sid}/end", headers=h).json()["status"] == "ended"
-    assert client.get(f"/v1/sessions/{sid}", headers=h).json()["summary"] is not None
+    ended = client.post(f"/v1/sessions/{sid}/end", headers=h).json()
+    assert ended["status"] == "ended" and ended["report_status"] == "pending"  # returns without waiting
+    detail = _wait_report(client, h, sid)
+    assert detail["session"]["report_status"] == "ready" and detail["summary"] is not None
+    # ending again is a no-op: no second report job
+    assert client.post(f"/v1/sessions/{sid}/end", headers=h).json()["report_status"] == "ready"
+
+
+def test_ending_a_live_session_does_not_wait_for_the_report(client: TestClient, monkeypatch: Any) -> None:
+    import asyncio
+    import threading
+
+    from orbit_api.sessions import report
+
+    release = threading.Event()  # set from the test thread; the app runs in the TestClient's loop thread
+    real = report.generate_report
+
+    async def slow_report(session_id: str) -> dict[str, Any]:
+        for _ in range(100):  # a report that takes "forever" (until released)
+            if release.is_set():
+                break
+            await asyncio.sleep(0.05)
+        return await real(session_id)
+
+    monkeypatch.setattr(report, "generate_report", slow_report)
+    h = _register(client)
+    sid = client.post("/v1/sessions", headers=h, json={"title": "quick exit"}).json()["id"]
+    with _live(client, h, sid) as ws:
+        _collect(ws, lambda ev: any(e["type"] == "session.started" for e in ev))
+        t0 = time.monotonic()
+        ws.send_text(json.dumps({"type": "session.end", "data": {}}))
+        _collect(ws, lambda ev: any(e["type"] == "session.ended" for e in ev))
+        assert time.monotonic() - t0 < 2  # session.ended arrives before the report exists
+    assert client.get(f"/v1/sessions/{sid}", headers=h).json()["session"]["report_status"] == "pending"
+    release.set()
+    assert _wait_report(client, h, sid)["session"]["report_status"] == "ready"
 
 
 def _live(client: TestClient, h: dict[str, str], sid: str) -> Any:
@@ -335,3 +379,4 @@ def test_screenshot_is_answered_over_the_live_socket(client: TestClient) -> None
         ws.send_text(json.dumps({"type": "session.end", "data": {}}))
         _collect(ws, lambda ev: any(e["type"] == "session.ended" for e in ev))
     assert client.get("/v1/usage", headers=h).json()["screenshots_used"] == 1
+

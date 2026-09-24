@@ -322,7 +322,7 @@ function PrivacyCard() {
 
   if (!user) return null;
 
-  const setPrivacy = async (patch: { store_transcripts?: boolean; store_screenshots?: boolean }) => {
+  const setPrivacy = async (patch: { store_transcripts?: boolean }) => {
     setSaving(true);
     setError(null);
     try {
@@ -368,14 +368,10 @@ function PrivacyCard() {
           label="Store transcripts"
           description="Keep session transcripts in History. Off: transcripts are used live and discarded when the session ends."
         />
-        <Toggle
-          checked={user.store_screenshots}
-          disabled={saving}
-          onChange={(v) => void setPrivacy({ store_screenshots: v })}
-          label="Store screenshots"
-          description="Keep captured screenshots with the session. Off: images are analyzed and discarded."
-        />
-        <p className="text-xs text-zinc-500">Raw audio is never stored. Transcript content is never sent to analytics.</p>
+        <p className="text-xs text-zinc-500">
+          Screenshots are sent to the AI model to answer, then discarded — never stored. Raw audio is never stored.
+          Transcript content is never sent to analytics.
+        </p>
         {error && <ErrorNote>{error}</ErrorNote>}
         <div className="flex flex-wrap gap-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
           <Button variant="secondary" onClick={() => void signOutEverywhere()}>

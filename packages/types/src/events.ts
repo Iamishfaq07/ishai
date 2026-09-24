@@ -187,6 +187,8 @@ export interface ServerEventMap {
   "answer.cancelled": { answer_id: string; reason: CancelReason };
   "answer.failed": { answer_id: string; error: ProtocolError };
   "provider.status": ProviderStatus;
+  /** Live-minute quota (server-enforced): a warning when few minutes remain; at the limit the session ends. */
+  "usage.status": { minutes_remaining: number; limit_reached: boolean };
   error: { code: string; message: string };
 }
 export type ServerEventType = keyof ServerEventMap;
@@ -238,6 +240,7 @@ const SERVER_EVENT_TYPES: ReadonlySet<string> = new Set<ServerEventType>([
   "answer.cancelled",
   "answer.failed",
   "provider.status",
+  "usage.status",
   "error",
 ]);
 

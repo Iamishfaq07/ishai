@@ -11,9 +11,41 @@ from orbit_api.config import Settings
 def _prod(**over: object) -> dict[str, object]:
     base = dict(ORBIT_ENV="production", ORBIT_JWT_SECRET="x" * 40, ORBIT_SMTP_HOST="smtp.example.com",
                 ORBIT_DATABASE_URL="postgresql+asyncpg://u:p@db/orbit", DEEPSEEK_API_KEY="sk-x",
-                DEEPGRAM_API_KEY="dg-x", ORBIT_LLM_PROVIDER="auto", ORBIT_STT_PROVIDER="auto")
+                DEEPGRAM_API_KEY="dg-x", ORBIT_LLM_PROVIDER="auto", ORBIT_STT_PROVIDER="auto",
+                ORBIT_ADMIN_EMAIL="owner@example.com")
     base.update(over)
     return base
+
+
+def test_production_requires_an_explicit_admin() -> None:
+    with pytest.raises(ValueError, match="ORBIT_ADMIN_EMAIL"):
+        Settings(**_prod(ORBIT_ADMIN_EMAIL=None))
+    with pytest.raises(ValueError, match="ORBIT_ADMIN_EMAIL"):
+        Settings(**_prod(ORBIT_ADMIN_EMAIL="  "))
+    Settings(**_prod(ORBIT_ENV="development", ORBIT_ADMIN_EMAIL=None))  # optional outside production
+
+
+def test_first_user_is_never_admin_in_production(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+    from types import SimpleNamespace
+
+    from orbit_api import entitlements
+    from orbit_api.models import User
+
+    first = User(id="u1", email="first@example.com", password_hash="x")
+
+    class _DB:
+        async def scalar(self, _q: object) -> str:
+            return "u1"  # the queried "first registered user" is `first`
+
+    def run(**cfg: object) -> bool:
+        monkeypatch.setattr(entitlements, "get_settings", lambda: SimpleNamespace(**cfg))
+        return asyncio.run(entitlements.is_admin(_DB(), first))  # type: ignore[arg-type]
+
+    assert run(env="development", admin_email=None)  # local convenience only
+    assert not run(env="production", admin_email=None)
+    assert not run(env="production", admin_email="owner@example.com")
+    assert run(env="production", admin_email=" FIRST@example.com ")
 
 
 def test_production_requires_real_providers_and_postgres() -> None:

@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from orbit_api import db
+from orbit_api import db, jobs
 from orbit_api.admin.routes import router as admin_router
 from orbit_api.auth.routes import router as auth_router
 from orbit_api.config import get_settings
@@ -16,6 +16,8 @@ from orbit_api.documents.routes import router as documents_router
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.stt import create_stt_provider
 from orbit_api.runtime_config import refresh as refresh_runtime_config
+from orbit_api.sessions.recorder import replay_failed_writes
+from orbit_api.sessions.routes import drain_teardowns
 from orbit_api.sessions.routes import router as sessions_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -33,7 +35,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             await refresh_runtime_config(session)  # load admin API-key overrides into providers
     except Exception:
         logging.getLogger(__name__).exception("failed to load runtime config; using environment defaults")
-    yield
+    try:
+        await replay_failed_writes()  # dead-lettered live-session writes from a previous outage
+    except Exception:
+        logging.getLogger(__name__).exception("replaying failed writes failed; will retry next start")
+    async with jobs.running_worker(s.job_poll_s):
+        yield
+        await drain_teardowns()
     await get_llm_provider().aclose()
     await db.dispose()
 

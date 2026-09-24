@@ -1,18 +1,17 @@
-import { createApiClient } from "@orbit/ui";
+import { checkServerUrl, createApiClient, type ServerUrlCheck } from "@orbit/ui";
 
 const API_URL_KEY = "orbit.apiUrl";
 export const DEFAULT_API_URL: string = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-/** Accepts only absolute http(s) URLs; returns the normalised origin+path or null. */
+/** Server URL rules (https unless it's this machine; dev builds may use http anywhere). */
+export function validateApiUrl(value: string | null | undefined): ServerUrlCheck {
+  return checkServerUrl(value, { allowInsecure: import.meta.env.DEV });
+}
+
+/** The normalised URL, or null if it fails validation — so an insecure saved override is ignored. */
 export function normalizeApiUrl(value: string | null | undefined): string | null {
-  if (!value) return null;
-  try {
-    const url = new URL(value.trim());
-    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
-    return url.toString().replace(/\/+$/, "");
-  } catch {
-    return null;
-  }
+  const check = validateApiUrl(value);
+  return check.ok ? check.url : null;
 }
 
 /** Server URL: a user override saved on the sign-in screen, else the build default. */

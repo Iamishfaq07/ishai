@@ -36,8 +36,9 @@ class LLMRequest:
 
 @dataclass
 class Usage:
-    input_tokens: int = 0
+    input_tokens: int = 0  # all prompt tokens (cached + uncached)
     output_tokens: int = 0
+    cached_input_tokens: int = 0  # prompt tokens served from the provider's context cache (billed cheaper)
 
 
 @dataclass
@@ -86,16 +87,3 @@ class LLMProvider(ABC):
 
     async def aclose(self) -> None:  # noqa: B027 - optional hook
         pass
-
-
-# USD per 1M tokens; override per deployment. Used only for internal cost estimates.
-PRICING_PER_MTOK: dict[str, tuple[float, float]] = {
-    "deepseek-chat": (0.27, 1.10),
-    "deepseek-reasoner": (0.55, 2.19),
-    "mock": (0.0, 0.0),
-}
-
-
-def estimate_cost(model: str, usage: Usage) -> float:
-    inp, out = PRICING_PER_MTOK.get(model, (0.0, 0.0))
-    return (usage.input_tokens * inp + usage.output_tokens * out) / 1_000_000

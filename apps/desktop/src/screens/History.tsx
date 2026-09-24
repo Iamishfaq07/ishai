@@ -1,6 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import type { OrbitSession, SessionAnswer, SessionDetail, SessionSummary } from "@orbit/types";
-import { Button, Card, CodeBlock, cx, EmptyState, ErrorNote, focusRing, Input, PageHeader, SessionReview, Spinner } from "@orbit/ui";
+import {
+  Button,
+  Card,
+  CodeBlock,
+  cx,
+  EmptyState,
+  ErrorNote,
+  focusRing,
+  Input,
+  PageHeader,
+  ReportStatusNote,
+  SessionReview,
+  Spinner,
+  useReportPolling,
+} from "@orbit/ui";
 import { api } from "../api";
 import { downloadText, errText, formatClock, formatDate, formatDuration, SESSION_TYPE_LABEL } from "../format";
 import { TitleBar } from "../TitleBar";
@@ -112,6 +126,7 @@ function SessionDetailView({ id, onDeleted }: { id: string; onDeleted: () => voi
       .catch((e) => setLoadError(errText(e)));
   };
   useEffect(load, [id]);
+  useReportPolling(detail?.session.report_status, async () => setDetail(await api.getSession(id)));
 
   if (detail === null) return loadError ? <ErrorNote onRetry={load}>{loadError}</ErrorNote> : <Spinner />;
   const { session } = detail;
@@ -158,6 +173,7 @@ function SessionDetailView({ id, onDeleted }: { id: string; onDeleted: () => voi
         </div>
       )}
 
+      <ReportStatusNote status={session.report_status} />
       <div role="tablist" className="mb-6 flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
         {(
           [
