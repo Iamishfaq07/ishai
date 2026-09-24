@@ -60,18 +60,24 @@ function levelFromRms(rms: number): number {
 
 export function SetupScreen({
   user,
+  initialType,
   onSignOut,
   onStart,
+  onBack,
   onOpenDocuments,
+  onOpenHistory,
   onOpenSettings,
 }: {
   user: User | null;
+  initialType?: SessionType;
   onSignOut: () => void;
   onStart: (session: OrbitSession, launch: DesktopLaunch) => void;
+  onBack: () => void;
   onOpenDocuments: () => void;
+  onOpenHistory: () => void;
   onOpenSettings: () => void;
 }) {
-  const [type, setType] = useState<SessionType>("interview");
+  const [type, setType] = useState<SessionType>(initialType ?? "interview");
   const [role, setRole] = useState("");
   const [length, setLength] = useState<AnswerLength>("short");
   const [style, setStyle] = useState<AnswerStyle>("bullets");
@@ -226,8 +232,14 @@ export function SetupScreen({
   return (
     <div className="flex h-full flex-col">
       <TitleBar>
+        <button type="button" onClick={onBack} className={cx("rounded px-1.5 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+          ← Home
+        </button>
         <button type="button" onClick={onOpenDocuments} className={cx("rounded px-1.5 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
           Documents
+        </button>
+        <button type="button" onClick={onOpenHistory} className={cx("rounded px-1.5 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+          History
         </button>
         <button type="button" onClick={onOpenSettings} className={cx("rounded px-1.5 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
           Settings

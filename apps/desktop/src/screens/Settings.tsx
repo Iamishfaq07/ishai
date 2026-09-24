@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import type { AdminConfig, AdminConfigUpdate, User } from "@orbit/types";
+import type { AdminConfig, AdminConfigUpdate, Usage, User } from "@orbit/types";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Spinner, Toggle } from "@orbit/ui";
 import { API_URL, api } from "../api";
 import { useTheme, type ThemePref } from "../theme";
@@ -32,6 +32,7 @@ export function SettingsScreen({
           <PageHeader title="Settings" />
           <AppearanceCard />
           <PrivacyCard user={user} onUser={onUser} onSignOut={onSignOut} />
+          <UsageCard />
           <AdvancedCard />
         </div>
       </div>
@@ -105,6 +106,44 @@ function PrivacyCard({ user, onUser, onSignOut }: { user: User; onUser: (u: User
           </Button>
         </div>
       </div>
+    </Card>
+  );
+}
+
+function UsageCard() {
+  const [usage, setUsage] = useState<Usage | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = () => {
+    setError(null);
+    api
+      .usage()
+      .then(setUsage)
+      .catch((e) => setError(errText(e)));
+  };
+  useEffect(load, []);
+
+  const line = (used: number, limit: number | null, unit: string) =>
+    limit === null ? `${used} ${unit} used (unlimited)` : `${used} / ${limit} ${unit} used`;
+
+  return (
+    <Card>
+      <h2 className="mb-3 font-semibold">Usage</h2>
+      {usage === null ? (
+        error ? (
+          <ErrorNote onRetry={load}>{error}</ErrorNote>
+        ) : (
+          <Spinner />
+        )
+      ) : (
+        <div className="space-y-1 text-sm text-zinc-600 dark:text-zinc-300">
+          <p>
+            Plan: <span className="font-medium capitalize text-zinc-900 dark:text-white">{usage.plan}</span>
+          </p>
+          <p>{line(usage.live_minutes_used, usage.live_minutes_limit, "live minutes")}</p>
+          <p>{line(usage.screenshots_used, usage.screenshots_limit, "screenshots")}</p>
+        </div>
+      )}
     </Card>
   );
 }
