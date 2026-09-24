@@ -86,6 +86,8 @@ export interface LiveAnswer {
    * illustrative story/details to swap for their real experience — shown as a badge), "general" (none).
    */
   grounding?: "verified" | "example" | "general" | null;
+  /** 3–6 short labels for the answer's points, in order (drives the "NEXT" checklist). */
+  key_points?: string[];
 }
 
 export interface Envelope<TType extends string = string, TData = unknown> {

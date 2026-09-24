@@ -4,6 +4,7 @@ import { formatElapsed, useElapsed } from "../hooks/useElapsed";
 import { useStickyScroll } from "../hooks/useStickyScroll";
 import { DEFAULT_HOTKEYS, useHotkeys, type HotkeyMap } from "../live/hotkeys";
 import { useAnswerHistory } from "../live/useAnswerHistory";
+import { useKeyPointProgress } from "../live/useKeyPointProgress";
 import {
   selectDisplayedAnswer,
   selectDisplayedQuestion,
@@ -61,6 +62,9 @@ export function LivePanel(props: LivePanelProps) {
   const elapsed = useElapsed(live.startedAt, !ended && !paused);
   const answer = selectDisplayedAnswer(live);
   const question = selectDisplayedQuestion(live);
+  // Chat replies and screenshot answers aren't spoken to the interviewer: no checklist for those.
+  const keyPoints = useKeyPointProgress(live, answer && (answer.source === "auto" || answer.source === "manual")
+    ? answer : null);
   const { history, index: historyIndex, browsing, newAnswer: newSinceBrowsing, step, backToLive } =
     useAnswerHistory(live, actions);
   const turns = useMemo(
@@ -163,6 +167,7 @@ export function LivePanel(props: LivePanelProps) {
             onRetry={retry}
             compact={compact}
             autoAnswer={live.settings.auto_answer}
+            progress={keyPoints}
           />
         </main>
 

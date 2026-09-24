@@ -24,6 +24,7 @@ def two_sum(nums: list[int], target: int) -> list[int]:
 TIME: O(n)
 SPACE: O(n)
 FOLLOWUP: How would you handle duplicate values?
+POINTS: Hash map of complements | One pass | O(n) time and space
 """
 
 _GENERAL = """ANSWER: [mock answer — set DEEPSEEK_API_KEY for real responses] {q}
@@ -31,6 +32,7 @@ _GENERAL = """ANSWER: [mock answer — set DEEPSEEK_API_KEY for real responses] 
 - Support it with one concrete, verified example
 - Close with the impact or trade-off
 FOLLOWUP: Can you give a specific example?
+POINTS: Direct answer first | One verified example | Impact or trade-off
 """
 
 

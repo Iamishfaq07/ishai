@@ -50,6 +50,8 @@ export interface AnswerView {
   error: ProtocolError | null;
   /** True once at least one chunk arrived — distinguishes "Thinking…" from streaming. */
   has_content: boolean;
+  /** Index into turnOrder when the answer appeared (candidate turns from here count toward key points). */
+  spoken_from: number;
 }
 
 export type ChatEntry =
@@ -186,6 +188,7 @@ function placeholderAnswer(answer_id: string, question_id: string): AnswerView {
     latency: null,
     error: null,
     has_content: false,
+    spoken_from: 0,
   };
 }
 
@@ -307,6 +310,8 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
         length,
         reasoning,
         source,
+        // Transcript position when this answer appeared: candidate speech after it counts toward its key points.
+        spoken_from: existing?.spoken_from ?? s.turnOrder.length,
       };
       const seen = answer_id in s.answers;
       return {

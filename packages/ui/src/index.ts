@@ -95,3 +95,5 @@ export { checkServerUrl, type ServerUrlCheck } from "./serverUrl";
 export { useReportPolling } from "./hooks/useReportPolling";
 export { ReportStatusNote } from "./components/ReportStatusNote";
 export { LatencyDiagnostics } from "./components/LatencyDiagnostics";
+export { scoreKeyPoints, type KeyPointProgress, type PointProgress } from "./live/coverage";
+export { useKeyPointProgress } from "./live/useKeyPointProgress";

@@ -1,5 +1,17 @@
 # Implementation log
 
+## Phase 5b — adaptive "NEXT" guidance (2026-09-25)
+
+- Answers carry 3–6 key points (`LiveAnswer.key_points`, from a `POINTS:` line); the answer card shows them as a
+  checklist that ticks off what the candidate has said and marks the next point (→). Local, instant, sticky, hideable
+  (D25).
+- Measured on real DeepSeek answers + DeepSeek-written "nervous candidate" paraphrases of the first half of each
+  answer: all four cases ticked exactly the points in the spoken part, and an off-topic ramble ticked none. One false
+  tick found during the evaluation (generic topic words against a long sentence) was fixed by requiring a label word
+  for loose sentence matches. POINTS presence: 12/12 after marking the line required (a design answer had omitted it).
+- Verified in the real desktop app with a real DeepSeek answer: five points, NEXT on the first, no false ticks from
+  the candidate's unrelated line, Hide/Show works, no console errors.
+
 ## Phase 5a — pre-session checklist + saved setups (2026-09-25)
 
 - **Checklist** (desktop Setup, above Start): microphone, interviewer audio source, resume/JD selected, network round
