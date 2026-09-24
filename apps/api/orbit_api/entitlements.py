@@ -7,7 +7,8 @@ from datetime import UTC, datetime
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orbit_api.models import Subscription, UsageEvent
+from orbit_api.config import get_settings
+from orbit_api.models import Subscription, UsageEvent, User
 
 
 @dataclass(frozen=True)
@@ -27,7 +28,21 @@ PLANS: dict[str, Plan] = {
 }
 
 
+async def is_admin(db: AsyncSession, user: User) -> bool:
+    """ORBIT_ADMIN_EMAIL if set, else the first-registered user."""
+    admin_email = get_settings().admin_email
+    if admin_email:
+        return user.email.lower() == admin_email.lower()
+    first_id = await db.scalar(select(User.id).order_by(User.created_at.asc(), User.id.asc()).limit(1))
+    return first_id == user.id
+
+
 async def plan_for(db: AsyncSession, user_id: str) -> Plan:
+    # The server owner pays the provider bills; capping them at the free tier's 30 live minutes would cut
+    # a real interview off mid-way.
+    user = await db.get(User, user_id)
+    if user is not None and await is_admin(db, user):
+        return PLANS["unlimited"]
     sub = await db.scalar(
         select(Subscription).where(Subscription.user_id == user_id, Subscription.status == "active")
         .order_by(Subscription.created_at.desc())

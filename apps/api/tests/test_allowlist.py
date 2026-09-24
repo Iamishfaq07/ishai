@@ -80,3 +80,24 @@ def test_legacy_password_hash_upgraded_on_login(client: TestClient) -> None:
     assert client.post("/v1/auth/login", json={"email": email, "password": "legacy password"}).status_code == 200
     upgraded = asyncio.run(set_and_get(None))
     assert upgraded != legacy and "m=19456,t=2,p=1" in upgraded
+
+
+def test_admin_is_never_capped_by_the_free_plan(monkeypatch: pytest.MonkeyPatch) -> None:
+    from orbit_api.config import get_settings
+    from orbit_api.main import create_app
+
+    admin = f"owner-{uuid.uuid4().hex[:6]}@example.com"
+    monkeypatch.setenv("ORBIT_ADMIN_EMAIL", admin)
+    get_settings.cache_clear()
+    try:
+        with TestClient(create_app()) as c:
+            def usage(email: str) -> dict[str, object]:
+                r = c.post("/v1/auth/register", json={"email": email, "password": "correct horse battery"})
+                c.cookies.clear()
+                return c.get("/v1/usage", headers={"Authorization": f"Bearer {r.json()['access_token']}"}).json()
+
+            owner = usage(admin.upper())  # admin match is case-insensitive
+            assert owner["plan"] == "unlimited" and owner["live_minutes_limit"] is None
+            assert usage(f"guest-{uuid.uuid4().hex[:6]}@example.com")["plan"] == "free"
+    finally:
+        get_settings.cache_clear()
