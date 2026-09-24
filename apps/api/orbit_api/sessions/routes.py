@@ -48,6 +48,13 @@ session_limit = limit("session", rate_per_s=0.2, burst=10)
 
 MAX_WS_TEXT_BYTES = 64 * 1024
 MAX_WS_AUDIO_BYTES = 64 * 1024
+# Each live socket runs two STT streams on the shared key. One socket per session (a newer connection,
+# e.g. rejoining from another device, takes over) and a small per-user cap on distinct live sessions.
+MAX_LIVE_SESSIONS_PER_USER = 2
+CLOSE_REPLACED = 4010
+CLOSE_TOO_MANY = 4029
+# In-process like the ticket store: fine for one API instance.
+_live_sockets: dict[str, dict[str, WebSocket]] = {}
 
 
 class SessionIn(BaseModel):
@@ -96,16 +103,20 @@ async def _owned(db: AsyncSession, session_id: str, user: User) -> LiveSessionRo
     return row
 
 
-async def _session_out(db: AsyncSession, row: LiveSessionRow) -> SessionOut:
-    qcount = await db.scalar(select(func.count()).select_from(Question).where(Question.session_id == row.id))
-    doc_ids = (await db.scalars(select(SessionDocument.document_id)
-                                .where(SessionDocument.session_id == row.id))).all()
+def _to_out(row: LiveSessionRow, question_count: int, doc_ids: list[str]) -> SessionOut:
     return SessionOut(
         id=row.id, title=row.title, type=row.type, role=row.role, language=row.language,
         answer_language=row.answer_language, length=row.length, style=row.style, auto_answer=row.auto_answer,
         status=row.status, created_at=row.created_at, started_at=row.started_at, ended_at=row.ended_at,
-        duration_seconds=row.duration_s, question_count=int(qcount or 0), document_ids=list(doc_ids),
+        duration_seconds=row.duration_s, question_count=question_count, document_ids=doc_ids,
     )
+
+
+async def _session_out(db: AsyncSession, row: LiveSessionRow) -> SessionOut:
+    qcount = await db.scalar(select(func.count()).select_from(Question).where(Question.session_id == row.id))
+    doc_ids = (await db.scalars(select(SessionDocument.document_id)
+                                .where(SessionDocument.session_id == row.id))).all()
+    return _to_out(row, int(qcount or 0), list(doc_ids))
 
 
 @router.post("/sessions", response_model=SessionOut, status_code=201, dependencies=[Depends(session_limit)])
@@ -133,7 +144,20 @@ async def list_sessions(user: Annotated[User, Depends(current_user)],
                         db: Annotated[AsyncSession, Depends(get_db)]) -> list[SessionOut]:
     rows = (await db.scalars(select(LiveSessionRow).where(LiveSessionRow.user_id == user.id)
                              .order_by(LiveSessionRow.created_at.desc()).limit(200))).all()
-    return [await _session_out(db, r) for r in rows]
+    ids = [r.id for r in rows]
+    if not ids:
+        return []
+    # Two grouped queries for the whole page instead of two per row.
+    counts: dict[str, int] = {
+        sid: int(n) for sid, n in (await db.execute(
+            select(Question.session_id, func.count()).where(Question.session_id.in_(ids))
+            .group_by(Question.session_id))).all()
+    }
+    docs: dict[str, list[str]] = {}
+    for sid, did in (await db.execute(select(SessionDocument.session_id, SessionDocument.document_id)
+                                      .where(SessionDocument.session_id.in_(ids)))).all():
+        docs.setdefault(sid, []).append(did)
+    return [_to_out(r, counts.get(r.id, 0), docs.get(r.id, [])) for r in rows]
 
 
 @router.get("/sessions/{session_id}", response_model=SessionDetail)
@@ -276,7 +300,21 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
                                 style=row.style)
         store_transcripts = user.store_transcripts
 
-    await ws.accept()
+    mine = _live_sockets.setdefault(user_id, {})
+    if session_id not in mine and len(mine) >= MAX_LIVE_SESSIONS_PER_USER:
+        await ws.close(code=CLOSE_TOO_MANY, reason="too many live sessions; end one first")
+        return
+    previous = mine.get(session_id)
+    mine[session_id] = ws
+    if previous is not None:
+        with contextlib.suppress(Exception):
+            await previous.close(code=CLOSE_REPLACED, reason="session opened in another window")
+    try:
+        await ws.accept()
+    except Exception:
+        if mine.get(session_id) is ws:
+            del mine[session_id]
+        raise
     send_lock = asyncio.Lock()
 
     async def send(msg: dict[str, Any]) -> None:
@@ -315,6 +353,10 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
     except WebSocketDisconnect:
         pass
     finally:
+        if mine.get(session_id) is ws:
+            del mine[session_id]
+            if not mine:
+                _live_sockets.pop(user_id, None)
         await engine.end(final=explicit_end)
         await recorder.close()
         with contextlib.suppress(Exception):

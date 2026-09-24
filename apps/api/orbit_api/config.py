@@ -58,6 +58,10 @@ class Settings(BaseSettings):
     # encrypted at rest with config_secret. If admin_email is unset, the first registered user is admin.
     admin_email: str | None = Field(None, validation_alias=AliasChoices("ORBIT_ADMIN_EMAIL"))
     config_secret: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_CONFIG_SECRET"))
+    # Who may sign up / sign in: comma-separated emails and/or "@domain" entries, or "*" for anyone.
+    # The admin is always allowed. Unset: open in development/test, admin-only in production — the
+    # server spends one shared provider key, so a public URL must not mean public usage.
+    allowed_emails: str | None = Field(None, validation_alias=AliasChoices("ORBIT_ALLOWED_EMAILS"))
 
     @model_validator(mode="after")
     def _reject_insecure_production(self) -> "Settings":
@@ -79,6 +83,17 @@ class Settings(BaseSettings):
     @property
     def is_sqlite(self) -> bool:
         return self.database_url.startswith("sqlite")
+
+    def email_allowed(self, email: str) -> bool:
+        email = email.strip().lower()
+        if self.admin_email and email == self.admin_email.strip().lower():
+            return True
+        if self.allowed_emails is None:
+            return self.env != "production" or not self.admin_email
+        entries = {e.strip().lower() for e in self.allowed_emails.split(",") if e.strip()}
+        if "*" in entries:
+            return True
+        return email in entries or ("@" in email and "@" + email.rsplit("@", 1)[1] in entries)
 
 
 @lru_cache

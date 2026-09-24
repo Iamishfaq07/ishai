@@ -276,7 +276,9 @@ function Banners({
   if (llm && (llm.state === "down" || llm.state === "reconnecting"))
     items.push({ key: "llm", tone: "warn", text: llm.detail ?? "AI is temporarily unavailable — retrying." });
   const stt = live.providers.stt;
-  if (stt && (stt.state === "down" || stt.state === "reconnecting"))
+  if (stt?.state === "down")
+    items.push({ key: "stt", tone: "error", text: stt.detail ?? "Transcription is down." });
+  else if (stt?.state === "reconnecting")
     items.push({ key: "stt", tone: "warn", text: stt.detail ?? "Transcription reconnecting…" });
   if (live.lastError)
     items.push({

@@ -194,6 +194,11 @@ def test_core_acceptance_flow(client: TestClient) -> None:
     detail = client.get(f"/v1/sessions/{sid}", headers=h).json()
     assert detail["session"]["status"] == "ended"
     assert detail["session"]["question_count"] == 2
+    # the batched list endpoint agrees with the per-session detail
+    other = client.post("/v1/sessions", headers=h, json={"title": "empty"}).json()["id"]
+    listed = {s["id"]: s for s in client.get("/v1/sessions", headers=h).json()}
+    assert listed[sid]["question_count"] == 2 and sorted(listed[sid]["document_ids"]) == sorted([resume, jd])
+    assert listed[other]["question_count"] == 0 and listed[other]["document_ids"] == []
     speakers = {t["speaker"] for t in detail["turns"]}
     assert speakers == {"interviewer", "candidate"}
     assert len(detail["answers"]) >= 2
@@ -264,3 +269,43 @@ def test_rest_end_generates_report_for_detached_session(client: TestClient) -> N
     sid = client.post("/v1/sessions", headers=h, json={"title": "closed from history page"}).json()["id"]
     assert client.post(f"/v1/sessions/{sid}/end", headers=h).json()["status"] == "ended"
     assert client.get(f"/v1/sessions/{sid}", headers=h).json()["summary"] is not None
+
+
+def _live(client: TestClient, h: dict[str, str], sid: str) -> Any:
+    ticket = client.post(f"/v1/sessions/{sid}/live-ticket", headers=h).json()["ticket"]
+    return client.websocket_connect(f"/v1/sessions/{sid}/live?ticket={ticket}")
+
+
+def _close_code(ws: Any) -> int:
+    from starlette.websockets import WebSocketDisconnect
+
+    try:
+        while True:
+            ws.receive_text()
+    except WebSocketDisconnect as e:
+        return int(e.code)
+
+
+def test_live_socket_takeover_and_per_user_cap(client: TestClient) -> None:
+    h = _register(client)
+    a, b, c = (client.post("/v1/sessions", headers=h, json={"title": t}).json()["id"] for t in "abc")
+    with _live(client, h, a) as ws_a:
+        _collect(ws_a, lambda ev: any(e["type"] == "session.started" for e in ev))
+        # rejoining the same session elsewhere takes it over; the old socket gets a terminal 4010
+        with _live(client, h, a) as ws_a2:
+            _collect(ws_a2, lambda ev: any(e["type"] == "session.started" for e in ev))
+            assert _close_code(ws_a) == 4010
+            with _live(client, h, b) as ws_b:
+                _collect(ws_b, lambda ev: any(e["type"] == "session.started" for e in ev))
+                from starlette.websockets import WebSocketDisconnect
+
+                try:  # a third distinct live session is refused before accept
+                    with _live(client, h, c) as ws_c:
+                        ws_c.receive_text()
+                    raise AssertionError("third live session accepted")
+                except WebSocketDisconnect as e:
+                    assert e.code == 4029
+                ws_b.send_text(json.dumps({"type": "session.end", "data": {}}))
+                _collect(ws_b, lambda ev: any(e["type"] == "session.ended" for e in ev))
+            with _live(client, h, c) as ws_c:  # a slot freed up
+                _collect(ws_c, lambda ev: any(e["type"] == "session.started" for e in ev))

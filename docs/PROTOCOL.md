@@ -11,7 +11,8 @@ Source of truth: `apps/api/orbit_api/live/events.py` (Pydantic). TypeScript mirr
 Tickets are single-use and short-lived, so a long-lived access token never goes in a URL.
 
 **Close codes** (terminal: the client must not auto-reconnect): `1000` normal · `4001` invalid/expired ticket ·
-`4003` forbidden · `4004` session not found · `4009` session has ended. Any other close means the client
+`4003` forbidden · `4004` session not found · `4009` session has ended · `4010` the session was opened in
+another window/device (the newer connection wins) · `4029` too many live sessions for this user (max 2). Any other close means the client
 should fetch a new ticket and reconnect with backoff.
 
 **Reconnect semantics.** Only `session.end` (or `POST /v1/sessions/{id}/end`) ends a session and

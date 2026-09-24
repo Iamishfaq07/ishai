@@ -336,7 +336,13 @@ class LiveEngine:
             elif ev.status == "connected":
                 await self.send(f"audio.{channel}_status", {"state": "connected"})
                 if self.state == LiveState.stt_reconnecting:
+                    await self.send("provider.status", {"provider": "stt", "name": self._stt.name, "state": "ok"})
                     await self._set_state(LiveState.listening)
+            elif ev.status == "down":
+                detail = f"Transcription is down: {ev.text or 'the provider refused the connection'}."
+                await self.send(f"audio.{channel}_status", {"state": "error", "detail": detail})
+                await self.send("provider.status", {"provider": "stt", "name": self._stt.name,
+                                                    "state": "down", "detail": detail})
             return
         if self._paused or self._ended:
             return
