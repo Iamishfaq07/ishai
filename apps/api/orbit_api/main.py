@@ -11,6 +11,8 @@ from orbit_api import db, jobs
 from orbit_api.admin.routes import router as admin_router
 from orbit_api.auth.routes import router as auth_router
 from orbit_api.config import get_settings
+from orbit_api.csrf import HEADER as CSRF_HEADER
+from orbit_api.csrf import csrf_middleware
 from orbit_api.desktop_updates import router as desktop_router
 from orbit_api.documents.routes import router as documents_router
 from orbit_api.observability import configure_logging, init_sentry, request_id_middleware
@@ -62,12 +64,15 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Orbit API", version="0.1.0", lifespan=lifespan,
                   docs_url="/docs" if s.env != "production" else None, redoc_url=None)
     app.middleware("http")(request_id_middleware)
+    # Registered before CORS so it runs *inside* it: its 403s still carry CORS headers the browser can read.
+    app.middleware("http")(csrf_middleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=s.cors_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PATCH", "DELETE"],
-        allow_headers=["Authorization", "Content-Type"],
+        # PUT: workspace updates and admin config use it; without it the browser's preflight blocks them.
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+        allow_headers=["Authorization", "Content-Type", CSRF_HEADER],
     )
 
     @app.middleware("http")

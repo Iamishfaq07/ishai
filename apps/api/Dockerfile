@@ -18,4 +18,7 @@ USER orbit
 ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
 # Honor $PORT when the platform injects one (e.g. Render); default to 8000 (Fly/local).
-CMD ["sh", "-c", "alembic upgrade head && uvicorn orbit_api.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers"]
+# --forwarded-allow-ips='*': the container is only reachable through the host's proxy, so trust its
+# X-Forwarded-For. Without it uvicorn trusts only 127.0.0.1, every request appears to come from the proxy, and
+# per-IP rate limits and audit IPs collapse into a single shared value.
+CMD ["sh", "-c", "alembic upgrade head && uvicorn orbit_api.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]

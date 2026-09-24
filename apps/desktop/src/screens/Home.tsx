@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import type { OrbitSession, SessionType, User } from "@orbit/types";
 import { Button, Card, cx, focusRing, OrbitLogo, Spinner } from "@orbit/ui";
 import { api } from "../api";
@@ -14,6 +14,7 @@ const QUICK_START: Array<{ type: SessionType; title: string; body: string }> = [
 /** Desktop landing: greeting, quick-start, recent sessions, and navigation to the other screens. */
 export function HomeScreen({
   user,
+  notice,
   onNewSession,
   onResume,
   onOpenDocuments,
@@ -22,6 +23,8 @@ export function HomeScreen({
   onSignOut,
 }: {
   user: User | null;
+  /** Account notice under the title bar (e.g. verify your email). */
+  notice?: ReactNode;
   onNewSession: (type?: SessionType) => void;
   onResume: (session: OrbitSession) => void;
   onOpenDocuments: () => void;
@@ -57,6 +60,7 @@ export function HomeScreen({
           Sign out
         </button>
       </TitleBar>
+      {notice}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-4xl space-y-6">
           <section className="relative animate-fade-up overflow-hidden rounded-3xl border border-zinc-200 bg-gradient-to-br from-indigo-500/10 via-transparent to-indigo-500/5 p-6 dark:border-zinc-800">

@@ -2,6 +2,7 @@ import type {
   AdminConfig,
   AdminConfigUpdate,
   ApiErrorBody,
+  AuthConfig,
   AuthResponse,
   CreateSessionRequest,
   CreateTextDocumentRequest,
@@ -61,11 +62,18 @@ export function createApiClient(options: ApiClientOptions) {
   const baseUrl = options.baseUrl.replace(/\/+$/, "");
   const doFetch = options.fetchImpl ?? ((input: RequestInfo | URL, init?: RequestInit) => fetch(input, init));
 
+  // Cookie mode: the API's CSRF token for this session, taken from the latest auth response (/me, login,
+  // register, password reset) and sent back on every state-changing request. See apps/api/orbit_api/csrf.py.
+  let csrfToken: string | null = null;
+  const UNSAFE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
   async function raw(path: string, init: RequestInit = {}): Promise<Response> {
     const headers = new Headers(init.headers);
     if (options.auth.mode === "bearer") {
       const token = options.auth.getToken();
       if (token) headers.set("Authorization", `Bearer ${token}`);
+    } else if (csrfToken && UNSAFE.has((init.method ?? "GET").toUpperCase())) {
+      headers.set("X-CSRF-Token", csrfToken);
     }
     if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json");
@@ -90,7 +98,16 @@ export function createApiClient(options: ApiClientOptions) {
   async function json<T>(path: string, init: RequestInit = {}): Promise<T> {
     const response = await raw(path, init);
     if (response.status === 204) return undefined as T;
-    return (await response.json()) as T;
+    const data = (await response.json()) as T;
+    rememberCsrf(data);
+    return data;
+  }
+
+  function rememberCsrf(data: unknown): void {
+    if (!data || typeof data !== "object") return;
+    const d = data as { csrf_token?: unknown; user?: { csrf_token?: unknown } };
+    const token = typeof d.csrf_token === "string" ? d.csrf_token : d.user?.csrf_token;
+    if (typeof token === "string" && token) csrfToken = token;
   }
 
   const body = (value: unknown): string => JSON.stringify(value);
@@ -99,18 +116,25 @@ export function createApiClient(options: ApiClientOptions) {
     baseUrl,
 
     // Auth
+    authConfig: () => json<AuthConfig>("/v1/auth/config"),
     register: (req: RegisterRequest) => json<AuthResponse>("/v1/auth/register", { method: "POST", body: body(req) }),
     login: (req: LoginRequest) => json<AuthResponse>("/v1/auth/login", { method: "POST", body: body(req) }),
     me: () => json<User>("/v1/auth/me"),
-    logout: () => json<void>("/v1/auth/logout", { method: "POST" }),
+    logout: async () => {
+      await json<void>("/v1/auth/logout", { method: "POST" });
+      csrfToken = null;
+    },
     updatePrivacy: (req: PrivacyUpdate) => json<User>("/v1/auth/me/privacy", { method: "PATCH", body: body(req) }),
     deleteAccount: () => json<void>("/v1/auth/me", { method: "DELETE" }),
     logoutAll: () => json<void>("/v1/auth/logout-all", { method: "POST" }),
     requestVerification: () => json<{ status: string }>("/v1/auth/verify-email/request", { method: "POST" }),
     confirmVerification: (token: string) =>
       json<User>("/v1/auth/verify-email/confirm", { method: "POST", body: body({ token }) }),
-    requestPasswordReset: (email: string) =>
-      json<{ status: string }>("/v1/auth/password-reset/request", { method: "POST", body: body({ email }) }),
+    requestPasswordReset: (email: string, captchaToken?: string) =>
+      json<{ status: string }>("/v1/auth/password-reset/request", {
+        method: "POST",
+        body: body(captchaToken ? { email, captcha_token: captchaToken } : { email }),
+      }),
     confirmPasswordReset: (token: string, password: string) =>
       json<AuthResponse>("/v1/auth/password-reset/confirm", { method: "POST", body: body({ token, password }) }),
 
@@ -191,6 +215,10 @@ async function toApiError(response: Response): Promise<ApiError> {
   if (parsed?.error) return new ApiError(response.status, parsed.error.message, parsed.error.code);
   const detail = parsed?.detail;
   if (typeof detail === "string") return new ApiError(response.status, detail);
+  // Structured errors: { detail: { code, message } } (e.g. "email_unverified", "captcha_failed").
+  if (detail && !Array.isArray(detail) && typeof detail === "object" && typeof detail.message === "string") {
+    return new ApiError(response.status, detail.message, typeof detail.code === "string" ? detail.code : "http_error");
+  }
   if (Array.isArray(detail) && detail.length > 0) {
     return new ApiError(response.status, detail.map((d) => d.msg).join("; "), "validation_error");
   }

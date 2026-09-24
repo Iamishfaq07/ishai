@@ -26,12 +26,15 @@ Render dashboard → New → Blueprint → this repo (`render.yaml`). Set the pr
 | `DEEPSEEK_API_KEY`, `DEEPGRAM_API_KEY` | yes | production refuses to boot without them (no mock fallback) |
 | `ORBIT_ADMIN_EMAIL` | **yes** | the owner account (unlimited plan, Advanced settings). Production refuses to boot without it; the admin is never inferred from registration order. Register this account right after the first deploy. |
 | `ORBIT_WEB_URL`, `ORBIT_CORS_ORIGINS` | yes | the web URL; CORS is a JSON array incl. `http://tauri.localhost` |
-| `ORBIT_ALLOWED_EMAILS` | no | who else may sign in (emails, `@domain`, or `*`). Unset = admin only. Re-checked per request. |
+| `ORBIT_ALLOWED_EMAILS` | no | who else may sign in (emails, `@domain`, or `*`). Unset = admin only. Re-checked per request. Anyone besides the admin needs SMTP (below) to verify their email. |
 | `ORBIT_UPDATES_GITHUB_TOKEN` | no | fine-grained PAT (this repo, Contents read) so desktop auto-update works |
 | `ORBIT_LLM_PRICING_JSON` | no | extra/override LLM prices for internal cost estimates (see `providers/llm/pricing.py`) |
 | `ORBIT_LIVE_HEARTBEAT_S` | no | live-minute commit/enforcement interval, default 15 |
 | `ORBIT_SPOOL_DIR` | no | where dead-lettered writes spool if the DB is unreachable (default: temp dir) |
-| `ORBIT_SMTP_*` | no | without SMTP, verification/reset email is disabled (fine for a private deploy) |
+| `ORBIT_SMTP_*` | if others sign in | required as soon as anyone besides the admin can sign in (they must verify their email); admin-only deploys can skip it |
+| `ORBIT_EMAIL_VERIFICATION` | no | `required` (production default) or `off`. `off` is allowed only for a private list of exact addresses, never with `*` / `@domain` |
+| `ORBIT_CAPTCHA_PROVIDER`, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | no | bot check on sign-up / password reset (`turnstile`). Add the web hostname to the Turnstile widget |
+| `ORBIT_CSRF_PROTECTION` | no | leave unset (on). See [SECURITY.md](SECURITY.md) |
 | `ORBIT_SENTRY_DSN` | no | turns on Sentry error reporting (off when unset). Sends no PII, bodies, headers, query strings or breadcrumbs. |
 | `ORBIT_LOG_FORMAT` | no | `json` (default in production) or `text`. Every line carries `request_id` / `user_id` / `session_id`; secrets are redacted. |
 

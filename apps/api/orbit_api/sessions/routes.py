@@ -23,6 +23,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import jobs
+from orbit_api.auth.guards import require_verified_user
 from orbit_api.auth.security import TICKET_TTL_S, current_user, issue_ticket, redeem_ticket
 from orbit_api.config import get_settings
 from orbit_api.db import get_db, sessionmaker
@@ -52,7 +53,7 @@ from orbit_api.observability import request_id_var, session_id_var, user_id_var
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMImage
 from orbit_api.providers.stt import create_stt_provider
-from orbit_api.ratelimit import limit
+from orbit_api.ratelimit import limit, limit_user
 from orbit_api.retrieval.index import IndexedChunk, SessionIndex
 from orbit_api.sessions.recorder import DbRecorder, upsert_usage
 from orbit_api.sessions.report import generate_report
@@ -63,6 +64,11 @@ router = APIRouter(prefix="/v1", tags=["sessions"])
 
 session_limit = limit("session", rate_per_s=0.2, burst=10)
 review_limit = limit("review", rate_per_s=0.05, burst=3)  # each review is one sizeable LLM call
+# Per account, on top of the per-IP limits: paid-provider work can't be multiplied by rotating IPs.
+session_user_limit = limit_user("session-user", rate_per_s=30 / 3600, burst=10)
+ticket_user_limit = limit_user("ticket-user", rate_per_s=120 / 3600, burst=20)  # reconnects need headroom
+screenshot_user_limit = limit_user("screenshot-user", rate_per_s=0.1, burst=10)
+review_user_limit = limit_user("review-user", rate_per_s=10 / 3600, burst=3)
 
 MAX_WS_TEXT_BYTES = 64 * 1024
 MAX_WS_AUDIO_BYTES = 64 * 1024
@@ -167,8 +173,9 @@ async def _session_out(db: AsyncSession, row: LiveSessionRow) -> SessionOut:
     return _to_out(row, int(qcount or 0), list(doc_ids), (await _report_statuses(db, [row])).get(row.id))
 
 
-@router.post("/sessions", response_model=SessionOut, status_code=201, dependencies=[Depends(session_limit)])
-async def create_session(body: SessionIn, user: Annotated[User, Depends(current_user)],
+@router.post("/sessions", response_model=SessionOut, status_code=201,
+             dependencies=[Depends(session_limit), Depends(session_user_limit)])
+async def create_session(body: SessionIn, user: Annotated[User, Depends(require_verified_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> SessionOut:
     remaining = await live_minutes_remaining(db, user.id)
     if remaining is not None and remaining <= 0:
@@ -255,8 +262,8 @@ async def end_session(session_id: str, user: Annotated[User, Depends(current_use
     return await _session_out(db, row)
 
 
-@router.post("/sessions/{session_id}/review", dependencies=[Depends(review_limit)])
-async def review_session(session_id: str, user: Annotated[User, Depends(current_user)],
+@router.post("/sessions/{session_id}/review", dependencies=[Depends(review_limit), Depends(review_user_limit)])
+async def review_session(session_id: str, user: Annotated[User, Depends(require_verified_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
     """(Re)generate the post-session report + review scorecard for an ended session."""
     row = await _owned(db, session_id, user)
@@ -295,8 +302,8 @@ async def export_markdown(session_id: str, user: Annotated[User, Depends(current
     return "\n".join(lines) + "\n"
 
 
-@router.post("/sessions/{session_id}/live-ticket")
-async def live_ticket(session_id: str, user: Annotated[User, Depends(current_user)],
+@router.post("/sessions/{session_id}/live-ticket", dependencies=[Depends(ticket_user_limit)])
+async def live_ticket(session_id: str, user: Annotated[User, Depends(require_verified_user)],
                       db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
     row = await _owned(db, session_id, user)
     if row.status == "ended":
@@ -317,9 +324,10 @@ def _image_type(head: bytes) -> str | None:
     return None
 
 
-@router.post("/sessions/{session_id}/screenshots", status_code=202, dependencies=[Depends(session_limit)])
+@router.post("/sessions/{session_id}/screenshots", status_code=202,
+             dependencies=[Depends(session_limit), Depends(screenshot_user_limit)])
 async def upload_screenshot(session_id: str, image: Annotated[UploadFile, File()],
-                            user: Annotated[User, Depends(current_user)],
+                            user: Annotated[User, Depends(require_verified_user)],
                             db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, str]:
     """Answer what a screenshot shows; the answer streams over the session's live socket. The image is only
     sent to the model — never stored."""

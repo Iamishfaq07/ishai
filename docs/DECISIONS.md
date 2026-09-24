@@ -157,3 +157,18 @@ tooltip.
 Manager, outside the folders Tauri's uninstaller deletes. An NSIS post-uninstall hook removes it under exactly
 Tauri's conditions: the box is ticked, and this is not an update. Silent uninstalls and updates keep everything, so
 a reinstall comes back signed in.
+**D32 — Paid features require a verified email; the admin is exempt.** The server pays for every live minute, so
+an account must prove it controls its inbox before it can spend provider money. The check is one dependency
+(`require_verified_user`) on the paid routes, not scattered `if`s. The admin is configured by env, not by sign-up,
+so it's trusted. Production refuses to boot if non-admins can sign in but no SMTP exists to verify them: a silent
+lock-out is worse than a loud config error.
+
+**D33 — CSRF via Origin check + session-bound token header, not a double-submit cookie.** The API and web app are
+on different sites, so the web app can't read an API cookie, and a double-submit cookie doesn't work. The token is
+an HMAC of (user id, token version), so it needs no storage and rotates on sign-out-everywhere. It's handed out
+only in CORS-protected auth responses. Sending a custom header also forces a CORS preflight, which unknown origins
+fail.
+
+**D34 — Rate limits key on the account as well as the IP.** IPs are cheap to rotate, and accounts are gated by
+email verification, so provider-cost endpoints are limited per user. Login is also limited per target email, which
+throttles password guessing spread over many IPs.

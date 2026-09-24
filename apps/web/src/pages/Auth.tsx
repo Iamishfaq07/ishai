@@ -5,6 +5,7 @@ import { Button, ErrorNote, Field, Input } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { errorText } from "../lib/format";
+import { Captcha, useCaptchaConfig } from "../components/Captcha";
 
 function AuthShell({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
@@ -98,6 +99,8 @@ export function RegisterPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const captcha = useCaptchaConfig();
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   if (user) return <Navigate to="/" replace />;
 
@@ -110,7 +113,12 @@ export function RegisterPage() {
     setBusy(true);
     setError(null);
     try {
-      await register({ email, password, ...(name.trim() ? { name: name.trim() } : {}) });
+      await register({
+        email,
+        password,
+        ...(name.trim() ? { name: name.trim() } : {}),
+        ...(captchaToken ? { captcha_token: captchaToken } : {}),
+      });
       navigate("/documents", { replace: true, state: { onboarding: true } });
     } catch (err) {
       setError(errorText(err));
@@ -139,8 +147,9 @@ export function RegisterPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </Field>
+        {captcha && <Captcha config={captcha} onToken={setCaptchaToken} />}
         {error && <ErrorNote>{error}</ErrorNote>}
-        <Button type="submit" disabled={busy} className="w-full">
+        <Button type="submit" disabled={busy || captcha === undefined || (!!captcha && !captchaToken)} className="w-full">
           {busy ? "Creating account…" : "Create account"}
         </Button>
       </form>
@@ -171,13 +180,15 @@ export function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const captcha = useCaptchaConfig();
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      await api.requestPasswordReset(email);
+      await api.requestPasswordReset(email, captchaToken ?? undefined);
       setSent(true);
     } catch (err) {
       setError(errorText(err));
@@ -202,8 +213,9 @@ export function ForgotPasswordPage() {
           <Field label="Email" htmlFor="email">
             <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </Field>
+          {captcha && <Captcha config={captcha} onToken={setCaptchaToken} />}
           {error && <ErrorNote>{error}</ErrorNote>}
-          <Button type="submit" disabled={busy} className="w-full">
+          <Button type="submit" disabled={busy || captcha === undefined || (!!captcha && !captchaToken)} className="w-full">
             {busy ? "Sending…" : "Send reset link"}
           </Button>
           <p className="text-center text-sm">

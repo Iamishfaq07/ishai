@@ -36,6 +36,7 @@ Docs:
 - [Live protocol](docs/PROTOCOL.md)
 - [Decisions](docs/DECISIONS.md)
 - [Deploy](docs/DEPLOY.md)
+- [Security](docs/SECURITY.md)
 - [Windows release & updates](docs/WINDOWS_RELEASE.md)
 - [Changelog](docs/CHANGELOG.md)
 

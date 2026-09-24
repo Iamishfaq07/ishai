@@ -6,6 +6,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth import email_tokens
+from orbit_api.auth.captcha import public_config as captcha_config
+from orbit_api.auth.captcha import require_captcha
 from orbit_api.auth.security import (
     COOKIE_NAME,
     NOT_ALLOWED,
@@ -16,20 +18,27 @@ from orbit_api.auth.security import (
     verify_password,
 )
 from orbit_api.config import get_settings
+from orbit_api.csrf import token_for as csrf_token_for
 from orbit_api.db import get_db
 from orbit_api.models import AuditLog, User
 from orbit_api.providers.email import OutgoingEmail, send_safely
-from orbit_api.ratelimit import limit
+from orbit_api.ratelimit import TokenBucket, check, limit
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 auth_limit = limit("auth", rate_per_s=0.2, burst=10)
 email_limit = limit("email", rate_per_s=0.05, burst=5)
+# Account creation: a handful per IP per hour. Login is also throttled per target email, so password guessing
+# spread over many IPs still hits a wall.
+signup_limit = limit("signup", rate_per_s=5 / 3600, burst=5)
+_login_by_email = TokenBucket(rate_per_s=10 / 900, burst=10)
+_reset_by_email = TokenBucket(rate_per_s=3 / 3600, burst=3)
 
 
 class RegisterIn(BaseModel):
     email: EmailStr
     password: str = Field(min_length=10, max_length=256)
     name: str | None = Field(None, max_length=200)
+    captcha_token: str | None = Field(None, max_length=4096)
 
 
 class LoginIn(BaseModel):
@@ -46,6 +55,9 @@ class UserOut(BaseModel):
     # Always false: screenshots are analysed and discarded, never stored (the old toggle did nothing). Kept in
     # the response so older clients still parse it.
     store_screenshots: bool = False
+    # Browser clients send this back as X-CSRF-Token on state-changing requests (see orbit_api/csrf.py). Only
+    # present on auth responses; the desktop app (Bearer token) ignores it.
+    csrf_token: str | None = None
 
 
 class AuthOut(BaseModel):
@@ -53,9 +65,10 @@ class AuthOut(BaseModel):
     access_token: str
 
 
-def _user_out(u: User) -> UserOut:
+def _user_out(u: User, *, with_csrf: bool = False) -> UserOut:
     return UserOut(id=u.id, email=u.email, name=u.name, email_verified=u.email_verified,
-                   store_transcripts=u.store_transcripts)
+                   store_transcripts=u.store_transcripts,
+                   csrf_token=csrf_token_for(u.id, u.token_version) if with_csrf else None)
 
 
 def _cookie_policy() -> tuple[bool, Literal["lax", "none"]]:
@@ -83,12 +96,27 @@ def _ip(request: Request) -> str | None:
     return request.client.host if request.client else None
 
 
-@router.post("/register", response_model=AuthOut, status_code=201, dependencies=[Depends(auth_limit)])
+class AuthConfigOut(BaseModel):
+    """Public: what the sign-in / sign-up screens need to know before anyone is signed in."""
+    captcha: dict[str, str] | None
+    email_verification: Literal["required", "off"]
+
+
+@router.get("/config", response_model=AuthConfigOut)
+async def auth_config() -> AuthConfigOut:
+    s = get_settings()
+    return AuthConfigOut(captcha=captcha_config(),
+                         email_verification="required" if s.verification_required else "off")
+
+
+@router.post("/register", response_model=AuthOut, status_code=201,
+             dependencies=[Depends(auth_limit), Depends(signup_limit)])
 async def register(body: RegisterIn, request: Request, response: Response,
                    db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut:
     email = body.email.lower()
     if not get_settings().email_allowed(email):
         raise HTTPException(status.HTTP_403_FORBIDDEN, NOT_ALLOWED)
+    await require_captcha(body.captcha_token, _ip(request))
     if await db.scalar(select(func.count()).select_from(User).where(User.email == email)):
         raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists.")
     user = User(email=email, name=body.name, password_hash=await hash_password(body.password))
@@ -100,12 +128,14 @@ async def register(body: RegisterIn, request: Request, response: Response,
     await send_safely(_verification_email(user.email, verify))
     token = create_access_token(user.id, user.token_version)
     _set_cookie(response, token)
-    return AuthOut(user=_user_out(user), access_token=token)
+    return AuthOut(user=_user_out(user, with_csrf=True), access_token=token)
 
 
 @router.post("/login", response_model=AuthOut, dependencies=[Depends(auth_limit)])
 async def login(body: LoginIn, request: Request, response: Response,
                 db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut:
+    check(_login_by_email, body.email.lower(),
+          "Too many sign-in attempts for this account — try again in a few minutes.")
     user = await db.scalar(select(User).where(User.email == body.email.lower()))
     if not await verify_password(body.password, user.password_hash if user else None) or user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password.")
@@ -117,7 +147,7 @@ async def login(body: LoginIn, request: Request, response: Response,
     await db.commit()
     token = create_access_token(user.id, user.token_version)
     _set_cookie(response, token)
-    return AuthOut(user=_user_out(user), access_token=token)
+    return AuthOut(user=_user_out(user, with_csrf=True), access_token=token)
 
 
 @router.post("/logout", status_code=204)
@@ -129,7 +159,7 @@ async def logout(response: Response) -> Response:
 
 @router.get("/me", response_model=UserOut)
 async def me(user: Annotated[User, Depends(current_user)]) -> UserOut:
-    return _user_out(user)
+    return _user_out(user, with_csrf=True)
 
 
 class PrivacyIn(BaseModel):
@@ -201,6 +231,7 @@ class TokenIn(BaseModel):
 
 class ResetRequestIn(BaseModel):
     email: EmailStr
+    captcha_token: str | None = Field(None, max_length=4096)
 
 
 class ResetConfirmIn(BaseModel):
@@ -239,6 +270,8 @@ async def request_password_reset(body: ResetRequestIn, request: Request, backgro
                                  db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, str]:
     """Always 202 with the same body, whether or not the account exists (no account enumeration).
     The email is sent after the response so SMTP latency can't reveal existence via timing either."""
+    await require_captcha(body.captcha_token, _ip(request))
+    check(_reset_by_email, body.email.lower(), "Too many reset requests for this email — try again later.")
     user = await db.scalar(select(User).where(User.email == body.email.lower()))
     if user is not None and not await email_tokens.recently_issued(db, user.id, "reset_password"):
         token = await email_tokens.issue(db, user.id, "reset_password")
@@ -262,7 +295,7 @@ async def confirm_password_reset(body: ResetConfirmIn, request: Request, respons
     await db.commit()
     token = create_access_token(user.id, user.token_version)
     _set_cookie(response, token)
-    return AuthOut(user=_user_out(user), access_token=token)
+    return AuthOut(user=_user_out(user, with_csrf=True), access_token=token)
 
 
 @router.post("/logout-all", status_code=204)

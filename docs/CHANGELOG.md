@@ -1,5 +1,40 @@
 # Implementation log
 
+## Launch hardening 1a — verification, CSRF, abuse limits (2026-09-25)
+
+- **Email verification is enforced.** `require_verified_user` gates session creation (live and mock), live
+  tickets, screenshots, AI review and document uploads with `403 email_unverified`.
+  - The admin is exempt.
+  - Unverified users keep account access.
+  - Both apps show a shared banner (Resend link / I've verified), and preflight reports it without spending
+    provider calls.
+- **CSRF defence** for cookie-authenticated browser requests: a strict Origin/Referer check plus an
+  `X-CSRF-Token` HMAC of the session, which the shared client sends automatically. Bearer (desktop) requests are
+  unaffected.
+- **Abuse limits:**
+  - sign-up 5/hour per IP;
+  - login also limited per target email;
+  - password reset per email;
+  - per-user limits on session create, live tickets, screenshots and review, so rotating IPs doesn't multiply
+    provider spend.
+- **CAPTCHA abstraction:** Turnstile on sign-up and password reset when configured; the widget is chosen via
+  `GET /v1/auth/config`.
+- **Production fail-fast:** the API refuses to boot with public sign-up but verification off, verification
+  required without SMTP, or Turnstile without keys.
+- **Fixed (production):** CORS didn't allow `PUT`, so from the desktop app **editing a saved workspace and saving
+  admin config were blocked** by the browser preflight.
+- **Fixed (production):** uvicorn trusted `X-Forwarded-For` only from 127.0.0.1, so behind Render every request
+  shared the proxy's IP: **per-IP rate limits were one global bucket** and audit IPs were wrong. The Dockerfile now
+  passes `--forwarded-allow-ips='*'`.
+- **Fixed (dev):** log redaction masked the dev outbox's links, so local verification and reset links couldn't be
+  clicked. The dev outbox (never used in production) now also writes mail to `%TEMP%/orbit-dev-outbox.txt`.
+- New `docs/SECURITY.md`.
+- Tests:
+  - 13 API regression tests (`test_launch_security.py`) and 5 client tests.
+  - A real-browser drive of the web app (Edge) confirmed the verify flow, CSRF enforcement and the cross-origin
+    PUT.
+  - A real desktop test build confirmed the banner, the checklist entry and refused starts.
+
 ## Phase 6e — docs pass (2026-09-25)
 
 Every doc was checked against the code, and stale statements were fixed:

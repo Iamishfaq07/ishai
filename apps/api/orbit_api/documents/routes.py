@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from orbit_api.auth.guards import require_verified_user
 from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
@@ -102,7 +103,7 @@ async def list_documents(user: Annotated[User, Depends(current_user)],
 
 @router.post("", response_model=DocumentOut, status_code=201, dependencies=[Depends(upload_limit)])
 async def upload_document(
-    user: Annotated[User, Depends(current_user)],
+    user: Annotated[User, Depends(require_verified_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     file: Annotated[UploadFile, File()],
     kind: Annotated[DocKind, Form()],
@@ -130,7 +131,7 @@ async def upload_document(
 
 
 @router.post("/text", response_model=DocumentOut, status_code=201, dependencies=[Depends(upload_limit)])
-async def create_text_document(body: TextDocIn, user: Annotated[User, Depends(current_user)],
+async def create_text_document(body: TextDocIn, user: Annotated[User, Depends(require_verified_user)],
                                db: Annotated[AsyncSession, Depends(get_db)]) -> DocumentOut:
     await _check_quota(db, user)
     doc = Document(user_id=user.id, title=body.title, kind=body.kind, size_bytes=len(body.text.encode()))
@@ -157,7 +158,7 @@ async def get_document_text(doc_id: str, user: Annotated[User, Depends(current_u
 
 
 @router.patch("/{doc_id}", response_model=DocumentOut, dependencies=[Depends(upload_limit)])
-async def update_document(doc_id: str, body: DocPatchIn, user: Annotated[User, Depends(current_user)],
+async def update_document(doc_id: str, body: DocPatchIn, user: Annotated[User, Depends(require_verified_user)],
                           db: Annotated[AsyncSession, Depends(get_db)]) -> DocumentOut:
     doc = await _owned(db, doc_id, user)
     kind_changed = body.kind is not None and body.kind != doc.kind
