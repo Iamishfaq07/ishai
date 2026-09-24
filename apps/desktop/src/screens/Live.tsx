@@ -23,6 +23,7 @@ import { API_URL, api } from "../api";
 import {
   REGION_CAPTURED_EVENT,
   base64ToBytes,
+  deviceStatusText,
   openRegionSelector,
   startCapture,
   stopCapture,
@@ -37,8 +38,10 @@ import { applyPanelMode, setAlwaysOnTop } from "../windowing";
 export interface DesktopLaunch {
   micDeviceId?: string;
   systemAudio: boolean;
-  /** Capture only this app's audio (process tree); undefined = all system audio. */
+  /** Capture only this app's audio (process tree); undefined = an output device. */
   systemProcessId?: number;
+  /** Output to capture when no app is chosen: "default" | "communications" | endpoint id. */
+  systemDevice?: string;
 }
 
 const MODE_KEY = "orbit.desktop.panelMode";
@@ -95,10 +98,18 @@ export function LiveScreen({
           systemAudio: launch.systemAudio,
           ...(launch.micDeviceId ? { micDeviceId: launch.micDeviceId } : {}),
           ...(launch.systemProcessId ? { systemProcessId: launch.systemProcessId } : {}),
+          ...(launch.systemDevice ? { systemDevice: launch.systemDevice } : {}),
         },
         (ev) => {
           if (ev.kind === "frame") {
             if (!pausedRef.current) client.sendAudioBytes(ev.channel, base64ToBytes(ev.pcm));
+          } else if (ev.kind === "status") {
+            // Device came back / switched: clear the "disconnected" note after a moment.
+            const text = deviceStatusText(ev);
+            setCaptureNote(text);
+            if (text && (ev.state === "restored" || ev.state === "switched")) {
+              window.setTimeout(() => setCaptureNote((n) => (n === text ? null : n)), 4000);
+            }
           } else {
             setCaptureNote(ev.message);
           }
@@ -111,7 +122,7 @@ export function LiveScreen({
     } catch (err) {
       setCaptureNote(`Audio capture failed: ${String(err)}`);
     }
-  }, [client, launch.micDeviceId, launch.systemAudio, launch.systemProcessId]);
+  }, [client, launch.micDeviceId, launch.systemAudio, launch.systemProcessId, launch.systemDevice]);
 
   useEffect(() => {
     void startAudio();

@@ -1,5 +1,28 @@
 # Implementation log
 
+## Phase 3 — Windows audio reliability (2026-09-24)
+
+- **Stable device identity:** microphones and outputs are listed and opened by MMDevice endpoint id (legacy saved
+  names still resolve). The Setup screen remembers the mic and output choice.
+- **Recovery:** unplug/replug, Bluetooth drop, device invalidation and default-device switches reopen capture by
+  itself; a missing chosen device falls back to the default and switches back when it returns. Live shows
+  "Microphone disconnected — reconnecting…" / "reconnected" / "switched to …".
+- **Call audio:** new "Call audio — communications device" choice, plus any specific output. On the dev PC the
+  default output (Realtek Digital Output) and the communications device (Speakers) differ, so a Teams call routed to
+  the communications device was previously inaudible to Orbit.
+- **Resampling:** Windows converts to 16 kHz mono (AUTOCONVERTPCM + SRC_DEFAULT_QUALITY) on the capture path.
+- **Silence fill:** output loopback emits silence frames while nothing plays, keeping end-of-speech detection and
+  the latency timeline working.
+
+**Verified on real hardware** (test build driven over CDP): endpoint ids listed with default/communications flags;
+TTS through the default output captured (RMS 0.097); 20 frames/s of silence with nothing playing; communications
+choice opens Speakers; bogus saved ids fall back with a `fallback` status; switching the Windows default output
+mid-capture (Digital → Speakers → Digital, restored afterwards) produced `switched` → `switched` with no frame gap.
+Rust 18 tests, clippy -D warnings, fmt; desktop typecheck + lint.
+
+**Needs manual hardware:** USB/Bluetooth unplug-replug, HDMI outputs and sleep/wake weren't physically exercised
+(the same reopen path handles them: device invalidation → reopen); Teams/Zoom routing to the communications device.
+
 ## Phase 2 — platform (2026-09-24)
 
 Decisions for a private deployment: one API instance (D12), no Stripe or backup provider yet (D17), Sentry built in

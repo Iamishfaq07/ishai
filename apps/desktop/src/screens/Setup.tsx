@@ -24,7 +24,16 @@ import {
 } from "@orbit/ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { WEB_URL, api } from "../api";
-import { listAudioApps, listAudioDevices, startCapture, stopCapture, type AudioApp, type NativeAudioDevice } from "../native";
+import {
+  deviceStatusText,
+  listAudioApps,
+  listAudioDevices,
+  listOutputDevices,
+  startCapture,
+  stopCapture,
+  type AudioApp,
+  type NativeAudioDevice,
+} from "../native";
 import { TitleBar } from "../TitleBar";
 import { UpdateBanner } from "../UpdateBanner";
 import type { DesktopLaunch } from "./Live";
@@ -65,6 +74,15 @@ const MEETING_APPS = new Set(["zoom.exe", "ms-teams.exe", "teams.exe", "webexmta
 
 const control =
   "block w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-sm dark:border-zinc-800 dark:bg-zinc-900";
+
+const MIC_KEY = "orbit.micDeviceId";
+const OUTPUT_KEY = "orbit.outputSource";
+
+/** " (Speakers — Realtek)" for the current default / communications output, if known. */
+function defaultName(outputs: NativeAudioDevice[], communications: boolean): string {
+  const d = outputs.find((o) => (communications ? o.isCommunications : o.isDefault));
+  return d ? ` (${d.name})` : "";
+}
 
 function levelFromRms(rms: number): number {
   if (rms <= 0) return 0;
@@ -107,23 +125,40 @@ export function SetupScreen({
   const [pasteText, setPasteText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [devices, setDevices] = useState<NativeAudioDevice[]>([]);
-  const [micId, setMicId] = useState("");
+  const [outputs, setOutputs] = useState<NativeAudioDevice[]>([]);
+  // Device ids are stable endpoint ids, so the last choice is remembered (a missing device falls back to the
+  // default at capture time).
+  const [micId, setMicIdState] = useState(() => localStorage.getItem(MIC_KEY) ?? "");
+  const setMicId = (id: string) => {
+    setMicIdState(id);
+    localStorage.setItem(MIC_KEY, id);
+  };
   const [systemAudio, setSystemAudio] = useState(!IS_MAC);
   const [apps, setApps] = useState<AudioApp[]>([]);
-  const [appPid, setAppPid] = useState<string>(""); // "" = all system audio
+  // What to listen to: "app:<pid>" (one app), or an output: "out:default" | "out:communications" | "out:<id>".
+  const [source, setSource] = useState<string>(() => localStorage.getItem(OUTPUT_KEY) ?? "out:default");
   const appTouched = useRef(false);
+  const appPid = source.startsWith("app:") ? source.slice(4) : "";
+  const systemDevice = source.startsWith("out:") ? source.slice(4) : undefined;
+  const chooseSource = (value: string) => {
+    appTouched.current = true;
+    setSource(value);
+    if (value.startsWith("out:")) localStorage.setItem(OUTPUT_KEY, value);
+  };
 
   const refreshApps = () => {
     void listAudioApps().then((list) => {
       setApps(list);
+      const savedOutput = localStorage.getItem(OUTPUT_KEY) ?? "out:default";
       if (appTouched.current) {
         // keep the user's choice unless that app has gone away
-        setAppPid((pid) => (pid && !list.some((a) => String(a.pid) === pid) ? "" : pid));
+        setSource((s) => (s.startsWith("app:") && !list.some((a) => `app:${a.pid}` === s) ? savedOutput : s));
         return;
       }
       const meeting = list.find((a) => MEETING_APPS.has(a.exe.toLowerCase()));
-      setAppPid(meeting ? String(meeting.pid) : "");
+      setSource(meeting ? `app:${meeting.pid}` : savedOutput);
     });
+    void listOutputDevices().then(setOutputs);
   };
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -237,6 +272,7 @@ export function SetupScreen({
         systemAudio,
         ...(micId ? { micDeviceId: micId } : {}),
         ...(systemAudio && appPid ? { systemProcessId: Number(appPid) } : {}),
+        ...(systemAudio && systemDevice ? { systemDevice } : {}),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn’t start the session.");
@@ -475,13 +511,16 @@ export function SetupScreen({
             <label className="block space-y-1">
               <span className="text-xs font-medium">Microphone (you)</span>
               <select value={micId} onChange={(e) => setMicId(e.target.value)} className={cx(control, focusRing)}>
-                <option value="">System default</option>
+                <option value="">System default{devices.find((d) => d.isDefault) ? ` (${devices.find((d) => d.isDefault)!.name})` : ""}</option>
                 {devices.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}
                     {d.isDefault ? " (default)" : ""}
                   </option>
                 ))}
+                {micId && devices.length > 0 && !devices.some((d) => d.id === micId) && (
+                  <option value={micId}>Saved microphone (not connected — will use default)</option>
+                )}
               </select>
             </label>
             <label className={cx("flex items-start gap-2 text-xs", (IS_MAC || type === "phone") && "opacity-60")}>
@@ -508,21 +547,34 @@ export function SetupScreen({
                 <span className="text-xs font-medium">Listen to</span>
                 <div className="flex gap-1.5">
                   <select
-                    value={appPid}
-                    onChange={(e) => {
-                      appTouched.current = true;
-                      setAppPid(e.target.value);
-                    }}
+                    value={source}
+                    onChange={(e) => chooseSource(e.target.value)}
                     aria-label="Interviewer audio source"
                     className={cx(control, focusRing)}
                   >
-                    <option value="">All system audio</option>
-                    {apps.map((a) => (
-                      <option key={a.pid} value={String(a.pid)}>
-                        {a.name}
-                        {a.active ? " — playing" : ""}
-                      </option>
-                    ))}
+                    {apps.length > 0 && (
+                      <optgroup label="Just one app (recommended)">
+                        {apps.map((a) => (
+                          <option key={a.pid} value={`app:${a.pid}`}>
+                            {a.name}
+                            {a.active ? " — playing" : ""}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    <optgroup label="Everything an output plays">
+                      <option value="out:default">Default output{defaultName(outputs, false)}</option>
+                      <option value="out:communications">Call audio — communications device{defaultName(outputs, true)}</option>
+                      {outputs.map((d) => (
+                        <option key={d.id} value={`out:${d.id}`}>
+                          {d.name}
+                        </option>
+                      ))}
+                      {systemDevice && !["default", "communications"].includes(systemDevice) &&
+                        !outputs.some((d) => d.id === systemDevice) && (
+                          <option value={source}>Saved device (not connected — will use default)</option>
+                        )}
+                    </optgroup>
                   </select>
                   <button type="button" onClick={refreshApps} title="Refresh app list" aria-label="Refresh app list" className={cx("rounded-lg border border-zinc-200 px-2 text-xs dark:border-zinc-800", focusRing)}>
                     ↻
@@ -531,11 +583,19 @@ export function SetupScreen({
                 <p className="text-[11px] text-zinc-500">
                   {appPid
                     ? "Only this app is captured — games, music and notifications are ignored."
-                    : "Everything your PC plays is captured. Pick your meeting app to ignore other sounds."}
+                    : systemDevice === "communications"
+                      ? "Captures the device Windows uses for calls (often your headset). Everything it plays is heard."
+                      : "Everything this output plays is captured. Pick your meeting app to ignore other sounds."}
+                  {!appPid && " If a device is unplugged, Orbit switches to the default and back by itself."}
                 </p>
               </div>
             )}
-            <AudioTest micId={micId || undefined} systemAudio={systemAudio} systemProcessId={appPid ? Number(appPid) : undefined} />
+            <AudioTest
+              micId={micId || undefined}
+              systemAudio={systemAudio}
+              systemProcessId={appPid ? Number(appPid) : undefined}
+              systemDevice={systemDevice}
+            />
           </div>
 
           {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
@@ -562,7 +622,17 @@ export function SetupScreen({
   );
 }
 
-function AudioTest({ micId, systemAudio, systemProcessId }: { micId?: string; systemAudio: boolean; systemProcessId?: number | undefined }) {
+function AudioTest({
+  micId,
+  systemAudio,
+  systemProcessId,
+  systemDevice,
+}: {
+  micId?: string;
+  systemAudio: boolean;
+  systemProcessId?: number | undefined;
+  systemDevice?: string | undefined;
+}) {
   const [running, setRunning] = useState(false);
   const [levels, setLevels] = useState<[number, number]>([0, 0]);
   const [note, setNote] = useState<string | null>(null);
@@ -579,7 +649,13 @@ function AudioTest({ micId, systemAudio, systemProcessId }: { micId?: string; sy
     setNote(null);
     try {
       runningRef.current = true;
-      const info = await startCapture({ ...(micId ? { micDeviceId: micId } : {}), systemAudio, ...(systemProcessId ? { systemProcessId } : {}) }, (ev) => {
+      const options = {
+        ...(micId ? { micDeviceId: micId } : {}),
+        systemAudio,
+        ...(systemProcessId ? { systemProcessId } : {}),
+        ...(systemDevice ? { systemDevice } : {}),
+      };
+      const info = await startCapture(options, (ev) => {
         if (!runningRef.current) return;
         if (ev.kind === "frame") {
           setLevels((prev) => {
@@ -587,6 +663,9 @@ function AudioTest({ micId, systemAudio, systemProcessId }: { micId?: string; sy
             next[ev.channel === AUDIO_CHANNEL.mic ? 0 : 1] = levelFromRms(ev.rms);
             return next;
           });
+        } else if (ev.kind === "status") {
+          const text = deviceStatusText(ev);
+          if (text) setNote(text);
         } else {
           setNote(ev.message);
         }

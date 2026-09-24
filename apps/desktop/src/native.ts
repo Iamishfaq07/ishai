@@ -6,10 +6,16 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import type { AudioChannel } from "@orbit/types";
 
 export interface NativeAudioDevice {
+  /** Windows: stable endpoint id (survives renames; tells identical devices apart). */
   id: string;
   name: string;
   isDefault: boolean;
+  /** The default *communications* device (Teams/Zoom calls often play here). */
+  isCommunications: boolean;
 }
+
+/** Device lifecycle while capturing (Windows): Orbit reopens lost devices by itself. */
+export type DeviceState = "active" | "fallback" | "lost" | "restored" | "switched";
 
 export interface CaptureInfo {
   mic: boolean;
@@ -23,7 +29,8 @@ export interface CaptureInfo {
 export type CaptureEvent =
   /** pcm = base64 PCM16LE mono 16 kHz; rms = 0..1 for meters. */
   | { kind: "frame"; channel: AudioChannel; pcm: string; rms: number }
-  | { kind: "error"; channel: AudioChannel; message: string };
+  | { kind: "error"; channel: AudioChannel; message: string }
+  | { kind: "status"; channel: AudioChannel; state: DeviceState; device: string };
 
 export interface NativeCapture {
   pngBase64: string;
@@ -33,6 +40,28 @@ export interface NativeCapture {
 
 export function listAudioDevices(): Promise<NativeAudioDevice[]> {
   return invoke<NativeAudioDevice[]>("list_audio_devices");
+}
+
+/** Output devices whose sound can be captured (Windows). */
+export function listOutputDevices(): Promise<NativeAudioDevice[]> {
+  return invoke<NativeAudioDevice[]>("list_output_devices").catch(() => []);
+}
+
+/** A short, human line for a device status event (null = nothing worth showing). */
+export function deviceStatusText(ev: { channel: AudioChannel; state: DeviceState; device: string }): string | null {
+  const what = ev.channel === 0 ? "Microphone" : "Interviewer audio";
+  switch (ev.state) {
+    case "lost":
+      return `${what} disconnected${ev.device ? ` (${ev.device})` : ""} — reconnecting…`;
+    case "restored":
+      return `${what} reconnected.`;
+    case "switched":
+      return `${what} switched to ${ev.device}.`;
+    case "fallback":
+      return `Your chosen ${ev.channel === 0 ? "microphone" : "output"} isn't connected — using ${ev.device}.`;
+    default:
+      return null;
+  }
 }
 
 /** An app with an audio session (Windows). `pid` is the root of its process tree. */
@@ -49,7 +78,7 @@ export function listAudioApps(): Promise<AudioApp[]> {
 }
 
 export function startCapture(
-  options: { micDeviceId?: string; systemAudio: boolean; systemProcessId?: number },
+  options: { micDeviceId?: string; systemAudio: boolean; systemProcessId?: number; systemDevice?: string },
   onEvent: (event: CaptureEvent) => void,
 ): Promise<CaptureInfo> {
   const channel = new Channel<CaptureEvent>();
@@ -58,6 +87,7 @@ export function startCapture(
     micDeviceId: options.micDeviceId ?? null,
     systemAudio: options.systemAudio,
     systemProcessId: options.systemProcessId ?? null,
+    systemDevice: options.systemDevice ?? null,
     onEvent: channel,
   });
 }

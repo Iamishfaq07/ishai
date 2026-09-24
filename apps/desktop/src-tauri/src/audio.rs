@@ -15,7 +15,10 @@ use std::sync::{mpsc, Mutex};
 use std::thread;
 
 use base64::Engine;
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::traits::StreamTrait;
+#[cfg(not(target_os = "windows"))]
+use cpal::traits::{DeviceTrait, HostTrait};
+#[cfg(not(target_os = "windows"))]
 use cpal::{FromSample, Sample, SizedSample};
 use serde::Serialize;
 use tauri::ipc::Channel;
@@ -29,9 +32,11 @@ pub(crate) const CHANNEL_SYSTEM: u8 = 1;
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioDevice {
+    /// Windows: the stable MMDevice endpoint id. Elsewhere: the device name.
     id: String,
     name: String,
     is_default: bool,
+    is_communications: bool,
 }
 
 #[derive(Clone, Serialize)]
@@ -56,6 +61,13 @@ pub enum CaptureEvent {
         channel: u8,
         message: String,
     },
+    /// Device lifecycle (Windows): `active` | `fallback` (chosen device missing, using the default) |
+    /// `lost` (reopening) | `restored` | `switched` (Windows changed the default), with the device in use.
+    Status {
+        channel: u8,
+        state: String,
+        device: String,
+    },
 }
 
 #[derive(Default)]
@@ -78,8 +90,39 @@ impl CaptureState {
     }
 }
 
+#[cfg(target_os = "windows")]
+fn endpoints(flow: crate::wasapi_capture::Flow) -> Result<Vec<AudioDevice>, String> {
+    Ok(crate::wasapi_capture::list(flow)?
+        .into_iter()
+        .map(|e| AudioDevice {
+            id: e.id,
+            name: e.name,
+            is_default: e.is_default,
+            is_communications: e.is_communications,
+        })
+        .collect())
+}
+
+/// Microphones.
 #[tauri::command]
 pub fn list_audio_devices() -> Result<Vec<AudioDevice>, String> {
+    #[cfg(target_os = "windows")]
+    return endpoints(crate::wasapi_capture::Flow::Microphone);
+    #[cfg(not(target_os = "windows"))]
+    list_cpal_inputs()
+}
+
+/// Output devices whose sound can be captured (loopback). Windows only.
+#[tauri::command]
+pub fn list_output_devices() -> Result<Vec<AudioDevice>, String> {
+    #[cfg(target_os = "windows")]
+    return endpoints(crate::wasapi_capture::Flow::Output);
+    #[cfg(not(target_os = "windows"))]
+    Ok(Vec::new())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn list_cpal_inputs() -> Result<Vec<AudioDevice>, String> {
     let host = cpal::default_host();
     let default_name = host.default_input_device().and_then(|d| d.name().ok());
     let devices = host.input_devices().map_err(|e| e.to_string())?;
@@ -87,6 +130,7 @@ pub fn list_audio_devices() -> Result<Vec<AudioDevice>, String> {
         .filter_map(|d| d.name().ok())
         .map(|name| AudioDevice {
             is_default: default_name.as_deref() == Some(name.as_str()),
+            is_communications: false,
             id: name.clone(),
             name,
         })
@@ -98,8 +142,10 @@ pub fn start_capture(
     state: tauri::State<'_, CaptureState>,
     mic_device_id: Option<String>,
     system_audio: bool,
-    // Windows: capture only this app's process tree (Zoom, Teams, the browser…). None = all system audio.
+    // Windows: capture only this app's process tree (Zoom, Teams, the browser…). None = an output device.
     system_process_id: Option<u32>,
+    // Windows: which output to capture when no app is chosen: "default" | "communications" | endpoint id.
+    system_device: Option<String>,
     on_event: Channel<CaptureEvent>,
 ) -> Result<CaptureInfo, String> {
     state.stop_existing();
@@ -110,9 +156,6 @@ pub fn start_capture(
     thread::Builder::new()
         .name("orbit-audio".into())
         .spawn(move || {
-            let host = cpal::default_host();
-            let mut streams: Vec<cpal::Stream> = Vec::new();
-
             // Mic and system audio are independent: a busy mic must not stop Orbit from hearing the interviewer.
             let mut info = CaptureInfo {
                 mic: false,
@@ -120,21 +163,47 @@ pub fn start_capture(
                 mic_error: None,
                 system_error: None,
             };
-            match open_mic(&host, mic_device_id.as_deref(), on_event.clone()) {
-                Ok(stream) => {
-                    streams.push(stream);
-                    info.mic = true;
-                }
-                Err(e) => info.mic_error = Some(format!("Microphone unavailable: {e}")),
-            }
-            let app_stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-            let mut app_thread: Option<thread::JoinHandle<()>> = None;
+            let native_stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+            let mut native_threads: Vec<thread::JoinHandle<()>> = Vec::new();
+            #[cfg_attr(target_os = "windows", allow(unused_mut))]
+            let mut streams: Vec<cpal::Stream> = Vec::new();
+
             #[cfg(target_os = "windows")]
-            if system_audio {
-                if let Some(pid) = system_process_id {
-                    match crate::process_loopback::spawn(pid, on_event.clone(), app_stop.clone()) {
+            {
+                use crate::wasapi_capture::{spawn, Choice, Flow};
+                match spawn(
+                    Flow::Microphone,
+                    Choice::parse(mic_device_id.as_deref()),
+                    CHANNEL_MIC,
+                    on_event.clone(),
+                    native_stop.clone(),
+                ) {
+                    Ok(handle) => {
+                        native_threads.push(handle);
+                        info.mic = true;
+                    }
+                    Err(e) => info.mic_error = Some(e),
+                }
+                if system_audio {
+                    let started = match system_process_id {
+                        // one app's process tree (Zoom, Teams, the browser…)
+                        Some(pid) => crate::process_loopback::spawn(
+                            pid,
+                            on_event.clone(),
+                            native_stop.clone(),
+                        ),
+                        // an output device: default, communications, or a specific one
+                        None => spawn(
+                            Flow::Output,
+                            Choice::parse(system_device.as_deref()),
+                            CHANNEL_SYSTEM,
+                            on_event.clone(),
+                            native_stop.clone(),
+                        ),
+                    };
+                    match started {
                         Ok(handle) => {
-                            app_thread = Some(handle);
+                            native_threads.push(handle);
                             info.system = true;
                         }
                         Err(e) => info.system_error = Some(e),
@@ -142,14 +211,24 @@ pub fn start_capture(
                 }
             }
             #[cfg(not(target_os = "windows"))]
-            let _ = system_process_id;
-            if system_audio && app_thread.is_none() && info.system_error.is_none() {
-                match open_system(&host, on_event.clone()) {
+            {
+                let _ = (system_process_id, &system_device);
+                let host = cpal::default_host();
+                match open_mic(&host, mic_device_id.as_deref(), on_event.clone()) {
                     Ok(stream) => {
                         streams.push(stream);
-                        info.system = true;
+                        info.mic = true;
                     }
-                    Err(e) => info.system_error = Some(e),
+                    Err(e) => info.mic_error = Some(format!("Microphone unavailable: {e}")),
+                }
+                if system_audio {
+                    match open_system(&host, on_event.clone()) {
+                        Ok(stream) => {
+                            streams.push(stream);
+                            info.system = true;
+                        }
+                        Err(e) => info.system_error = Some(e),
+                    }
                 }
             }
 
@@ -160,6 +239,7 @@ pub fn start_capture(
                 }
             }
             if !info.mic && !info.system {
+                native_stop.store(true, std::sync::atomic::Ordering::Relaxed);
                 let mic_msg = info.mic_error.clone().unwrap_or_default();
                 let sys_msg = info.system_error.clone().unwrap_or_default();
                 let _ = ready_tx.send(Err(if !mic_msg.is_empty() {
@@ -176,8 +256,8 @@ pub fn start_capture(
             // Park until stop_capture (or the sender is dropped); dropping the streams stops them.
             let _ = stop_rx.recv();
             drop(streams);
-            app_stop.store(true, std::sync::atomic::Ordering::Relaxed);
-            if let Some(handle) = app_thread {
+            native_stop.store(true, std::sync::atomic::Ordering::Relaxed);
+            for handle in native_threads {
                 let _ = handle.join();
             }
         })
@@ -197,6 +277,7 @@ pub fn stop_capture(state: tauri::State<'_, CaptureState>) {
     state.stop_existing();
 }
 
+#[cfg(not(target_os = "windows"))]
 fn open_mic(
     host: &cpal::Host,
     device_id: Option<&str>,
@@ -214,17 +295,6 @@ fn open_mic(
     open_stream(&device, config, CHANNEL_MIC, sink)
 }
 
-#[cfg(target_os = "windows")]
-fn open_system(host: &cpal::Host, sink: Channel<CaptureEvent>) -> Result<cpal::Stream, String> {
-    // WASAPI loopback: an input stream on the render (output) device.
-    let device = host
-        .default_output_device()
-        .ok_or("no default output device")?;
-    let config = device.default_output_config().map_err(|e| e.to_string())?;
-    open_stream(&device, config, CHANNEL_SYSTEM, sink)
-        .map_err(|e| format!("System audio loopback failed: {e}"))
-}
-
 #[cfg(target_os = "macos")]
 fn open_system(_host: &cpal::Host, _sink: Channel<CaptureEvent>) -> Result<cpal::Stream, String> {
     Err("macOS system audio requires ScreenCaptureKit — not implemented yet.".into())
@@ -235,6 +305,7 @@ fn open_system(_host: &cpal::Host, _sink: Channel<CaptureEvent>) -> Result<cpal:
     Err("System audio capture isn't supported on this platform yet.".into())
 }
 
+#[cfg(not(target_os = "windows"))]
 fn open_stream(
     device: &cpal::Device,
     config: cpal::SupportedStreamConfig,
@@ -252,6 +323,7 @@ fn open_stream(
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 fn build_stream<T>(
     device: &cpal::Device,
     config: &cpal::StreamConfig,

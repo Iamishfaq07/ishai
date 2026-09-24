@@ -77,3 +77,11 @@ request bodies/headers/query strings and breadcrumbs stripped. Without it, struc
 provider" to "server time it was sent", so speech-start/speech-end timestamps from Deepgram become server times even
 across pauses. Deepgram timestamps restart at 0 on every socket, so each reconnect's events are shifted by the audio
 sent to earlier sockets, giving one continuous session timeline.
+
+**D20 — Native WASAPI capture on Windows (cpal only elsewhere).** Mic and output loopback open MMDevice endpoints by
+stable id and ask the audio engine for 16 kHz mono directly (AUTOCONVERTPCM + SRC_DEFAULT_QUALITY), so Windows'
+resampler replaces the hand-rolled one on this path. Each source runs a supervised loop: an invalidated/unplugged
+device is reopened with backoff (same device if it returns, else the default), a stream following the default (or
+the default *communications* device) re-targets within ~1 s when Windows switches it, and an explicitly chosen device
+that was missing is switched back to as soon as it reappears. Output loopback delivers no packets while nothing
+plays, so silence is synthesized after 100 ms — the transcriber needs to hear the pause to end the utterance.
