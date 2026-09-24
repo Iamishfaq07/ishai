@@ -27,6 +27,11 @@ services:
         sync: false
       - key: ORBIT_CORS_ORIGINS # JSON array incl. the Pages URL + tauri origins
         sync: false
+      # Desktop auto-update from GitHub Releases (Render free has no disk for ORBIT_DESKTOP_UPDATES_DIR).
+      - key: ORBIT_UPDATES_GITHUB_REPO
+        value: Iamishfaq07/ishai
+      - key: ORBIT_UPDATES_GITHUB_TOKEN # fine-grained PAT: this repo only, Contents → Read-only
+        sync: false
       # Generated once by Render and kept stable across deploys:
       - key: ORBIT_JWT_SECRET
         generateValue: true

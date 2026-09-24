@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     )
 
     desktop_updates_dir: str | None = Field(None, validation_alias=AliasChoices("ORBIT_DESKTOP_UPDATES_DIR"))
+    # Or serve desktop updates straight from GitHub Releases (for hosts without a persistent disk). The token
+    # only needs read access to this one repo's contents (fine-grained PAT: Contents → Read-only).
+    updates_github_repo: str | None = Field(None, validation_alias=AliasChoices("ORBIT_UPDATES_GITHUB_REPO"))
+    updates_github_token: SecretStr | None = Field(
+        None, validation_alias=AliasChoices("ORBIT_UPDATES_GITHUB_TOKEN")
+    )
     web_url: str = Field("http://localhost:5173", validation_alias=AliasChoices("ORBIT_WEB_URL"))
     smtp_host: str | None = Field(None, validation_alias=AliasChoices("ORBIT_SMTP_HOST"))
     smtp_port: int = Field(587, validation_alias=AliasChoices("ORBIT_SMTP_PORT"))

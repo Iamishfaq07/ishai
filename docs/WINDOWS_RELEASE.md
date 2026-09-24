@@ -18,7 +18,27 @@ The `desktop-windows` job produces the `orbit-windows` artifact:
 For a permanent version bump, also update `version` in `apps/desktop/src-tauri/tauri.conf.json` and
 `Cargo.toml`, so local builds report it too.
 
-## 2. Stage on the update server
+## 2. Publish so installed apps update
+
+**Hosted (Render): GitHub Releases.** With `ORBIT_UPDATES_GITHUB_REPO` + `ORBIT_UPDATES_GITHUB_TOKEN` set on the
+API, the latest published release *is* the update: the API offers its `*-setup.exe` + `*-setup.exe.sig`
+(installers without a `.sig` are never offered; drafts and pre-releases are ignored) and redirects the
+download to GitHub's short-lived signed URL. So releasing is just:
+
+```bash
+# build locally (no Actions minutes needed) — the signing key comes from %USERPROFILE%\.orbit\updater
+export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.orbit/updater/orbit-updater.key)"
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="$(cat ~/.orbit/updater/orbit-updater.key.password)"
+pnpm --filter @orbit/desktop tauri build --bundles nsis --config '{"version":"0.2.0"}'
+B=apps/desktop/src-tauri/target/release/bundle/nsis
+gh release create v0.2.0 --target "$(git rev-parse HEAD)" --title "Orbit 0.2.0" --notes "What's new" \
+  "$B/Orbit_0.2.0_x64-setup.exe" "$B/Orbit_0.2.0_x64-setup.exe.sig"
+```
+
+The API caches the release lookup for 5 minutes. The token needs only read access to this repo
+(fine-grained PAT → Repository access: only this repo → Permissions: Contents → Read-only).
+
+**Self-hosted with a disk:** stage into `ORBIT_DESKTOP_UPDATES_DIR` instead (takes precedence):
 
 ```bash
 gh run download <run-id> -n orbit-windows -D ./artifact
