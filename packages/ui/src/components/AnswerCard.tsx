@@ -67,7 +67,7 @@ export function AnswerCard({ answer, pinned, onPin, onRetry, compact = false, au
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
           {answer.source === "chat" ? "Reply" : "Answer"}
           {answer.reasoning === "deep" && (
-            <span className="ml-2 normal-case tracking-normal text-indigo-600 dark:text-indigo-300">deep reasoning</span>
+            <span className="ml-2 normal-case tracking-normal text-indigo-600 dark:text-indigo-300">in-depth</span>
           )}
         </h2>
         <button

@@ -190,3 +190,24 @@ async def test_stt_status_reconnect_clears_and_down_is_reported() -> None:
     assert down["state"] == "down" and "key was rejected" in down["detail"]
     assert sink.of("audio.mic_status")[-1]["state"] == "error"
     await eng.handle_client({"type": "session.end", "data": {}})
+
+
+class RecordingLLM(MockLLMProvider):
+    def __init__(self) -> None:
+        super().__init__()
+        self.requests: list[LLMRequest] = []
+
+    async def stream(self, request: LLMRequest) -> AsyncIterator[LLMChunk]:
+        self.requests.append(request)
+        async for chunk in super().stream(request):
+            yield chunk
+
+
+async def test_deep_questions_still_use_the_fast_model_live() -> None:
+    llm = RecordingLLM()
+    eng, sink = await _engine(llm)
+    await _ask(eng, "How would you design a distributed rate limiter that scales to a million requests per second?")
+    await sink.wait_for("answer.completed")
+    assert sink.of("answer.started")[0]["reasoning"] == "deep"  # still flagged for the UI
+    assert llm.requests and all(r.reasoning == "light" for r in llm.requests)  # never the slow reasoner
+    await eng.handle_client({"type": "session.end", "data": {}})
