@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { AdminConfig, AdminConfigUpdate, Usage, User } from "@orbit/types";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Spinner, Toggle } from "@orbit/ui";
 import { API_URL, api } from "../api";
+import { useTheme, type ThemePref } from "../theme";
 import { TitleBar } from "../TitleBar";
 
 function errText(err: unknown): string {
@@ -29,12 +30,34 @@ export function SettingsScreen({
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-3xl space-y-6">
           <PageHeader title="Settings" />
+          <AppearanceCard />
           <PrivacyCard user={user} onUser={onUser} onSignOut={onSignOut} />
           <UsageCard />
           <AdvancedCard />
         </div>
       </div>
     </div>
+  );
+}
+
+function AppearanceCard() {
+  const [theme, setTheme] = useTheme();
+  return (
+    <Card>
+      <h2 className="mb-4 font-semibold">Appearance</h2>
+      <div className="flex items-center justify-between gap-4">
+        <label htmlFor="theme" className="text-sm font-medium">
+          Theme
+        </label>
+        <div className="w-40">
+          <Select id="theme" value={theme} onChange={(e) => setTheme(e.target.value as ThemePref)}>
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+            <option value="system">System</option>
+          </Select>
+        </div>
+      </div>
+    </Card>
   );
 }
 

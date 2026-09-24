@@ -6,7 +6,7 @@ import { downloadText, errText, formatClock, formatDate, formatDuration, SESSION
 import { TitleBar } from "../TitleBar";
 
 /** Past sessions: a list, and a detail view with summary / transcript / Q&A. */
-export function HistoryScreen({ onBack }: { onBack: () => void }) {
+export function HistoryScreen({ onBack, onResume }: { onBack: () => void; onResume: (session: OrbitSession) => void }) {
   const [selected, setSelected] = useState<string | null>(null);
 
   return (
@@ -20,14 +20,14 @@ export function HistoryScreen({ onBack }: { onBack: () => void }) {
         {selected ? (
           <SessionDetailView id={selected} onDeleted={() => setSelected(null)} />
         ) : (
-          <SessionList onOpen={setSelected} />
+          <SessionList onOpen={setSelected} onResume={onResume} />
         )}
       </div>
     </div>
   );
 }
 
-function SessionList({ onOpen }: { onOpen: (id: string) => void }) {
+function SessionList({ onOpen, onResume }: { onOpen: (id: string) => void; onResume: (session: OrbitSession) => void }) {
   const [sessions, setSessions] = useState<OrbitSession[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,11 +55,11 @@ function SessionList({ onOpen }: { onOpen: (id: string) => void }) {
         <Card className="p-0">
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
             {sessions.map((s) => (
-              <li key={s.id}>
+              <li key={s.id} className="flex items-center gap-3 px-5 py-4">
                 <button
                   type="button"
                   onClick={() => onOpen(s.id)}
-                  className={cx("grid w-full gap-1 px-5 py-4 text-left hover:bg-zinc-50 sm:grid-cols-[1fr_auto] dark:hover:bg-zinc-900", focusRing)}
+                  className={cx("grid min-w-0 flex-1 gap-1 rounded text-left hover:opacity-80 sm:grid-cols-[1fr_auto]", focusRing)}
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium">
@@ -75,13 +75,18 @@ function SessionList({ onOpen }: { onOpen: (id: string) => void }) {
                       {s.role ? ` · ${s.role}` : ""} · {s.language.toUpperCase()}
                     </p>
                   </div>
-                  <div className="text-xs text-zinc-500 sm:text-right">
+                  <div className="text-xs text-zinc-500 sm:pr-3 sm:text-right">
                     <p>{formatDate(s.started_at ?? s.created_at)}</p>
                     <p>
                       {formatDuration(s.duration_seconds)} · {s.question_count} question{s.question_count === 1 ? "" : "s"}
                     </p>
                   </div>
                 </button>
+                {s.status !== "ended" && (
+                  <Button size="sm" onClick={() => onResume(s)}>
+                    Rejoin
+                  </Button>
+                )}
               </li>
             ))}
           </ul>
