@@ -199,6 +199,17 @@ def extract_question(text: str) -> str:
     return " ".join(kept) if kept else sentences[-1]
 
 
+def lead_in(text: str, max_words: int) -> str:
+    """Interviewer set-up before the actual question ("Let's talk about image classification.") — kept as
+    part of the question, minus fillers/pleasantries/bare acknowledgements ("Great.", "Okay, thanks."), and
+    trimmed from the front to the last `max_words` words."""
+    kept = [x.strip() for x in _SENTENCE.split(text.strip())
+            if x.strip() and not _is_noise(x) and (len(tokens(x)) > 3 or _detect_one(x, "interviewer").is_question)]
+    while kept and sum(len(tokens(x)) for x in kept) > max_words:
+        kept.pop(0)
+    return " ".join(kept)
+
+
 def continue_question(question: str, more: str) -> str:
     """A held question plus what the interviewer added after pausing, minus fillers ("okay", "um")."""
     kept = [x.strip() for x in _SENTENCE.split(more.strip()) if x.strip() and not _is_noise(x)]
