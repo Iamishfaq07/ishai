@@ -9,12 +9,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user
-from orbit_api.config import get_settings
 from orbit_api.db import get_db
+from orbit_api.entitlements import is_admin
 from orbit_api.models import AppConfig, User
 from orbit_api.runtime_config import (
     EDITABLE_KEYS,
@@ -31,14 +30,7 @@ router = APIRouter(prefix="/v1/admin", tags=["admin"])
 
 async def require_admin(user: Annotated[User, Depends(current_user)],
                         db: Annotated[AsyncSession, Depends(get_db)]) -> User:
-    admin_email = get_settings().admin_email
-    if admin_email:
-        if user.email.lower() != admin_email.lower():
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "Admin access required")
-        return user
-    # No admin configured: the first-registered user is the admin.
-    first_id = await db.scalar(select(User.id).order_by(User.created_at.asc(), User.id.asc()).limit(1))
-    if first_id != user.id:
+    if not await is_admin(db, user):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Admin access required")
     return user
 
@@ -139,9 +131,4 @@ class AdminStatus(BaseModel):
 async def admin_status(user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> AdminStatus:
     """Cheap check so the UI can decide whether to show Advanced settings (no 403 noise)."""
-    admin_email = get_settings().admin_email
-    if admin_email:
-        return AdminStatus(is_admin=user.email.lower() == admin_email.lower())
-    n = await db.scalar(select(func.count()).select_from(User))
-    first_id = await db.scalar(select(User.id).order_by(User.created_at.asc(), User.id.asc()).limit(1))
-    return AdminStatus(is_admin=(n or 0) > 0 and first_id == user.id)
+    return AdminStatus(is_admin=await is_admin(db, user))
