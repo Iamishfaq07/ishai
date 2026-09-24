@@ -45,8 +45,9 @@ The container runs `alembic upgrade head` on boot (Postgres DDL is transactional
 and the previous deploy keeps serving). Health: `/health` (liveness + deployed `commit`), `/ready` (DB).
 
 **Run exactly one instance.** Live-session state (WS tickets, socket ownership, rate limits) is in process memory
-(`docs/DECISIONS.md` D12). Don't scale the service out until that moves to Redis. Durable state — usage, cost,
-report jobs, dead-lettered writes — is in Postgres.
+(`docs/DECISIONS.md` D12). Don't scale the service out until that moves to Redis. `render.yaml` pins
+`numInstances: 1`, and `ORBIT_API_REPLICAS` above 1 stops a production boot. Durable state (usage, cost, report
+jobs, dead-lettered writes) is in Postgres.
 
 **Background work runs in the API process.** Session reports are DB-backed jobs picked up by a worker inside each
 API process; there's no separate worker service to deploy. Dead-lettered live-session writes are replayed on boot.
