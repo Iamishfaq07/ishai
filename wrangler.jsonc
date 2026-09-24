@@ -5,8 +5,14 @@
 {
   "name": "orbit",
   "compatibility_date": "2026-09-01",
+  "main": "apps/web/worker/index.js",
   "assets": {
     "directory": "apps/web/dist",
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application"
-  }
+  },
+  // Keep the Render free-tier API from sleeping (see apps/web/worker/index.js). One always-on free
+  // service uses ~744 of Render's 750 free instance-hours a month.
+  "triggers": { "crons": ["*/10 * * * *"] },
+  "vars": { "API_URL": "https://orbit-api-5kcx.onrender.com" }
 }
