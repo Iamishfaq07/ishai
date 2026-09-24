@@ -12,8 +12,17 @@ Tickets are single-use and short-lived, so a long-lived access token never goes 
 
 **Close codes** (terminal: the client must not auto-reconnect): `1000` normal · `4001` invalid/expired ticket ·
 `4003` live minutes used up (at connect, or mid-session after `usage.status { limit_reached: true }`) · `4004` session not found · `4009` session has ended · `4010` the session was opened in
-another window/device (the newer connection wins) · `4029` too many live sessions for this user (max 2). Any other close means the client
+another window/device (the newer connection wins) · `4029` another live session of this account is running (one at a time; normally refused earlier at the ticket, see below). Any other close means the client
 should fetch a new ticket and reconnect with backoff.
+
+**One live session per account.** A second live session is refused at `POST …/live-ticket` with `409
+{"detail": {"code": "live_session_active", "session_id", "title", "message"}}` before any audio or AI spend. The
+client closes for good, shows the message, and offers **End it and use this one**: `POST /v1/sessions/{other}/end`,
+then reconnect. Ticket errors 401/402/403/404/409 are never retried, and the server's message is shown as-is
+(for example "Verify your email…").
+
+**Ending from elsewhere.** `POST /v1/sessions/{id}/end` also stops that session's live socket if one is open. The
+engine sends `session.ended`, records usage, and the socket closes with `4009`.
 
 **Reconnect semantics.** Only `session.end` (or `POST /v1/sessions/{id}/end`) ends a session and
 queues its report. A dropped socket just detaches: usage is recorded and the session stays `live`.
@@ -85,7 +94,7 @@ Answers are spoken first-person prose (`direct_answer`, paragraphs separated by 
 | `answer.completed` | `{ answer_id, answer: LiveAnswer, latency: { first_token_ms, total_ms } }` |
 | `answer.cancelled` | `{ answer_id, reason: "superseded"\|"cleared"\|"session_ended" }` |
 | `answer.failed` | `{ answer_id, error: { code, message, retryable } }` |
-| `provider.status` | `{ provider: "stt"\|"llm", name, state: "ok"\|"reconnecting"\|"down"\|"mock", detail? }` |
+| `provider.status` | `{ provider: "stt"\|"llm", name, state: "connecting"\|"ok"\|"reconnecting"\|"down"\|"mock", detail? }` — STT starts `connecting` and reports `ok` only once **both** channel sockets are really open (audio is buffered meanwhile); it reports `down` if a handshake is rejected |
 | `usage.status` | `{ minutes_remaining, limit_reached }` — low-minutes warning, or the limit ended the session |
 | `mock.question` | `{ question_id, text, is_follow_up, index, total }` — the AI interviewer asks (clients may speak it aloud) |
 | `mock.completed` | `{ questions }` — the mock interview is over (question budget or duration reached) |

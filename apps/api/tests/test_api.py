@@ -330,29 +330,41 @@ def _close_code(ws: Any) -> int:
         return int(e.code)
 
 
-def test_live_socket_takeover_and_per_user_cap(client: TestClient) -> None:
+def test_live_socket_takeover_and_one_live_session_per_account(client: TestClient) -> None:
+    from starlette.websockets import WebSocketDisconnect
+
+    from orbit_api.auth.security import issue_ticket
+
     h = _register(client)
-    a, b, c = (client.post("/v1/sessions", headers=h, json={"title": t}).json()["id"] for t in "abc")
+    a, b = (client.post("/v1/sessions", headers=h, json={"title": t}).json()["id"] for t in ("Acme loop", "b"))
     with _live(client, h, a) as ws_a:
         _collect(ws_a, lambda ev: any(e["type"] == "session.started" for e in ev))
         # rejoining the same session elsewhere takes it over; the old socket gets a terminal 4010
         with _live(client, h, a) as ws_a2:
             _collect(ws_a2, lambda ev: any(e["type"] == "session.started" for e in ev))
             assert _close_code(ws_a) == 4010
-            with _live(client, h, b) as ws_b:
-                _collect(ws_b, lambda ev: any(e["type"] == "session.started" for e in ev))
-                from starlette.websockets import WebSocketDisconnect
 
-                try:  # a third distinct live session is refused before accept
-                    with _live(client, h, c) as ws_c:
-                        ws_c.receive_text()
-                    raise AssertionError("third live session accepted")
-                except WebSocketDisconnect as e:
-                    assert e.code == 4029
-                ws_b.send_text(json.dumps({"type": "session.end", "data": {}}))
-                _collect(ws_b, lambda ev: any(e["type"] == "session.ended" for e in ev))
-            with _live(client, h, c) as ws_c:  # a slot freed up
-                _collect(ws_c, lambda ev: any(e["type"] == "session.started" for e in ev))
+            # a second live session is refused at the ticket, before any audio/LLM spend, naming the running one
+            r = client.post(f"/v1/sessions/{b}/live-ticket", headers=h)
+            assert r.status_code == 409
+            detail = r.json()["detail"]
+            assert detail["code"] == "live_session_active" and detail["session_id"] == a
+            assert detail["title"] == "Acme loop"
+            # the socket check is a backstop for a ticket minted some other way
+            me = client.get("/v1/auth/me", headers=h).json()["id"]
+            try:
+                with client.websocket_connect(f"/v1/sessions/{b}/live?ticket={issue_ticket(me, b)}") as ws_b:
+                    ws_b.receive_text()
+                raise AssertionError("second live session accepted")
+            except WebSocketDisconnect as e:
+                assert e.code == 4029
+
+            # "End it and use this one": ending the running session over HTTP stops its socket too
+            assert client.post(f"/v1/sessions/{a}/end", headers=h).status_code == 200
+            _collect(ws_a2, lambda ev: any(e["type"] == "session.ended" for e in ev))
+            assert _close_code(ws_a2) == 4009
+        with _live(client, h, b) as ws_b:  # the slot is free
+            _collect(ws_b, lambda ev: any(e["type"] == "session.started" for e in ev))
 
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64

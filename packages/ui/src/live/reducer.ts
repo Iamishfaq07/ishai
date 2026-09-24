@@ -16,7 +16,7 @@ import {
   type ServerEvent,
   type Speaker,
 } from "@orbit/types";
-import type { ConnectionStatus } from "./client";
+import type { CloseInfo, ConnectionStatus } from "./client";
 
 export interface TurnView {
   turn_id: string;
@@ -61,6 +61,8 @@ export type ChatEntry =
 export interface LiveViewState {
   connection: ConnectionStatus;
   connectionDetail: string | null;
+  /** Machine-readable reason the connection closed for good (e.g. another live session is running). */
+  connectionInfo: CloseInfo | null;
   state: LiveState;
   settings: LiveSettings;
   startedAt: number | null;
@@ -90,7 +92,7 @@ export interface LiveViewState {
 }
 
 export type LocalAction =
-  | { type: "local/connection"; status: ConnectionStatus; detail?: string }
+  | { type: "local/connection"; status: ConnectionStatus; detail?: string; info?: CloseInfo }
   | { type: "local/pin"; answer_id: string; pinned: boolean }
   | { type: "local/clear" }
   | { type: "local/view"; answer_id: string | null }
@@ -105,6 +107,7 @@ export function initialLiveState(settings: Partial<LiveSettings> = {}): LiveView
   return {
     connection: "closed",
     connectionDetail: null,
+    connectionInfo: null,
     state: "idle",
     settings: { ...DEFAULT_LIVE_SETTINGS, ...settings },
     startedAt: null,
@@ -201,7 +204,7 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
   switch (action.type) {
     // ── local ────────────────────────────────────────────────────────────
     case "local/connection":
-      return { ...s, connection: action.status, connectionDetail: action.detail ?? null };
+      return { ...s, connection: action.status, connectionDetail: action.detail ?? null, connectionInfo: action.info ?? null };
 
     case "local/pin": {
       if (!action.pinned) {

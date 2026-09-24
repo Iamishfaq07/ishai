@@ -80,8 +80,8 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
 
   useEffect(() => {
     const offEvents = client.on(dispatch);
-    const offStatus = client.onStatus((status, detail) =>
-      dispatch({ type: "local/connection", status, ...(detail ? { detail } : {}) }),
+    const offStatus = client.onStatus((status, detail, info) =>
+      dispatch({ type: "local/connection", status, ...(detail ? { detail } : {}), ...(info ? { info } : {}) }),
     );
     if (autoConnect) client.connect();
     return () => {

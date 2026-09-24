@@ -11,7 +11,7 @@ from orbit_api.auth.guards import require_verified_user
 from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
-from orbit_api.documents.parsing import ParseError, chunk_document, detect_format, extract_text
+from orbit_api.documents.parsing import ParseError, chunk_document, detect_format, extract_text_isolated
 from orbit_api.entitlements import plan_for
 from orbit_api.models import Document, DocumentChunk, User
 from orbit_api.ratelimit import limit
@@ -117,7 +117,7 @@ async def upload_document(
     filename = (file.filename or "document").replace("\\", "/").rsplit("/", 1)[-1][:300]
     try:
         fmt = detect_format(filename, file.content_type, data[:8])
-        text = await asyncio.to_thread(extract_text, data, fmt)
+        text = await asyncio.to_thread(extract_text_isolated, data, fmt)
     except ParseError as e:
         raise HTTPException(422, str(e)) from e
     # The original bytes are not retained: only extracted text chunks are stored.

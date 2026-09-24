@@ -1,5 +1,29 @@
 # Implementation log
 
+## Launch hardening 1a, part 2 — one live session, truthful STT status, upload hardening (2026-09-25)
+
+- **One live session per account.** A second one is refused at the ticket (`409 live_session_active`, naming the
+  running session) before any audio or AI spend. The live screen offers **End it and use this one**.
+  - Ticket errors (401/402/403/404/409) are no longer retried, and they keep the server's message, which used to
+    be replaced by a generic "Not authorized".
+- **Fixed:** `POST /sessions/{id}/end` didn't stop that session's live socket, so a session ended from another
+  window or the web kept streaming audio to Deepgram until its client left. It now ends the engine
+  (`session.ended`, usage recorded) and closes the socket with 4009.
+- **Truthful STT status (§14).** Deepgram `connect()` suppressed its timeout, and the engine then reported
+  transcription as `ok` regardless, so a slow or rejected handshake showed "ok" first.
+  - Sessions now expose their real state.
+  - The engine reports `connecting`, then `ok` only once both sockets are open, plus `reconnecting` / `down`.
+  - The status pill says "Connecting audio…" / "Transcription unavailable".
+- **Upload hardening (§20).** DOCX archives are inspected before parsing (ZIP bomb, size, entry count,
+  traversal). PDF/DOCX extraction runs in an isolated child process with a timeout (and memory/CPU limits on
+  Linux).
+- **Per-app capture wording (§21).** Choosing a browser now says other tabs may be heard too, instead of "only
+  this app".
+- Tests:
+  - 4 STT-status tests, 12 upload tests, a rewritten live-session test and 2 live-client tests.
+  - Real desktop test build: a second session hit the conflict, "End it and use this one" ended the other (it
+    received `session.ended`, then 4009) and connected. Chrome in "Listen to" shows the browser wording.
+
 ## Launch hardening 1a — verification, CSRF, abuse limits (2026-09-25)
 
 - **Email verification is enforced.** `require_verified_user` gates session creation (live and mock), live

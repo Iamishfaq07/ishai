@@ -35,6 +35,8 @@ export interface LivePanelProps {
   onModeChange: (mode: PanelMode) => void;
   onEnd: () => void;
   onReconnect?: () => void;
+  /** End another live session of this account (one live session at a time), so this one can connect. */
+  onEndOtherSession?: (sessionId: string) => Promise<void>;
   onScreenshot?: () => void;
   screenshotUnavailableReason?: string;
   hotkeys?: HotkeyMap;
@@ -127,7 +129,7 @@ export function LivePanel(props: LivePanelProps) {
         <span data-tauri-drag-region={props.dragRegion ? "" : undefined} className="text-sm font-semibold tracking-tight">
           {compact ? "" : (props.title ?? "Orbit")}
         </span>
-        <StatusPill state={live.state} connection={live.connection} />
+        <StatusPill state={live.state} connection={live.connection} stt={live.providers.stt?.state} />
         <span
           data-tauri-drag-region={props.dragRegion ? "" : undefined}
           className="ml-auto font-mono text-xs tabular-nums text-zinc-500"
@@ -157,7 +159,7 @@ export function LivePanel(props: LivePanelProps) {
         )}
       </header>
 
-      <Banners live={live} onReconnect={props.onReconnect} onDismiss={actions.dismissError} />
+      <Banners live={live} onReconnect={props.onReconnect} onEndOtherSession={props.onEndOtherSession} onDismiss={actions.dismissError} />
       {props.notice}
 
       <div className={cx("flex min-h-0 flex-1", !compact && "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]")}>
@@ -297,18 +299,48 @@ export function LivePanel(props: LivePanelProps) {
   );
 }
 
+function EndOtherButton({ onEnd, onDone }: { onEnd: () => Promise<void>; onDone?: () => void }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => {
+        setBusy(true);
+        onEnd()
+          .then(() => onDone?.())
+          .finally(() => setBusy(false));
+      }}
+      className={cx("shrink-0 font-medium underline disabled:opacity-50", focusRing)}
+    >
+      {busy ? "Ending…" : "End it and use this one"}
+    </button>
+  );
+}
+
 function Banners({
   live,
   onReconnect,
+  onEndOtherSession,
   onDismiss,
 }: {
   live: LiveViewState;
   onReconnect?: () => void;
+  /** End another live session of this account (one live session at a time), so this one can connect. */
+  onEndOtherSession?: (sessionId: string) => Promise<void>;
   onDismiss: () => void;
 }) {
   const items: Array<{ key: string; tone: "warn" | "error"; text: string; action?: ReactNode }> = [];
 
-  if (live.connection === "closed" && live.state !== "ended" && live.connectionDetail) {
+  const other = live.connectionInfo?.code === "live_session_active" ? live.connectionInfo.sessionId : undefined;
+  if (live.connection === "closed" && live.state !== "ended" && live.connectionDetail && other && onEndOtherSession) {
+    items.push({
+      key: "conn",
+      tone: "error",
+      text: live.connectionDetail,
+      action: <EndOtherButton onEnd={() => onEndOtherSession(other)} onDone={onReconnect} />,
+    });
+  } else if (live.connection === "closed" && live.state !== "ended" && live.connectionDetail) {
     items.push({
       key: "conn",
       tone: "error",

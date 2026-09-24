@@ -1,4 +1,4 @@
-import type { LiveState } from "@orbit/types";
+import type { LiveState, ProviderState } from "@orbit/types";
 import type { ConnectionStatus } from "../live/client";
 import { cx } from "./cx";
 
@@ -34,10 +34,12 @@ const TONE_CLASSES: Record<Tone, { dot: string; text: string }> = {
 export interface StatusPillProps {
   state: LiveState;
   connection: ConnectionStatus;
+  /** Transcription provider state: "Connecting audio…" until the STT socket is really up. */
+  stt?: ProviderState;
 }
 
 /** Connection problems take precedence over the server-reported live state. */
-export function StatusPill({ state, connection }: StatusPillProps) {
+export function StatusPill({ state, connection, stt }: StatusPillProps) {
   const meta =
     connection === "connecting"
       ? { label: "Connecting…", tone: "idle" as Tone, pulse: true }
@@ -45,7 +47,11 @@ export function StatusPill({ state, connection }: StatusPillProps) {
         ? { label: "Reconnecting…", tone: "warn" as Tone, pulse: true }
         : connection === "closed" && state !== "ended"
           ? { label: "Disconnected", tone: "error" as Tone, pulse: false }
-          : STATE_META[state];
+          : stt === "connecting" && state !== "ended" && state !== "paused"
+            ? { label: "Connecting audio…", tone: "idle" as Tone, pulse: true }
+            : stt === "down" && state !== "ended"
+              ? { label: "Transcription unavailable", tone: "error" as Tone, pulse: false }
+              : STATE_META[state];
   const tone = TONE_CLASSES[meta.tone];
 
   return (

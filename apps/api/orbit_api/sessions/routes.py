@@ -72,9 +72,12 @@ review_user_limit = limit_user("review-user", rate_per_s=10 / 3600, burst=3)
 
 MAX_WS_TEXT_BYTES = 64 * 1024
 MAX_WS_AUDIO_BYTES = 64 * 1024
-# Each live socket runs two STT streams on the shared key. One socket per session (a newer connection,
-# e.g. rejoining from another device, takes over) and a small per-user cap on distinct live sessions.
-MAX_LIVE_SESSIONS_PER_USER = 2
+# Each live socket runs two STT streams and an LLM on the shared keys. One socket per session (a newer connection,
+# e.g. rejoining from another device, takes over) and one live session per account: a second interview would
+# double the paid audio/LLM spend, and nobody sits two interviews at once. The ticket endpoint answers
+# `409 live_session_active` (naming the running session) before anything is spent; the socket check is a backstop.
+MAX_LIVE_SESSIONS_PER_USER = 1
+LIVE_SESSION_ACTIVE = "live_session_active"
 CLOSE_REPLACED = 4010
 CLOSE_TOO_MANY = 4029
 # In-process like the ticket store: fine for one API instance.
@@ -252,6 +255,16 @@ async def get_session(session_id: str, user: Annotated[User, Depends(current_use
 async def end_session(session_id: str, user: Annotated[User, Depends(current_user)],
                       db: Annotated[AsyncSession, Depends(get_db)]) -> SessionOut:
     row = await _owned(db, session_id, user)
+    # Ended from elsewhere (another window, the web app, "end it and use this one") while a socket is still
+    # streaming: stop that engine for real — it tells its client `session.ended` and records usage — and close
+    # the socket, so it stops spending STT/LLM and frees the account's one live slot.
+    engine = _live_engines.get(session_id)
+    socket = _live_sockets.get(user.id, {}).get(session_id)
+    if engine is not None:
+        await engine.end(final=True)
+    if socket is not None:
+        with contextlib.suppress(Exception):
+            await socket.close(code=4009, reason="session has ended")
     if row.status != "ended":
         row.status = "ended"
         row.ended_at = datetime.now(UTC)
@@ -308,6 +321,14 @@ async def live_ticket(session_id: str, user: Annotated[User, Depends(require_ver
     row = await _owned(db, session_id, user)
     if row.status == "ended":
         raise HTTPException(status.HTTP_409_CONFLICT, "Session has ended")
+    other = next((sid for sid in _live_sockets.get(user.id, {}) if sid != session_id), None)
+    if other is not None and len(_live_sockets.get(user.id, {})) >= MAX_LIVE_SESSIONS_PER_USER:
+        running = await db.get(LiveSessionRow, other)
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={
+            "code": LIVE_SESSION_ACTIVE, "session_id": other, "title": running.title if running else None,
+            "message": f"You already have a live session running ({running.title if running else 'another window'})."
+                       " End it first — or end it here and use this one.",
+        })
     # Enforce the monthly live-minute quota here (not just at session create) so reconnects can't stream
     # unlimited after the cap is hit.
     remaining = await live_minutes_remaining(db, user.id)

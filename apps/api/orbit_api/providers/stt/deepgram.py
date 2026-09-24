@@ -89,6 +89,7 @@ class DeepgramSession(STTSession):
         self._backlog: list[bytes] = []
         self._runner: asyncio.Task[None] | None = None
         self._connected = asyncio.Event()
+        self.state = "connecting"
         # Deepgram timestamps count audio received on the CURRENT socket, so each reconnect restarts them at 0.
         # Shift every event by the audio that went to earlier sockets to keep one continuous session timeline
         # (what transcripts and latency are measured against).
@@ -96,6 +97,9 @@ class DeepgramSession(STTSession):
         self._offset_ms = 0.0
 
     async def connect(self) -> None:
+        """Start the socket and wait (bounded) for the handshake. Returns either way — audio is backlogged while
+        it's pending — but `state` says what actually happened: connected, still connecting/reconnecting, or down.
+        Callers must read it rather than assume success."""
         self._runner = asyncio.create_task(self._run())
         with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(self._connected.wait(), timeout=5)
@@ -108,6 +112,7 @@ class DeepgramSession(STTSession):
                     self._url, additional_headers=self._headers, open_timeout=5, max_size=2**20
                 ) as ws:
                     self._ws = ws
+                    self.state = "connected"
                     self._connected.set()
                     await self._queue.put(TranscriptEvent(kind="status", status="connected"))
                     backoff = 0.25
@@ -132,6 +137,7 @@ class DeepgramSession(STTSession):
                 code = e.response.status_code
                 if code in FATAL_HANDSHAKE:
                     log.error("deepgram handshake rejected (%s); not retrying", code)
+                    self.state = "down"
                     self._connected.set()  # unblock connect(); the session is down, not pending
                     await self._queue.put(TranscriptEvent(kind="status", status="down",
                                                           text=FATAL_HANDSHAKE[code]))
@@ -142,6 +148,7 @@ class DeepgramSession(STTSession):
             if self._closed:
                 break
             self._connected.clear()
+            self.state = "reconnecting"
             await self._queue.put(TranscriptEvent(kind="status", status="reconnecting"))
             await asyncio.sleep(backoff)
             backoff = min(backoff * 2, 5.0)

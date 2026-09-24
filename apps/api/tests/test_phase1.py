@@ -216,23 +216,26 @@ def test_reconnect_meters_each_connection_once(fast_client: TestClient) -> None:
     assert len(rows) == 2 and len({k for k, _ in rows}) == 2 and all(q >= 1 for _, q in rows)
 
 
-def test_concurrent_sessions_share_one_allowance(fast_client: TestClient) -> None:
+def test_a_second_session_cannot_double_the_allowance(fast_client: TestClient) -> None:
+    """One live session per account: a second one can't open while the first runs, so the monthly allowance
+    can't be spent twice in parallel — and the running one is still cut off at the limit."""
     from starlette.websockets import WebSocketDisconnect
 
     h, uid = _user(fast_client)
     _add_usage(uid, "live_seconds", 30 * 60 - 3)
     a, b = _session(fast_client, h), _session(fast_client, h)
-    ended: list[str] = []
+    ended = False
     try:
-        with _live(fast_client, h, a) as ws_a, _live(fast_client, h, b) as ws_b:
-            for ws, name in ((ws_a, "a"), (ws_b, "b")):
-                _collect(ws, lambda ev: any(e["type"] == "session.ended" for e in ev), timeout_s=10)
-                ended.append(name)
+        with _live(fast_client, h, a) as ws_a:
+            _collect(ws_a, lambda ev: any(e["type"] == "session.started" for e in ev))
+            r = fast_client.post(f"/v1/sessions/{b}/live-ticket", headers=h)
+            assert r.status_code == 409 and r.json()["detail"]["code"] == "live_session_active"
+            _collect(ws_a, lambda ev: any(e["type"] == "session.ended" for e in ev), timeout_s=10)
+            ended = True
     except WebSocketDisconnect:
         pass
-    assert ended == ["a", "b"]
-    used = sum(q for _, q in _live_rows(uid))
-    assert used <= 30 * 60 + 3  # both stopped: the overshoot is bounded by about one heartbeat each
+    assert ended
+    assert sum(q for _, q in _live_rows(uid)) <= 30 * 60 + 3  # overshoot bounded by about one heartbeat
 
 
 def test_unlimited_admin_is_metered_but_never_cut_off(monkeypatch: pytest.MonkeyPatch) -> None:
