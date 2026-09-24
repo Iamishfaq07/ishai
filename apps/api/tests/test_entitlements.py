@@ -46,7 +46,8 @@ def test_defaults_and_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     get_settings.cache_clear()
     try:
         p = entitlements.plans()
-        assert p["pro"].live_minutes == 900 and p["pro"].price_usd_month == 29 and p["pro"].stripe_price_id == "price_123"
+        assert p["pro"].live_minutes == 900 and p["pro"].price_usd_month == 29
+        assert p["pro"].stripe_price_id == "price_123"
         assert not p["free"].has("vision") and p["unlimited"].max_session_minutes == 300
     finally:
         get_settings.cache_clear()
@@ -87,7 +88,8 @@ def test_entitlements_report_limits_usage_and_features(monkeypatch: pytest.Monke
         h, uid = _user(c)
         _add_usage(uid, "live_seconds", 600)
         _add_usage(uid, "mock_seconds", 120)
-        c.post("/v1/documents/text", headers=h, json={"kind": "notes", "title": "n", "text": "some notes here about the role"})
+        c.post("/v1/documents/text", headers=h,
+               json={"kind": "notes", "title": "n", "text": "some notes here about the role"})
         e = c.get("/v1/entitlements", headers=h).json()
         assert e["plan"] == "free" and e["limits"]["live_minutes"] == 30 and e["limits"]["max_session_minutes"] == 60
         assert e["usage"] == {"live_minutes": 10.0, "mock_minutes": 2.0, "screenshots": 0, "documents": 1}
