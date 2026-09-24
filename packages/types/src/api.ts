@@ -108,6 +108,46 @@ export interface CreateSessionRequest {
   document_ids: string[];
   /** Only sent for type === "mock". */
   mock?: MockConfig;
+  /** Started from a saved setup (recorded; its documents are used if document_ids is empty). */
+  workspace_id?: string;
+}
+
+/** A saved interview setup ("Google — Senior Security Engineer"). */
+export interface WorkspaceInput {
+  name: string;
+  company?: string | null;
+  role?: string | null;
+  session_type: SessionType;
+  language: string;
+  answer_language?: string | null;
+  length: AnswerLength;
+  style: AnswerStyle;
+  auto_answer: boolean;
+  notes?: string | null;
+  document_ids: string[];
+}
+
+export interface Workspace extends WorkspaceInput {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  last_used_at: string | null;
+  session_count: number;
+}
+
+/** GET /v1/preflight — can a live session work right now, and what to do if not. */
+export interface PreflightCheck {
+  id: string;
+  label: string;
+  status: "ok" | "warn" | "fail";
+  detail: string;
+  fix?: string | null;
+  latency_ms?: number | null;
+}
+
+export interface PreflightReport {
+  checks: PreflightCheck[];
+  ok: boolean;
 }
 
 export interface OrbitSession {
@@ -129,6 +169,7 @@ export interface OrbitSession {
   created_at: string;
   /** Ended sessions: the report is written by a background job after the session ends. */
   report_status?: "pending" | "ready" | "failed" | null;
+  workspace_id?: string | null;
 }
 
 export interface SessionTurn {

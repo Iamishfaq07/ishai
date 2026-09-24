@@ -9,6 +9,7 @@ import type {
   SessionType,
   ThinkingLevel,
   User,
+  Workspace,
 } from "@orbit/types";
 import { AUDIO_CHANNEL } from "@orbit/types";
 import {
@@ -34,8 +35,10 @@ import {
   type AudioApp,
   type NativeAudioDevice,
 } from "../native";
+import { PreflightPanel, type LocalAudioState } from "../PreflightPanel";
 import { TitleBar } from "../TitleBar";
 import { UpdateBanner } from "../UpdateBanner";
+import { WorkspaceBar } from "../WorkspaceBar";
 import type { DesktopLaunch } from "./Live";
 
 const TYPES: Array<{ value: SessionType; label: string }> = [
@@ -76,6 +79,7 @@ const control =
   "block w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-sm dark:border-zinc-800 dark:bg-zinc-900";
 
 const MIC_KEY = "orbit.micDeviceId";
+const WORKSPACE_KEY = "orbit.workspaceId";
 const OUTPUT_KEY = "orbit.outputSource";
 
 /** " (Speakers — Realtek)" for the current default / communications output, if known. */
@@ -162,6 +166,32 @@ export function SetupScreen({
   };
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [workspaceId, setWorkspaceId] = useState<string | null>(() => localStorage.getItem(WORKSPACE_KEY));
+  const [preflightFailed, setPreflightFailed] = useState(false);
+
+  const applyWorkspace = (ws: Workspace | null) => {
+    setWorkspaceId(ws?.id ?? null);
+    if (ws) localStorage.setItem(WORKSPACE_KEY, ws.id);
+    else localStorage.removeItem(WORKSPACE_KEY);
+    if (!ws) return;
+    setType(ws.session_type);
+    setRole(ws.role ?? "");
+    setLanguage(ws.language);
+    setLength(ws.length);
+    setStyle(ws.style);
+    setAutoAnswer(ws.auto_answer);
+    setSelected(new Set(ws.document_ids));
+  };
+  // Restore the last-used setup once documents are loaded (its document ids replace the default selection).
+  const restored = useRef(false);
+  useEffect(() => {
+    if (restored.current || docs === null || !workspaceId) return;
+    restored.current = true;
+    api
+      .listWorkspaces()
+      .then((list) => applyWorkspace(list.find((w) => w.id === workspaceId) ?? null))
+      .catch(() => undefined);
+  }, [docs, workspaceId]);
 
   useEffect(() => {
     api
@@ -253,6 +283,24 @@ export function SetupScreen({
       return next;
     });
 
+  const selectedDocs = (docs ?? []).filter((d) => selected.has(d.id));
+  const micDevice = micId ? devices.find((d) => d.id === micId) : undefined;
+  const outputName = (id: string | undefined) =>
+    id === "communications"
+      ? outputs.find((o) => o.isCommunications)?.name
+      : id && id !== "default"
+        ? outputs.find((o) => o.id === id)?.name
+        : outputs.find((o) => o.isDefault)?.name;
+  const localState: LocalAudioState = {
+    micName: (micDevice ?? devices.find((d) => d.isDefault) ?? devices[0])?.name ?? null,
+    systemAudio,
+    interviewerSource: appPid
+      ? `Capturing ${apps.find((a) => String(a.pid) === appPid)?.name ?? "the selected app"} only`
+      : `Capturing ${outputName(systemDevice) ?? "the default output"}`,
+    hasResume: selectedDocs.some((d) => d.kind === "resume"),
+    hasJobDescription: selectedDocs.some((d) => d.kind === "job_description"),
+  };
+
   const start = async (e: FormEvent) => {
     e.preventDefault();
     setStarting(true);
@@ -267,6 +315,7 @@ export function SetupScreen({
         style,
         auto_answer: autoAnswer,
         document_ids: [...selected],
+        ...(workspaceId ? { workspace_id: workspaceId } : {}),
       });
       onStart(session, {
         systemAudio,
@@ -303,6 +352,20 @@ export function SetupScreen({
       <form onSubmit={(e) => void start(e)} className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 text-sm">
           <p className="text-xs text-zinc-500">{user ? `Signed in as ${user.email}` : "Offline — some data may be unavailable."}</p>
+
+          <WorkspaceBar
+            selectedId={workspaceId}
+            onSelect={applyWorkspace}
+            current={{
+              role: role.trim() || null,
+              session_type: type,
+              language,
+              length,
+              style,
+              auto_answer: autoAnswer,
+              document_ids: [...selected],
+            }}
+          />
 
           <label className="block space-y-1">
             <span className="text-xs font-medium">Session type</span>
@@ -601,13 +664,14 @@ export function SetupScreen({
           {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
         </div>
 
-        <div className="border-t border-zinc-200 p-3 dark:border-zinc-800">
+        <div className="space-y-2 border-t border-zinc-200 p-3 dark:border-zinc-800">
+          <PreflightPanel local={localState} onStatus={setPreflightFailed} />
           <button
             type="submit"
             disabled={starting}
             className={cx("w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50", focusRing)}
           >
-            {starting ? "Starting…" : "Start Session"}
+            {starting ? "Starting…" : preflightFailed ? "Start anyway" : "Start Session"}
           </button>
           <button
             type="button"

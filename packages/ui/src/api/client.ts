@@ -12,6 +12,7 @@ import type {
   LoginRequest,
   OrbitDocument,
   OrbitSession,
+  PreflightReport,
   PrivacyUpdate,
   RegisterRequest,
   ScreenshotAccepted,
@@ -20,6 +21,8 @@ import type {
   UpdateDocumentRequest,
   Usage,
   User,
+  Workspace,
+  WorkspaceInput,
 } from "@orbit/types";
 
 export class ApiError extends Error {
@@ -152,6 +155,22 @@ export function createApiClient(options: ApiClientOptions) {
 
     // Usage
     usage: () => json<Usage>("/v1/usage"),
+
+    // Saved interview setups
+    listWorkspaces: () => json<Workspace[]>("/v1/workspaces"),
+    createWorkspace: (req: WorkspaceInput) => json<Workspace>("/v1/workspaces", { method: "POST", body: body(req) }),
+    updateWorkspace: (id: string, req: WorkspaceInput) =>
+      json<Workspace>(`/v1/workspaces/${encodeURIComponent(id)}`, { method: "PUT", body: body(req) }),
+    deleteWorkspace: (id: string) => json<void>(`/v1/workspaces/${encodeURIComponent(id)}`, { method: "DELETE" }),
+
+    // Pre-session checklist
+    preflight: (opts: { appVersion?: string; refresh?: boolean } = {}) => {
+      const q = new URLSearchParams();
+      if (opts.appVersion) q.set("app_version", opts.appVersion);
+      if (opts.refresh) q.set("refresh", "true");
+      const qs = q.toString();
+      return json<PreflightReport>(`/v1/preflight${qs ? `?${qs}` : ""}`);
+    },
 
     // Admin / advanced settings
     adminStatus: () => json<{ is_admin: boolean }>("/v1/admin/status"),

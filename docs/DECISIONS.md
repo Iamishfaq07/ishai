@@ -99,3 +99,13 @@ project that the documents don't contain) shows a "Suggested details" badge. A f
 an LLM judge labelling each claim VERIFIED / INFERRED / GENERAL / UNSUPPORTED) showed invented personal detail can't be
 fully prevented for questions the documents don't cover, but with the label every answer containing it was flagged
 (12/12 across two runs). A personal question with no verified facts and no label defaults to "example".
+
+**D23 — Preflight checks are real but cheap.** `GET /v1/preflight` pings DeepSeek with a 3-token request (cached 60 s)
+and validates the Deepgram key with its free project-listing endpoint (cached 5 min), so the checklist reflects the
+providers actually working — not just keys being present — at negligible cost. Warnings never block a session; a
+failure turns the button into "Start anyway". Local checks (microphone, interviewer audio, documents, network round
+trip) run in the desktop.
+
+**D24 — Workspaces are saved setups, not a job tracker.** A workspace stores documents + answer preferences (role,
+type, language, length, style, auto-answer). Audio devices stay per-machine (localStorage), since a setup may be used
+on another PC. Deleting a workspace keeps its sessions (link set to NULL) and never touches documents.

@@ -1,5 +1,19 @@
 # Implementation log
 
+## Phase 5a — pre-session checklist + saved setups (2026-09-25)
+
+- **Checklist** (desktop Setup, above Start): microphone, interviewer audio source, resume/JD selected, network round
+  trip, plus server checks (`GET /v1/preflight`: database, DeepSeek responding, Deepgram key valid, vision, live
+  minutes / screenshot credits, app version) — each with a precise fix. Collapsed when all is well; failures expand
+  and the button reads "Start anyway". Provider checks are cached (D23).
+- **Saved setups** (`/v1/workspaces`, migration `a1f3c7e9d2b5`): save the current session setup under a name, pick it
+  next time (documents + preferences restored, last one remembered), update or delete it. Sessions record the
+  workspace they came from; a workspace's documents are used when a session doesn't pass its own.
+
+**Verified in the real desktop app** (test build + local server with real keys): checklist showed real statuses
+(DeepSeek 715 ms, Deepgram key valid, resume/JD missing flagged with fixes); a setup saved, restored after leaving
+and reopening Setup, and the session started from it was linked (`session_count` 1). API 239 tests (+6).
+
 ## Phase 4 — answer quality (2026-09-24)
 
 - **Question detection** (measured on the brief's phrases plus a monologue/filler corpus):

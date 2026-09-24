@@ -14,12 +14,14 @@ from orbit_api.config import get_settings
 from orbit_api.desktop_updates import router as desktop_router
 from orbit_api.documents.routes import router as documents_router
 from orbit_api.observability import configure_logging, init_sentry, request_id_middleware
+from orbit_api.preflight import router as preflight_router
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.stt import create_stt_provider
 from orbit_api.runtime_config import refresh as refresh_runtime_config
 from orbit_api.sessions.recorder import replay_failed_writes
 from orbit_api.sessions.routes import drain_teardowns
 from orbit_api.sessions.routes import router as sessions_router
+from orbit_api.workspaces.routes import router as workspaces_router
 
 _boot = get_settings()
 configure_logging(_boot.log_format or ("json" if _boot.env == "production" else "text"))
@@ -108,6 +110,8 @@ def create_app() -> FastAPI:
     app.include_router(sessions_router)
     app.include_router(desktop_router)
     app.include_router(admin_router)
+    app.include_router(workspaces_router)
+    app.include_router(preflight_router)
     return app
 
 
