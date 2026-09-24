@@ -88,7 +88,7 @@ export function WorkspaceBar({
     <div className="space-y-1.5 rounded-xl border border-indigo-200/60 bg-indigo-50/40 p-3 dark:border-indigo-900/50 dark:bg-indigo-950/20">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium">Saved setup</span>
-        {note && <span className="text-[11px] text-zinc-500">{note}</span>}
+        {note && <span className="text-xs text-zinc-500">{note}</span>}
       </div>
       <select
         value={selectedId ?? ""}

@@ -39,7 +39,7 @@ const btn =
   "inline-flex items-center justify-center rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40";
 const ghost = "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800";
 const miniSelect =
-  "rounded-md bg-transparent py-1 pl-1 pr-5 text-[11px] font-medium text-zinc-600 disabled:opacity-40 dark:text-zinc-300";
+  "rounded-md bg-transparent py-1 pl-1 pr-5 text-xs font-medium text-zinc-600 disabled:opacity-40 dark:text-zinc-300";
 
 export function ControlBar(props: ControlBarProps) {
   const { hotkeys, ended } = props;
@@ -107,7 +107,7 @@ export function ControlBar(props: ControlBarProps) {
                 disabled={ended}
                 onClick={() => props.onLength(l.value)}
                 className={cx(
-                  "rounded-md px-2 py-1 text-[11px] font-medium",
+                  "rounded-md px-2 py-1 text-xs font-medium",
                   props.length === l.value
                     ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white"
                     : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200",

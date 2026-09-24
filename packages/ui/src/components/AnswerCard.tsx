@@ -70,7 +70,7 @@ function CopyButton({ text }: { text: string }) {
       }}
       title="Copy this answer"
       className={cx(
-        "rounded-md px-2 py-0.5 text-[11px] font-medium",
+        "rounded-md px-2 py-0.5 text-xs font-medium",
         copied ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800",
         focusRing,
       )}
@@ -102,7 +102,7 @@ function KeyPoints({ progress, compact }: { progress: KeyPointProgress; compact:
         </button>
       </div>
       {on && (
-        <ul className={cx("space-y-1", compact ? "text-sm" : "text-[15px]")}>
+        <ul className={cx("space-y-1", compact ? "text-[0.9375rem]" : "text-base")}>
           {progress.points.map((p, i) => {
             const isNext = i === progress.next;
             return (
@@ -164,7 +164,7 @@ export function AnswerCard({
   return (
     <section aria-label="Suggested answer" className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center justify-between px-4 pt-3">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
           {answer.source === "chat" ? "Reply" : answer.source === "screenshot" ? "Screenshot answer" : "Answer"}
           {answer.reasoning === "deep" && (
             <span className="ml-2 normal-case tracking-normal text-indigo-600 dark:text-indigo-300">in-depth</span>
@@ -178,7 +178,7 @@ export function AnswerCard({
             aria-pressed={pinned}
             title={pinned ? "Unpin — follow new questions again" : "Pin — keep this answer on screen"}
             className={cx(
-              "rounded-md px-2 py-0.5 text-[11px] font-medium",
+              "rounded-md px-2 py-0.5 text-xs font-medium",
               pinned
                 ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
                 : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800",
@@ -235,7 +235,7 @@ export function AnswerCard({
         {coding && a.direct_answer && <SectionLabel block>Say</SectionLabel>}
 
         {a.direct_answer && (
-          <div className={cx("space-y-2.5", compact ? "text-sm" : "text-[15px] leading-relaxed")}>
+          <div className={cx("space-y-2.5", compact ? "text-[0.9375rem] leading-relaxed" : "text-base leading-relaxed")}>
             {a.direct_answer.split(/\n{2,}/).map((para, i) => (
               // The opening sentence carries the answer, so it reads a touch stronger for a quick glance.
               <p
@@ -254,7 +254,7 @@ export function AnswerCard({
         {progress && answer.status !== "failed" && <KeyPoints progress={progress} compact={compact} />}
 
         {a.talking_points.length > 0 && (
-          <ul className={cx("mt-2 space-y-1.5", compact ? "text-sm" : "text-[15px]")}>
+          <ul className={cx("mt-2 space-y-1.5", compact ? "text-[0.9375rem]" : "text-base")}>
             {a.talking_points.map((point, i) => (
               <li key={i} className="flex gap-2 leading-snug text-zinc-800 dark:text-zinc-200">
                 <span className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-indigo-500" aria-hidden="true" />
@@ -301,7 +301,7 @@ export function AnswerCard({
         {coding && (a.tests?.length ?? 0) > 0 && (
           <div className="mt-3">
             <SectionLabel block>Tests</SectionLabel>
-            <ul className="space-y-1 font-mono text-[13px] text-zinc-700 dark:text-zinc-300">
+            <ul className="space-y-1 font-mono text-[0.8125rem] text-zinc-700 dark:text-zinc-300">
               {a.tests!.map((t, i) => (
                 <li key={i}>{t}</li>
               ))}
@@ -334,7 +334,7 @@ export function AnswerCard({
         )}
 
         {!compact && a.context_used.length > 0 && answer.status === "complete" && (
-          <p className="mt-2 truncate text-[11px] text-zinc-400" title={a.context_used.join(" · ")}>
+          <p className="mt-2 truncate text-xs text-zinc-400" title={a.context_used.join(" · ")}>
             Grounded in: {a.context_used.join(" · ")}
           </p>
         )}

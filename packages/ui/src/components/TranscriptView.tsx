@@ -42,7 +42,7 @@ export function TranscriptView({ turns, onCorrectSpeaker }: TranscriptViewProps)
               <div className="flex items-center gap-2">
                 <span
                   className={cx(
-                    "text-[11px] font-semibold uppercase tracking-wider",
+                    "text-xs font-semibold uppercase tracking-wider",
                     t.speaker === "candidate" ? "text-emerald-600 dark:text-emerald-400" : "text-indigo-600 dark:text-indigo-300",
                   )}
                 >
@@ -52,7 +52,7 @@ export function TranscriptView({ turns, onCorrectSpeaker }: TranscriptViewProps)
                   <button
                     type="button"
                     onClick={() => onCorrectSpeaker(t.turn_id, t.speaker === "candidate" ? "interviewer" : "candidate")}
-                    className={cx("text-[10px] text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200", focusRing)}
+                    className={cx("text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200", focusRing)}
                     title="Wrong speaker? Swap it"
                   >
                     swap

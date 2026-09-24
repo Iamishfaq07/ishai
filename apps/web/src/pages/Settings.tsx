@@ -13,8 +13,7 @@ import {
   type HotkeyAction,
   type HotkeyMap,
   AppearanceControls,
-  useDesign,
-} from "@orbit/ui";
+  useDesign, confirmDialog } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Spinner, Toggle } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -118,7 +117,7 @@ function AdvancedConfig() {
   };
 
   const clearKey = async (which: "deepseek_api_key" | "deepgram_api_key") => {
-    if (!window.confirm("Remove this key? Orbit will fall back to the key from the server environment.")) return;
+    if (!(await confirmDialog({ title: "Remove this key?", body: "Orbit falls back to the key from the server environment.", confirmLabel: "Remove", danger: true }))) return;
     setError(null);
     try {
       setForm(await api.updateAdminConfig({ [which]: "" }));
@@ -335,7 +334,7 @@ function PrivacyCard() {
   };
 
   const signOutEverywhere = async () => {
-    if (!window.confirm("Sign out of Orbit on every device, including the desktop app and this browser?")) return;
+    if (!(await confirmDialog({ title: "Sign out everywhere?", body: "You’ll be signed out of Orbit on every device, including the desktop app and this browser.", confirmLabel: "Sign out everywhere", danger: true }))) return;
     try {
       await api.logoutAll();
       await logout().catch(() => undefined);
@@ -346,8 +345,7 @@ function PrivacyCard() {
   };
 
   const deleteAccount = async () => {
-    const typed = window.prompt('This permanently deletes your account, documents, and all sessions. Type "DELETE" to confirm.');
-    if (typed !== "DELETE") return;
+    if (!(await confirmDialog({ title: "Delete your account?", body: "This permanently deletes your account, documents and all sessions.", confirmLabel: "Delete account", danger: true, typeToConfirm: "DELETE" }))) return;
     try {
       await api.deleteAccount();
       await logout().catch(() => undefined);

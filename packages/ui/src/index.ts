@@ -102,3 +102,4 @@ export { scoreKeyPoints, type KeyPointProgress, type PointProgress } from "./liv
 export { useKeyPointProgress } from "./live/useKeyPointProgress";
 export { useInterviewerVoice, type InterviewerVoice } from "./live/useInterviewerVoice";
 export { MockPanel } from "./components/MockPanel";
+export { ConfirmHost, confirmDialog, type ConfirmOptions } from "./components/ConfirmDialog";

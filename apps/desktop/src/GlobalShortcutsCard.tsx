@@ -62,7 +62,7 @@ export function GlobalShortcutsCard() {
             <li key={action} className="flex items-center justify-between gap-3 py-2">
               <span className="text-sm">{GLOBAL_LABELS[action]}</span>
               <span className="flex items-center gap-2">
-                {problem && <span className="text-[11px] text-amber-600 dark:text-amber-400">{problem}</span>}
+                {problem && <span className="text-xs text-amber-600 dark:text-amber-400">{problem}</span>}
                 <button
                   type="button"
                   disabled={!enabled}
@@ -84,7 +84,7 @@ export function GlobalShortcutsCard() {
                   <button
                     type="button"
                     onClick={() => commit({ ...map, [action]: GLOBAL_DEFAULTS[action] })}
-                    className={cx("text-[11px] text-zinc-500 underline hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}
+                    className={cx("text-xs text-zinc-500 underline hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}
                   >
                     Reset
                   </button>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { SessionAnswer, SessionDetail, SessionSummary } from "@orbit/types";
-import { CodeBlock, ReportStatusNote, SessionReview, cx, focusRing, useReportPolling } from "@orbit/ui";
+import { CodeBlock, ReportStatusNote, SessionReview, cx, focusRing, useReportPolling, confirmDialog } from "@orbit/ui";
 import { Button, Card, ErrorNote, Input, PageHeader, Spinner } from "../components/ui";
 import { api } from "../lib/api";
 import { SESSION_TYPE_LABEL, downloadText, errorText, formatClock, formatDate, formatDuration } from "../lib/format";
@@ -38,7 +38,7 @@ export function SessionDetailPage() {
   };
 
   const remove = async () => {
-    if (!window.confirm("Delete this session, its transcript, answers, and screenshots? This can’t be undone.")) return;
+    if (!(await confirmDialog({ title: "Delete this session?", body: "Its transcript, questions, answers and review are deleted. This can’t be undone.", confirmLabel: "Delete", danger: true }))) return;
     try {
       await api.deleteSession(session.id);
       navigate("/sessions", { replace: true });
@@ -240,7 +240,7 @@ function QuestionsView({ detail }: { detail: SessionDetail }) {
                   </div>
                 )}
                 {a.first_token_ms !== null && (
-                  <p className="mt-2 text-[11px] text-zinc-400">
+                  <p className="mt-2 text-xs text-zinc-400">
                     {a.model ?? "model"} · first token {Math.round(a.first_token_ms)} ms
                   </p>
                 )}

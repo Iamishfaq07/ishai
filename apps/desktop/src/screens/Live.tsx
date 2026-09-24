@@ -16,6 +16,7 @@ import {
   useLiveSession,
   type PanelMode,
   VISION_ENABLED,
+  confirmDialog,
 } from "@orbit/ui";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -189,9 +190,9 @@ export function LiveScreen({
 
   // ── End ───────────────────────────────────────────────────────────────
   const [ending, setEnding] = useState(false);
-  const end = () => {
+  const end = async () => {
     // Ending finalizes the session + report; the compact always-on-top window makes End easy to misclick.
-    if (!window.confirm("End this session? The transcript and summary will be saved to History.")) return;
+    if (!(await confirmDialog({ title: "End this session?", body: "The transcript and report are saved to History.", confirmLabel: "End session", danger: true }))) return;
     setEnding(true);
     actions.end();
   };
@@ -214,7 +215,7 @@ export function LiveScreen({
     captureNote || shotNote ? (
       <div className="space-y-px">
         {captureNote && (
-          <div className="flex items-center gap-2 bg-amber-50 px-4 py-1.5 text-[11px] text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+          <div className="flex items-center gap-2 bg-amber-50 px-4 py-1.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
             <span className="flex-1">{captureNote}</span>
             <button type="button" onClick={() => void startAudio()} className={cx("font-medium underline", focusRing)}>
               Retry
@@ -222,7 +223,7 @@ export function LiveScreen({
           </div>
         )}
         {shotNote && (
-          <div className="flex items-center gap-2 bg-rose-50 px-4 py-1.5 text-[11px] text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">
+          <div className="flex items-center gap-2 bg-rose-50 px-4 py-1.5 text-xs text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">
             <span className="flex-1">{shotNote}</span>
             <button type="button" onClick={() => setShotNote(null)} aria-label="Dismiss" className={cx("px-1", focusRing)}>
               ×

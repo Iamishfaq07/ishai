@@ -1,5 +1,19 @@
 # Implementation log
 
+## Phase 6a — readable text, in-app dialogs, performance baseline (2026-09-25)
+
+- **Text size setting now works everywhere:** 49 fixed-pixel text sizes (43 labels at 10–11 px, the question, the
+  answer body, code) were converted to rem, so Settings → Text size scales them (they ignored it before). Sizes follow
+  the brief: labels 12 px, answer 16 px, question 17 px, compact overlay 15 px (at the default size).
+- **No more browser dialogs:** all 10 `window.confirm` / `window.prompt` uses (end session, delete document/session,
+  remove key, sign out everywhere, delete account) use one accessible in-app `confirmDialog` (alertdialog, Esc to
+  cancel, focus restored, danger styling, "type DELETE" for account deletion). Delete-session copy no longer claims
+  to delete screenshots (they are never stored).
+- **Performance baseline** (desktop app + WebView2, 8-core PC): startup to window 0.57 s; idle 212 MB / 1.7 % CPU;
+  live simulated interview 274 MB / 1.7 % CPU.
+- Verified in the real app: labels 12 → 13.5 px when the root size goes to Large; End shows the in-app dialog, Esc
+  keeps the session, "End session" ends it; zero native dialogs; no console errors.
+
 ## Release incident — 0.1.11 forgot sign-ins (2026-09-25)
 
 - **What happened:** 0.1.11 was built while `ORBIT_KEYRING_SERVICE` (a compile-time switch for test builds) was set

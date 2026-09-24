@@ -123,7 +123,7 @@ export function PreflightPanel({ local, onStatus }: { local: LocalAudioState; on
           <span className="ml-auto text-zinc-400">{open ? "▴" : "▾"}</span>
         </button>
         <button type="button" disabled={checking} onClick={() => void run(true)}
-                className={cx("rounded-lg border border-zinc-200 px-2 py-0.5 text-[11px] disabled:opacity-40 dark:border-zinc-800", focusRing)}>
+                className={cx("rounded-lg border border-zinc-200 px-2 py-0.5 text-xs disabled:opacity-40 dark:border-zinc-800", focusRing)}>
           {checking ? "Checking…" : "Re-check"}
         </button>
       </div>
