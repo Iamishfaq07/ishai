@@ -6,12 +6,15 @@ verification/reset links — which are credentials — are never written to prod
 
 import asyncio
 import logging
+import os
 import smtplib
 import ssl
+import tempfile
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from email.message import EmailMessage
 from functools import lru_cache
+from pathlib import Path
 
 from orbit_api.config import get_settings
 
@@ -33,7 +36,8 @@ class EmailSender(ABC):
 
 
 class DevOutbox(EmailSender):
-    """Keeps sent mail in memory (tests read it) and logs it so local dev can click the link."""
+    """Keeps sent mail in memory (tests read it) and appends it to a local file so dev can click the link.
+    Logs carry only a pointer: log redaction masks `token=` values, which would make the links unusable."""
 
     name = "dev-outbox"
 
@@ -43,7 +47,14 @@ class DevOutbox(EmailSender):
     async def send(self, email: OutgoingEmail) -> None:
         self.sent.append(email)
         del self.sent[:-100]
-        log.info("DEV EMAIL to=%s subject=%r\n%s", email.to, email.subject, email.text)
+        path = dev_outbox_path()
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(f"--- to={email.to} subject={email.subject!r}\n{email.text}\n\n")
+        log.info("DEV EMAIL to=%s subject=%r (full text with links in %s)", email.to, email.subject, path)
+
+
+def dev_outbox_path() -> Path:
+    return Path(os.environ.get("ORBIT_DEV_OUTBOX") or Path(tempfile.gettempdir()) / "orbit-dev-outbox.txt")
 
 
 class SmtpSender(EmailSender):

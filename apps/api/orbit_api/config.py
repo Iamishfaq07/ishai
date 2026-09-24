@@ -82,6 +82,29 @@ class Settings(BaseSettings):
     # server spends one shared provider key, so a public URL must not mean public usage.
     allowed_emails: str | None = Field(None, validation_alias=AliasChoices("ORBIT_ALLOWED_EMAILS"))
 
+    # Email verification before paid-provider features (live, screenshots, mock, AI review). Unset: required in
+    # production, off in development/test. The admin is always exempt (configured by env, not by signup).
+    email_verification: Literal["required", "off"] | None = Field(
+        None, validation_alias=AliasChoices("ORBIT_EMAIL_VERIFICATION")
+    )
+    # CSRF defence for cookie-authenticated browser requests (Origin check + per-session token header).
+    # Unset: on everywhere except the test environment. Bearer-token (desktop) requests are never affected.
+    csrf_protection: bool | None = Field(None, validation_alias=AliasChoices("ORBIT_CSRF_PROTECTION"))
+    # Bot protection on sign-up / password reset. "none" or "turnstile" (Cloudflare). Provider-neutral: the
+    # client asks GET /v1/auth/config which widget to render. Skipped only in the test environment.
+    captcha_provider: Literal["none", "turnstile"] = Field(
+        "none", validation_alias=AliasChoices("ORBIT_CAPTCHA_PROVIDER", "CAPTCHA_PROVIDER")
+    )
+    captcha_enabled: bool | None = Field(
+        None, validation_alias=AliasChoices("ORBIT_CAPTCHA_ENABLED", "CAPTCHA_ENABLED")
+    )
+    turnstile_site_key: str | None = Field(
+        None, validation_alias=AliasChoices("ORBIT_TURNSTILE_SITE_KEY", "TURNSTILE_SITE_KEY")
+    )
+    turnstile_secret_key: SecretStr | None = Field(
+        None, validation_alias=AliasChoices("ORBIT_TURNSTILE_SECRET_KEY", "TURNSTILE_SECRET_KEY")
+    )
+
     @model_validator(mode="after")
     def _reject_insecure_production(self) -> "Settings":
         if self.env == "production":
@@ -99,9 +122,58 @@ class Settings(BaseSettings):
             # use of the shared provider keys to whoever registers first.
             if not (self.admin_email and "@" in self.admin_email):
                 raise ValueError("ORBIT_ADMIN_EMAIL must be set in production (the admin is never inferred)")
-        # SMTP is optional: without it, email verification / password reset are disabled (fine for a
-        # private single-user deploy). It's never faked to the dev outbox in production (see email.py).
+            # Anyone other than the admin can sign in → they must be able to prove their inbox, or turn
+            # verification off explicitly (allowed only for a private, owner-vetted list of exact addresses).
+            if self.public_signup and not self.verification_required:
+                raise ValueError("ORBIT_EMAIL_VERIFICATION=off is not allowed with public sign-up "
+                                 "(ORBIT_ALLOWED_EMAILS contains '*' or an @domain entry)")
+            if self.verification_required and self.others_can_sign_in and not self.smtp_host:
+                raise ValueError("Email verification is required for non-admin users but ORBIT_SMTP_HOST is not "
+                                 "set, so nobody could verify. Configure SMTP, or for a private list of exact "
+                                 "addresses set ORBIT_EMAIL_VERIFICATION=off.")
+            if self.captcha_provider == "turnstile" and not (self.turnstile_site_key and self.turnstile_secret_key):
+                raise ValueError("ORBIT_CAPTCHA_PROVIDER=turnstile needs TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY")
+        # SMTP is optional for an admin-only deploy: email features are then disabled. It's never faked to the
+        # dev outbox in production (see email.py).
         return self
+
+    @property
+    def verification_required(self) -> bool:
+        if self.email_verification is not None:
+            return self.email_verification == "required"
+        return self.env == "production"
+
+    @property
+    def csrf_enabled(self) -> bool:
+        return self.csrf_protection if self.csrf_protection is not None else self.env != "test"
+
+    @property
+    def captcha_active(self) -> bool:
+        """On when a provider is configured. CAPTCHA_ENABLED=false bypasses it only outside production."""
+        if self.captcha_provider == "none" or not (self.turnstile_site_key and self.turnstile_secret_key):
+            return False
+        return not (self.captcha_enabled is False and self.env != "production")
+
+    def _allow_entries(self) -> set[str]:
+        return {e.strip().lower() for e in (self.allowed_emails or "").split(",") if e.strip()}
+
+    @property
+    def public_signup(self) -> bool:
+        """Anyone (or anyone at a domain) may create an account — the case abuse protection is for."""
+        if self.allowed_emails is None:
+            return self.env != "production"
+        return any(e == "*" or e.startswith("@") for e in self._allow_entries())
+
+    @property
+    def others_can_sign_in(self) -> bool:
+        """Someone other than the admin may sign in (public sign-up or a non-empty allowlist)."""
+        if self.allowed_emails is None:
+            return self.env != "production"
+        admin = (self.admin_email or "").strip().lower()
+        return any(e != admin for e in self._allow_entries())
+
+    def is_admin_email(self, email: str) -> bool:
+        return bool(self.admin_email) and email.strip().lower() == (self.admin_email or "").strip().lower()
 
     @property
     def is_sqlite(self) -> bool:
@@ -113,7 +185,7 @@ class Settings(BaseSettings):
             return True
         if self.allowed_emails is None:
             return self.env != "production"
-        entries = {e.strip().lower() for e in self.allowed_emails.split(",") if e.strip()}
+        entries = self._allow_entries()
         if "*" in entries:
             return True
         return email in entries or ("@" in email and "@" + email.rsplit("@", 1)[1] in entries)

@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { OrbitLogo, cx, focusRing } from "@orbit/ui";
+import { OrbitLogo, VerifyEmailBanner, cx, focusRing } from "@orbit/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { errorText } from "../lib/format";
 
 const NAV = [
   { to: "/", label: "Home", end: true },
@@ -13,41 +12,13 @@ const NAV = [
   { to: "/settings", label: "Settings" },
 ];
 
-function VerifyEmailBanner({ email }: { email: string }) {
-  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
-  const [error, setError] = useState<string | null>(null);
-  const resend = () => {
-    setState("sending");
-    setError(null);
-    api
-      .requestVerification()
-      .then(() => setState("sent"))
-      .catch((err: unknown) => {
-        setError(errorText(err));
-        setState("idle");
-      });
-  };
-  return (
-    <div role="status" className="border-b border-amber-200 bg-amber-50 px-6 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-1">
-        <span>
-          Confirm <strong>{email}</strong> — we sent you a verification link.
-        </span>
-        {state === "sent" ? (
-          <span className="font-medium">New link sent.</span>
-        ) : (
-          <button type="button" onClick={resend} disabled={state === "sending"} className={cx("font-medium underline disabled:opacity-50", focusRing)}>
-            {state === "sending" ? "Sending…" : "Resend link"}
-          </button>
-        )}
-        {error && <span className="text-rose-700 dark:text-rose-300">{error}</span>}
-      </div>
-    </div>
-  );
-}
-
 export function Layout() {
-  const { user, logout } = useAuth();
+  const { user, logout, setUser } = useAuth();
+  // Only nag when this server actually locks paid features behind verification.
+  const [verificationRequired, setVerificationRequired] = useState(false);
+  useEffect(() => {
+    api.authConfig().then((c) => setVerificationRequired(c.email_verification === "required")).catch(() => undefined);
+  }, []);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -94,7 +65,18 @@ export function Layout() {
           </div>
         </div>
       </header>
-      {user && !user.email_verified && <VerifyEmailBanner email={user.email} />}
+      {user && !user.email_verified && verificationRequired && (
+        <VerifyEmailBanner
+          email={user.email}
+          className="px-6"
+          onResend={() => api.requestVerification()}
+          onRecheck={async () => {
+            const fresh = await api.me();
+            setUser(fresh);
+            return fresh.email_verified;
+          }}
+        />
+      )}
       <main id="main" className="mx-auto max-w-6xl px-6 py-8">
         {/* Keyed on the route so each page fades up in. */}
         <div key={location.pathname} className="animate-fade-up">

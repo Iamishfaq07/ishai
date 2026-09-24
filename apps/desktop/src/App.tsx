@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { OrbitSession, SessionType, User } from "@orbit/types";
-import { ApiError, ConfirmHost, OrbitLogo } from "@orbit/ui";
+import { ApiError, ConfirmHost, OrbitLogo, VerifyEmailBanner } from "@orbit/ui";
 import { api, setAccessToken, setUnauthorizedHandler } from "./api";
 import { CloseDialog } from "./CloseDialog";
 import { stepGlass } from "./glass";
@@ -36,6 +36,24 @@ export function App() {
   useShortcutHandler(onAppShortcut);
   const [screen, setScreen] = useState<Screen>({ name: "boot" });
   const [user, setUser] = useState<User | null>(null);
+  // Paid features are locked until the email is verified — but only on servers that require it.
+  const [verificationRequired, setVerificationRequired] = useState(false);
+  useEffect(() => {
+    if (!user || user.email_verified) return;
+    api.authConfig().then((c) => setVerificationRequired(c.email_verification === "required")).catch(() => undefined);
+  }, [user]);
+  const verifyNotice =
+    user && !user.email_verified && verificationRequired ? (
+      <VerifyEmailBanner
+        email={user.email}
+        onResend={() => api.requestVerification()}
+        onRecheck={async () => {
+          const fresh = await api.me();
+          setUser(fresh);
+          return fresh.email_verified;
+        }}
+      />
+    ) : null;
 
   const signOut = useCallback(async () => {
     setAccessToken(null);
@@ -111,6 +129,7 @@ export function App() {
         return (
           <HomeScreen
             user={user}
+            notice={verifyNotice}
             onNewSession={(type) => setScreen({ name: "setup", ...(type ? { initialType: type } : {}) })}
             onResume={resume}
             onOpenDocuments={() => setScreen({ name: "documents" })}
@@ -123,6 +142,7 @@ export function App() {
         return (
           <SetupScreen
             user={user}
+            notice={verifyNotice}
             initialType={screen.initialType}
             onSignOut={() => void signOut()}
             onBack={home}

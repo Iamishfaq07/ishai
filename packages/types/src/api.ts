@@ -20,6 +20,14 @@ export interface User {
   store_transcripts: boolean;
   /** Always false: screenshots are analyzed and discarded, never stored. */
   store_screenshots: boolean;
+  /** Auth responses only: browser clients echo it as X-CSRF-Token on state-changing requests. */
+  csrf_token?: string | null;
+}
+
+/** GET /v1/auth/config (public): what sign-in / sign-up screens need before anyone is signed in. */
+export interface AuthConfig {
+  captcha: { provider: "turnstile"; site_key: string } | null;
+  email_verification: "required" | "off";
 }
 
 /** PATCH /v1/auth/me/privacy → User */
@@ -31,6 +39,8 @@ export interface RegisterRequest {
   email: string;
   password: string;
   name?: string;
+  /** The CAPTCHA widget's response token, when GET /v1/auth/config asks for one. */
+  captcha_token?: string;
 }
 
 export interface LoginRequest {
@@ -312,6 +322,6 @@ export interface LatencyReport {
 
 /** FastAPI returns { detail: string | ValidationError[] }; Orbit errors use { error: { code, message } }. */
 export interface ApiErrorBody {
-  detail?: string | Array<{ msg: string; loc?: Array<string | number> }>;
+  detail?: string | Array<{ msg: string; loc?: Array<string | number> }> | { code?: string; message?: string };
   error?: { code: string; message: string };
 }

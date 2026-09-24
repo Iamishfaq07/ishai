@@ -17,9 +17,10 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user
+from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.desktop_updates import _root, github_latest_release, latest_release, parse_version
-from orbit_api.entitlements import plan_for, usage_this_month
+from orbit_api.entitlements import is_admin, plan_for, usage_this_month
 from orbit_api.models import User
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMRequest
@@ -139,6 +140,13 @@ async def preflight(user: Annotated[User, Depends(current_user)], db: Annotated[
     except Exception:
         checks.append(Check(id="server", label="Orbit server", status="fail", detail="The database isn't reachable.",
                             fix="The server is having trouble — try again in a minute."))
+
+    if get_settings().verification_required and not user.email_verified and not await is_admin(db, user):
+        # Paid-provider features are locked until the email is verified, so don't spend provider calls on them.
+        checks.append(Check(id="account", label="Email verification", status="fail",
+                            detail=f"{user.email} isn't verified yet.",
+                            fix="Open the link we emailed you (or resend it from the banner), then re-check."))
+        return PreflightOut(checks=checks, ok=False)
 
     llm, stt = await asyncio.gather(_cached("llm", LLM_TTL_S, _llm_check), _cached("stt", STT_TTL_S, _stt_check))
     checks += [llm, stt]

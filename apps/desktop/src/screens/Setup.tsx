@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { type ReactNode, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import type {
   AnswerLength,
   AnswerStyle,
@@ -121,6 +121,7 @@ function levelFromRms(rms: number): number {
 
 export function SetupScreen({
   user,
+  notice,
   initialType,
   onSignOut,
   onStart,
@@ -130,6 +131,8 @@ export function SetupScreen({
   onOpenSettings,
 }: {
   user: User | null;
+  /** Account notice under the title bar (e.g. verify your email). */
+  notice?: ReactNode;
   initialType?: SessionType;
   onSignOut: () => void;
   onStart: (session: OrbitSession, launch: DesktopLaunch) => void;
@@ -383,6 +386,7 @@ export function SetupScreen({
           <LogOut className="h-4 w-4" />
         </button>
       </TitleBar>
+      {notice}
       <UpdateBanner />
       <form onSubmit={(e) => void start(e)} className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 text-sm">
