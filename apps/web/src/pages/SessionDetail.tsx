@@ -1,19 +1,19 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { SessionAnswer, SessionDetail, SessionSummary } from "@orbit/types";
-import { CodeBlock, cx, focusRing } from "@orbit/ui";
+import { CodeBlock, SessionReview, cx, focusRing } from "@orbit/ui";
 import { Button, Card, ErrorNote, Input, PageHeader, Spinner } from "../components/ui";
 import { api } from "../lib/api";
 import { SESSION_TYPE_LABEL, downloadText, errorText, formatClock, formatDate, formatDuration } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 
-type Tab = "summary" | "transcript" | "questions";
+type Tab = "review" | "summary" | "transcript" | "questions";
 
 export function SessionDetailPage() {
   const { sessionId = "" } = useParams();
   const navigate = useNavigate();
   const detail = useAsync(() => api.getSession(sessionId), [sessionId]);
-  const [tab, setTab] = useState<Tab>("summary");
+  const [tab, setTab] = useState<Tab>("review");
   const [actionError, setActionError] = useState<string | null>(null);
 
   if (detail.loading) return <Spinner />;
@@ -67,6 +67,7 @@ export function SessionDetailPage() {
       <div role="tablist" className="mb-6 flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
         {(
           [
+            ["review", "Review"],
             ["summary", "Summary"],
             ["transcript", `Transcript (${detail.data.turns.length})`],
             ["questions", `Questions & answers (${detail.data.questions.length})`],
@@ -89,6 +90,16 @@ export function SessionDetailPage() {
         ))}
       </div>
 
+      {tab === "review" && (
+        <SessionReview
+          review={detail.data.summary?.review}
+          ended={session.status === "ended"}
+          onGenerate={async () => {
+            await api.reviewSession(session.id);
+            detail.reload();
+          }}
+        />
+      )}
       {tab === "summary" && <SummaryView summary={detail.data.summary} />}
       {tab === "transcript" && <TranscriptTimeline detail={detail.data} />}
       {tab === "questions" && <QuestionsView detail={detail.data} />}

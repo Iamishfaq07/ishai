@@ -15,6 +15,7 @@ import type {
   RegisterRequest,
   ScreenshotAccepted,
   SessionDetail,
+  SessionSummary,
   UpdateDocumentRequest,
   Usage,
   User,
@@ -131,6 +132,9 @@ export function createApiClient(options: ApiClientOptions) {
     listSessions: () => json<OrbitSession[]>("/v1/sessions"),
     getSession: (id: string) => json<SessionDetail>(`/v1/sessions/${encodeURIComponent(id)}`),
     endSession: (id: string) => json<OrbitSession>(`/v1/sessions/${encodeURIComponent(id)}/end`, { method: "POST" }),
+    /** (Re)generate the report + review scorecard for an ended session. */
+    reviewSession: (id: string) =>
+      json<SessionSummary>(`/v1/sessions/${encodeURIComponent(id)}/review`, { method: "POST" }),
     deleteSession: (id: string) => json<void>(`/v1/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),
     exportSessionMarkdown: async (id: string): Promise<string> =>
       (await raw(`/v1/sessions/${encodeURIComponent(id)}/export.md`)).text(),

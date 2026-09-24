@@ -155,6 +155,26 @@ export interface SessionAnswer {
   total_ms: number | null;
 }
 
+/** One interviewer question, graded on what the candidate actually said after it. */
+export interface ReviewItem {
+  question: string;
+  /** The candidate's own words (from the transcript); "" when they didn't answer. */
+  you_said: string;
+  /** 1–5, or null when the question wasn't answered. */
+  score: number | null;
+  feedback: string;
+  /** A stronger way to say it (first person). */
+  better: string;
+}
+
+export interface SessionReview {
+  overall_score: number | null;
+  strengths: string[];
+  improvements: string[];
+  practice: string[];
+  items: ReviewItem[];
+}
+
 export interface SessionSummary {
   summary: string;
   topics: string[];
@@ -164,6 +184,8 @@ export interface SessionSummary {
   questions_asked: string[];
   question_types: Partial<Record<QuestionType, number>>;
   follow_up_count: number;
+  /** Post-session scorecard; absent on summaries made before reviews existed. */
+  review?: SessionReview | null;
 }
 
 export interface SessionDetail {

@@ -33,6 +33,22 @@ FOLLOWUP: Can you give a specific example?
 """
 
 
+def _mock_report(user: str) -> str:
+    """Canned report whose review scores every paired question (4 when answered) so tests exercise the
+    server-side validation of the model's scorecard."""
+    import json
+    import re
+
+    items = [{"q": int(n), "feedback": f"[mock] feedback {n}", "score": 4, "better": f"[mock] better {n}"}
+             for n in re.findall(r"^Q(\d+):", user, flags=re.MULTILINE)]
+    return json.dumps({
+        "summary": "[mock] Session summary.", "topics": [], "important_follow_ups": [],
+        "potential_weak_areas": [], "suggested_preparation": [],
+        "review": {"overall_score": 4, "strengths": ["[mock] clear structure"], "improvements": ["[mock] add metrics"],
+                   "practice": ["[mock] rehearse STAR stories"], "items": items},
+    })
+
+
 class MockLLMProvider(LLMProvider):
     name = "mock"
 
@@ -51,8 +67,7 @@ class MockLLMProvider(LLMProvider):
         if self._script:
             return self._script.pop(0)
         if request.request_type == "summary":
-            return ('{"summary": "[mock] Session summary.", "topics": [], "important_follow_ups": [], '
-                    '"potential_weak_areas": [], "suggested_preparation": []}')
+            return _mock_report(request.messages[-1].content if request.messages else "")
         if request.request_type == "classify":
             return '{"is_question": true, "confidence": 0.7}'
         user = request.messages[-1].content if request.messages else ""
