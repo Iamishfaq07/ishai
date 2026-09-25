@@ -13,9 +13,11 @@ import type {
   ThinkingLevel,
   User,
   Workspace,
+  PreflightCheck,
 } from "@orbit/types";
 import { AUDIO_CHANNEL } from "@orbit/types";
 import {
+  confirmDialog,
   ArrowLeft,
   FileText,
   HistoryIcon,
@@ -201,7 +203,11 @@ export function SetupScreen({
   const [mockMinutes, setMockMinutes] = useState(20);
   const isMock = type === "mock";
   const [workspaceId, setWorkspaceId] = useState<string | null>(() => localStorage.getItem(WORKSPACE_KEY));
-  const [preflightFailed, setPreflightFailed] = useState(false);
+  // Failing critical checks (server, AI, transcription, mic, minutes, verification): Start is disabled unless the user
+  // explicitly overrides — a broken setup must never slide into a live interview by default.
+  const [blockers, setBlockers] = useState<PreflightCheck[]>([]);
+  const [overrideBlockers, setOverrideBlockers] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const applyWorkspace = (ws: Workspace | null) => {
     setWorkspaceId(ws?.id ?? null);
@@ -342,6 +348,7 @@ export function SetupScreen({
 
   const start = async (e: FormEvent) => {
     e.preventDefault();
+    if (blockers.length > 0 && !overrideBlockers) return;
     setStarting(true);
     setError(null);
     try {
@@ -393,7 +400,7 @@ export function SetupScreen({
       </TitleBar>
       {notice}
       <UpdateBanner />
-      <form onSubmit={(e) => void start(e)} className="flex min-h-0 flex-1 flex-col">
+      <form ref={formRef} onSubmit={(e) => void start(e)} className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 text-sm">
           <p className="text-xs text-zinc-500">{user ? `Signed in as ${user.email}` : "Offline — some data may be unavailable."}</p>
 
@@ -734,14 +741,44 @@ export function SetupScreen({
         </div>
 
         <div className="space-y-2 border-t border-zinc-200 p-3 dark:border-zinc-800">
-          <PreflightPanel local={localState} onStatus={setPreflightFailed} />
+          <PreflightPanel
+            local={localState}
+            onStatus={(b) => {
+              setBlockers(b);
+              if (b.length === 0) setOverrideBlockers(false);
+            }}
+          />
           <button
             type="submit"
-            disabled={starting}
+            disabled={starting || (blockers.length > 0 && !overrideBlockers)}
             className={cx("w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50", focusRing)}
           >
-            {starting ? "Starting…" : preflightFailed ? "Start anyway" : "Start Session"}
+            {starting
+              ? "Starting…"
+              : blockers.length > 0 && !overrideBlockers
+                ? `Fix ${blockers.length} problem${blockers.length === 1 ? "" : "s"} to start`
+                : "Start Session"}
           </button>
+          {blockers.length > 0 && !overrideBlockers && !starting && (
+            <button
+              type="button"
+              onClick={() => {
+                void confirmDialog({
+                  title: "Start with problems?",
+                  body: `${blockers.map((b) => `${b.label}: ${b.detail}`).join(" ")} The session may not hear or answer you — only continue if you're sure the check is wrong.`,
+                  confirmLabel: "Start anyway",
+                  danger: true,
+                }).then((ok) => {
+                  if (!ok) return;
+                  setOverrideBlockers(true);
+                  setTimeout(() => formRef.current?.requestSubmit(), 0);
+                });
+              }}
+              className={cx("w-full text-center text-xs text-zinc-500 underline hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}
+            >
+              Start without these checks
+            </button>
+          )}
           <button
             type="button"
             onClick={() => void openUrl(`${WEB_URL}/sessions`)}

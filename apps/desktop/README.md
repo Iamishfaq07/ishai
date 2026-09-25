@@ -101,7 +101,14 @@ Setup shows a **Checklist** (preflight). Local checks cover the microphone, inte
 description and network. The server checks (`GET /v1/preflight`) cover the Orbit server, AI, transcription, vision,
 minutes left, screenshot credits and the app version.
 
-Problems come with a one-line fix. **Test audio** shows live meters for both channels. Windows microphone access
+Problems come with a one-line fix.
+
+- **Blockers disable Start ("Fix N problems to start"):** Orbit server, network, AI, transcription, microphone,
+  minutes left and email verification. These are the checks without which a live interview can't work.
+  **Start without these checks** remains as a confirmed escape hatch, in case a check itself is wrong.
+- **Warnings never block:** resume, JD, vision, screenshot credits, app version, interviewer audio switched off.
+- **Transcription** is checked twice: the Deepgram account, and then a real streaming handshake (no audio sent).
+  The result says "Streaming transcription verified", not just that the account answered. **Test audio** shows live meters for both channels. Windows microphone access
 must be on: Settings → Privacy & security → Microphone → "Let desktop apps access your microphone". Loopback capture
 needs no extra permission.
 

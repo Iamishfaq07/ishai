@@ -30,6 +30,7 @@ function localChecks(s: LocalAudioState): PreflightCheck[] {
           id: "mic",
           label: "Microphone",
           status: "fail",
+          severity: "blocker",
           detail: "No microphone found.",
           fix: "Plug one in, or allow microphone access in Windows Settings → Privacy & security → Microphone.",
         },
@@ -66,13 +67,20 @@ async function networkCheck(): Promise<PreflightCheck> {
              detail: `${ms} ms to the Orbit server${slow ? " (slow)" : ""}.`,
              fix: slow ? "Answers may arrive late. A wired connection or closing downloads helps." : null };
   } catch {
-    return { id: "network", label: "Network", status: "fail", detail: "Can't reach the Orbit server.",
+    return { id: "network", label: "Network", status: "fail", severity: "blocker", detail: "Can't reach the Orbit server.",
              fix: "Check your internet connection (the server may also be waking up — re-check in 30 s)." };
   }
 }
 
 /** Pre-session checklist: local audio + documents, network, and the server's provider/allowance checks. */
-export function PreflightPanel({ local, onStatus }: { local: LocalAudioState; onStatus?: (hasFailure: boolean) => void }) {
+/** Local + server checks. `onStatus` reports the failing blockers (critical checks) so Setup can gate Start. */
+export function PreflightPanel({
+  local,
+  onStatus,
+}: {
+  local: LocalAudioState;
+  onStatus?: (blockers: PreflightCheck[]) => void;
+}) {
   const [remote, setRemote] = useState<PreflightCheck[] | null>(null);
   const [checking, setChecking] = useState(false);
   const [open, setOpen] = useState(false);
@@ -101,7 +109,10 @@ export function PreflightPanel({ local, onStatus }: { local: LocalAudioState; on
   const checks = [...localChecks(local), ...(remote ?? [])];
   const problems = checks.filter((c) => c.status !== "ok");
   const failures = checks.filter((c) => c.status === "fail");
-  useEffect(() => onStatus?.(failures.length > 0), [failures.length, onStatus]);
+  const blockers = failures.filter((c) => c.severity === "blocker");
+  const blockerKey = blockers.map((c) => c.id).join(",");
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on which blockers fail, not the array identity
+  useEffect(() => onStatus?.(blockers), [blockerKey, onStatus]);
 
   const summary = remote === null
     ? "Checking…"

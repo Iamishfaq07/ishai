@@ -1,5 +1,21 @@
 # Implementation log
 
+## Preflight blockers vs warnings, honest Deepgram check (2026-09-25)
+
+- **Severity on every check (§15):**
+  - Blockers: server, network, AI, transcription, microphone, minutes, email verification.
+  - Warnings: resume, JD, vision, screenshots, app version, interviewer audio off.
+  - `GET /v1/preflight` returns `severity` per check, plus `blockers`; `ok` now means "no failing blocker".
+- **Setup gates Start on blockers:** "Fix N problems to start" instead of "Start anyway". A confirmed **Start
+  without these checks** stays as an escape hatch, and the dialog lists each failing check and its detail.
+  Warnings never block.
+- **Deepgram check (§16):** after the account call (`/v1/projects`), preflight opens a real streaming socket with
+  the live settings and closes it without sending audio. "Streaming transcription verified" is shown only when
+  that succeeds; otherwise "Deepgram account reachable, but live streaming failed (…)". Verified against real
+  Deepgram (1,094 ms), and a bad key fails with HTTP 401.
+- Tests: 6 new API tests. Real desktop test build: a blocked case (unverified email) had Start disabled and the
+  confirmation cancellable; a warnings-only case could start.
+
 ## Phase 2 — LLM failover and provider health (2026-09-25)
 
 - **Backup LLM (§12):** `OpenAICompatibleProvider` (OpenAI, Gemini, OpenRouter, Groq…) behind

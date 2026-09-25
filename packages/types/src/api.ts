@@ -156,6 +156,8 @@ export interface PreflightCheck {
   detail: string;
   fix?: string | null;
   latency_ms?: number | null;
+  /** "blocker": a failure here means a live interview can't work (Start is disabled). Warnings never block. */
+  severity?: "blocker" | "warning";
 }
 
 export interface PreflightReport {
