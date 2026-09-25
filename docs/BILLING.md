@@ -52,3 +52,16 @@ FREE_MAX_SESSION_MINUTES=60   PRO_MAX_SESSION_MINUTES=180   UNLIMITED_MAX_SESSIO
 Not live yet: plans exist, but nothing can be bought. Stripe Checkout, the webhook-driven subscription state and
 the customer portal come next. They will set `subscriptions.plan`, and the server derives everything above from
 that.
+
+## What it costs to run (admin → Settings → Costs)
+`GET /v1/admin/costs?days=30` (desktop Settings, admin only) reports:
+- **totals:** LLM (from token counts), speech-to-text (minutes × `ORBIT_STT_PRICE_PER_MINUTE`) and vision;
+- **live:** cost per live hour and per session;
+- **LLM efficiency:** the cache hit ratio and tokens per answer;
+- **breakdowns:** per model (including backup calls), per request type, per user and per plan.
+
+LLM calls on a model without a configured price are **counted and shown as unpriced, never as $0**.
+
+A real measurement on one session: an answer cost about $0.0002 in AI tokens (with an 89% DeepSeek cache hit).
+**Speech-to-text dominates**: two channels at the Nova-3 list price come to about $0.92 per live hour. Price plans
+from the live-hour figure, not from AI tokens.

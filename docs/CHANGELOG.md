@@ -1,5 +1,20 @@
 # Implementation log
 
+## Admin cost dashboard (2026-09-25)
+
+- **`GET /v1/admin/costs` (§40):**
+  - totals for LLM, speech-to-text and vision;
+  - **cost per live hour and per session**;
+  - cache hit ratio and tokens per answer;
+  - how many calls the backup served;
+  - per model, per request type, per user and per plan.
+- **Unpriced LLM calls are counted and flagged, never shown as $0.** Speech-to-text uses
+  `ORBIT_STT_PRICE_PER_MINUTE` (the Deepgram Nova-3 list price by default; empty = unknown, not zero).
+- **Desktop Settings → Costs** (admin only) shows the stats, the per-model table and the top users.
+- **Real measurement:** one real DeepSeek answer cost $0.0002 (2,162 tokens in, 292 out, 89% cache hit). Speech
+  to text is ~90% of the cost of a live hour.
+- Tests: 2 tests with exact numbers from seeded rows, admin-only access, unpriced ≠ $0, unknown STT price.
+
 ## Data controls: export, email change, transcript deletion, report retry (2026-09-25)
 
 - **Download my data (§42):** `GET /v1/auth/me/export` returns one JSON file with the profile, documents (full

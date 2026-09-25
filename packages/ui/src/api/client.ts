@@ -3,6 +3,7 @@ import type {
   AdminConfigUpdate,
   ApiErrorBody,
   AuthConfig,
+  CostReport,
   Entitlements,
   PlanInfo,
   AuthResponse,
@@ -220,6 +221,7 @@ export function createApiClient(options: ApiClientOptions) {
     // Admin / advanced settings
     adminStatus: () => json<{ is_admin: boolean }>("/v1/admin/status"),
     getLatency: (days = 7) => json<LatencyReport>(`/v1/admin/latency?days=${days}`),
+    getCosts: (days = 30) => json<CostReport>(`/v1/admin/costs?days=${days}`),
     getAdminConfig: () => json<AdminConfig>("/v1/admin/config"),
     updateAdminConfig: (req: AdminConfigUpdate) =>
       json<AdminConfig>("/v1/admin/config", { method: "PUT", body: body(req) }),

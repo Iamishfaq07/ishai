@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import AliasChoices, Field, SecretStr, model_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _DEV_SECRET = "dev-only-insecure-secret-change-me"  # noqa: S105 - rejected outside development
@@ -76,6 +76,9 @@ class Settings(BaseSettings):
     live_heartbeat_s: float = Field(15.0, validation_alias=AliasChoices("ORBIT_LIVE_HEARTBEAT_S"))
     # Extra/override LLM prices for internal cost estimates (see providers/llm/pricing.py).
     llm_pricing_json: str | None = Field(None, validation_alias=AliasChoices("ORBIT_LLM_PRICING_JSON"))
+    # Speech-to-text list price per audio minute for cost estimates (admin cost dashboard). Default: Deepgram Nova-3
+    # streaming pay-as-you-go at the time of writing; set your contracted rate. Unset (empty) = STT cost unknown.
+    stt_price_per_minute: float | None = Field(0.0077, validation_alias=AliasChoices("ORBIT_STT_PRICE_PER_MINUTE"))
     # Plan limits/features/prices overrides (see entitlements.py). Validated at startup.
     plans_json: str | None = Field(None, validation_alias=AliasChoices("ORBIT_PLANS_JSON"))
 
@@ -129,6 +132,11 @@ class Settings(BaseSettings):
     turnstile_secret_key: SecretStr | None = Field(
         None, validation_alias=AliasChoices("ORBIT_TURNSTILE_SECRET_KEY", "TURNSTILE_SECRET_KEY")
     )
+
+    @field_validator("stt_price_per_minute", mode="before")
+    @classmethod
+    def _blank_price_is_unknown(cls, v: object) -> object:
+        return None if isinstance(v, str) and not v.strip() else v
 
     @model_validator(mode="after")
     def _reject_insecure_production(self) -> "Settings":
