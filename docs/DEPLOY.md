@@ -66,10 +66,14 @@ measured from the interviewer's actual speech.
 
 ## 3. Web app — Cloudflare
 
-`apps/web/.env.production` bakes `VITE_API_URL`. Cloudflare Workers Builds deploys on every push to `main`.
-Manually: `pnpm --filter @orbit/web build`, then `wrangler deploy` from the repo root. That uploads `apps/web/dist`
-as static assets (SPA fallback) plus `apps/web/worker/index.js`, whose 10-minute cron pings the API so the free
-Render instance doesn't sleep.
+`apps/web/.env.production` bakes `VITE_API_URL` and `VITE_API_PROXY_PATH=/api`. Cloudflare Workers Builds deploys
+on every push to `main`. Manually: `pnpm --filter @orbit/web build`, then `wrangler deploy` from the repo root. That
+uploads `apps/web/dist` as static assets (SPA fallback) plus `apps/web/worker/index.js`, which does two things:
+
+- **Proxies `/api/*` to the API** (`API_URL` in `wrangler.jsonc`), so the browser sees the session cookie as
+  first-party. Called cross-site, Safari on iOS blocks it and sign-in loops back to the login screen. The live
+  WebSocket still connects to `VITE_API_URL` directly; it authenticates by ticket, not cookie.
+- Runs a 10-minute cron that pings the API so the free Render instance doesn't sleep.
 
 ## 4. Desktop app
 

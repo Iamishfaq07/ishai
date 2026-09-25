@@ -1,7 +1,8 @@
 // Cloudflare deploy config for the Orbit web app (a static SPA served from Cloudflare's edge).
 // The build command (`pnpm --filter @orbit/web build`) emits apps/web/dist; `wrangler deploy`
 // uploads that directory as static assets. `single-page-application` routes unknown paths to
-// index.html so client-side routing (React Router) works on refresh/deep links.
+// index.html so client-side routing (React Router) works on refresh/deep links. /api/* skips the
+// assets and goes to the worker, which proxies it to API_URL so the session cookie is first-party.
 {
   "name": "orbit",
   "compatibility_date": "2026-09-01",
@@ -9,7 +10,8 @@
   "assets": {
     "directory": "apps/web/dist",
     "binding": "ASSETS",
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api", "/api/*"]
   },
   // Keep the Render free-tier API from sleeping (see apps/web/worker/index.js). One always-on free
   // service uses ~744 of Render's 750 free instance-hours a month.
