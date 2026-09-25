@@ -144,6 +144,8 @@ pub async fn capture_region(
 #[tauri::command]
 pub async fn open_region_selector(app: AppHandle) -> Result<(), String> {
     if let Some(existing) = app.get_webview_window(OVERLAY_LABEL) {
+        let _ = existing.set_content_protected(true);
+        let _ = existing.set_skip_taskbar(true);
         existing.set_focus().map_err(|e| e.to_string())?;
         return Ok(());
     }
@@ -165,6 +167,7 @@ pub async fn open_region_selector(app: AppHandle) -> Result<(), String> {
         .shadow(false)
         .always_on_top(true)
         .skip_taskbar(true)
+        .content_protected(true)
         .resizable(false)
         .position(pos.x, pos.y)
         .inner_size(size.width, size.height)
