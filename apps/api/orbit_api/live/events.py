@@ -88,6 +88,20 @@ class FactSource(BaseModel):
     verified: bool  # a candidate fact from the user's own documents (resume), not a JD requirement or a note
 
 
+class DesignSection(BaseModel):
+    title: str  # Requirements | Assumptions | Scale | APIs | Data model | Architecture | Storage | Caching | …
+    text: str
+
+
+class DebugInfo(BaseModel):
+    """Debug mode (a bug, error or failing test): the corrected code itself is in `code`."""
+
+    root_cause: str | None = None
+    fix: str | None = None  # the minimal fix, in one or two lines
+    why: str | None = None  # why it failed
+    diff: str | None = None  # unified diff of the fix
+
+
 class LiveAnswer(BaseModel):
     question: str = ""
     type: QuestionType = QuestionType.technical
@@ -112,6 +126,10 @@ class LiveAnswer(BaseModel):
     problem: str | None = None
     edge_cases: list[str] = Field(default_factory=list)
     tests: list[str] = Field(default_factory=list)
+    # System design mode: the structured sections behind the spoken talk track (direct_answer).
+    design: list[DesignSection] = Field(default_factory=list)
+    # Debug mode: root cause / minimal fix / why / diff; the talk track explains it aloud.
+    debug: DebugInfo | None = None
 
 
 class Envelope(BaseModel):

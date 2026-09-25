@@ -98,6 +98,9 @@ class PromptInputs:
     answer_language: str
     instruction: str | None = None  # chat-mode instruction ("make this shorter")
     coding_language: str | None = None  # preferred language for code, if the user picked one
+    # "design": structured system-design sections; "debug": root cause / fix / diff; "debug_if_error": a coding
+    # screenshot — use the debug format only if the image shows an error or failing test.
+    mode: str = "normal"
 
 
 @dataclass
@@ -108,6 +111,22 @@ class BuiltPrompt:
     # The facts as numbered in the prompt ("F1" → hit), so the model's SOURCES line can be resolved and checked.
     facts: dict[str, Hit] = field(default_factory=dict)
 
+
+# Structured answer modes (launch brief §29–§30). The spoken talk track (ANSWER) always comes first.
+_MODE_RULES = {
+    "design": ("SYSTEM DESIGN MODE: ANSWER is the spoken talk track (how you'd walk the interviewer through it). "
+               "Then write DESIGN: with one line per section, in this order, each 'Title: content' in a few words: "
+               "Requirements, Assumptions, Scale, APIs, Data model, Architecture, Storage, Caching, Queues, "
+               "Reliability, Security, Trade-offs. Skip a section only if it truly doesn't apply."),
+    "debug": ("DEBUG MODE: this is a bug, error or failing test. ANSWER is how to explain it aloud (what's wrong, "
+              "why, and the fix). Then ROOTCAUSE: (one line), FIX: (the minimal change, one line), WHY: (why it "
+              "failed, one line), DIFF: followed by a ```diff fenced unified diff of the minimal fix, then CODE: "
+              "with the full corrected code."),
+    "debug_if_error": ("If the image shows an error, a stack trace, a failing test or wrong output, use DEBUG "
+                       "MODE: after ANSWER write ROOTCAUSE:, FIX:, WHY: (one line each), DIFF: with a ```diff "
+                       "fenced minimal fix, then CODE: with the corrected code. Otherwise answer it as a normal "
+                       "coding question."),
+}
 
 # Question types that ask for the user's own story/position, where invented specifics are most tempting.
 _PERSONAL_TYPES = {
@@ -185,6 +204,7 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
             (f"Write any code in {_LANGUAGE_NAMES.get(inputs.coding_language, inputs.coding_language)} unless the "
              "question names a different language.") if inputs.coding_language else "",
             _GROUNDING_RULE if inputs.qtype in _PERSONAL_TYPES or inputs.is_follow_up else "",
+            _MODE_RULES.get(inputs.mode, ""),
             f"Question type: {inputs.qtype.value}" + (" (follow-up to the previous question)" if inputs.is_follow_up
                                                      else ""),
         ]

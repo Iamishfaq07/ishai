@@ -110,6 +110,10 @@ export interface LiveAnswer {
   problem?: string | null;
   edge_cases?: string[];
   tests?: string[];
+  /** System design mode: structured sections behind the spoken talk track. */
+  design?: Array<{ title: string; text: string }>;
+  /** Debug mode: root cause, minimal fix, why it failed, and a unified diff (the corrected code is `code`). */
+  debug?: { root_cause: string | null; fix: string | null; why: string | null; diff: string | null } | null;
 }
 
 export interface Envelope<TType extends string = string, TData = unknown> {

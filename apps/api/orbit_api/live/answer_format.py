@@ -22,9 +22,16 @@ format still produces something readable.
 
 import re
 
-from orbit_api.live.events import CodeBlock, FactSource, LiveAnswer, QuestionType
+from orbit_api.live.events import CodeBlock, DebugInfo, DesignSection, FactSource, LiveAnswer, QuestionType
 
-_TAG = re.compile(r"^(GROUNDED|PROBLEM|ANSWER|EXAMPLE|CODE|TIME|SPACE|EDGE|TESTS|FOLLOWUP|SOURCES|POINTS)\s*:\s*(.*)$",
+# System design sections, in the order the prompt asks for them (keys are matched case-insensitively).
+DESIGN_TITLES = ("Requirements", "Assumptions", "Scale", "APIs", "Data model", "Architecture", "Storage", "Caching",
+                 "Queues", "Reliability", "Security", "Trade-offs")
+_DESIGN_KEYS = {t.lower().replace("-", "").replace(" ", ""): t for t in DESIGN_TITLES}
+_DESIGN_LINE = re.compile(r"^\s*(?:[-*•]\s*)?([A-Za-z][A-Za-z -]{1,20}?)\s*:\s*(.+)$")
+
+_TAG = re.compile(r"^(GROUNDED|PROBLEM|ANSWER|EXAMPLE|CODE|TIME|SPACE|EDGE|TESTS|FOLLOWUP|SOURCES|POINTS|DESIGN|"
+                  r"ROOTCAUSE|FIX|WHY|DIFF)\s*:\s*(.*)$",
                   re.IGNORECASE)
 MAX_LIST_ITEMS = 8
 MAX_KEY_POINTS = 6
@@ -62,11 +69,24 @@ class AnswerStreamParser:
         in_code = False
         code_lang = ""
         code_lines: list[str] = []
+        in_diff = False
+        diff_lines: list[str] = []
         stray: list[str] = []
         para_break = False  # a blank line inside the spoken answer starts a new paragraph
 
         for line in self._buf.split("\n"):
             tag = _TAG.match(line.strip())
+            if in_diff:
+                if tag or _FENCE.match(line):
+                    in_diff = False
+                    if not tag:
+                        continue
+                else:
+                    diff_lines.append(line)
+                    continue
+            if section == "DIFF" and _FENCE.match(line) and not in_code:
+                in_diff = True
+                continue
             if in_code:
                 # A real tag line (TIME/SPACE/FOLLOWUP/…) ends the code block even if the model's closing
                 # fence is missing or mismatched — otherwise trailing sections would be swallowed as code.
@@ -125,10 +145,27 @@ class AnswerStreamParser:
                     else:
                         ans.tests = items
                     section = None
+                elif section == "DESIGN":
+                    if value:
+                        self._design_line(ans, value)
+                elif section in ("ROOTCAUSE", "FIX", "WHY"):
+                    dbg = ans.debug or DebugInfo()
+                    setattr(dbg, {"ROOTCAUSE": "root_cause", "FIX": "fix", "WHY": "why"}[section], value[:600] or None)
+                    ans.debug = dbg
+                elif section == "DIFF":
+                    ans.debug = ans.debug or DebugInfo()
                 elif section == "POINTS":
                     ans.key_points = [p.strip(" .•-")[:MAX_KEY_POINT_CHARS]
                                       for p in value.split("|") if p.strip(" .•-")][:MAX_KEY_POINTS]
                     section = None  # one line; nothing continues it
+                continue
+
+            if section == "DESIGN" and line.strip():
+                self._design_line(ans, line.strip())
+                continue
+            if section in ("ROOTCAUSE", "FIX", "WHY") and line.strip() and ans.debug is not None:
+                key = {"ROOTCAUSE": "root_cause", "FIX": "fix", "WHY": "why"}[section]
+                setattr(ans.debug, key, f"{getattr(ans.debug, key) or ''} {line.strip()}".strip()[:600])
                 continue
 
             bullet = _BULLET.match(line)
@@ -164,7 +201,21 @@ class AnswerStreamParser:
             ans.grounding = "example"
         if code_lines or code_lang:
             ans.code = CodeBlock(language=code_lang or "text", content="\n".join(code_lines).rstrip())
+        if diff_lines:
+            ans.debug = ans.debug or DebugInfo()
+            ans.debug.diff = "\n".join(diff_lines).rstrip()[:6000]
         return ans
+
+    @staticmethod
+    def _design_line(ans: LiveAnswer, line: str) -> None:
+        """"Title: text" starts a known design section; anything else continues the previous one."""
+        m = _DESIGN_LINE.match(line)
+        title = _DESIGN_KEYS.get(m.group(1).lower().replace("-", "").replace(" ", "")) if m else None
+        if m and title:
+            ans.design.append(DesignSection(title=title, text=m.group(2).strip()[:800]))
+        elif ans.design:
+            last = ans.design[-1]
+            last.text = f"{last.text} {line.lstrip('-*• ').strip()}".strip()[:800]
 
 
 def finalize_grounding(answer: LiveAnswer) -> LiveAnswer:
