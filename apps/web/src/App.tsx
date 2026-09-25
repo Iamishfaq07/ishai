@@ -51,6 +51,7 @@ const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/forgot-password/, "Reset password"],
   [/^\/reset-password/, "Reset password"],
   [/^\/verify-email/, "Verify email"],
+  [/^\/confirm-email-change/, "Confirm email"],
 ];
 
 function useRouteTitle(): void {
@@ -67,7 +68,7 @@ export function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
+      <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
       <Route
         path="/live/:sessionId"
         element={

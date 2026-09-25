@@ -24,6 +24,26 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/**
+ * Re-reads the session right after sign-in. If the browser refused to store the session cookie (blocked
+ * third-party/site cookies), the next request would 401 and silently bounce back to the login page; say so instead.
+ */
+async function confirmSession(): Promise<User> {
+  try {
+    return await api.me();
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) {
+      throw new ApiError(
+        401,
+        "You were signed in, but your browser didn't keep the session. Allow cookies for this site " +
+          "(or turn off \"Prevent cross-site tracking\" / private browsing) and try again.",
+        "session_cookie_blocked",
+      );
+    }
+    throw err;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,13 +62,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (req: LoginRequest) => {
-    const res = await api.login(req);
-    setUser(res.user);
+    await api.login(req);
+    setUser(await confirmSession());
   }, []);
 
   const register = useCallback(async (req: RegisterRequest) => {
-    const res = await api.register(req);
-    setUser(res.user);
+    await api.register(req);
+    setUser(await confirmSession());
   }, []);
 
   const logout = useCallback(async () => {

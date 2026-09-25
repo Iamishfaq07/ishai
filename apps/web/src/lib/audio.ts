@@ -17,9 +17,18 @@ export interface AudioCapture {
  */
 export async function captureStream(stream: MediaStream, onFrame: (frame: PcmFrame) => void): Promise<AudioCapture> {
   const ctx = new AudioContext();
-  await ctx.audioWorklet.addModule("/pcm16-worklet.js");
-  const source = ctx.createMediaStreamSource(stream);
-  const node = new AudioWorkletNode(ctx, "pcm16-processor");
+  let source: MediaStreamAudioSourceNode;
+  let node: AudioWorkletNode;
+  try {
+    await ctx.audioWorklet.addModule("/pcm16-worklet.js");
+    source = ctx.createMediaStreamSource(stream);
+    node = new AudioWorkletNode(ctx, "pcm16-processor");
+  } catch (err) {
+    // Don't leave the mic (and its recording indicator) running when setup fails half way.
+    stream.getTracks().forEach((t) => t.stop());
+    void ctx.close().catch(() => {});
+    throw err;
+  }
   node.port.onmessage = (ev: MessageEvent<{ pcm: ArrayBuffer; rms: number }>) => {
     onFrame({ pcm: new Int16Array(ev.data.pcm), rms: ev.data.rms });
   };
@@ -30,6 +39,19 @@ export async function captureStream(stream: MediaStream, onFrame: (frame: PcmFra
   mute.gain.value = 0;
   node.connect(mute).connect(ctx.destination);
 
+  // Mobile browsers (iOS Safari especially) start an AudioContext created outside a tap "suspended", and it
+  // produces no frames until resumed from a user gesture: try now, then again on the next tap/keypress.
+  const resume = () => {
+    if (ctx.state === "suspended") void ctx.resume().catch(() => {});
+  };
+  const unlockEvents = ["pointerdown", "keydown", "touchend"] as const;
+  const unlock = () => {
+    resume();
+    if (ctx.state !== "suspended") unlockEvents.forEach((e) => document.removeEventListener(e, unlock));
+  };
+  resume();
+  unlockEvents.forEach((e) => document.addEventListener(e, unlock));
+
   let stopped = false;
   return {
     stream,
@@ -37,6 +59,7 @@ export async function captureStream(stream: MediaStream, onFrame: (frame: PcmFra
     stop: () => {
       if (stopped) return;
       stopped = true;
+      unlockEvents.forEach((e) => document.removeEventListener(e, unlock));
       node.port.onmessage = null;
       source.disconnect();
       node.disconnect();
