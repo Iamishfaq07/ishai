@@ -114,6 +114,60 @@ ever allows it.
 Sources: [Artifact Signing FAQ](https://learn.microsoft.com/en-us/azure/artifact-signing/faq),
 [Code signing options for Windows apps](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options).
 
+## Free: the Microsoft Store (no "unknown publisher")
+
+**The Microsoft Store signs the package itself**, so a Store install shows no SmartScreen warning and needs no
+certificate. Individual developer accounts are free. The direct download (NSIS) keeps working alongside it and is
+still unsigned until there's a certificate.
+
+**How the Store build differs:**
+- The exe is the same one. It's wrapped in an MSIX (`apps/desktop/src-tauri/windows/msix/AppxManifest.xml`) as a
+  full-trust desktop app with the `microphone` capability. Audio capture, screenshots and the credential store
+  work as in the NSIS build.
+- **The Store delivers updates.** At runtime the exe detects its package identity (`updater::is_packaged`), then
+  reports "no update" and refuses to self-install, as Store policy requires.
+- Sign-in is shared with a direct install on the same PC, because both use the same Windows credential store.
+  WebView settings (theme, preferences) are separate, since packaged apps get their own app-data folder.
+- Minimum Windows version is 10 2004 (19041), which per-app audio capture needs.
+
+**One-time setup (you):**
+1. Register a free individual account at <https://storedeveloper.microsoft.com> (Microsoft account + ID check).
+2. In Partner Center: **Apps and games → New product → MSIX or PWA app**, and reserve the name. "Orbit" is
+   probably taken; try something like "Orbit Interview Copilot".
+3. Open **Product management → Product identity** and copy `Package/Identity/Name`, `Package/Identity/Publisher`
+   and `Package/Properties/PublisherDisplayName` into
+   `apps/desktop/src-tauri/windows/msix/store-identity.json`. Set `displayName` to the reserved name. None of
+   these are secrets.
+
+**Each release:**
+1. Run `scripts/package-msix.ps1 -Version X.Y.Z`. It does a clean build with the same sign-in storage guard as
+   release-desktop.ps1 and writes `target/msix/Orbit_X.Y.Z_x64.msix`.
+2. In Partner Center, open a new submission → **Packages**, and upload the `.msix` **unsigned**.
+3. For the first submission you also need:
+   - the listing (description, screenshots);
+   - the age rating;
+   - a **privacy policy URL**, required because Orbit uses the microphone and the internet. Use
+     <https://orbit.ishfaq.workers.dev/privacy.html> (`apps/web/public/privacy.html`; keep it in step with PRIVACY.md);
+   - a justification for the restricted capability `runFullTrust`, e.g. "desktop app: captures meeting audio
+     with WASAPI and stores sign-in in Windows Credential Manager".
+4. Publish to a **private audience** first, install it from the Store, and check sign-in, capture and a live
+   session. Then make it public.
+
+**Testing a package on this PC before uploading:**
+- Windows refuses unsigned packages that contain a desktop exe (`0x80073D2B`: "an unsigned package cannot include
+  Executable activations").
+- So local testing needs one admin step, either:
+  - turn on **Developer Mode** (Settings → System → For developers), then
+    `Add-AppxPackage -Register apps\desktop\src-tauri\target\msix\layout\AppxManifest.xml`; or
+  - sign a `-Test` package with a self-signed certificate trusted in `LocalMachine\TrustedPeople`.
+- `scripts/package-msix.ps1 -Version X.Y.Z -Test` packages the current `target/release` exe under a test
+  identity. Build that exe with `ORBIT_KEYRING_SERVICE=ai.orbit.desktop.test`, so a test never touches your
+  real sign-in.
+
+**Store policy caveat:** Microsoft reviews every submission. Orbit's own rules help here: it's a visible
+assistant, with no stealth or proctoring evasion. Even so, a reviewer may ask how it's meant to be used, so say it
+plainly in the description: practice interviews, meeting notes and live suggestions the user reads.
+
 ## Releasing from a workstation
 
 Use `scripts/release-desktop.ps1 -Version X.Y.Z [-Publish -NotesFile notes.md]`. It clears `ORBIT_KEYRING_SERVICE`

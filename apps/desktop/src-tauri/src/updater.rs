@@ -2,6 +2,9 @@
 //! so release assets aren't publicly downloadable). Every installer is verified against the minisign
 //! public key compiled in from tauri.conf.json before it runs, so a compromised server can't push code.
 //!
+//! Microsoft Store (MSIX) installs never self-update: the Store delivers their updates (Store policy 10.2.3), so
+//! a packaged process reports "no update" and refuses to install one.
+//!
 //! Transport policy: https everywhere, except plain http to localhost/127.0.0.1 for local development.
 //! (The plugin-level `dangerousInsecureTransportProtocol` flag is on only so this check can decide.)
 
@@ -55,12 +58,36 @@ pub fn endpoint_for(
     .map_err(|e| format!("Invalid update URL: {e}"))
 }
 
+/// Running from an MSIX package (the Microsoft Store build)? Asked once; package identity can't change at runtime.
+pub fn is_packaged() -> bool {
+    #[cfg(windows)]
+    {
+        use std::sync::OnceLock;
+        use windows::Win32::Foundation::APPMODEL_ERROR_NO_PACKAGE;
+        use windows::Win32::Storage::Packaging::Appx::GetCurrentPackageFullName;
+        static PACKAGED: OnceLock<bool> = OnceLock::new();
+        *PACKAGED.get_or_init(|| {
+            let mut len = 0u32;
+            // SAFETY: a length query with no buffer; the API only writes `len`.
+            let rc = unsafe { GetCurrentPackageFullName(&mut len, None) };
+            rc != APPMODEL_ERROR_NO_PACKAGE
+        })
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
 #[tauri::command]
 pub async fn check_update(
     app: AppHandle,
     pending: State<'_, PendingUpdate>,
     api_url: String,
 ) -> Result<Option<UpdateInfo>, String> {
+    if is_packaged() {
+        return Ok(None); // the Microsoft Store updates this install
+    }
     let current = app.package_info().version.to_string();
     let endpoint = endpoint_for(&api_url, "windows", std::env::consts::ARCH, &current)?;
     let updater = app
@@ -90,6 +117,9 @@ pub async fn install_update(
     capture: State<'_, CaptureState>,
     on_event: Channel<UpdateProgress>,
 ) -> Result<(), String> {
+    if is_packaged() {
+        return Err("This copy of Orbit is updated by the Microsoft Store.".to_string());
+    }
     // Never restart the app under someone mid-interview.
     if capture.is_active() {
         return Err("Finish or end your live session before updating.".to_string());
@@ -119,7 +149,12 @@ pub async fn install_update(
 
 #[cfg(test)]
 mod tests {
-    use super::endpoint_for;
+    use super::{endpoint_for, is_packaged};
+
+    #[test]
+    fn an_unpackaged_process_is_not_the_store_build() {
+        assert!(!is_packaged()); // cargo test runs without package identity
+    }
 
     #[test]
     fn https_endpoint_is_built() {
