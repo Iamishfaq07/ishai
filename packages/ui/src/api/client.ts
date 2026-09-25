@@ -180,6 +180,9 @@ export function createApiClient(options: ApiClientOptions) {
     deleteSession: (id: string) => json<void>(`/v1/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),
     deleteTranscript: (id: string) =>
       json<void>(`/v1/sessions/${encodeURIComponent(id)}/transcript`, { method: "DELETE" }),
+    /** Re-drill: a new mock session asking this session's weak questions again (from its review). */
+    drillSession: (id: string) =>
+      json<OrbitSession>(`/v1/sessions/${encodeURIComponent(id)}/drill`, { method: "POST" }),
     retryReport: (id: string) =>
       json<OrbitSession>(`/v1/sessions/${encodeURIComponent(id)}/report/retry`, { method: "POST" }),
     exportSessionMarkdown: async (id: string): Promise<string> =>

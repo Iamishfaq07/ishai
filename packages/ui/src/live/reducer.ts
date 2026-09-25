@@ -15,6 +15,7 @@ import {
   type ReasoningLevel,
   type ServerEvent,
   type Speaker,
+  type MockRoundSummary,
 } from "@orbit/types";
 import type { CloseInfo, ConnectionStatus } from "./client";
 
@@ -87,8 +88,16 @@ export interface LiveViewState {
   /** Server-reported live-minute status: set when few minutes remain or the limit ended the session. */
   usage: { minutesRemaining: number; limitReached: boolean; reason: "monthly" | "session" } | null;
   /** Mock interview: the AI interviewer's current question, and whether the interview is over. */
-  mock: { questionId: string; text: string; isFollowUp: boolean; index: number; total: number } | null;
+  mock: {
+    questionId: string;
+    text: string;
+    isFollowUp: boolean;
+    index: number;
+    total: number;
+    drillKind: "retry" | "follow_up" | "concise" | null;
+  } | null;
   mockCompleted: boolean;
+  mockSummary: MockRoundSummary | null;
 }
 
 export type LocalAction =
@@ -129,6 +138,7 @@ export function initialLiveState(settings: Partial<LiveSettings> = {}): LiveView
     usage: null,
     mock: null,
     mockCompleted: false,
+    mockSummary: null,
   };
 }
 
@@ -261,10 +271,11 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
       return {
         ...s,
         mock: { questionId: action.data.question_id, text: action.data.text, isFollowUp: action.data.is_follow_up,
+          drillKind: action.data.drill_kind ?? null,
                 index: action.data.index, total: action.data.total },
       };
     case "mock.completed":
-      return { ...s, mockCompleted: true };
+      return { ...s, mockCompleted: true, mockSummary: action.data };
 
     case "usage.status":
       return {

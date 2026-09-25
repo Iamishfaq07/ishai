@@ -224,9 +224,17 @@ export interface ServerEventMap {
   "answer.failed": { answer_id: string; error: ProtocolError };
   "provider.status": ProviderStatus;
   /** Mock interview: the AI interviewer's next question (the client speaks it). */
-  "mock.question": { question_id: string; text: string; is_follow_up: boolean; index: number; total: number };
+  "mock.question": {
+    question_id: string;
+    text: string;
+    is_follow_up: boolean;
+    index: number;
+    total: number;
+    /** Re-drill sessions only: a weak question again, its live follow-up, or the short version. */
+    drill_kind?: "retry" | "follow_up" | "concise";
+  };
   /** Mock interview finished (planned questions or time used up); session.ended follows. */
-  "mock.completed": { questions: number };
+  "mock.completed": MockRoundSummary;
   /** Live-minute quota (server-enforced): a warning when few minutes remain; at the limit the session ends. */
   /** `reason`: which limit — this month's allowance ("monthly") or this session's maximum length ("session"). */
   "usage.status": { minutes_remaining: number; limit_reached: boolean; reason?: "monthly" | "session" };
@@ -298,4 +306,15 @@ export function isServerEvent(value: unknown): value is ServerEvent {
     typeof v.data === "object" &&
     v.data !== null
   );
+}
+
+/** End of a mock round: counts for the summary screen (the graded scorecard comes from the session review). */
+export interface MockRoundSummary {
+  questions: number;
+  topics?: number;
+  follow_ups?: number;
+  answered?: number;
+  unanswered?: number;
+  average_answer_words?: number;
+  drill?: boolean;
 }

@@ -37,7 +37,7 @@ from orbit_api.live.events import (
     LiveSettings,
     SessionType,
 )
-from orbit_api.live.mock_interviewer import MockConfig
+from orbit_api.live.mock_interviewer import MockConfig, drill_plan
 from orbit_api.models import (
     Answer,
     AuditLog,
@@ -328,6 +328,34 @@ async def review_session(session_id: str, user: Annotated[User, Depends(require_
     if not report.get("review"):
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Couldn't generate a review for this session.")
     return report
+
+
+@router.post("/sessions/{session_id}/drill", response_model=SessionOut, status_code=201,
+             dependencies=[Depends(session_limit), Depends(session_user_limit)])
+async def drill_session(session_id: str, user: Annotated[User, Depends(require_verified_user)],
+                        db: Annotated[AsyncSession, Depends(get_db)]) -> SessionOut:
+    """Re-drill (spec §33): a new mock session that asks this session's weak questions again (from its review),
+    with the same documents, role and interviewer settings."""
+    row = await _owned(db, session_id, user)
+    summary = await db.scalar(select(SessionSummary).where(SessionSummary.session_id == row.id))
+    review = (summary.content or {}).get("review") if summary else None
+    items = review.get("items") if isinstance(review, dict) else None
+    if not isinstance(items, list) or not items:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={
+            "code": "no_review", "message": "Generate the review first; the drill is built from it."})
+    plan = drill_plan(items)
+    if not plan:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={
+            "code": "nothing_to_drill", "message": "Nothing to drill: every question scored 4 or higher."})
+    base = MockConfig.model_validate(row.mock_config) if row.mock_config else MockConfig()
+    mock = base.model_copy(update={"drill": plan, "source_session_id": row.id,
+                                   "duration_minutes": min(60, max(5, 4 * len(plan)))})
+    doc_ids = list((await db.scalars(select(SessionDocument.document_id)
+                                     .where(SessionDocument.session_id == row.id))).all())
+    title = row.title.removeprefix("Drill: ")
+    body = SessionIn(title=f"Drill: {title}"[:300], type="mock", role=row.role, language=row.language,
+                     answer_language=row.answer_language, document_ids=doc_ids, mock=mock)
+    return await create_session(body, user, db)
 
 
 @router.delete("/sessions/{session_id}", status_code=204)

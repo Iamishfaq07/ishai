@@ -9,13 +9,20 @@ export interface SessionReviewProps {
   ended: boolean;
   /** Generates (or regenerates) the review, then the caller reloads the session. */
   onGenerate: () => Promise<void>;
+  /** Re-drill: start a practice round on the weak questions (the caller creates the session and opens it). */
+  onDrill?: () => Promise<void>;
+}
+
+/** Scores of 3/5 or lower, or unanswered, are what a drill practises (matches the server's drill_plan). */
+export function weakQuestions(review: Review): number {
+  return review.items.filter((i) => !i.you_said.trim() || (i.score !== null && i.score <= 3)).length;
 }
 
 const SCORE_WORD: Record<number, string> = { 1: "Needs work", 2: "Developing", 3: "Solid start", 4: "Strong", 5: "Excellent" };
 
 /** Post-call scorecard: overall score, strengths/improvements/practice, and each question graded on what
  * the candidate actually said. Shared by the web session page and the desktop History screen. */
-export function SessionReview({ review, ended, onGenerate }: SessionReviewProps) {
+export function SessionReview({ review, ended, onGenerate, onDrill }: SessionReviewProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const generate = async () => {
@@ -54,6 +61,18 @@ export function SessionReview({ review, ended, onGenerate }: SessionReviewProps)
   }
 
   const answered = review.items.filter((i) => i.score !== null).length;
+  const weak = weakQuestions(review);
+  const drill = async () => {
+    if (!onDrill) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await onDrill();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't start the drill.");
+      setBusy(false);
+    }
+  };
   return (
     <div className="space-y-4">
       <Card className="animate-fade-up">
@@ -67,8 +86,14 @@ export function SessionReview({ review, ended, onGenerate }: SessionReviewProps)
               {answered} of {review.items.length} question{review.items.length === 1 ? "" : "s"} answered and scored
             </p>
           </div>
+          {onDrill && weak > 0 && (
+            <Button size="sm" onClick={() => void drill()} disabled={busy}
+                    title="A short mock round: your weakest questions again, with follow-ups, then a 30-second version">
+              Drill {weak} weak question{weak === 1 ? "" : "s"}
+            </Button>
+          )}
           <Button variant="secondary" size="sm" onClick={() => void generate()} disabled={busy}>
-            {busy ? "Re-reviewing…" : "Regenerate"}
+            {busy ? "Working…" : "Regenerate"}
           </Button>
         </div>
         {error && (

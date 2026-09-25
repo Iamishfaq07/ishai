@@ -6,6 +6,7 @@ import { Button, Card, ErrorNote, Input, PageHeader, Spinner } from "../componen
 import { api } from "../lib/api";
 import { SESSION_TYPE_LABEL, downloadText, errorText, formatClock, formatDate, formatDuration } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
+import type { LiveLaunchState } from "./SessionSetup";
 
 type Tab = "review" | "summary" | "transcript" | "questions";
 
@@ -133,6 +134,11 @@ export function SessionDetailPage() {
           onGenerate={async () => {
             await api.reviewSession(session.id);
             detail.reload();
+          }}
+          onDrill={async () => {
+            const drill = await api.drillSession(session.id);
+            const launch: LiveLaunchState = { systemAudio: false };
+            navigate(`/live/${drill.id}`, { state: launch });
           }}
         />
       )}

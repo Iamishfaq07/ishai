@@ -18,10 +18,19 @@ export function MockPanel({ live, actions, voice, ended }: {
     "dark:border-zinc-800 dark:hover:bg-zinc-900", focusRing);
 
   if (live.mockCompleted || ended) {
+    const s = live.mockSummary;
     return (
       <div className="flex flex-1 animate-fade-in flex-col items-center justify-center gap-2 px-6 text-center">
-        <p className="text-lg font-semibold">That's the end of the interview.</p>
-        <p className="text-sm text-zinc-500">Your review — each answer graded, with a stronger way to say it — is being prepared in History.</p>
+        <p className="text-lg font-semibold">{s?.drill ? "That's the end of the drill." : "That's the end of the interview."}</p>
+        {s && s.answered !== undefined && (
+          <p className="text-sm text-zinc-700 dark:text-zinc-300" aria-label="Round summary">
+            {s.answered} of {s.questions} answered
+            {s.follow_ups ? ` · ${s.follow_ups} follow-up${s.follow_ups === 1 ? "" : "s"}` : ""}
+            {s.average_answer_words ? ` · about ${s.average_answer_words} words per answer` : ""}
+            {s.unanswered ? ` · ${s.unanswered} skipped` : ""}
+          </p>
+        )}
+        <p className="text-sm text-zinc-500">End the session for your review: each answer graded, with a stronger way to say it, in History.</p>
       </div>
     );
   }
@@ -39,6 +48,14 @@ export function MockPanel({ live, actions, voice, ended }: {
       <div className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
         <span className="uppercase tracking-[0.12em]">Question {q.index} of {q.total}</span>
         {q.isFollowUp && <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-indigo-700 dark:text-indigo-300">Follow-up</span>}
+        {q.drillKind === "retry" && (
+          <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-amber-800 dark:text-amber-300" title="A question you found hard last time">
+            Drill: try again
+          </span>
+        )}
+        {q.drillKind === "concise" && (
+          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-800 dark:text-emerald-300">Short version · ~30 s</span>
+        )}
       </div>
       <p key={q.questionId} className="animate-fade-up text-xl font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
         {q.text}
