@@ -67,6 +67,8 @@ export function fallbackPoints(answerText: string, maxPoints = 5, maxWords = 7):
 export interface PointProgress {
   label: string;
   covered: boolean;
+  /** Set by the candidate's click rather than detected from speech. */
+  manual?: boolean;
 }
 
 export interface KeyPointProgress {
@@ -111,8 +113,26 @@ export function scoreKeyPoints(
       (sentenceHits >= support.size * 0.45 || (labelHits >= 1 && sentenceHits >= Math.max(3, support.size * 0.3)));
     return { label, covered: alreadyCovered.has(i) || byLabel || bySentence };
   });
+  return { points, next: nextPoint(points) };
+}
+
+/** The point to say next: the first uncovered one after the last covered one (else the first uncovered). */
+function nextPoint(points: PointProgress[]): number | null {
   const lastCovered = points.reduce((last, p, i) => (p.covered ? i : last), -1);
   let next = points.findIndex((p, i) => !p.covered && i > lastCovered);
   if (next === -1) next = points.findIndex((p) => !p.covered);
-  return { points, next: next === -1 ? null : next };
+  return next === -1 ? null : next;
+}
+
+/**
+ * The candidate's own clicks win over the automatic ticks: `true` ticks a point they said (the transcript missed
+ * it), `false` unticks one they didn't say (a false match). NEXT then moves accordingly.
+ */
+export function applyOverrides(progress: KeyPointProgress, overrides: ReadonlyMap<number, boolean>): KeyPointProgress {
+  if (overrides.size === 0) return progress;
+  const points = progress.points.map((p, i) => {
+    const manual = overrides.get(i);
+    return manual === undefined ? p : { ...p, covered: manual, manual: true };
+  });
+  return { points, next: nextPoint(points) };
 }

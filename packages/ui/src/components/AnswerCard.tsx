@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import type { CodingLanguage } from "@orbit/types";
 import type { KeyPointProgress } from "../live/coverage";
 import { splitPlaceholders } from "../live/placeholders";
+import { READ_ALOUD_RATES, speechText } from "../live/readAloud";
 import type { AnswerView } from "../live/reducer";
+import type { ReadAloud } from "../live/useReadAloud";
 import { CodeBlock } from "./CodeBlock";
 import { cx, focusRing } from "./cx";
-import { ArrowRight, Check, Circle, PenLine } from "../icons";
+import { ArrowRight, Check, Circle, Pause, PenLine, Play, Square, Volume2 } from "../icons";
 
 export interface AnswerCardProps {
   answer: AnswerView | null;
@@ -17,6 +19,10 @@ export interface AnswerCardProps {
   autoAnswer: boolean;
   /** Key points ticked off from the candidate's speech ("NEXT" guidance). */
   progress?: KeyPointProgress | null;
+  /** Manually tick / untick a key point. */
+  onTogglePoint?: (index: number) => void;
+  /** Read the answer aloud (user-triggered; capture is muted while it plays). */
+  reader?: ReadAloud;
   /** Rewrite a coding answer in another language (shows the language picker on the code). */
   onCodeLanguage?: (lang: CodingLanguage) => void;
 }
@@ -89,7 +95,11 @@ function CopyButton({ text }: { text: string }) {
 const NEXT_PREF = "orbit.adaptiveNext";
 
 /** The answer's key points, ticked off as the candidate says them, with the one to say next highlighted. */
-function KeyPoints({ progress, compact }: { progress: KeyPointProgress; compact: boolean }) {
+function KeyPoints({ progress, compact, onToggle }: {
+  progress: KeyPointProgress;
+  compact: boolean;
+  onToggle?: (index: number) => void;
+}) {
   const [on, setOn] = useState(() => localStorage.getItem(NEXT_PREF) !== "off");
   const toggle = () => {
     localStorage.setItem(NEXT_PREF, on ? "off" : "on");
@@ -103,7 +113,7 @@ function KeyPoints({ progress, compact }: { progress: KeyPointProgress; compact:
           {done ? "All points covered" : "Key points"}
         </h3>
         <button type="button" onClick={toggle} className={cx("text-xs text-zinc-500 hover:underline", focusRing)}
-                aria-pressed={on} title="Tick points off as you say them">
+                aria-pressed={on} title="Points tick off as you say them. Click one to tick or untick it yourself">
           {on ? "Hide" : "Show"}
         </button>
       </div>
@@ -112,18 +122,26 @@ function KeyPoints({ progress, compact }: { progress: KeyPointProgress; compact:
           {progress.points.map((p, i) => {
             const isNext = i === progress.next;
             return (
-              <li key={i} className={cx("flex items-start gap-2 leading-snug transition-colors",
-                p.covered ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200",
-                isNext && "font-semibold text-indigo-700 dark:text-indigo-300")}>
-                <span aria-hidden="true" className={cx("mt-0.5 flex w-4 flex-none justify-center",
-                  p.covered ? "text-emerald-500" : isNext ? "text-indigo-500" : "text-zinc-400")}>
-                  {p.covered ? <Check className="h-3.5 w-3.5" /> : isNext ? <ArrowRight className="h-3.5 w-3.5" /> : <Circle className="mt-0.5 h-2.5 w-2.5" />}
-                </span>
-                <span>
-                  {isNext && <span className="sr-only">Next: </span>}
-                  {p.covered && <span className="sr-only">Covered: </span>}
-                  {p.label}
-                </span>
+              <li key={i}>
+                <button
+                  type="button"
+                  disabled={!onToggle}
+                  onClick={() => onToggle?.(i)}
+                  aria-pressed={p.covered}
+                  title={p.covered ? "Mark as not said yet" : "Mark as said"}
+                  className={cx("flex w-full items-start gap-2 rounded text-left leading-snug transition-colors",
+                    onToggle && "hover:bg-zinc-100 dark:hover:bg-zinc-800/60", focusRing,
+                    p.covered ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200",
+                    isNext && "font-semibold text-indigo-700 dark:text-indigo-300")}>
+                  <span aria-hidden="true" className={cx("mt-0.5 flex w-4 flex-none justify-center",
+                    p.covered ? "text-emerald-500" : isNext ? "text-indigo-500" : "text-zinc-400")}>
+                    {p.covered ? <Check className="h-3.5 w-3.5" /> : isNext ? <ArrowRight className="h-3.5 w-3.5" /> : <Circle className="mt-0.5 h-2.5 w-2.5" />}
+                  </span>
+                  <span>
+                    {isNext && <span className="sr-only">Next: </span>}
+                    {p.label}
+                  </span>
+                </button>
               </li>
             );
           })}
@@ -133,13 +151,59 @@ function KeyPoints({ progress, compact }: { progress: KeyPointProgress; compact:
   );
 }
 
+const iconBtn = (active = false) =>
+  cx("inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium",
+    active ? "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800",
+    focusRing);
+
+/** Pause / stop / speed / voice for the answer being read aloud. */
+function ReadAloudControls({ reader }: { reader: ReadAloud }) {
+  const select = cx("rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-xs dark:border-zinc-800 dark:bg-zinc-900", focusRing);
+  return (
+    <div role="group" aria-label="Read aloud" className="mx-4 mt-2 flex animate-fade-in flex-wrap items-center gap-1.5 rounded-lg bg-indigo-500/5 px-2 py-1.5">
+      {reader.status === "paused" ? (
+        <button type="button" onClick={reader.resume} className={iconBtn()}>
+          <Play className="h-3.5 w-3.5" /> Resume
+        </button>
+      ) : (
+        <button type="button" onClick={reader.pause} className={iconBtn()}>
+          <Pause className="h-3.5 w-3.5" /> Pause
+        </button>
+      )}
+      <button type="button" onClick={reader.stop} className={iconBtn()}>
+        <Square className="h-3 w-3" /> Stop
+      </button>
+      <select aria-label="Speed" value={reader.rate} onChange={(e) => reader.setRate(Number(e.target.value))} className={select}>
+        {READ_ALOUD_RATES.map((r) => (
+          <option key={r} value={r}>
+            {r}×
+          </option>
+        ))}
+      </select>
+      {reader.voices.length > 1 && (
+        <select aria-label="Voice" value={reader.voiceId ?? ""} onChange={(e) => reader.setVoiceId(e.target.value)}
+                className={cx(select, "max-w-[10rem] truncate")}>
+          {reader.voices.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.name.replace(/^Microsoft /, "")}
+            </option>
+          ))}
+        </select>
+      )}
+      <span role="status" className="text-xs text-zinc-500 dark:text-zinc-400">
+        {reader.status === "paused" ? "Paused. Listening again" : "Playing on your speakers. Orbit isn’t listening"}
+      </span>
+    </div>
+  );
+}
+
 function SectionLabel({ children, block = false }: { children: string; block?: boolean }) {
   const cls = "text-xs font-semibold uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400";
   return block ? <h3 className={cx(cls, "mb-1")}>{children}</h3> : <span className={cls}>{children}</span>;
 }
 
 export function AnswerCard({
-  answer, pinned, onPin, onRetry, compact = false, autoAnswer, progress, onCodeLanguage,
+  answer, pinned, onPin, onRetry, compact = false, autoAnswer, progress, onTogglePoint, reader, onCodeLanguage,
 }: AnswerCardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showExample, setShowExample] = useState(false);
@@ -169,6 +233,7 @@ export function AnswerCard({
   const debug = a.debug ?? null;
   const structured = coding || design.length > 0 || Boolean(debug);
   const hasComplexity = Boolean(a.time_complexity || a.space_complexity);
+  const reading = Boolean(reader && reader.status !== "idle" && reader.key === answer.answer_id);
 
   return (
     <section aria-label="Suggested answer" className="flex min-h-0 flex-1 flex-col">
@@ -180,6 +245,17 @@ export function AnswerCard({
           )}
         </h2>
         <span className="flex items-center gap-1">
+          {reader?.supported && answer.status === "complete" && answer.has_content && speechText(a) && (
+            <button
+              type="button"
+              onClick={() => (reading ? reader.stop() : reader.play(answer.answer_id, speechText(a)))}
+              aria-pressed={reading}
+              title={reading ? "Stop reading" : "Read this answer aloud on your speakers (Orbit stops listening while it plays)"}
+              className={iconBtn(reading)}
+            >
+              <Volume2 className="h-3.5 w-3.5" /> {reading ? "Reading" : "Read aloud"}
+            </button>
+          )}
           {answer.has_content && answer.status !== "failed" && <CopyButton text={answerAsText(a)} />}
           <button
             type="button"
@@ -198,6 +274,8 @@ export function AnswerCard({
           </button>
         </span>
       </div>
+
+      {reading && reader && <ReadAloudControls reader={reader} />}
 
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-2" tabIndex={0}>
         {a.grounding === "example" && answer.has_content && (
@@ -269,7 +347,7 @@ export function AnswerCard({
           </div>
         )}
 
-        {progress && answer.status !== "failed" && <KeyPoints progress={progress} compact={compact} />}
+        {progress && answer.status !== "failed" && <KeyPoints progress={progress} compact={compact} {...(onTogglePoint ? { onToggle: onTogglePoint } : {})} />}
 
         {a.talking_points.length > 0 && (
           <ul className={cx("mt-2 space-y-1.5", compact ? "text-[0.9375rem]" : "text-base")}>

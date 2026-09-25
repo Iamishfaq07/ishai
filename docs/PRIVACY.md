@@ -46,3 +46,13 @@ included instead.
 - **AI answers:** DeepSeek receives the prompt: the question, retrieved facts and recent conversation. A configured
   backup AI provider receives the same prompt only when it's used.
 - **Embeddings** for retrieval are computed on the Orbit server, not by a third party.
+
+## Read aloud
+*Read aloud* uses only the on-device voices built into Windows (or the browser), so the answer text is spoken on
+your device and isn't sent to any speech service. Only when no on-device voice exists for the language does it
+offer the browser's online voices, marked "(online)"; those send the text to the browser vendor's speech
+service. While it plays, Orbit stops sending audio for transcription.
+
+The mock interviewer's spoken questions may use an online "Natural" voice when one is installed, for a more
+natural sound. Those questions are generated practice questions, not your answers.
+

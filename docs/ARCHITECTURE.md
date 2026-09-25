@@ -12,7 +12,7 @@ Built from scratch in this repo, starting 2026-09-23 (it held only a generated R
 | Live engine: per-channel STT → turns → question detector (+ AI classifier for the ambiguous band) → finalizer → dedup → retrieval → streamed answer | ✅ tested + real providers |
 | DeepSeek provider: SSE streaming, cache-hit usage, error mapping, thinking levels, **vision** (DeepSeek-V4.1-Flash) | ✅ tested + real API |
 | Deepgram nova-3 streaming STT: reconnect with timestamp continuity, keepalive, backlog, keyterms, `language=multi` for auto | ✅ tested + real API |
-| Answers: spoken first-person prose, **key points** (ticked off as the candidate covers them), grounding label (*Suggested details*), coding sections (problem / code / complexity / edge cases / tests) in a chosen language | ✅ tested |
+| Answers: spoken first-person prose, **key points** (ticked off as the candidate covers them, or by hand), **Read aloud** (local voices; audio isn't sent while it plays), grounding label (*Suggested details*), coding sections (problem / code / complexity / edge cases / tests) in a chosen language | ✅ tested |
 | Screenshot → vision answer (analysed and discarded; credit spent only on success) | ✅ tested + real desktop build |
 | **Mock interviewer**: persona / type / difficulty / duration, follow-ups, spoken questions (browser TTS), review | ✅ tested + real voice path |
 | **Preflight** (`GET /v1/preflight` + local device checks) before a session starts | ✅ |
