@@ -131,6 +131,15 @@ export function createApiClient(options: ApiClientOptions) {
     updatePrivacy: (req: PrivacyUpdate) => json<User>("/v1/auth/me/privacy", { method: "PATCH", body: body(req) }),
     deleteAccount: () => json<void>("/v1/auth/me", { method: "DELETE" }),
     logoutAll: () => json<void>("/v1/auth/logout-all", { method: "POST" }),
+    requestEmailChange: (newEmail: string, password: string) =>
+      json<{ status: string }>("/v1/auth/me/email", {
+        method: "POST",
+        body: body({ new_email: newEmail, password }),
+      }),
+    confirmEmailChange: (token: string) =>
+      json<AuthResponse>("/v1/auth/email-change/confirm", { method: "POST", body: body({ token }) }),
+    /** Everything Orbit stores about the account, as a JSON file (Blob). */
+    exportData: async () => (await raw("/v1/auth/me/export")).blob(),
     requestVerification: () => json<{ status: string }>("/v1/auth/verify-email/request", { method: "POST" }),
     confirmVerification: (token: string) =>
       json<User>("/v1/auth/verify-email/confirm", { method: "POST", body: body({ token }) }),
@@ -168,6 +177,10 @@ export function createApiClient(options: ApiClientOptions) {
     reviewSession: (id: string) =>
       json<SessionSummary>(`/v1/sessions/${encodeURIComponent(id)}/review`, { method: "POST" }),
     deleteSession: (id: string) => json<void>(`/v1/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    deleteTranscript: (id: string) =>
+      json<void>(`/v1/sessions/${encodeURIComponent(id)}/transcript`, { method: "DELETE" }),
+    retryReport: (id: string) =>
+      json<OrbitSession>(`/v1/sessions/${encodeURIComponent(id)}/report/retry`, { method: "POST" }),
     exportSessionMarkdown: async (id: string): Promise<string> =>
       (await raw(`/v1/sessions/${encodeURIComponent(id)}/export.md`)).text(),
     liveTicket: (id: string) =>

@@ -1,5 +1,21 @@
 # Implementation log
 
+## Data controls: export, email change, transcript deletion, report retry (2026-09-25)
+
+- **Download my data (§42):** `GET /v1/auth/me/export` returns one JSON file with the profile, documents (full
+  text), workspaces, sessions (transcript, questions, answers, report), usage and security log. Secrets and
+  embeddings are excluded. It's in web Settings → Account.
+- **Verified email change (§43):** it requires the password. A single-use 24 h link goes to the **new** address
+  and a heads-up to the old one. Confirming swaps the email, marks it verified and signs out every other session
+  (migration `d4f9b2c6e1a3`).
+- **Delete just the transcript:** `DELETE /v1/sessions/{id}/transcript` keeps the answers and report. It's refused
+  while the session is live.
+- **Report retry (§41):** `POST /v1/sessions/{id}/report/retry` re-queues a failed report. The "couldn't generate"
+  note used to point at *Generate review*, a different feature; it now has **Try again**.
+- New `docs/PRIVACY.md`: what's never stored, what's stored and why, and every control.
+- Tests: 6 API tests. Real browser (Edge): the data download produced a real JSON file with no password hash, and
+  the email change worked end to end through the emailed link.
+
 ## System design and debug modes (2026-09-25)
 
 - **System design mode (§30):** system-design questions get the spoken talk track first, then a `DESIGN` block

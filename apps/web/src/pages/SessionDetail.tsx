@@ -37,6 +37,31 @@ export function SessionDetailPage() {
     }
   };
 
+  const refresh = async () => {
+    const fresh = await api.getSession(session.id);
+    setData(() => fresh);
+  };
+
+  const retryReport = async () => {
+    setActionError(null);
+    try {
+      await api.retryReport(session.id);
+      await refresh();
+    } catch (err) {
+      setActionError(errorText(err));
+    }
+  };
+
+  const removeTranscript = async () => {
+    if (!(await confirmDialog({ title: "Delete the transcript?", body: "What was said in this session is deleted. The answers and the report are kept.", confirmLabel: "Delete transcript", danger: true }))) return;
+    try {
+      await api.deleteTranscript(session.id);
+      await refresh();
+    } catch (err) {
+      setActionError(errorText(err));
+    }
+  };
+
   const remove = async () => {
     if (!(await confirmDialog({ title: "Delete this session?", body: "Its transcript, questions, answers and review are deleted. This can’t be undone.", confirmLabel: "Delete", danger: true }))) return;
     try {
@@ -57,6 +82,11 @@ export function SessionDetailPage() {
             <Button variant="secondary" size="sm" onClick={() => void exportMd()}>
               Export Markdown
             </Button>
+            {detail.data.turns.length > 0 && (
+              <Button variant="secondary" size="sm" onClick={() => void removeTranscript()}>
+                Delete transcript
+              </Button>
+            )}
             <Button variant="danger" size="sm" onClick={() => void remove()}>
               Delete
             </Button>
@@ -69,7 +99,7 @@ export function SessionDetailPage() {
         </div>
       )}
 
-      <ReportStatusNote status={session.report_status} />
+      <ReportStatusNote status={session.report_status} onRetry={() => void retryReport()} />
       <div role="tablist" className="mb-6 flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
         {(
           [

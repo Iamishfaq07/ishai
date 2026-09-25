@@ -346,3 +346,44 @@ export function VerifyEmailPage() {
     </AuthShell>
   );
 }
+
+export function ConfirmEmailChangePage() {
+  const token = useOneTimeToken();
+  const { setUser } = useAuth();
+  const [state, setState] = useState<"working" | "done" | "failed">(token ? "working" : "failed");
+  const [error, setError] = useState<string | null>(token ? null : "This link is missing its token.");
+  const [email, setEmail] = useState<string | null>(null);
+  const started = useRef(false); // StrictMode runs effects twice; the token only works once
+
+  useEffect(() => {
+    if (!token || started.current) return;
+    started.current = true;
+    api
+      .confirmEmailChange(token)
+      .then((res) => {
+        setUser(res.user);
+        setEmail(res.user.email);
+        setState("done");
+      })
+      .catch((err: unknown) => {
+        setError(errorText(err));
+        setState("failed");
+      });
+  }, [token, setUser]);
+
+  return (
+    <AuthShell
+      title={state === "done" ? "Email changed" : state === "working" ? "Confirming…" : "Link didn't work"}
+      subtitle={state === "done" ? `You now sign in with ${email}. Other devices were signed out.` : ""}
+    >
+      <div role="status" className="space-y-4 text-center text-sm">
+        {state === "failed" && error && <ErrorNote>{error}</ErrorNote>}
+        {state !== "working" && (
+          <Link to={state === "done" ? "/" : "/settings"} className={linkClass}>
+            {state === "done" ? "Go to Orbit" : "Back to settings"}
+          </Link>
+        )}
+      </div>
+    </AuthShell>
+  );
+}

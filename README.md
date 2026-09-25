@@ -37,6 +37,7 @@ Docs:
 - [Decisions](docs/DECISIONS.md)
 - [Deploy](docs/DEPLOY.md)
 - [Security](docs/SECURITY.md)
+- [Privacy & your data](docs/PRIVACY.md)
 - [Plans & billing](docs/BILLING.md)
 - [AI providers & failover](docs/AI_PROVIDER.md)
 - [Retrieval](docs/RETRIEVAL.md)

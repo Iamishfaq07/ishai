@@ -1,3 +1,4 @@
+import json
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
@@ -309,3 +310,101 @@ async def logout_everywhere(request: Request, response: Response, user: Annotate
     _clear_cookie(response)
     response.status_code = 204
     return response
+
+
+# ---- email change (brief §43) -----------------------------------------------------------------------------
+
+
+class EmailChangeIn(BaseModel):
+    new_email: EmailStr
+    password: str = Field(max_length=256)
+
+
+email_change_limit = limit("email-change", rate_per_s=3 / 3600, burst=3)
+
+
+def _email_change_email(to: str, token: str) -> OutgoingEmail:
+    return OutgoingEmail(
+        to=to,
+        subject="Confirm your new Orbit email",
+        text=(
+            "Confirm that this is the new email address for your Orbit account:\n\n"
+            f"{_link('/confirm-email-change', token)}\n\n"
+            "The link expires in 24 hours and works once. If you didn't ask for this, ignore this email."
+        ),
+    )
+
+
+def _email_change_notice(to: str, new_email: str) -> OutgoingEmail:
+    return OutgoingEmail(
+        to=to,
+        subject="Your Orbit email is being changed",
+        text=(
+            f"Someone signed in to your Orbit account asked to change its email to {new_email}.\n\n"
+            "Nothing changes until the new address is confirmed. If this wasn't you, change your password now — "
+            "that signs out every device."
+        ),
+    )
+
+
+@router.post("/me/email", status_code=202, dependencies=[Depends(email_change_limit)])
+async def request_email_change(body: EmailChangeIn, request: Request, user: Annotated[User, Depends(current_user)],
+                               db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, str]:
+    """Re-authenticates with the password, then emails a single-use confirmation link to the NEW address (and a
+    heads-up to the old one). The email only changes when the link is opened."""
+    new_email = body.new_email.lower()
+    u = await db.get(User, user.id)
+    assert u is not None
+    if not await verify_password(body.password, u.password_hash):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "That password isn't right.")
+    if new_email == u.email:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That's already your email.")
+    if not get_settings().email_allowed(new_email):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, NOT_ALLOWED)
+    if await db.scalar(select(func.count()).select_from(User).where(User.email == new_email)):
+        raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists.")
+    token = await email_tokens.issue(db, u.id, "change_email", new_email=new_email)
+    db.add(AuditLog(user_id=u.id, action="auth.email_change_request", ip=_ip(request)))
+    await db.commit()
+    await send_safely(_email_change_email(new_email, token))
+    await send_safely(_email_change_notice(u.email, new_email))
+    return {"status": "sent"}
+
+
+@router.post("/email-change/confirm", response_model=AuthOut, dependencies=[Depends(auth_limit)])
+async def confirm_email_change(body: TokenIn, request: Request, response: Response,
+                               db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut:
+    row = await email_tokens.consume_row(db, body.token, "change_email")
+    user = await db.get(User, row.user_id) if row else None
+    if row is None or user is None or not row.new_email:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "This link is invalid or has expired.")
+    if await db.scalar(select(func.count()).select_from(User).where(User.email == row.new_email)):
+        raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists.")
+    old = user.email
+    user.email = row.new_email
+    user.email_verified = True  # opening the link proves control of the new inbox
+    user.token_version += 1  # every other session (web + desktop) signs in again
+    db.add(AuditLog(user_id=user.id, action="auth.email_changed", target=old, ip=_ip(request)))
+    await db.commit()
+    token = create_access_token(user.id, user.token_version)
+    _set_cookie(response, token)
+    return AuthOut(user=_user_out(user, with_csrf=True), access_token=token)
+
+
+# ---- data export (brief §42) ------------------------------------------------------------------------------
+
+export_limit = limit("export", rate_per_s=5 / 3600, burst=3)
+
+
+@router.get("/me/export", dependencies=[Depends(export_limit)])
+async def export_my_data(user: Annotated[User, Depends(current_user)],
+                         db: Annotated[AsyncSession, Depends(get_db)]) -> Response:
+    """Everything Orbit stores about the account, as one JSON file (profile, documents, workspaces, sessions with
+    transcripts/questions/answers/reports, usage, security log). Secrets and derived search data are left out."""
+    from orbit_api.auth.export import build_export
+
+    data = await build_export(db, user.id)
+    stamp = data["exported_at"][:10]
+    return Response(content=json.dumps(data, ensure_ascii=False, indent=1, default=str),
+                    media_type="application/json",
+                    headers={"Content-Disposition": f'attachment; filename="orbit-export-{stamp}.json"'})
