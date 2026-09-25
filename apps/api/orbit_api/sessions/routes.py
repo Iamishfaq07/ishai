@@ -54,7 +54,8 @@ from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMImage
 from orbit_api.providers.stt import create_stt_provider
 from orbit_api.ratelimit import limit, limit_user
-from orbit_api.retrieval.index import IndexedChunk, SessionIndex
+from orbit_api.retrieval.embeddings import get_embedder
+from orbit_api.retrieval.index import IndexedChunk, SessionIndex, chunk_body
 from orbit_api.sessions.recorder import DbRecorder, upsert_usage
 from orbit_api.sessions.report import generate_report
 from orbit_api.workspaces.routes import owned_workspace, workspace_document_ids
@@ -413,7 +414,18 @@ async def _load_index(db: AsyncSession, session_id: str) -> tuple[SessionIndex, 
         .where(SessionDocument.session_id == session_id)
         .order_by(Document.created_at, DocumentChunk.ordinal)  # keep resume order: most recent role first
     )).all()
-    chunks = [IndexedChunk(c.id, kind, c.category, c.label, c.text, c.verified, c.embedding or [])
+    embedder = get_embedder()
+    stale = [c for c, _ in rows if c.embedding_model != embedder.model_id] if embedder.ready else []
+    if stale:
+        # Vectors from another embedder (or the legacy full-text hash) are recomputed once and saved back.
+        vectors = await asyncio.to_thread(
+            lambda: [embedder.embed(chunk_body(c.category, c.text)) for c in stale])
+        for c, v in zip(stale, vectors, strict=True):
+            c.embedding, c.embedding_model = v, embedder.model_id
+        await db.commit()
+    current = embedder.ready
+    chunks = [IndexedChunk(c.id, kind, c.category, c.label, c.text, c.verified,
+                           (c.embedding or []) if current and c.embedding_model == embedder.model_id else [])
               for c, kind in rows]
     # skills from resume/JD become STT key terms (custom vocabulary)
     keyterms = [c.text for c in chunks if c.category == "skill" and len(c.text) < 40][:30]

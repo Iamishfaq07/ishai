@@ -26,6 +26,7 @@ from orbit_api.preflight import router as preflight_router
 from orbit_api.providers import health as dependency_health
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.stt import create_stt_provider
+from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.runtime_config import refresh as refresh_runtime_config
 from orbit_api.sessions.recorder import replay_failed_writes
 from orbit_api.sessions.routes import drain_teardowns
@@ -48,6 +49,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logging.getLogger(__name__).exception("failed to load runtime config; using environment defaults")
     # Checked off the boot path: a host where child-process parsing fails degrades to in-process parsing.
     selftest = asyncio.create_task(asyncio.to_thread(isolation_selftest))
+    # A neural embedder loads in the background (seconds on a small CPU); retrieval is BM25-only until it's ready.
+    embedder = get_embedder()
+    warm = getattr(embedder, "warm", None)
+    warming = asyncio.create_task(asyncio.to_thread(warm)) if warm and not embedder.ready else None
     try:
         await replay_failed_writes()  # dead-lettered live-session writes from a previous outage
     except Exception:
@@ -57,6 +62,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await drain_teardowns()
     with contextlib.suppress(Exception):
         await selftest
+    if warming is not None:
+        with contextlib.suppress(Exception):
+            await warming
     await get_llm_provider().aclose()
     await db.dispose()
 

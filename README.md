@@ -39,6 +39,7 @@ Docs:
 - [Security](docs/SECURITY.md)
 - [Plans & billing](docs/BILLING.md)
 - [AI providers & failover](docs/AI_PROVIDER.md)
+- [Retrieval](docs/RETRIEVAL.md)
 - [Windows release & updates](docs/WINDOWS_RELEASE.md)
 - [Changelog](docs/CHANGELOG.md)
 
