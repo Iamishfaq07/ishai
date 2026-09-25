@@ -18,7 +18,7 @@ import {
   confirmDialog,
 } from "@orbit/ui";
 import { ErrorNote, Spinner } from "../components/ui";
-import { API_URL, api } from "../lib/api";
+import { LIVE_URL, api } from "../lib/api";
 import {
   captureScreenFrame,
   captureStream,
@@ -74,7 +74,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   const [mode, setMode] = useState<PanelMode>(() => (localStorage.getItem(MODE_KEY) as PanelMode | null) ?? "expanded");
   const [hotkeys] = useState(loadHotkeys);
   const { live, actions, client } = useLiveSession({
-    apiBaseUrl: API_URL,
+    apiBaseUrl: LIVE_URL,
     sessionId: session.id,
     getTicket: async () => (await api.liveTicket(session.id)).ticket,
     initialSettings: {
@@ -104,20 +104,37 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   const [sysState, setSysState] = useState<"off" | "needs_share" | "on" | "error">(launch.systemAudio ? "needs_share" : "off");
   const [sysError, setSysError] = useState<string | null>(null);
 
+  // Bumped on every start/stop so a slow getUserMedia from an earlier attempt (double-tapped Retry, a remount)
+  // can't install a second capture that keeps streaming duplicate audio.
+  const micGenRef = useRef(0);
+  const stopMic = useCallback(() => {
+    micGenRef.current++;
+    micRef.current?.stop();
+    micRef.current = null;
+  }, []);
   const startMic = useCallback(async () => {
+    const gen = ++micGenRef.current;
     setMicError(null);
     micRef.current?.stop();
+    micRef.current = null;
     try {
       const stream = await openMicrophone(launch.micDeviceId);
-      micRef.current = await captureStream(stream, (f) => {
+      const capture = await captureStream(stream, (f) => {
         if (!pausedRef.current && !interviewerSpeakingRef.current) client.sendAudio(AUDIO_CHANNEL.mic, f.pcm);
       });
+      if (gen !== micGenRef.current) {
+        capture.stop();
+        return;
+      }
+      micRef.current = capture;
       setMicOn(true);
       stream.getAudioTracks()[0]?.addEventListener("ended", () => {
+        if (gen !== micGenRef.current) return;
         setMicOn(false);
         setMicError("Microphone disconnected.");
       });
     } catch (err) {
+      if (gen !== micGenRef.current) return;
       setMicOn(false);
       const denied = err instanceof DOMException && err.name === "NotAllowedError";
       setMicError(
@@ -131,11 +148,10 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   useEffect(() => {
     void startMic();
     return () => {
-      micRef.current?.stop();
-      micRef.current = null;
+      stopMic();
       setMicOn(false);
     };
-  }, [startMic]);
+  }, [startMic, stopMic]);
 
   const startSystemAudio = async () => {
     setSysError(null);
@@ -199,7 +215,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   };
   useEffect(() => {
     if (!ending && live.state !== "ended") return;
-    micRef.current?.stop();
+    stopMic();
     sysRef.current?.stop();
     if (live.state === "ended") {
       const t = setTimeout(() => navigate(`/sessions/${session.id}`), 600);
@@ -213,7 +229,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
         .finally(() => navigate(`/sessions/${session.id}`));
     }, 3000);
     return () => clearTimeout(t);
-  }, [ending, live.state, navigate, session.id]);
+  }, [ending, live.state, navigate, session.id, stopMic]);
 
   const notice = (
     <>

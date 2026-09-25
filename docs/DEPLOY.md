@@ -71,6 +71,13 @@ Manually: `pnpm --filter @orbit/web build`, then `wrangler deploy` from the repo
 as static assets (SPA fallback) plus `apps/web/worker/index.js`, whose 10-minute cron pings the API so the free
 Render instance doesn't sleep.
 
+**The web app talks to the API through its own origin.** The Worker proxies `/api/*` to `API_URL` (in
+`wrangler.jsonc`), and the production build uses `VITE_API_URL=/api`. That makes the session cookie first-party: a
+cookie set by a different site (the Render API) is dropped by browsers that block third-party cookies (Safari and
+every browser on iOS, Firefox strict mode, Brave), and sign-in would bounce straight back to the login page. Live
+WebSockets authenticate with a single-use ticket, so they still connect straight to the API (`VITE_LIVE_URL`). Keep
+the web origin in `ORBIT_CORS_ORIGINS`/`ORBIT_WEB_URL`: the CSRF check still validates `Origin` on proxied requests.
+
 ## 4. Desktop app
 
 Release builds bake the hosted API URL (`apps/desktop/.env.production`). A user can point the app at another

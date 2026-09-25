@@ -168,7 +168,8 @@ function useOneTimeToken(): string | null {
   const [params] = useSearchParams();
   const [token] = useState(() => params.get("token"));
   useEffect(() => {
-    if (token) window.history.replaceState(null, "", window.location.pathname);
+    // Keep React Router's own history entry state (key/index) — only the URL changes.
+    if (token) window.history.replaceState(window.history.state, "", window.location.pathname);
   }, [token]);
   return token;
 }
