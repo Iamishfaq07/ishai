@@ -3,6 +3,7 @@ export { AppearanceControls } from "./components/AppearanceControls";
 export { OrbitLogo } from "./components/OrbitLogo";
 export { SessionReview } from "./components/SessionReview";
 export { VerifyEmailBanner } from "./components/VerifyEmailBanner";
+export { CostDashboard } from "./components/CostDashboard";
 export {
   ACCENTS,
   DEFAULT_DESIGN,

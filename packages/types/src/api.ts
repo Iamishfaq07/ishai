@@ -355,3 +355,39 @@ export interface ApiErrorBody {
   detail?: string | Array<{ msg: string; loc?: Array<string | number> }> | { code?: string; message?: string };
   error?: { code: string; message: string };
 }
+
+/** GET /v1/admin/costs — estimated provider spend (admin). Unpriced LLM calls are counted, never shown as $0. */
+export interface CostReport {
+  days: number;
+  has_data: boolean;
+  totals: { usd: number; llm_usd: number; stt_usd: number | null; vision_usd: number; unpriced_llm_requests: number };
+  live: {
+    hours: number;
+    sessions: number;
+    stt_minutes: number;
+    usd_per_hour: number | null;
+    usd_per_session: number | null;
+    screenshots: number;
+  };
+  llm: {
+    requests: number;
+    cache_hit_ratio: number | null;
+    tokens_per_answer: { input: number | null; output: number | null };
+    fallback_requests: number;
+    by_model: Array<{
+      provider: string;
+      model: string;
+      requests: number;
+      input_tokens: number;
+      cached_input_tokens: number;
+      output_tokens: number;
+      usd: number;
+      unpriced: number;
+      failed: number;
+    }>;
+    by_type: Record<string, { requests: number; usd: number; unpriced: number }>;
+  };
+  per_user: Array<{ user_id: string; email: string | null; plan: string | null; llm_usd: number; stt_usd: number; usd: number }>;
+  per_plan: Record<string, { users: number; usd: number }>;
+  notes: { stt_price_per_minute: number | null; stt: string; unpriced: string };
+}

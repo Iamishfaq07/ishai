@@ -9,6 +9,7 @@ import {
   Field,
   Input,
   LatencyDiagnostics,
+  CostDashboard,
   PageHeader,
   Select,
   Spinner,
@@ -209,6 +210,9 @@ function AdvancedCard() {
       <AdvancedConfig />
       <Card>
         <LatencyDiagnostics load={api.getLatency} />
+      </Card>
+      <Card>
+        <CostDashboard load={api.getCosts} />
       </Card>
     </>
   );

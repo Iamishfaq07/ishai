@@ -168,3 +168,13 @@ async def provider_health(_: Annotated[User, Depends(require_admin)]) -> dict[st
         failover = {"primary": llm.primary.name, "backup": llm.fallback.name if llm.fallback else None,
                     "breaker": llm.breaker.state, "first_token_timeout_s": llm.first_token_timeout_s}
     return {"dependencies": health.snapshot(), "llm_failover": failover}
+
+
+@router.get("/costs")
+async def costs(_: Annotated[User, Depends(require_admin)], db: Annotated[AsyncSession, Depends(get_db)],
+                days: Annotated[int, Query(ge=1, le=90)] = 30) -> dict[str, Any]:
+    """Provider costs: totals, per live hour / session, cache hit ratio, tokens per answer, per model, type, user and
+    plan. Unpriced calls are counted, never shown as $0 (see admin/costs.py)."""
+    from orbit_api.admin.costs import cost_report
+
+    return await cost_report(db, days)
