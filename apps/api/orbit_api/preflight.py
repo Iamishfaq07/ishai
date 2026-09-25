@@ -6,6 +6,8 @@ free project-listing endpoint (validates the key) at most every five minutes.
 """
 
 import asyncio
+import contextlib
+import json
 import time
 from dataclasses import dataclass
 from typing import Annotated, Any, Literal
@@ -32,6 +34,10 @@ router = APIRouter(prefix="/v1", tags=["preflight"])
 preflight_limit = limit("preflight", rate_per_s=0.2, burst=6)
 
 Status = Literal["ok", "warn", "fail"]
+Severity = Literal["blocker", "warning"]
+# A failing check here means a live interview can't work: the app disables Start (with a confirmed escape hatch).
+# Everything else is advice and never blocks.
+BLOCKER_IDS = frozenset({"server", "network", "llm", "stt", "mic", "minutes", "account"})
 LLM_TTL_S = 60
 STT_TTL_S = 300
 LOW_MINUTES = 10
@@ -44,11 +50,20 @@ class Check(BaseModel):
     detail: str
     fix: str | None = None
     latency_ms: int | None = None
+    severity: Severity = "warning"
 
 
 class PreflightOut(BaseModel):
     checks: list[Check]
-    ok: bool  # no "fail" (warnings don't block a session)
+    ok: bool  # no failing blocker (warnings never block a session)
+    blockers: int = 0
+
+
+def _finish(checks: list[Check]) -> PreflightOut:
+    for c in checks:
+        c.severity = "blocker" if c.id in BLOCKER_IDS else "warning"
+    blockers = sum(c.status == "fail" and c.severity == "blocker" for c in checks)
+    return PreflightOut(checks=checks, ok=blockers == 0, blockers=blockers)
 
 
 @dataclass
@@ -130,9 +145,42 @@ async def _stt_check() -> Check:
         return Check(id="stt", label="Transcription", status="fail", detail="The Deepgram account is out of credit.",
                      fix="Add credit to the Deepgram account.")
     if r.status_code >= 400:
-        return Check(id="stt", label="Transcription", status="warn", detail=f"Deepgram answered {r.status_code}.",
+        return Check(id="stt", label="Transcription", status="warn",
+                     detail=f"Deepgram account check answered {r.status_code}; streaming not verified.",
                      fix="Transcription may still work; re-check in a minute.")
-    return Check(id="stt", label="Transcription", status="ok", detail=f"Deepgram ready ({ms} ms).", latency_ms=ms)
+    # The account answering isn't proof the live stream works (model/language/params, websocket egress):
+    # open a real streaming socket and close it without sending audio.
+    stream_ms, stream_error = await _deepgram_stream_handshake(cfg.deepgram_api_key or "", cfg.deepgram_model)
+    if stream_error:
+        return Check(id="stt", label="Transcription", status="fail", latency_ms=ms,
+                     detail=f"Deepgram account reachable, but live streaming failed ({stream_error}).",
+                     fix="Re-check in a minute. If it persists, Deepgram streaming may be down.")
+    return Check(id="stt", label="Transcription", status="ok", latency_ms=stream_ms,
+                 detail=f"Streaming transcription verified ({stream_ms} ms).")
+
+
+async def _deepgram_stream_handshake(api_key: str, model: str) -> tuple[int, str | None]:
+    """Open Deepgram's streaming endpoint with the live settings and close it straight away (no audio is sent,
+    so nothing is transcribed or billed). Returns (ms, error or None)."""
+    import websockets
+    from websockets.exceptions import InvalidStatus
+
+    from orbit_api.providers.stt.base import STTConfig
+    from orbit_api.providers.stt.deepgram import build_url
+
+    started = time.monotonic()
+    try:
+        async with websockets.connect(build_url(model, STTConfig(language="en")),
+                                      additional_headers={"Authorization": f"Token {api_key}"},
+                                      open_timeout=6) as ws:
+            ms = int((time.monotonic() - started) * 1000)
+            with contextlib.suppress(Exception):
+                await ws.send(json.dumps({"type": "CloseStream"}))
+        return ms, None
+    except InvalidStatus as e:
+        return int((time.monotonic() - started) * 1000), f"HTTP {e.response.status_code}"
+    except (OSError, TimeoutError, websockets.WebSocketException) as e:
+        return int((time.monotonic() - started) * 1000), type(e).__name__
 
 
 async def _latest_version() -> str | None:
@@ -163,7 +211,7 @@ async def preflight(user: Annotated[User, Depends(current_user)], db: Annotated[
         checks.append(Check(id="account", label="Email verification", status="fail",
                             detail=f"{user.email} isn't verified yet.",
                             fix="Open the link we emailed you (or resend it from the banner), then re-check."))
-        return PreflightOut(checks=checks, ok=False)
+        return _finish(checks)
 
     llm, stt = await asyncio.gather(_cached("llm", LLM_TTL_S, _llm_check), _cached("stt", STT_TTL_S, _stt_check))
     checks += [llm, stt]
@@ -204,4 +252,4 @@ async def preflight(user: Annotated[User, Depends(current_user)], db: Annotated[
         else:
             checks.append(Check(id="app", label="App version", status="ok", detail=f"{app_version} — up to date."))
 
-    return PreflightOut(checks=checks, ok=all(c.status != "fail" for c in checks))
+    return _finish(checks)
