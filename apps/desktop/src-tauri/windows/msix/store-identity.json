@@ -1,0 +1,7 @@
+{
+  "_comment": "Copy these three values from Partner Center > your app > Product identity (not secrets). displayName must be the reserved Store name.",
+  "identityName": "",
+  "publisher": "",
+  "publisherDisplayName": "",
+  "displayName": "Orbit"
+}

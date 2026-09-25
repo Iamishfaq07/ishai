@@ -1,5 +1,23 @@
 # Implementation log
 
+## Microsoft Store packaging: free, no "unknown publisher" (2026-09-25)
+
+- **`scripts/package-msix.ps1`:** packages the release exe as an MSIX for the Microsoft Store.
+  - The Store signs it, so Store installs show no SmartScreen warning, and individual developer accounts are free.
+  - Clean build with the same sign-in storage guard as release-desktop.ps1.
+  - Uses the Windows SDK's `makeappx`, and the manifest template is `windows/msix/AppxManifest.xml` (full trust + microphone).
+- **The Store copy never self-updates.** `updater::is_packaged()` checks the process's package identity, so
+  `check_update` reports none and `install_update` refuses, because the Store delivers updates. The direct
+  download is unchanged.
+- **Public privacy policy** at `/privacy.html` (web), which the Store listing requires.
+- Waiting on the user: a Partner Center account and the three identity values (`store-identity.json`).
+- **Tested:**
+  - Rust: fmt, clippy `-D warnings`, 20 tests.
+  - `makeappx` validates the manifest and packs a 2.5 MB package.
+  - Not yet: an install on this PC. Windows refuses an unsigned package that contains a desktop exe
+    (`0x80073D2B`), so a local install needs Developer Mode or a trusted test certificate (both need admin).
+    The alternative is a private-audience Store listing.
+
 ## Dependency upgrades: all Dependabot PRs (2026-09-25)
 
 - **Desktop (Rust):**
