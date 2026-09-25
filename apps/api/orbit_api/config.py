@@ -72,6 +72,10 @@ class Settings(BaseSettings):
     sentry_dsn: str | None = Field(None, validation_alias=AliasChoices("ORBIT_SENTRY_DSN"))
     # How often an idle durable-job worker polls for due jobs (reports), seconds.
     job_poll_s: float = Field(2.0, validation_alias=AliasChoices("ORBIT_JOB_POLL_S"))
+    # A session left open (disconnected, no new transcript) this long is ended and reported (sessions/cleanup.py).
+    abandoned_session_min: float = Field(60.0, validation_alias=AliasChoices("ORBIT_ABANDONED_SESSION_MIN"))
+    # How often that sweep runs, seconds.
+    session_sweep_s: float = Field(300.0, validation_alias=AliasChoices("ORBIT_SESSION_SWEEP_S"))
     # Live-minute metering: usage is committed (and the plan limit enforced) this often during a session.
     live_heartbeat_s: float = Field(15.0, validation_alias=AliasChoices("ORBIT_LIVE_HEARTBEAT_S"))
     # Extra/override LLM prices for internal cost estimates (see providers/llm/pricing.py).

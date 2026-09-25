@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { AdminConfig, AdminConfigUpdate } from "@orbit/types";
 import {
   DEFAULT_HOTKEYS,
@@ -16,6 +16,8 @@ import {
   useDesign,
   confirmDialog,
   SettingsIcon,
+  CreditCard,
+  ChevronRight,
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Spinner, Toggle } from "../components/ui";
 import { api } from "../lib/api";
@@ -30,6 +32,22 @@ export function SettingsPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <PageHeader icon={SettingsIcon} title="Settings" />
+      <Link
+        to="/billing"
+        className={cx(
+          "glass-panel lift flex items-center gap-4 rounded-2xl p-5 hover:border-indigo-400/40",
+          focusRing,
+        )}
+      >
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+          <CreditCard className="h-5 w-5" />
+        </span>
+        <span className="flex-1">
+          <span className="block font-display font-semibold">Plan &amp; usage</span>
+          <span className="block text-sm text-zinc-500">Your plan, this month’s minutes, screenshots and documents.</span>
+        </span>
+        <ChevronRight className="h-4 w-4 text-zinc-400" />
+      </Link>
       <Card>
         <h2 className="mb-4 font-semibold">Appearance</h2>
         <div className="flex items-center justify-between gap-4">

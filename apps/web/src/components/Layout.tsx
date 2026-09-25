@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
+  ChevronDown,
   CreditCard,
   FolderOpen,
   HistoryIcon,
   House,
   LogOut,
+  MOCK_INTERVIEW_ENABLED,
   OrbitWordmark,
   SettingsIcon,
+  Target,
   VerifyEmailBanner,
   cx,
   focusRing,
@@ -16,11 +19,12 @@ import {
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
+// Daily destinations only. Plan & billing lives in the account menu (and Settings): nobody checks it daily.
 const NAV: Array<{ to: string; label: string; icon: LucideIcon; end?: boolean }> = [
   { to: "/", label: "Home", icon: House, end: true },
+  ...(MOCK_INTERVIEW_ENABLED ? [{ to: "/mock", label: "Practice", icon: Target }] : []),
   { to: "/sessions", label: "Sessions", icon: HistoryIcon },
   { to: "/documents", label: "Documents", icon: FolderOpen },
-  { to: "/billing", label: "Billing", icon: CreditCard },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ];
 
@@ -85,28 +89,12 @@ export function Layout() {
             ))}
           </nav>
 
-          <div className="ml-auto flex items-center gap-2 text-sm md:ml-0">
-            <span
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-aurora-500 text-xs font-semibold text-white shadow-glow-sm"
-              title={user?.email}
-              aria-hidden="true"
-            >
-              {initials(user?.name, user?.email)}
-            </span>
-            <span className="hidden max-w-[14rem] truncate text-zinc-500 lg:inline">{user?.email}</span>
-            <button
-              type="button"
-              onClick={signOut}
-              className={cx(
-                "flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-zinc-600 hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
-                focusRing,
-              )}
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Sign out</span>
-              <span className="sr-only sm:hidden">Sign out</span>
-            </button>
-          </div>
+          <AccountMenu
+            name={user?.name ?? null}
+            email={user?.email ?? ""}
+            onBilling={() => navigate("/billing")}
+            onSignOut={signOut}
+          />
         </div>
       </header>
 
@@ -167,6 +155,80 @@ export function Layout() {
           ))}
         </ul>
       </nav>
+    </div>
+  );
+}
+
+/** Avatar button → account menu: who's signed in, plan & billing, sign out. */
+function AccountMenu({
+  name,
+  email,
+  onBilling,
+  onSignOut,
+}: {
+  name: string | null;
+  email: string;
+  onBilling: () => void;
+  onSignOut: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  const item = cx(
+    "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-900/5 dark:text-zinc-200 dark:hover:bg-white/5",
+    focusRing,
+  );
+  const choose = (fn: () => void) => () => {
+    setOpen(false);
+    fn();
+  };
+  return (
+    <div ref={ref} className="relative ml-auto md:ml-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Account menu"
+        className={cx("flex items-center gap-1.5 rounded-full p-0.5 pr-1.5 hover:bg-zinc-900/5 dark:hover:bg-white/5", focusRing)}
+      >
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-aurora-500 text-xs font-semibold text-white shadow-glow-sm">
+          {initials(name, email)}
+        </span>
+        <ChevronDown className={cx("h-4 w-4 text-zinc-500 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="glass-panel absolute right-0 top-full z-30 mt-2 w-64 animate-scale-in rounded-2xl p-1.5 shadow-xl"
+        >
+          <div className="px-3 py-2">
+            {name && <p className="truncate text-sm font-medium">{name}</p>}
+            <p className="truncate text-xs text-zinc-500">{email}</p>
+          </div>
+          <div className="my-1 h-px bg-zinc-200 dark:bg-white/10" />
+          <button type="button" role="menuitem" className={item} onClick={choose(onBilling)}>
+            <CreditCard className="h-4 w-4 text-zinc-500" />
+            Plan &amp; billing
+          </button>
+          <button type="button" role="menuitem" className={item} onClick={choose(onSignOut)}>
+            <LogOut className="h-4 w-4 text-zinc-500" />
+            Sign out
+          </button>
+        </div>
+      )}
     </div>
   );
 }

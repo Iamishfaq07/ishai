@@ -180,6 +180,20 @@ export function LivePanel(props: LivePanelProps) {
   };
 
   const retry = () => actions.answer(question?.text);
+
+  // "Shorter" / "Longer": step the answer length and re-ask the same question. Only for spoken answers to a
+  // question (not chat replies or screenshots), and not while one is still streaming.
+  const LENGTH_STEPS = ["short", "standard", "detailed"] as const;
+  const lengthIndex = LENGTH_STEPS.indexOf(live.settings.length);
+  const canResize = Boolean(
+    answer && question && !ended && answer.status === "complete" && (answer.source === "auto" || answer.source === "manual"),
+  );
+  const resizeTo = (index: number) => () => {
+    const next = LENGTH_STEPS[index];
+    if (!next || !question) return;
+    actions.setLength(next);
+    actions.answer(question.text); // same socket, in order: the new length applies to this answer
+  };
   const mockStt = live.providers.stt?.state === "mock";
 
   return (
@@ -275,6 +289,12 @@ export function LivePanel(props: LivePanelProps) {
             progress={keyPoints?.progress ?? null}
             {...(keyPoints ? { onTogglePoint: keyPoints.toggle } : {})}
             reader={reader}
+            {...(canResize
+              ? {
+                  onShorter: lengthIndex > 0 ? resizeTo(lengthIndex - 1) : null,
+                  onLonger: lengthIndex < LENGTH_STEPS.length - 1 ? resizeTo(lengthIndex + 1) : null,
+                }
+              : {})}
             // Screenshots can't be re-run (the image isn't kept), so their code has no language picker.
             {...(answer && answer.source !== "screenshot" && question && !ended
               ? { onCodeLanguage: (lang: CodingLanguage) => actions.setCodingLanguage(lang, question.text) }

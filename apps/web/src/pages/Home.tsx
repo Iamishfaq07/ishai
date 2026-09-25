@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import type { SessionType } from "@orbit/types";
+import type { OrbitDocument, OrbitSession, SessionType } from "@orbit/types";
 import {
   ArrowRight,
   ArrowUpRight,
   Briefcase,
+  Check,
   ClipboardCheck,
   Code2,
   Download,
@@ -17,6 +19,7 @@ import {
   SpotIllustration,
   Target,
   Users,
+  X,
   cx,
   focusRing,
   type LucideIcon,
@@ -88,11 +91,16 @@ export function HomePage() {
               )}
             </div>
           </div>
-          <div className="relative -mt-4 flex justify-center pb-8 md:mt-0 md:py-8 md:pr-8">
-            <PlanetHero className="w-56 motion-safe:animate-float sm:w-72" />
+          {/* Small on phones so the setup checklist below stays in view. */}
+          <div className="relative -mt-6 flex justify-center pb-6 md:mt-0 md:py-8 md:pr-8">
+            <PlanetHero className="w-32 motion-safe:animate-float sm:w-72" />
           </div>
         </div>
       </section>
+
+      {sessions.data && documents.data && (
+        <GettingStarted sessions={sessions.data} documents={documents.data} />
+      )}
 
       <section aria-labelledby="quick-start">
         <h2 id="quick-start" className="mb-4 font-display text-lg font-semibold tracking-tight">
@@ -165,8 +173,8 @@ export function HomePage() {
                         </span>
                       </span>
                       {s.status !== "ended" && (
-                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-                          Live
+                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                          {s.status === "live" ? "Unfinished" : "Not started"}
                         </span>
                       )}
                     </Link>
@@ -210,6 +218,119 @@ export function HomePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+const CHECKLIST_KEY = "orbit.checklistDismissed";
+
+/**
+ * First-run guide: the four things that make Orbit useful, ticked off from real data. It disappears once they're all
+ * done, or for good when dismissed.
+ */
+function GettingStarted({ sessions, documents }: { sessions: OrbitSession[]; documents: OrbitDocument[] }) {
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(CHECKLIST_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const steps = [
+    {
+      title: "Upload your resume",
+      body: "Answers are grounded in your real experience.",
+      done: documents.some((d) => d.kind === "resume"),
+      to: "/documents",
+    },
+    {
+      title: "Add a job description",
+      body: "Orbit tailors answers to the role.",
+      done: documents.some((d) => d.kind === "job_description"),
+      to: "/documents",
+    },
+    ...(MOCK_INTERVIEW_ENABLED
+      ? [{ title: "Try a practice interview", body: "Orbit asks, you answer out loud.", done: sessions.some((s) => s.type === "mock"), to: "/mock" }]
+      : []),
+    {
+      title: "Run a live session",
+      body: "Test your mic and audio before the real thing.",
+      done: sessions.some((s) => s.type !== "mock"),
+      to: "/start",
+    },
+  ];
+  const doneCount = steps.filter((s) => s.done).length;
+  if (dismissed || doneCount === steps.length) return null;
+
+  const dismiss = () => {
+    setDismissed(true);
+    try {
+      localStorage.setItem(CHECKLIST_KEY, "1");
+    } catch {
+      // storage unavailable — hidden for this visit
+    }
+  };
+
+  return (
+    <section aria-labelledby="getting-started" className="glass-panel rounded-2xl p-5 sm:p-6">
+      <div className="flex items-start gap-3">
+        <div className="flex-1">
+          <h2 id="getting-started" className="font-display text-lg font-semibold tracking-tight">
+            Get set up
+          </h2>
+          <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+            {doneCount} of {steps.length} done — about five minutes to be interview-ready.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label="Hide setup checklist"
+          title="Hide"
+          className={cx("rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-900/5 dark:hover:bg-white/5", focusRing)}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-white/10">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-aurora-400 transition-[width] duration-500"
+          style={{ width: `${Math.round((doneCount / steps.length) * 100)}%` }}
+        />
+      </div>
+      <ol className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {steps.map((step, i) => (
+          <li key={step.title}>
+            <Link
+              to={step.to}
+              className={cx(
+                "flex h-full gap-3 rounded-xl p-3 ring-1 transition-colors",
+                step.done
+                  ? "ring-emerald-500/20 bg-emerald-500/5"
+                  : "ring-zinc-200 hover:bg-zinc-900/[0.03] hover:ring-indigo-400/40 dark:ring-white/10 dark:hover:bg-white/[0.03]",
+                focusRing,
+              )}
+            >
+              <span
+                className={cx(
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+                  step.done ? "bg-emerald-500 text-white" : "bg-indigo-500/15 text-indigo-700 dark:text-indigo-200",
+                )}
+                aria-hidden="true"
+              >
+                {step.done ? <Check className="h-3.5 w-3.5" /> : i + 1}
+              </span>
+              <span className="min-w-0">
+                <span className={cx("block text-sm font-medium", step.done && "text-zinc-500 line-through")}>
+                  {step.title}
+                  <span className="sr-only">{step.done ? " (done)" : ""}</span>
+                </span>
+                <span className="block text-xs text-zinc-500 dark:text-zinc-400">{step.body}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

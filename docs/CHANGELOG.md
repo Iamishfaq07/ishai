@@ -1,5 +1,23 @@
 # Implementation log
 
+## Unfinished sessions, Practice in the menu, setup checklist (2026-09-25)
+
+- **Sessions left open are ended automatically.** A dropped connection doesn't end a session (so it can be
+  resumed), which meant a session closed without **End** stayed "live" forever: no report, and "Live · 0 min" in
+  every list. A sweep (`sessions/cleanup.py`, every `ORBIT_SESSION_SWEEP_S`, default 5 min) now ends any session
+  with no connection and no new transcript for `ORBIT_ABANDONED_SESSION_MIN` (default 60) exactly as End would:
+  status, `ended_at` = its last activity, and the durable report job. Test: `test_abandoned_sessions_are_ended_and_reported`.
+- **Sessions page:** open sessions are labelled *Unfinished* / *Not started*, listed first, with **Resume** and
+  **End** right in the list. Home and the desktop app use the same labels.
+- **Menu:** Home · **Practice** · Sessions · Documents · Settings. Practice (mock interviews) had no menu entry on the
+  web. Plan & billing moved to the **account menu** (avatar) and a card at the top of Settings; Sign out is in the
+  account menu too.
+- **Plan & billing:** plans without a price say *Pricing coming soon* and *Upgrades coming soon* instead of a blank
+  price and a greyed-out Upgrade button that looked broken.
+- **Get set up** checklist on Home for new accounts: upload a resume, add a job description, try a practice
+  interview, run a live session — ticked off from real data, hidden once done or dismissed.
+- **Shorter / Longer** on an answer re-asks the same question one length step down / up (30s · 60s · Detailed).
+
 ## Live screen: hideable side panel, labelled answer settings (2026-09-25)
 
 - **Transcript panel can be hidden.** A header button (and a ✕ in the panel) shows/hides the Transcript · Chat ·
