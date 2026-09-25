@@ -28,6 +28,7 @@ from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.stt import create_stt_provider
 from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.runtime_config import refresh as refresh_runtime_config
+from orbit_api.sessions.cleanup import running_sweeper
 from orbit_api.sessions.recorder import replay_failed_writes
 from orbit_api.sessions.routes import drain_teardowns
 from orbit_api.sessions.routes import router as sessions_router
@@ -57,7 +58,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await replay_failed_writes()  # dead-lettered live-session writes from a previous outage
     except Exception:
         logging.getLogger(__name__).exception("replaying failed writes failed; will retry next start")
-    async with jobs.running_worker(s.job_poll_s):
+    async with jobs.running_worker(s.job_poll_s), running_sweeper(s.session_sweep_s):
         yield
         await drain_teardowns()
     with contextlib.suppress(Exception):

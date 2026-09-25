@@ -1,6 +1,6 @@
-import { CreditCard } from "@orbit/ui";
+import { CreditCard, cx } from "@orbit/ui";
 import type { Entitlements, PlanInfo } from "@orbit/types";
-import { Button, Card, ErrorNote, PageHeader, Spinner } from "../components/ui";
+import { Card, ErrorNote, PageHeader, Spinner } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -62,7 +62,7 @@ function PlanCard({ p, current }: { p: PlanInfo; current: string | null }) {
     <Card className={p.name === current ? "ring-2 ring-indigo-500" : undefined}>
       <h3 className="font-semibold">{p.label}</h3>
       <p className="mt-1 text-sm text-zinc-500">
-        {p.price_usd_month === null ? " " : p.price_usd_month === 0 ? "Free" : `$${p.price_usd_month} / month`}
+        {p.price_usd_month === null ? "Pricing coming soon" : p.price_usd_month === 0 ? "Free" : `$${p.price_usd_month} / month`}
       </p>
       <ul className="mt-3 space-y-1.5 text-sm text-zinc-600 dark:text-zinc-400">
         <li>· {limitLine(p.live_minutes, "live minutes / month")}</li>
@@ -74,11 +74,17 @@ function PlanCard({ p, current }: { p: PlanInfo; current: string | null }) {
           <li key={f}>· {f}</li>
         ))}
       </ul>
-      <span className="mt-4 block" title={p.name === current ? undefined : "Payments aren’t enabled yet."}>
-        <Button variant={p.name === current ? "secondary" : "primary"} size="sm" disabled className="w-full">
-          {p.name === current ? "Current plan" : "Upgrade"}
-        </Button>
-      </span>
+      {/* Checkout isn't live yet: a status label, not a greyed-out button that looks broken. */}
+      <p
+        className={cx(
+          "mt-4 rounded-xl px-3 py-2 text-center text-xs font-medium",
+          p.name === current
+            ? "bg-indigo-500/10 text-indigo-700 ring-1 ring-indigo-500/25 dark:text-indigo-200"
+            : "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",
+        )}
+      >
+        {p.name === current ? "Your current plan" : "Upgrades coming soon"}
+      </p>
     </Card>
   );
 }
@@ -98,7 +104,7 @@ export function BillingPage() {
 
   return (
     <div>
-      <PageHeader icon={CreditCard} title="Billing" subtitle="Your plan and this month’s usage." />
+      <PageHeader icon={CreditCard} title="Plan & billing" subtitle="Your plan and this month’s usage." />
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <h2 className="mb-1 font-semibold">This month</h2>
@@ -123,7 +129,7 @@ export function BillingPage() {
             (plans.data ?? []).map((p) => <PlanCard key={p.name} p={p} current={current} />)
           )}
           <p className="text-xs text-zinc-500 sm:col-span-3">
-            Plans and limits come from the server. Checkout isn’t live yet, so no payment can be taken from this page.
+            Paid plans open soon. Until then nothing can be bought here, and you won’t be charged.
           </p>
         </div>
       </div>

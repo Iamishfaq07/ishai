@@ -9,7 +9,7 @@ import { CodeBlock } from "./CodeBlock";
 import { cx, focusRing } from "./cx";
 import { PulseRings } from "./Illustrations";
 import { OrbitLogo } from "./OrbitLogo";
-import { ArrowRight, Check, Circle, Pause, PenLine, Play, Square, Volume2 } from "../icons";
+import { ArrowRight, Check, Circle, Maximize2, Minimize2, Pause, PenLine, Play, Square, Volume2 } from "../icons";
 
 export interface AnswerCardProps {
   answer: AnswerView | null;
@@ -27,6 +27,9 @@ export interface AnswerCardProps {
   reader?: ReadAloud;
   /** Rewrite a coding answer in another language (shows the language picker on the code). */
   onCodeLanguage?: (lang: CodingLanguage) => void;
+  /** Re-answer the same question shorter / longer (null = already at that end of the scale). */
+  onShorter?: (() => void) | null;
+  onLonger?: (() => void) | null;
 }
 
 /** Answer text with "[fill in]" prompts rendered as distinct chips so they're never read out verbatim. */
@@ -206,6 +209,7 @@ function SectionLabel({ children, block = false }: { children: string; block?: b
 
 export function AnswerCard({
   answer, pinned, onPin, onRetry, compact = false, autoAnswer, progress, onTogglePoint, reader, onCodeLanguage,
+  onShorter, onLonger,
 }: AnswerCardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showExample, setShowExample] = useState(false);
@@ -266,6 +270,28 @@ export function AnswerCard({
             >
               <Volume2 className="h-3.5 w-3.5" /> {reading ? "Reading" : "Read aloud"}
             </button>
+          )}
+          {answer.status === "complete" && answer.has_content && (onShorter !== undefined || onLonger !== undefined) && (
+            <>
+              <button
+                type="button"
+                onClick={onShorter ?? undefined}
+                disabled={!onShorter}
+                title={onShorter ? "Answer this question again, shorter" : "Already the shortest length"}
+                className={cx(iconBtn(false), "disabled:opacity-40")}
+              >
+                <Minimize2 className="h-3.5 w-3.5" /> Shorter
+              </button>
+              <button
+                type="button"
+                onClick={onLonger ?? undefined}
+                disabled={!onLonger}
+                title={onLonger ? "Answer this question again, in more depth" : "Already the longest length"}
+                className={cx(iconBtn(false), "disabled:opacity-40")}
+              >
+                <Maximize2 className="h-3.5 w-3.5" /> Longer
+              </button>
+            </>
           )}
           {answer.has_content && answer.status !== "failed" && <CopyButton text={answerAsText(a)} />}
           <button

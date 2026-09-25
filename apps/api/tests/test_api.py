@@ -392,3 +392,31 @@ def test_screenshot_is_answered_over_the_live_socket(client: TestClient) -> None
         _collect(ws, lambda ev: any(e["type"] == "session.ended" for e in ev))
     assert client.get("/v1/usage", headers=h).json()["screenshots_used"] == 1
 
+
+
+def test_abandoned_sessions_are_ended_and_reported(client: TestClient) -> None:
+    """A session closed without End (tab closed, app quit) doesn't stay "live" forever: once it has had no
+    connection and no activity for ORBIT_ABANDONED_SESSION_MIN, the sweep ends it and writes its report."""
+    from datetime import UTC, datetime, timedelta
+
+    from orbit_api.sessions.cleanup import end_abandoned_sessions
+
+    h = _register(client)
+    sid = client.post("/v1/sessions", headers=h, json={"title": "left open"}).json()["id"]
+    ticket = client.post(f"/v1/sessions/{sid}/live-ticket", headers=h).json()["ticket"]
+    with client.websocket_connect(f"/v1/sessions/{sid}/live?ticket={ticket}") as ws:
+        _collect(ws, lambda ev: any(e["type"] == "session.started" for e in ev))
+    assert client.get(f"/v1/sessions/{sid}", headers=h).json()["session"]["status"] == "live"
+
+    assert client.portal is not None
+    run = client.portal.call  # the app's own event loop (its DB engine lives there)
+    # Not idle long enough yet: left alone (a dropped connection must still be resumable).
+    assert run(end_abandoned_sessions, datetime.now(UTC)) == 0
+    assert client.get(f"/v1/sessions/{sid}", headers=h).json()["session"]["status"] == "live"
+
+    # Past the cutoff: ended as if End were pressed, with its report.
+    assert run(end_abandoned_sessions, datetime.now(UTC) + timedelta(hours=2)) >= 1
+    detail = _wait_report(client, h, sid)
+    assert detail["session"]["status"] == "ended" and detail["session"]["ended_at"] is not None
+    assert detail["session"]["report_status"] == "ready"
+    assert client.post(f"/v1/sessions/{sid}/live-ticket", headers=h).status_code == 409
