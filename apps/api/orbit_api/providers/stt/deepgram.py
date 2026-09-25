@@ -49,6 +49,8 @@ def build_url(model: str, cfg: STTConfig) -> str:
     params.append(("language", "multi" if cfg.language == "auto" else cfg.language))
     if cfg.diarize:
         params.append(("diarize", "true"))
+    if cfg.filler_words:
+        params.append(("filler_words", "true"))
     for term in cfg.keyterms[:50]:
         params.append(("keyterm", term))
     return "wss://api.deepgram.com/v1/listen?" + urlencode(params)

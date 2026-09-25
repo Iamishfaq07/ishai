@@ -23,6 +23,7 @@ from orbit_api.models import LiveSessionRow, ProviderRequest, Question, SessionS
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMRequest
 from orbit_api.providers.llm.pricing import estimate_cost
+from orbit_api.sessions.delivery import delivery_stats
 
 log = logging.getLogger(__name__)
 
@@ -154,6 +155,8 @@ async def generate_report(session_id: str) -> dict[str, Any]:
             "suggested_preparation": [],
             "review": None,
             "generated_by": None,
+            # Pace, fillers, talk time: arithmetic on the transcript (sessions/delivery.py), no model call.
+            "delivery": delivery_stats(turns, [p.answer for p in pair_questions_with_answers(questions, turns)]),
         }
 
         narrative_failed = False

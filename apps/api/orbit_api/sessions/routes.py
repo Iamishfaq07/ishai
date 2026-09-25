@@ -109,6 +109,8 @@ class SessionIn(BaseModel):
     workspace_id: str | None = Field(None, max_length=36)
     # Mock interviews only (type "mock"): what the AI interviewer asks and for how long.
     mock: MockConfig | None = None
+    # The candidate's standing instructions for answers; from a saved setup's notes when not given.
+    instructions: str | None = Field(None, max_length=1000)
 
 
 class SessionOut(BaseModel):
@@ -131,6 +133,7 @@ class SessionOut(BaseModel):
     # Ended sessions: "pending" while the report job runs, "ready" once written, "failed" if it gave up.
     report_status: Literal["pending", "ready", "failed"] | None = None
     workspace_id: str | None = None
+    instructions: str | None = None
 
 
 class SessionDetail(BaseModel):
@@ -155,7 +158,7 @@ def _to_out(row: LiveSessionRow, question_count: int, doc_ids: list[str],
         answer_language=row.answer_language, length=row.length, style=row.style, auto_answer=row.auto_answer,
         status=row.status, created_at=row.created_at, started_at=row.started_at, ended_at=row.ended_at,
         duration_seconds=row.duration_s, question_count=question_count, document_ids=doc_ids,
-        report_status=report_status, workspace_id=row.workspace_id,
+        report_status=report_status, workspace_id=row.workspace_id, instructions=row.instructions,
     )
 
 
@@ -198,6 +201,8 @@ async def create_session(body: SessionIn, user: Annotated[User, Depends(require_
         ws.last_used_at = datetime.now(UTC)
         if not document_ids:
             document_ids = await workspace_document_ids(db, ws.id)
+        if body.instructions is None and ws.notes:
+            body.instructions = ws.notes[:1000]
     if document_ids:
         owned = (await db.scalars(select(Document.id).where(Document.id.in_(document_ids),
                                                             Document.user_id == user.id))).all()
@@ -593,6 +598,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             mock=MockConfig.model_validate(row.mock_config) if row.mock_config else None,
             allow_fallback=plan.has("provider_fallback"),
             features=frozenset(f for f in ("system_design", "advanced_coding") if plan.has(f)),
+            instructions=(row.instructions or "").strip() or None,
         )
         settings = LiveSettings(auto_answer=row.auto_answer, length=row.length,
                                 style=row.style)

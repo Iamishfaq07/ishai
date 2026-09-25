@@ -12,6 +12,9 @@ class STTConfig:
     sample_rate: int = 16_000
     keyterms: list[str] = field(default_factory=list)  # custom vocabulary (skills, company names)
     diarize: bool = False  # only useful on a mixed channel
+    # Keep "um"/"uh" in the text (speaking feedback). Only the candidate's mic: fillers would add noise to the
+    # interviewer's text that question detection reads.
+    filler_words: bool = False
 
 
 @dataclass

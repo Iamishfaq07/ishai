@@ -156,6 +156,8 @@ export interface CreateSessionRequest {
   mock?: MockConfig;
   /** Started from a saved setup (recorded; its documents are used if document_ids is empty). */
   workspace_id?: string;
+  /** Standing instructions for every answer ("mention I'm relocating"); from the saved setup's notes if omitted. */
+  instructions?: string;
 }
 
 /** A saved interview setup ("Google — Senior Security Engineer"). */
@@ -277,6 +279,54 @@ export interface SessionSummary {
   follow_up_count: number;
   /** Post-session scorecard; absent on summaries made before reviews existed. */
   review?: SessionReview | null;
+  /** Speaking feedback from the transcript (no model call); null when there was too little speech. */
+  delivery?: DeliveryStats | null;
+  /** The debrief + thank-you email, once generated (POST /v1/sessions/{id}/follow-up). */
+  follow_up?: FollowUp | null;
+}
+
+export interface DeliveryStats {
+  speaking_seconds: number;
+  words: number;
+  words_per_minute: number;
+  fillers_total: number;
+  fillers_per_minute: number;
+  top_fillers: Array<{ word: string; count: number }>;
+  /** Your share of the talking time (0–1); null when only your side was captured. */
+  talk_share: number | null;
+  answers: number;
+  average_answer_words: number | null;
+  longest_answer_words: number | null;
+  tips: string[];
+}
+
+export interface FollowUp {
+  debrief: { went_well: string[]; to_improve: string[]; promised: string[]; next_steps: string[] };
+  thank_you: { subject: string; body: string };
+}
+
+/** GET /v1/progress — ended sessions (oldest first) with score and speaking stats, plus a summary. */
+export interface ProgressPoint {
+  id: string;
+  title: string;
+  type: SessionType;
+  ended_at: string | null;
+  overall_score: number | null;
+  words_per_minute: number | null;
+  fillers_per_minute: number | null;
+  talk_share: number | null;
+}
+
+export interface Progress {
+  points: ProgressPoint[];
+  summary: {
+    sessions: number;
+    this_week: number;
+    streak_days: number;
+    average_score_recent: number | null;
+    average_score_before: number | null;
+    latest_tips: string[];
+  };
 }
 
 export interface SessionDetail {

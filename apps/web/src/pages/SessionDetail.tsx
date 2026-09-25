@@ -1,7 +1,17 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { SessionAnswer, SessionDetail, SessionSummary } from "@orbit/types";
-import { CodeBlock, ReportStatusNote, SessionReview, cx, focusRing, useReportPolling, confirmDialog } from "@orbit/ui";
+import {
+  CodeBlock,
+  DeliveryCard,
+  FollowUpCard,
+  ReportStatusNote,
+  SessionReview,
+  cx,
+  focusRing,
+  useReportPolling,
+  confirmDialog,
+} from "@orbit/ui";
 import { Button, Card, ErrorNote, Input, PageHeader, Spinner } from "../components/ui";
 import { api } from "../lib/api";
 import { SESSION_TYPE_LABEL, downloadText, errorText, formatClock, formatDate, formatDuration } from "../lib/format";
@@ -128,6 +138,7 @@ export function SessionDetailPage() {
       </div>
 
       {tab === "review" && (
+        <div className="space-y-6">
         <SessionReview
           review={detail.data.summary?.review}
           ended={session.status === "ended"}
@@ -141,6 +152,11 @@ export function SessionDetailPage() {
             navigate(`/live/${drill.id}`, { state: launch });
           }}
         />
+        <DeliveryCard delivery={detail.data.summary?.delivery} />
+        {session.status === "ended" && session.type !== "mock" && (
+          <FollowUpCard initial={detail.data.summary?.follow_up} load={(refresh) => api.followUp(session.id, refresh)} />
+        )}
+        </div>
       )}
       {tab === "summary" && <SummaryView summary={detail.data.summary} />}
       {tab === "transcript" && <TranscriptTimeline detail={detail.data} />}
