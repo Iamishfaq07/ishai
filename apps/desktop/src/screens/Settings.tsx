@@ -14,8 +14,13 @@ import {
   Select,
   Spinner,
   Toggle,
-  useDesign, confirmDialog } from "@orbit/ui";
-import { API_URL, api } from "../api";
+  useDesign, confirmDialog,
+  CreditCard,
+  ExternalLink,
+  UserCog,
+} from "@orbit/ui";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { API_URL, WEB_URL, api } from "../api";
 import { loadCloseAction, saveCloseAction, type CloseAction } from "../CloseDialog";
 import { GlassControls } from "../GlassControls";
 import { GlobalShortcutsCard } from "../GlobalShortcutsCard";
@@ -143,10 +148,49 @@ function PrivacyCard({ user, onUser, onSignOut }: { user: User; onUser: (u: User
           Screenshots are sent to the AI model to answer, then discarded — never stored. Raw audio is never stored.
         </p>
         {error && <ErrorNote>{error}</ErrorNote>}
-        <div className="border-t border-zinc-100 pt-4 dark:border-zinc-800">
+        <div className="flex flex-wrap gap-2 border-t border-zinc-100 pt-4 dark:border-white/[0.06]">
           <Button variant="secondary" onClick={onSignOut}>
             Sign out
           </Button>
+          <Button
+            variant="ghost"
+            onClick={() =>
+              void confirmDialog({
+                title: "Sign out everywhere?",
+                body: "Every device signed in to this account — this app, browsers, other computers — is signed out.",
+                confirmLabel: "Sign out everywhere",
+                danger: true,
+              }).then(async (ok) => {
+                if (!ok) return;
+                try {
+                  await api.logoutAll();
+                } catch (err) {
+                  setError(errText(err));
+                  return;
+                }
+                onSignOut();
+              })
+            }
+          >
+            Sign out everywhere
+          </Button>
+        </div>
+        {/* Account management the desktop app doesn't duplicate: one click to the same page in the browser. */}
+        <div className="rounded-xl bg-zinc-500/5 p-3 ring-1 ring-zinc-200 dark:ring-white/[0.06]">
+          <p className="text-sm font-medium">More account options</p>
+          <p className="mt-0.5 text-xs text-zinc-500">Open in your browser, signed in to the same account.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button variant="secondary" size="sm" onClick={() => void openUrl(`${WEB_URL}/billing`)}>
+              <CreditCard className="h-3.5 w-3.5" />
+              Plan &amp; billing
+              <ExternalLink className="h-3 w-3 opacity-60" />
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => void openUrl(`${WEB_URL}/settings`)}>
+              <UserCog className="h-3.5 w-3.5" />
+              Change email · download my data · delete account
+              <ExternalLink className="h-3 w-3 opacity-60" />
+            </Button>
+          </div>
         </div>
       </div>
     </Card>

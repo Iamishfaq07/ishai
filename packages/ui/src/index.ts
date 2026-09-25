@@ -102,6 +102,8 @@ export { TranscriptView, type TranscriptViewProps } from "./components/Transcrip
 export { checkServerUrl, type ServerUrlCheck } from "./serverUrl";
 export { useReportPolling } from "./hooks/useReportPolling";
 export { ReportStatusNote } from "./components/ReportStatusNote";
+export { WorkspaceBar } from "./components/WorkspaceBar";
+export { PreflightPanel } from "./components/PreflightPanel";
 export { LatencyDiagnostics } from "./components/LatencyDiagnostics";
 export { applyOverrides, scoreKeyPoints, type KeyPointProgress, type PointProgress } from "./live/coverage";
 export { useKeyPointProgress, type KeyPoints } from "./live/useKeyPointProgress";

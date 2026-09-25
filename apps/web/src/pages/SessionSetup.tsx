@@ -1,6 +1,16 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { AnswerLength, AnswerStyle, DocumentKind, ResponseTiming, SessionType, ThinkingLevel } from "@orbit/types";
+import type {
+  AnswerLength,
+  AnswerStyle,
+  DocumentKind,
+  OrbitDocument,
+  PreflightCheck,
+  ResponseTiming,
+  SessionType,
+  ThinkingLevel,
+  Workspace,
+} from "@orbit/types";
 import {
   ANSWER_STYLES,
   RESPONSE_TIMINGS,
@@ -9,10 +19,20 @@ import {
   loadThinking,
   saveResponseTiming,
   saveThinking,
+  PreflightPanel,
   Rocket,
+  addFrame,
+  newChannelStats,
+  summarizeChannel,
+  type ChannelSummary,
+  type Verdict,
+  WorkspaceBar,
+  confirmDialog,
+  cx,
+  focusRing,
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, Meter, PageHeader, Select, Spinner, Toggle } from "../components/ui";
-import { api } from "../lib/api";
+import { API_URL, api } from "../lib/api";
 import {
   captureStream,
   levelFromRms,
@@ -49,6 +69,94 @@ const LENGTHS: Array<{ value: AnswerLength; label: string }> = [
 const SELECTABLE_TYPES: SessionType[] = ["interview", "meeting", "coding", "assessment", "phone"];
 const KIND_ORDER: Record<DocumentKind, number> = { resume: 0, job_description: 1, notes: 2, other: 3 };
 
+const WORKSPACE_KEY = "orbit.workspaceId";
+
+/** What only the browser can check before a session: microphone access, tab audio, and the chosen documents. */
+function browserChecks(o: {
+  permission: ReturnType<typeof useMicPermission>;
+  micCount: number;
+  systemAudio: boolean;
+  type: SessionType;
+  docs: OrbitDocument[];
+  selected: Set<string>;
+}): PreflightCheck[] {
+  const out: PreflightCheck[] = [];
+  out.push(
+    o.permission === "denied"
+      ? {
+          id: "mic",
+          label: "Microphone",
+          status: "fail",
+          severity: "blocker",
+          detail: "Blocked in this browser.",
+          fix: "Allow the microphone from the lock icon in the address bar, then Re-check.",
+        }
+      : o.permission === "granted" && o.micCount === 0
+        ? {
+            id: "mic",
+            label: "Microphone",
+            status: "fail",
+            severity: "blocker",
+            detail: "No microphone found.",
+            fix: "Plug one in (or pick another input in your system settings), then Re-check.",
+          }
+        : o.permission === "granted"
+          ? { id: "mic", label: "Microphone", status: "ok", detail: "Allowed." }
+          : {
+              id: "mic",
+              label: "Microphone",
+              status: "warn",
+              detail: "Your browser will ask for access when the session starts.",
+              fix: "Press Test microphone now to allow it ahead of time.",
+            },
+  );
+  out.push(
+    o.type === "phone"
+      ? { id: "system", label: "Interviewer audio", status: "ok", detail: "Phone / room mode: your microphone hears both sides." }
+      : !supportsDisplayAudio()
+        ? {
+            id: "system",
+            label: "Interviewer audio",
+            status: "warn",
+            detail: "This browser can't share tab audio, so Orbit only hears your microphone.",
+            fix: "Use Chrome or Edge on a computer, or the Orbit desktop app.",
+          }
+        : !o.systemAudio
+          ? {
+              id: "system",
+              label: "Interviewer audio",
+              status: "warn",
+              detail: "Off — Orbit only hears your microphone.",
+              fix: "Turn on Interviewer audio so Orbit can tell who's speaking.",
+            }
+          : { id: "system", label: "Interviewer audio", status: "ok", detail: "You'll share the meeting tab when the session starts." },
+  );
+  const picked = o.docs.filter((d) => o.selected.has(d.id));
+  out.push(
+    picked.some((d) => d.kind === "resume")
+      ? { id: "resume", label: "Resume", status: "ok", detail: "Selected." }
+      : {
+          id: "resume",
+          label: "Resume",
+          status: "warn",
+          detail: "None selected.",
+          fix: "Add or tick your resume so answers use your real background.",
+        },
+  );
+  out.push(
+    picked.some((d) => d.kind === "job_description")
+      ? { id: "jd", label: "Job description", status: "ok", detail: "Selected." }
+      : {
+          id: "jd",
+          label: "Job description",
+          status: "warn",
+          detail: "None selected.",
+          fix: "Optional: add the job description so answers fit the role.",
+        },
+  );
+  return out;
+}
+
 export interface LiveLaunchState {
   micDeviceId?: string;
   systemAudio: boolean;
@@ -77,6 +185,51 @@ export function SessionSetupPage() {
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const micPermission = useMicPermission();
+  const [workspaceId, setWorkspaceId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(WORKSPACE_KEY);
+    } catch {
+      return null;
+    }
+  });
+  // Failing critical checks (server, AI, transcription, microphone, minutes): Start stays disabled unless the user
+  // explicitly overrides — a broken setup must never slide into a live interview by default.
+  const [blockers, setBlockers] = useState<PreflightCheck[]>([]);
+  const [overrideBlockers, setOverrideBlockers] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const onPreflight = useCallback((b: PreflightCheck[]) => {
+    setBlockers(b);
+    if (b.length === 0) setOverrideBlockers(false);
+  }, []);
+
+  const applyWorkspace = (ws: Workspace | null) => {
+    setWorkspaceId(ws?.id ?? null);
+    try {
+      if (ws) localStorage.setItem(WORKSPACE_KEY, ws.id);
+      else localStorage.removeItem(WORKSPACE_KEY);
+    } catch {
+      // storage unavailable — the choice still applies to this session
+    }
+    if (!ws) return;
+    if (SELECTABLE_TYPES.includes(ws.session_type)) setType(ws.session_type);
+    setRole(ws.role ?? "");
+    setLanguage(ws.language);
+    setAnswerLanguage(ws.answer_language ?? ws.language);
+    setLength(ws.length);
+    setStyle(ws.style);
+    setAutoAnswer(ws.auto_answer);
+    setSelectedDocs(new Set(ws.document_ids));
+  };
+  // Restore the last-used setup once documents are loaded (its document ids replace the default selection).
+  const restored = useRef(false);
+  useEffect(() => {
+    if (restored.current || !docs.data || !workspaceId) return;
+    restored.current = true;
+    api
+      .listWorkspaces()
+      .then((list) => applyWorkspace(list.find((w) => w.id === workspaceId) ?? null))
+      .catch(() => undefined);
+  }, [docs.data, workspaceId]);
 
   // Default selection: every ready resume + JD (spec §23 — not every document).
   useEffect(() => {
@@ -125,6 +278,7 @@ export function SessionSetupPage() {
         style,
         auto_answer: autoAnswer,
         document_ids: [...(selectedDocs ?? [])],
+        ...(workspaceId ? { workspace_id: workspaceId } : {}),
       });
       const launch: LiveLaunchState = { systemAudio, ...(micId ? { micDeviceId: micId } : {}) };
       navigate(`/live/${session.id}`, { state: launch });
@@ -135,12 +289,36 @@ export function SessionSetupPage() {
   };
 
   const sortedDocs = [...(docs.data ?? [])].sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind]);
+  const localChecks = browserChecks({
+    permission: micPermission,
+    micCount: mics.filter((m) => m.deviceId).length,
+    systemAudio,
+    type,
+    docs: docs.data ?? [],
+    selected: selectedDocs ?? new Set(),
+  });
+  const blocked = blockers.length > 0 && !overrideBlockers;
 
   return (
     <div>
       <PageHeader icon={Rocket} title="New live session" subtitle="Pick your context and audio, then start. You can change answer length live." />
-      <form onSubmit={(e) => void start(e)} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <form ref={formRef} onSubmit={(e) => void start(e)} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-6">
+          <WorkspaceBar
+            api={api}
+            selectedId={workspaceId}
+            onSelect={applyWorkspace}
+            current={{
+              role: role.trim() || null,
+              session_type: type,
+              language,
+              answer_language: answerLanguage !== language ? answerLanguage : null,
+              length,
+              style,
+              auto_answer: autoAnswer,
+              document_ids: [...(selectedDocs ?? [])],
+            }}
+          />
           <Card>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Session name" htmlFor="title">
@@ -326,10 +504,38 @@ export function SessionSetupPage() {
             </div>
           </Card>
 
+          <PreflightPanel api={api} healthUrl={`${API_URL}/health`} local={localChecks} onStatus={onPreflight} />
           {error && <ErrorNote>{error}</ErrorNote>}
-          <Button type="submit" size="lg" className="w-full" disabled={starting}>
-            {starting ? "Starting…" : "Start Session"}
+          <Button type="submit" size="lg" className="w-full" disabled={starting || blocked}>
+            {starting
+              ? "Starting…"
+              : blocked
+                ? `Fix ${blockers.length} problem${blockers.length === 1 ? "" : "s"} to start`
+                : "Start Session"}
           </Button>
+          {blocked && !starting && (
+            <button
+              type="button"
+              onClick={() => {
+                void confirmDialog({
+                  title: "Start with problems?",
+                  body: `${blockers.map((b) => `${b.label}: ${b.detail}`).join(" ")} The session may not hear or answer you — only continue if you're sure the check is wrong.`,
+                  confirmLabel: "Start anyway",
+                  danger: true,
+                }).then((ok) => {
+                  if (!ok) return;
+                  setOverrideBlockers(true);
+                  setTimeout(() => formRef.current?.requestSubmit(), 0);
+                });
+              }}
+              className={cx(
+                "w-full text-center text-xs text-zinc-500 underline hover:text-zinc-800 dark:hover:text-zinc-200",
+                focusRing,
+              )}
+            >
+              Start without these checks
+            </button>
+          )}
         </div>
       </form>
     </div>
@@ -347,11 +553,29 @@ function PermissionLine({ permission }: { permission: ReturnType<typeof useMicPe
   return <p className="text-xs text-zinc-500">Your browser will ask for microphone access when you test or start.</p>;
 }
 
-function useLevelCapture() {
+const TEST_LIMIT_MS = 30_000; // the mic indicator shouldn't stay on because someone forgot the test
+
+const VERDICT_STYLE: Record<Verdict, string> = {
+  waiting: "text-zinc-500 dark:text-zinc-400",
+  ok: "text-emerald-600 dark:text-emerald-400",
+  silent: "text-amber-600 dark:text-amber-400",
+  too_loud: "text-amber-600 dark:text-amber-400",
+  dropouts: "text-rose-600 dark:text-rose-400",
+  no_audio: "text-rose-600 dark:text-rose-400",
+};
+
+/**
+ * A level meter plus the same diagnosis the desktop app gives (delivery, dropouts, silence, loudness), measured in
+ * the browser from the capture frames. Nothing is sent to the server.
+ */
+function useLevelCapture(kind: "mic" | "system") {
   const [level, setLevel] = useState(0);
   const [active, setActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<ChannelSummary | null>(null);
   const captureRef = useRef<AudioCapture | null>(null);
+  const stats = useRef(newChannelStats());
+  const startedAt = useRef(0);
 
   const stop = () => {
     captureRef.current?.stop();
@@ -363,9 +587,15 @@ function useLevelCapture() {
   const start = async (open: () => Promise<MediaStream>) => {
     stop();
     setError(null);
+    setSummary(null);
     try {
       const stream = await open();
-      captureRef.current = await captureStream(stream, (f) => setLevel(levelFromRms(f.rms)));
+      stats.current = newChannelStats();
+      startedAt.current = performance.now();
+      captureRef.current = await captureStream(stream, (f) => {
+        setLevel(levelFromRms(f.rms));
+        stats.current = addFrame(stats.current, f.rms, performance.now());
+      });
       stream.getAudioTracks()[0]?.addEventListener("ended", stop);
       setActive(true);
     } catch (err) {
@@ -373,12 +603,32 @@ function useLevelCapture() {
     }
   };
 
+  // Re-diagnose twice a second while testing; stop on its own after 30 s.
+  useEffect(() => {
+    if (!active) return;
+    const tick = setInterval(() => {
+      const now = performance.now();
+      setSummary(summarizeChannel(stats.current, startedAt.current, now, kind));
+      if (now - startedAt.current > TEST_LIMIT_MS) stop();
+    }, 500);
+    return () => clearInterval(tick);
+  }, [active, kind]);
+
   useEffect(() => () => captureRef.current?.stop(), []);
-  return { level, active, error, start, stop };
+  return { level, active, error, summary, start, stop };
+}
+
+function TestResult({ summary }: { summary: ChannelSummary | null }) {
+  if (!summary) return null;
+  return (
+    <p role="status" className={cx("text-xs", VERDICT_STYLE[summary.verdict])}>
+      {summary.advice}
+    </p>
+  );
 }
 
 function MicTest({ deviceId, onGranted }: { deviceId?: string; onGranted: () => void }) {
-  const t = useLevelCapture();
+  const t = useLevelCapture("mic");
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-3">
@@ -401,13 +651,14 @@ function MicTest({ deviceId, onGranted }: { deviceId?: string; onGranted: () => 
           <Meter level={t.level} label="Microphone" />
         </div>
       </div>
+      <TestResult summary={t.summary} />
       {t.error && <p className="text-xs text-rose-600 dark:text-rose-400">{t.error}</p>}
     </div>
   );
 }
 
 function SystemAudioTest() {
-  const t = useLevelCapture();
+  const t = useLevelCapture("system");
   return (
     <div className="mt-3 space-y-2">
       <div className="flex items-center gap-3">
@@ -418,6 +669,7 @@ function SystemAudioTest() {
           <Meter level={t.level} label="Tab audio" />
         </div>
       </div>
+      <TestResult summary={t.summary} />
       {t.error && <p className="text-xs text-rose-600 dark:text-rose-400">{t.error}</p>}
     </div>
   );
