@@ -97,3 +97,16 @@ async def test_reconnect_is_reported_and_clears() -> None:
     await asyncio.sleep(0.05)
     assert _stt_states(sink).count("ok") == 2
     await eng.end()
+
+
+async def test_mock_stt_stays_mock_after_its_connected_events() -> None:
+    """The mock provider's scripted "connected" events mustn't turn "mock" into "ok" (that hid the dev simulator)."""
+    from orbit_api.providers.stt.mock import MockSTTProvider
+
+    sink = Sink()
+    eng = LiveEngine(SessionProfile("s1", "interview", "Engineer", "en", "en", dev_mode=True), LiveSettings(),
+                     send=sink, llm=MockLLMProvider(), stt=MockSTTProvider(), index=SessionIndex([]))
+    await eng.start()
+    await asyncio.sleep(0.1)
+    assert _stt_states(sink) == ["mock"]
+    await eng.end()

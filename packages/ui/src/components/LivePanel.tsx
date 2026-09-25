@@ -6,6 +6,7 @@ import { DEFAULT_HOTKEYS, useHotkeys, type HotkeyMap } from "../live/hotkeys";
 import { useAnswerHistory } from "../live/useAnswerHistory";
 import { useInterviewerVoice } from "../live/useInterviewerVoice";
 import { useKeyPointProgress } from "../live/useKeyPointProgress";
+import { useReadAloud } from "../live/useReadAloud";
 import {
   selectDisplayedAnswer,
   selectDisplayedQuestion,
@@ -53,7 +54,10 @@ export interface LivePanelProps {
   devFixtures?: readonly string[];
   /** Mock interview session: the AI interviewer's questions are shown and spoken instead of suggested answers. */
   mockInterview?: boolean;
-  /** Mock interview: the interviewer's voice started/stopped — mute the microphone while it speaks. */
+  /**
+   * Orbit's own voice started/stopped (the mock interviewer, or "Read aloud"). Stop sending audio while it plays,
+   * so the speakers are never transcribed as part of the interview.
+   */
   onInterviewerSpeaking?: (speaking: boolean) => void;
 }
 
@@ -77,7 +81,9 @@ export function LivePanel(props: LivePanelProps) {
   );
   const voice = useInterviewerVoice(mockQuestion, { enabled: Boolean(props.mockInterview) });
   const { onInterviewerSpeaking } = props;
-  useEffect(() => onInterviewerSpeaking?.(voice.speaking), [voice.speaking, onInterviewerSpeaking]);
+  const reader = useReadAloud();
+  const selfSpeaking = voice.speaking || reader.status === "playing";
+  useEffect(() => onInterviewerSpeaking?.(selfSpeaking), [selfSpeaking, onInterviewerSpeaking]);
   // Chat replies and screenshot answers aren't spoken to the interviewer: no checklist for those.
   const keyPoints = useKeyPointProgress(live, answer && (answer.source === "auto" || answer.source === "manual")
     ? answer : null);
@@ -187,7 +193,9 @@ export function LivePanel(props: LivePanelProps) {
             onRetry={retry}
             compact={compact}
             autoAnswer={live.settings.auto_answer}
-            progress={keyPoints}
+            progress={keyPoints?.progress ?? null}
+            {...(keyPoints ? { onTogglePoint: keyPoints.toggle } : {})}
+            reader={reader}
             // Screenshots can't be re-run (the image isn't kept), so their code has no language picker.
             {...(answer && answer.source !== "screenshot" && question && !ended
               ? { onCodeLanguage: (lang: CodingLanguage) => actions.setCodingLanguage(lang, question.text) }

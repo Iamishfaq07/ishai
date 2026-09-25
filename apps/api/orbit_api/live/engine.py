@@ -408,6 +408,8 @@ class LiveEngine:
 
     async def _publish_stt_state(self) -> None:
         state, detail = self._stt_aggregate()
+        if self._stt_published == "mock" and state in ("ok", "connecting"):
+            return  # scripted transcripts: "connected" isn't news, but a reconnect or outage still is
         if state == self._stt_published:
             return
         self._stt_published = state

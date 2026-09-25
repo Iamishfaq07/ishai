@@ -1,5 +1,27 @@
 # Implementation log
 
+## Key points you can tick, and Read aloud (2026-09-25)
+
+- **Key points (§25):** click a point to tick or untick it yourself. Your click wins over the automatic match, and
+  NEXT moves with it. Show/Hide is remembered per device.
+- **Read aloud (§31):** a *Read aloud* button on finished answers reads the spoken answer and its talking points
+  on the on-device Windows voices (the text never leaves the machine). It has Pause/Resume, Stop, speed (0.75–1.5×) and a voice picker; speed and
+  voice are remembered.
+  - It only starts when you press it.
+  - Code and diagrams aren't read; a `[fill in]` prompt becomes a pause.
+  - **While it plays, Orbit sends no audio**, so its own voice is never transcribed as the interview. It uses the
+    same mute as the mock interviewer. When paused, listening resumes.
+- **Fix:** with the mock speech-to-text provider (dev), the status went from "mock" to "ok" after the scripted
+  "connected" events, which hid the Dev · simulate controls. It now stays "mock". This was a regression from the
+  truthful-STT change; real providers are unaffected.
+- **Verified in the desktop test build:**
+  - 80 audio frames per 2 s when idle, **0 while reading**, and 80 again when paused or stopped;
+  - manual tick/untick works;
+  - 8 voices listed;
+  - speed persisted;
+  - no console errors.
+- Tests: UI 72 (override, speech text, chunking), plus an API test that mock STT stays "mock".
+
 ## Admin cost dashboard (2026-09-25)
 
 - **`GET /v1/admin/costs` (§40):**

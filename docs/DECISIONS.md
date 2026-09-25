@@ -203,3 +203,11 @@ it names them (`SOURCES: F1 F3`, after the spoken text so there's no latency cos
 it actually put in the prompt. It never trusts a "verified" label without a verified source: an honest model loses
 nothing, and a mistaken one can't present invented history as real. "Embellishing a real fact" (inferred) is
 split from "inventing an event" (example), because they need different warnings.
+
+**D41 — Read aloud mutes capture instead of filtering its own voice.** Orbit's voice comes out of the speakers,
+so the mic and the system loopback both hear it. Echo cancellation or a "don't transcribe my own voice" filter
+would be guesswork. Not sending audio while it plays is exact, reuses the mock interviewer's mute, and can't leak
+the answer into the transcript. The cost is that anything said during playback is missed, so it's user-started
+only, pausing resumes listening, and the controls say "Orbit isn't listening". It uses the platform's voices, so
+there's no provider and no cost. Only on-device voices are used, so no text leaves the machine.
+

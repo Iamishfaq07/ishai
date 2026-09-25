@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
  */
 const PREFERRED = [/natural/i, /aria|jenny|guy|sonia|ryan|libby/i, /zira|david|mark/i];
 
-function pickVoice(voices: SpeechSynthesisVoice[], lang: string): SpeechSynthesisVoice | undefined {
+export function pickVoice(voices: SpeechSynthesisVoice[], lang: string): SpeechSynthesisVoice | undefined {
   const base = lang.split("-")[0]!.toLowerCase();
   const matching = voices.filter((v) => v.lang.toLowerCase().startsWith(base));
   for (const pattern of PREFERRED) {
