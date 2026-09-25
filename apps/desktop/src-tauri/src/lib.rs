@@ -7,9 +7,11 @@ mod updater;
 #[cfg(target_os = "windows")]
 mod wasapi_capture;
 
+use std::time::Duration;
+
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
-use tauri::Manager;
+use tauri::{Manager, WindowEvent};
 
 /// "Quit Orbit" from the close dialog (the tray menu quits the same way).
 #[tauri::command]
@@ -20,6 +22,13 @@ fn quit_app(app: tauri::AppHandle) {
 fn protect_window(window: &tauri::WebviewWindow) {
     let _ = window.set_content_protected(true);
     let _ = window.set_skip_taskbar(true);
+}
+
+/// Every Orbit window, including ones opened after startup.
+fn protect_all(app: &tauri::AppHandle) {
+    for (_, window) in app.webview_windows() {
+        protect_window(&window);
+    }
 }
 
 fn show_main(app: &tauri::AppHandle) {
@@ -41,6 +50,16 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(audio::CaptureState::default())
         .manage(updater::PendingUpdate::default())
+        .on_window_event(|window, event| {
+            if matches!(
+                event,
+                WindowEvent::Focused(_) | WindowEvent::ScaleFactorChanged { .. } | WindowEvent::ThemeChanged(_)
+            ) {
+                if let Some(webview) = window.app_handle().get_webview_window(window.label()) {
+                    protect_window(&webview);
+                }
+            }
+        })
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "Show Orbit", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit Orbit", true, None::<&str>)?;
@@ -59,9 +78,14 @@ pub fn run() {
             }
             tray.build(app)?;
 
-            if let Some(win) = app.get_webview_window("main") {
-                protect_window(&win);
-            }
+            protect_all(app.handle());
+
+            // Windows can drop capture-exclusion after DPI or fullscreen changes.
+            let handle = app.handle().clone();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(Duration::from_secs(2));
+                protect_all(&handle);
+            });
 
             Ok(())
         })
