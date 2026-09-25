@@ -20,7 +20,7 @@
   - 8 voices listed;
   - speed persisted;
   - no console errors.
-- Tests: UI 72 (override, speech text, chunking), plus an API test that mock STT stays "mock".
+- Tests: UI 72 (override, speech text, chunking); API 356 (plus a test that mock STT stays "mock" while a reconnect or outage still shows).
 
 ## Admin cost dashboard (2026-09-25)
 
