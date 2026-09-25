@@ -1,5 +1,18 @@
 # Implementation log
 
+## Live screen: hideable side panel, labelled answer settings (2026-09-25)
+
+- **Transcript panel can be hidden.** A header button (and a ✕ in the panel) shows/hides the Transcript · Chat ·
+  Reading panel; wide screens remember the choice per device. On phones the panel used to be unreachable — it now
+  opens as a sheet over the answer (Esc or ✕ closes it), so phones get the transcript and the chat history too.
+- **Chat lives in the panel.** The Chat button opens the panel on its Chat tab and focuses the input (the phone-only
+  input with no replies above it is gone).
+- **Bottom bar in two clear rows:** actions (Answer, Screenshot, Chat, Clear … Settings, Pause, End — icons with
+  labels, icon-only on phones) and a labelled **Answer settings** row: *Length*, *Auto-answer*, *Wait*, *Style*,
+  *Thinking*. **"What do these do?"** explains every option in place with the current one marked (the old
+  explanations were hover tooltips, which touch screens never show). The settings row folds away with **Settings**;
+  it starts folded on phones and remembers the choice.
+
 ## "Deep Space" redesign — web + desktop (2026-09-25)
 
 - **New brand mark:** a planet core inside an orbit ring (accent violet → aurora cyan) with a four-point spark (the
