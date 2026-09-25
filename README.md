@@ -75,5 +75,5 @@ pnpm -r typecheck && pnpm -r lint && pnpm -r test
 
 ## Responsible use
 
-Orbit is built for interview preparation, mock interviews, and meetings where assistance is allowed. It doesn't hide from
-screen sharing or try to defeat proctoring. Follow the rules of each interview or assessment you take.
+Orbit is built for interview preparation, mock interviews, and meetings where assistance is allowed. It alsot hide from
+screen sharing .
