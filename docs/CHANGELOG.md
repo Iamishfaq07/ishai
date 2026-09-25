@@ -1,5 +1,27 @@
 # Implementation log
 
+## Dependency upgrades: all Dependabot PRs (2026-09-25)
+
+- **Desktop (Rust):**
+  - cpal 0.18, xcap 0.9, png 0.18, base64 0.23.
+  - windows-core 0.62. **`windows` moved to 0.62 with it**: the `#[implement]` macro needs matching versions, and 0.62 alone didn't compile.
+- **Frontend:**
+  - React 19. `react`, `@types/react` and `react-dom` move together; the Dependabot PR bumped only `react-dom`.
+  - React Router 7, TypeScript 6, vitest 5.
+  - `@vitejs/plugin-react` 6, which needs **Vite 8**, so Vite went 5 to 8.
+  - One React 19 type fix: `RefObject<T | null>`.
+- **Node 22.12+:**
+  - vitest 5 requires it, and Node 20 is end-of-life.
+  - CI uses Node 22, `engines` is `>=22.12`, and `.node-version` pins Cloudflare's builder to 22.
+- **CI actions:** checkout 7, upload-artifact 7, setup-uv 7, pnpm/action-setup 6, gitleaks 3. All tags exist, and none of their breaking changes touch inputs we use.
+- **Verified locally** (GitHub Actions is blocked by billing):
+  - Rust: fmt, clippy `-D warnings`, 19 tests;
+  - UI: 72 tests; typecheck and lint in all workspaces; web and desktop production builds;
+  - the full web journey in Chrome (register → documents → live → end → History);
+  - a desktop release build: device list, and mic + loopback capture (60/60 frames);
+  - a screenshot (2560×1440) through to an answer;
+  - live screen, key points and Read aloud (0 audio frames while reading).
+
 ## Key points you can tick, and Read aloud (2026-09-25)
 
 - **Key points (§25):** click a point to tick or untick it yourself. Your click wins over the automatic match, and
