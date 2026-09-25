@@ -20,16 +20,16 @@ tauri-plugin-opener = "2"
 tauri-plugin-updater = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-base64 = "0.22"
-cpal = "0.15"
-png = "0.17"
-xcap = "0.4"
+base64 = "0.23"
+cpal = "0.18"
+png = "0.18"
+xcap = "0.9"
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 tauri-plugin-clipboard-manager = "2"
 
 [target.'cfg(windows)'.dependencies]
 # Per-app audio capture (WASAPI process loopback). Same version Tauri already pulls in.
-windows = { version = "0.61", features = [
+windows = { version = "0.62", features = [
     "Win32_Devices_FunctionDiscovery",
     "Win32_Foundation",
     "Win32_Security",
@@ -41,7 +41,7 @@ windows = { version = "0.61", features = [
     "Win32_System_Variant",
     "Win32_UI_Shell_PropertiesSystem",
 ] }
-windows-core = "0.61" # the #[implement] macro expands to ::windows_core
+windows-core = "0.62" # the #[implement] macro expands to ::windows_core
 
 [profile.release]
 codegen-units = 1

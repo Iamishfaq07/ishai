@@ -64,7 +64,7 @@ server and are never shipped to the desktop or web clients. With the mock STT pr
 
 ## Frontend
 
-Requires Node 20.11+ and pnpm 9 (plus Rust stable for the desktop app):
+Requires Node 22.12+ and pnpm 9 (plus Rust stable for the desktop app):
 
 ```bash
 pnpm install
