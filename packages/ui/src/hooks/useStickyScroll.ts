@@ -8,7 +8,7 @@ const NEAR_BOTTOM_PX = 48;
  */
 export function useStickyScroll<T extends HTMLElement>(
   dependency: unknown,
-): { ref: RefObject<T>; atBottom: boolean; jumpToLatest: () => void; onScroll: () => void } {
+): { ref: RefObject<T | null>; atBottom: boolean; jumpToLatest: () => void; onScroll: () => void } {
   const ref = useRef<T>(null);
   const stickRef = useRef(true);
   const [atBottom, setAtBottom] = useState(true);
