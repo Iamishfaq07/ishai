@@ -1,5 +1,20 @@
 # Implementation log
 
+## Web ↔ desktop parity: saved setups, ready check, audio verdicts, account options (2026-09-25)
+
+- **Saved setups on the web.** The setup picker (pick one to fill in role, documents, language and answer
+  preferences; save / update / delete) moved from the desktop app into `packages/ui` (`WorkspaceBar`) and is now on
+  the web's New session page too. The last-used setup is restored, and sessions record which setup they came from.
+- **Ready check on the web.** The desktop pre-session checklist is shared (`PreflightPanel`): the server's provider /
+  allowance checks and a network round trip, plus each app's own checks. The web's are microphone permission / no
+  microphone, tab-audio support (phones can't share tab audio), and whether a resume and job description are
+  selected. Failing blockers disable **Start** unless you choose *Start without these checks*, as on desktop.
+- **Test microphone / Test tab audio verdicts on the web** — *sounds good*, *silent*, *too loud*, *dropping out*,
+  *no audio arriving* — using the shared audio diagnostics (measured in the browser; nothing is sent). Tests stop on
+  their own after 30 s.
+- **Desktop account options:** *Sign out everywhere* in Settings, and one-click links to Plan & billing and to change
+  email / download data / delete account in the browser.
+
 ## Unfinished sessions, Practice in the menu, setup checklist (2026-09-25)
 
 - **Sessions left open are ended automatically.** A dropped connection doesn't end a session (so it can be
