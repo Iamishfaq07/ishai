@@ -34,7 +34,16 @@ import {
   loadThinking,
   saveResponseTiming,
   saveThinking,
+  addFrame,
+  diagnosticsReport,
+  newChannelStats,
+  summarizeChannel,
+  type ChannelSummary,
+  type DiagnosticsEvent,
+  type Verdict,
 } from "@orbit/ui";
+import { getVersion } from "@tauri-apps/api/app";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { WEB_URL, api } from "../api";
 import {
@@ -734,6 +743,10 @@ export function SetupScreen({
               systemAudio={systemAudio}
               systemProcessId={appPid ? Number(appPid) : undefined}
               systemDevice={systemDevice}
+              micLabel={localState.micName ?? "default"}
+              listenTo={appPid ? `app: ${selectedApp?.exe.split(/[\\/]/).pop() ?? "unknown"}` : `output: ${outputName(systemDevice) ?? "default"}`}
+              devices={devices}
+              outputs={outputs}
             />
           </div>
 
@@ -792,23 +805,61 @@ export function SetupScreen({
   );
 }
 
+const TEST_LIMIT_MS = 30_000; // the mic indicator shouldn't stay on because someone forgot the test
+
+const VERDICT_STYLE: Record<Verdict, string> = {
+  waiting: "text-zinc-500",
+  ok: "text-emerald-600 dark:text-emerald-400",
+  silent: "text-amber-600 dark:text-amber-400",
+  too_loud: "text-amber-600 dark:text-amber-400",
+  dropouts: "text-rose-600 dark:text-rose-400",
+  no_audio: "text-rose-600 dark:text-rose-400",
+};
+
+/**
+ * "Test audio": live meters plus diagnostics (§23): delivery, dropouts, silence and loudness per channel,
+ * measured locally from the capture frames. Nothing is sent to the server. "Copy diagnostics" produces a
+ * shareable report with measurements and settings only.
+ */
 function AudioTest({
   micId,
   systemAudio,
   systemProcessId,
   systemDevice,
+  micLabel,
+  listenTo,
+  devices,
+  outputs,
 }: {
   micId?: string;
   systemAudio: boolean;
   systemProcessId?: number | undefined;
   systemDevice?: string | undefined;
+  micLabel: string;
+  listenTo: string;
+  devices: NativeAudioDevice[];
+  outputs: NativeAudioDevice[];
 }) {
   const [running, setRunning] = useState(false);
   const [levels, setLevels] = useState<[number, number]>([0, 0]);
   const [note, setNote] = useState<string | null>(null);
+  const [summaries, setSummaries] = useState<{ mic: ChannelSummary; system: ChannelSummary | null } | null>(null);
+  const [copied, setCopied] = useState(false);
   const runningRef = useRef(false);
+  const stats = useRef({ mic: newChannelStats(), system: newChannelStats() });
+  const startedAt = useRef(0);
+  const events = useRef<DiagnosticsEvent[]>([]);
+
+  const measure = () => {
+    const now = performance.now();
+    setSummaries({
+      mic: summarizeChannel(stats.current.mic, startedAt.current, now, "mic"),
+      system: systemAudio ? summarizeChannel(stats.current.system, startedAt.current, now, "system") : null,
+    });
+  };
 
   const stop = async () => {
+    if (runningRef.current) measure();
     runningRef.current = false;
     setRunning(false);
     setLevels([0, 0]);
@@ -817,6 +868,10 @@ function AudioTest({
 
   const start = async () => {
     setNote(null);
+    setCopied(false);
+    stats.current = { mic: newChannelStats(), system: newChannelStats() };
+    events.current = [];
+    setSummaries(null);
     try {
       runningRef.current = true;
       const options = {
@@ -825,28 +880,52 @@ function AudioTest({
         ...(systemProcessId ? { systemProcessId } : {}),
         ...(systemDevice ? { systemDevice } : {}),
       };
+      const t0 = performance.now();
+      startedAt.current = t0;
+      const log = (channel: "mic" | "system", kind: "status" | "error", detail: string) =>
+        events.current.length < 50 &&
+        events.current.push({ t: Math.round((performance.now() - t0) / 100) / 10, channel, kind, detail });
       const info = await startCapture(options, (ev) => {
         if (!runningRef.current) return;
+        const channel = ev.channel === AUDIO_CHANNEL.mic ? "mic" : "system";
         if (ev.kind === "frame") {
+          addFrame(stats.current[channel], ev.rms, performance.now());
           setLevels((prev) => {
             const next: [number, number] = [prev[0], prev[1]];
-            next[ev.channel === AUDIO_CHANNEL.mic ? 0 : 1] = levelFromRms(ev.rms);
+            next[channel === "mic" ? 0 : 1] = levelFromRms(ev.rms);
             return next;
           });
         } else if (ev.kind === "status") {
+          log(channel, "status", `${ev.state}: ${ev.device}`);
           const text = deviceStatusText(ev);
           if (text) setNote(text);
         } else {
+          log(channel, "error", ev.message);
           setNote(ev.message);
         }
       });
-      if (systemAudio && info.systemError) setNote(info.systemError);
+      if (info.micError) log("mic", "error", info.micError);
+      if (systemAudio && info.systemError) {
+        log("system", "error", info.systemError);
+        setNote(info.systemError);
+      }
       setRunning(true);
     } catch (err) {
       runningRef.current = false;
       setNote(String(err));
     }
   };
+
+  // Re-measure twice a second while running; stop by itself at the limit.
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(() => {
+      measure();
+      if (performance.now() - startedAt.current >= TEST_LIMIT_MS) void stop();
+    }, 500);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running]);
 
   useEffect(
     () => () => {
@@ -855,18 +934,64 @@ function AudioTest({
     [],
   );
 
+  const copy = async () => {
+    if (!summaries) return;
+    const report = diagnosticsReport({
+      appVersion: await getVersion().catch(() => null),
+      userAgent: navigator.userAgent,
+      selection: { mic: micLabel, listenTo },
+      devices: {
+        mics: devices.map((d) => ({ name: d.name, isDefault: d.isDefault })),
+        outputs: outputs.map((d) => ({ name: d.name, isDefault: d.isDefault })),
+      },
+      channels: summaries,
+      events: events.current,
+    });
+    await writeText(report);
+    setCopied(true);
+  };
+
   return (
     <div className="space-y-2">
-      <button
-        type="button"
-        onClick={() => void (running ? stop() : start())}
-        className={cx("rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900", focusRing)}
-      >
-        {running ? "Stop test" : "Test audio"}
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => void (running ? stop() : start())}
+          className={cx("rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900", focusRing)}
+        >
+          {running ? "Stop test" : "Test audio"}
+        </button>
+        {summaries && !running && (
+          <button
+            type="button"
+            onClick={() => void copy()}
+            title="Copies a report with measurements and device settings only: no audio, transcript or account details"
+            className={cx("rounded-lg px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800", focusRing)}
+          >
+            {copied ? "Copied" : "Copy diagnostics"}
+          </button>
+        )}
+      </div>
       <LevelRow label="Mic" level={levels[0]} />
+      {summaries && <ChannelResult summary={summaries.mic} />}
       {systemAudio && <LevelRow label="System" level={levels[1]} />}
+      {systemAudio && summaries?.system && <ChannelResult summary={summaries.system} />}
       {note && <p className="text-xs text-amber-600 dark:text-amber-400">{note}</p>}
+    </div>
+  );
+}
+
+function ChannelResult({ summary: s }: { summary: ChannelSummary }) {
+  const pct = (v: number | null) => (v === null ? "—" : `${Math.round(v * 100)}%`);
+  return (
+    <div role="status" className="pl-14 text-xs">
+      <p className={VERDICT_STYLE[s.verdict]}>{s.advice}</p>
+      {s.verdict !== "waiting" && (
+        <p className="text-zinc-500 tabular-nums">
+          {s.seconds}s · received {pct(s.delivery)} · dropouts {s.dropouts} · silent {pct(s.silentShare)}
+          {s.averageDbfs !== null && ` · avg ${s.averageDbfs} dBFS, peak ${s.peakDbfs} dBFS`}
+        </p>
+      )}
     </div>
   );
 }
