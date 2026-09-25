@@ -46,6 +46,7 @@ export function SettingsPage() {
         </div>
       </Card>
       <HotkeysCard />
+      <AccountCard />
       <PrivacyCard />
       <AdvancedSettingsCard />
     </div>
@@ -309,6 +310,91 @@ function HotkeysCard() {
         ))}
       </ul>
       <p className="mt-3 text-xs text-zinc-500">Shortcuts need a modifier (Ctrl/⌘, Shift or Alt) so typing never triggers them.</p>
+    </Card>
+  );
+}
+
+/** Change the sign-in email (confirmed from the new inbox) and download everything Orbit stores. */
+function AccountCard() {
+  const { user } = useAuth();
+  const [newEmail, setNewEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [sent, setSent] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!user) return null;
+
+  const change = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await api.requestEmailChange(newEmail.trim(), password);
+      setSent(newEmail.trim());
+      setPassword("");
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const download = async () => {
+    setExporting(true);
+    setError(null);
+    try {
+      const blob = await api.exportData();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `orbit-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <Card>
+      <h2 className="mb-1 font-semibold">Account</h2>
+      <p className="mb-4 text-sm text-zinc-500">Signed in as {user.email}</p>
+      {sent ? (
+        <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
+          Check <strong>{sent}</strong> for a confirmation link. Your email changes when you open it; until then you
+          keep signing in with {user.email}.
+        </p>
+      ) : (
+        <form onSubmit={(e) => void change(e)} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <Field label="New email" htmlFor="new-email">
+            <Input id="new-email" type="email" autoComplete="email" required value={newEmail}
+                   onChange={(e) => setNewEmail(e.target.value)} />
+          </Field>
+          <Field label="Current password" htmlFor="confirm-password">
+            <Input id="confirm-password" type="password" autoComplete="current-password" required value={password}
+                   onChange={(e) => setPassword(e.target.value)} />
+          </Field>
+          <Button type="submit" variant="secondary" disabled={busy || !newEmail || !password}>
+            {busy ? "Sending…" : "Change email"}
+          </Button>
+        </form>
+      )}
+      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+        <Button variant="secondary" onClick={() => void download()} disabled={exporting}>
+          {exporting ? "Preparing…" : "Download my data"}
+        </Button>
+        <span className="text-xs text-zinc-500">
+          One JSON file: your profile, documents, workspaces, sessions (transcripts, answers, reports) and usage.
+        </span>
+      </div>
+      {error && (
+        <div className="mt-3">
+          <ErrorNote>{error}</ErrorNote>
+        </div>
+      )}
     </Card>
   );
 }

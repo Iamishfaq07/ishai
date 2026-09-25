@@ -1,7 +1,7 @@
-import { cx } from "./cx";
+import { cx, focusRing } from "./cx";
 
 /** Session-detail banner for the background report: generating, or failed (the transcript is still saved). */
-export function ReportStatusNote({ status }: { status: string | null | undefined }) {
+export function ReportStatusNote({ status, onRetry }: { status: string | null | undefined; onRetry?: () => void }) {
   if (status !== "pending" && status !== "failed") return null;
   const pending = status === "pending";
   return (
@@ -15,9 +15,16 @@ export function ReportStatusNote({ status }: { status: string | null | undefined
       )}
     >
       {pending && <span className="h-2 w-2 animate-pulse rounded-full bg-indigo-500" aria-hidden />}
-      {pending
-        ? "Generating the report… this page updates on its own."
-        : "The report couldn't be generated. Your transcript is saved — use Generate review to try again."}
+      <span className="flex-1">
+        {pending
+          ? "Generating the report… this page updates on its own."
+          : "The report couldn't be generated. Your transcript is saved."}
+      </span>
+      {!pending && onRetry && (
+        <button type="button" onClick={onRetry} className={cx("font-medium underline", focusRing)}>
+          Try again
+        </button>
+      )}
     </div>
   );
 }

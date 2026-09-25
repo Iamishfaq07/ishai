@@ -8,7 +8,14 @@ import { BillingPage } from "./pages/Billing";
 import { DocumentsPage } from "./pages/Documents";
 import { HomePage } from "./pages/Home";
 import { LivePage } from "./pages/Live";
-import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage, VerifyEmailPage } from "./pages/Auth";
+import {
+  ConfirmEmailChangePage,
+  ForgotPasswordPage,
+  LoginPage,
+  RegisterPage,
+  ResetPasswordPage,
+  VerifyEmailPage,
+} from "./pages/Auth";
 import { MockPage } from "./pages/Mock";
 import { SessionDetailPage } from "./pages/SessionDetail";
 import { SessionSetupPage } from "./pages/SessionSetup";
@@ -60,6 +67,7 @@ export function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
       <Route
         path="/live/:sessionId"
         element={

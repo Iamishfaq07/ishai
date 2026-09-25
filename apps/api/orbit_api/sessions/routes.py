@@ -12,6 +12,7 @@ from fastapi import (
     Depends,
     File,
     HTTPException,
+    Response,
     UploadFile,
     WebSocket,
     WebSocketDisconnect,
@@ -19,7 +20,7 @@ from fastapi import (
 )
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import jobs
@@ -39,6 +40,7 @@ from orbit_api.live.events import (
 from orbit_api.live.mock_interviewer import MockConfig
 from orbit_api.models import (
     Answer,
+    AuditLog,
     Document,
     DocumentChunk,
     LiveSessionRow,
@@ -280,6 +282,36 @@ async def end_session(session_id: str, user: Annotated[User, Depends(current_use
         await jobs.enqueue(db, "report", {"session_id": row.id}, jobs.report_key(row.id))
         await db.commit()
     return await _session_out(db, row)
+
+
+@router.post("/sessions/{session_id}/report/retry", response_model=SessionOut,
+             dependencies=[Depends(review_limit), Depends(review_user_limit)])
+async def retry_report(session_id: str, user: Annotated[User, Depends(require_verified_user)],
+                       db: Annotated[AsyncSession, Depends(get_db)]) -> SessionOut:
+    """Re-queue a failed (or missing) session report. A report already pending or ready is left alone."""
+    row = await _owned(db, session_id, user)
+    if row.status != "ended":
+        raise HTTPException(status.HTTP_409_CONFLICT, "The report is written when the session ends.")
+    current = (await _report_statuses(db, [row])).get(row.id)
+    if current not in ("pending", "ready"):
+        await jobs.enqueue(db, "report", {"session_id": row.id}, jobs.report_key(row.id))
+        await db.commit()
+    return await _session_out(db, row)
+
+
+@router.delete("/sessions/{session_id}/transcript", status_code=204)
+async def delete_transcript(session_id: str, user: Annotated[User, Depends(current_user)],
+                            db: Annotated[AsyncSession, Depends(get_db)]) -> Response:
+    """Delete what was said (transcript turns and detected questions) but keep the session, its answers and
+    report. Refused while the session is live, so a running recorder doesn't immediately re-create rows."""
+    row = await _owned(db, session_id, user)
+    if session_id in _live_engines:
+        raise HTTPException(status.HTTP_409_CONFLICT, "End the live session first.")
+    await db.execute(delete(SessionTurn).where(SessionTurn.session_id == row.id))
+    await db.execute(delete(Question).where(Question.session_id == row.id))
+    db.add(AuditLog(user_id=user.id, action="session.delete_transcript", target=row.id))
+    await db.commit()
+    return Response(status_code=204)
 
 
 @router.post("/sessions/{session_id}/review", dependencies=[Depends(review_limit), Depends(review_user_limit)])

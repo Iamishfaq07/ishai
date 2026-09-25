@@ -54,10 +54,11 @@ class EmailToken(TimestampMixin, Base):
     __tablename__ = "email_tokens"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    purpose: Mapped[str] = mapped_column(String(16))  # verify_email | reset_password
+    purpose: Mapped[str] = mapped_column(String(16))  # verify_email | reset_password | change_email
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    new_email: Mapped[str | None] = mapped_column(String(320), nullable=True)  # change_email: the address to switch to
 
 
 class Subscription(TimestampMixin, Base):

@@ -34,6 +34,7 @@ UNSAFE = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 TOKEN_EXEMPT = frozenset({
     "/v1/auth/login", "/v1/auth/register", "/v1/auth/logout",
     "/v1/auth/password-reset/request", "/v1/auth/password-reset/confirm", "/v1/auth/verify-email/confirm",
+    "/v1/auth/email-change/confirm",
 })
 # Server-to-server callbacks authenticated by their own signatures (e.g. a payment webhook).
 FULLY_EXEMPT: frozenset[str] = frozenset({"/v1/billing/webhook"})
