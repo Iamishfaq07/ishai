@@ -16,6 +16,7 @@ from orbit_api.entitlements import plan_for
 from orbit_api.models import Document, DocumentChunk, User
 from orbit_api.ratelimit import limit
 from orbit_api.retrieval.embeddings import get_embedder
+from orbit_api.retrieval.index import chunk_body
 
 router = APIRouter(prefix="/v1/documents", tags=["documents"])
 upload_limit = limit("upload", rate_per_s=0.5, burst=10)
@@ -74,20 +75,28 @@ async def _check_quota(db: AsyncSession, user: User) -> None:
                             f"Your plan allows {plan.documents} documents. Delete one or upgrade.")
 
 
-def _chunk_and_embed(text: str, kind: str, title: str) -> list[tuple[int, "ChunkDraft", list[float]]]:
-    """CPU-bound chunking + embedding, run in a thread so it doesn't block the event loop."""
+Prepared = list[tuple[int, "ChunkDraft", list[float] | None]]
+
+
+def _chunk_and_embed(text: str, kind: str, title: str) -> tuple[str | None, Prepared]:
+    """CPU-bound chunking + embedding, run in a thread so it doesn't block the event loop. Returns the embedder's
+    model id with the vectors; if a neural embedder isn't loaded yet, vectors are left empty and filled in when a
+    session first loads the chunks."""
     embedder = get_embedder()
     drafts = chunk_document(text, kind, title)
-    return [(i, c, embedder.embed(c.text)) for i, c in enumerate(drafts)]
+    if not embedder.ready:
+        return None, [(i, c, None) for i, c in enumerate(drafts)]
+    return embedder.model_id, [(i, c, embedder.embed(chunk_body(c.category, c.text))) for i, c in enumerate(drafts)]
 
 
 async def _ingest(db: AsyncSession, doc: Document, text: str) -> None:
     # Drop any prior chunks first so re-ingest (an edit) replaces rather than appends.
     await db.execute(delete(DocumentChunk).where(DocumentChunk.document_id == doc.id))
-    prepared = await asyncio.to_thread(_chunk_and_embed, text, doc.kind, doc.title)
+    model_id, prepared = await asyncio.to_thread(_chunk_and_embed, text, doc.kind, doc.title)
     for i, c, embedding in prepared:
         db.add(DocumentChunk(document_id=doc.id, user_id=doc.user_id, ordinal=i, category=c.category,
-                             label=c.label, text=c.text, verified=c.verified, embedding=embedding))
+                             label=c.label, text=c.text, verified=c.verified, embedding=embedding,
+                             embedding_model=model_id if embedding is not None else None))
     doc.source_text = text
     doc.status = "ready"
     doc.extracted = {"chunk_categories": sorted({c.category for _, c, _ in prepared})}

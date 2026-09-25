@@ -1,5 +1,24 @@
 # Implementation log
 
+## Hybrid retrieval + benchmark (2026-09-25)
+
+- **Benchmark first (§18):** `tests/retrieval_eval.py` has 22 dev and 16 **held-out** paraphrased interview
+  questions, scored on Recall@1/@3 and MRR through the real chunker. The old retriever scored R@3 0.50 (dev) and
+  0.38 (held-out). The brief's own example, "stakeholder conflict" → "resolved release disagreements", wasn't
+  found at all.
+- **Hybrid retrieval (§17):** reciprocal-rank fusion of dense + BM25 (light stemming), on the bullet itself (not
+  its shared job heading), with interview-theme query expansion.
+  - Category boosts were removed; they hurt on both sets.
+  - A relevance gate keeps unrelated facts out of prompts.
+  - Held-out: R@3 0.38 → **0.50** (hash) → **0.81** (bge-small).
+- **Local neural embedder, opt-in:** `ORBIT_EMBEDDER=bge-small` (ONNX via fastembed, CPU, no embedding bill,
+  about +200 MB RAM). It loads in the background with a BM25-only fallback until ready, and degrades to hashing if
+  it can't load.
+- **Migration path:** `document_chunks.embedding_model`; chunks from another embedder are re-embedded lazily when
+  a session loads them (migration `c3e8a1d5f7b2`).
+- **Fixed:** the chunker dropped 1–2 character skills (**Go**, R, C#).
+- Tests: 11 retrieval tests, with benchmark floors. New `docs/RETRIEVAL.md`.
+
 ## Preflight blockers vs warnings, honest Deepgram check (2026-09-25)
 
 - **Severity on every check (§15):**

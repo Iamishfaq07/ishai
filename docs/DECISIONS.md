@@ -190,3 +190,10 @@ sets of facts into one spoken answer. Failing over before any text costs at most
 text has streamed, a failure is shown as a failed answer, which the user can re-ask. The backup is any
 OpenAI-compatible API, so no vendor-specific client code is needed. Provider quirks (reasoning effort, thinking)
 are configuration, not code.
+
+**D39 — Hybrid retrieval, judged on a held-out set.** Retrieval changes are scored on paraphrased interview
+questions, including a held-out resume that is never tuned against. Theme expansion looked spectacular on the dev
+set (R@3 0.95) partly because the cues were written after seeing its failures; the held-out set showed the real
+gain. Reciprocal-rank fusion avoids hand-tuned score weights. The neural embedder is opt-in because it costs
+~200 MB on a 512 MB host. Each chunk records its embedder, so switching is a config change plus lazy
+re-embedding.

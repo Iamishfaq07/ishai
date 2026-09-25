@@ -1,18 +1,29 @@
-"""Embedding abstraction.
+"""Embedders: the dense half of hybrid retrieval (the lexical half is BM25, `lexical.py`).
 
-DeepSeek has no embeddings endpoint, so the default is a local feature-hashing embedder (unigrams +
-bigrams + char trigrams of long tokens). It is fast (<1 ms per chunk), needs no network and no key,
-and is good enough for lexical-semantic matching of resume facts to questions. A neural embedder
-can be swapped in behind `Embedder` without touching callers; dimensions must match EMBEDDING_DIM.
+- `hash`: a local feature-hashing embedder (unigrams + bigrams + char trigrams of long tokens). Needs no
+  dependencies or memory, at <1 ms per text. It's the default.
+- `bge-small`: BAAI/bge-small-en-v1.5 via fastembed (ONNX, CPU, 384 dims, about +200 MB RAM). It's clearly
+  better on the retrieval benchmark, including the held-out set (tests/retrieval_eval.py). Enable it with
+  ORBIT_EMBEDDER=bge-small. It loads in the background at boot; until it's ready, retrieval ranks with BM25 alone
+  rather than mixing embedding spaces.
+
+Each stored chunk records its `embedding_model`; chunks embedded by another model are re-embedded when a session
+loads them, so switching models needs no migration script. All embedders produce EMBEDDING_DIM (384) vectors, the
+pgvector column size.
 """
 
 import hashlib
 import itertools
+import logging
 import math
 import re
-from typing import Protocol
+import threading
+from typing import Any, Protocol
 
+from orbit_api.config import get_settings
 from orbit_api.db import EMBEDDING_DIM
+
+log = logging.getLogger(__name__)
 
 _TOKEN = re.compile(r"[a-z0-9+#]+")
 _STOP = frozenset(
@@ -24,12 +35,22 @@ _STOP = frozenset(
 
 class Embedder(Protocol):
     dim: int
+    model_id: str  # stored per chunk; a mismatch means "re-embed"
+    relevance_floor: float  # dense cosine below this doesn't count as a match on its own
 
-    def embed(self, text: str) -> list[float]: ...
+    @property
+    def ready(self) -> bool: ...
+
+    def embed(self, text: str) -> list[float]: ...  # documents
+
+    def embed_query(self, text: str) -> list[float]: ...
 
 
 class HashingEmbedder:
     dim = EMBEDDING_DIM
+    model_id = "hash-v2"  # v2: chunks are embedded without their shared "Role — Company:" heading
+    relevance_floor = 0.12
+    ready = True
 
     def _features(self, text: str) -> list[tuple[str, float]]:
         toks = [t for t in _TOKEN.findall(text.lower()) if t not in _STOP]
@@ -48,13 +69,70 @@ class HashingEmbedder:
         norm = math.sqrt(sum(v * v for v in vec)) or 1.0
         return [v / norm for v in vec]
 
+    def embed_query(self, text: str) -> list[float]:
+        return self.embed(text)
+
+
+class FastEmbedEmbedder:
+    """A local ONNX sentence embedder (no network at query time; the model downloads once to the cache dir)."""
+
+    dim = EMBEDDING_DIM
+    relevance_floor = 0.40
+    _QUERY_PREFIX = "Represent this sentence for searching relevant passages: "  # bge's retrieval instruction
+
+    def __init__(self, model: str, cache_dir: str | None) -> None:
+        self.model_name = model
+        self.model_id = model
+        self._cache_dir = cache_dir
+        self._model: Any = None
+        self._lock = threading.Lock()
+        self.load_error: str | None = None
+
+    @property
+    def ready(self) -> bool:
+        return self._model is not None
+
+    def warm(self) -> bool:
+        """Load the model (blocking; run in a thread). Safe to call repeatedly."""
+        with self._lock:
+            if self._model is None and self.load_error is None:
+                try:
+                    from fastembed import TextEmbedding
+
+                    self._model = TextEmbedding(self.model_name, cache_dir=self._cache_dir, threads=1)
+                    log.info("embedder %s loaded", self.model_name)
+                except Exception as e:  # missing package, download failure, bad model name
+                    self.load_error = f"{type(e).__name__}: {e}"
+                    log.error("embedder %s failed to load; retrieval uses BM25 + hashing: %s",
+                              self.model_name, self.load_error)
+        return self._model is not None
+
+    def _one(self, text: str) -> list[float]:
+        if not self.warm():
+            raise RuntimeError(f"embedder {self.model_name} unavailable: {self.load_error}")
+        return [float(x) for x in next(iter(self._model.embed([text])))]
+
+    def embed(self, text: str) -> list[float]:
+        return self._one(text)
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._one(self._QUERY_PREFIX + text)
+
 
 def cosine(a: list[float], b: list[float]) -> float:
     return sum(x * y for x, y in zip(a, b, strict=False))
 
 
-_default = HashingEmbedder()
+_hash = HashingEmbedder()
+_neural: FastEmbedEmbedder | None = None
 
 
 def get_embedder() -> Embedder:
-    return _default
+    """The configured embedder. A neural one that failed to load degrades to hashing (logged at error level)."""
+    global _neural
+    s = get_settings()
+    if s.embedder == "hash":
+        return _hash
+    if _neural is None:
+        _neural = FastEmbedEmbedder("BAAI/bge-small-en-v1.5", s.embedding_cache_dir)
+    return _hash if _neural.load_error else _neural

@@ -1,0 +1,18 @@
+[
+  {"q": "Tell me about a time you disagreed with your manager or a senior stakeholder.", "type": "behavioral", "expect": "product director"},
+  {"q": "Have you ever had to say no to a business request?", "type": "behavioral", "expect": "product director"},
+  {"q": "Describe friction with another team and how it ended.", "type": "behavioral", "expect": "who owned data-quality checks"},
+  {"q": "Tell me about a model that went wrong in production.", "type": "behavioral", "expect": "drifted after a pricing change"},
+  {"q": "What's a mistake you made and how did you fix it?", "type": "behavioral", "expect": "drifted after a pricing change"},
+  {"q": "How did you decide between a simple model and a complex one?", "type": "technical", "expect": "LightGBM instead of a deep network"},
+  {"q": "Explain a modelling choice you had to justify to non-technical people.", "type": "behavioral", "expect": "LightGBM instead of a deep network"},
+  {"q": "Have you coached or developed other data scientists?", "type": "leadership", "expect": "Coached three data scientists"},
+  {"q": "Give an example of picking up work that wasn't yours.", "type": "behavioral", "expect": "maintain the feature store"},
+  {"q": "Tell me about being woken up by an alert.", "type": "behavioral", "expect": "Paged at 2 a.m."},
+  {"q": "What measurable impact have your models had?", "type": "behavioral", "expect": "watch time per user by 11%"},
+  {"q": "How have you reduced compute spend?", "type": "technical", "expect": "spot instances"},
+  {"q": "Have you done time-series forecasting?", "type": "technical", "expect": "demand forecasting pipeline"},
+  {"q": "What's your academic background?", "type": "resume", "expect": "University of Lagos"},
+  {"q": "Do you know R?", "type": "resume", "expect": "R"},
+  {"q": "How do you keep models healthy after launch?", "type": "technical", "expect": "drift monitoring"}
+]

@@ -62,6 +62,11 @@ class Settings(BaseSettings):
         10.0, gt=0, validation_alias=AliasChoices("ORBIT_LLM_FIRST_TOKEN_TIMEOUT_S")
     )
 
+    # Dense half of hybrid retrieval: "hash" (default: no deps, no memory) or "bge-small" (local ONNX model via
+    # fastembed, ~+200 MB RAM, better recall; see retrieval/embeddings.py and docs/RETRIEVAL.md).
+    embedder: Literal["hash", "bge-small"] = Field("hash", validation_alias=AliasChoices("ORBIT_EMBEDDER"))
+    embedding_cache_dir: str | None = Field(None, validation_alias=AliasChoices("ORBIT_EMBEDDING_CACHE_DIR"))
+
     # Observability. Logs default to JSON lines in production. Sentry stays off unless a DSN is set.
     log_format: Literal["json", "text"] | None = Field(None, validation_alias=AliasChoices("ORBIT_LOG_FORMAT"))
     sentry_dsn: str | None = Field(None, validation_alias=AliasChoices("ORBIT_SENTRY_DSN"))

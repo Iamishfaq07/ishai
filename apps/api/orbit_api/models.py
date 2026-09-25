@@ -105,6 +105,9 @@ class DocumentChunk(Base):
     verified: Mapped[bool] = mapped_column(Boolean, default=False)  # user-provided candidate fact
     confidence: Mapped[float] = mapped_column(Float, default=1.0)
     embedding: Mapped[list[float] | None] = mapped_column(EmbeddingType())
+    # Which embedder produced `embedding` (e.g. "hash-v2", "BAAI/bge-small-en-v1.5"). A mismatch with the
+    # configured embedder means the vector is re-computed when a session loads the chunk. NULL = legacy hash-v1.
+    embedding_model: Mapped[str | None] = mapped_column(String(64), nullable=True)
     document: Mapped[Document] = relationship(back_populates="chunks")
 
 

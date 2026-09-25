@@ -246,7 +246,8 @@ def _structured_chunks(
             continue
         is_bullet = bool(_BULLET.match(raw))
         body = _BULLET.sub("", line).strip()
-        if len(body) < 3:
+        # Skills can be one or two characters (Go, R, C, C#, JS): keep them there; elsewhere drop fragments.
+        if len(body) < (1 if section == "skill" else 3) or not any(ch.isalnum() for ch in body):
             continue
         if not is_bullet and len(body) <= 90 and section in ("experience", "project"):
             heading = body  # e.g. "Security Engineer — Acme Corp (2021–2024)"
