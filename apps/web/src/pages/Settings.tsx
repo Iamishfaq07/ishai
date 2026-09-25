@@ -13,7 +13,10 @@ import {
   type HotkeyAction,
   type HotkeyMap,
   AppearanceControls,
-  useDesign, confirmDialog } from "@orbit/ui";
+  useDesign,
+  confirmDialog,
+  SettingsIcon,
+} from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Spinner, Toggle } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -26,7 +29,7 @@ export function SettingsPage() {
   const [design, setDesign] = useDesign();
   return (
     <div className="max-w-3xl space-y-6">
-      <PageHeader title="Settings" />
+      <PageHeader icon={SettingsIcon} title="Settings" />
       <Card>
         <h2 className="mb-4 font-semibold">Appearance</h2>
         <div className="flex items-center justify-between gap-4">

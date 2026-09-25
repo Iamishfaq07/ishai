@@ -40,10 +40,10 @@ describe("design prefs", () => {
 
   it("round-trips and falls back on junk", () => {
     vi.stubGlobal("localStorage", fakeStorage());
-    expect(loadDesign()).toEqual({ accent: "indigo", textSize: "md", motion: true });
+    expect(loadDesign()).toEqual({ accent: "nebula", textSize: "md", motion: true });
     saveDesign({ accent: "rose", textSize: "sm", motion: false });
     expect(loadDesign()).toEqual({ accent: "rose", textSize: "sm", motion: false });
     localStorage.setItem("orbit.design", JSON.stringify({ accent: "neon", textSize: "xxl", motion: "yes" }));
-    expect(loadDesign()).toEqual({ accent: "indigo", textSize: "md", motion: true });
+    expect(loadDesign()).toEqual({ accent: "nebula", textSize: "md", motion: true });
   });
 });

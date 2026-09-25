@@ -1,3 +1,6 @@
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/space-grotesk";
+@import "@fontsource-variable/jetbrains-mono";
 @import "../../../packages/ui/src/design/base.css";
 @tailwind base;
 @tailwind components;
@@ -9,8 +12,10 @@
   #root {
     height: 100%;
   }
-  ::selection {
-    @apply bg-indigo-500/30;
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
   }
 }
 
@@ -32,25 +37,41 @@
 html.glass {
   background: transparent;
 }
+/* No painted sky behind a see-through window: the desktop itself is the backdrop. */
+html.glass body {
+  background-image: none !important;
+}
+html.glass .space-backdrop {
+  display: none;
+}
 html.glass body,
 html.glass .bg-white:not(.glass-solid) {
   background-color: rgb(255 255 255 / var(--glass, 1)) !important;
 }
 html.glass .bg-zinc-50:not(.glass-solid) {
-  background-color: rgb(250 250 250 / var(--glass, 1)) !important;
+  background-color: rgb(var(--ink-50) / var(--glass, 1)) !important;
 }
 html.glass .bg-zinc-100:not(.glass-solid) {
-  background-color: rgb(244 244 245 / var(--glass, 1)) !important;
+  background-color: rgb(var(--ink-100) / var(--glass, 1)) !important;
 }
 html.dark.glass body,
 html.dark.glass .dark\:bg-zinc-950:not(.glass-solid) {
-  background-color: rgb(9 9 11 / var(--glass, 1)) !important;
+  background-color: rgb(var(--ink-950) / var(--glass, 1)) !important;
 }
 html.dark.glass .dark\:bg-zinc-900:not(.glass-solid) {
-  background-color: rgb(24 24 27 / var(--glass, 1)) !important;
+  background-color: rgb(var(--ink-900) / var(--glass, 1)) !important;
 }
 html.dark.glass .dark\:bg-zinc-800:not(.glass-solid) {
-  background-color: rgb(39 39 42 / var(--glass, 1)) !important;
+  background-color: rgb(var(--ink-800) / var(--glass, 1)) !important;
+}
+/* Glass panels follow the window's transparency too (their blur would otherwise frost an empty window). */
+html.glass .glass-panel {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background-color: rgb(255 255 255 / calc(var(--glass, 1) * 0.8));
+}
+html.dark.glass .glass-panel {
+  background-color: rgb(var(--ink-900) / calc(var(--glass, 1) * 0.8));
 }
 /* Very see-through: a soft halo keeps text legible over any desktop. */
 html.glass-low body {

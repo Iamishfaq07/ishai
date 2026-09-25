@@ -42,6 +42,7 @@ Docs:
 - [AI providers & failover](docs/AI_PROVIDER.md)
 - [Retrieval](docs/RETRIEVAL.md)
 - [Windows release & updates](docs/WINDOWS_RELEASE.md)
+- [Design system](docs/DESIGN.md)
 - [Changelog](docs/CHANGELOG.md)
 
 ## Quick start (backend, no API keys needed)

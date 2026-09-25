@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { DOCUMENT_ACCEPT, type DocumentKind, type OrbitDocument } from "@orbit/types";
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../components/ui";
-import { confirmDialog } from "@orbit/ui";
+import { confirmDialog, FileUp, FolderOpen } from "@orbit/ui";
 import { api } from "../lib/api";
 import { errorText, formatBytes, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -80,6 +80,7 @@ export function DocumentsPage() {
   return (
     <div>
       <PageHeader
+        icon={FolderOpen}
         title="Documents"
         subtitle="Your resume, job descriptions, and notes. Pick which ones each session can use."
       />
@@ -163,11 +164,11 @@ export function DocumentsPage() {
       ) : docs.error ? (
         <ErrorNote onRetry={docs.reload}>{errorText(docs.error)}</ErrorNote>
       ) : (docs.data ?? []).length === 0 ? (
-        <EmptyState title="No documents yet" body="Uploaded documents are parsed into facts Orbit can cite during a session." />
+        <EmptyState icon={FileUp} title="No documents yet" body="Uploaded documents are parsed into facts Orbit can cite during a session." />
       ) : (
         <Card className="p-0">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-zinc-200 text-xs uppercase tracking-wider text-zinc-500 dark:border-zinc-800">
+            <thead className="border-b border-zinc-200 text-xs uppercase tracking-wider text-zinc-500 dark:border-white/5">
               <tr>
                 <th className="px-5 py-3 font-medium">Title</th>
                 <th className="px-5 py-3 font-medium">Type</th>
@@ -177,7 +178,7 @@ export function DocumentsPage() {
                 <th className="px-5 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
               {(docs.data ?? []).map((d) => (
                 <tr key={d.id}>
                   <td className="max-w-[16rem] truncate px-5 py-3 font-medium" title={d.filename ?? d.title}>

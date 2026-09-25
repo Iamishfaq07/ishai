@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { DEV_FIXTURES, type CodingLanguage } from "@orbit/types";
 import { formatElapsed, useElapsed } from "../hooks/useElapsed";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useStickyScroll } from "../hooks/useStickyScroll";
 import { DEFAULT_HOTKEYS, useHotkeys, type HotkeyMap } from "../live/hotkeys";
 import { useAnswerHistory } from "../live/useAnswerHistory";
@@ -20,14 +21,57 @@ import { ChatInput } from "./ChatInput";
 import { ControlBar } from "./ControlBar";
 import { MockPanel } from "./MockPanel";
 import { cx, focusRing } from "./cx";
+import { OrbitLogo } from "./OrbitLogo";
 import { QuestionCard } from "./QuestionCard";
 import { StatusPill } from "./StatusPill";
 import { Teleprompter } from "./Teleprompter";
 import { TranscriptView } from "./TranscriptView";
-import { ChevronLeft, ChevronRight, X } from "../icons";
+import {
+  BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  MessageSquare,
+  Minimize2,
+  PanelRightClose,
+  PanelRightOpen,
+  ScrollText,
+  X,
+  type LucideIcon,
+} from "../icons";
 
 export type PanelMode = "compact" | "expanded";
 type SideTab = "transcript" | "chat" | "reading";
+
+const SIDE_TABS: Array<{ id: SideTab; label: string; icon: LucideIcon }> = [
+  { id: "transcript", label: "Transcript", icon: ScrollText },
+  { id: "chat", label: "Chat", icon: MessageSquare },
+  { id: "reading", label: "Reading", icon: BookOpen },
+];
+
+const SIDE_PANEL_KEY = "orbit.sidePanel";
+
+/** Wide screens remember whether the side panel is shown; phones always start with it closed (it covers the answer). */
+function useSidePanel(wide: boolean): [boolean, (open: boolean) => void] {
+  const [wideOpen, setWideOpen] = useState(() => {
+    try {
+      return localStorage.getItem(SIDE_PANEL_KEY) !== "closed";
+    } catch {
+      return true;
+    }
+  });
+  const [narrowOpen, setNarrowOpen] = useState(false);
+  const set = (open: boolean) => {
+    if (!wide) return setNarrowOpen(open);
+    setWideOpen(open);
+    try {
+      localStorage.setItem(SIDE_PANEL_KEY, open ? "open" : "closed");
+    } catch {
+      // storage unavailable — still applies for this session
+    }
+  };
+  return [wide ? wideOpen : narrowOpen, set];
+}
 
 export interface LivePanelProps {
   live: LiveViewState;
@@ -66,7 +110,11 @@ export function LivePanel(props: LivePanelProps) {
   const hotkeys = props.hotkeys ?? DEFAULT_HOTKEYS;
   const compact = mode === "compact";
   const [sideTab, setSideTab] = useState<SideTab>("transcript");
-  const [chatOpen, setChatOpen] = useState(false);
+  const wide = useMediaQuery("(min-width: 768px)");
+  const [sideOpen, setSideOpen] = useSidePanel(wide);
+  const sideId = useId();
+  const sideVisible = !compact && sideOpen;
+  const chatShowing = sideVisible && sideTab === "chat";
   const [simSpeed, setSimSpeed] = useState(1);
   const chatRef = useRef<HTMLTextAreaElement>(null);
 
@@ -101,9 +149,10 @@ export function LivePanel(props: LivePanelProps) {
     return null;
   }, [turns]);
 
+  // Chat lives in the side panel (on phones the panel opens over the answer).
   const focusChat = () => {
     if (compact) props.onModeChange("expanded");
-    setChatOpen(true);
+    setSideOpen(true);
     setSideTab("chat");
     // Wait a frame for the input to mount.
     requestAnimationFrame(() => chatRef.current?.focus());
@@ -123,6 +172,13 @@ export function LivePanel(props: LivePanelProps) {
     !ended,
   );
 
+  const toggleChat = () => {
+    if (!chatShowing) return focusChat();
+    // Wide: back to the transcript. Phone: close the overlay so the answer shows again.
+    if (wide) setSideTab("transcript");
+    else setSideOpen(false);
+  };
+
   const retry = () => actions.answer(question?.text);
   const mockStt = live.providers.stt?.state === "mock";
 
@@ -130,11 +186,17 @@ export function LivePanel(props: LivePanelProps) {
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       <header
         data-tauri-drag-region={props.dragRegion ? "" : undefined}
-        className="flex select-none items-center gap-3 border-b border-zinc-200 px-4 py-2 dark:border-zinc-800"
+        className="flex select-none items-center gap-2.5 border-b border-zinc-200 px-4 py-2.5 dark:border-white/[0.06]"
       >
-        <span data-tauri-drag-region={props.dragRegion ? "" : undefined} className="text-sm font-semibold tracking-tight">
-          {compact ? "" : (props.title ?? "Orbit")}
-        </span>
+        <OrbitLogo size={18} busy={live.state === "generating" || live.state === "streaming"} />
+        {!compact && (
+          <span
+            data-tauri-drag-region={props.dragRegion ? "" : undefined}
+            className="max-w-[40%] truncate font-display text-sm font-semibold tracking-tight"
+          >
+            {props.title ?? "Orbit"}
+          </span>
+        )}
         <StatusPill state={live.state} connection={live.connection} stt={live.providers.stt?.state} />
         <span
           data-tauri-drag-region={props.dragRegion ? "" : undefined}
@@ -144,14 +206,31 @@ export function LivePanel(props: LivePanelProps) {
           {formatElapsed(elapsed)}
         </span>
         {props.headerEnd}
+        {!compact && (
+          <button
+            type="button"
+            onClick={() => setSideOpen(!sideOpen)}
+            aria-expanded={sideOpen}
+            aria-controls={sideId}
+            title={sideOpen ? "Hide transcript panel" : "Show transcript, chat and reading"}
+            aria-label={sideOpen ? "Hide transcript panel" : "Show transcript panel"}
+            className={cx(
+              "rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/5 dark:hover:text-zinc-200",
+              sideOpen && "text-indigo-600 dark:text-indigo-300",
+              focusRing,
+            )}
+          >
+            {sideOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => props.onModeChange(compact ? "expanded" : "compact")}
           title={compact ? "Expand" : "Compact"}
           aria-label={compact ? "Switch to expanded mode" : "Switch to compact mode"}
-          className={cx("rounded px-1.5 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800", focusRing)}
+          className={cx("rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/5 dark:hover:text-zinc-200", focusRing)}
         >
-          {compact ? "⤢" : "⤡"}
+          {compact ? <Maximize2 className="h-3.5 w-3.5" /> : <Minimize2 className="h-3.5 w-3.5" />}
         </button>
         {compact && (
           <button
@@ -168,14 +247,14 @@ export function LivePanel(props: LivePanelProps) {
       <Banners live={live} onReconnect={props.onReconnect} onEndOtherSession={props.onEndOtherSession} onDismiss={actions.dismissError} />
       {props.notice}
 
-      <div className={cx("flex min-h-0 flex-1", !compact && "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]")}>
+      <div className={cx("relative flex min-h-0 flex-1", sideVisible && "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]")}>
         <main className="flex min-h-0 flex-1 flex-col">
           {props.mockInterview ? (
             <MockPanel live={live} actions={actions} voice={voice} ended={ended} />
           ) : (
           <>
           <QuestionCard question={question} liveTurn={liveInterviewerTurn} compact={compact} />
-          <div className="mx-4 border-t border-zinc-100 dark:border-zinc-900" />
+          <div className="mx-4 h-px bg-gradient-to-r from-transparent via-zinc-200 to-transparent dark:via-white/10" />
           {history.length > 1 && !live.pinnedAnswerId && (
             <HistoryNav
               index={historyIndex}
@@ -205,25 +284,50 @@ export function LivePanel(props: LivePanelProps) {
           )}
         </main>
 
-        {!compact && (
-          <aside className="hidden min-h-0 flex-col border-l border-zinc-200 dark:border-zinc-800 md:flex">
-            <div role="tablist" aria-label="Session panels" className="flex gap-1 border-b border-zinc-200 px-2 py-1.5 dark:border-zinc-800">
-              {(["transcript", "chat", "reading"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  role="tab"
-                  aria-selected={sideTab === tab}
-                  onClick={() => setSideTab(tab)}
-                  className={cx(
-                    "rounded-md px-2.5 py-1 text-xs font-medium capitalize",
-                    sideTab === tab ? "bg-zinc-100 dark:bg-zinc-800" : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200",
-                    focusRing,
-                  )}
-                >
-                  {tab}
-                </button>
-              ))}
+        {sideVisible && (
+          // Wide: a column beside the answer. Phone: a sheet over the answer (the controls stay reachable below).
+          <aside
+            id={sideId}
+            aria-label="Transcript, chat and reading"
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && !wide) setSideOpen(false);
+            }}
+            className="absolute inset-0 z-20 flex min-h-0 animate-fade-in flex-col bg-white dark:bg-zinc-950 md:static md:z-auto md:animate-none md:border-l md:border-zinc-200 md:dark:border-white/[0.06]"
+          >
+            <div className="flex items-center gap-1 border-b border-zinc-200 px-2 py-2 dark:border-white/[0.06]">
+              <div role="tablist" aria-label="Session panels" className="flex gap-1">
+                {SIDE_TABS.map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={sideTab === id}
+                    onClick={() => setSideTab(id)}
+                    className={cx(
+                      "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
+                      sideTab === id
+                        ? "bg-indigo-500/10 text-indigo-700 ring-1 ring-indigo-500/25 dark:text-indigo-200"
+                        : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200",
+                      focusRing,
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSideOpen(false)}
+                aria-label="Hide panel"
+                title="Hide panel"
+                className={cx(
+                  "ml-auto rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/5 dark:hover:text-zinc-200",
+                  focusRing,
+                )}
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
             {sideTab === "transcript" && (
               <TranscriptView
@@ -237,12 +341,6 @@ export function LivePanel(props: LivePanelProps) {
           </aside>
         )}
       </div>
-
-      {chatOpen && (compact || sideTab !== "chat") && (
-        <div className="md:hidden">
-          <ChatInput ref={chatRef} onSend={actions.chat} disabled={ended} />
-        </div>
-      )}
 
       {mockStt && !ended && (
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-dashed border-zinc-200 px-4 py-1.5 text-xs text-zinc-500 dark:border-zinc-800">
@@ -287,11 +385,11 @@ export function LivePanel(props: LivePanelProps) {
         ended={ended}
         hotkeys={hotkeys}
         compact={compact}
-        chatOpen={chatOpen}
+        chatOpen={chatShowing}
         onAnswer={() => actions.answer()}
         onScreenshot={props.onScreenshot}
         screenshotUnavailableReason={props.screenshotUnavailableReason}
-        onToggleChat={() => (chatOpen ? setChatOpen(false) : focusChat())}
+        onToggleChat={toggleChat}
         onClear={actions.clear}
         onLength={actions.setLength}
         onAutoAnswer={actions.setAutoAnswer}
@@ -446,11 +544,11 @@ function ChatLog({ live }: { live: LiveViewState }) {
     >
       {live.chat.map((entry) =>
         entry.kind === "user" ? (
-          <li key={entry.id} className="ml-8 rounded-lg bg-indigo-600 px-3 py-2 text-white">
+          <li key={entry.id} className="ml-8 rounded-2xl rounded-br-md bg-gradient-to-br from-indigo-500 to-indigo-700 px-3.5 py-2 text-white shadow-glow-sm">
             {entry.text}
           </li>
         ) : (
-          <li key={entry.id} className="mr-4 rounded-lg bg-zinc-100 px-3 py-2 dark:bg-zinc-900">
+          <li key={entry.id} className="mr-4 rounded-2xl rounded-bl-md bg-zinc-100 px-3.5 py-2 ring-1 ring-zinc-200 dark:bg-white/[0.04] dark:ring-white/[0.06]">
             <ChatAnswer answer={live.answers[entry.answer_id]} />
           </li>
         ),

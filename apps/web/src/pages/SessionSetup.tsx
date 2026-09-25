@@ -9,6 +9,7 @@ import {
   loadThinking,
   saveResponseTiming,
   saveThinking,
+  Rocket,
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, Meter, PageHeader, Select, Spinner, Toggle } from "../components/ui";
 import { api } from "../lib/api";
@@ -137,7 +138,7 @@ export function SessionSetupPage() {
 
   return (
     <div>
-      <PageHeader title="New live session" subtitle="Pick your context and audio, then start. You can change answer length live." />
+      <PageHeader icon={Rocket} title="New live session" subtitle="Pick your context and audio, then start. You can change answer length live." />
       <form onSubmit={(e) => void start(e)} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-6">
           <Card>
