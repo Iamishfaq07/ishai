@@ -20,7 +20,12 @@ import { downloadText, errText, formatClock, formatDate, formatDuration, SESSION
 import { TitleBar } from "../TitleBar";
 
 /** Past sessions: a list, and a detail view with summary / transcript / Q&A. */
-export function HistoryScreen({ onBack, onResume }: { onBack: () => void; onResume: (session: OrbitSession) => void }) {
+export function HistoryScreen({ onBack, onResume, onDrill }: {
+  onBack: () => void;
+  onResume: (session: OrbitSession) => void;
+  /** Opens a new re-drill session (mock, mic only). */
+  onDrill: (session: OrbitSession) => void;
+}) {
   const [selected, setSelected] = useState<string | null>(null);
 
   return (
@@ -33,7 +38,7 @@ export function HistoryScreen({ onBack, onResume }: { onBack: () => void; onResu
       </TitleBar>
       <div className="flex-1 overflow-y-auto p-6">
         {selected ? (
-          <SessionDetailView id={selected} onDeleted={() => setSelected(null)} />
+          <SessionDetailView id={selected} onDeleted={() => setSelected(null)} onDrill={onDrill} />
         ) : (
           <SessionList onOpen={setSelected} onResume={onResume} />
         )}
@@ -113,7 +118,11 @@ function SessionList({ onOpen, onResume }: { onOpen: (id: string) => void; onRes
 
 type Tab = "review" | "summary" | "transcript" | "questions";
 
-function SessionDetailView({ id, onDeleted }: { id: string; onDeleted: () => void }) {
+function SessionDetailView({ id, onDeleted, onDrill }: {
+  id: string;
+  onDeleted: () => void;
+  onDrill: (session: OrbitSession) => void;
+}) {
   const [detail, setDetail] = useState<SessionDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("review");
@@ -233,6 +242,7 @@ function SessionDetailView({ id, onDeleted }: { id: string; onDeleted: () => voi
             await api.reviewSession(session.id);
             setDetail(await api.getSession(session.id));
           }}
+          onDrill={async () => onDrill(await api.drillSession(session.id))}
         />
       )}
       {tab === "summary" && <SummaryView summary={detail.summary} />}

@@ -211,3 +211,9 @@ the answer into the transcript. The cost is that anything said during playback i
 only, pausing resumes listening, and the controls say "Orbit isn't listening". It uses the platform's voices, so
 there's no provider and no cost. Only on-device voices are used, so no text leaves the machine.
 
+**D42 — The drill plan is picked from the review, not generated.** Which questions to practise is already known:
+the review scored them against what was actually said. Picking the weakest deterministically costs no model call
+and can't invent questions the candidate never struggled with. The AI is used only where it adds something: a live
+follow-up on the new answer, steered by the old feedback (fenced as data). The drill runs on the normal mock
+machinery, so it's recorded and can be reviewed and drilled again like any session.
+

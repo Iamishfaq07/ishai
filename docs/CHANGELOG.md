@@ -1,5 +1,26 @@
 # Implementation log
 
+## Mock interview quality (§32) and re-drill (§33) (2026-09-25)
+
+- **Re-drill:** the review has a **Drill N weak questions** button, and `POST /v1/sessions/{id}/drill` starts a new
+  mock session from it.
+  - It asks the weakest questions again (scored ≤ 3 or unanswered, up to 3). The first two each get a **live
+    follow-up** built from the new answer and the old feedback.
+  - Then a **short version** drill ("in about thirty seconds").
+  - Same role, documents and interviewer settings; the mock machinery handles recording and grading.
+  - Available in desktop History and the web session page.
+- **Answer completion adapts** to how an answer ends: 5 s after trailing off mid-thought ("…and", "…because",
+  "um"), 1.2 s after a wrap-up ("so yeah", "that's it"), 2.5 s after a long answer, and 3 s otherwise.
+- **End-of-round summary:** answered / skipped, follow-ups and words per answer. It says to end the session for the
+  graded review.
+- The drill UI labels questions *Drill: try again* and *Short version · ~30 s*.
+- **Real DeepSeek:** the follow-ups targeted the old feedback ("what actually happened with that trial, and how did
+  you land on a final decision?", "what did you change afterwards so the leak couldn't happen again?") in 0.8–1.0 s.
+- **Desktop test build:** History → Review showed "Drill 2 weak questions", which opened a 3-question drill with the
+  badge and lead-in. A skipped question moved on without a follow-up. No errors.
+- Tests: 6 API tests (completion timing, plan selection, drill flow + summary, skip, endpoint: no review, nothing
+  to drill, other user's session, same documents). The UI reducer test covers `drill_kind` and the summary.
+
 ## Audio diagnostics (§23) (2026-09-25)
 
 - **Setup → Test audio** now diagnoses each channel as well as showing its meter. The mic and the interviewer

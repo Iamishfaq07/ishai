@@ -96,8 +96,8 @@ Answers are spoken first-person prose (`direct_answer`, paragraphs separated by 
 | `answer.failed` | `{ answer_id, error: { code, message, retryable } }` |
 | `provider.status` | `{ provider: "stt"\|"llm", name, state: "connecting"\|"ok"\|"reconnecting"\|"down"\|"mock", detail? }` — STT starts `connecting` and reports `ok` only once **both** channel sockets are really open (audio is buffered meanwhile); it reports `down` if a handshake is rejected |
 | `usage.status` | `{ minutes_remaining, limit_reached, reason: "monthly"\|"session" }` — 5-minute warning, or a limit ended the session: this month's allowance (live or mock minutes) or this session's maximum length (see BILLING.md) |
-| `mock.question` | `{ question_id, text, is_follow_up, index, total }` — the AI interviewer asks (clients may speak it aloud) |
-| `mock.completed` | `{ questions }` — the mock interview is over (question budget or duration reached) |
+| `mock.question` | `{ question_id, text, is_follow_up, index, total, drill_kind? }`: the AI interviewer asks (clients may speak it aloud). `drill_kind` (re-drill sessions only) is `retry` \| `follow_up` \| `concise` |
+| `mock.completed` | `{ questions, topics, follow_ups, answered, unanswered, average_answer_words, drill }`: the mock interview is over (question budget, drill plan or duration reached); the counts drive the end-of-round summary |
 | `error` | `{ code, message }` |
 
 **Screenshots** (`POST /v1/sessions/{id}/screenshots`, multipart `image`, PNG/JPEG ≤ 8 MB, needs a live socket)
@@ -156,3 +156,10 @@ plus `follow_up_detected`, `stt_reconnecting`, `ai_reconnecting`, `error`, `paus
 
 `code` may be `null`. `context_used` lists source labels (e.g. `"resume: Acme Corp — AppSec lead"`),
 never raw document text.
+
+## Re-drill
+`POST /v1/sessions/{id}/drill` → `201` with a new `mock` session (same role, documents and interviewer settings).
+It asks the reviewed session's weak questions again: those scored ≤ 3 or unanswered, weakest first, up to 3. The
+first two each get one live follow-up, generated from the new answer and steered by the old feedback. Then comes one
+"short version" drill. Errors are `409 no_review` (generate the review first) and `409 nothing_to_drill` (every
+question scored 4+). Plan limits and the mock feature gate apply as for `POST /v1/sessions`.

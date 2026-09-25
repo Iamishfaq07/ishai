@@ -95,6 +95,11 @@ export function App() {
   const home = () => setScreen({ name: "home" });
   // Rejoin an existing (live/created) session with default audio (system on Windows, default mic).
   const resume = (session: OrbitSession) => setScreen({ name: "live", session, launch: { systemAudio: !IS_MAC } });
+  // A drill is a mock round: the interviewer is Orbit itself, so only the (remembered) mic is captured.
+  const drill = (session: OrbitSession) => {
+    const mic = localStorage.getItem("orbit.micDeviceId");
+    setScreen({ name: "live", session, launch: { systemAudio: false, ...(mic ? { micDeviceId: mic } : {}) } });
+  };
 
   return (
     <>
@@ -155,7 +160,7 @@ export function App() {
       case "documents":
         return <DocumentsScreen onBack={home} />;
       case "history":
-        return <HistoryScreen onBack={home} onResume={resume} />;
+        return <HistoryScreen onBack={home} onResume={resume} onDrill={drill} />;
       case "settings":
         return user ? (
           <SettingsScreen user={user} onUser={setUser} onSignOut={() => void signOut()} onBack={home} />

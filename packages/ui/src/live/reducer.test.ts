@@ -261,10 +261,13 @@ describe("usage status", () => {
 describe("mock interview", () => {
   it("tracks the interviewer's current question and completion", () => {
     let s = run([ev("mock.question", { question_id: "m1", text: "Tell me about yourself.", is_follow_up: false, index: 1, total: 4 })]);
-    expect(s.mock).toEqual({ questionId: "m1", text: "Tell me about yourself.", isFollowUp: false, index: 1, total: 4 });
+    expect(s.mock).toEqual({ questionId: "m1", text: "Tell me about yourself.", isFollowUp: false, index: 1, total: 4, drillKind: null });
     s = run([ev("mock.question", { question_id: "m2", text: "What was the hardest part?", is_follow_up: true, index: 1, total: 4 })], s);
     expect(s.mock?.isFollowUp).toBe(true);
-    s = run([ev("mock.completed", { questions: 2 })], s);
+    s = run([ev("mock.question", { question_id: "m3", text: "Short version.", is_follow_up: false, index: 2, total: 4, drill_kind: "concise" })], s);
+    expect(s.mock?.drillKind).toBe("concise");
+    s = run([ev("mock.completed", { questions: 3, answered: 2, unanswered: 1, follow_ups: 1, drill: true })], s);
     expect(s.mockCompleted).toBe(true);
+    expect(s.mockSummary).toMatchObject({ answered: 2, unanswered: 1, drill: true });
   });
 });
