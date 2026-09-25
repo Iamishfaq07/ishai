@@ -7,6 +7,7 @@ Transport-agnostic: the WebSocket handler, tests, and fixture replay all drive t
 import asyncio
 import contextlib
 import logging
+import re
 import time
 import uuid
 from collections.abc import Awaitable, Callable
@@ -131,6 +132,8 @@ class SessionProfile:
     mock: MockConfig | None = None  # session_type "mock": the AI plays the interviewer
     # The plan's "provider_fallback" feature: may a backup LLM answer when DeepSeek fails before its first token?
     allow_fallback: bool = True
+    # Plan features that change answers ("system_design", "advanced_coding"); all on unless the plan says otherwise.
+    features: frozenset[str] = frozenset({"system_design", "advanced_coding"})
 
 
 @dataclass
@@ -678,11 +681,13 @@ class LiveEngine:
         started = self._clock()
         is_code = qtype == QuestionType.coding or self.profile.session_type == "coding"
         reasoning = choose_reasoning_level(qtype, estimate_complexity(question), self.profile.session_type)
+        mode = answer_mode(qtype, question, source, is_code, self.profile.features)
+        is_code = is_code or mode == "debug"  # a bug report is a coding answer (code format, code-sized budget)
         inputs = PromptInputs(
             question=question, qtype=qtype, is_follow_up=is_follow_up, session_type=self.profile.session_type,
             role=self.profile.role, length=self.settings.length, style=self.settings.style,
             answer_language=self.settings.answer_language or self.profile.answer_language or "en",
-            instruction=instruction, coding_language=self.settings.coding_language,
+            instruction=instruction, coding_language=self.settings.coding_language, mode=mode,
         )
         built = build_prompt(self._index, inputs, self.memory)
         # Live answers always run on the fast model. The reasoning model's hidden chain-of-thought put its
@@ -692,7 +697,8 @@ class LiveEngine:
             messages=built.messages, reasoning="light", thinking=self.settings.thinking, images=images,
             # + room for the FOLLOWUP/POINTS trailer, which comes after the answer: a design answer that used its whole
             # budget otherwise lost its key points.
-            max_tokens=(CODE_MAX_TOKENS if is_code else MAX_TOKENS[self.settings.length]) + TRAILER_TOKENS,
+            max_tokens=(CODE_MAX_TOKENS if is_code or mode == "design" else MAX_TOKENS[self.settings.length])
+            + TRAILER_TOKENS,
             request_type={"chat": "chat", "screenshot": "vision"}.get(source, "answer"),
             allow_fallback=self.profile.allow_fallback,
         )
@@ -808,3 +814,30 @@ class LiveEngine:
         self.memory.rolling_summary = resp.text.strip()[:1200]
         await self._rec.provider_request(resp.provider or self._llm.name, resp.model, "summary", resp.usage,
                                          int((self._clock() - started) * 1000), True)
+
+
+_DEBUG_CUES = re.compile(
+    r"\b(bug|buggy|error|exception|traceback|stack ?trace|crash\w*|fail\w*|broken|doesn'?t work|not working|"
+    r"wrong (output|answer|result)|off[- ]by[- ]one|debug\w*|fix (this|the|my|it)|segfault|null ?pointer|typeerror|"
+    r"keyerror|indexerror|undefined)\b", re.IGNORECASE)
+
+
+# A bug report pasted into chat or asked aloud is usually classified "technical"; code context tells it apart
+# from a conceptual question ("what is an exception?") or a story ("tell me about a bug you fixed").
+_CODE_CONTEXT = re.compile(
+    r"(\b(my|this|the|our) (code|function|method|script|test|query|program|loop|class)\b|\b\w+Error\b|\bstack ?trace|"
+    r"\bdef \w+\(|\bfunction \w*\(|=>|\);|\{\s*$|\bfor \w+ in |\bSELECT\b)", re.IGNORECASE | re.MULTILINE)
+
+
+def answer_mode(qtype: QuestionType, question: str, source: str, is_code: bool, features: frozenset[str]) -> str:
+    """Which structured format an answer uses (brief §29–§30), gated by plan features."""
+    if qtype == QuestionType.system_design and "system_design" in features:
+        return "design"
+    if "advanced_coding" not in features:
+        return "normal"
+    if is_code and source == "screenshot":
+        return "debug_if_error"
+    code_bug = qtype == QuestionType.technical and bool(_CODE_CONTEXT.search(question))
+    if (is_code or code_bug) and _DEBUG_CUES.search(question):
+        return "debug"
+    return "normal"

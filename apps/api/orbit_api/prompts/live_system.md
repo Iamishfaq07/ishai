@@ -85,6 +85,8 @@ TIME: <time complexity>      (coding only)
 SPACE: <space complexity>    (coding only)
 EDGE: <edge case | edge case | …>                         (coding only)
 TESTS: <input → expected | input → expected | …>           (coding only)
+ROOTCAUSE: / FIX: / WHY: / DIFF:  (debug mode only — see the mode instruction)
+DESIGN:                            (system design mode only — one "Title: content" line per section)
 FOLLOWUP: <the most likely next question, or omit>
 SOURCES: <the numbers of the document facts your claims about the user rely on, e.g. "F1 F3", or "none">
 POINTS: <3 to 6 short labels (2–6 words each) for the points the answer makes, in the same order, separated by " | ">

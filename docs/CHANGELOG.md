@@ -1,5 +1,23 @@
 # Implementation log
 
+## System design and debug modes (2026-09-25)
+
+- **System design mode (§30):** system-design questions get the spoken talk track first, then a `DESIGN` block
+  with 12 sections (Requirements … Trade-offs). The answer card shows them as a labelled grid. Gated by the plan
+  feature `system_design`.
+- **Debug mode (§29):** bug reports get the talk track (how to explain it), then root cause, minimal fix, why it
+  failed, a unified diff (red/green), and the corrected code. It triggers on coding questions with bug cues, and on
+  technical questions with code context. Coding screenshots use it only if the image shows an error. Gated by
+  `advanced_coding`.
+- **Found in the real app:** the question classifier labels bug reports ("my code throws a KeyError", "this test
+  is failing") as `technical`, so a coding-only trigger never fired from Chat. Code context now identifies them.
+- **Copy** includes design sections and debug details.
+- **Measured with real DeepSeek:** first token in 0.59 s (design) and 0.68 s (debug), unchanged from normal
+  answers. All 12 design sections came back filled, and the debug answer had a correct root cause, fix, diff and
+  code. Both render in the real desktop app.
+- Tests: 6 API tests (parsing, streaming, plan gating, mode choice incl. technical bug reports, prompt wiring) and
+  1 UI test.
+
 ## Candidate fact provenance (2026-09-25)
 
 - **Numbered facts and cited sources (§19).** Prompt facts are numbered F1…Fn. The model ends each answer with

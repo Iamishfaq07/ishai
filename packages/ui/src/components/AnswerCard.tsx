@@ -48,6 +48,11 @@ export function answerAsText(a: AnswerView["answer"]): string {
   return [
     a.direct_answer,
     ...a.talking_points.map((p) => `- ${p}`),
+    a.design?.length ? `\n${a.design.map((d) => `${d.title}: ${d.text}`).join("\n")}` : "",
+    a.debug?.root_cause ? `\nRoot cause: ${a.debug.root_cause}` : "",
+    a.debug?.fix ? `Minimal fix: ${a.debug.fix}` : "",
+    a.debug?.why ? `Why it failed: ${a.debug.why}` : "",
+    a.debug?.diff ? `\n${a.debug.diff}` : "",
     a.code ? `\n${a.code.content}` : "",
     a.example ? `\nExample: ${a.example}` : "",
   ]
@@ -160,6 +165,9 @@ export function AnswerCard({
   const thinking = answer.status === "streaming" && !answer.has_content;
   // Coding layout: what to SAY (the talk track) is kept apart from what to CODE.
   const coding = Boolean(a.code || a.problem || a.edge_cases?.length || a.tests?.length);
+  const design = a.design ?? [];
+  const debug = a.debug ?? null;
+  const structured = coding || design.length > 0 || Boolean(debug);
   const hasComplexity = Boolean(a.time_complexity || a.space_complexity);
 
   return (
@@ -242,7 +250,7 @@ export function AnswerCard({
             <SectionLabel>Problem</SectionLabel> {a.problem}
           </p>
         )}
-        {coding && a.direct_answer && <SectionLabel block>Say</SectionLabel>}
+        {structured && a.direct_answer && <SectionLabel block>Say</SectionLabel>}
 
         {a.direct_answer && (
           <div className={cx("space-y-2.5", compact ? "text-[0.9375rem] leading-relaxed" : "text-base leading-relaxed")}>
@@ -287,9 +295,44 @@ export function AnswerCard({
           </div>
         )}
 
+        {design.length > 0 && (
+          <div className="mt-3 animate-fade-in" aria-label="System design">
+            <SectionLabel block>Design</SectionLabel>
+            <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
+              {design.map((d) => (
+                <div key={d.title} className="min-w-0">
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{d.title}</dt>
+                  <dd className="text-zinc-800 dark:text-zinc-200">{d.text}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
+
+        {debug && (debug.root_cause || debug.fix || debug.why || debug.diff) && (
+          <div className="mt-3 animate-fade-in space-y-2" aria-label="Debugging">
+            {debug.root_cause && (
+              <p className="text-sm text-zinc-800 dark:text-zinc-200">
+                <SectionLabel>Root cause</SectionLabel> {debug.root_cause}
+              </p>
+            )}
+            {debug.fix && (
+              <p className="text-sm text-zinc-800 dark:text-zinc-200">
+                <SectionLabel>Minimal fix</SectionLabel> {debug.fix}
+              </p>
+            )}
+            {debug.why && (
+              <p className="text-sm text-zinc-800 dark:text-zinc-200">
+                <SectionLabel>Why it failed</SectionLabel> {debug.why}
+              </p>
+            )}
+            {debug.diff && <DiffView diff={debug.diff} />}
+          </div>
+        )}
+
         {a.code && (
           <div className="mt-3">
-            {coding && <SectionLabel block>Code</SectionLabel>}
+            {coding && <SectionLabel block>{debug ? "Corrected code" : "Code"}</SectionLabel>}
             <CodeBlock code={a.code} {...(onCodeLanguage ? { onLanguage: onCodeLanguage } : {})} />
           </div>
         )}
@@ -380,4 +423,32 @@ export function AnswerCard({
 
 function sourceKind(kind: string): string {
   return kind === "resume" ? "Resume" : kind === "job_description" ? "Job description" : kind === "notes" ? "Notes" : "Document";
+}
+
+/** A unified diff with added/removed lines tinted; read-only and selectable. */
+function DiffView({ diff }: { diff: string }) {
+  return (
+    <div>
+      <SectionLabel block>Diff</SectionLabel>
+      <pre
+        className="overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 py-2 font-mono text-[0.8125rem] leading-relaxed dark:border-zinc-800 dark:bg-zinc-950"
+        aria-label="Code diff"
+      >
+        {diff.split("\n").map((line, i) => {
+          const tone = line.startsWith("+") && !line.startsWith("+++")
+            ? "bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
+            : line.startsWith("-") && !line.startsWith("---")
+              ? "bg-rose-500/10 text-rose-800 dark:text-rose-300"
+              : line.startsWith("@@")
+                ? "text-indigo-700 dark:text-indigo-300"
+                : "text-zinc-700 dark:text-zinc-300";
+          return (
+            <div key={i} className={cx("px-3", tone)}>
+              {line || "\u00a0"}
+            </div>
+          );
+        })}
+      </pre>
+    </div>
+  );
 }

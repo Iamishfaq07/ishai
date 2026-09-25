@@ -532,6 +532,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             keyterms=keyterms, dev_mode=get_settings().env != "production",
             mock=MockConfig.model_validate(row.mock_config) if row.mock_config else None,
             allow_fallback=plan.has("provider_fallback"),
+            features=frozenset(f for f in ("system_design", "advanced_coding") if plan.has(f)),
         )
         settings = LiveSettings(auto_answer=row.auto_answer, length=row.length,
                                 style=row.style)

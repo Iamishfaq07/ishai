@@ -143,5 +143,16 @@ plus `follow_up_detected`, `stt_reconnecting`, `ai_reconnecting`, `error`, `paus
 - `problem`, `edge_cases`, `tests`: coding answers only. The task restated in one line, edge cases to mention, and
   example tests (`input → expected`).
 
+- `design` (system design mode): `[{title, text}]`, sections in this order: Requirements, Assumptions, Scale, APIs,
+  Data model, Architecture, Storage, Caching, Queues, Reliability, Security, Trade-offs. `direct_answer` is the
+  spoken talk track.
+- `debug` (debug mode: a bug, error or failing test): `{root_cause, fix, why, diff}`, where `diff` is a unified
+  diff. The corrected code is in `code`, and `direct_answer` is how to explain it aloud.
+- Modes are chosen server-side:
+  - `design` for system-design questions on plans with `system_design`;
+  - `debug` for coding questions, or technical questions with code context, that carry bug cues (error,
+    traceback, failing, wrong output…), on plans with `advanced_coding`;
+  - coding screenshots let the model use the debug format only if the image shows an error.
+
 `code` may be `null`. `context_used` lists source labels (e.g. `"resume: Acme Corp — AppSec lead"`),
 never raw document text.

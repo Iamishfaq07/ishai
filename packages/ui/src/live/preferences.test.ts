@@ -40,4 +40,17 @@ describe("answer copy text", () => {
     const a = { ...emptyLiveAnswer("q"), direct_answer: "First para.\n\nSecond para.", talking_points: ["one"] };
     expect(answerAsText(a)).toBe("First para.\n\nSecond para.\n- one");
   });
+
+  it("includes system design sections and debug details", async () => {
+    const { answerAsText } = await import("../components/AnswerCard");
+    const { emptyLiveAnswer } = await import("@orbit/types");
+    const design = { ...emptyLiveAnswer("q"), direct_answer: "Talk.", design: [{ title: "Scale", text: "10k rps" }] };
+    expect(answerAsText(design)).toBe("Talk.\n\nScale: 10k rps");
+    const debug = {
+      ...emptyLiveAnswer("q"),
+      direct_answer: "Off by one.",
+      debug: { root_cause: "bound", fix: "drop +1", why: "len-1", diff: "-a\n+b" },
+    };
+    expect(answerAsText(debug)).toBe("Off by one.\n\nRoot cause: bound\nMinimal fix: drop +1\nWhy it failed: len-1\n\n-a\n+b");
+  });
 });
