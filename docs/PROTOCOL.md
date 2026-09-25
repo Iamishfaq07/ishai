@@ -126,8 +126,18 @@ plus `follow_up_detected`, `stt_reconnecting`, `ai_reconnecting`, `error`, `paus
 }
 ```
 
-- `grounding`: `"verified"` (claims come from your documents), `"example"` (illustrative details you must swap for
-  your real experience; the UI shows *Suggested details*), `"general"` (no personal claims), or `null`.
+- `grounding` (brief §19: VERIFIED / INFERRED / UNSUPPORTED / GENERAL):
+  - `"verified"`: the claims are stated in your documents;
+  - `"inferred"`: built on a cited fact but adding details it doesn't state; the UI says to check them;
+  - `"example"`: unsupported, meaning the event isn't in your documents; the UI shows *Suggested details*;
+  - `"general"`: no personal claims;
+  - `null`.
+
+  The server downgrades `"verified"` that cites no verified fact (to `"inferred"` if it cites a JD or note fact,
+  otherwise to `"example"`), and `"inferred"` that cites nothing becomes `"example"`.
+- `sources`: `[{ref, chunk_id, doc_kind, document, label, excerpt, verified}]`, the document facts the answer's
+  claims rely on. The prompt numbers the facts F1…Fn and the model names the ones it used in a trailing
+  `SOURCES:` line. Unknown refs are ignored, never trusted.
 - `key_points`: 3–6 short labels for the points the answer makes, in order. The client ticks them off as the
   candidate says them ("NEXT" guidance, local and deterministic, D25).
 - `problem`, `edge_cases`, `tests`: coding answers only. The task restated in one line, edge cases to mention, and

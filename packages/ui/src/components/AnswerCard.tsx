@@ -201,6 +201,15 @@ export function AnswerCard({
             <span>Suggested details — check they match your real experience before you say them.</span>
           </p>
         )}
+        {a.grounding === "inferred" && answer.status === "complete" && (
+          <p
+            className="mb-2 flex animate-fade-in items-start gap-1.5 rounded-md bg-sky-500/10 px-2 py-1 text-xs text-sky-800 dark:text-sky-200"
+            title="Built on facts from your documents, but goes further than they say"
+          >
+            <PenLine className="mt-px h-3.5 w-3.5 flex-none" />
+            <span>Based on your documents — some details go beyond them, so check before you say them.</span>
+          </p>
+        )}
         {thinking && (
           <div className="animate-fade-in space-y-2.5" role="status" aria-label="Thinking">
             <p className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
@@ -334,7 +343,24 @@ export function AnswerCard({
           </p>
         )}
 
-        {!compact && a.context_used.length > 0 && answer.status === "complete" && (
+        {!compact && answer.status === "complete" && a.sources !== undefined && a.sources.length > 0 && (
+          <ul className="mt-2 space-y-0.5 text-xs text-zinc-500 dark:text-zinc-400" aria-label="Sources from your documents">
+            {a.sources.map((s) => (
+              <li key={s.ref} className="flex min-w-0 items-center gap-1.5" title={s.excerpt}>
+                {s.verified ? (
+                  <Check className="h-3 w-3 flex-none text-emerald-600 dark:text-emerald-400" aria-label="From your documents" />
+                ) : (
+                  <Circle className="h-2 w-2 flex-none" aria-label="Reference" />
+                )}
+                <span className="truncate">
+                  {sourceKind(s.doc_kind)}
+                  {s.document ? ` · ${s.document}` : ""}: {s.excerpt}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!compact && answer.status === "complete" && a.sources === undefined && a.context_used.length > 0 && (
           <p className="mt-2 truncate text-xs text-zinc-400" title={a.context_used.join(" · ")}>
             Grounded in: {a.context_used.join(" · ")}
           </p>
@@ -350,4 +376,8 @@ export function AnswerCard({
       </span>
     </section>
   );
+}
+
+function sourceKind(kind: string): string {
+  return kind === "resume" ? "Resume" : kind === "job_description" ? "Job description" : kind === "notes" ? "Notes" : "Document";
 }

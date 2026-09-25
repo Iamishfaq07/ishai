@@ -408,14 +408,14 @@ async def usage(user: Annotated[User, Depends(current_user)],
 
 async def _load_index(db: AsyncSession, session_id: str) -> tuple[SessionIndex, list[str]]:
     rows = (await db.execute(
-        select(DocumentChunk, Document.kind)
+        select(DocumentChunk, Document.kind, Document.title)
         .join(Document, Document.id == DocumentChunk.document_id)
         .join(SessionDocument, SessionDocument.document_id == Document.id)
         .where(SessionDocument.session_id == session_id)
         .order_by(Document.created_at, DocumentChunk.ordinal)  # keep resume order: most recent role first
     )).all()
     embedder = get_embedder()
-    stale = [c for c, _ in rows if c.embedding_model != embedder.model_id] if embedder.ready else []
+    stale = [c for c, _, _ in rows if c.embedding_model != embedder.model_id] if embedder.ready else []
     if stale:
         # Vectors from another embedder (or the legacy full-text hash) are recomputed once and saved back.
         vectors = await asyncio.to_thread(
@@ -425,8 +425,9 @@ async def _load_index(db: AsyncSession, session_id: str) -> tuple[SessionIndex, 
         await db.commit()
     current = embedder.ready
     chunks = [IndexedChunk(c.id, kind, c.category, c.label, c.text, c.verified,
-                           (c.embedding or []) if current and c.embedding_model == embedder.model_id else [])
-              for c, kind in rows]
+                           (c.embedding or []) if current and c.embedding_model == embedder.model_id else [],
+                           doc_title=title or "")
+              for c, kind, title in rows]
     # skills from resume/JD become STT key terms (custom vocabulary)
     keyterms = [c.text for c in chunks if c.category == "skill" and len(c.text) < 40][:30]
     return SessionIndex(chunks), keyterms

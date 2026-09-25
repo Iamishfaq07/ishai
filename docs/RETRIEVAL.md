@@ -55,3 +55,17 @@ Bugs found along the way:
 - The chunker dropped 1–2 character skills (Go, R, C#).
 - The category boosts pushed 12 experience chunks above the education line, so "Where did you study?" never found
   it.
+
+## Provenance (brief §19)
+Every fact in the prompt is numbered (`F1 [VERIFIED CANDIDATE FACT] (resume: …) …`).
+- **Answer trailer:** the model ends each answer with `SOURCES: F1 F3` (or `none`) and a grounding label.
+- **Sources:** the parser resolves the refs to the real chunks (document, label, excerpt, verified).
+- **Safety net:** `finalize_grounding` ensures "verified" always has a verified source behind it.
+- **UI:** the answer card lists the cited facts (✓ for your own documents) and shows *Based on your documents —
+  check details* for `inferred`, or *Suggested details* for unsupported examples.
+
+Checked with real DeepSeek on the fixture resume:
+- the education question is `verified` and cites the degree fact;
+- "disagreement with leadership" and mentoring are `inferred` and cite the real bullets;
+- "an angry customer" (not in the resume) is `example`, with no sources;
+- system design is `general`.

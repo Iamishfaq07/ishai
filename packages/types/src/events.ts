@@ -74,6 +74,17 @@ export interface LiveAnswerCode {
   content: string;
 }
 
+export interface FactSource {
+  ref: string;
+  chunk_id: string;
+  doc_kind: string;
+  document: string;
+  label: string;
+  excerpt: string;
+  /** From the user's own documents (a resume fact), not a JD requirement or a note. */
+  verified: boolean;
+}
+
 export interface LiveAnswer {
   question: string;
   type: QuestionType;
@@ -86,10 +97,13 @@ export interface LiveAnswer {
   follow_up: string | null;
   context_used: string[];
   /**
-   * Where the answer's claims about the user come from: "verified" (their documents), "example" (an
-   * illustrative story/details to swap for their real experience — shown as a badge), "general" (none).
+   * Where the answer's claims about the user come from: "verified" (stated in their documents), "inferred" (built
+   * on them but going further — check the details), "example" (unsupported: illustrative details to swap for
+   * their real experience), "general" (no personal claims). The server never leaves "verified" without a source.
    */
-  grounding?: "verified" | "example" | "general" | null;
+  grounding?: "verified" | "inferred" | "example" | "general" | null;
+  /** The document facts the answer's claims about the user rely on (resolved from the model's SOURCES). */
+  sources?: FactSource[];
   /** 3–6 short labels for the answer's points, in order (drives the "NEXT" checklist). */
   key_points?: string[];
   /** Coding answers: the task in one line, edge cases to mention, example tests (`input → expected`). */

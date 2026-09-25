@@ -76,6 +76,18 @@ class CodeBlock(BaseModel):
     content: str = ""
 
 
+class FactSource(BaseModel):
+    """A document fact an answer's claims about the user rely on (resolved from the model's SOURCES line)."""
+
+    ref: str  # "F2": the fact's number in the prompt
+    chunk_id: str
+    doc_kind: str  # resume | job_description | notes | other
+    document: str  # document title
+    label: str
+    excerpt: str
+    verified: bool  # a candidate fact from the user's own documents (resume), not a JD requirement or a note
+
+
 class LiveAnswer(BaseModel):
     question: str = ""
     type: QuestionType = QuestionType.technical
@@ -87,9 +99,12 @@ class LiveAnswer(BaseModel):
     space_complexity: str | None = None
     follow_up: str | None = None
     context_used: list[str] = Field(default_factory=list)
-    # Where the answer's personal claims come from: "verified" (the user's own documents), "example" (an
-    # illustrative story/details the user must swap for their real experience), "general" (no personal claims).
-    grounding: Literal["verified", "example", "general"] | None = None
+    # Where the answer's personal claims come from (launch brief §19: VERIFIED / INFERRED / GENERAL / UNSUPPORTED):
+    # "verified" (stated in the user's own documents), "inferred" (built on them but going beyond what they say),
+    # "general" (no personal claims), "example" (= unsupported: an illustrative story/details the user must swap
+    # for their real experience). The server never lets "verified" stand without a cited verified fact.
+    grounding: Literal["verified", "inferred", "example", "general"] | None = None
+    sources: list[FactSource] = Field(default_factory=list)
     # 3–6 short labels for the points the answer makes, in order — the UI ticks them off as the candidate
     # covers them ("NEXT" guidance).
     key_points: list[str] = Field(default_factory=list)

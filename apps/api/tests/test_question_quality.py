@@ -175,8 +175,10 @@ def test_live_prompt_requires_the_grounding_label() -> None:
     from orbit_api.live.context_builder import live_system_prompt
 
     prompt = live_system_prompt()
-    assert "GROUNDED: <verified | example | general>" in prompt
-    assert "Elaborating a real project IS example" in prompt
+    assert "GROUNDED: <verified | inferred | example | general>" in prompt
+    assert "SOURCES:" in prompt
+    # embellishing a real, cited fact is "inferred"; an event that isn't in the facts is "example"
+    assert "Embellishing a real, cited fact is \"inferred\"" in prompt
 
 
 def test_key_points_are_parsed_capped_and_kept_out_of_the_answer() -> None:

@@ -105,6 +105,8 @@ class BuiltPrompt:
     messages: list[LLMMessage]
     context_used: list[str]
     hits: list[Hit]
+    # The facts as numbered in the prompt ("F1" → hit), so the model's SOURCES line can be resolved and checked.
+    facts: dict[str, Hit] = field(default_factory=dict)
 
 
 # Question types that ask for the user's own story/position, where invented specifics are most tempting.
@@ -155,10 +157,12 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
 
     ctx_lines: list[str] = []
     used: list[str] = []
+    facts: dict[str, Hit] = {}
     budget = MAX_CONTEXT_CHARS
     for h in hits:
         tag = "VERIFIED CANDIDATE FACT" if h.chunk.verified else h.chunk.doc_kind.upper()
-        prefix = f"[{tag}] ({h.chunk.label}) "
+        ref = f"F{len(facts) + 1}"
+        prefix = f"{ref} [{tag}] ({h.chunk.label}) "
         # Hits are ranked, so once we can't fit a fact, truncate it rather than skipping to a
         # lower-ranked one (which would invert priority). Keep a little headroom for the tag.
         avail = budget - len(prefix)
@@ -167,6 +171,7 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
         line = prefix + h.chunk.text[:avail]
         budget -= len(line)
         ctx_lines.append(line)
+        facts[ref] = h
         if h.chunk.label not in used:
             used.append(h.chunk.label)
 
@@ -210,4 +215,5 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
         messages=[LLMMessage("system", live_system_prompt()), LLMMessage("user", "\n\n".join(parts))],
         context_used=used,
         hits=hits,
+        facts=facts,
     )
