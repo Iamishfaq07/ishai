@@ -41,7 +41,7 @@ MAX_FOLLOW_UPS_PER_TOPIC = 2
 QUESTION_TIMEOUT_S = 10
 
 
-DrillKind = Literal["retry", "concise"]
+DrillKind = Literal["retry", "concise", "prep"]
 
 
 class DrillItem(BaseModel):
@@ -173,8 +173,10 @@ class _Asked:
 
 _DRILL_LEAD = {
     "first": "Let's work on a few questions from your last session. ",
+    "first_prep": "Let's practise the questions from your prep. ",
     "retry": "Let's try this one again. ",
     "concise": "Now the short version, in about thirty seconds. ",
+    "prep": "",
 }
 
 
@@ -294,7 +296,10 @@ class MockInterviewer:
                 return
             item = plan[self._drill_next]
             self._drill_next += 1
-            lead = _DRILL_LEAD["first"] if not self.asked and item.kind == "retry" else _DRILL_LEAD[item.kind]
+            if not self.asked and item.kind in ("retry", "prep"):
+                lead = _DRILL_LEAD["first_prep" if item.kind == "prep" else "first"]
+            else:
+                lead = _DRILL_LEAD[item.kind]
             await self._put(lead + item.question, False, drill=item)
 
     def _follow_ups_in_topic(self) -> int:

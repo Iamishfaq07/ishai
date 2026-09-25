@@ -231,7 +231,7 @@ export interface ServerEventMap {
     index: number;
     total: number;
     /** Re-drill sessions only: a weak question again, its live follow-up, or the short version. */
-    drill_kind?: "retry" | "follow_up" | "concise";
+    drill_kind?: "retry" | "follow_up" | "concise" | "prep";
   };
   /** Mock interview finished (planned questions or time used up); session.ended follows. */
   "mock.completed": MockRoundSummary;

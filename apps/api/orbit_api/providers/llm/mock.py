@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import re
 from collections.abc import AsyncIterator
 
 from orbit_api.live.routing import ReasoningLevel
@@ -71,6 +72,17 @@ class MockLLMProvider(LLMProvider):
             return self._script.pop(0)
         if request.request_type == "summary":
             return _mock_report(request.messages[-1].content if request.messages else "")
+        if request.request_type == "prep":
+            body = request.messages[-1].content if request.messages else ""
+            m = re.search(r"Number of questions: (\d+)", body)
+            n = int(m.group(1)) if m else 8
+            cats = ["behavioral", "technical", "role", "motivation", "curveball"]
+            return json.dumps({"role": "[mock] Role", "company": None, "questions": [
+                {"question": f"[mock] Prep question {i + 1}?", "category": cats[i % len(cats)],
+                 "why": "[mock] The job description asks for this.",
+                 "talking_points": ["[mock] point A", "[mock] point B"],
+                 "suggested_answer": f"[mock] In my last role I [name the project] — answer {i + 1}."}
+                for i in range(n)]})
         if request.request_type == "mock_question":
             body = request.messages[-1].content if request.messages else ""
             n = body.count("Interviewer:") + 1
