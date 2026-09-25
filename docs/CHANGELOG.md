@@ -1,5 +1,21 @@
 # Implementation log
 
+## Candidate fact provenance (2026-09-25)
+
+- **Numbered facts and cited sources (§19).** Prompt facts are numbered F1…Fn. The model ends each answer with
+  `SOURCES:` (after the spoken text, so no first-token cost), and each answer carries `sources` (document, chunk,
+  excerpt, verified).
+- **Four grounding levels:** `verified` / `inferred` (new) / `example` (= unsupported) / `general`.
+  `finalize_grounding` never lets "verified" stand without a cited verified fact, and an "inferred" answer with
+  no source becomes "example".
+- **Answer card:**
+  - shows the cited facts, with ✓ for the user's own documents, instead of every retrieved label;
+  - adds a new *Based on your documents — check details* badge for `inferred`.
+- **Found with the real model:** the old rule "elaborating a real project IS example" labelled a true, cited
+  story as *Suggested details*. It's now `inferred`, with the source shown.
+- Tests: 4 provenance tests (resolution, unknown refs, every downgrade path, engine end to end). Real DeepSeek
+  produced all four labels correctly on the fixture resume.
+
 ## Hybrid retrieval + benchmark (2026-09-25)
 
 - **Benchmark first (§18):** `tests/retrieval_eval.py` has 22 dev and 16 **held-out** paraphrased interview

@@ -22,15 +22,17 @@ format still produces something readable.
 
 import re
 
-from orbit_api.live.events import CodeBlock, LiveAnswer, QuestionType
+from orbit_api.live.events import CodeBlock, FactSource, LiveAnswer, QuestionType
 
-_TAG = re.compile(r"^(GROUNDED|PROBLEM|ANSWER|EXAMPLE|CODE|TIME|SPACE|EDGE|TESTS|FOLLOWUP|POINTS)\s*:\s*(.*)$",
+_TAG = re.compile(r"^(GROUNDED|PROBLEM|ANSWER|EXAMPLE|CODE|TIME|SPACE|EDGE|TESTS|FOLLOWUP|SOURCES|POINTS)\s*:\s*(.*)$",
                   re.IGNORECASE)
 MAX_LIST_ITEMS = 8
 MAX_KEY_POINTS = 6
 MAX_KEY_POINT_CHARS = 60
 # The model's own label for its personal claims (see live_system.md): only "example" is surfaced to the user.
-_GROUNDING = {"verified": "verified", "example": "example", "general": "general"}
+_GROUNDING = {"verified": "verified", "inferred": "inferred", "example": "example", "general": "general",
+              "unsupported": "example"}
+_REF = re.compile(r"\bF(\d{1,2})\b", re.IGNORECASE)
 _PERSONAL = frozenset({QuestionType.behavioral, QuestionType.resume, QuestionType.leadership, QuestionType.culture})
 _BULLET = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+(.*)$")
 _FENCE = re.compile(r"^\s*```\s*([\w+#-]*)\s*$")
@@ -38,7 +40,8 @@ _FENCE = re.compile(r"^\s*```\s*([\w+#-]*)\s*$")
 
 class AnswerStreamParser:
     def __init__(self, question: str, qtype: QuestionType, context_used: list[str], *,
-                 max_points: int | None = None) -> None:
+                 max_points: int | None = None, facts: dict[str, FactSource] | None = None) -> None:
+        self._facts = facts or {}  # "F1" → the fact as numbered in the prompt
         self._buf = ""
         self._max_points = max_points  # hard cap for the chosen answer length; prompts alone don't enforce it
         self._question = question
@@ -91,6 +94,15 @@ class AnswerStreamParser:
                     label = value.lower().strip(" .")
                     ans.grounding = _GROUNDING.get(label)  # type: ignore[assignment]
                     section = None  # a one-line tag: nothing continues it
+                elif section == "SOURCES":
+                    # Only refs the prompt actually contained count; anything else is ignored, not trusted.
+                    seen: set[str] = set()
+                    for n in _REF.findall(value):
+                        ref = f"F{int(n)}"
+                        if ref in self._facts and ref not in seen:
+                            seen.add(ref)
+                            ans.sources.append(self._facts[ref])
+                    section = None
                 elif section == "ANSWER":
                     ans.direct_answer = value
                 elif section == "EXAMPLE":
@@ -153,3 +165,15 @@ class AnswerStreamParser:
         if code_lines or code_lang:
             ans.code = CodeBlock(language=code_lang or "text", content="\n".join(code_lines).rstrip())
         return ans
+
+
+def finalize_grounding(answer: LiveAnswer) -> LiveAnswer:
+    """Brief §19: never present unsupported candidate history as real. Applied to the completed answer.
+    "verified" must cite at least one verified fact (the user's own document). Citing only non-candidate sources
+    (a JD requirement, a note) makes it "inferred"; citing nothing makes it "example" (unsupported). "inferred"
+    with no source at all is likewise "example". Other labels pass through unchanged."""
+    if answer.grounding == "verified" and not any(s.verified for s in answer.sources):
+        answer.grounding = "inferred" if answer.sources else "example"
+    elif answer.grounding == "inferred" and not answer.sources:
+        answer.grounding = "example"
+    return answer

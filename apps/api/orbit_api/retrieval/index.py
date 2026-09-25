@@ -38,6 +38,7 @@ class IndexedChunk:
     text: str
     verified: bool
     embedding: list[float]  # [] when it isn't in the current embedder's space (then ranked lexically only)
+    doc_title: str = ""
 
 
 @dataclass(frozen=True)

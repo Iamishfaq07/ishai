@@ -15,7 +15,7 @@ from typing import Any, Literal, Protocol
 
 from pydantic import ValidationError
 
-from orbit_api.live.answer_format import AnswerStreamParser
+from orbit_api.live.answer_format import AnswerStreamParser, finalize_grounding
 from orbit_api.live.classifier import classify
 from orbit_api.live.context_builder import PromptInputs, SessionMemory, build_prompt, fence
 from orbit_api.live.dedup import DedupDecision, Deduplicator
@@ -25,6 +25,7 @@ from orbit_api.live.events import (
     ChatMessage,
     DevSimulate,
     Envelope,
+    FactSource,
     LiveAnswer,
     LiveSettings,
     LiveSettingsPatch,
@@ -56,7 +57,7 @@ from orbit_api.providers.llm.base import (
 )
 from orbit_api.providers.stt.base import STTConfig, STTProvider, STTSession, TranscriptEvent
 from orbit_api.providers.stt.mock import MockSTTProvider, load_fixture, replay
-from orbit_api.retrieval.index import SessionIndex
+from orbit_api.retrieval.index import SessionIndex, chunk_body
 
 log = logging.getLogger(__name__)
 
@@ -701,7 +702,11 @@ class LiveEngine:
                                            "reasoning": reasoning, "source": source})
         await self._set_state(LiveState.generating)
 
-        parser = AnswerStreamParser(question, qtype, built.context_used,
+        facts = {ref: FactSource(ref=ref, chunk_id=h.chunk.id, doc_kind=h.chunk.doc_kind,
+                                 document=h.chunk.doc_title, label=h.chunk.label,
+                                 excerpt=chunk_body(h.chunk.category, h.chunk.text)[:240],
+                                 verified=h.chunk.verified) for ref, h in built.facts.items()}
+        parser = AnswerStreamParser(question, qtype, built.context_used, facts=facts,
                                     max_points=MAX_TALKING_POINTS[self.settings.length])
         first_token_ms: int | None = None
         usage = Usage()
@@ -767,7 +772,7 @@ class LiveEngine:
             return
 
         total_ms = int((self._clock() - started) * 1000)
-        final: LiveAnswer = parser.snapshot()
+        final: LiveAnswer = finalize_grounding(parser.snapshot())
         await self.send("answer.completed", {"answer_id": aid, "answer": final.model_dump(),
                                              "latency": {"first_token_ms": first_token_ms, "total_ms": total_ms}})
         await self._set_state(LiveState.answer_complete)

@@ -197,3 +197,9 @@ set (R@3 0.95) partly because the cues were written after seeing its failures; t
 gain. Reciprocal-rank fusion avoids hand-tuned score weights. The neural embedder is opt-in because it costs
 ~200 MB on a 512 MB host. Each chunk records its embedder, so switching is a config change plus lazy
 re-embedding.
+
+**D40 — Provenance is cited by the model and enforced by the server.** The model knows which facts it used, so
+it names them (`SOURCES: F1 F3`, after the spoken text so there's no latency cost). The server resolves only refs
+it actually put in the prompt. It never trusts a "verified" label without a verified source: an honest model loses
+nothing, and a mistaken one can't present invented history as real. "Embellishing a real fact" (inferred) is
+split from "inventing an event" (example), because they need different warnings.
