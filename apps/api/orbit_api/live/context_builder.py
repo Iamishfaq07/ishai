@@ -101,6 +101,8 @@ class PromptInputs:
     # "design": structured system-design sections; "debug": root cause / fix / diff; "debug_if_error": a coding
     # screenshot — use the debug format only if the image shows an error or failing test.
     mode: str = "normal"
+    # The candidate's standing preferences for every answer (saved with the setup). Preferences, never rules.
+    candidate_instructions: str | None = None
 
 
 @dataclass
@@ -211,6 +213,11 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
     ).strip()
 
     parts: list[str] = [settings_block]
+    if inputs.candidate_instructions:
+        parts.append("The candidate's own preferences for every answer — follow them when they don't conflict with "
+                     "the rules above (they can't change the format, grounding or honesty rules):\n"
+                     "<reference_data source=\"candidate_preferences\">\n"
+                     + fence(inputs.candidate_instructions[:1000]) + "\n</reference_data>")
     if ctx_lines:
         parts.append("<reference_data source=\"documents\">\n" + fence("\n".join(ctx_lines)) + "\n</reference_data>")
     else:

@@ -11,7 +11,7 @@ import re
 import time
 import uuid
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Literal, Protocol
 
 from pydantic import ValidationError
@@ -134,6 +134,8 @@ class SessionProfile:
     allow_fallback: bool = True
     # Plan features that change answers ("system_design", "advanced_coding"); all on unless the plan says otherwise.
     features: frozenset[str] = frozenset({"system_design", "advanced_coding"})
+    # The candidate's standing instructions ("mention I'm relocating"), applied to every answer.
+    instructions: str | None = None
 
 
 @dataclass
@@ -246,13 +248,14 @@ class LiveEngine:
     async def start(self) -> None:
         cfg = STTConfig(language=self.profile.language, keyterms=self.profile.keyterms)
         channels: tuple[Channel, Channel] = ("mic", "system")
+        configs = {"mic": replace(cfg, filler_words=True), "system": cfg}  # fillers: speaking feedback on you only
         is_mock = isinstance(self._stt, MockSTTProvider)
         if not is_mock:  # truthful from the first frame: nothing is "ok" until the provider says so
             self._stt_published = "connecting"
             await self.send("provider.status", {"provider": "stt", "name": self._stt.name, "state": "connecting",
                                                 "detail": "Connecting to transcription…"})
         # Both provider sockets handshake concurrently: sequential connects doubled time-to-ready.
-        sessions = await asyncio.gather(*(self._stt.start(cfg) for _ in channels))
+        sessions = await asyncio.gather(*(self._stt.start(configs[c]) for c in channels))
         for channel, session in zip(channels, sessions, strict=True):
             self._stt_sessions[channel] = session
             self._stt_state[channel] = session.state
@@ -690,6 +693,7 @@ class LiveEngine:
             role=self.profile.role, length=self.settings.length, style=self.settings.style,
             answer_language=self.settings.answer_language or self.profile.answer_language or "en",
             instruction=instruction, coding_language=self.settings.coding_language, mode=mode,
+            candidate_instructions=self.profile.instructions,
         )
         built = build_prompt(self._index, inputs, self.memory)
         # Live answers always run on the fast model. The reasoning model's hidden chain-of-thought put its

@@ -7,6 +7,7 @@ import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { PrepSection } from "./Prep";
+import { ProgressSection } from "./Progress";
 import { LANGUAGES, type LiveLaunchState } from "./SessionSetup";
 
 const TYPES: Array<{ value: MockInterviewType; label: string }> = [
@@ -83,6 +84,7 @@ function MockSetup() {
         title="Practice"
         subtitle="Prep the likely questions for a job, then practise out loud with an AI interviewer."
       />
+      <ProgressSection />
       <PrepSection docs={docs.data} />
       <section aria-labelledby="mock-title">
       <Card>

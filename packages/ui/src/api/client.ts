@@ -18,6 +18,8 @@ import type {
   OrbitSession,
   PreflightReport,
   PrepRequest,
+  Progress,
+  FollowUp,
   PrepResponse,
   PrivacyUpdate,
   RegisterRequest,
@@ -183,6 +185,13 @@ export function createApiClient(options: ApiClientOptions) {
     deleteTranscript: (id: string) =>
       json<void>(`/v1/sessions/${encodeURIComponent(id)}/transcript`, { method: "DELETE" }),
     /** Re-drill: a new mock session asking this session's weak questions again (from its review). */
+    /** Debrief + thank-you email for an ended session (cached server-side; `refresh` regenerates). */
+    followUp: (id: string, refresh = false) =>
+      json<FollowUp>(`/v1/sessions/${encodeURIComponent(id)}/follow-up${refresh ? "?refresh=true" : ""}`, {
+        method: "POST",
+      }),
+    /** Scores and speaking stats across ended sessions. */
+    progress: () => json<Progress>("/v1/progress"),
     /** Interview prep: likely questions from a job description, with answers drawn from the resume. */
     prep: (req: PrepRequest) => json<PrepResponse>("/v1/prep", { method: "POST", body: body(req) }),
     drillSession: (id: string) =>

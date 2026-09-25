@@ -13,8 +13,11 @@ import {
   PageHeader,
   ReportStatusNote,
   SessionReview,
+  DeliveryCard,
+  FollowUpCard,
   Spinner,
   useReportPolling, confirmDialog } from "@orbit/ui";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { api } from "../api";
 import { downloadText, errText, formatClock, formatDate, formatDuration, SESSION_TYPE_LABEL } from "../format";
 import { TitleBar } from "../TitleBar";
@@ -235,6 +238,7 @@ function SessionDetailView({ id, onDeleted, onDrill }: {
       </div>
 
       {tab === "review" && (
+        <div className="space-y-6">
         <SessionReview
           review={detail.summary?.review}
           ended={session.status === "ended"}
@@ -244,6 +248,15 @@ function SessionDetailView({ id, onDeleted, onDrill }: {
           }}
           onDrill={async () => onDrill(await api.drillSession(session.id))}
         />
+        <DeliveryCard delivery={detail.summary?.delivery} />
+        {session.status === "ended" && session.type !== "mock" && (
+          <FollowUpCard
+            initial={detail.summary?.follow_up}
+            load={(refresh) => api.followUp(session.id, refresh)}
+            openLink={(url) => void openUrl(url)}
+          />
+        )}
+        </div>
       )}
       {tab === "summary" && <SummaryView summary={detail.summary} />}
       {tab === "transcript" && <TranscriptTimeline detail={detail} />}

@@ -154,6 +154,7 @@ export function SetupScreen({
 }) {
   const [type, setType] = useState<SessionType>(initialType ?? "interview");
   const [role, setRole] = useState("");
+  const [instructions, setInstructions] = useState("");
   const [length, setLength] = useState<AnswerLength>("short");
   const [style, setStyle] = useState<AnswerStyle>("natural");
   const [thinking, setThinking] = useState<ThinkingLevel>(loadThinking);
@@ -225,6 +226,7 @@ export function SetupScreen({
     if (!ws) return;
     setType(ws.session_type);
     setRole(ws.role ?? "");
+    setInstructions(ws.notes ?? "");
     setLanguage(ws.language);
     setLength(ws.length);
     setStyle(ws.style);
@@ -371,6 +373,7 @@ export function SetupScreen({
         auto_answer: isMock ? false : autoAnswer,
         document_ids: [...selected],
         ...(workspaceId ? { workspace_id: workspaceId } : {}),
+        ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
         ...(isMock
           ? { mock: { interview_type: mockType, difficulty: mockDifficulty, duration_minutes: mockMinutes, persona: mockPersona } }
           : {}),
@@ -423,6 +426,7 @@ export function SetupScreen({
               length,
               style,
               auto_answer: autoAnswer,
+              notes: instructions.trim() || null,
               document_ids: [...selected],
             }}
           />
@@ -465,6 +469,21 @@ export function SetupScreen({
             <span className="text-xs font-medium">Role / goal</span>
             <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Senior Security Engineer" className={cx(control, focusRing)} />
           </label>
+
+          {!isMock && (
+            <label className="block space-y-1">
+              <span className="text-xs font-medium">Custom instructions (optional)</span>
+              <textarea
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                maxLength={1000}
+                rows={2}
+                placeholder="e.g. Mention I'm relocating to Berlin. Use British spelling."
+                className={cx(control, focusRing)}
+              />
+              <span className="block text-[11px] text-zinc-500">Applied to every answer. Saved with the setup.</span>
+            </label>
+          )}
 
           <fieldset className="space-y-2 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
             <legend className="px-1 text-xs font-medium">Context documents</legend>

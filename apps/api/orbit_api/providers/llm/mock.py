@@ -83,6 +83,13 @@ class MockLLMProvider(LLMProvider):
                  "talking_points": ["[mock] point A", "[mock] point B"],
                  "suggested_answer": f"[mock] In my last role I [name the project] — answer {i + 1}."}
                 for i in range(n)]})
+        if request.request_type == "follow_up":
+            return json.dumps({
+                "debrief": {"went_well": ["[mock] clear example"], "to_improve": ["[mock] add a metric"],
+                            "promised": ["[mock] send the portfolio link"], "next_steps": []},
+                "thank_you": {"subject": "[mock] Thank you",
+                              "body": "Hi [Interviewer name],\n\n[mock] Thanks for the conversation.\n\n[Your name]"},
+            })
         if request.request_type == "mock_question":
             body = request.messages[-1].content if request.messages else ""
             n = body.count("Interviewer:") + 1

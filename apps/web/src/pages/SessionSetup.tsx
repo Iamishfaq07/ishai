@@ -31,7 +31,7 @@ import {
   cx,
   focusRing,
 } from "@orbit/ui";
-import { Button, Card, ErrorNote, Field, Input, Meter, PageHeader, Select, Spinner, Toggle } from "../components/ui";
+import { Button, Card, ErrorNote, Field, Input, Meter, PageHeader, Select, Spinner, Textarea, Toggle } from "../components/ui";
 import { API_URL, api } from "../lib/api";
 import {
   captureStream,
@@ -171,6 +171,7 @@ export function SessionSetupPage() {
   const [title, setTitle] = useState("");
   const [type, setType] = useState<SessionType>(SELECTABLE_TYPES.includes(initialType) ? initialType : "interview");
   const [role, setRole] = useState("");
+  const [instructions, setInstructions] = useState("");
   const [language, setLanguage] = useState("en");
   const [answerLanguage, setAnswerLanguage] = useState("en");
   const [length, setLength] = useState<AnswerLength>("standard");
@@ -213,6 +214,7 @@ export function SessionSetupPage() {
     if (!ws) return;
     if (SELECTABLE_TYPES.includes(ws.session_type)) setType(ws.session_type);
     setRole(ws.role ?? "");
+    setInstructions(ws.notes ?? "");
     setLanguage(ws.language);
     setAnswerLanguage(ws.answer_language ?? ws.language);
     setLength(ws.length);
@@ -279,6 +281,7 @@ export function SessionSetupPage() {
         auto_answer: autoAnswer,
         document_ids: [...(selectedDocs ?? [])],
         ...(workspaceId ? { workspace_id: workspaceId } : {}),
+        ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
       });
       const launch: LiveLaunchState = { systemAudio, ...(micId ? { micDeviceId: micId } : {}) };
       navigate(`/live/${session.id}`, { state: launch });
@@ -316,6 +319,7 @@ export function SessionSetupPage() {
               length,
               style,
               auto_answer: autoAnswer,
+              notes: instructions.trim() || null,
               document_ids: [...(selectedDocs ?? [])],
             }}
           />
@@ -393,6 +397,22 @@ export function SessionSetupPage() {
                 <Select id="model" disabled value="default">
                   <option value="default">DeepSeek (default)</option>
                 </Select>
+              </Field>
+            </div>
+            <div className="mt-4">
+              <Field
+                label="Custom instructions (optional)"
+                htmlFor="instructions"
+                hint="Applied to every answer in this session, and saved with the setup."
+              >
+                <Textarea
+                  id="instructions"
+                  rows={2}
+                  maxLength={1000}
+                  value={instructions}
+                  onChange={(e) => setInstructions(e.target.value)}
+                  placeholder="e.g. Mention I'm relocating to Berlin. Use British spelling. Keep examples from my fintech work."
+                />
               </Field>
             </div>
             <div className="mt-5">

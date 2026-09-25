@@ -54,6 +54,7 @@ export function WorkspaceBar({
       selected.length !== current.length ||
       selected.style !== current.style ||
       selected.auto_answer !== current.auto_answer ||
+      (selected.notes ?? "") !== (current.notes ?? "") ||
       !sameDocs(selected.document_ids, current.document_ids));
 
   const run = async (fn: () => Promise<void>, done: string) => {
@@ -85,7 +86,7 @@ export function WorkspaceBar({
         ...current,
         name: selected.name,
         company: selected.company,
-        notes: selected.notes,
+        notes: current.notes !== undefined ? current.notes : selected.notes,
       });
       await reload();
       onSelect(ws);

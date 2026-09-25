@@ -1,5 +1,29 @@
 # Implementation log
 
+## Speaking feedback, progress, custom instructions, follow-ups (2026-09-25)
+
+From a competitor review (Yoodli-style delivery coaching, progress tracking, Final Round-style debriefs and
+custom instructions):
+
+- **How you sounded** (session review, web + desktop): pace (words/min), filler words per minute and the most used,
+  your share of the talking time, and average answer length, each with a status and a tip. Pure arithmetic on your
+  side of the transcript (`sessions/delivery.py`), stored in the report as `delivery` — no model call. The mic
+  channel is transcribed with Deepgram `filler_words=true` so "um"/"uh" are kept; the interviewer's channel isn't
+  (question detection reads it).
+- **Your progress** (top of the Practice page): sessions this week, streak, average score of the last five vs the
+  five before, latest pace, a review-score-over-time chart (hover tooltip, table view) and the latest speaking tips.
+  `GET /v1/progress`, no model call.
+- **Custom instructions** ("Mention I'm relocating to Berlin", "British spelling"): a field on New session (web +
+  desktop), saved with the setup (its notes), stored on the session (`sessions.instructions`, migration
+  `e5a1c7d3b9f2`) and applied to every live answer as fenced candidate preferences that can't override the format,
+  grounding or honesty rules.
+- **Follow up** (ended real sessions, web + desktop): a debrief (went well / to improve / what you promised / next
+  steps) and a thank-you email drafted from the transcript, with Copy and Open in email app. `POST
+  /v1/sessions/{id}/follow-up`, generated once and cached with the report (`?refresh=true` rewrites it); not for
+  mock interviews.
+- Tests: `tests/test_insights.py` (filler counting, pace/tips, `filler_words` only on request, instruction fencing,
+  instructions from a saved setup, follow-up caching and rules, progress and streaks).
+
 ## Interview prep from a job description (2026-09-25)
 
 - **`POST /v1/prep`** (`orbit_api/prep`): from a saved job description or pasted text, plus the newest (or a chosen)
