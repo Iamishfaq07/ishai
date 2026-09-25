@@ -23,6 +23,7 @@ from orbit_api.documents.routes import router as documents_router
 from orbit_api.entitlements import plans as configured_plans
 from orbit_api.observability import configure_logging, init_sentry, request_id_middleware
 from orbit_api.preflight import router as preflight_router
+from orbit_api.prep.routes import router as prep_router
 from orbit_api.providers import health as dependency_health
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.stt import create_stt_provider
@@ -142,6 +143,7 @@ def create_app() -> FastAPI:
     app.include_router(workspaces_router)
     app.include_router(preflight_router)
     app.include_router(billing_router)
+    app.include_router(prep_router)
     return app
 
 

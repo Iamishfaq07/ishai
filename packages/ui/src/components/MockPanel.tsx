@@ -53,6 +53,11 @@ export function MockPanel({ live, actions, voice, ended }: {
             Drill: try again
           </span>
         )}
+        {q.drillKind === "prep" && (
+          <span className="rounded-full bg-aurora-400/10 px-2 py-0.5 text-aurora-700 dark:text-aurora-300" title="A question from your interview prep">
+            From your prep
+          </span>
+        )}
         {q.drillKind === "concise" && (
           <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-800 dark:text-emerald-300">Short version · ~30 s</span>
         )}

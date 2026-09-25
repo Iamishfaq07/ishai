@@ -6,6 +6,7 @@ import { MOCK_INTERVIEW_ENABLED, Target } from "@orbit/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
+import { PrepSection } from "./Prep";
 import { LANGUAGES, type LiveLaunchState } from "./SessionSetup";
 
 const TYPES: Array<{ value: MockInterviewType; label: string }> = [
@@ -76,9 +77,23 @@ function MockSetup() {
   };
 
   return (
-    <div className="max-w-2xl">
-      <PageHeader icon={Target} title="Mock interview" subtitle="Practice out loud. Orbit asks, listens, follows up, and gives you a short report at the end." />
+    <div className="max-w-3xl space-y-8">
+      <PageHeader
+        icon={Target}
+        title="Practice"
+        subtitle="Prep the likely questions for a job, then practise out loud with an AI interviewer."
+      />
+      <PrepSection docs={docs.data} />
+      <section aria-labelledby="mock-title">
       <Card>
+        <div className="mb-5">
+          <h2 id="mock-title" className="font-display text-lg font-semibold">
+            Mock interview
+          </h2>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Orbit asks, listens, follows up, and gives you a short report at the end.
+          </p>
+        </div>
         <form onSubmit={(e) => void start(e)} className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Role" htmlFor="mock-role">
@@ -137,6 +152,7 @@ function MockSetup() {
           </Button>
         </form>
       </Card>
+      </section>
     </div>
   );
 }

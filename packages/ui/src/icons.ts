@@ -27,6 +27,7 @@ export {
   Clock,
   Code2,
   Contrast,
+  Copy,
   CreditCard,
   Download,
   Eraser,

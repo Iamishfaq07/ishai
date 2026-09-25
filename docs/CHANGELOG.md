@@ -1,5 +1,21 @@
 # Implementation log
 
+## Interview prep from a job description (2026-09-25)
+
+- **`POST /v1/prep`** (`orbit_api/prep`): from a saved job description or pasted text, plus the newest (or a chosen)
+  resume, the model predicts the questions this interviewer is most likely to ask. Each comes with its category,
+  *why* they'd ask it (the JD requirement behind it), talking points drawn only from the resume, and a first-person
+  suggested answer; missing personal details become `[fill in]` prompts instead of invented facts. The document
+  text is fenced as reference data; the model's JSON is validated item by item (malformed items dropped, unknown
+  categories normalised); cost is recorded as a `prep` provider request. Gated on the plan's `mock` feature,
+  verified users, per-IP and per-user rate limits. Stateless — nothing else is stored.
+- **Practice page (web)** is now *Prep → Practise*: generate questions, read the talking points and suggested
+  answers, **Copy all** as Markdown, and **Practise N out loud**, which starts a mock interview asking exactly the
+  ticked questions (a `drill` with the new kind `prep`: "Let's practise the questions from your prep", then each
+  question in order, labelled *From your prep*). The last result is kept on the device.
+- Tests: `tests/test_prep.py` (pasted and saved documents, resume grounding, validation and ownership, parser
+  robustness, practising the questions in a mock session).
+
 ## Web ↔ desktop parity: saved setups, ready check, audio verdicts, account options (2026-09-25)
 
 - **Saved setups on the web.** The setup picker (pick one to fill in role, documents, language and answer

@@ -103,10 +103,43 @@ export type MockInterviewType = "behavioral" | "technical" | "system_design" | "
 export type MockPersona = "recruiter" | "hiring_manager" | "engineer" | "staff_engineer" | "executive";
 
 export interface MockConfig {
-  interview_type: MockInterviewType;
-  difficulty: MockDifficulty;
+  interview_type?: MockInterviewType;
+  difficulty?: MockDifficulty;
   duration_minutes: number;
   persona?: MockPersona;
+  /** A fixed list of questions, asked in order (re-drills, or questions from interview prep: kind "prep"). */
+  drill?: Array<{ question: string; kind?: "retry" | "concise" | "prep"; follow_up?: boolean }>;
+}
+
+/** POST /v1/prep — likely interview questions from a job description, answered from the resume. */
+export interface PrepRequest {
+  job_description_id?: string;
+  job_text?: string;
+  resume_id?: string;
+  role?: string;
+  /** 4–12, default 8. */
+  count?: number;
+}
+
+export type PrepCategory = "behavioral" | "technical" | "role" | "motivation" | "curveball";
+
+export interface PrepQuestion {
+  question: string;
+  category: PrepCategory;
+  /** Why this interviewer would ask it (the JD requirement behind it). */
+  why: string;
+  /** From the resume only. */
+  talking_points: string[];
+  /** First person, ready to say; "[…]" marks details the candidate fills in. */
+  suggested_answer: string;
+}
+
+export interface PrepResponse {
+  role: string | null;
+  company: string | null;
+  questions: PrepQuestion[];
+  /** False when no resume was available (answers lean on "[fill in]" prompts). */
+  grounded_in_resume: boolean;
 }
 
 export interface CreateSessionRequest {

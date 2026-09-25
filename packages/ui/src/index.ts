@@ -120,6 +120,7 @@ export {
   type Verdict,
 } from "./live/audioDiagnostics";
 export { READ_ALOUD_RATES, speechChunks, speechText } from "./live/readAloud";
+export { splitPlaceholders } from "./live/placeholders";
 export { useInterviewerVoice, type InterviewerVoice } from "./live/useInterviewerVoice";
 export { MockPanel } from "./components/MockPanel";
 export { ConfirmHost, confirmDialog, type ConfirmOptions } from "./components/ConfirmDialog";

@@ -94,7 +94,7 @@ export interface LiveViewState {
     isFollowUp: boolean;
     index: number;
     total: number;
-    drillKind: "retry" | "follow_up" | "concise" | null;
+    drillKind: "retry" | "follow_up" | "concise" | "prep" | null;
   } | null;
   mockCompleted: boolean;
   mockSummary: MockRoundSummary | null;

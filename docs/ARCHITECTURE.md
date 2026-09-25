@@ -15,6 +15,7 @@ Built from scratch in this repo, starting 2026-09-23 (it held only a generated R
 | Answers: spoken first-person prose, **key points** (ticked off as the candidate covers them, or by hand), **Read aloud** (local voices; audio isn't sent while it plays), grounding label (*Suggested details*), coding sections (problem / code / complexity / edge cases / tests) in a chosen language | ✅ tested |
 | Screenshot → vision answer (analysed and discarded; credit spent only on success) | ✅ tested + real desktop build |
 | **Mock interviewer**: persona / type / difficulty / duration, follow-ups, spoken questions (browser TTS), review | ✅ tested + real voice path |
+| **Interview prep**: likely questions from a job description, with why / talking points / suggested answer from the resume, practised as a mock drill | ✅ tested |
 | **Preflight** (`GET /v1/preflight` + local device checks) before a session starts | ✅ |
 | Session memory, follow-up stitching, chat mode, manual answer, pin / clear, cancellation, answer history | ✅ tested |
 | Session report (background DB job), review scores, transcript, Markdown export, privacy toggles | ✅ tested |
