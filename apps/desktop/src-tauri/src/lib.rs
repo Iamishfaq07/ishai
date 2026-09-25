@@ -17,8 +17,14 @@ fn quit_app(app: tauri::AppHandle) {
     app.exit(0);
 }
 
+fn protect_window(window: &tauri::WebviewWindow) {
+    let _ = window.set_content_protected(true);
+    let _ = window.set_skip_taskbar(true);
+}
+
 fn show_main(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
+        protect_window(&window);
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
@@ -52,6 +58,11 @@ pub fn run() {
                 tray = tray.icon(icon.clone());
             }
             tray.build(app)?;
+
+            if let Some(win) = app.get_webview_window("main") {
+                protect_window(&win);
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
