@@ -1,3 +1,4 @@
+import { CreditCard } from "@orbit/ui";
 import type { Entitlements, PlanInfo } from "@orbit/types";
 import { Button, Card, ErrorNote, PageHeader, Spinner } from "../components/ui";
 import { api } from "../lib/api";
@@ -97,7 +98,7 @@ export function BillingPage() {
 
   return (
     <div>
-      <PageHeader title="Billing" subtitle="Your plan and this month’s usage." />
+      <PageHeader icon={CreditCard} title="Billing" subtitle="Your plan and this month’s usage." />
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <h2 className="mb-1 font-semibold">This month</h2>

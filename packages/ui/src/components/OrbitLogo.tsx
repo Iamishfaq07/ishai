@@ -1,28 +1,71 @@
+import { useId } from "react";
 import { cx } from "./cx";
 
 export interface OrbitLogoProps {
   size?: number;
-  /** Satellite circles the planet (off = static mark). */
+  /** Gentle life: the spark twinkles (off = static mark). */
   animated?: boolean;
-  /** Faster orbit, e.g. while the AI is working. */
+  /** Working: the orbit ring spins, e.g. while the AI is answering. */
   busy?: boolean;
   className?: string;
 }
 
-/** The Orbit mark: an accent-coloured planet with a satellite on a tilted orbit. Follows the accent colour. */
+// Geometry on a 64-unit grid: a planet core, an orbit ring broken at the upper right, and a four-point spark
+// (the AI) riding the orbit in that gap. Drawn once here; public/favicon.svg and the app icons are the same paths.
+const RING = "M51.41 20.84 A23 23 0 1 1 43.16 12.59";
+const SPARK = "M48.26 6.76 L50.34 13.66 L57.24 15.74 L50.34 17.82 L48.26 24.72 L46.18 17.82 L39.28 15.74 L46.18 13.66Z";
+
+/** The Orbit mark. Ring and planet follow the accent colour into the aurora cyan; the spark is always starlight. */
 export function OrbitLogo({ size = 20, animated = true, busy = false, className }: OrbitLogoProps) {
+  const id = useId().replace(/:/g, "");
   return (
-    <span className={cx("relative inline-block shrink-0", className)} style={{ width: size, height: size }} aria-hidden="true">
-      <span className="absolute inset-[22%] rounded-full bg-gradient-to-br from-indigo-300 via-indigo-500 to-indigo-700 shadow-[0_0_12px_rgb(var(--accent-500)/0.55)]" />
-      <span
-        className="absolute inset-0 rounded-full border border-indigo-400/50"
-        style={{ transform: "rotateX(62deg) rotateZ(-18deg)" }}
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      className={cx("shrink-0 overflow-visible", className)}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <defs>
+        <linearGradient id={`${id}-ring`} x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stopColor="rgb(var(--accent-600))" />
+          <stop offset="0.5" stopColor="rgb(var(--accent-400))" />
+          <stop offset="1" stopColor="rgb(var(--aurora-400))" />
+        </linearGradient>
+        <linearGradient id={`${id}-core`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="rgb(var(--accent-300))" />
+          <stop offset="1" stopColor="rgb(var(--accent-600))" />
+        </linearGradient>
+      </defs>
+      <g className={cx(busy && "origin-center animate-orbit-fast")} style={{ transformBox: "view-box" }}>
+        <path d={RING} fill="none" stroke={`url(#${id}-ring)`} strokeWidth="8" strokeLinecap="round" />
+      </g>
+      <circle cx="32" cy="32" r="8.5" fill={`url(#${id}-core)`} />
+      <path
+        d={SPARK}
+        className={cx("fill-zinc-900 dark:fill-white", animated && "animate-spark")}
+        style={{ transformBox: "fill-box", transformOrigin: "center" }}
       />
-      <span className={cx("absolute inset-0", animated && (busy ? "animate-orbit-fast" : "animate-orbit"))}>
-        <span
-          className="absolute left-1/2 top-0 -translate-x-1/2 rounded-full bg-indigo-200 shadow-[0_0_6px_rgb(var(--accent-300))]"
-          style={{ width: Math.max(3, size * 0.2), height: Math.max(3, size * 0.2) }}
-        />
+    </svg>
+  );
+}
+
+/** Mark + "orbit" wordmark, for headers and sign-in screens. */
+export function OrbitWordmark({
+  size = 24,
+  animated = true,
+  className,
+}: {
+  size?: number;
+  animated?: boolean;
+  className?: string;
+}) {
+  return (
+    <span className={cx("inline-flex items-center gap-2", className)}>
+      <OrbitLogo size={size} animated={animated} />
+      <span className="font-display font-semibold tracking-tight" style={{ fontSize: size * 0.8 }}>
+        orbit
       </span>
     </span>
   );

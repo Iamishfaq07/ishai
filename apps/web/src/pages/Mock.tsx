@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import type { MockDifficulty, MockInterviewType, MockPersona } from "@orbit/types";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select } from "../components/ui";
-import { MOCK_INTERVIEW_ENABLED } from "@orbit/ui";
+import { MOCK_INTERVIEW_ENABLED, Target } from "@orbit/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -25,7 +25,7 @@ export function MockPage() {
   if (!MOCK_INTERVIEW_ENABLED) {
     return (
       <div className="mx-auto max-w-md py-16 text-center">
-        <PageHeader title="Mock interview" subtitle="Coming soon" />
+        <PageHeader icon={Target} title="Mock interview" subtitle="Coming soon" />
         <p className="mt-4 text-sm text-zinc-500">
           The AI interviewer that asks you questions is still in the works. For now, start a normal session and
           use Orbit live, or practice by pasting questions into Chat.
@@ -77,7 +77,7 @@ function MockSetup() {
 
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Mock interview" subtitle="Practice out loud. Orbit asks, listens, follows up, and gives you a short report at the end." />
+      <PageHeader icon={Target} title="Mock interview" subtitle="Practice out loud. Orbit asks, listens, follows up, and gives you a short report at the end." />
       <Card>
         <form onSubmit={(e) => void start(e)} className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">

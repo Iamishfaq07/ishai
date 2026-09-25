@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 /** User-chosen look & feel, shared by the web and desktop apps (stored per device). */
-export type AccentName = "indigo" | "violet" | "sky" | "emerald" | "rose" | "amber";
+export type AccentName = "nebula" | "indigo" | "violet" | "sky" | "emerald" | "rose" | "amber";
 export type TextSize = "sm" | "md" | "lg";
 
 export interface DesignPrefs {
@@ -11,13 +11,14 @@ export interface DesignPrefs {
   motion: boolean;
 }
 
-export const DEFAULT_DESIGN: DesignPrefs = { accent: "indigo", textSize: "md", motion: true };
+export const DEFAULT_DESIGN: DesignPrefs = { accent: "nebula", textSize: "md", motion: true };
 
 type Palette = [string, string, string, string, string, string, string, string, string, string, string];
 const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
 
-/** Tailwind palettes as RGB triplets (50 → 950). */
+/** Accent palettes as RGB triplets (50 → 950). "Nebula" is Orbit's own violet; the rest are Tailwind's. */
 export const ACCENTS: Record<AccentName, { label: string; palette: Palette }> = {
+  nebula: { label: "Nebula", palette: ["245 243 255", "236 233 255", "221 214 254", "196 181 253", "164 139 250", "134 102 255", "112 72 245", "94 56 214", "76 46 170", "58 38 128", "32 20 80"] },
   indigo: { label: "Indigo", palette: ["238 242 255", "224 231 255", "199 210 254", "165 180 252", "129 140 248", "99 102 241", "79 70 229", "67 56 202", "55 48 163", "49 46 129", "30 27 75"] },
   violet: { label: "Violet", palette: ["245 243 255", "237 233 254", "221 214 254", "196 181 253", "167 139 250", "139 92 246", "124 58 237", "109 40 217", "91 33 182", "76 29 149", "46 16 101"] },
   sky: { label: "Sky", palette: ["240 249 255", "224 242 254", "186 230 253", "125 211 252", "56 189 248", "14 165 233", "2 132 199", "3 105 161", "7 89 133", "12 74 110", "8 47 73"] },

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { OrbitLogo } from "@orbit/ui";
+import { AudioLines, OrbitWordmark, PlanetHero, ShieldCheck, Sparkles, type LucideIcon } from "@orbit/ui";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button, ErrorNote, Field, Input } from "../components/ui";
 import { api } from "../lib/api";
@@ -7,18 +7,50 @@ import { useAuth } from "../lib/auth";
 import { errorText } from "../lib/format";
 import { Captcha, useCaptchaConfig } from "../components/Captcha";
 
+const AUTH_POINTS: Array<{ icon: LucideIcon; text: string }> = [
+  { icon: AudioLines, text: "Hears the question the moment it’s asked" },
+  { icon: Sparkles, text: "Answers in your voice, grounded in your resume" },
+  { icon: ShieldCheck, text: "Your documents stay private to your account" },
+];
+
 function AuthShell({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
-    <div className="flex min-h-full items-center justify-center bg-gradient-to-b from-indigo-500/5 to-transparent px-6 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <span className="mb-4 flex justify-center">
-            <OrbitLogo size={48} />
-          </span>
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>
+    <div className="grid min-h-full lg:grid-cols-2">
+      <aside className="dark relative hidden overflow-hidden border-r border-white/5 bg-zinc-950 p-12 text-white lg:flex lg:flex-col">
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-24 top-1/3 h-96 w-96 rounded-full bg-indigo-600/30 blur-3xl"
+        />
+        <OrbitWordmark size={30} className="relative" />
+        <div className="relative my-auto">
+          <PlanetHero className="mx-auto w-80 motion-safe:animate-float xl:w-96" />
+          <h2 className="mt-10 max-w-md font-display text-4xl font-semibold leading-tight tracking-tight">
+            Walk into every interview <span className="text-gradient">with backup.</span>
+          </h2>
+          <ul className="mt-6 space-y-3">
+            {AUTH_POINTS.map(({ icon: Icon, text }) => (
+              <li key={text} className="flex items-center gap-3 text-sm text-zinc-300">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/10">
+                  <Icon className="h-4 w-4 text-indigo-200" />
+                </span>
+                {text}
+              </li>
+            ))}
+          </ul>
         </div>
-        {children}
+      </aside>
+
+      <div className="flex items-center justify-center px-4 py-10 sm:px-6">
+        <div className="w-full max-w-sm animate-fade-up">
+          <div className="mb-8 text-center">
+            <span className="mb-6 flex justify-center lg:hidden">
+              <OrbitWordmark size={34} />
+            </span>
+            <h1 className="font-display text-3xl font-semibold tracking-tight">{title}</h1>
+            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>
+          </div>
+          <div className="glass-panel rounded-2xl p-6 sm:p-7">{children}</div>
+        </div>
       </div>
     </div>
   );

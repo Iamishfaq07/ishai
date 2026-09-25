@@ -1,6 +1,8 @@
 export { ErrorBoundary } from "./components/ErrorBoundary";
 export { AppearanceControls } from "./components/AppearanceControls";
-export { OrbitLogo } from "./components/OrbitLogo";
+export { OrbitLogo, OrbitWordmark } from "./components/OrbitLogo";
+export { SpaceBackdrop } from "./components/SpaceBackdrop";
+export { PlanetHero, PulseRings, SpotIllustration } from "./components/Illustrations";
 export { SessionReview } from "./components/SessionReview";
 export { VerifyEmailBanner } from "./components/VerifyEmailBanner";
 export { CostDashboard } from "./components/CostDashboard";
@@ -84,6 +86,7 @@ export {
   ErrorNote,
   Field,
   Input,
+  Meter,
   PageHeader,
   Select,
   Spinner,

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { OrbitSession, SessionType, User } from "@orbit/types";
-import { ApiError, ConfirmHost, OrbitLogo, VerifyEmailBanner } from "@orbit/ui";
+import { ApiError, ConfirmHost, OrbitLogo, SpaceBackdrop, VerifyEmailBanner } from "@orbit/ui";
 import { api, setAccessToken, setUnauthorizedHandler } from "./api";
 import { CloseDialog } from "./CloseDialog";
 import { stepGlass } from "./glass";
@@ -103,6 +103,8 @@ export function App() {
 
   return (
     <>
+      {/* Hidden while the window is see-through (index.css): then the desktop itself is the backdrop. */}
+      <SpaceBackdrop className="space-backdrop" />
       {/* Keyed on the screen so every navigation fades the new screen in. */}
       <div key={screen.name} className="h-full animate-fade-in">
         {renderScreen()}

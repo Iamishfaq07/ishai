@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { ConfirmHost, ErrorBoundary, initDesign } from "@orbit/ui";
+import { ConfirmHost, ErrorBoundary, SpaceBackdrop, initDesign } from "@orbit/ui";
 import { App } from "./App";
 import { AuthProvider } from "./lib/auth";
 import "./index.css";
@@ -16,6 +16,7 @@ createRoot(root).render(
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
+          <SpaceBackdrop />
           <App />
           <ConfirmHost />
         </AuthProvider>

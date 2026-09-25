@@ -37,7 +37,7 @@ const LENGTHS: Array<{ value: AnswerLength; label: string; hint: string }> = [
 
 const btn =
   "inline-flex items-center justify-center rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40";
-const ghost = "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800";
+const ghost = "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/5";
 const miniSelect =
   "rounded-md bg-transparent py-1 pl-1 pr-5 text-xs font-medium text-zinc-600 disabled:opacity-40 dark:text-zinc-300";
 
@@ -46,14 +46,14 @@ export function ControlBar(props: ControlBarProps) {
   const screenshotDisabled = !props.onScreenshot || ended;
 
   return (
-    <div className="border-t border-zinc-200 px-3 py-2 dark:border-zinc-800">
+    <div className="border-t border-zinc-200 px-3 py-2 dark:border-white/[0.06]">
       <div className="flex items-center gap-1">
         <button
           type="button"
           onClick={props.onAnswer}
           disabled={ended}
           title={`Answer now (${formatHotkey(hotkeys.answer)})`}
-          className={cx(btn, "bg-indigo-600 text-white hover:bg-indigo-500", focusRing)}
+          className={cx(btn, "bg-gradient-to-b from-indigo-500 to-indigo-600 text-white shadow-glow-sm hover:from-indigo-400 hover:to-indigo-500", focusRing)}
         >
           Answer
         </button>
@@ -74,7 +74,7 @@ export function ControlBar(props: ControlBarProps) {
           aria-pressed={props.chatOpen}
           disabled={ended}
           title={`Chat (${formatHotkey(hotkeys.focusChat)})`}
-          className={cx(btn, ghost, props.chatOpen && "bg-zinc-100 dark:bg-zinc-800", focusRing)}
+          className={cx(btn, ghost, props.chatOpen && "bg-zinc-100 dark:bg-white/10", focusRing)}
         >
           Chat
         </button>
@@ -95,8 +95,8 @@ export function ControlBar(props: ControlBarProps) {
       </div>
 
       {!props.compact && (
-        <div className="mt-1.5 flex items-center gap-1">
-          <div role="radiogroup" aria-label="Answer length" className="flex rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-1 gap-y-1.5">
+          <div role="radiogroup" aria-label="Answer length" className="flex rounded-lg bg-zinc-100 p-0.5 dark:bg-white/[0.04]">
             {LENGTHS.map((l) => (
               <button
                 key={l.value}
@@ -109,7 +109,7 @@ export function ControlBar(props: ControlBarProps) {
                 className={cx(
                   "rounded-md px-2 py-1 text-xs font-medium",
                   props.length === l.value
-                    ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white"
+                    ? "bg-white text-zinc-900 shadow-sm dark:bg-indigo-500/25 dark:text-white"
                     : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200",
                   focusRing,
                 )}

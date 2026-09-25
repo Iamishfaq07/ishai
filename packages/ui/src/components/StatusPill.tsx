@@ -1,6 +1,7 @@
 import type { LiveState, ProviderState } from "@orbit/types";
 import type { ConnectionStatus } from "../live/client";
 import { cx } from "./cx";
+import { OrbitLogo } from "./OrbitLogo";
 
 type Tone = "idle" | "live" | "busy" | "warn" | "error" | "done";
 
@@ -22,13 +23,13 @@ const STATE_META: Record<LiveState, { label: string; tone: Tone; pulse?: boolean
   ended: { label: "Ended", tone: "done" },
 };
 
-const TONE_CLASSES: Record<Tone, { dot: string; text: string }> = {
-  idle: { dot: "bg-zinc-400", text: "text-zinc-500 dark:text-zinc-400" },
-  live: { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-300" },
-  busy: { dot: "bg-indigo-500", text: "text-indigo-700 dark:text-indigo-300" },
-  warn: { dot: "bg-amber-500", text: "text-amber-700 dark:text-amber-300" },
-  error: { dot: "bg-rose-500", text: "text-rose-700 dark:text-rose-300" },
-  done: { dot: "bg-zinc-500", text: "text-zinc-600 dark:text-zinc-400" },
+const TONE_CLASSES: Record<Tone, { dot: string; text: string; pill: string }> = {
+  idle: { dot: "bg-zinc-400", text: "text-zinc-500 dark:text-zinc-400", pill: "bg-zinc-500/10 ring-zinc-500/15" },
+  live: { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-300", pill: "bg-emerald-500/10 ring-emerald-500/20" },
+  busy: { dot: "bg-indigo-500", text: "text-indigo-700 dark:text-indigo-300", pill: "bg-indigo-500/10 ring-indigo-500/25" },
+  warn: { dot: "bg-amber-500", text: "text-amber-700 dark:text-amber-300", pill: "bg-amber-500/10 ring-amber-500/20" },
+  error: { dot: "bg-rose-500", text: "text-rose-700 dark:text-rose-300", pill: "bg-rose-500/10 ring-rose-500/20" },
+  done: { dot: "bg-zinc-500", text: "text-zinc-600 dark:text-zinc-400", pill: "bg-zinc-500/10 ring-zinc-500/15" },
 };
 
 export interface StatusPillProps {
@@ -59,7 +60,11 @@ export function StatusPill({ state, connection, stt }: StatusPillProps) {
     // detected → thinking → answering …); announcing each one would talk over the answer. The answer
     // card's result region carries aria-live instead. `title` keeps it discoverable on hover.
     <span
-      className={cx("inline-flex items-center gap-1.5 text-xs font-medium tracking-wide", tone.text)}
+      className={cx(
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium tracking-wide ring-1 transition-colors",
+        tone.text,
+        tone.pill,
+      )}
       title={meta.label}
     >
       <Indicator motion={"motion" in meta ? meta.motion : undefined} pulse={Boolean(meta.pulse)} dot={tone.dot} />
@@ -70,7 +75,7 @@ export function StatusPill({ state, connection, stt }: StatusPillProps) {
   );
 }
 
-/** Listening: a breathing dot. Hearing speech: a live sound wave. Thinking/answering: an orbiting spinner. */
+/** Listening: a breathing dot. Hearing speech: a live sound wave. Thinking/answering: the Orbit mark, ring spinning. */
 function Indicator({ motion, pulse, dot }: { motion?: Motion; pulse: boolean; dot: string }) {
   if (motion === "wave") {
     return (
@@ -85,14 +90,7 @@ function Indicator({ motion, pulse, dot }: { motion?: Motion; pulse: boolean; do
       </span>
     );
   }
-  if (motion === "spin") {
-    return (
-      <span
-        className="h-2.5 w-2.5 rounded-full border-2 border-indigo-500/25 border-t-indigo-500 motion-safe:animate-orbit-fast"
-        aria-hidden="true"
-      />
-    );
-  }
+  if (motion === "spin") return <OrbitLogo size={13} busy animated={false} />;
   return (
     <span className="relative flex h-2 w-2" aria-hidden="true">
       {pulse && (

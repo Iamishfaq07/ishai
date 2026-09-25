@@ -7,6 +7,8 @@ import type { AnswerView } from "../live/reducer";
 import type { ReadAloud } from "../live/useReadAloud";
 import { CodeBlock } from "./CodeBlock";
 import { cx, focusRing } from "./cx";
+import { PulseRings } from "./Illustrations";
+import { OrbitLogo } from "./OrbitLogo";
 import { ArrowRight, Check, Circle, Pause, PenLine, Play, Square, Volume2 } from "../icons";
 
 export interface AnswerCardProps {
@@ -217,10 +219,19 @@ export function AnswerCard({
 
   if (!answer) {
     return (
-      <div className="flex flex-1 animate-fade-in items-center justify-center px-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
-        {autoAnswer
-          ? "Answers appear here as soon as a question is detected."
-          : "Auto answer is off — press Answer when you’re ready."}
+      <div className="flex flex-1 animate-fade-in flex-col items-center justify-center gap-5 px-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
+        {/* A quiet radar: Orbit is listening for the next question. */}
+        <span className="relative flex items-center justify-center text-indigo-400/60" aria-hidden="true">
+          <PulseRings />
+          <span className="relative flex items-center justify-center rounded-full bg-indigo-500/10 p-3 ring-1 ring-indigo-500/20">
+            <OrbitLogo size={compact ? 28 : 40} />
+          </span>
+        </span>
+        <span className="max-w-xs">
+          {autoAnswer
+            ? "Answers appear here as soon as a question is detected."
+            : "Auto answer is off — press Answer when you’re ready."}
+        </span>
       </div>
     );
   }

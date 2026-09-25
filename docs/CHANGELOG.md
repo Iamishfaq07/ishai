@@ -1,5 +1,31 @@
 # Implementation log
 
+## "Deep Space" redesign — web + desktop (2026-09-25)
+
+- **New brand mark:** a planet core inside an orbit ring (accent violet → aurora cyan) with a four-point spark (the
+  AI) riding the gap. One SVG component (`OrbitLogo`, `OrbitWordmark`) drives the header, spinners and status pill;
+  the favicon, Windows app/tray icons (`apps/desktop/src-tauri/icons`), Apple touch icon and PWA icons are the same
+  paths on a dark tile.
+- **Design tokens:** `zinc-*` now resolves to *ink* (cool blue-violet neutrals) and `indigo-*` to the accent, both
+  as CSS variables, so every existing screen picked up the new palette without touching its classes. New default
+  accent **Nebula**; the old accents stay selectable. `aurora-*` is the fixed cyan used only in brand gradients.
+- **Type:** Space Grotesk (headings), Inter (body), JetBrains Mono (code), self-hosted via Fontsource so the
+  desktop app works offline. Previously Inter was named but never loaded, so every device fell back to its system font.
+- **Surfaces & motion:** an animated sky (`SpaceBackdrop`: two drifting aurora clouds, three twinkling star layers;
+  hidden in see-through desktop windows), frosted-glass panels, gradient hairline borders, a sheen on primary
+  buttons, lift-on-hover cards, staggered entrances. Everything honours reduced motion and Settings → Animations.
+- **Illustrations:** `PlanetHero` (ringed planet, orbiting moon and spark) and `SpotIllustration` (any icon in a
+  glowing orb with an orbiting satellite) for heroes and empty states; a listening "radar" when no answer is showing.
+- **Web:** new app shell (glass top bar with icons; on phones a bottom tab bar replaces the top nav, whose last
+  three links used to be scrolled off-screen), split-screen sign-in, a new Home, icons on every page header.
+  The web app's duplicate UI primitives now re-export the shared ones.
+- **Live panel (shared):** logo in the header (spins while answering), pill status, pill tabs, chat bubbles,
+  icon buttons for compact/expand (were Unicode glyphs); the control bar wraps instead of overflowing on phones.
+- **Desktop:** icon buttons in the title bar (fits the 380 px window), redesigned sign-in and Home; see-through
+  mode rules updated to the new palette.
+- Checks: typecheck, lint, 81 UI tests; screenshots of web (desktop + 390 px phone, dark + light) and the desktop
+  UI at 380 px and 900 px.
+
 ## Mock interview quality (§32) and re-drill (§33) (2026-09-25)
 
 - **Re-drill:** the review has a **Drill N weak questions** button, and `POST /v1/sessions/{id}/drill` starts a new

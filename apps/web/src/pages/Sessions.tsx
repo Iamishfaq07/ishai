@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { cx, focusRing } from "@orbit/ui";
+import { AudioLines, cx, focusRing, HistoryIcon } from "@orbit/ui";
 import { Button, Card, EmptyState, ErrorNote, PageHeader, Spinner } from "../components/ui";
 import { api } from "../lib/api";
 import { SESSION_TYPE_LABEL, errorText, formatDate, formatDuration } from "../lib/format";
@@ -12,6 +12,7 @@ export function SessionsPage() {
   return (
     <div>
       <PageHeader
+        icon={HistoryIcon}
         title="Sessions"
         subtitle="Transcripts, detected questions, answers, and summaries from past sessions."
         actions={<Button onClick={() => navigate("/start")}>New session</Button>}
@@ -21,10 +22,10 @@ export function SessionsPage() {
       ) : sessions.error ? (
         <ErrorNote onRetry={sessions.reload}>{errorText(sessions.error)}</ErrorNote>
       ) : (sessions.data ?? []).length === 0 ? (
-        <EmptyState title="No sessions yet" body="When you end a live session, its transcript and summary are saved here." />
+        <EmptyState icon={AudioLines} title="No sessions yet" body="When you end a live session, its transcript and summary are saved here." />
       ) : (
         <Card className="p-0">
-          <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+          <ul className="divide-y divide-zinc-100 dark:divide-white/5">
             {(sessions.data ?? []).map((s) => (
               <li key={s.id}>
                 <Link

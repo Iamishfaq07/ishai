@@ -1,13 +1,13 @@
 import { useState, type FormEvent } from "react";
 import type { User } from "@orbit/types";
-import { cx, focusRing } from "@orbit/ui";
+import { Button, OrbitWordmark, PlanetHero, cx, focusRing } from "@orbit/ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { API_URL, DEFAULT_API_URL, WEB_URL, api, setAccessToken, setApiUrl, validateApiUrl } from "../api";
 import { saveToken } from "../native";
 import { TitleBar } from "../TitleBar";
 
 const input =
-  "block w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-900";
+  "block w-full rounded-xl border border-zinc-200 bg-white/90 px-3.5 py-2.5 text-sm transition-colors hover:border-zinc-300 focus:border-indigo-500 dark:border-white/10 dark:bg-zinc-950/60 dark:hover:border-white/20 dark:focus:border-indigo-400";
 
 export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }) {
   const [email, setEmail] = useState("");
@@ -40,10 +40,14 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
   return (
     <div className="flex h-full flex-col">
       <TitleBar />
-      <div className="flex flex-1 flex-col justify-center px-6">
-        <span className="mx-auto mb-3 h-9 w-9 rounded-full bg-gradient-to-br from-indigo-400 to-violet-600 ring-4 ring-indigo-400/20" aria-hidden="true" />
-        <h1 className="text-center text-lg font-semibold">Sign in to Orbit</h1>
-        <form onSubmit={(e) => void submit(e)} className="mt-6 space-y-3">
+      <div className="flex flex-1 flex-col justify-center overflow-y-auto px-6 py-4">
+        <div className="relative mx-auto mb-2 flex h-28 w-full max-w-xs items-center justify-center">
+          <PlanetHero className="absolute -top-6 w-32 opacity-90 motion-safe:animate-float" />
+        </div>
+        <OrbitWordmark size={28} className="mx-auto" />
+        <h1 className="mt-3 text-center font-display text-xl font-semibold tracking-tight">Welcome back</h1>
+        <p className="mt-1 text-center text-xs text-zinc-500 dark:text-zinc-400">Sign in to start a live session</p>
+        <form onSubmit={(e) => void submit(e)} className="glass-panel mx-auto mt-5 w-full max-w-sm space-y-3 rounded-2xl p-4">
           <label className="block text-xs font-medium">
             Email
             <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={cx(input, "mt-1", focusRing)} />
@@ -60,18 +64,14 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
             />
           </label>
           {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
-          <button
-            type="submit"
-            disabled={busy}
-            className={cx("w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50", focusRing)}
-          >
+          <Button type="submit" disabled={busy} className="w-full">
             {busy ? "Signing in…" : "Sign in"}
-          </button>
+          </Button>
         </form>
         <button
           type="button"
           onClick={() => void openUrl(`${WEB_URL}/register`)}
-          className={cx("mx-auto mt-4 text-xs text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}
+          className={cx("mx-auto mt-4 text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}
         >
           Create an account in the browser
         </button>
