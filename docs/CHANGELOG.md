@@ -1,5 +1,25 @@
 # Implementation log
 
+## Audio diagnostics (§23) (2026-09-25)
+
+- **Setup → Test audio** now diagnoses each channel as well as showing its meter. The mic and the interviewer
+  channel get a verdict with advice: *sounds good*, *silent* (muted mic / nothing playing), *too loud*,
+  *dropping out* or *no audio arriving*.
+- **Measured on the device, from the capture frames' levels**, with nothing sent to the server:
+  - delivery (frames received vs expected at 50 ms each), dropouts (gaps ≥ 250 ms, or a stalled stream), longest gap;
+  - silent / near-clipping share, average and peak dBFS;
+  - device status events and errors.
+- The test stops itself after 30 s, so the mic isn't left on.
+- **Copy diagnostics:** a shareable JSON report with measurements and device settings only: no audio,
+  transcripts, account details or keys. Personal names in device names ("Sam's AirPods") are redacted.
+- Code: `packages/ui/src/live/audioDiagnostics.ts` (pure), with 9 tests covering each verdict, redaction and report contents.
+- **Verified in the desktop test build on real devices:**
+  - verdicts appear after 2 s;
+  - the room mic read "silent" (avg -79 dBFS) and the output "nothing playing", with 97–98% delivery and 0 dropouts;
+  - the 30 s auto-stop fired;
+  - the copied report held only the fields above;
+  - no console errors.
+
 ## Microsoft Store packaging: free, no "unknown publisher" (2026-09-25)
 
 - **`scripts/package-msix.ps1`:** packages the release exe as an MSIX for the Microsoft Store.

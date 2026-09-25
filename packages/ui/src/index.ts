@@ -103,6 +103,17 @@ export { LatencyDiagnostics } from "./components/LatencyDiagnostics";
 export { applyOverrides, scoreKeyPoints, type KeyPointProgress, type PointProgress } from "./live/coverage";
 export { useKeyPointProgress, type KeyPoints } from "./live/useKeyPointProgress";
 export { useReadAloud, type ReadAloud, type ReadAloudStatus } from "./live/useReadAloud";
+export {
+  addFrame,
+  diagnosticsReport,
+  newChannelStats,
+  redactDeviceName,
+  summarize as summarizeChannel,
+  type ChannelStats,
+  type ChannelSummary,
+  type DiagnosticsEvent,
+  type Verdict,
+} from "./live/audioDiagnostics";
 export { READ_ALOUD_RATES, speechChunks, speechText } from "./live/readAloud";
 export { useInterviewerVoice, type InterviewerVoice } from "./live/useInterviewerVoice";
 export { MockPanel } from "./components/MockPanel";

@@ -56,3 +56,7 @@ service. While it plays, Orbit stops sending audio for transcription.
 The mock interviewer's spoken questions may use an online "Natural" voice when one is installed, for a more
 natural sound. Those questions are generated practice questions, not your answers.
 
+## Audio diagnostics
+*Test audio* measures levels on your device and sends nothing to the server. *Copy diagnostics* puts a report on
+your clipboard for you to share if you choose. It holds measurements, device names (with personal names such as
+"Sam's AirPods" redacted), the app version and the Windows version: no audio, transcripts, account details or keys.
