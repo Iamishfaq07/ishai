@@ -21,6 +21,7 @@ from orbit_api.db import get_db
 from orbit_api.entitlements import plan_for
 from orbit_api.live.context_builder import fence
 from orbit_api.models import Document, ProviderRequest, User
+from orbit_api.prep import job_link
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMRequest
 from orbit_api.providers.llm.pricing import estimate_cost
@@ -32,6 +33,9 @@ router = APIRouter(prefix="/v1", tags=["prep"])
 # One sizeable LLM call each: a few per hour is plenty for real prep.
 prep_limit = limit("prep", rate_per_s=0.05, burst=3)
 prep_user_limit = limit_user("prep-user", rate_per_s=20 / 3600, burst=5)
+# Each import is one outbound fetch: plenty for real use, useless as a scanner.
+link_limit = limit("prep-link", rate_per_s=0.1, burst=5)
+link_user_limit = limit_user("prep-link-user", rate_per_s=30 / 3600, burst=8)
 
 MAX_SOURCE_CHARS = 8_000
 Category = Literal["behavioral", "technical", "role", "motivation", "curveball"]
@@ -179,3 +183,27 @@ async def prepare(body: PrepIn, user: Annotated[User, Depends(require_verified_u
         raise HTTPException(status.HTTP_502_BAD_GATEWAY,
                             "The AI's answer came back garbled. Try again.") from e
     return PrepOut(**parsed, grounded_in_resume=bool(resume))
+
+
+class ImportLinkIn(BaseModel):
+    url: str = Field(min_length=8, max_length=2_000)
+
+
+class ImportLinkOut(BaseModel):
+    url: str
+    title: str | None
+    company: str | None
+    text: str
+
+
+@router.post("/prep/import-link", response_model=ImportLinkOut,
+             dependencies=[Depends(link_limit), Depends(link_user_limit)])
+async def import_link(body: ImportLinkIn, user: Annotated[User, Depends(require_verified_user)]) -> ImportLinkOut:
+    """Read a job posting from a link (safely: see prep/job_link.py). Nothing is stored; the client shows the text
+    to check and edit, and can save it as a job description document."""
+    try:
+        posting = await job_link.fetch_job_posting(body.url)
+    except job_link.JobLinkError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e
+    log.info("imported a job posting (%d chars)", len(posting.text))
+    return ImportLinkOut(url=posting.url, title=posting.title, company=posting.company, text=posting.text)
