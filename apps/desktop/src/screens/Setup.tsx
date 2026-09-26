@@ -41,6 +41,7 @@ import {
   type ChannelSummary,
   type DiagnosticsEvent,
   type Verdict,
+  StoryBankNote,
 } from "@orbit/ui";
 import { getVersion } from "@tauri-apps/api/app";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -585,6 +586,7 @@ export function SetupScreen({
                 ))}
               </ul>
             )}
+            <StoryBankNote api={api} onManage={() => void openUrl(`${WEB_URL}/documents/stories`)} />
           </fieldset>
 
           <div className="grid grid-cols-2 gap-3">

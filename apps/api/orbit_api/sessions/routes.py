@@ -48,6 +48,7 @@ from orbit_api.models import (
     SessionDocument,
     SessionSummary,
     SessionTurn,
+    Story,
     UsageEvent,
     User,
 )
@@ -61,6 +62,7 @@ from orbit_api.retrieval.index import IndexedChunk, SessionIndex, chunk_body
 from orbit_api.sessions import companion
 from orbit_api.sessions.recorder import DbRecorder, upsert_usage
 from orbit_api.sessions.report import generate_report
+from orbit_api.stories.routes import MAX_STORIES, index_chunk, story_text
 from orbit_api.workspaces.routes import owned_workspace, workspace_document_ids
 
 log = logging.getLogger(__name__)
@@ -474,7 +476,7 @@ async def usage(user: Annotated[User, Depends(current_user)],
 # ---- live WebSocket ---------------------------------------------------------------------------------------
 
 
-async def _load_index(db: AsyncSession, session_id: str) -> tuple[SessionIndex, list[str]]:
+async def _load_index(db: AsyncSession, session_id: str, user_id: str) -> tuple[SessionIndex, list[str]]:
     rows = (await db.execute(
         select(DocumentChunk, Document.kind, Document.title)
         .join(Document, Document.id == DocumentChunk.document_id)
@@ -496,6 +498,17 @@ async def _load_index(db: AsyncSession, session_id: str) -> tuple[SessionIndex, 
                            (c.embedding or []) if current and c.embedding_model == embedder.model_id else [],
                            doc_title=title or "")
               for c, kind, title in rows]
+    # The story bank goes with the user into every session, as verified facts for behavioral answers.
+    stories = (await db.scalars(select(Story).where(Story.user_id == user_id)
+                                .order_by(Story.updated_at.desc()).limit(MAX_STORIES))).all()
+    unembedded = [st for st in stories if st.embedding_model != embedder.model_id] if current else []
+    if unembedded:
+        vectors = await asyncio.to_thread(lambda: [embedder.embed(story_text(st)) for st in unembedded])
+        for st, v in zip(unembedded, vectors, strict=True):
+            st.embedding, st.embedding_model = v, embedder.model_id
+        await db.commit()
+    chunks += [index_chunk(st, (st.embedding or []) if current and st.embedding_model == embedder.model_id else [])
+               for st in stories]
     # skills from resume/JD become STT key terms (custom vocabulary)
     keyterms = [c.text for c in chunks if c.category == "skill" and len(c.text) < 40][:30]
     return SessionIndex(chunks), keyterms
@@ -590,7 +603,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             await ws.close(code=4003, reason="live minutes exhausted" if remaining is not None and remaining <= 0
                            else "session time limit reached")
             return
-        index, keyterms = await _load_index(db, session_id)
+        index, keyterms = await _load_index(db, session_id, user_id)
         row.status = "live"
         row.started_at = row.started_at or datetime.now(UTC)
         await db.commit()

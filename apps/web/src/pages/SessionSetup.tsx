@@ -21,6 +21,7 @@ import {
   saveThinking,
   PreflightPanel,
   Rocket,
+  StoryBankNote,
   addFrame,
   newChannelStats,
   summarizeChannel,
@@ -480,6 +481,7 @@ export function SessionSetupPage() {
                 ))}
               </ul>
             )}
+            <StoryBankNote api={api} onManage={() => navigate("/documents/stories")} className="mt-4" />
           </Card>
         </div>
 

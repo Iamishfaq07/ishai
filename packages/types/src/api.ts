@@ -342,6 +342,55 @@ export interface LiveTicket {
   expires_in: number;
 }
 
+// ─── Story bank ──────────────────────────────────────────────────────────────
+
+/** Competencies behavioral interviews probe (matches orbit_api/stories/routes.py COMPETENCIES). */
+export const STORY_COMPETENCIES = [
+  "leadership",
+  "teamwork",
+  "conflict",
+  "failure",
+  "ownership",
+  "impact",
+  "ambiguity",
+  "customer",
+  "influence",
+  "learning",
+  "technical",
+  "deadline",
+] as const;
+export type StoryCompetency = (typeof STORY_COMPETENCIES)[number];
+
+/** A real example in STAR form, reused in every live session as a verified fact for behavioral answers. */
+export interface StoryInput {
+  title: string;
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+  competencies: StoryCompetency[];
+}
+
+export interface Story extends StoryInput {
+  id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** POST /v1/stories/draft — drafts from the newest resume (several) or from rough notes (one). Not saved. */
+export interface StoryDraftRequest {
+  source: "resume" | "notes";
+  notes?: string;
+  resume_id?: string;
+  count?: number;
+}
+
+export interface StoryDraftResponse {
+  stories: StoryInput[];
+  /** False when drafting from the resume found none to draft from. */
+  grounded: boolean;
+}
+
 // ─── Phone companion ─────────────────────────────────────────────────────────
 
 /** POST /v1/sessions/{id}/companion — the code a phone scans (valid until the session ends or `expires_in` s). */

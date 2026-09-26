@@ -26,6 +26,10 @@ import type {
   PrivacyUpdate,
   RegisterRequest,
   ScreenshotAccepted,
+  Story,
+  StoryDraftRequest,
+  StoryDraftResponse,
+  StoryInput,
   SessionDetail,
   SessionSummary,
   UpdateDocumentRequest,
@@ -191,6 +195,14 @@ export function createApiClient(options: ApiClientOptions) {
       json<FollowUp>(`/v1/sessions/${encodeURIComponent(id)}/follow-up${refresh ? "?refresh=true" : ""}`, {
         method: "POST",
       }),
+    // Story bank
+    listStories: () => json<Story[]>("/v1/stories"),
+    createStory: (req: StoryInput) => json<Story>("/v1/stories", { method: "POST", body: body(req) }),
+    updateStory: (id: string, req: StoryInput) =>
+      json<Story>(`/v1/stories/${encodeURIComponent(id)}`, { method: "PUT", body: body(req) }),
+    deleteStory: (id: string) => json<void>(`/v1/stories/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    draftStories: (req: StoryDraftRequest) =>
+      json<StoryDraftResponse>("/v1/stories/draft", { method: "POST", body: body(req) }),
     /** Scores and speaking stats across ended sessions. */
     progress: () => json<Progress>("/v1/progress"),
     /** Interview prep: likely questions from a job description, with answers drawn from the resume. */

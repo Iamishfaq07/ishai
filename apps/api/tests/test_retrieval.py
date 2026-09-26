@@ -115,7 +115,7 @@ def test_stale_vectors_are_reembedded_when_a_session_loads(client: TestClient) -
     from sqlalchemy import select, update
 
     from orbit_api.db import sessionmaker
-    from orbit_api.models import DocumentChunk
+    from orbit_api.models import DocumentChunk, LiveSessionRow
     from orbit_api.sessions.routes import _load_index
 
     r = client.post("/v1/auth/register", json={"email": f"rt-{uuid.uuid4().hex[:8]}@example.com",
@@ -134,7 +134,8 @@ def test_stale_vectors_are_reembedded_when_a_session_loads(client: TestClient) -
             await db.execute(update(DocumentChunk).where(DocumentChunk.document_id == doc["id"])
                              .values(embedding_model=None))  # as if embedded by the legacy hasher
             await db.commit()
-            index, _ = await _load_index(db, sid)
+            owner = await db.scalar(select(LiveSessionRow.user_id).where(LiveSessionRow.id == sid))
+            index, _ = await _load_index(db, sid, str(owner))
             after = [c.embedding_model for c in (await db.scalars(
                 select(DocumentChunk).where(DocumentChunk.document_id == doc["id"]))).all()]
             return first, after, len(index)

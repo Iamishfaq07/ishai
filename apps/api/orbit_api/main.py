@@ -35,6 +35,7 @@ from orbit_api.sessions.insights import router as insights_router
 from orbit_api.sessions.recorder import replay_failed_writes
 from orbit_api.sessions.routes import drain_teardowns
 from orbit_api.sessions.routes import router as sessions_router
+from orbit_api.stories.routes import router as stories_router
 from orbit_api.workspaces.routes import router as workspaces_router
 
 _boot = get_settings()
@@ -148,6 +149,7 @@ def create_app() -> FastAPI:
     app.include_router(prep_router)
     app.include_router(insights_router)
     app.include_router(companion_router)
+    app.include_router(stories_router)
     return app
 
 

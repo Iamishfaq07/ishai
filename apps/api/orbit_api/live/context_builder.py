@@ -148,6 +148,9 @@ _GROUNDING_RULE = (
     "never state a number as the user's own unless verified — use a negotiation-safe framing."
 )
 
+# Questions a story-bank example answers best: always offer the most relevant story, if one matches at all.
+_STORY_TYPES = {QuestionType.behavioral, QuestionType.leadership, QuestionType.culture}
+
 # "Tell me about yourself" is about the whole arc, not the facts that happen to share words with it,
 # so these always get the profile summary and the most recent roles (resumes list newest first).
 _ANCHORED_TYPES = {QuestionType.resume}
@@ -168,6 +171,9 @@ def retrieve(index: SessionIndex, inputs: PromptInputs, memory: SessionMemory) -
         anchored = _anchor_hits(index)
         seen = {h.chunk.id for h in anchored}
         hits = anchored + [h for h in hits if h.chunk.id not in seen]
+    if inputs.qtype in _STORY_TYPES and not any(h.chunk.doc_kind == "story" for h in hits):
+        # "Tell me about a time…": the user's own story-bank example beats any single resume bullet.
+        hits = index.search(query, inputs.qtype, k=1, doc_kind="story") + hits
     if not any(h.chunk.doc_kind == "job_description" for h in hits):
         hits += index.search(query, inputs.qtype, k=2, doc_kind="job_description")
     return hits

@@ -6,6 +6,7 @@ import { confirmDialog, FileUp, FolderOpen } from "@orbit/ui";
 import { api } from "../lib/api";
 import { errorText, formatBytes, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
+import { LibraryTabs } from "./Stories";
 
 const KIND_LABEL: Record<DocumentKind, string> = {
   resume: "Resume",
@@ -79,6 +80,7 @@ export function DocumentsPage() {
 
   return (
     <div>
+      <LibraryTabs />
       <PageHeader
         icon={FolderOpen}
         title="Documents"
