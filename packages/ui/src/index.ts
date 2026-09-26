@@ -104,6 +104,7 @@ export { useReportPolling } from "./hooks/useReportPolling";
 export { ReportStatusNote } from "./components/ReportStatusNote";
 export { WorkspaceBar } from "./components/WorkspaceBar";
 export { PreflightPanel } from "./components/PreflightPanel";
+export { CompanionShare, QrCode, companionLink } from "./components/CompanionShare";
 export { DeliveryCard, FollowUpCard } from "./components/Insights";
 export { LatencyDiagnostics } from "./components/LatencyDiagnostics";
 export { applyOverrides, scoreKeyPoints, type KeyPointProgress, type PointProgress } from "./live/coverage";

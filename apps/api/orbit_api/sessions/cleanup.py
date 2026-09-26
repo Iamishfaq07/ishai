@@ -19,6 +19,7 @@ from orbit_api import jobs
 from orbit_api.config import get_settings
 from orbit_api.db import sessionmaker
 from orbit_api.models import LiveSessionRow, Question, SessionTurn
+from orbit_api.sessions import companion
 from orbit_api.sessions.routes import _live_engines  # sessions with a connected live socket
 
 log = logging.getLogger(__name__)
@@ -49,6 +50,7 @@ async def end_abandoned_sessions(now: datetime | None = None) -> int:
             row.status = "ended"
             row.ended_at = last_activity  # when it actually stopped, not when the sweep noticed
             await jobs.enqueue(db, "report", {"session_id": row.id}, jobs.report_key(row.id))
+            companion.stop_sharing(row.id)
             ended += 1
         if ended:
             await db.commit()

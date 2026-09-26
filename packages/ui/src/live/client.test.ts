@@ -93,6 +93,9 @@ describe("framing", () => {
       "wss://api.orbit.test/v1/sessions/s%201/live?ticket=a%2Fb",
     );
     expect(toWebSocketUrl("http://localhost:8000", "s1", "t")).toBe("ws://localhost:8000/v1/sessions/s1/live?ticket=t");
+    expect(toWebSocketUrl("https://api.orbit.test", "s1", "t", "view")).toBe(
+      "wss://api.orbit.test/v1/sessions/s1/view?ticket=t",
+    );
   });
 
   it("rejects malformed, wrong-version, and unknown frames", () => {
@@ -120,6 +123,13 @@ describe("LiveClient", () => {
     expect(socket.jsonSent().map((m) => m.type)).toEqual(["session.start", "answer.clear"]);
     expect(socket.jsonSent()[0]).toMatchObject({ v: PROTOCOL_VERSION, type: "session.start" });
     expect(client.connectionStatus).toBe("open");
+  });
+
+  it("opens the phone companion's read-only view socket when asked", async () => {
+    const client = makeClient({ path: "view" });
+    client.connect();
+    await flush();
+    expect((FakeSocket.instances[0] as FakeSocket).url).toBe("wss://api.orbit.test/v1/sessions/s1/view?ticket=ticket-1");
   });
 
   it("drops audio while disconnected but sends it when open", async () => {

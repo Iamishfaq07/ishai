@@ -40,6 +40,8 @@ export interface LiveClientOptions {
   maxAttempts?: number;
   /** Called once per successful open — used to (re)send `session.start`, which the server treats as idempotent. */
   onOpen?: (client: LiveClient, isReconnect: boolean) => void;
+  /** `view`: the phone companion's read-only socket (it replays recent events on every open). Default `live`. */
+  path?: "live" | "view";
 }
 
 const OPEN = 1;
@@ -81,6 +83,7 @@ export class LiveClient {
       maxBackoffMs: options.maxBackoffMs ?? 8000,
       maxAttempts: options.maxAttempts ?? 12,
       onOpen: options.onOpen,
+      path: options.path ?? "live",
     };
   }
 
@@ -171,7 +174,7 @@ export class LiveClient {
     if (gen !== this.generation || this.closedByUser) return;
     this.opening = false;
 
-    const socket = this.opts.createSocket(toWebSocketUrl(this.opts.apiBaseUrl, this.opts.sessionId, ticket));
+    const socket = this.opts.createSocket(toWebSocketUrl(this.opts.apiBaseUrl, this.opts.sessionId, ticket, this.opts.path));
     socket.binaryType = "arraybuffer";
     this.socket = socket;
 
