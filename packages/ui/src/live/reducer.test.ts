@@ -259,9 +259,14 @@ describe("usage status", () => {
 });
 
 describe("mock interview", () => {
+  it("marks a salary-negotiation turn", () => {
+    const s = run([ev("mock.question", { question_id: "n1", text: "We'd like to offer you $150k.", is_follow_up: false, index: 1, total: 5, negotiation: true })]);
+    expect(s.mock?.negotiation).toBe(true);
+  });
+
   it("tracks the interviewer's current question and completion", () => {
     let s = run([ev("mock.question", { question_id: "m1", text: "Tell me about yourself.", is_follow_up: false, index: 1, total: 4 })]);
-    expect(s.mock).toEqual({ questionId: "m1", text: "Tell me about yourself.", isFollowUp: false, index: 1, total: 4, drillKind: null });
+    expect(s.mock).toEqual({ questionId: "m1", text: "Tell me about yourself.", isFollowUp: false, index: 1, total: 4, drillKind: null, negotiation: false });
     s = run([ev("mock.question", { question_id: "m2", text: "What was the hardest part?", is_follow_up: true, index: 1, total: 4 })], s);
     expect(s.mock?.isFollowUp).toBe(true);
     s = run([ev("mock.question", { question_id: "m3", text: "Short version.", is_follow_up: false, index: 2, total: 4, drill_kind: "concise" })], s);

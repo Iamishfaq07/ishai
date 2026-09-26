@@ -95,6 +95,8 @@ export interface LiveViewState {
     index: number;
     total: number;
     drillKind: "retry" | "follow_up" | "concise" | "prep" | null;
+    /** Salary-negotiation practice: a recruiter on a call, counted in turns. */
+    negotiation: boolean;
   } | null;
   mockCompleted: boolean;
   mockSummary: MockRoundSummary | null;
@@ -271,7 +273,7 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
       return {
         ...s,
         mock: { questionId: action.data.question_id, text: action.data.text, isFollowUp: action.data.is_follow_up,
-          drillKind: action.data.drill_kind ?? null,
+          drillKind: action.data.drill_kind ?? null, negotiation: Boolean(action.data.negotiation),
                 index: action.data.index, total: action.data.total },
       };
     case "mock.completed":

@@ -20,6 +20,7 @@ Built from scratch in this repo, starting 2026-09-23 (it held only a generated R
 | **Story bank**: STAR stories written once (or drafted from the resume or notes), used by live answers to behavioral questions as verified facts | ✅ tested |
 | **Answer ratings**: 👍/👎 with a reason on live answers; repeated reasons become style hints in later sessions; admin satisfaction report | ✅ tested |
 | **Job posting from a link** (Prep): SSRF-safe fetch, schema.org JobPosting or main-content extraction, save as a document | ✅ tested |
+| **Salary negotiation practice**: AI recruiter presents your offer and negotiates back (flexible/realistic/tough); review graded on negotiation skill | ✅ tested |
 | **Preflight** (`GET /v1/preflight` + local device checks) before a session starts | ✅ |
 | Session memory, follow-up stitching, chat mode, manual answer, pin / clear, cancellation, answer history | ✅ tested |
 | Session report (background DB job), review scores, transcript, Markdown export, privacy toggles | ✅ tested |

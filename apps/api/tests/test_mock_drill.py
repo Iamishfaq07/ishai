@@ -126,7 +126,8 @@ async def test_drill_asks_the_plan_in_order_with_live_follow_ups_then_summarises
     await sink.wait_for("mock.completed")
     done = sink.of("mock.completed")[0]
     assert done == {"questions": 4, "topics": 3, "follow_ups": 1, "answered": 4, "unanswered": 0,
-                    "average_answer_words": done["average_answer_words"], "drill": True}
+                    "average_answer_words": done["average_answer_words"], "drill": True,
+                    "negotiation": False}
     assert done["average_answer_words"] > 5
     await eng.end()
 

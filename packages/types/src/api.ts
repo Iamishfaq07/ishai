@@ -98,7 +98,15 @@ export type SessionType = "interview" | "meeting" | "coding" | "assessment" | "p
 export type SessionStatus = "created" | "live" | "ended";
 
 export type MockDifficulty = "easy" | "medium" | "hard";
-export type MockInterviewType = "behavioral" | "technical" | "system_design" | "coding" | "mixed";
+export type MockInterviewType = "behavioral" | "technical" | "system_design" | "coding" | "mixed" | "negotiation";
+
+/** Salary-negotiation practice (interview_type "negotiation"): the offer the AI recruiter presents. */
+export interface NegotiationSetup {
+  offer: string;
+  company?: string;
+  /** The candidate's goal: only the review sees it, never the recruiter. */
+  target?: string;
+}
 
 export type MockPersona = "recruiter" | "hiring_manager" | "engineer" | "staff_engineer" | "executive";
 
@@ -109,6 +117,8 @@ export interface MockConfig {
   persona?: MockPersona;
   /** A fixed list of questions, asked in order (re-drills, or questions from interview prep: kind "prep"). */
   drill?: Array<{ question: string; kind?: "retry" | "concise" | "prep"; follow_up?: boolean }>;
+  /** Required when interview_type is "negotiation". */
+  negotiation?: NegotiationSetup;
 }
 
 /** POST /v1/prep — likely interview questions from a job description, answered from the resume. */
