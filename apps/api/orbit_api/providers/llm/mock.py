@@ -99,6 +99,12 @@ class MockLLMProvider(LLMProvider):
                 "thank_you": {"subject": "[mock] Thank you",
                               "body": "Hi [Interviewer name],\n\n[mock] Thanks for the conversation.\n\n[Your name]"},
             })
+        if request.request_type == "mock_question" and "call_so_far" in (request.messages[-1].content
+                                                                           if request.messages else ""):
+            body = request.messages[-1].content
+            n = body.count("Recruiter:") + 1
+            return json.dumps({"question": f"[mock] Recruiter turn {n}: what number did you have in mind?",
+                               "is_follow_up": n > 1, "done": "set done to true" in body})
         if request.request_type == "mock_question":
             body = request.messages[-1].content if request.messages else ""
             n = body.count("Interviewer:") + 1

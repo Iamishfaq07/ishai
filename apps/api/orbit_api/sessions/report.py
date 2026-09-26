@@ -48,6 +48,18 @@ _SYSTEM = (
 )
 
 
+# Salary-negotiation practice (MockConfig.negotiation): the same report shape, graded on negotiation skill.
+_NEGOTIATION_RUBRIC = (
+    "\nThis session was a SALARY NEGOTIATION practice: the 'questions' are the recruiter's lines and the answers are "
+    "the candidate's replies. Grade negotiation skill, not interview answers: anchoring with a specific, justified "
+    "number (not a range starting at the offer); tying the ask to value and market data; not accepting or conceding "
+    "too early; asking about the whole package (bonus, equity, benefits, start date, title); handling pushback, "
+    "pressure and silence calmly; staying warm and collaborative; never inventing a competing offer; confirming what "
+    "was agreed and getting it in writing. In 'better', give the stronger thing to say. In the summary, say where "
+    "the offer ended up versus where it started (and versus the candidate's target, if given)."
+)
+
+
 @dataclass
 class QAPair:
     question: str
@@ -166,12 +178,20 @@ async def generate_report(session_id: str) -> dict[str, Any]:
                 f"interviewer: {q.text}" for q in questions)
             user = (f"Session type: {row.type}. Role: {row.role or 'n/a'}.\n"
                     f"<reference_data source=\"transcript\">\n{fence(convo)}\n</reference_data>")
+            system = _SYSTEM
+            negotiation = (row.mock_config or {}).get("negotiation") if row.type == "mock" else None
+            if isinstance(negotiation, dict):
+                system += _NEGOTIATION_RUBRIC
+                setup = f"Offer presented: {negotiation.get('offer') or 'n/a'}"
+                if negotiation.get("target"):
+                    setup += f"\nCandidate's target: {negotiation['target']}"
+                user += f"\n<reference_data source=\"negotiation_setup\">\n{fence(setup)}\n</reference_data>"
             if pairs:
                 user += ("\n\nPAIRS (score these):\n<reference_data source=\"pairs\">\n"
                          f"{fence(_pairs_block(pairs))}\n</reference_data>")
             llm = get_llm_provider()
             req = LLMRequest(
-                messages=[LLMMessage("system", _SYSTEM), LLMMessage("user", user)],
+                messages=[LLMMessage("system", system), LLMMessage("user", user)],
                 json_mode=llm.supports_structured_output(), max_tokens=700 + 160 * len(pairs),
                 request_type="summary",
             )

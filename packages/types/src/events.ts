@@ -232,6 +232,8 @@ export interface ServerEventMap {
     total: number;
     /** Re-drill sessions only: a weak question again, its live follow-up, or the short version. */
     drill_kind?: "retry" | "follow_up" | "concise" | "prep";
+    /** Salary-negotiation practice: the AI is a recruiter, and `index`/`total` count turns of the call. */
+    negotiation?: boolean;
   };
   /** Mock interview finished (planned questions or time used up); session.ended follows. */
   "mock.completed": MockRoundSummary;
@@ -317,4 +319,5 @@ export interface MockRoundSummary {
   unanswered?: number;
   average_answer_words?: number;
   drill?: boolean;
+  negotiation?: boolean;
 }

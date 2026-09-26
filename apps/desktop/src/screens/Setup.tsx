@@ -85,6 +85,7 @@ const MOCK_TYPES: Array<{ value: MockInterviewType; label: string }> = [
   { value: "technical", label: "Technical" },
   { value: "system_design", label: "System design" },
   { value: "coding", label: "Coding" },
+  { value: "negotiation", label: "Salary negotiation" },
 ];
 
 const LANGUAGES: Array<{ value: string; label: string }> = [
@@ -212,7 +213,11 @@ export function SetupScreen({
   const [mockType, setMockType] = useState<MockInterviewType>("mixed");
   const [mockDifficulty, setMockDifficulty] = useState<MockDifficulty>("medium");
   const [mockMinutes, setMockMinutes] = useState(20);
+  const [offer, setOffer] = useState("");
+  const [offerCompany, setOfferCompany] = useState("");
+  const [offerTarget, setOfferTarget] = useState("");
   const isMock = type === "mock";
+  const negotiation = isMock && mockType === "negotiation";
   const [workspaceId, setWorkspaceId] = useState<string | null>(() => localStorage.getItem(WORKSPACE_KEY));
   // Failing critical checks (server, AI, transcription, mic, minutes, verification): Start is disabled unless the user
   // explicitly overrides — a broken setup must never slide into a live interview by default.
@@ -376,7 +381,23 @@ export function SetupScreen({
         ...(workspaceId ? { workspace_id: workspaceId } : {}),
         ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
         ...(isMock
-          ? { mock: { interview_type: mockType, difficulty: mockDifficulty, duration_minutes: mockMinutes, persona: mockPersona } }
+          ? {
+              mock: {
+                interview_type: mockType,
+                difficulty: mockDifficulty,
+                duration_minutes: mockMinutes,
+                persona: negotiation ? "recruiter" : mockPersona,
+                ...(negotiation
+                  ? {
+                      negotiation: {
+                        offer: offer.trim(),
+                        ...(offerCompany.trim() ? { company: offerCompany.trim() } : {}),
+                        ...(offerTarget.trim() ? { target: offerTarget.trim() } : {}),
+                      },
+                    }
+                  : {}),
+              },
+            }
           : {}),
       });
       onStart(session, {
@@ -446,23 +467,45 @@ export function SetupScreen({
           {isMock && (
             <fieldset className="grid grid-cols-2 gap-2 rounded-xl border border-indigo-200/60 bg-indigo-50/40 p-3 dark:border-indigo-900/50 dark:bg-indigo-950/20">
               <legend className="px-1 text-xs font-medium">Mock interview</legend>
-              <p className="col-span-2 text-xs text-zinc-500">The AI interviewer asks out loud, follows up on what you say, and you get a graded review at the end. Only your microphone is used.</p>
-              <label className="space-y-1"><span className="text-xs">Interviewer</span>
-                <select value={mockPersona} onChange={(e) => setMockPersona(e.target.value as MockPersona)} className={cx(control, focusRing)}>
-                  {PERSONAS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-                </select></label>
+              <p className="col-span-2 text-xs text-zinc-500">
+                {negotiation
+                  ? "The AI plays a recruiter who has just made you this offer. Negotiate out loud; your review grades how you anchored, justified and handled pushback."
+                  : "The AI interviewer asks out loud, follows up on what you say, and you get a graded review at the end. Only your microphone is used."}
+              </p>
+              {negotiation ? (
+                <label className="space-y-1"><span className="text-xs">Company</span>
+                  <input value={offerCompany} onChange={(e) => setOfferCompany(e.target.value)} maxLength={120} placeholder="Acme" className={cx(control, focusRing)} />
+                </label>
+              ) : (
+                <label className="space-y-1"><span className="text-xs">Interviewer</span>
+                  <select value={mockPersona} onChange={(e) => setMockPersona(e.target.value as MockPersona)} className={cx(control, focusRing)}>
+                    {PERSONAS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </select></label>
+              )}
               <label className="space-y-1"><span className="text-xs">Focus</span>
                 <select value={mockType} onChange={(e) => setMockType(e.target.value as MockInterviewType)} className={cx(control, focusRing)}>
                   {MOCK_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select></label>
-              <label className="space-y-1"><span className="text-xs">Difficulty</span>
+              <label className="space-y-1"><span className="text-xs">{negotiation ? "Recruiter" : "Difficulty"}</span>
                 <select value={mockDifficulty} onChange={(e) => setMockDifficulty(e.target.value as MockDifficulty)} className={cx(control, focusRing)}>
-                  <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option>
+                  <option value="easy">{negotiation ? "Flexible" : "Easy"}</option>
+                  <option value="medium">{negotiation ? "Realistic" : "Medium"}</option>
+                  <option value="hard">{negotiation ? "Tough" : "Hard"}</option>
                 </select></label>
               <label className="space-y-1"><span className="text-xs">Length</span>
                 <select value={mockMinutes} onChange={(e) => setMockMinutes(Number(e.target.value))} className={cx(control, focusRing)}>
                   {[10, 20, 30, 45].map((m) => <option key={m} value={m}>{m} minutes</option>)}
                 </select></label>
+              {negotiation && (
+                <>
+                  <label className="col-span-2 space-y-1"><span className="text-xs">The offer</span>
+                    <input value={offer} onChange={(e) => setOffer(e.target.value)} maxLength={300} placeholder="$150,000 base, 10% bonus" className={cx(control, focusRing)} />
+                  </label>
+                  <label className="col-span-2 space-y-1"><span className="text-xs">Your target (optional — only your review sees it)</span>
+                    <input value={offerTarget} onChange={(e) => setOfferTarget(e.target.value)} maxLength={300} placeholder="$170,000 base" className={cx(control, focusRing)} />
+                  </label>
+                </>
+              )}
             </fieldset>
           )}
 
@@ -784,7 +827,7 @@ export function SetupScreen({
           />
           <button
             type="submit"
-            disabled={starting || (blockers.length > 0 && !overrideBlockers)}
+            disabled={starting || (negotiation && offer.trim().length < 2) || (blockers.length > 0 && !overrideBlockers)}
             className={cx("w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50", focusRing)}
           >
             {starting

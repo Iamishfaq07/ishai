@@ -16,6 +16,7 @@ const TYPES: Array<{ value: MockInterviewType; label: string }> = [
   { value: "system_design", label: "System design" },
   { value: "coding", label: "Coding" },
   { value: "mixed", label: "Mixed" },
+  { value: "negotiation", label: "Salary negotiation" },
 ];
 
 /**
@@ -47,6 +48,10 @@ function MockSetup() {
   const [duration, setDuration] = useState(20);
   const [persona, setPersona] = useState<MockPersona>("hiring_manager");
   const [language, setLanguage] = useState("en");
+  const [offer, setOffer] = useState("");
+  const [company, setCompany] = useState("");
+  const [target, setTarget] = useState("");
+  const negotiation = interviewType === "negotiation";
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -59,7 +64,9 @@ function MockSetup() {
       .map((d) => d.id);
     try {
       const session = await api.createSession({
-        title: `Mock — ${role.trim() || TYPES.find((t) => t.value === interviewType)?.label || "Interview"}`,
+        title: negotiation
+          ? `Negotiation — ${company.trim() || role.trim() || "offer"}`
+          : `Mock — ${role.trim() || TYPES.find((t) => t.value === interviewType)?.label || "Interview"}`,
         type: "mock",
         ...(role.trim() ? { role: role.trim() } : {}),
         language,
@@ -67,7 +74,21 @@ function MockSetup() {
         style: "natural",
         auto_answer: false,
         document_ids: contextDocs,
-        mock: { interview_type: interviewType, difficulty, duration_minutes: duration, persona },
+        mock: {
+          interview_type: interviewType,
+          difficulty,
+          duration_minutes: duration,
+          persona: negotiation ? "recruiter" : persona,
+          ...(negotiation
+            ? {
+                negotiation: {
+                  offer: offer.trim(),
+                  ...(company.trim() ? { company: company.trim() } : {}),
+                  ...(target.trim() ? { target: target.trim() } : {}),
+                },
+              }
+            : {}),
+        },
       });
       const launch: LiveLaunchState = { systemAudio: false };
       navigate(`/live/${session.id}`, { state: launch });
@@ -110,22 +131,38 @@ function MockSetup() {
                 ))}
               </Select>
             </Field>
-            <Field label="Interviewer" htmlFor="mock-persona">
-              <Select id="mock-persona" value={persona} onChange={(e) => setPersona(e.target.value as MockPersona)}>
-                <option value="recruiter">Recruiter</option>
-                <option value="hiring_manager">Hiring manager</option>
-                <option value="engineer">Senior engineer</option>
-                <option value="staff_engineer">Staff engineer</option>
-                <option value="executive">Executive</option>
-              </Select>
-            </Field>
-            <Field label="Difficulty" htmlFor="mock-difficulty">
+            {negotiation ? (
+              <Field label="Company" htmlFor="mock-company">
+                <Input id="mock-company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Acme" maxLength={120} />
+              </Field>
+            ) : (
+              <Field label="Interviewer" htmlFor="mock-persona">
+                <Select id="mock-persona" value={persona} onChange={(e) => setPersona(e.target.value as MockPersona)}>
+                  <option value="recruiter">Recruiter</option>
+                  <option value="hiring_manager">Hiring manager</option>
+                  <option value="engineer">Senior engineer</option>
+                  <option value="staff_engineer">Staff engineer</option>
+                  <option value="executive">Executive</option>
+                </Select>
+              </Field>
+            )}
+            <Field label={negotiation ? "Recruiter" : "Difficulty"} htmlFor="mock-difficulty">
               <Select id="mock-difficulty" value={difficulty} onChange={(e) => setDifficulty(e.target.value as MockDifficulty)}>
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
+                <option value="easy">{negotiation ? "Flexible — has budget room" : "Easy"}</option>
+                <option value="medium">{negotiation ? "Realistic — some room, pushes back" : "Medium"}</option>
+                <option value="hard">{negotiation ? "Tough — tight budget, applies pressure" : "Hard"}</option>
               </Select>
             </Field>
+            {negotiation && (
+              <>
+                <Field label="The offer" htmlFor="mock-offer" hint="What the recruiter presents, e.g. “$150,000 base, 10% bonus, 0.05% equity”.">
+                  <Input id="mock-offer" required value={offer} onChange={(e) => setOffer(e.target.value)} maxLength={300} />
+                </Field>
+                <Field label="Your target (optional)" htmlFor="mock-target" hint="The recruiter doesn’t know it — your review uses it to judge how close you got.">
+                  <Input id="mock-target" value={target} onChange={(e) => setTarget(e.target.value)} maxLength={300} placeholder="$170,000 base" />
+                </Field>
+              </>
+            )}
             <Field label="Duration" htmlFor="mock-duration">
               <Select id="mock-duration" value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
                 {[10, 20, 30, 45].map((m) => (
@@ -146,11 +183,13 @@ function MockSetup() {
             </Field>
           </div>
           <p className="text-xs text-zinc-500">
-            Uses your ready resume and job descriptions for context. Only your microphone is used.
+            {negotiation
+              ? "The AI plays a recruiter who has just made you this offer. Negotiate out loud; your review grades how you anchored, justified and handled pushback. Only your microphone is used."
+              : "Uses your ready resume and job descriptions for context. Only your microphone is used."}
           </p>
           {error && <ErrorNote>{error}</ErrorNote>}
-          <Button type="submit" disabled={busy}>
-            {busy ? "Starting…" : "Start mock interview"}
+          <Button type="submit" disabled={busy || (negotiation && offer.trim().length < 2)}>
+            {busy ? "Starting…" : negotiation ? "Start the negotiation" : "Start mock interview"}
           </Button>
         </form>
       </Card>

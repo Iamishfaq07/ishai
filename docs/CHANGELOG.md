@@ -1,5 +1,22 @@
 # Implementation log
 
+## Salary negotiation practice (2026-09-26)
+
+- **Practice → Mock interview → Salary negotiation** (web + desktop): enter the offer (and optionally the company
+  and your target). The AI plays a recruiter who has just made the offer: it opens by presenting it, then reacts to
+  what you say, asking for your number and its basis, pushing back with bands and internal equity, and offering
+  non-salary levers (signing bonus, equity, start date, title, leave) when base is stuck. The recruiter setting
+  (flexible / realistic / tough) sets how much room it has and how much pressure it applies. The call ends when a deal
+  is closed, you ask for time, the turn budget (about one turn per two minutes, 4-12) or the time runs out.
+- **Your target stays hidden** from the recruiter; only the review sees it.
+- **Negotiation review**: the usual report and scorecard, graded on negotiation skill: anchoring with a justified
+  number, tying the ask to value and market data, not conceding early, asking about the whole package, handling
+  pushback and silence, staying collaborative, never inventing a competing offer, confirming in writing. The
+  summary says where the offer ended up versus where it started and your target.
+- API: `MockConfig.interview_type = "negotiation"` with `MockConfig.negotiation {offer, company?, target?}` (required
+  for that type); `mock.question` carries `negotiation: true` and counts turns. Tests: `tests/test_negotiation.py`
+  (setup validation, turn flow and closing, hidden target, turn budget and fallbacks, the review rubric end to end).
+
 ## Job posting from a link (2026-09-26)
 
 - **Prep → From a link…**: paste a job posting URL and Orbit reads the posting into the job description field,
