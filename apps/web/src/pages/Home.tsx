@@ -56,6 +56,7 @@ export function HomePage() {
   const navigate = useNavigate();
   const sessions = useAsync(() => api.listSessions(), []);
   const documents = useAsync(() => api.listDocuments(), []);
+  const stories = useAsync(() => api.listStories(), []);
 
   const recent = (sessions.data ?? []).slice(0, 5);
   const readyDocs = (documents.data ?? []).filter((d) => d.status === "ready");
@@ -99,7 +100,7 @@ export function HomePage() {
       </section>
 
       {sessions.data && documents.data && (
-        <GettingStarted sessions={sessions.data} documents={documents.data} />
+        <GettingStarted sessions={sessions.data} documents={documents.data} storyCount={stories.data?.length ?? 0} />
       )}
 
       <section aria-labelledby="quick-start">
@@ -227,7 +228,15 @@ const CHECKLIST_KEY = "orbit.checklistDismissed";
  * First-run guide: the four things that make Orbit useful, ticked off from real data. It disappears once they're all
  * done, or for good when dismissed.
  */
-function GettingStarted({ sessions, documents }: { sessions: OrbitSession[]; documents: OrbitDocument[] }) {
+function GettingStarted({
+  sessions,
+  documents,
+  storyCount,
+}: {
+  sessions: OrbitSession[];
+  documents: OrbitDocument[];
+  storyCount: number;
+}) {
   const [dismissed, setDismissed] = useState(() => {
     try {
       return localStorage.getItem(CHECKLIST_KEY) === "1";
@@ -247,6 +256,12 @@ function GettingStarted({ sessions, documents }: { sessions: OrbitSession[]; doc
       body: "Orbit tailors answers to the role.",
       done: documents.some((d) => d.kind === "job_description"),
       to: "/documents",
+    },
+    {
+      title: "Add a story",
+      body: "A real example for “Tell me about a time…” questions.",
+      done: storyCount > 0,
+      to: "/documents/stories",
     },
     ...(MOCK_INTERVIEW_ENABLED
       ? [{ title: "Try a practice interview", body: "Orbit asks, you answer out loud.", done: sessions.some((s) => s.type === "mock"), to: "/mock" }]
@@ -297,7 +312,7 @@ function GettingStarted({ sessions, documents }: { sessions: OrbitSession[]; doc
           style={{ width: `${Math.round((doneCount / steps.length) * 100)}%` }}
         />
       </div>
-      <ol className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <ol className={cx("mt-4 grid gap-2 sm:grid-cols-2", steps.length > 4 ? "lg:grid-cols-5" : "lg:grid-cols-4")}>
         {steps.map((step, i) => (
           <li key={step.title}>
             <Link

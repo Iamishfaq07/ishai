@@ -83,6 +83,15 @@ class MockLLMProvider(LLMProvider):
                  "talking_points": ["[mock] point A", "[mock] point B"],
                  "suggested_answer": f"[mock] In my last role I [name the project] — answer {i + 1}."}
                 for i in range(n)]})
+        if request.request_type == "story_draft":
+            body = request.messages[-1].content if request.messages else ""
+            m = re.search(r"Number of stories: (\d+)", body)
+            comps = ["leadership", "conflict", "failure", "impact", "teamwork", "ambiguity"]
+            return json.dumps({"stories": [
+                {"title": f"[mock] Story {i + 1}", "situation": "[mock] The team was behind on a launch.",
+                 "task": "[mock] I owned the release.", "action": "[mock] I re-planned the work and [what you did].",
+                 "result": "[mock] We shipped on time [with a number].", "competencies": [comps[i % len(comps)]]}
+                for i in range(int(m.group(1)) if m else 1)]})
         if request.request_type == "follow_up":
             return json.dumps({
                 "debrief": {"went_well": ["[mock] clear example"], "to_improve": ["[mock] add a metric"],

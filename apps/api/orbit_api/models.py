@@ -160,6 +160,25 @@ class Workspace(TimestampMixin, Base):
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class Story(TimestampMixin, Base):
+    """A story-bank entry: one of the candidate's real examples in STAR form, reused across interviews. Every live
+    session can draw on it as a verified candidate fact for behavioral answers."""
+
+    __tablename__ = "stories"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(160))
+    situation: Mapped[str] = mapped_column(Text, default="")
+    task: Mapped[str] = mapped_column(Text, default="")
+    action: Mapped[str] = mapped_column(Text, default="")
+    result: Mapped[str] = mapped_column(Text, default="")
+    competencies: Mapped[list[str]] = mapped_column(JSON, default=list)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    # Retrieval vector, computed lazily when a session loads the story (see sessions.routes._load_index).
+    embedding: Mapped[list[float] | None] = mapped_column(EmbeddingType())
+    embedding_model: Mapped[str | None] = mapped_column(String(64))
+
+
 class WorkspaceDocument(Base):
     __tablename__ = "workspace_documents"
     __table_args__ = (UniqueConstraint("workspace_id", "document_id", name="uq_workspace_document"),)

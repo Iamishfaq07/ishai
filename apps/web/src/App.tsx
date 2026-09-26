@@ -22,6 +22,7 @@ import { SessionDetailPage } from "./pages/SessionDetail";
 import { SessionSetupPage } from "./pages/SessionSetup";
 import { SessionsPage } from "./pages/Sessions";
 import { SettingsPage } from "./pages/Settings";
+import { StoriesPage } from "./pages/Stories";
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -42,6 +43,7 @@ const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/start/, "New session"],
   [/^\/sessions\/[^/]+/, "Session"],
   [/^\/sessions/, "Sessions"],
+  [/^\/documents\/stories/, "Story bank"],
   [/^\/documents/, "Documents"],
   [/^\/mock/, "Practice"],
   [/^\/billing/, "Billing"],
@@ -93,6 +95,7 @@ export function App() {
         <Route path="sessions" element={<SessionsPage />} />
         <Route path="sessions/:sessionId" element={<SessionDetailPage />} />
         <Route path="documents" element={<DocumentsPage />} />
+        <Route path="documents/stories" element={<StoriesPage />} />
         <Route path="mock" element={<MockPage />} />
         <Route path="billing" element={<BillingPage />} />
         <Route path="settings" element={<SettingsPage />} />

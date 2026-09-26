@@ -1,5 +1,26 @@
 # Implementation log
 
+## Story bank (2026-09-26)
+
+Your real examples, written once in STAR form and reused in every interview (the most-asked-for gap in the
+competitor review):
+
+- **Story bank** (web: Documents → Story bank, `/documents/stories`): write stories (title, situation, task,
+  action, result, and what they show), edit and delete them. A **Coverage** card shows which of 12 common
+  competencies (leadership, conflict, failure, impact, ...) have a story yet; tapping a gap starts one for it.
+- **Draft from my resume** (up to 4) or **From my notes** (rough notes → one story): drafts to review, with
+  missing details as highlighted [fill in] prompts; only saved stories are used. `POST /v1/stories/draft`, not
+  stored.
+- **Live answers use them**: every session loads the user's stories into its retrieval index as verified
+  candidate facts (embedded lazily and cached on the row), and behavioral, leadership and culture questions always
+  get the best-matching story if any matches. The answer's sources show "Story: <title>".
+- Setup (web + desktop) says how many stories come along, with a link to manage them; Home's getting-started
+  checklist gains "Add a story". Stories are in the account export and deleted with the account.
+- API: `GET/POST /v1/stories`, `PUT/DELETE /v1/stories/{id}` (up to 100), table `stories` (migration
+  `f6b2d8e4a1c9`).
+- Tests: `tests/test_stories.py` (CRUD and ownership, competency validation, export, drafting from resume and
+  notes, draft parsing, story retrieval for behavioral prompts, a saved story reaching a live answer).
+
 ## Phone companion (2026-09-26)
 
 A second screen on your phone, the way competitors pair a phone with the desktop app:
