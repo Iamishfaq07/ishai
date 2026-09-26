@@ -113,15 +113,16 @@ export function SessionDetailPage() {
       )}
 
       <ReportStatusNote status={session.report_status} onRetry={() => void retryReport()} />
-      <div role="tablist" className="mb-6 flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
+      <div role="tablist" className="mb-6 flex gap-0 border-b sm:gap-1 border-zinc-200 dark:border-zinc-800">
         {(
           [
-            ["review", "Review"],
-            ["summary", "Summary"],
-            ["transcript", `Transcript (${detail.data.turns.length})`],
-            ["questions", `Questions & answers (${detail.data.questions.length})`],
+            // [id, label, shorter label for phones]
+            ["review", "Review", "Review"],
+            ["summary", "Summary", "Summary"],
+            ["transcript", `Transcript (${detail.data.turns.length})`, "Transcript"],
+            ["questions", `Questions & answers (${detail.data.questions.length})`, `Q&A (${detail.data.questions.length})`],
           ] as const
-        ).map(([id, label]) => (
+        ).map(([id, label, short]) => (
           <button
             key={id}
             type="button"
@@ -129,12 +130,13 @@ export function SessionDetailPage() {
             aria-selected={tab === id}
             onClick={() => setTab(id)}
             className={cx(
-              "-mb-px border-b-2 px-3 py-2 text-sm font-medium",
+              "-mb-px whitespace-nowrap border-b-2 px-2 py-2 text-[13px] font-medium sm:px-3 sm:text-sm",
               tab === id ? "border-indigo-500 text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200",
               focusRing,
             )}
           >
-            {label}
+            <span className="sm:hidden">{short}</span>
+            <span className="hidden sm:inline">{label}</span>
           </button>
         ))}
       </div>
@@ -171,7 +173,7 @@ function ListBlock({ title, items }: { title: string; items: string[] }) {
   if (items.length === 0) return null;
   return (
     <Card>
-      <h3 className="mb-2 text-sm font-semibold">{title}</h3>
+      <h2 className="mb-2 text-sm font-semibold">{title}</h2>
       <ul className="space-y-1 text-sm text-zinc-700 dark:text-zinc-300">
         {items.map((item, i) => (
           <li key={i}>· {item}</li>
@@ -188,7 +190,7 @@ function SummaryView({ summary }: { summary: SessionSummary | null }) {
   return (
     <div className="space-y-4">
       <Card>
-        <h3 className="mb-2 text-sm font-semibold">Session summary</h3>
+        <h2 className="mb-2 text-sm font-semibold">Session summary</h2>
         <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">{summary.summary}</p>
         <p className="mt-3 text-xs text-zinc-500">
           {summary.questions_asked.length} questions · {summary.follow_up_count} follow-ups

@@ -287,7 +287,7 @@ export function SessionSetupPage() {
   return (
     <div>
       <PageHeader icon={Rocket} title="New live session" subtitle="Pick your context and audio, then start. You can change answer length live." />
-      <form ref={formRef} onSubmit={(e) => void start(e)} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <form ref={formRef} onSubmit={(e) => void start(e)} className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-6">
           <WorkspaceBar
             api={api}

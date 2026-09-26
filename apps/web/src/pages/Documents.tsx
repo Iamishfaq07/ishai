@@ -168,27 +168,34 @@ export function DocumentsPage() {
       ) : (docs.data ?? []).length === 0 ? (
         <EmptyState icon={FileUp} title="No documents yet" body="Uploaded documents are parsed into facts Orbit can cite during a session." />
       ) : (
-        <Card className="p-0">
+        <Card className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-zinc-200 text-xs uppercase tracking-wider text-zinc-500 dark:border-white/5">
               <tr>
                 <th className="px-5 py-3 font-medium">Title</th>
-                <th className="px-5 py-3 font-medium">Type</th>
+                <th className="hidden px-5 py-3 font-medium sm:table-cell">Type</th>
                 <th className="hidden px-5 py-3 font-medium sm:table-cell">Size</th>
-                <th className="px-5 py-3 font-medium">Status</th>
+                <th className="hidden px-5 py-3 font-medium sm:table-cell">Status</th>
                 <th className="hidden px-5 py-3 font-medium md:table-cell">Added</th>
-                <th className="px-5 py-3" />
+                <th className="px-5 py-3">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
               {(docs.data ?? []).map((d) => (
                 <tr key={d.id}>
-                  <td className="max-w-[16rem] truncate px-5 py-3 font-medium" title={d.filename ?? d.title}>
-                    {d.title}
+                  <td className="px-5 py-3" title={d.filename ?? d.title}>
+                    <div className="max-w-[11rem] truncate font-medium sm:max-w-[16rem]">{d.title}</div>
+                    {/* Phones: type and status fold under the title instead of their own columns. */}
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-zinc-500 sm:hidden">
+                      <span>{KIND_LABEL[d.kind]}</span>
+                      <StatusBadge doc={d} />
+                    </div>
                   </td>
-                  <td className="px-5 py-3 text-zinc-500">{KIND_LABEL[d.kind]}</td>
+                  <td className="hidden px-5 py-3 text-zinc-500 sm:table-cell">{KIND_LABEL[d.kind]}</td>
                   <td className="hidden px-5 py-3 text-zinc-500 sm:table-cell">{formatBytes(d.size_bytes)}</td>
-                  <td className="px-5 py-3">
+                  <td className="hidden px-5 py-3 sm:table-cell">
                     <StatusBadge doc={d} />
                   </td>
                   <td className="hidden px-5 py-3 text-zinc-500 md:table-cell">{formatDate(d.created_at)}</td>

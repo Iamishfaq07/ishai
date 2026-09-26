@@ -12,7 +12,7 @@
     "not_found_handling": "single-page-application",
     // /api/* is proxied to the API by the Worker (first-party session cookie — see apps/web/worker/index.js).
     // Run the Worker first there so the SPA fallback never answers an API call with index.html.
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api", "/api/*"]
   },
   // Keep the Render free-tier API from sleeping (see apps/web/worker/index.js). One always-on free
   // service uses ~744 of Render's 750 free instance-hours a month.

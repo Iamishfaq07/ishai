@@ -1,5 +1,24 @@
 # Implementation log
 
+## Phones, accessibility and loose ends (2026-09-26)
+
+- **Nothing scrolls sideways on phones.** Checked every page at 320 px and 390 px wide. Fixed:
+  - Documents: 259 px too wide at 390. On phones, type and status move under the title instead of their own table
+    columns.
+  - New session: 64 px too wide. `Field` is `min-w-0`, because a select sizes to its longest option and stretched
+    the grid column. This fixes every form.
+  - Home at 320 px: the recent-sessions card in an auto-sized grid column.
+  - Session detail at 320 px: the tabs use shorter labels on phones ("Q&A").
+  - The live screen's "Mic off" and "Interviewer off" chips no longer wrap.
+- **Accessibility (axe-core, both themes, every main page and the live screen)**: the score rings and pips are
+  `role="img"` (their labels were ignored), the sign-in page has a `main` landmark, the review and summary headings
+  no longer skip a level (web and desktop), the documents table's actions column has a header, the live screen has
+  an `h1` (the session title) and a labelled nav, and the amber "Unfinished" / "Pinned" badges pass contrast in
+  light mode (4.46 → above 4.5:1).
+- **Worker hardening (from the superseded #83)**: a client-sent `X-Forwarded-For` is dropped when Cloudflare's
+  `CF-Connecting-IP` is absent, so it can't spoof the IP the API rate-limits by. A bare `/api` also runs the Worker.
+  PR #83 was closed as superseded by #84.
+
 ## Speed and feel pass (2026-09-26)
 
 Measured on a production build with a phone profile (390 px, 4x CPU slowdown; "slow 4G" = 150 ms RTT, 1.6 Mbps):

@@ -91,7 +91,8 @@ export function PageHeader({
 
 export function Field({ label, hint, children, htmlFor }: { label: string; hint?: string; children: ReactNode; htmlFor?: string }) {
   return (
-    <div className="space-y-1.5">
+    // min-w-0: a select sizes to its longest option; without this it stretches a grid column past a phone's width.
+    <div className="min-w-0 space-y-1.5">
       <label htmlFor={htmlFor} className="block text-sm font-medium text-zinc-800 dark:text-zinc-200">
         {label}
       </label>

@@ -271,7 +271,7 @@ function ListBlock({ title, items }: { title: string; items: string[] }) {
   if (items.length === 0) return null;
   return (
     <Card>
-      <h3 className="mb-2 text-sm font-semibold">{title}</h3>
+      <h2 className="mb-2 text-sm font-semibold">{title}</h2>
       <ul className="space-y-1 text-sm text-zinc-700 dark:text-zinc-300">
         {items.map((item, i) => (
           <li key={i}>· {item}</li>
@@ -286,7 +286,7 @@ function SummaryView({ summary }: { summary: SessionSummary | null }) {
   return (
     <div className="space-y-4">
       <Card>
-        <h3 className="mb-2 text-sm font-semibold">Session summary</h3>
+        <h2 className="mb-2 text-sm font-semibold">Session summary</h2>
         <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">{summary.summary}</p>
         <p className="mt-3 text-xs text-zinc-500">
           {summary.questions_asked.length} questions · {summary.follow_up_count} follow-ups

@@ -20,8 +20,10 @@ async function proxyToApi(request, env, url) {
   const proxied = new Request(target, request);
   // The API's per-IP rate limits and audit log read the left-most X-Forwarded-For entry; without this every
   // proxied request would appear to come from Cloudflare's egress address.
+  // Never trust a client-sent X-Forwarded-For: without Cloudflare's own address, drop it (no spoofed IPs).
   const clientIp = request.headers.get("cf-connecting-ip");
   if (clientIp) proxied.headers.set("x-forwarded-for", clientIp);
+  else proxied.headers.delete("x-forwarded-for");
   return fetch(proxied);
 }
 

@@ -316,7 +316,7 @@ export function AnswerCard({
             className={cx(
               "rounded-md px-2 py-0.5 text-xs font-medium",
               pinned
-                ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                ? "bg-amber-500/15 text-amber-800 dark:text-amber-300"
                 : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800",
               focusRing,
             )}
