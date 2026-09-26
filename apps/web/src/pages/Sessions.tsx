@@ -66,7 +66,7 @@ export function SessionsPage() {
                       <p className="truncate font-medium">
                         {s.title}
                         {open && (
-                          <span className="ml-2 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                          <span className="ml-2 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
                             {s.status === "live" ? "Unfinished" : "Not started"}
                           </span>
                         )}

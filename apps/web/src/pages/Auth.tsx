@@ -40,7 +40,7 @@ function AuthShell({ title, subtitle, children }: { title: string; subtitle: str
         </div>
       </aside>
 
-      <div className="flex items-center justify-center px-4 py-10 sm:px-6">
+      <main className="flex items-center justify-center px-4 py-10 sm:px-6">
         <div className="w-full max-w-sm animate-fade-up">
           <div className="mb-8 text-center">
             <span className="mb-6 flex justify-center lg:hidden">
@@ -51,7 +51,7 @@ function AuthShell({ title, subtitle, children }: { title: string; subtitle: str
           </div>
           <div className="glass-panel rounded-2xl p-6 sm:p-7">{children}</div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -294,20 +294,20 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 px-4 py-2.5 text-xs text-zinc-500 dark:text-zinc-400">
+      <nav aria-label="Session" className="flex items-center gap-3 px-4 py-2.5 text-xs text-zinc-500 dark:text-zinc-400">
         <Link
           to="/"
           className={cx("inline-flex items-center gap-1.5 rounded-lg py-1 pr-2 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           <OrbitLogo size={16} animated={false} />
-          <span className="font-display font-medium">orbit</span>
+          <span className="hidden font-display font-medium min-[360px]:inline">orbit</span>
         </Link>
         <span className="ml-auto flex items-center gap-2">
           <AudioChip icon={Mic} label="Mic" on={micOn} />
           <AudioChip icon={Headphones} label="Interviewer" on={sysState === "on"} />
         </span>
-      </div>
+      </nav>
       <div className={cx("min-h-0 flex-1 px-2 pb-2 sm:px-4 sm:pb-4", mode === "compact" && "flex items-start justify-center")}>
         <div
           className={cx(
@@ -326,7 +326,7 @@ function AudioChip({ icon: Icon, label, on }: { icon: LucideIcon; label: string;
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 ring-1",
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 ring-1",
         on
           ? "bg-emerald-500/10 text-emerald-700 ring-emerald-500/25 dark:text-emerald-300"
           : "bg-zinc-500/10 text-zinc-500 ring-zinc-500/15 dark:text-zinc-400",

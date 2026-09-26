@@ -123,7 +123,7 @@ function ScoreRing({ score }: { score: number | null }) {
   const circ = 2 * Math.PI * r;
   const frac = score ? score / 5 : 0;
   return (
-    <span className="relative inline-flex h-16 w-16 shrink-0 items-center justify-center" aria-label={score ? `Overall ${score} out of 5` : "No overall score"}>
+    <span role="img" className="relative inline-flex h-16 w-16 shrink-0 items-center justify-center" aria-label={score ? `Overall ${score} out of 5` : "No overall score"}>
       <svg viewBox="0 0 64 64" className="absolute inset-0 -rotate-90" aria-hidden="true">
         <circle cx="32" cy="32" r={r} fill="none" strokeWidth="6" className="stroke-zinc-200 dark:stroke-zinc-800" />
         <circle
@@ -153,7 +153,7 @@ function Bullets({ title, items, tone }: { title: string; items: string[]; tone:
   if (items.length === 0) return null;
   return (
     <Card className="animate-fade-up">
-      <h3 className="mb-2 text-sm font-semibold">{title}</h3>
+      <h2 className="mb-2 text-sm font-semibold">{title}</h2>
       <ul className="space-y-1.5 text-sm text-zinc-700 dark:text-zinc-300">
         {items.map((it, i) => (
           <li key={i} className="flex gap-2">
@@ -168,7 +168,7 @@ function Bullets({ title, items, tone }: { title: string; items: string[]; tone:
 
 function Pips({ score }: { score: number | null }) {
   return (
-    <span className="flex items-center gap-1" aria-label={score ? `${score} out of 5` : "Not scored"}>
+    <span role="img" className="flex items-center gap-1" aria-label={score ? `${score} out of 5` : "Not scored"}>
       {[1, 2, 3, 4, 5].map((n) => (
         <span
           key={n}

@@ -206,13 +206,14 @@ export function LivePanel(props: LivePanelProps) {
         className="flex select-none items-center gap-2.5 border-b border-zinc-200 px-4 py-2.5 dark:border-white/[0.06]"
       >
         <OrbitLogo size={18} busy={live.state === "generating" || live.state === "streaming"} />
+        {compact && <h1 className="sr-only">{props.title ?? "Orbit"}</h1>}
         {!compact && (
-          <span
+          <h1
             data-tauri-drag-region={props.dragRegion ? "" : undefined}
             className="max-w-[40%] truncate font-display text-sm font-semibold tracking-tight"
           >
             {props.title ?? "Orbit"}
-          </span>
+          </h1>
         )}
         <StatusPill state={live.state} connection={live.connection} stt={live.providers.stt?.state} />
         <span

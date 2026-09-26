@@ -130,7 +130,7 @@ export function HomePage() {
 
       <DesktopPromo />
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="flex items-center gap-2 font-display font-semibold">
@@ -169,12 +169,12 @@ export function HomePage() {
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-medium">{s.title}</span>
-                        <span className="block text-xs text-zinc-500">
+                        <span className="block truncate text-xs text-zinc-500">
                           {SESSION_TYPE_LABEL[s.type]} · {formatDate(s.started_at ?? s.created_at)}
                         </span>
                       </span>
                       {s.status !== "ended" && (
-                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                        <span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:text-amber-300">
                           {s.status === "live" ? "Unfinished" : "Not started"}
                         </span>
                       )}
