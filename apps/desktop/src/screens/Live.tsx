@@ -6,6 +6,7 @@ import {
   X,
   ApiError,
   CompanionShare,
+  useAnswerRatings,
   LivePanel,
   answerAsText,
   base64ToBlob,
@@ -68,6 +69,7 @@ export function LiveScreen({
   const [captureNote, setCaptureNote] = useState<string | null>(null);
   const [shotNote, setShotNote] = useState<string | null>(null);
 
+  const ratings = useAnswerRatings(api, session.id);
   const { live, actions, client } = useLiveSession({
     apiBaseUrl: API_URL,
     sessionId: session.id,
@@ -240,6 +242,7 @@ export function LiveScreen({
   return (
     <LivePanel
       mockInterview={session.type === "mock"}
+      ratings={ratings}
       onInterviewerSpeaking={onInterviewerSpeaking}
       live={live}
       actions={actions}

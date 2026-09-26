@@ -10,6 +10,7 @@ import {
   Input,
   LatencyDiagnostics,
   CostDashboard,
+  FeedbackDiagnostics,
   PageHeader,
   Select,
   Spinner,
@@ -254,6 +255,9 @@ function AdvancedCard() {
       <AdvancedConfig />
       <Card>
         <LatencyDiagnostics load={api.getLatency} />
+      </Card>
+      <Card>
+        <FeedbackDiagnostics load={api.getFeedbackReport} />
       </Card>
       <Card>
         <CostDashboard load={api.getCosts} />

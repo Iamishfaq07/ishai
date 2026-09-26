@@ -136,6 +136,8 @@ class SessionProfile:
     features: frozenset[str] = frozenset({"system_design", "advanced_coding"})
     # The candidate's standing instructions ("mention I'm relocating"), applied to every answer.
     instructions: str | None = None
+    # Style hints learned from the reasons the user gave for 👎 on earlier answers (sessions/feedback.py).
+    learned: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -693,7 +695,7 @@ class LiveEngine:
             role=self.profile.role, length=self.settings.length, style=self.settings.style,
             answer_language=self.settings.answer_language or self.profile.answer_language or "en",
             instruction=instruction, coding_language=self.settings.coding_language, mode=mode,
-            candidate_instructions=self.profile.instructions,
+            candidate_instructions=self.profile.instructions, learned_preferences=self.profile.learned,
         )
         built = build_prompt(self._index, inputs, self.memory)
         # Live answers always run on the fast model. The reasoning model's hidden chain-of-thought put its

@@ -7,6 +7,9 @@ import type {
   Entitlements,
   PlanInfo,
   AuthResponse,
+  AnswerFeedbackReason,
+  AnswerRating,
+  FeedbackReport,
   CompanionShare,
   CompanionView,
   CreateSessionRequest,
@@ -216,6 +219,12 @@ export function createApiClient(options: ApiClientOptions) {
       (await raw(`/v1/sessions/${encodeURIComponent(id)}/export.md`)).text(),
     liveTicket: (id: string) =>
       json<LiveTicket>(`/v1/sessions/${encodeURIComponent(id)}/live-ticket`, { method: "POST" }),
+    /** 👍/👎 an answer (null clears it); a reason explains a 👎. */
+    rateAnswer: (sessionId: string, answerId: string, rating: AnswerRating | null, reason?: AnswerFeedbackReason | null) =>
+      json<{ answer_id: string; rating: AnswerRating | null; reason: AnswerFeedbackReason | null }>(
+        `/v1/sessions/${encodeURIComponent(sessionId)}/answers/${encodeURIComponent(answerId)}/feedback`,
+        { method: "PUT", body: body({ rating, reason: reason ?? null }) },
+      ),
     /** Phone companion: a code for the QR (stable while valid); `stopCompanion` revokes it and disconnects phones. */
     startCompanion: (id: string) =>
       json<CompanionShare>(`/v1/sessions/${encodeURIComponent(id)}/companion`, { method: "POST" }),
@@ -260,6 +269,7 @@ export function createApiClient(options: ApiClientOptions) {
     adminStatus: () => json<{ is_admin: boolean }>("/v1/admin/status"),
     getLatency: (days = 7) => json<LatencyReport>(`/v1/admin/latency?days=${days}`),
     getCosts: (days = 30) => json<CostReport>(`/v1/admin/costs?days=${days}`),
+    getFeedbackReport: (days = 30) => json<FeedbackReport>(`/v1/admin/feedback?days=${days}`),
     getAdminConfig: () => json<AdminConfig>("/v1/admin/config"),
     updateAdminConfig: (req: AdminConfigUpdate) =>
       json<AdminConfig>("/v1/admin/config", { method: "PUT", body: body(req) }),

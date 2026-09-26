@@ -1,10 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import type { CodingLanguage } from "@orbit/types";
+import type {
+  AnswerFeedback,
+  AnswerFeedbackReason,
+  AnswerRating as AnswerRatingValue,
+  CodingLanguage,
+} from "@orbit/types";
 import type { KeyPointProgress } from "../live/coverage";
 import { splitPlaceholders } from "../live/placeholders";
 import { READ_ALOUD_RATES, speechText } from "../live/readAloud";
 import type { AnswerView } from "../live/reducer";
 import type { ReadAloud } from "../live/useReadAloud";
+import { AnswerRatingButtons } from "./AnswerRating";
 import { CodeBlock } from "./CodeBlock";
 import { cx, focusRing } from "./cx";
 import { PulseRings } from "./Illustrations";
@@ -32,6 +38,9 @@ export interface AnswerCardProps {
   onLonger?: (() => void) | null;
   /** Phone companion: a mirror of the session, so nothing here can act on it (no "Try again"). */
   readOnly?: boolean;
+  /** 👍/👎 for this answer (shown once it's complete). */
+  rating?: AnswerFeedback | null;
+  onRate?: (rating: AnswerRatingValue | null, reason?: AnswerFeedbackReason | null) => void;
 }
 
 /** Answer text with "[fill in]" prompts rendered as distinct chips so they're never read out verbatim. */
@@ -211,7 +220,7 @@ function SectionLabel({ children, block = false }: { children: string; block?: b
 
 export function AnswerCard({
   answer, pinned, onPin, onRetry, compact = false, autoAnswer, progress, onTogglePoint, reader, onCodeLanguage,
-  onShorter, onLonger, readOnly = false,
+  onShorter, onLonger, readOnly = false, rating = null, onRate,
 }: AnswerCardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showExample, setShowExample] = useState(false);
@@ -296,6 +305,9 @@ export function AnswerCard({
             </>
           )}
           {answer.has_content && answer.status !== "failed" && <CopyButton text={answerAsText(a)} />}
+          {onRate && answer.status === "complete" && answer.has_content && (
+            <AnswerRatingButtons value={rating} onRate={onRate} />
+          )}
           <button
             type="button"
             onClick={() => onPin(!pinned)}

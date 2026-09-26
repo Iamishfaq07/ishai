@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ApiError,
   CompanionShare,
+  useAnswerRatings,
   Headphones,
   LivePanel,
   Mic,
@@ -78,6 +79,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   const navigate = useNavigate();
   const [mode, setMode] = useState<PanelMode>(() => (localStorage.getItem(MODE_KEY) as PanelMode | null) ?? "expanded");
   const [hotkeys] = useState(loadHotkeys);
+  const ratings = useAnswerRatings(api, session.id);
   const { live, actions, client } = useLiveSession({
     apiBaseUrl: LIVE_URL,
     sessionId: session.id,
@@ -257,6 +259,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   const panel = (
     <LivePanel
       mockInterview={session.type === "mock"}
+      ratings={ratings}
       onInterviewerSpeaking={onInterviewerSpeaking}
       live={live}
       actions={actions}

@@ -1,5 +1,20 @@
 # Implementation log
 
+## Answer ratings (2026-09-26)
+
+- **👍/👎 on every live answer** (web + desktop live panel) and in the session review (Questions & answers). A 👎
+  asks what was off, in one optional tap: too long, too generic, not accurate, missed the question, too formal.
+- **Orbit adapts**: a reason you give three times in your last 40 ratings becomes a fixed style hint in every later
+  session's prompt ("keep every answer noticeably tighter", "be concrete, prefer your documents and stories", ...).
+  Only these fixed hints reach the model, never free text.
+- **Admin → Answer ratings** (desktop Settings): satisfaction, share of answers rated, 👎 reasons, and by question
+  type and model. Counts only, no answer content.
+- API: `PUT /v1/sessions/{id}/answers/{answer_id}/feedback` (`rating: null` clears), ratings on
+  `GET /v1/sessions/{id}` answers, `GET /v1/admin/feedback`. Table `answer_feedback` (migration `a7c3e9f1b5d2`),
+  keyed by the live answer id so a rating never races the answer row being written. In the account export.
+- Tests: `tests/test_feedback.py` (rate/change/clear and ownership, rating before the answer row lands, learned
+  hints reaching the next session and the prompt, admin report and gating).
+
 ## Story bank (2026-09-26)
 
 Your real examples, written once in STAR form and reused in every interview (the most-asked-for gap in the

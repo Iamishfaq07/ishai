@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.models import (
     Answer,
+    AnswerFeedback,
     AuditLog,
     Document,
     LiveSessionRow,
@@ -58,6 +59,9 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
                                                            .order_by(Workspace.created_at))).all()],
         "stories": [_row(st) for st in (await db.scalars(select(Story).where(Story.user_id == user_id)
                                                           .order_by(Story.created_at))).all()],
+        "answer_ratings": [_row(f) for f in (await db.scalars(
+            select(AnswerFeedback).where(AnswerFeedback.user_id == user_id)
+            .order_by(AnswerFeedback.created_at))).all()],
         "sessions": [{**_row(s), "transcript": turns[s.id], "questions": questions[s.id], "answers": answers[s.id],
                       "report": (summaries[s.id][0]["content"] if summaries[s.id] else None)} for s in sessions],
         "usage": [_row(u) for u in (await db.scalars(select(UsageEvent).where(UsageEvent.user_id == user_id)
