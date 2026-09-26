@@ -47,20 +47,6 @@ import {
 import { SESSION_TYPE_LABEL, errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 
-export const LANGUAGES: Array<{ code: string; label: string }> = [
-  { code: "en", label: "English" },
-  { code: "hi", label: "Hindi" },
-  { code: "ur", label: "Urdu" },
-  { code: "es", label: "Spanish" },
-  { code: "fr", label: "French" },
-  { code: "de", label: "German" },
-  { code: "pt", label: "Portuguese" },
-  { code: "ar", label: "Arabic" },
-  { code: "zh", label: "Chinese" },
-  { code: "ja", label: "Japanese" },
-  { code: "ko", label: "Korean" },
-];
-
 const LENGTHS: Array<{ value: AnswerLength; label: string }> = [
   { value: "short", label: "Short (~30 s spoken)" },
   { value: "standard", label: "Standard (~1 min)" },
@@ -173,8 +159,6 @@ export function SessionSetupPage() {
   const [type, setType] = useState<SessionType>(SELECTABLE_TYPES.includes(initialType) ? initialType : "interview");
   const [role, setRole] = useState("");
   const [instructions, setInstructions] = useState("");
-  const [language, setLanguage] = useState("en");
-  const [answerLanguage, setAnswerLanguage] = useState("en");
   const [length, setLength] = useState<AnswerLength>("standard");
   const [style, setStyle] = useState<AnswerStyle>("natural");
   const [thinking, setThinking] = useState<ThinkingLevel>(loadThinking);
@@ -216,8 +200,6 @@ export function SessionSetupPage() {
     if (SELECTABLE_TYPES.includes(ws.session_type)) setType(ws.session_type);
     setRole(ws.role ?? "");
     setInstructions(ws.notes ?? "");
-    setLanguage(ws.language);
-    setAnswerLanguage(ws.answer_language ?? ws.language);
     setLength(ws.length);
     setStyle(ws.style);
     setAutoAnswer(ws.auto_answer);
@@ -275,8 +257,7 @@ export function SessionSetupPage() {
         title: title.trim() || `${SESSION_TYPE_LABEL[type]}${role.trim() ? ` — ${role.trim()}` : ""}`,
         type,
         ...(role.trim() ? { role: role.trim() } : {}),
-        language,
-        ...(answerLanguage !== language ? { answer_language: answerLanguage } : {}),
+        language: "en",
         length,
         style,
         auto_answer: autoAnswer,
@@ -315,8 +296,8 @@ export function SessionSetupPage() {
             current={{
               role: role.trim() || null,
               session_type: type,
-              language,
-              answer_language: answerLanguage !== language ? answerLanguage : null,
+              language: "en",
+              answer_language: null,
               length,
               style,
               auto_answer: autoAnswer,
@@ -372,24 +353,6 @@ export function SessionSetupPage() {
                   {THINKING_LEVELS.map((t) => (
                     <option key={t.value} value={t.value}>
                       {t.label} — {t.hint}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Listen in" htmlFor="language">
-                <Select id="language" value={language} onChange={(e) => setLanguage(e.target.value)}>
-                  {LANGUAGES.map((l) => (
-                    <option key={l.code} value={l.code}>
-                      {l.label}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Answer in" htmlFor="answer-language">
-                <Select id="answer-language" value={answerLanguage} onChange={(e) => setAnswerLanguage(e.target.value)}>
-                  {LANGUAGES.map((l) => (
-                    <option key={l.code} value={l.code}>
-                      {l.label}
                     </option>
                   ))}
                 </Select>

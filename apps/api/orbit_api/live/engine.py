@@ -693,7 +693,7 @@ class LiveEngine:
         inputs = PromptInputs(
             question=question, qtype=qtype, is_follow_up=is_follow_up, session_type=self.profile.session_type,
             role=self.profile.role, length=self.settings.length, style=self.settings.style,
-            answer_language=self.settings.answer_language or self.profile.answer_language or "en",
+            answer_language=self.profile.answer_language or "en",  # English only: no per-session override
             instruction=instruction, coding_language=self.settings.coding_language, mode=mode,
             candidate_instructions=self.profile.instructions, learned_preferences=self.profile.learned,
         )

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +30,17 @@ class WorkspaceIn(BaseModel):
     auto_answer: bool = True
     notes: str | None = Field(None, max_length=4000)
     document_ids: list[str] = Field(default_factory=list, max_length=20)
+
+    # Orbit is English only: older clients and saved setups may still send another language, so it's pinned here.
+    @field_validator("language")
+    @classmethod
+    def _english(cls, _: str) -> str:
+        return "en"
+
+    @field_validator("answer_language")
+    @classmethod
+    def _no_answer_language(cls, _: str | None) -> None:
+        return None
 
 
 class WorkspaceOut(WorkspaceIn):

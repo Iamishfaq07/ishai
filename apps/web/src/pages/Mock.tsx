@@ -8,7 +8,7 @@ import { errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { PrepSection } from "./Prep";
 import { ProgressSection } from "./Progress";
-import { LANGUAGES, type LiveLaunchState } from "./SessionSetup";
+import type { LiveLaunchState } from "./SessionSetup";
 
 const TYPES: Array<{ value: MockInterviewType; label: string }> = [
   { value: "behavioral", label: "Behavioral" },
@@ -47,7 +47,6 @@ function MockSetup() {
   const [difficulty, setDifficulty] = useState<MockDifficulty>("medium");
   const [duration, setDuration] = useState(20);
   const [persona, setPersona] = useState<MockPersona>("hiring_manager");
-  const [language, setLanguage] = useState("en");
   const [offer, setOffer] = useState("");
   const [company, setCompany] = useState("");
   const [target, setTarget] = useState("");
@@ -69,7 +68,7 @@ function MockSetup() {
           : `Mock — ${role.trim() || TYPES.find((t) => t.value === interviewType)?.label || "Interview"}`,
         type: "mock",
         ...(role.trim() ? { role: role.trim() } : {}),
-        language,
+        language: "en",
         length: "standard",
         style: "natural",
         auto_answer: false,
@@ -168,15 +167,6 @@ function MockSetup() {
                 {[10, 20, 30, 45].map((m) => (
                   <option key={m} value={m}>
                     {m} minutes
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Language" htmlFor="mock-language">
-              <Select id="mock-language" value={language} onChange={(e) => setLanguage(e.target.value)}>
-                {LANGUAGES.map((l) => (
-                  <option key={l.code} value={l.code}>
-                    {l.label}
                   </option>
                 ))}
               </Select>

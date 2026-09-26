@@ -19,7 +19,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -115,6 +115,17 @@ class SessionIn(BaseModel):
     mock: MockConfig | None = None
     # The candidate's standing instructions for answers; from a saved setup's notes when not given.
     instructions: str | None = Field(None, max_length=1000)
+
+    # Orbit is English only: older clients and saved setups may still send another language, so it's pinned here.
+    @field_validator("language")
+    @classmethod
+    def _english(cls, _: str) -> str:
+        return "en"
+
+    @field_validator("answer_language")
+    @classmethod
+    def _no_answer_language(cls, _: str | None) -> None:
+        return None
 
 
 class SessionOut(BaseModel):
@@ -612,7 +623,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
         await db.commit()
         profile = SessionProfile(
             session_id=row.id, session_type=row.type,  # type: ignore[arg-type]
-            role=row.role, language=row.language, answer_language=row.answer_language or row.language,
+            role=row.role, language="en", answer_language="en",  # English only (older rows may say otherwise)
             keyterms=keyterms, dev_mode=get_settings().env != "production",
             mock=MockConfig.model_validate(row.mock_config) if row.mock_config else None,
             allow_fallback=plan.has("provider_fallback"),

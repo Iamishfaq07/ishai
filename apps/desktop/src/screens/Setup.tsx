@@ -88,15 +88,6 @@ const MOCK_TYPES: Array<{ value: MockInterviewType; label: string }> = [
   { value: "negotiation", label: "Salary negotiation" },
 ];
 
-const LANGUAGES: Array<{ value: string; label: string }> = [
-  { value: "en", label: "English" },
-  { value: "hi", label: "Hindi" },
-  { value: "es", label: "Spanish" },
-  { value: "fr", label: "French" },
-  { value: "de", label: "German" },
-  { value: "pt", label: "Portuguese" },
-];
-
 const DOC_KINDS: Array<{ value: DocumentKind; label: string }> = [
   { value: "resume", label: "Resume" },
   { value: "job_description", label: "Job description" },
@@ -160,7 +151,6 @@ export function SetupScreen({
   const [length, setLength] = useState<AnswerLength>("short");
   const [style, setStyle] = useState<AnswerStyle>("natural");
   const [thinking, setThinking] = useState<ThinkingLevel>(loadThinking);
-  const [language, setLanguage] = useState("en");
   const [autoAnswer, setAutoAnswer] = useState(true);
   const [responseTiming, setResponseTiming] = useState<ResponseTiming>(loadResponseTiming);
   const [docs, setDocs] = useState<OrbitDocument[] | null>(null);
@@ -233,7 +223,6 @@ export function SetupScreen({
     setType(ws.session_type);
     setRole(ws.role ?? "");
     setInstructions(ws.notes ?? "");
-    setLanguage(ws.language);
     setLength(ws.length);
     setStyle(ws.style);
     setAutoAnswer(ws.auto_answer);
@@ -373,7 +362,7 @@ export function SetupScreen({
         title: `${TYPES.find((t) => t.value === type)?.label ?? "Session"}${role.trim() ? ` — ${role.trim()}` : ""}`,
         type,
         ...(role.trim() ? { role: role.trim() } : {}),
-        language,
+        language: "en",
         length,
         style,
         auto_answer: isMock ? false : autoAnswer,
@@ -444,7 +433,7 @@ export function SetupScreen({
             current={{
               role: role.trim() || null,
               session_type: type,
-              language,
+              language: "en",
               length,
               style,
               auto_answer: autoAnswer,
@@ -701,16 +690,6 @@ export function SetupScreen({
                 {ANSWER_STYLES.map((s) => (
                   <option key={s.value} value={s.value}>
                     {s.label} — {s.hint}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block space-y-1">
-              <span className="text-xs font-medium">Language</span>
-              <select value={language} onChange={(e) => setLanguage(e.target.value)} className={cx(control, focusRing)}>
-                {LANGUAGES.map((l) => (
-                  <option key={l.value} value={l.value}>
-                    {l.label}
                   </option>
                 ))}
               </select>
