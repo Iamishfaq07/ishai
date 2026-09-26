@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { DEV_FIXTURES, type CodingLanguage } from "@orbit/types";
+import { DEV_FIXTURES, type AnswerFeedbackReason, type AnswerRating, type CodingLanguage } from "@orbit/types";
 import { formatElapsed, useElapsed } from "../hooks/useElapsed";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useStickyScroll } from "../hooks/useStickyScroll";
@@ -17,6 +17,7 @@ import {
 } from "../live/reducer";
 import type { LiveActions } from "../live/useLiveSession";
 import { AnswerCard } from "./AnswerCard";
+import type { AnswerRatings } from "./AnswerRating";
 import { ChatInput } from "./ChatInput";
 import { ControlBar } from "./ControlBar";
 import { MockPanel } from "./MockPanel";
@@ -96,6 +97,8 @@ export interface LivePanelProps {
   overlay?: ReactNode;
   /** Transcript fixtures offered when the server runs the mock STT provider (defaults to DEV_FIXTURES). */
   devFixtures?: readonly string[];
+  /** 👍/👎 on answers (useAnswerRatings). */
+  ratings?: AnswerRatings;
   /** Mock interview session: the AI interviewer's questions are shown and spoken instead of suggested answers. */
   mockInterview?: boolean;
   /**
@@ -284,6 +287,13 @@ export function LivePanel(props: LivePanelProps) {
             pinned={Boolean(answer && live.pinnedAnswerId === answer.answer_id)}
             onPin={(pinned) => answer && actions.pin(answer.answer_id, pinned)}
             onRetry={retry}
+            {...(props.ratings && answer
+              ? {
+                  rating: props.ratings.get(answer.answer_id),
+                  onRate: (r: AnswerRating | null, why?: AnswerFeedbackReason | null) =>
+                    props.ratings?.rate(answer.answer_id, r, why),
+                }
+              : {})}
             compact={compact}
             autoAnswer={live.settings.auto_answer}
             progress={keyPoints?.progress ?? null}

@@ -230,6 +230,20 @@ class Answer(TimestampMixin, Base):
     total_ms: Mapped[int | None] = mapped_column(Integer)
 
 
+class AnswerFeedback(TimestampMixin, Base):
+    """The user's 👍/👎 on one answer (and, for 👎, why). Keyed by the live answer id rather than a foreign key to
+    `answers`, whose row is written in the background and may land a moment after the user rates it."""
+
+    __tablename__ = "answer_feedback"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    session_id: Mapped[str] = mapped_column(ForeignKey("sessions.id", ondelete="CASCADE"), index=True)
+    answer_id: Mapped[str] = mapped_column(String(36), unique=True)
+    rating: Mapped[str] = mapped_column(String(8))  # up | down
+    reason: Mapped[str | None] = mapped_column(String(32))  # for "down": too_long | too_generic | ...
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class SessionSummary(TimestampMixin, Base):
     __tablename__ = "session_summaries"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)

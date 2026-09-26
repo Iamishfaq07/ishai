@@ -78,6 +78,8 @@ export {
   Square,
   Sun,
   Target,
+  ThumbsDown,
+  ThumbsUp,
   Trash2,
   Upload,
   UserRound,

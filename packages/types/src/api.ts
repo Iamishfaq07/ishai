@@ -246,6 +246,32 @@ export interface SessionAnswer {
   model: string | null;
   first_token_ms: number | null;
   total_ms: number | null;
+  /** The user's rating of this answer, if any. */
+  feedback?: AnswerFeedback | null;
+}
+
+// ─── Answer feedback ─────────────────────────────────────────────────────────
+
+export type AnswerRating = "up" | "down";
+/** Why an answer got 👎. Repeated reasons become style hints in later sessions. */
+export type AnswerFeedbackReason = "too_long" | "too_generic" | "inaccurate" | "off_topic" | "too_formal";
+
+export interface AnswerFeedback {
+  rating: AnswerRating;
+  reason: AnswerFeedbackReason | null;
+}
+
+/** GET /v1/admin/feedback — answer ratings (counts only, no content). */
+export interface FeedbackReport {
+  days: number;
+  up: number;
+  down: number;
+  satisfaction: number | null;
+  reasons: Partial<Record<AnswerFeedbackReason, number>>;
+  by_type: Array<{ key: string; up: number; down: number }>;
+  by_model: Array<{ key: string; up: number; down: number }>;
+  /** Rated answers / completed answers in the period. */
+  rated_share: number | null;
 }
 
 /** One interviewer question, graded on what the candidate actually said after it. */

@@ -60,6 +60,7 @@ from orbit_api.ratelimit import limit, limit_user
 from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.retrieval.index import IndexedChunk, SessionIndex, chunk_body
 from orbit_api.sessions import companion
+from orbit_api.sessions.feedback import learned_preferences, session_feedback
 from orbit_api.sessions.recorder import DbRecorder, upsert_usage
 from orbit_api.sessions.report import generate_report
 from orbit_api.stories.routes import MAX_STORIES, index_chunk, story_text
@@ -256,6 +257,7 @@ async def get_session(session_id: str, user: Annotated[User, Depends(current_use
     answers = (await db.scalars(select(Answer).where(Answer.session_id == row.id, Answer.status == "completed")
                                 .order_by(Answer.created_at))).all()
     summary = await db.scalar(select(SessionSummary).where(SessionSummary.session_id == row.id))
+    ratings = await session_feedback(db, row.id)
     return SessionDetail(
         session=session_out,
         turns=[{"id": t.id, "speaker": t.speaker, "text": t.text, "start_ms": t.start_ms, "end_ms": t.end_ms}
@@ -263,7 +265,8 @@ async def get_session(session_id: str, user: Annotated[User, Depends(current_use
         questions=[{"id": q.id, "text": q.text, "type": q.type, "is_follow_up": q.is_follow_up,
                     "source": q.source, "created_at": q.created_at.isoformat()} for q in questions],
         answers=[{"id": a.id, "question_id": a.question_id, "content": a.content, "model": a.model,
-                  "first_token_ms": a.first_token_ms, "total_ms": a.total_ms} for a in answers],
+                  "first_token_ms": a.first_token_ms, "total_ms": a.total_ms, "feedback": ratings.get(a.id)}
+                 for a in answers],
         summary=summary.content if summary else None,
     )
 
@@ -615,6 +618,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             allow_fallback=plan.has("provider_fallback"),
             features=frozenset(f for f in ("system_design", "advanced_coding") if plan.has(f)),
             instructions=(row.instructions or "").strip() or None,
+            learned=await learned_preferences(db, user_id),
         )
         settings = LiveSettings(auto_answer=row.auto_answer, length=row.length,
                                 style=row.style)

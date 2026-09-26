@@ -28,6 +28,7 @@ from orbit_api.runtime_config import (
     secrets_editable,
     validate_value,
 )
+from orbit_api.sessions.feedback import FeedbackReport, feedback_report
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
 
@@ -168,6 +169,13 @@ async def provider_health(_: Annotated[User, Depends(require_admin)]) -> dict[st
         failover = {"primary": llm.primary.name, "backup": llm.fallback.name if llm.fallback else None,
                     "breaker": llm.breaker.state, "first_token_timeout_s": llm.first_token_timeout_s}
     return {"dependencies": health.snapshot(), "llm_failover": failover}
+
+
+@router.get("/feedback", response_model=FeedbackReport)
+async def feedback(_: Annotated[User, Depends(require_admin)], db: Annotated[AsyncSession, Depends(get_db)],
+                   days: Annotated[int, Query(ge=1, le=90)] = 30) -> FeedbackReport:
+    """Answer ratings: satisfaction, 👎 reasons, and by question type and model (counts only, no content)."""
+    return await feedback_report(db, days)
 
 
 @router.get("/costs")

@@ -103,6 +103,8 @@ class PromptInputs:
     mode: str = "normal"
     # The candidate's standing preferences for every answer (saved with the setup). Preferences, never rules.
     candidate_instructions: str | None = None
+    # Fixed style hints learned from the candidate's 👎 reasons (sessions/feedback.LEARNED_HINTS), never user text.
+    learned_preferences: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -219,6 +221,9 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
     ).strip()
 
     parts: list[str] = [settings_block]
+    if inputs.learned_preferences:
+        parts.append("Learned from the candidate's ratings of earlier answers:\n"
+                     + "\n".join(f"- {h}" for h in inputs.learned_preferences[:5]))
     if inputs.candidate_instructions:
         parts.append("The candidate's own preferences for every answer — follow them when they don't conflict with "
                      "the rules above (they can't change the format, grounding or honesty rules):\n"

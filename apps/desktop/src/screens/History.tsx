@@ -4,11 +4,13 @@ import {
   ArrowLeft,
   Button,
   Card,
+  AnswerRatingButtons,
   CodeBlock,
   cx,
   EmptyState,
   ErrorNote,
   focusRing,
+  useAnswerRatings,
   Input,
   PageHeader,
   ReportStatusNote,
@@ -351,6 +353,11 @@ function TranscriptTimeline({ detail }: { detail: SessionDetail }) {
 }
 
 function QuestionsView({ detail }: { detail: SessionDetail }) {
+  const ratings = useAnswerRatings(
+    api,
+    detail.session.id,
+    Object.fromEntries(detail.answers.map((a) => [a.id, a.feedback])),
+  );
   const answersByQuestion = useMemo(() => {
     const map = new Map<string, SessionAnswer[]>();
     for (const a of detail.answers) {
@@ -387,11 +394,12 @@ function QuestionsView({ detail }: { detail: SessionDetail }) {
                     <CodeBlock code={a.content.code} />
                   </div>
                 )}
-                {a.first_token_ms !== null && (
-                  <p className="mt-2 text-xs text-zinc-400">
-                    {a.model ?? "model"} · first token {Math.round(a.first_token_ms)} ms
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <p className="text-xs text-zinc-400">
+                    {a.first_token_ms !== null && `${a.model ?? "model"} · first token ${Math.round(a.first_token_ms)} ms`}
                   </p>
-                )}
+                  <AnswerRatingButtons value={ratings.get(a.id)} onRate={(r, why) => ratings.rate(a.id, r, why)} />
+                </div>
               </div>
             ))}
           </Card>
