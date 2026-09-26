@@ -153,7 +153,7 @@ export function SessionSetupPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const initialType = (params.get("type") as SessionType | null) ?? "interview";
-  const docs = useAsync(() => api.listDocuments(), []);
+  const docs = useAsync(() => api.listDocuments(), [], "documents");
 
   const [title, setTitle] = useState("");
   const [type, setType] = useState<SessionType>(SELECTABLE_TYPES.includes(initialType) ? initialType : "interview");

@@ -12,6 +12,7 @@ import {
 import type { LoginRequest, RegisterRequest, User } from "@orbit/types";
 import { ApiError } from "@orbit/ui";
 import { api, setUnauthorizedHandler } from "./api";
+import { clearAsyncCache } from "./useAsync";
 
 interface AuthContextValue {
   user: User | null;
@@ -49,7 +50,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setUnauthorizedHandler(() => setUser(null));
+    setUnauthorizedHandler(() => {
+      clearAsyncCache();
+      setUser(null);
+    });
     api
       .me()
       .then(setUser)
@@ -61,13 +65,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => setUnauthorizedHandler(null);
   }, []);
 
+  // Cached page data belongs to one account: dropped before the user changes, so nobody sees the last person's.
   const login = useCallback(async (req: LoginRequest) => {
     await api.login(req);
+    clearAsyncCache();
     setUser(await confirmSession());
   }, []);
 
   const register = useCallback(async (req: RegisterRequest) => {
     await api.register(req);
+    clearAsyncCache();
     setUser(await confirmSession());
   }, []);
 
@@ -75,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api.logout();
     } finally {
+      clearAsyncCache();
       setUser(null);
     }
   }, []);

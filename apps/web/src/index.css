@@ -1,6 +1,4 @@
-@import "@fontsource-variable/inter";
-@import "@fontsource-variable/space-grotesk";
-@import "@fontsource-variable/jetbrains-mono";
+@import "./fonts.css";
 @import "../../../packages/ui/src/design/base.css";
 @tailwind base;
 @tailwind components;

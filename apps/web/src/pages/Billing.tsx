@@ -90,7 +90,7 @@ function PlanCard({ p, current }: { p: PlanInfo; current: string | null }) {
 }
 
 export function UsageSummary() {
-  const ent = useAsync(() => api.entitlements(), []);
+  const ent = useAsync(() => api.entitlements(), [], "entitlements");
   if (ent.loading) return <Spinner />;
   if (ent.error) return <ErrorNote onRetry={ent.reload}>{errorText(ent.error)}</ErrorNote>;
   if (!ent.data) return null;
@@ -98,8 +98,8 @@ export function UsageSummary() {
 }
 
 export function BillingPage() {
-  const ent = useAsync(() => api.entitlements(), []);
-  const plans = useAsync(() => api.listPlans(), []);
+  const ent = useAsync(() => api.entitlements(), [], "entitlements");
+  const plans = useAsync(() => api.listPlans(), [], "plans");
   const current = ent.data?.plan ?? null;
 
   return (

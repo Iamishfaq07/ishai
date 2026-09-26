@@ -310,7 +310,7 @@ function StoryCard({ story, onEdit, onDelete }: { story: StoryInput; onEdit: () 
 type Editing = { id: string | null; initial: StoryInput; heading: string; fromDraft?: number };
 
 export function StoriesPage() {
-  const stories = useAsync(() => api.listStories(), []);
+  const stories = useAsync(() => api.listStories(), [], "stories");
   const [editing, setEditing] = useState<Editing | null>(null);
   const [drafts, setDrafts] = useState<StoryInput[]>([]);
   const [drafting, setDrafting] = useState(false);

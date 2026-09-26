@@ -1,5 +1,36 @@
 # Implementation log
 
+## Speed and feel pass (2026-09-26)
+
+Measured on a production build with a phone profile (390 px, 4x CPU slowdown; "slow 4G" = 150 ms RTT, 1.6 Mbps):
+
+| | Before | After |
+|---|---|---|
+| Idle CPU on Home, per 5 s of doing nothing | 5.35 s | 0.9 s once settled (2.1 s in the first seconds) |
+| JavaScript to open the sign-in page | 559 kB (170 kB gzip), one file | ~290 kB (~92 kB gzip); pages load on demand |
+| Sign-in form usable on slow 4G | 1.82 s | 1.48 s |
+| Going back to a page you've seen | spinner, then data | instant (last data shown, refreshed in the background) |
+
+- **Idle CPU (battery, scroll jank)**: the glass cards and bars no longer use `backdrop-filter` blur. Over the
+  animated sky it re-blurred every panel on every frame, and it was half the idle cost. Surfaces are slightly more
+  opaque, so they look the same. The sky still drifts and twinkles, in steps (a few repaints a second instead of 60).
+  Decorative loops (planet orbit and glow, sparkles, float, empty-state orbits, the logo spark) play for a while and
+  then rest. Status animations (listening pulse, "thinking" spinner, recording) are unchanged.
+- **Code splitting** (`apps/web/src/routes.ts`): every page is its own chunk. After sign-in the daily pages are
+  fetched when the browser is idle, and nav links prefetch on hover, focus and touch. The shared UI packages declare
+  `sideEffects`, so each page only includes the components it uses.
+- **Stale-while-revalidate data** (`useAsync(fn, deps, key)`): the session, document and story lists, progress, a
+  session's detail, plans and entitlements show their last data instantly and refresh in the background. Pages that
+  share a key share the data. The cache is cleared on sign-in, sign-out and session expiry.
+- **Fonts**: Latin and Latin-ext only (English only), not seven subsets. CSS is down from 72 kB to 66 kB. Fonts are
+  not preloaded: that was measured ~0.3 s slower on slow 4G, because it competes with the app's code.
+- **Caching**: `apps/web/public/_headers` gives the hashed `/assets/*` files a one-year immutable cache, so repeat
+  visits skip the revalidation round trips. `index.html` still revalidates, so deploys show up immediately.
+- **API gzip** for JSON over 1 kB (the desktop app talks to the API directly). Never on `/v1/auth/*`, where tokens
+  sit next to user input (BREACH). Test: `tests/test_compression.py`.
+- **Feel**: buttons have a pressed state (no transform when motion is reduced), taps have no 300 ms delay and no
+  grey flash, a new page opens at the top (Back keeps its position), and session lists no longer show "EN".
+
 ## English only (2026-09-26)
 
 - The language pickers are gone from web setup ("Listen in", "Answer in"), the web mock form and desktop setup:

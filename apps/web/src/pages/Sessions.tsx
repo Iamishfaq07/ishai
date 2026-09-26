@@ -7,7 +7,7 @@ import { SESSION_TYPE_LABEL, errorText, formatDate, formatDuration } from "../li
 import { useAsync } from "../lib/useAsync";
 
 export function SessionsPage() {
-  const sessions = useAsync(() => api.listSessions(), []);
+  const sessions = useAsync(() => api.listSessions(), [], "sessions");
   const navigate = useNavigate();
   const [ending, setEnding] = useState<string | null>(null);
   const [endError, setEndError] = useState<string | null>(null);
@@ -73,7 +73,7 @@ export function SessionsPage() {
                       </p>
                       <p className="text-xs text-zinc-500">
                         {SESSION_TYPE_LABEL[s.type]}
-                        {s.role ? ` · ${s.role}` : ""} · {s.language.toUpperCase()}
+                        {s.role ? ` · ${s.role}` : ""}
                       </p>
                     </div>
                     <div className="text-xs text-zinc-500 sm:text-right">

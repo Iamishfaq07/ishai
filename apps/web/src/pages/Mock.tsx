@@ -41,7 +41,7 @@ export function MockPage() {
 
 function MockSetup() {
   const navigate = useNavigate();
-  const docs = useAsync(() => api.listDocuments(), []);
+  const docs = useAsync(() => api.listDocuments(), [], "documents");
   const [role, setRole] = useState("");
   const [interviewType, setInterviewType] = useState<MockInterviewType>("mixed");
   const [difficulty, setDifficulty] = useState<MockDifficulty>("medium");

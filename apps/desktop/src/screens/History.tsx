@@ -97,7 +97,7 @@ function SessionList({ onOpen, onResume }: { onOpen: (id: string) => void; onRes
                     </p>
                     <p className="text-xs text-zinc-500">
                       {SESSION_TYPE_LABEL[s.type]}
-                      {s.role ? ` · ${s.role}` : ""} · {s.language.toUpperCase()}
+                      {s.role ? ` · ${s.role}` : ""}
                     </p>
                   </div>
                   <div className="text-xs text-zinc-500 sm:pr-3 sm:text-right">

@@ -54,9 +54,9 @@ function greeting(): string {
 export function HomePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const sessions = useAsync(() => api.listSessions(), []);
-  const documents = useAsync(() => api.listDocuments(), []);
-  const stories = useAsync(() => api.listStories(), []);
+  const sessions = useAsync(() => api.listSessions(), [], "sessions");
+  const documents = useAsync(() => api.listDocuments(), [], "documents");
+  const stories = useAsync(() => api.listStories(), [], "stories");
 
   const recent = (sessions.data ?? []).slice(0, 5);
   const readyDocs = (documents.data ?? []).filter((d) => d.status === "ready");

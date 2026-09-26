@@ -1,14 +1,9 @@
-import type { ReactNode } from "react";
+import { Suspense, useEffect, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { Spinner } from "./components/ui";
 import { useAuth } from "./lib/auth";
 import { useDocumentTitle } from "./lib/useDocumentTitle";
-import { BillingPage } from "./pages/Billing";
-import { CompanionPage } from "./pages/Companion";
-import { DocumentsPage } from "./pages/Documents";
-import { HomePage } from "./pages/Home";
-import { LivePage } from "./pages/Live";
 import {
   ConfirmEmailChangePage,
   ForgotPasswordPage,
@@ -17,12 +12,29 @@ import {
   ResetPasswordPage,
   VerifyEmailPage,
 } from "./pages/Auth";
-import { MockPage } from "./pages/Mock";
-import { SessionDetailPage } from "./pages/SessionDetail";
-import { SessionSetupPage } from "./pages/SessionSetup";
-import { SessionsPage } from "./pages/Sessions";
-import { SettingsPage } from "./pages/Settings";
-import { StoriesPage } from "./pages/Stories";
+import {
+  BillingPage,
+  CompanionPage,
+  DocumentsPage,
+  HomePage,
+  LivePage,
+  MockPage,
+  SessionDetailPage,
+  SessionSetupPage,
+  SessionsPage,
+  SettingsPage,
+  StoriesPage,
+  prefetchLikelyRoutes,
+} from "./routes";
+
+/** While a page's code downloads (first visit only; later visits are instant). */
+export function PageLoading() {
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center">
+      <Spinner />
+    </div>
+  );
+}
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -35,6 +47,12 @@ function RequireAuth({ children }: { children: ReactNode }) {
     );
   }
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  return <Signed>{children}</Signed>;
+}
+
+/** Signed in: warm the daily pages in the background so the next click doesn't wait for a download. */
+function Signed({ children }: { children: ReactNode }) {
+  useEffect(() => prefetchLikelyRoutes(), []);
   return <>{children}</>;
 }
 
@@ -66,6 +84,7 @@ function useRouteTitle(): void {
 export function App() {
   useRouteTitle();
   return (
+    <Suspense fallback={<PageLoading />}>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -102,5 +121,6 @@ export function App() {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 }

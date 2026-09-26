@@ -9,6 +9,8 @@ from typing import Any
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
+from starlette.types import Receive, Scope, Send
 
 from orbit_api import db, jobs
 from orbit_api.admin.routes import router as admin_router
@@ -82,6 +84,17 @@ def running_commit() -> str | None:
     return sha[:7] if sha else None
 
 
+class ApiGZip(GZipMiddleware):
+    """gzip for JSON bodies over 1 kB (session transcripts, reports, lists): the desktop app talks to the API
+    directly, so nothing else compresses them. Never auth responses: they carry tokens next to user input (BREACH)."""
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and str(scope.get("path", "")).startswith("/v1/auth"):
+            await self.app(scope, receive, send)
+            return
+        await super().__call__(scope, receive, send)
+
+
 def create_app() -> FastAPI:
     s = get_settings()
     configured_plans()  # fail fast on a bad ORBIT_PLANS_JSON / *_MAX_SESSION_MINUTES instead of at first use
@@ -111,6 +124,8 @@ def create_app() -> FastAPI:
         if not request.url.path.startswith("/docs"):
             response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
         return response
+
+    app.add_middleware(ApiGZip, minimum_size=1024)
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
