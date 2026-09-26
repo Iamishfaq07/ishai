@@ -1,8 +1,20 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import type { OrbitDocument, PrepCategory, PrepQuestion, PrepResponse } from "@orbit/types";
-import { Check, ChevronDown, Copy, Sparkles, Target, Wand2, cx, focusRing, splitPlaceholders } from "@orbit/ui";
-import { Button, Card, ErrorNote, Field, Select, Textarea } from "../components/ui";
+import {
+  Check,
+  ChevronDown,
+  Copy,
+  Link2,
+  Save,
+  Sparkles,
+  Target,
+  Wand2,
+  cx,
+  focusRing,
+  splitPlaceholders,
+} from "@orbit/ui";
+import { Button, Card, ErrorNote, Field, Input, Select, Textarea } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import type { LiveLaunchState } from "./SessionSetup";
@@ -67,12 +79,23 @@ function Spoken({ text }: { text: string }) {
  * Interview prep: pick (or paste) a job description, and Orbit predicts the likely questions with talking points
  * and a suggested answer from your resume. Then practise the ones you pick in a mock interview.
  */
-export function PrepSection({ docs }: { docs: OrbitDocument[] | null }) {
+export function PrepSection({
+  docs,
+  onDocumentAdded,
+}: {
+  docs: OrbitDocument[] | null;
+  /** A job description saved from an imported link (the parent adds it to its document list). */
+  onDocumentAdded?: (doc: OrbitDocument) => void;
+}) {
   const navigate = useNavigate();
   const jds = (docs ?? []).filter((d) => d.kind === "job_description" && d.status === "ready");
   const hasResume = (docs ?? []).some((d) => d.kind === "resume" && d.status === "ready");
-  const [source, setSource] = useState<string>(""); // a JD document id, or "paste"
+  const [source, setSource] = useState<string>(""); // a JD document id, "link", or "paste"
   const [pasted, setPasted] = useState("");
+  const [link, setLink] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [imported, setImported] = useState<{ url: string; title: string | null; company: string | null } | null>(null);
+  const [savingDoc, setSavingDoc] = useState(false);
   const [count, setCount] = useState(8);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,13 +116,51 @@ export function PrepSection({ docs }: { docs: OrbitDocument[] | null }) {
     setPicked(new Set(result.questions.slice(0, MAX_PRACTICE).map((_, i) => i)));
   }, [result]);
 
+  const importLink = async () => {
+    setImporting(true);
+    setError(null);
+    try {
+      const posting = await api.importJobLink(link.trim());
+      setPasted(posting.text);
+      setImported({ url: posting.url, title: posting.title, company: posting.company });
+      setSource("paste");
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const saveImported = async () => {
+    if (!imported) return;
+    setSavingDoc(true);
+    setError(null);
+    try {
+      const host = new URL(imported.url).hostname.replace(/^www\./, "");
+      const doc = await api.createTextDocument({
+        title: [imported.title, imported.company].filter(Boolean).join(" — ") || `Job posting (${host})`,
+        kind: "job_description",
+        text: pasted.trim(),
+      });
+      onDocumentAdded?.(doc);
+      setImported(null);
+      setSource(doc.id);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setSavingDoc(false);
+    }
+  };
+
   const generate = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
       const res = await api.prep(
-        source === "paste" ? { job_text: pasted.trim(), count } : { job_description_id: source, count },
+        source === "paste"
+          ? { job_text: pasted.trim(), count, ...(imported?.title ? { role: imported.title } : {}) }
+          : { job_description_id: source, count },
       );
       setResult(res);
       setOpen(0);
@@ -190,6 +251,7 @@ export function PrepSection({ docs }: { docs: OrbitDocument[] | null }) {
                     {d.title}
                   </option>
                 ))}
+                <option value="link">From a link…</option>
                 <option value="paste">Paste a job description…</option>
               </Select>
             </Field>
@@ -203,6 +265,51 @@ export function PrepSection({ docs }: { docs: OrbitDocument[] | null }) {
               </Select>
             </Field>
           </div>
+          {source === "link" && (
+            <Field
+              label="Link to the job posting"
+              htmlFor="prep-link"
+              hint="Company career pages and job boards like Greenhouse, Lever or Workday work best. Sites that need a sign-in (LinkedIn) can't be read — paste the text instead."
+            >
+              <div className="flex gap-2">
+                <Input
+                  id="prep-link"
+                  type="url"
+                  inputMode="url"
+                  placeholder="https://…"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (/^https?:\/\/\S+\.\S+/.test(link.trim())) void importLink();
+                    }
+                  }}
+                />
+                <Button
+                  variant="secondary"
+                  onClick={() => void importLink()}
+                  disabled={importing || !/^https?:\/\/\S+\.\S+/.test(link.trim())}
+                  className="shrink-0"
+                >
+                  <Link2 className="h-4 w-4" />
+                  {importing ? "Reading…" : "Import"}
+                </Button>
+              </div>
+            </Field>
+          )}
+          {source === "paste" && imported && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl bg-indigo-500/10 px-3 py-2 text-sm text-indigo-900 dark:text-indigo-100">
+              <span className="min-w-0 flex-1">
+                Imported from <span className="font-medium">{new URL(imported.url).hostname.replace(/^www\./, "")}</span>
+                {imported.title ? ` — ${imported.title}` : ""}. Check it’s the whole posting and trim anything that isn’t.
+              </span>
+              <Button size="sm" variant="secondary" onClick={() => void saveImported()} disabled={savingDoc || pasted.trim().length < 40}>
+                <Save className="h-3.5 w-3.5" />
+                {savingDoc ? "Saving…" : "Save to Documents"}
+              </Button>
+            </div>
+          )}
           {source === "paste" && (
             <Field label="Paste the job posting" htmlFor="prep-text">
               <Textarea
@@ -224,7 +331,7 @@ export function PrepSection({ docs }: { docs: OrbitDocument[] | null }) {
               for answers from your real experience.
             </p>
           )}
-          <Button type="submit" disabled={busy || (source === "paste" && pasted.trim().length < 40)}>
+          <Button type="submit" disabled={busy || source === "link" || (source === "paste" && pasted.trim().length < 40)}>
             <Wand2 className="h-4 w-4" />
             {busy ? "Reading the job description…" : result ? "Generate again" : "Generate my questions"}
           </Button>

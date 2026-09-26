@@ -1,5 +1,21 @@
 # Implementation log
 
+## Job posting from a link (2026-09-26)
+
+- **Prep → From a link…**: paste a job posting URL and Orbit reads the posting into the job description field,
+  to check and edit; **Save to Documents** keeps it as a job description (then usable in live sessions too). The
+  role title goes along with the prep request. Sites that need a sign-in (LinkedIn) say so and suggest pasting.
+- Reads the page's schema.org JobPosting data when present (Greenhouse, Lever, Workday and most ATSs publish it),
+  else the page's main content without navigation, header and footer.
+- SSRF-safe fetch (`prep/job_link.py`): http(s) on default ports only, no credentials in the URL; the host is
+  resolved once and every address must be public (no loopback, private, link-local/metadata, CGNAT or reserved,
+  including IPv4-mapped and shorthand forms); the connection goes to that checked IP with Host + TLS SNI (no DNS
+  rebinding); redirects re-checked hop by hop (max 4); 8 s timeout, 2 MB cap, HTML/text only, no environment proxy;
+  rate-limited per IP and per user. Nothing is stored.
+- API: `POST /v1/prep/import-link`. Tests: `tests/test_job_link.py` (28: extraction paths, pinned request, private
+  and literal/shorthand addresses, mixed DNS answers, unsupported links, redirect re-checks and loops, unreadable
+  pages, the endpoint).
+
 ## Answer ratings (2026-09-26)
 
 - **👍/👎 on every live answer** (web + desktop live panel) and in the session review (Questions & answers). A 👎

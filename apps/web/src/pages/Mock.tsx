@@ -85,7 +85,7 @@ function MockSetup() {
         subtitle="Prep the likely questions for a job, then practise out loud with an AI interviewer."
       />
       <ProgressSection />
-      <PrepSection docs={docs.data} />
+      <PrepSection docs={docs.data} onDocumentAdded={(d) => docs.setData((prev) => [d, ...(prev ?? [])])} />
       <section aria-labelledby="mock-title">
       <Card>
         <div className="mb-5">

@@ -134,6 +134,14 @@ export interface PrepQuestion {
   suggested_answer: string;
 }
 
+/** POST /v1/prep/import-link — a job posting read from a link (nothing stored). */
+export interface ImportedJobPosting {
+  url: string;
+  title: string | null;
+  company: string | null;
+  text: string;
+}
+
 export interface PrepResponse {
   role: string | null;
   company: string | null;

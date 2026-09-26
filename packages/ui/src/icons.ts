@@ -42,6 +42,7 @@ export {
   House,
   KeyRound,
   LayoutGrid,
+  Link2,
   LogOut,
   Mail,
   Maximize2,

@@ -16,6 +16,7 @@ import type {
   CreateTextDocumentRequest,
   DocumentKind,
   DocumentText,
+  ImportedJobPosting,
   LatencyReport,
   LiveTicket,
   LoginRequest,
@@ -210,6 +211,9 @@ export function createApiClient(options: ApiClientOptions) {
     progress: () => json<Progress>("/v1/progress"),
     /** Interview prep: likely questions from a job description, with answers drawn from the resume. */
     prep: (req: PrepRequest) => json<PrepResponse>("/v1/prep", { method: "POST", body: body(req) }),
+    /** Read a job posting from a link (server-side, SSRF-safe); returns the text to check and edit. */
+    importJobLink: (url: string) =>
+      json<ImportedJobPosting>("/v1/prep/import-link", { method: "POST", body: body({ url }) }),
     /** Re-drill: a new mock session asking this session's weak questions again (from its review). */
     drillSession: (id: string) =>
       json<OrbitSession>(`/v1/sessions/${encodeURIComponent(id)}/drill`, { method: "POST" }),
