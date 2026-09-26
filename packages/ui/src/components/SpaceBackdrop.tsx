@@ -47,7 +47,7 @@ function StarLayer({ stars, className }: { stars: Star[]; className?: string }) 
 
 /**
  * The animated sky behind every screen: two slow aurora clouds and three layers of twinkling stars. Purely
- * decorative (aria-hidden, no pointer events), GPU-cheap (opacity/transform only, no blur filters), stars only in
+ * decorative (aria-hidden, no pointer events), GPU-cheap (opacity/transform only, no blur filters, stepped so an idle screen repaints a few times a second), stars only in
  * dark mode, and still when motion is reduced.
  */
 export const SpaceBackdrop = memo(function SpaceBackdrop({ className }: { className?: string }) {
@@ -67,8 +67,8 @@ export const SpaceBackdrop = memo(function SpaceBackdrop({ className }: { classN
       />
       <div className="absolute inset-0 hidden dark:block">
         <StarLayer stars={FAR} className="opacity-70" />
-        <StarLayer stars={NEAR} className="motion-safe:animate-twinkle" />
-        <StarLayer stars={BRIGHT} className="motion-safe:animate-twinkle [animation-delay:-1.6s] [animation-duration:4.5s]" />
+        <StarLayer stars={NEAR} className="motion-safe:animate-twinkle-sky" />
+        <StarLayer stars={BRIGHT} className="motion-safe:animate-twinkle-sky [animation-delay:-1.6s] [animation-duration:4.5s]" />
       </div>
     </div>
   );

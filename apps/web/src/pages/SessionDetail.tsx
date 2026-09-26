@@ -25,7 +25,7 @@ type Tab = "review" | "summary" | "transcript" | "questions";
 export function SessionDetailPage() {
   const { sessionId = "" } = useParams();
   const navigate = useNavigate();
-  const detail = useAsync(() => api.getSession(sessionId), [sessionId]);
+  const detail = useAsync(() => api.getSession(sessionId), [sessionId], `session:${sessionId}`);
   const [tab, setTab] = useState<Tab>("review");
   const [actionError, setActionError] = useState<string | null>(null);
   const { setData } = detail;

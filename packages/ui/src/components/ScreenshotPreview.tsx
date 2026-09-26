@@ -36,7 +36,7 @@ export function ScreenshotPreview({ image, onAnalyze, onRetake, onCancel }: Scre
       role="dialog"
       aria-modal="true"
       aria-label="Screenshot preview"
-      className="absolute inset-0 z-20 flex flex-col bg-white/95 backdrop-blur dark:bg-zinc-950/95"
+      className="absolute inset-0 z-20 flex flex-col bg-white/95 dark:bg-zinc-950/95"
     >
       <div className="min-h-0 flex-1 overflow-auto p-3">
         {url && <img src={url} alt="Captured screenshot" className="mx-auto max-h-full rounded-lg border border-zinc-200 dark:border-zinc-800" />}

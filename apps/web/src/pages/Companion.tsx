@@ -175,7 +175,7 @@ function CompanionRoom({ code, view }: { code: string; view: CompanionView }) {
 
   return (
     <div className="flex h-[100dvh] flex-col">
-      <header className="flex items-center gap-2.5 border-b border-zinc-200 bg-white/70 px-4 py-2.5 backdrop-blur dark:border-white/[0.06] dark:bg-zinc-950/60">
+      <header className="flex items-center gap-2.5 border-b border-zinc-200 bg-white/90 px-4 py-2.5 dark:border-white/[0.06] dark:bg-zinc-950/85">
         <OrbitLogo size={18} busy={live.state === "generating" || live.state === "streaming"} />
         <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold">{view.title}</span>
         <StatusPill state={live.state} connection={live.connection} />

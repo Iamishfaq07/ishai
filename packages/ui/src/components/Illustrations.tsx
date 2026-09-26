@@ -46,7 +46,7 @@ export function PlanetHero({ className }: { className?: string }) {
       <circle cx="160" cy="160" r="122" fill="none" stroke="rgb(var(--aurora-400))" strokeOpacity="0.12" />
 
       {/* Atmosphere + ring (back half) */}
-      <circle cx="160" cy="160" r="118" fill={`url(#${g("atmo")})`} className="motion-safe:animate-glow" />
+      <circle cx="160" cy="160" r="118" fill={`url(#${g("atmo")})`} className="motion-safe:animate-glow-calm" />
       <g transform="rotate(-16 160 160)">
         <ellipse cx="160" cy="160" rx="138" ry="30" fill="none" stroke={`url(#${g("ring")})`} strokeWidth="5" strokeOpacity="0.55" />
       </g>
@@ -123,7 +123,7 @@ export function SpotIllustration({
         <circle cx="56" cy="56" r="46" fill="none" stroke="rgb(var(--accent-400))" strokeOpacity="0.35" strokeDasharray="3 6" />
         <circle cx="56" cy="56" r="26" fill={`url(#${id}-orb)`} />
         <circle cx="56" cy="56" r="26" fill="none" stroke="white" strokeOpacity="0.25" />
-        <g className="motion-safe:animate-orbit" style={{ transformOrigin: "56px 56px", animationDuration: "9s" }}>
+        <g className="motion-safe:animate-orbit-calm" style={{ transformOrigin: "56px 56px" }}>
           <circle cx="56" cy="10" r="4" fill="rgb(var(--aurora-300))" />
           <circle cx="56" cy="10" r="8" fill="rgb(var(--aurora-300))" opacity="0.2" />
         </g>

@@ -20,7 +20,7 @@ const MAX_MB = 10;
 export function DocumentsPage() {
   const location = useLocation();
   const onboarding = Boolean((location.state as { onboarding?: boolean } | null)?.onboarding);
-  const docs = useAsync(() => api.listDocuments(), []);
+  const docs = useAsync(() => api.listDocuments(), [], "documents");
   const fileRef = useRef<HTMLInputElement>(null);
   const [kind, setKind] = useState<DocumentKind>("resume");
   const [uploading, setUploading] = useState(false);

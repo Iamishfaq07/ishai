@@ -64,10 +64,8 @@ html.dark.glass .dark\:bg-zinc-900:not(.glass-solid) {
 html.dark.glass .dark\:bg-zinc-800:not(.glass-solid) {
   background-color: rgb(var(--ink-800) / var(--glass, 1)) !important;
 }
-/* Glass panels follow the window's transparency too (their blur would otherwise frost an empty window). */
+/* Glass panels follow the window's transparency too. */
 html.glass .glass-panel {
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
   background-color: rgb(255 255 255 / calc(var(--glass, 1) * 0.8));
 }
 html.dark.glass .glass-panel {

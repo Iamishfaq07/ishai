@@ -10,7 +10,7 @@ export function TitleBar({ title = "Orbit", children }: { title?: string; childr
   return (
     <div
       data-tauri-drag-region=""
-      className="flex h-10 shrink-0 select-none items-center gap-2 border-b border-zinc-200/80 bg-white/60 px-3 backdrop-blur-xl dark:border-white/[0.06] dark:bg-zinc-950/40"
+      className="flex h-10 shrink-0 select-none items-center gap-2 border-b border-zinc-200/80 bg-white/85 px-3 dark:border-white/[0.06] dark:bg-zinc-950/70"
     >
       <span data-tauri-drag-region="" className="flex items-center gap-2 font-display text-sm font-semibold tracking-tight">
         <OrbitLogo size={18} />

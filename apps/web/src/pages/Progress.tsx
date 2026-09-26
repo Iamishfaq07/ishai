@@ -145,7 +145,7 @@ function ScoreDelta({ recent, before }: { recent: number | null; before: number 
 
 /** "Your progress": practice cadence, review scores over time and the latest speaking tips. */
 export function ProgressSection() {
-  const progress = useAsync<Progress>(() => api.progress(), []);
+  const progress = useAsync<Progress>(() => api.progress(), [], "progress");
   if (progress.loading) return <Spinner />;
   if (progress.error) return <ErrorNote onRetry={progress.reload}>{errorText(progress.error)}</ErrorNote>;
   const data = progress.data;

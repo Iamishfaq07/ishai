@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import {
   ChevronDown,
   CreditCard,
@@ -18,6 +18,8 @@ import {
 } from "@orbit/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { prefetchRoute } from "../routes";
+import { Spinner } from "./ui";
 
 // Daily destinations only. Plan & billing lives in the account menu (and Settings): nobody checks it daily.
 const NAV: Array<{ to: string; label: string; icon: LucideIcon; end?: boolean }> = [
@@ -43,6 +45,11 @@ export function Layout() {
   }, []);
   const location = useLocation();
   const navigate = useNavigate();
+  const navigationType = useNavigationType();
+  // A new page opens at its top; Back/Forward (POP) keeps the browser's own scroll position.
+  useEffect(() => {
+    if (navigationType !== "POP") window.scrollTo(0, 0);
+  }, [location.pathname, navigationType]);
   const signOut = () => void logout().then(() => navigate("/login"));
 
   return (
@@ -54,7 +61,7 @@ export function Layout() {
         Skip to content
       </a>
 
-      <header className="sticky top-0 z-20 border-b border-zinc-200/70 bg-white/70 backdrop-blur-xl dark:border-white/5 dark:bg-zinc-950/60">
+      <header className="sticky top-0 z-20 border-b border-zinc-200/70 bg-white/90 dark:border-white/5 dark:bg-zinc-950/85">
         <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3 sm:px-6">
           <NavLink to="/" className={cx("rounded-lg", focusRing)} aria-label="Orbit home">
             <OrbitWordmark size={26} />
@@ -66,6 +73,8 @@ export function Layout() {
                 key={to}
                 to={to}
                 end={end}
+                onMouseEnter={() => prefetchRoute(to)}
+                onFocus={() => prefetchRoute(to)}
                 className={({ isActive }) =>
                   cx(
                     "relative flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
@@ -114,14 +123,23 @@ export function Layout() {
       <main id="main" className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
         {/* Keyed on the route so each page fades up in. */}
         <div key={location.pathname} className="animate-fade-up">
-          <Outlet />
+          {/* Inside the layout: the nav stays put while a page's code arrives. */}
+          <Suspense
+            fallback={
+              <div className="flex min-h-[40vh] items-center justify-center">
+                <Spinner />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </div>
       </main>
 
       {/* Phones: a thumb-reach tab bar instead of a scrolling top nav. */}
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200/70 bg-white/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden dark:border-white/5 dark:bg-zinc-950/75"
+        className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200/70 bg-white/95 pb-[env(safe-area-inset-bottom)] md:hidden dark:border-white/5 dark:bg-zinc-950/90"
       >
         <ul className="mx-auto grid max-w-md grid-cols-5">
           {NAV.map(({ to, label, icon: Icon, end }) => (
@@ -129,6 +147,7 @@ export function Layout() {
               <NavLink
                 to={to}
                 end={end}
+                onTouchStart={() => prefetchRoute(to)}
                 className={({ isActive }) =>
                   cx(
                     "flex flex-col items-center gap-1 px-1 pb-2 pt-2.5 text-[11px] font-medium",
