@@ -7,6 +7,8 @@ import type {
   Entitlements,
   PlanInfo,
   AuthResponse,
+  CompanionShare,
+  CompanionView,
   CreateSessionRequest,
   CreateTextDocumentRequest,
   DocumentKind,
@@ -184,7 +186,6 @@ export function createApiClient(options: ApiClientOptions) {
     deleteSession: (id: string) => json<void>(`/v1/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),
     deleteTranscript: (id: string) =>
       json<void>(`/v1/sessions/${encodeURIComponent(id)}/transcript`, { method: "DELETE" }),
-    /** Re-drill: a new mock session asking this session's weak questions again (from its review). */
     /** Debrief + thank-you email for an ended session (cached server-side; `refresh` regenerates). */
     followUp: (id: string, refresh = false) =>
       json<FollowUp>(`/v1/sessions/${encodeURIComponent(id)}/follow-up${refresh ? "?refresh=true" : ""}`, {
@@ -194,6 +195,7 @@ export function createApiClient(options: ApiClientOptions) {
     progress: () => json<Progress>("/v1/progress"),
     /** Interview prep: likely questions from a job description, with answers drawn from the resume. */
     prep: (req: PrepRequest) => json<PrepResponse>("/v1/prep", { method: "POST", body: body(req) }),
+    /** Re-drill: a new mock session asking this session's weak questions again (from its review). */
     drillSession: (id: string) =>
       json<OrbitSession>(`/v1/sessions/${encodeURIComponent(id)}/drill`, { method: "POST" }),
     retryReport: (id: string) =>
@@ -202,6 +204,14 @@ export function createApiClient(options: ApiClientOptions) {
       (await raw(`/v1/sessions/${encodeURIComponent(id)}/export.md`)).text(),
     liveTicket: (id: string) =>
       json<LiveTicket>(`/v1/sessions/${encodeURIComponent(id)}/live-ticket`, { method: "POST" }),
+    /** Phone companion: a code for the QR (stable while valid); `stopCompanion` revokes it and disconnects phones. */
+    startCompanion: (id: string) =>
+      json<CompanionShare>(`/v1/sessions/${encodeURIComponent(id)}/companion`, { method: "POST" }),
+    stopCompanion: (id: string) =>
+      json<void>(`/v1/sessions/${encodeURIComponent(id)}/companion`, { method: "DELETE" }),
+    /** On the phone (no login): trade the scanned code for a single-use view ticket. */
+    redeemCompanion: (code: string) =>
+      json<CompanionView>(`/v1/companion/${encodeURIComponent(code)}`, { method: "POST" }),
     uploadScreenshot: (id: string, image: Blob) => {
       const form = new FormData();
       form.append("image", image, "screenshot.png");

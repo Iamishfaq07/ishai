@@ -70,6 +70,7 @@ export {
   ScrollText,
   ScanText,
   Search,
+  Smartphone,
   SettingsIcon,
   ShieldCheck,
   SlidersHorizontal,

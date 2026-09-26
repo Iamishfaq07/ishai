@@ -58,6 +58,7 @@ from orbit_api.providers.stt import create_stt_provider
 from orbit_api.ratelimit import limit, limit_user
 from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.retrieval.index import IndexedChunk, SessionIndex, chunk_body
+from orbit_api.sessions import companion
 from orbit_api.sessions.recorder import DbRecorder, upsert_usage
 from orbit_api.sessions.report import generate_report
 from orbit_api.workspaces.routes import owned_workspace, workspace_document_ids
@@ -286,6 +287,7 @@ async def end_session(session_id: str, user: Annotated[User, Depends(current_use
         # same job instead of adding a second LLM call.
         await jobs.enqueue(db, "report", {"session_id": row.id}, jobs.report_key(row.id))
         await db.commit()
+    companion.stop_sharing(row.id)
     return await _session_out(db, row)
 
 
@@ -301,6 +303,7 @@ async def retry_report(session_id: str, user: Annotated[User, Depends(require_ve
     if current not in ("pending", "ready"):
         await jobs.enqueue(db, "report", {"session_id": row.id}, jobs.report_key(row.id))
         await db.commit()
+    companion.stop_sharing(row.id)
     return await _session_out(db, row)
 
 
@@ -622,6 +625,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
     send_lock = asyncio.Lock()
 
     async def send(msg: dict[str, Any]) -> None:
+        companion.publish(session_id, msg)  # phones first: they keep following even if this socket just dropped
         async with send_lock:
             await ws.send_text(json.dumps(msg, separators=(",", ":")))
 

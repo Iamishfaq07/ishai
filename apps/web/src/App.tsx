@@ -5,6 +5,7 @@ import { Spinner } from "./components/ui";
 import { useAuth } from "./lib/auth";
 import { useDocumentTitle } from "./lib/useDocumentTitle";
 import { BillingPage } from "./pages/Billing";
+import { CompanionPage } from "./pages/Companion";
 import { DocumentsPage } from "./pages/Documents";
 import { HomePage } from "./pages/Home";
 import { LivePage } from "./pages/Live";
@@ -46,6 +47,7 @@ const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/billing/, "Billing"],
   [/^\/settings/, "Settings"],
   [/^\/live\//, "Live session"],
+  [/^\/companion/, "Phone companion"],
   [/^\/login/, "Sign in"],
   [/^\/register/, "Create account"],
   [/^\/forgot-password/, "Reset password"],
@@ -69,6 +71,8 @@ export function App() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
+      {/* Public: the scanned code is the credential, so the phone needn't sign in. */}
+      <Route path="/companion" element={<CompanionPage />} />
       <Route
         path="/live/:sessionId"
         element={

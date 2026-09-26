@@ -49,7 +49,13 @@ export function parseServerFrame(raw: string): ServerEvent | null {
   return isServerEvent(value) ? value : null;
 }
 
-export function toWebSocketUrl(apiBaseUrl: string, sessionId: string, ticket: string): string {
+/** `live` is the owner's two-way socket; `view` is the phone companion's read-only mirror of it. */
+export function toWebSocketUrl(
+  apiBaseUrl: string,
+  sessionId: string,
+  ticket: string,
+  path: "live" | "view" = "live",
+): string {
   const base = apiBaseUrl.replace(/\/+$/, "").replace(/^http/i, "ws");
-  return `${base}/v1/sessions/${encodeURIComponent(sessionId)}/live?ticket=${encodeURIComponent(ticket)}`;
+  return `${base}/v1/sessions/${encodeURIComponent(sessionId)}/${path}?ticket=${encodeURIComponent(ticket)}`;
 }

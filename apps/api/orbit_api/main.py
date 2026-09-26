@@ -30,6 +30,7 @@ from orbit_api.providers.stt import create_stt_provider
 from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.runtime_config import refresh as refresh_runtime_config
 from orbit_api.sessions.cleanup import running_sweeper
+from orbit_api.sessions.companion import router as companion_router
 from orbit_api.sessions.insights import router as insights_router
 from orbit_api.sessions.recorder import replay_failed_writes
 from orbit_api.sessions.routes import drain_teardowns
@@ -146,6 +147,7 @@ def create_app() -> FastAPI:
     app.include_router(billing_router)
     app.include_router(prep_router)
     app.include_router(insights_router)
+    app.include_router(companion_router)
     return app
 
 

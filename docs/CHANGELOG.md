@@ -1,5 +1,25 @@
 # Implementation log
 
+## Phone companion (2026-09-26)
+
+A second screen on your phone, the way competitors pair a phone with the desktop app:
+
+- **Phone** button in the live panel header (web + desktop): a QR code for `<web>/companion#<code>`, Copy link and
+  Stop sharing. The phone needs no sign-in and captures nothing: it shows the current question and answer, lets you
+  flip through earlier answers and pin one (on the phone only), keeps its screen awake, and says when the session
+  has ended.
+- API (`sessions/companion.py`): `POST /v1/sessions/{id}/companion` (owner; the same code while valid) and
+  `DELETE` (revoke + disconnect phones); `POST /v1/companion/{code}` (public, rate-limited; the 256-bit code is the
+  credential) → a single-use 60 s ticket; `WS /v1/sessions/{id}/view?ticket=` mirrors the live socket's events
+  (minus interim transcript), replaying the last 400 so a phone joining late catches up. Up to 3 phones; each has
+  its own bounded queue so a slow phone never delays the session. Codes expire after 4 h and are revoked when the
+  session ends (live end, REST end, or the abandoned-session sweep).
+- The code travels in the URL fragment (never sent to a server or logged) and the page removes it from the address
+  bar once read.
+- Tests: `tests/test_companion.py` (stable owner-only codes and revocation, single-use session-bound tickets,
+  mirrored events with replay and read-only socket, disconnect on end, viewer limit); client `view` socket URL and
+  QR size.
+
 ## Speaking feedback, progress, custom instructions, follow-ups (2026-09-25)
 
 From a competitor review (Yoodli-style delivery coaching, progress tracking, Final Round-style debriefs and

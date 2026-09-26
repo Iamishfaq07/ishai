@@ -30,6 +30,8 @@ export interface AnswerCardProps {
   /** Re-answer the same question shorter / longer (null = already at that end of the scale). */
   onShorter?: (() => void) | null;
   onLonger?: (() => void) | null;
+  /** Phone companion: a mirror of the session, so nothing here can act on it (no "Try again"). */
+  readOnly?: boolean;
 }
 
 /** Answer text with "[fill in]" prompts rendered as distinct chips so they're never read out verbatim. */
@@ -209,7 +211,7 @@ function SectionLabel({ children, block = false }: { children: string; block?: b
 
 export function AnswerCard({
   answer, pinned, onPin, onRetry, compact = false, autoAnswer, progress, onTogglePoint, reader, onCodeLanguage,
-  onShorter, onLonger,
+  onShorter, onLonger, readOnly = false,
 }: AnswerCardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showExample, setShowExample] = useState(false);
@@ -352,7 +354,7 @@ export function AnswerCard({
         {answer.status === "failed" && (
           <div className="rounded-lg border border-rose-300/60 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
             <p>{answer.error?.message ?? "The answer couldn’t be generated."}</p>
-            {answer.error?.retryable !== false && (
+            {answer.error?.retryable !== false && !readOnly && (
               <button type="button" onClick={onRetry} className={cx("mt-2 font-medium underline", focusRing)}>
                 Try again
               </button>

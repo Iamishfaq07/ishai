@@ -4,6 +4,7 @@ import { AUDIO_CHANNEL, type OrbitSession } from "@orbit/types";
 import {
   ArrowLeft,
   ApiError,
+  CompanionShare,
   Headphones,
   LivePanel,
   Mic,
@@ -270,6 +271,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       screenshotUnavailableReason={!VISION_ENABLED ? "Screenshot analysis isn’t enabled yet." : "This browser can’t capture the screen."}
       hotkeys={hotkeys}
       title={session.title}
+      headerEnd={<CompanionShare api={api} sessionId={session.id} webUrl={window.location.origin} disabled={live.state === "ended"} />}
       notice={notice}
       overlay={
         shot ? (

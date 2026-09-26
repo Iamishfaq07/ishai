@@ -342,6 +342,21 @@ export interface LiveTicket {
   expires_in: number;
 }
 
+// ─── Phone companion ─────────────────────────────────────────────────────────
+
+/** POST /v1/sessions/{id}/companion — the code a phone scans (valid until the session ends or `expires_in` s). */
+export interface CompanionShare {
+  code: string;
+  expires_in: number;
+}
+
+/** POST /v1/companion/{code} (no login) — a single-use ticket for WS /v1/sessions/{id}/view. */
+export interface CompanionView {
+  session_id: string;
+  title: string;
+  ticket: string;
+}
+
 // ─── Screenshots (Phase 7) ───────────────────────────────────────────────────
 
 /** POST /v1/sessions/{id}/screenshots (multipart `image`); the answer streams over the live socket. */

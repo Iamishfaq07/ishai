@@ -5,6 +5,7 @@ import {
   PinOff,
   X,
   ApiError,
+  CompanionShare,
   LivePanel,
   answerAsText,
   base64ToBlob,
@@ -24,7 +25,7 @@ import {
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { API_URL, api } from "../api";
+import { API_URL, WEB_URL, api } from "../api";
 import {
   REGION_CAPTURED_EVENT,
   base64ToBytes,
@@ -257,6 +258,7 @@ export function LiveScreen({
       notice={notice}
       headerEnd={
         <>
+          <CompanionShare api={api} sessionId={session.id} webUrl={WEB_URL} disabled={live.state === "ended"} />
           <button
             type="button"
             onClick={() => setOnTop((v) => !v)}
