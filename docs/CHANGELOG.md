@@ -1,5 +1,14 @@
 # Implementation log
 
+## English only (2026-09-26)
+
+- The language pickers are gone from web setup ("Listen in", "Answer in"), the web mock form and desktop setup:
+  every session listens and answers in English.
+- The API pins it too: `language` is always stored as `en` and `answer_language` as none for new sessions and saved
+  setups (older clients or saved setups that send another language get English), live sessions run in English even
+  for older rows, and a live `settings.update` can't change the answer language. The fields stay in the API for
+  compatibility. Test: `tests/test_english_only.py`.
+
 ## Salary negotiation practice (2026-09-26)
 
 - **Practice → Mock interview → Salary negotiation** (web + desktop): enter the offer (and optionally the company
