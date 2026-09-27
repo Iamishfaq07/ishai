@@ -41,8 +41,10 @@ def _register(c: TestClient, email: str | None = None, **extra: object) -> tuple
     email = email or _email()
     r = c.post("/v1/auth/register", json={"email": email, "password": PW, **extra}, headers={"Origin": WEB})
     assert r.status_code == 201, r.text
+    assert r.json()["access_token"] is None  # the web app's session lives only in the httpOnly cookie
+    token = c.cookies.get("orbit_session")
     c.cookies.clear()
-    return email, {"Authorization": f"Bearer {r.json()['access_token']}"}
+    return email, {"Authorization": f"Bearer {token}"}
 
 
 def _verify(c: TestClient, email: str) -> None:

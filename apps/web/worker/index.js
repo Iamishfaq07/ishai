@@ -24,6 +24,14 @@ async function proxyToApi(request, env, url) {
   const clientIp = request.headers.get("cf-connecting-ip");
   if (clientIp) proxied.headers.set("x-forwarded-for", clientIp);
   else proxied.headers.delete("x-forwarded-for");
+  // With the shared secret (wrangler secret PROXY_SECRET = the API's ORBIT_PROXY_SECRET) the API believes the
+  // client IP stated here and nothing a caller sends directly; never forward a client's own copy of either header.
+  proxied.headers.delete("x-orbit-proxy-secret");
+  proxied.headers.delete("x-orbit-client-ip");
+  if (env.PROXY_SECRET && clientIp) {
+    proxied.headers.set("x-orbit-proxy-secret", env.PROXY_SECRET);
+    proxied.headers.set("x-orbit-client-ip", clientIp);
+  }
   return fetch(proxied);
 }
 

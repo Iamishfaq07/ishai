@@ -1,11 +1,12 @@
 """Small in-process token-bucket limiter. Swap for Redis when running more than one API instance.
 
 Keys are per client IP (`limit`), per signed-in user (`limit_user`), or any caller-chosen key (`check`, e.g. per
-email address on login, so credential stuffing spread over many IPs is still throttled). Client IPs come from
-`X-Forwarded-For` only because uvicorn runs with `--forwarded-allow-ips` behind the host's proxy; without it every
-request would share the proxy's address, and so one bucket.
+email address on login, so credential stuffing spread over many IPs is still throttled). See `client_ip` for where
+the address comes from.
 """
 
+import hmac
+import ipaddress
 import time
 import weakref
 from collections.abc import Awaitable, Callable
@@ -45,8 +46,36 @@ class TokenBucket:
         return True
 
 
+PROXY_SECRET_HEADER = "x-orbit-proxy-secret"  # noqa: S105 - a header name, not a secret
+CLIENT_IP_HEADER = "x-orbit-client-ip"
+
+
+def _valid_ip(value: str | None) -> str | None:
+    if not value:
+        return None
+    try:
+        return str(ipaddress.ip_address(value.strip()))
+    except ValueError:
+        return None
+
+
 def client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
+    """The caller's IP, for rate limits and the audit log.
+
+    Without ORBIT_PROXY_SECRET: uvicorn's --proxy-headers already put the left-most X-Forwarded-For entry here. With
+    it: the web app's edge proxy (which knows the secret) states the real client IP; any other request is keyed by
+    the right-most X-Forwarded-For entry, the one the host's own edge appended (a client can only add entries to
+    the left), so spoofing the header no longer moves a caller into a fresh bucket.
+    """
+    fallback = request.client.host if request.client else "unknown"
+    secret = get_settings().proxy_secret
+    if secret is None:
+        return fallback
+    sent = request.headers.get(PROXY_SECRET_HEADER, "")
+    if sent and hmac.compare_digest(sent.encode(), secret.get_secret_value().encode()):
+        return _valid_ip(request.headers.get(CLIENT_IP_HEADER)) or fallback
+    hops = [h for h in ",".join(request.headers.getlist("x-forwarded-for")).split(",") if h.strip()]
+    return (_valid_ip(hops[-1]) if hops else None) or fallback
 
 
 def check(bucket: TokenBucket, key: str, message: str = TOO_MANY) -> None:

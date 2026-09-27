@@ -174,6 +174,10 @@ async def _github_download_url(release: GitHubRelease) -> str | None:
 
 
 def _public_url(request: Request, **params: str) -> str:
+    base = get_settings().api_public_url
+    if base:  # never derive a download link from the request's Host header when the real address is known
+        path = request.app.url_path_for("download_installer", **params)
+        return base.rstrip("/") + str(path)
     url = str(request.url_for("download_installer", **params))
     # Behind Render/Cloudflare the app sees plain http; the updater should get the https URL clients used.
     if request.headers.get("x-forwarded-proto") == "https" and url.startswith("http://"):

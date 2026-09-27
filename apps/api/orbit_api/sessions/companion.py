@@ -29,6 +29,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user
+from orbit_api.csrf import websocket_origin_allowed
 from orbit_api.db import get_db
 from orbit_api.models import LiveSessionRow, User
 from orbit_api.ratelimit import limit
@@ -175,6 +176,9 @@ async def redeem(code: str) -> RedeemOut:
 
 @router.websocket("/sessions/{session_id}/view")
 async def view(ws: WebSocket, session_id: str, ticket: str = "") -> None:
+    if not websocket_origin_allowed(ws.headers.get("origin")):
+        await ws.close(code=1008, reason="origin not allowed")
+        return
     entry = _view_tickets.pop(ticket, None)
     if entry is None or entry[0] != session_id or entry[1] < time.monotonic():
         await ws.close(code=4001, reason="invalid or expired ticket")

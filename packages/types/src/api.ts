@@ -48,10 +48,13 @@ export interface LoginRequest {
   password: string;
 }
 
-/** Web clients rely on the httpOnly cookie; desktop stores access_token in the OS keychain. */
+/**
+ * Web clients rely on the httpOnly cookie (the API leaves `access_token` out for the web app's own origin);
+ * desktop stores access_token in the OS keychain.
+ */
 export interface AuthResponse {
   user: User;
-  access_token: string;
+  access_token?: string | null;
 }
 
 // ─── Documents ───────────────────────────────────────────────────────────────

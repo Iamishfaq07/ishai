@@ -18,4 +18,6 @@
   // service uses ~744 of Render's 750 free instance-hours a month.
   "triggers": { "crons": ["*/10 * * * *"] },
   "vars": { "API_URL": "https://orbit-api-5kcx.onrender.com" }
+  // Secret (not a var): `wrangler secret put PROXY_SECRET` with the API's ORBIT_PROXY_SECRET, so the API can trust
+  // the client IP this Worker forwards (apps/web/worker/index.js).
 }

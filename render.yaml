@@ -30,6 +30,14 @@ services:
         sync: false
       - key: ORBIT_CORS_ORIGINS # JSON array incl. the Pages URL + tauri origins
         sync: false
+      # This service's own https URL (e.g. https://orbit-api-5kcx.onrender.com): links it hands out (desktop
+      # installer downloads) are built from it, never from the request's Host header.
+      - key: ORBIT_API_PUBLIC_URL
+        sync: false
+      # 32+ random chars, the same value as the web Worker's secret (`wrangler secret put PROXY_SECRET`): only
+      # the Worker may then state a caller's IP; per-IP rate limits can't be dodged by faking X-Forwarded-For.
+      - key: ORBIT_PROXY_SECRET
+        sync: false
       # Desktop auto-update from GitHub Releases (Render free has no disk for ORBIT_DESKTOP_UPDATES_DIR).
       - key: ORBIT_UPDATES_GITHUB_REPO
         value: Iamishfaq07/ishai

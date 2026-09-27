@@ -14,24 +14,32 @@ on:
 permissions:
   contents: write # create the release + upload assets
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with: { persist-credentials: false }
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with: { workspaces: apps/desktop/src-tauri }
 
       - name: Resolve version
         id: ver
         shell: bash
+        env:
+          # Via env, never ${{ }} inside the script: a crafted input would otherwise run as shell code.
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [[ -n "${{ inputs.version }}" ]]; then V="${{ inputs.version }}"; else V="${GITHUB_REF_NAME#v}"; fi
+          if [[ -n "$INPUT_VERSION" ]]; then V="$INPUT_VERSION"; else V="${GITHUB_REF_NAME#v}"; fi
           [[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "bad version: $V"; exit 1; }
           echo "version=$V" >> "$GITHUB_OUTPUT"
 
@@ -52,17 +60,18 @@ jobs:
           WINDOWS_SIGN_COMMAND: ${{ vars.WINDOWS_SIGN_COMMAND }}
           # Set the repo variable ORBIT_REQUIRE_SIGNING=true once a certificate exists: unsigned releases then fail.
           REQUIRE_SIGNING: ${{ vars.ORBIT_REQUIRE_SIGNING }}
+          VERSION: ${{ steps.ver.outputs.version }}
         run: |
           if [[ "$REQUIRE_SIGNING" == "true" && -z "$WINDOWS_SIGN_COMMAND" ]]; then
             echo "::error::ORBIT_REQUIRE_SIGNING=true but WINDOWS_SIGN_COMMAND is not set; refusing an unsigned release."
             exit 1
           fi
           if [[ -n "$WINDOWS_SIGN_COMMAND" ]]; then
-            CONFIG=$(jq -nc --arg v "${{ steps.ver.outputs.version }}" --arg s "$WINDOWS_SIGN_COMMAND" \
+            CONFIG=$(jq -nc --arg v "$VERSION" --arg s "$WINDOWS_SIGN_COMMAND" \
               '{version:$v, bundle:{windows:{signCommand:$s}}}')
             echo "Authenticode signing enabled."
           else
-            CONFIG=$(jq -nc --arg v "${{ steps.ver.outputs.version }}" '{version:$v}')
+            CONFIG=$(jq -nc --arg v "$VERSION" '{version:$v}')
             echo "No WINDOWS_SIGN_COMMAND set — building unsigned (SmartScreen will warn)."
           fi
           pnpm --filter @orbit/desktop tauri build --bundles nsis --config "$CONFIG"
@@ -76,7 +85,7 @@ jobs:
           ./scripts/verify-authenticode.ps1 -Files $inst.FullName, "$env:RUNNER_TEMP/sigcheck/orbit-desktop.exe", "$env:RUNNER_TEMP/sigcheck/uninstall.exe"
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: v${{ steps.ver.outputs.version }}
           name: Orbit ${{ steps.ver.outputs.version }}

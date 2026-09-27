@@ -27,6 +27,7 @@ from orbit_api import jobs
 from orbit_api.auth.guards import require_verified_user
 from orbit_api.auth.security import TICKET_TTL_S, current_user, issue_ticket, redeem_ticket
 from orbit_api.config import get_settings
+from orbit_api.csrf import websocket_origin_allowed
 from orbit_api.db import get_db, sessionmaker
 from orbit_api.entitlements import minutes_metric, minutes_remaining, plan_for, usage_this_month
 from orbit_api.live.engine import LiveEngine, SessionProfile
@@ -593,6 +594,9 @@ async def _meter_live_minutes(ws: WebSocket, engine: LiveEngine, user_id: str, s
 
 @router.websocket("/sessions/{session_id}/live")
 async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
+    if not websocket_origin_allowed(ws.headers.get("origin")):  # before redeeming: a hostile page can't burn it
+        await ws.close(code=1008, reason="origin not allowed")
+        return
     user_id = redeem_ticket(ticket, session_id)
     # Correlation ids for every log line of this live session (tasks created below inherit them).
     session_id_var.set(session_id)
