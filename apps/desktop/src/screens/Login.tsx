@@ -25,6 +25,7 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
     setError(null);
     try {
       const res = await api.login({ email, password });
+      if (!res.access_token) throw new Error("The server didn't return a sign-in token. Check the server address.");
       setAccessToken(res.access_token);
       await saveToken(res.access_token).catch((err: unknown) =>
         console.warn("Couldn't store token in the OS keychain; you'll need to sign in next launch.", err),

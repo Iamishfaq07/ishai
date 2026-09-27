@@ -94,6 +94,19 @@ class Settings(BaseSettings):
         None, validation_alias=AliasChoices("ORBIT_UPDATES_GITHUB_TOKEN")
     )
     web_url: str = Field("http://localhost:5173", validation_alias=AliasChoices("ORBIT_WEB_URL"))
+    # The API's own public base URL (e.g. https://orbit-api.onrender.com). When set, links the API hands out (desktop
+    # installer downloads) are built from it instead of the request's Host header.
+    api_public_url: str | None = Field(None, validation_alias=AliasChoices("ORBIT_API_PUBLIC_URL"))
+    # SameSite for the session cookie. The web app reaches the API through its own /api proxy (same site), so Lax
+    # works and blocks the cookie on cross-site requests. "none" only for a web app that calls the API cross-site.
+    cookie_samesite: Literal["lax", "strict", "none"] = Field(
+        "lax", validation_alias=AliasChoices("ORBIT_COOKIE_SAMESITE")
+    )
+    # Shared with the web app's edge proxy (wrangler secret PROXY_SECRET). Requests carrying it may state the real
+    # client IP (X-Orbit-Client-IP); every other request is keyed by the address the host's own edge recorded
+    # (right-most X-Forwarded-For), so a caller can't pick its own IP to dodge per-IP limits. Unset = trust the
+    # left-most X-Forwarded-For (uvicorn's --proxy-headers).
+    proxy_secret: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_PROXY_SECRET"))
     smtp_host: str | None = Field(None, validation_alias=AliasChoices("ORBIT_SMTP_HOST"))
     smtp_port: int = Field(587, validation_alias=AliasChoices("ORBIT_SMTP_PORT"))
     smtp_username: str | None = Field(None, validation_alias=AliasChoices("ORBIT_SMTP_USERNAME"))
@@ -167,6 +180,10 @@ class Settings(BaseSettings):
 
                 if not isinstance(json.loads(self.fallback_llm_extra_json), dict):
                     raise ValueError("ORBIT_FALLBACK_LLM_EXTRA_JSON must be a JSON object")
+            if "*" in self.cors_origins:
+                raise ValueError("ORBIT_CORS_ORIGINS must list exact origins in production (no '*')")
+            if self.proxy_secret is not None and len(self.proxy_secret.get_secret_value()) < 32:
+                raise ValueError("ORBIT_PROXY_SECRET must be a random value of 32+ chars")
             if self.api_replicas != 1:
                 raise ValueError("ORBIT_API_REPLICAS must be 1: live-session state is process-local (tickets, "
                                  "socket ownership, screenshot routing, rate limits). See docs/DECISIONS.md D12.")

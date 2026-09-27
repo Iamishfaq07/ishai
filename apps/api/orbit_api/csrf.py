@@ -62,6 +62,12 @@ def allowed_origins() -> set[str]:
     return out
 
 
+def websocket_origin_allowed(origin: str | None) -> bool:
+    """Browsers always send Origin on a WebSocket handshake: only our own frontends may open one (defence in depth;
+    the single-use ticket, minted by a CSRF-protected POST, is the real credential). No Origin = not a browser."""
+    return origin is None or origin.rstrip("/").lower() in allowed_origins()
+
+
 def _reject(code: str, message: str) -> Response:
     return JSONResponse({"error": {"code": code, "message": message}}, status_code=403)
 

@@ -98,7 +98,13 @@ class NoEmailSender(EmailSender):
     name = "disabled"
 
     async def send(self, email: OutgoingEmail) -> None:
-        log.info("email disabled (no SMTP configured); dropping %r to %s", email.subject, email.to)
+        log.info("email disabled (no SMTP configured); dropping %r to %s", email.subject, mask_email(email.to))
+
+
+def mask_email(address: str) -> str:
+    """`jane.doe@example.com` → `j***@example.com`: enough to tell recipients apart in logs, not a mailing list."""
+    local, _, domain = address.partition("@")
+    return f"{local[:1]}***@{domain}" if domain else "***"
 
 
 @lru_cache

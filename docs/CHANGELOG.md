@@ -1,5 +1,29 @@
 # Implementation log
 
+## Security review (2026-09-27)
+
+Full review (secrets, SCA, SAST, manual review, DAST): [SECURITY_REVIEW.md](SECURITY_REVIEW.md).
+- **CI:**
+  - Fixed script injection in the release workflow.
+  - Every action is pinned to a commit SHA, and checkouts use `persist-credentials: false`.
+  - New `security` job: pip-audit, bandit and pnpm audit.
+  - Dependabot covers Docker.
+- **Sign-in:**
+  - The web app no longer receives the session token in JSON (httpOnly cookie only).
+  - The cookie is `SameSite=Lax` in production.
+  - Auth asserts are explicit 401s.
+- **Client IPs:** can't be spoofed when `ORBIT_PROXY_SECRET` is set; the Worker states the real one.
+- **Web app:** a CSP (built from the finished `index.html`), HSTS, `nosniff`, frame denial, COOP and a
+  Permissions-Policy.
+- **API:**
+  - Request bodies are capped (413).
+  - WebSockets refuse foreign origins.
+  - Update links come from `ORBIT_API_PUBLIC_URL`.
+  - Dropped-email logs mask the address.
+  - No `server` banner.
+- **Images and desktop:** base images are pinned by digest, and the desktop CSP adds `object-src`, `base-uri`,
+  `form-action` and `frame-src 'none'`.
+
 ## Phones, accessibility and loose ends (2026-09-26)
 
 - **Nothing scrolls sideways on phones.** Checked every page at 320 px and 390 px wide. Fixed:

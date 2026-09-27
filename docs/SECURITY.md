@@ -13,7 +13,10 @@ What protects what, and where it lives in the code. Report issues privately to t
 ## Authentication
 - Passwords use argon2, and JWTs carry `token_version`. A password reset or "sign out everywhere" bumps the
   version, which kills every existing session on web and desktop.
-- **Web:** httpOnly `SameSite=None; Secure` cookie (the API and web app are on different sites).
+- **Web:** httpOnly `SameSite=Lax; Secure` cookie. The web app calls the API through its own `/api` proxy, so the
+  cookie is first-party (`ORBIT_COOKIE_SAMESITE=none` only for a web app that calls the API cross-site). Auth
+  responses to the web app's own origin (`ORBIT_WEB_URL`) carry no `access_token`, so script on the page can never
+  read a long-lived credential.
 - **Desktop:** Bearer token in Windows Credential Manager.
 - The **WebSocket** uses single-use, 60 s tickets minted by an authenticated POST. No long-lived token appears in
   a URL (D7).
@@ -37,8 +40,8 @@ What protects what, and where it lives in the code. Report issues privately to t
   - the admin (`ORBIT_ADMIN_EMAIL`) is exempt.
 
 ## CSRF (`csrf.py`)
-The session cookie is `SameSite=None`, so a browser attaches it to requests any site triggers. For
-POST/PUT/PATCH/DELETE:
+`SameSite=Lax` already keeps the cookie off cross-site POSTs; this is defence in depth (and covers deployments
+that set `ORBIT_COOKIE_SAMESITE=none`). For POST/PUT/PATCH/DELETE:
 1. `Origin` (or `Referer`) must be a configured frontend (`ORBIT_CORS_ORIGINS` + `ORBIT_WEB_URL`). Unknown origins
    are refused even when signed out, which also blocks login CSRF.
 2. Requests carrying the cookie must send `X-CSRF-Token`. It's an HMAC of user id and token version, handed out in
@@ -63,9 +66,14 @@ In-process token buckets. They move to Redis before the API runs more than one i
 | AI review | IP + user | 3 burst, 10 / hour per user |
 | Uploads / preflight | IP | 10 burst / 6 burst |
 
-Client IPs come from `X-Forwarded-For`. The container runs uvicorn with `--forwarded-allow-ips='*'` because it's
-reachable only through the host's proxy. Without that flag every request would share the proxy's IP, and with it
-one bucket.
+Client IPs (`ratelimit.client_ip`): the container runs uvicorn with `--forwarded-allow-ips='*'` because it's
+reachable only through the host's proxy; without that flag every request would share the proxy's IP, and so one
+bucket. But the left-most `X-Forwarded-For` entry is whatever a caller who reaches the API directly writes there. With
+`ORBIT_PROXY_SECRET` set (the same value as the web Worker's `PROXY_SECRET`), only the Worker may state the client IP
+(`X-Orbit-Client-IP`); every other request is keyed by the right-most entry, the one the host's own edge appended.
+Sign-in is also limited per target email, so rotating IPs never buys more password guesses.
+
+Request bodies are capped at the upload limit + 1 MB (`main.BodyLimit`, 413) before anything buffers them.
 
 ## Bot protection (`auth/captcha.py`)
 - **Scope:** sign-up and password-reset requests.
@@ -107,6 +115,29 @@ The API refuses to boot in production with:
 - **Boot self-test.** At boot the API parses a tiny generated DOCX through the isolated path. If child processes
   don't work on the host, it logs a critical error (which reaches Sentry when enabled) and parses in-process, with
   the archive checks still applied, rather than rejecting every upload.
+
+## Web app headers (`apps/web/vite.config.ts` → `dist/_headers`)
+Generated at build time so they can't go stale:
+- **CSP:** `default-src 'self'`; scripts from self, the inline theme script by SHA-256 hash (computed from the built
+  `index.html`) and Cloudflare Turnstile; `connect-src` limited to self plus the API/live origins this build uses;
+  `object-src 'none'`, `base-uri 'none'`, `form-action 'self'`, `frame-ancestors 'none'`, `upgrade-insecure-requests`.
+- **Also:** HSTS (2 years), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, COOP `same-origin`,
+  and a `Permissions-Policy` that allows only the microphone and screen capture, only for the app itself.
+
+The API sends its own: CSP `default-src 'none'`, `nosniff`, `DENY`, `no-store`, `no-referrer`, and HSTS in
+production. Links it hands out (desktop installer downloads) come from `ORBIT_API_PUBLIC_URL` when set, never from
+the request's `Host` header.
+
+## Supply chain (`.github/`)
+- Every third-party action is pinned to a full commit SHA, with the version as a comment. Dependabot bumps them.
+- Checkouts use `persist-credentials: false`. The default token is read-only, except the release job, which needs
+  `contents: write`.
+- Workflow inputs reach shell scripts only through `env:`, never `${{ }}` inside `run:` (script injection).
+- The API image's base images are pinned by digest, and Dependabot covers pip, npm, cargo, actions and docker.
+- **CI `security` job:** `pip-audit` (the locked API dependencies), `bandit` (medium severity and up) and
+  `pnpm audit --audit-level high`. The `secrets` job runs gitleaks over the full history.
+
+The full review, its method and its accepted risks are in [SECURITY_REVIEW.md](SECURITY_REVIEW.md).
 
 ## Data handling
 - Screenshots are analysed and discarded, and audio is never written to disk.

@@ -96,17 +96,24 @@ def test_document_edit_rechunks_and_enforces_ownership(client: TestClient) -> No
     assert client.patch(f"/v1/documents/{doc_id}", headers=other, json={"title": "hijack"}).status_code == 404
 
 
-def test_session_cookie_is_cross_site_in_production(monkeypatch: Any) -> None:
-    # Web (Cloudflare) and API (Render) are different sites, so the session cookie must be
-    # SameSite=None; Secure in production or the browser drops it and login "bounces".
+def test_session_cookie_policy(monkeypatch: Any) -> None:
+    # The web app reaches the API through its own /api proxy (first-party), so production uses SameSite=Lax;
+    # Secure. SameSite=None stays available for a web app that calls the API cross-site.
     from types import SimpleNamespace
 
     from orbit_api.auth import routes
 
-    monkeypatch.setattr(routes, "get_settings", lambda: SimpleNamespace(env="production", jwt_ttl_minutes=60))
+    def env(name: str, samesite: str = "lax") -> None:
+        monkeypatch.setattr(routes, "get_settings", lambda: SimpleNamespace(env=name, cookie_samesite=samesite))
+
+    env("production")
+    assert routes._cookie_policy() == (True, "lax")
+    env("production", "none")
     assert routes._cookie_policy() == (True, "none")
-    monkeypatch.setattr(routes, "get_settings", lambda: SimpleNamespace(env="development", jwt_ttl_minutes=60))
+    env("development")
     assert routes._cookie_policy() == (False, "lax")
+    env("development", "none")
+    assert routes._cookie_policy() == (True, "none")  # browsers reject SameSite=None without Secure
 
 
 def test_free_plan_document_quota(client: TestClient) -> None:

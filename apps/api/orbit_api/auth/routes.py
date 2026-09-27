@@ -1,5 +1,6 @@
 import json
 from typing import Annotated, Literal
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
@@ -23,7 +24,7 @@ from orbit_api.csrf import token_for as csrf_token_for
 from orbit_api.db import get_db
 from orbit_api.models import AuditLog, User
 from orbit_api.providers.email import OutgoingEmail, send_safely
-from orbit_api.ratelimit import TokenBucket, check, limit
+from orbit_api.ratelimit import TokenBucket, check, client_ip, limit
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 auth_limit = limit("auth", rate_per_s=0.2, burst=10)
@@ -63,7 +64,9 @@ class UserOut(BaseModel):
 
 class AuthOut(BaseModel):
     user: UserOut
-    access_token: str
+    # Bearer token for the desktop app (kept in the OS keychain). Left out for the web app, whose session lives only
+    # in the httpOnly cookie, so script on the page (an XSS) can never read a long-lived credential.
+    access_token: str | None = None
 
 
 def _user_out(u: User, *, with_csrf: bool = False) -> UserOut:
@@ -72,12 +75,27 @@ def _user_out(u: User, *, with_csrf: bool = False) -> UserOut:
                    csrf_token=csrf_token_for(u.id, u.token_version) if with_csrf else None)
 
 
-def _cookie_policy() -> tuple[bool, Literal["lax", "none"]]:
-    """(secure, samesite). In production the web app and API are usually on different sites
-    (e.g. Cloudflare + Render), so the session cookie must be SameSite=None; Secure to be sent
-    cross-site. Locally (same-site over http) SameSite=Lax without Secure works."""
-    cross_site = get_settings().env == "production"
-    return (True, "none") if cross_site else (False, "lax")
+def _cookie_policy() -> tuple[bool, Literal["lax", "strict", "none"]]:
+    """(secure, samesite). In production the web app reaches the API through its own /api proxy, so the cookie is
+    first-party and SameSite=Lax (ORBIT_COOKIE_SAMESITE) keeps it off cross-site requests; always Secure there.
+    Locally (same-site over plain http) Lax without Secure."""
+    s = get_settings()
+    if s.env == "production":
+        return True, s.cookie_samesite
+    return (True, "none") if s.cookie_samesite == "none" else (False, s.cookie_samesite)
+
+
+def _origin(url: str) -> str:
+    parts = urlsplit(url)
+    return f"{parts.scheme}://{parts.netloc}".lower()
+
+
+def _auth_out(request: Request, response: Response, user: User) -> AuthOut:
+    """Sign `user` in: session cookie for browsers, and a Bearer token unless the caller is the web app itself."""
+    token = create_access_token(user.id, user.token_version)
+    _set_cookie(response, token)
+    from_web = request.headers.get("origin", "").rstrip("/").lower() == _origin(get_settings().web_url)
+    return AuthOut(user=_user_out(user, with_csrf=True), access_token=None if from_web else token)
 
 
 def _set_cookie(response: Response, token: str) -> None:
@@ -94,7 +112,8 @@ def _clear_cookie(response: Response) -> None:
 
 
 def _ip(request: Request) -> str | None:
-    return request.client.host if request.client else None
+    ip = client_ip(request)
+    return None if ip == "unknown" else ip
 
 
 class AuthConfigOut(BaseModel):
@@ -127,9 +146,7 @@ async def register(body: RegisterIn, request: Request, response: Response,
     verify = await email_tokens.issue(db, user.id, "verify_email")
     await db.commit()
     await send_safely(_verification_email(user.email, verify))
-    token = create_access_token(user.id, user.token_version)
-    _set_cookie(response, token)
-    return AuthOut(user=_user_out(user, with_csrf=True), access_token=token)
+    return _auth_out(request, response, user)
 
 
 @router.post("/login", response_model=AuthOut, dependencies=[Depends(auth_limit)])
@@ -146,9 +163,7 @@ async def login(body: LoginIn, request: Request, response: Response,
         user.password_hash = await hash_password(body.password)
     db.add(AuditLog(user_id=user.id, action="auth.login", ip=_ip(request)))
     await db.commit()
-    token = create_access_token(user.id, user.token_version)
-    _set_cookie(response, token)
-    return AuthOut(user=_user_out(user, with_csrf=True), access_token=token)
+    return _auth_out(request, response, user)
 
 
 @router.post("/logout", status_code=204)
@@ -173,7 +188,8 @@ class PrivacyIn(BaseModel):
 async def update_privacy(body: PrivacyIn, user: Annotated[User, Depends(current_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> UserOut:
     u = await db.get(User, user.id)
-    assert u is not None
+    if u is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not signed in.")
     if body.store_transcripts is not None:
         u.store_transcripts = body.store_transcripts
     await db.commit()
@@ -294,16 +310,15 @@ async def confirm_password_reset(body: ResetConfirmIn, request: Request, respons
     user.email_verified = True  # they just proved control of the inbox
     db.add(AuditLog(user_id=user.id, action="auth.password_reset", ip=_ip(request)))
     await db.commit()
-    token = create_access_token(user.id, user.token_version)
-    _set_cookie(response, token)
-    return AuthOut(user=_user_out(user, with_csrf=True), access_token=token)
+    return _auth_out(request, response, user)
 
 
 @router.post("/logout-all", status_code=204)
 async def logout_everywhere(request: Request, response: Response, user: Annotated[User, Depends(current_user)],
                             db: Annotated[AsyncSession, Depends(get_db)]) -> Response:
     u = await db.get(User, user.id)
-    assert u is not None
+    if u is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not signed in.")
     u.token_version += 1
     db.add(AuditLog(user_id=u.id, action="auth.logout_all", ip=_ip(request)))
     await db.commit()
@@ -354,7 +369,8 @@ async def request_email_change(body: EmailChangeIn, request: Request, user: Anno
     heads-up to the old one). The email only changes when the link is opened."""
     new_email = body.new_email.lower()
     u = await db.get(User, user.id)
-    assert u is not None
+    if u is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not signed in.")
     if not await verify_password(body.password, u.password_hash):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "That password isn't right.")
     if new_email == u.email:
@@ -386,9 +402,7 @@ async def confirm_email_change(body: TokenIn, request: Request, response: Respon
     user.token_version += 1  # every other session (web + desktop) signs in again
     db.add(AuditLog(user_id=user.id, action="auth.email_changed", target=old, ip=_ip(request)))
     await db.commit()
-    token = create_access_token(user.id, user.token_version)
-    _set_cookie(response, token)
-    return AuthOut(user=_user_out(user, with_csrf=True), access_token=token)
+    return _auth_out(request, response, user)
 
 
 # ---- data export (brief §42) ------------------------------------------------------------------------------

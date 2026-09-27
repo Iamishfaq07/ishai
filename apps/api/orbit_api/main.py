@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.types import Receive, Scope, Send
@@ -95,6 +95,37 @@ class ApiGZip(GZipMiddleware):
         await super().__call__(scope, receive, send)
 
 
+class BodyLimit:
+    """Refuses request bodies over `max_bytes` (413) before anything buffers them: by Content-Length up front, and by
+    counting for chunked uploads. The upload route has its own, smaller per-file check; this bounds everything else
+    (a multi-GB multipart body would otherwise be spooled to disk before any route sees it)."""
+
+    def __init__(self, app: Any, max_bytes: int) -> None:
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        length = dict(scope.get("headers") or []).get(b"content-length")
+        if length is not None and (not length.isdigit() or int(length) > self.max_bytes):
+            await Response("Request body too large.", status_code=413)(scope, receive, send)
+            return
+        seen = 0
+
+        async def counted() -> Any:
+            nonlocal seen
+            message = await receive()
+            if message["type"] == "http.request":
+                seen += len(message.get("body", b""))
+                if seen > self.max_bytes:  # chunked upload past the cap: body parsing stops here (400)
+                    raise HTTPException(413, "Request body too large.")
+            return message
+
+        await self.app(scope, receive if length is not None else counted, send)
+
+
 def create_app() -> FastAPI:
     s = get_settings()
     configured_plans()  # fail fast on a bad ORBIT_PLANS_JSON / *_MAX_SESSION_MINUTES instead of at first use
@@ -123,9 +154,13 @@ def create_app() -> FastAPI:
         response.headers["Cache-Control"] = "no-store"
         if not request.url.path.startswith("/docs"):
             response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+        if s.env == "production":
+            response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
         return response
 
     app.add_middleware(ApiGZip, minimum_size=1024)
+    # Outermost: an oversized body is refused before any other middleware or route reads it.
+    app.add_middleware(BodyLimit, max_bytes=s.max_upload_bytes + 1024 * 1024)
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
