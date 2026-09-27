@@ -14,7 +14,10 @@ export default tseslint.config(
     },
     plugins: { "react-hooks": reactHooks },
     rules: {
-      ...reactHooks.configs.recommended.rules,
+      // The two classic hook rules, as v5's "recommended" had them. v7's recommended set adds the React Compiler
+      // rules (set-state-in-effect, refs, purity…): adopting those is a refactor of its own, not a version bump.
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
