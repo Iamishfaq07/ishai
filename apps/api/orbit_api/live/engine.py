@@ -17,6 +17,7 @@ from typing import Any, Literal, Protocol
 from pydantic import ValidationError
 
 from orbit_api.live.answer_format import AnswerStreamParser, finalize_grounding
+from orbit_api.live.carryover import Carryover
 from orbit_api.live.classifier import classify
 from orbit_api.live.context_builder import PromptInputs, SessionMemory, build_prompt, fence
 from orbit_api.live.dedup import DedupDecision, Deduplicator
@@ -174,6 +175,7 @@ class LiveEngine:
         index: SessionIndex,
         recorder: Recorder | None = None,
         clock: Callable[[], float] = time.monotonic,
+        resume: Carryover | None = None,
     ) -> None:
         self.profile = profile
         self.settings = settings
@@ -220,6 +222,15 @@ class LiveEngine:
             self._mock = MockInterviewer(profile.mock or MockConfig(), llm=llm, index=index, role=profile.role,
                                          send=self.send, on_question=self._on_mock_question,
                                          on_finish=self._on_mock_finish, record_usage=self._record_mock_usage)
+        if resume is not None:  # a reconnect: pick up the conversation (and the mock round) where it was
+            self.memory = resume.memory
+            if self._mock is not None and resume.mock is not None:
+                self._mock.resume(resume.mock)
+
+    def carryover(self) -> Carryover:
+        """What the next connection for this session should remember (live/carryover.py)."""
+        mock = self._mock.progress(self.now_ms()) if self._mock is not None and not self._mock.finished else None
+        return Carryover(memory=self.memory, mock=mock)
 
     # ---- plumbing ---------------------------------------------------------------------------------------
 

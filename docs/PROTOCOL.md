@@ -38,8 +38,16 @@ write never double-counts. Remaining minutes are computed across all of the user
 5 minutes the server sends `usage.status { minutes_remaining, limit_reached: false }` once; at zero it sends
 `usage.status { minutes_remaining: 0, limit_reached: true }`, ends the session (report included) and closes with
 `4003`. Concurrent sessions can overshoot by at most about one heartbeat each.
-Clients send `session.start` with their current settings on every (re)connect. In-memory conversation
-context (recent turns, rolling summary) does not yet survive a reconnect.
+Clients send `session.start` with their current settings on every (re)connect.
+
+**A reconnect continues the session** (`live/carryover.py`):
+- **Conversation:** the new engine keeps the recent turns, rolling summary and questions asked, so follow-ups still
+  have their thread.
+- **Mock rounds:** they pick up at the same question and place ("2 of 3"), and the question is re-sent as
+  `mock.question` with the same `question_id`. The round's clock keeps running, and a question that was being
+  written when the connection dropped is asked by the new engine.
+- **Where it's kept:** process memory only, for at most `ORBIT_ABANDONED_SESSION_MIN`, and dropped when the
+  session ends. After a server restart, the saved rolling summary seeds the new engine.
 
 ## Envelope (both directions, JSON text frames)
 

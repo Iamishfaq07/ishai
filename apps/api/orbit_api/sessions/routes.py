@@ -30,6 +30,8 @@ from orbit_api.config import get_settings
 from orbit_api.csrf import websocket_origin_allowed
 from orbit_api.db import get_db, sessionmaker
 from orbit_api.entitlements import minutes_metric, minutes_remaining, plan_for, usage_this_month
+from orbit_api.live import carryover
+from orbit_api.live.context_builder import SessionMemory
 from orbit_api.live.engine import LiveEngine, SessionProfile
 from orbit_api.live.events import (
     CLIENT_EVENT_TYPES,
@@ -294,6 +296,7 @@ async def end_session(session_id: str, user: Annotated[User, Depends(current_use
     socket = _live_sockets.get(user.id, {}).get(session_id)
     if engine is not None:
         await engine.end(final=True)
+    carryover.discard(session_id)
     if socket is not None:
         with contextlib.suppress(Exception):
             await socket.close(code=4009, reason="session has ended")
@@ -638,6 +641,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
         settings = LiveSettings(auto_answer=row.auto_answer, length=row.length,
                                 style=row.style)
         store_transcripts = user.store_transcripts
+        saved_summary = row.rolling_summary or ""
 
     mine = _live_sockets.setdefault(user_id, {})
     if session_id not in mine and len(mine) >= MAX_LIVE_SESSIONS_PER_USER:
@@ -665,8 +669,15 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
     usage_key = f"live:{uuid.uuid4()}"
     recorder = DbRecorder(session_id, user_id, store_transcripts=store_transcripts, usage_key=usage_key,
                           usage_metric=minutes_metric(profile.session_type))
+    # A reconnect picks up the conversation where it was: from the engine still attached (a second window took
+    # over) or the state the dropped one left (live/carryover.py). After a server restart, the saved summary.
+    attached = _live_engines.get(session_id)
+    resume = attached.carryover() if attached is not None else carryover.take(session_id)
+    carryover.discard(session_id)
+    if resume is None and saved_summary:
+        resume = carryover.Carryover(memory=SessionMemory(rolling_summary=saved_summary))
     engine = LiveEngine(profile, settings, send=send, llm=get_llm_provider(), stt=create_stt_provider(),
-                        index=index, recorder=recorder)
+                        index=index, recorder=recorder, resume=resume)
     _live_engines[session_id] = engine
     explicit_end = False
     limit_ending = asyncio.Event()
@@ -707,6 +718,12 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
                 _live_sockets.pop(user_id, None)
         if _live_engines.get(session_id) is engine:
             del _live_engines[session_id]
+            # Dropped without ending: the next connection continues this conversation. (A newer engine that
+            # took over already has it.)
+            if explicit_end or limit_ending.is_set():
+                carryover.discard(session_id)
+            else:
+                carryover.save(session_id, engine.carryover())
 
         async def teardown() -> None:
             if not limit_ending.is_set():

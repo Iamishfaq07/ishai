@@ -15,11 +15,12 @@ import logging
 import re
 import uuid
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from orbit_api.live.carryover import MockProgress
 from orbit_api.live.context_builder import fence
 from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMProvider, LLMRequest, LLMResponse
 from orbit_api.retrieval.index import SessionIndex
@@ -259,12 +260,38 @@ class MockInterviewer:
         self._closing = False  # negotiation: the recruiter has closed the call; the candidate's reply ends it
         self.finished = False
         self._lock = asyncio.Lock()
+        self._resumed: MockProgress | None = None
+
+    # ---- a dropped connection (live/carryover.py) -------------------------------------------------------------
+
+    def progress(self, now_ms: int) -> MockProgress:
+        return MockProgress(asked=[replace(a, answer=list(a.answer)) for a in self.asked],
+                            drill_next=self._drill_next, closing=self._closing, awaiting=self._awaiting,
+                            elapsed_ms=now_ms - self._started_ms if self._started_ms is not None else 0)
+
+    def resume(self, progress: MockProgress) -> None:
+        """Continue a round a previous connection started: `start` then picks up where it left off."""
+        self.asked = list(progress.asked)
+        self._drill_next = progress.drill_next
+        self._closing = progress.closing
+        self._resumed = progress
 
     # ---- inputs ---------------------------------------------------------------------------------------------
 
     async def start(self, now_ms: int) -> None:
-        self._started_ms = now_ms
-        await self._ask_next(now_ms)
+        resumed, self._resumed = self._resumed, None
+        if resumed is None:
+            self._started_ms = now_ms
+            await self._ask_next(now_ms)
+            return
+        self._started_ms = now_ms - resumed.elapsed_ms  # the round's clock keeps running from where it was
+        if resumed.awaiting and self.asked:
+            # The question was out when the connection dropped: show it again and keep listening for the answer.
+            # It's already recorded, so it isn't recorded twice.
+            self._awaiting = True
+            await self._send("mock.question", self._question_payload(self.asked[-1]))
+        else:
+            await self._ask_next(now_ms)
 
     def on_candidate(self, text: str, now_ms: int, *, final: bool) -> None:
         if not self._awaiting or not self.asked or not text.strip():
@@ -320,19 +347,26 @@ class MockInterviewer:
 
     async def _put(self, text: str, follow_up: bool, drill: DrillItem | None = None) -> None:
         qid = str(uuid.uuid4())
-        self.asked.append(_Asked(qid, text, follow_up, drill=drill))
+        asked = _Asked(qid, text, follow_up, drill=drill)
+        self.asked.append(asked)
         self._last_speech_ms = None
         self._awaiting = True
         await self._on_question(qid, text, follow_up)
+        await self._send("mock.question", self._question_payload(asked))
+
+    def _question_payload(self, asked: _Asked) -> dict[str, Any]:
+        """For the question just asked (the last one): its place in the round, as the client shows it."""
         negotiation = self.config.is_negotiation
-        payload: dict[str, Any] = {"question_id": qid, "text": text, "is_follow_up": follow_up and not negotiation,
+        payload: dict[str, Any] = {"question_id": asked.question_id, "text": asked.text,
+                                   "is_follow_up": asked.is_follow_up and not negotiation,
                                    "index": len(self.asked) if negotiation else self._topics(),
                                    "total": self.config.planned_questions}
         if self.config.drill:
-            payload["drill_kind"] = "follow_up" if follow_up else (drill.kind if drill else "retry")
+            payload["drill_kind"] = "follow_up" if asked.is_follow_up else (asked.drill.kind if asked.drill
+                                                                            else "retry")
         if negotiation:
             payload["negotiation"] = True
-        await self._send("mock.question", payload)
+        return payload
 
     async def _ask_next_negotiation(self, now_ms: int) -> None:
         """Negotiation: a back-and-forth with the recruiter until a close, the turn budget, or the time limit."""
