@@ -1,5 +1,21 @@
 # Implementation log
 
+## Dependency updates (2026-09-27)
+
+Taken from Dependabot, after testing each one locally (typecheck, lint, tests, both builds, audit):
+- **npm:** globals 17; eslint-plugin-react-hooks 7, with the classic rules kept as v5 had them (the new React
+  Compiler rules are a refactor of their own); @types/node 22.x, matching the Node CI runs.
+- **Actions:** setup-node 7, setup-uv 10, build-push-action 7, action-gh-release 3, pnpm/action-setup 6.1, all
+  still SHA-pinned.
+
+Not taken:
+- **Tailwind 4:** the build breaks; it needs a real migration.
+- **@types/node 26:** ahead of the runtime.
+- **windows-core 0.100 on its own:** it must move with `windows`.
+
+Dependabot now groups updates: one PR for all actions, minor and patch updates batched per ecosystem, and the
+`windows` crates together. It also ignores major Tailwind and @types/node versions.
+
 ## Sign-up privacy, shorter web sessions, verified admin (2026-09-27)
 
 - **Sign-up no longer reveals whether an email is registered** (when verification is required and mail works):
