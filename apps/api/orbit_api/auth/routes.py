@@ -5,6 +5,7 @@ from urllib.parse import urlsplit
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth import email_tokens
@@ -149,16 +150,22 @@ async def register(body: RegisterIn, request: Request, response: Response, backg
     # No account enumeration: new or taken, the caller sees the same 202 and every email goes out after the
     # response. Both paths run one argon2 operation, so timing doesn't tell them apart either.
     response.status_code = status.HTTP_202_ACCEPTED
+    pending = RegisterPendingOut(email=email)
     if existing is None:
-        user = await _create_user(db, request, email, body)
-        background.add_task(send_safely, _verification_email(email, await _verify_token(db, user)))
-    elif (await verify_password(body.password, existing.password_hash) and not existing.email_verified
-          and not await email_tokens.recently_issued(db, existing.id, "verify_email")):
-        # The owner signing up again before verifying: a fresh link.
-        background.add_task(send_safely, _verification_email(email, await _verify_token(db, existing)))
+        try:
+            user = await _create_user(db, request, email, body)
+            token = await _verify_token(db, user)
+        except IntegrityError:  # a simultaneous sign-up for the same address won: same answer, no 500
+            await db.rollback()
+            return pending
+        background.add_task(send_safely, _verification_email(email, token))
+    elif await verify_password(body.password, existing.password_hash) and not existing.email_verified:
+        # The owner signing up again before verifying: a fresh link, unless one went out moments ago.
+        if not await email_tokens.recently_issued(db, existing.id, "verify_email"):
+            background.add_task(send_safely, _verification_email(email, await _verify_token(db, existing)))
     elif _signup_notice_by_email.allow(email):  # someone else, or already verified: tell the owner
         background.add_task(send_safely, _already_registered_email(email))
-    return RegisterPendingOut(email=email)
+    return pending
 
 
 async def _create_user(db: AsyncSession, request: Request, email: str, body: RegisterIn) -> User:
