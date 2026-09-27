@@ -178,6 +178,23 @@ def test_owner_signing_up_again_before_verifying_gets_a_fresh_link(monkeypatch: 
         assert len(links()) == 1
         c.post("/v1/auth/register", json={"email": email, "password": PW}, headers={"Origin": WEB})
         assert len(links()) == 1  # a link went out moments ago: no second one yet (resend cooldown)
+        assert not any(m.to == email and "already has one" in m.text for m in sender.sent)  # and no confusing notice
+
+
+def test_simultaneous_signups_for_one_address_get_the_same_answer(monkeypatch: pytest.MonkeyPatch) -> None:
+    from sqlalchemy.exc import IntegrityError
+
+    from orbit_api.auth import routes
+    from tests.test_launch_security import app_with
+
+    async def lost_the_race(*_: object) -> None:
+        raise IntegrityError("INSERT", {}, Exception("UNIQUE constraint failed: users.email"))
+
+    with app_with(monkeypatch, ORBIT_EMAIL_VERIFICATION="required") as c:
+        monkeypatch.setattr(routes, "_create_user", lost_the_race)
+        email = _email()
+        r = c.post("/v1/auth/register", json={"email": email, "password": PW}, headers={"Origin": WEB})
+        assert (r.status_code, r.json()) == (202, {"status": "verify_email", "email": email})
 
 
 def test_signup_signs_straight_in_when_verification_is_off(client: TestClient) -> None:
