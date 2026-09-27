@@ -22,7 +22,11 @@ class Settings(BaseSettings):
     # Redis. Declared so a scaled-out deploy fails loudly at boot instead of breaking sessions at random.
     api_replicas: int = Field(1, ge=1, validation_alias=AliasChoices("ORBIT_API_REPLICAS", "API_REPLICAS"))
     jwt_secret: SecretStr = Field(SecretStr(_DEV_SECRET), validation_alias=AliasChoices("ORBIT_JWT_SECRET"))
+    # Hard cap on any sign-in: after this, sign in again (web and desktop).
     jwt_ttl_minutes: int = 60 * 24 * 7
+    # Web sessions also end after this long unused; each request made in the last stretch renews the cookie (up to
+    # the hard cap). A stolen, unused web cookie is dead in days, not a week. Desktop tokens (OS keychain) use the cap.
+    session_idle_hours: float = Field(72.0, gt=0, validation_alias=AliasChoices("ORBIT_SESSION_IDLE_HOURS"))
     cors_origins: list[str] = Field(
         ["http://localhost:5173", "http://localhost:1420", "http://tauri.localhost", "tauri://localhost"],
         validation_alias=AliasChoices("ORBIT_CORS_ORIGINS"),

@@ -45,7 +45,12 @@ def test_first_user_is_never_admin_in_production(monkeypatch: pytest.MonkeyPatch
     assert run(env="development", admin_email=None)  # local convenience only
     assert not run(env="production", admin_email=None)
     assert not run(env="production", admin_email="owner@example.com")
-    assert run(env="production", admin_email=" FIRST@example.com ")
+    # the admin address must be verified whenever mail can be delivered (else the first registrant would win)
+    admin = dict(env="production", admin_email=" FIRST@example.com ")
+    assert run(**admin, verification_required=False)
+    assert not run(**admin, verification_required=True)
+    first.email_verified = True
+    assert run(**admin, verification_required=True)
 
 
 def test_production_requires_real_providers_and_postgres() -> None:

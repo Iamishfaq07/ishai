@@ -16,7 +16,14 @@ What protects what, and where it lives in the code. Report issues privately to t
 - **Web:** httpOnly `SameSite=Lax; Secure` cookie. The web app calls the API through its own `/api` proxy, so the
   cookie is first-party (`ORBIT_COOKIE_SAMESITE=none` only for a web app that calls the API cross-site). Auth
   responses to the web app's own origin (`ORBIT_WEB_URL`) carry no `access_token`, so script on the page can never
-  read a long-lived credential.
+  read a long-lived credential. Web sessions end after 3 days unused (`ORBIT_SESSION_IDLE_HOURS`). While in use, the
+  cookie renews at most every 15 minutes, up to the 7-day cap from the original sign-in (the token's `auth` claim).
+- **Sign-up** never reveals whether an email is taken when verification is required and mail can be delivered:
+  - new and taken addresses get the same `202 {"status": "verify_email"}`, nobody is signed in, and every email goes
+    out after the response;
+  - the owner of a taken address is told by email;
+  - the link only verifies, and the person then signs in with their password (so a pre-registered account can't be
+    handed to its victim).
 - **Desktop:** Bearer token in Windows Credential Manager.
 - The **WebSocket** uses single-use, 60 s tickets minted by an authenticated POST. No long-lived token appears in
   a URL (D7).
@@ -37,7 +44,8 @@ What protects what, and where it lives in the code. Report issues privately to t
   IP limit.
 - **Policy** (`ORBIT_EMAIL_VERIFICATION`):
   - required in production, off in development and test unless set;
-  - the admin (`ORBIT_ADMIN_EMAIL`) is exempt.
+  - the admin (`ORBIT_ADMIN_EMAIL`) needs a verified address too whenever mail can be delivered. Otherwise the first
+    person to register it would be admin. Only an admin-only deploy with no SMTP skips this.
 
 ## CSRF (`csrf.py`)
 `SameSite=Lax` already keeps the cookie off cross-site POSTs; this is defence in depth (and covers deployments

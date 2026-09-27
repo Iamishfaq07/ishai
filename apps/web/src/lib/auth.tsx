@@ -14,11 +14,13 @@ import { ApiError } from "@orbit/ui";
 import { api, setUnauthorizedHandler } from "./api";
 import { clearAsyncCache } from "./useAsync";
 
+export type RegisterOutcome = "signed_in" | "verify_email";
+
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
   login: (req: LoginRequest) => Promise<void>;
-  register: (req: RegisterRequest) => Promise<void>;
+  register: (req: RegisterRequest) => Promise<RegisterOutcome>;
   logout: () => Promise<void>;
   setUser: Dispatch<SetStateAction<User | null>>;
 }
@@ -72,10 +74,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(await confirmSession());
   }, []);
 
-  const register = useCallback(async (req: RegisterRequest) => {
-    await api.register(req);
+  /** "signed_in", or "verify_email" when the server wants the inbox proven first (nobody is signed in then). */
+  const register = useCallback(async (req: RegisterRequest): Promise<RegisterOutcome> => {
+    const res = await api.register(req);
+    if ("status" in res && res.status === "verify_email") return "verify_email";
     clearAsyncCache();
     setUser(await confirmSession());
+    return "signed_in";
   }, []);
 
   const logout = useCallback(async () => {

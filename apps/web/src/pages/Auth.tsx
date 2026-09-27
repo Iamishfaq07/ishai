@@ -133,8 +133,10 @@ export function RegisterPage() {
   const [busy, setBusy] = useState(false);
   const captcha = useCaptchaConfig();
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
   if (user) return <Navigate to="/" replace />;
+  if (sentTo) return <CheckInbox email={sentTo} />;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -145,13 +147,14 @@ export function RegisterPage() {
     setBusy(true);
     setError(null);
     try {
-      await register({
+      const outcome = await register({
         email,
         password,
         ...(name.trim() ? { name: name.trim() } : {}),
         ...(captchaToken ? { captcha_token: captchaToken } : {}),
       });
-      navigate("/documents", { replace: true, state: { onboarding: true } });
+      if (outcome === "verify_email") setSentTo(email.trim().toLowerCase());
+      else navigate("/documents", { replace: true, state: { onboarding: true } });
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -191,6 +194,27 @@ export function RegisterPage() {
           Sign in
         </Link>
       </p>
+    </AuthShell>
+  );
+}
+
+/** After sign-up when the server wants the inbox proven first. Worded the same whether or not the address was new. */
+function CheckInbox({ email }: { email: string }) {
+  return (
+    <AuthShell title="Check your inbox" subtitle="One step left">
+      <div role="status" className="space-y-4 text-sm">
+        <p>
+          We sent an email to <strong className="break-all">{email}</strong>. Open the link in it to confirm your
+          address, then sign in with the password you just chose.
+        </p>
+        <p className="text-zinc-500 dark:text-zinc-400">
+          Nothing there after a few minutes? Check spam. If you already had an Orbit account, the email explains how
+          to sign in or reset your password instead.
+        </p>
+        <Link to="/login" className={`block text-center ${linkClass}`}>
+          Go to sign in
+        </Link>
+      </div>
     </AuthShell>
   );
 }

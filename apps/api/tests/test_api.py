@@ -101,19 +101,19 @@ def test_session_cookie_policy(monkeypatch: Any) -> None:
     # Secure. SameSite=None stays available for a web app that calls the API cross-site.
     from types import SimpleNamespace
 
-    from orbit_api.auth import routes
+    from orbit_api.auth import security as routes
 
     def env(name: str, samesite: str = "lax") -> None:
         monkeypatch.setattr(routes, "get_settings", lambda: SimpleNamespace(env=name, cookie_samesite=samesite))
 
     env("production")
-    assert routes._cookie_policy() == (True, "lax")
+    assert routes.cookie_policy() == (True, "lax")
     env("production", "none")
-    assert routes._cookie_policy() == (True, "none")
+    assert routes.cookie_policy() == (True, "none")
     env("development")
-    assert routes._cookie_policy() == (False, "lax")
+    assert routes.cookie_policy() == (False, "lax")
     env("development", "none")
-    assert routes._cookie_policy() == (True, "none")  # browsers reject SameSite=None without Secure
+    assert routes.cookie_policy() == (True, "none")  # browsers reject SameSite=None without Secure
 
 
 def test_free_plan_document_quota(client: TestClient) -> None:

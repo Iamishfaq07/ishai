@@ -1,5 +1,16 @@
 # Implementation log
 
+## Sign-up privacy, shorter web sessions, verified admin (2026-09-27)
+
+- **Sign-up no longer reveals whether an email is registered** (when verification is required and mail works):
+  - new and taken addresses get the same "Check your inbox" answer;
+  - the owner of a taken address gets a "you already have an account" email;
+  - the link verifies, then the person signs in.
+- **Web sessions end after 3 days unused** (`ORBIT_SESSION_IDLE_HOURS`) and renew while in use, up to the same
+  7-day cap. Desktop tokens are unchanged.
+- **Admin rights need a verified email** when mail can be delivered, so registering the admin address first no
+  longer makes someone admin.
+
 ## Security review (2026-09-27)
 
 Full review (secrets, SCA, SAST, manual review, DAST): [SECURITY_REVIEW.md](SECURITY_REVIEW.md).

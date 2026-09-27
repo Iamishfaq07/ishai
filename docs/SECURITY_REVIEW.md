@@ -98,12 +98,28 @@ work is described in [SECURITY.md](SECURITY.md).
   - The hashed theme script runs.
   - The session token is visible to no script: not in `localStorage` and not in `document.cookie`.
 
+## Follow-up: resolved later the same day
+- **Sign-up no longer reveals whether an email is registered.** When verification is required and mail can be
+  delivered:
+  - it answers `202 {"status": "verify_email"}` for new and taken addresses alike, signs nobody in, and sends every
+    email after the response;
+  - both paths run one argon2 operation, so timing doesn't tell them apart either;
+  - the owner of a taken address gets a "you already have an account" email (at most 3 an hour);
+  - the verification link only verifies: the person then signs in with their password, so pre-registering someone
+    else's email and waiting for them to click can't take over an account.
+- **Unused web sessions expire after 3 days** (`ORBIT_SESSION_IDLE_HOURS`). The cookie renews at most every 15
+  minutes while in use, never past the 7-day cap counted from the original sign-in.
+- **Admin rights need a verified email** whenever mail can be delivered. Before, whoever registered the admin
+  address first became admin without proving the inbox.
+
 ## Accepted risks
-- **Sign-up reveals whether an email is registered (409).** Sign-in and password reset don't. Sign-up is limited to
-  5 per hour per IP and can require CAPTCHA, so enumerating through it is slow. Hiding it would mean a "check your
-  inbox" sign-up flow.
-- **The session JWT lasts 7 days, with no refresh token.** It is revocable at any time: "sign out everywhere",
-  password reset and email change all bump `token_version`.
+- **Signing up still returns 409 for a taken email where verification is off** (development, or a private list
+  with `ORBIT_EMAIL_VERIFICATION=off`). Nobody outside the list can sign up there. The same goes for an admin-only
+  deploy with no SMTP.
+- **Desktop tokens last until the 7-day cap.** They live in the OS keychain rather than a browser, and are revocable
+  at any time: "sign out everywhere", password reset and email change all bump `token_version`.
+- **An admin-only deploy with no SMTP can't verify the admin address.** There, register the admin account
+  immediately after the first deploy.
 - **The desktop CSP allows `connect-src https: wss:`,** because the server address can be changed in the app. The
   window loads only bundled code, and no remote scripts are allowed.
 - **Rate limits and live tickets are in process memory,** which is fine for the single instance production

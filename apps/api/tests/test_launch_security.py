@@ -40,7 +40,12 @@ def _email() -> str:
 def _register(c: TestClient, email: str | None = None, **extra: object) -> tuple[str, dict[str, str]]:
     email = email or _email()
     r = c.post("/v1/auth/register", json={"email": email, "password": PW, **extra}, headers={"Origin": WEB})
-    assert r.status_code == 201, r.text
+    if r.status_code == 202:  # verification required: sign-up waits for the inbox, then the person signs in
+        assert r.json() == {"status": "verify_email", "email": email}
+        r = c.post("/v1/auth/login", json={"email": email, "password": PW}, headers={"Origin": WEB})
+        assert r.status_code == 200, r.text
+    else:
+        assert r.status_code == 201, r.text
     assert r.json()["access_token"] is None  # the web app's session lives only in the httpOnly cookie
     token = c.cookies.get("orbit_session")
     c.cookies.clear()
@@ -101,11 +106,16 @@ def test_live_ticket_screenshot_and_review_are_gated(monkeypatch: pytest.MonkeyP
             assert r.status_code == 403 and r.json()["detail"]["code"] == "email_unverified"
 
 
-def test_admin_is_exempt_from_verification(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_admin_must_verify_when_mail_can_be_delivered(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Otherwise whoever registered the admin address first would be admin without proving the inbox.
     admin = _email()
     with app_with(monkeypatch, ORBIT_EMAIL_VERIFICATION="required", ORBIT_ADMIN_EMAIL=admin) as c:
         _, h = _register(c, admin)
+        r = c.post("/v1/sessions", headers=h, json={"title": "t"})
+        assert r.status_code == 403 and r.json()["detail"]["code"] == "email_unverified"
+        _verify(c, admin)
         assert c.post("/v1/sessions", headers=h, json={"title": "t"}).status_code == 201
+        assert c.get("/v1/entitlements", headers=h).json()["plan"] == "unlimited"
 
 
 def test_auth_config_is_public(monkeypatch: pytest.MonkeyPatch) -> None:

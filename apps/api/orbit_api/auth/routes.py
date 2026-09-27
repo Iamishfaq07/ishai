@@ -13,17 +13,19 @@ from orbit_api.auth.captcha import require_captcha
 from orbit_api.auth.security import (
     COOKIE_NAME,
     NOT_ALLOWED,
+    cookie_policy,
     create_access_token,
     current_user,
     hash_password,
     needs_rehash,
+    set_session_cookie,
     verify_password,
 )
 from orbit_api.config import get_settings
 from orbit_api.csrf import token_for as csrf_token_for
 from orbit_api.db import get_db
 from orbit_api.models import AuditLog, User
-from orbit_api.providers.email import OutgoingEmail, send_safely
+from orbit_api.providers.email import OutgoingEmail, can_deliver, send_safely
 from orbit_api.ratelimit import TokenBucket, check, client_ip, limit
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
@@ -34,6 +36,8 @@ email_limit = limit("email", rate_per_s=0.05, burst=5)
 signup_limit = limit("signup", rate_per_s=5 / 3600, burst=5)
 _login_by_email = TokenBucket(rate_per_s=10 / 900, burst=10)
 _reset_by_email = TokenBucket(rate_per_s=3 / 3600, burst=3)
+# "You already have an account" notices: sign-up attempts with a taken address can't flood its owner's inbox.
+_signup_notice_by_email = TokenBucket(rate_per_s=3 / 3600, burst=3)
 
 
 class RegisterIn(BaseModel):
@@ -75,39 +79,23 @@ def _user_out(u: User, *, with_csrf: bool = False) -> UserOut:
                    csrf_token=csrf_token_for(u.id, u.token_version) if with_csrf else None)
 
 
-def _cookie_policy() -> tuple[bool, Literal["lax", "strict", "none"]]:
-    """(secure, samesite). In production the web app reaches the API through its own /api proxy, so the cookie is
-    first-party and SameSite=Lax (ORBIT_COOKIE_SAMESITE) keeps it off cross-site requests; always Secure there.
-    Locally (same-site over plain http) Lax without Secure."""
-    s = get_settings()
-    if s.env == "production":
-        return True, s.cookie_samesite
-    return (True, "none") if s.cookie_samesite == "none" else (False, s.cookie_samesite)
-
-
 def _origin(url: str) -> str:
     parts = urlsplit(url)
     return f"{parts.scheme}://{parts.netloc}".lower()
 
 
 def _auth_out(request: Request, response: Response, user: User) -> AuthOut:
-    """Sign `user` in: session cookie for browsers, and a Bearer token unless the caller is the web app itself."""
-    token = create_access_token(user.id, user.token_version)
-    _set_cookie(response, token)
+    """Sign `user` in. The web app gets only a short-lived, self-renewing httpOnly cookie; other callers (the
+    desktop app) get a Bearer token for the keychain, valid until the hard cap, and the same token as a cookie."""
     from_web = request.headers.get("origin", "").rstrip("/").lower() == _origin(get_settings().web_url)
+    token = create_access_token(user.id, user.token_version, idle=from_web)
+    set_session_cookie(response, token)
     return AuthOut(user=_user_out(user, with_csrf=True), access_token=None if from_web else token)
-
-
-def _set_cookie(response: Response, token: str) -> None:
-    s = get_settings()
-    secure, samesite = _cookie_policy()
-    response.set_cookie(COOKIE_NAME, token, httponly=True, secure=secure, samesite=samesite,
-                        max_age=s.jwt_ttl_minutes * 60, path="/")
 
 
 def _clear_cookie(response: Response) -> None:
     # delete_cookie must repeat the attributes the browser stored it with, or it won't be cleared.
-    secure, samesite = _cookie_policy()
+    secure, samesite = cookie_policy()
     response.delete_cookie(COOKIE_NAME, path="/", secure=secure, samesite=samesite, httponly=True)
 
 
@@ -129,24 +117,62 @@ async def auth_config() -> AuthConfigOut:
                          email_verification="required" if s.verification_required else "off")
 
 
-@router.post("/register", response_model=AuthOut, status_code=201,
+class RegisterPendingOut(BaseModel):
+    """Sign-up when the inbox must be proven: the same answer whether or not the email already has an account."""
+    status: Literal["verify_email"] = "verify_email"
+    email: str
+
+
+def _inbox_first() -> bool:
+    """Sign-up waits for the emailed link (and never reveals whether the address is taken) whenever verification
+    is required and mail can actually be delivered. Otherwise (verification off, or an admin-only deploy with no
+    SMTP) it signs straight in, as nobody else can sign up there anyway."""
+    return get_settings().verification_required and can_deliver()
+
+
+@router.post("/register", response_model=AuthOut | RegisterPendingOut, status_code=201,
              dependencies=[Depends(auth_limit), Depends(signup_limit)])
-async def register(body: RegisterIn, request: Request, response: Response,
-                   db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut:
+async def register(body: RegisterIn, request: Request, response: Response, background: BackgroundTasks,
+                   db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut | RegisterPendingOut:
     email = body.email.lower()
     if not get_settings().email_allowed(email):
         raise HTTPException(status.HTTP_403_FORBIDDEN, NOT_ALLOWED)
     await require_captcha(body.captcha_token, _ip(request))
-    if await db.scalar(select(func.count()).select_from(User).where(User.email == email)):
-        raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists.")
+    existing = await db.scalar(select(User).where(User.email == email))
+    if not _inbox_first():
+        if existing is not None:
+            raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists.")
+        user = await _create_user(db, request, email, body)
+        await send_safely(_verification_email(user.email, await _verify_token(db, user)))
+        return _auth_out(request, response, user)
+
+    # No account enumeration: new or taken, the caller sees the same 202 and every email goes out after the
+    # response. Both paths run one argon2 operation, so timing doesn't tell them apart either.
+    response.status_code = status.HTTP_202_ACCEPTED
+    if existing is None:
+        user = await _create_user(db, request, email, body)
+        background.add_task(send_safely, _verification_email(email, await _verify_token(db, user)))
+    elif (await verify_password(body.password, existing.password_hash) and not existing.email_verified
+          and not await email_tokens.recently_issued(db, existing.id, "verify_email")):
+        # The owner signing up again before verifying: a fresh link.
+        background.add_task(send_safely, _verification_email(email, await _verify_token(db, existing)))
+    elif _signup_notice_by_email.allow(email):  # someone else, or already verified: tell the owner
+        background.add_task(send_safely, _already_registered_email(email))
+    return RegisterPendingOut(email=email)
+
+
+async def _create_user(db: AsyncSession, request: Request, email: str, body: RegisterIn) -> User:
     user = User(email=email, name=body.name, password_hash=await hash_password(body.password))
     db.add(user)
     await db.flush()
     db.add(AuditLog(user_id=user.id, action="auth.register", ip=_ip(request)))
-    verify = await email_tokens.issue(db, user.id, "verify_email")
+    return user
+
+
+async def _verify_token(db: AsyncSession, user: User) -> str:
+    token = await email_tokens.issue(db, user.id, "verify_email")
     await db.commit()
-    await send_safely(_verification_email(user.email, verify))
-    return _auth_out(request, response, user)
+    return token
 
 
 @router.post("/login", response_model=AuthOut, dependencies=[Depends(auth_limit)])
@@ -225,6 +251,19 @@ def _verification_email(to: str, token: str) -> OutgoingEmail:
             "Confirm this is your email address for Orbit:\n\n"
             f"{_link('/verify-email', token)}\n\n"
             "The link expires in 48 hours. If you didn't create an Orbit account, ignore this email."
+        ),
+    )
+
+
+def _already_registered_email(to: str) -> OutgoingEmail:
+    return OutgoingEmail(
+        to=to,
+        subject="You already have an Orbit account",
+        text=(
+            "Someone tried to create an Orbit account with this email, but it already has one.\n\n"
+            f"If that was you, sign in at {get_settings().web_url.rstrip('/')}/login — or, if you've forgotten your "
+            f"password, reset it at {get_settings().web_url.rstrip('/')}/forgot-password.\n\n"
+            "If it wasn't you, you can ignore this email: nothing about your account has changed."
         ),
     )
 
