@@ -133,3 +133,130 @@ def test_websockets_refuse_foreign_origins_without_burning_the_ticket(client: Te
         ws.send_json({"type": "session.end", "data": {}})
         while ws.receive_json()["type"] != "session.ended":
             pass
+
+
+# ---- sign-up never reveals whether an email is registered ----------------------------------------------------
+
+
+def test_signup_answers_the_same_for_new_and_taken_emails(monkeypatch: pytest.MonkeyPatch) -> None:
+    from orbit_api.providers.email import DevOutbox, get_email_sender
+    from tests.test_launch_security import _verify, app_with
+
+    sender = get_email_sender()
+    assert isinstance(sender, DevOutbox)
+    with app_with(monkeypatch, ORBIT_EMAIL_VERIFICATION="required") as c:
+        email = _email()
+        new = c.post("/v1/auth/register", json={"email": email, "password": PW}, headers={"Origin": WEB})
+        assert new.status_code == 202 and "set-cookie" not in new.headers
+        assert new.json() == {"status": "verify_email", "email": email}
+        assert c.get("/v1/auth/me").status_code == 401  # not signed in until they prove the inbox and sign in
+
+        # taken (by someone else's attempt with a different password): identical answer, the owner is told
+        taken = c.post("/v1/auth/register", json={"email": email, "password": "someone else's pw"},
+                       headers={"Origin": WEB})
+        assert (taken.status_code, taken.json(), "set-cookie" in taken.headers) == (202, new.json(), False)
+        assert any(m.to == email and "already has one" in m.text for m in sender.sent)
+
+        # verified accounts too; then the person signs in with their password
+        _verify(c, email)
+        again = c.post("/v1/auth/register", json={"email": email, "password": PW}, headers={"Origin": WEB})
+        assert (again.status_code, again.json()) == (202, new.json())
+        signed_in = c.post("/v1/auth/login", json={"email": email, "password": PW}, headers={"Origin": WEB})
+        assert signed_in.status_code == 200 and signed_in.json()["user"]["email_verified"] is True
+
+
+def test_owner_signing_up_again_before_verifying_gets_a_fresh_link(monkeypatch: pytest.MonkeyPatch) -> None:
+    from orbit_api.providers.email import DevOutbox, get_email_sender
+    from tests.test_launch_security import app_with
+
+    sender = get_email_sender()
+    assert isinstance(sender, DevOutbox)
+    with app_with(monkeypatch, ORBIT_EMAIL_VERIFICATION="required") as c:
+        email = _email()
+        c.post("/v1/auth/register", json={"email": email, "password": PW}, headers={"Origin": WEB})
+        links = lambda: [m for m in sender.sent if m.to == email and "/verify-email" in m.text]  # noqa: E731
+        assert len(links()) == 1
+        c.post("/v1/auth/register", json={"email": email, "password": PW}, headers={"Origin": WEB})
+        assert len(links()) == 1  # a link went out moments ago: no second one yet (resend cooldown)
+
+
+def test_signup_signs_straight_in_when_verification_is_off(client: TestClient) -> None:
+    email = _email()
+    r = client.post("/v1/auth/register", json={"email": email, "password": PW}, headers={"Origin": WEB})
+    assert r.status_code == 201 and r.json()["user"]["email"] == email
+    client.cookies.clear()
+    dup = client.post("/v1/auth/register", json={"email": email, "password": PW}, headers={"Origin": WEB})
+    assert dup.status_code == 409  # only local/private deploys, where nobody else can sign up
+
+
+# ---- web sessions expire when unused and renew while in use ---------------------------------------------------
+
+
+def _claims(token: str) -> dict[str, object]:
+    from orbit_api.auth.security import decode_claims
+
+    claims = decode_claims(token)
+    assert claims is not None
+    return claims
+
+
+def _claims_unverified(token: str) -> dict[str, object]:
+    import jwt
+
+    claims: dict[str, object] = jwt.decode(token, options={"verify_signature": False})
+    return claims
+
+
+def test_web_session_is_short_lived_and_renews_while_used(client: TestClient,
+                                                          monkeypatch: pytest.MonkeyPatch) -> None:
+    import time
+
+    from orbit_api.auth import security
+
+    email = _email()
+    r = client.post("/v1/auth/register", json={"email": email, "password": PW}, headers={"Origin": WEB})
+    assert r.status_code == 201
+    web = _claims(client.cookies["orbit_session"])
+    idle = get_settings().session_idle_hours * 3600
+    cap = get_settings().jwt_ttl_minutes * 60
+    assert web["idle"] is True and int(web["exp"]) - int(web["iat"]) == idle  # type: ignore[call-overload]
+    assert "max-age=259200" in r.headers["set-cookie"].lower()
+
+    # fresh cookie: no renewal on every request
+    assert "set-cookie" not in client.get("/v1/auth/me").headers
+    # an hour later the same session is renewed (new expiry, same sign-in time)
+    later = time.time() + 3600
+    monkeypatch.setattr(security, "_now", lambda: int(later))
+    renewed = client.get("/v1/auth/me")
+    assert renewed.status_code == 200 and "orbit_session=" in renewed.headers["set-cookie"]
+    fresh = _claims_unverified(client.cookies["orbit_session"])
+    assert fresh["auth"] == web["auth"] and int(fresh["exp"]) > int(web["exp"])  # type: ignore[call-overload]
+
+    # never past the hard cap, however active
+    auth = int(web["auth"])  # type: ignore[call-overload]
+    monkeypatch.setattr(security, "_now", lambda: auth + cap - 60)
+    capped = _claims_unverified(security.create_access_token(email, 0, idle=True, signed_in_at=auth))
+    assert int(capped["exp"]) == auth + cap  # type: ignore[call-overload]
+
+
+def test_unused_web_session_expires_but_desktop_token_lasts(client: TestClient,
+                                                            monkeypatch: pytest.MonkeyPatch) -> None:
+    import time
+
+    from orbit_api.auth import security
+
+    email = _email()
+    four_days_ago = time.time() - 4 * 24 * 3600
+    monkeypatch.setattr(security, "_now", lambda: int(four_days_ago))  # both sign-ins happened 4 days ago
+    client.post("/v1/auth/register", json={"email": email, "password": PW}, headers={"Origin": WEB})
+    web_cookie = client.cookies["orbit_session"]
+    client.cookies.clear()
+    desk = client.post("/v1/auth/login", json={"email": email, "password": PW}, headers={"Origin": DESKTOP})
+    client.cookies.clear()
+    monkeypatch.undo()
+    assert _claims(desk.json()["access_token"])["idle"] is False
+    client.cookies.set("orbit_session", web_cookie)
+    assert client.get("/v1/auth/me").status_code == 401  # unused for more than 3 days
+    client.cookies.clear()
+    bearer = {"Authorization": f"Bearer {desk.json()['access_token']}"}
+    assert client.get("/v1/auth/me", headers=bearer).status_code == 200  # desktop: until the 7-day cap

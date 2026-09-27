@@ -43,6 +43,15 @@ export interface RegisterRequest {
   captcha_token?: string;
 }
 
+/**
+ * POST /v1/auth/register when the server needs the inbox proven first (production): the same answer whether or not
+ * the email already has an account, and nobody is signed in. The emailed link verifies; then the person signs in.
+ */
+export interface RegisterPending {
+  status: "verify_email";
+  email: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;

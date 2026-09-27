@@ -28,6 +28,7 @@ import type {
   FollowUp,
   PrepResponse,
   PrivacyUpdate,
+  RegisterPending,
   RegisterRequest,
   ScreenshotAccepted,
   Story,
@@ -136,7 +137,8 @@ export function createApiClient(options: ApiClientOptions) {
 
     // Auth
     authConfig: () => json<AuthConfig>("/v1/auth/config"),
-    register: (req: RegisterRequest) => json<AuthResponse>("/v1/auth/register", { method: "POST", body: body(req) }),
+    register: (req: RegisterRequest) =>
+      json<AuthResponse | RegisterPending>("/v1/auth/register", { method: "POST", body: body(req) }),
     login: (req: LoginRequest) => json<AuthResponse>("/v1/auth/login", { method: "POST", body: body(req) }),
     me: () => json<User>("/v1/auth/me"),
     logout: async () => {

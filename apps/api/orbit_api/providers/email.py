@@ -118,6 +118,11 @@ def get_email_sender() -> EmailSender:
     return DevOutbox() if s.env != "production" else NoEmailSender()
 
 
+def can_deliver() -> bool:
+    """False when production has no SMTP: mail is dropped, so nothing may depend on someone reading it."""
+    return not isinstance(get_email_sender(), NoEmailSender)
+
+
 async def send_safely(email: OutgoingEmail) -> None:
     """Email failures must never leak into auth responses (that would reveal account existence)."""
     sender = get_email_sender()

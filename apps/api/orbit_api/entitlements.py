@@ -99,11 +99,18 @@ def plan_named(name: str) -> Plan:
 
 
 async def is_admin(db: AsyncSession, user: User) -> bool:
-    """ORBIT_ADMIN_EMAIL. Only outside production (where it's optional) does the first-registered user stand
-    in: production refuses to start without it, and admin is never inferred from registration order there."""
+    """ORBIT_ADMIN_EMAIL, once that address is verified. Only outside production (where it's optional) does the
+    first-registered user stand in: production refuses to start without it, and admin is never inferred from
+    registration order there."""
     settings = get_settings()
     if settings.admin_email:
-        return user.email.strip().lower() == settings.admin_email.strip().lower()
+        if user.email.strip().lower() != settings.admin_email.strip().lower():
+            return False
+        # Whoever registered the address first would otherwise be admin without ever proving the inbox. Only an
+        # admin-only deploy with no way to send mail (no SMTP in production) skips the proof: nobody could verify.
+        from orbit_api.providers.email import can_deliver
+
+        return user.email_verified or not (settings.verification_required and can_deliver())
     if settings.env == "production":
         return False
     first_id = await db.scalar(select(User.id).order_by(User.created_at.asc(), User.id.asc()).limit(1))
