@@ -1,5 +1,18 @@
 # Implementation log
 
+## Reconnects continue the session (2026-09-27)
+
+- **Conversation memory survives a dropped connection.** Before, a Wi-Fi blip mid-interview gave the new
+  connection a fresh engine with no recent turns, summary or question history, so follow-up answers lost the
+  thread. The next connection now picks up the previous engine's memory (`live/carryover.py`). It's kept in
+  process memory for no longer than an idle session and dropped when the session ends. After a server restart,
+  the saved rolling summary seeds it.
+- **Mock interviews resume instead of restarting.** A drop used to start the round over at question 1 with a fresh
+  timer. Now the same question comes back in the same place ("2 of 3"), it isn't recorded twice, and the round's
+  clock keeps running.
+- **Sign-up review fixes:** no stray "already registered" email to an owner mid-sign-up, and no 500 when two
+  sign-ups for one address race.
+
 ## Dependency updates (2026-09-27)
 
 Taken from Dependabot, after testing each one locally (typecheck, lint, tests, both builds, audit):
