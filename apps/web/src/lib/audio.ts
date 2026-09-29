@@ -11,6 +11,18 @@ export interface AudioCapture {
   stream: MediaStream;
 }
 
+const WORKLET_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer = 0;
+  return Promise.race([
+    promise.finally(() => window.clearTimeout(timer)),
+    new Promise<T>((_, reject) => {
+      timer = window.setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
+}
+
 /**
  * Streams a MediaStream through the PCM16 worklet. One AudioContext per capture so
  * mic and system audio stay on separate channels end to end.
@@ -20,7 +32,13 @@ export async function captureStream(stream: MediaStream, onFrame: (frame: PcmFra
   let source: MediaStreamAudioSourceNode;
   let node: AudioWorkletNode;
   try {
-    await ctx.audioWorklet.addModule("/pcm16-worklet.js");
+    // A stuck audio engine (another app holding the device, a browser audio bug) never settles this promise:
+    // fail with something the user can act on instead of a silent "Mic off".
+    await withTimeout(
+      ctx.audioWorklet.addModule("/pcm16-worklet.js"),
+      WORKLET_TIMEOUT_MS,
+      "the browser's audio engine didn't start. Close other tabs or apps using audio, then retry",
+    );
     source = ctx.createMediaStreamSource(stream);
     node = new AudioWorkletNode(ctx, "pcm16-processor");
   } catch (err) {

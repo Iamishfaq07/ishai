@@ -263,3 +263,54 @@ async def test_manual_answer_with_auto_off_gets_the_whole_question() -> None:
     q = sink.of("question.detected")[0]["text"]
     assert q.startswith("Walk me through") and "failure modes" in q
     await eng.handle_client({"type": "session.end", "data": {}})
+
+
+
+async def test_a_question_that_grows_is_stored_whole() -> None:
+    """The interviewer carries on after a question fired: the stored question (review, exports, history) becomes
+    the whole question, not just the part that fired first."""
+    from tests.test_mock_interview import Spy
+
+    class Recording(Spy):
+        def __init__(self) -> None:
+            super().__init__()
+            self.updates: list[tuple[str, str]] = []
+
+        async def question_text(self, qid: str, text: str) -> None:
+            self.updates.append((qid, text))
+
+    rec = Recording()
+    sink = Sink()
+    eng = LiveEngine(SessionProfile("s1", "interview", "Engineer", "en", "en", dev_mode=True),
+                     LiveSettings(response_timing="quick"), send=sink, llm=MockLLMProvider(),
+                     stt=MockSTTProvider(), index=SessionIndex([]), recorder=rec)  # type: ignore[arg-type]
+    await eng.start()
+    await _ask(eng, "Walk me through how you'd build an image classification pipeline.")
+    await sink.wait_for("answer.completed")
+    await _ask(eng, "Start with data, then preprocessing, and what failure modes you'd look for.")
+    await sink.wait_for("question.updated")
+    updated = sink.of("question.updated")[-1]
+    assert rec.updates == [(updated["question_id"], updated["text"])]
+    assert rec.questions[0][0].startswith("Walk me through")  # recorded once, then updated in place
+    await eng.handle_client({"type": "session.end", "data": {}})
+
+
+def test_recorder_updates_the_stored_question_text(client: Any) -> None:
+    from orbit_api.sessions.recorder import DbRecorder
+    from tests.test_api import _register
+
+    h = _register(client)
+    sid = client.post("/v1/sessions", headers=h, json={"title": "t"}).json()["id"]
+    user_id = client.get("/v1/auth/me", headers=h).json()["id"]
+
+    async def record() -> None:
+        rec = DbRecorder(sid, user_id, store_transcripts=True, usage_key=None, usage_metric="live_seconds")
+        await rec.question("q-grow", None, "How do you prevent security gates from slowing engineering?",
+                           "technical", 0.9, False, "auto")
+        await rec.question_text("q-grow", "How do you prevent security gates from slowing engineering? "
+                                          "What is dependency injection?")
+        await rec.close()
+
+    client.portal.call(record)
+    stored = next(q for q in client.get(f"/v1/sessions/{sid}", headers=h).json()["questions"] if q["id"] == "q-grow")
+    assert stored["text"].endswith("What is dependency injection?")

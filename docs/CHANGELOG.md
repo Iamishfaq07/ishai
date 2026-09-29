@@ -1,5 +1,17 @@
 # Implementation log
 
+## Fix: whole-app check (2026-09-29)
+
+A pass through every screen (sign-up, documents, story bank, a live session, the report, practice, settings,
+billing, phone widths) found three problems:
+- **Long questions were saved cut short.** When the interviewer kept talking and a question grew, the live
+  answer used the whole question, but the report and exports kept only its first part. The recorder now updates
+  the stored question text (`DbRecorder.question_text`).
+- **The mic could hang on "Starting…".** If the browser's audio engine never loaded, nothing happened and there
+  was no error. It now gives up after 8 seconds and shows "Microphone unavailable" with a Retry button.
+- **Resume fields had no length limits.** Pasting a long text into a resume field made every autosave fail
+  quietly ("Not saved"). Each field now stops at the limit the server accepts, and "Add role" stops at 20 roles.
+
 ## Fix: answers covered only the last part of a question (2026-09-29)
 
 When the interviewer asked in one breath, e.g. "Tell me about your last project. What was the hardest part?" or
