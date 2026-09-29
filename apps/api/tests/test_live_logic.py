@@ -363,6 +363,37 @@ def test_extracts_the_question_sentence(turn: str, question: str) -> None:
     assert d.should_generate and d.question_text == question
 
 
+# The whole question, not just its last sentence: a multi-part question, or set-up said before it in the same
+# breath, used to be answered from the last sentence alone.
+@pytest.mark.parametrize(
+    ("turn", "question"),
+    [
+        ("Tell me about your last project. What was the hardest part?",
+         "Tell me about your last project. What was the hardest part?"),
+        ("We process ten thousand payments a second and latency spikes at peak. How would you fix it?",
+         "We process ten thousand payments a second and latency spikes at peak. How would you fix it?"),
+        ("Great answer, thanks. Let's say you have a queue that's backing up. How would you debug it?",
+         "Let's say you have a queue that's backing up. How would you debug it?"),
+        ("How would you design a URL shortener? Assume a hundred million links a month.",
+         "How would you design a URL shortener? Assume a hundred million links a month."),
+        ("That makes sense. Um. So imagine a customer is angry about a late delivery. What do you do first? "
+         "And how do you follow up?",
+         "So imagine a customer is angry about a late delivery. What do you do first? And how do you follow up?"),
+    ],
+)
+def test_keeps_the_set_up_and_earlier_parts_of_the_question(turn: str, question: str) -> None:
+    d = detect(turn, "interviewer")
+    assert d.should_generate and d.question_text == question
+
+
+def test_set_up_is_capped_and_scoring_still_uses_the_question_sentence() -> None:
+    long_setup = " ".join(["We have a service that handles orders for many regions."] * 12)
+    d = detect(f"{long_setup} How would you scale it?", "interviewer")
+    assert d.should_generate and len(d.question_text.split()) <= 80 + 5
+    assert detect("Attack an enemy shield. How would you design a rate limiter?",
+                  "interviewer").question_text == "How would you design a rate limiter?"
+
+
 @pytest.mark.parametrize("turn", [
     "Right. Okay. Give me one second. Attack an enemy shield.",  # the real false positive
     "Thanks for joining us today.",
@@ -429,6 +460,17 @@ def test_a_question_continued_after_a_pause_is_answered_whole() -> None:
     assert fired and fired.turn_id == "t2"
     assert fired.detection.question_text == (
         "Tell me about a difficult bug you fixed. Specifically, how did you track it down?")
+
+
+def test_a_multi_part_question_in_one_turn_is_answered_whole() -> None:
+    # One breath, no pause long enough to split the turn: the answer used to cover only the last sentence.
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=3000)
+    f.on_transcript("t1", "Tell me about your last project.", 0, is_final=False)
+    assert f.on_transcript("t1", "Tell me about your last project. What was the hardest part?", 900,
+                           is_final=True, endpoint=True) is None
+    assert f.tick(3800) is None  # "patient": 3 s after the interviewer stops
+    fired = f.tick(3900)
+    assert fired and fired.detection.question_text == "Tell me about your last project. What was the hardest part?"
 
 
 def test_vad_noise_does_not_hold_a_question_forever() -> None:

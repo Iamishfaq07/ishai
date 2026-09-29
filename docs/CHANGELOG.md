@@ -1,5 +1,24 @@
 # Implementation log
 
+## Fix: answers covered only the last part of a question (2026-09-29)
+
+When the interviewer asked in one breath, e.g. "Tell me about your last project. What was the hardest part?" or
+"We process 10k payments a second and latency spikes at peak. How would you fix it?", the answer covered only
+the last sentence. The detector kept just the last question sentence of a turn, so a longer "wait before
+answering" didn't help. `question_in_context` now keeps:
+- earlier parts of the question;
+- set-up said right before it ("Let's say…", "We have…", "Imagine…"), or that the question refers back to
+  ("…fix it?");
+- constraints added right after ("Assume a million users.").
+
+What still stays out:
+- other apps' audio merged into the turn;
+- fillers and pleasantries;
+- the interviewer's reaction to your last answer ("Great, thanks.").
+
+Set-up is capped at 80 words. Whether something counts as a question is still judged on the question sentence
+itself.
+
 ## Resume maker (2026-09-29)
 
 Most resumes are read by software before a person sees them. The resume maker, under Documents → Resume maker,

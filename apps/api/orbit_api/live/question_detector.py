@@ -6,7 +6,7 @@ to an LLM classifier, but the default path never waits on one.
 """
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from orbit_api.live.events import QuestionType, SessionType, Speaker
 
@@ -244,24 +244,95 @@ def _is_noise(sentence: str) -> bool:
             or (len(toks) <= 3 and all(t in _FILLER_TOKENS for t in toks)))
 
 
-def extract_question(text: str) -> str:
-    """The question inside a multi-sentence turn: drops fillers, pleasantries and trailing fragments.
-
-    Real system audio merges things into one turn ("Right. Okay. Give me one second. <other app audio>",
-    "Thanks for joining us today. So tell me about yourself."), so detection is per sentence.
-    """
-    raw = text.strip()
-    sentences = [x.strip() for x in _SENTENCE.split(raw) if x.strip()]
-    if len(sentences) <= 1:
-        return raw
+def _question_span(sentences: list[str]) -> tuple[int, int] | None:
+    """(first, last) sentence index of the last question in a turn, with a framing lead-in just before it."""
     for i in range(len(sentences) - 1, -1, -1):
         if not _is_noise(sentences[i]) and _detect_one(sentences[i], "interviewer", DetectorContext()).is_question:
             start = i
             if i > 0 and not _is_noise(sentences[i - 1]) and normalize(sentences[i - 1]).startswith(_LEAD_IN):
                 start = i - 1
-            return " ".join(sentences[start : i + 1])
+            return start, i
+    return None
+
+
+def extract_question(text: str) -> str:
+    """The question inside a multi-sentence turn: drops fillers, pleasantries and trailing fragments.
+
+    Real system audio merges things into one turn ("Right. Okay. Give me one second. <other app audio>",
+    "Thanks for joining us today. So tell me about yourself."), so detection is per sentence. This is the part
+    that's *scored* as a question; `question_in_context` is what gets answered.
+    """
+    raw = text.strip()
+    sentences = [x.strip() for x in _SENTENCE.split(raw) if x.strip()]
+    if len(sentences) <= 1:
+        return raw
+    span = _question_span(sentences)
+    if span is not None:
+        return " ".join(sentences[span[0] : span[1] + 1])
     kept = [x for x in sentences if not _is_noise(x)]
     return " ".join(kept) if kept else sentences[-1]
+
+
+# Set-up said before the question in the same breath ("Let's say you have a queue that's backing up. How would
+# you debug it?"): answering only the last sentence loses what it's about.
+_SETUP = ("let's say", "lets say", "say you", "imagine", "suppose", "assume", "consider", "given", "we have",
+          "we've got", "we are", "we're", "you have", "you've got", "you are", "you're", "there is", "there's",
+          "there are", "our ", "in this", "here's", "here is", "the problem", "the scenario", "the context",
+          "for this", "for context", "a customer", "a user", "your team", "your manager", "so we", "so you",
+          "so let's", "so imagine", "so say")
+# Said right after the question, still part of it ("How would you design it? Assume a million users.").
+_CONTINUATION = ("assume", "consider", "think about", "keep in mind", "focus on", "for example", "for instance",
+                 "especially", "in particular", "including", "also ", "and ", "feel free", "you can assume",
+                 "let's assume", "given that", "suppose", "start with", "then ", "bonus if")
+# The interviewer reacting to the previous answer: what comes before it belongs to that exchange.
+_REACTION = ("great", "good", "nice", "perfect", "awesome", "excellent", "thanks", "thank you", "okay", "ok",
+             "alright", "all right", "got it", "makes sense", "that makes sense", "that's great", "that's a great",
+             "that's helpful", "that's interesting", "that's fair", "fair enough", "interesting", "cool",
+             "understood", "i see", "love that", "sounds good")
+_BACK_REFERENCE = frozenset({"it", "its", "this", "that", "these", "those", "they", "them", "their", "there"})
+MAX_CONTEXT_WORDS = 80
+
+
+def _is_reaction(sentence: str) -> bool:
+    n = normalize(sentence)
+    return len(n.split()) <= 8 and n.startswith(_REACTION)
+
+
+def question_in_context(text: str) -> str:
+    """The whole question as the interviewer put it in this turn: the question sentence plus the set-up and earlier
+    parts said before it ("Tell me about your last project. What was the hardest part?"), and constraints added
+    right after ("Assume a million users."). Unrelated speech merged into the turn (another app's audio, the
+    interviewer reacting to your last answer) stays out: a sentence before the question is kept only if it's
+    itself part of the question, opens like set-up, or the question refers back to it."""
+    raw = text.strip()
+    sentences = [x.strip() for x in _SENTENCE.split(raw) if x.strip()]
+    span = _question_span(sentences) if len(sentences) > 1 else None
+    if span is None:
+        return extract_question(text)
+    start, end = span
+    before: list[str] = []
+    words = 0
+    for j in range(start - 1, -1, -1):
+        sentence = sentences[j]
+        if _is_reaction(sentence):
+            break
+        if _is_noise(sentence):
+            continue  # "um", "so", a pleasantry: skip over it
+        n = normalize(sentence)
+        chain = [*before, *sentences[start : end + 1]]
+        refers_back = bool(set(tokens(chain[0])) & _BACK_REFERENCE)
+        related = (_detect_one(sentence, "interviewer", DetectorContext()).is_question or n.startswith(_SETUP)
+                   or n.startswith(_LEAD_IN) or (refers_back and len(tokens(sentence)) > 3))
+        if not related or words + len(tokens(sentence)) > MAX_CONTEXT_WORDS:
+            break
+        before.insert(0, sentence)
+        words += len(tokens(sentence))
+    after: list[str] = []
+    for sentence in sentences[end + 1 :]:
+        if _is_noise(sentence) or len(tokens(sentence)) < 3 or not normalize(sentence).startswith(_CONTINUATION):
+            break
+        after.append(sentence)
+    return " ".join([*before, *sentences[start : end + 1], *after])
 
 
 def lead_in(text: str, max_words: int) -> str:
@@ -282,7 +353,14 @@ def continue_question(question: str, more: str) -> str:
 
 
 def detect(text: str, speaker: Speaker, ctx: DetectorContext | None = None) -> Detection:
-    return _detect_one(extract_question(text), speaker, ctx)
+    """Scored on the question sentence itself; `question_text` is the question in context (set-up and earlier
+    parts from the same turn), which is what gets answered."""
+    core = extract_question(text)
+    d = _detect_one(core, speaker, ctx)
+    if speaker != "interviewer":
+        return d
+    full = question_in_context(text)
+    return d if full == core else replace(d, question_text=full)
 
 
 def _detect_one(text: str, speaker: Speaker, ctx: DetectorContext | None = None) -> Detection:
