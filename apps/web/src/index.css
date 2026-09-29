@@ -48,10 +48,12 @@
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  /* Single-column templates flow across pages: the @page margin gives page 2 its top margin too. */
+  /* The page itself has no margin (@page in PrintCopy), which leaves the browser no room to print its own
+     header and footer (date, title, URL, page numbers). Single-column templates flow across pages, and
+     "clone" repeats the resume's padding on every page, so page 2 still gets its top margin. */
   .resume-print-flow .resume-page {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
     min-height: 0 !important;
   }
 }

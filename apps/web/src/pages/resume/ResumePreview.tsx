@@ -198,8 +198,10 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
 
   const header =
     t === "classic" ? (
-      <header className="relative text-center">
-        {photo && <div className="absolute right-0 top-0">{photoEl("22mm")}</div>}
+      // Not positioned itself: a positioned header is painted after the sections, so the PDF's text would list
+      // the name and contacts last, which confuses ATS parsers. The photo is placed against the page instead.
+      <header className="text-center">
+        {photo && <div className="absolute" style={{ top: space.pad, right: space.pad }}>{photoEl("22mm")}</div>}
         <h1 style={{ fontSize: "2em", lineHeight: 1.15 }} className="font-bold tracking-tight">
           {name}
         </h1>
@@ -231,7 +233,7 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     );
 
   return (
-    <div style={style} className="resume-page">
+    <div style={style} className="resume-page relative">
       {header}
       {data.section_order.map(section)}
     </div>

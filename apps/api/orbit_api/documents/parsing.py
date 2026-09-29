@@ -8,12 +8,18 @@ Hostile files are handled in two layers:
   total uncompressed size, compression ratio, path traversal), so a ZIP bomb is refused without inflating it.
 - PDF/DOCX extraction runs in a short-lived child process (`extract_text_isolated`) with a timeout and, on Linux,
   memory and CPU limits. A parser that hangs, balloons or crashes takes down the child, never the API.
+
+A PDF is read by pypdf, then by PDFium if pypdf finds no text (fonts pypdf can't map, some design-tool exports),
+then, for a scanned PDF with no text layer, by OCR: PDFium renders the first pages and Tesseract reads them.
 """
 
 import io
 import logging
 import multiprocessing
+import os
 import re
+import shutil
+import subprocess
 import sys
 import zipfile
 from dataclasses import dataclass
@@ -29,8 +35,14 @@ MAX_ZIP_ENTRY_BYTES = 25 * 1024 * 1024
 MAX_ZIP_TOTAL_BYTES = 50 * 1024 * 1024
 MAX_ZIP_RATIO = 100  # uncompressed / compressed, checked on entries big enough to matter
 ZIP_RATIO_MIN_BYTES = 1024 * 1024
-# Child-process limits for PDF/DOCX extraction.
+# Child-process limits for PDF/DOCX extraction. OCR of a scanned PDF is slow on a small CPU, so PDFs get longer.
 PARSE_TIMEOUT_S = 20.0
+PDF_PARSE_TIMEOUT_S = 75.0
+# OCR of scanned PDFs: pages read, render resolution (Tesseract is most accurate around 300 dpi), per-page cap.
+OCR_MAX_PAGES = 3
+OCR_DPI = 300
+OCR_PAGE_TIMEOUT_S = 20.0
+OCR_MAX_SIDE_PX = 4000
 PARSE_MEMORY_BYTES = 768 * 1024 * 1024
 PARSE_CPU_SECONDS = 30
 # Set by `isolation_selftest()` at boot if child-process parsing doesn't work on this host; extraction then runs
@@ -130,7 +142,7 @@ def extract_text_isolated(data: bytes, fmt: str) -> str:
     proc.start()
     sender.close()
     try:
-        if not receiver.poll(PARSE_TIMEOUT_S):
+        if not receiver.poll(PDF_PARSE_TIMEOUT_S if fmt == "pdf" else PARSE_TIMEOUT_S):
             raise ParseError("This document took too long to process.")
         status, value = receiver.recv()
     except (EOFError, OSError) as e:  # the child died (memory/CPU limit, parser crash)
@@ -168,15 +180,86 @@ def isolation_selftest() -> bool:
     return ok
 
 
+def _pypdf_text(data: bytes) -> str:
+    from pypdf import PdfReader
+
+    reader = PdfReader(io.BytesIO(data))
+    if reader.is_encrypted:
+        raise ParseError("Encrypted PDFs are not supported.")
+    return "\n".join((p.extract_text() or "") for p in reader.pages[:MAX_PAGES])
+
+
+def _pdfium_text(data: bytes) -> str:
+    import pypdfium2 as pdfium
+
+    pdf = pdfium.PdfDocument(data)
+    try:
+        pages = []
+        for i in range(min(len(pdf), MAX_PAGES)):
+            page = pdf[i]
+            textpage = page.get_textpage()
+            pages.append(textpage.get_text_bounded())
+            textpage.close()
+            page.close()
+        return "\n".join(pages)
+    finally:
+        pdf.close()
+
+
+def ocr_available() -> bool:
+    return shutil.which("tesseract") is not None
+
+
+def _ocr_pdf(data: bytes) -> str:
+    """Read a scanned PDF: render its first pages with PDFium and run Tesseract on each (as a subprocess, so it
+    inherits this child's memory and CPU limits)."""
+    import pypdfium2 as pdfium
+
+    exe = shutil.which("tesseract")
+    if exe is None:
+        raise ParseError("This PDF is a scanned image with no text in it, and this server can't read images. "
+                         "Export it again as a text PDF, or paste the text instead.")
+    env = {**os.environ, "OMP_THREAD_LIMIT": "1"}  # one thread: steadier on small shared CPUs
+    pdf = pdfium.PdfDocument(data)
+    try:
+        texts = []
+        for i in range(min(len(pdf), OCR_MAX_PAGES)):
+            page = pdf[i]
+            buf = io.BytesIO()
+            scale = min(OCR_DPI / 72, OCR_MAX_SIDE_PX / max(*page.get_size(), 1))  # a poster-sized page stays small
+            page.render(scale=scale, grayscale=True).to_pil().save(buf, format="PNG")
+            page.close()
+            try:
+                # Fixed arguments; the untrusted file only reaches Tesseract as rendered PNG bytes on stdin.
+                out = subprocess.run([exe, "stdin", "stdout", "-l", "eng", "--psm", "3"], input=buf.getvalue(),  # noqa: S603
+                                     capture_output=True, timeout=OCR_PAGE_TIMEOUT_S, env=env, check=False)
+            except subprocess.TimeoutExpired as e:
+                raise ParseError("This scanned PDF took too long to read. Paste the text instead.") from e
+            texts.append(out.stdout.decode("utf-8", errors="replace"))
+        return "\n".join(texts)
+    finally:
+        pdf.close()
+
+
+def _pdf_text(data: bytes) -> str:
+    try:
+        text = _pypdf_text(data)
+    except ParseError:
+        raise
+    except Exception:  # pypdf chokes on some files PDFium reads fine
+        log.info("pypdf couldn't read a PDF; trying PDFium")
+        text = ""
+    if not text.strip():
+        text = _pdfium_text(data)
+    if not text.strip():
+        text = _ocr_pdf(data)
+    return text
+
+
 def extract_text(data: bytes, fmt: str) -> str:
     try:
         if fmt == "pdf":
-            from pypdf import PdfReader
-
-            reader = PdfReader(io.BytesIO(data))
-            if reader.is_encrypted:
-                raise ParseError("Encrypted PDFs are not supported.")
-            text = "\n".join((p.extract_text() or "") for p in reader.pages[:MAX_PAGES])
+            text = _pdf_text(data)
         elif fmt == "docx":
             import docx
 
@@ -190,7 +273,7 @@ def extract_text(data: bytes, fmt: str) -> str:
         raise ParseError("Could not read this document.") from e
     text = text.replace("\r\n", "\n").replace("\x00", "")
     if not text.strip():
-        raise ParseError("No readable text found (scanned PDFs need OCR, not yet supported).")
+        raise ParseError("No readable text found in this file. Paste the text instead.")
     return text[:MAX_CHARS]
 
 
