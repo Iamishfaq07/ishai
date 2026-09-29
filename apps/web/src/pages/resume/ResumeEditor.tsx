@@ -25,7 +25,7 @@ import {
 } from "@orbit/ui";
 import { Button, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
 import { api } from "../../lib/api";
-import { errorText } from "../../lib/format";
+import { downloadText, errorText } from "../../lib/format";
 import { ContentForm } from "./ContentForm";
 import { ACCENTS, FONTS, SPACING, TEMPLATES, getAt, newId, photoToDataUrl, resumeToText, setAt } from "./model";
 import { PAGE_MM, ResumePreview } from "./ResumePreview";
@@ -208,7 +208,8 @@ export function ResumeEditorPage() {
             </button>
           )}
           <SaveToDocuments resume={resume} />
-          <Button onClick={() => window.print()}>
+          <DownloadWord resume={resume} />
+          <Button onClick={() => printResume(resume)}>
             <Download className="h-4 w-4" /> Download PDF
           </Button>
         </div>
@@ -322,6 +323,45 @@ function SaveToDocuments({ resume }: { resume: Resume }) {
       {state === "done" ? "Saved to Documents" : state === "error" ? "Couldn't save, try again" : "Use in Orbit"}
     </Button>
   );
+}
+
+/** A Word copy for portals and recruiters that ask for .docx: one plain column, which ATS software reads best. */
+function DownloadWord({ resume }: { resume: Resume }) {
+  const [state, setState] = useState<"idle" | "busy" | "error">("idle");
+  return (
+    <Button
+      variant="secondary"
+      disabled={state === "busy"}
+      title="Download a Word copy (.docx): one plain column, no photo, which ATS software reads best"
+      onClick={() => {
+        setState("busy");
+        api
+          .resumeDocx(resume.data, resume.design)
+          .then((blob) => {
+            downloadText(`${fileName(resume)}.docx`, blob, blob.type);
+            setState("idle");
+          })
+          .catch(() => setState("error"));
+      }}
+    >
+      <FileText className="h-4 w-4" />
+      {state === "busy" ? "Preparing…" : state === "error" ? "Couldn't download, try again" : "Word"}
+    </Button>
+  );
+}
+
+/** Browsers name the saved PDF after the page title, so it's "Sam Lee - Resume.pdf" rather than the app's name. */
+function printResume(resume: Resume): void {
+  const previous = document.title;
+  document.title = fileName(resume);
+  window.addEventListener("afterprint", () => (document.title = previous), { once: true });
+  window.print();
+}
+
+/** "Sam Lee - Resume", from the name on the resume (or its title), safe to use as a file name everywhere. */
+function fileName(resume: Resume): string {
+  const base = resume.data.basics.name.trim() ? `${resume.data.basics.name.trim()} - Resume` : resume.title.trim();
+  return base.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 100) || "Resume";
 }
 
 /** The page at real size, scaled down to fit the column. */

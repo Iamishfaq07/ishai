@@ -1,5 +1,19 @@
 # Implementation log
 
+## Resume maker: Word download, better Word import, named PDF (2026-09-29)
+
+- **Download as Word (.docx).** Next to "Download PDF", **Word** downloads the resume as the editor shows it,
+  saved or not, for portals and recruiters that ask for Word (`POST /v1/resumes/docx`, `resumes/docx_export.py`).
+  - It is built from real Word parts: headings, bullet lists, and a right tab stop for dates. That makes it easy
+    to edit, and ATS software reads it cleanly.
+  - It keeps the font, size, accent colour, spacing, page size and section order. It is always one plain column
+    with no photo.
+- **Word resumes import whole.** Uploading a .docx used to read only top-level paragraphs, dropping anything in
+  tables, text boxes, and page headers and footers. Many Word resume templates put the whole layout in tables
+  and the contact line in the page header. All of it is now read, in order and only once (Word keeps two copies
+  of each text box). This applies to Documents uploads too.
+- **The PDF gets a real file name.** "Download PDF" now suggests "Sam Lee - Resume.pdf" instead of the app's name.
+
 ## Fix: resume import of scanned PDFs, and a clean "Download PDF" (2026-09-29)
 
 - **Scanned and hard-to-read PDFs now import.** Uploads used to fail with "No readable text found (scanned PDFs

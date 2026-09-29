@@ -16,7 +16,7 @@ import logging
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +33,7 @@ from orbit_api.providers.llm.pricing import estimate_cost
 from orbit_api.ratelimit import limit, limit_user
 from orbit_api.resumes import ai
 from orbit_api.resumes.ats import AtsReport, score_resume
+from orbit_api.resumes.docx_export import resume_docx
 from orbit_api.resumes.schema import ResumeData, ResumeDesign
 
 log = logging.getLogger(__name__)
@@ -154,6 +155,24 @@ class ScoreIn(BaseModel):
 @router.post("/score", response_model=AtsReport, dependencies=[Depends(score_limit)])
 async def score(body: ScoreIn, _: Annotated[User, Depends(current_user)]) -> AtsReport:
     return score_resume(body.data, body.design, body.job_text)
+
+
+# ---- Word export --------------------------------------------------------------------------------------------
+
+DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+
+class DocxIn(BaseModel):
+    data: ResumeData
+    design: ResumeDesign = Field(default_factory=ResumeDesign)
+
+
+@router.post("/docx", dependencies=[Depends(score_limit)],
+             responses={200: {"content": {DOCX_TYPE: {}}, "description": "The resume as a Word file."}})
+async def export_docx(body: DocxIn, _: Annotated[User, Depends(current_user)]) -> Response:
+    """The resume the editor shows right now (saved or not) as a .docx; nothing is stored."""
+    content = await asyncio.to_thread(resume_docx, body.data, body.design)
+    return Response(content, media_type=DOCX_TYPE, headers={"Cache-Control": "no-store"})
 
 
 # ---- AI: import and suggestions ----------------------------------------------------------------------------

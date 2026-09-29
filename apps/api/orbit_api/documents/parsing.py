@@ -25,6 +25,7 @@ import zipfile
 from dataclasses import dataclass
 from multiprocessing.connection import Connection
 from pathlib import PurePosixPath
+from typing import Any
 
 MAX_PAGES = 40
 MAX_CHARS = 200_000
@@ -256,15 +257,51 @@ def _pdf_text(data: bytes) -> str:
     return text
 
 
+_W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+_MC_FALLBACK = "{http://schemas.openxmlformats.org/markup-compatibility/2006}Fallback"
+
+
+def _docx_lines(root: Any) -> list[str]:
+    """Every paragraph under `root` in reading order, including those in tables and text boxes. A text box sits
+    inside a run of an outer paragraph, so each piece of text counts only toward its nearest paragraph; the legacy
+    copy Word keeps of each text box (mc:Fallback) is skipped so nothing is read twice."""
+    lines = []
+    for par in root.iter(_W + "p"):
+        if any(a.tag == _MC_FALLBACK for a in par.iterancestors()):
+            continue
+        parts = []
+        for node in par.iter(_W + "t", _W + "tab", _W + "br", _W + "cr"):
+            # Only text inside this paragraph's own runs: a text box has its own paragraphs, and a paragraph's
+            # settings list its tab stops as w:tab too.
+            if next(node.iterancestors(_W + "p"), None) is not par or node.getparent().tag != _W + "r":
+                continue
+            parts.append(node.text or "" if node.tag == _W + "t" else "\t" if node.tag == _W + "tab" else "\n")
+        lines.append("".join(parts))
+    return lines
+
+
+def _docx_text(data: bytes) -> str:
+    """Body text plus page headers and footers (resume templates often put the contact line there, and lay the
+    body out in tables), headers first and footers last."""
+    import docx
+
+    d = docx.Document(io.BytesIO(data))
+    head: list[str] = []
+    foot: list[str] = []
+    for part in d.part.package.iter_parts():
+        name = str(part.partname)
+        target = head if name.startswith("/word/header") else foot if name.startswith("/word/footer") else None
+        if target is not None and hasattr(part, "element"):
+            target.extend(line for line in _docx_lines(part.element) if line.strip() and line not in target)
+    return "\n".join([*head, *_docx_lines(d.element.body), *foot])
+
+
 def extract_text(data: bytes, fmt: str) -> str:
     try:
         if fmt == "pdf":
             text = _pdf_text(data)
         elif fmt == "docx":
-            import docx
-
-            d = docx.Document(io.BytesIO(data))
-            text = "\n".join(p.text for p in d.paragraphs)
+            text = _docx_text(data)
         else:
             text = data.decode("utf-8", errors="replace")
     except ParseError:

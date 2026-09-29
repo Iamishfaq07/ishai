@@ -154,6 +154,37 @@ def test_export_includes_resumes(client: TestClient) -> None:
     assert [r["title"] for r in client.get("/v1/auth/me/export", headers=h).json()["resumes"]] == ["Mine"]
 
 
+# ---- Word export -------------------------------------------------------------------------------------------
+
+
+def test_word_export_reads_back_in_order(client: TestClient) -> None:
+    import docx
+
+    from orbit_api.documents.parsing import extract_text
+
+    h = _register(client)
+    data = strong_resume()
+    data.section_order = ["experience", "skills", "education", "summary", "projects", "certifications"]
+    r = client.post("/v1/resumes/docx", headers=h, json={
+        "data": data.model_dump(mode="json"), "design": {"font": "georgia", "accent": "#0f766e", "page": "letter"}})
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("application/vnd.openxmlformats-officedocument.wordprocessingml")
+    text = extract_text(r.content, "docx")
+    lines = text.split("\n")
+    assert lines[0] == "Sam Lee" and "sam@example.com" in lines[1]
+    # The chosen section order, empty sections left out, the job line with its dates after a tab.
+    heads = [line for line in lines if line in ("EXPERIENCE", "SKILLS", "EDUCATION", "SUMMARY", "PROJECTS")]
+    assert heads == ["EXPERIENCE", "SKILLS", "EDUCATION", "SUMMARY"]
+    assert "Senior Engineer, PayCo\tJan 2020 – Present" in lines
+    assert "Infrastructure: AWS, Kubernetes, Docker, Terraform, Kafka, Redis, PostgreSQL, Datadog" in lines
+    d = docx.Document(__import__("io").BytesIO(r.content))
+    assert d.styles["Normal"].font.name == "Georgia"
+    assert round(d.sections[0].page_width.mm) == 216
+    assert sum(p.style.name == "List Bullet" for p in d.paragraphs) == 6
+    assert sum(p.style.name == "Heading 1" for p in d.paragraphs) == 4
+    assert client.post("/v1/resumes/docx", json={"data": {}}).status_code == 401
+
+
 # ---- AI import ---------------------------------------------------------------------------------------------
 
 PASTED = """Priya Raman
