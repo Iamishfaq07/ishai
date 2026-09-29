@@ -17,6 +17,7 @@ from orbit_api.models import (
     Document,
     LiveSessionRow,
     Question,
+    Resume,
     SessionSummary,
     SessionTurn,
     Story,
@@ -59,6 +60,8 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
                                                            .order_by(Workspace.created_at))).all()],
         "stories": [_row(st) for st in (await db.scalars(select(Story).where(Story.user_id == user_id)
                                                           .order_by(Story.created_at))).all()],
+        "resumes": [_row(r) for r in (await db.scalars(select(Resume).where(Resume.user_id == user_id)
+                                                       .order_by(Resume.created_at))).all()],
         "answer_ratings": [_row(f) for f in (await db.scalars(
             select(AnswerFeedback).where(AnswerFeedback.user_id == user_id)
             .order_by(AnswerFeedback.created_at))).all()],

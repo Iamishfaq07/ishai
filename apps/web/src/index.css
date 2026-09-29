@@ -30,3 +30,28 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Resume maker: "Download PDF" prints only the resume (a copy portalled next to #root), at real size. */
+.resume-print {
+  display: none;
+}
+@media print {
+  body > #root {
+    display: none !important;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  .resume-print {
+    display: block;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Single-column templates flow across pages: the @page margin gives page 2 its top margin too. */
+  .resume-print-flow .resume-page {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    min-height: 0 !important;
+  }
+}

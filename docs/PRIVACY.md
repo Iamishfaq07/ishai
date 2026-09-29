@@ -17,6 +17,7 @@ be checked.
 | Account (email, name, password hash) | sign-in | `users` |
 | Documents' extracted text + searchable facts | grounding answers in your background | `documents`, `document_chunks` |
 | Workspaces | saved setups | `workspaces` |
+| Resume maker: resumes (content, design, the photo if you add one, the job post you tailor to) | editing and scoring them | `resumes` |
 | Sessions: transcript, questions, answers, report | history and review | `session_turns`, `questions`, `answers`, `session_summaries` |
 | Usage (minutes, screenshots) | plan limits | `usage` |
 | Security log (sign-ins, resets, email changes) | account security | `audit_logs` |
@@ -31,6 +32,7 @@ discarded when the session ends.
 | Delete just a session's transcript, keeping answers and report | History | `DELETE /v1/sessions/{id}/transcript` |
 | Delete a document (and its searchable facts) | Documents | `DELETE /v1/documents/{id}` |
 | Delete a workspace | Setup | `DELETE /v1/workspaces/{id}` |
+| Delete a resume (and its photo) | Documents → Resume maker | `DELETE /v1/resumes/{id}` |
 | Download all your data (one JSON file) | Settings → Account | `GET /v1/auth/me/export` |
 | Change your email (confirmed from the new inbox; the old one is told) | Settings → Account | `POST /v1/auth/me/email` |
 | Sign out of every device | Settings → Privacy | `POST /v1/auth/logout-all` |
@@ -39,6 +41,9 @@ discarded when the session ends.
 Deleting an account cascades to every row above (`ON DELETE CASCADE`). The export includes everything above
 except secrets (the password hash) and derived search data (chunk embeddings). The documents' full text is
 included instead.
+
+Resume imports (a PDF, Word file, LinkedIn "Save to PDF" or pasted text) are read once and the file isn't kept:
+only the structured resume you then save is stored.
 
 ## Where data lives
 - **The API and database:** the configured host (see DEPLOY.md: Render and Neon Postgres).

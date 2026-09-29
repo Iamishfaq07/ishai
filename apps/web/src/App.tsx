@@ -24,6 +24,8 @@ import {
   SessionsPage,
   SettingsPage,
   StoriesPage,
+  ResumesPage,
+  ResumeEditorPage,
   prefetchLikelyRoutes,
 } from "./routes";
 
@@ -62,6 +64,7 @@ const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/sessions\/[^/]+/, "Session"],
   [/^\/sessions/, "Sessions"],
   [/^\/documents\/stories/, "Story bank"],
+  [/^\/documents\/resumes/, "Resume maker"],
   [/^\/documents/, "Documents"],
   [/^\/mock/, "Practice"],
   [/^\/billing/, "Billing"],
@@ -115,6 +118,8 @@ export function App() {
         <Route path="sessions/:sessionId" element={<SessionDetailPage />} />
         <Route path="documents" element={<DocumentsPage />} />
         <Route path="documents/stories" element={<StoriesPage />} />
+        <Route path="documents/resumes" element={<ResumesPage />} />
+        <Route path="documents/resumes/:resumeId" element={<ResumeEditorPage />} />
         <Route path="mock" element={<MockPage />} />
         <Route path="billing" element={<BillingPage />} />
         <Route path="settings" element={<SettingsPage />} />

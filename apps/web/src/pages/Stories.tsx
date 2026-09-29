@@ -4,6 +4,7 @@ import { STORY_COMPETENCIES, type Story, type StoryCompetency, type StoryInput }
 import {
   BookOpen,
   Check,
+  FileText,
   FolderOpen,
   PenLine,
   Plus,
@@ -36,6 +37,9 @@ export function LibraryTabs() {
       </NavLink>
       <NavLink to="/documents/stories" className={tab}>
         <BookOpen className="h-4 w-4" /> Story bank
+      </NavLink>
+      <NavLink to="/documents/resumes" className={tab}>
+        <FileText className="h-4 w-4" /> Resume maker
       </NavLink>
     </nav>
   );

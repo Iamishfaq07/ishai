@@ -179,6 +179,21 @@ class Story(TimestampMixin, Base):
     embedding_model: Mapped[str | None] = mapped_column(String(64))
 
 
+class Resume(TimestampMixin, Base):
+    """A resume built in the resume maker: its content and design as JSON (resumes/schema.py), plus the job post it's
+    being tailored to. Scored on demand (resumes/ats.py); nothing here is shared with live sessions unless the user
+    saves it to Documents."""
+
+    __tablename__ = "resumes"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(160))
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    design: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    job_text: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class WorkspaceDocument(Base):
     __tablename__ = "workspace_documents"
     __table_args__ = (UniqueConstraint("workspace_id", "document_id", name="uq_workspace_document"),)

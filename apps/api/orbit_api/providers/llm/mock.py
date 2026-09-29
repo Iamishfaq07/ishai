@@ -53,6 +53,22 @@ def _mock_report(user: str) -> str:
     })
 
 
+def _mock_resume_import(body: str) -> str:
+    """Enough of a resume read to exercise the editor locally: the name, contact details and a role."""
+    raw = [ln.strip() for ln in re.sub(r"</?reference_data[^>]*>", "", body).splitlines()]
+    lines = [ln.strip(" -•*\t") for ln in raw if ln]
+    bullets = [ln.strip(" -•*\t") for ln in raw if ln[:1] in {"-", "•", "*"}]
+    email = re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", body)
+    phone = re.search(r"\+?\d[\d ()-]{7,}\d", body)
+    return json.dumps({
+        "basics": {"name": lines[0][:120] if lines else "", "headline": "", "email": email.group(0) if email else "",
+                   "phone": phone.group(0) if phone else "", "location": "", "summary": "", "links": []},
+        "experience": [{"title": "[mock] Role", "company": "[mock] Company", "location": "", "start": "Jan 2020",
+                        "end": "", "current": True, "bullets": [ln[:300] for ln in bullets[:4]]}],
+        "education": [], "skills": [{"name": "Skills", "items": ["[mock] Skill"]}], "projects": [],
+        "certifications": []})
+
+
 class MockLLMProvider(LLMProvider):
     name = "mock"
 
@@ -92,6 +108,19 @@ class MockLLMProvider(LLMProvider):
                  "task": "[mock] I owned the release.", "action": "[mock] I re-planned the work and [what you did].",
                  "result": "[mock] We shipped on time [with a number].", "competencies": [comps[i % len(comps)]]}
                 for i in range(int(m.group(1)) if m else 1)]})
+        if request.request_type == "resume_import":
+            return _mock_resume_import(request.messages[-1].content if request.messages else "")
+        if request.request_type == "resume_suggest":
+            body = request.messages[-1].content if request.messages else ""
+            m = re.search(r'<reference_data source="resume_fields">\s*(?:<<<\s*)?(\[.*?\])', body, re.S)
+            try:
+                fields = json.loads(m.group(1)) if m else []
+            except json.JSONDecodeError:
+                fields = []
+            return json.dumps({"suggestions": [
+                {"path": f["path"], "after": f"[mock] Improved: {f['text'] or 'A summary of your strengths'}"[:300],
+                 "reason": "[mock] Clearer and more specific."}
+                for f in fields if isinstance(f, dict) and "path" in f][:3]})
         if request.request_type == "follow_up":
             return json.dumps({
                 "debrief": {"went_well": ["[mock] clear example"], "to_improve": ["[mock] add a metric"],

@@ -1,4 +1,5 @@
 import type {
+  AtsReport,
   AdminConfig,
   AdminConfigUpdate,
   ApiErrorBody,
@@ -29,6 +30,15 @@ import type {
   PrepResponse,
   PrivacyUpdate,
   RegisterPending,
+  Resume,
+  ResumeData,
+  ResumeDesign,
+  ResumeImportRequest,
+  ResumeImportResponse,
+  ResumeInput,
+  ResumeSuggestRequest,
+  ResumeSuggestion,
+  ResumeSummary,
   RegisterRequest,
   ScreenshotAccepted,
   Story,
@@ -211,6 +221,26 @@ export function createApiClient(options: ApiClientOptions) {
       json<StoryDraftResponse>("/v1/stories/draft", { method: "POST", body: body(req) }),
     /** Scores and speaking stats across ended sessions. */
     progress: () => json<Progress>("/v1/progress"),
+    // Resume maker
+    listResumes: () => json<ResumeSummary[]>("/v1/resumes"),
+    getResume: (id: string) => json<Resume>(`/v1/resumes/${encodeURIComponent(id)}`),
+    createResume: (req: ResumeInput) => json<Resume>("/v1/resumes", { method: "POST", body: body(req) }),
+    updateResume: (id: string, req: ResumeInput) =>
+      json<Resume>(`/v1/resumes/${encodeURIComponent(id)}`, { method: "PUT", body: body(req) }),
+    deleteResume: (id: string) => json<void>(`/v1/resumes/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    scoreResume: (data: ResumeData, design: ResumeDesign, jobText: string) =>
+      json<AtsReport>("/v1/resumes/score", { method: "POST", body: body({ data, design, job_text: jobText }) }),
+    importResume: (req: ResumeImportRequest) =>
+      json<ResumeImportResponse>("/v1/resumes/import", { method: "POST", body: body(req) }),
+    importResumeFile: (file: File | Blob, filename?: string) => {
+      const form = new FormData();
+      if (filename) form.append("file", file, filename);
+      else form.append("file", file);
+      return json<ResumeImportResponse>("/v1/resumes/import-file", { method: "POST", body: form });
+    },
+    suggestResume: (req: ResumeSuggestRequest) =>
+      json<{ suggestions: ResumeSuggestion[] }>("/v1/resumes/suggest", { method: "POST", body: body(req) }),
+
     /** Interview prep: likely questions from a job description, with answers drawn from the resume. */
     prep: (req: PrepRequest) => json<PrepResponse>("/v1/prep", { method: "POST", body: body(req) }),
     /** Read a job posting from a link (server-side, SSRF-safe); returns the text to check and edit. */

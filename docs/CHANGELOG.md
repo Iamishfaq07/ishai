@@ -1,5 +1,34 @@
 # Implementation log
 
+## Resume maker (2026-09-29)
+
+Most resumes are read by software before a person sees them. The resume maker, under Documents → Resume maker,
+scores yours the way that software reads it and helps you fix it until it passes.
+- **Start anywhere:** from scratch, from a PDF or Word file, from LinkedIn ("Save to PDF", or pasted text), from
+  pasted text, or from a resume already in Documents. AI reads it into editable sections, never adding facts.
+  The file isn't kept.
+- **ATS score out of 100, with a fix for every missed point** (`resumes/ats.py`):
+  - The score is deterministic, so the same resume always gets the same number, and it re-scores as you type.
+  - Contact details 10, standard sections 12, summary 5, experience bullets 28 (action verbs, numbers, length, no
+    "I"), skills 8, length and dates 7, ATS-safe layout 5, job keywords 25.
+  - Without a job post, the other 75 points are scaled to 100.
+  - "Show me" jumps to the text a fix is about.
+- **Tailor to a job post:** paste it or import it from a link. You see which keywords are matched and which are
+  missing, and one click adds a missing one to your skills (only the ones you really have).
+- **AI rewrite, one accepted change at a time:** "Improve my resume", "Tailor to the job", or "Fix with AI" on a
+  single line.
+  - Each suggestion names the exact text it replaces and is skipped if you've edited that text since.
+  - Where a number would help, the AI leaves a [placeholder] for you to fill in, never an invented figure.
+- **Design:**
+  - Four templates: Classic, Modern, Compact, and Sidebar (flagged as less ATS-safe).
+  - Accent colour, five fonts, text size, spacing, A4 or Letter, and an optional photo (shrunk to 256 px; flagged
+    for ATS).
+- **Download PDF** prints just the resume at real size, as real selectable text: one A4 page in the tested
+  example, with the text in reading order.
+- **Use in Orbit** saves the resume to Documents, so live sessions answer from it.
+- Included in "Download my data". Every page scans clean with axe (WCAG 2.1 AA) in both themes, and there's no
+  sideways scroll on phones.
+
 ## Reconnects continue the session (2026-09-27)
 
 - **Conversation memory survives a dropped connection.** Before, a Wi-Fi blip mid-interview gave the new
