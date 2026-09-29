@@ -40,8 +40,8 @@ export function errorText(err: unknown): string {
   return err instanceof Error ? err.message : "Something went wrong.";
 }
 
-export function downloadText(filename: string, text: string, type = "text/markdown"): void {
-  const url = URL.createObjectURL(new Blob([text], { type }));
+export function downloadText(filename: string, content: BlobPart, type = "text/markdown"): void {
+  const url = URL.createObjectURL(new Blob([content], { type }));
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;

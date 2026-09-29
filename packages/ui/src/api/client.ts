@@ -238,6 +238,9 @@ export function createApiClient(options: ApiClientOptions) {
       else form.append("file", file);
       return json<ResumeImportResponse>("/v1/resumes/import-file", { method: "POST", body: form });
     },
+    /** The resume as a Word file (.docx): one plain column, built from what the editor shows now. */
+    resumeDocx: async (data: ResumeData, design: ResumeDesign) =>
+      (await raw("/v1/resumes/docx", { method: "POST", body: body({ data, design }) })).blob(),
     suggestResume: (req: ResumeSuggestRequest) =>
       json<{ suggestions: ResumeSuggestion[] }>("/v1/resumes/suggest", { method: "POST", body: body(req) }),
 
