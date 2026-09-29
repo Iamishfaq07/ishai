@@ -314,3 +314,15 @@ def test_recorder_updates_the_stored_question_text(client: Any) -> None:
     client.portal.call(record)
     stored = next(q for q in client.get(f"/v1/sessions/{sid}", headers=h).json()["questions"] if q["id"] == "q-grow")
     assert stored["text"].endswith("What is dependency injection?")
+
+
+async def test_each_answer_is_noted_and_a_rewrite_replaces_its_note() -> None:
+    eng, sink = await _engine(MockLLMProvider())
+    await _ask(eng, "Tell me about a time you handled a conflict.")
+    await sink.wait_for("answer.completed")
+    assert [n.question for n in eng.memory.answers] == ["Tell me about a time you handled a conflict."]
+    await eng.handle_client({"type": "chat.message", "data": {"text": "Make it shorter"}})
+    await sink.wait_for("answer.completed", n=2)
+    notes = list(eng.memory.answers)
+    assert len(notes) == 1 and notes[0].question == "Tell me about a time you handled a conflict."
+    await eng.end()

@@ -144,3 +144,29 @@ async def test_answer_requests_never_produce_an_ai_answer_in_practice_mode() -> 
     await sink.wait_for("mock.question", 2)  # treated as "I'm done"
     assert not sink.of("answer.started")
     await eng.end()
+
+
+async def test_the_interviewer_sees_every_topic_covered_and_what_the_difficulty_means() -> None:
+    class Recording(MockLLMProvider):
+        def __init__(self) -> None:
+            super().__init__()
+            self.requests: list[LLMRequest] = []
+
+        async def generate(self, request: LLMRequest) -> Any:
+            self.requests.append(request)
+            return await super().generate(request)
+
+    llm = Recording()
+    eng, sink, _, _ = await _engine(llm=llm, minutes=30)
+    await sink.wait_for("mock.question")
+    for n in range(2, 5):  # the mock model makes every second question a follow-up: two topics by the fourth
+        await eng.handle_client({"type": "mock.next", "data": {}})
+        await sink.wait_for("mock.question", n)
+    asked = [q["text"] for q in sink.of("mock.question") if not q["is_follow_up"]]
+    assert len(asked) == 2
+    last = llm.requests[-1]
+    system, user = str(last.messages[0].content), str(last.messages[1].content)
+    assert "Difficulty: medium: the realistic bar for the level" in system
+    assert '<reference_data source="topics_already_covered">' in user
+    assert all(q[:160] in user for q in asked)
+    await eng.end()

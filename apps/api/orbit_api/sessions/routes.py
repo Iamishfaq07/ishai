@@ -54,6 +54,7 @@ from orbit_api.models import (
     Story,
     UsageEvent,
     User,
+    Workspace,
 )
 from orbit_api.observability import request_id_var, session_id_var, user_id_var
 from orbit_api.providers.llm import get_llm_provider
@@ -494,6 +495,17 @@ async def usage(user: Annotated[User, Depends(current_user)],
 # ---- live WebSocket ---------------------------------------------------------------------------------------
 
 
+async def _session_company(db: AsyncSession, row: LiveSessionRow) -> str | None:
+    """Who the interview is with, when the session knows: the saved setup it started from, or the mock setup."""
+    if row.workspace_id:
+        ws = await db.get(Workspace, row.workspace_id)
+        if ws is not None and ws.user_id == row.user_id and (ws.company or "").strip():
+            return (ws.company or "").strip()[:120]
+    negotiation = (row.mock_config or {}).get("negotiation")
+    company = negotiation.get("company") if isinstance(negotiation, dict) else None
+    return company.strip()[:120] if isinstance(company, str) and company.strip() else None
+
+
 async def _load_index(db: AsyncSession, session_id: str, user_id: str) -> tuple[SessionIndex, list[str]]:
     rows = (await db.execute(
         select(DocumentChunk, Document.kind, Document.title)
@@ -637,6 +649,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             features=frozenset(f for f in ("system_design", "advanced_coding") if plan.has(f)),
             instructions=(row.instructions or "").strip() or None,
             learned=await learned_preferences(db, user_id),
+            company=await _session_company(db, row),
         )
         settings = LiveSettings(auto_answer=row.auto_answer, length=row.length,
                                 style=row.style)

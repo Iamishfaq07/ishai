@@ -160,6 +160,14 @@ _TYPES: dict[str, str] = {
     "mixed": "a realistic mix: an opener about their background, then behavioral and technical questions",
 }
 
+_DIFFICULTY: dict[str, str] = {
+    "easy": "easy: friendly and encouraging, standard questions, gentle follow-ups",
+    "medium": ("medium: the realistic bar for the level: probe once where an answer is vague or skips the result "
+               "or the trade-offs"),
+    "hard": ("hard: a demanding bar: ask for specifics, numbers and trade-offs, politely challenge weak reasoning, "
+             "and go deeper technically than the candidate goes on their own"),
+}
+
 _SYSTEM = (
     "You are {persona}, interviewing a candidate{role} in a live, spoken mock interview. Difficulty: {difficulty}. "
     "Focus: {focus}.\n"
@@ -242,11 +250,13 @@ OnFinish = Callable[[], Awaitable[None]]
 class MockInterviewer:
     def __init__(self, config: MockConfig, *, llm: LLMProvider, index: SessionIndex, role: str | None,
                  send: Send, on_question: OnQuestion, on_finish: OnFinish,
-                 record_usage: Callable[[LLMResponse, int], Awaitable[None]] | None = None) -> None:
+                 record_usage: Callable[[LLMResponse, int], Awaitable[None]] | None = None,
+                 company: str | None = None) -> None:
         self.config = config
         self._llm = llm
         self._index = index
         self._role = role
+        self._company = company
         self._send = send
         self._on_question = on_question
         self._on_finish = on_finish
@@ -490,8 +500,11 @@ class MockInterviewer:
 
     async def _generate(self, follow_up_on: DrillItem | None = None) -> tuple[str, bool]:
         cfg = self.config
-        system = _SYSTEM.format(persona=_PERSONAS[cfg.persona], role=f" for {self._role}" if self._role else "",
-                                difficulty=cfg.difficulty, focus=_TYPES[cfg.interview_type])
+        role = f" for {self._role}" if self._role else ""
+        if self._company:
+            role += f" at {self._company}"
+        system = _SYSTEM.format(persona=_PERSONAS[cfg.persona], role=role, difficulty=_DIFFICULTY[cfg.difficulty],
+                                focus=_TYPES[cfg.interview_type])
         follow_ups = self._follow_ups_in_topic()
         if follow_up_on is not None:
             steer = ("Ask ONE probing follow-up on the candidate's last answer (is_follow_up true). Push on what was "
@@ -506,8 +519,12 @@ class MockInterviewer:
         else:
             steer = (f"Topics so far: {self._topics()} of about {cfg.planned_questions}. Decide: a follow-up on the "
                      "last answer if it was vague or incomplete, otherwise a new topic.")
+        # The transcript window is the last few exchanges; the topics list keeps a long round from circling back.
+        covered = [a.text[:160] for a in self.asked if not a.is_follow_up]
+        topics = ("<reference_data source=\"topics_already_covered\">\n" + fence("\n".join(covered))
+                  + "\n</reference_data>\n") if len(covered) > 1 else ""
         user = (f"<reference_data source=\"candidate_documents\">\n{fence(self._context() or '(none)')}\n"
-                f"</reference_data>\n<reference_data source=\"interview_so_far\">\n"
+                f"</reference_data>\n{topics}<reference_data source=\"interview_so_far\">\n"
                 f"{fence(self._transcript() or '(nothing yet)')}\n</reference_data>\n{steer}")
         request = LLMRequest(messages=[LLMMessage("system", system), LLMMessage("user", user)], json_mode=True,
                              max_tokens=160, temperature=0.7, request_type="mock_question")

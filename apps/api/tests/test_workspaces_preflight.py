@@ -130,3 +130,23 @@ def test_preflight_never_claims_up_to_date_when_it_cannot_check(client: TestClie
     h = _register(client)
     app = {c["id"]: c for c in client.get("/v1/preflight?app_version=0.1.8", headers=h).json()["checks"]}["app"]
     assert app["status"] == "ok" and "couldn't check" in app["detail"] and "up to date" not in app["detail"]
+
+
+def test_live_answers_know_the_company_from_the_saved_setup(client: TestClient) -> None:
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import LiveSessionRow
+    from orbit_api.sessions.routes import _session_company
+
+    h = _register(client)
+    wid = client.post("/v1/workspaces", headers=h, json=SETUP).json()["id"]
+    with_setup = client.post("/v1/sessions", headers=h, json={"title": "x", "workspace_id": wid}).json()["id"]
+    without = client.post("/v1/sessions", headers=h, json={"title": "y"}).json()["id"]
+
+    async def company(sid: str) -> str | None:
+        async with sessionmaker()() as db:
+            row = await db.get(LiveSessionRow, sid)
+            assert row is not None
+            return await _session_company(db, row)
+
+    assert client.portal.call(company, with_setup) == "Google"  # type: ignore[union-attr]
+    assert client.portal.call(company, without) is None  # type: ignore[union-attr]

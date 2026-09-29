@@ -9,11 +9,12 @@ from dataclasses import dataclass, field
 from functools import cache
 from pathlib import Path
 
-from orbit_api.live.events import AnswerLength, AnswerStyle, QuestionType, SessionType, Speaker
+from orbit_api.live.events import AnswerLength, AnswerStyle, LiveAnswer, QuestionType, SessionType, Speaker
 from orbit_api.providers.llm.base import LLMMessage
 from orbit_api.retrieval.index import Hit, IndexedChunk, SessionIndex
 
 RECENT_TURNS = 6
+EARLIER_ANSWERS = 6  # notes on the last answers given, so later ones stay consistent and don't retell a story
 MAX_TURN_CHARS = 500
 MAX_CONTEXT_CHARS = 5000  # ≈1.2k tokens of retrieved context
 
@@ -70,6 +71,23 @@ class Turn:
     text: str
 
 
+@dataclass(frozen=True)
+class AnswerNote:
+    """What an earlier answer said, in brief: its points and the user's facts it drew on."""
+
+    question: str
+    points: tuple[str, ...]
+    drew_on: tuple[str, ...]
+    example: bool  # an illustrative story the user must swap for a real one
+
+    def line(self) -> str:
+        said = " | ".join(self.points)[:240]
+        extra = f" (drew on: {', '.join(self.drew_on[:3])})" if self.drew_on else ""
+        if self.example:
+            extra += " (an example story, not a verified one)"
+        return f"Q: {self.question[:160]}\nA: {said}{extra}"
+
+
 @dataclass
 class SessionMemory:
     """Recent turns + rolling summary + question history (spec §25)."""
@@ -78,9 +96,16 @@ class SessionMemory:
     rolling_summary: str = ""
     questions: list[str] = field(default_factory=list)
     last_answer_brief: str = ""
+    answers: deque[AnswerNote] = field(default_factory=lambda: deque(maxlen=EARLIER_ANSWERS))
 
     def add_turn(self, speaker: Speaker, text: str) -> None:
         self.recent.append(Turn(speaker, text[:MAX_TURN_CHARS]))
+
+    def note_answer(self, question: str, answer: LiveAnswer) -> None:
+        points = answer.key_points or answer.talking_points or [answer.direct_answer[:200]]
+        drew_on = tuple(dict.fromkeys(s.label for s in answer.sources if s.verified and s.label))
+        self.answers.append(AnswerNote(question, tuple(p for p in points if p), drew_on,
+                                       answer.grounding == "example"))
 
     def recent_turns(self, n: int = RECENT_TURNS) -> list[Turn]:
         return list(self.recent)[-n:]
@@ -105,6 +130,7 @@ class PromptInputs:
     candidate_instructions: str | None = None
     # Fixed style hints learned from the candidate's 👎 reasons (sessions/feedback.LEARNED_HINTS), never user text.
     learned_preferences: list[str] = field(default_factory=list)
+    company: str | None = None  # from the saved setup or the mock interview, when known
 
 
 @dataclass
@@ -153,6 +179,9 @@ _GROUNDING_RULE = (
 # Questions a story-bank example answers best: always offer the most relevant story, if one matches at all.
 _STORY_TYPES = {QuestionType.behavioral, QuestionType.leadership, QuestionType.culture}
 
+# Why this company / role / move: answered from the job post's "about us" and the role's responsibilities.
+_MOTIVATION_TYPES = {QuestionType.culture}
+
 # "Tell me about yourself" is about the whole arc, not the facts that happen to share words with it,
 # so these always get the profile summary and the most recent roles (resumes list newest first).
 _ANCHORED_TYPES = {QuestionType.resume}
@@ -176,6 +205,13 @@ def retrieve(index: SessionIndex, inputs: PromptInputs, memory: SessionMemory) -
     if inputs.qtype in _STORY_TYPES and not any(h.chunk.doc_kind == "story" for h in hits):
         # "Tell me about a time…": the user's own story-bank example beats any single resume bullet.
         hits = index.search(query, inputs.qtype, k=1, doc_kind="story") + hits
+    if inputs.qtype in _MOTIVATION_TYPES:
+        # "Why us?" is answered from what the job post says about the company and the role, which rarely shares
+        # words with the question; so bring that in whatever the search found.
+        seen = {h.chunk.id for h in hits}
+        about = index.by_category("job_description", ("company",), 2)
+        about += index.by_category("job_description", ("responsibility",), 1)
+        hits += [Hit(c, 1.0) for c in about if c.id not in seen]
     if not any(h.chunk.doc_kind == "job_description" for h in hits):
         hits += index.search(query, inputs.qtype, k=2, doc_kind="job_description")
     return hits
@@ -208,6 +244,7 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
         [
             _SESSION_RULES[inputs.session_type],
             f"Target role: {inputs.role}" if inputs.role else "",
+            f"Company: {inputs.company}" if inputs.company else "",
             _LENGTH_RULES[inputs.length],
             _STYLE_RULES[inputs.style] if inputs.qtype != QuestionType.coding else "",
             f"Answer language: {(inputs.answer_language or '').strip() or 'English'}",
@@ -238,11 +275,17 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
     if memory.rolling_summary:
         parts.append("<reference_data source=\"session_summary\">\n" + fence(memory.rolling_summary)
                      + "\n</reference_data>")
+    show_previous = bool(memory.last_answer_brief and (inputs.is_follow_up or inputs.instruction))
+    # The previous answer is shown in full below when it's the subject; the rest as notes.
+    earlier = list(memory.answers)[:-1] if show_previous else list(memory.answers)
+    if earlier:
+        parts.append("<reference_data source=\"earlier_answers\">\n" + fence("\n".join(n.line() for n in earlier))
+                     + "\n</reference_data>")
     turns = memory.recent_turns()
     if turns:
         convo = "\n".join(f"{t.speaker.upper()}: {t.text}" for t in turns)
         parts.append("<reference_data source=\"recent_conversation\">\n" + fence(convo) + "\n</reference_data>")
-    if memory.last_answer_brief and (inputs.is_follow_up or inputs.instruction):
+    if show_previous:
         parts.append("<reference_data source=\"previous_answer\">\n" + fence(memory.last_answer_brief)
                      + "\n</reference_data>")
     if inputs.instruction:
