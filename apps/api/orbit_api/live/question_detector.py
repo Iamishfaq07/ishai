@@ -115,7 +115,12 @@ _TYPE_RULES: list[tuple[QuestionType, tuple[str, ...]]] = [
                                "managed a team", "delegate", "stakeholder", "influence")),
     (QuestionType.culture, ("why do you want", "why this company", "why us", "why are you leaving",
                             "our culture", "values", "where do you see yourself", "what motivates you",
-                            "why should we hire")),
+                            "why should we hire", "why this role", "why this position", "why are you looking",
+                            "what interests you about", "what attracted you", "why are you interested",
+                            "what do you know about us", "what do you know about our",
+                            # the open floor at the end: the candidate asks the questions now
+                            "any questions for", "questions for me", "questions for us",
+                            "anything you'd like to ask", "anything you want to ask")),
 ]
 
 # Phrases that only make sense relative to the previous answer. Deliberately NOT bare pronouns

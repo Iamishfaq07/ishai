@@ -1,5 +1,36 @@
 # Implementation log
 
+## Better interview answers: consistency, common questions, company, sharper mock interviewer (2026-09-29)
+
+- **Answers stay consistent and don't retell the same story.** Each answer used to see only the one before it, and
+  only on a follow-up. Now every answer gets short notes on the last 6 answers (`SessionMemory.answers`): the
+  question, the points made, and which of the user's facts each one drew on. Example stories are marked as such.
+  The prompt says to keep the same facts, numbers and opinions, and to pick a different story for a new
+  behavioral question unless the question is about that same story. A "make it shorter" rewrite replaces its
+  answer's note rather than adding one. The notes survive a reconnect, since they live in the carried-over memory.
+- **Guidance for the most common interview questions** (`prompts/live_system.md`):
+  - tell me about yourself: a short arc, not a resume recital;
+  - why this company, why this role, why you're leaving: specific, forward-looking, never criticising an
+    employer, no invented company facts;
+  - strengths with proof, and weaknesses that are real but not disqualifying (no humblebrags);
+  - why should we hire you: the role's top needs matched to verified strengths;
+  - "Do you have any questions for us?": the answer is now two or three tailored questions for the user to *ask*,
+    not an answer;
+  - clarifications.
+
+  Closing and motivation questions ("any questions for us", "why this role", "what interests you about…") are
+  now detected as that type.
+- **Company awareness.**
+  - A session started from a saved setup passes its company name to every answer and to the mock interviewer.
+    A salary-negotiation practice uses the company from its offer setup.
+  - "Why us?" answers always get the "about us" and role parts of the job post, even when a search wouldn't find
+    them.
+- **Mock interviewer.**
+  - It now sees every topic it has already covered, so a long round no longer circles back to one; before, it saw
+    only the last 6 exchanges.
+  - Difficulty is spelled out: easy is encouraging; medium probes once on vague answers; hard asks for specifics,
+    numbers and trade-offs and politely challenges weak reasoning.
+
 ## Resume maker: Word download, better Word import, named PDF (2026-09-29)
 
 - **Download as Word (.docx).** Next to "Download PDF", **Word** downloads the resume as the editor shows it,

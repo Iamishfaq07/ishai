@@ -141,6 +141,8 @@ class SessionProfile:
     instructions: str | None = None
     # Style hints learned from the reasons the user gave for 👎 on earlier answers (sessions/feedback.py).
     learned: list[str] = field(default_factory=list)
+    # The company interviewing, from the saved setup the session started from (or the mock interview's setup).
+    company: str | None = None
 
 
 @dataclass
@@ -223,7 +225,8 @@ class LiveEngine:
         if profile.session_type == "mock":
             self._mock = MockInterviewer(profile.mock or MockConfig(), llm=llm, index=index, role=profile.role,
                                          send=self.send, on_question=self._on_mock_question,
-                                         on_finish=self._on_mock_finish, record_usage=self._record_mock_usage)
+                                         on_finish=self._on_mock_finish, record_usage=self._record_mock_usage,
+                                         company=profile.company)
         if resume is not None:  # a reconnect: pick up the conversation (and the mock round) where it was
             self.memory = resume.memory
             if self._mock is not None and resume.mock is not None:
@@ -710,6 +713,7 @@ class LiveEngine:
             answer_language=self.profile.answer_language or "en",  # English only: no per-session override
             instruction=instruction, coding_language=self.settings.coding_language, mode=mode,
             candidate_instructions=self.profile.instructions, learned_preferences=self.profile.learned,
+            company=self.profile.company,
         )
         built = build_prompt(self._index, inputs, self.memory)
         # Live answers always run on the fast model. The reasoning model's hidden chain-of-thought put its
@@ -807,7 +811,10 @@ class LiveEngine:
         self._last_answer_at_ms = self.now_ms()
         if source != "chat" or instruction is None:
             self.memory.questions.append(question)
+        elif self.memory.answers:
+            self.memory.answers.pop()  # a rewrite ("make it shorter") replaces what the last answer said
         self.memory.last_answer_brief = (final.direct_answer + " " + " | ".join(final.talking_points))[:600]
+        self.memory.note_answer(question, final)
         await self._rec.answer(aid, qid, "completed", final.model_dump(), provider, model, first_token_ms,
                                total_ms)
         await self._rec.provider_request(provider, model, request.request_type, usage, total_ms, True)
