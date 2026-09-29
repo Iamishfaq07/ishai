@@ -1,5 +1,23 @@
 # Implementation log
 
+## Fix: resume import of scanned PDFs, and a clean "Download PDF" (2026-09-29)
+
+- **Scanned and hard-to-read PDFs now import.** Uploads used to fail with "No readable text found (scanned PDFs
+  need OCR, not yet supported)". PDFs are now read in three steps (`documents/parsing.py`):
+  - pypdf first;
+  - PDFium if pypdf finds nothing (fonts it can't map, some design-tool exports);
+  - OCR for scans with no text layer: PDFium renders the first 3 pages and Tesseract reads them.
+
+  OCR runs inside the same memory- and CPU-limited child process as the parsers, which now has 75 s for a PDF.
+  It applies to Documents uploads too. The API image installs `tesseract-ocr`; a server without it tells the
+  user to export a text PDF or paste the text.
+- **The downloaded resume has no browser header or footer.** The print page now has no margin, so the browser
+  has nowhere to print its date, title, URL and page numbers. The resume's own padding repeats on every page
+  (`box-decoration-break: clone`), so page 2 still gets its top margin.
+- **The name comes first in the PDF's text.** In the Classic template the header was positioned, so the browser
+  wrote its text after the sections, and ATS parsers read the name and contacts last. The photo is now anchored
+  to the page instead.
+
 ## Fix: whole-app check (2026-09-29)
 
 A pass through every screen (sign-up, documents, story bank, a live session, the report, practice, settings,

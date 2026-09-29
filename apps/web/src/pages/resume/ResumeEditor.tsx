@@ -355,10 +355,9 @@ function ScaledPage({ data, design }: { data: ResumeData; design: ResumeDesign }
 /** What "Download PDF" prints: the resume alone, at real size, with the page set to A4 or Letter. */
 function PrintCopy({ data, design }: { data: ResumeData; design: ResumeDesign }) {
   const flow = design.template !== "sidebar";
-  const pad = design.spacing === "compact" ? "12mm" : design.spacing === "relaxed" ? "20mm" : "16mm";
   return createPortal(
     <div className={cx("resume-print", flow && "resume-print-flow")}>
-      <style>{`@page { size: ${design.page === "letter" ? "letter" : "A4"}; margin: ${flow ? `${pad} 0` : "0"}; }`}</style>
+      <style>{`@page { size: ${design.page === "letter" ? "letter" : "A4"}; margin: 0; }`}</style>
       <ResumePreview data={data} design={design} />
     </div>,
     document.body,
