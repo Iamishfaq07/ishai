@@ -17,6 +17,7 @@ import {
   Toggle,
   useDesign, confirmDialog,
   CreditCard,
+  FileText,
   ExternalLink,
   UserCog,
 } from "@orbit/ui";
@@ -184,6 +185,11 @@ function PrivacyCard({ user, onUser, onSignOut }: { user: User; onUser: (u: User
             <Button variant="secondary" size="sm" onClick={() => void openUrl(`${WEB_URL}/billing`)}>
               <CreditCard className="h-3.5 w-3.5" />
               Plan &amp; billing
+              <ExternalLink className="h-3 w-3 opacity-60" />
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => void openUrl(`${WEB_URL}/documents/resumes`)}>
+              <FileText className="h-3.5 w-3.5" />
+              Resume maker
               <ExternalLink className="h-3 w-3 opacity-60" />
             </Button>
             <Button variant="secondary" size="sm" onClick={() => void openUrl(`${WEB_URL}/settings`)}>

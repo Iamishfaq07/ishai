@@ -26,6 +26,8 @@ scores yours the way that software reads it and helps you fix it until it passes
 - **Download PDF** prints just the resume at real size, as real selectable text: one A4 page in the tested
   example, with the text in reading order.
 - **Use in Orbit** saves the resume to Documents, so live sessions answer from it.
+- **Desktop app:** the setup screen shows your best resume's ATS score, with a link to the Resume maker, and
+  Settings has a Resume maker button. Both open it in your browser.
 - Included in "Download my data". Every page scans clean with axe (WCAG 2.1 AA) in both themes, and there's no
   sideways scroll on phones.
 
