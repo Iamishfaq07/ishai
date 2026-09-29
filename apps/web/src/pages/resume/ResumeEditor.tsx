@@ -443,7 +443,7 @@ function ScorePanel({
 
       <Panel title="Job post">
         <Field label="Paste the job post to tailor the resume to it" htmlFor="job">
-          <Textarea id="job" rows={5} value={resume.job_text} onChange={(e) => onJob(e.target.value.slice(0, 20_000))} placeholder="Paste the job description…" />
+          <Textarea id="job" rows={5} maxLength={20_000} value={resume.job_text} onChange={(e) => onJob(e.target.value.slice(0, 20_000))} placeholder="Paste the job description…" />
         </Field>
         <form
           className="mt-2 flex gap-2"

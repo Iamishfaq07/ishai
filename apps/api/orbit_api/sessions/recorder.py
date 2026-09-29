@@ -14,11 +14,12 @@ import os
 import tempfile
 import uuid
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import DateTime, select
+from sqlalchemy import DateTime, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -100,6 +101,26 @@ async def _with_retries(fn: Callable[[], Awaitable[None]], what: str) -> bool:
                 return False
             await asyncio.sleep(BACKOFF_S * 2**attempt)
     return False
+
+
+@dataclass(frozen=True)
+class _QuestionText:
+    qid: str
+    text: str
+
+
+async def _update_question_text(change: _QuestionText) -> None:
+    for attempt in range(WRITE_ATTEMPTS):
+        try:
+            async with sessionmaker()() as db:
+                await db.execute(update(Question).where(Question.id == change.qid).values(text=change.text))
+                await db.commit()
+            return
+        except Exception as e:
+            if attempt == WRITE_ATTEMPTS - 1:
+                log.error("recorder: question text update failed (%s)", type(e).__name__)
+            else:
+                await asyncio.sleep(BACKOFF_S * 2**attempt)
 
 
 async def write_durably(obj: Base) -> bool:
@@ -198,7 +219,10 @@ class DbRecorder:
             obj = await self._queue.get()
             if obj is None:
                 return
-            await write_durably(obj)
+            if isinstance(obj, _QuestionText):
+                await _update_question_text(obj)
+            else:
+                await write_durably(obj)
 
     def _put(self, obj: Any) -> None:
         self._queue.put_nowait(obj)
@@ -213,6 +237,12 @@ class DbRecorder:
         self._put(Question(id=qid, session_id=self.session_id, turn_id=turn_id, text=text, type=qtype,
                            confidence=confidence, is_follow_up=is_follow_up, source=source,
                            created_at=datetime.now(UTC)))
+
+    async def question_text(self, qid: str, text: str) -> None:
+        """The interviewer carried on after the question fired ("…? What is dependency injection?"): the stored
+        question becomes the whole thing, so the review and exports show what was actually answered. Queued after
+        the question's own insert, so it always lands after it."""
+        self._put(_QuestionText(qid, text))
 
     async def answer(self, aid: str, qid: str | None, status: str, content: dict[str, Any] | None,
                      provider: str, model: str, first_token_ms: int | None, total_ms: int | None) -> None:
