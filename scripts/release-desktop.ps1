@@ -59,7 +59,8 @@ if ($Sign) {
   $signer = (Resolve-Path "scripts\sign-windows.ps1").Path
   $overrides.bundle = @{ windows = @{ signCommand = @{ cmd = "pwsh"; args = @("-NoProfile", "-File", $signer, "%1") } } }
 }
-$overrides | ConvertTo-Json -Depth 6 | Set-Content -Encoding utf8NoBOM $config
+# UTF-8 without a BOM (Tauri rejects a BOM), written so it works in Windows PowerShell 5.1 as well as 7.
+[IO.File]::WriteAllText($config, ($overrides | ConvertTo-Json -Depth 6), [Text.UTF8Encoding]::new($false))
 
 pnpm install --frozen-lockfile
 pnpm --filter @orbit/desktop tauri build --bundles nsis --config $config

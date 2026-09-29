@@ -170,7 +170,10 @@ plainly in the description: practice interviews, meeting notes and live suggesti
 
 ## Releasing from a workstation
 
-Use `scripts/release-desktop.ps1 -Version X.Y.Z [-Publish -NotesFile notes.md]`. It clears `ORBIT_KEYRING_SERVICE`
+Use `scripts/release-desktop.ps1 -Version X.Y.Z [-Publish -NotesFile notes.md]`. Windows blocks local scripts by
+default ("running scripts is disabled on this system"), so run it through a one-off bypass that changes no system
+setting: `powershell -ExecutionPolicy Bypass -File .\scripts\release-desktop.ps1 -Version X.Y.Z -Publish -NotesFile
+docs\releases\X.Y.Z.md` (Windows PowerShell 5.1 or 7 both work; `-Sign` also needs `pwsh`). It clears `ORBIT_KEYRING_SERVICE`
 (only test builds set it), builds the signed installer, and refuses to continue unless rustc's dep-info shows the
 variable unset. 0.1.11 was built with the variable left at an empty string and looked for the saved sign-in under
 an empty service name; `secrets.rs` now also treats an empty value as unset. To verify any built exe, run it with
