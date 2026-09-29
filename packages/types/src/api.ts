@@ -594,3 +594,178 @@ export interface CostReport {
   per_plan: Record<string, { users: number; usd: number }>;
   notes: { stt_price_per_minute: number | null; stt: string; unpriced: string };
 }
+
+// ─── Resume maker ────────────────────────────────────────────────────────────
+
+export type ResumeSectionId = "summary" | "experience" | "education" | "skills" | "projects" | "certifications";
+export type ResumeTemplate = "classic" | "modern" | "compact" | "sidebar";
+export type ResumeFont = "inter" | "arial" | "georgia" | "garamond" | "grotesk";
+export type ResumeSpacing = "compact" | "normal" | "relaxed";
+
+export interface ResumeLink {
+  label: string;
+  url: string;
+}
+
+export interface ResumeBasics {
+  name: string;
+  headline: string;
+  email: string;
+  phone: string;
+  location: string;
+  links: ResumeLink[];
+  summary: string;
+}
+
+export interface ResumeExperience {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  start: string;
+  end: string;
+  current: boolean;
+  bullets: string[];
+}
+
+export interface ResumeEducation {
+  id: string;
+  school: string;
+  degree: string;
+  field: string;
+  start: string;
+  end: string;
+  details: string;
+}
+
+export interface ResumeSkillGroup {
+  id: string;
+  name: string;
+  items: string[];
+}
+
+export interface ResumeProject {
+  id: string;
+  name: string;
+  link: string;
+  description: string;
+  bullets: string[];
+}
+
+export interface ResumeCertification {
+  id: string;
+  name: string;
+  issuer: string;
+  date: string;
+}
+
+export interface ResumeData {
+  basics: ResumeBasics;
+  experience: ResumeExperience[];
+  education: ResumeEducation[];
+  skills: ResumeSkillGroup[];
+  projects: ResumeProject[];
+  certifications: ResumeCertification[];
+  section_order: ResumeSectionId[];
+}
+
+export interface ResumeDesign {
+  template: ResumeTemplate;
+  /** #rrggbb */
+  accent: string;
+  font: ResumeFont;
+  /** Points (9–12.5). */
+  font_size: number;
+  spacing: ResumeSpacing;
+  page: "a4" | "letter";
+  /** A data: URL (PNG/JPEG/WebP), shrunk before upload. */
+  photo: string | null;
+  show_photo: boolean;
+}
+
+export interface ResumeInput {
+  title: string;
+  data: ResumeData;
+  design: ResumeDesign;
+  job_text: string;
+}
+
+export interface Resume extends ResumeInput {
+  id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ResumeSummary {
+  id: string;
+  title: string;
+  name: string;
+  headline: string;
+  template: ResumeTemplate;
+  score: number;
+  has_job: boolean;
+  updated_at: string;
+}
+
+export type AtsCategoryId =
+  | "contact"
+  | "sections"
+  | "summary"
+  | "experience"
+  | "skills"
+  | "readability"
+  | "layout"
+  | "keywords";
+
+export interface AtsCheck {
+  id: string;
+  category: AtsCategoryId;
+  label: string;
+  points: number;
+  max_points: number;
+  passed: boolean;
+  fix: string | null;
+  /** What the fix is about: "basics.email", "experience.<id>.bullets.2", "skills", "design.template"… */
+  target: string | null;
+  /** "Fix with AI" can rewrite the target text. */
+  ai_fixable: boolean;
+}
+
+export interface AtsReport {
+  score: number;
+  verdict: string;
+  categories: Array<{ id: AtsCategoryId; label: string; points: number; max_points: number }>;
+  checks: AtsCheck[];
+  keywords: { matched: string[]; missing: string[] } | null;
+  has_job: boolean;
+}
+
+export interface ResumeImportRequest {
+  source: "text" | "linkedin" | "document";
+  text?: string;
+  document_id?: string;
+}
+
+export interface ResumeImportResponse {
+  data: ResumeData;
+  title: string;
+}
+
+export interface ResumeSuggestion {
+  id: string;
+  /** The exact text it replaces, e.g. "experience.<id>.bullets.1" or "basics.summary". */
+  path: string;
+  label: string;
+  before: string;
+  after: string;
+  reason: string;
+}
+
+export interface ResumeSuggestRequest {
+  data: ResumeData;
+  design?: ResumeDesign;
+  job_text?: string;
+  mode?: "improve" | "tailor";
+  /** Rewrite just this one field. */
+  focus?: string;
+}
