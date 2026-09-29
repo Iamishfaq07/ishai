@@ -106,6 +106,7 @@ export { WorkspaceBar } from "./components/WorkspaceBar";
 export { PreflightPanel } from "./components/PreflightPanel";
 export { CompanionShare, QrCode, companionLink } from "./components/CompanionShare";
 export { StoryBankNote } from "./components/StoryBankNote";
+export { ResumeMakerNote } from "./components/ResumeMakerNote";
 export { AnswerRatingButtons, FEEDBACK_REASONS, useAnswerRatings, type AnswerRatings } from "./components/AnswerRating";
 export { DeliveryCard, FollowUpCard } from "./components/Insights";
 export { LatencyDiagnostics } from "./components/LatencyDiagnostics";

@@ -42,6 +42,7 @@ import {
   type DiagnosticsEvent,
   type Verdict,
   StoryBankNote,
+  ResumeMakerNote,
 } from "@orbit/ui";
 import { getVersion } from "@tauri-apps/api/app";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -619,6 +620,7 @@ export function SetupScreen({
               </ul>
             )}
             <StoryBankNote api={api} onManage={() => void openUrl(`${WEB_URL}/documents/stories`)} />
+            <ResumeMakerNote api={api} onOpen={() => void openUrl(`${WEB_URL}/documents/resumes`)} className="mt-1" />
           </fieldset>
 
           <div className="grid grid-cols-2 gap-3">
