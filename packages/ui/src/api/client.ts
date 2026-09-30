@@ -56,6 +56,7 @@ import type {
   Workspace,
   WorkspaceInput,
 } from "@orbit/types";
+import { trimTrailingSlashes } from "../serverUrl";
 
 export class ApiError extends Error {
   constructor(
@@ -92,7 +93,7 @@ export interface ApiClientOptions {
 export type ApiClient = ReturnType<typeof createApiClient>;
 
 export function createApiClient(options: ApiClientOptions) {
-  const baseUrl = options.baseUrl.replace(/\/+$/, "");
+  const baseUrl = trimTrailingSlashes(options.baseUrl);
   const doFetch = options.fetchImpl ?? ((input: RequestInfo | URL, init?: RequestInit) => fetch(input, init));
 
   // Cookie mode: the API's CSRF token for this session, taken from the latest auth response (/me, login,

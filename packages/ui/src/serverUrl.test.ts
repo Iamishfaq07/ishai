@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkServerUrl } from "./serverUrl";
+import { checkServerUrl, trimTrailingSlashes } from "./serverUrl";
 
 const ok = (v: string, allowInsecure = false) => checkServerUrl(v, { allowInsecure });
 
@@ -25,5 +25,14 @@ describe("checkServerUrl", () => {
 
   it("development builds may use remote http", () => {
     expect(ok("http://192.168.1.20:8000", true).ok).toBe(true);
+  });
+});
+
+describe("trimTrailingSlashes", () => {
+  it("drops only the trailing slashes, and stays fast on a long run of them", () => {
+    expect(trimTrailingSlashes("https://a.example/api///")).toBe("https://a.example/api");
+    expect(trimTrailingSlashes("https://a.example")).toBe("https://a.example");
+    expect(trimTrailingSlashes("///")).toBe("");
+    expect(trimTrailingSlashes(`${"/".repeat(100_000)}a`)).toHaveLength(100_001);
   });
 });

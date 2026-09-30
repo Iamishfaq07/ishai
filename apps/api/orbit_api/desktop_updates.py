@@ -214,7 +214,8 @@ async def check_update(target: str, arch: str, current_version: str, request: Re
 
 @router.get("/download/{version}/{filename}", name="download_installer", response_model=None)
 async def download_installer(version: str, filename: str) -> FileResponse | RedirectResponse:
-    if parse_version(version) is None or not re.fullmatch(r"[\w.-]+-setup\.exe", filename):
+    stem = filename.removesuffix("-setup.exe")
+    if parse_version(version) is None or stem == filename or not re.fullmatch(r"[\w.-]+", stem):
         raise HTTPException(404, "Not found")
     root = _root()
     if root is None:
@@ -225,7 +226,10 @@ async def download_installer(version: str, filename: str) -> FileResponse | Redi
         if location is None:
             raise HTTPException(502, "Update download unavailable")
         return RedirectResponse(location, status_code=302)
-    path = (root / version / filename).resolve()
-    if path.parent != (root / version).resolve() or not path.is_file():  # no traversal outside the release
+    # Serve only a file the release folder itself lists, never a path built from the request, so nothing outside
+    # the release (or a symlink out of it) can be reached.
+    folder = next((d for d in root.iterdir() if d.is_dir() and d.name == version), None) if root.is_dir() else None
+    path = next((f for f in folder.glob("*-setup.exe") if f.name == filename), None) if folder else None
+    if folder is None or path is None or not path.is_file() or path.resolve().parent != folder.resolve():
         raise HTTPException(404, "Not found")
-    return FileResponse(path, media_type="application/octet-stream", filename=filename)
+    return FileResponse(path, media_type="application/octet-stream", filename=path.name)

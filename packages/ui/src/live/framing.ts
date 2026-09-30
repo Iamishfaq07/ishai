@@ -7,6 +7,7 @@ import {
   type ClientEventType,
   type ServerEvent,
 } from "@orbit/types";
+import { trimTrailingSlashes } from "../serverUrl";
 
 /**
  * Binary audio frame: [1 byte channel][PCM16LE mono 16 kHz samples...].
@@ -56,6 +57,6 @@ export function toWebSocketUrl(
   ticket: string,
   path: "live" | "view" = "live",
 ): string {
-  const base = apiBaseUrl.replace(/\/+$/, "").replace(/^http/i, "ws");
+  const base = trimTrailingSlashes(apiBaseUrl).replace(/^http/i, "ws");
   return `${base}/v1/sessions/${encodeURIComponent(sessionId)}/${path}?ticket=${encodeURIComponent(ticket)}`;
 }

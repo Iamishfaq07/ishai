@@ -5,6 +5,13 @@
  */
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
+/** `url` without trailing slashes. A loop, not `/\/+$/`, which backtracks quadratically on a long run of slashes. */
+export function trimTrailingSlashes(url: string): string {
+  let end = url.length;
+  while (end > 0 && url[end - 1] === "/") end--;
+  return url.slice(0, end);
+}
+
 export type ServerUrlCheck = { ok: true; url: string } | { ok: false; reason: string };
 
 export function checkServerUrl(value: string | null | undefined, opts: { allowInsecure?: boolean } = {}): ServerUrlCheck {
@@ -23,5 +30,5 @@ export function checkServerUrl(value: string | null | undefined, opts: { allowIn
   if (url.protocol === "http:" && !LOOPBACK.has(url.hostname) && !opts.allowInsecure) {
     return { ok: false, reason: "Remote servers must use https:// — your password would be sent unencrypted." };
   }
-  return { ok: true, url: url.toString().replace(/\/+$/, "") };
+  return { ok: true, url: trimTrailingSlashes(url.toString()) };
 }
