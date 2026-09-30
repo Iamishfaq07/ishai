@@ -8,11 +8,12 @@ from fastapi.testclient import TestClient
 
 from orbit_api.providers.llm.base import LLMResponse, Usage
 from orbit_api.resumes import ai
-from orbit_api.resumes.ats import date_style, extract_keywords, match_keywords, score_resume
+from orbit_api.resumes.ats import AtsCheck, date_key, date_style, extract_keywords, match_keywords, score_resume
 from orbit_api.resumes.schema import (
     Basics,
     Education,
     Experience,
+    ExtraSection,
     Link,
     ResumeData,
     ResumeDesign,
@@ -109,6 +110,88 @@ def test_design_is_validated() -> None:
         ResumeDesign(photo="javascript:alert(1)")
     assert ResumeDesign(accent="#ABCDEF").accent == "#abcdef"
     assert ResumeData(section_order=["skills"]).section_order[0] == "skills"  # the rest keep their places
+
+
+def _checks(data: ResumeData) -> dict[str, AtsCheck]:
+    return {c.id: c for c in score_resume(data).checks}
+
+
+def test_unfilled_placeholders_are_caught_before_they_print() -> None:
+    assert _checks(strong_resume())["placeholders"].passed
+    data = strong_resume()
+    data.experience[1].bullets[0] = "Shipped CI/CD with GitHub Actions, cutting release time by [X%]"
+    check = _checks(data)["placeholders"]
+    assert not check.passed and "[X%]" in (check.fix or "")
+    assert check.target == f"experience.{data.experience[1].id}.bullets.0"
+
+
+def test_repeated_opening_verbs_cost_points_and_suggest_others() -> None:
+    assert _checks(strong_resume())["varied_verbs"].passed
+    data = strong_resume()
+    role = data.experience[0]
+    role.bullets = [f"Led the {x} migration for the payments ledger, cutting costs by 20%" for x in "ABCD"]
+    check = _checks(data)["varied_verbs"]
+    assert not check.passed and check.ai_fixable
+    assert "4 bullets start with \"Led\"" in (check.fix or "") and "Directed" in (check.fix or "")
+    assert check.target == f"experience.{role.id}.bullets.2"  # the first one past the two allowed
+
+
+def test_cliches_are_flagged_with_where_they_are() -> None:
+    assert _checks(strong_resume())["cliches"].passed
+    data = strong_resume()
+    data.basics.summary += " A results-driven team player."
+    check = _checks(data)["cliches"]
+    assert not check.passed and check.target == "basics.summary" and check.ai_fixable
+    assert "results-driven" in (check.fix or "")
+
+
+def test_roles_must_be_most_recent_first_with_dates_in_order() -> None:
+    assert _checks(strong_resume())["date_order"].passed
+    backwards = strong_resume()
+    backwards.experience.reverse()
+    check = _checks(backwards)["date_order"]
+    assert not check.passed and check.target == f"experience.{backwards.experience[1].id}"
+    inverted = strong_resume()
+    inverted.experience[1].start, inverted.experience[1].end = "Dec 2019", "Jun 2016"
+    check = _checks(inverted)["date_order"]
+    assert not check.passed and "ends before it starts" in (check.fix or "")
+    overlapping = strong_resume()  # a longer role that started earlier, listed second: not out of order
+    overlapping.experience[1].start, overlapping.experience[1].end = "Jun 2016", "Dec 2024"
+    assert _checks(overlapping)["date_order"].passed
+    assert [date_key(v) for v in ("Jan 2021", "03/2020", "2019-07", "2018", "Present", "soon")] == [
+        (2021, 1), (2020, 3), (2019, 7), (2018, 1), None, None]
+    assert date_key("2018", end=True) == (2018, 12) and date_key("Present", end=True) == (9999, 12)
+
+
+def test_extra_sections_keep_their_place_and_are_read_and_exported(client: TestClient) -> None:
+    langs = ExtraSection(id="lang1", title="Languages", items=["English (native)", "Spanish (fluent)"],
+                         style="inline")
+    awards = ExtraSection(id="aw1", title="Awards", items=["Hackathon winner, PyCon 2022"])
+    data = strong_resume()
+    data.extras = [langs, awards]
+    data.section_order = ["experience", "extra:aw1", "skills", "extra:gone"]  # unknown entries are dropped
+    data = ResumeData.model_validate(data.model_dump())
+    assert data.section_order[:3] == ["experience", "extra:aw1", "skills"] and "extra:lang1" in data.section_order
+    assert "extra:gone" not in data.section_order and len(data.section_order) == 8
+    with pytest.raises(ValueError):
+        ResumeData(extras=[ExtraSection(title=str(i)) for i in range(6)])  # at most 5
+
+    from orbit_api.documents.parsing import extract_text
+
+    h = _register(client)
+    r = client.post("/v1/resumes/docx", headers=h, json={"data": data.model_dump(mode="json")})
+    lines = extract_text(r.content, "docx").split("\n")
+    assert lines.index("EXPERIENCE") < lines.index("AWARDS") < lines.index("SKILLS")
+    assert "Hackathon winner, PyCon 2022" in lines and "English (native)  ·  Spanish (fluent)" in lines
+    assert "Spanish" in match_keywords(["Spanish"], data).matched
+
+
+def test_import_reads_extra_sections() -> None:
+    raw = {"basics": {"name": "Ana"}, "extras": [
+        {"title": "Languages", "items": ["English", "Portuguese"]}, {"title": "Volunteering", "items": ["Mentor"]},
+        {"title": "", "items": ["no title"]}, {"title": "Empty", "items": []}, "junk"]}
+    extras = ai.parse_structured(json.dumps(raw)).extras
+    assert [(x.title, x.style) for x in extras] == [("Languages", "inline"), ("Volunteering", "bullets")]
 
 
 # ---- CRUD & ownership --------------------------------------------------------------------------------------
@@ -273,3 +356,48 @@ def test_parse_suggestions_rejects_unknown_paths_no_ops_and_duplicates() -> None
     assert [s.path for s in got] == [path, "basics.summary"]
     assert got[0].after.startswith("Led ") and got[0].before == same  # bullet character stripped
     assert len(got[1].after) == 1_500
+
+
+# ---- cover letter ------------------------------------------------------------------------------------------
+
+
+def test_cover_letter_is_written_saved_and_kept_by_later_saves(client: TestClient) -> None:
+    h = _register(client)
+    data = strong_resume().model_dump(mode="json")
+    r = client.post("/v1/resumes/cover-letter", headers=h, json={"data": data, "job_text": JOB})
+    assert r.status_code == 200, r.text
+    letter = r.json()["text"]
+    assert letter.startswith("Dear Hiring Manager,") and letter.rstrip().endswith("Sam Lee")
+
+    created = client.post("/v1/resumes", headers=h, json={"title": "Mine", "data": data, "cover_letter": letter})
+    rid = created.json()["id"]
+    assert created.json()["cover_letter"] == letter
+    # A save that doesn't mention the letter (an older client) leaves it alone; an explicit one replaces it.
+    kept = client.put(f"/v1/resumes/{rid}", headers=h, json={"title": "Mine", "data": data})
+    assert kept.json()["cover_letter"] == letter
+    edited = client.put(f"/v1/resumes/{rid}", headers=h, json={"title": "Mine", "data": data, "cover_letter": "Edited"})
+    assert edited.json()["cover_letter"] == "Edited"
+
+    empty = client.post("/v1/resumes/cover-letter", headers=h, json={"data": {}})
+    assert empty.status_code == 422 and "experience" in empty.json()["detail"]
+
+
+def test_cover_letter_word_file_has_the_header_and_paragraphs(client: TestClient) -> None:
+    from orbit_api.documents.parsing import extract_text
+
+    h = _register(client)
+    text = "Dear Hiring Manager,\n\nFirst paragraph.\n\nSecond paragraph.\n\nSincerely,\nSam Lee"
+    r = client.post("/v1/resumes/cover-letter/docx", headers=h,
+                    json={"text": text, "data": strong_resume().model_dump(mode="json")})
+    assert r.status_code == 200
+    lines = extract_text(r.content, "docx").split("\n")
+    assert lines[0] == "Sam Lee" and "sam@example.com" in lines[1]
+    assert lines[3:] == ["Dear Hiring Manager,", "First paragraph.", "Second paragraph.", "Sincerely,", "Sam Lee"]
+
+
+def test_parse_cover_letter_strips_wrappers_and_rejects_scraps() -> None:
+    body = "Dear Hiring Manager,\n\n" + "A real paragraph about the work. " * 10 + "\n\n\n\nSincerely,\nAna"
+    assert ai.parse_cover_letter("Here's your letter:\n```\n" + body + "\n```").startswith("Dear Hiring Manager,")
+    assert "\n\n\n" not in ai.parse_cover_letter(body)
+    with pytest.raises(ValueError):
+        ai.parse_cover_letter("Sorry, I can't.")

@@ -6,6 +6,7 @@ layout is always single-column and has no photo, since that's what ATS parsers r
 """
 
 import io
+from datetime import UTC, datetime
 
 from docx import Document
 from docx.document import Document as DocxDocument
@@ -15,9 +16,9 @@ from docx.oxml.ns import qn
 from docx.shared import Mm, Pt, RGBColor
 from docx.text.paragraph import Paragraph
 
-from orbit_api.resumes.schema import ResumeData, ResumeDesign, SectionId
+from orbit_api.resumes.schema import EXTRA_PREFIX, ExtraSection, ResumeData, ResumeDesign
 
-SECTION_LABEL: dict[SectionId, str] = {
+SECTION_LABEL: dict[str, str] = {
     "summary": "Summary",
     "experience": "Experience",
     "education": "Education",
@@ -38,12 +39,22 @@ def _date_range(start: str, end: str, current: bool = False) -> str:
     return " – ".join(p for p in (start.strip(), to) if p)
 
 
-def _has_content(data: ResumeData, section: SectionId) -> bool:
+def extra_section(data: ResumeData, key: str) -> ExtraSection | None:
+    """The extra section a section_order entry ("extra:<id>") names, if it exists."""
+    if not key.startswith(EXTRA_PREFIX):
+        return None
+    return next((x for x in data.extras if x.id == key[len(EXTRA_PREFIX):]), None)
+
+
+def _has_content(data: ResumeData, section: str) -> bool:
     if section == "summary":
         return bool(data.basics.summary.strip())
     if section == "skills":
         return any(i.strip() for s in data.skills for i in s.items)
-    return bool(getattr(data, section))
+    if section.startswith(EXTRA_PREFIX):
+        extra = extra_section(data, section)
+        return extra is not None and bool(extra.title.strip()) and any(i.strip() for i in extra.items)
+    return bool(getattr(data, section, None))
 
 
 _PBDR_SUCCESSORS = ("w:shd", "w:tabs", "w:suppressAutoHyphens", "w:kinsoku", "w:wordWrap", "w:overflowPunct",
@@ -146,8 +157,15 @@ def resume_docx(data: ResumeData, design: ResumeDesign) -> bytes:
     for section in data.section_order:
         if not _has_content(data, section):
             continue
-        w.heading(SECTION_LABEL[section])
-        if section == "summary":
+        extra = extra_section(data, section)
+        w.heading(extra.title.strip() if extra else SECTION_LABEL[section])
+        if extra:
+            items = [i.strip() for i in extra.items if i.strip()]
+            if extra.style == "inline":
+                w.par("  ·  ".join(items))
+            else:
+                w.bullets(items)
+        elif section == "summary":
             w.par(b.summary.strip())
         elif section == "experience":
             for e in data.experience:
@@ -190,10 +208,36 @@ def resume_docx(data: ResumeData, design: ResumeDesign) -> bytes:
         elif section == "certifications":
             for c in data.certifications:
                 p = w.par(c.name, bold=True)
-                extra = ", ".join(x for x in (c.issuer, c.date) if x.strip())
-                if extra:
-                    p.add_run(" · " + extra)
+                issued = ", ".join(x for x in (c.issuer, c.date) if x.strip())
+                if issued:
+                    p.add_run(" · " + issued)
 
+    buf = io.BytesIO()
+    w.doc.save(buf)
+    return buf.getvalue()
+
+
+def letter_docx(text: str, data: ResumeData, design: ResumeDesign) -> bytes:
+    """The cover letter on a page that matches the resume: the same name and contact line, then today's date and the
+    letter's paragraphs (a single line break inside one, e.g. "Sincerely," / the name, stays a line break)."""
+    w = _Writer(design)
+    b = data.basics
+    if b.name.strip():
+        w.par(b.name.strip(), bold=True, size=design.font_size * 1.6)
+    contacts = [s.strip() for s in (b.email, b.phone, b.location, *(link.url for link in b.links)) if s.strip()]
+    if contacts:
+        w.par("  ·  ".join(contacts), after=w.section_gap)
+    today = datetime.now(UTC)
+    w.par(f"{today.day} {today:%B %Y}", after=w.section_gap)
+    for block in (p.strip() for p in text.replace("\r\n", "\n").split("\n\n")):
+        if not block:
+            continue
+        p = w.par(after=w.item_gap + 3)
+        for i, line in enumerate(block.split("\n")):
+            if i:
+                p.add_run().add_break()
+            p.add_run(line.strip())
+    w.doc.core_properties.title = "Cover letter"
     buf = io.BytesIO()
     w.doc.save(buf)
     return buf.getvalue()

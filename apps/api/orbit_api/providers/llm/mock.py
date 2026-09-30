@@ -121,6 +121,15 @@ class MockLLMProvider(LLMProvider):
                 {"path": f["path"], "after": f"[mock] Improved: {f['text'] or 'A summary of your strengths'}"[:300],
                  "reason": "[mock] Clearer and more specific."}
                 for f in fields if isinstance(f, dict) and "path" in f][:3]})
+        if request.request_type == "cover_letter":
+            body = request.messages[-1].content if request.messages else ""
+            m = re.search(r'"name": "([^"]*)"', body)
+            name = (m.group(1) if m else "") or "[Your name]"
+            return ("Dear Hiring Manager,\n\n[mock] I'm applying for the role in your job post. My experience "
+                    "building reliable backend systems matches what you describe.\n\n[mock] In my last role I "
+                    "cut release time by [a number you can cite], and I led the work end to end.\n\n[mock] What "
+                    "draws me to this team is the scale of the problem. I'd welcome the chance to talk.\n\n"
+                    f"Sincerely,\n{name}")
         if request.request_type == "follow_up":
             return json.dumps({
                 "debrief": {"went_well": ["[mock] clear example"], "to_improve": ["[mock] add a metric"],

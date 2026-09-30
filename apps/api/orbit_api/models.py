@@ -191,6 +191,8 @@ class Resume(TimestampMixin, Base):
     data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     design: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     job_text: Mapped[str] = mapped_column(Text, default="")
+    # The cover letter written for this resume and job post (AI draft, then the user's edits).
+    cover_letter: Mapped[str] = mapped_column(Text, default="", server_default="")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 

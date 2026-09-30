@@ -8,6 +8,8 @@
   structured data. Nothing is saved until the editor creates the resume.
 - `POST /v1/resumes/suggest`: AI rewrites, whole-resume ("improve"), for a job post ("tailor"), or one field
   ("focus"). The editor applies them one accepted change at a time.
+- `POST /v1/resumes/cover-letter`: an AI cover letter from the resume and job post, grounded the same way; the
+  editor saves it with the resume. `POST /v1/resumes/cover-letter/docx` downloads it as a Word file.
 """
 
 import asyncio
@@ -33,7 +35,7 @@ from orbit_api.providers.llm.pricing import estimate_cost
 from orbit_api.ratelimit import limit, limit_user
 from orbit_api.resumes import ai
 from orbit_api.resumes.ats import AtsReport, score_resume
-from orbit_api.resumes.docx_export import resume_docx
+from orbit_api.resumes.docx_export import letter_docx, resume_docx
 from orbit_api.resumes.schema import ResumeData, ResumeDesign
 
 log = logging.getLogger(__name__)
@@ -53,10 +55,13 @@ class ResumeIn(BaseModel):
     data: ResumeData = Field(default_factory=ResumeData)
     design: ResumeDesign = Field(default_factory=ResumeDesign)
     job_text: str = Field("", max_length=MAX_JOB_TEXT)
+    # Left out (None) by clients that don't edit it, so saving the resume never wipes the letter.
+    cover_letter: str | None = Field(None, max_length=ai.MAX_LETTER_CHARS)
 
 
 class ResumeOut(ResumeIn):
     id: str
+    cover_letter: str = ""
     created_at: datetime
     updated_at: datetime
 
@@ -79,7 +84,7 @@ def _load(r: Resume) -> tuple[ResumeData, ResumeDesign]:
 def _out(r: Resume) -> ResumeOut:
     data, design = _load(r)
     return ResumeOut(id=r.id, title=r.title, data=data, design=design, job_text=r.job_text or "",
-                     created_at=r.created_at, updated_at=r.updated_at)
+                     cover_letter=r.cover_letter or "", created_at=r.created_at, updated_at=r.updated_at)
 
 
 async def _owned(db: AsyncSession, resume_id: str, user: User) -> Resume:
@@ -110,7 +115,7 @@ async def create_resume(body: ResumeIn, user: Annotated[User, Depends(current_us
     if (count or 0) >= MAX_RESUMES:
         raise HTTPException(status.HTTP_409_CONFLICT, f"You can keep up to {MAX_RESUMES} resumes. Delete one first.")
     r = Resume(user_id=user.id, title=body.title, data=body.data.model_dump(mode="json"),
-               design=body.design.model_dump(mode="json"), job_text=body.job_text)
+               design=body.design.model_dump(mode="json"), job_text=body.job_text, cover_letter=body.cover_letter or "")
     db.add(r)
     await db.commit()
     await db.refresh(r)
@@ -131,6 +136,8 @@ async def update_resume(resume_id: str, body: ResumeIn, user: Annotated[User, De
     r.data = body.data.model_dump(mode="json")
     r.design = body.design.model_dump(mode="json")
     r.job_text = body.job_text
+    if body.cover_letter is not None:
+        r.cover_letter = body.cover_letter
     await db.commit()
     await db.refresh(r)
     return _out(r)
@@ -251,6 +258,48 @@ async def import_resume_file(file: Annotated[UploadFile, File()],
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e
     kind = "linkedin" if "linkedin" in text[:4_000].lower() else "resume"
     return await _import_text(db, user, text, kind)
+
+
+# ---- cover letter ------------------------------------------------------------------------------------------
+
+
+class CoverLetterIn(BaseModel):
+    data: ResumeData
+    job_text: str = Field("", max_length=MAX_JOB_TEXT)
+
+
+class CoverLetterOut(BaseModel):
+    text: str
+
+
+@router.post("/cover-letter", response_model=CoverLetterOut,
+             dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
+async def cover_letter(body: CoverLetterIn, user: Annotated[User, Depends(require_verified_user)],
+                       db: Annotated[AsyncSession, Depends(get_db)]) -> CoverLetterOut:
+    """A cover letter from what the resume says and what the job post asks for; nothing is invented."""
+    d = body.data
+    if not (d.basics.name.strip() and (d.experience or d.projects or d.basics.summary.strip())):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            "Add your name and some experience first: the letter is written from your resume.")
+    resp = await _generate(db, user, ai.cover_letter_request(d, body.job_text), "cover letter")
+    try:
+        return CoverLetterOut(text=ai.parse_cover_letter(resp.text))
+    except ValueError as e:
+        log.warning("cover letter unusable: %s", e)
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "The AI couldn't write the letter. Try again.") from e
+
+
+class LetterDocxIn(BaseModel):
+    text: str = Field(min_length=1, max_length=ai.MAX_LETTER_CHARS)
+    data: ResumeData = Field(default_factory=ResumeData)
+    design: ResumeDesign = Field(default_factory=ResumeDesign)
+
+
+@router.post("/cover-letter/docx", dependencies=[Depends(score_limit)],
+             responses={200: {"content": {DOCX_TYPE: {}}, "description": "The cover letter as a Word file."}})
+async def cover_letter_docx(body: LetterDocxIn, _: Annotated[User, Depends(current_user)]) -> Response:
+    content = await asyncio.to_thread(letter_docx, body.text, body.data, body.design)
+    return Response(content, media_type=DOCX_TYPE, headers={"Cache-Control": "no-store"})
 
 
 class SuggestIn(BaseModel):

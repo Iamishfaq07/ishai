@@ -238,6 +238,12 @@ export function createApiClient(options: ApiClientOptions) {
       else form.append("file", file);
       return json<ResumeImportResponse>("/v1/resumes/import-file", { method: "POST", body: form });
     },
+    /** A cover letter from the resume and (if given) the job post; nothing it says goes beyond them. */
+    coverLetter: (data: ResumeData, jobText: string) =>
+      json<{ text: string }>("/v1/resumes/cover-letter", { method: "POST", body: body({ data, job_text: jobText }) }),
+    /** The cover letter as a Word file, with the resume's name and contact line on top. */
+    coverLetterDocx: async (text: string, data: ResumeData, design: ResumeDesign) =>
+      (await raw("/v1/resumes/cover-letter/docx", { method: "POST", body: body({ text, data, design }) })).blob(),
     /** The resume as a Word file (.docx): one plain column, built from what the editor shows now. */
     resumeDocx: async (data: ResumeData, design: ResumeDesign) =>
       (await raw("/v1/resumes/docx", { method: "POST", body: body({ data, design }) })).blob(),

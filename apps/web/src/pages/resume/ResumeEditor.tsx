@@ -1,24 +1,29 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import { Link, useLocation, useParams } from "react-router-dom";
-import type { AtsCheck, AtsReport, Resume, ResumeData, ResumeDesign, ResumeSuggestion } from "@orbit/types";
+import type { AtsCheck, AtsReport, Resume, ResumeData, ResumeDesign, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
 import {
   ArrowLeft,
   Check,
   CircleAlert,
   CircleCheck,
+  Copy,
   Download,
   FileText,
   Gauge,
   Link2,
+  Mail,
   Palette,
   PenLine,
   Plus,
+  Redo2,
   Save,
   Sparkles,
+  Undo2,
   Upload,
   Wand2,
   X,
+  confirmDialog,
   cx,
   focusRing,
   splitPlaceholders,
@@ -28,17 +33,26 @@ import { api } from "../../lib/api";
 import { downloadText, errorText } from "../../lib/format";
 import { ContentForm } from "./ContentForm";
 import { ACCENTS, FONTS, SPACING, TEMPLATES, getAt, newId, photoToDataUrl, resumeToText, setAt } from "./model";
-import { PAGE_MM, ResumePreview } from "./ResumePreview";
+import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
 
-type Tab = "content" | "score" | "ai" | "design";
-const MM_TO_PX = 96 / 25.4;
+type Tab = "content" | "score" | "ai" | "design" | "letter";
+
+/** What undo/redo restores: everything the user edits. */
+type Snapshot = Pick<Resume, "title" | "data" | "design" | "job_text" | "cover_letter">;
+const snapshot = (r: Resume): Snapshot => ({ title: r.title, data: r.data, design: r.design, job_text: r.job_text, cover_letter: r.cover_letter });
+/** A bracketed cue the AI leaves for the user to fill in ("by [X%]"). */
+const FILL = /\[[^\][\n]{1,160}\]/g;
+const HISTORY_LIMIT = 100;
+/** Edits closer together than this, in the same field, undo as one step (a burst of typing). */
+const HISTORY_GROUP_MS = 1200;
 
 const TABS: Array<{ id: Tab; label: string; icon: typeof FileText }> = [
   { id: "content", label: "Content", icon: PenLine },
   { id: "score", label: "ATS score", icon: Gauge },
   { id: "ai", label: "AI rewrite", icon: Wand2 },
   { id: "design", label: "Design", icon: Palette },
+  { id: "letter", label: "Cover letter", icon: Mail },
 ];
 
 /** The text "Fix with AI" can rewrite: a summary, headline, bullet or project description. */
@@ -71,23 +85,74 @@ export function ResumeEditorPage() {
       .catch((err: unknown) => setLoadError(errorText(err)));
   }, [resumeId]);
 
-  const change = useCallback((fn: (r: Resume) => Resume) => {
-    setResume((r) => (r ? fn(r) : r));
+  // Undo/redo. Typing in one field is one step; a pause, another field or a button starts the next.
+  const latest = useRef(resume);
+  latest.current = resume;
+  const history = useRef<{ past: Snapshot[]; future: Snapshot[]; at: number; el: Element | null }>({ past: [], future: [], at: 0, el: null });
+  const [steps, setSteps] = useState({ undo: 0, redo: 0 });
+  const apply = useCallback((next: Resume) => {
+    latest.current = next;
+    setResume(next);
     setSave({ state: "dirty" });
+    setSteps({ undo: history.current.past.length, redo: history.current.future.length });
   }, []);
+  const change = useCallback(
+    (fn: (r: Resume) => Resume) => {
+      const r = latest.current;
+      if (!r) return;
+      const next = fn(r);
+      if (next === r) return;
+      const h = history.current;
+      const now = Date.now();
+      const el = document.activeElement;
+      if (!h.past.length || now - h.at > HISTORY_GROUP_MS || el !== h.el) {
+        h.past.push(snapshot(r));
+        if (h.past.length > HISTORY_LIMIT) h.past.shift();
+      }
+      h.at = now;
+      h.el = el;
+      h.future = [];
+      apply(next);
+    },
+    [apply],
+  );
+  const step = useCallback(
+    (from: "undo" | "redo") => {
+      const r = latest.current;
+      const h = history.current;
+      const target = (from === "undo" ? h.past : h.future).pop();
+      if (!r || !target) return;
+      (from === "undo" ? h.future : h.past).push(snapshot(r));
+      h.at = 0; // the next edit is a new step
+      apply({ ...r, ...target });
+    },
+    [apply],
+  );
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if (key !== "z" && key !== "y") return;
+      // Inside a text field the browser's own undo edits that field; elsewhere it's the whole resume.
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName))) return;
+      e.preventDefault();
+      step(key === "y" || e.shiftKey ? "redo" : "undo");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [step]);
   const update = useCallback((fn: (d: ResumeData) => ResumeData) => change((r) => ({ ...r, data: fn(r.data) })), [change]);
   const setDesign = (patch: Partial<ResumeDesign>) => change((r) => ({ ...r, design: { ...r.design, ...patch } }));
 
   // Autosave, a moment after the last edit.
-  const latest = useRef(resume);
-  latest.current = resume;
   useEffect(() => {
     if (!resume || save.state !== "dirty") return;
     const t = window.setTimeout(() => {
       setSave({ state: "saving" });
-      const { title, data, design, job_text } = resume;
+      const { title, data, design, job_text, cover_letter } = resume;
       api
-        .updateResume(resume.id, { title: title.trim() || "Untitled resume", data, design, job_text })
+        .updateResume(resume.id, { title: title.trim() || "Untitled resume", data, design, job_text, cover_letter })
         .then(() => setSave((s) => (s.state === "saving" ? { state: "saved" } : s)))
         .catch((err: unknown) => setSave({ state: "error", error: errorText(err) }));
     }, 900);
@@ -109,7 +174,7 @@ export function ResumeEditorPage() {
       const r = latest.current;
       if (r && unsaved.current) {
         void api
-          .updateResume(r.id, { title: r.title.trim() || "Untitled resume", data: r.data, design: r.design, job_text: r.job_text })
+          .updateResume(r.id, { title: r.title.trim() || "Untitled resume", data: r.data, design: r.design, job_text: r.job_text, cover_letter: r.cover_letter })
           .catch(() => undefined);
       }
     },
@@ -174,6 +239,35 @@ export function ResumeEditorPage() {
     setQueue((q) => q.filter((x) => x.id !== s.id));
   };
 
+  const placeholders = report?.checks.find((c) => c.id === "placeholders" && !c.passed) ?? null;
+  /** Downloading with an unfilled [placeholder] prints it as-is: say so first. */
+  const okToDownload = () =>
+    placeholders
+      ? confirmDialog({
+          title: "Some placeholders aren't filled in",
+          body: `${placeholders.fix ?? ""} Download anyway?`,
+          confirmLabel: "Download anyway",
+        })
+      : Promise.resolve(true);
+
+  // "Download PDF" prints the resume, or the cover letter from its tab; the browser names the file after the title.
+  const [printing, setPrinting] = useState<"resume" | "letter">("resume");
+  const printDoc = (kind: "resume" | "letter") => {
+    if (!resume) return;
+    flushSync(() => setPrinting(kind));
+    const previous = document.title;
+    document.title = fileName(resume, kind === "letter" ? "Cover letter" : "Resume");
+    window.addEventListener(
+      "afterprint",
+      () => {
+        document.title = previous;
+        setPrinting("resume");
+      },
+      { once: true },
+    );
+    window.print();
+  };
+
   if (loadError) return <ErrorNote>{loadError}</ErrorNote>;
   if (!resume) return <Spinner label="Opening your resume" />;
 
@@ -191,6 +285,14 @@ export function ResumeEditorPage() {
           className="max-w-xs font-display text-lg font-semibold"
         />
         <SaveState state={save.state} error={save.error} />
+        <div className="flex items-center">
+          <HistoryButton label="Undo" shortcut="Ctrl+Z" disabled={!steps.undo} onClick={() => step("undo")}>
+            <Undo2 className="h-4 w-4" />
+          </HistoryButton>
+          <HistoryButton label="Redo" shortcut="Ctrl+Shift+Z" disabled={!steps.redo} onClick={() => step("redo")}>
+            <Redo2 className="h-4 w-4" />
+          </HistoryButton>
+        </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {report && (
             <button
@@ -208,8 +310,8 @@ export function ResumeEditorPage() {
             </button>
           )}
           <SaveToDocuments resume={resume} />
-          <DownloadWord resume={resume} />
-          <Button onClick={() => printResume(resume)}>
+          <DownloadWord resume={resume} confirm={okToDownload} />
+          <Button onClick={() => void okToDownload().then((ok) => ok && printDoc("resume"))}>
             <Download className="h-4 w-4" /> Download PDF
           </Button>
         </div>
@@ -232,15 +334,17 @@ export function ResumeEditorPage() {
                 key={id}
                 role="tab"
                 aria-selected={tab === id}
+                aria-label={label}
                 type="button"
                 onClick={() => setTab(id)}
                 className={cx(
-                  "flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium",
+                  "flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1.5 text-sm font-medium",
                   tab === id ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
                   focusRing,
                 )}
               >
-                <Icon className="h-4 w-4" />
+                {/* Icons alone on phones; labels alone where the column is narrow; both when there's room. */}
+                <Icon className="h-4 w-4 shrink-0 sm:max-xl:hidden" aria-hidden />
                 <span className="hidden sm:inline">{label}</span>
                 {id === "ai" && queue.length > 0 && <span className="rounded-full bg-indigo-600 px-1.5 text-[0.625rem] text-white">{queue.length}</span>}
               </button>
@@ -277,16 +381,52 @@ export function ResumeEditorPage() {
             />
           )}
           {tab === "design" && <DesignPanel design={resume.design} setDesign={setDesign} />}
+          {tab === "letter" && (
+            <LetterPanel
+              resume={resume}
+              onText={(cover_letter) => change((r) => ({ ...r, cover_letter }))}
+              onShowJob={() => setTab("score")}
+              onPrint={() => printDoc("letter")}
+            />
+          )}
         </div>
 
         <div className="min-w-0">
-          <div className="sticky top-20">
-            <ScaledPage data={resume.data} design={resume.design} />
+          <div className="sticky top-20 space-y-3">
+            {placeholders && tab !== "letter" && (
+              <div role="status" className="flex items-start gap-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">
+                <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="flex-1">{placeholders.fix} They're highlighted below.</span>
+                <Button size="sm" variant="secondary" onClick={() => showTarget(placeholders.target)}>
+                  Show me
+                </Button>
+              </div>
+            )}
+            {tab === "letter" ? (
+              <ScaledLetter data={resume.data} design={resume.design} text={resume.cover_letter} />
+            ) : (
+              <ScaledPage data={resume.data} design={resume.design} onFit={(design) => change((r) => ({ ...r, design }))} />
+            )}
           </div>
         </div>
       </div>
-      <PrintCopy data={resume.data} design={resume.design} />
+      <PrintCopy data={resume.data} design={resume.design} letter={printing === "letter" ? resume.cover_letter : null} />
     </div>
+  );
+}
+
+function HistoryButton({ label, shortcut, disabled, onClick, children }: { label: string; shortcut: string; disabled: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={`${label} (${shortcut})`}
+      disabled={disabled}
+      onClick={onClick}
+      className={cx("rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-900 disabled:opacity-30 dark:hover:bg-white/10 dark:hover:text-white", focusRing)}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -326,14 +466,15 @@ function SaveToDocuments({ resume }: { resume: Resume }) {
 }
 
 /** A Word copy for portals and recruiters that ask for .docx: one plain column, which ATS software reads best. */
-function DownloadWord({ resume }: { resume: Resume }) {
+function DownloadWord({ resume, confirm }: { resume: Resume; confirm: () => Promise<boolean> }) {
   const [state, setState] = useState<"idle" | "busy" | "error">("idle");
   return (
     <Button
       variant="secondary"
       disabled={state === "busy"}
       title="Download a Word copy (.docx): one plain column, no photo, which ATS software reads best"
-      onClick={() => {
+      onClick={async () => {
+        if (!(await confirm())) return;
         setState("busy");
         api
           .resumeDocx(resume.data, resume.design)
@@ -350,57 +491,245 @@ function DownloadWord({ resume }: { resume: Resume }) {
   );
 }
 
-/** Browsers name the saved PDF after the page title, so it's "Sam Lee - Resume.pdf" rather than the app's name. */
-function printResume(resume: Resume): void {
-  const previous = document.title;
-  document.title = fileName(resume);
-  window.addEventListener("afterprint", () => (document.title = previous), { once: true });
-  window.print();
+/** "Sam Lee - Resume" (or "- Cover letter"), from the name on the resume or its title, safe as a file name. */
+function fileName(resume: Resume, kind: "Resume" | "Cover letter" = "Resume"): string {
+  const name = resume.data.basics.name.trim();
+  const base = name ? `${name} - ${kind}` : kind === "Resume" ? resume.title.trim() : `${resume.title.trim()} - ${kind}`;
+  return base.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 100) || kind;
 }
 
-/** "Sam Lee - Resume", from the name on the resume (or its title), safe to use as a file name everywhere. */
-function fileName(resume: Resume): string {
-  const base = resume.data.basics.name.trim() ? `${resume.data.basics.name.trim()} - Resume` : resume.title.trim();
-  return base.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 100) || "Resume";
-}
-
-/** The page at real size, scaled down to fit the column. */
-function ScaledPage({ data, design }: { data: ResumeData; design: ResumeDesign }) {
+/** A page drawn at real size and scaled to fit its column: the refs to attach, the scale, and its real height. */
+function useScaledPage(size: ResumeDesign["page"]) {
   const box = useRef<HTMLDivElement>(null);
   const page = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.6);
-  const [height, setHeight] = useState(0);
+  const [realHeight, setRealHeight] = useState(0);
   useLayoutEffect(() => {
-    const pageWidth = PAGE_MM[design.page].w * MM_TO_PX;
+    const pageWidth = PAGE_MM[size].w * MM_TO_PX;
     const measure = () => {
-      const s = Math.min(1, (box.current?.clientWidth ?? pageWidth) / pageWidth);
-      setScale(s);
-      setHeight((page.current?.offsetHeight ?? 0) * s);
+      setScale(Math.min(1, (box.current?.clientWidth ?? pageWidth) / pageWidth));
+      setRealHeight(page.current?.offsetHeight ?? 0);
     };
     measure();
     const ro = new ResizeObserver(measure);
     if (box.current) ro.observe(box.current);
     if (page.current) ro.observe(page.current);
     return () => ro.disconnect();
-  }, [design.page]);
+  }, [size]);
+  return { box, page, scale, realHeight };
+}
+
+function ScaledLetter({ data, design, text }: { data: ResumeData; design: ResumeDesign; text: string }) {
+  const { box, page, scale, realHeight } = useScaledPage(design.page);
   return (
-    <div ref={box} className="w-full" aria-label="Resume preview" role="img" style={{ height }}>
+    <div ref={box} className="w-full" aria-label="Cover letter preview" role="img" style={{ height: realHeight * scale }}>
       <div ref={page} style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "max-content" }} className="overflow-hidden rounded-sm shadow-xl ring-1 ring-black/5">
-        <ResumePreview data={data} design={design} />
+        <LetterPreview data={data} design={design} text={text} />
       </div>
     </div>
   );
 }
 
-/** What "Download PDF" prints: the resume alone, at real size, with the page set to A4 or Letter. */
-function PrintCopy({ data, design }: { data: ResumeData; design: ResumeDesign }) {
-  const flow = design.template !== "sidebar";
+/** The page at real size, scaled down to fit the column, with where page 2 (and 3…) would start when printed. */
+function ScaledPage({ data, design, onFit }: { data: ResumeData; design: ResumeDesign; onFit: (design: ResumeDesign) => void }) {
+  const { box, page, scale, realHeight } = useScaledPage(design.page);
+  const [fitting, setFitting] = useState(false);
+  const [fitNote, setFitNote] = useState<string | null>(null);
+  const { pages, breaks } = pageLayout(realHeight, design);
+  useEffect(() => setFitNote(null), [data]);
+  // Printing keeps each role, project and school whole, so a break inside one moves to its top: show it there.
+  const [guides, setGuides] = useState<number[]>([]);
+  const breakKey = breaks.join(",");
+  useLayoutEffect(() => {
+    const root = page.current?.firstElementChild;
+    if (!root || !breaks.length) {
+      setGuides([]);
+      return;
+    }
+    const top = root.getBoundingClientRect().top;
+    const entries = [...root.querySelectorAll(".break-inside-avoid")].map((el) => {
+      const r = el.getBoundingClientRect();
+      return [(r.top - top) / scale, (r.bottom - top) / scale] as const;
+    });
+    setGuides(breaks.map((y) => entries.find(([a, b]) => a < y && y < b)?.[0] ?? y));
+  }, [breakKey, scale, data]); // eslint-disable-line react-hooks/exhaustive-deps -- breaks is new each render; breakKey tracks it
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className={cx("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1", pages === 1 ? "bg-emerald-500/10 text-emerald-800 ring-emerald-500/25 dark:text-emerald-300" : pages === 2 ? "bg-sky-500/10 text-sky-800 ring-sky-500/25 dark:text-sky-300" : "bg-amber-500/10 text-amber-900 ring-amber-500/25 dark:text-amber-200")}>
+          <FileText className="h-3.5 w-3.5" /> {pages} page{pages === 1 ? "" : "s"}
+        </span>
+        {pages > 2 && <span className="text-xs text-zinc-600 dark:text-zinc-400">Recruiters rarely read past page 2: trim older roles.</span>}
+        {pages > 1 && (
+          <Button size="sm" variant="ghost" disabled={fitting} onClick={() => { setFitNote(null); setFitting(true); }}>
+            Fit to one page
+          </Button>
+        )}
+        {fitNote && <span role="status" className="text-xs text-zinc-600 dark:text-zinc-400">{fitNote}</span>}
+      </div>
+      <div ref={box} className="relative w-full" aria-label={`Resume preview, ${pages} page${pages === 1 ? "" : "s"}`} role="img" style={{ height: realHeight * scale }}>
+        <div ref={page} style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "max-content" }} className="overflow-hidden rounded-sm shadow-xl ring-1 ring-black/5">
+          <ResumePreview data={data} design={design} />
+        </div>
+        {guides.map((y, i) => (
+          <div key={i} aria-hidden className="pointer-events-none absolute inset-x-0 border-t-2 border-dashed border-sky-500/70" style={{ top: Math.max(0, y * scale - 3) }}>
+            <span className="absolute right-1 top-0 -translate-y-full rounded-t bg-sky-500 px-1.5 py-px text-[0.625rem] font-medium text-white">Page {i + 2} starts</span>
+          </div>
+        ))}
+      </div>
+      {fitting && (
+        <FitMeasurer
+          data={data}
+          candidates={fitCandidates(design)}
+          onDone={(fit) => {
+            setFitting(false);
+            if (fit) {
+              onFit(fit);
+              setFitNote(`Fitted: ${fit.spacing} spacing, ${fit.font_size} pt text.`);
+            } else {
+              setFitNote("Still over a page at the smallest readable size. Trim older roles or bullets, or keep two pages.");
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Designs to try, least change first: tighter spacing, then smaller text down to 9.5 pt. */
+function fitCandidates(d: ResumeDesign): ResumeDesign[] {
+  const order: ResumeSpacing[] = ["relaxed", "normal", "compact"];
+  const out: ResumeDesign[] = order.slice(order.indexOf(d.spacing) + 1).map((spacing) => ({ ...d, spacing }));
+  for (let size = d.font_size - 0.5; size >= 9.5; size -= 0.5) out.push({ ...d, spacing: "compact", font_size: size });
+  return out;
+}
+
+/** Lays the candidates out off-screen, once, and reports the first that fits on one page (or null). */
+function FitMeasurer({ data, candidates, onDone }: { data: ResumeData; candidates: ResumeDesign[]; onDone: (fit: ResumeDesign | null) => void }) {
+  const refs = useRef<Array<HTMLDivElement | null>>([]);
+  useLayoutEffect(() => {
+    const fit = candidates.find((c, i) => pageLayout(refs.current[i]?.offsetHeight ?? Infinity, c).pages === 1) ?? null;
+    onDone(fit);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- measured once, on mount
+  return createPortal(
+    <div aria-hidden className="print:hidden" style={{ position: "fixed", left: -100_000, top: 0, visibility: "hidden", pointerEvents: "none" }}>
+      {candidates.map((c, i) => (
+        <div key={i} ref={(el) => { refs.current[i] = el; }} style={{ width: "max-content" }}>
+          <ResumePreview data={data} design={c} />
+        </div>
+      ))}
+    </div>,
+    document.body,
+  );
+}
+
+/** What "Download PDF" prints: the resume (or the cover letter) alone, at real size, on A4 or Letter. */
+function PrintCopy({ data, design, letter }: { data: ResumeData; design: ResumeDesign; letter: string | null }) {
+  const flow = letter !== null || design.template !== "sidebar";
   return createPortal(
     <div className={cx("resume-print", flow && "resume-print-flow")}>
       <style>{`@page { size: ${design.page === "letter" ? "letter" : "A4"}; margin: 0; }`}</style>
-      <ResumePreview data={data} design={design} />
+      {letter !== null ? <LetterPreview data={data} design={design} text={letter} /> : <ResumePreview data={data} design={design} />}
     </div>,
     document.body,
+  );
+}
+
+function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; onText: (text: string) => void; onShowJob: () => void; onPrint: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [word, setWord] = useState<"idle" | "busy" | "error">("idle");
+  const text = resume.cover_letter;
+  const hasJob = Boolean(resume.job_text.trim());
+  const fills = text.match(FILL) ?? [];
+
+  const write = async () => {
+    if (text.trim() && !(await confirmDialog({ title: "Write a new letter?", body: "This replaces the letter below, with your edits. Undo brings it back.", confirmLabel: "Write a new one" }))) return;
+    setBusy(true);
+    setError(null);
+    try {
+      onText((await api.coverLetter(resume.data, resume.job_text)).text);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const okToDownload = () =>
+    fills.length
+      ? confirmDialog({
+          title: "Some placeholders aren't filled in",
+          body: `${fills.length} placeholder${fills.length === 1 ? "" : "s"} like ${fills[0]} would print as-is. Download anyway?`,
+          confirmLabel: "Download anyway",
+        })
+      : Promise.resolve(true);
+
+  return (
+    <div className="space-y-4">
+      <Panel title="Cover letter">
+        <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-300">
+          Written from your resume and the job post. It never adds facts: where a detail would help, it leaves a
+          <mark className="mx-1 rounded bg-amber-200/70 px-0.5 text-amber-950 dark:bg-amber-400/30 dark:text-amber-100">[placeholder]</mark>
+          for you to fill in. Edit it freely: it's saved with this resume.
+        </p>
+        {!hasJob && (
+          <p className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">
+            Add the job post first for a letter aimed at that job.
+            <Button size="sm" variant="secondary" onClick={onShowJob}>
+              <Upload className="h-3.5 w-3.5" /> Add a job post
+            </Button>
+          </p>
+        )}
+        <Button disabled={busy} onClick={() => void write()}>
+          <Sparkles className="h-4 w-4" /> {busy ? "Writing…" : text.trim() ? "Write a new one" : "Write my cover letter"}
+        </Button>
+        {error && <p className="mt-2 text-sm text-rose-600">{error}</p>}
+      </Panel>
+      {busy && <Spinner label="Writing your letter" />}
+      {(text || !busy) && (
+        <Panel title="Your letter" action={fills.length > 0 ? <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">{fills.length} to fill in</span> : undefined}>
+          <Textarea aria-label="Letter text" rows={18} maxLength={6000} value={text} onChange={(e) => onText(e.target.value)} placeholder="Write it yourself, or let the AI draft it above." />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              disabled={!text.trim()}
+              onClick={() =>
+                void navigator.clipboard
+                  .writeText(text)
+                  .then(() => {
+                    setCopied(true);
+                    window.setTimeout(() => setCopied(false), 1500);
+                  })
+                  .catch(() => undefined)
+              }
+            >
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? "Copied" : "Copy"}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={!text.trim() || word === "busy"}
+              onClick={async () => {
+                if (!(await okToDownload())) return;
+                setWord("busy");
+                api
+                  .coverLetterDocx(text, resume.data, resume.design)
+                  .then((blob) => {
+                    downloadText(`${fileName(resume, "Cover letter")}.docx`, blob, blob.type);
+                    setWord("idle");
+                  })
+                  .catch(() => setWord("error"));
+              }}
+            >
+              <FileText className="h-4 w-4" /> {word === "busy" ? "Preparing…" : word === "error" ? "Couldn't download, try again" : "Word"}
+            </Button>
+            <Button disabled={!text.trim()} onClick={() => void okToDownload().then((ok) => ok && onPrint())}>
+              <Download className="h-4 w-4" /> Download PDF
+            </Button>
+          </div>
+        </Panel>
+      )}
+    </div>
   );
 }
 
