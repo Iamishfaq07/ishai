@@ -24,6 +24,11 @@ describe("read aloud text", () => {
     expect(chunks.join(" ").split(/\s+/).filter((w) => w.startsWith("word")).length).toBe(80);
     expect(chunks.at(-1)).toBe("Last?");
   });
+
+  it("keeps closing quotes with their sentence, drops stray end marks, and handles long unpunctuated text", () => {
+    expect(speechChunks('He said "Ship it." Then? ...and "done"', 20)).toEqual(['He said "Ship it."', 'Then? and "done"']);
+    expect(speechChunks(`${" ".repeat(100_000)}x`)).toEqual(["x"]);
+  });
 });
 
 describe("manual key point overrides", () => {

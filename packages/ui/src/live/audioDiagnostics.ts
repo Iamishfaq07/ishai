@@ -127,7 +127,9 @@ export function summarize(s: ChannelStats, startedAt: number, now: number, kind:
 
 /** Device names can carry a person's name ("Sam's AirPods Pro"); keep the model, drop the name. */
 export function redactDeviceName(name: string): string {
-  return name.replace(/[\p{L}\p{N}._-]+['’]s\b/gu, "[name]'s");
+  // Each match is a whole run of name characters plus an optional "'s"; the optional group never fails, so the
+  // regex never backtracks into the run (the plain `run's` form is quadratic on a long run with no "'s").
+  return name.replace(/[\p{L}\p{N}._-]+(['’]s\b)?/gu, (run, possessive?: string) => (possessive ? "[name]'s" : run));
 }
 
 export interface DiagnosticsEvent {

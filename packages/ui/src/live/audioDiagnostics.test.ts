@@ -55,6 +55,9 @@ describe("audio diagnostics", () => {
     expect(redactDeviceName("Sam's AirPods Pro")).toBe("[name]'s AirPods Pro");
     expect(redactDeviceName("Headset (Priya’s Jabra)")).toBe("Headset ([name]'s Jabra)");
     expect(redactDeviceName("Microphone (Realtek(R) Audio)")).toBe("Microphone (Realtek(R) Audio)");
+    expect(redactDeviceName("Sam'sung")).toBe("Sam'sung");
+    const long = "-".repeat(100_000); // no "'s" anywhere: linear, not a quadratic backtrack
+    expect(redactDeviceName(long)).toBe(long);
   });
 
   it("the report holds measurements only, with names redacted", () => {

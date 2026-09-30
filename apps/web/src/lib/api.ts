@@ -1,8 +1,8 @@
-import { createApiClient } from "@orbit/ui";
+import { createApiClient, trimTrailingSlashes } from "@orbit/ui";
 
 /** Absolute URL for a configured base, which may be relative to this site (e.g. "/api", the Worker's proxy). */
 function absolute(base: string): string {
-  return new URL(base, window.location.origin).toString().replace(/\/+$/, "");
+  return trimTrailingSlashes(new URL(base, window.location.origin).toString());
 }
 
 // REST base. In production this is the same-origin "/api" proxy, so the session cookie is first-party — a cookie

@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { encode } from "uqr";
 import type { ApiClient } from "../api/client";
 import { Check, Copy, Smartphone, X } from "../icons";
+import { trimTrailingSlashes } from "../serverUrl";
 import { cx, focusRing } from "./cx";
 import { Button } from "./ui";
 
@@ -9,7 +10,7 @@ type CompanionApi = Pick<ApiClient, "startCompanion" | "stopCompanion">;
 
 /** The phone link. The code rides in the #fragment, so it never reaches a server log or a Referer header. */
 export function companionLink(webUrl: string, code: string): string {
-  return `${webUrl.replace(/\/+$/, "")}/companion#${code}`;
+  return `${trimTrailingSlashes(webUrl)}/companion#${code}`;
 }
 
 /** A QR code as crisp SVG modules (dark on a white quiet zone, in both themes, so every phone camera reads it). */
