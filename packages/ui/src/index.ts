@@ -5,6 +5,7 @@ export { SpaceBackdrop } from "./components/SpaceBackdrop";
 export { PlanetHero, PulseRings, SpotIllustration } from "./components/Illustrations";
 export { SessionReview } from "./components/SessionReview";
 export { VerifyEmailBanner } from "./components/VerifyEmailBanner";
+export { ApprovalBanner } from "./components/ApprovalBanner";
 export { CostDashboard } from "./components/CostDashboard";
 export {
   ACCENTS,

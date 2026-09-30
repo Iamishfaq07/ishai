@@ -110,6 +110,11 @@ export function BillingPage() {
           <h2 className="mb-1 font-semibold">This month</h2>
           <p className="mb-4 text-sm text-zinc-500">
             Current plan: <span className="font-medium text-zinc-800 dark:text-zinc-200">{ent.data?.label ?? "—"}</span>
+            {ent.data?.until && (
+              <span className="block">
+                Until {new Date(ent.data.until).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
           </p>
           {ent.loading ? (
             <Spinner />

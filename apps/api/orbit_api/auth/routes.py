@@ -25,6 +25,7 @@ from orbit_api.auth.security import (
 from orbit_api.config import get_settings
 from orbit_api.csrf import token_for as csrf_token_for
 from orbit_api.db import get_db
+from orbit_api.entitlements import awaiting_approval
 from orbit_api.models import AuditLog, User
 from orbit_api.providers.email import OutgoingEmail, can_deliver, send_safely
 from orbit_api.ratelimit import TokenBucket, check, client_ip, limit
@@ -58,6 +59,8 @@ class UserOut(BaseModel):
     email: str
     name: str | None
     email_verified: bool
+    # Signed up while sign-up approval was on and not approved (or granted a plan) yet: the app shows a banner.
+    approval_pending: bool = False
     store_transcripts: bool
     # Always false: screenshots are analysed and discarded, never stored (the old toggle did nothing). Kept in
     # the response so older clients still parse it.
@@ -76,7 +79,7 @@ class AuthOut(BaseModel):
 
 def _user_out(u: User, *, with_csrf: bool = False) -> UserOut:
     return UserOut(id=u.id, email=u.email, name=u.name, email_verified=u.email_verified,
-                   store_transcripts=u.store_transcripts,
+                   approval_pending=awaiting_approval(u), store_transcripts=u.store_transcripts,
                    csrf_token=csrf_token_for(u.id, u.token_version) if with_csrf else None)
 
 
@@ -145,6 +148,7 @@ async def register(body: RegisterIn, request: Request, response: Response, backg
             raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists.")
         user = await _create_user(db, request, email, body)
         await send_safely(_verification_email(user.email, await _verify_token(db, user)))
+        _alert_admin_if_waiting(user, background)
         return _auth_out(request, response, user)
 
     # No account enumeration: new or taken, the caller sees the same 202 and every email goes out after the
@@ -169,7 +173,13 @@ async def register(body: RegisterIn, request: Request, response: Response, backg
 
 
 async def _create_user(db: AsyncSession, request: Request, email: str, body: RegisterIn) -> User:
-    user = User(email=email, name=body.name, password_hash=await hash_password(body.password))
+    s = get_settings()
+    # With sign-up approval on, a new account waits for the admin. The admin never waits, and neither does the
+    # very first account of a dev server without ORBIT_ADMIN_EMAIL (it stands in as admin there).
+    first_dev_user = (not s.admin_email and s.env != "production"
+                      and not await db.scalar(select(func.count()).select_from(User)))
+    approved = not s.approval_required or s.is_admin_email(email) or bool(first_dev_user)
+    user = User(email=email, name=body.name, password_hash=await hash_password(body.password), approved=approved)
     db.add(user)
     await db.flush()
     db.add(AuditLog(user_id=user.id, action="auth.register", ip=_ip(request)))
@@ -262,6 +272,27 @@ def _verification_email(to: str, token: str) -> OutgoingEmail:
     )
 
 
+def _alert_admin_if_waiting(user: User, background: BackgroundTasks) -> None:
+    """Tell the admin a new account is waiting for access, once it's a real one: at sign-up, or where email
+    verification is required, when the inbox is proven (so a typo'd or throwaway address never reaches them)."""
+    s = get_settings()
+    if not (awaiting_approval(user) and s.admin_email) or s.is_admin_email(user.email):
+        return
+    if s.verification_required and not user.email_verified:
+        return
+    web = s.web_url.rstrip("/")
+    who = f"{user.name} ({user.email})" if user.name else user.email
+    background.add_task(send_safely, OutgoingEmail(
+        to=s.admin_email,
+        subject=f"New Orbit sign-up: {user.email}",
+        text=(
+            f"{who} just signed up for Orbit and is waiting for access.\n\n"
+            f"Give them access, for example Unlimited for 2 hours: {web}/admin/users\n\n"
+            "Until you do, they can sign in but can't start sessions or use the AI."
+        ),
+    ))
+
+
 def _already_registered_email(to: str) -> OutgoingEmail:
     return OutgoingEmail(
         to=to,
@@ -316,15 +347,18 @@ async def request_verification(user: Annotated[User, Depends(current_user)],
 
 
 @router.post("/verify-email/confirm", response_model=UserOut)
-async def confirm_verification(body: TokenIn, request: Request,
+async def confirm_verification(body: TokenIn, request: Request, background: BackgroundTasks,
                                db: Annotated[AsyncSession, Depends(get_db)]) -> UserOut:
     user_id = await email_tokens.consume(db, body.token, "verify_email")
     user = await db.get(User, user_id) if user_id else None
     if user is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "This verification link is invalid or has expired.")
+    newly = not user.email_verified
     user.email_verified = True
     db.add(AuditLog(user_id=user.id, action="auth.verify_email", ip=_ip(request)))
     await db.commit()
+    if newly:  # where verification is required, the admin hears about a sign-up once its inbox is proven
+        _alert_admin_if_waiting(user, background)
     return _user_out(user)
 
 
@@ -346,16 +380,20 @@ async def request_password_reset(body: ResetRequestIn, request: Request, backgro
 
 @router.post("/password-reset/confirm", response_model=AuthOut, dependencies=[Depends(auth_limit)])
 async def confirm_password_reset(body: ResetConfirmIn, request: Request, response: Response,
+                                 background: BackgroundTasks,
                                  db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut:
     user_id = await email_tokens.consume(db, body.token, "reset_password")
     user = await db.get(User, user_id) if user_id else None
     if user is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "This reset link is invalid or has expired.")
+    newly_verified = not user.email_verified
     user.password_hash = await hash_password(body.password)
     user.token_version += 1  # every existing session (web + desktop) is signed out
     user.email_verified = True  # they just proved control of the inbox
     db.add(AuditLog(user_id=user.id, action="auth.password_reset", ip=_ip(request)))
     await db.commit()
+    if newly_verified:  # the reset proved the inbox first: the admin hears about the sign-up now
+        _alert_admin_if_waiting(user, background)
     return _auth_out(request, response, user)
 
 

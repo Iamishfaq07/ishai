@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { OrbitSession, SessionType, User } from "@orbit/types";
-import { ApiError, ConfirmHost, OrbitLogo, SpaceBackdrop, VerifyEmailBanner } from "@orbit/ui";
+import { ApiError, ApprovalBanner, ConfirmHost, OrbitLogo, SpaceBackdrop, VerifyEmailBanner } from "@orbit/ui";
 import { api, setAccessToken, setUnauthorizedHandler } from "./api";
 import { CloseDialog } from "./CloseDialog";
 import { stepGlass } from "./glass";
@@ -51,6 +51,14 @@ export function App() {
           const fresh = await api.me();
           setUser(fresh);
           return fresh.email_verified;
+        }}
+      />
+    ) : user?.approval_pending ? (
+      <ApprovalBanner
+        onRecheck={async () => {
+          const fresh = await api.me();
+          setUser(fresh);
+          return Boolean(fresh.approval_pending);
         }}
       />
     ) : null;

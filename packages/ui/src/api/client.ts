@@ -1,7 +1,10 @@
 import type {
   AtsReport,
+  AccessChange,
   AdminConfig,
   AdminConfigUpdate,
+  AdminUser,
+  AdminUsers,
   ApiErrorBody,
   AuthConfig,
   CostReport,
@@ -312,6 +315,11 @@ export function createApiClient(options: ApiClientOptions) {
 
     // Admin / advanced settings
     adminStatus: () => json<{ is_admin: boolean }>("/v1/admin/status"),
+    /** Admin: accounts, newest first ("pending" = waiting for access). */
+    adminUsers: (only: "all" | "pending" = "all") => json<AdminUsers>(`/v1/admin/users?only=${only}`),
+    /** Admin: grant a plan for a while, approve for good, or revoke. */
+    setUserAccess: (userId: string, change: AccessChange) =>
+      json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/access`, { method: "POST", body: body(change) }),
     getLatency: (days = 7) => json<LatencyReport>(`/v1/admin/latency?days=${days}`),
     getCosts: (days = 30) => json<CostReport>(`/v1/admin/costs?days=${days}`),
     getFeedbackReport: (days = 30) => json<FeedbackReport>(`/v1/admin/feedback?days=${days}`),

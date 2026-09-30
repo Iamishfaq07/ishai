@@ -16,6 +16,8 @@ export interface User {
   email: string;
   name: string | null;
   email_verified: boolean;
+  /** Signed up while sign-up approval was on and not given access yet: the app shows a "waiting" banner. */
+  approval_pending?: boolean;
   /** Privacy controls (spec §65), account-wide. */
   store_transcripts: boolean;
   /** Always false: screenshots are analyzed and discarded, never stored. */
@@ -471,7 +473,8 @@ export interface ScreenshotAccepted {
 
 // ─── Usage / billing ─────────────────────────────────────────────────────────
 
-export type PlanId = "free" | "pro" | "unlimited";
+/** "pending": a new account waiting for the admin (sign-up approval), with nothing included. */
+export type PlanId = "free" | "pro" | "unlimited" | "pending";
 
 /** GET /v1/plans (public) — what each plan includes. The server is the only source of limits and prices. */
 export interface PlanInfo {
@@ -490,6 +493,8 @@ export interface PlanInfo {
 export interface Entitlements {
   plan: PlanId;
   label: string;
+  /** When the admin granted this plan for a while: when it runs out (ISO). */
+  until?: string | null;
   limits: {
     live_minutes: number | null;
     mock_minutes: number | null;
@@ -510,6 +515,30 @@ export interface Usage {
 }
 
 // ─── Admin / advanced settings ─────────────────────────────────────────────────
+
+/** Admin → Users & access: one account and what it may use. */
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string | null;
+  created_at: string;
+  email_verified: boolean;
+  /** admin: always full access · pending: waiting for you · granted: a plan until grant_until · approved: for good */
+  access: "admin" | "pending" | "granted" | "approved";
+  plan_label: string;
+  grant_until: string | null;
+  live_minutes_this_month: number;
+}
+
+export interface AdminUsers {
+  approval_required: boolean;
+  users: AdminUser[];
+}
+
+export type AccessChange =
+  | { action: "grant"; plan: "pro" | "unlimited"; hours: number }
+  | { action: "approve" }
+  | { action: "revoke" };
 
 export interface AdminConfig {
   /** False when ORBIT_CONFIG_SECRET isn't set, so API keys can't be stored in-app. */

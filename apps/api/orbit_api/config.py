@@ -136,6 +136,10 @@ class Settings(BaseSettings):
     email_verification: Literal["required", "off"] | None = Field(
         None, validation_alias=AliasChoices("ORBIT_EMAIL_VERIFICATION")
     )
+    # Sign-up approval: new accounts can't use anything until the admin approves them or grants a plan for a while
+    # (Settings → Users), and the admin gets an email for each new sign-up. Unset: on in production, off in
+    # development/test. Accounts that existed before are unaffected.
+    signup_approval: bool | None = Field(None, validation_alias=AliasChoices("ORBIT_SIGNUP_APPROVAL"))
     # CSRF defence for cookie-authenticated browser requests (Origin check + per-session token header).
     # Unset: on everywhere except the test environment. Bearer-token (desktop) requests are never affected.
     csrf_protection: bool | None = Field(None, validation_alias=AliasChoices("ORBIT_CSRF_PROTECTION"))
@@ -207,6 +211,10 @@ class Settings(BaseSettings):
         # SMTP is optional for an admin-only deploy: email features are then disabled. It's never faked to the
         # dev outbox in production (see email.py).
         return self
+
+    @property
+    def approval_required(self) -> bool:
+        return self.signup_approval if self.signup_approval is not None else self.env == "production"
 
     @property
     def verification_required(self) -> bool:

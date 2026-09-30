@@ -1,5 +1,25 @@
 # Implementation log
 
+## New sign-ups wait for the admin; grant access for a while (2026-09-30)
+
+- **New accounts wait for approval** (`ORBIT_SIGNUP_APPROVAL`, on by default in production).
+  - A new account can sign in and look around. Sessions, AI features and uploads answer 403 `approval_pending`
+    (`require_verified_user`).
+  - A banner in the web and desktop apps says it's waiting, and the ready check says so too, instead of "out of
+    minutes".
+  - Accounts from before stay approved (`users.approved` defaults to true, migration `d2a6f8c4e9b1`).
+- **The admin hears about every sign-up.** An email to `ORBIT_ADMIN_EMAIL` names the person and links to the
+  admin page. Where email verification is required, it's sent once the new inbox is verified, so typo'd and
+  throwaway addresses never reach you.
+- **Users & access** (Settings → Users & access, `/admin/users`). Waiting and Everyone tabs, each account with its
+  join date, email status and live minutes this month.
+  - **Give access for a while:** Unlimited or Pro, for 1 hour, 2 hours, 1 day, 7 days or 30 days. Giving the same
+    plan again adds the time on.
+  - **Approve for good** (the Free plan), or **Revoke** (back to waiting).
+  - The user gets an email for a grant or an approval. A grant runs out on its own and they wait again.
+  - Plan & billing shows when a granted plan ends.
+  - Endpoints: `GET /v1/admin/users`, `POST /v1/admin/users/{id}/access`.
+
 ## Resume maker: cover letters, more sections, undo, page count, sharper ATS checks (2026-09-30)
 
 - **Cover letter** (new tab). One click writes a letter from the resume and the job post (`POST
