@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from orbit_api.db import Base, EmbeddingType
@@ -32,6 +32,12 @@ class User(TimestampMixin, Base):
     # Privacy controls (spec §65)
     store_transcripts: Mapped[bool] = mapped_column(Boolean, default=True)
     store_screenshots: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Sign-up approval (ORBIT_SIGNUP_APPROVAL): a new account waits (approved=False) until the admin approves it
+    # for good (Free plan, or whatever it pays for) or grants a plan for a while (grant_plan until grant_until).
+    # Accounts from before approval existed are approved.
+    approved: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+    grant_plan: Mapped[str | None] = mapped_column(String(32))
+    grant_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class AppConfig(Base):

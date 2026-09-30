@@ -1,4 +1,7 @@
-"""Admin-only advanced settings: rotate provider API keys / models in-app.
+"""Admin-only: advanced settings (rotate provider API keys / models in-app), and who may use Orbit.
+
+Users: with sign-up approval on (ORBIT_SIGNUP_APPROVAL), new accounts wait until the admin approves them for good
+or grants a plan for a while ("Unlimited for 2 hours"); a grant runs out on its own.
 
 Access is limited to the admin: ORBIT_ADMIN_EMAIL (required in production; in development/test the first
 registered user stands in when it's unset).
@@ -7,18 +10,20 @@ ORBIT_CONFIG_SECRET and applied to live providers immediately after saving.
 """
 
 from datetime import UTC, datetime, timedelta
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user
+from orbit_api.config import get_settings
 from orbit_api.db import get_db
-from orbit_api.entitlements import is_admin
+from orbit_api.entitlements import GRANT_PLANS, active_grant, awaiting_approval, is_admin, plan_named
 from orbit_api.live.metrics import summarize
-from orbit_api.models import AppConfig, LiveSessionRow, User
+from orbit_api.models import AppConfig, AuditLog, LiveSessionRow, UsageEvent, User
+from orbit_api.providers.email import OutgoingEmail, send_safely
 from orbit_api.runtime_config import (
     EDITABLE_KEYS,
     ConfigSecretMissing,
@@ -186,3 +191,118 @@ async def costs(_: Annotated[User, Depends(require_admin)], db: Annotated[AsyncS
     from orbit_api.admin.costs import cost_report
 
     return await cost_report(db, days)
+
+
+# ---- users & access ------------------------------------------------------------------------------------------
+
+MAX_GRANT_HOURS = 24 * 90
+
+
+class AdminUser(BaseModel):
+    id: str
+    email: str
+    name: str | None
+    created_at: datetime
+    email_verified: bool
+    # admin: always full access · pending: waiting for you · granted: a plan until grant_until · approved: for good
+    access: Literal["admin", "pending", "granted", "approved"]
+    plan_label: str
+    grant_until: datetime | None
+    live_minutes_this_month: float
+
+
+class UsersOut(BaseModel):
+    approval_required: bool
+    users: list[AdminUser]
+
+
+def _aware(d: datetime) -> datetime:
+    return d if d.tzinfo else d.replace(tzinfo=UTC)
+
+
+async def _admin_rows(db: AsyncSession, users: list[User]) -> list[AdminUser]:
+    month = datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    ids = [u.id for u in users]
+    used: dict[str, float] = {}
+    if ids:
+        rows = await db.execute(
+            select(UsageEvent.user_id, func.sum(UsageEvent.quantity))
+            .where(UsageEvent.user_id.in_(ids), UsageEvent.metric == "live_seconds", UsageEvent.created_at >= month)
+            .group_by(UsageEvent.user_id))
+        used = {uid: float(total or 0) for uid, total in rows.all()}
+    out = []
+    for u in users:
+        granted = active_grant(u)
+        access: Literal["admin", "pending", "granted", "approved"] = (
+            "admin" if await is_admin(db, u) else "granted" if granted else
+            "pending" if awaiting_approval(u) else "approved")
+        label = ("Unlimited" if access == "admin" else plan_named(granted).label if granted
+                 else "No access yet" if access == "pending" else "Free")
+        out.append(AdminUser(
+            id=u.id, email=u.email, name=u.name, created_at=u.created_at, email_verified=u.email_verified,
+            access=access, plan_label=label, grant_until=_aware(u.grant_until) if granted and u.grant_until else None,
+            live_minutes_this_month=round(float(used.get(u.id) or 0) / 60, 1)))
+    return out
+
+
+@router.get("/users", response_model=UsersOut)
+async def list_users(_: Annotated[User, Depends(require_admin)], db: Annotated[AsyncSession, Depends(get_db)],
+                     only: Literal["all", "pending"] = "all",
+                     limit: Annotated[int, Query(ge=1, le=500)] = 200) -> UsersOut:
+    """Newest first. "pending" lists the accounts waiting for you (and ones whose grant ran out)."""
+    q = select(User).order_by(User.created_at.desc()).limit(limit)
+    if only == "pending":
+        q = q.where(User.approved.is_(False))
+    rows = await _admin_rows(db, list((await db.scalars(q)).all()))
+    if only == "pending":
+        rows = [r for r in rows if r.access == "pending"]
+    return UsersOut(approval_required=get_settings().approval_required, users=rows)
+
+
+class AccessIn(BaseModel):
+    # grant: a plan for `hours` (from now, or added on to a running grant of the same plan) · approve: Free for good
+    # (or whatever they pay for) · revoke: back to waiting, grant cancelled
+    action: Literal["grant", "approve", "revoke"]
+    plan: Literal["pro", "unlimited"] = "unlimited"
+    hours: float = Field(2, gt=0, le=MAX_GRANT_HOURS)
+
+
+def _until_text(until: datetime) -> str:
+    return f"{until:%d %b %Y}, {until:%H:%M} UTC".lstrip("0")
+
+
+@router.post("/users/{user_id}/access", response_model=AdminUser)
+async def set_access(user_id: str, body: AccessIn, background: BackgroundTasks,
+                     admin: Annotated[User, Depends(require_admin)],
+                     db: Annotated[AsyncSession, Depends(get_db)]) -> AdminUser:
+    u = await db.get(User, user_id)
+    if u is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    if await is_admin(db, u):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            "That's the admin account: it always has full access.")
+    now = datetime.now(UTC)
+    web = get_settings().web_url.rstrip("/")
+    mail: OutgoingEmail | None = None
+    if body.action == "grant":
+        assert body.plan in GRANT_PLANS
+        running = active_grant(u, now) == body.plan and u.grant_until is not None
+        start = _aware(u.grant_until) if running and u.grant_until else now  # "2 more hours" extends
+        u.grant_plan, u.grant_until = body.plan, start + timedelta(hours=body.hours)
+        label, until = plan_named(body.plan).label, _until_text(u.grant_until)
+        mail = OutgoingEmail(to=u.email, subject=f"You have Orbit {label} until {until}",
+                             text=(f"Your Orbit account now has the {label} plan until {until}.\n\n"
+                                   f"Sign in and start a session: {web}/login"))
+    elif body.action == "approve":
+        u.approved = True
+        mail = OutgoingEmail(to=u.email, subject="Your Orbit account is ready",
+                             text=f"Your Orbit account has been approved. Sign in to get started: {web}/login")
+    else:
+        u.approved, u.grant_plan, u.grant_until = False, None, None
+    db.add(AuditLog(user_id=admin.id, action=f"admin.access.{body.action}",
+                    target=f"{u.id} {body.plan} {body.hours}h" if body.action == "grant" else u.id))
+    await db.commit()
+    await db.refresh(u)
+    if mail is not None:
+        background.add_task(send_safely, mail)
+    return (await _admin_rows(db, [u]))[0]

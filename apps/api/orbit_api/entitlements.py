@@ -98,6 +98,30 @@ def plan_named(name: str) -> Plan:
     return plans().get(name, plans()["free"])
 
 
+# A new account the admin hasn't approved yet (ORBIT_SIGNUP_APPROVAL): nothing that costs anything. Not a real
+# plan: never listed, never configurable.
+PENDING = Plan("pending", "Awaiting approval", live_minutes=0, mock_minutes=0, screenshots=0, documents=0,
+               max_session_minutes=1, features=frozenset())
+GRANT_PLANS = ("pro", "unlimited")
+
+
+def _aware(d: datetime) -> datetime:
+    return d if d.tzinfo else d.replace(tzinfo=UTC)
+
+
+def active_grant(user: User, now: datetime | None = None) -> str | None:
+    """The plan the admin granted this user for a while, if that time hasn't run out."""
+    if user.grant_plan and user.grant_until and _aware(user.grant_until) > (now or datetime.now(UTC)):
+        return user.grant_plan
+    return None
+
+
+def awaiting_approval(user: User) -> bool:
+    """Signed up while approval was on, and neither approved nor on a running grant. Turning approval off
+    releases everyone."""
+    return get_settings().approval_required and not user.approved and active_grant(user) is None
+
+
 async def is_admin(db: AsyncSession, user: User) -> bool:
     """ORBIT_ADMIN_EMAIL, once that address is verified. Only outside production (where it's optional) does the
     first-registered user stand in: production refuses to start without it, and admin is never inferred from
@@ -122,11 +146,15 @@ async def plan_for(db: AsyncSession, user_id: str) -> Plan:
     user = await db.get(User, user_id)
     if user is not None and await is_admin(db, user):
         return plans()["unlimited"]
+    if user is not None and (granted := active_grant(user)):
+        return plan_named(granted)
     sub = await db.scalar(
         select(Subscription).where(Subscription.user_id == user_id, Subscription.status == "active")
         .order_by(Subscription.created_at.desc())
     )
-    return plan_named(sub.plan if sub else "free")
+    if sub is not None:
+        return plan_named(sub.plan)
+    return PENDING if user is not None and awaiting_approval(user) else plans()["free"]
 
 
 def _month_start() -> datetime:
@@ -166,9 +194,12 @@ async def for_user(db: AsyncSession, user: User) -> dict[str, Any]:
     """Everything a client may show about the user's plan: limits, this month's usage, features."""
     plan = await plan_for(db, user.id)
     docs = await db.scalar(select(func.count()).select_from(Document).where(Document.user_id == user.id))
+    grant_until = user.grant_until if active_grant(user) else None
     return {
         "plan": plan.name,
         "label": plan.label,
+        # When the admin granted this plan for a while: when it runs out (then it's Free, or awaiting approval).
+        "until": _aware(grant_until).isoformat() if grant_until else None,
         "limits": {k: getattr(plan, k) for k in _INT_FIELDS},
         "usage": {
             "live_minutes": round(await usage_this_month(db, user.id, "live_seconds") / 60, 1),

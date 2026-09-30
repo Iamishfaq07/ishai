@@ -22,7 +22,7 @@ from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.desktop_updates import _root, github_latest_release, latest_release, parse_version
-from orbit_api.entitlements import is_admin, plan_for, usage_this_month
+from orbit_api.entitlements import PENDING, awaiting_approval, is_admin, plan_for, usage_this_month
 from orbit_api.models import User
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMProvider, LLMRequest
@@ -211,6 +211,12 @@ async def preflight(user: Annotated[User, Depends(current_user)], db: Annotated[
         checks.append(Check(id="account", label="Email verification", status="fail",
                             detail=f"{user.email} isn't verified yet.",
                             fix="Open the link we emailed you (or resend it from the banner), then re-check."))
+        return _finish(checks)
+    if awaiting_approval(user) and await plan_for(db, user.id) is PENDING:
+        # A new account the admin hasn't given access to yet: say that, not "out of minutes".
+        checks.append(Check(id="account", label="Account approval", status="fail",
+                            detail="Your account is waiting for approval.",
+                            fix="You'll get an email as soon as it's ready. Then re-check."))
         return _finish(checks)
 
     llm, stt = await asyncio.gather(_cached("llm", LLM_TTL_S, _llm_check), _cached("stt", STT_TTL_S, _stt_check))

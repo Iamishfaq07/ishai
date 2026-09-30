@@ -12,6 +12,7 @@ import {
   SettingsIcon,
   Target,
   VerifyEmailBanner,
+  ApprovalBanner,
   cx,
   focusRing,
   type LucideIcon,
@@ -116,6 +117,18 @@ export function Layout() {
             const fresh = await api.me();
             setUser(fresh);
             return fresh.email_verified;
+          }}
+        />
+      )}
+
+      {/* One banner at a time: verifying the email comes first. */}
+      {user?.approval_pending && !(!user.email_verified && verificationRequired) && (
+        <ApprovalBanner
+          className="px-4 sm:px-6"
+          onRecheck={async () => {
+            const fresh = await api.me();
+            setUser(fresh);
+            return Boolean(fresh.approval_pending);
           }}
         />
       )}
