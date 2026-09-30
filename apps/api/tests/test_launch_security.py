@@ -269,7 +269,13 @@ def test_production_refuses_unverifiable_or_unsafe_signup() -> None:
     with pytest.raises(ValueError, match="SMTP"):
         _prod(ORBIT_ALLOWED_EMAILS="friend@example.com")
     with pytest.raises(ValueError, match="not allowed with public sign-up"):
-        _prod(ORBIT_ALLOWED_EMAILS="*", ORBIT_EMAIL_VERIFICATION="off")
+        _prod(ORBIT_ALLOWED_EMAILS="*", ORBIT_EMAIL_VERIFICATION="off", ORBIT_SIGNUP_APPROVAL="false")
+    # With sign-up approval (on by default in production) nobody spends anything before the admin looks, so open
+    # sign-up without SMTP is allowed: the admin sees new accounts in the app instead of by email.
+    open_approved = _prod(ORBIT_ALLOWED_EMAILS="*", ORBIT_EMAIL_VERIFICATION="off")
+    assert open_approved.public_signup and open_approved.approval_required
+    with pytest.raises(ValueError, match="SMTP"):  # "*" alone still needs a way to verify
+        _prod(ORBIT_ALLOWED_EMAILS="*")
     with pytest.raises(ValueError, match="TURNSTILE"):
         _prod(ORBIT_CAPTCHA_PROVIDER="turnstile")
     # a private list of exact addresses may opt out explicitly; public sign-up needs SMTP

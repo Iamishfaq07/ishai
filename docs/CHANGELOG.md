@@ -1,5 +1,13 @@
 # Implementation log
 
+## Open sign-up without SMTP when approval is on; "waiting" count for the admin (2026-09-30)
+
+- **Open sign-up without email.** Production used to refuse `ORBIT_ALLOWED_EMAILS=*` without SMTP, and refuse
+  `ORBIT_EMAIL_VERIFICATION=off` with it. With sign-up approval on, nobody can spend anything until the admin
+  looks at the account, so `*` with verification `off` is now allowed. `*` with verification on still needs SMTP.
+- **"N waiting" in the web header** (admin only). It links to Users & access, is re-counted on every page change
+  and every minute, and is how the admin hears about sign-ups on a server with no SMTP.
+
 ## New sign-ups wait for the admin; grant access for a while (2026-09-30)
 
 - **New accounts wait for approval** (`ORBIT_SIGNUP_APPROVAL`, on by default in production).
