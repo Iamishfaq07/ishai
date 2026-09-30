@@ -598,6 +598,8 @@ export interface CostReport {
 // ─── Resume maker ────────────────────────────────────────────────────────────
 
 export type ResumeSectionId = "summary" | "experience" | "education" | "skills" | "projects" | "certifications";
+/** A place in `section_order`: a standard section, or "extra:<id>" for one of `extras`. */
+export type ResumeSectionKey = ResumeSectionId | `extra:${string}`;
 export type ResumeTemplate = "classic" | "modern" | "compact" | "sidebar";
 export type ResumeFont = "inter" | "arial" | "georgia" | "garamond" | "grotesk";
 export type ResumeSpacing = "compact" | "normal" | "relaxed";
@@ -659,6 +661,15 @@ export interface ResumeCertification {
   date: string;
 }
 
+/** A section beyond the standard ones: Languages, Awards, Volunteering… One line per item. */
+export interface ResumeExtraSection {
+  id: string;
+  title: string;
+  items: string[];
+  /** A bulleted list, or the items run together on one line ("English · Spanish"). */
+  style: "bullets" | "inline";
+}
+
 export interface ResumeData {
   basics: ResumeBasics;
   experience: ResumeExperience[];
@@ -666,7 +677,8 @@ export interface ResumeData {
   skills: ResumeSkillGroup[];
   projects: ResumeProject[];
   certifications: ResumeCertification[];
-  section_order: ResumeSectionId[];
+  extras: ResumeExtraSection[];
+  section_order: ResumeSectionKey[];
 }
 
 export interface ResumeDesign {
@@ -688,9 +700,12 @@ export interface ResumeInput {
   data: ResumeData;
   design: ResumeDesign;
   job_text: string;
+  /** Left out, the saved letter is kept as it is. */
+  cover_letter?: string;
 }
 
 export interface Resume extends ResumeInput {
+  cover_letter: string;
   id: string;
   created_at: string;
   updated_at: string;

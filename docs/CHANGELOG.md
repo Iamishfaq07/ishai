@@ -1,5 +1,39 @@
 # Implementation log
 
+## Resume maker: cover letters, more sections, undo, page count, sharper ATS checks (2026-09-30)
+
+- **Cover letter** (new tab). One click writes a letter from the resume and the job post (`POST
+  /v1/resumes/cover-letter`, `resumes/ai.py`).
+  - It's grounded like the rewrites: it only restates what the resume and job post say, with [placeholders] for
+    the rest.
+  - It's saved with the resume in a new `resumes.cover_letter` column (migration `c9d4e7a2f1b8`). A save that
+    leaves the field out keeps the letter.
+  - It's editable, with a matching letter-page preview, Copy, Word (`/cover-letter/docx`) and PDF.
+- **More sections:** Languages, Awards, Volunteering, Publications, Interests, or a custom one (up to 5).
+  - Each shows as a list or on one line, and has a place in the section order (`extra:<id>`).
+  - They appear in the preview, both PDFs and the Word file, count toward keywords, and are read by AI import.
+  - In the Sidebar template, one-line sections go in the side column.
+- **Undo and redo** for the whole resume (buttons, or Ctrl+Z / Ctrl+Shift+Z outside a text field). Typing in one
+  field is one step. A removed role, an accepted AI change or a "fit to page" can all be taken back.
+- **Page count:**
+  - The preview shows how many pages the resume prints on, and where page 2 starts. The guide sits at the top of
+    the role that moves to page 2, since printing keeps each role whole.
+  - **Fit to one page** tries tighter spacing, then smaller text down to 9.5 pt, measured off-screen, and applies
+    the first that fits (one undo step), or says it can't.
+- **Unfilled placeholders are caught.** An AI rewrite can leave a cue like "[X%]".
+  - A new ATS check and a banner point to it, and it's highlighted in the preview (not in print).
+  - Downloading a PDF or Word file with one left asks first.
+- **Make a copy** of a resume from the list, to tailor a version for another job.
+- **Sharper ATS checks** (weights rebalanced so they still total 100):
+  - the same opening verb on too many bullets, with other verbs to use;
+  - clichés like "team player" or "results-driven";
+  - roles not listed most recent first, or ending before they start.
+- **Fixes:**
+  - In the Links and Skills rows, the label box took the whole width and hid the URL (a `w-32` lost to the
+    input's `w-full`).
+  - The editor tabs no longer wrap.
+  - On phones, the icon-only tabs had no accessible name.
+
 ## Better interview answers: consistency, common questions, company, sharper mock interviewer (2026-09-29)
 
 - **Answers stay consistent and don't retell the same story.** Each answer used to see only the one before it, and

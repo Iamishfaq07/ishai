@@ -82,6 +82,8 @@ export {
   ThumbsDown,
   ThumbsUp,
   Trash2,
+  Undo2,
+  Redo2,
   Upload,
   UserRound,
   UserCog,

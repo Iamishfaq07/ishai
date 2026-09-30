@@ -5,7 +5,7 @@ and every point is explainable. The rubric follows what resume parsers and recru
 reachable contact details, the standard sections, bullets that start with a verb and carry a number, a skills list,
 a single-column layout, and (with a job post) the job's own keywords.
 
-Categories and weights (100): contact 10, sections 12, summary 5, experience 28, skills 8, readability 7, layout 5,
+Categories and weights (100): contact 10, sections 10, summary 4, experience 28, skills 7, readability 12, layout 4,
 keywords 25. Without a job post there are no keywords to match, and the other 75 points are scaled to 100.
 
 Paths in `target` point at the text a fix is about, e.g. `experience.<id>.bullets.2` or `basics.summary`. The editor
@@ -24,7 +24,7 @@ from orbit_api.resumes.schema import ResumeData, ResumeDesign
 Category = Literal["contact", "sections", "summary", "experience", "skills", "readability", "layout", "keywords"]
 CATEGORY_LABELS: dict[Category, str] = {
     "contact": "Contact details", "sections": "Standard sections", "summary": "Summary",
-    "experience": "Experience bullets", "skills": "Skills", "readability": "Length & dates",
+    "experience": "Experience bullets", "skills": "Skills", "readability": "Readability",
     "layout": "ATS-safe layout", "keywords": "Job keywords",
 }
 
@@ -84,6 +84,26 @@ started streamlined strengthened structured supervised supported surpassed synth
 transformed translated tripled troubleshot tuned unified upgraded utilized validated won wrote
 """.split())
 
+# Other strong verbs to suggest when one opens too many bullets.
+VERB_ALTERNATIVES: dict[str, str] = {
+    "led": "Directed, Headed, Drove, Steered", "managed": "Directed, Oversaw, Ran, Coordinated",
+    "built": "Engineered, Created, Developed, Shipped", "developed": "Built, Engineered, Designed, Created",
+    "created": "Designed, Launched, Built, Produced", "improved": "Boosted, Strengthened, Raised, Refined",
+    "worked": "Built, Delivered, Partnered, Drove", "helped": "Enabled, Supported, Advised, Contributed",
+    "designed": "Architected, Planned, Shaped, Modeled", "implemented": "Rolled out, Delivered, Built, Deployed",
+    "increased": "Grew, Raised, Boosted, Expanded", "reduced": "Cut, Lowered, Trimmed, Decreased",
+}
+# Phrases recruiters skim past: they claim a quality instead of showing it.
+CLICHES: tuple[str, ...] = (
+    "team player", "hard worker", "hard-working", "hardworking", "detail-oriented", "detail oriented",
+    "results-driven", "results driven", "results-oriented", "self-starter", "self starter", "go-getter",
+    "think outside the box", "thinking outside the box", "synergy", "proven track record", "highly motivated",
+    "fast learner", "quick learner", "excellent communication skills", "go-to person", "dynamic individual",
+)
+_CLICHE = re.compile(r"(?<![a-z])(" + "|".join(re.escape(c) for c in CLICHES) + r")(?![a-z])", re.IGNORECASE)
+# A bracketed cue the AI leaves for the user to fill in ("by [X%]"); same shape the editor highlights.
+PLACEHOLDER = re.compile(r"\[[^\][\n]{1,160}\]")
+
 _PRONOUN = re.compile(r"\b(?:I|me|my|mine|myself)\b|\b(?:My|Me)\b")
 _NUMBER = re.compile(r"\d|%|\$|€|£|₹")
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
@@ -115,6 +135,48 @@ def date_style(value: str) -> str | None:
     return "other"
 
 
+_MONTH_NUM = {m: i + 1 for i, m in enumerate(_MONTHS)}
+
+
+def date_key(value: str, *, end: bool = False) -> tuple[int, int] | None:
+    """(year, month) of a written date, for ordering: "Jan 2021" -> (2021, 1), "01/2021" -> (2021, 1), "2021" ->
+    (2021, 1) as a start or (2021, 12) as an end. "Present" as an end is the latest possible. None if unreadable."""
+    v = value.strip().lower()
+    if end and v in {"present", "current", "now", "today", "ongoing"}:
+        return (9999, 12)
+    year = re.search(r"\b(19|20)\d{2}\b", v)
+    if not year:
+        return None
+    y = int(year.group(0))
+    month: int | None = _MONTH_NUM.get(v[:3])
+    if month is None:
+        numeric = re.fullmatch(r"(\d{1,2})\s*[/.-]\s*\d{4}|\d{4}\s*[/.-]\s*(\d{1,2})", v)
+        if numeric:
+            month = int(numeric.group(1) or numeric.group(2))
+    if month is None or not 1 <= month <= 12:
+        month = 12 if end else 1
+    return (y, month)
+
+
+def text_fields(data: ResumeData) -> Iterator[tuple[str, str]]:
+    """(path, text) of every free-text field a person or the AI writes sentences in; paths match the editor's."""
+    b = data.basics
+    yield "basics.headline", b.headline
+    yield "basics.summary", b.summary
+    for e in data.experience:
+        for i, text in enumerate(e.bullets):
+            yield f"experience.{e.id}.bullets.{i}", text
+    for p in data.projects:
+        yield f"projects.{p.id}.description", p.description
+        for i, text in enumerate(p.bullets):
+            yield f"projects.{p.id}.bullets.{i}", text
+    for ed in data.education:
+        yield f"education.{ed.id}", ed.details
+    for x in data.extras:
+        for i, text in enumerate(x.items):
+            yield f"extras.{x.id}.items.{i}", text
+
+
 def resume_text(data: ResumeData) -> str:
     """Everything on the resume as plain text (keyword matching, word counts, and "save to Documents")."""
     b = data.basics
@@ -129,6 +191,8 @@ def resume_text(data: ResumeData) -> str:
         lines += [f"{ed.degree} {ed.field} {ed.school}", ed.details]
     for c in data.certifications:
         lines += [f"{c.name} {c.issuer}"]
+    for x in data.extras:
+        lines += [x.title, *x.items]
     return "\n".join(line for line in lines if line and line.strip())
 
 
@@ -282,21 +346,21 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
            1.0 if any(link.url.strip() for link in b.links) else 0,
            "Add your LinkedIn profile or portfolio link.", "basics.links")
 
-    # sections (12)
+    # sections (10)
     has_exp = any(e.title.strip() or e.company.strip() for e in data.experience)
     has_edu = any(e.school.strip() or e.degree.strip() for e in data.education)
     n_skills = sum(len([i for i in s.items if i.strip()]) for s in data.skills)
-    _check(checks, "has_experience", "sections", "An Experience section", 5, 1.0 if has_exp else 0,
+    _check(checks, "has_experience", "sections", "An Experience section", 4, 1.0 if has_exp else 0,
            "Add your work experience: it's what ATS software weighs most. Internships and volunteer roles count.",
            "experience")
     _check(checks, "has_education", "sections", "An Education section", 3, 1.0 if has_edu else 0,
            "Add your education: many ATS filters check for a degree or school.", "education")
-    _check(checks, "has_skills", "sections", "A Skills section", 4, 1.0 if n_skills else 0,
+    _check(checks, "has_skills", "sections", "A Skills section", 3, 1.0 if n_skills else 0,
            "Add a Skills section: recruiters search it first.", "skills")
 
-    # summary (5)
+    # summary (4)
     summary_words = len(_words(b.summary))
-    _check(checks, "summary", "summary", "A summary of 25-90 words", 5,
+    _check(checks, "summary", "summary", "A summary of 25-90 words", 4,
            0 if not summary_words else 1.0 if 25 <= summary_words <= 90 else 0.5,
            "Add a 2-3 sentence summary: who you are, your strongest skills, and what you're looking for."
            if not summary_words else
@@ -322,7 +386,7 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
 
     if bullets:
         weak = [(p, t) for p, t in bullets if _first_word(t) not in ACTION_VERBS]
-        _check(checks, "action_verbs", "experience", "Bullets start with an action verb", 6,
+        _check(checks, "action_verbs", "experience", "Bullets start with an action verb", 5,
                1 - len(weak) / len(bullets),
                f"{len(bullets) - len(weak)} of {len(bullets)} bullets start with an action verb. Lead with what you "
                "did: Led, Built, Reduced, Launched.", weak[0][0] if weak else None, ai_fixable=True)
@@ -336,40 +400,85 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
         _check(checks, "bullet_length", "experience", "Bullets are 8-35 words", 3, 1 - len(bad_len) / len(bullets),
                "Keep each bullet to one line or two: 8-35 words.", bad_len[0][0] if bad_len else None,
                ai_fixable=True)
+        # The same opening verb over and over reads as padding: allow it on about one bullet in five, at least twice.
+        openers = Counter(_first_word(t) for _, t in bullets)
+        allowed = max(2, -(-len(bullets) // 5))
+        overused = [(w, n) for w, n in openers.most_common() if w and n > allowed]
+        repeat_at = None
+        if overused:
+            word = overused[0][0]
+            repeat_at = [p for p, t in bullets if _first_word(t) == word][allowed]
+        _check(checks, "varied_verbs", "experience", "Opening verbs are varied", 2, 0 if overused else 1.0,
+               (f"{overused[0][1]} bullets start with \"{overused[0][0].capitalize()}\". Vary them"
+                + (f": {VERB_ALTERNATIVES[overused[0][0]]}." if overused[0][0] in VERB_ALTERNATIVES else ".")
+                ) if overused else None, repeat_at, ai_fixable=True)
         first_person = [(p, t) for p, t in bullets if _PRONOUN.search(t)]
-        _check(checks, "no_pronouns", "experience", "No \"I\" or \"my\" in bullets", 2,
+        _check(checks, "no_pronouns", "experience", "No \"I\" or \"my\" in bullets", 1,
                1 - len(first_person) / len(bullets),
                "Drop \"I\" and \"my\": resume bullets start with the verb.",
                first_person[0][0] if first_person else None, ai_fixable=True)
     else:
-        for id_, label, pts in (("action_verbs", "Bullets start with an action verb", 6),
+        for id_, label, pts in (("action_verbs", "Bullets start with an action verb", 5),
                                 ("quantified", "At least half the bullets have a number", 7),
                                 ("bullet_length", "Bullets are 8-35 words", 3),
-                                ("no_pronouns", "No \"I\" or \"my\" in bullets", 2)):
+                                ("varied_verbs", "Opening verbs are varied", 2),
+                                ("no_pronouns", "No \"I\" or \"my\" in bullets", 1)):
             _check(checks, id_, "experience", label, pts, 0, "Add bullets describing what you achieved in each role.",
                    "experience")
 
-    # skills (8)
-    _check(checks, "skills_count", "skills", "At least 8 skills listed", 8, n_skills / 8,
+    # skills (7)
+    _check(checks, "skills_count", "skills", "At least 8 skills listed", 7, n_skills / 8,
            f"You list {n_skills} skill{'s' if n_skills != 1 else ''}; list at least 8 tools, languages and methods you "
            "really use.", "skills")
 
-    # readability (7)
+    # readability (12)
     total_words = len(_words(resume_text(data)))
-    _check(checks, "length", "readability", "300-1,000 words (1-2 pages)", 4,
+    _check(checks, "length", "readability", "300-1,000 words (1-2 pages)", 3,
            1.0 if 300 <= total_words <= 1000 else total_words / 300 if total_words < 300 else 0.5,
            f"The resume has {total_words} words: " + ("add more detail to your roles." if total_words < 300 else
                                                       "trim it to the last 10-15 years and your best results."),
            "experience")
     # Roles only: education written as years ("2016") is normal next to "Jan 2020" for jobs.
     styles = {s for e in data.experience for s in (date_style(e.start), date_style(e.end)) if s}
-    _check(checks, "dates", "readability", "Dates written one way", 3,
+    _check(checks, "dates", "readability", "Dates written one way", 2,
            1.0 if len(styles) <= 1 and "other" not in styles else 0,
            "Write every date the same way, e.g. \"Jan 2021\", so a parser can work out each role's length.",
            "experience")
+    # Roles most recent first, and none ending before it starts: parsers and recruiters both read it that way.
+    # Out of order means it both starts and ends later than the role above it: overlapping jobs are fine.
+    order_fix: tuple[str, str] | None = None
+    previous: tuple[tuple[int, int] | None, tuple[int, int] | None, str] | None = None
+    for e in roles:
+        start, end = date_key(e.start), date_key("present" if e.current else e.end, end=True)
+        name = e.title or e.company or "a role"
+        if start and end and end < start:
+            order_fix = (f"\"{name}\" ends before it starts: check its dates.", f"experience.{e.id}")
+            break
+        if previous:
+            later = [mine > theirs for mine, theirs in ((start, previous[0]), (end, previous[1])) if mine and theirs]
+            if later and all(later):
+                order_fix = (f"List roles most recent first: move \"{name}\" above \"{previous[2]}\".",
+                             f"experience.{e.id}")
+                break
+        if start or end:
+            previous = (start, end, name)
+    _check(checks, "date_order", "readability", "Roles most recent first, dates in order", 2,
+           0 if order_fix else 1.0, order_fix[0] if order_fix else None, order_fix[1] if order_fix else None)
+    fields = [(p, t) for p, t in text_fields(data) if t.strip()]
+    unfilled = [(p, m.group(0)) for p, t in fields if (m := PLACEHOLDER.search(t))]
+    n_unfilled = len(unfilled)
+    _check(checks, "placeholders", "readability", "No [placeholders] left to fill", 3, 0 if unfilled else 1.0,
+           (f"{n_unfilled} line{'s' if n_unfilled != 1 else ''} still {'have' if n_unfilled != 1 else 'has'} a "
+            f"placeholder like {unfilled[0][1]}: fill in the real detail or remove it, or it prints as-is."
+            ) if unfilled else None, unfilled[0][0] if unfilled else None)
+    cliched = [(p, m.group(1)) for p, t in fields if (m := _CLICHE.search(t))]
+    _check(checks, "cliches", "readability", "No clichés like \"team player\"", 2, 0 if cliched else 1.0,
+           (f"\"{cliched[0][1]}\" claims a quality instead of showing it. Replace it with what you did that proves it."
+            ) if cliched else None, cliched[0][0] if cliched else None,
+           ai_fixable=bool(cliched) and not cliched[0][0].startswith(("education.", "extras.")))
 
-    # layout (5)
-    _check(checks, "single_column", "layout", "Single-column template", 3, 0 if design.template == "sidebar" else 1.0,
+    # layout (4)
+    _check(checks, "single_column", "layout", "Single-column template", 2, 0 if design.template == "sidebar" else 1.0,
            "Two-column layouts can be read out of order by ATS software. Pick Classic, Modern or Compact.",
            "design.template")
     photo = design.show_photo and bool(design.photo)

@@ -43,6 +43,11 @@
   body {
     background: #fff !important;
   }
+  /* Unfilled [placeholders] are highlighted on screen only. */
+  .resume-print .resume-fill {
+    background: none !important;
+    padding: 0 !important;
+  }
   .resume-print {
     display: block;
     -webkit-print-color-adjust: exact;

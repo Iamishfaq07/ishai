@@ -8,10 +8,12 @@ import re
 import uuid
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 SectionId = Literal["summary", "experience", "education", "skills", "projects", "certifications"]
 DEFAULT_ORDER: list[SectionId] = ["summary", "experience", "skills", "projects", "education", "certifications"]
+EXTRA_PREFIX = "extra:"  # an extra section's place in section_order: "extra:<its id>"
+MAX_EXTRAS = 5
 
 Template = Literal["classic", "modern", "compact", "sidebar"]
 Font = Literal["inter", "arial", "georgia", "garamond", "grotesk"]
@@ -103,6 +105,21 @@ class Certification(BaseModel):
     date: str = Field("", max_length=40)
 
 
+class ExtraSection(BaseModel):
+    """A section beyond the standard ones: Languages, Awards, Volunteering, Publications, Interests or anything the
+    user names. One line per item, shown as a bulleted list or run together on one line."""
+
+    id: str = Field(default_factory=_id, max_length=40)
+    title: str = Field("", max_length=60)
+    items: list[str] = Field(default_factory=list, max_length=20)
+    style: Literal["bullets", "inline"] = "bullets"
+
+    @field_validator("items")
+    @classmethod
+    def _items(cls, v: list[str]) -> list[str]:
+        return [i[:300] for i in v]
+
+
 class ResumeData(BaseModel):
     basics: Basics = Field(default_factory=Basics)
     experience: list[Experience] = Field(default_factory=list, max_length=20)
@@ -110,13 +127,18 @@ class ResumeData(BaseModel):
     skills: list[SkillGroup] = Field(default_factory=list, max_length=10)
     projects: list[Project] = Field(default_factory=list, max_length=10)
     certifications: list[Certification] = Field(default_factory=list, max_length=20)
-    section_order: list[SectionId] = Field(default_factory=lambda: list(DEFAULT_ORDER), max_length=6)
+    extras: list[ExtraSection] = Field(default_factory=list, max_length=MAX_EXTRAS)
+    # Standard section ids, and "extra:<id>" for each extra section.
+    section_order: list[str] = Field(default_factory=lambda: [str(s) for s in DEFAULT_ORDER], max_length=16)
 
-    @field_validator("section_order")
-    @classmethod
-    def _order(cls, v: list[SectionId]) -> list[SectionId]:
-        seen = list(dict.fromkeys(v))
-        return seen + [s for s in DEFAULT_ORDER if s not in seen]  # every section keeps a place
+    @model_validator(mode="after")
+    def _order(self) -> "ResumeData":
+        """Every section keeps exactly one place: unknown or duplicate entries are dropped, and missing ones (a new
+        extra section, or a standard one an older client left out) go at the end."""
+        known: list[str] = list(dict.fromkeys([*DEFAULT_ORDER, *(EXTRA_PREFIX + x.id for x in self.extras)]))
+        seen = [s for s in dict.fromkeys(self.section_order) if s in known]
+        self.section_order = seen + [s for s in known if s not in seen]
+        return self
 
 
 class ResumeDesign(BaseModel):

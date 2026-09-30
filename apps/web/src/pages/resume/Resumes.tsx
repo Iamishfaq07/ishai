@@ -4,6 +4,7 @@ import type { ResumeData, ResumeSummary } from "@orbit/types";
 import {
   ArrowLeft,
   ClipboardCheck,
+  Copy,
   FileText,
   FileUp,
   FolderOpen,
@@ -35,8 +36,25 @@ export function scoreTone(score: number): string {
 
 /** Resume maker: your resumes, each with its ATS score, and the ways to start a new one. */
 export function ResumesPage() {
+  const navigate = useNavigate();
   const list = useAsync(() => api.listResumes(), [], "resumes");
   const [creating, setCreating] = useState(false);
+  const [copying, setCopying] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  /** A copy to tailor for another job, without touching the original. */
+  const duplicate = async (r: ResumeSummary) => {
+    setCopying(r.id);
+    setActionError(null);
+    try {
+      const full = await api.getResume(r.id);
+      const copy = await api.createResume({ title: `${full.title} (copy)`.slice(0, 160), data: full.data, design: full.design, job_text: full.job_text, cover_letter: full.cover_letter });
+      navigate(`/documents/resumes/${copy.id}`);
+    } catch (err) {
+      setActionError(errorText(err));
+      setCopying(null);
+    }
+  };
 
   const remove = async (r: ResumeSummary) => {
     const ok = await confirmDialog({
@@ -64,6 +82,7 @@ export function ResumesPage() {
         }
       />
       {creating && <NewResume onClose={() => setCreating(false)} />}
+      {actionError && <div className="mb-4"><ErrorNote>{actionError}</ErrorNote></div>}
       {list.loading && !list.data ? (
         <Spinner label="Loading your resumes" />
       ) : list.error ? (
@@ -95,7 +114,7 @@ export function ResumesPage() {
                       <span className="font-display text-lg font-semibold leading-none tabular-nums">{r.score}</span>
                       <span className="text-[0.625rem] leading-none opacity-80">ATS</span>
                     </span>
-                    <span className="min-w-0 pr-8">
+                    <span className="min-w-0 pr-16">
                       <span className="block truncate font-medium">{r.title}</span>
                       <span className="block truncate text-sm text-zinc-500 dark:text-zinc-400">
                         {[r.name, r.headline].filter(Boolean).join(" · ") || "No name yet"}
@@ -107,14 +126,26 @@ export function ResumesPage() {
                     </span>
                   </div>
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => void remove(r)}
-                  aria-label={`Delete ${r.title}`}
-                  className={cx("absolute right-3 top-3 rounded-md p-1.5 text-zinc-400 hover:bg-rose-500/10 hover:text-rose-600", focusRing)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="absolute right-3 top-3 flex">
+                  <button
+                    type="button"
+                    onClick={() => void duplicate(r)}
+                    disabled={copying !== null}
+                    aria-label={`Make a copy of ${r.title}`}
+                    title="Make a copy (to tailor for another job)"
+                    className={cx("rounded-md p-1.5 text-zinc-400 hover:bg-indigo-500/10 hover:text-indigo-600 disabled:opacity-40", focusRing)}
+                  >
+                    <Copy className={cx("h-4 w-4", copying === r.id && "animate-pulse")} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void remove(r)}
+                    aria-label={`Delete ${r.title}`}
+                    className={cx("rounded-md p-1.5 text-zinc-400 hover:bg-rose-500/10 hover:text-rose-600", focusRing)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </Card>
             </li>
           ))}

@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
-import type { ResumeData, ResumeDesign, ResumeSectionId } from "@orbit/types";
-import { FONTS, SECTION_LABEL, dateRange } from "./model";
+import type { ResumeData, ResumeDesign, ResumeSectionKey } from "@orbit/types";
+import { FONTS, dateRange, extraOf, sectionLabel } from "./model";
 
 const SPACE = {
   compact: { section: "9pt", item: "5pt", pad: "12mm" },
@@ -9,6 +9,21 @@ const SPACE = {
 } as const;
 
 export const PAGE_MM = { a4: { w: 210, h: 297 }, letter: { w: 215.9, h: 279.4 } } as const;
+export const MM_TO_PX = 96 / 25.4;
+const PAD_MM = { compact: 12, normal: 16, relaxed: 20 } as const;
+
+/**
+ * Where the printed pages break, for a preview `heightPx` tall (CSS px at real size). Single-column templates print
+ * with the page padding repeated on every page, so each page holds `pageHeight - 2 × padding` of content; the
+ * Sidebar template has no page padding. `breaks` are the y positions (px) where each new page starts.
+ */
+export function pageLayout(heightPx: number, design: ResumeDesign): { pages: number; breaks: number[] } {
+  const pageH = PAGE_MM[design.page].h * MM_TO_PX;
+  const pad = design.template === "sidebar" ? 0 : PAD_MM[design.spacing] * MM_TO_PX;
+  const usable = pageH - 2 * pad;
+  const pages = Math.max(1, Math.ceil((heightPx - 2 * pad - 2) / usable));
+  return { pages, breaks: Array.from({ length: pages - 1 }, (_, k) => pad + (k + 1) * usable) };
+}
 
 /** Mix the accent with white: `tint(accent, 0.9)` is a pale background in the same hue. */
 function tint(hex: string, amount: number): string {
@@ -22,10 +37,34 @@ function contactItems(data: ResumeData): string[] {
   return [b.email, b.phone, b.location, ...b.links.map((l) => l.url)].map((s) => s.trim()).filter(Boolean);
 }
 
-function hasContent(data: ResumeData, id: ResumeSectionId): boolean {
+function hasContent(data: ResumeData, id: ResumeSectionKey): boolean {
   if (id === "summary") return Boolean(data.basics.summary.trim());
   if (id === "skills") return data.skills.some((s) => s.items.some((i) => i.trim()));
-  return data[id].length > 0;
+  const extra = extraOf(data, id);
+  if (extra) return Boolean(extra.title.trim()) && extra.items.some((i) => i.trim());
+  if (id === "experience" || id === "education" || id === "projects" || id === "certifications") return data[id].length > 0;
+  return false;
+}
+
+/** A bracketed cue the AI left to fill in: the same shape the ATS check counts, one-letter "[N]" included. */
+const FILL = /(\[[^\][\n]{1,160}\])/;
+
+/** Text with any [placeholder] the AI left marked on screen, so it's hard to miss (printed plainly). */
+function Fill({ text }: { text: string }) {
+  // split() with a capturing group keeps the placeholders at the odd indexes.
+  return (
+    <>
+      {text.split(FILL).map((part, i) =>
+        i % 2 ? (
+          <mark key={i} className="resume-fill rounded-sm bg-amber-200 px-px text-inherit">
+            {part}
+          </mark>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
 }
 
 /**
@@ -84,16 +123,23 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     return list.length ? (
       <ul className="mt-[2pt] list-disc space-y-[1.5pt] pl-[1.2em]">
         {list.map((b, i) => (
-          <li key={i}>{b}</li>
+          <li key={i}>
+            <Fill text={b} />
+          </li>
         ))}
       </ul>
     ) : null;
   };
 
-  const section = (id: ResumeSectionId): ReactNode => {
+  const section = (id: ResumeSectionKey): ReactNode => {
     if (!hasContent(data, id)) return null;
     let body: ReactNode = null;
-    if (id === "summary") body = <p>{data.basics.summary}</p>;
+    const extra = extraOf(data, id);
+    if (extra) {
+      const items = extra.items.filter((i) => i.trim());
+      body = extra.style === "inline" ? <p><Fill text={items.join(" · ")} /></p> : bullets(items);
+    }
+    if (id === "summary") body = <p><Fill text={data.basics.summary} /></p>;
     if (id === "experience") {
       body = data.experience.map((e) => (
         <div key={e.id} style={{ marginBottom: space.item }} className="break-inside-avoid">
@@ -119,7 +165,7 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
             </p>
             <p className="whitespace-nowrap text-zinc-600">{dateRange(e.start, e.end)}</p>
           </div>
-          {e.details && <p className="text-zinc-700">{e.details}</p>}
+          {e.details && <p className="text-zinc-700"><Fill text={e.details} /></p>}
         </div>
       ));
     }
@@ -144,7 +190,7 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
             <span className="font-bold">{p.name}</span>
             {p.link && <span className="text-zinc-600"> · {p.link}</span>}
           </p>
-          {p.description && <p>{p.description}</p>}
+          {p.description && <p><Fill text={p.description} /></p>}
           {bullets(p.bullets)}
         </div>
       ));
@@ -159,7 +205,7 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     }
     return (
       <section key={id} style={{ marginTop: space.section }}>
-        {heading(SECTION_LABEL[id])}
+        {heading(sectionLabel(data, id))}
         {body}
       </section>
     );
@@ -172,8 +218,9 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
   const contacts = contactItems(data);
 
   if (sidebar) {
-    const side: ResumeSectionId[] = ["skills", "education", "certifications"];
-    const main = data.section_order.filter((s) => !side.includes(s));
+    // Short, list-like sections go in the side column: skills, education, certifications, one-line extras.
+    const inSide = (s: ResumeSectionKey) => ["skills", "education", "certifications"].includes(s) || extraOf(data, s)?.style === "inline";
+    const main = data.section_order.filter((s) => !inSide(s));
     return (
       <div style={style} className="resume-page flex">
         <aside style={{ background: tint(accent, 0.9), padding: space.pad, width: "34%" }} className="shrink-0">
@@ -187,7 +234,7 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
               <p key={c}>{c}</p>
             ))}
           </div>
-          {data.section_order.filter((s) => side.includes(s)).map(section)}
+          {data.section_order.filter(inSide).map(section)}
         </aside>
         <main style={{ padding: space.pad, paddingLeft: "7mm" }} className="min-w-0 flex-1">
           {main.map(section)}
@@ -236,6 +283,46 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     <div style={style} className="resume-page relative">
       {header}
       {data.section_order.map(section)}
+    </div>
+  );
+}
+
+/** The cover letter on a page that matches the resume: same font, colour and contact line. */
+export function LetterPreview({ data, design, text }: { data: ResumeData; design: ResumeDesign; text: string }) {
+  const space = SPACE[design.spacing];
+  const page = PAGE_MM[design.page];
+  const font = FONTS.find((f) => f.id === design.font)?.stack ?? FONTS[0]!.stack;
+  const contacts = contactItems(data);
+  const today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const blocks = text.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+  return (
+    <div
+      className="resume-page"
+      style={{ width: `${page.w}mm`, minHeight: `${page.h}mm`, padding: space.pad, fontFamily: font, fontSize: `${design.font_size}pt`, lineHeight: 1.5, color: "#18181b", background: "#ffffff" }}
+    >
+      <header style={{ borderColor: design.accent, paddingBottom: "4pt" }} className="border-b">
+        <h1 style={{ color: design.accent, fontSize: "1.6em", lineHeight: 1.15 }} className="font-bold">
+          {data.basics.name || "Your name"}
+        </h1>
+        {contacts.length > 0 && <p className="text-zinc-600">{contacts.join("  ·  ")}</p>}
+      </header>
+      <p style={{ marginTop: space.section }}>{today}</p>
+      {blocks.length ? (
+        blocks.map((b, i) => (
+          <p key={i} style={{ marginTop: space.section }}>
+            {b.split("\n").map((line, j) => (
+              <span key={j}>
+                {j > 0 && <br />}
+                <Fill text={line} />
+              </span>
+            ))}
+          </p>
+        ))
+      ) : (
+        <p style={{ marginTop: space.section }} className="text-zinc-400">
+          Your cover letter appears here.
+        </p>
+      )}
     </div>
   );
 }

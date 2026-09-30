@@ -1,9 +1,11 @@
 import type {
   ResumeData,
   ResumeDesign,
+  ResumeExtraSection,
   ResumeFont,
   ResumeInput,
   ResumeSectionId,
+  ResumeSectionKey,
   ResumeSpacing,
   ResumeTemplate,
 } from "@orbit/types";
@@ -18,6 +20,29 @@ export const SECTION_LABEL: Record<ResumeSectionId, string> = {
 };
 
 export const DEFAULT_ORDER: ResumeSectionId[] = ["summary", "experience", "skills", "projects", "education", "certifications"];
+
+export const MAX_EXTRAS = 5;
+
+/** Ready-made extra sections: the usual ones, each shown the way it reads best. */
+export const EXTRA_PRESETS: Array<{ title: string; style: ResumeExtraSection["style"]; placeholder: string }> = [
+  { title: "Languages", style: "inline", placeholder: "Spanish (fluent)" },
+  { title: "Awards", style: "bullets", placeholder: "Engineering Excellence Award, Acme, 2023" },
+  { title: "Volunteering", style: "bullets", placeholder: "Mentor, Code Club: taught 12 students Python weekly" },
+  { title: "Publications", style: "bullets", placeholder: "“Scaling ledgers”, PyCon talk, 2022" },
+  { title: "Interests", style: "inline", placeholder: "Trail running" },
+];
+
+/** The extra section a `section_order` entry ("extra:<id>") names. */
+export function extraOf(data: ResumeData, key: ResumeSectionKey): ResumeExtraSection | undefined {
+  return key.startsWith("extra:") ? data.extras.find((x) => `extra:${x.id}` === key) : undefined;
+}
+
+/** A section's heading: the standard name, or the title the user gave an extra section. */
+export function sectionLabel(data: ResumeData, key: ResumeSectionKey): string {
+  const extra = extraOf(data, key);
+  if (extra) return extra.title.trim() || "Untitled section";
+  return SECTION_LABEL[key as ResumeSectionId] ?? key;
+}
 
 export const TEMPLATES: Array<{ id: ResumeTemplate; label: string; note: string }> = [
   { id: "classic", label: "Classic", note: "Centred header, ruled sections. Reads well everywhere." },
@@ -54,6 +79,7 @@ export function emptyData(): ResumeData {
     skills: [],
     projects: [],
     certifications: [],
+    extras: [],
     section_order: [...DEFAULT_ORDER],
   };
 }
@@ -156,6 +182,11 @@ export function resumeToText(data: ResumeData): string {
     }
     if (section === "certifications" && data.certifications.length) {
       out.push("", "CERTIFICATIONS", ...data.certifications.map((c) => [c.name, c.issuer, c.date].filter(Boolean).join(", ")));
+    }
+    const extra = extraOf(data, section);
+    const items = extra?.items.filter((t) => t.trim()) ?? [];
+    if (extra && extra.title.trim() && items.length) {
+      out.push("", extra.title.trim().toUpperCase(), ...(extra.style === "inline" ? [items.join(" · ")] : items.map((t) => `- ${t}`)));
     }
   }
   return out.filter((line, i, all) => line.trim() || (i > 0 && all[i - 1]?.trim())).join("\n").trim();

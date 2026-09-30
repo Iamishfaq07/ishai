@@ -4,13 +4,14 @@ import type {
   ResumeData,
   ResumeEducation,
   ResumeExperience,
+  ResumeExtraSection,
   ResumeProject,
-  ResumeSectionId,
+  ResumeSectionKey,
   ResumeSkillGroup,
 } from "@orbit/types";
 import { ChevronDown, Plus, Trash2, X, cx, focusRing } from "@orbit/ui";
 import { Button, Field, Input, Textarea } from "../../components/ui";
-import { SECTION_LABEL, newId } from "./model";
+import { EXTRA_PRESETS, MAX_EXTRAS, newId, sectionLabel } from "./model";
 
 type Update = (fn: (d: ResumeData) => ResumeData) => void;
 
@@ -102,6 +103,70 @@ function Bullets({ path, bullets, onChange }: { path: string; bullets: string[];
   );
 }
 
+/** One extra section: its title, list or one-line style, and its items. */
+function ExtraEditor({ x, i, n, onPatch, onMove, onRemove }: {
+  x: ResumeExtraSection;
+  i: number;
+  n: number;
+  onPatch: (patch: Partial<ResumeExtraSection>) => void;
+  onMove: (by: -1 | 1) => void;
+  onRemove: () => void;
+}) {
+  const placeholder = EXTRA_PRESETS.find((p) => p.title.toLowerCase() === x.title.trim().toLowerCase())?.placeholder ?? "One item per line";
+  const items = x.items.length ? x.items : [""];
+  const setItems = (next: string[]) => onPatch({ items: next });
+  return (
+    <div data-path={`extras.${x.id}`} tabIndex={-1} className="scroll-mt-24 space-y-3 rounded-xl border border-zinc-200 p-3 outline-none dark:border-white/10">
+      <div className="flex flex-wrap items-center gap-2">
+        <Input aria-label="Section title" maxLength={60} value={x.title} placeholder="Section title" className="min-w-0 flex-1 font-medium" onChange={(e) => onPatch({ title: e.target.value })} />
+        <div role="group" aria-label="Show as" className="inline-flex gap-1 rounded-lg bg-zinc-500/10 p-0.5">
+          {(["bullets", "inline"] as const).map((style) => (
+            <button
+              key={style}
+              type="button"
+              aria-pressed={x.style === style}
+              onClick={() => onPatch({ style })}
+              className={cx("rounded-md px-2 py-0.5 text-xs", x.style === style ? "bg-white font-medium shadow-sm dark:bg-white/10" : "text-zinc-500", focusRing)}
+            >
+              {style === "bullets" ? "List" : "One line"}
+            </button>
+          ))}
+        </div>
+        <ItemTools i={i} n={n} label={x.title || "section"} onMove={onMove} onRemove={onRemove} />
+      </div>
+      <div className="space-y-2">
+        {items.map((item, j) => (
+          <div key={j} className="flex items-center gap-1">
+            <span aria-hidden className="text-zinc-400">{x.style === "inline" ? "·" : "•"}</span>
+            <Input
+              aria-label={`${x.title || "Section"} item ${j + 1}`}
+              maxLength={300}
+              data-path={`extras.${x.id}.items.${j}`}
+              value={item}
+              placeholder={j === 0 ? placeholder : undefined}
+              className="flex-1 scroll-mt-24"
+              onChange={(e) => setItems(items.map((t, k) => (k === j ? e.target.value : t)))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && items.length < 20) {
+                  e.preventDefault();
+                  setItems([...items.slice(0, j + 1), "", ...items.slice(j + 1)]);
+                  window.setTimeout(() => document.querySelector<HTMLInputElement>(`[data-path="extras.${x.id}.items.${j + 1}"]`)?.focus());
+                }
+              }}
+            />
+            <IconButton label={`Remove item ${j + 1}`} onClick={() => setItems(items.filter((_, k) => k !== j))}>
+              <X className="h-3.5 w-3.5" />
+            </IconButton>
+          </div>
+        ))}
+        <Button variant="ghost" size="sm" onClick={() => setItems([...items, ""])} disabled={items.length >= 20}>
+          <Plus className="h-3.5 w-3.5" /> Add item
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /** Comma-separated skills, kept as typed while the field has focus (so "React, " doesn't lose its comma). */
 function SkillItems({ id, items, onChange }: { id: string; items: string[]; onChange: (items: string[]) => void }) {
   const [text, setText] = useState(items.join(", "));
@@ -127,7 +192,7 @@ function SkillItems({ id, items, onChange }: { id: string; items: string[]; onCh
 export function ContentForm({ data, update }: { data: ResumeData; update: Update }) {
   const b = data.basics;
   const setBasics = (patch: Partial<ResumeData["basics"]>) => update((d) => ({ ...d, basics: { ...d.basics, ...patch } }));
-  const list = <K extends "experience" | "education" | "skills" | "projects" | "certifications">(key: K) => ({
+  const list = <K extends "experience" | "education" | "skills" | "projects" | "certifications" | "extras">(key: K) => ({
     set: (items: ResumeData[K]) => update((d) => ({ ...d, [key]: items })),
     patch: (id: string, patch: Partial<ResumeData[K][number]>) =>
       update((d) => ({ ...d, [key]: (d[key] as Array<{ id: string }>).map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
@@ -137,18 +202,34 @@ export function ContentForm({ data, update }: { data: ResumeData; update: Update
   const skills = list("skills");
   const projects = list("projects");
   const certs = list("certifications");
+  const extras = list("extras");
+  const usedTitles = new Set(data.extras.map((x) => x.title.trim().toLowerCase()));
+  const addExtra = (title: string, style: ResumeExtraSection["style"]) => {
+    const id = newId();
+    update((d) => ({
+      ...d,
+      extras: [...d.extras, { id, title, items: [""], style }],
+      section_order: [...d.section_order, `extra:${id}` as ResumeSectionKey],
+    }));
+    window.setTimeout(() => {
+      const sel = title ? `[data-path="extras.${id}.items.0"]` : `[data-path="extras.${id}"] input`;
+      document.querySelector<HTMLElement>(sel)?.focus();
+    });
+  };
+  const removeExtra = (id: string) =>
+    update((d) => ({ ...d, extras: d.extras.filter((x) => x.id !== id), section_order: d.section_order.filter((k) => k !== `extra:${id}`) }));
 
   const order = (
     <Section id="section_order" title="Section order">
       <ol className="space-y-1">
         {data.section_order.map((s, i) => (
           <li key={s} className="flex items-center justify-between rounded-lg bg-zinc-500/5 px-3 py-1.5 text-sm">
-            {SECTION_LABEL[s]}
+            {sectionLabel(data, s)}
             <span className="flex">
-              <IconButton label={`Move ${SECTION_LABEL[s]} up`} onClick={() => update((d) => ({ ...d, section_order: move<ResumeSectionId>(d.section_order, i, -1) }))} disabled={i === 0}>
+              <IconButton label={`Move ${sectionLabel(data, s)} up`} onClick={() => update((d) => ({ ...d, section_order: move<ResumeSectionKey>(d.section_order, i, -1) }))} disabled={i === 0}>
                 <ChevronDown className="h-4 w-4 rotate-180" />
               </IconButton>
-              <IconButton label={`Move ${SECTION_LABEL[s]} down`} onClick={() => update((d) => ({ ...d, section_order: move<ResumeSectionId>(d.section_order, i, 1) }))} disabled={i === data.section_order.length - 1}>
+              <IconButton label={`Move ${sectionLabel(data, s)} down`} onClick={() => update((d) => ({ ...d, section_order: move<ResumeSectionKey>(d.section_order, i, 1) }))} disabled={i === data.section_order.length - 1}>
                 <ChevronDown className="h-4 w-4" />
               </IconButton>
             </span>
@@ -182,7 +263,7 @@ export function ContentForm({ data, update }: { data: ResumeData; update: Update
           <p className="text-sm font-medium">Links</p>
           {b.links.map((l, i) => (
             <div key={i} className="flex gap-2">
-              <Input aria-label={`Link ${i + 1} label`} maxLength={40} value={l.label} placeholder="LinkedIn" className="w-32" onChange={(e) => setBasics({ links: b.links.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) })} />
+              <Input aria-label={`Link ${i + 1} label`} maxLength={40} value={l.label} placeholder="LinkedIn" className="!w-32 shrink-0" onChange={(e) => setBasics({ links: b.links.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) })} />
               <Input aria-label={`Link ${i + 1} URL`} maxLength={300} value={l.url} placeholder="linkedin.com/in/you" className="flex-1" onChange={(e) => setBasics({ links: b.links.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) })} />
               <IconButton label={`Remove link ${i + 1}`} onClick={() => setBasics({ links: b.links.filter((_, j) => j !== i) })}>
                 <X className="h-4 w-4" />
@@ -249,7 +330,7 @@ export function ContentForm({ data, update }: { data: ResumeData; update: Update
         {!data.skills.length && <p className="text-sm text-zinc-500 dark:text-zinc-400">Group them if you like: Languages, Tools, Methods.</p>}
         {data.skills.map((g, i) => (
           <div key={g.id} className="flex items-start gap-2">
-            <Input aria-label="Group name" maxLength={60} value={g.name} placeholder="Tools" className="w-32" onChange={(ev) => skills.patch(g.id, { name: ev.target.value })} />
+            <Input aria-label="Group name" maxLength={60} value={g.name} placeholder="Tools" className="!w-32 shrink-0" onChange={(ev) => skills.patch(g.id, { name: ev.target.value })} />
             <div className="flex-1"><SkillItems id={`k-${g.id}`} items={g.items} onChange={(items) => skills.patch(g.id, { items })} /></div>
             <ItemTools i={i} n={data.skills.length} label="skill group" onMove={(by) => skills.set(move(data.skills, i, by))} onRemove={() => skills.set(data.skills.filter((x) => x.id !== g.id))} />
           </div>
@@ -293,7 +374,7 @@ export function ContentForm({ data, update }: { data: ResumeData; update: Update
         }
       >
         {data.education.map((e, i) => (
-          <div key={e.id} className="space-y-3 rounded-xl border border-zinc-200 p-3 dark:border-white/10">
+          <div key={e.id} data-path={`education.${e.id}`} tabIndex={-1} className="scroll-mt-24 space-y-3 rounded-xl border border-zinc-200 p-3 outline-none dark:border-white/10">
             <div className="flex items-center justify-between gap-2">
               <p className="truncate text-sm font-medium">{e.school || "New education"}</p>
               <ItemTools i={i} n={data.education.length} label="education" onMove={(by) => edu.set(move(data.education, i, by))} onRemove={() => edu.set(data.education.filter((x) => x.id !== e.id))} />
@@ -333,6 +414,39 @@ export function ContentForm({ data, update }: { data: ResumeData; update: Update
             <ItemTools i={i} n={data.certifications.length} label="certification" onMove={(by) => certs.set(move(data.certifications, i, by))} onRemove={() => certs.set(data.certifications.filter((x) => x.id !== c.id))} />
           </div>
         ))}
+      </Section>
+
+      <Section id="extras" title="More sections">
+        {data.extras.map((x, i) => (
+          <ExtraEditor
+            key={x.id}
+            x={x}
+            i={i}
+            n={data.extras.length}
+            onPatch={(patch) => extras.patch(x.id, patch)}
+            onMove={(by) => extras.set(move(data.extras, i, by))}
+            onRemove={() => removeExtra(x.id)}
+          />
+        ))}
+        {data.extras.length < MAX_EXTRAS ? (
+          <div>
+            <p className="mb-2 text-sm text-zinc-600 dark:text-zinc-400">
+              {data.extras.length ? "Add another:" : "Languages, awards, volunteering: add the ones that help you stand out."}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {EXTRA_PRESETS.filter((p) => !usedTitles.has(p.title.toLowerCase())).map((p) => (
+                <Button key={p.title} size="sm" variant="secondary" onClick={() => addExtra(p.title, p.style)}>
+                  <Plus className="h-3.5 w-3.5" /> {p.title}
+                </Button>
+              ))}
+              <Button size="sm" variant="ghost" onClick={() => addExtra("", "bullets")}>
+                <Plus className="h-3.5 w-3.5" /> Custom section
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">That's the most extra sections a resume can have.</p>
+        )}
       </Section>
 
       {order}
