@@ -198,10 +198,12 @@ class Settings(BaseSettings):
             if not (self.admin_email and "@" in self.admin_email):
                 raise ValueError("ORBIT_ADMIN_EMAIL must be set in production (the admin is never inferred)")
             # Anyone other than the admin can sign in → they must be able to prove their inbox, or turn
-            # verification off explicitly (allowed only for a private, owner-vetted list of exact addresses).
-            if self.public_signup and not self.verification_required:
+            # verification off explicitly: for a private, owner-vetted list of exact addresses, or with sign-up
+            # approval on, where nobody can spend anything until the admin has looked at the account.
+            if self.public_signup and not self.verification_required and not self.approval_required:
                 raise ValueError("ORBIT_EMAIL_VERIFICATION=off is not allowed with public sign-up "
-                                 "(ORBIT_ALLOWED_EMAILS contains '*' or an @domain entry)")
+                                 "(ORBIT_ALLOWED_EMAILS contains '*' or an @domain entry) unless "
+                                 "ORBIT_SIGNUP_APPROVAL is on")
             if self.verification_required and self.others_can_sign_in and not self.smtp_host:
                 raise ValueError("Email verification is required for non-admin users but ORBIT_SMTP_HOST is not "
                                  "set, so nobody could verify. Configure SMTP, or for a private list of exact "

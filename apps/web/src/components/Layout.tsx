@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useRef, useState } from "react";
-import { NavLink, Outlet, useLocation, useNavigate, useNavigationType } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import {
   ChevronDown,
   CreditCard,
@@ -99,6 +99,7 @@ export function Layout() {
             ))}
           </nav>
 
+          <WaitingForAccess />
           <AccountMenu
             name={user?.name ?? null}
             email={user?.email ?? ""}
@@ -262,5 +263,36 @@ function AccountMenu({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Admin only: how many new accounts are waiting for access, linking to Users & access. The in-app side of the
+ * sign-up email, and the only one on a server without SMTP. Re-counted on every page change and each minute.
+ */
+function WaitingForAccess() {
+  const { pathname } = useLocation();
+  const [admin, setAdmin] = useState(false);
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    api.adminStatus().then((s) => setAdmin(s.is_admin)).catch(() => undefined);
+  }, []);
+  useEffect(() => {
+    if (!admin) return;
+    const load = () => void api.adminUsers("pending").then((r) => setCount(r.users.length)).catch(() => undefined);
+    load();
+    const t = window.setInterval(load, 60_000);
+    return () => window.clearInterval(t);
+  }, [admin, pathname]);
+  if (!admin || !count) return null;
+  return (
+    <Link
+      to="/admin/users"
+      className="mr-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-amber-500/30 hover:bg-amber-500/25 dark:text-amber-200"
+      aria-label={`${count} new ${count === 1 ? "account is" : "accounts are"} waiting for access`}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
+      {count} waiting
+    </Link>
   );
 }

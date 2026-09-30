@@ -36,7 +36,7 @@ Render dashboard → New → Blueprint → this repo (`render.yaml`). Set the pr
 | `ORBIT_LIVE_HEARTBEAT_S` | no | live-minute commit/enforcement interval, default 15 |
 | `ORBIT_SPOOL_DIR` | no | where dead-lettered writes spool if the DB is unreachable (default: temp dir) |
 | `ORBIT_SMTP_*` | if others sign in | required as soon as anyone besides the admin can sign in (they must verify their email); admin-only deploys can skip it |
-| `ORBIT_EMAIL_VERIFICATION` | no | `required` (production default) or `off`. `off` is allowed only for a private list of exact addresses, never with `*` / `@domain` |
+| `ORBIT_EMAIL_VERIFICATION` | no | `required` (production default) or `off`. `off` is allowed for a private list of exact addresses, or with `*` / `@domain` when sign-up approval is on (nobody spends anything before the admin looks) |
 | `ORBIT_SIGNUP_APPROVAL` | no | `true` (production default) or `false`. New accounts can sign in but use nothing until the admin gives them access in **Settings → Users & access**: a plan for a while (e.g. Unlimited for 2 hours) or approval for good. The admin gets an email for each sign-up (once its email is verified). Accounts from before stay as they were. |
 | `ORBIT_CAPTCHA_PROVIDER`, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | no | bot check on sign-up / password reset (`turnstile`). Add the web hostname to the Turnstile widget |
 | `ORBIT_CSRF_PROTECTION` | no | leave unset (on). See [SECURITY.md](SECURITY.md) |
