@@ -548,7 +548,7 @@ class LiveEngine:
             return
         if self._paused or self._ended:
             return
-        speaker = CHANNEL_SPEAKER[channel]
+        speaker = self._channel_speaker(channel)
         if self._mock is not None and speaker == "candidate" and ev.kind in ("partial", "final"):
             self._mock.on_candidate(ev.text, self.now_ms(), final=ev.kind == "final")
         if ev.kind == "speech_started":
@@ -605,6 +605,14 @@ class LiveEngine:
             await self._commit_turn(channel, turn)
         await self._sync_speculation()
 
+    def _channel_speaker(self, channel: Channel) -> Speaker:
+        # Phone / room audio (a phone on speaker, an in-person room): the one microphone hears the interviewer, and
+        # there is no tab or app audio to tell them apart. Treat it as the interviewer so their questions get
+        # answered; the user can swap a line that was really them.
+        if channel == "mic" and self.profile.session_type == "phone":
+            return "interviewer"
+        return CHANNEL_SPEAKER[channel]
+
     def _track_stt_latency(self, channel: Channel, turn: _ChannelTurn, ev: TranscriptEvent) -> None:
         clock = self._audio_clock[channel]
         now = self.now_ms()
@@ -619,7 +627,7 @@ class LiveEngine:
 
     async def _commit_turn(self, channel: Channel, turn: _ChannelTurn) -> None:
         self._turns[channel] = None
-        spk = self._speaker_overrides.get(turn.turn_id, CHANNEL_SPEAKER[channel])
+        spk = self._speaker_overrides.get(turn.turn_id, self._channel_speaker(channel))
         await self.send("transcript.final", {"turn_id": turn.turn_id, "speaker": spk, "text": turn.text,
                                              "start_ms": turn.start_ms, "end_ms": turn.end_ms})
         self.memory.add_turn(spk, turn.text)
