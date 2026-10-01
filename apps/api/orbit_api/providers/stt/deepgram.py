@@ -64,7 +64,9 @@ def parse_message(msg: dict[str, Any]) -> TranscriptEvent | None:
         start = int(float(msg.get("start", 0)) * 1000)
         end = start + int(float(msg.get("duration", 0)) * 1000)
         words = alt.get("words") or []
-        speaker = words[0].get("speaker") if words and "speaker" in words[0] else None
+        # Diarized: the speaker who said most of these words (a result can straddle a change of speaker).
+        voices = [w["speaker"] for w in words if isinstance(w, dict) and "speaker" in w]
+        speaker = max(set(voices), key=voices.count) if voices else None
         is_final = bool(msg.get("is_final"))
         if not text and not msg.get("speech_final"):
             return None

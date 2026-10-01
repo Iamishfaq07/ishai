@@ -46,12 +46,14 @@ async def stream_chat_completions(client: httpx.AsyncClient, payload: dict[str, 
                     usage = Usage(u.get("prompt_tokens") or 0, u.get("completion_tokens") or 0,
                                   cached_input_tokens=cached or 0)
                 delta = ""
+                finish: str | None = None
                 choices = obj.get("choices") or []
                 if choices:
                     # `reasoning_content` (chain-of-thought) is deliberately not surfaced.
                     delta = (choices[0].get("delta") or {}).get("content") or ""
-                if delta or usage:
-                    yield LLMChunk(delta=delta, usage=usage)
+                    finish = choices[0].get("finish_reason")
+                if delta or usage or finish:
+                    yield LLMChunk(delta=delta, usage=usage, finish_reason=finish)
     except httpx.TimeoutException as e:
         raise LLMError("timeout", f"{label} request timed out", retryable=True) from e
     except httpx.TransportError as e:

@@ -1,5 +1,15 @@
 # Implementation log
 
+## Phone mode tells voices apart; capped answers end cleanly (2026-10-01)
+
+- **Phone / room mode knows who's talking.** The single microphone is diarized (Deepgram `diarize=true`).
+  - The first voice to ask a real question is the interviewer; other voices are the candidate.
+  - The candidate thinking aloud ("So how would I explain it?") no longer triggers an answer.
+  - Swapping a transcript line teaches Orbit that voice for the rest of the session.
+  - A result that straddles two speakers belongs to the one who said most of it.
+- **Capped answers end on a full sentence.** The stream now reports `finish_reason`. An answer that hits its token
+  budget is trimmed to its last complete sentence instead of stopping mid-word, and the server logs it.
+
 ## Live answers: the whole question, faster, with Stop and Pause in reach (2026-10-01)
 
 - **The whole question gets answered.**

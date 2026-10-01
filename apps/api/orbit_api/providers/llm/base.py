@@ -50,6 +50,8 @@ class LLMChunk:
     # Who actually served this stream (set on its first chunk by FallbackProvider), for cost and diagnostics.
     provider: str | None = None
     model: str | None = None
+    # Why the model stopped, on the chunk that says so ("length": it hit max_tokens and the text is cut off).
+    finish_reason: str | None = None
 
 
 @dataclass

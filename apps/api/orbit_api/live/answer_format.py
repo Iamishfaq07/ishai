@@ -218,6 +218,21 @@ class AnswerStreamParser:
             last.text = f"{last.text} {line.lstrip('-*• ').strip()}".strip()[:800]
 
 
+_SENTENCE_END = re.compile(r"[.!?…][\"')\]]*(?=\s|$)")
+
+
+def trim_cut_off(answer: LiveAnswer) -> LiveAnswer:
+    """An answer that hit its token cap stops mid-sentence: end it at its last complete sentence instead, so the user
+    never reads (or says) half a thought."""
+    text = answer.direct_answer.rstrip()
+    if not text or re.search(r"[.!?…][\"')\]]*$", text):
+        return answer
+    ends = list(_SENTENCE_END.finditer(text))
+    if not ends:
+        return answer
+    return answer.model_copy(update={"direct_answer": text[: ends[-1].end()]})
+
+
 def finalize_grounding(answer: LiveAnswer) -> LiveAnswer:
     """Brief §19: never present unsupported candidate history as real. Applied to the completed answer.
     "verified" must cite at least one verified fact (the user's own document). Citing only non-candidate sources
