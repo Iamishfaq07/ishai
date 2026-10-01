@@ -57,6 +57,11 @@ _OBJECT_START = frozenset({
     "your", "you", "yourself", "me", "us", "a", "an", "the", "this", "that", "these", "those", "how", "what", "why",
     "when", "where", "which", "who", "some", "one", "two", "three", "each", "every", "any", "on", "for", "it",
 })
+# A verb later in the clause means the "imperative" was a noun ("Design reviews happen weekly.").
+_FINITE = frozenset({"is", "are", "was", "were", "has", "have", "had", "will", "would", "can", "could", "should",
+                     "takes", "took", "happen", "happens", "happened", "matters", "matter", "went", "goes", "comes",
+                     "came", "looks", "seems", "keeps", "needs", "works", "runs", "ran", "got", "gets",
+                     "made", "makes", "does", "did", "isn't", "aren't", "wasn't", "won't", "doesn't", "didn't"})
 # A verb right after the "imperative" means it was the subject of a statement ("Tell me is what my manager says").
 _COPULA = frozenset({"is", "are", "was", "were", "has", "have", "had", "will", "would", "can", "could", "ups", "up",
                      "s", "took", "takes", "went", "goes"})
@@ -207,7 +212,12 @@ def _imperative_strength(norm: str) -> float:
                 best = max(best, 0.0 if nxt in _COPULA else 0.6)
         if toks[0] in _VERB_IMPERATIVE:
             nxt = toks[1] if len(toks) > 1 else ""
-            best = max(best, 0.0 if nxt in _COPULA else 0.6 if nxt in _OBJECT_START else 0.45)
+            if nxt in _COPULA:
+                continue
+            # "Explain microservices." / "Define idempotency." are commands; "Design reviews happen weekly." and
+            # "Share price is up." are statements: a noun phrase followed by its own verb.
+            statement = not nxt or any(t in _FINITE for t in toks[2:])
+            best = max(best, 0.6 if nxt in _OBJECT_START or not statement else 0.45)
     return best
 
 
@@ -508,7 +518,7 @@ def _detect_one(text: str, speaker: Speaker, ctx: DetectorContext | None = None)
     if any(p in norm for p in _DIRECT_ASKS):
         score += 0.3
         reasons.append("open_floor")
-    if len(toks) < 3:
+    if len(toks) < 3 and imperative < 0.6:  # "Explain microservices." is short but plainly a request
         score -= 0.25
         reasons.append("very_short")
     if len(toks) >= 6:

@@ -1,5 +1,18 @@
 # Implementation log
 
+## Short commands get answered; ambiguous ones don't wait for the classifier (2026-10-01)
+
+- **"Explain microservices." / "Define idempotency." are answered.**
+  - A request verb followed by a bare noun ("Explain microservices.", "Define idempotency.", "Compare REST and
+    gRPC.") scored as a possible statement, minus a penalty for being short. Such requests never auto-answered
+    and didn't even reach the classifier.
+  - They now count as requests unless the noun phrase has its own verb ("Design reviews happen weekly.", "Share
+    price is up."), which still goes to the classifier.
+- **The classifier no longer adds its round trip.** For an utterance that does go to the classifier, the answer
+  is written in the background while it decides.
+  - If it says "answer" (with the question unchanged or only lightly reworded), the words appear at once.
+  - Otherwise they are discarded unseen.
+
 ## Phone mode tells voices apart; capped answers end cleanly (2026-10-01)
 
 - **Phone / room mode knows who's talking.** The single microphone is diarized (Deepgram `diarize=true`).
