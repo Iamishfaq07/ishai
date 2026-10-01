@@ -331,7 +331,7 @@ export function createApiClient(options: ApiClientOptions) {
 }
 
 async function toApiError(response: Response): Promise<ApiError> {
-  let parsed: ApiErrorBody | null = null;
+  let parsed: ApiErrorBody | null;
   try {
     parsed = (await response.json()) as ApiErrorBody;
   } catch {

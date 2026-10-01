@@ -139,8 +139,13 @@ jobs:
         with:
           context: apps/api
           push: false
+          load: true
+          tags: orbit-api:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      # Building isn't enough: a base-image bump can produce an image whose app can't even import.
+      - name: Import the app inside the image
+        run: docker run --rm orbit-api:ci python -c "import orbit_api.main"
 
   # SCA + SAST: known-vulnerable dependencies (Python, npm) and risky Python patterns (medium severity and up).
   # See docs/SECURITY_REVIEW.md for the full review and how to run these locally.

@@ -32,3 +32,8 @@ updates:
   - package-ecosystem: docker
     directory: /apps/api
     schedule: { interval: weekly }
+    ignore:
+      # A new Python minor is a migration (CI, mypy target and lockfile move with it), not a base-image bump: 3.14
+      # shipped with a pydantic that can't import on it. Digest and patch updates still come through.
+      - dependency-name: python
+        update-types: [version-update:semver-major, version-update:semver-minor]
