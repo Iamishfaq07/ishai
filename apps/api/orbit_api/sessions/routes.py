@@ -350,6 +350,11 @@ async def review_session(session_id: str, user: Annotated[User, Depends(require_
     row = await _owned(db, session_id, user)
     if row.status != "ended":
         raise HTTPException(status.HTTP_409_CONFLICT, "End the session first — reviews cover finished sessions.")
+    heard = await db.scalar(select(func.count()).select_from(SessionTurn).where(SessionTurn.session_id == row.id))
+    asked = await db.scalar(select(func.count()).select_from(Question).where(Question.session_id == row.id))
+    if not heard and not asked:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Nothing was captured in this session (no speech, no "
+                                                      "questions), so there's nothing to review.")
     try:
         report = await asyncio.wait_for(generate_report(row.id), timeout=90)
     except TimeoutError as e:

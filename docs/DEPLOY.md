@@ -25,7 +25,7 @@ Render dashboard → New → Blueprint → this repo (`render.yaml`). Set the pr
 | `ORBIT_DATABASE_URL` | yes | Neon string from step 1 |
 | `DEEPSEEK_API_KEY`, `DEEPGRAM_API_KEY` | yes | production refuses to boot without them (no mock fallback) |
 | `ORBIT_ADMIN_EMAIL` | **yes** | the owner account (unlimited plan, Advanced settings). Production refuses to boot without it; the admin is never inferred from registration order. Register this account right after the first deploy. |
-| `ORBIT_WEB_URL`, `ORBIT_CORS_ORIGINS` | yes | the web URL; CORS is a JSON array incl. `http://tauri.localhost` |
+| `ORBIT_WEB_URL`, `ORBIT_CORS_ORIGINS` | yes | the web URL; CORS: a JSON array or comma-separated list, incl. `http://tauri.localhost` |
 | `ORBIT_ALLOWED_EMAILS` | no | who else may sign in (emails, `@domain`, or `*`). Unset = admin only. Re-checked per request. Anyone besides the admin needs SMTP (below) to verify their email. |
 | `ORBIT_UPDATES_GITHUB_TOKEN` | no | fine-grained PAT (this repo, Contents read) so desktop auto-update works |
 | `ORBIT_PLANS_JSON`, `FREE_/PRO_/UNLIMITED_MAX_SESSION_MINUTES` | no | plan limits, features, prices and the per-session ceiling. See [BILLING.md](BILLING.md) |

@@ -67,11 +67,22 @@ export function matchesHotkey(event: KeyboardEvent, combo: string, isMac: boolea
   return event.key.toLowerCase() === parsed.key;
 }
 
+// Named keys as people write them (parseCombo lowercases: "arrowleft" would otherwise show as "Arrowleft").
+const KEY_LABEL: Record<string, string> = {
+  arrowleft: "←",
+  arrowright: "→",
+  arrowup: "↑",
+  arrowdown: "↓",
+  escape: "Esc",
+  pageup: "PgUp",
+  pagedown: "PgDn",
+};
+
 /** Human label: "⌘ ⇧ S" on macOS, "Ctrl+Shift+S" elsewhere. */
 export function formatHotkey(combo: string, isMac: boolean = isMacPlatform()): string {
   const parsed = parseCombo(combo);
   if (!parsed) return combo;
-  const key = parsed.key.length === 1 ? parsed.key.toUpperCase() : capitalize(parsed.key);
+  const key = parsed.key.length === 1 ? parsed.key.toUpperCase() : (KEY_LABEL[parsed.key] ?? capitalize(parsed.key));
   if (isMac) {
     return [parsed.mod && "⌘", parsed.shift && "⇧", parsed.alt && "⌥", key === "Enter" ? "↩" : key]
       .filter(Boolean)

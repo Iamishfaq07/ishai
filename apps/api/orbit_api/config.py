@@ -1,8 +1,8 @@
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import AliasChoices, Field, SecretStr, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 _DEV_SECRET = "dev-only-insecure-secret-change-me"  # noqa: S105 - rejected outside development
 
@@ -27,7 +27,8 @@ class Settings(BaseSettings):
     # Web sessions also end after this long unused; each request made in the last stretch renews the cookie (up to
     # the hard cap). A stolen, unused web cookie is dead in days, not a week. Desktop tokens (OS keychain) use the cap.
     session_idle_hours: float = Field(72.0, gt=0, validation_alias=AliasChoices("ORBIT_SESSION_IDLE_HOURS"))
-    cors_origins: list[str] = Field(
+    # A JSON array or a comma-separated list ("https://a.example, http://tauri.localhost").
+    cors_origins: Annotated[list[str], NoDecode] = Field(
         ["http://localhost:5173", "http://localhost:1420", "http://tauri.localhost", "tauri://localhost"],
         validation_alias=AliasChoices("ORBIT_CORS_ORIGINS"),
     )
@@ -157,6 +158,18 @@ class Settings(BaseSettings):
     turnstile_secret_key: SecretStr | None = Field(
         None, validation_alias=AliasChoices("ORBIT_TURNSTILE_SECRET_KEY", "TURNSTILE_SECRET_KEY")
     )
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _origins_list(cls, v: object) -> object:
+        if not isinstance(v, str):
+            return v
+        if v.strip().startswith("["):
+            import json
+
+            return json.loads(v)
+        # Origins never end in "/"; a pasted "https://app.example/" would otherwise never match the browser's Origin.
+        return [o.strip().rstrip("/") for o in v.split(",") if o.strip()]
 
     @field_validator("stt_price_per_minute", mode="before")
     @classmethod

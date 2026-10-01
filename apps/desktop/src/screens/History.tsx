@@ -244,6 +244,7 @@ function SessionDetailView({ id, onDeleted, onDrill }: {
         <SessionReview
           review={detail.summary?.review}
           ended={session.status === "ended"}
+          empty={!detail.turns.length && !detail.questions.length}
           onGenerate={async () => {
             await api.reviewSession(session.id);
             setDetail(await api.getSession(session.id));
@@ -251,7 +252,7 @@ function SessionDetailView({ id, onDeleted, onDrill }: {
           onDrill={async () => onDrill(await api.drillSession(session.id))}
         />
         <DeliveryCard delivery={detail.summary?.delivery} />
-        {session.status === "ended" && session.type !== "mock" && (
+        {session.status === "ended" && session.type !== "mock" && (detail.turns.length > 0 || detail.questions.length > 0) && (
           <FollowUpCard
             initial={detail.summary?.follow_up}
             load={(refresh) => api.followUp(session.id, refresh)}

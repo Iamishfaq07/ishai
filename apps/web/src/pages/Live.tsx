@@ -207,7 +207,9 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       setShot(null);
     } catch (err) {
       if (err instanceof ApiError && err.isNotImplemented) {
-        throw new Error("Screenshot analysis isn’t enabled on this server yet. Paste the problem into Chat instead.");
+        throw new Error("Screenshot analysis isn’t enabled on this server yet. Paste the problem into Chat instead.", {
+          cause: err,
+        });
       }
       throw err;
     }

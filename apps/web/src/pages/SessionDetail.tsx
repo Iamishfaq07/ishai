@@ -146,6 +146,7 @@ export function SessionDetailPage() {
         <SessionReview
           review={detail.data.summary?.review}
           ended={session.status === "ended"}
+          empty={!detail.data.turns.length && !detail.data.questions.length}
           onGenerate={async () => {
             await api.reviewSession(session.id);
             detail.reload();
@@ -157,7 +158,7 @@ export function SessionDetailPage() {
           }}
         />
         <DeliveryCard delivery={detail.data.summary?.delivery} />
-        {session.status === "ended" && session.type !== "mock" && (
+        {session.status === "ended" && session.type !== "mock" && (detail.data.turns.length > 0 || detail.data.questions.length > 0) && (
           <FollowUpCard initial={detail.data.summary?.follow_up} load={(refresh) => api.followUp(session.id, refresh)} />
         )}
         </div>

@@ -322,11 +322,11 @@ export function SessionSetupPage() {
               <Field label="Role / goal" htmlFor="role">
                 <Input id="role" value={role} onChange={(e) => setRole(e.target.value)} placeholder="Senior Security Engineer" />
               </Field>
-              <Field label="Answer style" htmlFor="style">
+              <Field label="Answer style" htmlFor="style" hint={ANSWER_STYLES.find((s) => s.value === style)?.hint}>
                 <Select id="style" value={style} onChange={(e) => setStyle(e.target.value as AnswerStyle)}>
                   {ANSWER_STYLES.map((s) => (
                     <option key={s.value} value={s.value}>
-                      {s.label} — {s.hint}
+                      {s.label}
                     </option>
                   ))}
                 </Select>
@@ -340,7 +340,7 @@ export function SessionSetupPage() {
                   ))}
                 </Select>
               </Field>
-              <Field label="Thinking" htmlFor="thinking">
+              <Field label="Thinking" htmlFor="thinking" hint={THINKING_LEVELS.find((t) => t.value === thinking)?.hint}>
                 <Select
                   id="thinking"
                   value={thinking}
@@ -352,7 +352,7 @@ export function SessionSetupPage() {
                 >
                   {THINKING_LEVELS.map((t) => (
                     <option key={t.value} value={t.value}>
-                      {t.label} — {t.hint}
+                      {t.label}
                     </option>
                   ))}
                 </Select>
@@ -389,7 +389,7 @@ export function SessionSetupPage() {
             </div>
             {autoAnswer && (
               <div className="mt-4 max-w-sm">
-                <Field label="Wait before answering" htmlFor="response-timing">
+                <Field label="Wait before answering" htmlFor="response-timing" hint={RESPONSE_TIMINGS.find((t) => t.value === responseTiming)?.hint}>
                   <Select
                     id="response-timing"
                     value={responseTiming}
@@ -401,7 +401,7 @@ export function SessionSetupPage() {
                   >
                     {RESPONSE_TIMINGS.map((t) => (
                       <option key={t.value} value={t.value}>
-                        {t.label} — {t.hint}
+                        {t.label}
                       </option>
                     ))}
                   </Select>

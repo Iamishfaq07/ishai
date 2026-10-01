@@ -7,6 +7,8 @@ export interface SessionReviewProps {
   review: Review | null | undefined;
   /** Reviews cover finished sessions only. */
   ended: boolean;
+  /** Nothing was heard or asked (no transcript, no questions): there is nothing to review. */
+  empty?: boolean;
   /** Generates (or regenerates) the review, then the caller reloads the session. */
   onGenerate: () => Promise<void>;
   /** Re-drill: start a practice round on the weak questions (the caller creates the session and opens it). */
@@ -22,7 +24,7 @@ const SCORE_WORD: Record<number, string> = { 1: "Needs work", 2: "Developing", 3
 
 /** Post-call scorecard: overall score, strengths/improvements/practice, and each question graded on what
  * the candidate actually said. Shared by the web session page and the desktop History screen. */
-export function SessionReview({ review, ended, onGenerate, onDrill }: SessionReviewProps) {
+export function SessionReview({ review, ended, empty = false, onGenerate, onDrill }: SessionReviewProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const generate = async () => {
@@ -36,6 +38,18 @@ export function SessionReview({ review, ended, onGenerate, onDrill }: SessionRev
       setBusy(false);
     }
   };
+
+  if (!review && ended && empty) {
+    return (
+      <Card className="animate-fade-up text-center">
+        <p className="font-semibold">Nothing was captured</p>
+        <p className="mx-auto mt-1 max-w-md text-sm text-zinc-500 dark:text-zinc-400">
+          No speech was heard and no questions were asked in this session, so there's nothing to review. If audio was on,
+          check your microphone and interviewer audio with the tests on the start screen next time.
+        </p>
+      </Card>
+    );
+  }
 
   if (!review) {
     return (
