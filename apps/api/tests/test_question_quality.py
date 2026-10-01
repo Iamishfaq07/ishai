@@ -6,7 +6,7 @@ from orbit_api.live.classifier import build_request, parse
 from orbit_api.live.engine import LiveEngine, SessionProfile
 from orbit_api.live.events import LiveSettings
 from orbit_api.live.question_detector import DetectorContext, detect
-from orbit_api.providers.llm.base import LLMRequest
+from orbit_api.providers.llm.base import LLMRequest, LLMResponse
 from orbit_api.providers.llm.mock import MockLLMProvider
 from orbit_api.providers.stt.base import TranscriptEvent
 from orbit_api.providers.stt.mock import MockSTTProvider
@@ -55,9 +55,17 @@ def test_bare_continuers_only_count_right_after_a_question() -> None:
 
 
 def test_ambiguous_commands_go_to_the_classifier_band() -> None:
-    for text in ("Compare REST and gRPC for internal services.", "Share price has gone up a lot this year."):
+    # A verb that may be a noun, followed by its own verb: a statement as often as a request.
+    for text in ("Design reviews are something you'd run here.", "Share price has gone up a lot this year."):
         d = detect(text, "interviewer", FRESH)
         assert d.needs_llm and not d.should_generate, text
+
+
+@pytest.mark.parametrize("text", ["Explain microservices.", "Define idempotency.",
+                                  "Compare REST and gRPC for internal services.", "Implement an LRU cache."])
+def test_bare_commands_are_answered_without_waiting_for_the_classifier(text: str) -> None:
+    d = detect(text, "interviewer", FRESH)
+    assert d.should_generate, (text, d.confidence, d.reasons)
 
 
 # ---- classifier ----------------------------------------------------------------------------------------------
@@ -102,10 +110,13 @@ async def _say(eng: LiveEngine, text: str) -> None:
 
 async def test_ambiguous_request_is_classified_then_answered() -> None:
     eng, sink, llm = await _engine()
-    await _say(eng, "Compare REST and gRPC for internal services.")
+    await _say(eng, "Design reviews are something you'd run here.")
     await sink.wait_for("answer.completed")
-    assert [r.request_type for r in llm.requests][:2] == ["classify", "answer"]
-    assert sink.of("question.detected")[0]["text"] == "Compare REST and gRPC for internal services."
+    # The answer is written while the classifier decides, and used once it says "answer": one of each.
+    assert sorted(r.request_type for r in llm.requests if r.request_type in ("classify", "answer")) == [
+        "answer", "classify"]
+    assert sink.of("question.detected")[0]["text"] == "Design reviews are something you'd run here."
+    assert len(sink.of("answer.started")) == 1
     await eng.end()
 
 
@@ -115,8 +126,9 @@ async def test_ambiguous_statement_is_classified_and_ignored() -> None:
     eng, sink, llm = await _engine()
     await _say(eng, "Share price has gone up a lot this year.")
     await asyncio.sleep(0.3)
-    assert [r.request_type for r in llm.requests] == ["classify"]
-    assert not sink.of("question.detected")
+    assert "classify" in [r.request_type for r in llm.requests]
+    assert not sink.of("question.detected") and not sink.of("answer.started")  # the early answer was never shown
+    assert eng._spec is None
     await eng.end()
 
 
@@ -231,3 +243,23 @@ def test_preferred_coding_language_reaches_the_prompt() -> None:
 ])
 def test_salary_sql_problems_are_coding_not_negotiation(text: str, expected: str) -> None:
     assert detect(text, "interviewer", FRESH).question_type.value == expected
+
+
+async def test_the_answer_is_written_while_the_classifier_decides() -> None:
+    import asyncio
+
+    class SlowClassifier(MockLLMProvider):
+        async def generate(self, request: LLMRequest) -> LLMResponse:
+            if request.request_type == "classify":
+                await asyncio.sleep(0.4)  # a real classifier call takes a few hundred ms
+            return await super().generate(request)
+
+    llm = SlowClassifier()
+    eng = LiveEngine(SessionProfile("s1", "interview", None, "en", "en", dev_mode=True),
+                     LiveSettings(response_timing="quick"), send=(sink := Sink()), llm=llm, stt=MockSTTProvider(),
+                     index=SessionIndex([]))
+    await eng.start()
+    await _say(eng, "Design reviews are something you'd run here.")
+    await sink.wait_for("answer.completed")
+    assert eng.latency.as_dict()["first_token_after_question"][0] < 100  # ready the moment it was confirmed
+    await eng.end()

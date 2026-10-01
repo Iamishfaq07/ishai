@@ -20,7 +20,7 @@ from orbit_api.live.answer_format import AnswerStreamParser, finalize_grounding,
 from orbit_api.live.carryover import Carryover
 from orbit_api.live.classifier import classify
 from orbit_api.live.context_builder import PromptInputs, SessionMemory, build_prompt, fence
-from orbit_api.live.dedup import DedupDecision, Deduplicator
+from orbit_api.live.dedup import DedupDecision, Deduplicator, similarity
 from orbit_api.live.events import (
     AnswerPin,
     AnswerRequest,
@@ -40,7 +40,14 @@ from orbit_api.live.events import (
 from orbit_api.live.finalizer import GRACE_MS, FinalizedQuestion, QuestionFinalizer
 from orbit_api.live.metrics import AudioClock, LatencySamples
 from orbit_api.live.mock_interviewer import MockConfig, MockInterviewer
-from orbit_api.live.question_detector import DetectorContext, classify_type, detect, normalize, question_parts
+from orbit_api.live.question_detector import (
+    DetectorContext,
+    classify_type,
+    detect,
+    normalize,
+    question_parts,
+    tokens,
+)
 from orbit_api.live.routing import (
     CODE_MAX_TOKENS,
     MAX_TALKING_POINTS,
@@ -101,6 +108,8 @@ class Recorder(Protocol):
 
 
 TRAILER_TOKENS = 80
+# The classifier's rewording counts as the same question (keep the early answer) above this word overlap.
+CLASSIFY_SAME_QUESTION = 0.6
 # Token budget per extra part of a multi-part question, and the cap on the total increase.
 MULTI_PART_EXTRA = 0.2
 MULTI_PART_MAX_FACTOR = 1.6
@@ -240,6 +249,8 @@ class _Speculation:
     qtype: QuestionType
     is_follow_up: bool
     gen: _Generation
+    # "hold": during the "wait before answering" window; "classify": while the classifier decides an ambiguous one.
+    kind: str = "hold"
 
 
 class LiveEngine:
@@ -718,6 +729,9 @@ class LiveEngine:
 
     async def _classify_then_answer(self, turn_id: str, text: str) -> None:
         started = self._clock()
+        # Start answering while the classifier decides: if it says "answer", the words are already there.
+        self._drop_speculation()
+        self._start_speculation(text, kind="classify")
         previous = self.memory.questions[-1] if self.memory.questions else None
         recent = [f"{t.speaker}: {t.text}" for t in self.memory.recent_turns(4)]
         result = await classify(self._llm, text, previous, recent)
@@ -728,8 +742,16 @@ class LiveEngine:
         log.info("classifier: %s answer=%s in %d ms", result.kind if result else "unavailable",
                  bool(result and result.should_answer), latency)
         if result is None or not result.should_answer or self._ended:
+            self._drop_speculation()
             return
-        await self._on_question(turn_id, result.normalized_question or text)
+        question = result.normalized_question or text
+        spec = self._spec
+        if (spec is not None and spec.kind == "classify" and spec.question == text
+                and similarity(tokens(question), tokens(text)) >= CLASSIFY_SAME_QUESTION):
+            question = text  # only lightly reworded: keep the answer that's already being written
+        await self._on_question(turn_id, question)
+        if self._spec is not None and self._spec.kind == "classify":
+            self._drop_speculation()  # not used (a duplicate, or reworded into a different question)
 
     async def _on_question(self, turn_id: str, text: str) -> None:
         if not self.settings.auto_answer:
@@ -818,20 +840,26 @@ class LiveEngine:
         if spec is not None:
             if spec.gen.out.is_open or spec.gen.task.done():
                 self._spec = None  # already committed, or cancelled
+            elif spec.kind != "hold":
+                return  # the classifier's early answer: _classify_then_answer settles it
             elif d is None or d.question_text != spec.question:
                 self._drop_speculation()  # the interviewer kept going (or it fired as something else)
             else:
                 return  # still the same question: keep streaming in the background
-        if d is None or self._dedup.check("speculation", d.question_text, self.now_ms())[0] == DedupDecision.duplicate:
+        if d is not None:
+            self._start_speculation(d.question_text, kind="hold")
+
+    def _start_speculation(self, question: str, *, kind: str) -> None:
+        if self._dedup.check("speculation", question, self.now_ms())[0] == DedupDecision.duplicate:
             return
-        det = detect(d.question_text, "interviewer", self._detector_context())
+        det = detect(question, "interviewer", self._detector_context())
         aid = str(uuid.uuid4())
         out = _AnswerOut(self, speculative=True)
-        task = asyncio.ensure_future(self._run_answer(aid, None, d.question_text, det.question_type, det.is_follow_up,
+        task = asyncio.ensure_future(self._run_answer(aid, None, question, det.question_type, det.is_follow_up,
                                                       "auto", None, [], out))
         gen = _Generation(aid, None, task, out)
         self._gens[aid] = gen
-        self._spec = _Speculation(d.question_text, det.question_type, det.is_follow_up, gen)
+        self._spec = _Speculation(question, det.question_type, det.is_follow_up, gen, kind)
 
     def _drop_speculation(self) -> None:
         spec, self._spec = self._spec, None
