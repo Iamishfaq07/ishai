@@ -170,3 +170,48 @@ async def test_the_interviewer_sees_every_topic_covered_and_what_the_difficulty_
     assert '<reference_data source="topics_already_covered">' in user
     assert all(q[:160] in user for q in asked)
     await eng.end()
+
+
+class SlowQuestions(MockLLMProvider):
+    """Each interviewer question takes a noticeable moment to write, like a real model call."""
+
+    async def generate(self, request: LLMRequest) -> Any:
+        if request.request_type == "mock_question":
+            await asyncio.sleep(0.3)
+        return await super().generate(request)
+
+
+def _questions_written(llm: MockLLMProvider) -> int:
+    return sum(r.request_type == "mock_question" for r in llm.requests)
+
+
+async def test_the_next_question_is_written_during_the_pause_and_asked_without_waiting() -> None:
+    llm = SlowQuestions()
+    eng, sink, _spy, now = await _engine(llm)
+    await sink.wait_for("mock.question")
+    await eng.on_transcript("mic", TranscriptEvent("final", "I built the payments service and led its migration",
+                                                   0, 1000, endpoint=True))
+    now["t"] += 1.0  # a pause: long enough to start on the next question, too short to end the answer
+    await asyncio.sleep(0.45)  # …which gets written in the background meanwhile
+    assert sink.of("mock.question")[1:] == [] and _questions_written(llm) == 2
+    now["t"] += ANSWER_SILENCE_MS / 1000  # the answer is over
+    started = time.monotonic()
+    await sink.wait_for("mock.question", 2)
+    assert time.monotonic() - started < 0.25  # no model call left to wait for
+    assert _questions_written(llm) == 2  # the early question was used, not written twice
+    await eng.handle_client({"type": "session.end", "data": {}})
+
+
+async def test_an_early_question_is_dropped_when_the_candidate_keeps_talking() -> None:
+    llm = SlowQuestions()
+    eng, sink, _spy, now = await _engine(llm)
+    await sink.wait_for("mock.question")
+    await eng.on_transcript("mic", TranscriptEvent("final", "I built the payments service", 0, 1000, endpoint=True))
+    now["t"] += 1.0
+    await asyncio.sleep(0.1)  # the early question has started
+    await eng.on_transcript("mic", TranscriptEvent("final", "and then I scaled it to ten regions", 0, 1000,
+                                                   endpoint=True))
+    assert eng._mock is not None and eng._mock._prefetch is None  # thrown away: the answer changed
+    now["t"] += ANSWER_SILENCE_MS / 1000 + 0.2
+    await sink.wait_for("mock.question", 2, timeout=5)
+    await eng.handle_client({"type": "session.end", "data": {}})

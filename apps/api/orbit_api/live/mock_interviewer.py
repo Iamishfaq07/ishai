@@ -40,6 +40,9 @@ LONG_ANSWER_MS = 2500  # a long answer followed by a pause is usually done
 LONG_ANSWER_WORDS = 120
 MAX_FOLLOW_UPS_PER_TOPIC = 2
 QUESTION_TIMEOUT_S = 10
+# A pause this long in the candidate's answer starts writing the next question in the background, so the interviewer
+# speaks the moment the answer is judged complete instead of a model call later. Discarded if they keep talking.
+PREFETCH_SILENCE_MS = 900
 
 
 DrillKind = Literal["retry", "concise", "prep"]
@@ -271,6 +274,8 @@ class MockInterviewer:
         self.finished = False
         self._lock = asyncio.Lock()
         self._resumed: MockProgress | None = None
+        # The next question, being written during the candidate's pause: (the answer it was written for, the call).
+        self._prefetch: tuple[tuple[int, str], asyncio.Task[tuple[str, bool]]] | None = None
 
     # ---- a dropped connection (live/carryover.py) -------------------------------------------------------------
 
@@ -307,6 +312,7 @@ class MockInterviewer:
         if not self._awaiting or not self.asked or not text.strip():
             return
         self._last_speech_ms = now_ms
+        self._drop_prefetch()  # still talking: the answer isn't what the early question was written for
         if final:
             self.asked[-1].answer.append(text.strip())
 
@@ -314,8 +320,41 @@ class MockInterviewer:
         if not self._awaiting or self._busy or self._last_speech_ms is None:
             return
         answer = " ".join(self.asked[-1].answer)
-        if len(answer.split()) >= MIN_ANSWER_WORDS and now_ms - self._last_speech_ms >= answer_silence_ms(answer):
+        if len(answer.split()) < MIN_ANSWER_WORDS:
+            return
+        silence = now_ms - self._last_speech_ms
+        if silence >= answer_silence_ms(answer):
             await self._ask_next(now_ms)
+        elif silence >= PREFETCH_SILENCE_MS and self._prefetch is None and self._can_prefetch(now_ms):
+            self._prefetch = (self._answer_key(), asyncio.ensure_future(self._generate()))
+
+    def _answer_key(self) -> tuple[int, str]:
+        return len(self.asked), " ".join(self.asked[-1].answer) if self.asked else ""
+
+    def _can_prefetch(self, now_ms: int) -> bool:
+        """Only the free-flowing interview (drills and negotiations write their turns differently), and only when
+        another question will actually be asked."""
+        return (not self.config.drill and not self.config.is_negotiation and not self._time_up(now_ms)
+                and not (self._topics() >= self.config.planned_questions and self._follow_ups_in_topic() >= 1))
+
+    def _drop_prefetch(self) -> None:
+        prefetch, self._prefetch = self._prefetch, None
+        if prefetch is not None:
+            prefetch[1].cancel()
+
+    async def _next_question(self) -> tuple[str, bool]:
+        """The question written during the pause, if it was written for this exact answer; else write it now."""
+        prefetch, self._prefetch = self._prefetch, None
+        if prefetch is not None:
+            key, task = prefetch
+            if key == self._answer_key() and not task.cancelled():
+                try:
+                    return await task
+                except asyncio.CancelledError:
+                    pass
+            else:
+                task.cancel()
+        return await self._generate()
 
     async def next(self, now_ms: int) -> None:
         """The candidate says they're done ("I'm done" / skip)."""
@@ -347,7 +386,7 @@ class MockInterviewer:
             self._busy = True
             self._awaiting = False
             try:
-                text, follow_up = await self._generate()
+                text, follow_up = await self._next_question()
             finally:
                 self._busy = False
             if self._topics() >= self.config.planned_questions and not follow_up:
@@ -434,6 +473,7 @@ class MockInterviewer:
         return n
 
     async def _finish(self) -> None:
+        self._drop_prefetch()
         self.finished = True
         self._awaiting = False
         await self._send("mock.completed", self.round_summary())
