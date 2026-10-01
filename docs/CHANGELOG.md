@@ -1,5 +1,18 @@
 # Implementation log
 
+## Transcription knows this interview's vocabulary (2026-10-01)
+
+- **Real custom vocabulary for the speech-to-text.** Deepgram's keyterm prompting takes single terms, but Orbit sent
+  whole resume skill lines ("Languages: Python, Go, TypeScript"), and lines of 40+ characters were dropped
+  entirely. Tech terms from the job post and the company name were never sent.
+- Now (`live/keyterms.py`) it sends up to 50 individual terms, most useful first:
+  - the company;
+  - each skill from the resume's skills lines;
+  - tech-shaped names from the job post (gRPC, ClickHouse, Node.js, C++, AWS);
+  - names written mid-sentence (Rust, Protobuf, Stripe);
+  - then the same from the rest of the documents.
+  - Generic job words ("Engineer", "Senior") and company suffixes are left out.
+
 ## Short commands get answered; ambiguous ones don't wait for the classifier (2026-10-01)
 
 - **"Explain microservices." / "Define idempotency." are answered.**
