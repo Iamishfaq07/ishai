@@ -15,17 +15,26 @@ _STOP = frozenset(
     "our me us do did does can could would should will what how why when where which who this that these "
     "those tell about as so if then than into over under up down out time any have has had".split()
 )
-_SUFFIXES = ("ations", "ation", "ments", "ment", "ings", "ing", "ies", "ied", "ers", "er", "ed", "es", "ly", "s")
+_SUFFIXES = ("ations", "ation", "ating", "ated", "ments", "ment", "ings", "ing", "ies", "ied", "ers", "er", "ed", "es",
+             "ly", "s")
 
 
 def stem(tok: str) -> str:
     if len(tok) <= 4 or not tok.isalpha():
         return tok
+    base = tok
     for suf in _SUFFIXES:
-        if tok.endswith(suf) and len(tok) - len(suf) >= 3:
-            base = tok[: -len(suf)]
-            return base + "y" if suf in ("ies", "ied") else base
-    return tok
+        if not tok.endswith(suf) or len(tok) - len(suf) < 3:
+            continue
+        if suf == "es" and not tok[:-2].endswith(("s", "x", "z", "ch", "sh")):
+            continue  # "services" is service+s (→ the "s" rule), "processes" is process+es
+        if suf == "s" and tok.endswith(("ss", "us", "is")):
+            break  # "success", "status", "analysis": not plurals
+        base = tok[: -len(suf)]
+        base = base + "y" if suf in ("ies", "ied") else base
+        break
+    # A final silent "e" goes too, so "scale" / "scaled" / "scaling" and "service" / "services" meet.
+    return base[:-1] if base.endswith("e") and len(base) > 4 else base
 
 
 def tokenize(text: str) -> list[str]:

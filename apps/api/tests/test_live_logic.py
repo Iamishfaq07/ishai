@@ -721,3 +721,10 @@ def test_an_answer_cut_off_by_its_token_cap_ends_at_its_last_full_sentence() -> 
     assert trim_cut_off(whole).direct_answer == whole.direct_answer  # nothing to trim
     no_sentence = LiveAnswer(direct_answer="one long unfinished thought without any")
     assert trim_cut_off(no_sentence).direct_answer == no_sentence.direct_answer  # better than nothing
+
+
+@pytest.mark.parametrize("q", ["Tell me about a time you had to scale a service under pressure.",
+                               "Describe a situation where you debugged a production outage.",
+                               "Walk me through the project you're most proud of."])
+def test_asking_for_a_story_is_behavioral_whatever_it_is_about(q: str) -> None:
+    assert detect(q, "interviewer").question_type is QuestionType.behavioral

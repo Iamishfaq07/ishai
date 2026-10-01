@@ -1,5 +1,18 @@
 # Implementation log
 
+## Story questions get story answers, grounded in the resume (2026-10-01)
+
+- **"Tell me about a time…" is always behavioral.** "Tell me about a time you had to scale a service under pressure"
+  was typed system design (the "scale" keyword won). That gave a story question the design format and a code-sized
+  budget, without the story rules. Asking for a story (a time / situation / example, "have you ever") now decides
+  the type first.
+- **Retrieval matches word forms properly.** The stemmer split "service"/"services" ("service" vs "servic"),
+  truncated "success" to "succes", and kept "migrating"/"migration" apart, despite its own docstring. It now
+  handles "-es" only after s/x/z/ch/sh, leaves "-ss"/"-us"/"-is" alone, drops a final silent "e", and unifies
+  "-ating"/"-ated"/"-ation".
+  - The scaling question now finds "Built payment services handling 10k TPS"; before, it found nothing.
+  - The retrieval benchmark is unchanged (no regressions).
+
 ## Mock interviewer replies without a model call's wait (2026-10-01)
 
 - **The next question is written during the candidate's pause.** After 0.9 s of silence the next question starts

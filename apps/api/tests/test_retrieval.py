@@ -144,3 +144,25 @@ def test_stale_vectors_are_reembedded_when_a_session_loads(client: TestClient) -
     first, after, n = client.portal.call(go)
     assert first == ["hash-v2"] and after == ["hash-v2"] and n == 1
     assert asyncio.iscoroutinefunction(_load_index)
+
+
+def test_the_stemmer_brings_word_forms_together() -> None:
+    from orbit_api.retrieval.lexical import stem
+
+    for group in (("service", "services"), ("scale", "scaled", "scaling"), ("migrating", "migration", "migrated"),
+                  ("measure", "measured", "measurement"), ("process", "processes"), ("company", "companies")):
+        assert len({stem(w) for w in group}) == 1, group
+    assert stem("success") == "success" and stem("status") == "status" and stem("analysis") == "analysis"
+
+
+def test_a_story_question_finds_the_experience_it_is_about() -> None:
+    from orbit_api.documents.parsing import chunk_document
+    from orbit_api.live.events import QuestionType
+    from orbit_api.retrieval.index import IndexedChunk, SessionIndex
+
+    resume = "EXPERIENCE\nAcme Corp — Senior Engineer (2021–Present)\n- Built payment services handling 10k TPS\n"
+    chunks = [IndexedChunk(f"r{i}", "resume", c.category, c.label, c.text, True, [])
+              for i, c in enumerate(chunk_document(resume, "resume", "cv"))]
+    hits = SessionIndex(chunks).search("Tell me about a time you had to scale a service under pressure.",
+                                       QuestionType.behavioral)
+    assert hits and "payment services" in hits[0].chunk.text
