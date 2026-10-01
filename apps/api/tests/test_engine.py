@@ -326,3 +326,92 @@ async def test_each_answer_is_noted_and_a_rewrite_replaces_its_note() -> None:
     notes = list(eng.memory.answers)
     assert len(notes) == 1 and notes[0].question == "Tell me about a time you handled a conflict."
     await eng.end()
+
+
+def _answer_requests(llm: MockLLMProvider) -> list[LLMRequest]:
+    return [r for r in llm.requests if r.request_type == "answer"]
+
+
+async def test_the_answer_starts_during_the_wait_and_shows_the_moment_the_question_fires() -> None:
+    llm = MockLLMProvider()  # records its own requests
+    eng, sink = await _engine(llm, response_timing="balanced")
+    await _ask(eng, "What is dependency injection?")
+    await asyncio.sleep(0.3)
+    assert len(_answer_requests(llm)) == 1  # already being written…
+    assert sink.of("answer.started") == [] and sink.of("question.detected") == []  # …but not shown yet
+    await sink.wait_for("answer.completed")
+    q, started = sink.of("question.detected")[0], sink.of("answer.started")[0]
+    assert started["question_id"] == q["question_id"] and sink.of("answer.chunk")
+    types = [e["type"] for e in sink.events]
+    assert types.index("question.detected") < types.index("answer.started") < types.index("answer.completed")
+    assert len(_answer_requests(llm)) == 1  # the early answer was used, not asked for again
+    assert eng.latency.as_dict()["first_token_after_question"][0] < 100  # words were ready when it fired
+    await eng.handle_client({"type": "session.end", "data": {}})
+
+
+async def test_an_early_answer_is_dropped_unseen_when_the_interviewer_keeps_talking() -> None:
+    llm = MockLLMProvider()  # records its own requests
+    eng, sink = await _engine(llm, response_timing="balanced")
+    await _ask(eng, "Tell me about a difficult bug you fixed.")
+    await asyncio.sleep(0.3)
+    await _ask(eng, "Specifically, how did you track it down?")
+    await sink.wait_for("answer.completed")
+    assert len(sink.of("answer.started")) == 1 and sink.of("answer.cancelled") == []
+    assert sink.of("answer.completed")[0]["answer"]["question"] == (
+        "Tell me about a difficult bug you fixed. Specifically, how did you track it down?")
+    assert len(_answer_requests(llm)) == 2  # the first, partial one was thrown away before anyone saw it
+    await eng.handle_client({"type": "session.end", "data": {}})
+
+
+async def test_pausing_drops_an_early_answer() -> None:
+    llm = MockLLMProvider()  # records its own requests
+    eng, sink = await _engine(llm, response_timing="balanced")
+    await _ask(eng, "What is dependency injection?")
+    await asyncio.sleep(0.2)
+    await eng.handle_client({"type": "session.pause", "data": {}})
+    await asyncio.sleep(1.6)
+    assert sink.of("answer.started") == [] and eng._spec is None
+    await eng.handle_client({"type": "session.end", "data": {}})
+
+
+async def test_an_early_answer_still_streaming_when_its_question_fires_keeps_streaming_on_screen() -> None:
+    llm = MockLLMProvider(chunk_delay_s=0.06)  # a slow model: still writing when the wait ends
+    eng, sink = await _engine(llm, response_timing="balanced")
+    await _ask(eng, "Walk me through how you would design a URL shortener for a large company.")
+    await sink.wait_for("answer.started", timeout=4)
+    chunks_at_start = len(sink.of("answer.chunk"))
+    await sink.wait_for("answer.completed", timeout=10)
+    assert len(sink.of("answer.chunk")) > chunks_at_start  # the rest streamed live after it was shown
+    assert len(_answer_requests(llm)) == 1
+    states = [e["data"]["state"] for e in sink.events if e["type"] == "state.changed"]
+    assert states.index("question_detected") < states.index("streaming") < states.index("answer_complete")
+    await eng.handle_client({"type": "session.end", "data": {}})
+
+
+async def test_a_multi_part_question_gets_a_bigger_budget_and_its_parts_listed() -> None:
+    llm = MockLLMProvider()
+    eng, sink = await _engine(llm)
+    await _ask(eng, "What is dependency injection?")
+    await sink.wait_for("answer.completed")
+    await eng.on_transcript("mic", TranscriptEvent("final", "So it means passing things in", 0, 100, endpoint=True))
+    await _ask(eng, "Tell me about a time you disagreed with your manager. How did you resolve it, and what was "
+                    "the outcome?")
+    await sink.wait_for("answer.completed", 2)
+    single, multi = _answer_requests(llm)
+    assert multi.max_tokens > single.max_tokens
+    assert "This question has 3 parts" in multi.messages[1].content
+    assert "This question has" not in single.messages[1].content
+    await eng.handle_client({"type": "session.end", "data": {}})
+
+
+async def test_stop_ends_the_answer_but_keeps_what_was_written() -> None:
+    eng, sink = await _engine(MockLLMProvider(chunk_delay_s=0.05))
+    await _ask(eng, "Walk me through how you would design a URL shortener for a large company.")
+    await sink.wait_for("answer.chunk", 2)
+    await eng.handle_client({"type": "answer.stop", "data": {}})
+    await sink.wait_for("answer.cancelled")
+    assert sink.of("answer.cancelled")[0]["reason"] == "stopped"
+    assert sink.of("answer.completed") == [] and eng.state.value == "listening"
+    await eng.handle_client({"type": "answer.stop", "data": {}})  # nothing streaming: a no-op, not an error
+    assert sink.of("error") == []
+    await eng.handle_client({"type": "session.end", "data": {}})

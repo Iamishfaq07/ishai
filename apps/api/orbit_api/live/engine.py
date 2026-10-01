@@ -40,7 +40,7 @@ from orbit_api.live.events import (
 from orbit_api.live.finalizer import GRACE_MS, FinalizedQuestion, QuestionFinalizer
 from orbit_api.live.metrics import AudioClock, LatencySamples
 from orbit_api.live.mock_interviewer import MockConfig, MockInterviewer
-from orbit_api.live.question_detector import DetectorContext, classify_type, detect, normalize
+from orbit_api.live.question_detector import DetectorContext, classify_type, detect, normalize, question_parts
 from orbit_api.live.routing import (
     CODE_MAX_TOKENS,
     MAX_TALKING_POINTS,
@@ -101,6 +101,9 @@ class Recorder(Protocol):
 
 
 TRAILER_TOKENS = 80
+# Token budget per extra part of a multi-part question, and the cap on the total increase.
+MULTI_PART_EXTRA = 0.2
+MULTI_PART_MAX_FACTOR = 1.6
 
 SCREENSHOT_LABEL = "📷 Screenshot"
 SCREENSHOT_PROMPT = (
@@ -158,13 +161,85 @@ class _ChannelTurn:
         return f"{self.committed} {self.partial}".strip()
 
 
+class _AnswerOut:
+    """Where one answer's events and state changes go.
+
+    A speculative answer (started while a finished-looking question is held for the "wait before answering" window)
+    buffers them: if the question fires unchanged it's committed and everything is replayed at once, the words that
+    already streamed included; if the interviewer keeps talking it's cancelled and nobody ever sees it."""
+
+    def __init__(self, engine: "LiveEngine", question_id: str | None = None, *, speculative: bool = False) -> None:
+        self._engine = engine
+        self._buffer: list[tuple[str, Any]] = []  # ("", state) entries are state changes
+        self.opened = asyncio.Event()
+        self.opened_at = 0.0
+        self.question_id = question_id  # set on commit for an early answer
+        self._first_token_at: float | None = None
+        self.on_visible: Callable[[float], Awaitable[None]] | None = None
+        if not speculative:
+            self.opened.set()
+            self.opened_at = engine._clock()
+
+    @property
+    def is_open(self) -> bool:
+        return self.opened.is_set()
+
+    async def send(self, type_: str, data: dict[str, Any]) -> None:
+        if self.is_open:
+            await self._engine.send(type_, data)
+        elif type_ == "answer.chunk" and self._buffer and self._buffer[-1][0] == "answer.chunk":
+            self._buffer[-1] = (type_, data)  # chunks are cumulative snapshots: only the latest matters
+        else:
+            self._buffer.append((type_, data))
+
+    async def state(self, state: LiveState) -> None:
+        if self.is_open:
+            await self._engine._set_state(state)
+        else:
+            self._buffer.append(("", state))
+
+    async def first_token(self) -> None:
+        self._first_token_at = self._engine._clock()
+        await self._visible()
+
+    async def commit(self, question_id: str | None) -> None:
+        self.question_id = question_id
+        self.opened_at = self._engine._clock()
+        while self._buffer:  # anything sent while replaying lands at the end and is replayed in order too
+            type_, data = self._buffer.pop(0)
+            if not type_:
+                await self._engine._set_state(data)
+            else:
+                if type_ == "answer.started":
+                    data = {**data, "question_id": question_id}
+                await self._engine.send(type_, data)
+        self.opened.set()
+        await self._visible()
+
+    async def _visible(self) -> None:
+        """The first words are on screen: report how long after the question that was."""
+        if self._first_token_at is None or not self.is_open or self.on_visible is None:
+            return
+        callback, self.on_visible = self.on_visible, None
+        await callback(max(self._first_token_at, self.opened_at))
+
+
 @dataclass
 class _Generation:
     answer_id: str
     question_id: str | None
     task: asyncio.Task[None]
+    out: _AnswerOut
     pinned: bool = False
     cancel_reason: str = "superseded"
+
+
+@dataclass
+class _Speculation:
+    question: str
+    qtype: QuestionType
+    is_follow_up: bool
+    gen: _Generation
 
 
 class LiveEngine:
@@ -206,6 +281,7 @@ class LiveEngine:
         self._gens: dict[str, _Generation] = {}
         self._active: str | None = None  # answer id currently shown/streaming
         self._answer_lock = asyncio.Lock()  # serializes _start_answer (no double generations)
+        self._spec: _Speculation | None = None  # an answer started early, during the "wait before answering" hold
         self._tasks: set[asyncio.Task[Any]] = set()
         self._paused = False
         self._ended = False
@@ -279,6 +355,7 @@ class LiveEngine:
             self._stt_state[channel] = session.state
             self._spawn(self._pump_stt(channel, session))
         self._spawn(self._ticker())
+        self._spawn(self._llm.warm())  # the first answer shouldn't pay for the TLS handshake
         if self._mock is not None:
             self._spawn(self._mock.start(self.now_ms()))
         await self.send("session.started", {"state": LiveState.listening.value,
@@ -298,6 +375,7 @@ class LiveEngine:
         if self._ended:
             return
         self._ended = True
+        self._drop_speculation()
         for gen in list(self._gens.values()):
             if not gen.task.done():
                 gen.cancel_reason = "session_ended"
@@ -358,6 +436,7 @@ class LiveEngine:
                     await self._apply_settings(LiveSettingsPatch.model_validate(data["settings"]))
             case "session.pause":
                 self._paused = True
+                self._drop_speculation()
                 await self._set_state(LiveState.paused)
                 await self.send("session.paused", {"state": "paused", "settings": self.settings.model_dump()})
             case "session.resume":
@@ -379,6 +458,15 @@ class LiveEngine:
                 await self._cancel_active("cleared", include_pinned=True)
                 self._active = None
                 await self._set_state(LiveState.listening)
+            case "answer.stop":
+                # Stop writing the answer on screen but keep what's there (Clear removes it).
+                gen = self._gens.get(self._active) if self._active else None
+                if gen is not None and gen.out.is_open and not gen.task.done():
+                    gen.cancel_reason = "stopped"
+                    gen.task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError, Exception):
+                        await gen.task
+                    await self._set_state(LiveState.listening)
             case "chat.message":
                 await self._chat(ChatMessage.model_validate(data).text)
             case "speaker.correct":
@@ -397,6 +485,7 @@ class LiveEngine:
                 await self.send("error", {"code": "unknown_event", "message": f"unknown event type {type_!r}"})
 
     async def _apply_settings(self, patch: LiveSettingsPatch) -> None:
+        self._drop_speculation()  # it was written for the old length/style
         self.settings = self.settings.model_copy(update=patch.model_dump(exclude_none=True))
         self._finalizer.grace_ms = GRACE_MS[self.settings.response_timing]
 
@@ -465,6 +554,8 @@ class LiveEngine:
         if ev.kind == "speech_started":
             if speaker == "interviewer":
                 self._finalizer.on_speech_activity(self.now_ms())
+                self._spawn(self._llm.warm())
+                await self._sync_speculation()
             return
 
         turn = self._turns[channel]
@@ -476,12 +567,15 @@ class LiveEngine:
                     if fired:
                         await self._on_fired(fired)
                 await self._commit_turn(channel, turn)
+                await self._sync_speculation()
             return
 
         if turn is None:
             if not ev.text:
                 return
             turn = self._turns[channel] = _ChannelTurn(turn_id=str(uuid.uuid4()), start_ms=ev.start_ms)
+            if speaker == "interviewer":
+                self._spawn(self._llm.warm())
         if ev.kind == "final":
             turn.committed = f"{turn.committed} {ev.text}".strip()
             turn.partial = ""
@@ -509,6 +603,7 @@ class LiveEngine:
                 await self._on_fired(fired)
         if ev.kind == "final" and ev.endpoint:
             await self._commit_turn(channel, turn)
+        await self._sync_speculation()
 
     def _track_stt_latency(self, channel: Channel, turn: _ChannelTurn, ev: TranscriptEvent) -> None:
         clock = self._audio_clock[channel]
@@ -546,6 +641,7 @@ class LiveEngine:
             fired = self._finalizer.tick(self.now_ms())
             if fired:
                 await self._on_fired(fired)
+            await self._sync_speculation()
 
     def _detector_context(self) -> DetectorContext:
         since = None
@@ -659,9 +755,9 @@ class LiveEngine:
         else:
             await self._start_answer(None, text, classify_type(normalize(text)), False, "chat")
 
-    async def _cancel_active(self, reason: str, *, include_pinned: bool = False) -> None:
+    async def _cancel_active(self, reason: str, *, include_pinned: bool = False, keep: str | None = None) -> None:
         for gen in list(self._gens.values()):
-            if gen.task.done() or (gen.pinned and not include_pinned):
+            if gen.task.done() or (gen.pinned and not include_pinned) or gen.answer_id == keep:
                 continue
             gen.cancel_reason = reason
             gen.task.cancel()
@@ -679,6 +775,37 @@ class LiveEngine:
         await self._start_answer(qid, SCREENSHOT_PROMPT, qtype, False, "screenshot", images=[image])
         return qid
 
+    async def _sync_speculation(self) -> None:
+        """Start the answer early for a question held in the "wait before answering" window, and drop it the moment
+        the interviewer turns out not to be done. No awaits: it can't interleave with itself."""
+        d = None
+        if self.settings.auto_answer and self._mock is None and not self._paused and not self._ended:
+            d = self._finalizer.speculation(self.now_ms())
+        spec = self._spec
+        if spec is not None:
+            if spec.gen.out.is_open or spec.gen.task.done():
+                self._spec = None  # already committed, or cancelled
+            elif d is None or d.question_text != spec.question:
+                self._drop_speculation()  # the interviewer kept going (or it fired as something else)
+            else:
+                return  # still the same question: keep streaming in the background
+        if d is None or self._dedup.check("speculation", d.question_text, self.now_ms())[0] == DedupDecision.duplicate:
+            return
+        det = detect(d.question_text, "interviewer", self._detector_context())
+        aid = str(uuid.uuid4())
+        out = _AnswerOut(self, speculative=True)
+        task = asyncio.ensure_future(self._run_answer(aid, None, d.question_text, det.question_type, det.is_follow_up,
+                                                      "auto", None, [], out))
+        gen = _Generation(aid, None, task, out)
+        self._gens[aid] = gen
+        self._spec = _Speculation(d.question_text, det.question_type, det.is_follow_up, gen)
+
+    def _drop_speculation(self) -> None:
+        spec, self._spec = self._spec, None
+        if spec is not None and not spec.gen.out.is_open and not spec.gen.task.done():
+            spec.gen.cancel_reason = "speculation"
+            spec.gen.task.cancel()
+
     async def _start_answer(
         self, qid: str | None, question: str, qtype: QuestionType, is_follow_up: bool, source: str,
         instruction: str | None = None, images: list[LLMImage] | None = None,
@@ -686,12 +813,24 @@ class LiveEngine:
         # Serialize: _cancel_active() awaits, so without this lock a manual answer racing auto-answer could
         # both pass cancellation before either registers its generation → two billed LLM streams at once.
         async with self._answer_lock:
-            await self._cancel_active("superseded")
-            aid = str(uuid.uuid4())
-            task = asyncio.ensure_future(
-                self._run_answer(aid, qid, question, qtype, is_follow_up, source, instruction, images or []))
-            self._gens[aid] = _Generation(aid, qid, task)
-            self._active = aid
+            spec, self._spec = self._spec, None
+            if not (spec is not None and source == "auto" and instruction is None and not images
+                    and spec.question == question and spec.qtype == qtype and spec.is_follow_up == is_follow_up
+                    and not spec.gen.task.done()):
+                spec = None  # not this question: cancelled with the rest just below
+            await self._cancel_active("superseded", keep=spec.gen.answer_id if spec else None)
+            if spec is not None:
+                # Started early, while the question was held: show it now, with whatever already streamed.
+                spec.gen.question_id = qid
+                self._active = spec.gen.answer_id
+                await spec.gen.out.commit(qid)
+            else:
+                aid = str(uuid.uuid4())
+                out = _AnswerOut(self, qid)
+                task = asyncio.ensure_future(
+                    self._run_answer(aid, qid, question, qtype, is_follow_up, source, instruction, images or [], out))
+                self._gens[aid] = _Generation(aid, qid, task, out)
+                self._active = aid
         # keep only recent generation handles
         if len(self._gens) > 20:
             for old in list(self._gens)[:-20]:
@@ -700,22 +839,27 @@ class LiveEngine:
 
     async def _run_answer(
         self, aid: str, qid: str | None, question: str, qtype: QuestionType, is_follow_up: bool, source: str,
-        instruction: str | None, images: list[LLMImage],
+        instruction: str | None, images: list[LLMImage], out: _AnswerOut,
     ) -> None:
-        started = self._clock()
         is_code = qtype == QuestionType.coding or self.profile.session_type == "coding"
         reasoning = choose_reasoning_level(qtype, estimate_complexity(question), self.profile.session_type)
         mode = answer_mode(qtype, question, source, is_code, self.profile.features)
         is_code = is_code or mode == "debug"  # a bug report is a coding answer (code format, code-sized budget)
+        # A screenshot's "question" is our own instruction text, not the interviewer's asks.
+        asks = question_parts(question) if source != "screenshot" else [question]
         inputs = PromptInputs(
             question=question, qtype=qtype, is_follow_up=is_follow_up, session_type=self.profile.session_type,
             role=self.profile.role, length=self.settings.length, style=self.settings.style,
             answer_language=self.profile.answer_language or "en",  # English only: no per-session override
             instruction=instruction, coding_language=self.settings.coding_language, mode=mode,
             candidate_instructions=self.profile.instructions, learned_preferences=self.profile.learned,
-            company=self.profile.company,
+            company=self.profile.company, parts=asks,
         )
         built = build_prompt(self._index, inputs, self.memory)
+        budget = CODE_MAX_TOKENS if is_code or mode == "design" else MAX_TOKENS[self.settings.length]
+        if not is_code and mode != "design":
+            # Room for every part of a multi-part question: a capped answer stops mid-way and skips the last parts.
+            budget = int(budget * min(MULTI_PART_MAX_FACTOR, 1 + MULTI_PART_EXTRA * (len(asks) - 1)))
         # Live answers always run on the fast model. The reasoning model's hidden chain-of-thought put its
         # first visible token ~3.7 s out (measured, vs ~0.7 s) — too late mid-conversation. `reasoning` is
         # still reported so the UI can flag in-depth questions.
@@ -723,16 +867,15 @@ class LiveEngine:
             messages=built.messages, reasoning="light", thinking=self.settings.thinking, images=images,
             # + room for the FOLLOWUP/POINTS trailer, which comes after the answer: a design answer that used its whole
             # budget otherwise lost its key points.
-            max_tokens=(CODE_MAX_TOKENS if is_code or mode == "design" else MAX_TOKENS[self.settings.length])
-            + TRAILER_TOKENS,
+            max_tokens=budget + TRAILER_TOKENS,
             request_type={"chat": "chat", "screenshot": "vision"}.get(source, "answer"),
             allow_fallback=self.profile.allow_fallback,
         )
         model = self._llm.model_for(request.reasoning)
         provider = self._llm.name  # replaced by whoever actually serves the stream (the backup, on failover)
-        await self.send("answer.started", {"answer_id": aid, "question_id": qid, "length": self.settings.length,
-                                           "reasoning": reasoning, "source": source})
-        await self._set_state(LiveState.generating)
+        await out.send("answer.started", {"answer_id": aid, "question_id": out.question_id,
+                                          "length": self.settings.length, "reasoning": reasoning, "source": source})
+        await out.state(LiveState.generating)
 
         facts = {ref: FactSource(ref=ref, chunk_id=h.chunk.id, doc_kind=h.chunk.doc_kind,
                                  document=h.chunk.doc_title, label=h.chunk.label,
@@ -741,6 +884,19 @@ class LiveEngine:
         parser = AnswerStreamParser(question, qtype, built.context_used, facts=facts,
                                     max_points=MAX_TALKING_POINTS[self.settings.length])
         first_token_ms: int | None = None
+        streamed = False
+
+        async def visible(at: float) -> None:
+            # Measured from when the answer could be shown (the question firing), so an answer started early that
+            # is already streaming when its question fires counts as ~0 ms, which is what the user sees.
+            nonlocal first_token_ms
+            first_token_ms = int((at - out.opened_at) * 1000)
+            if source == "auto":
+                self.latency.add("first_token_after_question", first_token_ms)
+                if out.question_id and (spoken := self._question_speech_end.get(out.question_id)) is not None:
+                    self.latency.add("first_token_after_speech", self.now_ms() - spoken)
+
+        out.on_visible = visible
         usage = Usage()
         last_emit = 0.0
         attempts = 0
@@ -752,62 +908,64 @@ class LiveEngine:
                             provider, model = chunk.provider, chunk.model or model
                             if provider != self._llm.name:
                                 # Served by the backup: subtle for the user (no provider names, no error codes).
-                                await self.send("provider.status", {"provider": "llm", "name": provider,
+                                await out.send("provider.status", {"provider": "llm", "name": provider,
                                                                     "state": "ok", "detail": "AI connection recovered"})
                         if chunk.usage:
                             usage = chunk.usage
                         if not chunk.delta:
                             continue
-                        if first_token_ms is None:
-                            first_token_ms = int((self._clock() - started) * 1000)
-                            await self._set_state(LiveState.streaming)
-                            if source == "auto":
-                                self.latency.add("first_token_after_question", first_token_ms)
-                                if qid and (spoken := self._question_speech_end.get(qid)) is not None:
-                                    after_speech = self.now_ms() - spoken
-                                    self.latency.add("first_token_after_speech", after_speech)
+                        if not streamed:
+                            streamed = True
+                            await out.state(LiveState.streaming)
+                            await out.first_token()
                         partial = parser.feed(chunk.delta)
                         now = self._clock()
                         if now - last_emit >= CHUNK_EMIT_INTERVAL_S or "\n" in chunk.delta:
                             last_emit = now
-                            await self.send("answer.chunk", {"answer_id": aid, "partial": partial.model_dump()})
+                            await out.send("answer.chunk", {"answer_id": aid, "partial": partial.model_dump()})
                     break
                 except LLMError as e:
                     attempts += 1
-                    if e.retryable and first_token_ms is None and attempts <= 1:
-                        await self._set_state(LiveState.ai_reconnecting)
+                    if e.retryable and not streamed and attempts <= 1:
+                        await out.state(LiveState.ai_reconnecting)
                         await asyncio.sleep(0.4)
                         continue
                     raise
         except asyncio.CancelledError:
+            if not out.is_open:
+                raise  # an early answer the interviewer outran: never shown, so nothing to tell or record
             gen = self._gens.get(aid)
             reason = gen.cancel_reason if gen else "superseded"
-            await self.send("answer.cancelled", {"answer_id": aid, "reason": reason})
-            await self._rec.answer(aid, qid, "cancelled", parser.snapshot().model_dump(), provider, model,
-                                   first_token_ms, None)
+            await out.send("answer.cancelled", {"answer_id": aid, "reason": reason})
+            await self._rec.answer(aid, out.question_id, "cancelled", parser.snapshot().model_dump(), provider,
+                                   model, first_token_ms, None)
             raise
         except LLMError as e:
-            total = int((self._clock() - started) * 1000)
+            await out.opened.wait()  # an early answer reports its failure only if its question fires
+            qid = out.question_id
+            total = int((self._clock() - out.opened_at) * 1000)
             # Log the upstream detail server-side; send the user a generic message (raw provider bodies can
             # carry account/quota internals).
             log.warning("answer %s failed: %s: %s", aid, e.code, e)
             user_msg = _USER_ERROR.get(e.code, _USER_ERROR_DEFAULT)
-            await self.send("answer.failed", {"answer_id": aid,
+            await out.send("answer.failed", {"answer_id": aid,
                                               "error": {"code": e.code, "message": user_msg,
                                                         "retryable": e.retryable}})
             await self._rec.answer(aid, qid, "failed", None, provider, model, first_token_ms, total)
             await self._rec.provider_request(provider, model, request.request_type, usage, total, False)
             if source == "screenshot":
                 await self._rec.usage("screenshot_failures", 1, f"shotfail:{aid}")
-            await self._set_state(LiveState.error)
-            await self._set_state(LiveState.listening)
+            await out.state(LiveState.error)
+            await out.state(LiveState.listening)
             return
 
-        total_ms = int((self._clock() - started) * 1000)
+        await out.opened.wait()  # an early answer completes only once its question has fired (cancelled otherwise)
+        qid = out.question_id
+        total_ms = int((self._clock() - out.opened_at) * 1000)
         final: LiveAnswer = finalize_grounding(parser.snapshot())
-        await self.send("answer.completed", {"answer_id": aid, "answer": final.model_dump(),
+        await out.send("answer.completed", {"answer_id": aid, "answer": final.model_dump(),
                                              "latency": {"first_token_ms": first_token_ms, "total_ms": total_ms}})
-        await self._set_state(LiveState.answer_complete)
+        await out.state(LiveState.answer_complete)
         self._last_answer_at_ms = self.now_ms()
         if source != "chat" or instruction is None:
             self.memory.questions.append(question)

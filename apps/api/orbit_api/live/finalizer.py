@@ -42,7 +42,9 @@ COMPLETE_SILENCE_MS = 650
 MAX_SILENCE_MS = 1300
 # Fallback when a VAD provider's endpoint event is lost (noisy audio, dropped message).
 PROVIDER_FALLBACK_SILENCE_MS = 2500
-# A fired turn may fire again once it has grown by this many words (dedup marks it `extends`).
+# A fired turn may fire again once it has grown by this many words (dedup marks it `extends`), or by fewer words
+# that ask something ("…would you pick? <pause> And why?", "…design a cache? <pause> In Go?"). A short aside
+# ("Yeah, that's right.") doesn't restart the answer.
 REFIRE_EXTRA_WORDS = 4
 # "Wait before answering" presets: extra silence after the provider endpoint before a question fires.
 GRACE_MS = {"quick": 0, "balanced": 1500, "patient": 3000}
@@ -81,6 +83,7 @@ class _Pending:
     fired_question: str | None = None  # the cleaned question text that was actually sent when it fired
     held_question: str = ""  # earlier part(s) of this question, from before a pause
     held_confidence: float = 0.0  # best question-confidence of those earlier parts (carried across stitches)
+    answered: str | None = None  # the held part as it already fired: the stitched question refires only on real growth
     endpoint_ms: int | None = None
     resumed_ms: int | None = None  # VAD heard the interviewer again after the endpoint
 
@@ -108,8 +111,9 @@ class QuestionFinalizer:
         if p is None or p.turn_id != turn_id:
             held = self._held_question(p, now_ms)
             held_conf = self._confidence_of(p) if held and p is not None else 0.0
+            answered = held if held and p is not None and p.fired_question == held else None
             p = self._pending = _Pending(turn_id=turn_id, text=text, last_speech_ms=now_ms, held_question=held,
-                                         held_confidence=held_conf)
+                                         held_confidence=held_conf, answered=answered)
         else:
             if text != p.text:
                 p.last_speech_ms = now_ms
@@ -226,16 +230,9 @@ class QuestionFinalizer:
         if p is None:
             return None
         full = p.full_text
-        if p.fired_text is not None and len(tokens(full)) < len(tokens(p.fired_text)) + REFIRE_EXTRA_WORDS:
+        if not self._grown(p):
             return None
-        d = detect(full, "interviewer", self.context)
-        if p.held_question:
-            # extract_question keeps only the last question sentence; a stitched question keeps both parts,
-            # and is at least as much a question as the part we were already holding.
-            complete = is_complete(full)
-            conf = max(d.confidence, p.held_confidence)
-            d = replace(d, question_text=full, is_complete=complete, confidence=conf, is_question=conf >= 0.5,
-                        should_generate=conf >= 0.6 and complete, needs_llm=0.35 <= conf < 0.6 and complete)
+        d = self._detection(p)
         if not d.is_question and not d.needs_llm:
             return None
         silence = now_ms - p.last_speech_ms
@@ -265,6 +262,43 @@ class QuestionFinalizer:
         p.fired_text = full
         p.fired_question = d.question_text
         return FinalizedQuestion(turn_id=p.turn_id, detection=d, trigger=trigger)
+
+    def speculation(self, now_ms: int) -> Detection | None:
+        """The question as it will fire, while it's held only for the patience window ("wait before answering"):
+        the interviewer has stopped and it's complete and clearly a question. The engine starts the answer now
+        and shows it only if the question fires unchanged, so the wait no longer adds the model's start-up time."""
+        p = self._pending
+        if (p is None or not p.endpointed or p.resumed_ms is not None or p.endpoint_ms is None
+                or self.grace_ms <= 0 or now_ms - p.endpoint_ms >= self.grace_ms or not self._grown(p)):
+            return None
+        d = self._detection(p)
+        return d if d.should_generate and d.is_complete else None
+
+    def _grown(self, p: _Pending) -> bool:
+        """Not yet answered, or it has grown enough since it was."""
+        already = p.fired_text if p.fired_text is not None else p.answered
+        return already is None or self._grew_enough(already, p.full_text)
+
+    def _detection(self, p: _Pending) -> Detection:
+        full = p.full_text
+        d = detect(full, "interviewer", self.context)
+        if p.held_question:
+            # extract_question keeps only the last question sentence; a stitched question keeps both parts,
+            # and is at least as much a question as the part we were already holding.
+            complete = is_complete(full)
+            conf = max(d.confidence, p.held_confidence)
+            d = replace(d, question_text=full, is_complete=complete, confidence=conf, is_question=conf >= 0.5,
+                        should_generate=conf >= 0.6 and complete, needs_llm=0.35 <= conf < 0.6 and complete)
+        return d
+
+    def _grew_enough(self, fired: str, full: str) -> bool:
+        grown = len(tokens(full)) - len(tokens(fired))
+        if grown <= 0:
+            return False
+        if grown >= REFIRE_EXTRA_WORDS:
+            return True
+        added = full[len(fired):].strip() if full.startswith(fired) else full
+        return added.endswith("?") or detect(added, "interviewer", self.context).is_question
 
     def _holding(self, p: _Pending, now_ms: int) -> bool:
         """Still inside the patience window, or the interviewer resumed and their words aren't in yet."""

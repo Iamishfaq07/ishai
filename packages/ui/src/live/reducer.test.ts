@@ -129,6 +129,19 @@ describe("answers", () => {
     expect(selectDisplayedQuestion(s)?.question_id).toBe("q2");
   });
 
+  it("a stopped answer stays on screen with what was written, and says why it stopped", () => {
+    const s = run([
+      detected("q1"),
+      started("a1", "q1"),
+      ev("answer.chunk", { answer_id: "a1", partial: answer(["half an answer"]) }),
+      ev("answer.cancelled", { answer_id: "a1", reason: "stopped" }),
+    ]);
+    expect(s.answers.a1?.status).toBe("cancelled");
+    expect(s.answers.a1?.cancel_reason).toBe("stopped");
+    expect(selectDisplayedAnswer(s)?.answer_id).toBe("a1");
+    expect(selectDisplayedAnswer(s)?.has_content).toBe(true);
+  });
+
   it("a pinned answer stays displayed (with its question) while new ones stream", () => {
     const s = run([
       detected("q1"),

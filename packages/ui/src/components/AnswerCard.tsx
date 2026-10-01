@@ -22,6 +22,8 @@ export interface AnswerCardProps {
   pinned: boolean;
   onPin: (pinned: boolean) => void;
   onRetry: () => void;
+  /** Stop writing this answer, keeping what's there (shown while it streams). */
+  onStop?: () => void;
   compact?: boolean;
   /** Whether the session is waiting on a question (drives the empty state copy). */
   autoAnswer: boolean;
@@ -213,13 +215,18 @@ function ReadAloudControls({ reader }: { reader: ReadAloud }) {
   );
 }
 
+/** A toolbar button's text: icon-only in the compact overlay (the words stay for screen readers). */
+function Label({ compact, children }: { compact: boolean; children: string }) {
+  return <span className={compact ? "sr-only" : undefined}>{children}</span>;
+}
+
 function SectionLabel({ children, block = false }: { children: string; block?: boolean }) {
   const cls = "text-xs font-semibold uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400";
   return block ? <h3 className={cx(cls, "mb-1")}>{children}</h3> : <span className={cls}>{children}</span>;
 }
 
 export function AnswerCard({
-  answer, pinned, onPin, onRetry, compact = false, autoAnswer, progress, onTogglePoint, reader, onCodeLanguage,
+  answer, pinned, onPin, onRetry, onStop, compact = false, autoAnswer, progress, onTogglePoint, reader, onCodeLanguage,
   onShorter, onLonger, readOnly = false, rating = null, onRate,
 }: AnswerCardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -263,14 +270,24 @@ export function AnswerCard({
 
   return (
     <section aria-label="Suggested answer" className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center justify-between px-4 pt-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-4 pt-3">
         <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
           {answer.source === "chat" ? "Reply" : answer.source === "screenshot" ? "Screenshot answer" : "Answer"}
           {answer.reasoning === "deep" && (
             <span className="ml-2 normal-case tracking-normal text-indigo-600 dark:text-indigo-300">in-depth</span>
           )}
         </h2>
-        <span className="flex items-center gap-1">
+        <span className="flex flex-wrap items-center justify-end gap-1">
+          {onStop && !readOnly && answer.status === "streaming" && (
+            <button
+              type="button"
+              onClick={onStop}
+              title="Stop writing this answer (keeps what's here)"
+              className={cx(iconBtn(false), "text-rose-600 dark:text-rose-400")}
+            >
+              <Square className="h-3 w-3" /> Stop
+            </button>
+          )}
           {reader?.supported && answer.status === "complete" && answer.has_content && speechText(a) && (
             <button
               type="button"
@@ -279,7 +296,7 @@ export function AnswerCard({
               title={reading ? "Stop reading" : "Read this answer aloud on your speakers (Orbit stops listening while it plays)"}
               className={iconBtn(reading)}
             >
-              <Volume2 className="h-3.5 w-3.5" /> {reading ? "Reading" : "Read aloud"}
+              <Volume2 className="h-3.5 w-3.5" /> <Label compact={compact}>{reading ? "Reading" : "Read aloud"}</Label>
             </button>
           )}
           {answer.status === "complete" && answer.has_content && (onShorter !== undefined || onLonger !== undefined) && (
@@ -291,7 +308,7 @@ export function AnswerCard({
                 title={onShorter ? "Answer this question again, shorter" : "Already the shortest length"}
                 className={cx(iconBtn(false), "disabled:opacity-40")}
               >
-                <Minimize2 className="h-3.5 w-3.5" /> Shorter
+                <Minimize2 className="h-3.5 w-3.5" /> <Label compact={compact}>Shorter</Label>
               </button>
               <button
                 type="button"
@@ -300,7 +317,7 @@ export function AnswerCard({
                 title={onLonger ? "Answer this question again, in more depth" : "Already the longest length"}
                 className={cx(iconBtn(false), "disabled:opacity-40")}
               >
-                <Maximize2 className="h-3.5 w-3.5" /> Longer
+                <Maximize2 className="h-3.5 w-3.5" /> <Label compact={compact}>Longer</Label>
               </button>
             </>
           )}
@@ -539,7 +556,13 @@ export function AnswerCard({
         )}
 
         {answer.status === "cancelled" && (
-          <p className="mt-3 text-xs text-zinc-400">Stopped — a newer question took over.</p>
+          <p className="mt-3 text-xs text-zinc-400">
+            {answer.cancel_reason === "stopped"
+              ? "Stopped. Press Answer to write it again."
+              : answer.cancel_reason === "superseded"
+                ? "Stopped — a newer question took over."
+                : "Stopped."}
+          </p>
         )}
       </div>
 

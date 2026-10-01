@@ -95,5 +95,9 @@ class LLMProvider(ABC):
     def supports_structured_output(self) -> bool:
         return False
 
+    async def warm(self) -> None:  # noqa: B027 - optional hook
+        """Open (or refresh) the connection ahead of a likely request, so the answer doesn't pay for a TLS handshake.
+        Cheap, idempotent, never raises."""
+
     async def aclose(self) -> None:  # noqa: B027 - optional hook
         pass

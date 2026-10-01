@@ -103,6 +103,7 @@ export function ControlBar(props: ControlBarProps) {
           <ActionButton
             icon={<Camera className="h-3.5 w-3.5" />}
             label="Screenshot"
+            compact={props.compact}
             onClick={props.onScreenshot}
             disabled={screenshotDisabled}
             title={screenshotDisabled ? undefined : `Screenshot (${formatHotkey(hotkeys.screenshot)})`}
@@ -111,6 +112,7 @@ export function ControlBar(props: ControlBarProps) {
         <ActionButton
           icon={<MessageSquare className="h-3.5 w-3.5" />}
           label="Chat"
+            compact={props.compact}
           onClick={props.onToggleChat}
           disabled={ended}
           active={props.chatOpen}
@@ -119,6 +121,7 @@ export function ControlBar(props: ControlBarProps) {
         <ActionButton
           icon={<Eraser className="h-3.5 w-3.5" />}
           label="Clear"
+            compact={props.compact}
           onClick={props.onClear}
           disabled={ended}
           title={`Clear the answer (${formatHotkey(hotkeys.clear)})`}
@@ -126,7 +129,20 @@ export function ControlBar(props: ControlBarProps) {
 
         <span className="ml-auto flex items-center gap-1">
           {props.compact ? (
-            <AutoSwitch on={props.autoAnswer} disabled={ended} onChange={props.onAutoAnswer} />
+            <>
+              <button
+                type="button"
+                onClick={props.onTogglePause}
+                disabled={ended}
+                aria-pressed={props.paused}
+                aria-label={props.paused ? "Resume listening" : "Pause listening"}
+                title={`${props.paused ? "Resume" : "Pause"} listening (${formatHotkey(hotkeys.toggleListening)})`}
+                className={cx(btn, ghost, props.paused && pressed, focusRing)}
+              >
+                {props.paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+              </button>
+              <AutoSwitch on={props.autoAnswer} disabled={ended} onChange={props.onAutoAnswer} />
+            </>
           ) : (
             <>
               <button
@@ -282,6 +298,7 @@ function ActionButton({
   disabled,
   active,
   title,
+  compact = false,
 }: {
   icon: ReactNode;
   label: string;
@@ -289,6 +306,8 @@ function ActionButton({
   disabled?: boolean;
   active?: boolean;
   title?: string;
+  /** The small overlay: icon only at any screen size. */
+  compact?: boolean;
 }) {
   return (
     <button
@@ -300,9 +319,15 @@ function ActionButton({
       className={cx(btn, ghost, active && pressed, focusRing)}
     >
       {icon}
-      {/* Phones: icon only (the label stays for screen readers). */}
-      <span className="hidden sm:inline">{label}</span>
-      <span className="sr-only sm:hidden">{label}</span>
+      {/* Phones and the compact overlay: icon only (the label stays for screen readers). */}
+      {compact ? (
+        <span className="sr-only">{label}</span>
+      ) : (
+        <>
+          <span className="hidden sm:inline">{label}</span>
+          <span className="sr-only sm:hidden">{label}</span>
+        </>
+      )}
     </button>
   );
 }

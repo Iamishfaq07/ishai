@@ -1,5 +1,7 @@
 """DeepSeek via its OpenAI-compatible Chat Completions API (server-side only)."""
 
+import contextlib
+import time
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -15,6 +17,9 @@ VISION_MODELS = frozenset({"deepseek-flash"})
 # Extra max_tokens for chain-of-thought, which counts against max_tokens (max effort used ~1.6k tokens on a
 # multi-part design question; the old reasoner ~2.5k).
 REASONING_HEADROOM = 4000
+
+# warm(): refresh the connection when it has been idle this long (servers and proxies drop idle keep-alives).
+WARM_IDLE_S = 25.0
 
 
 class DeepSeekProvider(LLMProvider):
@@ -38,6 +43,7 @@ class DeepSeekProvider(LLMProvider):
             timeout=httpx.Timeout(connect=5.0, read=60.0, write=10.0, pool=5.0),
             limits=httpx.Limits(max_keepalive_connections=20, keepalive_expiry=120),
         )
+        self._last_used = float("-inf")
 
     def model_for(self, reasoning: ReasoningLevel) -> str:
         return self._reasoning_model if reasoning == "deep" else self._model
@@ -75,7 +81,18 @@ class DeepSeekProvider(LLMProvider):
         return payload
 
     def stream(self, request: LLMRequest) -> AsyncIterator[LLMChunk]:
+        self._last_used = time.monotonic()
         return stream_chat_completions(self._client, self._payload(request), "DeepSeek")
+
+    async def warm(self) -> None:
+        # The interviewer just started talking: have a live TLS connection ready for the answer. GET /models costs
+        # no tokens; failures don't matter (the answer opens its own connection as before).
+        now = time.monotonic()
+        if now - self._last_used < WARM_IDLE_S:
+            return
+        self._last_used = now
+        with contextlib.suppress(Exception):
+            await self._client.get("/models", timeout=3.0)
 
     async def aclose(self) -> None:
         await self._client.aclose()

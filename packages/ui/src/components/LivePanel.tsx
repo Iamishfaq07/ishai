@@ -35,6 +35,7 @@ import {
   MessageSquare,
   Minimize2,
   PanelRightClose,
+  Pause,
   PanelRightOpen,
   ScrollText,
   X,
@@ -265,8 +266,25 @@ export function LivePanel(props: LivePanelProps) {
       <Banners live={live} onReconnect={props.onReconnect} onEndOtherSession={props.onEndOtherSession} onDismiss={actions.dismissError} />
       {props.notice}
 
+      {paused && !ended && (
+        <div
+          role="status"
+          className="flex animate-fade-in items-center gap-2 border-b border-amber-500/20 bg-amber-500/10 px-4 py-1.5 text-xs text-amber-900 dark:text-amber-200"
+        >
+          <Pause className="h-3.5 w-3.5 flex-none" aria-hidden="true" />
+          <span className="min-w-0 flex-1">Paused — Orbit isn’t listening or answering.</span>
+          <button
+            type="button"
+            onClick={actions.resume}
+            className={cx("rounded-md px-2 py-0.5 font-semibold hover:bg-amber-500/15", focusRing)}
+          >
+            Resume
+          </button>
+        </div>
+      )}
+
       <div className={cx("relative flex min-h-0 flex-1", sideVisible && "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]")}>
-        <main className="flex min-h-0 flex-1 flex-col">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col">
           {props.mockInterview ? (
             <MockPanel live={live} actions={actions} voice={voice} ended={ended} />
           ) : (
@@ -288,6 +306,7 @@ export function LivePanel(props: LivePanelProps) {
             pinned={Boolean(answer && live.pinnedAnswerId === answer.answer_id)}
             onPin={(pinned) => answer && actions.pin(answer.answer_id, pinned)}
             onRetry={retry}
+            onStop={actions.stop}
             {...(props.ratings && answer
               ? {
                   rating: props.ratings.get(answer.answer_id),

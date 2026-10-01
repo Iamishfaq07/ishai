@@ -77,6 +77,9 @@ class FallbackProvider(LLMProvider):
     def supports_structured_output(self) -> bool:
         return self.primary.supports_structured_output()
 
+    async def warm(self) -> None:
+        await self.primary.warm()
+
     def _budget(self, request: LLMRequest) -> float:
         return self.first_token_timeout_s + (THINKING_EXTRA_S if request.thinking != "off" else 0.0)
 

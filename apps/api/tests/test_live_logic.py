@@ -386,6 +386,63 @@ def test_keeps_the_set_up_and_earlier_parts_of_the_question(turn: str, question:
     assert d.should_generate and d.question_text == question
 
 
+# Statements between the parts of one question, asks phrased as statements, and the topic framing before a question
+# all used to be cut, leaving only the last sentence to be answered.
+@pytest.mark.parametrize(
+    ("turn", "question"),
+    [
+        ("Tell me about your last project. I'm especially interested in how you handled scaling. "
+         "What would you do differently?",
+         "Tell me about your last project. I'm especially interested in how you handled scaling. "
+         "What would you do differently?"),
+        ("I'd like to understand your approach to code review. What do you look for first? "
+         "How do you give feedback on a junior's code?",
+         "I'd like to understand your approach to code review. What do you look for first? "
+         "How do you give feedback on a junior's code?"),
+        ("Great, thanks. So my next question is about testing. How do you decide what to unit test?",
+         "So my next question is about testing. How do you decide what to unit test?"),
+        # unrelated speech before the question still stays out, even with a statement in between
+        ("Attack an enemy shield. The weather is nice. How would you design a rate limiter?",
+         "How would you design a rate limiter?"),
+    ],
+)
+def test_bridges_interest_phrases_and_topic_lead_ins_stay_in_the_question(turn: str, question: str) -> None:
+    d = detect(turn, "interviewer")
+    assert d.should_generate and d.question_text == question
+
+
+@pytest.mark.parametrize(
+    ("turn", "qtype"),
+    [
+        ("What's your experience with Kafka? And how would you handle backpressure?", QuestionType.resume),
+        ("How would you handle backpressure in a streaming pipeline?", QuestionType.technical),  # not "pressure"
+        ("Can you tell me about a time you disagreed with your manager. How did you resolve it?",
+         QuestionType.behavioral),  # typed from the whole question, not just its last sentence
+        ("Find the maximum subarray sum.", QuestionType.coding),
+    ],
+)
+def test_question_type_uses_whole_words_and_the_whole_question(turn: str, qtype: QuestionType) -> None:
+    assert detect(turn, "interviewer").question_type is qtype
+
+
+@pytest.mark.parametrize("more", ["And why?", "In Go?"])
+def test_a_short_continuation_after_a_pause_refires_the_whole_question(more: str) -> None:
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=800)
+    f.on_transcript("t1", "Which database would you pick for this?", 0, is_final=True, endpoint=True)
+    assert f.tick(800)
+    f.on_transcript("t2", more, 3000, is_final=True, endpoint=True)
+    fired = f.tick(3800)
+    assert fired and fired.detection.question_text == f"Which database would you pick for this? {more}"
+
+
+def test_a_short_aside_after_the_answer_fired_does_not_restart_it() -> None:
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=800)
+    f.on_transcript("t1", "Which database would you pick for this?", 0, is_final=True, endpoint=True)
+    assert f.tick(800)
+    f.on_transcript("t2", "Yeah, that's right.", 3000, is_final=True, endpoint=True)
+    assert not any(f.tick(t) for t in range(3000, 6000, 50))
+
+
 def test_set_up_is_capped_and_scoring_still_uses_the_question_sentence() -> None:
     long_setup = " ".join(["We have a service that handles orders for many regions."] * 12)
     d = detect(f"{long_setup} How would you scale it?", "interviewer")
@@ -615,3 +672,40 @@ def test_mic_echo_transcribed_before_the_interviewer_channel_is_not_an_answer() 
                     endpoint=True)
     fired = next((x for t in range(3400, 6000, 50) if (x := f.tick(t))), None)
     assert fired and fired.detection.question_text.startswith(a)  # still stitched: the echo didn't close it
+
+
+@pytest.mark.parametrize(
+    ("question", "parts"),
+    [
+        ("What is dependency injection?", ["What is dependency injection?"]),
+        ("How would you design a URL shortener? Assume a hundred million links a month.",
+         ["How would you design a URL shortener? Assume a hundred million links a month."]),  # a constraint, not a part
+        ("Walk me through how you'd debug it, and what metrics you'd look at first.",
+         ["Walk me through how you'd debug it.", "what metrics you'd look at first."]),
+        ("Tell me about a time you disagreed with your manager. How did you resolve it, and what was the outcome?",
+         ["Tell me about a time you disagreed with your manager.", "How did you resolve it?",
+          "what was the outcome?"]),
+        ("What are the pros and cons of microservices?", ["What are the pros and cons of microservices?"]),
+    ],
+)
+def test_question_parts(question: str, parts: list[str]) -> None:
+    from orbit_api.live.question_detector import question_parts
+
+    assert question_parts(question) == parts
+
+
+def test_a_multi_part_question_lists_its_parts_for_the_model() -> None:
+    q = "Tell me about a time you disagreed with your manager. How did you resolve it, and what was the outcome?"
+    from orbit_api.live.question_detector import question_parts
+
+    user = build_prompt(SessionIndex([]), _inputs(q, parts=question_parts(q)), SessionMemory()).messages[1].content
+    assert "This question has 3 parts" in user and "3. what was the outcome?" in user
+    assert user.index("This question has 3 parts") < user.index("QUESTION:")
+    single = build_prompt(SessionIndex([]), _inputs("What is DI?", parts=["What is DI?"]), SessionMemory())
+    assert "This question has" not in single.messages[1].content
+
+
+def test_the_model_is_told_the_question_is_live_speech() -> None:
+    system = build_prompt(SessionIndex([]), _inputs("What is DI?"), SessionMemory()).messages[0].content
+    assert "THE QUESTION IS LIVE SPEECH" in system and "transcription errors" in system
+    assert "latest turn" in system and "Never re-answer questions from earlier exchanges" in system
