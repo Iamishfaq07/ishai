@@ -231,7 +231,16 @@ _TYPE_PATTERNS: list[tuple[QuestionType, re.Pattern[str]]] = [
 ]
 
 
+# Asking for a story is behavioral whatever the story is about: "Tell me about a time you had to scale a service" is
+# not a system-design question, and "…a time you debugged a nasty bug" is not a coding one.
+_STORY_ASK = re.compile(r"\b(?:tell me about|describe|give me an example of|share|walk me through|talk about) "
+                        r"(?:a|one|the|another) (?:time|situation|moment|occasion|project|example)\b"
+                        r"|\b(?:a|one) (?:time|situation) (?:when|where|that|you)\b|\bhave you ever\b")
+
+
 def classify_type(norm: str) -> QuestionType:
+    if _STORY_ASK.search(norm):
+        return QuestionType.behavioral
     if _DATA_CUES.search(norm) and any(n in norm for n in ("salary", "salaries", "compensation", "pay")):
         return QuestionType.coding
     for qtype, pattern in _TYPE_PATTERNS:
