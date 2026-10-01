@@ -28,7 +28,7 @@ services:
         sync: false
       - key: ORBIT_WEB_URL # your Cloudflare Pages URL, e.g. https://orbit-web.pages.dev
         sync: false
-      - key: ORBIT_CORS_ORIGINS # JSON array incl. the Pages URL + tauri origins
+      - key: ORBIT_CORS_ORIGINS # JSON array or comma-separated: the Pages URL + tauri origins
         sync: false
       # This service's own https URL (e.g. https://orbit-api-5kcx.onrender.com): links it hands out (desktop
       # installer downloads) are built from it, never from the request's Host header.

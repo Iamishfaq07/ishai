@@ -24,7 +24,7 @@ import { useAsync } from "../lib/useAsync";
 export function LibraryTabs() {
   const tab = ({ isActive }: { isActive: boolean }) =>
     cx(
-      "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+      "inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors sm:px-3",
       isActive
         ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white"
         : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
@@ -33,13 +33,13 @@ export function LibraryTabs() {
   return (
     <nav aria-label="Your materials" className="mb-6 inline-flex gap-1 rounded-xl bg-zinc-500/10 p-1">
       <NavLink to="/documents" end className={tab}>
-        <FolderOpen className="h-4 w-4" /> Documents
+        <FolderOpen className="hidden h-4 w-4 sm:block" aria-hidden="true" /> Documents
       </NavLink>
       <NavLink to="/documents/stories" className={tab}>
-        <BookOpen className="h-4 w-4" /> Story bank
+        <BookOpen className="hidden h-4 w-4 sm:block" aria-hidden="true" /> Story bank
       </NavLink>
       <NavLink to="/documents/resumes" className={tab}>
-        <FileText className="h-4 w-4" /> Resume maker
+        <FileText className="hidden h-4 w-4 sm:block" aria-hidden="true" /> Resume maker
       </NavLink>
     </nav>
   );

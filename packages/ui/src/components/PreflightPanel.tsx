@@ -107,8 +107,8 @@ export function PreflightPanel({
       : failures.length
         ? `${failures.length} problem${failures.length === 1 ? "" : "s"} to fix`
         : problems.length
-          ? `Ready · ${problems.length} suggestion${problems.length === 1 ? "" : "s"}`
-          : "Ready — everything checks out";
+          ? `Ready · ${problems.length} tip${problems.length === 1 ? "" : "s"}` // short: the panel shares a narrow column
+          : "All set";
 
   return (
     <section

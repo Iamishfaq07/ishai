@@ -90,3 +90,13 @@ def test_review_accepts_the_ways_models_number_items() -> None:
     assert [i["score"] for i in r["items"]] == [None, 2, 3]
     r2 = build_review({"items": [{"score": 4}, {"score": 1}, {"score": 3}]}, pairs)
     assert r2 is not None and [i["score"] for i in r2["items"]] == [4, 1, 3]
+
+
+def test_review_of_a_session_where_nothing_was_captured_says_so(client: TestClient) -> None:
+    from tests.test_api import _register
+
+    h = _register(client)
+    sid = client.post("/v1/sessions", headers=h, json={"title": "Silent"}).json()["id"]
+    assert client.post(f"/v1/sessions/{sid}/end", headers=h).status_code == 200
+    r = client.post(f"/v1/sessions/{sid}/review", headers=h)
+    assert r.status_code == 409 and "Nothing was captured" in r.json()["detail"]

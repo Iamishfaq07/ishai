@@ -658,10 +658,11 @@ export function SetupScreen({
             >
               {THINKING_LEVELS.map((t) => (
                 <option key={t.value} value={t.value}>
-                  {t.label} — {t.hint}
+                  {t.label}
                 </option>
               ))}
             </select>
+              <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">{THINKING_LEVELS.find((t) => t.value === thinking)?.hint}</span>
           </label>
 
           {autoAnswer && (
@@ -678,10 +679,11 @@ export function SetupScreen({
               >
                 {RESPONSE_TIMINGS.map((t) => (
                   <option key={t.value} value={t.value}>
-                    {t.label} — {t.hint}
+                    {t.label}
                   </option>
                 ))}
               </select>
+              <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">{RESPONSE_TIMINGS.find((t) => t.value === responseTiming)?.hint}</span>
             </label>
           )}
 
@@ -691,10 +693,11 @@ export function SetupScreen({
               <select value={style} onChange={(e) => setStyle(e.target.value as AnswerStyle)} className={cx(control, focusRing)}>
                 {ANSWER_STYLES.map((s) => (
                   <option key={s.value} value={s.value}>
-                    {s.label} — {s.hint}
+                    {s.label}
                   </option>
                 ))}
               </select>
+              <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">{ANSWER_STYLES.find((s) => s.value === style)?.hint}</span>
             </label>
           </div>
 

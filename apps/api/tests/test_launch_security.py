@@ -291,3 +291,10 @@ def test_production_refuses_more_than_one_replica() -> None:
     assert _prod().api_replicas == 1
     with pytest.raises(ValueError, match="ORBIT_API_REPLICAS must be 1"):
         _prod(ORBIT_API_REPLICAS=2)
+
+
+def test_cors_origins_accept_json_or_comma_list(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ORBIT_CORS_ORIGINS", '["https://a.example", "http://tauri.localhost"]')
+    assert Settings().cors_origins == ["https://a.example", "http://tauri.localhost"]
+    monkeypatch.setenv("ORBIT_CORS_ORIGINS", " https://a.example/ ,http://tauri.localhost,, ")
+    assert Settings().cors_origins == ["https://a.example", "http://tauri.localhost"]
