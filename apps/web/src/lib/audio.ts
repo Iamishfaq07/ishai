@@ -105,13 +105,7 @@ export async function openMicrophone(deviceId?: string): Promise<MediaStream> {
  * We drop the video track immediately — no screen pixels are recorded.
  */
 export async function openDisplayAudio(): Promise<MediaStream> {
-  if (!supportsDisplayAudio()) {
-    throw new Error(
-      isMobileDevice()
-        ? "Phones can't share tab audio. Put the call on speaker and use Phone / room audio, or use a computer."
-        : "This browser can't share tab audio. Use Chrome or Edge, or the Orbit desktop app.",
-    );
-  }
+  if (!supportsDisplayAudio()) throw new Error(displayAudioHelp());
   // Some browsers show the share prompt and then never settle the promise (seen on Android): give up rather than
   // leave the session stuck on "Share tab audio".
   const stream = await withTimeout(
@@ -124,7 +118,11 @@ export async function openDisplayAudio(): Promise<MediaStream> {
     stream.removeTrack(t);
   });
   if (stream.getAudioTracks().length === 0) {
-    throw new Error("No audio was shared. Pick the interview tab and enable “Share tab audio”.");
+    throw new Error(
+      isMac()
+        ? "No audio was shared. On a Mac only a Chrome tab’s audio can be shared: pick the meeting’s tab and leave “Share tab audio” on."
+        : "No audio was shared. Pick the interview tab and enable “Share tab audio”.",
+    );
   }
   return stream;
 }
@@ -136,12 +134,70 @@ export function isMobileDevice(): boolean {
   if (typeof navigator === "undefined") return false;
   const uaData = (navigator as Navigator & { userAgentData?: { mobile?: boolean } }).userAgentData;
   if (uaData?.mobile) return true;
-  // iPadOS reports itself as a Mac; touch points give it away.
-  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || isIpadOs();
+}
+
+/** iPadOS reports itself as a Mac; touch points give it away. */
+function isIpadOs(): boolean {
+  return /Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1;
+}
+
+export function isAppleMobile(): boolean {
+  return typeof navigator !== "undefined" && (/iPhone|iPad|iPod/.test(navigator.userAgent) || isIpadOs());
+}
+
+export function isMac(): boolean {
+  return typeof navigator !== "undefined" && /Macintosh|Mac OS X/.test(navigator.userAgent) && !isIpadOs();
+}
+
+export function isWindows(): boolean {
+  return typeof navigator !== "undefined" && /Windows/.test(navigator.userAgent);
+}
+
+/**
+ * Whether this browser can capture a meeting's audio by sharing a tab. Only Chromium browsers on a computer can:
+ * phones can't share another tab's or app's audio at all, and Safari and Firefox share video only.
+ */
+export type DisplayAudioSupport = "ok" | "phone" | "safari" | "firefox" | "unsupported";
+
+export function displayAudioSupport(): DisplayAudioSupport {
+  if (typeof navigator === "undefined") return "unsupported";
+  if (isMobileDevice()) return "phone";
+  const ua = navigator.userAgent;
+  if (/Firefox\//.test(ua)) return "firefox";
+  if (/Safari\//.test(ua) && !/Chrome\/|Chromium\/|Edg\/|OPR\//.test(ua)) return "safari";
+  return typeof navigator.mediaDevices?.getDisplayMedia === "function" ? "ok" : "unsupported";
 }
 
 export function supportsDisplayAudio(): boolean {
-  return typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getDisplayMedia) && !isMobileDevice();
+  return displayAudioSupport() === "ok";
+}
+
+/** What to do instead when tab audio can't be shared here (or, on a Mac, what can be shared). */
+export function displayAudioHelp(): string {
+  switch (displayAudioSupport()) {
+    case "phone":
+      return isAppleMobile()
+        ? "iPhone and iPad can’t share another app’s audio, and during a call on this same phone iOS gives the " +
+            "microphone to the call. Use Phone / room audio: run the interview on another device on speaker, keep " +
+            "this phone next to it, and keep Orbit open on screen."
+        : "Phones can’t share another app’s audio, and a call on this same phone usually takes the microphone. Use " +
+            "Phone / room audio: run the interview on another device on speaker and keep this phone next to it.";
+    case "safari":
+      return "Safari can’t share a tab’s audio. Open Orbit in Chrome or Edge to hear a meeting tab, or use Phone / " +
+        "room audio with the call on your speakers.";
+    case "firefox":
+      return "Firefox can’t share a tab’s audio. Open Orbit in Chrome or Edge to hear a meeting tab, or use Phone / " +
+        "room audio with the call on your speakers.";
+    case "unsupported":
+      return "This browser can’t share tab audio. Use Chrome or Edge, or Phone / room audio with the call on speaker.";
+    case "ok":
+      return isMac()
+        ? "On a Mac, Chrome can share a browser tab’s audio but not the Zoom or Teams app: join the meeting in a " +
+            "Chrome tab, or use Phone / room audio with the call on your speakers."
+        : "In the browser, you’ll share the meeting tab with “Share tab audio” on. Only audio is used — no video is " +
+            "recorded.";
+  }
 }
 
 /** Captures one still frame from a user-chosen screen/window/tab. */

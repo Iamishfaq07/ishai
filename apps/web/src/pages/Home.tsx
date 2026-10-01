@@ -26,6 +26,7 @@ import {
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Spinner } from "../components/ui";
 import { api } from "../lib/api";
+import { displayAudioHelp, isWindows } from "../lib/audio";
 import { useAuth } from "../lib/auth";
 import { SESSION_TYPE_LABEL, errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -354,6 +355,25 @@ const DESKTOP_DOWNLOAD_URL: string =
   import.meta.env.VITE_DESKTOP_DOWNLOAD_URL ?? "https://github.com/Iamishfaq07/ishai/releases/latest";
 
 function DesktopPromo() {
+  // The desktop app is Windows-only: elsewhere, say how to get the best capture from the browser instead.
+  if (!isWindows()) {
+    return (
+      <section className="rounded-3xl border border-indigo-500/20 bg-indigo-500/5 p-5 sm:p-6">
+        <div className="flex gap-4">
+          <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 sm:flex dark:text-indigo-300">
+            <Monitor className="h-5 w-5" />
+          </span>
+          <div>
+            <h2 className="font-display text-lg font-semibold">Hearing the interviewer on this device</h2>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{displayAudioHelp()}</p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              The Orbit desktop app (system audio from any call app) is Windows-only for now.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-zinc-950 p-6 text-white shadow-glow sm:p-8">
       <span
