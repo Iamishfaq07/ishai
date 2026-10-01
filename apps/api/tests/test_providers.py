@@ -159,3 +159,21 @@ async def test_warm_opens_the_connection_once_while_it_is_fresh() -> None:
 
     p = _provider(httpx.MockTransport(down))
     await p.warm()  # never raises: the answer opens its own connection as before
+
+
+async def test_finish_reason_is_reported() -> None:
+    def handle(req: httpx.Request) -> httpx.Response:
+        body = _sse({"choices": [{"delta": {"content": "Half a"}}]},
+                    {"choices": [{"delta": {}, "finish_reason": "length"}]})
+        return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
+
+    chunks = [c async for c in _provider(httpx.MockTransport(handle)).stream(
+        LLMRequest(messages=[LLMMessage("user", "q")]))]
+    assert [c.finish_reason for c in chunks] == [None, "length"]
+
+
+def test_a_diarized_result_belongs_to_the_voice_that_said_most_of_it() -> None:
+    words = [{"word": w, "speaker": s} for w, s in (("okay", 1), ("so", 0), ("what", 0), ("is", 0), ("it", 0))]
+    ev = parse_message({"type": "Results", "is_final": True, "start": 0, "duration": 1,
+                        "channel": {"alternatives": [{"transcript": "okay so what is it", "words": words}]}})
+    assert ev is not None and ev.speaker_hint == 0

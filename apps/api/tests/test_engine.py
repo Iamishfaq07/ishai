@@ -427,3 +427,45 @@ async def test_phone_mode_answers_questions_heard_through_the_microphone() -> No
     await sink.wait_for("answer.completed")
     assert sink.of("transcript.final")[0]["speaker"] == "interviewer"
     await eng.handle_client({"type": "session.end", "data": {}})
+
+
+async def test_phone_mode_learns_which_voice_is_the_candidate() -> None:
+    sink = Sink()
+    eng = LiveEngine(SessionProfile("s1", "phone", "Engineer", "en", "en", dev_mode=True),
+                     LiveSettings(response_timing="quick"), send=sink, llm=MockLLMProvider(), stt=MockSTTProvider(),
+                     index=SessionIndex([]))
+    await eng.start()
+
+    async def say(text: str, voice: int) -> None:
+        await eng.on_transcript("mic", TranscriptEvent("final", text, 0, 100, endpoint=True, speaker_hint=voice))
+
+    await say("What is dependency injection?", 0)  # the first voice to ask is the interviewer
+    await sink.wait_for("answer.completed")
+    await say("So how would I explain it? I'd say it means passing things in.", 1)  # the candidate, thinking aloud
+    await asyncio.sleep(0.2)
+    speakers = [t["speaker"] for t in sink.of("transcript.final")]
+    assert speakers == ["interviewer", "candidate"]
+    assert len(sink.of("answer.started")) == 1  # the candidate's own question isn't answered
+
+    # The user swaps a line: that voice is remembered the other way round from then on.
+    first = sink.of("transcript.final")[0]["turn_id"]
+    await eng.handle_client({"type": "speaker.correct", "data": {"turn_id": first, "speaker": "candidate"}})
+    await say("Okay, my answer continues here.", 0)
+    await asyncio.sleep(0.1)
+    assert sink.of("transcript.final")[-1]["speaker"] == "candidate"
+    await eng.handle_client({"type": "session.end", "data": {}})
+
+
+class CutOffLLM(MockLLMProvider):
+    async def stream(self, request: LLMRequest) -> AsyncIterator[LLMChunk]:
+        for part in ["GROUNDED: general\nANSWER:\n", "First, the data. ", "Then the labels. ", "After that the"]:
+            yield LLMChunk(delta=part)
+        yield LLMChunk(finish_reason="length")
+
+
+async def test_an_answer_that_hits_its_token_cap_never_ends_mid_sentence() -> None:
+    eng, sink = await _engine(CutOffLLM())
+    await _ask(eng, "Walk me through an image classification pipeline.")
+    await sink.wait_for("answer.completed")
+    assert sink.of("answer.completed")[0]["answer"]["direct_answer"] == "First, the data. Then the labels."
+    await eng.handle_client({"type": "session.end", "data": {}})

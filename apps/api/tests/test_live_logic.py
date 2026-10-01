@@ -709,3 +709,15 @@ def test_the_model_is_told_the_question_is_live_speech() -> None:
     system = build_prompt(SessionIndex([]), _inputs("What is DI?"), SessionMemory()).messages[0].content
     assert "THE QUESTION IS LIVE SPEECH" in system and "transcription errors" in system
     assert "latest turn" in system and "Never re-answer questions from earlier exchanges" in system
+
+
+def test_an_answer_cut_off_by_its_token_cap_ends_at_its_last_full_sentence() -> None:
+    from orbit_api.live.answer_format import trim_cut_off
+    from orbit_api.live.events import LiveAnswer
+
+    cut = LiveAnswer(direct_answer="I'd start with the data. Then I'd check the labels.\n\nAfter that the model is")
+    assert trim_cut_off(cut).direct_answer == "I'd start with the data. Then I'd check the labels."
+    whole = LiveAnswer(direct_answer='It ends cleanly ("like this.")')
+    assert trim_cut_off(whole).direct_answer == whole.direct_answer  # nothing to trim
+    no_sentence = LiveAnswer(direct_answer="one long unfinished thought without any")
+    assert trim_cut_off(no_sentence).direct_answer == no_sentence.direct_answer  # better than nothing

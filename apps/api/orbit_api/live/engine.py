@@ -16,7 +16,7 @@ from typing import Any, Literal, Protocol
 
 from pydantic import ValidationError
 
-from orbit_api.live.answer_format import AnswerStreamParser, finalize_grounding
+from orbit_api.live.answer_format import AnswerStreamParser, finalize_grounding, trim_cut_off
 from orbit_api.live.carryover import Carryover
 from orbit_api.live.classifier import classify
 from orbit_api.live.context_builder import PromptInputs, SessionMemory, build_prompt, fence
@@ -290,6 +290,9 @@ class LiveEngine:
         self._turns_since_summary = 0
         self._last_answer_at_ms: int | None = None
         self._speaker_overrides: dict[str, Speaker] = {}
+        # Phone / room mode: who each diarized voice on the mic is (learned), and which voice said each turn.
+        self._voices: dict[int, Speaker] = {}
+        self._turn_voice: dict[str, int] = {}
         # Latency, measured from the interviewer's actual speech (see live/metrics.py).
         self.latency = LatencySamples()
         self._audio_clock: dict[Channel, AudioClock] = {"mic": AudioClock(), "system": AudioClock()}
@@ -342,7 +345,9 @@ class LiveEngine:
     async def start(self) -> None:
         cfg = STTConfig(language=self.profile.language, keyterms=self.profile.keyterms)
         channels: tuple[Channel, Channel] = ("mic", "system")
-        configs = {"mic": replace(cfg, filler_words=True), "system": cfg}  # fillers: speaking feedback on you only
+        # fillers: speaking feedback on you only. Phone / room mode: one mic hears both people, so tell voices apart.
+        configs = {"mic": replace(cfg, filler_words=True, diarize=self.profile.session_type == "phone"),
+                   "system": cfg}
         is_mock = isinstance(self._stt, MockSTTProvider)
         if not is_mock:  # truthful from the first frame: nothing is "ok" until the provider says so
             self._stt_published = "connecting"
@@ -472,6 +477,8 @@ class LiveEngine:
             case "speaker.correct":
                 sc = SpeakerCorrect.model_validate(data)
                 self._speaker_overrides[sc.turn_id] = sc.speaker
+                if (voice := self._turn_voice.get(sc.turn_id)) is not None:
+                    self._learn_voice(voice, sc.speaker)  # the user's fix also applies to that voice from now on
             case "mock.next":
                 if self._mock is not None:
                     self._spawn(self._mock.next(self.now_ms()))
@@ -548,7 +555,7 @@ class LiveEngine:
             return
         if self._paused or self._ended:
             return
-        speaker = self._channel_speaker(channel)
+        speaker = self._channel_speaker(channel, ev.speaker_hint)
         if self._mock is not None and speaker == "candidate" and ev.kind in ("partial", "final"):
             self._mock.on_candidate(ev.text, self.now_ms(), final=ev.kind == "final")
         if ev.kind == "speech_started":
@@ -574,6 +581,8 @@ class LiveEngine:
             if not ev.text:
                 return
             turn = self._turns[channel] = _ChannelTurn(turn_id=str(uuid.uuid4()), start_ms=ev.start_ms)
+            if ev.speaker_hint is not None and channel == "mic":
+                self._turn_voice[turn.turn_id] = ev.speaker_hint
             if speaker == "interviewer":
                 self._spawn(self._llm.warm())
         if ev.kind == "final":
@@ -605,13 +614,20 @@ class LiveEngine:
             await self._commit_turn(channel, turn)
         await self._sync_speculation()
 
-    def _channel_speaker(self, channel: Channel) -> Speaker:
-        # Phone / room audio (a phone on speaker, an in-person room): the one microphone hears the interviewer, and
-        # there is no tab or app audio to tell them apart. Treat it as the interviewer so their questions get
-        # answered; the user can swap a line that was really them.
+    def _channel_speaker(self, channel: Channel, voice: int | None = None) -> Speaker:
+        # Phone / room audio (a phone on speaker, an in-person room): the one microphone hears both people. Voices
+        # are told apart by diarization: until we know who the interviewer is, everyone counts as the interviewer
+        # (so the first question gets answered); after that, any other voice is the candidate.
         if channel == "mic" and self.profile.session_type == "phone":
-            return "interviewer"
+            if voice is None or not self._voices:
+                return "interviewer"
+            if voice in self._voices:
+                return self._voices[voice]
+            return "candidate" if "interviewer" in self._voices.values() else "interviewer"
         return CHANNEL_SPEAKER[channel]
+
+    def _learn_voice(self, voice: int, speaker: Speaker) -> None:
+        self._voices[voice] = speaker
 
     def _track_stt_latency(self, channel: Channel, turn: _ChannelTurn, ev: TranscriptEvent) -> None:
         clock = self._audio_clock[channel]
@@ -627,7 +643,16 @@ class LiveEngine:
 
     async def _commit_turn(self, channel: Channel, turn: _ChannelTurn) -> None:
         self._turns[channel] = None
-        spk = self._speaker_overrides.get(turn.turn_id, self._channel_speaker(channel))
+        spk = self._speaker_overrides.get(turn.turn_id,
+                                          self._channel_speaker(channel, self._turn_voice.get(turn.turn_id)))
+        voice = self._turn_voice.get(turn.turn_id)
+        if len(self._turn_voice) > 500:  # kept for later "swap" corrections; only recent turns can be swapped
+            for old in list(self._turn_voice)[:-200]:
+                del self._turn_voice[old]
+        if voice is not None and turn.turn_id not in self._speaker_overrides and not self._voices:
+            # The first voice to ask a real question is the interviewer; every other voice is the candidate.
+            if detect(turn.text, "interviewer", self._detector_context()).should_generate:
+                self._learn_voice(voice, "interviewer")
         await self.send("transcript.final", {"turn_id": turn.turn_id, "speaker": spk, "text": turn.text,
                                              "start_ms": turn.start_ms, "end_ms": turn.end_ms})
         self.memory.add_turn(spk, turn.text)
@@ -906,6 +931,7 @@ class LiveEngine:
 
         out.on_visible = visible
         usage = Usage()
+        cut_off = False  # the model hit max_tokens mid-answer
         last_emit = 0.0
         attempts = 0
         try:
@@ -920,6 +946,8 @@ class LiveEngine:
                                                                     "state": "ok", "detail": "AI connection recovered"})
                         if chunk.usage:
                             usage = chunk.usage
+                        if chunk.finish_reason == "length":
+                            cut_off = True
                         if not chunk.delta:
                             continue
                         if not streamed:
@@ -971,6 +999,10 @@ class LiveEngine:
         qid = out.question_id
         total_ms = int((self._clock() - out.opened_at) * 1000)
         final: LiveAnswer = finalize_grounding(parser.snapshot())
+        if cut_off:
+            log.warning("answer %s hit its token budget (%d): trimmed to its last full sentence", aid,
+                        request.max_tokens)
+            final = trim_cut_off(final)
         await out.send("answer.completed", {"answer_id": aid, "answer": final.model_dump(),
                                              "latency": {"first_token_ms": first_token_ms, "total_ms": total_ms}})
         await out.state(LiveState.answer_complete)
