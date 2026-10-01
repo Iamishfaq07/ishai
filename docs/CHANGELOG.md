@@ -1,5 +1,13 @@
 # Implementation log
 
+## Mock interviewer replies without a model call's wait (2026-10-01)
+
+- **The next question is written during the candidate's pause.** After 0.9 s of silence the next question starts
+  in the background.
+  - When the answer is judged complete (1.2–5 s, depending on how it ends), it is asked at once.
+  - If the candidate keeps talking, it is discarded and written again for the full answer.
+  - Applies to the free-flowing interview (not drills or negotiations), and only when another question will be asked.
+
 ## Transcription knows this interview's vocabulary (2026-10-01)
 
 - **Real custom vocabulary for the speech-to-text.** Deepgram's keyterm prompting takes single terms, but Orbit sent
