@@ -40,7 +40,7 @@ import {
   listMicrophones,
   openDisplayAudio,
   openMicrophone,
-  isMobileDevice,
+  displayAudioHelp,
   supportsDisplayAudio,
   useMicPermission,
   type AudioCapture,
@@ -106,12 +106,8 @@ function browserChecks(o: {
             id: "system",
             label: "Interviewer audio",
             status: "warn",
-            detail: isMobileDevice()
-              ? "Phones can't share tab audio, so Orbit only hears your microphone and won't hear the interviewer."
-              : "This browser can't share tab audio, so Orbit only hears your microphone.",
-            fix: isMobileDevice()
-              ? "Choose Phone / room audio as the session type and put the call on speaker."
-              : "Use Chrome or Edge on a computer, or the Orbit desktop app.",
+            detail: "Tab audio can't be shared here, so Orbit only hears your microphone and won't hear the interviewer.",
+            fix: displayAudioHelp(),
           }
         : !o.systemAudio
           ? {
@@ -157,7 +153,8 @@ export interface LiveLaunchState {
 export function SessionSetupPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const initialType = (params.get("type") as SessionType | null) ?? (isMobileDevice() ? "phone" : "interview");
+  // Where a tab's audio can't be shared (phones, Safari, Firefox), listen through the microphone by default.
+  const initialType = (params.get("type") as SessionType | null) ?? (supportsDisplayAudio() ? "interview" : "phone");
   const docs = useAsync(() => api.listDocuments(), [], "documents");
 
   const [title, setTitle] = useState("");
@@ -480,12 +477,10 @@ export function SessionSetupPage() {
                   label="Interviewer audio (tab share)"
                   description={
                     type === "phone"
-                      ? "Phone / room mode listens through your microphone only."
-                      : supportsDisplayAudio()
-                        ? "In the browser, you’ll share the meeting tab with “Share tab audio” on. Only audio is used — no video is recorded."
-                        : isMobileDevice()
-                          ? "Phones can’t share tab audio. Use Phone / room audio and put the call on speaker."
-                          : "This browser can’t capture tab audio. Use Chrome/Edge or the desktop app."
+                      ? supportsDisplayAudio()
+                        ? "Phone / room mode listens through your microphone only: play the call on your speakers, not headphones."
+                        : displayAudioHelp()
+                      : displayAudioHelp()
                   }
                 />
                 {systemAudio && supportsDisplayAudio() && <SystemAudioTest />}
