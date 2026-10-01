@@ -5,6 +5,7 @@ import {
   type AnswerLength,
   type AnswerSource,
   type AudioStatus,
+  type CancelReason,
   type LiveAnswer,
   type LiveSettings,
   type LiveState,
@@ -51,6 +52,8 @@ export interface AnswerView {
   error: ProtocolError | null;
   /** True once at least one chunk arrived — distinguishes "Thinking…" from streaming. */
   has_content: boolean;
+  /** Why it stopped early ("stopped": the user pressed Stop; "superseded": a newer question took over). */
+  cancel_reason?: CancelReason | null;
   /** Index into turnOrder when the answer appeared (candidate turns from here count toward key points). */
   spoken_from: number;
 }
@@ -397,7 +400,7 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
     }
     case "answer.cancelled": {
       const { answer_id, reason } = action.data;
-      let next = patchAnswer(s, answer_id, { status: "cancelled" });
+      let next = patchAnswer(s, answer_id, { status: "cancelled", cancel_reason: reason });
       if (reason === "cleared" && next.currentAnswerId === answer_id) {
         next = { ...next, currentAnswerId: null, currentQuestionId: null };
       }

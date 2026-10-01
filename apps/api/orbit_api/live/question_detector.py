@@ -66,6 +66,11 @@ _INDIRECT = (
     "love to know", "question for you is", "my question is",
 )
 _WONDERING = re.compile(r"\b(?:wondering|curious) (?:if|whether|how|what|why|when|where|which|who|about)\b")
+# "I'm especially interested in how you…", "I'd like to understand your approach to…", "I want you to…": asks phrased
+# as statements, often the main question of a multi-part turn.
+_INTEREST = re.compile(r"\b(?:i'm|i am) (?:\w+ )?(?:interested in|curious about|keen to hear)\b"
+                       r"|\bi(?:'d| would)? (?:like|want|love) (?:you )?to (?:understand|hear|know|learn|see)\b"
+                       r"|\bi(?:'d| would)? (?:like|want) you to\b")
 # Explicit open floors for the candidate.
 _DIRECT_ASKS = ("any questions for", "questions for me", "questions for us", "anything you'd like to ask",
                 "anything you want to ask", "anything else you'd like to add", "anything to add")
@@ -94,6 +99,7 @@ _TYPE_RULES: list[tuple[QuestionType, tuple[str, ...]]] = [
     (QuestionType.clarification, ("what do you mean", "can you clarify", "could you clarify",
                                   "could you repeat", "can you repeat", "say that again", "rephrase")),
     (QuestionType.coding, ("write a function", "write code", "implement", "algorithm", "leetcode", "array",
+                           "subarray", "substring", "subsequence",
                            "linked list", "binary tree", "time complexity", "big o", "optimize this code",
                            "optimise this code", "this code", "the code", "string reversal", "two sum",
                            "hash map", "recursion", "sql query", "write a query", "debug this")),
@@ -106,7 +112,8 @@ _TYPE_RULES: list[tuple[QuestionType, tuple[str, ...]]] = [
     (QuestionType.resume, ("tell me about yourself", "introduce yourself", "walk me through your",
                            "your background", "your resume", "your experience", "your current role",
                            "your last role", "your previous role", "your role at", "at your last",
-                           "in your current", "your career")),
+                           "in your current", "your career", "your last project", "your current project",
+                           "your recent project", "your most recent project", "a recent project", "a project you")),
     (QuestionType.behavioral, ("tell me about a time", "describe a time", "give me an example of a time",
                                "a situation where", "conflict", "disagree", "failure", "failed", "mistake",
                                "proud", "difficult", "challenge", "pressure", "deadline", "feedback",
@@ -208,11 +215,17 @@ def _imperative_strength(norm: str) -> float:
 _DATA_CUES = re.compile(r"\b(?:table|tables|query|queries|sql|column|columns|rows|select|join|schema)\b")
 
 
+# Needles match at the start of a word: "backpressure" is not about "pressure", "escalate" is not "scale".
+_TYPE_PATTERNS: list[tuple[QuestionType, re.Pattern[str]]] = [
+    (qtype, re.compile(r"\b(?:" + "|".join(re.escape(n) for n in needles) + ")")) for qtype, needles in _TYPE_RULES
+]
+
+
 def classify_type(norm: str) -> QuestionType:
     if _DATA_CUES.search(norm) and any(n in norm for n in ("salary", "salaries", "compensation", "pay")):
         return QuestionType.coding
-    for qtype, needles in _TYPE_RULES:
-        if any(n in norm for n in needles):
+    for qtype, pattern in _TYPE_PATTERNS:
+        if pattern.search(norm):
             return qtype
     return QuestionType.technical
 
@@ -238,7 +251,20 @@ _PLEASANTRIES = (
 _WAIT_PHRASE = re.compile(r"^(give me|just|hold on|wait) (a|one|1) (second|sec|moment|minute)")
 # A short sentence right before the question that frames it ("Let's talk about your time at Acme.").
 _LEAD_IN = ("let's talk about", "lets talk about", "moving on", "switching gears", "you mentioned", "i see you",
-            "i noticed", "on your resume", "looking at your", "in your last role", "at your last company")
+            "i noticed", "on your resume", "looking at your", "in your last role", "at your last company",
+            "my next question", "next question", "the next question", "the next thing", "next i want", "next i'd like",
+            "i want to ask about", "i'd like to ask about", "let's move on to", "let's switch to", "let's shift to",
+            "switching to", "turning to", "let's go back to", "going back to", "let's dig into", "let's dive into",
+            "on the topic of", "speaking of", "let's look at", "let's turn to", "this one is about", "this is about")
+_OPENERS = frozenset({"so", "okay", "ok", "now", "alright", "and", "right", "well", "um", "uh"})
+
+
+def _is_lead_in(sentence: str) -> bool:
+    """Framing that names the topic of the question that follows ("So, my next question is about testing.")."""
+    toks = normalize(sentence).split()
+    while toks and toks[0] in _OPENERS:
+        toks = toks[1:]
+    return " ".join(toks).startswith(_LEAD_IN)
 
 
 def _is_noise(sentence: str) -> bool:
@@ -254,7 +280,7 @@ def _question_span(sentences: list[str]) -> tuple[int, int] | None:
     for i in range(len(sentences) - 1, -1, -1):
         if not _is_noise(sentences[i]) and _detect_one(sentences[i], "interviewer", DetectorContext()).is_question:
             start = i
-            if i > 0 and not _is_noise(sentences[i - 1]) and normalize(sentences[i - 1]).startswith(_LEAD_IN):
+            if i > 0 and not _is_noise(sentences[i - 1]) and _is_lead_in(sentences[i - 1]):
                 start = i - 1
             return start, i
     return None
@@ -296,6 +322,7 @@ _REACTION = ("great", "good", "nice", "perfect", "awesome", "excellent", "thanks
              "understood", "i see", "love that", "sounds good")
 _BACK_REFERENCE = frozenset({"it", "its", "this", "that", "these", "those", "they", "them", "their", "there"})
 MAX_CONTEXT_WORDS = 80
+MAX_BRIDGE_SENTENCES = 2
 
 
 def _is_reaction(sentence: str) -> bool:
@@ -317,6 +344,9 @@ def question_in_context(text: str) -> str:
     start, end = span
     before: list[str] = []
     words = 0
+    # Statements between two parts of one question ("Tell me about your last project. I'm especially interested in
+    # the scaling. What would you do differently?") are kept only once an earlier part is found before them.
+    bridge: list[str] = []
     for j in range(start - 1, -1, -1):
         sentence = sentences[j]
         if _is_reaction(sentence):
@@ -324,14 +354,21 @@ def question_in_context(text: str) -> str:
         if _is_noise(sentence):
             continue  # "um", "so", a pleasantry: skip over it
         n = normalize(sentence)
-        chain = [*before, *sentences[start : end + 1]]
+        size = len(tokens(sentence))
+        if words + sum(len(tokens(b)) for b in bridge) + size > MAX_CONTEXT_WORDS:
+            break
+        chain = [*bridge, *before, *sentences[start : end + 1]]
         refers_back = bool(set(tokens(chain[0])) & _BACK_REFERENCE)
         related = (_detect_one(sentence, "interviewer", DetectorContext()).is_question or n.startswith(_SETUP)
-                   or n.startswith(_LEAD_IN) or (refers_back and len(tokens(sentence)) > 3))
-        if not related or words + len(tokens(sentence)) > MAX_CONTEXT_WORDS:
-            break
-        before.insert(0, sentence)
-        words += len(tokens(sentence))
+                   or _is_lead_in(sentence) or (refers_back and size > 3))
+        if not related:
+            if len(bridge) >= MAX_BRIDGE_SENTENCES:
+                break
+            bridge.insert(0, sentence)
+            continue
+        before[:0] = [sentence, *bridge]
+        words += size + sum(len(tokens(b)) for b in bridge)
+        bridge = []
     after: list[str] = []
     for sentence in sentences[end + 1 :]:
         if _is_noise(sentence) or len(tokens(sentence)) < 3 or not normalize(sentence).startswith(_CONTINUATION):
@@ -357,6 +394,28 @@ def continue_question(question: str, more: str) -> str:
     return " ".join([question.strip(), *kept]).strip()
 
 
+# "…how you'd debug it, and what metrics you'd look at first": a second ask joined by "and" inside one sentence.
+_JOINED_ASK = re.compile(r",?\s+(?:and|but|plus)\s+(?:also\s+|then\s+)?(?=(?:what|how|why|when|where|which|who|whether|"
+                         r"would|could|can|do|does|did|is|are|should|tell|walk|explain|describe|give)\b)",
+                         re.IGNORECASE)
+MAX_PARTS = 6
+
+
+def question_parts(question: str) -> list[str]:
+    """The separate asks in a question, in order ("Tell me about your last project. What was the hardest part, and
+    what would you do differently?" → three). Set-up and constraint sentences aren't parts of their own; they stay
+    with the question text. A single ask gives one part."""
+    parts: list[str] = []
+    for sentence in (x.strip() for x in _SENTENCE.split(question.strip()) if x.strip()):
+        if _is_noise(sentence) or not (_detect_one(sentence, "interviewer").is_question or _INTEREST.search(
+                normalize(sentence))):
+            continue
+        pieces = [x.strip(" ,") for x in _JOINED_ASK.split(sentence) if x.strip(" ,")]
+        end = sentence[-1] if sentence.endswith(("?", ".", "!")) else ""
+        parts += [x if x.endswith(("?", ".", "!")) else x + end for x in pieces]
+    return parts[:MAX_PARTS] if len(parts) > 1 else [question.strip()]
+
+
 def detect(text: str, speaker: Speaker, ctx: DetectorContext | None = None) -> Detection:
     """Scored on the question sentence itself; `question_text` is the question in context (set-up and earlier
     parts from the same turn), which is what gets answered."""
@@ -365,7 +424,14 @@ def detect(text: str, speaker: Speaker, ctx: DetectorContext | None = None) -> D
     if speaker != "interviewer":
         return d
     full = question_in_context(text)
-    return d if full == core else replace(d, question_text=full)
+    if full == core:
+        return d
+    # The type comes from the whole question when the last sentence alone doesn't name one ("Tell me about a time
+    # you disagreed with your manager. How did you resolve it?" is behavioral, not technical).
+    qtype = d.question_type
+    if qtype is QuestionType.technical:
+        qtype = classify_type(normalize(full))
+    return replace(d, question_text=full, question_type=qtype)
 
 
 def _detect_one(text: str, speaker: Speaker, ctx: DetectorContext | None = None) -> Detection:
@@ -436,7 +502,7 @@ def _detect_one(text: str, speaker: Speaker, ctx: DetectorContext | None = None)
     if any(p in norm for p in _EMBEDDED):
         score += 0.2
         reasons.append("embedded_request")
-    if any(p in norm for p in _INDIRECT) or _WONDERING.search(norm):
+    if any(p in norm for p in _INDIRECT) or _WONDERING.search(norm) or _INTEREST.search(norm):
         score += 0.55
         reasons.append("indirect_request")
     if any(p in norm for p in _DIRECT_ASKS):

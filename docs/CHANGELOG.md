@@ -1,5 +1,34 @@
 # Implementation log
 
+## Live answers: the whole question, faster, with Stop and Pause in reach (2026-10-01)
+
+- **The whole question gets answered.**
+  - Question extraction no longer drops the main ask when a statement sits between the parts ("Tell me about your
+    last project. I'm especially interested in the scaling. What would you do differently?" used to send only the
+    last sentence).
+  - Asks phrased as statements count ("I'd like to understand…", "I'm especially interested in…"), and topic
+    framing ("So my next question is about testing.") stays with the question.
+  - A short continuation after a pause ("…which database? <pause> And why?", "In Go?") re-answers the whole
+    question. A short aside ("Yeah, that's right.") doesn't restart the answer.
+  - Question types match whole words ("backpressure" is no longer "pressure" = behavioral) and come from the whole
+    question, not only its last sentence.
+- **Multi-part questions are spelled out for the model.** The prompt lists the parts ("This question has 3
+  parts…") with a POINTS label for each, and the token budget grows with the number of parts so the answer isn't
+  cut off before the last one.
+- **The model knows the question is live speech.** It corrects misheard technical terms silently and checks the
+  interviewer's latest turn for anything the extracted question missed, without re-answering earlier questions.
+- **Faster answers.**
+  - With "wait before answering" on Balanced or Patient, the answer is now written *during* the wait: if the
+    question fires unchanged it appears at once, words included; if the interviewer keeps talking it's dropped
+    unseen. This hides the model's start-up time (about 0.7–1 s) inside the wait.
+  - The AI connection is warmed when the interviewer starts speaking (and at session start), so an answer after
+    a quiet stretch doesn't pay for a new TLS handshake.
+- **Stop and Pause.**
+  - **Stop** on a streaming answer ends it but keeps what's written (`answer.stop`); Clear still removes it.
+  - **Pause** is now in the compact overlay too (the desktop app's default), and a paused session shows a banner
+    with Resume.
+  - The compact overlay's answer toolbar and bottom bar are icon-only and wrap instead of overflowing the panel.
+
 ## Open sign-up without SMTP when approval is on; "waiting" count for the admin (2026-09-30)
 
 - **Open sign-up without email.** Production used to refuse `ORBIT_ALLOWED_EMAILS=*` without SMTP, and refuse

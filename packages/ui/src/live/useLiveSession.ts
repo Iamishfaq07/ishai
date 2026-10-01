@@ -17,6 +17,8 @@ export interface LiveActions {
    * pause), else the latest interviewer utterance. */
   answer: (questionText?: string) => void;
   clear: () => void;
+  /** Stop writing the current answer, keeping what's on screen. */
+  stop: () => void;
   pin: (answerId: string, pinned: boolean) => void;
   chat: (text: string) => void;
   setLength: (length: AnswerLength) => void;
@@ -114,6 +116,7 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
         dispatch({ type: "local/clear" });
         client.send("answer.clear", {});
       },
+      stop: () => client.send("answer.stop", {}),
       pin: (answerId, pinned) => {
         dispatch({ type: "local/pin", answer_id: answerId, pinned });
         client.send("answer.pin", { answer_id: answerId, pinned });

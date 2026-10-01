@@ -136,6 +136,8 @@ export interface ClientEventMap {
   "mock.next": Record<string, never>;
   "answer.pin": { answer_id: string; pinned: boolean };
   "answer.clear": Record<string, never>;
+  /** Stop writing the answer on screen, keeping what's there. */
+  "answer.stop": Record<string, never>;
   "chat.message": { text: string };
   "settings.update": Partial<LiveSettings>;
   "speaker.correct": { turn_id: string; speaker: Speaker };
@@ -172,7 +174,7 @@ export interface SessionStateData {
 
 export type ReasoningLevel = "light" | "deep";
 export type AnswerSource = "auto" | "manual" | "chat" | "screenshot";
-export type CancelReason = "superseded" | "cleared" | "session_ended";
+export type CancelReason = "superseded" | "cleared" | "session_ended" | "stopped";
 
 export interface AnswerLatency {
   first_token_ms: number | null;

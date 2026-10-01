@@ -131,6 +131,8 @@ class PromptInputs:
     # Fixed style hints learned from the candidate's 👎 reasons (sessions/feedback.LEARNED_HINTS), never user text.
     learned_preferences: list[str] = field(default_factory=list)
     company: str | None = None  # from the saved setup or the mock interview, when known
+    # The separate asks of a multi-part question (question_detector.question_parts), listed so none is skipped.
+    parts: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -290,6 +292,11 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
                      + "\n</reference_data>")
     if inputs.instruction:
         parts.append("USER REQUEST (from the user, not the interviewer):\n" + fence(inputs.instruction))
+    if len(inputs.parts) > 1:
+        asks = "\n".join(f"{i}. {fence(a)}" for i, a in enumerate(inputs.parts, 1))
+        parts.append(f"This question has {len(inputs.parts)} parts. Answer every one, in this order, giving each its "
+                     "share (a multi-part answer may run up to a third over the length target), with at least one "
+                     f"POINTS label per part:\n{asks}")
     parts.append("QUESTION: " + fence(inputs.question))
 
     return BuiltPrompt(

@@ -140,3 +140,22 @@ def test_images_ride_on_the_last_user_message_for_vision_models() -> None:
     with pytest.raises(LLMError) as e:
         legacy._payload(LLMRequest(messages=msgs, images=[LLMImage(b"x")]))
     assert e.value.code == "vision_unsupported"
+
+
+async def test_warm_opens_the_connection_once_while_it_is_fresh() -> None:
+    calls: list[str] = []
+
+    def handle(req: httpx.Request) -> httpx.Response:
+        calls.append(req.url.path)
+        return httpx.Response(200, json={"data": []})
+
+    p = _provider(httpx.MockTransport(handle))
+    await p.warm()
+    await p.warm()  # the connection is fresh: no second request
+    assert calls == ["/models"]
+
+    def down(req: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("offline")
+
+    p = _provider(httpx.MockTransport(down))
+    await p.warm()  # never raises: the answer opens its own connection as before

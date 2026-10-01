@@ -176,6 +176,7 @@ CLIENT_EVENT_TYPES = frozenset(
         "mock.next",
         "answer.pin",
         "answer.clear",
+        "answer.stop",
         "chat.message",
         "settings.update",
         "speaker.correct",
