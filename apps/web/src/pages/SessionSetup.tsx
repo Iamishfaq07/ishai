@@ -40,6 +40,7 @@ import {
   listMicrophones,
   openDisplayAudio,
   openMicrophone,
+  isMobileDevice,
   supportsDisplayAudio,
   useMicPermission,
   type AudioCapture,
@@ -105,8 +106,12 @@ function browserChecks(o: {
             id: "system",
             label: "Interviewer audio",
             status: "warn",
-            detail: "This browser can't share tab audio, so Orbit only hears your microphone.",
-            fix: "Use Chrome or Edge on a computer, or the Orbit desktop app.",
+            detail: isMobileDevice()
+              ? "Phones can't share tab audio, so Orbit only hears your microphone and won't hear the interviewer."
+              : "This browser can't share tab audio, so Orbit only hears your microphone.",
+            fix: isMobileDevice()
+              ? "Choose Phone / room audio as the session type and put the call on speaker."
+              : "Use Chrome or Edge on a computer, or the Orbit desktop app.",
           }
         : !o.systemAudio
           ? {
@@ -152,7 +157,7 @@ export interface LiveLaunchState {
 export function SessionSetupPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const initialType = (params.get("type") as SessionType | null) ?? "interview";
+  const initialType = (params.get("type") as SessionType | null) ?? (isMobileDevice() ? "phone" : "interview");
   const docs = useAsync(() => api.listDocuments(), [], "documents");
 
   const [title, setTitle] = useState("");
@@ -164,7 +169,7 @@ export function SessionSetupPage() {
   const [thinking, setThinking] = useState<ThinkingLevel>(loadThinking);
   const [autoAnswer, setAutoAnswer] = useState(true);
   const [responseTiming, setResponseTiming] = useState<ResponseTiming>(loadResponseTiming);
-  const [systemAudio, setSystemAudio] = useState(type !== "phone");
+  const [systemAudio, setSystemAudio] = useState(type !== "phone" && supportsDisplayAudio());
   const [selectedDocs, setSelectedDocs] = useState<Set<string> | null>(null);
   const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
   const [micId, setMicId] = useState<string>("");
@@ -265,7 +270,7 @@ export function SessionSetupPage() {
         ...(workspaceId ? { workspace_id: workspaceId } : {}),
         ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
       });
-      const launch: LiveLaunchState = { systemAudio, ...(micId ? { micDeviceId: micId } : {}) };
+      const launch: LiveLaunchState = { systemAudio: systemAudio && supportsDisplayAudio(), ...(micId ? { micDeviceId: micId } : {}) };
       navigate(`/live/${session.id}`, { state: launch });
     } catch (err) {
       setError(errorText(err));
@@ -478,7 +483,9 @@ export function SessionSetupPage() {
                       ? "Phone / room mode listens through your microphone only."
                       : supportsDisplayAudio()
                         ? "In the browser, you’ll share the meeting tab with “Share tab audio” on. Only audio is used — no video is recorded."
-                        : "This browser can’t capture tab audio. Use Chrome/Edge or the desktop app."
+                        : isMobileDevice()
+                          ? "Phones can’t share tab audio. Use Phone / room audio and put the call on speaker."
+                          : "This browser can’t capture tab audio. Use Chrome/Edge or the desktop app."
                   }
                 />
                 {systemAudio && supportsDisplayAudio() && <SystemAudioTest />}

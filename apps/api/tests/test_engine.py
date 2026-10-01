@@ -415,3 +415,15 @@ async def test_stop_ends_the_answer_but_keeps_what_was_written() -> None:
     await eng.handle_client({"type": "answer.stop", "data": {}})  # nothing streaming: a no-op, not an error
     assert sink.of("error") == []
     await eng.handle_client({"type": "session.end", "data": {}})
+
+
+async def test_phone_mode_answers_questions_heard_through_the_microphone() -> None:
+    sink = Sink()
+    eng = LiveEngine(SessionProfile("s1", "phone", "Engineer", "en", "en", dev_mode=True),
+                     LiveSettings(response_timing="quick"), send=sink, llm=MockLLMProvider(), stt=MockSTTProvider(),
+                     index=SessionIndex([]))
+    await eng.start()
+    await eng.on_transcript("mic", TranscriptEvent("final", "What is dependency injection?", 0, 100, endpoint=True))
+    await sink.wait_for("answer.completed")
+    assert sink.of("transcript.final")[0]["speaker"] == "interviewer"
+    await eng.handle_client({"type": "session.end", "data": {}})

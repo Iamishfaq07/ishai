@@ -105,10 +105,20 @@ export async function openMicrophone(deviceId?: string): Promise<MediaStream> {
  * We drop the video track immediately — no screen pixels are recorded.
  */
 export async function openDisplayAudio(): Promise<MediaStream> {
-  if (!navigator.mediaDevices.getDisplayMedia) {
-    throw new Error("This browser can't share tab audio. Use Chrome or Edge, or the Orbit desktop app.");
+  if (!supportsDisplayAudio()) {
+    throw new Error(
+      isMobileDevice()
+        ? "Phones can't share tab audio. Put the call on speaker and use Phone / room audio, or use a computer."
+        : "This browser can't share tab audio. Use Chrome or Edge, or the Orbit desktop app.",
+    );
   }
-  const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+  // Some browsers show the share prompt and then never settle the promise (seen on Android): give up rather than
+  // leave the session stuck on "Share tab audio".
+  const stream = await withTimeout(
+    navigator.mediaDevices.getDisplayMedia({ video: true, audio: true }),
+    SHARE_TIMEOUT_MS,
+    "Tab audio sharing didn't start. Try again, or continue with your microphone only.",
+  );
   stream.getVideoTracks().forEach((t) => {
     t.stop();
     stream.removeTrack(t);
@@ -119,8 +129,19 @@ export async function openDisplayAudio(): Promise<MediaStream> {
   return stream;
 }
 
+const SHARE_TIMEOUT_MS = 60_000;
+
+/** A phone or tablet. Mobile browsers may expose getDisplayMedia (Android Chrome does) but can't share a tab's audio. */
+export function isMobileDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const uaData = (navigator as Navigator & { userAgentData?: { mobile?: boolean } }).userAgentData;
+  if (uaData?.mobile) return true;
+  // iPadOS reports itself as a Mac; touch points give it away.
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+}
+
 export function supportsDisplayAudio(): boolean {
-  return typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getDisplayMedia);
+  return typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getDisplayMedia) && !isMobileDevice();
 }
 
 /** Captures one still frame from a user-chosen screen/window/tab. */
