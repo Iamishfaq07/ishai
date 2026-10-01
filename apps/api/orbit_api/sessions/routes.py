@@ -40,6 +40,7 @@ from orbit_api.live.events import (
     LiveSettings,
     SessionType,
 )
+from orbit_api.live.keyterms import extract_keyterms
 from orbit_api.live.mock_interviewer import MockConfig, drill_plan
 from orbit_api.models import (
     Answer,
@@ -511,7 +512,8 @@ async def _session_company(db: AsyncSession, row: LiveSessionRow) -> str | None:
     return company.strip()[:120] if isinstance(company, str) and company.strip() else None
 
 
-async def _load_index(db: AsyncSession, session_id: str, user_id: str) -> tuple[SessionIndex, list[str]]:
+async def _load_index(db: AsyncSession, session_id: str,
+                      user_id: str) -> tuple[SessionIndex, list[IndexedChunk]]:
     rows = (await db.execute(
         select(DocumentChunk, Document.kind, Document.title)
         .join(Document, Document.id == DocumentChunk.document_id)
@@ -544,9 +546,7 @@ async def _load_index(db: AsyncSession, session_id: str, user_id: str) -> tuple[
         await db.commit()
     chunks += [index_chunk(st, (st.embedding or []) if current and st.embedding_model == embedder.model_id else [])
                for st in stories]
-    # skills from resume/JD become STT key terms (custom vocabulary)
-    keyterms = [c.text for c in chunks if c.category == "skill" and len(c.text) < 40][:30]
-    return SessionIndex(chunks), keyterms
+    return SessionIndex(chunks), chunks
 
 
 async def drain_teardowns(timeout_s: float = 15) -> None:
@@ -641,7 +641,10 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             await ws.close(code=4003, reason="live minutes exhausted" if remaining is not None and remaining <= 0
                            else "session time limit reached")
             return
-        index, keyterms = await _load_index(db, session_id, user_id)
+        index, chunks = await _load_index(db, session_id, user_id)
+        company = await _session_company(db, row)
+        # The resume's skills, tech names from the documents, the company: words a general STT model mishears.
+        keyterms = extract_keyterms(chunks, company=company, role=row.role)
         row.status = "live"
         row.started_at = row.started_at or datetime.now(UTC)
         await db.commit()
@@ -654,7 +657,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             features=frozenset(f for f in ("system_design", "advanced_coding") if plan.has(f)),
             instructions=(row.instructions or "").strip() or None,
             learned=await learned_preferences(db, user_id),
-            company=await _session_company(db, row),
+            company=company,
         )
         settings = LiveSettings(auto_answer=row.auto_answer, length=row.length,
                                 style=row.style)
