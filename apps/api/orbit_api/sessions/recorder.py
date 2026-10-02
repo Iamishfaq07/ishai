@@ -15,11 +15,11 @@ import tempfile
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import DateTime, select, update
+from sqlalchemy import DateTime, delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,6 +43,7 @@ log = logging.getLogger(__name__)
 
 WRITE_ATTEMPTS = 5
 BACKOFF_S = 0.25  # doubles per attempt: 0.25, 0.5, 1, 2 s
+FAILED_WRITE_KEEP_DAYS = 30  # a dead letter still failing this long is given up on (it holds transcript text)
 _MODELS: dict[str, type[Base]] = {m.__name__: m for m in (Answer, ProviderRequest, Question, SessionTurn,
                                                            UsageEvent)}
 
@@ -178,6 +179,11 @@ async def replay_failed_writes() -> int:
                 if await write_durably(_from_payload(item["kind"], item["payload"])):
                     done += 1
     async with sessionmaker()() as db:
+        # Dead letters hold transcript text: anything already replayed, or still failing after 30 days, goes.
+        await db.execute(delete(FailedWrite).where(
+            FailedWrite.replayed_at.is_not(None)
+            | (FailedWrite.created_at < datetime.now(UTC) - timedelta(days=FAILED_WRITE_KEEP_DAYS))))
+        await db.commit()
         pending = (await db.scalars(select(FailedWrite).where(FailedWrite.replayed_at.is_(None))
                                     .order_by(FailedWrite.created_at).limit(1000))).all()
     for fw in pending:
@@ -191,10 +197,9 @@ async def replay_failed_writes() -> int:
             log.warning("replay of failed write %s still failing", fw.id)
             continue
         async with sessionmaker()() as db:
-            row = await db.get(FailedWrite, fw.id)
-            if row is not None:
-                row.replayed_at = datetime.now(UTC)
-                await db.commit()
+            # Written (or its session is gone): the copy of the transcript in the dead letter isn't needed.
+            await db.execute(delete(FailedWrite).where(FailedWrite.id == fw.id))
+            await db.commit()
         done += 1
     if done:
         log.info("recorder: replayed %d failed writes", done)

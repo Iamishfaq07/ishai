@@ -234,3 +234,25 @@ def test_logged_paths_hide_tickets_and_share_codes() -> None:
         "1.2.3.4", "GET", "/v1/sessions/s/live?ticket=SECRET123456"), None)
     RedactArgs().filter(record)
     assert "SECRET" not in record.getMessage() and "ticket=[redacted]" in record.getMessage()
+
+
+def test_deleting_an_account_leaves_no_ip_addresses_behind(client: TestClient) -> None:
+    from sqlalchemy import select
+
+    from orbit_api.models import AuditLog
+
+    email = f"gone-{uuid.uuid4().hex[:8]}@example.com"
+    r = client.post("/v1/auth/register", json={"email": email, "password": PW})
+    client.cookies.clear()
+    h = {"Authorization": f"Bearer {r.json()['access_token']}"}
+    user_id = client.get("/v1/auth/me", headers=h).json()["id"]
+    client.post("/v1/auth/login", json={"email": email, "password": PW})
+    client.cookies.clear()
+    assert client.request("DELETE", "/v1/auth/me", headers=h, json={"password": PW}).status_code == 204
+
+    async def ips() -> list[str | None]:
+        async with sessionmaker()() as db:
+            return list((await db.scalars(select(AuditLog.ip).where(AuditLog.user_id == user_id))).all())
+
+    left = client.portal.call(ips)  # type: ignore[union-attr]
+    assert left and all(ip is None for ip in left)

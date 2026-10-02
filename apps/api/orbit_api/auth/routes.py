@@ -4,7 +4,7 @@ from urllib.parse import urlsplit
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,7 +27,7 @@ from orbit_api.config import get_settings
 from orbit_api.csrf import token_for as csrf_token_for
 from orbit_api.db import get_db
 from orbit_api.entitlements import awaiting_approval
-from orbit_api.models import AuditLog, LiveSessionRow, User
+from orbit_api.models import AuditLog, LiveSessionRow, ProviderRequest, User
 from orbit_api.providers.email import OutgoingEmail, can_deliver, send_safely
 from orbit_api.ratelimit import TokenBucket, blocked, check, client_ip, client_network, failed, limit
 from orbit_api.sessions.routes import stop_live, stop_user_live
@@ -324,7 +324,11 @@ async def delete_account(body: DeleteAccountIn, request: Request, response: Resp
                 LiveSessionRow.user_id == u.id, LiveSessionRow.status != "ended"))).all():
             await stop_live(u.id, session_id)
         await db.delete(u)
-        db.add(AuditLog(user_id=None, action="auth.delete_account", target=user.id, ip=_ip(request)))
+        # Rows without a foreign key keep no personal data: the account's audit trail loses its IP addresses, and
+        # provider-cost rows lose the link to it (the cost totals stay right).
+        await db.execute(update(AuditLog).where(AuditLog.user_id == u.id).values(ip=None))
+        await db.execute(update(ProviderRequest).where(ProviderRequest.user_id == u.id).values(user_id=None))
+        db.add(AuditLog(user_id=None, action="auth.delete_account", target=user.id))
         await db.commit()
     _clear_cookie(response)
     response.status_code = 204
