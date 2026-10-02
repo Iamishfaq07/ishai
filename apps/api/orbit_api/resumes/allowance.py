@@ -5,6 +5,9 @@ allow. Everyone else, signed in or not, gets one free AI action: one per account
 ORBIT_FREE_RESUME_AI_IP_DAYS (30; 0 = for good), so new accounts or signing out on the same network don't hand out
 more. An "AI action" is one request that calls the model (import, a rewrite, tailoring, a cover letter); fixes worked
 out without the model (dates, skills the resume already proves) stay free, as do typing, scoring and downloads.
+At most ORBIT_FREE_RESUME_AI_DAILY free actions are handed out a rolling day across everyone, so open sign-up has a
+bounded cost. Accounts still waiting for sign-up approval get the free action too (the resume maker is where they
+buy Resume Pro); live sessions stay locked for them.
 
 The use is claimed just before the model is called and given back if the request fails, so an AI outage doesn't
 spend it. Claims are serialized in-process (one API instance, docs/DECISIONS.md D12), and a unique key on the
@@ -19,7 +22,7 @@ from typing import Any
 
 from fastapi import HTTPException, Request, status
 from pydantic import BaseModel
-from sqlalchemy import delete, exists, select
+from sqlalchemy import delete, exists, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -109,6 +112,14 @@ class Allowance:
         async with _claim_lock:
             if await self._used():
                 raise self.exhausted()
+            cap = get_settings().free_resume_ai_daily_limit
+            today = await self.db.scalar(select(func.count()).select_from(FreeAiUse).where(
+                FreeAiUse.created_at >= datetime.now(UTC) - timedelta(days=1)))
+            if (today or 0) >= cap:
+                # The use isn't spent: it's still there tomorrow.
+                raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
+                                    "The free AI edit has reached today's limit for everyone. Try again tomorrow, "
+                                    "or upgrade for unlimited AI edits.")
             row = FreeAiUse(user_id=self.user.id if self.user else None, ip_hash=self.ip_hash)
             self.db.add(row)
             try:

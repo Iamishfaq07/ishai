@@ -6,6 +6,10 @@ their account (/me, verify, resend, logout, privacy, deletion) so they can finis
 
 With sign-up approval on (ORBIT_SIGNUP_APPROVAL), the same gate also holds back a new account until the admin
 approves it or grants it a plan for a while.
+
+`require_verified_email` is the email half alone, for the resume maker: an account waiting for approval may use it,
+since its AI is capped by the free allowance (resumes/allowance.py), exactly as when signed out, and it's where a
+newcomer buys Resume Pro (approving the payment approves the account).
 """
 
 from typing import Annotated
@@ -23,8 +27,8 @@ EMAIL_UNVERIFIED = "email_unverified"
 APPROVAL_PENDING = "approval_pending"
 
 
-async def require_verified_user(user: Annotated[User, Depends(current_user)],
-                                db: Annotated[AsyncSession, Depends(get_db)]) -> User:
+async def require_verified_email(user: Annotated[User, Depends(current_user)],
+                                 db: Annotated[AsyncSession, Depends(get_db)]) -> User:
     if get_settings().verification_required and not user.email_verified and not await is_admin(db, user):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
@@ -32,6 +36,11 @@ async def require_verified_user(user: Annotated[User, Depends(current_user)],
                     "message": f"Verify your email to use this. We sent a link to {user.email} — "
                                "you can resend it from the banner."},
         )
+    return user
+
+
+async def require_verified_user(user: Annotated[User, Depends(require_verified_email)],
+                                db: Annotated[AsyncSession, Depends(get_db)]) -> User:
     # plan_for also counts the admin and paid plans, which awaiting_approval() alone can't see.
     if awaiting_approval(user) and await plan_for(db, user.id) is PENDING:
         raise HTTPException(

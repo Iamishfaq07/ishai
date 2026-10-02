@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     # Without a plan that includes resume AI, there's one free AI action per account for good, and one per IP
     # address per this many days (0 = one per IP for good). See resumes/allowance.py.
     free_resume_ai_ip_days: int = Field(30, ge=0, validation_alias=AliasChoices("ORBIT_FREE_RESUME_AI_IP_DAYS"))
+    # And at most this many free AI actions a rolling day across everyone (new accounts and signed out alike), so open
+    # sign-up can't run up an open-ended bill. 0 turns the free action off; paid plans aren't affected.
+    free_resume_ai_daily_limit: int = Field(200, ge=0, validation_alias=AliasChoices("ORBIT_FREE_RESUME_AI_DAILY"))
     # UPI payments (billing/upi.py): the UPI ID people pay to and the name their UPI app shows. Unset = nothing can
     # be bought. Each payment is checked by the admin against the bank statement (UTR) before the plan turns on.
     upi_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_UPI_ID"))
