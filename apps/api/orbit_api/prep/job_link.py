@@ -7,7 +7,9 @@ Fetching a user-supplied URL server-side is an SSRF risk, so:
 - the connection goes to that checked IP (Host header + TLS SNI carry the name, so certificates still verify), so a
   second DNS answer can't swap in an internal address (DNS rebinding);
 - redirects are followed by hand, re-checking every hop, at most MAX_REDIRECTS;
-- a short timeout, a size cap, HTML/plain text only, and no proxy from the environment.
+- a short timeout per read and for the whole fetch, a size cap that applies to the decompressed text (a few hundred
+  compressed bytes can expand to gigabytes: only identity or a single gzip layer, inflated by hand with a cap),
+  HTML/plain text only, and no proxy from the environment.
 
 The text comes from the page's schema.org JobPosting data when present (Greenhouse, Lever, Workday, most ATSs
 publish it), else from the page's main content. Pages that need a sign-in or JavaScript to show the posting (e.g.
@@ -19,6 +21,7 @@ import ipaddress
 import json
 import re
 import socket
+import zlib
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from html import unescape
@@ -33,6 +36,11 @@ MAX_BYTES = 2_000_000
 MAX_TEXT = 20_000
 MIN_TEXT = 200
 TIMEOUT_S = 8.0
+TOTAL_TIMEOUT_S = 20.0  # the whole fetch, redirects included: a server dripping bytes can't hold a request open
+# Embedded IPv4 in IPv6: NAT64 (64:ff9b::a9fe:a9fe is 169.254.169.254), the deprecated IPv4-compatible ::a.b.c.d,
+# and site-local fec0::/10, none of which `is_global` reliably rules out.
+_NAT64 = (ipaddress.ip_network("64:ff9b::/96"), ipaddress.ip_network("64:ff9b:1::/48"))
+_BLOCKED_V6 = (ipaddress.ip_network("::/96"), ipaddress.ip_network("fec0::/10"))
 USER_AGENT = "Mozilla/5.0 (compatible; OrbitJobImport/1.0; +https://orbit.app)"
 
 Resolver = Callable[[str, int], Awaitable[list[str]]]
@@ -56,9 +64,16 @@ async def _resolve(host: str, port: int) -> list[str]:
 
 
 def _public(addr: str) -> bool:
-    ip = ipaddress.ip_address(addr.split("%", 1)[0])
-    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
-        ip = ip.ipv4_mapped
+    ip: ipaddress.IPv4Address | ipaddress.IPv6Address = ipaddress.ip_address(addr.split("%", 1)[0])
+    if isinstance(ip, ipaddress.IPv6Address):
+        if ip.ipv4_mapped is not None:
+            ip = ip.ipv4_mapped
+        elif any(ip in net for net in _BLOCKED_V6) or ip.teredo is not None:
+            return False
+        elif any(ip in net for net in _NAT64):
+            ip = ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF)
+        elif ip.sixtofour is not None:
+            ip = ip.sixtofour
     return ip.is_global and not ip.is_multicast
 
 
@@ -98,6 +113,41 @@ def _is_ip(host: str) -> bool:
 
 async def fetch_job_posting(url: str, *, resolve: Resolver = _resolve,
                             transport: httpx.AsyncBaseTransport | None = None) -> JobPosting:
+    try:
+        async with asyncio.timeout(TOTAL_TIMEOUT_S):
+            return await _fetch(url, resolve, transport)
+    except TimeoutError as e:
+        raise JobLinkError("That page took too long to load. Paste the job description text instead.") from e
+
+
+async def _read_capped(resp: httpx.Response) -> bytes:
+    """The body, decompressed by hand to at most MAX_BYTES: only identity or one gzip layer is accepted."""
+    encoding = resp.headers.get("content-encoding", "").strip().lower()
+    if encoding not in ("", "identity", "gzip", "x-gzip"):
+        raise JobLinkError("That page is sent in a way Orbit can't read. Paste the job description text instead.")
+    inflate = zlib.decompressobj(16 + zlib.MAX_WBITS) if encoding in ("gzip", "x-gzip") else None
+    body = bytearray()
+
+    def take(chunk: bytes) -> bool:
+        if inflate is not None:
+            try:
+                chunk = inflate.decompress(chunk, MAX_BYTES + 1 - len(body))
+            except zlib.error as e:
+                raise JobLinkError("That page couldn't be read. Paste the job description text instead.") from e
+        body.extend(chunk)
+        return len(body) > MAX_BYTES
+
+    try:
+        async for chunk in resp.aiter_raw():
+            if take(chunk):
+                break
+    except httpx.StreamConsumed:  # a response already in memory (a test transport): decoded already; same cap
+        inflate = None
+        take(resp.content[:MAX_BYTES + 1])
+    return bytes(body[:MAX_BYTES])
+
+
+async def _fetch(url: str, resolve: Resolver, transport: httpx.AsyncBaseTransport | None) -> JobPosting:
     current = url.strip()
     async with httpx.AsyncClient(transport=transport, timeout=TIMEOUT_S, trust_env=False,
                                  follow_redirects=False) as client:
@@ -107,7 +157,7 @@ async def fetch_job_posting(url: str, *, resolve: Resolver = _resolve,
             parts = urlsplit(current)
             ip_host = f"[{ip}]" if ":" in ip else ip
             target = parts._replace(netloc=ip_host if port in (80, 443) else f"{ip_host}:{port}").geturl()
-            headers = {"Host": host, "User-Agent": USER_AGENT,
+            headers = {"Host": host, "User-Agent": USER_AGENT, "Accept-Encoding": "gzip, identity",
                        "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9", "Accept-Language": "en"}
             extensions = {"sni_hostname": host} if scheme == "https" else {}
             try:
@@ -123,12 +173,7 @@ async def fetch_job_posting(url: str, *, resolve: Resolver = _resolve,
                     ctype = resp.headers.get("content-type", "").lower()
                     if ctype and "html" not in ctype and "text/plain" not in ctype:
                         raise JobLinkError("That link isn't a web page. Paste the job description text instead.")
-                    body = bytearray()
-                    async for chunk in resp.aiter_bytes():
-                        body += chunk
-                        if len(body) > MAX_BYTES:
-                            break
-                    raw = bytes(body[:MAX_BYTES]).decode(resp.encoding or "utf-8", errors="replace")
+                    raw = (await _read_capped(resp)).decode(resp.encoding or "utf-8", errors="replace")
             except httpx.HTTPError as e:
                 raise JobLinkError("Couldn't reach that page. Check the link, or paste the text instead.") from e
             # Parsing up to 2 MB of HTML is CPU work: a thread, so it doesn't stall the event loop.
