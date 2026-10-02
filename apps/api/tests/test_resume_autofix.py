@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from orbit_api.config import get_settings
 from orbit_api.providers.llm.base import LLMError
 from orbit_api.resumes.apply import add_skills, apply_suggestion, get_at, set_at
 from orbit_api.resumes.ats import score_resume
@@ -15,6 +16,12 @@ from orbit_api.resumes.fixes import Suggestion
 from orbit_api.resumes.schema import Basics, Experience, ResumeData, ResumeDesign, SkillGroup
 from tests.test_api import _register
 from tests.test_credits import _new_ip, _signup, enforce  # noqa: F401 (the fixture)
+
+
+@pytest.fixture
+def welcome(enforce: None, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
+    """Credits enforced, and every new account gets its welcome credit (the suite signs up past the daily cap)."""
+    monkeypatch.setattr(get_settings(), "welcome_daily_limit", 10**9)
 
 
 def weak() -> ResumeData:
@@ -106,7 +113,7 @@ def test_the_candidates_numbers_are_written_in_and_size_the_lines(client: TestCl
     assert _check(done, "quantified").passed or len(facts) < 3
 
 
-def test_mechanical_fixes_need_no_ai_and_no_credit(client: TestClient, enforce: None) -> None:  # noqa: F811
+def test_mechanical_fixes_need_no_ai_and_no_credit(client: TestClient, welcome: None) -> None:
     h = _signup(client, _new_ip())
     data = weak()
     out, fixed = _fix(client, h, data, check="tech_names")
@@ -119,7 +126,7 @@ def test_mechanical_fixes_need_no_ai_and_no_credit(client: TestClient, enforce: 
     assert out["upgrade_required"] is True and _check(fixed, "dates").passed
 
 
-def test_the_ai_being_down_keeps_the_free_fixes_and_the_credit(client: TestClient, enforce: None,  # noqa: F811
+def test_the_ai_being_down_keeps_the_free_fixes_and_the_credit(client: TestClient, welcome: None,
                                                                 monkeypatch: pytest.MonkeyPatch) -> None:
     class Down:
         name = "down"
@@ -165,7 +172,7 @@ def test_suggestions_apply_on_the_server_as_in_the_editor() -> None:
     assert one.before == "I kept the macro library up to date" and one.after == "Maintained the macro library"
 
 
-def test_answering_the_questions_is_part_of_the_fix_and_free(client: TestClient, enforce: None) -> None:  # noqa: F811
+def test_answering_the_questions_is_part_of_the_fix_and_free(client: TestClient, welcome: None) -> None:
     h = _signup(client, _new_ip())
     out, fixed = _fix(client, h, weak())  # spends the one credit
     assert client.get("/v1/resumes/allowance", headers=h).json()["credits_left"] == 0
