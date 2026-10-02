@@ -692,7 +692,11 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             return
         remaining = await minutes_remaining(db, user_id, row.type)
         plan = await plan_for(db, user_id)
-        prior_session_s = row.duration_s or 0
+        # Time this session already had, from the usage every connection commits each heartbeat (not only the
+        # duration a closed connection adds at teardown): reopening it in a second window can't reset the cap.
+        metered_s = await db.scalar(select(func.coalesce(func.sum(UsageEvent.quantity), 0.0)).where(
+            UsageEvent.session_id == session_id, UsageEvent.metric.in_(("live_seconds", "mock_seconds"))))
+        prior_session_s = max(row.duration_s or 0, int(metered_s or 0))
         if (remaining is not None and remaining <= 0) or prior_session_s >= plan.max_session_minutes * 60:
             await ws.close(code=4003, reason="live minutes exhausted" if remaining is not None and remaining <= 0
                            else "session time limit reached")

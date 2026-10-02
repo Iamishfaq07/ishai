@@ -33,6 +33,20 @@ def _answered_session(client: TestClient, h: dict[str, str]) -> tuple[str, str]:
     return sid, str(aid)
 
 
+def _answers(client: TestClient, sid: str, *ids: str) -> None:
+    """Stored answers of this session to rate (after a session ends, only its real answers can be rated)."""
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import Answer
+
+    async def add() -> None:
+        async with sessionmaker()() as db:
+            for aid in ids:
+                db.add(Answer(id=aid, session_id=sid, status="completed", content={}, provider="mock", model="mock"))
+            await db.commit()
+
+    client.portal.call(add)  # type: ignore[union-attr]
+
+
 def _rate(client: TestClient, h: dict[str, str], sid: str, aid: str, **body: object) -> dict[str, object]:
     r = client.put(f"/v1/sessions/{sid}/answers/{aid}/feedback", headers=h, json=body)
     assert r.status_code == 200, r.text
@@ -74,6 +88,7 @@ def test_rating_works_before_the_answer_row_is_written(client: TestClient) -> No
 def test_repeated_reasons_become_learned_preferences(client: TestClient) -> None:
     h = _register(client)
     sid, _ = _answered_session(client, h)
+    _answers(client, sid, "long-0", "long-1", "long-2", "formal-0")
     for i in range(3):
         _rate(client, h, sid, f"long-{i}", rating="down", reason="too_long")
     _rate(client, h, sid, "formal-0", rating="down", reason="too_formal")  # once isn't a pattern
@@ -105,7 +120,11 @@ def test_admin_feedback_report(monkeypatch: pytest.MonkeyPatch) -> None:
         h = _register(client)
         sid, aid = _answered_session(client, h)
         _rate(client, h, sid, aid, rating="down", reason="too_generic")
-        _rate(client, h, sid, "not-an-answer-row", rating="up")
+        _answers(client, sid, "second-answer")
+        _rate(client, h, sid, "second-answer", rating="up")
+        # A made-up answer id, after the session: refused (it would skew this report).
+        made_up = client.put(f"/v1/sessions/{sid}/answers/not-an-answer/feedback", headers=h, json={"rating": "up"})
+        assert made_up.status_code == 404
         assert client.get("/v1/admin/feedback", headers=h).status_code == 403  # admins only
 
         report = client.get("/v1/admin/feedback", headers=admin).json()
