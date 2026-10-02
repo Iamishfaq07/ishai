@@ -121,7 +121,7 @@ def test_unfilled_placeholders_are_caught_before_they_print() -> None:
     data = strong_resume()
     data.experience[1].bullets[0] = "Shipped CI/CD with GitHub Actions, cutting release time by [X%]"
     check = _checks(data)["placeholders"]
-    assert not check.passed and "[X%]" in (check.fix or "")
+    assert not check.passed and "[X%]" in (check.fix or "") and check.ai_fixable  # the AI rewrites it finished
     assert check.target == f"experience.{data.experience[1].id}.bullets.0"
 
 

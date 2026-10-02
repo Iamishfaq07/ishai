@@ -61,20 +61,20 @@ def test_dates_are_normalised_without_inventing_a_month() -> None:
     assert fixes.date_suggestions(strong_resume()) == []
 
 
-def test_new_bullets_are_drafted_for_thin_roles_with_placeholders_and_a_warning() -> None:
+def test_new_bullets_are_drafted_for_thin_roles_finished_and_with_a_warning() -> None:
     data = _resume(experience=[Experience(title="Support Engineer", company="Acme", start="Jan 2020", bullets=[])])
     path = f"experience.{data.experience[0].id}.bullets.+"
     assert list(ai.addable_roles(data)) == [path]
     got = ai.parse_suggestions(_resp({"suggestions": [
         {"path": path, "after": "Resolved 300 tickets a month with a 98% satisfaction score", "reason": "r"},
-        {"path": path, "after": "Resolved 300 tickets a month with a 98% satisfaction score"},  # duplicate
+        {"path": path, "after": "Resolved [N] tickets a month"},  # a placeholder: unfinished
         {"path": path, "after": "Automated triage with Zendesk and Terraform"},  # tools it never said
         {"path": path, "after": "Wrote runbooks the whole team used"},
         {"path": path, "after": "Trained new hires on the escalation process"},
         {"path": path, "after": "A fourth bullet over the cap"},
     ]}), data)
-    assert [s.kind for s in got] == ["add_bullet"] * 3
-    assert got[0].after == "Resolved [N] tickets a month with a [X%] satisfaction score"
+    assert [s.kind for s in got] == ["add_bullet"] * 3  # numbers it made up, a placeholder and new tools: dropped
+    assert got[0].after == "Wrote runbooks the whole team used"
     assert all(s.confirm == ai.NEW_BULLET_CONFIRM and s.before == "" for s in got)
 
 

@@ -557,8 +557,10 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
     n_unfilled = len(unfilled)
     _check(checks, "placeholders", "readability", "No [placeholders] left to fill", 3, 0 if unfilled else 1.0,
            (f"{n_unfilled} line{'s' if n_unfilled != 1 else ''} still {'have' if n_unfilled != 1 else 'has'} a "
-            f"placeholder like {unfilled[0][1]}: fill in the real detail or remove it, or it prints as-is."
-            ) if unfilled else None, unfilled[0][0] if unfilled else None)
+            f"placeholder like {unfilled[0][1]}: rewrite {'them' if n_unfilled != 1 else 'it'} as finished text, "
+            "using a real number if you have one, or it prints as-is."
+            ) if unfilled else None, unfilled[0][0] if unfilled else None,
+           ai_fixable=bool(unfilled))  # the AI rewrites them complete, without inventing a number
     cliched = [(p, m.group(1)) for p, t in fields if (m := _CLICHE.search(t))]
     _check(checks, "cliches", "readability", "No clichés like \"team player\"", 2, 0 if cliched else 1.0,
            (f"\"{cliched[0][1]}\" claims a quality instead of showing it. Replace it with what you did that proves it."

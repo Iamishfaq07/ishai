@@ -4,8 +4,12 @@ The suggestion prompt forbids invented numbers and tools, but a model sometimes 
 anyway, and a candidate who pastes that in is then asked about it in an interview. These checks run on every rewrite,
 against the whole resume (not just the field being rewritten, since a bullet may reuse a fact from elsewhere in it):
 
-- a figure that appears nowhere in the resume becomes a bracketed placeholder the candidate must fill in;
+- a figure that appears nowhere in the resume drops the suggestion (invented_figures);
 - a tool or technology that appears nowhere in the resume drops the suggestion.
+
+Nothing here writes a [placeholder]: AI text is always finished text the candidate can use as it is. Where a figure
+the source never gave has to go (an import, a cover letter), the words carrying it are taken out instead
+(strip_invented_figures).
 """
 
 import re
@@ -34,13 +38,47 @@ def _figures(text: str) -> list[tuple[re.Match[str], str]]:
     return out
 
 
-def _placeholder(m: re.Match[str]) -> str:
-    whole = m.group(0)
-    if "%" in whole:
-        return "[X%]"
-    if whole.startswith("$"):
-        return "[$X]"
-    return "[N]x" if whole.lower().endswith("x") else "[N]"
+def invented_figures(text: str, corpus: str) -> list[str]:
+    """The figures in `text` that appear nowhere in `corpus` (as written, e.g. "35%")."""
+    known = {n for _, n in _figures(corpus)}
+    return [m.group(0) for m, normal in _figures(text) if normal not in known]
+
+
+# The words that carry a figure: "by over 35%", "to 120 ms", "for 3M users", ", saving 10 hours a week", "(40%)",
+# "35% faster". Taking out the whole phrase leaves a sentence that still reads ("Cut page load time across the
+# storefront").
+_QUALIFIER = r"(?:(?:about|around|nearly|almost|roughly|approximately|over|more than|up to|under|less than|" \
+             r"an estimated|a)\s+)?"
+# One unit word after the figure ("users", "ms", "hours"), never a linking word that starts the next phrase, then an
+# optional rate ("a day", "per sprint").
+_LINKING = (r"(?:across|for|in|on|at|to|from|with|after|before|by|of|and|or|the|than|while|so|which|that|as|into|"
+            r"per|a|an|each|every|last|this|next|during|over|within|since|until)")
+_UNIT = (r"(?:\s+(?!" + _LINKING + r"\b)[a-zA-Z][\w-]*)?"
+         r"(?:\s+(?:a|an|per|each|every)\s+(?:day|week|month|year|hour|minute|second|quarter|sprint|release))?")
+_FIGURE_PHRASE = (
+    r"(?:\s*,?\s*(?:saving|cutting|reducing|adding|generating|reaching|growing|by|of|to|from|for|across|"
+    r"with|at|over|within|in)\s+" + _QUALIFIER + "<FIG>" + _UNIT + r")"
+    r"|(?:\s*\([^)]*<FIG>[^)]*\))"
+    r"|(?:<FIG>\s+(?=(?:faster|slower|more|less|fewer|higher|lower|better|cheaper|bigger|smaller)\b))"
+)
+
+
+def strip_invented_figures(text: str, corpus: str) -> tuple[str, int]:
+    """`text` without the figures `corpus` never gives, and how many went. Each goes with the words that carry it
+    ("by 35%"); one that can't be lifted out cleanly takes its sentence with it when there are others, else just the
+    number goes ("shipped 12 releases" -> "shipped releases")."""
+    count = 0
+    for fig in invented_figures(text, corpus):
+        pattern = re.compile(_FIGURE_PHRASE.replace("<FIG>", re.escape(fig)), re.IGNORECASE)
+        stripped, n = pattern.subn("", text, count=1)
+        if not n:
+            sentences = [s for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+            kept = [s for s in sentences if fig not in s]
+            stripped = " ".join(kept) if kept and len(kept) < len(sentences) else \
+                re.sub(r"(?<![\w.])" + re.escape(fig) + r"(?![\w])", "", text, count=1)
+        text = re.sub(r"\s+([,.;:!?])", r"\1", re.sub(r"[ \t]{2,}", " ", stripped)).strip()
+        count += 1
+    return text, count
 
 
 def invented_terms(after: str, corpus: str) -> list[str]:
@@ -55,21 +93,6 @@ def invented_terms(after: str, corpus: str) -> list[str]:
         seen.add(key)
         out.append(term)
     return out
-
-
-def fill_invented_figures(after: str, corpus: str) -> tuple[str, int]:
-    """`after` with every figure the resume doesn't contain replaced by a placeholder, and how many were."""
-    known = {n for _, n in _figures(corpus)}
-    pieces: list[str] = []
-    last = 0
-    count = 0
-    for m, normal in _figures(after):
-        if normal in known:
-            continue
-        pieces += [after[last:m.start()], _placeholder(m)]
-        last = m.end()
-        count += 1
-    return "".join(pieces) + after[last:], count
 
 
 # ---- import: everything the model read must be in what it was given ------------------------------------------
@@ -88,7 +111,7 @@ def ground_import(data: ResumeData, source: str) -> tuple[ResumeData, list[str]]
     The import prompt says "copy facts exactly", but a model sometimes adds a plausible skill, a placeholder-looking
     email, a profile link or a metric that the resume never had. Contact details and skills are what recruiters and
     ATS software read first, so each is checked against the source: an email, phone number or link it doesn't contain
-    is blanked, a skill it never lists is dropped, and a figure it never states becomes a placeholder.
+    is blanked, a skill it never lists is dropped, and a figure it never states is taken out with its words.
     """
     out = data.model_copy(deep=True)
     notes: list[str] = []
@@ -132,7 +155,7 @@ def ground_import(data: ResumeData, source: str) -> tuple[ResumeData, list[str]]
 
     def fix(text: str) -> str:
         nonlocal figures
-        fixed, n = fill_invented_figures(text, source)
+        fixed, n = strip_invented_figures(text, source)
         figures += n
         return fixed
 

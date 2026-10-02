@@ -122,13 +122,15 @@ class MockLLMProvider(LLMProvider):
                 roles = json.loads(roles_match.group(1)) if roles_match else []
             except json.JSONDecodeError:
                 roles = []
+            # Finished text with no [brackets], like the real prompt asks for (a bracket would be dropped as a
+            # placeholder), so "(mock)" marks it instead.
             added = [{"path": r["path"], "after": f"Maintained the {r['role'].split(' at ')[0].lower()} systems "
-                                                  "day to day for [N] users",
-                      "reason": "[mock] A role needs at least two bullets."}
+                                                  "day to day for the teams that relied on them",
+                      "reason": "(mock) A role needs at least two bullets."}
                      for r in roles if isinstance(r, dict) and "path" in r][:2]
             return json.dumps({"suggestions": added + [
-                {"path": f["path"], "after": f"[mock] Improved: {f['text'] or 'A summary of your strengths'}"[:300],
-                 "reason": "[mock] Clearer and more specific."}
+                {"path": f["path"], "after": f"(mock) Improved: {f['text'] or 'A summary of your strengths'}"[:300],
+                 "reason": "(mock) Clearer and more specific."}
                 for f in fields if isinstance(f, dict) and "path" in f][:3]})
         if request.request_type == "resume_skills":
             return json.dumps({"skills": ["Git", "Agile", "Jira", "Linux", "Code review", "Testing", "Communication"]})
