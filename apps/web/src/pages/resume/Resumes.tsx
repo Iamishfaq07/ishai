@@ -22,6 +22,7 @@ import { api } from "../../lib/api";
 import { errorText, formatDate } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
 import { LibraryTabs } from "../Stories";
+import { guestResume } from "./backend";
 import { newResume } from "./model";
 
 export function scoreTone(score: number): string {
@@ -41,6 +42,21 @@ export function ResumesPage() {
   const [creating, setCreating] = useState(false);
   const [copying, setCopying] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // A resume made on the free signed-out maker, still in this browser: offered once, then kept or dropped.
+  const [fromBefore, setFromBefore] = useState(() => guestResume.load());
+  const saveFromBefore = async () => {
+    if (!fromBefore) return;
+    setActionError(null);
+    try {
+      const { title, data, design, job_text, cover_letter } = fromBefore;
+      const r = await api.createResume({ title, data, design, job_text, cover_letter });
+      guestResume.clear();
+      setFromBefore(null);
+      navigate(`/documents/resumes/${r.id}`);
+    } catch (err) {
+      setActionError(errorText(err));
+    }
+  };
 
   /** A copy to tailor for another job, without touching the original. */
   const duplicate = async (r: ResumeSummary) => {
@@ -81,6 +97,25 @@ export function ResumesPage() {
           </Button>
         }
       />
+      {fromBefore && (
+        <Card className="mb-4 flex flex-wrap items-center gap-3">
+          <FileText className="h-5 w-5 shrink-0 text-indigo-500" aria-hidden />
+          <p className="min-w-0 flex-1 text-sm">
+            <strong className="font-medium">You made a resume before signing in</strong>
+            {fromBefore.data.basics.name ? ` (${fromBefore.data.basics.name})` : ""}. Save it to your account to keep it safe and use it in interviews.
+          </p>
+          <Button onClick={() => void saveFromBefore()}>Save to my account</Button>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              guestResume.clear();
+              setFromBefore(null);
+            }}
+          >
+            Discard
+          </Button>
+        </Card>
+      )}
       {creating && <NewResume onClose={() => setCreating(false)} />}
       {actionError && <div className="mb-4"><ErrorNote>{actionError}</ErrorNote></div>}
       {list.loading && !list.data ? (
@@ -188,18 +223,30 @@ function BusyNote({ onCancel }: { onCancel: () => void }) {
   );
 }
 
-function NewResume({ onClose }: { onClose: () => void }) {
+/** The ways to start a resume. Signed out (`guest`), the resume is kept on this device and "from your documents" is left out. */
+export function NewResume({ onClose, guest = false, onCreated }: { onClose?: () => void; guest?: boolean; onCreated?: (imported: boolean) => void }) {
   const navigate = useNavigate();
+  const tools = guest ? api.guest : api;
+  const sources = guest ? SOURCES.filter((s) => s.id !== "document") : SOURCES;
   const [source, setSource] = useState<Source | null>(null);
   const [text, setText] = useState("");
   const [docId, setDocId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const docs = useAsync(() => api.listDocuments(), [], "documents");
+  const docs = useAsync(() => (guest ? Promise.resolve([] as Awaited<ReturnType<typeof api.listDocuments>>) : api.listDocuments()), [guest], guest ? "documents-guest" : "documents");
   const resumeDocs = (docs.data ?? []).filter((d) => d.kind === "resume" && d.status === "ready");
 
   const create = async (title: string, data?: ResumeData) => {
+    if (guest) {
+      try {
+        guestResume.create(newResume(title, data));
+      } catch {
+        throw new Error("This browser won't let us keep a resume on your device (a private window, or storage turned off). Use a normal window.");
+      }
+      onCreated?.(Boolean(data));
+      return;
+    }
     const r = await api.createResume(newResume(title, data));
     navigate(`/documents/resumes/${r.id}`, { state: { imported: Boolean(data) } });
   };
@@ -226,14 +273,14 @@ function NewResume({ onClose }: { onClose: () => void }) {
       return;
     }
     void run(async (signal) => {
-      const res = await api.importResumeFile(file, file.name, { signal });
+      const res = await tools.importResumeFile(file, file.name, { signal });
       await create(res.title, res.data);
     });
   };
 
   const importText = (kind: "text" | "linkedin") =>
     void run(async (signal) => {
-      const res = await api.importResume({ source: kind, text }, { signal });
+      const res = await tools.importResume({ source: kind, text }, { signal });
       await create(res.title, res.data);
     });
 
@@ -329,11 +376,13 @@ function NewResume({ onClose }: { onClose: () => void }) {
           </button>
         )}
         <h2 className="flex-1 font-display text-lg font-semibold">
-          {source ? SOURCES.find((s) => s.id === source)!.label : "New resume"}
+          {source ? sources.find((s) => s.id === source)!.label : guest ? "Start your resume" : "New resume"}
         </h2>
-        <button type="button" onClick={onClose} aria-label="Close" className={cx("rounded-md p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-white", focusRing)}>
-          <X className="h-4 w-4" />
-        </button>
+        {onClose && (
+          <button type="button" onClick={onClose} aria-label="Close" className={cx("rounded-md p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-white", focusRing)}>
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
       {error && <div className="mb-4"><ErrorNote>{error}</ErrorNote></div>}
       {busy && source && source !== "scratch" && <BusyNote onCancel={cancel} />}
@@ -341,7 +390,7 @@ function NewResume({ onClose }: { onClose: () => void }) {
         body
       ) : (
         <ul className="grid gap-2 sm:grid-cols-2">
-          {SOURCES.map(({ id, label, hint, icon: Icon }) => (
+          {sources.map(({ id, label, hint, icon: Icon }) => (
             <li key={id}>
               <button
                 type="button"

@@ -29,6 +29,7 @@ from orbit_api.prep.routes import router as prep_router
 from orbit_api.providers import health as dependency_health
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.stt import create_stt_provider
+from orbit_api.resumes.routes import public_router as resume_maker_router
 from orbit_api.resumes.routes import router as resumes_router
 from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.runtime_config import refresh as refresh_runtime_config
@@ -204,6 +205,7 @@ def create_app() -> FastAPI:
     app.include_router(stories_router)
     app.include_router(feedback_router)
     app.include_router(resumes_router)
+    app.include_router(resume_maker_router)
     return app
 
 

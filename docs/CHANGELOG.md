@@ -1,5 +1,23 @@
 # Implementation log
 
+## The resume maker is free for everyone, no account (2026-10-02)
+
+- **Open to anyone at `/resume-maker`, linked from the sign-in and sign-up screens** ("Free resume maker, no account
+  needed"). Everything works signed out: start from scratch or import a PDF, Word file, LinkedIn profile or pasted
+  text; the live ATS score; the AI fixes (skills, bullets, numbers, dates, rewrites); cover letter; PDF and Word
+  download. Signed-in people are sent to their account's resume maker, which is unchanged.
+- **The resume stays in the visitor's browser**, not on the server: one resume, saved as they type ("Saved on this
+  device"), with a note that clearing browsing data deletes it. If they later sign in, Resumes offers "Save to my
+  account" (and Discard) for the one they made before.
+- **Cost is capped, since nobody is there to bill.** Signed-out AI: 6 calls at once, then 1 a minute per address, and
+  300 a day across everyone (`ORBIT_GUEST_RESUME_AI_DAILY`, `0` turns it off); past that, "The free AI has reached
+  today's limit. Try again tomorrow, or create a free account." Scoring and Word export aren't capped. Importing a
+  document from an account and importing a job post from a link need an account, so the signed-out editor leaves
+  them out; pasting a job post works.
+- **API:** new `/v1/resume-maker/{score,docx,import,import-file,suggest,cover-letter,cover-letter/docx}`, the same tools
+  as `/v1/resumes/*` (shared code), with no sign-in and nothing stored. The account endpoints still need one.
+  The shared client exposes them as `api.guest.*`.
+
 ## Resume AI fixes every problem, not just wording (2026-10-02)
 
 - **"Fix with AI" now appears on almost every ATS problem**, and it does what the problem needs: adds skills, adds

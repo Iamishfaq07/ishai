@@ -15,6 +15,7 @@ const loaders = {
   stories: () => import("./pages/Stories"),
   resumes: () => import("./pages/resume/Resumes"),
   resumeEditor: () => import("./pages/resume/ResumeEditor"),
+  guestResume: () => import("./pages/resume/GuestResumeMaker"),
   mock: () => import("./pages/Mock"),
   billing: () => import("./pages/Billing"),
   settings: () => import("./pages/Settings"),
@@ -35,6 +36,7 @@ export const DocumentsPage = page(loaders.documents, (m) => m.DocumentsPage);
 export const StoriesPage = page(loaders.stories, (m) => m.StoriesPage);
 export const ResumesPage = page(loaders.resumes, (m) => m.ResumesPage);
 export const ResumeEditorPage = page(loaders.resumeEditor, (m) => m.ResumeEditorPage);
+export const GuestResumeMakerPage = page(loaders.guestResume, (m) => m.GuestResumeMakerPage);
 export const MockPage = page(loaders.mock, (m) => m.MockPage);
 export const BillingPage = page(loaders.billing, (m) => m.BillingPage);
 export const SettingsPage = page(loaders.settings, (m) => m.SettingsPage);
@@ -48,6 +50,7 @@ const BY_PATH: Array<[RegExp, keyof typeof loaders]> = [
   [/^\/sessions\/[^/]+/, "sessionDetail"],
   [/^\/sessions/, "sessions"],
   [/^\/documents\/stories/, "stories"],
+  [/^\/resume-maker/, "guestResume"],
   [/^\/documents\/resumes\/[^/]+/, "resumeEditor"],
   [/^\/documents\/resumes/, "resumes"],
   [/^\/documents/, "documents"],
