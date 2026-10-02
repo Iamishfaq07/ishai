@@ -71,7 +71,7 @@ def test_strong_resume_scores_high_and_matches_the_job() -> None:
     report = score_resume(strong_resume(), job_text=JOB)
     assert report.score >= 85 and report.verdict == "Strong"
     assert report.keywords is not None and "Datadog" in report.keywords.matched
-    assert not report.keywords.missing or report.keywords.missing == ["observability"]
+    assert not report.keywords.missing or report.keywords.missing == ["Observability"]
 
 
 def test_without_a_job_post_keywords_are_left_out_and_the_rest_scaled_to_100() -> None:
@@ -96,7 +96,7 @@ def test_dates_and_keywords_helpers() -> None:
     mixed.experience[1].start = "06/2016"
     assert not {c.id: c for c in score_resume(mixed).checks}["dates"].passed
     kws = extract_keywords(JOB)
-    assert {"python", "kubernetes", "ci/cd", "Datadog"} <= set(kws)
+    assert {"Python", "Kubernetes", "CI/CD", "Datadog"} <= set(kws)  # written the way the post writes them
     assert not {"CI", "GitHub", "Backend", "APIs"} & set(kws)  # parts of longer terms, titles, generic words
     got = match_keywords(["node.js", "a/b testing", "c++", "microservice"], ResumeData(
         basics=Basics(summary="Nodejs services, A/B testing, C++ and microservices")))
@@ -350,7 +350,7 @@ def test_parse_suggestions_rejects_unknown_paths_no_ops_and_duplicates() -> None
     got = ai.parse_suggestions(resp([
         {"path": "experience.nope.bullets.0", "after": "x"},
         {"path": path, "after": same},  # no change
-        {"path": path, "after": "• Led the ledger migration to event sourcing, cutting reconciliation by [X%]",
+        {"path": path, "after": "• Led the ledger migration to event sourcing, cutting reconciliation time by 60%",
          "reason": "Leads with the result."},
         {"path": path, "after": "duplicate"},
         {"path": "basics.summary", "after": "S" * 3000},

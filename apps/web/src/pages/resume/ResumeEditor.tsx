@@ -222,7 +222,8 @@ function ResumeEditor() {
   unsaved.current = save.state === "dirty" || save.state === "error";
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
-      if (save.state === "dirty" || save.state === "saving") e.preventDefault();
+      // "error" too: a phone that went offline would otherwise close the tab on edits that never reached the server.
+      if (save.state !== "saved") e.preventDefault();
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
@@ -294,14 +295,26 @@ function ResumeEditor() {
     setFocusTarget(target);
   };
 
-  const askAi = async (mode: "improve" | "tailor", check?: string) => {
+  /** `focus`: rewrite just that one field (a bullet's ✨, the summary's "Rewrite with AI"). */
+  const askAi = async (mode: "improve" | "tailor", check?: string, focus?: string) => {
     if (!resume) return;
     setTab("ai");
-    setAiBusy((check && FIX_BUSY[check]) || (mode === "tailor" ? "Tailoring to the job…" : check ? "Working on that fix…" : "Reading your resume…"));
+    setAiBusy(
+      focus
+        ? focus === "basics.summary" ? "Writing your summary…" : "Rewriting that line…"
+        : (check && FIX_BUSY[check]) || (mode === "tailor" ? "Tailoring to the job…" : check ? "Working on that fix…" : "Reading your resume…"),
+    );
     setAiError(null);
     setAiUpgrade(false);
     try {
-      const res = await backend.tools.suggestResume({ data: resume.data, design: resume.design, job_text: resume.job_text, mode, ...(check ? { check } : {}) });
+      const res = await backend.tools.suggestResume({
+        data: resume.data,
+        design: resume.design,
+        job_text: resume.job_text,
+        mode: focus && resume.job_text.trim() ? "tailor" : mode,
+        ...(check ? { check } : {}),
+        ...(focus ? { focus } : {}),
+      });
       setQueue(res.suggestions);
       if (res.upgrade_required) {
         setAiUpgrade(true);
@@ -385,7 +398,7 @@ function ResumeEditor() {
           onChange={(e) => change((r) => ({ ...r, title: e.target.value }))}
           className="max-w-xs font-display text-lg font-semibold"
         />
-        <SaveState state={save.state} error={save.error} guest={backend.guest} />
+        <SaveState state={save.state} error={save.error} guest={backend.guest} onRetry={() => setSave({ state: "dirty" })} />
         <div className="flex items-center">
           <HistoryButton label="Undo" shortcut="Ctrl+Z" disabled={!steps.undo} onClick={() => step("undo")}>
             <Undo2 className="h-4 w-4" />
@@ -461,7 +474,7 @@ function ResumeEditor() {
             ))}
           </div>
 
-          {tab === "content" && <ContentForm data={resume.data} update={update} />}
+          {tab === "content" && <ContentForm data={resume.data} update={update} onRewrite={(path) => void askAi("improve", undefined, path)} />}
           {tab === "score" && (
             <ScorePanel
               resume={resume}
@@ -537,13 +550,18 @@ function HistoryButton({ label, shortcut, disabled, onClick, children }: { label
   );
 }
 
-function SaveState({ state, error, guest }: { state: "saved" | "saving" | "dirty" | "error"; error?: string; guest?: boolean }) {
+function SaveState({ state, error, guest, onRetry }: { state: "saved" | "saving" | "dirty" | "error"; error?: string; guest?: boolean; onRetry: () => void }) {
   return (
     <span role="status" className={cx("text-xs", state === "error" ? "text-rose-600" : "text-zinc-500 dark:text-zinc-400")}>
       {state === "saved" ? (
         <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" /> {guest ? "Saved on this device" : "Saved"}</span>
       ) : state === "error" ? (
-        `Not saved: ${error ?? "try again"}`
+        <span className="inline-flex items-center gap-1.5">
+          Not saved: {error ?? "try again"}
+          <button type="button" onClick={onRetry} className={cx("rounded font-medium underline", focusRing)}>
+            Retry
+          </button>
+        </span>
       ) : (
         "Saving…"
       )}

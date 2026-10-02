@@ -19,6 +19,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from orbit_api.resumes.claims import _GENERIC, _figures
 from orbit_api.resumes.schema import ResumeData, ResumeDesign
 
 Category = Literal["contact", "sections", "summary", "experience", "skills", "readability", "layout", "keywords"]
@@ -82,7 +83,39 @@ refined reorganized replaced reported represented researched resolved restructur
 saved scaled scheduled secured selected served shipped simplified slashed solved spearheaded standardized
 started streamlined strengthened structured supervised supported surpassed synthesized taught tested tracked trained
 transformed translated tripled troubleshot tuned unified upgraded utilized validated won wrote
+closed coded documented exceeded hired hosted landed lifted lowered onboarded owned piloted quadrupled ramped
+retained rolled shaped shortened sold sourced steered trimmed
 """.split())
+# Present-tense forms whose past isn't the word + "ed"/"d" (a current role is written in the present: "Lead a team").
+_IRREGULAR_PRESENT = {
+    "lead": "led", "build": "built", "run": "ran", "drive": "drove", "grow": "grew", "write": "wrote", "win": "won",
+    "cut": "cut", "oversee": "oversaw", "teach": "taught", "sell": "sold", "troubleshoot": "troubleshot",
+}
+
+
+def is_action_verb(word: str) -> bool:
+    """A bullet opener that says what the person did, in the past ("Led") or, for a current role, the present ("Lead",
+    "Leads", "Manage"). "Co-founded" and "Re-architected" count as their verb."""
+    w = word.lower().rstrip(".,;:")
+    for prefix in ("co-", "re-"):
+        if w.startswith(prefix) and len(w) > len(prefix) + 2:
+            w = w[len(prefix):]
+    if w in ACTION_VERBS:
+        return True
+    bases = {w}
+    if w.endswith("ies"):
+        bases.add(w[:-3] + "y")  # "applies" -> "apply"
+    if w.endswith("es"):
+        bases.add(w[:-2])  # "fixes" -> "fix"
+    if w.endswith("s"):
+        bases.add(w[:-1])  # "leads" -> "lead"
+    for base in bases:
+        if _IRREGULAR_PRESENT.get(base) in ACTION_VERBS:
+            return True
+        past = {base + "ed", base + "d", base[:-1] + "ied" if base.endswith("y") else "", base + base[-1:] + "ed"}
+        if past & ACTION_VERBS:
+            return True
+    return False
 
 # Other strong verbs to suggest when one opens too many bullets.
 VERB_ALTERNATIVES: dict[str, str] = {
@@ -104,8 +137,12 @@ _CLICHE = re.compile(r"(?<![a-z])(" + "|".join(re.escape(c) for c in CLICHES) + 
 # A bracketed cue the AI leaves for the user to fill in ("by [X%]"); same shape the editor highlights.
 PLACEHOLDER = re.compile(r"\[[^\][\n]{1,160}\]")
 
-_PRONOUN = re.compile(r"\b(?:I|me|my|mine|myself)\b|\b(?:My|Me)\b")
-_NUMBER = re.compile(r"\d|%|\$|€|£|₹")
+# "I", but not the I in "I/O" or "CI/CD".
+_PRONOUN = re.compile(r"(?<![\w/])I(?![\w/])|\b(?:me|my|mine|myself|My|Me)\b")
+# Results said in words: "doubled sign-ups", "cut hundreds of hours".
+_NUMBER_WORDS = re.compile(r"\b(?:doubl|tripl|quadrupl|halv)(?:ed|ing|es)\b|\b(?:dozens|hundreds|thousands|millions|"
+                           r"billions|two|three|four|five|six|seven|eight|nine|ten|twelve|fifteen|twenty|fifty)\b",
+                           re.IGNORECASE)
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
 _WORD = re.compile(r"[A-Za-z][A-Za-z0-9+#.\-']*")
 _MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
@@ -113,6 +150,12 @@ _MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct",
 
 def _words(text: str) -> list[str]:
     return _WORD.findall(text)
+
+
+def is_quantified(text: str) -> bool:
+    """The bullet sizes its result: a figure (40%, $2M, 1,500, 3x; not the 3 in "S3", "Q3" or "24/7", not a year) or
+    a number in words ("doubled", "hundreds of")."""
+    return bool(_figures(text) or _NUMBER_WORDS.search(text) or re.search(r"[₹€£]\s?\d", text))
 
 
 def _first_word(text: str) -> str:
@@ -250,6 +293,40 @@ remote hybrid onsite pto benefits salary equity bonus insurance dental vision
 
 
 _LIST_LEAD = frozenset({",", "(", "/", "and", "or", "with", "in", "using", "like", "via", "including", "of"})
+# Job-post boilerplate that looks like a product name or acronym: titles, time zones, places, legal lines.
+_BOILERPLATE = frozenset("""
+eeo eoe est edt pst pdt cst cdt mst gmt utc ist cet us usa uk eu emea apac latam hq llc inc ltd coo cmo cio svp evp
+avp asap ote dei pto wfh nyc sf la ada
+""".split()) | _GENERIC
+# Skills that are also everyday words ("go to market", "excel in", "the rest", "Spring 2025", "a lean team"): only
+# counted when the post writes them as the product, capitalised mid-sentence.
+_AMBIGUOUS = {"go": "Go", "react": "React", "rest": "REST", "excel": "Excel", "spring": "Spring", "lean": "Lean",
+              "swift": "Swift", "spark": "Spark", "ruby": "Ruby"}
+
+
+def _as_product(job_text: str, written: str) -> int:
+    """How often `written` ("Go", "Excel") appears capitalised mid-sentence: not as a season, not a sentence's first
+    word."""
+    n = 0
+    for m in re.finditer(r"(?<![A-Za-z0-9])" + re.escape(written) + r"(?![A-Za-z0-9])", job_text):
+        before = job_text[:m.start()].rstrip(" \t")
+        if not before or before[-1] in ".!?:\n•*-–—" or re.match(r"\s+(?:19|20)\d\d", job_text[m.end():]):
+            continue
+        n += 1
+    return n
+
+
+def pretty_term(term: str, *texts: str) -> str:
+    """The way the term is written in the first text that has it (with a capital), else a sensible casing."""
+    for text in texts:
+        m = re.search(r"(?<![A-Za-z0-9])" + re.escape(term) + r"(?![A-Za-z0-9+#])", text, re.IGNORECASE)
+        if m and m.group(0) != m.group(0).lower():
+            return m.group(0)
+    if "/" in term and all(len(p) <= 4 for p in term.split("/")):
+        return term.upper()
+    if len(term) <= 3 and " " not in term:
+        return term.upper()
+    return " ".join(w if w.isupper() else w[:1].upper() + w[1:] for w in term.split(" "))
 
 
 def _norm(text: str) -> str:
@@ -276,10 +353,11 @@ def extract_keywords(job_text: str, limit: int = 20) -> list[str]:
     display: dict[str, str] = {}
     covered: list[str] = []
     for term in SKILL_VOCAB:
-        n = len(_term_pattern(term).findall(norm))
+        n = _as_product(job_text, _AMBIGUOUS[term]) if term in _AMBIGUOUS else len(_term_pattern(term).findall(norm))
         if n and not any(term in bigger for bigger in covered):  # "learning" inside "machine learning"
             scores[term] += 3 * n + 10
-            display[term] = term
+            # "AWS", "PostgreSQL": the chip is added to the resume as shown.
+            display[term] = _AMBIGUOUS.get(term) or pretty_term(term, job_text)
             covered.append(term)
     # Product and tech names. CamelCase and acronyms anywhere mid-sentence ("GraphQL", "SOC2"); a plain capitalised
     # word ("Datadog") only in a list-like spot ("with X", "in X", "X, Y", "(X)"), so a company name after "at" or a
@@ -292,13 +370,18 @@ def extract_keywords(job_text: str, limit: int = 20) -> list[str]:
         if plain and before not in _LIST_LEAD:
             continue
         key = _norm(word)
-        if key in _STOP or key.rstrip("s") in _STOP or key in scores or _part_of(key, covered):
+        if (key in _STOP or key.rstrip("s") in _STOP or key in _BOILERPLATE or key in scores or key in _AMBIGUOUS
+                or _part_of(key, covered)):
             continue
         scores[key] += 4
         display.setdefault(key, word)
-    counts = Counter(w for w in re.findall(r"[a-z][a-z+#-]{3,}", norm) if w not in _STOP)
+    counts = Counter(w for w in re.findall(r"[a-z][a-z+#-]{3,}", norm) if w not in _STOP and w not in _AMBIGUOUS)
     for word, n in counts.items():
         if n >= 3 and not any(word in k for k in scores):
+            # Capitalised every time it appears: the company's own name ("Brightline"), not a skill.
+            seen = re.findall(r"(?<![A-Za-z])" + re.escape(word) + r"(?![A-Za-z])", job_text, re.IGNORECASE)
+            if seen and all(s[0].isupper() for s in seen):
+                continue
             scores[word] += n
             display.setdefault(word, word)
     return [display[k] for k, _ in scores.most_common(limit)]
@@ -390,12 +473,12 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
            ai_fixable=thin is not None and len([x for x in thin.bullets if x.strip()]) < 2)
 
     if bullets:
-        weak = [(p, t) for p, t in bullets if _first_word(t) not in ACTION_VERBS]
+        weak = [(p, t) for p, t in bullets if not is_action_verb(_first_word(t))]
         _check(checks, "action_verbs", "experience", "Bullets start with an action verb", 5,
                1 - len(weak) / len(bullets),
                f"{len(bullets) - len(weak)} of {len(bullets)} bullets start with an action verb. Lead with what you "
                "did: Led, Built, Reduced, Launched.", weak[0][0] if weak else None, ai_fixable=True)
-        unquantified = [(p, t) for p, t in bullets if not _NUMBER.search(t)]
+        unquantified = [(p, t) for p, t in bullets if not is_quantified(t)]
         quantified = len(bullets) - len(unquantified)
         _check(checks, "quantified", "experience", "At least half the bullets have a number", 7,
                min(1.0, quantified / (len(bullets) * 0.5)),
