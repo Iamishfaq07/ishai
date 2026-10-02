@@ -32,13 +32,13 @@ interview minutes. Sign-up needs no approval or email check, so to stop throwawa
 ### Credit packs (UPI)
 | Pack | Price | Interview minutes | Resume AI credits |
 |---|---|---|---|
-| Starter | ₹1,499 | 60 | 15 |
-| Plus | ₹2,999 | 150 | 40 |
-| Pro | ₹5,999 | 360 | 100 |
+| Starter | ₹1,999 | 60 | 15 |
+| Plus | ₹3,999 | 150 | 40 |
+| Pro | ₹7,999 | 360 | 100 |
 
 Replace them without a code change (validated at boot):
 ```bash
-ORBIT_CREDIT_PACKS_JSON='[{"id": "starter", "label": "Starter", "price_inr": 1499, "resume_credits": 15, "interview_minutes": 60}]'
+ORBIT_CREDIT_PACKS_JSON='[{"id": "starter", "label": "Starter", "price_inr": 1999, "resume_credits": 15, "interview_minutes": 60}]'
 ```
 An order keeps what the pack gave when it was bought, so changing packs never changes a paid order.
 
@@ -104,4 +104,4 @@ LLM calls on a model without a configured price are **counted and shown as unpri
 
 A real measurement on one session: an answer cost about $0.0002 in AI tokens (with an 89% DeepSeek cache hit).
 **Speech-to-text dominates**: two channels at the Nova-3 list price come to about $0.92 per live hour, roughly ₹1.3
-per interview minute. The packs come to about ₹17-25 an interview minute.
+per interview minute. The packs come to about ₹22-33 an interview minute.

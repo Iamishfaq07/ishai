@@ -1,6 +1,6 @@
 """Credit packs sold over UPI (billing/upi.py). A pack adds resume-AI credits and interview minutes that never
 expire; nothing renews. Defaults below; `ORBIT_CREDIT_PACKS_JSON` replaces them, for example
-`[{"id": "starter", "label": "Starter", "price_inr": 1499, "resume_credits": 15, "interview_minutes": 60}]`.
+`[{"id": "starter", "label": "Starter", "price_inr": 1999, "resume_credits": 15, "interview_minutes": 60}]`.
 Invalid packs stop the API at boot.
 """
 
@@ -21,9 +21,9 @@ class CreditPack:
 
 
 DEFAULT_PACKS: tuple[CreditPack, ...] = (
-    CreditPack("starter", "Starter", price_inr=1499, resume_credits=15, interview_minutes=60),
-    CreditPack("plus", "Plus", price_inr=2999, resume_credits=40, interview_minutes=150),
-    CreditPack("pro", "Pro", price_inr=5999, resume_credits=100, interview_minutes=360),
+    CreditPack("starter", "Starter", price_inr=1999, resume_credits=15, interview_minutes=60),
+    CreditPack("plus", "Plus", price_inr=3999, resume_credits=40, interview_minutes=150),
+    CreditPack("pro", "Pro", price_inr=7999, resume_credits=100, interview_minutes=360),
 )
 _INT_FIELDS = ("price_inr", "resume_credits", "interview_minutes")
 
