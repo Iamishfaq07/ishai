@@ -8,6 +8,9 @@ check features by name (`plan.has("vision")`), never by plan id.
 
 Usage is metered in `usage` rows per calendar month (UTC): `live_seconds` for real sessions, `mock_seconds` for
 mock interviews, `screenshots` for delivered screenshot answers. Documents are counted, not metered.
+
+The Free plan is credit-based (`Plan.credits`): its interview minutes (live and mock together) and resume AI come
+from credits (credits.py: a welcome grant, UPI packs), which never expire, instead of a monthly allowance.
 """
 
 import json
@@ -20,13 +23,14 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from orbit_api import credits
 from orbit_api.config import get_settings
 from orbit_api.models import Document, Subscription, UsageEvent, User
 
 log = logging.getLogger(__name__)
 
 # Feature names (checked by name at call sites).
-# `resume_ai`: unlimited AI in the resume maker; without it there's one free AI action (resumes/allowance.py).
+# `resume_ai`: unlimited AI in the resume maker; without it each AI action spends a resume credit (credits.py).
 FEATURES = ("live", "documents", "mock", "vision", "advanced_coding", "system_design", "provider_fallback",
             "resume_ai")
 
@@ -44,21 +48,19 @@ class Plan:
     features: frozenset[str]
     price_usd_month: float | None = None  # display only; billing charges what Stripe's price says
     stripe_price_id: str | None = None
-    # What 30 days of the plan costs over UPI (billing/upi.py), in whole rupees. None = not for sale over UPI.
-    price_inr_month: int | None = None
+    # Interview time and resume AI come from credits (credits.py: the welcome grant, UPI packs) instead of a monthly
+    # allowance; live_minutes / mock_minutes are then unused.
+    credits: bool = False
 
     def has(self, feature: str) -> bool:
         return feature in self.features
 
 
 _ALL = frozenset(FEATURES)
-_FREE_FEATURES = frozenset({"live", "documents", "mock", "vision"})
 DEFAULT_PLANS: dict[str, Plan] = {
-    "free": Plan("free", "Free", live_minutes=30, mock_minutes=30, screenshots=10, documents=3,
-                 max_session_minutes=60, features=_FREE_FEATURES, price_usd_month=0, price_inr_month=0),
-    # The resume maker's paid plan: Free's interview allowance, plus unlimited resume AI.
-    "resume_pro": Plan("resume_pro", "Resume Pro", live_minutes=30, mock_minutes=30, screenshots=10, documents=3,
-                       max_session_minutes=60, features=_FREE_FEATURES | {"resume_ai"}, price_inr_month=299),
+    "free": Plan("free", "Free", live_minutes=None, mock_minutes=None, screenshots=10, documents=3,
+                 max_session_minutes=60, features=frozenset({"live", "documents", "mock", "vision"}),
+                 price_usd_month=0, credits=True),
     "pro": Plan("pro", "Pro", live_minutes=600, mock_minutes=300, screenshots=500, documents=50,
                 max_session_minutes=180, features=_ALL),
     "unlimited": Plan("unlimited", "Unlimited", live_minutes=None, mock_minutes=None, screenshots=None,
@@ -86,10 +88,6 @@ def plans() -> dict[str, Plan]:
                 if unknown:
                     raise ValueError(f"ORBIT_PLANS_JSON: {name}.features has unknown {sorted(unknown)}")
                 changes[key] = frozenset(value)
-            elif key == "price_inr_month":
-                if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 0):
-                    raise ValueError(f"ORBIT_PLANS_JSON: {name}.price_inr_month must be whole rupees or null")
-                changes[key] = value
             elif key in ("label", "stripe_price_id", "price_usd_month"):
                 changes[key] = value
             else:
@@ -113,7 +111,7 @@ def plan_named(name: str) -> Plan:
 # plan: never listed, never configurable.
 PENDING = Plan("pending", "Awaiting approval", live_minutes=0, mock_minutes=0, screenshots=0, documents=0,
                max_session_minutes=1, features=frozenset())
-GRANT_PLANS = ("resume_pro", "pro", "unlimited")
+GRANT_PLANS = ("pro", "unlimited")
 
 
 def _aware(d: datetime) -> datetime:
@@ -188,8 +186,11 @@ def minutes_metric(session_type: str) -> str:
 
 
 async def minutes_remaining(db: AsyncSession, user_id: str, session_type: str = "interview") -> float | None:
-    """Minutes left this month for this kind of session (None = unlimited)."""
+    """Minutes left for this kind of session (None = unlimited): the interview credits on a credit plan (live and
+    mock draw on the same balance), else this month's allowance."""
     plan = await plan_for(db, user_id)
+    if plan.credits:
+        return await credits.interview_minutes_left(db, user_id)
     limit = plan.mock_minutes if session_type == "mock" else plan.live_minutes
     if limit is None:
         return None
@@ -206,33 +207,47 @@ async def for_user(db: AsyncSession, user: User) -> dict[str, Any]:
     plan = await plan_for(db, user.id)
     docs = await db.scalar(select(func.count()).select_from(Document).where(Document.user_id == user.id))
     grant_until = user.grant_until if active_grant(user) else None
+    limits: dict[str, Any] = {k: getattr(plan, k) for k in _INT_FIELDS}
+    live_used = round(await usage_this_month(db, user.id, "live_seconds") / 60, 1)
+    mock_used = round(await usage_this_month(db, user.id, "mock_seconds") / 60, 1)
+    wallet: dict[str, Any] | None = None
+    if plan.credits:
+        granted_s, used_s = await credits.interview_seconds(db, user.id)
+        wallet = {
+            "resume": None if plan.has("resume_ai") else await credits.resume_balance(db, user.id),
+            "interview_minutes_left": round(max(granted_s - used_s, 0) / 60, 1),
+            "interview_minutes_total": round(granted_s / 60, 1),
+        }
+        # Older clients read limits/usage: show the one interview balance there (live and mock share it).
+        limits["live_minutes"] = limits["mock_minutes"] = round(granted_s / 60)
+        live_used = mock_used = round(used_s / 60, 1)
     return {
         "plan": plan.name,
         "label": plan.label,
         # When the admin granted this plan for a while: when it runs out (then it's Free, or awaiting approval).
         "until": _aware(grant_until).isoformat() if grant_until else None,
-        "limits": {k: getattr(plan, k) for k in _INT_FIELDS},
+        "limits": limits,
         "usage": {
-            "live_minutes": round(await usage_this_month(db, user.id, "live_seconds") / 60, 1),
-            "mock_minutes": round(await usage_this_month(db, user.id, "mock_seconds") / 60, 1),
+            "live_minutes": live_used,
+            "mock_minutes": mock_used,
             "screenshots": int(await usage_this_month(db, user.id, "screenshots")),
             "documents": int(docs or 0),
         },
         "features": {f: plan.has(f) for f in FEATURES},
+        # Credit plans: what's left to spend (never expires). None on plans with their own allowances.
+        "credits": wallet,
     }
 
 
-def buyable(plan: Plan) -> bool:
-    """Can be bought over UPI right now: it has a rupee price and a UPI ID to pay to is configured."""
-    return bool(plan.price_inr_month) and bool(get_settings().upi_id)
-
-
 def public_plans() -> list[dict[str, Any]]:
+    s = get_settings()
     out = []
     for p in plans().values():
         d = asdict(p)
         d["features"] = sorted(p.features)
-        d["buyable"] = buyable(p)
         d.pop("stripe_price_id")  # server-side detail
+        if p.credits:  # what a new account starts with
+            d["welcome"] = {"resume_credits": s.welcome_resume_credits,
+                            "interview_minutes": s.welcome_interview_minutes}
         out.append(d)
     return out

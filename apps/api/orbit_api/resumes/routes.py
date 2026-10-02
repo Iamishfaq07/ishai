@@ -6,25 +6,23 @@
 - `POST /v1/resumes/import` (text, a LinkedIn profile's text, or a document already in Orbit) and
   `POST /v1/resumes/import-file` (PDF, DOCX or TXT, including LinkedIn's "Save to PDF"): AI reads it into
   structured data. Nothing is saved until the editor creates the resume.
-- `/v1/resume-maker/*`: the same tools (score, Word export, import, suggest, cover letter) with no account, for the
-  free signed-out resume maker. Nothing is stored on the server; the editor keeps the resume on the device. Because
-  the AI costs money with nobody to bill, these have a strict per-IP limit and a daily cap (`guest_ai_gate`).
 - `POST /v1/resumes/suggest`: AI rewrites, whole-resume ("improve"), for a job post ("tailor"), or one field
   ("focus"). The editor applies them one accepted change at a time.
 - `POST /v1/resumes/cover-letter`: an AI cover letter from the resume and job post, grounded the same way; the
   editor saves it with the resume. `POST /v1/resumes/cover-letter/docx` downloads it as a Word file.
-- Without a plan that includes resume AI, AI actions draw on one free use (resumes/allowance.py); after that they
-  answer `402 upgrade_required`. `GET .../allowance` says what's left.
+- Without a plan that includes resume AI, each AI action spends a resume credit (resumes/allowance.py); with none
+  left they answer `402 upgrade_required`. `GET /v1/resumes/allowance` says what's left. There's no signed-out
+  resume maker: it's part of the Orbit account.
 """
 
 import asyncio
 import json
 import logging
 from collections.abc import Awaitable
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,10 +52,6 @@ MAX_JOB_TEXT = 20_000
 MIN_IMPORT_CHARS = 80
 
 score_limit = limit("resume-score", rate_per_s=2, burst=30)
-guest_score_limit = limit("resume-guest-score", rate_per_s=2, burst=30)
-# Signed-out AI: a handful at once, then one a minute per address.
-guest_ai_limit = limit("resume-guest-ai", rate_per_s=1 / 60, burst=6)
-GUEST_AI_TYPES = ("resume_import", "resume_suggest", "resume_skills", "cover_letter")
 ai_limit = limit("resume-ai", rate_per_s=0.1, burst=6)
 ai_user_limit = limit_user("resume-ai-user", rate_per_s=40 / 3600, burst=10)
 
@@ -122,10 +116,10 @@ async def list_resumes(user: Annotated[User, Depends(current_user)],
 
 # Before "/{resume_id}", which would otherwise take "allowance" for an id.
 @router.get("/allowance", response_model=AllowanceOut)
-async def my_allowance(request: Request, user: Annotated[User, Depends(current_user)],
+async def my_allowance(user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> AllowanceOut:
-    """Whether the AI is unlimited on this plan, or how many free AI actions are left (and what upgrading costs)."""
-    return await (await allowance_for(db, user, request)).status()
+    """Whether the AI is unlimited on this plan, or how many resume credits are left (and what a pack costs)."""
+    return await (await allowance_for(db, user)).status()
 
 
 @router.post("", response_model=ResumeOut, status_code=201)
@@ -205,30 +199,13 @@ async def export_docx(body: DocxIn, _: Annotated[User, Depends(current_user)]) -
 # ---- AI: import and suggestions ----------------------------------------------------------------------------
 
 
-async def guest_ai_gate(db: Annotated[AsyncSession, Depends(get_db)]) -> None:
-    """Stop signed-out AI calls once the day's budget is spent, so a free tool can't run up an open-ended bill."""
-    cap = get_settings().guest_resume_ai_daily_limit
-    since = datetime.now(UTC) - timedelta(days=1)
-    used = await db.scalar(select(func.count()).select_from(ProviderRequest).where(
-        ProviderRequest.user_id.is_(None), ProviderRequest.request_type.in_(GUEST_AI_TYPES),
-        ProviderRequest.created_at >= since))
-    if cap <= 0 or (used or 0) >= cap:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
-                            "The free AI has reached today's limit. Try again tomorrow, or create a free account to "
-                            "keep going.")
-
-
-async def account_allowance(request: Request, user: Annotated[User, Depends(require_verified_email)],
+async def account_allowance(user: Annotated[User, Depends(require_verified_email)],
                             db: Annotated[AsyncSession, Depends(get_db)]) -> Allowance:
-    return await allowance_for(db, user, request)
-
-
-async def guest_allowance(request: Request, db: Annotated[AsyncSession, Depends(get_db)]) -> Allowance:
-    return await allowance_for(db, None, request)
+    return await allowance_for(db, user)
 
 
 async def _spend[T](allowance: Allowance, work: Awaitable[T]) -> T:
-    """Runs an AI request, giving the free use back if it fails: an outage or a garbled answer mustn't spend it."""
+    """Runs an AI request, giving the credit back if it fails: an outage or a garbled answer mustn't spend it."""
     try:
         return await work
     except Exception:
@@ -473,63 +450,3 @@ async def suggest(body: SuggestIn, user: Annotated[User, Depends(require_verifie
 async def cover_letter_docx(body: LetterDocxIn, _: Annotated[User, Depends(current_user)]) -> Response:
     content = await asyncio.to_thread(letter_docx, body.text, body.data, body.design)
     return Response(content, media_type=DOCX_TYPE, headers={"Cache-Control": "no-store"})
-
-
-# ---- the free resume maker: the same tools with no account ---------------------------------------------------
-
-public_router = APIRouter(prefix="/v1/resume-maker", tags=["resume-maker (public)"])
-
-
-@public_router.post("/score", response_model=AtsReport, dependencies=[Depends(guest_score_limit)])
-async def guest_score(body: ScoreIn) -> AtsReport:
-    return score_resume(body.data, body.design, body.job_text)
-
-
-@public_router.post("/docx", dependencies=[Depends(guest_score_limit)],
-                    responses={200: {"content": {DOCX_TYPE: {}}, "description": "The resume as a Word file."}})
-async def guest_docx(body: DocxIn) -> Response:
-    content = await asyncio.to_thread(resume_docx, body.data, body.design)
-    return Response(content, media_type=DOCX_TYPE, headers={"Cache-Control": "no-store"})
-
-
-@public_router.post("/cover-letter/docx", dependencies=[Depends(guest_score_limit)],
-                    responses={200: {"content": {DOCX_TYPE: {}}, "description": "The cover letter as a Word file."}})
-async def guest_letter_docx(body: LetterDocxIn) -> Response:
-    content = await asyncio.to_thread(letter_docx, body.text, body.data, body.design)
-    return Response(content, media_type=DOCX_TYPE, headers={"Cache-Control": "no-store"})
-
-
-GUEST_AI = [Depends(guest_ai_limit), Depends(guest_ai_gate)]
-GuestAllowance = Annotated[Allowance, Depends(guest_allowance)]
-
-
-@public_router.get("/allowance", response_model=AllowanceOut)
-async def guest_allowance_status(allowance: GuestAllowance) -> AllowanceOut:
-    """Whether this network's free AI action is still there (signed out, it's one per IP address)."""
-    return await allowance.status()
-
-
-@public_router.post("/import", response_model=ImportOut, dependencies=GUEST_AI)
-async def guest_import(body: ImportIn, db: Annotated[AsyncSession, Depends(get_db)],
-                       allowance: GuestAllowance) -> ImportOut:
-    if body.source == "document":  # documents belong to an account
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Paste your resume or upload a file instead.")
-    return await _spend(allowance, _import_text(db, None, body.text or "", body.source, allowance))
-
-
-@public_router.post("/import-file", response_model=ImportOut, dependencies=GUEST_AI)
-async def guest_import_file(file: Annotated[UploadFile, File()], db: Annotated[AsyncSession, Depends(get_db)],
-                            allowance: GuestAllowance) -> ImportOut:
-    return await _import_upload(db, None, file, allowance)
-
-
-@public_router.post("/suggest", response_model=SuggestOut, dependencies=GUEST_AI)
-async def guest_suggest(body: SuggestIn, db: Annotated[AsyncSession, Depends(get_db)],
-                        allowance: GuestAllowance) -> SuggestOut:
-    return await _spend(allowance, _suggest(db, None, body, allowance))
-
-
-@public_router.post("/cover-letter", response_model=CoverLetterOut, dependencies=GUEST_AI)
-async def guest_cover_letter(body: CoverLetterIn, db: Annotated[AsyncSession, Depends(get_db)],
-                             allowance: GuestAllowance) -> CoverLetterOut:
-    return await _spend(allowance, _cover_letter(db, None, body, allowance))

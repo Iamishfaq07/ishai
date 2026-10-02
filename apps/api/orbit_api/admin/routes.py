@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from orbit_api import credits
 from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
@@ -209,6 +210,9 @@ class AdminUser(BaseModel):
     plan_label: str
     grant_until: datetime | None
     live_minutes_this_month: float
+    # Credits left (the Free plan's balance; they never expire).
+    resume_credits: int = 0
+    interview_minutes_left: float = 0
 
 
 class UsersOut(BaseModel):
@@ -230,6 +234,7 @@ async def _admin_rows(db: AsyncSession, users: list[User]) -> list[AdminUser]:
             .where(UsageEvent.user_id.in_(ids), UsageEvent.metric == "live_seconds", UsageEvent.created_at >= month)
             .group_by(UsageEvent.user_id))
         used = {uid: float(total or 0) for uid, total in rows.all()}
+    wallets = await credits.balances(db, ids)
     out = []
     for u in users:
         granted = active_grant(u)
@@ -241,7 +246,9 @@ async def _admin_rows(db: AsyncSession, users: list[User]) -> list[AdminUser]:
         out.append(AdminUser(
             id=u.id, email=u.email, name=u.name, created_at=u.created_at, email_verified=u.email_verified,
             access=access, plan_label=label, grant_until=_aware(u.grant_until) if granted and u.grant_until else None,
-            live_minutes_this_month=round(float(used.get(u.id) or 0) / 60, 1)))
+            live_minutes_this_month=round(float(used.get(u.id) or 0) / 60, 1),
+            resume_credits=wallets.get(u.id, (0, 0.0))[0],
+            interview_minutes_left=round(wallets.get(u.id, (0, 0.0))[1], 1)))
     return out
 
 
@@ -263,7 +270,7 @@ class AccessIn(BaseModel):
     # grant: a plan for `hours` (from now, or added on to a running grant of the same plan) · approve: Free for good
     # (or whatever they pay for) · revoke: back to waiting, grant cancelled
     action: Literal["grant", "approve", "revoke"]
-    plan: Literal["resume_pro", "pro", "unlimited"] = "unlimited"
+    plan: Literal["pro", "unlimited"] = "unlimited"
     hours: float = Field(2, gt=0, le=MAX_GRANT_HOURS)
 
 
@@ -305,4 +312,29 @@ async def set_access(user_id: str, body: AccessIn, background: BackgroundTasks,
     await db.refresh(u)
     if mail is not None:
         background.add_task(send_safely, mail)
+    return (await _admin_rows(db, [u]))[0]
+
+
+class CreditsIn(BaseModel):
+    resume: int = Field(0, ge=0, le=1_000)
+    interview_minutes: int = Field(0, ge=0, le=6_000)
+
+
+@router.post("/users/{user_id}/credits", response_model=AdminUser)
+async def give_credits(user_id: str, body: CreditsIn, admin: Annotated[User, Depends(require_admin)],
+                       db: Annotated[AsyncSession, Depends(get_db)]) -> AdminUser:
+    """Add resume-AI credits and/or interview minutes to an account by hand (a goodwill top-up, a payment made some
+    other way). They never expire."""
+    u = await db.get(User, user_id)
+    if u is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    if not (body.resume or body.interview_minutes):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Add some resume credits or interview minutes.")
+    if body.resume:
+        credits.add(db, u.id, "resume", body.resume, "admin")
+    if body.interview_minutes:
+        credits.add(db, u.id, "interview_seconds", body.interview_minutes * 60, "admin")
+    db.add(AuditLog(user_id=admin.id, action="admin.credits",
+                    target=f"{u.id} resume+{body.resume} interview+{body.interview_minutes}m"))
+    await db.commit()
     return (await _admin_rows(db, [u]))[0]

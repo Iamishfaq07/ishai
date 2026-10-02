@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { AccessChange, AdminUser } from "@orbit/types";
-import { Check, Clock, Users, confirmDialog, cx } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote, PageHeader, Select, Spinner } from "../components/ui";
+import { Check, Clock, Plus, Users, confirmDialog, cx } from "@orbit/ui";
+import { Button, Card, EmptyState, ErrorNote, Input, PageHeader, Select, Spinner } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -90,8 +90,8 @@ function AccessBadge({ user }: { user: AdminUser }) {
   return <span className={cx("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1", tone)}>{text}</span>;
 }
 
-type GrantPlan = "unlimited" | "pro" | "resume_pro";
-const GRANT_LABEL: Record<GrantPlan, string> = { unlimited: "Unlimited", pro: "Pro", resume_pro: "Resume Pro" };
+type GrantPlan = "unlimited" | "pro";
+const GRANT_LABEL: Record<GrantPlan, string> = { unlimited: "Unlimited", pro: "Pro" };
 
 function UserRow({ user, onChange }: { user: AdminUser; onChange: (row: AdminUser) => void }) {
   const [plan, setPlan] = useState<GrantPlan>("unlimited");
@@ -118,6 +118,7 @@ function UserRow({ user, onChange }: { user: AdminUser; onChange: (row: AdminUse
           <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
             Joined {formatDate(user.created_at)} · {user.email_verified ? "email verified" : "email not verified"} · {user.live_minutes_this_month} live
             min this month
+            {user.access !== "admin" && ` · credits: ${user.resume_credits} resume, ${Math.round(user.interview_minutes_left)} interview min`}
           </p>
         </div>
         <AccessBadge user={user} />
@@ -166,7 +167,45 @@ function UserRow({ user, onChange }: { user: AdminUser; onChange: (row: AdminUse
           )}
         </div>
       )}
+      {user.access !== "admin" && <GiveCredits user={user} onChange={onChange} />}
       {error && <p className="mt-2 text-sm text-rose-600">{error}</p>}
     </Card>
+  );
+}
+
+/** Add resume credits and interview minutes by hand: a goodwill top-up, or a payment made some other way. */
+function GiveCredits({ user, onChange }: { user: AdminUser; onChange: (row: AdminUser) => void }) {
+  const [resume, setResume] = useState("");
+  const [minutes, setMinutes] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const r = Math.max(0, Math.floor(Number(resume) || 0));
+  const m = Math.max(0, Math.floor(Number(minutes) || 0));
+  return (
+    <form
+      className="mt-2 flex flex-wrap items-center gap-2 text-sm"
+      onSubmit={(e) => {
+        e.preventDefault();
+        setBusy(true);
+        setError(null);
+        api
+          .giveCredits(user.id, { resume: r, interview_minutes: m })
+          .then((row) => {
+            onChange(row);
+            setResume("");
+            setMinutes("");
+          })
+          .catch((err: unknown) => setError(errorText(err)))
+          .finally(() => setBusy(false));
+      }}
+    >
+      <span className="text-xs text-zinc-500">Give credits:</span>
+      <Input aria-label={`Resume credits for ${user.email}`} inputMode="numeric" value={resume} onChange={(e) => setResume(e.target.value)} placeholder="resume" className="!w-24" />
+      <Input aria-label={`Interview minutes for ${user.email}`} inputMode="numeric" value={minutes} onChange={(e) => setMinutes(e.target.value)} placeholder="minutes" className="!w-24" />
+      <Button size="sm" variant="secondary" type="submit" disabled={busy || !(r || m)}>
+        <Plus className="h-3.5 w-3.5" /> Add
+      </Button>
+      {error && <span className="text-rose-600">{error}</span>}
+    </form>
   );
 }

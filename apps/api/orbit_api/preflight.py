@@ -22,7 +22,14 @@ from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.desktop_updates import _root, github_latest_release, latest_release, parse_version
-from orbit_api.entitlements import PENDING, awaiting_approval, is_admin, plan_for, usage_this_month
+from orbit_api.entitlements import (
+    PENDING,
+    awaiting_approval,
+    is_admin,
+    minutes_remaining,
+    plan_for,
+    usage_this_month,
+)
 from orbit_api.models import User
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMProvider, LLMRequest
@@ -230,15 +237,21 @@ async def preflight(user: Annotated[User, Depends(current_user)], db: Annotated[
                             fix="Use a vision model (deepseek-flash) in Settings → Advanced."))
 
     plan = await plan_for(db, user.id)
-    if plan.live_minutes is None:
+    left_min = await minutes_remaining(db, user.id, "interview")
+    if left_min is None:
         checks.append(Check(id="minutes", label="Live minutes", status="ok", detail=f"Unlimited ({plan.name} plan)."))
     else:
-        left = max(plan.live_minutes - await usage_this_month(db, user.id, "live_seconds") / 60, 0)
+        left = max(left_min, 0)
         status: Status = "fail" if left <= 0 else "warn" if left < LOW_MINUTES else "ok"
-        fix = {"fail": "You're out of live minutes for this month.",
-               "warn": "Only a few minutes left — a session ends when they run out."}.get(status)
-        checks.append(Check(id="minutes", label="Live minutes", status=status,
-                            detail=f"{left:.0f} of {plan.live_minutes} minutes left this month.", fix=fix))
+        if plan.credits:  # interview credits: they don't refill, a pack adds more
+            fix = {"fail": "You're out of interview minutes. Buy a credit pack in Plan & billing.",
+                   "warn": "Only a few minutes left — a session ends when they run out. Packs add more."}.get(status)
+            detail = f"{left:.0f} interview minutes left."
+        else:
+            fix = {"fail": "You're out of live minutes for this month.",
+                   "warn": "Only a few minutes left — a session ends when they run out."}.get(status)
+            detail = f"{left:.0f} of {plan.live_minutes} minutes left this month."
+        checks.append(Check(id="minutes", label="Live minutes", status=status, detail=detail, fix=fix))
     if plan.screenshots is not None:
         used = int(await usage_this_month(db, user.id, "screenshots"))
         left_shots = max(plan.screenshots - used, 0)

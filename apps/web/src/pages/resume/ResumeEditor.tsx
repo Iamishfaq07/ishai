@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { Link, useLocation, useParams } from "react-router-dom";
 import type { AtsCheck, AtsReport, Resume, ResumeData, ResumeDesign, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
@@ -34,7 +34,7 @@ import { api } from "../../lib/api";
 import { downloadText, errorText } from "../../lib/format";
 import { ContentForm } from "./ContentForm";
 import { AiCostNote, AiErrorNote, AllowanceBanner, AllowanceContext, isUpgradeError, useAllowance, useResumeAllowance } from "./allowance";
-import { BackendContext, accountBackend, guestBackend, useBackend } from "./backend";
+import { useBackend } from "./backend";
 import { ACCENTS, FONTS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, resumeToText, suggestedSkills } from "./model";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
@@ -68,14 +68,9 @@ const FIX_BUSY: Record<string, string> = {
   quantified: "Finding where numbers fit…",
 };
 
-/** The resume editor: for the signed-in account, or (`guest`) the free signed-out maker, which keeps the resume on this device. */
-export function ResumeEditorPage({ guest = false, onStartOver }: { guest?: boolean; onStartOver?: () => void } = {}) {
-  const backend = useMemo(() => (guest ? guestBackend(onStartOver ?? (() => undefined)) : accountBackend), [guest, onStartOver]);
-  return (
-    <BackendContext.Provider value={backend}>
-      <ResumeEditor />
-    </BackendContext.Provider>
-  );
+/** The resume editor, for a resume in the signed-in account. */
+export function ResumeEditorPage() {
+  return <ResumeEditor />;
 }
 
 function ResumeEditor() {
@@ -105,15 +100,6 @@ function ResumeEditor() {
       : null,
   );
   const [focusTarget, setFocusTarget] = useState<string | null>(null);
-  const startOver = async () => {
-    const ok = await confirmDialog({
-      title: "Start a new resume?",
-      body: "The resume on this device is deleted. Download it first if you want to keep it.",
-      confirmLabel: "Start over",
-      danger: true,
-    });
-    if (ok) backend.startOver?.();
-  };
 
   useEffect(() => {
     backend
@@ -318,7 +304,7 @@ function ResumeEditor() {
       setQueue(res.suggestions);
       if (res.upgrade_required) {
         setAiUpgrade(true);
-        setAiError("These are the fixes that need no AI. AI rewrites, new bullets and tailoring need an upgrade: you've used your free AI edit.");
+        setAiError("These are the fixes that need no AI. AI rewrites, new bullets and tailoring need resume credits: you're out.");
       } else if (!res.suggestions.length) setAiError("Nothing to change: the AI thinks this already reads well.");
     } catch (err) {
       setAiError(errorText(err));
@@ -386,11 +372,9 @@ function ResumeEditor() {
     <AllowanceContext.Provider value={allowance}>
     <div className="animate-fade-up">
       <div className="mb-5 flex flex-wrap items-center gap-3">
-        {!backend.guest && (
-          <Link to="/documents/resumes" aria-label="All resumes" className={cx("rounded-lg p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white", focusRing)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        )}
+        <Link to="/documents/resumes" aria-label="All resumes" className={cx("rounded-lg p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white", focusRing)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
         <Input
           aria-label="Resume name"
           value={resume.title}
@@ -398,7 +382,7 @@ function ResumeEditor() {
           onChange={(e) => change((r) => ({ ...r, title: e.target.value }))}
           className="max-w-xs font-display text-lg font-semibold"
         />
-        <SaveState state={save.state} error={save.error} guest={backend.guest} onRetry={() => setSave({ state: "dirty" })} />
+        <SaveState state={save.state} error={save.error} onRetry={() => setSave({ state: "dirty" })} />
         <div className="flex items-center">
           <HistoryButton label="Undo" shortcut="Ctrl+Z" disabled={!steps.undo} onClick={() => step("undo")}>
             <Undo2 className="h-4 w-4" />
@@ -423,13 +407,7 @@ function ResumeEditor() {
               </span>
             </button>
           )}
-          {backend.guest ? (
-            <Button variant="ghost" onClick={() => void startOver()}>
-              <Plus className="h-4 w-4" /> New resume
-            </Button>
-          ) : (
-            <SaveToDocuments resume={resume} />
-          )}
+          <SaveToDocuments resume={resume} />
           <DownloadWord resume={resume} confirm={okToDownload} />
           <Button onClick={() => void okToDownload().then((ok) => ok && printDoc("resume"))}>
             <Download className="h-4 w-4" /> Download PDF
@@ -437,7 +415,6 @@ function ResumeEditor() {
         </div>
       </div>
 
-      {backend.guest && <GuestBanner />}
       <AllowanceBanner />
 
       {notice && (
@@ -550,11 +527,11 @@ function HistoryButton({ label, shortcut, disabled, onClick, children }: { label
   );
 }
 
-function SaveState({ state, error, guest, onRetry }: { state: "saved" | "saving" | "dirty" | "error"; error?: string; guest?: boolean; onRetry: () => void }) {
+function SaveState({ state, error, onRetry }: { state: "saved" | "saving" | "dirty" | "error"; error?: string; onRetry: () => void }) {
   return (
     <span role="status" className={cx("text-xs", state === "error" ? "text-rose-600" : "text-zinc-500 dark:text-zinc-400")}>
       {state === "saved" ? (
-        <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" /> {guest ? "Saved on this device" : "Saved"}</span>
+        <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" /> Saved</span>
       ) : state === "error" ? (
         <span className="inline-flex items-center gap-1.5">
           Not saved: {error ?? "try again"}
@@ -880,20 +857,6 @@ function Highlighted({ text }: { text: string }) {
   );
 }
 
-/** Signed-out notice: the resume is kept on this device, and an account would keep it safe and use it in interviews. */
-function GuestBanner() {
-  return (
-    <div role="note" className="mb-4 flex flex-col gap-1 rounded-xl bg-indigo-500/10 p-3 text-sm text-indigo-900 sm:flex-row sm:items-center sm:gap-3 dark:text-indigo-200">
-      <span className="min-w-0 sm:flex-1">
-        <strong>Free, no account needed.</strong> Your resume is saved in this browser only: clear your browsing data and it's gone, so download a copy when you're done.
-      </span>
-      <Link to="/register" className={cx("font-medium underline", focusRing)}>
-        Create a free account to keep it safe
-      </Link>
-    </div>
-  );
-}
-
 function Panel({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
   return (
     <section className="rounded-2xl border border-zinc-200 bg-white/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
@@ -924,7 +887,6 @@ function ScorePanel({
   const [url, setUrl] = useState("");
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
-  const { guest } = useBackend();
   const [showPassed, setShowPassed] = useState(false);
   if (!report) return <Spinner label="Scoring" />;
   const failed = report.checks.filter((c) => !c.passed).sort((a, b) => b.max_points - b.points - (a.max_points - a.points));
@@ -961,7 +923,6 @@ function ScorePanel({
         <Field label="Paste the job post to tailor the resume to it" htmlFor="job">
           <Textarea id="job" rows={5} maxLength={20_000} value={resume.job_text} onChange={(e) => onJob(e.target.value.slice(0, 20_000))} placeholder="Paste the job description…" />
         </Field>
-        {!guest && (
         <form
           className="mt-2 flex gap-2"
           onSubmit={(e) => {
@@ -983,7 +944,6 @@ function ScorePanel({
             <Link2 className="h-4 w-4" /> {importing ? "Importing…" : "Import"}
           </Button>
         </form>
-        )}
         {importError && <p className="mt-2 text-sm text-rose-600">{importError}</p>}
         {report.keywords && (
           <div className="mt-4 space-y-3 text-sm">

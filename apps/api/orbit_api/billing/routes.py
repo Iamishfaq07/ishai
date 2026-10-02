@@ -1,5 +1,5 @@
-"""Plans and entitlements over HTTP, and buying a plan over UPI (billing/upi.py). Limits and features never come from
-clients; a payment only changes anything once the admin has approved it."""
+"""Plans and entitlements over HTTP, and buying credit packs over UPI (billing/packs.py, billing/upi.py). Limits and
+features never come from clients; a payment only changes anything once the admin has approved it."""
 
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
@@ -10,13 +10,14 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orbit_api import entitlements
+from orbit_api import credits, entitlements
 from orbit_api.admin.routes import require_admin
 from orbit_api.auth.security import current_user
 from orbit_api.billing import upi
+from orbit_api.billing.packs import packs, public_packs
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
-from orbit_api.entitlements import active_grant, buyable, plan_named, plans
+from orbit_api.entitlements import active_grant, plan_named
 from orbit_api.models import AuditLog, Payment, User
 from orbit_api.providers.email import OutgoingEmail, send_safely
 from orbit_api.ratelimit import limit_user
@@ -33,10 +34,16 @@ async def list_plans() -> list[dict[str, Any]]:
     return entitlements.public_plans()
 
 
+@router.get("/billing/packs")
+async def list_packs() -> list[dict[str, Any]]:
+    """Public: the credit packs for sale, and whether they can be bought right now (a UPI ID is set)."""
+    return public_packs()
+
+
 @router.get("/entitlements")
 async def my_entitlements(user: Annotated[User, Depends(current_user)],
                           db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
-    """The signed-in user's plan, its limits, this month's usage, and which features are on."""
+    """The signed-in user's plan, its limits, this month's usage, which features are on, and credits left."""
     return await entitlements.for_user(db, user)
 
 
@@ -47,10 +54,11 @@ PaymentStatus = Literal["awaiting_payment", "submitted", "approved", "rejected"]
 
 class UpiOrderOut(BaseModel):
     id: str
-    plan: str
-    plan_label: str
+    pack: str
+    label: str
     amount_inr: int
-    days: int
+    resume_credits: int
+    interview_minutes: int
     reference: str
     status: PaymentStatus
     utr: str | None
@@ -65,11 +73,18 @@ class UpiOrderOut(BaseModel):
     upi_uri: str | None = None
 
 
+def _label(p: Payment) -> str:
+    pack = packs().get(p.plan)
+    if pack is not None:
+        return f"{pack.label} pack"
+    return plan_named(p.plan).label if p.days else p.plan  # an order from before credit packs
+
+
 def _order_out(p: Payment) -> UpiOrderOut:
-    label = plan_named(p.plan).label
-    out = UpiOrderOut(id=p.id, plan=p.plan, plan_label=label, amount_inr=p.amount_inr, days=p.days,
-                      reference=p.reference, status=p.status, utr=p.utr, note=p.note,
-                      created_at=upi.aware(p.created_at),
+    label = _label(p)
+    out = UpiOrderOut(id=p.id, pack=p.plan, label=label, amount_inr=p.amount_inr, resume_credits=p.resume_credits,
+                      interview_minutes=p.interview_minutes, reference=p.reference, status=p.status, utr=p.utr,
+                      note=p.note, created_at=upi.aware(p.created_at),
                       submitted_at=upi.aware(p.submitted_at) if p.submitted_at else None,
                       decided_at=upi.aware(p.decided_at) if p.decided_at else None)
     s = get_settings()
@@ -79,29 +94,29 @@ def _order_out(p: Payment) -> UpiOrderOut:
 
 
 class OrderIn(BaseModel):
-    plan: str = Field(min_length=1, max_length=32)
+    pack: str = Field(min_length=1, max_length=32)
 
 
 @router.post("/billing/upi/orders", response_model=UpiOrderOut, status_code=201, dependencies=[Depends(order_limit)])
 async def create_order(body: OrderIn, user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> UpiOrderOut:
-    """Start paying for a plan: the amount, reference, QR and UPI link. An open order for the same plan from the last
-    day is handed back instead of making another."""
-    plan = plans().get(body.plan)
-    if plan is None or not plan.price_inr_month:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That plan can't be bought.")
-    if not buyable(plan):
+    """Start paying for a credit pack: the amount, reference and UPI link. An open order for the same pack from the
+    last day is handed back instead of making another."""
+    pack = packs().get(body.pack)
+    if pack is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That pack can't be bought.")
+    if not get_settings().upi_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "UPI payments aren't set up yet.")
     since = datetime.now(UTC) - upi.OPEN_ORDER_REUSE
     open_order = await db.scalar(
-        select(Payment).where(Payment.user_id == user.id, Payment.plan == plan.name,
-                              Payment.status == "awaiting_payment", Payment.amount_inr == plan.price_inr_month,
+        select(Payment).where(Payment.user_id == user.id, Payment.plan == pack.id,
+                              Payment.status == "awaiting_payment", Payment.amount_inr == pack.price_inr,
                               Payment.created_at >= since)
         .order_by(Payment.created_at.desc()).limit(1))
     if open_order is not None:
         return _order_out(open_order)
-    p = Payment(user_id=user.id, plan=plan.name, amount_inr=plan.price_inr_month, days=upi.PLAN_DAYS,
-                reference=upi.new_reference(), status="awaiting_payment")
+    p = Payment(user_id=user.id, plan=pack.id, amount_inr=pack.price_inr, days=0, resume_credits=pack.resume_credits,
+                interview_minutes=pack.interview_minutes, reference=upi.new_reference(), status="awaiting_payment")
     db.add(p)
     await db.commit()
     await db.refresh(p)
@@ -149,7 +164,7 @@ async def submit_utr(order_id: str, body: UtrIn, background: BackgroundTasks,
     if first_time and s.admin_email and not s.is_admin_email(user.email):
         background.add_task(send_safely, OutgoingEmail(
             to=s.admin_email, subject=f"UPI payment to check: ₹{p.amount_inr} from {user.email}",
-            text=(f"{user.email} says they paid ₹{p.amount_inr} for {plan_named(p.plan).label}.\n\n"
+            text=(f"{user.email} says they paid ₹{p.amount_inr} for the {_label(p)}.\n\n"
                   f"UTR: {utr}\nReference (in the UPI note): {p.reference}\n\n"
                   f"Check your bank statement, then approve or reject it: {s.web_url.rstrip('/')}/admin/payments")))
     return _order_out(p)
@@ -162,7 +177,7 @@ class AdminPayment(UpiOrderOut):
     user_id: str
     email: str
     name: str | None
-    # What the account has right now, so approving one plan over another is a decision, not an accident.
+    # What the account has right now: a plan granted for a while, if any.
     current_plan: str | None
     current_until: datetime | None
 
@@ -204,12 +219,18 @@ class DecisionIn(BaseModel):
     note: str | None = Field(None, max_length=300)
 
 
+def _what(p: Payment) -> str:
+    parts = [f"{p.resume_credits} resume AI credits" if p.resume_credits else "",
+             f"{p.interview_minutes} interview minutes" if p.interview_minutes else ""]
+    return " and ".join(x for x in parts if x)
+
+
 @router.post("/admin/payments/{payment_id}", response_model=AdminPayment)
 async def decide_payment(payment_id: str, body: DecisionIn, background: BackgroundTasks,
                          admin: Annotated[User, Depends(require_admin)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> AdminPayment:
-    """Approve: the money is in your account, so the plan turns on for the order's days (added on to a running grant of
-    the same plan) and the account no longer waits for sign-up approval. Reject: the payer sees your note."""
+    """Approve: the money is in your account, so the pack's credits land (they never expire) and the account no
+    longer waits for sign-up approval. Reject: the payer sees your note."""
     p = await db.get(Payment, payment_id)
     if p is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found.")
@@ -218,18 +239,19 @@ async def decide_payment(payment_id: str, body: DecisionIn, background: Backgrou
     u = await db.get(User, p.user_id)
     assert u is not None
     now = datetime.now(UTC)
-    label = plan_named(p.plan).label
     web = get_settings().web_url.rstrip("/")
     note = (body.note or "").strip() or None
     if body.action == "approve":
-        running = u.grant_until if active_grant(u, now) == p.plan and u.grant_until else None
-        u.grant_plan, u.grant_until = p.plan, upi.grant_window(now, upi.aware(running) if running else None, p.days)
+        if p.resume_credits:
+            credits.add(db, u.id, "resume", p.resume_credits, "purchase", payment_id=p.id)
+        if p.interview_minutes:
+            credits.add(db, u.id, "interview_seconds", p.interview_minutes * 60, "purchase", payment_id=p.id)
         u.approved = True
         p.status, p.decided_at, p.note = "approved", now, note
-        until = f"{u.grant_until:%d %b %Y}"
-        mail = OutgoingEmail(to=u.email, subject=f"Payment received: Orbit {label} until {until}",
+        mail = OutgoingEmail(to=u.email, subject=f"Payment received: {_what(p)} added to Orbit",
                              text=(f"Thanks! We received your ₹{p.amount_inr} payment (UTR {p.utr}).\n\n"
-                                   f"Your account has {label} until {until}. Sign in to use it: {web}/login"))
+                                   f"Your account now has {_what(p)} more. They don't expire. "
+                                   f"Sign in to use them: {web}/login"))
     else:
         p.status, p.decided_at, p.note = "rejected", now, note
         reason = f"\n\nWhy: {note}" if note else ""

@@ -15,7 +15,6 @@ import {
 import {
   BillingPage,
   CompanionPage,
-  GuestResumeMakerPage,
   DocumentsPage,
   HomePage,
   LivePage,
@@ -68,7 +67,6 @@ const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/sessions/, "Sessions"],
   [/^\/documents\/stories/, "Story bank"],
   [/^\/documents\/resumes/, "Resume maker"],
-  [/^\/resume-maker/, "Free resume maker"],
   [/^\/documents/, "Documents"],
   [/^\/mock/, "Practice"],
   [/^\/billing/, "Billing"],
@@ -104,7 +102,8 @@ export function App() {
       {/* Public: the scanned code is the credential, so the phone needn't sign in. */}
       <Route path="/companion" element={<CompanionPage />} />
       {/* Public: the free resume maker needs no account; the resume stays in the visitor's browser. */}
-      <Route path="/resume-maker" element={<GuestResumeMakerPage />} />
+      {/* The signed-out resume maker is now part of the account: old links go to sign-up. */}
+      <Route path="/resume-maker" element={<Navigate to="/register" replace />} />
       <Route
         path="/live/:sessionId"
         element={

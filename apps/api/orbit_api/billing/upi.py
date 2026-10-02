@@ -1,16 +1,15 @@
-"""UPI payments for plans, with no payment gateway: the payer pays the configured UPI ID from any UPI app, then gives
-the UTR (the bank's 12-digit transaction number); the admin checks it against the bank statement and approves it,
-which grants the plan for 30 days (added on to a running grant of the same plan).
+"""UPI payments for credit packs (billing/packs.py), with no payment gateway: the payer pays the configured UPI ID
+from any UPI app, then gives the UTR (the bank's 12-digit transaction number); the admin checks it against the bank
+statement and approves it, which adds the pack's credits (credits.py). Credits never expire.
 
-- An order fixes the plan, amount and a reference (`ORB…`). The reference goes in the UPI note, so the admin can match
+- An order fixes the pack, amount and a reference (`ORB…`). The reference goes in the UPI note, so the admin can match
   the credit even before the UTR comes in.
 - The `upi://pay` link (and the QR the app draws from it) carries the amount, so nobody types it. Some UPI apps
   refuse links to personal UPI IDs; scanning the QR from another phone or paying the UPI ID by hand always works, so
   the page shows all three.
 - A UTR can be used once across all payments. A rejected payment can be submitted again with the right UTR.
 
-Nothing is charged automatically and nothing is renewed: when the 30 days run out, the account is back on Free and
-can buy another month.
+Nothing is charged automatically and nothing renews: a pack is bought when it's wanted.
 """
 
 import secrets
@@ -20,7 +19,6 @@ from urllib.parse import quote, urlencode
 from orbit_api.config import get_settings
 from orbit_api.models import Payment
 
-PLAN_DAYS = 30
 # Reused instead of making another, so reloading the page doesn't scatter orders (and references) around.
 OPEN_ORDER_REUSE = timedelta(hours=24)
 _REF_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O, 1/I: it gets read off a phone screen
@@ -43,12 +41,6 @@ def upi_uri(payment: Payment, plan_label: str) -> str:
     params = {"pa": s.upi_id, "pn": s.upi_name, "am": f"{payment.amount_inr}.00", "cu": "INR",
               "tn": f"Orbit {plan_label} {payment.reference}"}
     return "upi://pay?" + urlencode(params, quote_via=quote)
-
-
-def grant_window(now: datetime, running_until: datetime | None, days: int) -> datetime:
-    """When the plan runs out after this payment: added on to a running grant of the same plan, else from now."""
-    start = running_until if running_until and running_until > now else now
-    return start + timedelta(days=days)
 
 
 def aware(d: datetime) -> datetime:
