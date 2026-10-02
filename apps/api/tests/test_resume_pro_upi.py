@@ -250,3 +250,53 @@ def test_the_admin_can_grant_resume_pro_for_a_while(monkeypatch: pytest.MonkeyPa
         assert client.get("/v1/entitlements", headers=h).json()["features"]["resume_ai"] is True
     finally:
         gen.close()
+
+
+def test_a_waiting_account_gets_the_resume_maker_and_paying_lets_it_in(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Open sign-up with approval: a newcomer waits for interviews, but can use its free resume edit and buy
+    Resume Pro; approving the payment approves the account."""
+    admin_email = f"admin-{uuid.uuid4().hex[:8]}@example.com"
+    gen = _client(monkeypatch, ORBIT_ADMIN_EMAIL=admin_email, ORBIT_SIGNUP_APPROVAL="true",
+                  ORBIT_UPI_ID="owner@okicici", ORBIT_PROXY_SECRET=PROXY)
+    client = next(gen)
+    try:
+        monkeypatch.setattr(allowance, "ENFORCE_IN_TESTS", True)
+        admin, _ = _register_named(client, admin_email)
+        h, user = _register_named(client, f"new-{uuid.uuid4().hex[:8]}@example.com")
+        h = _ip(_new_ip(), h)
+        assert user["approval_pending"] is True
+        # Interviews wait for approval...
+        blocked = client.post("/v1/sessions", headers=h, json={"title": "x"})
+        assert blocked.status_code == 403 and blocked.json()["detail"]["code"] == "approval_pending"
+        # ...the resume maker doesn't: one free AI edit, then Upgrade.
+        assert client.get("/v1/resumes/allowance", headers=h).json()["free_left"] == 1
+        assert client.post("/v1/resumes/cover-letter", headers=h, json=_letter()).status_code == 200
+        assert client.post("/v1/resumes/cover-letter", headers=h, json=_letter()).status_code == 402
+        # Buying Resume Pro works while waiting, and the admin approving the payment lets the account in.
+        o = client.post("/v1/billing/upi/orders", headers=h, json={"plan": "resume_pro"}).json()
+        client.post(f"/v1/billing/upi/orders/{o['id']}/utr", headers=h,
+                    json={"utr": f"{uuid.uuid4().int % 10**12:012d}"})
+        assert client.post(f"/v1/admin/payments/{o['id']}", headers=admin,
+                           json={"action": "approve"}).status_code == 200
+        me = client.get("/v1/auth/me", headers=h).json()
+        assert me["approval_pending"] is False
+        assert client.post("/v1/resumes/cover-letter", headers=h, json=_letter()).status_code == 200
+    finally:
+        gen.close()
+
+
+def test_free_ai_has_a_daily_cap_for_everyone(client: TestClient, enforce: None,
+                                              monkeypatch: pytest.MonkeyPatch) -> None:
+    async def used_today() -> int:
+        from sqlalchemy import func, select
+
+        async with sessionmaker()() as db:
+            since = datetime.now(UTC) - timedelta(days=1)
+            return int(await db.scalar(select(func.count()).select_from(FreeAiUse)
+                                       .where(FreeAiUse.created_at >= since)) or 0)
+
+    h = _ip(_new_ip(), _register(client))
+    monkeypatch.setattr(get_settings(), "free_resume_ai_daily_limit", client.portal.call(used_today))  # type: ignore[union-attr]
+    capped = client.post("/v1/resumes/cover-letter", headers=h, json=_letter())
+    assert capped.status_code == 503 and "today" in capped.json()["detail"]
+    assert client.get("/v1/resumes/allowance", headers=h).json()["free_left"] == 1  # not spent: there tomorrow

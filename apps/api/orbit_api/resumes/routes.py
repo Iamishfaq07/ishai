@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orbit_api.auth.guards import require_verified_user
+from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
@@ -218,7 +218,7 @@ async def guest_ai_gate(db: Annotated[AsyncSession, Depends(get_db)]) -> None:
                             "keep going.")
 
 
-async def account_allowance(request: Request, user: Annotated[User, Depends(require_verified_user)],
+async def account_allowance(request: Request, user: Annotated[User, Depends(require_verified_email)],
                             db: Annotated[AsyncSession, Depends(get_db)]) -> Allowance:
     return await allowance_for(db, user, request)
 
@@ -288,7 +288,7 @@ async def _import_text(db: AsyncSession, user: User | None, text: str, kind: str
 
 
 @router.post("/import", response_model=ImportOut, dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
-async def import_resume(body: ImportIn, user: Annotated[User, Depends(require_verified_user)],
+async def import_resume(body: ImportIn, user: Annotated[User, Depends(require_verified_email)],
                         db: Annotated[AsyncSession, Depends(get_db)],
                         allowance: Annotated[Allowance, Depends(account_allowance)]) -> ImportOut:
     if body.source == "document":
@@ -318,7 +318,7 @@ async def _import_upload(db: AsyncSession, user: User | None, file: UploadFile, 
 
 @router.post("/import-file", response_model=ImportOut, dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
 async def import_resume_file(file: Annotated[UploadFile, File()],
-                             user: Annotated[User, Depends(require_verified_user)],
+                             user: Annotated[User, Depends(require_verified_email)],
                              db: Annotated[AsyncSession, Depends(get_db)],
                              allowance: Annotated[Allowance, Depends(account_allowance)]) -> ImportOut:
     return await _import_upload(db, user, file, allowance)
@@ -353,7 +353,7 @@ async def _cover_letter(db: AsyncSession, user: User | None, body: CoverLetterIn
 
 @router.post("/cover-letter", response_model=CoverLetterOut,
              dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
-async def cover_letter(body: CoverLetterIn, user: Annotated[User, Depends(require_verified_user)],
+async def cover_letter(body: CoverLetterIn, user: Annotated[User, Depends(require_verified_email)],
                        db: Annotated[AsyncSession, Depends(get_db)],
                        allowance: Annotated[Allowance, Depends(account_allowance)]) -> CoverLetterOut:
     return await _spend(allowance, _cover_letter(db, user, body, allowance))
@@ -462,7 +462,7 @@ async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn, allowan
 
 
 @router.post("/suggest", response_model=SuggestOut, dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
-async def suggest(body: SuggestIn, user: Annotated[User, Depends(require_verified_user)],
+async def suggest(body: SuggestIn, user: Annotated[User, Depends(require_verified_email)],
                   db: Annotated[AsyncSession, Depends(get_db)],
                   allowance: Annotated[Allowance, Depends(account_allowance)]) -> SuggestOut:
     return await _spend(allowance, _suggest(db, user, body, allowance))

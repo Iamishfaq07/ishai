@@ -63,6 +63,15 @@ or a cover letter (`apps/api/orbit_api/resumes/allowance.py`).
 - **After it's spent:** AI endpoints answer `402 upgrade_required` with the plan and price, and the editor shows
   Upgrade. `/suggest` still returns the AI-free fixes, with `upgrade_required: true`.
 - **A failed AI call doesn't spend it.** IPs are stored only as an HMAC (`free_ai_uses.ip_hash`).
+- **A daily cap for everyone:** at most `ORBIT_FREE_RESUME_AI_DAILY` (default 200) free actions a rolling day, new
+  accounts and signed out together, so open sign-up has a bounded AI bill. Past it: `503`, and the use isn't spent.
+- **Accounts waiting for sign-up approval** can use the resume maker (their free action, and buying Resume Pro);
+  interview sessions stay locked until you approve them, and approving a payment approves the account.
+
+### Opening sign-up to customers
+With no SMTP, the safe public setup is anyone-can-sign-up plus your approval:
+`ORBIT_ALLOWED_EMAILS=*`, `ORBIT_SIGNUP_APPROVAL=true`, `ORBIT_EMAIL_VERIFICATION=off`. (Public sign-up without
+approval needs SMTP for email verification, or the API refuses to start.)
 
 ## Payments: UPI, checked by the admin
 No payment gateway: people pay `ORBIT_UPI_ID` (shown as `ORBIT_UPI_NAME`) from any UPI app, and the admin confirms
