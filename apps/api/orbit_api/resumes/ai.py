@@ -181,12 +181,12 @@ def field_context(data: ResumeData) -> dict[str, dict[str, object]]:
     return out
 
 
-def addable_roles(data: ResumeData) -> dict[str, tuple[str, list[str]]]:
-    """Roles with fewer than 2 bullets: "experience.<id>.bullets.+" -> (role name, the bullets it has)."""
+def addable_roles(data: ResumeData, below: int = 2) -> dict[str, tuple[str, list[str]]]:
+    """Roles with fewer than `below` bullets: "experience.<id>.bullets.+" -> (role name, the bullets it has)."""
     out: dict[str, tuple[str, list[str]]] = {}
     for e in data.experience:
         have = [b for b in e.bullets if b.strip()]
-        if (e.title.strip() or e.company.strip()) and len(have) < 2 and len(e.bullets) < 6:
+        if (e.title.strip() or e.company.strip()) and len(have) < below and len(e.bullets) < 6:
             out[f"experience.{e.id}.bullets.+"] = (" at ".join(x for x in (e.title, e.company) if x), have)
     return out
 
@@ -274,21 +274,33 @@ def suggest_request(data: ResumeData, report: AtsReport, llm: LLMProvider, *, mo
     )
 
 
-def parse_suggestions(resp: LLMResponse, data: ResumeData, *, focus: str | None = None) -> list[Suggestion]:
+def job_title(job_text: str) -> str:
+    """The job post's first line or sentence: usually the title being hired for."""
+    first = job_text.strip().split("\n", 1)[0]
+    return re.split(r"(?<=[.!?])\s", first, maxsplit=1)[0][:120]
+
+
+def parse_suggestions(resp: LLMResponse, data: ResumeData, *, focus: str | None = None,
+                      only: set[str] | None = None, facts: dict[str, str] | None = None,
+                      limit: int = MAX_SUGGESTIONS, add_below: int = 2, job_text: str = "") -> list[Suggestion]:
     """The model's suggestions, checked. With `focus` (a one-field rewrite) up to DRAFTS of them for that field, each
-    labelled as a draft; otherwise at most one rewrite per field."""
+    labelled as a draft; otherwise at most one rewrite per field. `only` limits them to these paths; `facts` are
+    what the candidate told us about their lines ("about 40 tickets a week"), so a number from them isn't invented."""
     fields = editable_fields(data)
-    adds = addable_roles(data)
-    corpus = _resume_json(data)  # everything the candidate has said about themselves
+    adds = addable_roles(data, add_below)
+    # Everything the candidate has said about themselves.
+    corpus = _resume_json(data) + ("\n" + "\n".join(facts.values()) if facts else "")
+    # The summary and headline may name the job being applied for ("Seeking a Customer Success Manager role").
+    wanted = job_title(job_text)
     out: list[Suggestion] = []
     seen: set[tuple[str, str]] = set()
     added: Counter[str] = Counter()
-    for raw in _dicts(_json(resp.text).get("suggestions"), MAX_SUGGESTIONS * 2):
+    for raw in _dicts(_json(resp.text).get("suggestions"), limit * 2):
         path = _s(raw.get("path"), 120)
         adding = path in adds
         if not adding and path not in fields:
             continue
-        if focus and path != focus:
+        if (focus and path != focus) or (only is not None and path not in only):
             continue
         label, before = (f"{adds[path][0]}, new bullet", "") if adding else fields[path]
         limit = 1_500 if path == "basics.summary" else 160 if path == "basics.headline" else \
@@ -299,7 +311,8 @@ def parse_suggestions(resp: LLMResponse, data: ResumeData, *, focus: str | None 
             continue
         if adding and (added[path] >= MAX_NEW_BULLETS or after.lower() in {b.lower() for b in adds[path][1]}):
             continue
-        invented = invented_terms(after, corpus)
+        invented = invented_terms(after, corpus + ("\n" + wanted if path in ("basics.summary", "basics.headline")
+                                                    else ""))
         if invented:
             log.info("resume suggestion for %s dropped: it adds %s", path, ", ".join(invented[:3]))
             continue
@@ -323,11 +336,86 @@ def parse_suggestions(resp: LLMResponse, data: ResumeData, *, focus: str | None 
         out.append(Suggestion(id=new_id(), path=path, label=label, before=before, after=after, reason=reason,
                               kind="add_bullet" if adding else "rewrite",
                               confirm=NEW_BULLET_CONFIRM if adding else None))
-        if len(out) >= (DRAFTS if focus else MAX_SUGGESTIONS):
+        if len(out) >= (DRAFTS if focus else limit):
             break
     if focus and len(out) > 1:
         for n, s in enumerate(out, 1):
             s.label = f"{s.label} · draft {n} of {len(out)}"
+    return out
+
+
+# ---- fixing what the ATS check found, line by line ------------------------------------------------------------
+
+MAX_FIX_LINES = 40
+
+FIX_RULES = """
+
+Fixing mode: you get "lines to fix", each with the problems the ATS check found on it, and sometimes roles to add
+bullets to. Return exactly one suggestion for EVERY listed path, rewritten so that every listed problem is gone and
+what the line says is kept; a line can't be skipped. Problems:
+- "doesn't start with an action verb": open with a strong past-tense verb (present tense only where "current" is
+  true), e.g. Led, Built, Resolved, Answered, Trained, Launched, Reduced, Managed, Created, Organized.
+- "needs a number": use a number from the resume or from the candidate's facts when it belongs to this line. If
+  there is none, still rewrite the line with the impact in words, and add {"path": ..., "question": ...} to
+  "questions": one short, friendly question asking the candidate for the one number that would size this line
+  (how many, how often, how much, how fast), e.g. "Roughly how many tickets did you answer in a week?".
+- A fact from the candidate ("facts") is true: work it into its line, in resume style.
+Return ONLY {"suggestions": [...], "questions": [...]}."""
+
+# What each check asks of a line, in the words the model gets.
+LINE_PROBLEMS = {
+    "action_verbs": "doesn't start with an action verb",
+    "quantified": "needs a number that sizes the result",
+    "bullet_length": "must be 8-35 words",
+    "varied_verbs": "opens with the same verb as too many other bullets: start with a different strong verb",
+    "no_pronouns": "uses \"I\" or \"my\": start with the verb instead",
+    "placeholders": "has a [placeholder] or X%: write it as finished text without one",
+    "cliches": "uses a cliché: show the quality with what was done instead",
+    "tech_names": "spell tool names the standard way",
+}
+
+
+def fix_request(data: ResumeData, llm: LLMProvider, *, lines: dict[str, list[str]], roles: list[str],
+                job_text: str = "", facts: dict[str, str] | None = None, tailor: bool = False) -> LLMRequest:
+    """Rewrite exactly these lines (path -> the problems on it) and draft bullets for these roles ("...bullets.+")."""
+    fields = editable_fields(data)
+    context = field_context(data)
+    adds = addable_roles(data, below=6)
+    listed = [{"path": p, "text": t, **context.get(p, {})}
+              for p, (_, t) in list(fields.items())[:80] if t.strip()]
+    todo = [{"path": p, "text": fields[p][1], "problems": probs, **context.get(p, {})}
+            for p, probs in list(lines.items())[:MAX_FIX_LINES] if p in fields]
+    add = [{"path": p, "role": adds[p][0], "current_bullets": adds[p][1]} for p in roles if p in adds]
+    parts = ["Task: fix every problem on every line listed under \"lines to fix\""
+             + (", and add bullets to the roles listed (up to 2 each, so each role has at least 2-3)" if add else "")
+             + (", using the job post's wording where the resume supports it" if tailor and job_text.strip() else "")
+             + ".",
+             f"Lines to fix:\n<reference_data source=\"lines_to_fix\">\n{fence(json.dumps(todo, ensure_ascii=False))}\n"
+             "</reference_data>"]
+    if add:
+        parts.append("Roles to add bullets to:\n<reference_data source=\"roles\">\n"
+                     f"{fence(json.dumps(add, ensure_ascii=False))}\n</reference_data>")
+    if facts:
+        parts.append("Facts the candidate gave about their lines (true; use them):\n<reference_data source=\"facts\">\n"
+                     + fence(json.dumps([{"path": p, "fact": f} for p, f in facts.items()], ensure_ascii=False))
+                     + "\n</reference_data>")
+    parts.append(f"The whole resume, for context:\n<reference_data source=\"resume_fields\">\n"
+                 f"{fence(json.dumps(listed, ensure_ascii=False))}\n</reference_data>")
+    if job_text.strip():
+        parts.append("<reference_data source=\"job_post\">\n" + fence(job_text[:MAX_JOB_CHARS]) + "\n</reference_data>")
+    return LLMRequest(
+        messages=[LLMMessage("system", SUGGEST_SYSTEM + FIX_RULES), LLMMessage("user", "\n\n".join(parts))],
+        json_mode=llm.supports_structured_output(), max_tokens=6_000, temperature=0.3, request_type="resume_fix",
+    )
+
+
+def parse_questions(resp: LLMResponse, allowed: set[str]) -> dict[str, str]:
+    """path -> the question the model asks the candidate, for lines it couldn't size without a number."""
+    out: dict[str, str] = {}
+    for raw in _dicts(_json(resp.text).get("questions"), MAX_FIX_LINES):
+        path, question = _s(raw.get("path"), 120), _s(raw.get("question"), 200).strip()
+        if path in allowed and question and path not in out:
+            out[path] = question if question.endswith("?") else question.rstrip(".") + "?"
     return out
 
 

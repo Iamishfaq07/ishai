@@ -35,6 +35,13 @@
 .resume-print {
   display: none;
 }
+/* The line a suggestion, a check or the field being edited is about, marked on the on-screen preview only. */
+.resume-hl {
+  border-radius: 2px;
+  background: rgb(99 102 241 / 0.13);
+  box-shadow: 0 0 0 3px rgb(99 102 241 / 0.55);
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
 @media print {
   body > #root {
     display: none !important;

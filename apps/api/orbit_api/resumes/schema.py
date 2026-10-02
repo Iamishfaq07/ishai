@@ -15,10 +15,15 @@ DEFAULT_ORDER: list[SectionId] = ["summary", "experience", "skills", "projects",
 EXTRA_PREFIX = "extra:"  # an extra section's place in section_order: "extra:<its id>"
 MAX_EXTRAS = 5
 
-Template = Literal["classic", "modern", "compact", "sidebar"]
-Font = Literal["inter", "arial", "georgia", "garamond", "grotesk"]
+# All single-column (ATS-safe) except "sidebar".
+Template = Literal["classic", "modern", "compact", "sidebar", "elegant", "minimal", "bold", "executive"]
+Font = Literal["inter", "arial", "georgia", "garamond", "grotesk", "calibri", "cambria", "helvetica", "times",
+               "trebuchet"]
 Spacing = Literal["compact", "normal", "relaxed"]
+LineHeight = Literal["tight", "normal", "airy"]
+SkillsStyle = Literal["list", "tags"]
 PageSize = Literal["a4", "letter"]
+MAX_TITLE = 40
 
 MAX_PHOTO_CHARS = 400_000  # a data: URL; the editor shrinks photos to ~256 px before upload
 _PHOTO = re.compile(r"^data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$")
@@ -131,15 +136,37 @@ class ResumeData(BaseModel):
     extras: list[ExtraSection] = Field(default_factory=list, max_length=MAX_EXTRAS)
     # Standard section ids, and "extra:<id>" for each extra section.
     section_order: list[str] = Field(default_factory=lambda: [str(s) for s in DEFAULT_ORDER], max_length=16)
+    # Sections kept in the editor but left off the resume (preview, PDF, Word and the ATS score).
+    hidden: list[str] = Field(default_factory=list, max_length=16)
+    # Own headings for the standard sections ("Work experience" for "experience"); extras have their own titles.
+    titles: dict[str, str] = Field(default_factory=dict, max_length=6)
 
     @model_validator(mode="after")
     def _order(self) -> "ResumeData":
         """Every section keeps exactly one place: unknown or duplicate entries are dropped, and missing ones (a new
-        extra section, or a standard one an older client left out) go at the end."""
+        extra section, or a standard one an older client left out) go at the end. Hidden sections and headings only
+        name sections that exist."""
         known: list[str] = list(dict.fromkeys([*DEFAULT_ORDER, *(EXTRA_PREFIX + x.id for x in self.extras)]))
         seen = [s for s in dict.fromkeys(self.section_order) if s in known]
         self.section_order = seen + [s for s in known if s not in seen]
+        self.hidden = [s for s in dict.fromkeys(self.hidden) if s in known]
+        self.titles = {k: " ".join(v.split())[:MAX_TITLE] for k, v in self.titles.items()
+                       if k in DEFAULT_ORDER and v.strip()}
         return self
+
+    def visible(self) -> "ResumeData":
+        """The resume as it prints: hidden sections emptied (what the score, the Word file and the AI look at)."""
+        if not self.hidden:
+            return self
+        out = self.model_copy(deep=True)
+        hidden = set(self.hidden)
+        if "summary" in hidden:
+            out.basics.summary = ""
+        for key in ("experience", "education", "skills", "projects", "certifications"):
+            if key in hidden:
+                setattr(out, key, [])
+        out.extras = [x for x in out.extras if EXTRA_PREFIX + x.id not in hidden]
+        return out
 
 
 class ResumeDesign(BaseModel):
@@ -148,6 +175,8 @@ class ResumeDesign(BaseModel):
     font: Font = "inter"
     font_size: float = Field(10.5, ge=9, le=12.5)
     spacing: Spacing = "normal"
+    line_height: LineHeight = "normal"
+    skills_style: SkillsStyle = "list"
     page: PageSize = "a4"
     photo: str | None = Field(None, max_length=MAX_PHOTO_CHARS)
     show_photo: bool = False

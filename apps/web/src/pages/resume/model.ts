@@ -4,6 +4,7 @@ import type {
   ResumeExtraSection,
   ResumeFont,
   ResumeInput,
+  ResumeLineHeight,
   ResumeSectionId,
   ResumeSectionKey,
   ResumeSpacing,
@@ -42,13 +43,23 @@ export function extraOf(data: ResumeData, key: ResumeSectionKey): ResumeExtraSec
 export function sectionLabel(data: ResumeData, key: ResumeSectionKey): string {
   const extra = extraOf(data, key);
   if (extra) return extra.title.trim() || "Untitled section";
-  return SECTION_LABEL[key as ResumeSectionId] ?? key;
+  return data.titles?.[key as ResumeSectionId]?.trim() || (SECTION_LABEL[key as ResumeSectionId] ?? key);
+}
+
+/** The sections that print, in order: hidden ones stay in the editor only. */
+export function shownSections(data: ResumeData): ResumeSectionKey[] {
+  const hidden = new Set(data.hidden ?? []);
+  return data.section_order.filter((s) => !hidden.has(s));
 }
 
 export const TEMPLATES: Array<{ id: ResumeTemplate; label: string; note: string }> = [
   { id: "classic", label: "Classic", note: "Centred header, ruled sections. Reads well everywhere." },
   { id: "modern", label: "Modern", note: "Bold name in your colour, clean sections." },
   { id: "compact", label: "Compact", note: "Tighter spacing to fit more on a page." },
+  { id: "elegant", label: "Elegant", note: "Serif name, fine double rules. Classic and calm." },
+  { id: "minimal", label: "Minimal", note: "No colour blocks, lots of white space, small grey headings." },
+  { id: "bold", label: "Bold", note: "A band of your colour behind the name. Stands out, still one column." },
+  { id: "executive", label: "Executive", note: "Name left, headline in your colour, tinted section bars." },
   { id: "sidebar", label: "Sidebar", note: "Two columns. Looks great; some ATS read it out of order." },
 ];
 
@@ -58,6 +69,17 @@ export const FONTS: Array<{ id: ResumeFont; label: string; stack: string }> = [
   { id: "georgia", label: "Georgia", stack: "Georgia, 'Times New Roman', serif" },
   { id: "garamond", label: "Garamond", stack: "Garamond, 'EB Garamond', 'Times New Roman', serif" },
   { id: "grotesk", label: "Space Grotesk", stack: "'Space Grotesk Variable', 'Inter Variable', Arial, sans-serif" },
+  { id: "calibri", label: "Calibri", stack: "Calibri, Carlito, 'Segoe UI', Arial, sans-serif" },
+  { id: "cambria", label: "Cambria", stack: "Cambria, Caladea, Georgia, serif" },
+  { id: "helvetica", label: "Helvetica", stack: "'Helvetica Neue', Helvetica, Arial, sans-serif" },
+  { id: "times", label: "Times New Roman", stack: "'Times New Roman', Times, serif" },
+  { id: "trebuchet", label: "Trebuchet", stack: "'Trebuchet MS', 'Segoe UI', Arial, sans-serif" },
+];
+
+export const LINE_HEIGHTS: Array<{ id: ResumeLineHeight; label: string; value: number }> = [
+  { id: "tight", label: "Tight", value: 1.25 },
+  { id: "normal", label: "Normal", value: 1.4 },
+  { id: "airy", label: "Airy", value: 1.55 },
 ];
 
 export const SPACING: Array<{ id: ResumeSpacing; label: string }> = [
@@ -66,7 +88,20 @@ export const SPACING: Array<{ id: ResumeSpacing; label: string }> = [
   { id: "relaxed", label: "Relaxed" },
 ];
 
-export const ACCENTS = ["#4f46e5", "#0f766e", "#1d4ed8", "#b91c1c", "#9333ea", "#c2410c", "#334155", "#111827"];
+/** Ready-made combinations of template, colour and font: one click, then fine-tune. */
+export const LOOKS: Array<{ label: string; design: Pick<ResumeDesign, "template" | "accent" | "font"> }> = [
+  { label: "Corporate", design: { template: "executive", accent: "#1d4ed8", font: "cambria" } },
+  { label: "Tech", design: { template: "modern", accent: "#4f46e5", font: "inter" } },
+  { label: "Creative", design: { template: "bold", accent: "#be185d", font: "grotesk" } },
+  { label: "Academic", design: { template: "elegant", accent: "#7c2d12", font: "garamond" } },
+  { label: "Simple", design: { template: "minimal", accent: "#334155", font: "helvetica" } },
+  { label: "Finance", design: { template: "classic", accent: "#0f766e", font: "georgia" } },
+];
+
+export const ACCENTS = [
+  "#4f46e5", "#0f766e", "#1d4ed8", "#b91c1c", "#9333ea", "#c2410c", "#334155", "#111827",
+  "#0369a1", "#15803d", "#a16207", "#be185d", "#7c2d12", "#4338ca",
+];
 
 export function newId(): string {
   return Math.random().toString(16).slice(2, 14).padEnd(12, "0");
@@ -218,7 +253,7 @@ export function dateRange(start: string, end: string, current = false): string {
 export function resumeToText(data: ResumeData): string {
   const b = data.basics;
   const out: string[] = [b.name, b.headline, [b.email, b.phone, b.location, ...b.links.map((l) => l.url)].filter(Boolean).join(" | ")];
-  for (const section of data.section_order) {
+  for (const section of shownSections(data)) {
     if (section === "summary" && b.summary.trim()) out.push("", "SUMMARY", b.summary);
     if (section === "experience" && data.experience.length) {
       out.push("", "EXPERIENCE");

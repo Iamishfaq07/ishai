@@ -1,6 +1,6 @@
 import { Fragment, type CSSProperties, type ReactNode } from "react";
 import type { ResumeData, ResumeDesign, ResumeSectionKey } from "@orbit/types";
-import { FONTS, dateRange, extraOf, sectionLabel } from "./model";
+import { FONTS, LINE_HEIGHTS, dateRange, extraOf, sectionLabel, shownSections } from "./model";
 
 const SPACE = {
   compact: { section: "9pt", item: "5pt", pad: "12mm" },
@@ -119,12 +119,14 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
   const photo = design.show_photo && design.photo ? design.photo : null;
   const sidebar = t === "sidebar";
 
+  const lineHeight = LINE_HEIGHTS.find((l) => l.id === (design.line_height ?? "normal"))?.value ?? 1.4;
+  const serif = "Georgia, 'Times New Roman', serif";
   const style: CSSProperties = {
     width: `${page.w}mm`,
     minHeight: `${page.h}mm`,
     fontFamily: font,
     fontSize: `${design.font_size}pt`,
-    lineHeight: t === "compact" ? 1.3 : 1.4,
+    lineHeight: t === "compact" ? lineHeight - 0.1 : lineHeight,
     padding: sidebar ? 0 : space.pad,
     color: "#18181b",
     background: "#ffffff",
@@ -146,6 +148,40 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
         </h2>
       );
     }
+    if (t === "elegant") {
+      return (
+        <h2
+          style={{ color: accent, fontFamily: serif, fontSize: "1.05em", letterSpacing: "0.14em", borderBottom: `3px double ${accent}`, marginBottom: space.item, paddingBottom: "2pt" }}
+          className="text-center font-semibold uppercase"
+        >
+          {label}
+        </h2>
+      );
+    }
+    if (t === "minimal") {
+      return (
+        <h2 style={{ color: "#71717a", fontSize: "0.85em", letterSpacing: "0.18em", marginBottom: space.item }} className="font-semibold uppercase">
+          {label}
+        </h2>
+      );
+    }
+    if (t === "bold") {
+      return (
+        <h2 style={{ color: accent, fontSize: "1.1em", marginBottom: space.item }} className="font-extrabold uppercase tracking-wide">
+          {label}
+        </h2>
+      );
+    }
+    if (t === "executive") {
+      return (
+        <h2
+          style={{ background: tint(accent, 0.9), borderLeft: `3px solid ${accent}`, color: "#18181b", fontSize: "1em", marginBottom: space.item, padding: "1.5pt 5pt" }}
+          className="font-bold uppercase tracking-wider"
+        >
+          {label}
+        </h2>
+      );
+    }
     return (
       <h2
         style={{ color: accent, borderColor: accent, fontSize: "1em", marginBottom: space.item, paddingBottom: "2pt" }}
@@ -156,13 +192,15 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     );
   };
 
-  const bullets = (items: string[]) => {
-    const list = items.filter((b) => b.trim());
+  // `base` tags each line with the editor path it comes from ("experience.<id>.bullets.2"), so the editor can point at
+  // the line a suggestion or an edit is about. The index is the bullet's own, blanks included.
+  const bullets = (items: string[], base?: string) => {
+    const list = items.map((text, i) => ({ text, i })).filter((b) => b.text.trim());
     return list.length ? (
       <ul className="mt-[2pt] list-disc space-y-[1.5pt] pl-[1.2em]">
-        {list.map((b, i) => (
-          <li key={i}>
-            <Fill text={b} />
+        {list.map((b) => (
+          <li key={b.i} data-rpath={base ? `${base}.bullets.${b.i}` : undefined}>
+            <Fill text={b.text} />
           </li>
         ))}
       </ul>
@@ -175,12 +213,12 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     const extra = extraOf(data, id);
     if (extra) {
       const items = extra.items.filter((i) => i.trim());
-      body = extra.style === "inline" ? <p><Fill text={items.join(" · ")} /></p> : bullets(items);
+      body = <div data-rpath={`extras.${extra.id}`}>{extra.style === "inline" ? <p><Fill text={items.join(" · ")} /></p> : bullets(items)}</div>;
     }
-    if (id === "summary") body = <p><Fill text={data.basics.summary} /></p>;
+    if (id === "summary") body = <p data-rpath="basics.summary"><Fill text={data.basics.summary} /></p>;
     if (id === "experience") {
       body = data.experience.map((e) => (
-        <div key={e.id} style={{ marginBottom: space.item }} className="break-inside-avoid">
+        <div key={e.id} data-rpath={`experience.${e.id}`} style={{ marginBottom: space.item }} className="break-inside-avoid">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3">
             <p>
               <span className="font-bold">{e.title}</span>
@@ -189,13 +227,13 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
             </p>
             <p className="whitespace-nowrap text-zinc-600">{dateRange(e.start, e.end, e.current)}</p>
           </div>
-          {bullets(e.bullets)}
+          {bullets(e.bullets, `experience.${e.id}`)}
         </div>
       ));
     }
     if (id === "education") {
       body = data.education.map((e) => (
-        <div key={e.id} style={{ marginBottom: space.item }} className="break-inside-avoid">
+        <div key={e.id} data-rpath={`education.${e.id}`} style={{ marginBottom: space.item }} className="break-inside-avoid">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3">
             <p>
               <span className="font-bold">{[e.degree, e.field].filter(Boolean).join(", ") || e.school}</span>
@@ -209,13 +247,19 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     }
     if (id === "skills") {
       body = (
-        <div className="space-y-[2pt]">
+        <div data-rpath="skills" className="space-y-[2pt]">
           {data.skills
             .filter((s) => s.items.some((i) => i.trim()))
             .map((s) => (
               <p key={s.id}>
                 {s.name && <span className="font-bold">{s.name}: </span>}
-                {s.items.filter((i) => i.trim()).join(", ")}
+                {design.skills_style === "tags"
+                  ? s.items.filter((i) => i.trim()).map((item, i) => (
+                      <span key={i} style={{ borderColor: tint(accent, 0.55), background: tint(accent, 0.94) }} className="mb-[2pt] mr-[3pt] inline-block rounded border px-[4pt]">
+                        {item}
+                      </span>
+                    ))
+                  : s.items.filter((i) => i.trim()).join(", ")}
               </p>
             ))}
         </div>
@@ -223,13 +267,13 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     }
     if (id === "projects") {
       body = data.projects.map((p) => (
-        <div key={p.id} style={{ marginBottom: space.item }} className="break-inside-avoid">
+        <div key={p.id} data-rpath={`projects.${p.id}`} style={{ marginBottom: space.item }} className="break-inside-avoid">
           <p>
             <span className="font-bold">{p.name}</span>
             {p.link && <span className="text-zinc-600"> · {p.link}</span>}
           </p>
-          {p.description && <p><Fill text={p.description} /></p>}
-          {bullets(p.bullets)}
+          {p.description && <p data-rpath={`projects.${p.id}.description`}><Fill text={p.description} /></p>}
+          {bullets(p.bullets, `projects.${p.id}`)}
         </div>
       ));
     }
@@ -258,23 +302,23 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
   if (sidebar) {
     // Short, list-like sections go in the side column: skills, education, certifications, one-line extras.
     const inSide = (s: ResumeSectionKey) => ["skills", "education", "certifications"].includes(s) || extraOf(data, s)?.style === "inline";
-    const main = data.section_order.filter((s) => !inSide(s));
+    const main = shownSections(data).filter((s) => !inSide(s));
     return (
       <div style={style} className="resume-page flex">
         <aside style={{ background: tint(accent, 0.9), padding: space.pad, width: "34%" }} className="shrink-0">
           {photo && <div className="mb-[10pt]">{photoEl("30mm")}</div>}
-          <h1 style={{ color: accent, fontSize: "1.9em", lineHeight: 1.1 }} className="font-bold">
+          <h1 data-rpath="basics.name" style={{ color: accent, fontSize: "1.9em", lineHeight: 1.1 }} className="font-bold">
             {name}
           </h1>
-          {data.basics.headline && <p className="mt-[3pt] font-medium">{data.basics.headline}</p>}
-          <div className="mt-[8pt] space-y-[2pt] break-words text-[0.92em]">
+          {data.basics.headline && <p data-rpath="basics.headline" className="mt-[3pt] font-medium">{data.basics.headline}</p>}
+          <div data-rpath="basics" className="mt-[8pt] space-y-[2pt] break-words text-[0.92em]">
             {contacts.map((c, i) => (
               <p key={`${i}-${c.text}`}>
                 <ContactLine items={[c]} sep="" />
               </p>
             ))}
           </div>
-          {data.section_order.filter(inSide).map(section)}
+          {shownSections(data).filter(inSide).map(section)}
         </aside>
         <main style={{ padding: space.pad, paddingLeft: "7mm" }} className="min-w-0 flex-1">
           {main.map(section)}
@@ -287,29 +331,79 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     t === "classic" ? (
       // Not positioned itself: a positioned header is painted after the sections, so the PDF's text would list
       // the name and contacts last, which confuses ATS parsers. The photo is placed against the page instead.
-      <header className="text-center">
+      <header data-rpath="basics" className="text-center">
         {photo && <div className="absolute" style={{ top: space.pad, right: space.pad }}>{photoEl("22mm")}</div>}
-        <h1 style={{ fontSize: "2em", lineHeight: 1.15 }} className="font-bold tracking-tight">
+        <h1 data-rpath="basics.name" style={{ fontSize: "2em", lineHeight: 1.15 }} className="font-bold tracking-tight">
           {name}
         </h1>
-        {data.basics.headline && <p style={{ color: accent }} className="mt-[2pt] font-medium">{data.basics.headline}</p>}
+        {data.basics.headline && <p data-rpath="basics.headline" style={{ color: accent }} className="mt-[2pt] font-medium">{data.basics.headline}</p>}
         <p className="mt-[4pt] text-zinc-600"><ContactLine items={contacts} sep="  ·  " /></p>
       </header>
-    ) : t === "modern" ? (
-      <header className="flex items-start justify-between gap-4">
+    ) : t === "elegant" ? (
+      <header data-rpath="basics" className="text-center">
+        {photo && <div className="absolute" style={{ top: space.pad, right: space.pad }}>{photoEl("22mm")}</div>}
+        <h1 data-rpath="basics.name" style={{ fontFamily: serif, fontSize: "2.2em", lineHeight: 1.1, letterSpacing: "0.04em" }} className="font-semibold">
+          {name}
+        </h1>
+        {data.basics.headline && <p data-rpath="basics.headline" style={{ color: accent, letterSpacing: "0.12em" }} className="mt-[3pt] text-[0.95em] uppercase">{data.basics.headline}</p>}
+        <p className="mt-[5pt] text-zinc-600"><ContactLine items={contacts} sep="  ◆  " /></p>
+      </header>
+    ) : t === "minimal" ? (
+      <header data-rpath="basics" className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 style={{ color: accent, fontSize: "2.2em", lineHeight: 1.05 }} className="font-extrabold tracking-tight">
+          <h1 data-rpath="basics.name" style={{ fontSize: "2.1em", lineHeight: 1.1 }} className="font-light tracking-tight">
             {name}
           </h1>
-          {data.basics.headline && <p className="mt-[3pt] text-[1.1em] font-medium">{data.basics.headline}</p>}
+          {data.basics.headline && <p data-rpath="basics.headline" className="mt-[2pt] text-zinc-600">{data.basics.headline}</p>}
+          <p className="mt-[5pt] text-[0.92em] text-zinc-500"><ContactLine items={contacts} sep="   " /></p>
+        </div>
+        {photoEl("22mm")}
+      </header>
+    ) : t === "bold" ? (
+      <header
+        data-rpath="basics"
+        style={{ background: accent, margin: `-${space.pad} -${space.pad} 0`, padding: `${space.pad} ${space.pad} 9pt` }}
+        className="flex items-end justify-between gap-4 text-white"
+      >
+        <div className="min-w-0">
+          <h1 data-rpath="basics.name" style={{ fontSize: "2.3em", lineHeight: 1.05 }} className="font-extrabold tracking-tight">
+            {name}
+          </h1>
+          {data.basics.headline && <p data-rpath="basics.headline" className="mt-[3pt] text-[1.1em] font-medium opacity-90">{data.basics.headline}</p>}
+          <p className="mt-[5pt] opacity-90"><ContactLine items={contacts} sep="  |  " /></p>
+        </div>
+        {photoEl("24mm")}
+      </header>
+    ) : t === "executive" ? (
+      <header data-rpath="basics" className="flex items-start justify-between gap-4 pb-[4pt]" style={{ borderBottom: `2px solid ${accent}` }}>
+        <div className="min-w-0">
+          <h1 data-rpath="basics.name" style={{ fontFamily: serif, fontSize: "2.2em", lineHeight: 1.05 }} className="font-bold">
+            {name}
+          </h1>
+          {data.basics.headline && <p data-rpath="basics.headline" style={{ color: accent }} className="mt-[3pt] text-[1.1em] font-semibold">{data.basics.headline}</p>}
+        </div>
+        <div className="shrink-0 text-right text-[0.92em] text-zinc-600">
+          {contacts.map((c, i) => (
+            <p key={`${i}-${c.text}`}><ContactLine items={[c]} sep="" /></p>
+          ))}
+        </div>
+        {photoEl("20mm")}
+      </header>
+    ) : t === "modern" ? (
+      <header data-rpath="basics" className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 data-rpath="basics.name" style={{ color: accent, fontSize: "2.2em", lineHeight: 1.05 }} className="font-extrabold tracking-tight">
+            {name}
+          </h1>
+          {data.basics.headline && <p data-rpath="basics.headline" className="mt-[3pt] text-[1.1em] font-medium">{data.basics.headline}</p>}
           <p className="mt-[5pt] text-zinc-600"><ContactLine items={contacts} sep="  |  " /></p>
         </div>
         {photoEl("24mm")}
       </header>
     ) : (
-      <header className="flex items-end justify-between gap-3 border-b pb-[4pt]" style={{ borderColor: accent }}>
+      <header data-rpath="basics" className="flex items-end justify-between gap-3 border-b pb-[4pt]" style={{ borderColor: accent }}>
         <div className="min-w-0">
-          <h1 style={{ fontSize: "1.6em", lineHeight: 1.1 }} className="font-bold">
+          <h1 data-rpath="basics.name" style={{ fontSize: "1.6em", lineHeight: 1.1 }} className="font-bold">
             {name}
             {data.basics.headline && <span className="font-normal text-zinc-600"> — {data.basics.headline}</span>}
           </h1>
@@ -322,7 +416,7 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
   return (
     <div style={style} className="resume-page relative">
       {header}
-      {data.section_order.map(section)}
+      {shownSections(data).map(section)}
     </div>
   );
 }

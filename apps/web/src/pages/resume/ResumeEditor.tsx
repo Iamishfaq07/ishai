@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { Link, useLocation, useParams } from "react-router-dom";
-import type { AtsCheck, AtsReport, Resume, ResumeData, ResumeDesign, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
+import type { AtsReport, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
 import {
   ArrowLeft,
   Check,
@@ -35,7 +35,8 @@ import { downloadText, errorText } from "../../lib/format";
 import { ContentForm } from "./ContentForm";
 import { AiCostNote, AiErrorNote, AllowanceBanner, AllowanceContext, isUpgradeError, useAllowance, useResumeAllowance } from "./allowance";
 import { useBackend } from "./backend";
-import { ACCENTS, FONTS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, resumeToText, suggestedSkills } from "./model";
+import { FixActions, FixResult, fixKind } from "./FixPanel";
+import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, resumeToText, suggestedSkills } from "./model";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
 
@@ -102,6 +103,9 @@ function ResumeEditor() {
       : null,
   );
   const [focusTarget, setFocusTarget] = useState<string | null>(null);
+  // What the preview marks: the field being edited, or what's hovered on the ATS tab (a check's lines, a question).
+  const [editing, setEditing] = useState<string | null>(null);
+  const [pointing, setPointing] = useState<string[]>([]);
 
   useEffect(() => {
     backend
@@ -341,6 +345,62 @@ function ResumeEditor() {
     setAiError(null);
   };
 
+  // "Fix with AI" on the ATS score: fixed, applied and re-checked on the server, landing here as one undo step.
+  const [fixing, setFixing] = useState<string | null>(null);
+  const [fixResult, setFixResult] = useState<ResumeFixResponse | null>(null);
+  const [fixError, setFixError] = useState<{ text: string; upgrade: boolean } | null>(null);
+  const runFix = async (check: string | null, facts?: Record<string, string>, followup?: string | null) => {
+    const r = latest.current;
+    if (!r || fixing) return;
+    setFixing(check ?? "all");
+    setFixError(null);
+    try {
+      const out = await backend.tools.fixResume({
+        data: r.data,
+        design: r.design,
+        job_text: r.job_text,
+        ...(check ? { check } : {}),
+        ...(facts ? { facts } : {}),
+        ...(followup ? { followup } : {}),
+      });
+      const rank = new Map((out.order ?? []).map((id, i) => [id, i]));
+      change((cur) => {
+        // Each change names the text it replaces: a line edited while the AI worked is left as the user wrote it.
+        let data = out.suggestions.reduce((d, sug) => applySuggestion(d, sug, newId), cur.data);
+        if (out.order) {
+          data = { ...data, experience: [...data.experience].sort((a, b) => (rank.get(a.id) ?? 99) - (rank.get(b.id) ?? 99)) };
+        }
+        return { ...cur, data, design: { ...cur.design, ...out.design } };
+      });
+      // Answers to a fix's questions finish that fix: keep what it still offers for review, and its starting score.
+      setFixResult((prev) =>
+        facts && prev
+          ? {
+              ...out,
+              score_before: prev.score_before,
+              review: [...prev.review, ...out.review],
+              remaining: [...prev.remaining.filter((c) => !out.remaining.some((o) => o.id === c.id)), ...out.remaining],
+            }
+          : out,
+      );
+      if (out.upgrade_required) {
+        setFixError({ text: "The fixes that need no AI are done. Rewriting lines needs resume credits: you're out.", upgrade: true });
+      } else if (out.ai_error) setFixError({ text: out.ai_error, upgrade: false });
+    } catch (err) {
+      setFixError({ text: errorText(err), upgrade: isUpgradeError(err) });
+    } finally {
+      setFixing(null);
+      allowance.refresh();
+    }
+  };
+  const dropReview = (s: ResumeSuggestion) =>
+    setFixResult((res) => (res ? { ...res, review: res.review.filter((x) => x.id !== s.id) } : res));
+  const keepReview = (s: ResumeSuggestion, picked?: string[]) => {
+    const chosen = picked ? { ...s, after: picked.join(", ") } : s;
+    update((d) => applySuggestion(d, chosen, newId));
+    dropReview(s);
+  };
+
   const placeholders = report?.checks.find((c) => c.id === "placeholders" && !c.passed) ?? null;
   /** Downloading with an unfilled [placeholder] prints it as-is: say so first. */
   const okToDownload = () =>
@@ -457,13 +517,18 @@ function ResumeEditor() {
           </div>
 
           {tab === "content" && (
-            <ContentForm
-              data={resume.data}
-              update={update}
-              onRewrite={(path) => void askAi("improve", undefined, path)}
-              issues={report?.issues ?? []}
-              scored={scored}
-            />
+            <div
+              onFocus={(e) => setEditing((e.target as HTMLElement).closest("[data-path]")?.getAttribute("data-path") ?? null)}
+              onBlur={() => setEditing(null)}
+            >
+              <ContentForm
+                data={resume.data}
+                update={update}
+                onRewrite={(path) => void askAi("improve", undefined, path)}
+                issues={report?.issues ?? []}
+                scored={scored}
+              />
+            </div>
           )}
           {tab === "score" && (
             <ScorePanel
@@ -472,7 +537,30 @@ function ResumeEditor() {
               onJob={(job_text) => change((r) => ({ ...r, job_text }))}
               onAddSkill={(kw) => update((d) => addSkills(d, [kw], newId))}
               onShow={showTarget}
-              onFixWithAi={(check) => void askAi(check.category === "keywords" ? "tailor" : "improve", check.id)}
+              fixing={fixing}
+              onFix={(check) => void runFix(check)}
+              onPoint={setPointing}
+              result={
+                <FixResult
+                  result={fixResult}
+                  report={report}
+                  busy={fixing}
+                  error={fixError}
+                  onUndo={() => {
+                    step("undo");
+                    setFixResult(null);
+                  }}
+                  onKeep={keepReview}
+                  onSkip={dropReview}
+                  onAnswer={(facts) => void runFix("quantified", facts, fixResult?.followup)}
+                  onShow={showTarget}
+                  onPoint={setPointing}
+                  onDismiss={() => {
+                    setFixResult(null);
+                    setFixError(null);
+                  }}
+                />
+              }
             />
           )}
           {tab === "ai" && (
@@ -501,7 +589,7 @@ function ResumeEditor() {
         </div>
 
         <div className="min-w-0">
-          <div className="sticky top-20 space-y-3">
+          <div data-preview-scroll="" className="sticky top-20 space-y-3 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pb-4">
             {placeholders && tab !== "letter" && (
               <div role="status" className="flex items-start gap-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">
                 <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
@@ -514,7 +602,12 @@ function ResumeEditor() {
             {tab === "letter" ? (
               <ScaledLetter data={resume.data} design={resume.design} text={resume.cover_letter} />
             ) : (
-              <ScaledPage data={resume.data} design={resume.design} onFit={(design) => change((r) => ({ ...r, design }))} />
+              <ScaledPage
+                data={resume.data}
+                design={resume.design}
+                onFit={(design) => change((r) => ({ ...r, design }))}
+                highlight={tab === "ai" ? (queue[0] ? [queue[0].path] : []) : tab === "content" ? (editing ? [editing] : []) : tab === "score" ? pointing : []}
+              />
             )}
           </div>
         </div>
@@ -647,8 +740,35 @@ function ScaledLetter({ data, design, text }: { data: ResumeData; design: Resume
 }
 
 /** The page at real size, scaled down to fit the column, with where page 2 (and 3…) would start when printed. */
-function ScaledPage({ data, design, onFit }: { data: ResumeData; design: ResumeDesign; onFit: (design: ResumeDesign) => void }) {
+/** The preview element for a path: the line itself, else what it's part of ("experience.<id>.bullets.+" -> the role). */
+function previewTarget(root: Element, path: string): HTMLElement | null {
+  for (let p = path; p; p = p.includes(".") ? p.slice(0, p.lastIndexOf(".")) : "") {
+    const el = root.querySelector<HTMLElement>(`[data-rpath="${CSS.escape(p)}"]`);
+    if (el) return el;
+  }
+  return null;
+}
+
+function ScaledPage({ data, design, onFit, highlight = [] }: { data: ResumeData; design: ResumeDesign; onFit: (design: ResumeDesign) => void; highlight?: string[] }) {
   const { box, page, scale, realHeight } = useScaledPage(design.page);
+  // Mark what's being looked at, and bring the first one into view inside the preview column (not the whole page).
+  const marked = highlight.join("|");
+  useLayoutEffect(() => {
+    const root = page.current;
+    if (!root) return;
+    const els = [...new Set(highlight.map((p) => previewTarget(root, p)).filter((el): el is HTMLElement => Boolean(el)))];
+    els.forEach((el) => el.classList.add("resume-hl"));
+    const first = els[0];
+    const scroller = root.closest<HTMLElement>("[data-preview-scroll]");
+    if (first && scroller && scroller.scrollHeight > scroller.clientHeight) {
+      const r = first.getBoundingClientRect();
+      const c = scroller.getBoundingClientRect();
+      if (r.top < c.top || r.bottom > c.bottom) {
+        scroller.scrollTo({ top: scroller.scrollTop + r.top - c.top - c.height / 3, behavior: "smooth" });
+      }
+    }
+    return () => els.forEach((el) => el.classList.remove("resume-hl"));
+  }, [marked, data, design, scale]); // eslint-disable-line react-hooks/exhaustive-deps -- `marked` stands for `highlight`
   const [fitting, setFitting] = useState(false);
   const [fitNote, setFitNote] = useState<string | null>(null);
   const { pages, breaks } = pageLayout(realHeight, design);
@@ -887,14 +1007,24 @@ function ScorePanel({
   onJob,
   onAddSkill,
   onShow,
-  onFixWithAi,
+  fixing,
+  onFix,
+  result,
+  onPoint,
 }: {
   resume: Resume;
   report: AtsReport | null;
   onJob: (text: string) => void;
   onAddSkill: (keyword: string) => void;
   onShow: (target: string | null) => void;
-  onFixWithAi: (check: AtsCheck) => void;
+  /** The check being fixed ("all" for everything), while it runs. */
+  fixing: string | null;
+  /** Fix one check by id, or everything (null). */
+  onFix: (check: string | null) => void;
+  /** What the last fix did and what it needs from the candidate. */
+  result: ReactNode;
+  /** The lines a hovered check is about, for the preview to mark (empty: none). */
+  onPoint: (paths: string[]) => void;
 }) {
   const [url, setUrl] = useState("");
   const [importing, setImporting] = useState(false);
@@ -903,6 +1033,7 @@ function ScorePanel({
   if (!report) return <Spinner label="Scoring" />;
   const failed = report.checks.filter((c) => !c.passed).sort((a, b) => b.max_points - b.points - (a.max_points - a.points));
   const passed = report.checks.filter((c) => c.passed);
+  const fixable = failed.filter((c) => fixKind(c) !== "you" && (c.category !== "keywords" || report.has_job)).length;
 
   return (
     <div className="space-y-4">
@@ -994,10 +1125,34 @@ function ScorePanel({
         )}
       </Panel>
 
-      <Panel title={failed.length ? `${failed.length} fix${failed.length === 1 ? "" : "es"} to make` : "Nothing left to fix"}>
+      <Panel
+        title={failed.length ? `${failed.length} fix${failed.length === 1 ? "" : "es"} to make` : "Nothing left to fix"}
+        action={
+          fixable > 0 ? (
+            <Button size="sm" disabled={Boolean(fixing)} onClick={() => onFix(null)}>
+              <Sparkles className="h-3.5 w-3.5" /> Fix everything with AI
+            </Button>
+          ) : undefined
+        }
+      >
+        {fixable > 0 && (
+          <p className="-mt-1 mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+            Rewrites every flagged line, adds what's missing, then checks the score again. One resume credit for the whole
+            resume; fixes that need no AI are free. Anything not in your resume yet is shown for you to keep or skip.
+          </p>
+        )}
+        {fixable > 0 && <AiCostNote className="-mt-2 mb-3" />}
+        <div className="mb-3 empty:hidden">{result}</div>
         <ul className="space-y-2">
           {failed.map((c) => (
-            <li key={c.id} className="rounded-xl border border-zinc-200 p-3 dark:border-white/10">
+            <li
+              key={c.id}
+              onMouseEnter={() => onPoint(c.paths?.length ? c.paths : c.target ? [c.target] : [])}
+              onMouseLeave={() => onPoint([])}
+              onFocus={() => onPoint(c.paths?.length ? c.paths : c.target ? [c.target] : [])}
+              onBlur={() => onPoint([])}
+              className="rounded-xl border border-zinc-200 p-3 transition-colors hover:border-indigo-400/50 dark:border-white/10"
+            >
               <div className="flex items-start gap-2">
                 <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
                 <div className="min-w-0 flex-1">
@@ -1006,16 +1161,7 @@ function ScorePanel({
                   </p>
                   {c.fix && <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-300">{c.fix}</p>}
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {c.target && (
-                      <Button size="sm" variant="secondary" onClick={() => onShow(c.target)}>
-                        Show me
-                      </Button>
-                    )}
-                    {c.ai_fixable && (c.category !== "keywords" || report.has_job) && (
-                      <Button size="sm" variant="ghost" onClick={() => onFixWithAi(c)}>
-                        <Sparkles className="h-3.5 w-3.5" /> Fix with AI
-                      </Button>
-                    )}
+                    <FixActions check={c} report={report} busy={Boolean(fixing)} onFix={onFix} onShow={onShow} />
                   </div>
                 </div>
               </div>
@@ -1163,11 +1309,109 @@ function SuggestionCard({ s, total, onAccept, onSkip }: { s: ResumeSuggestion; t
   );
 }
 
+/** A small segmented control for one design choice. */
+function Segmented<T extends string>({ label, options, value, onChange }: {
+  label: string;
+  options: ReadonlyArray<{ id: T; label: string }>;
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div>
+      <p className="mb-1.5 text-sm font-medium">{label}</p>
+      <div role="group" aria-label={label} className="inline-flex gap-1 rounded-xl bg-zinc-500/10 p-1">
+        {options.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            aria-pressed={value === o.id}
+            onClick={() => onChange(o.id)}
+            className={cx("rounded-lg px-3 py-1 text-sm", value === o.id ? "bg-white font-medium shadow-sm dark:bg-white/10" : "text-zinc-500", focusRing)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** A thumbnail of a template's layout, in the chosen colour: header shape, headings, columns. */
+function TemplateSketch({ template, accent }: { template: ResumeDesign["template"]; accent: string }) {
+  const line = (w: string, extra = "") => <span className={cx("block h-[3px] rounded-full bg-zinc-300 dark:bg-zinc-600", extra)} style={{ width: w }} />;
+  const heading =
+    template === "minimal" ? (
+      <span className="block h-[3px] w-1/4 rounded-full bg-zinc-400" />
+    ) : template === "executive" ? (
+      <span className="block h-[5px] w-full rounded-sm" style={{ background: accent, opacity: 0.25, borderLeft: `2px solid ${accent}` }} />
+    ) : (
+      <span className="block h-[3px] w-1/3 rounded-full" style={{ background: accent }} />
+    );
+  const body = (
+    <span className="block space-y-1">
+      {heading}
+      {line("90%")}
+      {line("75%")}
+      {heading}
+      {line("85%")}
+      {line("60%")}
+    </span>
+  );
+  return (
+    <span aria-hidden className="block h-24 overflow-hidden rounded-lg bg-white p-2 ring-1 ring-black/5 dark:bg-zinc-100">
+      {template === "sidebar" ? (
+        <span className="flex h-full gap-1.5">
+          <span className="block w-1/3 space-y-1 rounded p-1" style={{ background: accent, opacity: 0.18 }} />
+          <span className="block flex-1">{body}</span>
+        </span>
+      ) : (
+        <>
+          {template === "bold" ? (
+            <span className="-mx-2 -mt-2 mb-1.5 block px-2 py-1.5" style={{ background: accent }}>
+              <span className="block h-[5px] w-1/2 rounded-full bg-white/90" />
+            </span>
+          ) : (
+            <span className={cx("mb-1.5 block", ["classic", "elegant"].includes(template) && "flex flex-col items-center")}>
+              <span className="block h-[5px] w-1/2 rounded-full" style={{ background: ["modern", "executive"].includes(template) ? accent : "#3f3f46" }} />
+              {template === "elegant" && <span className="mt-1 block h-[2px] w-full border-y border-zinc-400" />}
+            </span>
+          )}
+          {body}
+        </>
+      )}
+    </span>
+  );
+}
+
 function DesignPanel({ design, setDesign }: { design: ResumeDesign; setDesign: (patch: Partial<ResumeDesign>) => void }) {
   const photoRef = useRef<HTMLInputElement>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   return (
     <div className="space-y-4">
+      <Panel title="Quick looks">
+        <p className="-mt-1 mb-3 text-xs text-zinc-500 dark:text-zinc-400">One click sets the template, colour and font together. Fine-tune below.</p>
+        <div className="flex flex-wrap gap-2">
+          {LOOKS.map((look) => {
+            const on = look.design.template === design.template && look.design.accent === design.accent && look.design.font === design.font;
+            return (
+              <button
+                key={look.label}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setDesign(look.design)}
+                className={cx(
+                  "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors",
+                  on ? "border-indigo-500 bg-indigo-500/5 ring-1 ring-indigo-500" : "border-zinc-200 hover:border-zinc-300 dark:border-white/10",
+                  focusRing,
+                )}
+              >
+                <span aria-hidden className="h-3.5 w-3.5 rounded-full" style={{ background: look.design.accent }} />
+                {look.label}
+              </button>
+            );
+          })}
+        </div>
+      </Panel>
       <Panel title="Template">
         <div className="grid grid-cols-2 gap-2">
           {TEMPLATES.map((t) => (
@@ -1182,7 +1426,8 @@ function DesignPanel({ design, setDesign }: { design: ResumeDesign; setDesign: (
                 focusRing,
               )}
             >
-              <span className="block text-sm font-medium">{t.label}</span>
+              <TemplateSketch template={t.id} accent={design.accent} />
+              <span className="mt-2 block text-sm font-medium">{t.label}</span>
               <span className="block text-xs text-zinc-500 dark:text-zinc-400">{t.note}</span>
             </button>
           ))}
@@ -1234,6 +1479,18 @@ function DesignPanel({ design, setDesign }: { design: ResumeDesign; setDesign: (
           <Field label={`Text size: ${design.font_size} pt`} htmlFor="size">
             <input id="size" type="range" min={9} max={12.5} step={0.5} value={design.font_size} onChange={(e) => setDesign({ font_size: Number(e.target.value) })} className="w-full accent-indigo-600" />
           </Field>
+          <Segmented
+            label="Line spacing"
+            options={LINE_HEIGHTS}
+            value={design.line_height ?? "normal"}
+            onChange={(line_height) => setDesign({ line_height })}
+          />
+          <Segmented
+            label="Skills"
+            options={[{ id: "list", label: "Comma list" }, { id: "tags", label: "Tags" }] as const}
+            value={design.skills_style ?? "list"}
+            onChange={(skills_style) => setDesign({ skills_style })}
+          />
           <div>
             <p className="mb-1.5 text-sm font-medium">Spacing</p>
             <div className="inline-flex gap-1 rounded-xl bg-zinc-500/10 p-1">

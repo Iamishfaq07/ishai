@@ -28,7 +28,9 @@ SECTION_LABEL: dict[str, str] = {
 }
 # Fonts every copy of Word has; the web-only ones fall back to the closest match.
 WORD_FONT = {"inter": "Calibri", "arial": "Arial", "georgia": "Georgia", "garamond": "Garamond",
-             "grotesk": "Calibri"}
+             "grotesk": "Calibri", "calibri": "Calibri", "cambria": "Cambria", "helvetica": "Arial",
+             "times": "Times New Roman", "trebuchet": "Trebuchet MS"}
+LINE_SPACING = {"tight": 1.05, "normal": 1.15, "airy": 1.3}
 PAGE_MM = {"a4": (210, 297), "letter": (215.9, 279.4)}
 # Page margin, gap before a section heading, gap after an entry: the same steps as the preview.
 SPACING = {"compact": (12, 9, 5), "normal": (16, 13, 7), "relaxed": (20, 17, 10)}
@@ -95,7 +97,7 @@ class _Writer:
         for attr in ("w:ascii", "w:hAnsi", "w:eastAsia", "w:cs"):
             rfonts.set(qn(attr), WORD_FONT[design.font])
         normal.paragraph_format.space_after = Pt(0)
-        normal.paragraph_format.line_spacing = 1.15
+        normal.paragraph_format.line_spacing = LINE_SPACING[design.line_height]
 
     def properties(self, kind: str, name: str) -> None:
         """What Word's File > Info shows, and what some job portals read: the candidate, not "python-docx"."""
@@ -153,6 +155,7 @@ class _Writer:
 
 def resume_docx(data: ResumeData, design: ResumeDesign) -> bytes:
     w = _Writer(design)
+    data = data.visible()
     b = data.basics
     w.par(b.name.strip() or "Your name", bold=True, size=design.font_size * 2)
     if b.headline.strip():
@@ -165,7 +168,7 @@ def resume_docx(data: ResumeData, design: ResumeDesign) -> bytes:
         if not _has_content(data, section):
             continue
         extra = extra_section(data, section)
-        w.heading(extra.title.strip() if extra else SECTION_LABEL[section])
+        w.heading(extra.title.strip() if extra else data.titles.get(section) or SECTION_LABEL[section])
         if extra:
             items = [i.strip() for i in extra.items if i.strip()]
             if extra.style == "inline":
