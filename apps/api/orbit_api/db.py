@@ -1,3 +1,4 @@
+import ssl
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -39,11 +40,27 @@ _engine: AsyncEngine | None = None
 _sessionmaker: async_sessionmaker[AsyncSession] | None = None
 
 
+def connect_args(settings: Any) -> dict[str, Any]:
+    """TLS for Postgres (see Settings.database_ssl): in production the server's certificate is checked."""
+    url = settings.database_url
+    if settings.is_sqlite or "ssl=" in url or "sslmode=" in url:
+        return {}  # SQLite, or the URL already says how
+    mode = settings.database_ssl or ("verify" if settings.env == "production" else "off")
+    if mode == "off":
+        return {}
+    ctx = ssl.create_default_context()
+    if mode == "require":
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+    return {"ssl": ctx}
+
+
 def get_engine() -> AsyncEngine:
     global _engine, _sessionmaker
     if _engine is None:
         settings = get_settings()
-        _engine = create_async_engine(settings.database_url, pool_pre_ping=not settings.is_sqlite)
+        _engine = create_async_engine(settings.database_url, pool_pre_ping=not settings.is_sqlite,
+                                      connect_args=connect_args(settings))
         if settings.is_sqlite:
 
             @event.listens_for(_engine.sync_engine, "connect")

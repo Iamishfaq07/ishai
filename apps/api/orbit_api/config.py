@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     database_url: str = Field(
         "sqlite+aiosqlite:///./orbit.db", validation_alias=AliasChoices("ORBIT_DATABASE_URL")
     )
+    # Postgres TLS (db.connect_args): verify = encrypted and the server's certificate checked (production default);
+    # require = encrypted, certificate not checked; off = whatever the URL says. asyncpg's own default encrypts
+    # without checking who answers, so someone on the network path could pose as the database.
+    database_ssl: Literal["verify", "require", "off"] | None = Field(
+        None, validation_alias=AliasChoices("ORBIT_DATABASE_SSL"))
     redis_url: str | None = Field(None, validation_alias=AliasChoices("ORBIT_REDIS_URL"))
     # How many API processes serve this deployment. Live-session state (WS tickets, socket ownership, the engine
     # a screenshot is routed to, rate limits) is in process memory, so only 1 is supported until it moves to
