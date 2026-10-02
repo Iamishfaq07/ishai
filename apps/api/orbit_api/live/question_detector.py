@@ -120,7 +120,10 @@ _TYPE_RULES: list[tuple[QuestionType, tuple[str, ...]]] = [
                            "in your current", "your career", "your last project", "your current project",
                            "your recent project", "your most recent project", "a recent project", "a project you",
                            "university", "college", "your degree", "your education", "you studied", "did you study",
-                           "experience with", "worked with", "have you used", "have you worked", "familiar with")),
+                           "experience with", "worked with", "have you used", "have you worked", "familiar with",
+                           # "the payment service you built at Acme": about the candidate's own work
+                           "you built", "you led", "you designed", "you worked on", "you shipped", "you owned",
+                           "you created", "you wrote", "you ran", "you managed", "you implemented")),
     (QuestionType.behavioral, ("tell me about a time", "describe a time", "give me an example of a time",
                                "a situation where", "conflict", "disagree", "failure", "failed", "mistake",
                                "proud", "difficult", "challenge", "pressure", "deadline", "feedback",
@@ -148,6 +151,8 @@ _FOLLOW_UP_MARKERS = (
     "that decision", "that project", "that one", "that role", "there instead", "tell me more",
     "and the", "and your", "and what", "and how", "and why", "expand on that", "more on that", "that part",
     "that side", "your thinking", "when it failed",
+    # back-references to what the candidate just described
+    "the team", "the project", "the outcome", "the result", "same way", "do it again", "looking back",
 )
 
 

@@ -771,3 +771,25 @@ def test_tell_me_about_yourself_skips_a_name_only_summary() -> None:
 ])
 def test_personal_questions_are_not_typed_technical(q: str, qtype: QuestionType) -> None:
     assert detect(q, "interviewer").question_type is qtype
+
+
+def test_a_chain_of_follow_ups_keeps_the_thread_topic() -> None:
+    from orbit_api.live.context_builder import retrieve
+
+    mem = SessionMemory()
+    mem.questions += ["Tell me about the payment service you built at Acme.", "What would you do differently?"]
+    q = "How did you test it?"
+    hits = retrieve(_topic_index(), _inputs(q, is_follow_up=True), mem)
+    assert hits and "payment services" in hits[0].chunk.text
+
+
+@pytest.mark.parametrize("q", ["Okay. How big was the team?", "Would you handle it the same way today?"])
+def test_back_references_to_the_last_answer_are_follow_ups(q: str) -> None:
+    ctx = DetectorContext(previous_question="Tell me about the payment service you built.",
+                          seconds_since_previous_answer=20)
+    assert detect(q, "interviewer", ctx).is_follow_up
+
+
+def test_questions_about_work_the_candidate_did_are_personal() -> None:
+    assert detect("Tell me about the payment service you built at Acme.", "interviewer").question_type \
+        is QuestionType.resume

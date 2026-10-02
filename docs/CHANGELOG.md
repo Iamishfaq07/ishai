@@ -1,5 +1,15 @@
 # Implementation log
 
+## Follow-up chains keep their topic (2026-10-02)
+
+- **A follow-up's retrieval inherits the thread, not just the last question.** In "Tell me about the payment service
+  you built" → "What would you do differently?" → "How did you test it?", the third question used to search with only
+  the second and found nothing. It now carries the last two questions, so it still finds the payment-service facts.
+- **More back-references count as follow-ups**: "the team", "the project", "the outcome", "the result", "the same
+  way", "do it again", "looking back".
+- **"The X you built / led / designed / worked on…" is about the candidate's own work**, so it's typed personal and
+  gets the grounding rules.
+
 ## Topic questions get the matching facts; more personal questions get personal rules (2026-10-02)
 
 - **"Your experience with X" gets X.** Questions typed "resume" were always answered from the profile summary and

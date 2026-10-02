@@ -15,6 +15,7 @@ from orbit_api.providers.llm.base import LLMMessage
 from orbit_api.retrieval.index import Hit, IndexedChunk, SessionIndex
 
 RECENT_TURNS = 6
+FOLLOW_UP_THREAD = 2  # earlier questions a follow-up's retrieval query inherits
 EARLIER_ANSWERS = 6  # notes on the last answers given, so later ones stay consistent and don't retell a story
 MAX_TURN_CHARS = 500
 MAX_CONTEXT_CHARS = 5000  # ≈1.2k tokens of retrieved context
@@ -210,7 +211,9 @@ def _anchor_hits(index: SessionIndex) -> list[Hit]:
 def retrieve(index: SessionIndex, inputs: PromptInputs, memory: SessionMemory) -> list[Hit]:
     query = inputs.question
     if inputs.is_follow_up and memory.questions:
-        query = f"{memory.questions[-1]} {inputs.question}"  # follow-ups inherit the prior topic
+        # Follow-ups inherit the thread's topic. A chain ("Why Kafka?" → "What would you do differently?" → "How did
+        # you test it?") loses it after one step, so the last two questions come along.
+        query = " ".join([*memory.questions[-FOLLOW_UP_THREAD:], inputs.question])
     hits = index.search(query, inputs.qtype, k=6)
     if inputs.qtype in _ANCHORED_TYPES and _BROAD_BACKGROUND.search(inputs.question):
         anchored = _anchor_hits(index)
