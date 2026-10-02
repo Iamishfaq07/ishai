@@ -144,6 +144,8 @@ class CreditEntry(TimestampMixin, Base):
     reason: Mapped[str] = mapped_column(String(20))  # welcome | purchase | admin | resume_ai
     payment_id: Mapped[str | None] = mapped_column(String(36))
     ip_hash: Mapped[str | None] = mapped_column(String(64))
+    # Welcome grants: a keyed hash of the inbox (credits.inbox), so one mailbox gets one welcome however it's spelled.
+    email_hash: Mapped[str | None] = mapped_column(String(64), index=True)
     __table_args__ = (Index("ix_credit_entries_welcome", "reason", "ip_hash", "created_at"),
                       # One grant per payment and kind: approving twice at once can't add a pack's credits twice.
                       Index("uq_credit_entries_payment_kind", "payment_id", "kind", unique=True,

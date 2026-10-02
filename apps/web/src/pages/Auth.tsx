@@ -462,37 +462,48 @@ export function VerifyEmailPage() {
 export function ConfirmEmailChangePage() {
   const token = useOneTimeToken();
   const { setUser } = useAuth();
-  const [state, setState] = useState<"working" | "done" | "failed">(token ? "working" : "failed");
+  // A button, not on page load: a link someone else sent can't change an email without a deliberate click.
+  const [state, setState] = useState<"ready" | "working" | "done" | "failed">(token ? "ready" : "failed");
   const [error, setError] = useState<string | null>(token ? null : "This link is missing its token.");
   const [email, setEmail] = useState<string | null>(null);
-  const started = useRef(false); // StrictMode runs effects twice; the token only works once
 
-  useEffect(() => {
-    if (!token || started.current) return;
-    started.current = true;
+  const confirm = () => {
+    if (!token) return;
+    setState("working");
     api
       .confirmEmailChange(token)
       .then((res) => {
-        setUser(res.user);
-        setEmail(res.user.email);
+        setUser(null); // every session was signed out: sign in again with the new address
+        setEmail(res.email);
         setState("done");
       })
       .catch((err: unknown) => {
         setError(errorText(err));
         setState("failed");
       });
-  }, [token, setUser]);
+  };
 
   return (
     <AuthShell
-      title={state === "done" ? "Email changed" : state === "working" ? "Confirming…" : "Link didn't work"}
-      subtitle={state === "done" ? `You now sign in with ${email}. Other devices were signed out.` : ""}
+      title={state === "done" ? "Email changed" : state === "failed" ? "Link didn't work" : "Change your Orbit email?"}
+      subtitle={
+        state === "done"
+          ? `Sign in with ${email} and your password. Every device was signed out.`
+          : state === "failed"
+            ? ""
+            : "Confirm to make this inbox the account's email."
+      }
     >
       <div role="status" className="space-y-4 text-center text-sm">
         {state === "failed" && error && <ErrorNote>{error}</ErrorNote>}
-        {state !== "working" && (
-          <Link to={state === "done" ? "/" : "/settings"} className={linkClass}>
-            {state === "done" ? "Go to Orbit" : "Back to settings"}
+        {(state === "ready" || state === "working") && (
+          <Button className="w-full" disabled={state === "working"} onClick={confirm}>
+            {state === "working" ? "Confirming…" : "Confirm new email"}
+          </Button>
+        )}
+        {(state === "done" || state === "failed") && (
+          <Link to={state === "done" ? "/login" : "/settings"} className={linkClass}>
+            {state === "done" ? "Sign in" : "Back to settings"}
           </Link>
         )}
       </div>

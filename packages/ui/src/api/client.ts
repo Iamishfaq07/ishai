@@ -247,15 +247,23 @@ export function createApiClient(options: ApiClientOptions) {
       csrfToken = null;
     },
     updatePrivacy: (req: PrivacyUpdate) => json<User>("/v1/auth/me/privacy", { method: "PATCH", body: body(req) }),
-    deleteAccount: () => json<void>("/v1/auth/me", { method: "DELETE" }),
+    /** Asks for the password again: a session left open somewhere can't delete the account. */
+    deleteAccount: (password: string) => json<void>("/v1/auth/me", { method: "DELETE", body: body({ password }) }),
+    /** A new password; every other device (and any live session) is signed out, this one stays signed in. */
+    changePassword: (currentPassword: string, newPassword: string) =>
+      json<AuthResponse>("/v1/auth/me/password", {
+        method: "POST",
+        body: body({ current_password: currentPassword, new_password: newPassword }),
+      }),
     logoutAll: () => json<void>("/v1/auth/logout-all", { method: "POST" }),
     requestEmailChange: (newEmail: string, password: string) =>
       json<{ status: string }>("/v1/auth/me/email", {
         method: "POST",
         body: body({ new_email: newEmail, password }),
       }),
+    /** Changes the email; it signs nobody in (sign in with the new address and your password). */
     confirmEmailChange: (token: string) =>
-      json<AuthResponse>("/v1/auth/email-change/confirm", { method: "POST", body: body({ token }) }),
+      json<{ email: string }>("/v1/auth/email-change/confirm", { method: "POST", body: body({ token }) }),
     /** Everything Orbit stores about the account, as a JSON file (Blob). */
     exportData: async () => (await raw("/v1/auth/me/export")).blob(),
     requestVerification: () => json<{ status: string }>("/v1/auth/verify-email/request", { method: "POST" }),

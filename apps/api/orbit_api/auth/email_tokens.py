@@ -47,6 +47,14 @@ async def issue(db: AsyncSession, user_id: str, purpose: Purpose, *, new_email: 
     return token
 
 
+async def revoke_all(db: AsyncSession, user_id: str) -> None:
+    """Every unused link for this account stops working (a password reset, "sign out everywhere", an email change):
+    a pending email change started by someone who had the password can't be finished after the owner recovers the
+    account. Caller commits."""
+    await db.execute(update(EmailToken).where(EmailToken.user_id == user_id, EmailToken.used_at.is_(None))
+                     .values(used_at=datetime.now(UTC)))
+
+
 async def consume(db: AsyncSession, token: str, purpose: Purpose) -> str | None:
     """Marks the token used and returns its user id, or None if unknown/expired/used. Caller commits."""
     row = await consume_row(db, token, purpose)
@@ -62,5 +70,10 @@ async def consume_row(db: AsyncSession, token: str, purpose: Purpose) -> EmailTo
     now = datetime.now(UTC)
     if row is None or row.used_at is not None or _aware(row.expires_at) < now:
         return None
-    row.used_at = now
+    # Claimed with a conditional update: two requests opening the same link at once can't both use it.
+    claimed = await db.execute(update(EmailToken).where(EmailToken.id == row.id, EmailToken.used_at.is_(None))
+                               .values(used_at=now))
+    if claimed.rowcount != 1:  # type: ignore[attr-defined]
+        return None
+    await db.refresh(row)
     return row

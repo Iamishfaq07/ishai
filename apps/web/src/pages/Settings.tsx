@@ -430,6 +430,7 @@ function AccountCard() {
           </Button>
         </form>
       )}
+      <PasswordChange />
       <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
         <Button variant="secondary" onClick={() => void download()} disabled={exporting}>
           {exporting ? "Preparing…" : "Download my data"}
@@ -447,11 +448,62 @@ function AccountCard() {
   );
 }
 
+/** A new password, with the current one. Every other device signs out; this one stays signed in. */
+function PasswordChange() {
+  const { setUser } = useAuth();
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await api.changePassword(current, next);
+      setUser(res.user);
+      setDone(true);
+      setCurrent("");
+      setNext("");
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <form onSubmit={(e) => void submit(e)} className="mt-4 grid gap-3 border-t border-zinc-100 pt-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end dark:border-zinc-800">
+      <Field label="Current password" htmlFor="pw-current">
+        <Input id="pw-current" type="password" autoComplete="current-password" required value={current} onChange={(e) => setCurrent(e.target.value)} />
+      </Field>
+      <Field label="New password (10+ characters)" htmlFor="pw-new">
+        <Input id="pw-new" type="password" autoComplete="new-password" required minLength={10} value={next} onChange={(e) => setNext(e.target.value)} />
+      </Field>
+      <Button type="submit" variant="secondary" disabled={busy || !current || next.length < 10}>
+        {busy ? "Saving…" : "Change password"}
+      </Button>
+      {done && (
+        <p role="status" className="text-sm text-emerald-700 sm:col-span-3 dark:text-emerald-300">
+          Password changed. Every other device was signed out.
+        </p>
+      )}
+      {error && (
+        <div className="sm:col-span-3">
+          <ErrorNote>{error}</ErrorNote>
+        </div>
+      )}
+    </form>
+  );
+}
+
 function PrivacyCard() {
   const { user, setUser, logout } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
 
   if (!user) return null;
 
@@ -481,7 +533,7 @@ function PrivacyCard() {
   const deleteAccount = async () => {
     if (!(await confirmDialog({ title: "Delete your account?", body: "This permanently deletes your account, documents and all sessions.", confirmLabel: "Delete account", danger: true, typeToConfirm: "DELETE" }))) return;
     try {
-      await api.deleteAccount();
+      await api.deleteAccount(deletePassword);
       await logout().catch(() => undefined);
       navigate("/register", { replace: true });
     } catch (err) {
@@ -509,10 +561,31 @@ function PrivacyCard() {
           <Button variant="secondary" onClick={() => void signOutEverywhere()}>
             Sign out of all devices
           </Button>
-          <Button variant="danger" onClick={() => void deleteAccount()}>
-            Delete account
-          </Button>
+          {!deleting && (
+            <Button variant="danger" onClick={() => setDeleting(true)}>
+              Delete account
+            </Button>
+          )}
         </div>
+        {deleting && (
+          <form
+            className="flex flex-wrap items-end gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void deleteAccount();
+            }}
+          >
+            <Field label="Your password, to delete the account" htmlFor="delete-password">
+              <Input id="delete-password" type="password" autoComplete="current-password" required value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} />
+            </Field>
+            <Button type="submit" variant="danger" disabled={!deletePassword}>
+              Delete account
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setDeleting(false)}>
+              Cancel
+            </Button>
+          </form>
+        )}
       </div>
     </Card>
   );

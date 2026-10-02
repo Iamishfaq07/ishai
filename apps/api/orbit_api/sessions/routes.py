@@ -293,6 +293,14 @@ async def get_session(session_id: str, user: Annotated[User, Depends(current_use
     )
 
 
+async def stop_user_live(user_id: str) -> None:
+    """Every live session this account is streaming, and any phone following one: after "sign out everywhere" or a
+    password reset, a stolen session mustn't keep listening (and spending the owner's minutes)."""
+    for session_id in list(_live_sockets.get(user_id, {})):
+        await stop_live(user_id, session_id)
+        companion.stop_sharing(session_id)
+
+
 async def stop_live(user_id: str, session_id: str) -> None:
     """Ended or deleted from elsewhere (another window, the web app, "end it and use this one", deleting it or the
     account) while a socket is still streaming: stop that engine for real — it tells its client `session.ended`

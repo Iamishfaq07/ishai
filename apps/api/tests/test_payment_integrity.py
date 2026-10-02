@@ -50,7 +50,8 @@ def test_a_deleted_accounts_utr_cant_be_used_again(shop: Any) -> None:
     utr = _utr()
     o = _paid_order(client, h, utr)
     assert client.post(f"/v1/admin/payments/{o['id']}", headers=admin, json={"action": "approve"}).status_code == 200
-    assert client.delete("/v1/auth/me", headers=h).status_code in (200, 204)
+    gone = client.request("DELETE", "/v1/auth/me", headers=h, json={"password": "correct horse battery"})
+    assert gone.status_code == 204
     # The payment is still on the books, without its account.
     rows = client.get("/v1/admin/payments?only=all", headers=admin).json()["payments"]
     kept = next(p for p in rows if p["id"] == o["id"])

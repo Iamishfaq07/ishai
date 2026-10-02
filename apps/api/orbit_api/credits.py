@@ -18,6 +18,7 @@ Plans with their own allowances (the admin's Unlimited, Pro or Unlimited granted
 `entitlements.plan_for` decides, and only the Free plan is credit-based.
 """
 
+import asyncio
 import hashlib
 import hmac
 from datetime import UTC, datetime, timedelta
@@ -34,45 +35,72 @@ INTERVIEW_METRICS = ("live_seconds", "mock_seconds")
 # Like the rate limits: in the test environment every account gets its welcome credits (the suite signs everyone up
 # from one address); welcome tests flip this.
 ENFORCE_IN_TESTS = False
+# One sign-up at a time decides and commits its welcome grant, so two at once from one network can't both get it.
+# One API instance (docs/DECISIONS.md D12), so an in-process lock is enough.
+_welcome_lock = asyncio.Lock()
+_GMAIL = frozenset({"gmail.com", "googlemail.com"})
 
 
 def ip_hash(ip: str) -> str:
-    """A keyed hash, so the table never holds anyone's address."""
+    """A keyed hash of the caller's network (an IPv4 address or an IPv6 /64: one connection usually owns a whole
+    /64), so the table never holds anyone's address and rotating within a /64 isn't a new network."""
+    from orbit_api.ratelimit import network_of
+
     key = get_settings().jwt_secret.get_secret_value().encode()
-    return hmac.new(key, f"welcome:{ip}".encode(), hashlib.sha256).hexdigest()
+    return hmac.new(key, f"welcome:{network_of(ip)}".encode(), hashlib.sha256).hexdigest()
+
+
+def inbox(email: str) -> str:
+    """The mailbox an address really reaches: "+tags" dropped, and for Gmail the dots too (a.sha+1@gmail.com is
+    asha@gmail.com), so one inbox can't collect a welcome per spelling."""
+    local, _, domain = email.strip().lower().rpartition("@")
+    local = local.split("+", 1)[0]
+    if domain in _GMAIL:
+        local, domain = local.replace(".", ""), "gmail.com"
+    return f"{local}@{domain}"
+
+
+def email_hash(email: str) -> str:
+    key = get_settings().jwt_secret.get_secret_value().encode()
+    return hmac.new(key, f"welcome-inbox:{inbox(email)}".encode(), hashlib.sha256).hexdigest()
 
 
 def add(db: AsyncSession, user_id: str, kind: Kind, amount: int, reason: str, *, payment_id: str | None = None,
-        ip: str | None = None) -> CreditEntry:
+        ip: str | None = None, email: str | None = None) -> CreditEntry:
     """Stage one credit movement (the caller commits)."""
     entry = CreditEntry(user_id=user_id, kind=kind, amount=amount, reason=reason, payment_id=payment_id,
-                        ip_hash=ip_hash(ip) if ip else None)
+                        ip_hash=ip_hash(ip) if ip else None, email_hash=email_hash(email) if email else None)
     db.add(entry)
     return entry
 
 
 async def grant_welcome(db: AsyncSession, user: User, ip: str) -> bool:
-    """The welcome credits, unless this network already had them recently or today's cap is reached. Staged on the
-    session; returns whether they were granted."""
+    """The welcome credits, unless this network had them recently, this inbox ever had them (however it's spelled,
+    and after deleting the account), or today's cap is reached. Decided and committed under a lock; returns whether
+    they were granted."""
     s = get_settings()
     if not (s.welcome_resume_credits or s.welcome_interview_minutes):
         return False
-    now = datetime.now(UTC)
-    welcome = CreditEntry.reason == "welcome"
-    same_network = welcome & (CreditEntry.ip_hash == ip_hash(ip))
-    if s.welcome_ip_days:
-        same_network = same_network & (CreditEntry.created_at >= now - timedelta(days=s.welcome_ip_days))
-    if s.env != "test" or ENFORCE_IN_TESTS:
-        if await db.scalar(select(exists().where(same_network))):
-            return False
-        today = await db.scalar(select(func.count(func.distinct(CreditEntry.user_id))).where(
-            welcome, CreditEntry.ip_hash.is_not(None), CreditEntry.created_at >= now - timedelta(days=1)))
-        if (today or 0) >= s.welcome_daily_limit:
-            return False
-    if s.welcome_resume_credits:
-        add(db, user.id, "resume", s.welcome_resume_credits, "welcome", ip=ip)
-    if s.welcome_interview_minutes:
-        add(db, user.id, "interview_seconds", s.welcome_interview_minutes * 60, "welcome", ip=ip)
+    async with _welcome_lock:
+        now = datetime.now(UTC)
+        welcome = CreditEntry.reason == "welcome"
+        same_network = welcome & (CreditEntry.ip_hash == ip_hash(ip))
+        if s.welcome_ip_days:
+            same_network = same_network & (CreditEntry.created_at >= now - timedelta(days=s.welcome_ip_days))
+        same_inbox = welcome & (CreditEntry.email_hash == email_hash(user.email))
+        if s.env != "test" or ENFORCE_IN_TESTS:
+            if await db.scalar(select(exists().where(same_network | same_inbox))):
+                return False
+            today = await db.scalar(select(func.count(func.distinct(CreditEntry.user_id))).where(
+                welcome, CreditEntry.ip_hash.is_not(None), CreditEntry.created_at >= now - timedelta(days=1)))
+            if (today or 0) >= s.welcome_daily_limit:
+                return False
+        if s.welcome_resume_credits:
+            add(db, user.id, "resume", s.welcome_resume_credits, "welcome", ip=ip, email=user.email)
+        if s.welcome_interview_minutes:
+            add(db, user.id, "interview_seconds", s.welcome_interview_minutes * 60, "welcome", ip=ip,
+                email=user.email)
+        await db.commit()
     return True
 
 

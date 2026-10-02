@@ -137,11 +137,14 @@ def test_email_change_confirms_by_link_and_signs_out_old_sessions(client: TestCl
     assert client.get("/v1/auth/me", headers=h).json()["email"] == email  # nothing changes until confirmed
 
     r = client.post("/v1/auth/email-change/confirm", json={"token": token})
-    assert r.status_code == 200 and r.json()["user"]["email"] == new and r.json()["user"]["email_verified"] is True
+    # It changes the email but signs nobody in (whoever opens a passed-on link isn't necessarily the owner).
+    assert r.status_code == 200 and r.json() == {"email": new} and "access_token" not in r.json()
     client.cookies.clear()
     assert client.get("/v1/auth/me", headers=h).status_code == 401  # old sessions are signed out
-    fresh = {"Authorization": f"Bearer {r.json()['access_token']}"}
-    assert client.get("/v1/auth/me", headers=fresh).json()["email"] == new
+    signed_in = client.post("/v1/auth/login", json={"email": new, "password": PW}).json()
+    fresh = {"Authorization": f"Bearer {signed_in['access_token']}"}
+    me = client.get("/v1/auth/me", headers=fresh).json()
+    assert me["email"] == new and me["email_verified"] is True
     assert client.post("/v1/auth/email-change/confirm", json={"token": token}).status_code == 400  # single use
     assert client.post("/v1/auth/login", json={"email": new, "password": PW}).status_code == 200
     assert client.post("/v1/auth/login", json={"email": email, "password": PW}).status_code == 401

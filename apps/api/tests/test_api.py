@@ -233,7 +233,13 @@ def test_privacy_toggle_skips_transcript_storage(client: TestClient) -> None:
 def test_delete_account_cascades(client: TestClient) -> None:
     h = _register(client)
     _doc(client, h, "resume_sample")
-    assert client.delete("/v1/auth/me", headers=h).status_code == 204
+    # The password is asked for again: a session left open somewhere can't delete the account.
+    def delete(**body: str) -> int:
+        return client.request("DELETE", "/v1/auth/me", headers=h, json=body or None).status_code
+
+    assert delete(password="wrong password!!") == 403
+    assert delete() == 422
+    assert delete(password="correct horse battery") == 204
     assert client.get("/v1/documents", headers=h).status_code == 401
 
 
