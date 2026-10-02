@@ -283,7 +283,7 @@ async def cover_letter(body: CoverLetterIn, user: Annotated[User, Depends(requir
                             "Add your name and some experience first: the letter is written from your resume.")
     resp = await _generate(db, user, ai.cover_letter_request(d, body.job_text), "cover letter")
     try:
-        return CoverLetterOut(text=ai.parse_cover_letter(resp.text))
+        return CoverLetterOut(text=ai.parse_cover_letter(resp.text, d, body.job_text))
     except ValueError as e:
         log.warning("cover letter unusable: %s", e)
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "The AI couldn't write the letter. Try again.") from e

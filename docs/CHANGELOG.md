@@ -1,5 +1,18 @@
 # Implementation log
 
+## Resume AI can't invent facts; cleaner job keywords (2026-10-02)
+
+- **AI rewrites can't add facts** (`resumes/claims.py`). The prompts forbid invented numbers and tools, but nothing
+  checked. Now every suggested rewrite is checked against the whole resume:
+  - a figure the resume never states ("by 40%", "$2M", "3.5x", "12 teams") becomes a placeholder ("[X%]",
+    "[$X]", "[N]x", "[N]") and the reason says to fill in the real number;
+  - a tool or technology the resume never mentions (GraphQL, Terraform, S3…) drops that suggestion.
+  - Years and digits inside names (S3, k8s, 24/7) are not figures; generic shorthand (KPI, ROI, SLA) is not a tool.
+- **Cover letters get the figure check too**, against the resume and the job post (a letter may cite a figure the
+  post states, such as "500 services").
+- **Job keywords**: no more "RPC" split off "gRPC", "rails" (from "payment rails") as Ruby on Rails, or "Remote",
+  "Hybrid", "PTO" and similar perks as skills to add.
+
 ## Follow-up chains keep their topic (2026-10-02)
 
 - **A follow-up's retrieval inherits the thread, not just the last question.** In "Tell me about the payment service

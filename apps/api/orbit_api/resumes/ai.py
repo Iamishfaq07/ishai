@@ -7,6 +7,7 @@ time and never overwrites something the user edited meanwhile.
 """
 
 import json
+import logging
 import re
 from typing import Any, Literal
 
@@ -15,6 +16,7 @@ from pydantic import BaseModel
 from orbit_api.live.context_builder import fence
 from orbit_api.providers.llm.base import LLMMessage, LLMProvider, LLMRequest, LLMResponse
 from orbit_api.resumes.ats import AtsReport
+from orbit_api.resumes.claims import fill_invented_figures, invented_terms
 from orbit_api.resumes.schema import (
     Basics,
     Certification,
@@ -27,6 +29,8 @@ from orbit_api.resumes.schema import (
     SkillGroup,
     new_id,
 )
+
+log = logging.getLogger(__name__)
 
 MAX_SOURCE_CHARS = 14_000
 MAX_JOB_CHARS = 8_000
@@ -205,6 +209,7 @@ def suggest_request(data: ResumeData, report: AtsReport, llm: LLMProvider, *, mo
 
 def parse_suggestions(resp: LLMResponse, data: ResumeData) -> list[Suggestion]:
     fields = editable_fields(data)
+    corpus = _resume_json(data)  # everything the candidate has said about themselves
     out: list[Suggestion] = []
     seen: set[str] = set()
     for raw in _dicts(_json(resp.text).get("suggestions"), MAX_SUGGESTIONS * 2):
@@ -217,9 +222,16 @@ def parse_suggestions(resp: LLMResponse, data: ResumeData) -> list[Suggestion]:
         after = _s(raw.get("after"), limit).lstrip("•-* ").strip()
         if not after or after == before.strip():
             continue
+        invented = invented_terms(after, corpus)
+        if invented:
+            log.info("resume suggestion for %s dropped: it adds %s", path, ", ".join(invented[:3]))
+            continue
+        after, filled = fill_invented_figures(after, corpus)
+        reason = _s(raw.get("reason"), 240)
+        if filled:
+            reason = (reason + " " if reason else "") + "Replace the bracketed figure with your real number."
         seen.add(path)
-        out.append(Suggestion(id=new_id(), path=path, label=label, before=before, after=after,
-                              reason=_s(raw.get("reason"), 240)))
+        out.append(Suggestion(id=new_id(), path=path, label=label, before=before, after=after, reason=reason))
         if len(out) >= MAX_SUGGESTIONS:
             break
     return out
@@ -282,12 +294,18 @@ def cover_letter_request(data: ResumeData, job_text: str) -> LLMRequest:
     )
 
 
-def parse_cover_letter(text: str) -> str:
-    """The letter alone: no code fences or "Here's your letter:" lead-in, paragraphs separated by one blank line."""
+def parse_cover_letter(text: str, data: ResumeData | None = None, job_text: str = "") -> str:
+    """The letter alone: no code fences or "Here's your letter:" lead-in, paragraphs separated by one blank line.
+    With the resume (and job post) it came from, a figure in neither becomes a [placeholder] to fill in."""
     t = re.sub(r"^(?:here(?:'s| is)[^\n]*:)\s*", "", text.strip(), flags=re.IGNORECASE)
     t = re.sub(r"^```\w*\s*|\s*```$", "", t)
     t = re.sub(r"\*\*(.+?)\*\*", r"\1", t)  # stray bold markers
     t = re.sub(r"\n{3,}", "\n\n", t.replace("\r\n", "\n")).strip()
     if len(t) < 200:
         raise ValueError("too short to be a letter")
-    return t[:MAX_LETTER_CHARS]
+    t = t[:MAX_LETTER_CHARS]
+    if data is not None:
+        t, filled = fill_invented_figures(t, _resume_json(data) + "\n" + job_text[:MAX_JOB_CHARS])
+        if filled:
+            log.info("cover letter: %d figure(s) not in the resume or job post became placeholders", filled)
+    return t
