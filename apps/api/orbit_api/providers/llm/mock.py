@@ -112,15 +112,26 @@ class MockLLMProvider(LLMProvider):
             return _mock_resume_import(request.messages[-1].content if request.messages else "")
         if request.request_type == "resume_suggest":
             body = request.messages[-1].content if request.messages else ""
-            m = re.search(r'<reference_data source="resume_fields">\s*(?:<<<\s*)?(\[.*?\])', body, re.S)
+            m = re.search(r'<reference_data source="resume_fields">\s*(\[.*?\])\s*</reference_data>', body, re.S)
             try:
                 fields = json.loads(m.group(1)) if m else []
             except json.JSONDecodeError:
                 fields = []
-            return json.dumps({"suggestions": [
+            roles_match = re.search(r'<reference_data source="roles">\s*(\[.*?\])\s*</reference_data>', body, re.S)
+            try:
+                roles = json.loads(roles_match.group(1)) if roles_match else []
+            except json.JSONDecodeError:
+                roles = []
+            added = [{"path": r["path"], "after": f"Maintained the {r['role'].split(' at ')[0].lower()} systems "
+                                                  "day to day for [N] users",
+                      "reason": "[mock] A role needs at least two bullets."}
+                     for r in roles if isinstance(r, dict) and "path" in r][:2]
+            return json.dumps({"suggestions": added + [
                 {"path": f["path"], "after": f"[mock] Improved: {f['text'] or 'A summary of your strengths'}"[:300],
                  "reason": "[mock] Clearer and more specific."}
                 for f in fields if isinstance(f, dict) and "path" in f][:3]})
+        if request.request_type == "resume_skills":
+            return json.dumps({"skills": ["Git", "Agile", "Jira", "Linux", "Code review", "Testing", "Communication"]})
         if request.request_type == "cover_letter":
             body = request.messages[-1].content if request.messages else ""
             m = re.search(r'"name": "([^"]*)"', body)

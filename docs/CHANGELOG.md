@@ -1,5 +1,24 @@
 # Implementation log
 
+## Resume AI fixes every problem, not just wording (2026-10-02)
+
+- **"Fix with AI" now appears on almost every ATS problem**, and it does what the problem needs: adds skills, adds
+  bullets, adds numbers, writes dates one way, writes a missing headline or summary. Before, it could only reword
+  text that already existed, so "list at least 8 skills" or "this role has no bullets" had no fix.
+- **Skills** are worked out on the server with no AI call, so they're instant. Tools your own bullets name but your
+  Skills section lacks are offered with no warning (adding them says nothing new). Skills the job post asks for, and
+  skills common for your kind of role, come as separate suggestions with a "check it's true" warning. Tick off any
+  you don't have before adding.
+- **Missing bullets** are drafted for any role with fewer than 2, in a resume-bullet voice, with a placeholder for
+  every number and no tool the resume doesn't name, and a warning that they come from the job title, not from you.
+- **Numbers** are added as `[X%]` / `[N]` placeholders where a bullet needs one (never an invented figure).
+- **Dates** that mix styles ("01/2021" next to "Jun 2018") are rewritten one way; "2021" is never turned into
+  "Jan 2021", which would invent a month. **"Apply the N safe fixes at once"** applies the skills the resume proves
+  and the date fixes in one click; anything that needs your confirmation or a number stays one at a time.
+- `POST /v1/resumes/suggest` takes `check` (an ATS check id) and suggestions have a `kind`
+  (`rewrite`, `add_skill`, `add_bullet`, `set`) and an optional `confirm` warning. If the AI is down, the skill and
+  date fixes still come back.
+
 ## Resume writing on a phone: no more endless "uploading" / "scoring" (2026-10-02)
 
 - **Every request now has a time limit.** A stalled phone connection (switching wifi and cellular, a tunnel, weak

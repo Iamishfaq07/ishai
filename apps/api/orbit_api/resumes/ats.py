@@ -330,6 +330,8 @@ def _verdict(score: int) -> str:
 
 
 def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text: str = "") -> AtsReport:
+    from orbit_api.resumes.fixes import date_suggestions  # fixes builds on this module's helpers
+
     design = design or ResumeDesign()
     checks: list[AtsCheck] = []
     b = data.basics
@@ -358,7 +360,7 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
     _check(checks, "has_education", "sections", "An Education section", 3, 1.0 if has_edu else 0,
            "Add your education: many ATS filters check for a degree or school.", "education")
     _check(checks, "has_skills", "sections", "A Skills section", 3, 1.0 if n_skills else 0,
-           "Add a Skills section: recruiters search it first.", "skills")
+           "Add a Skills section: recruiters search it first.", "skills", ai_fixable=True)
 
     # summary (4)
     summary_words = len(_words(b.summary))
@@ -384,7 +386,8 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
     _check(checks, "bullets_per_role", "experience", "2-6 bullets per role", 4,
            (sum(1 for e in roles if 2 <= len([x for x in e.bullets if x.strip()]) <= 6) / len(roles)) if roles else 0,
            f"Give \"{thin.title or thin.company}\" 2-6 bullets: fewer looks thin, more gets skimmed." if thin
-           else "Add 2-6 bullets to each role.", f"experience.{thin.id}" if thin else "experience")
+           else "Add 2-6 bullets to each role.", f"experience.{thin.id}" if thin else "experience",
+           ai_fixable=thin is not None and len([x for x in thin.bullets if x.strip()]) < 2)
 
     if bullets:
         weak = [(p, t) for p, t in bullets if _first_word(t) not in ACTION_VERBS]
@@ -426,12 +429,12 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
                                 ("varied_verbs", "Opening verbs are varied", 2),
                                 ("no_pronouns", "No \"I\" or \"my\" in bullets", 1)):
             _check(checks, id_, "experience", label, pts, 0, "Add bullets describing what you achieved in each role.",
-                   "experience")
+                   "experience", ai_fixable=bool(roles))
 
     # skills (7)
     _check(checks, "skills_count", "skills", "At least 8 skills listed", 7, n_skills / 8,
            f"You list {n_skills} skill{'s' if n_skills != 1 else ''}; list at least 8 tools, languages and methods you "
-           "really use.", "skills")
+           "really use.", "skills", ai_fixable=True)
 
     # readability (12)
     total_words = len(_words(resume_text(data)))
@@ -445,7 +448,7 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
     _check(checks, "dates", "readability", "Dates written one way", 2,
            1.0 if len(styles) <= 1 and "other" not in styles else 0,
            "Write every date the same way, e.g. \"Jan 2021\", so a parser can work out each role's length.",
-           "experience")
+           "experience", ai_fixable=bool(date_suggestions(data)))
     # Roles most recent first, and none ending before it starts: parsers and recruiters both read it that way.
     # Out of order means it both starts and ends later than the role above it: overlapping jobs are fine.
     order_fix: tuple[str, str] | None = None

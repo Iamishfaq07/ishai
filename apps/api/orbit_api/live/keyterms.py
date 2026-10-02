@@ -74,3 +74,9 @@ def extract_keyterms(chunks: Iterable[IndexedChunk], *, company: str | None = No
         if len(out) >= MAX_KEYTERMS:
             break
     return out
+
+
+def shaped_terms(text: str) -> list[str]:
+    """Only the tech-shaped words (PostgreSQL, gRPC, AWS, Node.js), not capitalized names: safe to read as skills
+    without mistaking a sentence's first word for a tool."""
+    return [m.group(0) for m in _TECH.finditer(text)]

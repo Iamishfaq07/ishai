@@ -795,6 +795,13 @@ export interface ResumeImportResponse {
   title: string;
 }
 
+/**
+ * One change the editor can apply. `rewrite` and `set` replace the text at `path` (which must still equal `before`);
+ * `add_skill` adds the comma-separated skills in `after`; `add_bullet` appends `after` to the role at
+ * "experience.<id>.bullets.+". `confirm` is a warning the candidate must read: the AI can't know it's true.
+ */
+export type ResumeSuggestionKind = "rewrite" | "add_skill" | "add_bullet" | "set";
+
 export interface ResumeSuggestion {
   id: string;
   /** The exact text it replaces, e.g. "experience.<id>.bullets.1" or "basics.summary". */
@@ -803,6 +810,8 @@ export interface ResumeSuggestion {
   before: string;
   after: string;
   reason: string;
+  kind?: ResumeSuggestionKind;
+  confirm?: string | null;
 }
 
 export interface ResumeSuggestRequest {
@@ -812,4 +821,6 @@ export interface ResumeSuggestRequest {
   mode?: "improve" | "tailor";
   /** Rewrite just this one field. */
   focus?: string;
+  /** Fix this ATS check, by id ("skills_count", "dates", "quantified"…). */
+  check?: string;
 }

@@ -7,6 +7,7 @@ import type {
   ResumeSectionId,
   ResumeSectionKey,
   ResumeSpacing,
+  ResumeSuggestion,
   ResumeTemplate,
 } from "@orbit/types";
 
@@ -117,6 +118,7 @@ export function getAt(data: ResumeData, path: string): string | undefined {
     if (b === "bullets") return item.bullets[Number(c)];
     if (b === "description") return item.description;
   }
+  if (section === "experience" && (b === "start" || b === "end")) return data.experience.find((x) => x.id === a)?.[b];
   return undefined;
 }
 
@@ -128,7 +130,13 @@ export function setAt(data: ResumeData, path: string, value: string): ResumeData
     return {
       ...data,
       experience: data.experience.map((e) =>
-        e.id !== a || b !== "bullets" ? e : { ...e, bullets: e.bullets.map((t, i) => (i === Number(c) ? value : t)) },
+        e.id !== a
+          ? e
+          : b === "start" || b === "end"
+            ? { ...e, [b]: value }
+            : b === "bullets"
+              ? { ...e, bullets: e.bullets.map((t, i) => (i === Number(c) ? value : t)) }
+              : e,
       ),
     };
   }
@@ -145,6 +153,60 @@ export function setAt(data: ResumeData, path: string, value: string): ResumeData
     };
   }
   return data;
+}
+
+export const MAX_SKILLS_PER_GROUP = 40;
+const MAX_BULLETS = 12;
+
+/** The skills a suggestion adds, trimmed and without repeats. */
+export function suggestedSkills(s: ResumeSuggestion): string[] {
+  const seen = new Set<string>();
+  return s.after
+    .split(",")
+    .map((x) => x.trim())
+    .filter((x) => x && !seen.has(x.toLowerCase()) && seen.add(x.toLowerCase()));
+}
+
+/** Add skills to the Skills section without repeating any it has: into a group called "Skills" or the only group,
+ *  else a new "Additional skills" group, so Kafka never lands under "Languages". */
+export function addSkills(data: ResumeData, skills: string[], makeId: () => string): ResumeData {
+  const have = new Set(data.skills.flatMap((g) => g.items.map((i) => i.trim().toLowerCase())));
+  const fresh = skills.filter((x) => !have.has(x.toLowerCase()));
+  if (!fresh.length) return data;
+  const home = data.skills.find((g) => g.name.trim().toLowerCase() === "skills") ?? (data.skills.length === 1 ? data.skills[0] : undefined);
+  if (home && home.items.length + fresh.length <= MAX_SKILLS_PER_GROUP) {
+    return { ...data, skills: data.skills.map((g) => (g === home ? { ...g, items: [...g.items, ...fresh] } : g)) };
+  }
+  const name = data.skills.length ? "Additional skills" : "Skills";
+  const extra = data.skills.find((g) => g.name === name && g.items.length + fresh.length <= MAX_SKILLS_PER_GROUP);
+  if (extra) return { ...data, skills: data.skills.map((g) => (g === extra ? { ...g, items: [...g.items, ...fresh] } : g)) };
+  return { ...data, skills: [...data.skills, { id: makeId(), name, items: fresh.slice(0, MAX_SKILLS_PER_GROUP) }] };
+}
+
+/** Whether a suggestion still fits the resume: the text it replaces hasn't been edited since. */
+export function canApply(data: ResumeData, s: ResumeSuggestion): boolean {
+  if (s.kind === "add_skill") return true;
+  if (s.kind === "add_bullet") return data.experience.some((e) => e.id === s.path.split(".")[1] && e.bullets.length < MAX_BULLETS);
+  return getAt(data, s.path) === s.before;
+}
+
+/** `data` with the suggestion applied (unchanged if it no longer fits). */
+export function applySuggestion(data: ResumeData, s: ResumeSuggestion, makeId: () => string): ResumeData {
+  if (!canApply(data, s)) return data;
+  if (s.kind === "add_skill") return addSkills(data, suggestedSkills(s), makeId);
+  if (s.kind === "add_bullet") {
+    const id = s.path.split(".")[1];
+    return {
+      ...data,
+      experience: data.experience.map((e) => (e.id !== id || e.bullets.includes(s.after) ? e : { ...e, bullets: [...e.bullets.filter((b) => b.trim()), s.after] })),
+    };
+  }
+  return setAt(data, s.path, s.after);
+}
+
+/** Safe to apply in bulk: mechanical, and nothing the candidate needs to confirm or fill in. */
+export function isSafeFix(s: ResumeSuggestion): boolean {
+  return (s.kind === "add_skill" || s.kind === "set") && !s.confirm && !/\[[^\]]+\]/.test(s.after);
 }
 
 export function dateRange(start: string, end: string, current = false): string {

@@ -33,7 +33,7 @@ from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError, LLMRequest, LLMResponse
 from orbit_api.providers.llm.pricing import estimate_cost
 from orbit_api.ratelimit import limit, limit_user
-from orbit_api.resumes import ai
+from orbit_api.resumes import ai, fixes
 from orbit_api.resumes.ats import AtsReport, score_resume
 from orbit_api.resumes.claims import ground_import
 from orbit_api.resumes.docx_export import letter_docx, resume_docx
@@ -312,29 +312,71 @@ class SuggestIn(BaseModel):
     job_text: str = Field("", max_length=MAX_JOB_TEXT)
     mode: Literal["improve", "tailor"] = "improve"
     focus: str | None = Field(None, max_length=120)
+    check: str | None = Field(None, max_length=40)  # the ATS check to fix, by id
 
 
 class SuggestOut(BaseModel):
-    suggestions: list[ai.Suggestion]
+    suggestions: list[fixes.Suggestion]
+
+
+SKILL_CHECKS = frozenset({"has_skills", "skills_count"})
 
 
 @router.post("/suggest", response_model=SuggestOut, dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
 async def suggest(body: SuggestIn, user: Annotated[User, Depends(require_verified_user)],
                   db: Annotated[AsyncSession, Depends(get_db)]) -> SuggestOut:
+    """Fixes for the resume, whichever the problem is. Skills and dates are worked out on the server with no AI call
+    (instant, nothing invented); wording, missing bullets and numbers come from the model, checked against the resume.
+    `check` names one ATS problem to fix; without it you get the best fixes across the whole resume."""
     if body.mode == "tailor" and not body.job_text.strip():
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Add the job post first.")
-    fields = ai.editable_fields(body.data)
+    d = body.data
+    fields = ai.editable_fields(d)
     if body.focus and body.focus not in fields:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That part of the resume can't be rewritten.")
-    if not any(text.strip() for _, text in fields.values()) and body.focus != "basics.summary":
+    report = score_resume(d, body.design, body.job_text)
+    if body.check and body.check not in {c.id for c in report.checks}:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Unknown check.")
+    check = body.check
+    mechanical: list[fixes.Suggestion] = []
+    if not body.focus and check in (None, "keywords", "dates", *SKILL_CHECKS):
+        if check != "dates":
+            mechanical += fixes.skill_suggestions(d, report, body.job_text)
+        if check in (None, "dates"):
+            mechanical += fixes.date_suggestions(d)
+    need_model = check not in ("dates", *SKILL_CHECKS) or bool(body.focus)
+    if check in SKILL_CHECKS and not body.focus and fixes.skills_needed(d) > sum(
+            len(s.after.split(", ")) for s in mechanical if s.kind == "add_skill" and s.confirm is None):
+        # Not enough the resume proves or the job asks for: ask the model what the role usually needs.
+        resp = await _generate(db, user, ai.skills_request(d, get_llm_provider(), fixes.skills_needed(d)), "skills")
+        try:
+            idea = ai.parse_skill_ideas(resp, d, [x for s in mechanical for x in s.after.split(", ")])
+        except (ValueError, json.JSONDecodeError) as e:
+            log.warning("resume skill ideas unusable: %s", e)
+            idea = None
+        if idea:
+            mechanical.append(idea)
+    if not need_model:
+        if not mechanical:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Nothing to add here: this part looks fine.")
+        return SuggestOut(suggestions=mechanical)
+    rewrite = any(t.strip() for _, t in fields.values()) or bool(ai.addable_roles(d)) or body.focus == "basics.summary"
+    if not rewrite:
+        if mechanical:
+            return SuggestOut(suggestions=mechanical)
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Add some experience first, then ask the AI.")
-    report = score_resume(body.data, body.design, body.job_text)
     llm = get_llm_provider()
-    req = ai.suggest_request(body.data, report, llm, mode=body.mode, job_text=body.job_text, focus=body.focus)
-    resp = await _generate(db, user, req, "suggest")
+    req = ai.suggest_request(d, report, llm, mode=body.mode, job_text=body.job_text, focus=body.focus, check=check)
     try:
-        suggestions = ai.parse_suggestions(resp, body.data)
+        resp = await _generate(db, user, req, "suggest")
+        suggestions = ai.parse_suggestions(resp, d)
+    except HTTPException:
+        if mechanical:  # the AI is down, but the mechanical fixes are still good
+            return SuggestOut(suggestions=mechanical)
+        raise
     except (ValueError, json.JSONDecodeError) as e:
         log.warning("resume suggestions unusable: %s", e)
+        if mechanical:
+            return SuggestOut(suggestions=mechanical)
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "The AI's answer came back garbled. Try again.") from e
-    return SuggestOut(suggestions=suggestions)
+    return SuggestOut(suggestions=[*mechanical, *suggestions])
