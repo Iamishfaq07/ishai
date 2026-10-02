@@ -33,6 +33,7 @@ import { Button, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } fr
 import { api } from "../../lib/api";
 import { downloadText, errorText } from "../../lib/format";
 import { ContentForm } from "./ContentForm";
+import { AiCostNote, AiErrorNote, AllowanceBanner, AllowanceContext, isUpgradeError, useAllowance, useResumeAllowance } from "./allowance";
 import { BackendContext, accountBackend, guestBackend, useBackend } from "./backend";
 import { ACCENTS, FONTS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, resumeToText, suggestedSkills } from "./model";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
@@ -95,6 +96,9 @@ function ResumeEditor() {
   const [queue, setQueue] = useState<ResumeSuggestion[]>([]);
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+  // The free AI use is spent: the AI panel offers the upgrade with its message.
+  const [aiUpgrade, setAiUpgrade] = useState(false);
+  const allowance = useResumeAllowance();
   const [notice, setNotice] = useState<string | null>(
     (location.state as { imported?: boolean } | null)?.imported
       ? "We imported your resume. Check each section: the AI reads most resumes well, but not perfectly."
@@ -295,14 +299,20 @@ function ResumeEditor() {
     setTab("ai");
     setAiBusy((check && FIX_BUSY[check]) || (mode === "tailor" ? "Tailoring to the job…" : check ? "Working on that fix…" : "Reading your resume…"));
     setAiError(null);
+    setAiUpgrade(false);
     try {
       const res = await backend.tools.suggestResume({ data: resume.data, design: resume.design, job_text: resume.job_text, mode, ...(check ? { check } : {}) });
       setQueue(res.suggestions);
-      if (!res.suggestions.length) setAiError("Nothing to change: the AI thinks this already reads well.");
+      if (res.upgrade_required) {
+        setAiUpgrade(true);
+        setAiError("These are the fixes that need no AI. AI rewrites, new bullets and tailoring need an upgrade: you've used your free AI edit.");
+      } else if (!res.suggestions.length) setAiError("Nothing to change: the AI thinks this already reads well.");
     } catch (err) {
       setAiError(errorText(err));
+      setAiUpgrade(isUpgradeError(err));
     } finally {
       setAiBusy(null);
+      allowance.refresh();
     }
   };
 
@@ -360,6 +370,7 @@ function ResumeEditor() {
   if (!resume) return <Spinner label="Opening your resume" />;
 
   return (
+    <AllowanceContext.Provider value={allowance}>
     <div className="animate-fade-up">
       <div className="mb-5 flex flex-wrap items-center gap-3">
         {!backend.guest && (
@@ -414,6 +425,7 @@ function ResumeEditor() {
       </div>
 
       {backend.guest && <GuestBanner />}
+      <AllowanceBanner />
 
       {notice && (
         <div role="status" className="mb-4 flex items-start gap-2 rounded-xl bg-indigo-500/10 p-3 text-sm text-indigo-900 dark:text-indigo-200">
@@ -465,6 +477,7 @@ function ResumeEditor() {
               hasJob={Boolean(resume.job_text.trim())}
               busy={aiBusy}
               error={aiError}
+              upgrade={aiUpgrade}
               queue={queue}
               onAsk={(mode) => void askAi(mode)}
               onAccept={accept}
@@ -505,6 +518,7 @@ function ResumeEditor() {
       </div>
       <PrintCopy data={resume.data} design={resume.design} letter={printing === "letter" ? resume.cover_letter : null} />
     </div>
+    </AllowanceContext.Provider>
   );
 }
 
@@ -731,8 +745,10 @@ function PrintCopy({ data, design, letter }: { data: ResumeData; design: ResumeD
 
 function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; onText: (text: string) => void; onShowJob: () => void; onPrint: () => void }) {
   const backend = useBackend();
+  const { refresh } = useAllowance();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [upgrade, setUpgrade] = useState(false);
   const [copied, setCopied] = useState(false);
   const [word, setWord] = useState<"idle" | "busy" | "error">("idle");
   const text = resume.cover_letter;
@@ -743,12 +759,15 @@ function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; o
     if (text.trim() && !(await confirmDialog({ title: "Write a new letter?", body: "This replaces the letter below, with your edits. Undo brings it back.", confirmLabel: "Write a new one" }))) return;
     setBusy(true);
     setError(null);
+    setUpgrade(false);
     try {
       onText((await backend.tools.coverLetter(resume.data, resume.job_text)).text);
     } catch (err) {
       setError(errorText(err));
+      setUpgrade(isUpgradeError(err));
     } finally {
       setBusy(false);
+      refresh();
     }
   };
   const okToDownload = () =>
@@ -779,7 +798,8 @@ function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; o
         <Button disabled={busy} onClick={() => void write()}>
           <Sparkles className="h-4 w-4" /> {busy ? "Writing…" : text.trim() ? "Write a new one" : "Write my cover letter"}
         </Button>
-        {error && <p className="mt-2 text-sm text-rose-600">{error}</p>}
+        <AiCostNote className="mt-2" />
+        {error && (upgrade ? <AiErrorNote className="mt-2" error={error} upgrade /> : <p className="mt-2 text-sm text-rose-600">{error}</p>)}
       </Panel>
       {busy && <Spinner label="Writing your letter" />}
       {(text || !busy) && (
@@ -1037,6 +1057,7 @@ function AiPanel({
   hasJob,
   busy,
   error,
+  upgrade,
   queue,
   onAsk,
   onAccept,
@@ -1047,6 +1068,7 @@ function AiPanel({
   hasJob: boolean;
   busy: string | null;
   error: string | null;
+  upgrade: boolean;
   queue: ResumeSuggestion[];
   onAsk: (mode: "improve" | "tailor") => void;
   onAccept: (s: ResumeSuggestion, picked?: string[]) => void;
@@ -1077,9 +1099,10 @@ function AiPanel({
             </Button>
           )}
         </div>
+        <AiCostNote className="mt-2" />
       </Panel>
       {busy && <Spinner label={busy} />}
-      {error && !busy && <p role="status" className="text-sm text-zinc-600 dark:text-zinc-300">{error}</p>}
+      {error && !busy && <AiErrorNote error={error} upgrade={upgrade} />}
       {safe > 0 && !busy && (
         <Button variant="secondary" onClick={onAcceptSafe}>
           <Check className="h-4 w-4" /> Apply the {safe} safe fix{safe === 1 ? "" : "es"} at once

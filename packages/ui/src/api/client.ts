@@ -3,6 +3,8 @@ import type {
   AccessChange,
   AdminConfig,
   AdminConfigUpdate,
+  AdminPayment,
+  AdminPayments,
   AdminUser,
   AdminUsers,
   ApiErrorBody,
@@ -34,6 +36,7 @@ import type {
   PrivacyUpdate,
   RegisterPending,
   Resume,
+  ResumeAiAllowance,
   ResumeData,
   ResumeDesign,
   ResumeImportRequest,
@@ -51,6 +54,7 @@ import type {
   SessionDetail,
   SessionSummary,
   UpdateDocumentRequest,
+  UpiOrder,
   Usage,
   User,
   Workspace,
@@ -217,8 +221,14 @@ export function createApiClient(options: ApiClientOptions) {
     /** The resume as a Word file (.docx): one plain column, built from what the editor shows now. */
     resumeDocx: async (data: ResumeData, design: ResumeDesign) =>
       (await raw(`${base}/docx`, { method: "POST", body: body({ data, design }) })).blob(),
+    /** `upgrade_required`: the free AI use is spent, so these are only the fixes that need no AI. */
     suggestResume: (req: ResumeSuggestRequest) =>
-      json<{ suggestions: ResumeSuggestion[] }>(`${base}/suggest`, { method: "POST", body: body(req) }),
+      json<{ suggestions: ResumeSuggestion[]; upgrade_required?: boolean }>(`${base}/suggest`, {
+        method: "POST",
+        body: body(req),
+      }),
+    /** Unlimited AI on this plan, or how many free AI actions are left (and what upgrading costs). */
+    resumeAllowance: () => json<ResumeAiAllowance>(`${base}/allowance`),
   });
 
   return {
@@ -370,6 +380,16 @@ export function createApiClient(options: ApiClientOptions) {
     // Plans / entitlements
     listPlans: () => json<PlanInfo[]>("/v1/plans"),
     entitlements: () => json<Entitlements>("/v1/entitlements"),
+    /** Start paying for a plan over UPI (an open order for the same plan is handed back). */
+    createUpiOrder: (plan: string) =>
+      json<UpiOrder>("/v1/billing/upi/orders", { method: "POST", body: body({ plan }) }),
+    listUpiOrders: () => json<UpiOrder[]>("/v1/billing/upi/orders"),
+    /** "I've paid": the 12-digit UTR from the UPI app, for the admin to check. */
+    submitUtr: (orderId: string, utr: string) =>
+      json<UpiOrder>(`/v1/billing/upi/orders/${encodeURIComponent(orderId)}/utr`, {
+        method: "POST",
+        body: body({ utr }),
+      }),
 
     // Admin / advanced settings
     adminStatus: () => json<{ is_admin: boolean }>("/v1/admin/status"),
@@ -378,6 +398,14 @@ export function createApiClient(options: ApiClientOptions) {
     /** Admin: grant a plan for a while, approve for good, or revoke. */
     setUserAccess: (userId: string, change: AccessChange) =>
       json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/access`, { method: "POST", body: body(change) }),
+    /** Admin: UPI payments ("submitted" = a UTR waiting to be checked). */
+    adminPayments: (only: "submitted" | "all" = "submitted") =>
+      json<AdminPayments>(`/v1/admin/payments?only=${only}`),
+    decidePayment: (paymentId: string, action: "approve" | "reject", note?: string) =>
+      json<AdminPayment>(`/v1/admin/payments/${encodeURIComponent(paymentId)}`, {
+        method: "POST",
+        body: body({ action, note: note ?? null }),
+      }),
     getLatency: (days = 7) => json<LatencyReport>(`/v1/admin/latency?days=${days}`),
     getCosts: (days = 30) => json<CostReport>(`/v1/admin/costs?days=${days}`),
     getFeedbackReport: (days = 30) => json<FeedbackReport>(`/v1/admin/feedback?days=${days}`),

@@ -263,7 +263,7 @@ class AccessIn(BaseModel):
     # grant: a plan for `hours` (from now, or added on to a running grant of the same plan) · approve: Free for good
     # (or whatever they pay for) · revoke: back to waiting, grant cancelled
     action: Literal["grant", "approve", "revoke"]
-    plan: Literal["pro", "unlimited"] = "unlimited"
+    plan: Literal["resume_pro", "pro", "unlimited"] = "unlimited"
     hours: float = Field(2, gt=0, le=MAX_GRANT_HOURS)
 
 

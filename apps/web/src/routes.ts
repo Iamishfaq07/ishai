@@ -21,6 +21,7 @@ const loaders = {
   settings: () => import("./pages/Settings"),
   companion: () => import("./pages/Companion"),
   adminUsers: () => import("./pages/AdminUsers"),
+  adminPayments: () => import("./pages/AdminPayments"),
 } as const;
 
 function page<M>(load: () => Promise<M>, pick: (m: M) => ComponentType) {
@@ -42,6 +43,7 @@ export const BillingPage = page(loaders.billing, (m) => m.BillingPage);
 export const SettingsPage = page(loaders.settings, (m) => m.SettingsPage);
 export const CompanionPage = page(loaders.companion, (m) => m.CompanionPage);
 export const AdminUsersPage = page(loaders.adminUsers, (m) => m.AdminUsersPage);
+export const AdminPaymentsPage = page(loaders.adminPayments, (m) => m.AdminPaymentsPage);
 
 const BY_PATH: Array<[RegExp, keyof typeof loaders]> = [
   [/^\/$/, "home"],

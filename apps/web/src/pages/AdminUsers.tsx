@@ -90,8 +90,11 @@ function AccessBadge({ user }: { user: AdminUser }) {
   return <span className={cx("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1", tone)}>{text}</span>;
 }
 
+type GrantPlan = "unlimited" | "pro" | "resume_pro";
+const GRANT_LABEL: Record<GrantPlan, string> = { unlimited: "Unlimited", pro: "Pro", resume_pro: "Resume Pro" };
+
 function UserRow({ user, onChange }: { user: AdminUser; onChange: (row: AdminUser) => void }) {
-  const [plan, setPlan] = useState<"unlimited" | "pro">("unlimited");
+  const [plan, setPlan] = useState<GrantPlan>("unlimited");
   const [hours, setHours] = useState(2);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +109,7 @@ function UserRow({ user, onChange }: { user: AdminUser; onChange: (row: AdminUse
       setBusy(false);
     }
   };
-  const extends_ = user.access === "granted" && user.plan_label.toLowerCase() === plan;
+  const extends_ = user.access === "granted" && user.plan_label === GRANT_LABEL[plan];
   return (
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -121,9 +124,12 @@ function UserRow({ user, onChange }: { user: AdminUser; onChange: (row: AdminUse
       </div>
       {user.access !== "admin" && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Select aria-label={`Plan for ${user.email}`} value={plan} onChange={(e) => setPlan(e.target.value as "unlimited" | "pro")} className="!w-auto">
-            <option value="unlimited">Unlimited</option>
-            <option value="pro">Pro</option>
+          <Select aria-label={`Plan for ${user.email}`} value={plan} onChange={(e) => setPlan(e.target.value as GrantPlan)} className="!w-auto">
+            {(Object.keys(GRANT_LABEL) as GrantPlan[]).map((p) => (
+              <option key={p} value={p}>
+                {GRANT_LABEL[p]}
+              </option>
+            ))}
           </Select>
           <Select aria-label={`How long for ${user.email}`} value={hours} onChange={(e) => setHours(Number(e.target.value))} className="!w-auto">
             {DURATIONS.map((d) => (

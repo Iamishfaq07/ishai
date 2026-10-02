@@ -22,6 +22,7 @@ import { api } from "../../lib/api";
 import { errorText, formatDate } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
 import { LibraryTabs } from "../Stories";
+import { isUpgradeError, priceText } from "./allowance";
 import { guestResume } from "./backend";
 import { newResume } from "./model";
 
@@ -233,6 +234,10 @@ export function NewResume({ onClose, guest = false, onCreated }: { onClose?: () 
   const [docId, setDocId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [upgrade, setUpgrade] = useState(false);
+  // Importing is an AI action: say whether it takes the free AI edit (or needs Resume Pro) before it's spent.
+  const allowance = useAsync(() => tools.resumeAllowance().catch(() => null), [guest], guest ? "resume-allowance-guest" : "resume-allowance");
+  const ai = allowance.data;
   const fileRef = useRef<HTMLInputElement>(null);
   const docs = useAsync(() => (guest ? Promise.resolve([] as Awaited<ReturnType<typeof api.listDocuments>>) : api.listDocuments()), [guest], guest ? "documents-guest" : "documents");
   const resumeDocs = (docs.data ?? []).filter((d) => d.kind === "resume" && d.status === "ready");
@@ -258,11 +263,14 @@ export function NewResume({ onClose, guest = false, onCreated }: { onClose?: () 
     running.current = controller;
     setBusy(true);
     setError(null);
+    setUpgrade(false);
     try {
       await job(controller.signal);
     } catch (err) {
       if (!(err instanceof DOMException && err.name === "AbortError")) setError(errorText(err)); // a cancel is silent
+      setUpgrade(isUpgradeError(err));
       setBusy(false);
+      allowance.reload();
     }
   };
   const cancel = () => running.current?.abort();
@@ -384,7 +392,25 @@ export function NewResume({ onClose, guest = false, onCreated }: { onClose?: () 
           </button>
         )}
       </div>
-      {error && <div className="mb-4"><ErrorNote>{error}</ErrorNote></div>}
+      {error && !upgrade && <div className="mb-4"><ErrorNote>{error}</ErrorNote></div>}
+      {error && upgrade && (
+        <div role="status" className="mb-4 space-y-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-950 ring-1 ring-amber-500/30 dark:text-amber-100">
+          <p>{error} Starting from scratch is always free.</p>
+          <Link
+            to={guest ? "/register" : `/billing?plan=${ai?.upgrade.plan ?? "resume_pro"}`}
+            className={cx("inline-flex rounded-xl bg-amber-500 px-3 py-1.5 font-medium text-white hover:bg-amber-600", focusRing)}
+          >
+            {guest ? "Create an account to upgrade" : `Upgrade${ai?.upgrade.price_inr_month ? ` · ${priceText(ai.upgrade.price_inr_month)}` : ""}`}
+          </Link>
+        </div>
+      )}
+      {ai && !ai.unlimited && !error && source && source !== "scratch" && (
+        <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-400">
+          {ai.free_left > 0
+            ? "Importing uses your 1 free AI edit. Starting from scratch is always free."
+            : `You've used your free AI edit, so importing needs ${ai.upgrade.label}. Starting from scratch is always free.`}
+        </p>
+      )}
       {busy && source && source !== "scratch" && <BusyNote onCancel={cancel} />}
       {source ? (
         body

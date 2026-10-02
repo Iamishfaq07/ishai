@@ -38,6 +38,12 @@ services:
       # the Worker may then state a caller's IP; per-IP rate limits can't be dodged by faking X-Forwarded-For.
       - key: ORBIT_PROXY_SECRET
         sync: false
+      # UPI payments for Resume Pro (billing/upi.py): the UPI ID payers pay to and the name their app shows. Not
+      # secret: every payer sees both.
+      - key: ORBIT_UPI_ID
+        value: octane7@ibl
+      - key: ORBIT_UPI_NAME
+        value: Ishfaq Ahmad Bhat
       # Desktop auto-update from GitHub Releases (Render free has no disk for ORBIT_DESKTOP_UPDATES_DIR).
       - key: ORBIT_UPDATES_GITHUB_REPO
         value: Iamishfaq07/ishai

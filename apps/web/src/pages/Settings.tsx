@@ -18,6 +18,7 @@ import {
   SettingsIcon,
   CreditCard,
   ChevronRight,
+  IndianRupee,
   Users,
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Spinner, Toggle } from "../components/ui";
@@ -88,6 +89,16 @@ function AdvancedSettingsCard() {
         <span className="flex-1">
           <span className="block font-display font-semibold">Users &amp; access</span>
           <span className="block text-sm text-zinc-500">Who signed up, who's waiting, and giving them access for a while or for good.</span>
+        </span>
+        <ChevronRight className="h-4 w-4 text-zinc-400" />
+      </Link>
+      <Link to="/admin/payments" className={cx("glass-panel lift flex items-center gap-4 rounded-2xl p-5 hover:border-indigo-400/40", focusRing)}>
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-300">
+          <IndianRupee className="h-5 w-5" />
+        </span>
+        <span className="flex-1">
+          <span className="block font-display font-semibold">Payments</span>
+          <span className="block text-sm text-zinc-500">UPI payments to check against your bank, and approve so the plan turns on.</span>
         </span>
         <ChevronRight className="h-4 w-4 text-zinc-400" />
       </Link>

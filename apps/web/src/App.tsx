@@ -28,6 +28,7 @@ import {
   ResumesPage,
   ResumeEditorPage,
   AdminUsersPage,
+  AdminPaymentsPage,
   prefetchLikelyRoutes,
 } from "./routes";
 
@@ -72,6 +73,7 @@ const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/mock/, "Practice"],
   [/^\/billing/, "Billing"],
   [/^\/admin\/users/, "Users & access"],
+  [/^\/admin\/payments/, "Payments"],
   [/^\/settings/, "Settings"],
   [/^\/live\//, "Live session"],
   [/^\/companion/, "Phone companion"],
@@ -130,6 +132,7 @@ export function App() {
         <Route path="billing" element={<BillingPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="admin/users" element={<AdminUsersPage />} />
+        <Route path="admin/payments" element={<AdminPaymentsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

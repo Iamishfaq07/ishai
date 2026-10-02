@@ -26,7 +26,9 @@ from orbit_api.models import Document, Subscription, UsageEvent, User
 log = logging.getLogger(__name__)
 
 # Feature names (checked by name at call sites).
-FEATURES = ("live", "documents", "mock", "vision", "advanced_coding", "system_design", "provider_fallback")
+# `resume_ai`: unlimited AI in the resume maker; without it there's one free AI action (resumes/allowance.py).
+FEATURES = ("live", "documents", "mock", "vision", "advanced_coding", "system_design", "provider_fallback",
+            "resume_ai")
 
 
 @dataclass(frozen=True)
@@ -42,16 +44,21 @@ class Plan:
     features: frozenset[str]
     price_usd_month: float | None = None  # display only; billing charges what Stripe's price says
     stripe_price_id: str | None = None
+    # What 30 days of the plan costs over UPI (billing/upi.py), in whole rupees. None = not for sale over UPI.
+    price_inr_month: int | None = None
 
     def has(self, feature: str) -> bool:
         return feature in self.features
 
 
 _ALL = frozenset(FEATURES)
+_FREE_FEATURES = frozenset({"live", "documents", "mock", "vision"})
 DEFAULT_PLANS: dict[str, Plan] = {
     "free": Plan("free", "Free", live_minutes=30, mock_minutes=30, screenshots=10, documents=3,
-                 max_session_minutes=60, features=frozenset({"live", "documents", "mock", "vision"}),
-                 price_usd_month=0),
+                 max_session_minutes=60, features=_FREE_FEATURES, price_usd_month=0, price_inr_month=0),
+    # The resume maker's paid plan: Free's interview allowance, plus unlimited resume AI.
+    "resume_pro": Plan("resume_pro", "Resume Pro", live_minutes=30, mock_minutes=30, screenshots=10, documents=3,
+                       max_session_minutes=60, features=_FREE_FEATURES | {"resume_ai"}, price_inr_month=299),
     "pro": Plan("pro", "Pro", live_minutes=600, mock_minutes=300, screenshots=500, documents=50,
                 max_session_minutes=180, features=_ALL),
     "unlimited": Plan("unlimited", "Unlimited", live_minutes=None, mock_minutes=None, screenshots=None,
@@ -79,6 +86,10 @@ def plans() -> dict[str, Plan]:
                 if unknown:
                     raise ValueError(f"ORBIT_PLANS_JSON: {name}.features has unknown {sorted(unknown)}")
                 changes[key] = frozenset(value)
+            elif key == "price_inr_month":
+                if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 0):
+                    raise ValueError(f"ORBIT_PLANS_JSON: {name}.price_inr_month must be whole rupees or null")
+                changes[key] = value
             elif key in ("label", "stripe_price_id", "price_usd_month"):
                 changes[key] = value
             else:
@@ -102,7 +113,7 @@ def plan_named(name: str) -> Plan:
 # plan: never listed, never configurable.
 PENDING = Plan("pending", "Awaiting approval", live_minutes=0, mock_minutes=0, screenshots=0, documents=0,
                max_session_minutes=1, features=frozenset())
-GRANT_PLANS = ("pro", "unlimited")
+GRANT_PLANS = ("resume_pro", "pro", "unlimited")
 
 
 def _aware(d: datetime) -> datetime:
@@ -211,11 +222,17 @@ async def for_user(db: AsyncSession, user: User) -> dict[str, Any]:
     }
 
 
+def buyable(plan: Plan) -> bool:
+    """Can be bought over UPI right now: it has a rupee price and a UPI ID to pay to is configured."""
+    return bool(plan.price_inr_month) and bool(get_settings().upi_id)
+
+
 def public_plans() -> list[dict[str, Any]]:
     out = []
     for p in plans().values():
         d = asdict(p)
         d["features"] = sorted(p.features)
+        d["buyable"] = buyable(p)
         d.pop("stripe_price_id")  # server-side detail
         out.append(d)
     return out

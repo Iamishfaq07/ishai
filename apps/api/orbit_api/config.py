@@ -1,3 +1,4 @@
+import re
 from functools import lru_cache
 from typing import Annotated, Literal
 
@@ -37,6 +38,13 @@ class Settings(BaseSettings):
     # The free resume maker works without an account. Its AI calls cost money with nobody to bill, so besides a strict
     # per-IP limit there is a cap on all signed-out AI calls per rolling 24 hours (0 turns the signed-out AI off).
     guest_resume_ai_daily_limit: int = Field(300, ge=0, validation_alias=AliasChoices("ORBIT_GUEST_RESUME_AI_DAILY"))
+    # Without a plan that includes resume AI, there's one free AI action per account for good, and one per IP
+    # address per this many days (0 = one per IP for good). See resumes/allowance.py.
+    free_resume_ai_ip_days: int = Field(30, ge=0, validation_alias=AliasChoices("ORBIT_FREE_RESUME_AI_IP_DAYS"))
+    # UPI payments (billing/upi.py): the UPI ID people pay to and the name their UPI app shows. Unset = nothing can
+    # be bought. Each payment is checked by the admin against the bank statement (UTR) before the plan turns on.
+    upi_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_UPI_ID"))
+    upi_name: str = Field("Orbit", validation_alias=AliasChoices("ORBIT_UPI_NAME"))
 
     llm_provider: Literal["auto", "deepseek", "mock"] = Field(
         "auto", validation_alias=AliasChoices("ORBIT_LLM_PROVIDER")
@@ -173,6 +181,15 @@ class Settings(BaseSettings):
             return json.loads(v)
         # Origins never end in "/"; a pasted "https://app.example/" would otherwise never match the browser's Origin.
         return [o.strip().rstrip("/") for o in v.split(",") if o.strip()]
+
+    @field_validator("upi_id", mode="before")
+    @classmethod
+    def _upi_id(cls, v: object) -> object:
+        if isinstance(v, str):
+            v = v.strip() or None
+        if isinstance(v, str) and not re.fullmatch(r"[A-Za-z0-9.\-_]{2,256}@[A-Za-z][A-Za-z0-9.\-]{1,64}", v):
+            raise ValueError("ORBIT_UPI_ID must look like name@bank (for example yourname@okicici)")
+        return v
 
     @field_validator("stt_price_per_minute", mode="before")
     @classmethod

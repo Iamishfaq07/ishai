@@ -78,6 +78,38 @@ class Subscription(TimestampMixin, Base):
     current_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class Payment(TimestampMixin, Base):
+    """A UPI payment for a plan (billing/upi.py). Made as an order with a reference for the UPI note; the payer then
+    gives the UTR (the bank's 12-digit transaction number) and the admin approves it against the bank statement,
+    which grants the plan for `days`."""
+
+    __tablename__ = "payments"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    plan: Mapped[str] = mapped_column(String(32))
+    amount_inr: Mapped[int] = mapped_column(Integer)
+    days: Mapped[int] = mapped_column(Integer)
+    reference: Mapped[str] = mapped_column(String(16), unique=True)
+    # awaiting_payment → submitted (UTR given) → approved | rejected (a rejected one can be submitted again)
+    status: Mapped[str] = mapped_column(String(20), default="awaiting_payment", index=True)
+    utr: Mapped[str | None] = mapped_column(String(32), unique=True)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    note: Mapped[str | None] = mapped_column(String(300))  # the admin's reason, shown to the payer
+
+
+class FreeAiUse(TimestampMixin, Base):
+    """The free resume-AI action (resumes/allowance.py): one per account for good, one per IP address per window.
+    The IP is kept only as a keyed hash. No foreign key: the row outlives a deleted account, so deleting it and
+    signing up again from the same network doesn't hand out another free use."""
+
+    __tablename__ = "free_ai_uses"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str | None] = mapped_column(String(36), unique=True)
+    ip_hash: Mapped[str] = mapped_column(String(64))
+    __table_args__ = (Index("ix_free_ai_uses_ip_created", "ip_hash", "created_at"),)
+
+
 class Document(TimestampMixin, Base):
     __tablename__ = "documents"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
