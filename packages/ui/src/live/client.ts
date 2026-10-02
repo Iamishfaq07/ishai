@@ -163,7 +163,8 @@ export class LiveClient {
       if (status === 401 || status === 402 || status === 403 || status === 404 || status === 409) {
         const sessionId = typeof e?.details?.session_id === "string" ? e.details.session_id : undefined;
         this.setStatus("closed", e?.message || "Not authorized for this session", {
-          code: e?.code ?? `http_${status}`,
+          // ApiError's default code says nothing ("http_error"): keep the status, so a 402 can offer "Buy minutes".
+          code: e?.code && e.code !== "http_error" ? e.code : `http_${status}`,
           ...(sessionId ? { sessionId } : {}),
         });
         return;

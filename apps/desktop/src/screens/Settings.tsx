@@ -22,7 +22,7 @@ import {
   UserCog,
 } from "@orbit/ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { API_URL, WEB_URL, api } from "../api";
+import { WEB_URL, api } from "../api";
 import { loadCloseAction, saveCloseAction, type CloseAction } from "../CloseDialog";
 import { GlassControls } from "../GlassControls";
 import { GlobalShortcutsCard } from "../GlobalShortcutsCard";
@@ -55,10 +55,10 @@ export function SettingsScreen({
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-3xl space-y-6">
           <PageHeader title="Settings" />
+          <UsageCard />
+          <PrivacyCard user={user} onUser={onUser} onSignOut={onSignOut} />
           <AppearanceCard />
           <GlobalShortcutsCard />
-          <PrivacyCard user={user} onUser={onUser} onSignOut={onSignOut} />
-          <UsageCard />
           <AdvancedCard />
         </div>
       </div>
@@ -135,8 +135,7 @@ function PrivacyCard({ user, onUser, onSignOut }: { user: User; onUser: (u: User
     <Card>
       <h2 className="mb-4 font-semibold">Account &amp; privacy</h2>
       <p className="mb-4 text-sm text-zinc-500">
-        Signed in as <span className="font-medium text-zinc-700 dark:text-zinc-200">{user.email}</span> · server{" "}
-        <span className="font-mono text-xs">{API_URL}</span>
+        Signed in as <span className="font-medium text-zinc-700 dark:text-zinc-200">{user.email}</span>
       </p>
       <div className="space-y-4">
         <Toggle
@@ -184,7 +183,7 @@ function PrivacyCard({ user, onUser, onSignOut }: { user: User; onUser: (u: User
           <div className="mt-2 flex flex-wrap gap-2">
             <Button variant="secondary" size="sm" onClick={() => void openUrl(`${WEB_URL}/billing`)}>
               <CreditCard className="h-3.5 w-3.5" />
-              Plan &amp; billing
+              Your payments
               <ExternalLink className="h-3 w-3 opacity-60" />
             </Button>
             <Button variant="secondary" size="sm" onClick={() => void openUrl(`${WEB_URL}/documents/resumes`)}>
@@ -219,16 +218,49 @@ function UsageCard() {
 
   const line = (used: number, limit: number | null, unit: string) =>
     limit === null ? `${used} ${unit} used (unlimited)` : `${used} / ${limit} ${unit} used`;
+  const credits = usage?.credits ?? null;
 
   return (
     <Card>
-      <h2 className="mb-3 font-semibold">Usage</h2>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="font-semibold">{credits ? "Credits" : "Usage"}</h2>
+        <Button variant="secondary" size="sm" onClick={() => void openUrl(`${WEB_URL}/billing`)}>
+          <CreditCard className="h-3.5 w-3.5" />
+          {credits ? "Buy credits" : "Plan & billing"}
+          <ExternalLink className="h-3 w-3 opacity-60" />
+        </Button>
+      </div>
       {usage === null ? (
         error ? (
           <ErrorNote onRetry={load}>{error}</ErrorNote>
         ) : (
           <Spinner />
         )
+      ) : credits ? (
+        <div className="space-y-3 text-sm text-zinc-600 dark:text-zinc-300">
+          <div className="flex items-baseline justify-between gap-3">
+            <span>
+              Interview minutes
+              <span className="block text-xs text-zinc-500">Live and mock interviews both use these.</span>
+            </span>
+            <span className="shrink-0 font-medium tabular-nums text-zinc-900 dark:text-white">
+              {Math.round(credits.interview_minutes_left)} min left
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between gap-3">
+            <span>
+              Resume AI credits
+              <span className="block text-xs text-zinc-500">One per AI rewrite, tailoring, import or cover letter.</span>
+            </span>
+            <span className="shrink-0 font-medium tabular-nums text-zinc-900 dark:text-white">
+              {credits.resume === null ? "Unlimited" : `${credits.resume} left`}
+            </span>
+          </div>
+          <p className="text-xs text-zinc-500">
+            Credits never expire. Each session can run up to {usage.limits.max_session_minutes} minutes. Packs are paid by
+            UPI in your browser and land here once approved.
+          </p>
+        </div>
       ) : (
         <div className="space-y-1 text-sm text-zinc-600 dark:text-zinc-300">
           <p>

@@ -76,7 +76,7 @@ async def _check_quota(db: AsyncSession, user: User) -> None:
     n = await db.scalar(select(func.count()).select_from(Document).where(Document.user_id == user.id))
     if (n or 0) >= plan.documents:
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
-                            f"Your plan allows {plan.documents} documents. Delete one or upgrade.")
+                            f"You can keep up to {plan.documents} documents. Delete one to add another.")
 
 
 Prepared = list[tuple[int, "ChunkDraft", list[float] | None]]

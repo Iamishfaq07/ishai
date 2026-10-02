@@ -27,7 +27,8 @@ const quitApp = () => void invoke("quit_app");
 
 /**
  * Graphical "close Orbit?" dialog for the × button and Alt+F4: hide to tray, quit, or cancel — with
- * "remember my choice". A remembered "quit" still asks while a live session is running.
+ * "remember my choice". A remembered choice still asks while a live session is running: hiding keeps it listening
+ * (and using interview minutes) out of sight, quitting ends it.
  */
 export function CloseDialog({ liveActive }: { liveActive: boolean }) {
   const [open, setOpen] = useState(false);
@@ -38,7 +39,7 @@ export function CloseDialog({ liveActive }: { liveActive: boolean }) {
 
   const onRequest = useCallback(() => {
     const action = loadCloseAction();
-    if (action === "tray") return hideToTray();
+    if (action === "tray" && !liveRef.current) return hideToTray();
     if (action === "quit" && !liveRef.current) return quitApp();
     setRemember(false);
     setOpen(true);
@@ -99,7 +100,8 @@ export function CloseDialog({ liveActive }: { liveActive: boolean }) {
 
         {liveActive && (
           <p className="mb-3 animate-fade-up rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-            A live session is running. <b>Quit</b> ends it; <b>Hide</b> keeps listening in the background.
+            A live session is running and using your interview minutes. <b>Hide</b> keeps it listening in the
+            background; <b>Quit</b> ends it.
           </p>
         )}
 

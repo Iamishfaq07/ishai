@@ -64,6 +64,30 @@ export function deviceStatusText(ev: { channel: AudioChannel; state: DeviceState
   }
 }
 
+/**
+ * An audio error as a person reads it: what's wrong and what to do, without Windows error codes ("Access is denied.
+ * (0x80070005)"). The raw text goes to the console, and the audio test's "Copy diagnostics" keeps it.
+ */
+export function friendlyAudioError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  console.warn("Audio:", raw);
+  const what = /^(system audio|app audio|interviewer)/i.test(raw) ? "the meeting audio" : "the microphone";
+  if (/0x80070005|access is denied/i.test(raw)) {
+    return what === "the microphone"
+      ? "Windows is blocking the microphone. Turn on Windows Settings → Privacy & security → Microphone → “Let desktop apps access your microphone”, then click Retry."
+      : "Windows refused access to the meeting audio. Click Retry, or pick “Default output” under Listen to.";
+  }
+  if (/no device|0x80070490|0x88890004|not found/i.test(raw)) {
+    return `Couldn't find ${what === "the microphone" ? "that microphone" : "that audio device"}. Check it's plugged in or pick another one, then click Retry.`;
+  }
+  if (/0x8889000a|in use|exclusive/i.test(raw)) {
+    return `Another app is holding ${what} for itself. Close that app (or turn off its exclusive mode), then click Retry.`;
+  }
+  if (/list audio (devices|apps)/i.test(raw)) return "Couldn't read your audio devices. Click Retry, or restart Orbit.";
+  if (/app audio/i.test(raw)) return "Couldn't listen to that app. Pick “Default output” under Listen to, or restart the meeting app.";
+  return `Couldn't start ${what}. Check it's connected, then click Retry.`;
+}
+
 /** An app with an audio session (Windows). `pid` is the root of its process tree. */
 export interface AudioApp {
   pid: number;

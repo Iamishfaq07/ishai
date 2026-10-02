@@ -33,6 +33,8 @@ export {
   Download,
   Eraser,
   ExternalLink,
+  Eye,
+  EyeOff,
   FileText,
   FileUp,
   FolderOpen,

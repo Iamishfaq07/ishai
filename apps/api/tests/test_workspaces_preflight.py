@@ -51,7 +51,8 @@ def test_session_from_workspace_uses_its_documents_and_survives_deletion(client:
     assert kept["workspace_id"] is None and sorted(kept["document_ids"]) == sorted([resume, jd])
 
 
-def test_preflight_reports_demo_providers_and_allowance(client: TestClient) -> None:
+def test_preflight_reports_demo_providers_and_allowance(client: TestClient,
+                                                        monkeypatch: pytest.MonkeyPatch) -> None:
     from orbit_api import preflight
 
     preflight._cache.clear()
@@ -59,7 +60,16 @@ def test_preflight_reports_demo_providers_and_allowance(client: TestClient) -> N
     out = client.get("/v1/preflight", headers=h).json()
     checks = {c["id"]: c for c in out["checks"]}
     assert checks["server"]["status"] == "ok"
-    assert checks["llm"]["status"] == "warn" and "Demo" in checks["llm"]["detail"] and checks["llm"]["fix"]
+    # A regular user can't change the server's keys: no "set DEEPSEEK_API_KEY" advice for them.
+    assert checks["llm"]["status"] == "warn" and "Demo" in checks["llm"]["detail"] and checks["llm"]["fix"] is None
+    assert checks["minutes"]["label"] == "Interview minutes"
+
+    async def admin(*_: Any) -> bool:
+        return True
+
+    monkeypatch.setattr(preflight, "is_admin", admin)
+    checks = {c["id"]: c for c in client.get("/v1/preflight", headers=h).json()["checks"]}
+    assert "DEEPSEEK_API_KEY" in (checks["llm"]["fix"] or "")
     assert checks["stt"]["status"] == "warn"
     assert checks["vision"]["status"] == "ok"
     assert checks["minutes"]["status"] in ("ok", "warn")
@@ -90,9 +100,18 @@ def test_preflight_explains_a_failing_ai_and_an_outdated_app(client: TestClient,
     h = _register(client)
     out = client.get("/v1/preflight?app_version=0.1.8", headers=h).json()
     checks = {c["id"]: c for c in out["checks"]}
-    assert checks["llm"]["status"] == "fail" and "rejected" in checks["llm"]["fix"]
+    # What a regular user reads: it isn't working and Orbit retries; no provider name, error code or key advice.
+    assert checks["llm"]["status"] == "fail" and checks["llm"]["detail"] == "Not responding right now."
+    assert not any(w in str(checks) for w in ("DeepSeek", "http_401", "key", " ms"))
     assert checks["app"]["status"] == "warn" and "9.9.9" in checks["app"]["detail"]
     assert out["ok"] is False
+
+    async def admin(*_: Any) -> bool:
+        return True
+
+    monkeypatch.setattr(preflight, "is_admin", admin)
+    checks = {c["id"]: c for c in client.get("/v1/preflight", headers=h).json()["checks"]}
+    assert checks["llm"]["status"] == "fail" and "rejected" in checks["llm"]["fix"]  # the admin sees why
     preflight._cache.clear()
 
 

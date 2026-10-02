@@ -11,7 +11,10 @@ import {
   PageHeader,
   Select,
   Spinner,
-  Textarea, confirmDialog } from "@orbit/ui";
+  Textarea,
+  confirmDialog,
+  useFocusTrap,
+} from "@orbit/ui";
 import { api } from "../api";
 import { TitleBar } from "../TitleBar";
 
@@ -216,7 +219,7 @@ export function DocumentsScreen({ onBack }: { onBack: () => void }) {
 }
 
 function StatusText({ doc }: { doc: OrbitDocument }) {
-  if (doc.status === "ready") return <span className="text-emerald-600 dark:text-emerald-400">Ready · {doc.chunk_count} sections</span>;
+  if (doc.status === "ready") return <span className="text-emerald-600 dark:text-emerald-400">Ready</span>;
   if (doc.status === "processing") return <span className="text-amber-600 dark:text-amber-400">Processing…</span>;
   return <span className="text-rose-600 dark:text-rose-400">Couldn’t read file</span>;
 }
@@ -229,6 +232,7 @@ function EditModal({ doc, onClose, onSaved }: { doc: OrbitDocument; onClose: () 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useFocusTrap<HTMLDivElement>(true, { onEscape: onClose });
 
   useEffect(() => {
     api
@@ -268,9 +272,16 @@ function EditModal({ doc, onClose, onSaved }: { doc: OrbitDocument; onClose: () 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" onClick={onClose}>
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-900" onClick={(e) => e.stopPropagation()}>
-        <h2 className="mb-4 text-lg font-semibold">Edit document</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-doc-title"
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-900"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id="edit-doc-title" className="mb-4 text-lg font-semibold">Edit document</h2>
         {loading ? (
           <Spinner />
         ) : (

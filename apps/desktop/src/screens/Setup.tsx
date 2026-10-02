@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import type {
   AnswerLength,
   AnswerStyle,
@@ -17,8 +17,11 @@ import type {
 } from "@orbit/types";
 import { AUDIO_CHANNEL } from "@orbit/types";
 import {
+  ApiError,
+  Button,
   confirmDialog,
   ArrowLeft,
+  CreditCard,
   FileText,
   HistoryIcon,
   LogOut,
@@ -48,8 +51,10 @@ import { getVersion } from "@tauri-apps/api/app";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { WEB_URL, api } from "../api";
+import { openBilling, useEntitlements } from "../credits";
 import {
   deviceStatusText,
+  friendlyAudioError,
   listAudioApps,
   listAudioDevices,
   listOutputDevices,
@@ -199,7 +204,10 @@ export function SetupScreen({
     void listOutputDevices().then(setOutputs);
   };
   const [error, setError] = useState<string | null>(null);
+  // Why Start didn't work, shown by the Start button (the screen scrolls; the general error sits far above it).
+  const [startError, setStartError] = useState<{ text: string; buy: boolean } | null>(null);
   const [starting, setStarting] = useState(false);
+  const plan = useEntitlements();
   const [mockPersona, setMockPersona] = useState<MockPersona>("hiring_manager");
   const [mockType, setMockType] = useState<MockInterviewType>("mixed");
   const [mockDifficulty, setMockDifficulty] = useState<MockDifficulty>("medium");
@@ -215,6 +223,14 @@ export function SetupScreen({
   const [blockers, setBlockers] = useState<PreflightCheck[]>([]);
   const [overrideBlockers, setOverrideBlockers] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  // Stable, so the checks panel reports only when the failing set changes (a new function every render re-rendered
+  // this screen in a loop).
+  // Out of minutes: the server refuses the session whatever the checks say, so "Start anyway" can't help.
+  const outOfMinutes = blockers.length > 0 && blockers.every((b) => b.id === "minutes");
+  const onPreflight = useCallback((b: PreflightCheck[]) => {
+    setBlockers(b);
+    if (b.length === 0) setOverrideBlockers(false);
+  }, []);
 
   const applyWorkspace = (ws: Workspace | null) => {
     setWorkspaceId(ws?.id ?? null);
@@ -253,7 +269,7 @@ export function SetupScreen({
     if (!IS_MAC) refreshApps();
     listAudioDevices()
       .then(setDevices)
-      .catch((err: unknown) => setError(`Couldn’t list audio devices: ${String(err)}`));
+      .catch((err: unknown) => setError(friendlyAudioError(`Couldn't list audio devices: ${String(err)}`)));
   }, []);
 
   useEffect(() => {
@@ -358,6 +374,7 @@ export function SetupScreen({
     if (blockers.length > 0 && !overrideBlockers) return;
     setStarting(true);
     setError(null);
+    setStartError(null);
     try {
       const session = await api.createSession({
         title: `${TYPES.find((t) => t.value === type)?.label ?? "Session"}${role.trim() ? ` — ${role.trim()}` : ""}`,
@@ -397,7 +414,10 @@ export function SetupScreen({
         ...(systemAudio && systemDevice ? { systemDevice } : {}),
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn’t start the session.");
+      setStartError({
+        text: err instanceof Error ? err.message : "Couldn’t start the session.",
+        buy: err instanceof ApiError && err.status === 402,
+      });
       setStarting(false);
     }
   };
@@ -501,7 +521,7 @@ export function SetupScreen({
 
           <label className="block space-y-1">
             <span className="text-xs font-medium">Role / goal</span>
-            <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Senior Security Engineer" className={cx(control, focusRing)} />
+            <input value={role} maxLength={200} onChange={(e) => setRole(e.target.value)} placeholder="Senior Security Engineer" className={cx(control, focusRing)} />
           </label>
 
           {!isMock && (
@@ -802,13 +822,18 @@ export function SetupScreen({
         </div>
 
         <div className="space-y-2 border-t border-zinc-200 p-3 dark:border-zinc-800">
-          <PreflightPanel
-            local={localState}
-            onStatus={(b) => {
-              setBlockers(b);
-              if (b.length === 0) setOverrideBlockers(false);
-            }}
-          />
+          <PreflightPanel local={localState} onStatus={onPreflight} />
+          {plan?.credits && <MinutesLeft left={plan.credits.interview_minutes_left} />}
+          {startError && (
+            <div role="alert" className="flex items-start gap-2 rounded-lg bg-rose-500/10 px-3 py-2 text-xs text-rose-800 dark:text-rose-200">
+              <span className="flex-1">{startError.text}</span>
+              {startError.buy && (
+                <button type="button" onClick={() => openBilling()} className={cx("shrink-0 font-medium underline", focusRing)}>
+                  Buy minutes
+                </button>
+              )}
+            </div>
+          )}
           <button
             type="submit"
             disabled={starting || (negotiation && offer.trim().length < 2) || (blockers.length > 0 && !overrideBlockers)}
@@ -817,10 +842,18 @@ export function SetupScreen({
             {starting
               ? "Starting…"
               : blockers.length > 0 && !overrideBlockers
-                ? `Fix ${blockers.length} problem${blockers.length === 1 ? "" : "s"} to start`
+                ? outOfMinutes
+                  ? "Out of interview minutes"
+                  : `Fix ${blockers.length} problem${blockers.length === 1 ? "" : "s"} to start`
                 : "Start Session"}
           </button>
-          {blockers.length > 0 && !overrideBlockers && !starting && (
+          {outOfMinutes && !starting && (
+            <Button className="w-full" variant="secondary" onClick={() => openBilling()}>
+              <CreditCard className="h-4 w-4" />
+              Buy interview minutes
+            </Button>
+          )}
+          {blockers.length > 0 && !overrideBlockers && !starting && !outOfMinutes && (
             <button
               type="button"
               onClick={() => {
@@ -840,13 +873,15 @@ export function SetupScreen({
               Start without these checks
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => void openUrl(`${WEB_URL}/sessions`)}
-            className={cx("mt-2 w-full text-center text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}
-          >
-            History, documents & billing open in your browser
-          </button>
+          {!outOfMinutes && (
+            <button
+              type="button"
+              onClick={() => openBilling()}
+              className={cx("mt-2 w-full text-center text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}
+            >
+              Buy more interview minutes ↗
+            </button>
+          )}
         </div>
       </form>
     </div>
@@ -949,18 +984,22 @@ function AudioTest({
           if (text) setNote(text);
         } else {
           log(channel, "error", ev.message);
-          setNote(ev.message);
+          setNote(friendlyAudioError(ev.message));
         }
       });
-      if (info.micError) log("mic", "error", info.micError);
+      if (info.micError) {
+        log("mic", "error", info.micError);
+        setNote(friendlyAudioError(info.micError));
+      }
       if (systemAudio && info.systemError) {
         log("system", "error", info.systemError);
-        setNote(info.systemError);
+        setNote(friendlyAudioError(info.systemError));
       }
       setRunning(true);
     } catch (err) {
       runningRef.current = false;
-      setNote(String(err));
+      events.current.push({ t: 0, channel: "mic", kind: "error", detail: String(err) });
+      setNote(friendlyAudioError(err));
     }
   };
 
@@ -1034,10 +1073,15 @@ function ChannelResult({ summary: s }: { summary: ChannelSummary }) {
   return (
     <div role="status" className="pl-14 text-xs">
       <p className={VERDICT_STYLE[s.verdict]}>{s.advice}</p>
+      {/* The measurements are for support: in a tooltip and in "Copy diagnostics", not in the way. */}
       {s.verdict !== "waiting" && (
-        <p className="text-zinc-500 tabular-nums">
-          {s.seconds}s · received {pct(s.delivery)} · dropouts {s.dropouts} · silent {pct(s.silentShare)}
-          {s.averageDbfs !== null && ` · avg ${s.averageDbfs} dBFS, peak ${s.peakDbfs} dBFS`}
+        <p
+          className="text-zinc-500 tabular-nums"
+          title={`received ${pct(s.delivery)} · dropouts ${s.dropouts} · silent ${pct(s.silentShare)}${
+            s.averageDbfs !== null ? ` · avg ${s.averageDbfs} dBFS, peak ${s.peakDbfs} dBFS` : ""
+          }`}
+        >
+          Tested for {s.seconds}s
         </p>
       )}
     </div>
@@ -1065,4 +1109,15 @@ function LevelRow({ label, level }: { label: string; level: number }) {
 const BROWSER_EXES = new Set(["chrome.exe", "msedge.exe", "firefox.exe", "brave.exe", "opera.exe", "vivaldi.exe", "arc.exe"]);
 function isBrowserExe(exe: string): boolean {
   return BROWSER_EXES.has(exe.split(/[\\/]/).pop()?.toLowerCase() ?? "");
+}
+
+/** "42 interview minutes left" by the Start button; amber when a session would soon run out. */
+function MinutesLeft({ left }: { left: number }) {
+  const n = Math.max(0, Math.round(left));
+  if (n === 0) return null; // the checks already say so, with the way to buy more
+  return (
+    <p className={cx("text-center text-xs tabular-nums", n < 10 ? "text-amber-700 dark:text-amber-300" : "text-zinc-500")}>
+      {n} interview minute{n === 1 ? "" : "s"} left
+    </p>
+  );
 }

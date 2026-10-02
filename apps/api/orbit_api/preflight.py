@@ -66,6 +66,28 @@ class PreflightOut(BaseModel):
     blockers: int = 0
 
 
+def _plain(c: Check) -> Check:
+    """The check as someone who can't change the server reads it: what works and what to do, without provider
+    names, error codes, timings or server settings (admins see those)."""
+    if c.id not in ("server", "llm", "stt", "vision"):
+        return c
+    if c.status == "ok":
+        detail, fix = ("Connected." if c.id == "server" else "Ready."), None
+    elif c.id == "vision":
+        detail, fix = "Screenshot answers aren't available right now.", "Paste the problem into Chat instead."
+    elif c.detail.startswith("Demo mode"):
+        detail, fix = c.detail, None
+    elif c.id == "llm" and c.status == "warn":
+        detail = "Working, on the backup AI." if "backup" in c.detail else "Working, but slower than usual."
+        fix = "Answers may take a little longer for a while."
+    elif c.status == "warn":
+        detail, fix = "Couldn't fully check it; it will most likely work.", "Re-check in a minute."
+    else:
+        detail = "Orbit is having trouble right now." if c.id == "server" else "Not responding right now."
+        fix = "Orbit retries by itself. Re-check in a minute."
+    return c.model_copy(update={"detail": detail, "fix": fix, "latency_ms": None})
+
+
 def _finish(checks: list[Check]) -> PreflightOut:
     for c in checks:
         c.severity = "blocker" if c.id in BLOCKER_IDS else "warning"
@@ -230,32 +252,35 @@ async def preflight(user: Annotated[User, Depends(current_user)], db: Annotated[
     checks += [llm, stt]
     vision = get_llm_provider().supports_vision()
     if vision:
-        checks.append(Check(id="vision", label="Screenshots", status="ok", detail="The AI can read screenshots."))
+        checks.append(Check(id="vision", label="Screenshot answers", status="ok",
+                            detail="The AI can read screenshots."))
     else:
-        checks.append(Check(id="vision", label="Screenshots", status="warn",
+        checks.append(Check(id="vision", label="Screenshot answers", status="warn",
                             detail="The configured AI model can't read images.",
                             fix="Use a vision model (deepseek-flash) in Settings → Advanced."))
+    if not await is_admin(db, user):
+        checks = [_plain(c) for c in checks]
 
     plan = await plan_for(db, user.id)
     left_min = await minutes_remaining(db, user.id, "interview")
     if left_min is None:
-        checks.append(Check(id="minutes", label="Live minutes", status="ok", detail=f"Unlimited ({plan.name} plan)."))
+        checks.append(Check(id="minutes", label="Interview minutes", status="ok", detail="Unlimited."))
     else:
         left = max(left_min, 0)
         status: Status = "fail" if left <= 0 else "warn" if left < LOW_MINUTES else "ok"
         if plan.credits:  # interview credits: they don't refill, a pack adds more
-            fix = {"fail": "You're out of interview minutes. Buy a credit pack in Plan & billing.",
-                   "warn": "Only a few minutes left — a session ends when they run out. Packs add more."}.get(status)
+            fix = {"fail": "You're out of interview minutes. Buy a pack to keep going.",
+                   "warn": "Only a few minutes left — a session ends when they run out. A pack adds more."}.get(status)
             detail = f"{left:.0f} interview minutes left."
         else:
             fix = {"fail": "You're out of live minutes for this month.",
                    "warn": "Only a few minutes left — a session ends when they run out."}.get(status)
             detail = f"{left:.0f} of {plan.live_minutes} minutes left this month."
-        checks.append(Check(id="minutes", label="Live minutes", status=status, detail=detail, fix=fix))
+        checks.append(Check(id="minutes", label="Interview minutes", status=status, detail=detail, fix=fix))
     if plan.screenshots is not None:
         used = int(await usage_this_month(db, user.id, "screenshots"))
         left_shots = max(plan.screenshots - used, 0)
-        checks.append(Check(id="screenshots", label="Screenshot credits", status="ok" if left_shots else "warn",
+        checks.append(Check(id="screenshots", label="Screenshots", status="ok" if left_shots else "warn",
                             detail=f"{left_shots} of {plan.screenshots} left this month.",
                             fix=None if left_shots else "No screenshot answers left this month."))
 

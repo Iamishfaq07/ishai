@@ -105,6 +105,8 @@ export interface LivePanelProps {
   onReconnect?: () => void;
   /** End another live session of this account (one live session at a time), so this one can connect. */
   onEndOtherSession?: (sessionId: string) => Promise<void>;
+  /** Where to buy more interview minutes (the billing page), offered when they run low or out. */
+  onBuyMinutes?: () => void;
   onScreenshot?: () => void;
   screenshotUnavailableReason?: string;
   hotkeys?: HotkeyMap;
@@ -308,7 +310,13 @@ export function LivePanel(props: LivePanelProps) {
         )}
       </header>
 
-      <Banners live={live} onReconnect={props.onReconnect} onEndOtherSession={props.onEndOtherSession} onDismiss={actions.dismissError} />
+      <Banners
+        live={live}
+        onReconnect={props.onReconnect}
+        onEndOtherSession={props.onEndOtherSession}
+        onBuyMinutes={props.onBuyMinutes}
+        onDismiss={actions.dismissError}
+      />
       {props.notice}
 
       {paused && !ended && (
@@ -508,15 +516,25 @@ function Banners({
   live,
   onReconnect,
   onEndOtherSession,
+  onBuyMinutes,
   onDismiss,
 }: {
   live: LiveViewState;
   onReconnect?: () => void;
   /** End another live session of this account (one live session at a time), so this one can connect. */
   onEndOtherSession?: (sessionId: string) => Promise<void>;
+  onBuyMinutes?: () => void;
   onDismiss: () => void;
 }) {
   const items: Array<{ key: string; tone: "warn" | "error"; text: string; action?: ReactNode }> = [];
+  const buy = (label: string) =>
+    onBuyMinutes ? (
+      <button type="button" onClick={onBuyMinutes} className={cx("shrink-0 font-medium underline", focusRing)}>
+        {label}
+      </button>
+    ) : undefined;
+  // Out of minutes before connecting (the ticket was refused with 402): reconnecting can't help, buying can.
+  const outOfMinutes = live.connectionInfo?.code === "http_402";
 
   const other = live.connectionInfo?.code === "live_session_active" ? live.connectionInfo.sessionId : undefined;
   if (live.connection === "closed" && live.state !== "ended" && live.connectionDetail && other && onEndOtherSession) {
@@ -526,6 +544,8 @@ function Banners({
       text: live.connectionDetail,
       action: <EndOtherButton onEnd={() => onEndOtherSession(other)} onDone={onReconnect} />,
     });
+  } else if (live.connection === "closed" && live.state !== "ended" && live.connectionDetail && outOfMinutes) {
+    items.push({ key: "conn", tone: "error", text: live.connectionDetail, action: buy("Buy minutes") });
   } else if (live.connection === "closed" && live.state !== "ended" && live.connectionDetail) {
     items.push({
       key: "conn",
@@ -555,8 +575,9 @@ function Banners({
       tone: "error",
       text:
         live.usage.reason === "session"
-          ? "This session reached its maximum length and has ended. Start a new session to continue."
-          : "You've used this month's minutes — the session has ended.",
+          ? "This session reached the time limit and has ended. Start a new session to continue."
+          : "You've run out of interview minutes, so the session has ended. Your transcript is saved in History.",
+      ...(live.usage.reason === "session" ? {} : { action: buy("Buy minutes") }),
     });
   else if (live.usage && live.state !== "ended") {
     const n = Math.max(1, Math.round(live.usage.minutesRemaining));
@@ -565,8 +586,9 @@ function Banners({
       tone: "warn",
       text:
         live.usage.reason === "session"
-          ? `${n} minute${n === 1 ? "" : "s"} left in this session — it ends automatically at your plan's maximum length.`
-          : `${n} minute${n === 1 ? "" : "s"} left this month — the session ends when they run out.`,
+          ? `${n} minute${n === 1 ? "" : "s"} left in this session — it ends automatically at the time limit.`
+          : `${n} interview minute${n === 1 ? "" : "s"} left — the session ends when they run out.`,
+      ...(live.usage.reason === "session" ? {} : { action: buy("Buy more") }),
     });
   }
   if (live.lastError)

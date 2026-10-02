@@ -1,10 +1,11 @@
 import { type ReactNode, useEffect, useState } from "react";
-import type { OrbitSession, SessionType, User } from "@orbit/types";
+import type { Entitlements, OrbitSession, SessionType, User } from "@orbit/types";
 import {
   ArrowRight,
   Briefcase,
   ClipboardCheck,
   Code2,
+  CreditCard,
   FolderOpen,
   HistoryIcon,
   LogOut,
@@ -22,6 +23,7 @@ import {
   type LucideIcon,
 } from "@orbit/ui";
 import { api } from "../api";
+import { openBilling, useEntitlements } from "../credits";
 import { formatDate, formatDuration, SESSION_TYPE_LABEL } from "../format";
 import { TitleBar, TitleBarButton } from "../TitleBar";
 
@@ -62,13 +64,20 @@ export function HomeScreen({
   onSignOut: () => void;
 }) {
   const [sessions, setSessions] = useState<OrbitSession[] | null>(null);
+  const [sessionsError, setSessionsError] = useState(false);
+  const plan = useEntitlements();
 
-  useEffect(() => {
+  const loadSessions = () => {
+    setSessionsError(false);
     api
       .listSessions()
       .then(setSessions)
-      .catch(() => setSessions([]));
-  }, []);
+      .catch(() => {
+        setSessions([]);
+        setSessionsError(true);
+      });
+  };
+  useEffect(loadSessions, []);
 
   const recent = (sessions ?? []).slice(0, 5);
   const firstName = user?.name?.split(" ")[0];
@@ -97,10 +106,13 @@ export function HomeScreen({
               Orbit listens through your system or a chosen app, spots the interviewer’s question, and streams a concise
               answer you can glance at while you speak.
             </p>
-            <Button size="lg" className="relative mt-5" onClick={() => onNewSession()}>
-              New session
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+            <div className="relative mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+              <Button size="lg" onClick={() => onNewSession()}>
+                New session
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              {plan?.credits && <CreditsLine credits={plan.credits} />}
+            </div>
           </section>
 
           <section>
@@ -139,6 +151,14 @@ export function HomeScreen({
               {sessions === null ? (
                 <div className="p-5">
                   <Spinner />
+                </div>
+              ) : sessionsError ? (
+                <div className="flex flex-col items-center px-5 py-6 text-center">
+                  <p className="text-sm font-medium">Couldn't load your sessions</p>
+                  <p className="mt-0.5 text-xs text-zinc-500">Check your internet connection, then try again.</p>
+                  <Button variant="secondary" size="sm" className="mt-3" onClick={loadSessions}>
+                    Try again
+                  </Button>
                 </div>
               ) : recent.length === 0 ? (
                 <div className="flex flex-col items-center px-5 py-6 text-center">
@@ -188,5 +208,31 @@ export function HomeScreen({
         </div>
       </div>
     </div>
+  );
+}
+
+/** What's left to spend, with the way to add more. Low or empty balances say so before a session is started. */
+function CreditsLine({ credits }: { credits: NonNullable<Entitlements["credits"]> }) {
+  const left = Math.round(credits.interview_minutes_left);
+  const low = left < 10;
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-600 dark:text-zinc-300">
+      <span className={cx("font-medium tabular-nums", low && "text-amber-700 dark:text-amber-300")}>
+        {left > 0 ? `${left} interview min left` : "No interview minutes left"}
+      </span>
+      {credits.resume !== null && (
+        <span className="tabular-nums">
+          · {credits.resume} resume AI credit{credits.resume === 1 ? "" : "s"}
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={() => openBilling()}
+        className={cx("inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}
+      >
+        <CreditCard className="h-3 w-3" />
+        {low ? "Buy more" : "Buy credits"}
+      </button>
+    </p>
   );
 }
