@@ -32,13 +32,13 @@ interview minutes. Sign-up needs no approval or email check, so to stop throwawa
 ### Credit packs (UPI)
 | Pack | Price | Interview minutes | Resume AI credits |
 |---|---|---|---|
-| Starter | ₹1,499 | 60 | 30 |
-| Plus | ₹2,999 | 150 | 75 |
-| Pro | ₹5,999 | 360 | 200 |
+| Starter | ₹1,499 | 60 | 15 |
+| Plus | ₹2,999 | 150 | 40 |
+| Pro | ₹5,999 | 360 | 100 |
 
 Replace them without a code change (validated at boot):
 ```bash
-ORBIT_CREDIT_PACKS_JSON='[{"id": "starter", "label": "Starter", "price_inr": 1499, "resume_credits": 30, "interview_minutes": 60}]'
+ORBIT_CREDIT_PACKS_JSON='[{"id": "starter", "label": "Starter", "price_inr": 1499, "resume_credits": 15, "interview_minutes": 60}]'
 ```
 An order keeps what the pack gave when it was bought, so changing packs never changes a paid order.
 

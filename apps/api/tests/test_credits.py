@@ -164,7 +164,7 @@ def test_there_is_no_signed_out_resume_maker(client: TestClient) -> None:
 def test_packs_are_listed_and_need_a_upi_id(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(get_settings(), "upi_id", None)
     packs = {p["id"]: p for p in client.get("/v1/billing/packs").json()}
-    assert packs["starter"] == {"id": "starter", "label": "Starter", "price_inr": 1499, "resume_credits": 30,
+    assert packs["starter"] == {"id": "starter", "label": "Starter", "price_inr": 1499, "resume_credits": 15,
                                 "interview_minutes": 60, "buyable": False}
     assert set(packs) == {"starter", "plus", "pro"}
     h = _register(client)
@@ -210,7 +210,7 @@ def test_buying_a_pack_over_upi(monkeypatch: pytest.MonkeyPatch) -> None:
         order = client.post("/v1/billing/upi/orders", headers=h, json={"pack": "starter"})
         assert order.status_code == 201
         o = order.json()
-        assert (o["amount_inr"], o["resume_credits"], o["interview_minutes"]) == (1499, 30, 60)
+        assert (o["amount_inr"], o["resume_credits"], o["interview_minutes"]) == (1499, 15, 60)
         assert o["label"] == "Starter pack" and o["status"] == "awaiting_payment" and o["reference"].startswith("ORB")
         assert o["upi_uri"].startswith("upi://pay?pa=owner%40okicici") and "am=1499.00" in o["upi_uri"]
         assert o["reference"] in o["upi_uri"] and "pn=Ishfaq" in o["upi_uri"]
@@ -244,9 +244,9 @@ def test_buying_a_pack_over_upi(monkeypatch: pytest.MonkeyPatch) -> None:
         ok = client.post(f"/v1/admin/payments/{o['id']}", headers=admin, json={"action": "approve"})
         assert ok.status_code == 200 and ok.json()["status"] == "approved"
         w = _wallet(client, h)
-        assert w["resume"] == 31 and w["interview_minutes_left"] == 80.0  # welcome + the pack
+        assert w["resume"] == 16 and w["interview_minutes_left"] == 80.0  # welcome + the pack
         mail = next(m for m in reversed(_outbox().sent) if m.subject.startswith("Payment received"))
-        assert "30 resume AI credits and 60 interview minutes" in mail.subject
+        assert "15 resume AI credits and 60 interview minutes" in mail.subject
         assert client.post(f"/v1/admin/payments/{o['id']}", headers=admin,
                            json={"action": "approve"}).status_code == 409  # decided once
 
