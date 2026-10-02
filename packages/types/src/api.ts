@@ -700,9 +700,21 @@ export interface CostReport {
 export type ResumeSectionId = "summary" | "experience" | "education" | "skills" | "projects" | "certifications";
 /** A place in `section_order`: a standard section, or "extra:<id>" for one of `extras`. */
 export type ResumeSectionKey = ResumeSectionId | `extra:${string}`;
-export type ResumeTemplate = "classic" | "modern" | "compact" | "sidebar";
-export type ResumeFont = "inter" | "arial" | "georgia" | "garamond" | "grotesk";
+/** All single-column (ATS-safe) except "sidebar". */
+export type ResumeTemplate = "classic" | "modern" | "compact" | "sidebar" | "elegant" | "minimal" | "bold" | "executive";
+export type ResumeFont =
+  | "inter"
+  | "arial"
+  | "georgia"
+  | "garamond"
+  | "grotesk"
+  | "calibri"
+  | "cambria"
+  | "helvetica"
+  | "times"
+  | "trebuchet";
 export type ResumeSpacing = "compact" | "normal" | "relaxed";
+export type ResumeLineHeight = "tight" | "normal" | "airy";
 
 export interface ResumeLink {
   label: string;
@@ -779,6 +791,10 @@ export interface ResumeData {
   certifications: ResumeCertification[];
   extras: ResumeExtraSection[];
   section_order: ResumeSectionKey[];
+  /** Sections kept in the editor but left off the resume. */
+  hidden?: ResumeSectionKey[];
+  /** Your own headings for the standard sections ("Work experience"). */
+  titles?: Partial<Record<ResumeSectionId, string>>;
 }
 
 export interface ResumeDesign {
@@ -789,6 +805,9 @@ export interface ResumeDesign {
   /** Points (9–12.5). */
   font_size: number;
   spacing: ResumeSpacing;
+  line_height?: ResumeLineHeight;
+  /** Skills as a comma list, or as tags. */
+  skills_style?: "list" | "tags";
   page: "a4" | "letter";
   /** A data: URL (PNG/JPEG/WebP), shrunk before upload. */
   photo: string | null;

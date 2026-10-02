@@ -36,7 +36,7 @@ import { ContentForm } from "./ContentForm";
 import { AiCostNote, AiErrorNote, AllowanceBanner, AllowanceContext, isUpgradeError, useAllowance, useResumeAllowance } from "./allowance";
 import { useBackend } from "./backend";
 import { FixActions, FixResult, fixKind } from "./FixPanel";
-import { ACCENTS, FONTS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, resumeToText, suggestedSkills } from "./model";
+import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, resumeToText, suggestedSkills } from "./model";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
 
@@ -1309,11 +1309,109 @@ function SuggestionCard({ s, total, onAccept, onSkip }: { s: ResumeSuggestion; t
   );
 }
 
+/** A small segmented control for one design choice. */
+function Segmented<T extends string>({ label, options, value, onChange }: {
+  label: string;
+  options: ReadonlyArray<{ id: T; label: string }>;
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div>
+      <p className="mb-1.5 text-sm font-medium">{label}</p>
+      <div role="group" aria-label={label} className="inline-flex gap-1 rounded-xl bg-zinc-500/10 p-1">
+        {options.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            aria-pressed={value === o.id}
+            onClick={() => onChange(o.id)}
+            className={cx("rounded-lg px-3 py-1 text-sm", value === o.id ? "bg-white font-medium shadow-sm dark:bg-white/10" : "text-zinc-500", focusRing)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** A thumbnail of a template's layout, in the chosen colour: header shape, headings, columns. */
+function TemplateSketch({ template, accent }: { template: ResumeDesign["template"]; accent: string }) {
+  const line = (w: string, extra = "") => <span className={cx("block h-[3px] rounded-full bg-zinc-300 dark:bg-zinc-600", extra)} style={{ width: w }} />;
+  const heading =
+    template === "minimal" ? (
+      <span className="block h-[3px] w-1/4 rounded-full bg-zinc-400" />
+    ) : template === "executive" ? (
+      <span className="block h-[5px] w-full rounded-sm" style={{ background: accent, opacity: 0.25, borderLeft: `2px solid ${accent}` }} />
+    ) : (
+      <span className="block h-[3px] w-1/3 rounded-full" style={{ background: accent }} />
+    );
+  const body = (
+    <span className="block space-y-1">
+      {heading}
+      {line("90%")}
+      {line("75%")}
+      {heading}
+      {line("85%")}
+      {line("60%")}
+    </span>
+  );
+  return (
+    <span aria-hidden className="block h-24 overflow-hidden rounded-lg bg-white p-2 ring-1 ring-black/5 dark:bg-zinc-100">
+      {template === "sidebar" ? (
+        <span className="flex h-full gap-1.5">
+          <span className="block w-1/3 space-y-1 rounded p-1" style={{ background: accent, opacity: 0.18 }} />
+          <span className="block flex-1">{body}</span>
+        </span>
+      ) : (
+        <>
+          {template === "bold" ? (
+            <span className="-mx-2 -mt-2 mb-1.5 block px-2 py-1.5" style={{ background: accent }}>
+              <span className="block h-[5px] w-1/2 rounded-full bg-white/90" />
+            </span>
+          ) : (
+            <span className={cx("mb-1.5 block", ["classic", "elegant"].includes(template) && "flex flex-col items-center")}>
+              <span className="block h-[5px] w-1/2 rounded-full" style={{ background: ["modern", "executive"].includes(template) ? accent : "#3f3f46" }} />
+              {template === "elegant" && <span className="mt-1 block h-[2px] w-full border-y border-zinc-400" />}
+            </span>
+          )}
+          {body}
+        </>
+      )}
+    </span>
+  );
+}
+
 function DesignPanel({ design, setDesign }: { design: ResumeDesign; setDesign: (patch: Partial<ResumeDesign>) => void }) {
   const photoRef = useRef<HTMLInputElement>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   return (
     <div className="space-y-4">
+      <Panel title="Quick looks">
+        <p className="-mt-1 mb-3 text-xs text-zinc-500 dark:text-zinc-400">One click sets the template, colour and font together. Fine-tune below.</p>
+        <div className="flex flex-wrap gap-2">
+          {LOOKS.map((look) => {
+            const on = look.design.template === design.template && look.design.accent === design.accent && look.design.font === design.font;
+            return (
+              <button
+                key={look.label}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setDesign(look.design)}
+                className={cx(
+                  "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors",
+                  on ? "border-indigo-500 bg-indigo-500/5 ring-1 ring-indigo-500" : "border-zinc-200 hover:border-zinc-300 dark:border-white/10",
+                  focusRing,
+                )}
+              >
+                <span aria-hidden className="h-3.5 w-3.5 rounded-full" style={{ background: look.design.accent }} />
+                {look.label}
+              </button>
+            );
+          })}
+        </div>
+      </Panel>
       <Panel title="Template">
         <div className="grid grid-cols-2 gap-2">
           {TEMPLATES.map((t) => (
@@ -1328,7 +1426,8 @@ function DesignPanel({ design, setDesign }: { design: ResumeDesign; setDesign: (
                 focusRing,
               )}
             >
-              <span className="block text-sm font-medium">{t.label}</span>
+              <TemplateSketch template={t.id} accent={design.accent} />
+              <span className="mt-2 block text-sm font-medium">{t.label}</span>
               <span className="block text-xs text-zinc-500 dark:text-zinc-400">{t.note}</span>
             </button>
           ))}
@@ -1380,6 +1479,18 @@ function DesignPanel({ design, setDesign }: { design: ResumeDesign; setDesign: (
           <Field label={`Text size: ${design.font_size} pt`} htmlFor="size">
             <input id="size" type="range" min={9} max={12.5} step={0.5} value={design.font_size} onChange={(e) => setDesign({ font_size: Number(e.target.value) })} className="w-full accent-indigo-600" />
           </Field>
+          <Segmented
+            label="Line spacing"
+            options={LINE_HEIGHTS}
+            value={design.line_height ?? "normal"}
+            onChange={(line_height) => setDesign({ line_height })}
+          />
+          <Segmented
+            label="Skills"
+            options={[{ id: "list", label: "Comma list" }, { id: "tags", label: "Tags" }] as const}
+            value={design.skills_style ?? "list"}
+            onChange={(skills_style) => setDesign({ skills_style })}
+          />
           <div>
             <p className="mb-1.5 text-sm font-medium">Spacing</p>
             <div className="inline-flex gap-1 rounded-xl bg-zinc-500/10 p-1">

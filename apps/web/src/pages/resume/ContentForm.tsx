@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
 import type {
   ResumeCertification,
   ResumeData,
@@ -7,14 +7,24 @@ import type {
   ResumeExtraSection,
   ResumeLineIssue,
   ResumeProject,
+  ResumeSectionId,
   ResumeSectionKey,
   ResumeSkillGroup,
 } from "@orbit/types";
-import { ChevronDown, Plus, Sparkles, Trash2, X, cx, focusRing } from "@orbit/ui";
+import { ChevronDown, Copy, Eye, EyeOff, PenLine, Plus, Sparkles, Trash2, X, cx, focusRing } from "@orbit/ui";
 import { Button, Field, Input, Textarea } from "../../components/ui";
-import { EXTRA_PRESETS, MAX_EXTRAS, getAt, newId, sectionLabel } from "./model";
+import { EXTRA_PRESETS, MAX_EXTRAS, SECTION_LABEL, getAt, newId, sectionLabel } from "./model";
 
 type Update = (fn: (d: ResumeData) => ResumeData) => void;
+
+const MAX_BULLETS = 12;
+
+/** A copy of item `i` right after it, with its own id (and bullets), to edit into a similar role. */
+function duplicateAt<T extends { id: string }>(list: T[], i: number): T[] {
+  const item = list[i];
+  if (!item) return list;
+  return [...list.slice(0, i + 1), { ...structuredClone(item), id: newId() }, ...list.slice(i + 1)];
+}
 
 function move<T>(list: T[], i: number, by: -1 | 1): T[] {
   const j = i + by;
@@ -39,7 +49,15 @@ function IconButton({ label, onClick, children, disabled }: { label: string; onC
   );
 }
 
-function ItemTools({ i, n, label, onMove, onRemove }: { i: number; n: number; label: string; onMove: (by: -1 | 1) => void; onRemove: () => void }) {
+function ItemTools({ i, n, label, onMove, onRemove, onDuplicate }: {
+  i: number;
+  n: number;
+  label: string;
+  onMove: (by: -1 | 1) => void;
+  onRemove: () => void;
+  /** Absent when the list is full. */
+  onDuplicate?: () => void;
+}) {
   return (
     <div className="flex shrink-0 items-center gap-0.5">
       <IconButton label={`Move ${label} up`} onClick={() => onMove(-1)} disabled={i === 0}>
@@ -48,6 +66,11 @@ function ItemTools({ i, n, label, onMove, onRemove }: { i: number; n: number; la
       <IconButton label={`Move ${label} down`} onClick={() => onMove(1)} disabled={i === n - 1}>
         <ChevronDown className="h-4 w-4" />
       </IconButton>
+      {onDuplicate && (
+        <IconButton label={`Duplicate ${label}`} onClick={onDuplicate}>
+          <Copy className="h-4 w-4" />
+        </IconButton>
+      )}
       <IconButton label={`Remove ${label}`} onClick={onRemove}>
         <Trash2 className="h-4 w-4" />
       </IconButton>
@@ -134,9 +157,34 @@ function Bullets({ path, bullets, onChange, onRewrite, checks = NO_CHECKS }: {
   checks?: LineChecks;
 }) {
   const setBullet = (i: number, value: string) => onChange(bullets.map((x, j) => (j === i ? value : x)));
+  const focusBullet = (i: number, atEnd = false) =>
+    window.setTimeout(() => {
+      const el = document.querySelector<HTMLTextAreaElement>(`[data-path="${CSS.escape(`${path}.bullets.${i}`)}"]`);
+      el?.focus();
+      if (el && atEnd) el.setSelectionRange(el.value.length, el.value.length);
+    });
+  // Enter starts the next bullet (Shift+Enter is a line break); Backspace in an empty bullet removes it.
+  const onKey = (i: number, e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      if (bullets.length >= MAX_BULLETS) return;
+      const caret = e.currentTarget.selectionStart;
+      const text = bullets[i] ?? "";
+      const next = [...bullets];
+      next.splice(i, 1, text.slice(0, caret).trimEnd(), text.slice(caret).trimStart());
+      onChange(next);
+      focusBullet(i + 1);
+    } else if (e.key === "Backspace" && !(bullets[i] ?? "") && bullets.length > 1) {
+      e.preventDefault();
+      onChange(bullets.filter((_, j) => j !== i));
+      focusBullet(Math.max(0, i - 1), true);
+    }
+  };
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Bullets: start with a verb, end with the result (a number if you have one).</p>
+      <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        Bullets: start with a verb, end with the result (a number if you have one). Enter adds the next one.
+      </p>
       {bullets.map((b, i) => (
         <div key={i} className="space-y-1">
           <div className="flex items-start gap-1">
@@ -149,11 +197,15 @@ function Bullets({ path, bullets, onChange, onRewrite, checks = NO_CHECKS }: {
               spellCheck
               value={b}
               onChange={(e) => setBullet(i, e.target.value)}
+              onKeyDown={(e) => onKey(i, e)}
               className="min-h-0 flex-1 scroll-mt-24"
             />
             <div className="flex flex-col">
               <IconButton label={`Move bullet ${i + 1} up`} onClick={() => onChange(move(bullets, i, -1))} disabled={i === 0}>
                 <ChevronDown className="h-3.5 w-3.5 rotate-180" />
+              </IconButton>
+              <IconButton label={`Move bullet ${i + 1} down`} onClick={() => onChange(move(bullets, i, 1))} disabled={i === bullets.length - 1}>
+                <ChevronDown className="h-3.5 w-3.5" />
               </IconButton>
               <IconButton label={`Remove bullet ${i + 1}`} onClick={() => onChange(bullets.filter((_, j) => j !== i))}>
                 <X className="h-3.5 w-3.5" />
@@ -176,7 +228,15 @@ function Bullets({ path, bullets, onChange, onRewrite, checks = NO_CHECKS }: {
           />
         </div>
       ))}
-      <Button variant="ghost" size="sm" onClick={() => onChange([...bullets, ""])} disabled={bullets.length >= 12}>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => {
+          onChange([...bullets, ""]);
+          focusBullet(bullets.length);
+        }}
+        disabled={bullets.length >= MAX_BULLETS}
+      >
         <Plus className="h-3.5 w-3.5" /> Add bullet
       </Button>
     </div>
@@ -278,6 +338,7 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
 }) {
   const b = data.basics;
   const checks: LineChecks = { issues, scored };
+  const [renaming, setRenaming] = useState<ResumeSectionKey | null>(null);
   const summaryWords = b.summary.trim() ? b.summary.trim().split(/\s+/).length : 0;
   const setBasics = (patch: Partial<ResumeData["basics"]>) => update((d) => ({ ...d, basics: { ...d.basics, ...patch } }));
   const list = <K extends "experience" | "education" | "skills" | "projects" | "certifications" | "extras">(key: K) => ({
@@ -307,13 +368,51 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
   const removeExtra = (id: string) =>
     update((d) => ({ ...d, extras: d.extras.filter((x) => x.id !== id), section_order: d.section_order.filter((k) => k !== `extra:${id}`) }));
 
+  const hidden = new Set(data.hidden ?? []);
+  const toggleHidden = (s: ResumeSectionKey) =>
+    update((d) => {
+      const now = new Set(d.hidden ?? []);
+      if (!now.delete(s)) now.add(s);
+      return { ...d, hidden: d.section_order.filter((k) => now.has(k)) };
+    });
+  const setTitle = (s: ResumeSectionId, title: string) =>
+    update((d) => ({ ...d, titles: { ...d.titles, [s]: title.slice(0, 40) } }));
   const order = (
-    <Section id="section_order" title="Section order">
+    <Section id="section_order" title="Sections: order, names and what shows">
+      <p className="-mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+        Hidden sections stay here but are left off the resume. Standard names (Experience, Education, Skills) are what
+        ATS software looks for.
+      </p>
       <ol className="space-y-1">
         {data.section_order.map((s, i) => (
-          <li key={s} className="flex items-center justify-between rounded-lg bg-zinc-500/5 px-3 py-1.5 text-sm">
-            {sectionLabel(data, s)}
+          <li key={s} className={cx("flex items-center justify-between gap-2 rounded-lg bg-zinc-500/5 px-3 py-1.5 text-sm", hidden.has(s) && "opacity-60")}>
+            {renaming === s && !s.startsWith("extra:") ? (
+              <Input
+                aria-label={`Heading for ${SECTION_LABEL[s as ResumeSectionId]}`}
+                autoFocus
+                maxLength={40}
+                value={data.titles?.[s as ResumeSectionId] ?? ""}
+                placeholder={SECTION_LABEL[s as ResumeSectionId]}
+                onChange={(e) => setTitle(s as ResumeSectionId, e.target.value)}
+                onBlur={() => setRenaming(null)}
+                onKeyDown={(e) => (e.key === "Enter" || e.key === "Escape") && setRenaming(null)}
+                className="h-8 min-w-0 flex-1 py-1"
+              />
+            ) : (
+              <span className={cx("min-w-0 flex-1 truncate", hidden.has(s) && "line-through")}>
+                {sectionLabel(data, s)}
+                {hidden.has(s) && <span className="ml-2 text-xs no-underline">(hidden)</span>}
+              </span>
+            )}
             <span className="flex">
+              {!s.startsWith("extra:") && (
+                <IconButton label={`Rename ${sectionLabel(data, s)}`} onClick={() => setRenaming(s)}>
+                  <PenLine className="h-4 w-4" />
+                </IconButton>
+              )}
+              <IconButton label={hidden.has(s) ? `Show ${sectionLabel(data, s)}` : `Hide ${sectionLabel(data, s)}`} onClick={() => toggleHidden(s)}>
+                {hidden.has(s) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </IconButton>
               <IconButton label={`Move ${sectionLabel(data, s)} up`} onClick={() => update((d) => ({ ...d, section_order: move<ResumeSectionKey>(d.section_order, i, -1) }))} disabled={i === 0}>
                 <ChevronDown className="h-4 w-4 rotate-180" />
               </IconButton>
@@ -402,7 +501,14 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
           <div key={e.id} data-path={`experience.${e.id}`} tabIndex={-1} className="scroll-mt-24 space-y-3 rounded-xl border border-zinc-200 p-3 outline-none dark:border-white/10">
             <div className="flex items-center justify-between gap-2">
               <p className="truncate text-sm font-medium">{[e.title, e.company].filter(Boolean).join(" at ") || "New role"}</p>
-              <ItemTools i={i} n={data.experience.length} label="role" onMove={(by) => exp.set(move(data.experience, i, by))} onRemove={() => exp.set(data.experience.filter((x) => x.id !== e.id))} />
+              <ItemTools
+                i={i}
+                n={data.experience.length}
+                label="role"
+                onMove={(by) => exp.set(move(data.experience, i, by))}
+                onRemove={() => exp.set(data.experience.filter((x) => x.id !== e.id))}
+                onDuplicate={data.experience.length < 20 ? () => exp.set(duplicateAt(data.experience, i)) : undefined}
+              />
             </div>
             <TwoCol>
               <Field label="Job title" htmlFor={`t-${e.id}`}><Input id={`t-${e.id}`} maxLength={160} value={e.title} onChange={(ev) => exp.patch(e.id, { title: ev.target.value })} /></Field>
@@ -454,7 +560,14 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
           <div key={p.id} data-path={`projects.${p.id}`} tabIndex={-1} className="space-y-3 rounded-xl border border-zinc-200 p-3 outline-none dark:border-white/10">
             <div className="flex items-center justify-between gap-2">
               <p className="truncate text-sm font-medium">{p.name || "New project"}</p>
-              <ItemTools i={i} n={data.projects.length} label="project" onMove={(by) => projects.set(move(data.projects, i, by))} onRemove={() => projects.set(data.projects.filter((x) => x.id !== p.id))} />
+              <ItemTools
+                i={i}
+                n={data.projects.length}
+                label="project"
+                onMove={(by) => projects.set(move(data.projects, i, by))}
+                onRemove={() => projects.set(data.projects.filter((x) => x.id !== p.id))}
+                onDuplicate={data.projects.length < 10 ? () => projects.set(duplicateAt(data.projects, i)) : undefined}
+              />
             </div>
             <TwoCol>
               <Field label="Name" htmlFor={`pn-${p.id}`}><Input id={`pn-${p.id}`} maxLength={160} value={p.name} onChange={(ev) => projects.patch(p.id, { name: ev.target.value })} /></Field>

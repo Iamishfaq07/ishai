@@ -459,6 +459,7 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
     from orbit_api.resumes.fixes import date_suggestions  # fixes builds on this module's helpers
 
     design = design or ResumeDesign()
+    data = data.visible()  # a hidden section isn't on the resume, so it can't count
     checks: list[AtsCheck] = []
     b = data.basics
 
