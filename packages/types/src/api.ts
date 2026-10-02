@@ -844,6 +844,10 @@ export interface AtsCheck {
   target: string | null;
   /** "Fix with AI" can rewrite the target text. */
   ai_fixable: boolean;
+  /** How it gets fixed: "ai" (a resume credit), "auto" (worked out without the AI, free), "you" (only you know it). */
+  fix_kind?: "ai" | "auto" | "you" | null;
+  /** Every line the problem is on. */
+  paths?: string[];
 }
 
 /** A writing problem on one line (a bullet, the summary), shown under that line in the editor. */
@@ -894,6 +898,44 @@ export interface ResumeSuggestion {
   reason: string;
   kind?: ResumeSuggestionKind;
   confirm?: string | null;
+}
+
+/** "Fix with AI" from the ATS score: one check (`check`), or everything. */
+export interface ResumeFixRequest {
+  data: ResumeData;
+  design: ResumeDesign;
+  job_text: string;
+  check?: string;
+  /** Your answers to `questions`: path -> "about 40 a week". */
+  facts?: Record<string, string>;
+  /** From the fix that asked the questions: writing your answers in is part of it (free). */
+  followup?: string;
+}
+
+/** A number only you know, asked about one line. */
+export interface ResumeFixQuestion {
+  path: string;
+  text: string;
+  question: string;
+}
+
+export interface ResumeFixResponse {
+  /** Apply in order; each replaces the text that was sent (`before`). */
+  suggestions: ResumeSuggestion[];
+  /** Not in your resume yet (skills from the job post, bullets drafted from a job title): keep or skip each. */
+  review: ResumeSuggestion[];
+  questions: ResumeFixQuestion[];
+  design: Partial<ResumeDesign>;
+  /** Experience ids, most recent first. */
+  order: string[] | null;
+  score_before: number;
+  score_after: number;
+  /** Still failing, of what was asked. */
+  remaining: AtsCheck[];
+  upgrade_required: boolean;
+  ai_error: string | null;
+  /** Send back with the answers to `questions`. */
+  followup: string | null;
 }
 
 export interface ResumeSuggestRequest {

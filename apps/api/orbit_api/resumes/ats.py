@@ -31,6 +31,9 @@ CATEGORY_LABELS: dict[Category, str] = {
 }
 
 
+FixKind = Literal["ai", "auto", "you"]
+
+
 class AtsCheck(BaseModel):
     id: str
     category: Category
@@ -41,6 +44,11 @@ class AtsCheck(BaseModel):
     fix: str | None = None
     target: str | None = None
     ai_fixable: bool = False
+    # How it gets fixed: "ai" rewrites or drafts text (a resume credit), "auto" is worked out without the AI (free),
+    # "you" needs something only the candidate knows (a phone number, a role's dates). None once it passes.
+    fix_kind: FixKind | None = None
+    # Every line the problem is on (paths), not just the first: what "Fix with AI" rewrites and then re-checks.
+    paths: list[str] = []
 
 
 class AtsCategory(BaseModel):
@@ -88,6 +96,14 @@ started streamlined strengthened structured supervised supported surpassed synth
 transformed translated tripled troubleshot tuned unified upgraded utilized validated won wrote
 closed coded documented exceeded hired hosted landed lifted lowered onboarded owned piloted quadrupled ramped
 retained rolled shaped shortened sold sourced steered trimmed
+answered entered responded prepared compiled collected updated escalated logged recorded filed demonstrated
+explained interviewed liaised moderated navigated ordered posted purchased received registered routed sorted staffed
+stocked surveyed tutored verified volunteered welcomed cleaned greeted assisted answered handled triaged resolved
+assigned briefed checked communicated conveyed delegated distributed drafted equipped estimated familiarized gathered
+greenlit illustrated informed inventoried issued lectured matched modified noticed obtained outlined persuaded
+photographed picked prepped printed programmed protected qualified rated reached recognized rectified rewrote
+scanned screened shared simulated sketched spoke sponsored strategized studied summarized supplied tailored
+transcribed transitioned uncovered unveiled visualized weighed
 """.split())
 # Present-tense forms whose past isn't the word + "ed"/"d" (a current role is written in the present: "Lead a team").
 _IRREGULAR_PRESENT = {
@@ -423,12 +439,16 @@ def match_keywords(keywords: list[str], data: ResumeData) -> AtsKeywords:
 
 
 def _check(checks: list[AtsCheck], id_: str, category: Category, label: str, max_points: float, ratio: float,
-           fix: str | None, target: str | None = None, ai_fixable: bool = False) -> None:
+           fix: str | None, target: str | None = None, ai_fixable: bool = False, *, kind: FixKind | None = None,
+           paths: list[str] | None = None) -> None:
+    """`kind` is how the problem gets fixed (default: "ai" when the AI can, else "you"); `paths` every line it's on."""
     ratio = max(0.0, min(1.0, ratio))
     passed = ratio >= 0.999
+    kind = kind or ("ai" if ai_fixable else "you")
     checks.append(AtsCheck(id=id_, category=category, label=label, max_points=max_points,
                            points=round(max_points * ratio, 1), passed=passed, fix=None if passed else fix,
-                           target=None if passed else target, ai_fixable=ai_fixable and not passed))
+                           target=None if passed else target, ai_fixable=ai_fixable and not passed,
+                           fix_kind=None if passed else kind, paths=[] if passed else list(paths or [])))
 
 
 def _verdict(score: int) -> str:
@@ -446,12 +466,13 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
     _check(checks, "name", "contact", "Your name at the top", 2, 1.0 if b.name.strip() else 0,
            "Add your full name: it's the first thing a parser looks for.", "basics.name")
     _check(checks, "email", "contact", "A valid email address", 3, 1.0 if _EMAIL.match(b.email.strip()) else 0,
-           "Add an email address recruiters can reach you at.", "basics.email")
+           "Add an email address recruiters can reach you at.", "basics.email", kind="auto")  # the account's
     _check(checks, "phone", "contact", "A phone number", 2,
            1.0 if len(re.sub(r"\D", "", b.phone)) >= 7 else 0, "Add a phone number, with the country code.",
            "basics.phone")
     _check(checks, "location", "contact", "Your city or region", 1, 1.0 if b.location.strip() else 0,
-           "Add your city and country (or \"Remote\"): recruiters filter by location.", "basics.location")
+           "Add your city and country (or \"Remote\"): recruiters filter by location.", "basics.location",
+           kind="auto" if any(e.location.strip() for e in data.experience) else "you")  # the latest role's
     _check(checks, "link", "contact", "A LinkedIn or portfolio link", 2,
            1.0 if any(link.url.strip() for link in b.links) else 0,
            "Add your LinkedIn profile or portfolio link.", "basics.links")
@@ -493,41 +514,46 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
            (sum(1 for e in roles if 2 <= len([x for x in e.bullets if x.strip()]) <= 6) / len(roles)) if roles else 0,
            f"Give \"{thin.title or thin.company}\" 2-6 bullets: fewer looks thin, more gets skimmed." if thin
            else "Add 2-6 bullets to each role.", f"experience.{thin.id}" if thin else "experience",
-           ai_fixable=thin is not None and len([x for x in thin.bullets if x.strip()]) < 2)
+           ai_fixable=any(len([x for x in e.bullets if x.strip()]) < 2 for e in roles),
+           paths=[f"experience.{e.id}.bullets.+" for e in roles if len([x for x in e.bullets if x.strip()]) < 2])
 
     if bullets:
         weak = [(p, t) for p, t in bullets if not is_action_verb(_first_word(t))]
         _check(checks, "action_verbs", "experience", "Bullets start with an action verb", 4,
                1 - len(weak) / len(bullets),
                f"{len(bullets) - len(weak)} of {len(bullets)} bullets start with an action verb. Lead with what you "
-               "did: Led, Built, Reduced, Launched.", weak[0][0] if weak else None, ai_fixable=True)
+               "did: Led, Built, Reduced, Launched.", weak[0][0] if weak else None, ai_fixable=True,
+               paths=[p for p, _ in weak])
         unquantified = [(p, t) for p, t in bullets if not is_quantified(t)]
         quantified = len(bullets) - len(unquantified)
         _check(checks, "quantified", "experience", "At least half the bullets have a number", 7,
                min(1.0, quantified / (len(bullets) * 0.5)),
                f"{quantified} of {len(bullets)} bullets have a number. Add the size of the result: %, $, time saved, "
-               "users, team size.", unquantified[0][0] if unquantified else None, ai_fixable=True)
+               "users, team size.", unquantified[0][0] if unquantified else None, ai_fixable=True,
+               paths=[p for p, _ in unquantified])
         bad_len = [(p, t) for p, t in bullets if not 8 <= len(_words(t)) <= 35]
         _check(checks, "bullet_length", "experience", "Bullets are 8-35 words", 3, 1 - len(bad_len) / len(bullets),
                "Keep each bullet to one line or two: 8-35 words.", bad_len[0][0] if bad_len else None,
-               ai_fixable=True)
+               ai_fixable=True, paths=[p for p, _ in bad_len])
         # The same opening verb over and over reads as padding: allow it on about one bullet in five, at least twice.
         openers = Counter(_first_word(t) for _, t in bullets)
         allowed = max(2, -(-len(bullets) // 5))
         overused = [(w, n) for w, n in openers.most_common() if w and n > allowed]
         repeat_at = None
+        repeated: list[str] = []  # the ones past the allowance, for each overused opener
+        for word, _ in overused:
+            repeated += [p for p, t in bullets if _first_word(t) == word][allowed:]
         if overused:
-            word = overused[0][0]
-            repeat_at = [p for p, t in bullets if _first_word(t) == word][allowed]
+            repeat_at = repeated[0]
         _check(checks, "varied_verbs", "experience", "Opening verbs are varied", 1, 0 if overused else 1.0,
                (f"{overused[0][1]} bullets start with \"{overused[0][0].capitalize()}\". Vary them"
                 + (f": {VERB_ALTERNATIVES[overused[0][0]]}." if overused[0][0] in VERB_ALTERNATIVES else ".")
-                ) if overused else None, repeat_at, ai_fixable=True)
+                ) if overused else None, repeat_at, ai_fixable=True, paths=repeated)
         first_person = [(p, t) for p, t in bullets if _PRONOUN.search(t)]
         _check(checks, "no_pronouns", "experience", "No \"I\" or \"my\" in bullets", 1,
                1 - len(first_person) / len(bullets),
                "Drop \"I\" and \"my\": resume bullets start with the verb.",
-               first_person[0][0] if first_person else None, ai_fixable=True)
+               first_person[0][0] if first_person else None, ai_fixable=True, paths=[p for p, _ in first_person])
     else:
         for id_, label, pts in (("action_verbs", "Bullets start with an action verb", 4),
                                 ("quantified", "At least half the bullets have a number", 7),
@@ -535,7 +561,7 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
                                 ("varied_verbs", "Opening verbs are varied", 1),
                                 ("no_pronouns", "No \"I\" or \"my\" in bullets", 1)):
             _check(checks, id_, "experience", label, pts, 0, "Add bullets describing what you achieved in each role.",
-                   "experience", ai_fixable=bool(roles))
+                   "experience", ai_fixable=bool(roles), paths=[f"experience.{e.id}.bullets.+" for e in roles])
 
     # skills (7)
     _check(checks, "skills_count", "skills", "At least 8 skills listed", 7, n_skills / 8,
@@ -548,13 +574,13 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
            1.0 if 300 <= total_words <= 1000 else total_words / 300 if total_words < 300 else 0.5,
            f"The resume has {total_words} words: " + ("add more detail to your roles." if total_words < 300 else
                                                       "trim it to the last 10-15 years and your best results."),
-           "experience")
+           "experience", ai_fixable=bool(roles))  # the AI adds detail (or tightens) from what the resume says
     # Roles only: education written as years ("2016") is normal next to "Jan 2020" for jobs.
     styles = {s for e in data.experience for s in (date_style(e.start), date_style(e.end)) if s}
     _check(checks, "dates", "readability", "Dates written one way", 2,
            1.0 if len(styles) <= 1 and "other" not in styles else 0,
            "Write every date the same way, e.g. \"Jan 2021\", so a parser can work out each role's length.",
-           "experience", ai_fixable=bool(date_suggestions(data)))
+           "experience", ai_fixable=bool(date_suggestions(data)), kind="auto" if date_suggestions(data) else "you")
     # Roles most recent first, and none ending before it starts: parsers and recruiters both read it that way.
     # Out of order means it both starts and ends later than the role above it: overlapping jobs are fine.
     order_fix: tuple[str, str] | None = None
@@ -574,7 +600,8 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
         if start or end:
             previous = (start, end, name)
     _check(checks, "date_order", "readability", "Roles most recent first, dates in order", 2,
-           0 if order_fix else 1.0, order_fix[0] if order_fix else None, order_fix[1] if order_fix else None)
+           0 if order_fix else 1.0, order_fix[0] if order_fix else None, order_fix[1] if order_fix else None,
+           kind="auto" if order_fix and order_fix[0].startswith("List roles") else "you")  # sorting is mechanical
     fields = [(p, t) for p, t in text_fields(data) if t.strip()]
     unfilled = [(p, m.group(0)) for p, t in fields if (m := PLACEHOLDER.search(t))]
     n_unfilled = len(unfilled)
@@ -583,12 +610,14 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
             f"placeholder like {unfilled[0][1]}: rewrite {'them' if n_unfilled != 1 else 'it'} as finished text, "
             "using a real number if you have one, or it prints as-is."
             ) if unfilled else None, unfilled[0][0] if unfilled else None,
-           ai_fixable=bool(unfilled))  # the AI rewrites them complete, without inventing a number
+           ai_fixable=bool(unfilled),  # the AI rewrites them complete, without inventing a number
+           paths=[p for p, _ in unfilled])
     cliched = [(p, m.group(1)) for p, t in fields if (m := _CLICHE.search(t))]
     _check(checks, "cliches", "readability", "No clichés like \"team player\"", 1, 0 if cliched else 1.0,
            (f"\"{cliched[0][1]}\" claims a quality instead of showing it. Replace it with what you did that proves it."
             ) if cliched else None, cliched[0][0] if cliched else None,
-           ai_fixable=bool(cliched) and not cliched[0][0].startswith(("education.", "extras.")))
+           ai_fixable=bool(cliched) and not cliched[0][0].startswith(("education.", "extras.")),
+           paths=[p for p, _ in cliched if not p.startswith(("education.", "extras."))])
     issues = line_issues(data)
     unclear = [i for i in issues if i.kind != "casing"]
     unclear_lines = {i.path for i in unclear}
@@ -598,20 +627,21 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
            (f"{len(unclear_lines)} line{'s' if len(unclear_lines) != 1 else ''} could read stronger. First: "
             f"{unclear[0].message} Fix weak openers (\"Responsible for\", \"Helped\"), the passive voice, filler words "
             "and a past role written in the present tense.") if unclear else None,
-           unclear[0].path if unclear else None, ai_fixable=bool(unclear))
+           unclear[0].path if unclear else None, ai_fixable=bool(unclear), paths=sorted(unclear_lines))
     miscased = [i for i in issues if i.kind == "casing"]
     _check(checks, "tech_names", "readability", "Tools and tech spelled the standard way", 1, 0 if miscased else 1.0,
            miscased[0].message if miscased else None, miscased[0].path if miscased else None,
-           ai_fixable=bool(miscased))  # fixed mechanically (fixes.casing_suggestions): no AI, no credit
+           ai_fixable=bool(miscased), kind="auto",  # fixed mechanically (fixes.casing_suggestions): no AI, no credit
+           paths=[i.path for i in miscased])
 
     # layout (4)
     _check(checks, "single_column", "layout", "Single-column template", 2, 0 if design.template == "sidebar" else 1.0,
            "Two-column layouts can be read out of order by ATS software. Pick Classic, Modern or Compact.",
-           "design.template")
+           "design.template", kind="auto")
     photo = design.show_photo and bool(design.photo)
     _check(checks, "no_photo", "layout", "No photo", 2, 0 if photo else 1.0,
            "Most ATS software ignores photos, and US, UK and Canadian employers often screen them out. Hide it "
-           "unless photos are expected where you apply.", "design.photo")
+           "unless photos are expected where you apply.", "design.photo", kind="auto")
 
     # keywords (25)
     keywords: AtsKeywords | None = None

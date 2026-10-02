@@ -43,6 +43,8 @@ import type {
   ResumeImportRequest,
   ResumeImportResponse,
   ResumeInput,
+  ResumeFixRequest,
+  ResumeFixResponse,
   ResumeSuggestRequest,
   ResumeSuggestion,
   ResumeSummary,
@@ -228,6 +230,9 @@ export function createApiClient(options: ApiClientOptions) {
         method: "POST",
         body: body(req),
       }),
+    /** "Fix with AI" from the ATS score: fixed, applied and re-checked on the server; at most one resume credit. */
+    fixResume: (req: ResumeFixRequest) =>
+      json<ResumeFixResponse>(`${base}/fix`, { method: "POST", body: body(req), timeoutMs: LONG_TIMEOUT_MS }),
     /** Unlimited AI on this plan, or how many resume credits are left (and the cheapest pack that adds more). */
     resumeAllowance: () => json<ResumeAiAllowance>(`${base}/allowance`),
   });

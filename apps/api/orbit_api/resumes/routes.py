@@ -37,7 +37,7 @@ from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError, LLMRequest, LLMResponse
 from orbit_api.providers.llm.pricing import estimate_cost
 from orbit_api.ratelimit import limit, limit_user
-from orbit_api.resumes import ai, fixes
+from orbit_api.resumes import ai, autofix, fixes
 from orbit_api.resumes.allowance import Allowance, AllowanceOut, allowance_for
 from orbit_api.resumes.ats import AtsReport, score_resume
 from orbit_api.resumes.claims import ground_import
@@ -422,7 +422,7 @@ async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn, allowan
     req = ai.suggest_request(d, report, llm, mode=body.mode, job_text=body.job_text, focus=body.focus, check=check)
     try:
         resp = await _generate(db, user, req, "suggest", allowance)
-        suggestions = ai.parse_suggestions(resp, d, focus=body.focus)
+        suggestions = ai.parse_suggestions(resp, d, focus=body.focus, job_text=body.job_text)
     except HTTPException as e:
         if mechanical:  # the AI is down (or the free use just went), but the mechanical fixes are still good
             if not used_ai:
@@ -445,6 +445,29 @@ async def suggest(body: SuggestIn, user: Annotated[User, Depends(require_verifie
                   db: Annotated[AsyncSession, Depends(get_db)],
                   allowance: Annotated[Allowance, Depends(account_allowance)]) -> SuggestOut:
     return await _spend(allowance, _suggest(db, user, body, allowance))
+
+
+@router.post("/fix", response_model=autofix.FixOut, dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
+async def fix(body: autofix.FixIn, user: Annotated[User, Depends(require_verified_email)],
+              db: Annotated[AsyncSession, Depends(get_db)],
+              allowance: Annotated[Allowance, Depends(account_allowance)]) -> autofix.FixOut:
+    """"Fix with AI" from the ATS score: one check (or all of them) fixed, applied and re-checked here, with what
+    only the candidate can answer (a number, a claim to confirm) handed back. One AI action at most."""
+    if body.check and body.check not in {c.id for c in score_resume(body.data, body.design, body.job_text).checks}:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Unknown check.")
+    if body.followup and body.facts and autofix.followup_ok(body.followup, user.id, body.facts):
+        # Answers to the questions a fix asked: part of that fix, already paid for. Only those lines.
+        body = body.model_copy(update={"check": "quantified"})
+        allowance = Allowance(db, user, unlimited=True)
+
+    async def run() -> autofix.FixOut:
+        out, used_ai = await autofix.fix_resume(body, user, allowance.can_spend,
+                                                lambda req: _generate(db, user, req, "fix", allowance))
+        if not used_ai:  # nothing the AI wrote: the credit (if claimed) goes back
+            await allowance.release()
+        return out
+
+    return await _spend(allowance, run())
 
 
 @router.post("/cover-letter/docx", dependencies=[Depends(score_limit)],

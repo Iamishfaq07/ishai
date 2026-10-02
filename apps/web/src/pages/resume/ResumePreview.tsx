@@ -156,13 +156,15 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     );
   };
 
-  const bullets = (items: string[]) => {
-    const list = items.filter((b) => b.trim());
+  // `base` tags each line with the editor path it comes from ("experience.<id>.bullets.2"), so the editor can point at
+  // the line a suggestion or an edit is about. The index is the bullet's own, blanks included.
+  const bullets = (items: string[], base?: string) => {
+    const list = items.map((text, i) => ({ text, i })).filter((b) => b.text.trim());
     return list.length ? (
       <ul className="mt-[2pt] list-disc space-y-[1.5pt] pl-[1.2em]">
-        {list.map((b, i) => (
-          <li key={i}>
-            <Fill text={b} />
+        {list.map((b) => (
+          <li key={b.i} data-rpath={base ? `${base}.bullets.${b.i}` : undefined}>
+            <Fill text={b.text} />
           </li>
         ))}
       </ul>
@@ -175,12 +177,12 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     const extra = extraOf(data, id);
     if (extra) {
       const items = extra.items.filter((i) => i.trim());
-      body = extra.style === "inline" ? <p><Fill text={items.join(" · ")} /></p> : bullets(items);
+      body = <div data-rpath={`extras.${extra.id}`}>{extra.style === "inline" ? <p><Fill text={items.join(" · ")} /></p> : bullets(items)}</div>;
     }
-    if (id === "summary") body = <p><Fill text={data.basics.summary} /></p>;
+    if (id === "summary") body = <p data-rpath="basics.summary"><Fill text={data.basics.summary} /></p>;
     if (id === "experience") {
       body = data.experience.map((e) => (
-        <div key={e.id} style={{ marginBottom: space.item }} className="break-inside-avoid">
+        <div key={e.id} data-rpath={`experience.${e.id}`} style={{ marginBottom: space.item }} className="break-inside-avoid">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3">
             <p>
               <span className="font-bold">{e.title}</span>
@@ -189,13 +191,13 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
             </p>
             <p className="whitespace-nowrap text-zinc-600">{dateRange(e.start, e.end, e.current)}</p>
           </div>
-          {bullets(e.bullets)}
+          {bullets(e.bullets, `experience.${e.id}`)}
         </div>
       ));
     }
     if (id === "education") {
       body = data.education.map((e) => (
-        <div key={e.id} style={{ marginBottom: space.item }} className="break-inside-avoid">
+        <div key={e.id} data-rpath={`education.${e.id}`} style={{ marginBottom: space.item }} className="break-inside-avoid">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3">
             <p>
               <span className="font-bold">{[e.degree, e.field].filter(Boolean).join(", ") || e.school}</span>
@@ -209,7 +211,7 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     }
     if (id === "skills") {
       body = (
-        <div className="space-y-[2pt]">
+        <div data-rpath="skills" className="space-y-[2pt]">
           {data.skills
             .filter((s) => s.items.some((i) => i.trim()))
             .map((s) => (
@@ -223,13 +225,13 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     }
     if (id === "projects") {
       body = data.projects.map((p) => (
-        <div key={p.id} style={{ marginBottom: space.item }} className="break-inside-avoid">
+        <div key={p.id} data-rpath={`projects.${p.id}`} style={{ marginBottom: space.item }} className="break-inside-avoid">
           <p>
             <span className="font-bold">{p.name}</span>
             {p.link && <span className="text-zinc-600"> · {p.link}</span>}
           </p>
-          {p.description && <p><Fill text={p.description} /></p>}
-          {bullets(p.bullets)}
+          {p.description && <p data-rpath={`projects.${p.id}.description`}><Fill text={p.description} /></p>}
+          {bullets(p.bullets, `projects.${p.id}`)}
         </div>
       ));
     }
@@ -263,11 +265,11 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
       <div style={style} className="resume-page flex">
         <aside style={{ background: tint(accent, 0.9), padding: space.pad, width: "34%" }} className="shrink-0">
           {photo && <div className="mb-[10pt]">{photoEl("30mm")}</div>}
-          <h1 style={{ color: accent, fontSize: "1.9em", lineHeight: 1.1 }} className="font-bold">
+          <h1 data-rpath="basics.name" style={{ color: accent, fontSize: "1.9em", lineHeight: 1.1 }} className="font-bold">
             {name}
           </h1>
-          {data.basics.headline && <p className="mt-[3pt] font-medium">{data.basics.headline}</p>}
-          <div className="mt-[8pt] space-y-[2pt] break-words text-[0.92em]">
+          {data.basics.headline && <p data-rpath="basics.headline" className="mt-[3pt] font-medium">{data.basics.headline}</p>}
+          <div data-rpath="basics" className="mt-[8pt] space-y-[2pt] break-words text-[0.92em]">
             {contacts.map((c, i) => (
               <p key={`${i}-${c.text}`}>
                 <ContactLine items={[c]} sep="" />
@@ -287,29 +289,29 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     t === "classic" ? (
       // Not positioned itself: a positioned header is painted after the sections, so the PDF's text would list
       // the name and contacts last, which confuses ATS parsers. The photo is placed against the page instead.
-      <header className="text-center">
+      <header data-rpath="basics" className="text-center">
         {photo && <div className="absolute" style={{ top: space.pad, right: space.pad }}>{photoEl("22mm")}</div>}
-        <h1 style={{ fontSize: "2em", lineHeight: 1.15 }} className="font-bold tracking-tight">
+        <h1 data-rpath="basics.name" style={{ fontSize: "2em", lineHeight: 1.15 }} className="font-bold tracking-tight">
           {name}
         </h1>
-        {data.basics.headline && <p style={{ color: accent }} className="mt-[2pt] font-medium">{data.basics.headline}</p>}
+        {data.basics.headline && <p data-rpath="basics.headline" style={{ color: accent }} className="mt-[2pt] font-medium">{data.basics.headline}</p>}
         <p className="mt-[4pt] text-zinc-600"><ContactLine items={contacts} sep="  ·  " /></p>
       </header>
     ) : t === "modern" ? (
-      <header className="flex items-start justify-between gap-4">
+      <header data-rpath="basics" className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 style={{ color: accent, fontSize: "2.2em", lineHeight: 1.05 }} className="font-extrabold tracking-tight">
+          <h1 data-rpath="basics.name" style={{ color: accent, fontSize: "2.2em", lineHeight: 1.05 }} className="font-extrabold tracking-tight">
             {name}
           </h1>
-          {data.basics.headline && <p className="mt-[3pt] text-[1.1em] font-medium">{data.basics.headline}</p>}
+          {data.basics.headline && <p data-rpath="basics.headline" className="mt-[3pt] text-[1.1em] font-medium">{data.basics.headline}</p>}
           <p className="mt-[5pt] text-zinc-600"><ContactLine items={contacts} sep="  |  " /></p>
         </div>
         {photoEl("24mm")}
       </header>
     ) : (
-      <header className="flex items-end justify-between gap-3 border-b pb-[4pt]" style={{ borderColor: accent }}>
+      <header data-rpath="basics" className="flex items-end justify-between gap-3 border-b pb-[4pt]" style={{ borderColor: accent }}>
         <div className="min-w-0">
-          <h1 style={{ fontSize: "1.6em", lineHeight: 1.1 }} className="font-bold">
+          <h1 data-rpath="basics.name" style={{ fontSize: "1.6em", lineHeight: 1.1 }} className="font-bold">
             {name}
             {data.basics.headline && <span className="font-normal text-zinc-600"> — {data.basics.headline}</span>}
           </h1>

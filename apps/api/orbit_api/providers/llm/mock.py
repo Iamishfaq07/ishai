@@ -4,6 +4,7 @@ import asyncio
 import json
 import re
 from collections.abc import AsyncIterator
+from typing import Any
 
 from orbit_api.live.routing import ReasoningLevel
 from orbit_api.providers.llm.base import LLMChunk, LLMProvider, LLMRequest, Usage
@@ -51,6 +52,42 @@ def _mock_report(user: str) -> str:
         "review": {"overall_score": 4, "strengths": ["[mock] clear structure"], "improvements": ["[mock] add metrics"],
                    "practice": ["[mock] rehearse STAR stories"], "items": items},
     })
+
+
+def _reference(body: str, source: str) -> list[dict[str, Any]]:
+    m = re.search(rf'<reference_data source="{source}">\s*(\[.*?\])\s*</reference_data>', body, re.S)
+    try:
+        items = json.loads(m.group(1)) if m else []
+    except json.JSONDecodeError:
+        return []
+    return [x for x in items if isinstance(x, dict) and "path" in x]
+
+
+def _mock_resume_fix(body: str) -> str:
+    """Every listed line rewritten to start with a verb, without "I"/"my" or filler, keeping its words; a question
+    where it needs a number, and the candidate's fact written in where there is one. New bullets for listed roles."""
+    facts = {f["path"]: f.get("fact", "") for f in _reference(body, "facts")}
+    out, questions = [], []
+    for line in _reference(body, "lines_to_fix"):
+        words = [w for w in re.findall(r"[\w'%$.,+-]+", str(line.get("text", "")))
+                 if w.lower() not in {"i", "my", "me", "responsible", "for", "helped", "successfully", "was", "were",
+                                      "by", "team", "player", "hard", "working"}]
+        rest = " ".join(words).strip(" .,").lower() or "the work"
+        fact = facts.get(line["path"], "")
+        after = f"Delivered {rest}" + (f", {fact}" if fact else "") + " for the people who relied on it"
+        if line["path"] == "basics.summary":
+            after = ("Support professional who runs customer queues, writes help content and trains new colleagues, "
+                     "with a record of keeping customers answered and teams informed. Looking for a role that builds "
+                     "on that work.")
+        out.append({"path": line["path"], "after": after, "reason": "(mock) Fixed what was flagged."})
+        if any("number" in str(p) for p in line.get("problems", [])) and not fact:
+            questions.append({"path": line["path"], "question": "(mock) How many did you handle a week?"})
+    for role in _reference(body, "roles")[:3]:
+        job = str(role.get("role", "team")).split(" at ")[0].lower()
+        out.append({"path": role["path"], "after": f"Maintained the {job} systems day to day for the people who "
+                                                   "relied on them",
+                    "reason": "(mock) A role needs at least two bullets."})
+    return json.dumps({"suggestions": out, "questions": questions})
 
 
 def _mock_resume_import(body: str) -> str:
@@ -132,6 +169,8 @@ class MockLLMProvider(LLMProvider):
                 {"path": f["path"], "after": f"(mock) Improved: {f['text'] or 'A summary of your strengths'}"[:300],
                  "reason": "(mock) Clearer and more specific."}
                 for f in fields if isinstance(f, dict) and "path" in f][:3]})
+        if request.request_type == "resume_fix":
+            return _mock_resume_fix(request.messages[-1].content if request.messages else "")
         if request.request_type == "resume_skills":
             return json.dumps({"skills": ["Git", "Agile", "Jira", "Linux", "Code review", "Testing", "Communication"]})
         if request.request_type == "cover_letter":
