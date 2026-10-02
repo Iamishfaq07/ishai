@@ -47,6 +47,9 @@ Severity = Literal["blocker", "warning"]
 BLOCKER_IDS = frozenset({"server", "network", "llm", "stt", "mic", "minutes", "account"})
 LLM_TTL_S = 60
 STT_TTL_S = 300
+# "Re-check" re-pings the providers at most this often, for everyone together: they're shared (paid) keys, and an
+# account on many networks mustn't be able to keep them busy for every live interview.
+REFRESH_MIN_S = 10
 LOW_MINUTES = 10
 
 
@@ -225,8 +228,6 @@ async def _latest_version() -> str | None:
 async def preflight(user: Annotated[User, Depends(current_user)], db: Annotated[AsyncSession, Depends(get_db)],
                     app_version: Annotated[str | None, Query(max_length=32)] = None,
                     refresh: bool = False) -> PreflightOut:
-    if refresh:
-        _cache.clear()
     checks: list[Check] = []
     try:
         await db.execute(text("SELECT 1"))
@@ -248,7 +249,8 @@ async def preflight(user: Annotated[User, Depends(current_user)], db: Annotated[
                             fix="You'll get an email as soon as it's ready. Then re-check."))
         return _finish(checks)
 
-    llm, stt = await asyncio.gather(_cached("llm", LLM_TTL_S, _llm_check), _cached("stt", STT_TTL_S, _stt_check))
+    llm_ttl, stt_ttl = (REFRESH_MIN_S, REFRESH_MIN_S) if refresh else (LLM_TTL_S, STT_TTL_S)
+    llm, stt = await asyncio.gather(_cached("llm", llm_ttl, _llm_check), _cached("stt", stt_ttl, _stt_check))
     checks += [llm, stt]
     vision = get_llm_provider().supports_vision()
     if vision:

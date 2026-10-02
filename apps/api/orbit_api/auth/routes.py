@@ -323,6 +323,7 @@ async def delete_account(body: DeleteAccountIn, request: Request, response: Resp
         for session_id in (await db.scalars(select(LiveSessionRow.id).where(
                 LiveSessionRow.user_id == u.id, LiveSessionRow.status != "ended"))).all():
             await stop_live(u.id, session_id)
+        await stop_user_live(u.id)  # and every phone-share code
         await db.delete(u)
         # Rows without a foreign key keep no personal data: the account's audit trail loses its IP addresses, and
         # provider-cost rows lose the link to it (the cost totals stay right).

@@ -298,7 +298,7 @@ async def stop_user_live(user_id: str) -> None:
     password reset, a stolen session mustn't keep listening (and spending the owner's minutes)."""
     for session_id in list(_live_sockets.get(user_id, {})):
         await stop_live(user_id, session_id)
-        companion.stop_sharing(session_id)
+    companion.stop_user_sharing(user_id)  # every code, including for sessions not live yet
 
 
 async def stop_live(user_id: str, session_id: str) -> None:
@@ -412,6 +412,17 @@ async def drill_session(session_id: str, user: Annotated[User, Depends(require_v
     return await create_session(body, user, db)
 
 
+def _strip_nul(v: Any) -> Any:
+    """Postgres can't store U+0000 in text: dropped from live client events before anything records them."""
+    if isinstance(v, str):
+        return v.replace("\x00", "")
+    if isinstance(v, list):
+        return [_strip_nul(x) for x in v]
+    if isinstance(v, dict):
+        return {_strip_nul(k): _strip_nul(x) for k, x in v.items()}
+    return v
+
+
 @router.delete("/sessions/{session_id}", status_code=204)
 async def delete_session(session_id: str, user: Annotated[User, Depends(current_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> None:
@@ -419,6 +430,7 @@ async def delete_session(session_id: str, user: Annotated[User, Depends(current_
     # Live right now: stop it first, as End does. Deleting under a running engine left STT and the LLM running
     # (and metered) with every write failing against the deleted row, and the account's live slot taken.
     await stop_live(user.id, session_id)
+    companion.stop_sharing(session_id)  # its phone code goes with it, as on End
     await db.delete(row)
     await db.commit()
 
@@ -791,9 +803,11 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
                 continue
             try:
                 event = json.loads(text)
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, RecursionError):
                 await engine.send("error", {"code": "bad_json", "message": "invalid JSON"})
                 continue
+            if "\\u0000" in text:
+                event = _strip_nul(event)
             if not isinstance(event, dict) or event.get("type") not in CLIENT_EVENT_TYPES:
                 await engine.send("error", {"code": "unknown_event", "message": "unknown event type"})
                 continue

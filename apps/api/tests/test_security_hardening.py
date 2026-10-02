@@ -256,3 +256,34 @@ def test_deleting_an_account_leaves_no_ip_addresses_behind(client: TestClient) -
 
     left = client.portal.call(ips)  # type: ignore[union-attr]
     assert left and all(ip is None for ip in left)
+
+
+def test_a_nul_character_postgres_refuses_is_a_400_not_a_500() -> None:
+    from fastapi import FastAPI
+    from sqlalchemy.exc import DBAPIError
+
+    from orbit_api.main import bad_text_handler
+
+    class PgError(Exception):
+        def __init__(self, sqlstate: str) -> None:
+            self.sqlstate = sqlstate
+
+    app = FastAPI()
+    app.add_exception_handler(DBAPIError, bad_text_handler)
+
+    @app.get("/x/{code}")
+    async def x(code: str) -> None:
+        raise DBAPIError("INSERT", {}, PgError(code))
+
+    c = TestClient(app, raise_server_exceptions=False)
+    for code in ("22021", "22P05"):  # NUL in text, NUL in jsonb
+        r = c.get(f"/x/{code}")
+        assert r.status_code == 400 and "NUL" in r.json()["detail"]
+    assert c.get("/x/57P01").status_code == 500  # anything else is still a server error
+
+
+def test_live_events_lose_nul_characters_before_anything_records_them() -> None:
+    from orbit_api.sessions.routes import _strip_nul
+
+    assert _strip_nul({"type": "note", "text": "a\x00b", "tags": ["c\x00", 1], "k\x00": None}) == {
+        "type": "note", "text": "ab", "tags": ["c", 1], "k": None}

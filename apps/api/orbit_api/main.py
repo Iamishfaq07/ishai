@@ -9,6 +9,8 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import DBAPIError
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.types import Receive, Scope, Send
 
@@ -133,6 +135,25 @@ class BodyLimit:
         await self.app(scope, receive if length is not None else counted, send)
 
 
+# Postgres refuses U+0000 in text (22021) and in jsonb (22P05). Anything typed can carry one, so it's bad input.
+BAD_TEXT_SQLSTATES = frozenset({"22021", "22P05"})
+
+
+def bad_text(e: DBAPIError) -> bool:
+    orig = e.orig
+    codes = {getattr(orig, "sqlstate", None), getattr(orig, "pgcode", None),
+             getattr(getattr(orig, "__cause__", None), "sqlstate", None)}
+    return bool(codes & BAD_TEXT_SQLSTATES)
+
+
+async def bad_text_handler(request: Request, e: Exception) -> Response:
+    """A NUL character in a name, a resume line or a search: 400 with a reason, instead of a 500 (and an alert)."""
+    if isinstance(e, DBAPIError) and bad_text(e):
+        return JSONResponse({"detail": "That text has a character that can't be saved (a NUL byte). Remove it and "
+                                       "try again."}, status_code=400)
+    raise e
+
+
 def create_app() -> FastAPI:
     s = get_settings()
     configured_plans()  # fail fast on a bad ORBIT_PLANS_JSON / *_MAX_SESSION_MINUTES instead of at first use
@@ -145,6 +166,7 @@ def create_app() -> FastAPI:
                   docs_url="/docs" if s.env != "production" else None, redoc_url=None,
                   openapi_url="/openapi.json" if s.env != "production" else None)
     app.middleware("http")(request_id_middleware)
+    app.add_exception_handler(DBAPIError, bad_text_handler)
     # Registered before CORS so it runs *inside* it: its 403s still carry CORS headers the browser can read.
     app.middleware("http")(csrf_middleware)
     app.add_middleware(

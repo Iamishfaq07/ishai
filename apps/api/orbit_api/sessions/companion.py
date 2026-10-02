@@ -128,6 +128,13 @@ def stop_sharing(session_id: str) -> None:
         _detach(session_id, v)
 
 
+def stop_user_sharing(user_id: str) -> None:
+    """Every share code this account made, live session or not: after "sign out everywhere", a password reset or
+    change, a code made with a stolen login mustn't follow the owner's next interview."""
+    for session_id in {s.session_id for s in _shares.values() if s.user_id == user_id}:
+        stop_sharing(session_id)
+
+
 class ShareOut(BaseModel):
     code: str
     expires_in: int
