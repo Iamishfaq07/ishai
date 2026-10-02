@@ -182,6 +182,45 @@ export function createApiClient(options: ApiClientOptions) {
 
   const body = (value: unknown): string => JSON.stringify(value);
 
+  /** The resume tools that don't touch saved resumes, for the account API (`/v1/resumes`) or the free no-account one. */
+  const resumeTools = (base: string) => ({
+    scoreResume: (data: ResumeData, design: ResumeDesign, jobText: string, opts: RequestOptions = {}) =>
+      json<AtsReport>(`${base}/score`, {
+        method: "POST",
+        body: body({ data, design, job_text: jobText }),
+        ...(opts.signal ? { signal: opts.signal } : {}),
+      }),
+    importResume: (req: ResumeImportRequest, opts: RequestOptions = {}) =>
+      json<ResumeImportResponse>(`${base}/import`, {
+        method: "POST",
+        body: body(req),
+        timeoutMs: LONG_TIMEOUT_MS,
+        ...(opts.signal ? { signal: opts.signal } : {}),
+      }),
+    importResumeFile: (file: File | Blob, filename?: string, opts: RequestOptions = {}) => {
+      const form = new FormData();
+      if (filename) form.append("file", file, filename);
+      else form.append("file", file);
+      return json<ResumeImportResponse>(`${base}/import-file`, {
+        method: "POST",
+        body: form,
+        timeoutMs: LONG_TIMEOUT_MS,
+        ...(opts.signal ? { signal: opts.signal } : {}),
+      });
+    },
+    /** A cover letter from the resume and (if given) the job post; nothing it says goes beyond them. */
+    coverLetter: (data: ResumeData, jobText: string) =>
+      json<{ text: string }>(`${base}/cover-letter`, { method: "POST", body: body({ data, job_text: jobText }) }),
+    /** The cover letter as a Word file, with the resume's name and contact line on top. */
+    coverLetterDocx: async (text: string, data: ResumeData, design: ResumeDesign) =>
+      (await raw(`${base}/cover-letter/docx`, { method: "POST", body: body({ text, data, design }) })).blob(),
+    /** The resume as a Word file (.docx): one plain column, built from what the editor shows now. */
+    resumeDocx: async (data: ResumeData, design: ResumeDesign) =>
+      (await raw(`${base}/docx`, { method: "POST", body: body({ data, design }) })).blob(),
+    suggestResume: (req: ResumeSuggestRequest) =>
+      json<{ suggestions: ResumeSuggestion[] }>(`${base}/suggest`, { method: "POST", body: body(req) }),
+  });
+
   return {
     baseUrl,
 
@@ -268,41 +307,9 @@ export function createApiClient(options: ApiClientOptions) {
     updateResume: (id: string, req: ResumeInput) =>
       json<Resume>(`/v1/resumes/${encodeURIComponent(id)}`, { method: "PUT", body: body(req) }),
     deleteResume: (id: string) => json<void>(`/v1/resumes/${encodeURIComponent(id)}`, { method: "DELETE" }),
-    scoreResume: (data: ResumeData, design: ResumeDesign, jobText: string, opts: RequestOptions = {}) =>
-      json<AtsReport>("/v1/resumes/score", {
-        method: "POST",
-        body: body({ data, design, job_text: jobText }),
-        ...(opts.signal ? { signal: opts.signal } : {}),
-      }),
-    importResume: (req: ResumeImportRequest, opts: RequestOptions = {}) =>
-      json<ResumeImportResponse>("/v1/resumes/import", {
-        method: "POST",
-        body: body(req),
-        timeoutMs: LONG_TIMEOUT_MS,
-        ...(opts.signal ? { signal: opts.signal } : {}),
-      }),
-    importResumeFile: (file: File | Blob, filename?: string, opts: RequestOptions = {}) => {
-      const form = new FormData();
-      if (filename) form.append("file", file, filename);
-      else form.append("file", file);
-      return json<ResumeImportResponse>("/v1/resumes/import-file", {
-        method: "POST",
-        body: form,
-        timeoutMs: LONG_TIMEOUT_MS,
-        ...(opts.signal ? { signal: opts.signal } : {}),
-      });
-    },
-    /** A cover letter from the resume and (if given) the job post; nothing it says goes beyond them. */
-    coverLetter: (data: ResumeData, jobText: string) =>
-      json<{ text: string }>("/v1/resumes/cover-letter", { method: "POST", body: body({ data, job_text: jobText }) }),
-    /** The cover letter as a Word file, with the resume's name and contact line on top. */
-    coverLetterDocx: async (text: string, data: ResumeData, design: ResumeDesign) =>
-      (await raw("/v1/resumes/cover-letter/docx", { method: "POST", body: body({ text, data, design }) })).blob(),
-    /** The resume as a Word file (.docx): one plain column, built from what the editor shows now. */
-    resumeDocx: async (data: ResumeData, design: ResumeDesign) =>
-      (await raw("/v1/resumes/docx", { method: "POST", body: body({ data, design }) })).blob(),
-    suggestResume: (req: ResumeSuggestRequest) =>
-      json<{ suggestions: ResumeSuggestion[] }>("/v1/resumes/suggest", { method: "POST", body: body(req) }),
+    ...resumeTools("/v1/resumes"),
+    /** The free resume maker: the same tools with no account (the resume stays on the device). */
+    guest: resumeTools("/v1/resume-maker"),
 
     /** Interview prep: likely questions from a job description, with answers drawn from the resume. */
     prep: (req: PrepRequest) => json<PrepResponse>("/v1/prep", { method: "POST", body: body(req) }),

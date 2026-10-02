@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     )
     upload_dir: str = Field("./uploads", validation_alias=AliasChoices("ORBIT_UPLOAD_DIR"))
     max_upload_bytes: int = 10 * 1024 * 1024
+    # The free resume maker works without an account. Its AI calls cost money with nobody to bill, so besides a strict
+    # per-IP limit there is a cap on all signed-out AI calls per rolling 24 hours (0 turns the signed-out AI off).
+    guest_resume_ai_daily_limit: int = Field(300, ge=0, validation_alias=AliasChoices("ORBIT_GUEST_RESUME_AI_DAILY"))
 
     llm_provider: Literal["auto", "deepseek", "mock"] = Field(
         "auto", validation_alias=AliasChoices("ORBIT_LLM_PROVIDER")

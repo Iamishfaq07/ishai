@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { AudioLines, OrbitWordmark, PlanetHero, ShieldCheck, Sparkles, type LucideIcon } from "@orbit/ui";
+import { AudioLines, FileText, OrbitWordmark, PlanetHero, ShieldCheck, Sparkles, cx, focusRing, type LucideIcon } from "@orbit/ui";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button, ErrorNote, Field, Input } from "../components/ui";
 import { api } from "../lib/api";
@@ -13,7 +13,31 @@ const AUTH_POINTS: Array<{ icon: LucideIcon; text: string }> = [
   { icon: ShieldCheck, text: "Your documents stay private to your account" },
 ];
 
-function AuthShell({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
+/** The free resume maker needs no account, so the sign-in and sign-up screens say so and link straight to it. */
+function FreeResumeMaker() {
+  return (
+    <Link
+      to="/resume-maker"
+      className={cx(
+        "mt-4 flex items-center gap-3 rounded-2xl border border-indigo-500/25 bg-indigo-500/5 p-4 transition-colors hover:border-indigo-500/50 hover:bg-indigo-500/10",
+        focusRing,
+      )}
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-300">
+        <FileText className="h-5 w-5" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium">
+          Free resume maker <span className="ml-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">Free</span>
+        </span>
+        <span className="block text-xs text-zinc-500 dark:text-zinc-400">ATS score and AI fixes. No account needed.</span>
+      </span>
+      <span aria-hidden className="text-zinc-400">→</span>
+    </Link>
+  );
+}
+
+function AuthShell({ title, subtitle, children, freeResume = false }: { title: string; subtitle: string; children: ReactNode; freeResume?: boolean }) {
   return (
     <div className="grid min-h-full lg:grid-cols-2">
       <aside className="dark relative hidden overflow-hidden border-r border-white/5 bg-zinc-950 p-12 text-white lg:flex lg:flex-col">
@@ -50,6 +74,7 @@ function AuthShell({ title, subtitle, children }: { title: string; subtitle: str
             <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>
           </div>
           <div className="glass-panel rounded-2xl p-6 sm:p-7">{children}</div>
+          {freeResume && <FreeResumeMaker />}
         </div>
       </main>
     </div>
@@ -88,7 +113,7 @@ export function LoginPage() {
   };
 
   return (
-    <AuthShell title="Welcome back" subtitle="Sign in to start a live session">
+    <AuthShell title="Welcome back" subtitle="Sign in to start a live session" freeResume>
       <form onSubmit={(e) => void submit(e)} className="space-y-4">
         <Field label="Email" htmlFor="email">
           <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -163,7 +188,7 @@ export function RegisterPage() {
   };
 
   return (
-    <AuthShell title="Create your account" subtitle="Your real-time interview and meeting copilot">
+    <AuthShell title="Create your account" subtitle="Your real-time interview and meeting copilot" freeResume>
       <form onSubmit={(e) => void submit(e)} className="space-y-4">
         <Field label="Name" htmlFor="name">
           <Input id="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />

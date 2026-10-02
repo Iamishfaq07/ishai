@@ -42,6 +42,12 @@ Deleting an account cascades to every row above (`ON DELETE CASCADE`). The expor
 except secrets (the password hash) and derived search data (chunk embeddings). The documents' full text is
 included instead.
 
+**The free resume maker needs no account.** Signed out, the one resume you make is kept only in your browser
+(`localStorage`); the server never stores it, and it isn't tied to you. Scoring, Word export and the AI are done
+per request and nothing is kept: the text you send for an AI fix goes to the AI provider the same way a signed-in
+request does. Clearing your browsing data deletes the resume. If you later create an account, the editor offers to
+save that resume to it.
+
 Resume imports (a PDF, Word file, LinkedIn "Save to PDF" or pasted text) are read once and the file isn't kept:
 only the structured resume you then save is stored.
 

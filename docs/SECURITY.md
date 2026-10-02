@@ -73,6 +73,13 @@ In-process token buckets. They move to Redis before the API runs more than one i
 | Screenshots | IP + user | 10 burst, 6 / min per user |
 | AI review | IP + user | 3 burst, 10 / hour per user |
 | Uploads / preflight | IP | 10 burst / 6 burst |
+| Free resume maker, AI (signed out) | IP, and all signed-out callers | 6 burst, then 1 / min per IP; a rolling 24 h cap of `ORBIT_GUEST_RESUME_AI_DAILY` calls (default 300, `0` = AI off) |
+| Free resume maker, score and Word export (signed out) | IP | 30 burst, 2 / s |
+
+The free resume maker (`/v1/resume-maker/*`, `resumes/routes.py`) is the one public tool that spends money: it needs no
+account, so nobody can be billed or banned. It stores nothing, never reads documents or follows links, and its AI
+calls are logged without a user id so the daily cap (`guest_ai_gate`) can count them. A bot can therefore exhaust
+the day's free AI but not run up more than that cap in cost; scoring and Word export keep working either way.
 
 Client IPs (`ratelimit.client_ip`): the container runs uvicorn with `--forwarded-allow-ips='*'` because it's
 reachable only through the host's proxy; without that flag every request would share the proxy's IP, and so one

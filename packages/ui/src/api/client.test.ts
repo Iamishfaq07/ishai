@@ -116,3 +116,24 @@ describe("api client timeouts and cancelling", () => {
     expect(err).toMatchObject({ name: "AbortError" });
   });
 });
+
+describe("the free resume maker's client", () => {
+  it("uses the no-account endpoints for every tool, and the account ones otherwise", async () => {
+    const f = fakeFetch([]);
+    const api = createApiClient({ baseUrl: "https://api.test", auth: { mode: "cookie" }, fetchImpl: f.impl });
+    const data = { basics: {}, experience: [], education: [], skills: [], projects: [], certifications: [], extras: [] } as never;
+    const design = {} as never;
+    await api.guest.scoreResume(data, design, "");
+    await api.guest.suggestResume({ data });
+    await api.guest.importResume({ source: "text", text: "x" });
+    await api.guest.coverLetter(data, "");
+    await api.scoreResume(data, design, "");
+    expect(f.calls.map((c) => new URL(c.url).pathname)).toEqual([
+      "/v1/resume-maker/score",
+      "/v1/resume-maker/suggest",
+      "/v1/resume-maker/import",
+      "/v1/resume-maker/cover-letter",
+      "/v1/resumes/score",
+    ]);
+  });
+});

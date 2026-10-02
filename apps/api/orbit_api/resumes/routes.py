@@ -6,6 +6,9 @@
 - `POST /v1/resumes/import` (text, a LinkedIn profile's text, or a document already in Orbit) and
   `POST /v1/resumes/import-file` (PDF, DOCX or TXT, including LinkedIn's "Save to PDF"): AI reads it into
   structured data. Nothing is saved until the editor creates the resume.
+- `/v1/resume-maker/*`: the same tools (score, Word export, import, suggest, cover letter) with no account, for the
+  free signed-out resume maker. Nothing is stored on the server; the editor keeps the resume on the device. Because
+  the AI costs money with nobody to bill, these have a strict per-IP limit and a daily cap (`guest_ai_gate`).
 - `POST /v1/resumes/suggest`: AI rewrites, whole-resume ("improve"), for a job post ("tailor"), or one field
   ("focus"). The editor applies them one accepted change at a time.
 - `POST /v1/resumes/cover-letter`: an AI cover letter from the resume and job post, grounded the same way; the
@@ -15,7 +18,7 @@
 import asyncio
 import json
 import logging
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
@@ -47,6 +50,10 @@ MAX_JOB_TEXT = 20_000
 MIN_IMPORT_CHARS = 80
 
 score_limit = limit("resume-score", rate_per_s=2, burst=30)
+guest_score_limit = limit("resume-guest-score", rate_per_s=2, burst=30)
+# Signed-out AI: a handful at once, then one a minute per address.
+guest_ai_limit = limit("resume-guest-ai", rate_per_s=1 / 60, burst=6)
+GUEST_AI_TYPES = ("resume_import", "resume_suggest", "resume_skills", "cover_letter")
 ai_limit = limit("resume-ai", rate_per_s=0.1, burst=6)
 ai_user_limit = limit_user("resume-ai-user", rate_per_s=40 / 3600, burst=10)
 
@@ -186,7 +193,20 @@ async def export_docx(body: DocxIn, _: Annotated[User, Depends(current_user)]) -
 # ---- AI: import and suggestions ----------------------------------------------------------------------------
 
 
-async def _generate(db: AsyncSession, user: User, req: LLMRequest, what: str) -> LLMResponse:
+async def guest_ai_gate(db: Annotated[AsyncSession, Depends(get_db)]) -> None:
+    """Stop signed-out AI calls once the day's budget is spent, so a free tool can't run up an open-ended bill."""
+    cap = get_settings().guest_resume_ai_daily_limit
+    since = datetime.now(UTC) - timedelta(days=1)
+    used = await db.scalar(select(func.count()).select_from(ProviderRequest).where(
+        ProviderRequest.user_id.is_(None), ProviderRequest.request_type.in_(GUEST_AI_TYPES),
+        ProviderRequest.created_at >= since))
+    if cap <= 0 or (used or 0) >= cap:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
+                            "The free AI has reached today's limit. Try again tomorrow, or create a free account to "
+                            "keep going.")
+
+
+async def _generate(db: AsyncSession, user: User | None, req: LLMRequest, what: str) -> LLMResponse:
     llm = get_llm_provider()
     try:
         resp = await llm.generate(req)
@@ -194,7 +214,8 @@ async def _generate(db: AsyncSession, user: User, req: LLMRequest, what: str) ->
         log.warning("resume %s failed: %s", what, e)
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
                             "The AI isn't available right now. Try again in a moment.") from e
-    db.add(ProviderRequest(user_id=user.id, provider=llm.name, model=resp.model, request_type=req.request_type,
+    db.add(ProviderRequest(user_id=user.id if user else None, provider=llm.name, model=resp.model,
+                           request_type=req.request_type,
                            input_tokens=resp.usage.input_tokens, output_tokens=resp.usage.output_tokens,
                            cached_input_tokens=resp.usage.cached_input_tokens,
                            estimated_cost_usd=estimate_cost(resp.model, resp.usage)))
@@ -213,7 +234,7 @@ class ImportOut(BaseModel):
     title: str
 
 
-async def _import_text(db: AsyncSession, user: User, text: str, kind: str) -> ImportOut:
+async def _import_text(db: AsyncSession, user: User | None, text: str, kind: str) -> ImportOut:
     text = text.strip()
     if len(text) < MIN_IMPORT_CHARS:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -244,10 +265,7 @@ async def import_resume(body: ImportIn, user: Annotated[User, Depends(require_ve
     return await _import_text(db, user, body.text or "", body.source)
 
 
-@router.post("/import-file", response_model=ImportOut, dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
-async def import_resume_file(file: Annotated[UploadFile, File()],
-                             user: Annotated[User, Depends(require_verified_user)],
-                             db: Annotated[AsyncSession, Depends(get_db)]) -> ImportOut:
+async def _import_upload(db: AsyncSession, user: User | None, file: UploadFile) -> ImportOut:
     """A resume file, or a LinkedIn profile saved as PDF (profile → More → Save to PDF). The file itself isn't
     kept: only the structured result goes back to the editor."""
     max_bytes = get_settings().max_upload_bytes
@@ -264,6 +282,13 @@ async def import_resume_file(file: Annotated[UploadFile, File()],
     return await _import_text(db, user, text, kind)
 
 
+@router.post("/import-file", response_model=ImportOut, dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
+async def import_resume_file(file: Annotated[UploadFile, File()],
+                             user: Annotated[User, Depends(require_verified_user)],
+                             db: Annotated[AsyncSession, Depends(get_db)]) -> ImportOut:
+    return await _import_upload(db, user, file)
+
+
 # ---- cover letter ------------------------------------------------------------------------------------------
 
 
@@ -276,10 +301,7 @@ class CoverLetterOut(BaseModel):
     text: str
 
 
-@router.post("/cover-letter", response_model=CoverLetterOut,
-             dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
-async def cover_letter(body: CoverLetterIn, user: Annotated[User, Depends(require_verified_user)],
-                       db: Annotated[AsyncSession, Depends(get_db)]) -> CoverLetterOut:
+async def _cover_letter(db: AsyncSession, user: User | None, body: CoverLetterIn) -> CoverLetterOut:
     """A cover letter from what the resume says and what the job post asks for; nothing is invented."""
     d = body.data
     if not (d.basics.name.strip() and (d.experience or d.projects or d.basics.summary.strip())):
@@ -293,17 +315,17 @@ async def cover_letter(body: CoverLetterIn, user: Annotated[User, Depends(requir
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "The AI couldn't write the letter. Try again.") from e
 
 
+@router.post("/cover-letter", response_model=CoverLetterOut,
+             dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
+async def cover_letter(body: CoverLetterIn, user: Annotated[User, Depends(require_verified_user)],
+                       db: Annotated[AsyncSession, Depends(get_db)]) -> CoverLetterOut:
+    return await _cover_letter(db, user, body)
+
+
 class LetterDocxIn(BaseModel):
     text: str = Field(min_length=1, max_length=ai.MAX_LETTER_CHARS)
     data: ResumeData = Field(default_factory=ResumeData)
     design: ResumeDesign = Field(default_factory=ResumeDesign)
-
-
-@router.post("/cover-letter/docx", dependencies=[Depends(score_limit)],
-             responses={200: {"content": {DOCX_TYPE: {}}, "description": "The cover letter as a Word file."}})
-async def cover_letter_docx(body: LetterDocxIn, _: Annotated[User, Depends(current_user)]) -> Response:
-    content = await asyncio.to_thread(letter_docx, body.text, body.data, body.design)
-    return Response(content, media_type=DOCX_TYPE, headers={"Cache-Control": "no-store"})
 
 
 class SuggestIn(BaseModel):
@@ -322,9 +344,7 @@ class SuggestOut(BaseModel):
 SKILL_CHECKS = frozenset({"has_skills", "skills_count"})
 
 
-@router.post("/suggest", response_model=SuggestOut, dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
-async def suggest(body: SuggestIn, user: Annotated[User, Depends(require_verified_user)],
-                  db: Annotated[AsyncSession, Depends(get_db)]) -> SuggestOut:
+async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn) -> SuggestOut:
     """Fixes for the resume, whichever the problem is. Skills and dates are worked out on the server with no AI call
     (instant, nothing invented); wording, missing bullets and numbers come from the model, checked against the resume.
     `check` names one ATS problem to fix; without it you get the best fixes across the whole resume."""
@@ -380,3 +400,66 @@ async def suggest(body: SuggestIn, user: Annotated[User, Depends(require_verifie
             return SuggestOut(suggestions=mechanical)
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "The AI's answer came back garbled. Try again.") from e
     return SuggestOut(suggestions=[*mechanical, *suggestions])
+
+
+@router.post("/suggest", response_model=SuggestOut, dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
+async def suggest(body: SuggestIn, user: Annotated[User, Depends(require_verified_user)],
+                  db: Annotated[AsyncSession, Depends(get_db)]) -> SuggestOut:
+    return await _suggest(db, user, body)
+
+
+@router.post("/cover-letter/docx", dependencies=[Depends(score_limit)],
+             responses={200: {"content": {DOCX_TYPE: {}}, "description": "The cover letter as a Word file."}})
+async def cover_letter_docx(body: LetterDocxIn, _: Annotated[User, Depends(current_user)]) -> Response:
+    content = await asyncio.to_thread(letter_docx, body.text, body.data, body.design)
+    return Response(content, media_type=DOCX_TYPE, headers={"Cache-Control": "no-store"})
+
+
+# ---- the free resume maker: the same tools with no account ---------------------------------------------------
+
+public_router = APIRouter(prefix="/v1/resume-maker", tags=["resume-maker (public)"])
+
+
+@public_router.post("/score", response_model=AtsReport, dependencies=[Depends(guest_score_limit)])
+async def guest_score(body: ScoreIn) -> AtsReport:
+    return score_resume(body.data, body.design, body.job_text)
+
+
+@public_router.post("/docx", dependencies=[Depends(guest_score_limit)],
+                    responses={200: {"content": {DOCX_TYPE: {}}, "description": "The resume as a Word file."}})
+async def guest_docx(body: DocxIn) -> Response:
+    content = await asyncio.to_thread(resume_docx, body.data, body.design)
+    return Response(content, media_type=DOCX_TYPE, headers={"Cache-Control": "no-store"})
+
+
+@public_router.post("/cover-letter/docx", dependencies=[Depends(guest_score_limit)],
+                    responses={200: {"content": {DOCX_TYPE: {}}, "description": "The cover letter as a Word file."}})
+async def guest_letter_docx(body: LetterDocxIn) -> Response:
+    content = await asyncio.to_thread(letter_docx, body.text, body.data, body.design)
+    return Response(content, media_type=DOCX_TYPE, headers={"Cache-Control": "no-store"})
+
+
+GUEST_AI = [Depends(guest_ai_limit), Depends(guest_ai_gate)]
+
+
+@public_router.post("/import", response_model=ImportOut, dependencies=GUEST_AI)
+async def guest_import(body: ImportIn, db: Annotated[AsyncSession, Depends(get_db)]) -> ImportOut:
+    if body.source == "document":  # documents belong to an account
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Paste your resume or upload a file instead.")
+    return await _import_text(db, None, body.text or "", body.source)
+
+
+@public_router.post("/import-file", response_model=ImportOut, dependencies=GUEST_AI)
+async def guest_import_file(file: Annotated[UploadFile, File()],
+                            db: Annotated[AsyncSession, Depends(get_db)]) -> ImportOut:
+    return await _import_upload(db, None, file)
+
+
+@public_router.post("/suggest", response_model=SuggestOut, dependencies=GUEST_AI)
+async def guest_suggest(body: SuggestIn, db: Annotated[AsyncSession, Depends(get_db)]) -> SuggestOut:
+    return await _suggest(db, None, body)
+
+
+@public_router.post("/cover-letter", response_model=CoverLetterOut, dependencies=GUEST_AI)
+async def guest_cover_letter(body: CoverLetterIn, db: Annotated[AsyncSession, Depends(get_db)]) -> CoverLetterOut:
+    return await _cover_letter(db, None, body)
