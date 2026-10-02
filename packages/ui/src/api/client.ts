@@ -1,4 +1,5 @@
 import type {
+  AdminActivityItem,
   AtsReport,
   AccessChange,
   AdminConfig,
@@ -398,7 +399,11 @@ export function createApiClient(options: ApiClientOptions) {
     // Admin / advanced settings
     adminStatus: () => json<{ is_admin: boolean }>("/v1/admin/status"),
     /** Admin: accounts, newest first ("pending" = waiting for access). */
-    adminUsers: (only: "all" | "pending" = "all") => json<AdminUsers>(`/v1/admin/users?only=${only}`),
+    adminUsers: (only: "all" | "pending" = "all", q = "") =>
+      json<AdminUsers>(`/v1/admin/users?only=${only}${q.trim() ? `&q=${encodeURIComponent(q.trim())}` : ""}`),
+    /** Admin: one account's history (credits in and out, sessions and their minutes, payments), newest first. */
+    adminUserActivity: (userId: string) =>
+      json<{ items: AdminActivityItem[] }>(`/v1/admin/users/${encodeURIComponent(userId)}/activity`),
     /** Admin: add resume credits and/or interview minutes to an account (they never expire). */
     giveCredits: (userId: string, add: { resume?: number; interview_minutes?: number }) =>
       json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/credits`, { method: "POST", body: body(add) }),

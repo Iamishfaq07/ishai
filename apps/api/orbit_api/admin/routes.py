@@ -14,7 +14,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import case, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits
@@ -23,7 +23,7 @@ from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.entitlements import GRANT_PLANS, active_grant, awaiting_approval, is_admin, plan_named
 from orbit_api.live.metrics import summarize
-from orbit_api.models import AppConfig, AuditLog, LiveSessionRow, UsageEvent, User
+from orbit_api.models import AppConfig, AuditLog, CreditEntry, LiveSessionRow, Payment, UsageEvent, User
 from orbit_api.providers.email import OutgoingEmail, send_safely
 from orbit_api.runtime_config import (
     EDITABLE_KEYS,
@@ -199,6 +199,19 @@ async def costs(_: Annotated[User, Depends(require_admin)], db: Annotated[AsyncS
 MAX_GRANT_HOURS = 24 * 90
 
 
+class AdminUsage(BaseModel):
+    """What an account has had and used, all time."""
+    resume_given: int = 0  # resume AI credits from the welcome, packs and the admin
+    resume_used: int = 0
+    interview_minutes_given: float = 0
+    live_minutes_used: float = 0
+    mock_minutes_used: float = 0
+    sessions: int = 0
+    paid_inr: int = 0  # approved UPI payments
+    packs: int = 0
+    last_active: datetime | None = None
+
+
 class AdminUser(BaseModel):
     id: str
     email: str
@@ -213,19 +226,96 @@ class AdminUser(BaseModel):
     # Credits left (the Free plan's balance; they never expire).
     resume_credits: int = 0
     interview_minutes_left: float = 0
+    usage: AdminUsage = Field(default_factory=AdminUsage)
+
+
+class AdminTotals(BaseModel):
+    """The whole server at a glance."""
+    users: int
+    signups_7d: int
+    interview_minutes_this_month: float
+    resume_credits_used_this_month: int
+    paid_inr_total: int
+    paid_inr_this_month: int
+    payments_waiting: int
 
 
 class UsersOut(BaseModel):
     approval_required: bool
     users: list[AdminUser]
+    totals: AdminTotals | None = None
 
 
 def _aware(d: datetime) -> datetime:
     return d if d.tzinfo else d.replace(tzinfo=UTC)
 
 
+def _month_start() -> datetime:
+    return datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
+async def _usage(db: AsyncSession, ids: list[str]) -> dict[str, AdminUsage]:
+    """All-time usage per account, in four grouped queries (not one per account)."""
+    out = {uid: AdminUsage() for uid in ids}
+    if not ids:
+        return out
+    for uid, kind, given, spent in (await db.execute(
+            select(CreditEntry.user_id, CreditEntry.kind,
+                   func.sum(case((CreditEntry.amount > 0, CreditEntry.amount), else_=0)),
+                   func.sum(case((CreditEntry.amount < 0, -CreditEntry.amount), else_=0)))
+            .where(CreditEntry.user_id.in_(ids)).group_by(CreditEntry.user_id, CreditEntry.kind))).all():
+        u = out[uid]
+        if kind == "resume":
+            u.resume_given, u.resume_used = int(given or 0), int(spent or 0)
+        elif kind == "interview_seconds":
+            u.interview_minutes_given = round(float(given or 0) / 60, 1)
+    for uid, metric, total, last in (await db.execute(
+            select(UsageEvent.user_id, UsageEvent.metric, func.sum(UsageEvent.quantity),
+                   func.max(UsageEvent.created_at))
+            .where(UsageEvent.user_id.in_(ids), UsageEvent.metric.in_(credits.INTERVIEW_METRICS))
+            .group_by(UsageEvent.user_id, UsageEvent.metric))).all():
+        u = out[uid]
+        minutes = round(float(total or 0) / 60, 1)
+        if metric == "live_seconds":
+            u.live_minutes_used = minutes
+        else:
+            u.mock_minutes_used = minutes
+        if last is not None:
+            u.last_active = max(filter(None, (u.last_active, _aware(last))))
+    for uid, n, last in (await db.execute(
+            select(LiveSessionRow.user_id, func.count(), func.max(LiveSessionRow.created_at))
+            .where(LiveSessionRow.user_id.in_(ids)).group_by(LiveSessionRow.user_id))).all():
+        out[uid].sessions = int(n)
+        if last is not None:
+            out[uid].last_active = max(filter(None, (out[uid].last_active, _aware(last))))
+    for uid, paid, n in (await db.execute(
+            select(Payment.user_id, func.sum(Payment.amount_inr), func.count())
+            .where(Payment.user_id.in_(ids), Payment.status == "approved").group_by(Payment.user_id))).all():
+        out[uid].paid_inr, out[uid].packs = int(paid or 0), int(n)
+    return out
+
+
+async def _totals(db: AsyncSession) -> AdminTotals:
+    month = _month_start()
+    users = int(await db.scalar(select(func.count()).select_from(User)) or 0)
+    week = int(await db.scalar(select(func.count()).select_from(User).where(
+        User.created_at >= datetime.now(UTC) - timedelta(days=7))) or 0)
+    seconds = float(await db.scalar(select(func.coalesce(func.sum(UsageEvent.quantity), 0.0)).where(
+        UsageEvent.metric.in_(credits.INTERVIEW_METRICS), UsageEvent.created_at >= month)) or 0)
+    resume = int(await db.scalar(select(func.coalesce(func.sum(-CreditEntry.amount), 0)).where(
+        CreditEntry.kind == "resume", CreditEntry.amount < 0, CreditEntry.created_at >= month)) or 0)
+    paid = int(await db.scalar(select(func.coalesce(func.sum(Payment.amount_inr), 0)).where(
+        Payment.status == "approved")) or 0)
+    paid_month = int(await db.scalar(select(func.coalesce(func.sum(Payment.amount_inr), 0)).where(
+        Payment.status == "approved", Payment.decided_at >= month)) or 0)
+    waiting = int(await db.scalar(select(func.count()).select_from(Payment).where(Payment.status == "submitted")) or 0)
+    return AdminTotals(users=users, signups_7d=week, interview_minutes_this_month=round(seconds / 60, 1),
+                       resume_credits_used_this_month=resume, paid_inr_total=paid, paid_inr_this_month=paid_month,
+                       payments_waiting=waiting)
+
+
 async def _admin_rows(db: AsyncSession, users: list[User]) -> list[AdminUser]:
-    month = datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month = _month_start()
     ids = [u.id for u in users]
     used: dict[str, float] = {}
     if ids:
@@ -235,6 +325,7 @@ async def _admin_rows(db: AsyncSession, users: list[User]) -> list[AdminUser]:
             .group_by(UsageEvent.user_id))
         used = {uid: float(total or 0) for uid, total in rows.all()}
     wallets = await credits.balances(db, ids)
+    usage = await _usage(db, ids)
     out = []
     for u in users:
         granted = active_grant(u)
@@ -248,22 +339,76 @@ async def _admin_rows(db: AsyncSession, users: list[User]) -> list[AdminUser]:
             access=access, plan_label=label, grant_until=_aware(u.grant_until) if granted and u.grant_until else None,
             live_minutes_this_month=round(float(used.get(u.id) or 0) / 60, 1),
             resume_credits=wallets.get(u.id, (0, 0.0))[0],
-            interview_minutes_left=round(wallets.get(u.id, (0, 0.0))[1], 1)))
+            interview_minutes_left=round(wallets.get(u.id, (0, 0.0))[1], 1), usage=usage[u.id]))
     return out
 
 
 @router.get("/users", response_model=UsersOut)
 async def list_users(_: Annotated[User, Depends(require_admin)], db: Annotated[AsyncSession, Depends(get_db)],
                      only: Literal["all", "pending"] = "all",
+                     q: Annotated[str | None, Query(max_length=120)] = None,
                      limit: Annotated[int, Query(ge=1, le=500)] = 200) -> UsersOut:
-    """Newest first. "pending" lists the accounts waiting for you (and ones whose grant ran out)."""
-    q = select(User).order_by(User.created_at.desc()).limit(limit)
+    """Newest first. "pending" lists the accounts waiting for you (and ones whose grant ran out); `q` finds an
+    account by email or name."""
+    query = select(User).order_by(User.created_at.desc()).limit(limit)
     if only == "pending":
-        q = q.where(User.approved.is_(False))
-    rows = await _admin_rows(db, list((await db.scalars(q)).all()))
+        query = query.where(User.approved.is_(False))
+    if q and q.strip():
+        # Plain text, not a pattern: "%" and "_" mean themselves, so they're dropped (nothing left matches nobody).
+        term = q.strip().lower().replace("\\", "").replace("%", "").replace("_", "")
+        like = f"%{term}%"
+        query = query.where(or_(func.lower(User.email).like(like), func.lower(func.coalesce(User.name, "")).like(like))
+                            if term else false())
+    rows = await _admin_rows(db, list((await db.scalars(query)).all()))
     if only == "pending":
         rows = [r for r in rows if r.access == "pending"]
-    return UsersOut(approval_required=get_settings().approval_required, users=rows)
+    return UsersOut(approval_required=get_settings().approval_required, users=rows, totals=await _totals(db))
+
+
+class ActivityItem(BaseModel):
+    at: datetime
+    kind: Literal["credit", "session", "payment"]
+    text: str
+    amount: str | None = None
+
+
+class ActivityOut(BaseModel):
+    items: list[ActivityItem]
+
+
+_REASON = {"welcome": "Welcome credits", "purchase": "Pack bought", "admin": "Given by you", "resume_ai": "Resume AI"}
+
+
+@router.get("/users/{user_id}/activity", response_model=ActivityOut)
+async def user_activity(user_id: str, _: Annotated[User, Depends(require_admin)],
+                        db: Annotated[AsyncSession, Depends(get_db)]) -> ActivityOut:
+    """One account's history, newest first: credits in and out, sessions with the minutes each used, payments."""
+    if await db.get(User, user_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    items: list[ActivityItem] = []
+    for e in (await db.scalars(select(CreditEntry).where(CreditEntry.user_id == user_id)
+                               .order_by(CreditEntry.created_at.desc()).limit(100))).all():
+        unit = "resume credit" if e.kind == "resume" else "interview min"
+        n = e.amount if e.kind == "resume" else round(e.amount / 60)
+        items.append(ActivityItem(at=_aware(e.created_at), kind="credit", text=_REASON.get(e.reason, e.reason),
+                                  amount=f"{'+' if n > 0 else ''}{n} {unit}{'s' if abs(n) != 1 else ''}"))
+    used: dict[str | None, float] = {sid: float(total or 0) for sid, total in (await db.execute(
+        select(UsageEvent.session_id, func.sum(UsageEvent.quantity))
+        .where(UsageEvent.user_id == user_id, UsageEvent.metric.in_(credits.INTERVIEW_METRICS))
+        .group_by(UsageEvent.session_id))).all()}
+    for row in (await db.scalars(select(LiveSessionRow).where(LiveSessionRow.user_id == user_id)
+                                 .order_by(LiveSessionRow.created_at.desc()).limit(100))).all():
+        minutes = round(float(used.get(row.id) or 0) / 60, 1)
+        items.append(ActivityItem(at=_aware(row.started_at or row.created_at), kind="session",
+                                  text=f"{row.type.capitalize()} session · {row.status}",
+                                  amount=f"-{minutes:g} interview min" if minutes else None))
+    for pay in (await db.scalars(select(Payment).where(Payment.user_id == user_id)
+                                 .order_by(Payment.created_at.desc()).limit(50))).all():
+        items.append(ActivityItem(at=_aware(pay.decided_at or pay.submitted_at or pay.created_at), kind="payment",
+                                  text=f"{pay.plan.capitalize()} pack · {pay.status.replace('_', ' ')}",
+                                  amount=f"₹{pay.amount_inr:,}"))
+    items.sort(key=lambda i: i.at, reverse=True)
+    return ActivityOut(items=items[:150])
 
 
 class AccessIn(BaseModel):

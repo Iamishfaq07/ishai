@@ -599,11 +599,46 @@ export interface AdminUser {
   /** Credits left (Free plan balance; never expires). */
   resume_credits: number;
   interview_minutes_left: number;
+  /** Everything had and used, all time. */
+  usage?: AdminUsage;
+}
+
+export interface AdminUsage {
+  resume_given: number;
+  resume_used: number;
+  interview_minutes_given: number;
+  live_minutes_used: number;
+  mock_minutes_used: number;
+  sessions: number;
+  /** Approved UPI payments. */
+  paid_inr: number;
+  packs: number;
+  last_active: string | null;
+}
+
+/** The whole server at a glance. */
+export interface AdminTotals {
+  users: number;
+  signups_7d: number;
+  interview_minutes_this_month: number;
+  resume_credits_used_this_month: number;
+  paid_inr_total: number;
+  paid_inr_this_month: number;
+  payments_waiting: number;
 }
 
 export interface AdminUsers {
   approval_required: boolean;
   users: AdminUser[];
+  totals?: AdminTotals | null;
+}
+
+/** One line of an account's history: credits in or out, a session and its minutes, a payment. */
+export interface AdminActivityItem {
+  at: string;
+  kind: "credit" | "session" | "payment";
+  text: string;
+  amount: string | null;
 }
 
 export type AccessChange =
