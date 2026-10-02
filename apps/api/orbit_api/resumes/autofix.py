@@ -13,11 +13,13 @@ One request is one AI action: however many model calls it makes, it spends one r
 (`followup`) is part of the same fix: free for half an hour.
 """
 
+import asyncio
 import hashlib
 import hmac
 import json
 import logging
 import math
+import secrets
 import time
 from base64 import urlsafe_b64decode, urlsafe_b64encode
 from collections.abc import Awaitable, Callable, Iterable
@@ -89,14 +91,25 @@ def _mac(body: str) -> str:
     return urlsafe_b64encode(hmac.new(key, f"resume-fix:{body}".encode(), hashlib.sha256).digest()).decode().rstrip("=")
 
 
-def followup_token(user_id: str, paths: Iterable[str]) -> str:
-    """Lets the answers to these lines' questions be written in, free, for FOLLOWUP_S."""
-    payload = json.dumps({"u": user_id, "p": sorted(set(paths)), "e": int(time.time()) + FOLLOWUP_S})
+def _line_key(text: str) -> str:
+    return hashlib.sha256(" ".join(text.split()).encode()).hexdigest()[:20]
+
+
+# Follow-up tokens already used (jti -> expiry). One API instance (docs/DECISIONS.md D12), so memory is enough.
+_spent: dict[str, float] = {}
+
+
+def followup_token(user_id: str, lines: dict[str, str]) -> str:
+    """Lets the answers to these lines' questions be written in, free, once, within FOLLOWUP_S, and only into the
+    lines as they read when the questions were asked (path -> text)."""
+    payload = json.dumps({"u": user_id, "l": {p: _line_key(t) for p, t in sorted(lines.items())},
+                          "e": int(time.time()) + FOLLOWUP_S, "j": secrets.token_urlsafe(12)})
     body = urlsafe_b64encode(payload.encode()).decode().rstrip("=")
     return f"{body}.{_mac(body)}"
 
 
-def followup_ok(token: str, user_id: str, paths: Iterable[str]) -> bool:
+def followup_ok(token: str, user_id: str, data: ResumeData, paths: Iterable[str]) -> bool:
+    """A valid, unused token for these lines, which still read as they did: spends it."""
     body, _, mac = token.partition(".")
     if not body or not hmac.compare_digest(mac, _mac(body)):
         return False
@@ -104,8 +117,16 @@ def followup_ok(token: str, user_id: str, paths: Iterable[str]) -> bool:
         payload = json.loads(urlsafe_b64decode(body + "=" * (-len(body) % 4)))
     except ValueError:
         return False
-    return (payload.get("u") == user_id and int(payload.get("e", 0)) >= time.time()
-            and set(paths) <= set(payload.get("p", [])))
+    now = time.time()
+    lines = payload.get("l") or {}
+    jti = str(payload.get("j") or "")
+    if (payload.get("u") != user_id or int(payload.get("e", 0)) < now or not jti or jti in _spent
+            or not all(p in lines and lines[p] == _line_key(get_at(data, p) or "") for p in paths)):
+        return False
+    for old in [k for k, exp in _spent.items() if exp < now]:
+        del _spent[old]
+    _spent[jti] = float(payload["e"])
+    return True
 
 
 def _sorted_roles(roles: list[Experience]) -> list[str]:
@@ -193,8 +214,10 @@ class _Fix:
         self.asked: dict[str, str] = {}
         self.facts = {p: f.strip()[:200] for p, f in body.facts.items() if f.strip() and get_at(body.data, p)}
 
-    def score(self) -> AtsReport:
-        return score_resume(self.data, self.body.design.model_copy(update=self.design_patch), self.body.job_text)
+    async def score(self) -> AtsReport:
+        # CPU-bound (regexes over the whole resume): off the event loop, so live sessions don't stall.
+        return await asyncio.to_thread(score_resume, self.data, self.body.design.model_copy(update=self.design_patch),
+                                       self.body.job_text)
 
     def take(self, s: Suggestion) -> None:
         if s.confirm:
@@ -235,7 +258,7 @@ class _Fix:
         """The AI's part: the flagged lines, a second pass on what's still failing, the job post's keywords, skills."""
         job = self.body.job_text
         for n in range(PASSES):
-            report = self.score()
+            report = await self.score()
             if n > 0 and self.body.check is None:
                 # Fixing everything: also what the first pass's own rewrites broke ("5 bullets start with Led").
                 ids = ids | {c.id for c in report.checks if not c.passed and c.id in AI_CHECKS}
@@ -265,9 +288,10 @@ class _Fix:
                 continue
             for s in got:
                 self.take(s)
-        if "keywords" in ids and any(c.id == "keywords" and not c.passed for c in self.score().checks):
+        tailored: AtsReport | None = await self.score() if "keywords" in ids else None
+        if tailored is not None and any(c.id == "keywords" and not c.passed for c in tailored.checks):
             # The job post's words: the model picks the lines the candidate's own work supports them in.
-            resp = await generate(ai.suggest_request(self.data, self.score(), llm, mode="tailor", job_text=job,
+            resp = await generate(ai.suggest_request(self.data, tailored, llm, mode="tailor", job_text=job,
                                                      focus=None, check="keywords"))
             try:
                 for s in ai.parse_suggestions(resp, self.data, facts=self.facts, job_text=job):
@@ -303,7 +327,7 @@ async def fix_resume(body: FixIn, user: User, can_spend: Callable[[], Awaitable[
                      generate: Generate) -> tuple[FixOut, bool]:
     """The fix, and whether the AI was used (so the caller knows whether the credit was worth spending)."""
     fix = _Fix(body)
-    start = fix.score()
+    start = await fix.score()
     ids = {c.id for c in start.checks if not c.passed and (body.check is None or c.id == body.check)}
     if fix.facts:
         ids.add("quantified")
@@ -333,11 +357,13 @@ async def fix_resume(body: FixIn, user: User, can_spend: Callable[[], Awaitable[
         for s in fixes.casing_suggestions(fix.data):
             fix.take(s)
 
-    end = fix.score()
+    end = await fix.score()
     log.info("resume fix %s: %s -> %s in %s model calls", body.check or "all", start.score, end.score, calls)
     questions = fix.questions(ids, end)
     return FixOut(suggestions=_collapse(body.data, fix.applied), review=fix.review, questions=questions,
                   design=fix.design_patch, order=fix.order, score_before=start.score, score_after=end.score,
                   remaining=[c for c in end.checks if c.id in ids and not c.passed], upgrade_required=upgrade,
                   ai_error=ai_error,
-                  followup=followup_token(user.id, [q.path for q in questions]) if questions else None), used_ai
+                  # Only for questions a paid AI pass asked: a free (no-AI) answer can't mint free AI calls.
+                  followup=followup_token(user.id, {q.path: q.text for q in questions})
+                  if questions and used_ai and not upgrade else None), used_ai

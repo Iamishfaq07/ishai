@@ -453,9 +453,10 @@ async def fix(body: autofix.FixIn, user: Annotated[User, Depends(require_verifie
               allowance: Annotated[Allowance, Depends(account_allowance)]) -> autofix.FixOut:
     """"Fix with AI" from the ATS score: one check (or all of them) fixed, applied and re-checked here, with what
     only the candidate can answer (a number, a claim to confirm) handed back. One AI action at most."""
-    if body.check and body.check not in {c.id for c in score_resume(body.data, body.design, body.job_text).checks}:
+    if body.check and body.check not in {c.id for c in (await asyncio.to_thread(
+            score_resume, body.data, body.design, body.job_text)).checks}:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Unknown check.")
-    if body.followup and body.facts and autofix.followup_ok(body.followup, user.id, body.facts):
+    if body.followup and body.facts and autofix.followup_ok(body.followup, user.id, body.data, body.facts):
         # Answers to the questions a fix asked: part of that fix, already paid for. Only those lines.
         body = body.model_copy(update={"check": "quantified"})
         allowance = Allowance(db, user, unlimited=True)

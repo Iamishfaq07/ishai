@@ -184,6 +184,10 @@ def test_answering_the_questions_is_part_of_the_fix_and_free(client: TestClient,
     asked = set(facts)
     other = {next(f"experience.{e.id}.bullets.{i}" for e in fixed.experience for i in range(len(e.bullets))
                   if f"experience.{e.id}.bullets.{i}" not in asked): "12 a day"}
-    for extra in ({}, {"followup": out["followup"] + "x"}, {"followup": out["followup"], "facts": other}):
+    for extra in ({}, {"followup": out["followup"] + "x"}, {"followup": out["followup"]},  # spent: once only
+                  {"followup": out["followup"], "facts": other}):
         paid, _ = _fix(client, h, fixed, **{"check": "quantified", "facts": facts, **extra})
         assert paid["upgrade_required"] is True
+    # Out of credits, a fix that used no AI hands out no token to get AI for free with.
+    broke, _ = _fix(client, h, weak())
+    assert broke["upgrade_required"] is True and broke["followup"] is None
