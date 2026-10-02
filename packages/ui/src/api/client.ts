@@ -413,10 +413,11 @@ export function createApiClient(options: ApiClientOptions) {
     /** Admin: UPI payments ("submitted" = a UTR waiting to be checked). */
     adminPayments: (only: "submitted" | "all" = "submitted") =>
       json<AdminPayments>(`/v1/admin/payments?only=${only}`),
-    decidePayment: (paymentId: string, action: "approve" | "reject", note?: string) =>
+    /** `utr`: the one you checked against the bank statement; if the payer changed it since, nothing is decided. */
+    decidePayment: (paymentId: string, action: "approve" | "reject", note?: string, utr?: string | null) =>
       json<AdminPayment>(`/v1/admin/payments/${encodeURIComponent(paymentId)}`, {
         method: "POST",
-        body: body({ action, note: note ?? null }),
+        body: body({ action, note: note ?? null, ...(utr ? { utr } : {}) }),
       }),
     getLatency: (days = 7) => json<LatencyReport>(`/v1/admin/latency?days=${days}`),
     getCosts: (days = 30) => json<CostReport>(`/v1/admin/costs?days=${days}`),

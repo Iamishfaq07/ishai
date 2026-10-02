@@ -94,7 +94,7 @@ function PaymentRow({ payment: p, onChange }: { payment: AdminPayment; onChange:
     setBusy(true);
     setError(null);
     try {
-      onChange(await api.decidePayment(p.id, action, note.trim() || undefined));
+      onChange(await api.decidePayment(p.id, action, note.trim() || undefined, p.utr));
     } catch (err) {
       setError(errorText(err));
     } finally {

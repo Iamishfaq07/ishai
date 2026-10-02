@@ -532,7 +532,8 @@ export interface UpiOrder {
 }
 
 export interface AdminPayment extends Omit<UpiOrder, "upi_id" | "payee_name" | "upi_uri"> {
-  user_id: string;
+  /** null: the account was deleted (its payment is kept, so the UTR can't be used again). */
+  user_id: string | null;
   email: string;
   name: string | null;
   /** The plan the account has right now (a running grant), if any. */
