@@ -4,7 +4,9 @@ A dropped connection doesn't end a session (the client reconnects — see the li
 closed without pressing End stayed "live" forever: no report, and "Live · 0 min" in every list. A periodic sweep
 ends any session with no live connection and no activity for `abandoned_session_min`, exactly as the End button
 would (status, ended_at, the durable report job). Activity is the newest transcript turn or question, else the
-start. In-process like the live-socket registry it consults, which is fine for the one API instance (D12).
+start. A session whose connection just dropped is left alone while its state waits for the reconnect
+(live/carryover.py keeps it as long as an idle session lives): a quiet stretch before the drop mustn't end it
+mid-reconnect. In-process like the live-socket registry it consults, which is fine for the one API instance (D12).
 """
 
 import asyncio
@@ -18,9 +20,10 @@ from sqlalchemy import func, select
 from orbit_api import jobs
 from orbit_api.config import get_settings
 from orbit_api.db import sessionmaker
+from orbit_api.live import carryover
 from orbit_api.models import LiveSessionRow, Question, SessionTurn
 from orbit_api.sessions import companion
-from orbit_api.sessions.routes import _live_engines  # sessions with a connected live socket
+from orbit_api.sessions.routes import _live_engines, _live_sockets  # sessions with a live connection
 
 log = logging.getLogger(__name__)
 
@@ -34,16 +37,20 @@ async def end_abandoned_sessions(now: datetime | None = None) -> int:
     now = now or datetime.now(UTC)
     cutoff = now - timedelta(minutes=get_settings().abandoned_session_min)
     ended = 0
+    # One query: each open session with its newest turn and question (index lookups on session_id).
+    last_turn = (select(func.max(SessionTurn.created_at)).where(SessionTurn.session_id == LiveSessionRow.id)
+                 .correlate(LiveSessionRow).scalar_subquery())
+    last_question = (select(func.max(Question.created_at)).where(Question.session_id == LiveSessionRow.id)
+                     .correlate(LiveSessionRow).scalar_subquery())
     async with sessionmaker()() as db:
-        rows = (await db.scalars(select(LiveSessionRow).where(LiveSessionRow.status != "ended"))).all()
-        for row in rows:
-            if row.id in _live_engines:
+        rows = (await db.execute(select(LiveSessionRow, last_turn, last_question)
+                                 .where(LiveSessionRow.status != "ended"))).all()
+        # A connected socket or a running engine (registered together; either means "in use").
+        connected = set(_live_engines) | {sid for sockets in _live_sockets.values() for sid in sockets}
+        for row, turn_at, question_at in rows:
+            if row.id in connected or carryover.held(row.id):
                 continue
-            last_turn = await db.scalar(
-                select(func.max(SessionTurn.created_at)).where(SessionTurn.session_id == row.id))
-            last_question = await db.scalar(
-                select(func.max(Question.created_at)).where(Question.session_id == row.id))
-            stamps = [_aware(t) for t in (row.created_at, row.started_at, last_turn, last_question) if t is not None]
+            stamps = [_aware(t) for t in (row.created_at, row.started_at, turn_at, question_at) if t is not None]
             last_activity = max(stamps)
             if last_activity > cutoff:
                 continue

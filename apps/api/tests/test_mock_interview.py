@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from orbit_api.live.engine import LiveEngine, SessionProfile
+from orbit_api.live.engine import REQUEST_EVERY_S, LiveEngine, SessionProfile
 from orbit_api.live.events import LiveSettings
 from orbit_api.live.mock_interviewer import ANSWER_SILENCE_MS, MockConfig
 from orbit_api.providers.llm.base import LLMError, LLMRequest
@@ -73,12 +73,13 @@ async def test_interviewer_asks_listens_and_moves_on_after_the_answer() -> None:
 
 
 async def test_done_button_skips_the_wait_and_the_plan_ends_the_session() -> None:
-    eng, sink, spy, _ = await _engine()
+    eng, sink, spy, now = await _engine()
     await sink.wait_for("mock.question")
     for _ in range(12):
         if sink.of("mock.completed"):
             break
         asked = len(sink.of("mock.question"))
+        now["t"] += REQUEST_EVERY_S  # a person answering between presses (a flood of presses is throttled)
         await eng.handle_client({"type": "mock.next", "data": {}})
         async with asyncio.timeout(5):  # either another question or the end of the interview
             while len(sink.of("mock.question")) == asked and not sink.of("mock.completed"):

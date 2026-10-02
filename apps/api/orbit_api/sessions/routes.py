@@ -20,7 +20,7 @@ from fastapi import (
 )
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits, jobs
@@ -293,21 +293,26 @@ async def get_session(session_id: str, user: Annotated[User, Depends(current_use
     )
 
 
-@router.post("/sessions/{session_id}/end", response_model=SessionOut)
-async def end_session(session_id: str, user: Annotated[User, Depends(current_user)],
-                      db: Annotated[AsyncSession, Depends(get_db)]) -> SessionOut:
-    row = await _owned(db, session_id, user)
-    # Ended from elsewhere (another window, the web app, "end it and use this one") while a socket is still
-    # streaming: stop that engine for real — it tells its client `session.ended` and records usage — and close
-    # the socket, so it stops spending STT/LLM and frees the account's one live slot.
+async def stop_live(user_id: str, session_id: str) -> None:
+    """Ended or deleted from elsewhere (another window, the web app, "end it and use this one", deleting it or the
+    account) while a socket is still streaming: stop that engine for real — it tells its client `session.ended`
+    and records usage — and close the socket, so it stops spending STT/LLM and frees the account's one live slot.
+    A dropped connection's saved state goes too: nothing should reconnect to it."""
     engine = _live_engines.get(session_id)
-    socket = _live_sockets.get(user.id, {}).get(session_id)
+    socket = _live_sockets.get(user_id, {}).get(session_id)
     if engine is not None:
         await engine.end(final=True)
     carryover.discard(session_id)
     if socket is not None:
         with contextlib.suppress(Exception):
             await socket.close(code=4009, reason="session has ended")
+
+
+@router.post("/sessions/{session_id}/end", response_model=SessionOut)
+async def end_session(session_id: str, user: Annotated[User, Depends(current_user)],
+                      db: Annotated[AsyncSession, Depends(get_db)]) -> SessionOut:
+    row = await _owned(db, session_id, user)
+    await stop_live(user.id, session_id)
     if row.status != "ended":
         row.status = "ended"
         row.ended_at = datetime.now(UTC)
@@ -403,6 +408,9 @@ async def drill_session(session_id: str, user: Annotated[User, Depends(require_v
 async def delete_session(session_id: str, user: Annotated[User, Depends(current_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> None:
     row = await _owned(db, session_id, user)
+    # Live right now: stop it first, as End does. Deleting under a running engine left STT and the LLM running
+    # (and metered) with every write failing against the deleted row, and the account's live slot taken.
+    await stop_live(user.id, session_id)
     await db.delete(row)
     await db.commit()
 
@@ -467,7 +475,7 @@ async def upload_screenshot(session_id: str, image: Annotated[UploadFile, File()
     sent to the model — never stored."""
     await _owned(db, session_id, user)
     engine = _live_engines.get(session_id)
-    if engine is None:
+    if engine is None or engine.ended:
         raise HTTPException(status.HTTP_409_CONFLICT, "Start or rejoin the live session to analyse screenshots.")
     if not get_llm_provider().supports_vision():
         raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, "The configured AI model can't read images.")
@@ -562,6 +570,21 @@ async def _load_index(db: AsyncSession, session_id: str,
     return SessionIndex(chunks), chunks
 
 
+async def _not_live(session_id: str, status_: str, started_at: datetime | None) -> None:
+    """A connection refused or failed before it got going: the session goes back to how it was (unless something
+    else, an End, has changed it since), instead of showing "live" with nothing running."""
+    if status_ == "live":
+        return  # a reconnect: it was live (dropped) before this connection, and still is
+    try:
+        async with sessionmaker()() as db:
+            await db.execute(update(LiveSessionRow)
+                             .where(LiveSessionRow.id == session_id, LiveSessionRow.status == "live")
+                             .values(status=status_, started_at=started_at))
+            await db.commit()
+    except Exception:
+        log.exception("couldn't reset session %s after a failed start", session_id)
+
+
 async def drain_teardowns(timeout_s: float = 15) -> None:
     """On shutdown: let in-flight live-session teardowns finish writing before the DB goes away."""
     if _teardowns:
@@ -592,7 +615,7 @@ async def _meter_live_minutes(ws: WebSocket, engine: LiveEngine, user_id: str, s
     heartbeat."""
     heartbeat = get_settings().live_heartbeat_s
     warned: set[str] = set()
-    while True:
+    while not engine.ended:
         now_s = engine.now_ms() // 1000
         try:
             month_s = await _commit_live_seconds(user_id, session_id, usage_key, now_s, session_type)
@@ -600,12 +623,12 @@ async def _meter_live_minutes(ws: WebSocket, engine: LiveEngine, user_id: str, s
             # Fail open for this beat (never cut a live interview off on a DB blip), but loudly; the final
             # usage is still written durably by the recorder at teardown.
             log.exception("live-minute heartbeat failed for session %s", session_id)
-            await asyncio.sleep(heartbeat)
+            await _beat(engine, heartbeat)
             continue
         session_s = None if max_session_s is None else max_session_s - (prior_session_s + now_s)
         limits = [(r, s) for r, s in (("monthly", month_s), ("session", session_s)) if s is not None]
         if not limits:
-            await asyncio.sleep(heartbeat)
+            await _beat(engine, heartbeat)
             continue
         reason, remaining_s = min(limits, key=lambda x: x[1])
         if remaining_s <= 0:
@@ -622,7 +645,19 @@ async def _meter_live_minutes(ws: WebSocket, engine: LiveEngine, user_id: str, s
             await engine.send("usage.status", {"minutes_remaining": round(remaining_s / 60, 1),
                                                "limit_reached": False, "reason": reason})
         # Wake exactly at the limit when it falls before the next beat.
-        await asyncio.sleep(max(1.0, min(heartbeat, remaining_s)))
+        await _beat(engine, max(1.0, min(heartbeat, remaining_s)))
+    # The engine ended without this connection closing: a mock round that ran its course (End and the limits close
+    # the socket themselves). Metering stops here (the recorder wrote the final usage at the end), and the socket
+    # closes once the client has `session.ended`, so it stops streaming audio and the account's live slot frees up.
+    await engine.wait_ended()
+    with contextlib.suppress(Exception):
+        await ws.close(code=4009, reason="session has ended")
+
+
+async def _beat(engine: LiveEngine, seconds: float) -> None:
+    """Sleep until the next heartbeat, or until the engine ends (whichever is first)."""
+    with contextlib.suppress(TimeoutError):
+        await asyncio.wait_for(engine.wait_ended(), seconds)
 
 
 @router.websocket("/sessions/{session_id}/live")
@@ -658,6 +693,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
         company = await _session_company(db, row)
         # The resume's skills, tech names from the documents, the company: words a general STT model mishears.
         keyterms = extract_keyterms(chunks, company=company, role=row.role)
+        before = (row.status, row.started_at)  # put back if this connection never gets going
         row.status = "live"
         row.started_at = row.started_at or datetime.now(UTC)
         await db.commit()
@@ -679,19 +715,9 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
 
     mine = _live_sockets.setdefault(user_id, {})
     if session_id not in mine and len(mine) >= MAX_LIVE_SESSIONS_PER_USER:
+        await _not_live(session_id, *before)
         await ws.close(code=CLOSE_TOO_MANY, reason="too many live sessions; end one first")
         return
-    previous = mine.get(session_id)
-    mine[session_id] = ws
-    if previous is not None:
-        with contextlib.suppress(Exception):
-            await previous.close(code=CLOSE_REPLACED, reason="session opened in another window")
-    try:
-        await ws.accept()
-    except Exception:
-        if mine.get(session_id) is ws:
-            del mine[session_id]
-        raise
     send_lock = asyncio.Lock()
 
     async def send(msg: dict[str, Any]) -> None:
@@ -706,12 +732,28 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
     # A reconnect picks up the conversation where it was: from the engine still attached (a second window took
     # over) or the state the dropped one left (live/carryover.py). After a server restart, the saved summary.
     attached = _live_engines.get(session_id)
-    resume = attached.carryover() if attached is not None else carryover.take(session_id)
+    dropped = carryover.take(session_id) if attached is None else None
     carryover.discard(session_id)
+    resume = attached.carryover() if attached is not None else dropped
     if resume is None and saved_summary:
         resume = carryover.Carryover(memory=SessionMemory(rolling_summary=saved_summary))
-    engine = LiveEngine(profile, settings, send=send, llm=get_llm_provider(), stt=create_stt_provider(),
-                        index=index, recorder=recorder, resume=resume)
+    # Built before the socket takes the account's live slot: a provider that can't be created (no Deepgram key,
+    # say) used to leave the socket registered, so every later session got 409 live_session_active, and the row
+    # stuck at "live". Now the session is put back as it was, its saved state kept for the next try.
+    try:
+        engine = LiveEngine(profile, settings, send=send, llm=get_llm_provider(), stt=create_stt_provider(),
+                            index=index, recorder=recorder, resume=resume)
+    except Exception:
+        log.exception("live session %s couldn't start", session_id)
+        if dropped is not None:
+            carryover.save(session_id, dropped)
+        await recorder.close()
+        await _not_live(session_id, *before)
+        with contextlib.suppress(Exception):
+            await ws.close(code=1011, reason="the live session couldn't start")
+        return
+    previous = mine.get(session_id)
+    mine[session_id] = ws
     _live_engines[session_id] = engine
     explicit_end = False
     limit_ending = asyncio.Event()
@@ -719,6 +761,10 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
         ws, engine, user_id, session_id, usage_key, limit_ending, session_type=profile.session_type,
         prior_session_s=prior_session_s, max_session_s=plan.max_session_minutes * 60))
     try:
+        if previous is not None:
+            with contextlib.suppress(Exception):
+                await previous.close(code=CLOSE_REPLACED, reason="session opened in another window")
+        await ws.accept()
         await engine.start()
         while True:
             msg = await ws.receive()
@@ -753,8 +799,9 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
         if _live_engines.get(session_id) is engine:
             del _live_engines[session_id]
             # Dropped without ending: the next connection continues this conversation. (A newer engine that
-            # took over already has it.)
-            if explicit_end or limit_ending.is_set():
+            # took over already has it.) Ended any other way (End elsewhere, a deletion, a finished mock round),
+            # there's nothing to continue.
+            if explicit_end or limit_ending.is_set() or engine.ended:
                 carryover.discard(session_id)
             else:
                 carryover.save(session_id, engine.carryover())
