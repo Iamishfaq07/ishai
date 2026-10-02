@@ -14,7 +14,7 @@ Desktop app       ─┼──►  Render (FastAPI + WebSocket, ONE instance)  �
 
 Create a project → copy the **direct** connection string (not the `-pooler` one: asyncpg's prepared statements
 break behind PgBouncer). Use the async driver scheme and drop `?sslmode=...`:
-`postgresql+asyncpg://user:pass@ep-xxxx.us-east-2.aws.neon.tech/orbit`
+`postgresql+asyncpg://user:pass@ep-xxxx.ap-southeast-1.aws.neon.tech/orbit`
 
 ## 2. API — Render
 

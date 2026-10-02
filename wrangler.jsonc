@@ -15,9 +15,12 @@
     "run_worker_first": ["/api", "/api/*"]
   },
   // Keep the Render free-tier API from sleeping (see apps/web/worker/index.js). One always-on free
-  // service uses ~744 of Render's 750 free instance-hours a month.
-  "triggers": { "crons": ["*/10 * * * *"] },
-  "vars": { "API_URL": "https://orbit-api-5kcx.onrender.com" }
+  // service uses ~744 of Render's 750 free instance-hours a month. While the old Ohio service still runs for
+  // desktop apps that haven't updated, the two share those hours, so for now Singapore is kept awake 05:30-01:30
+  // IST (00-19 UTC) only; back to "*/10 * * * *" once Ohio is gone.
+  "triggers": { "crons": ["*/10 0-19 * * *"] },
+  // Singapore (Render + Neon aws-ap-southeast-1): ~90 ms from India, vs ~280 ms to the old Ohio service.
+  "vars": { "API_URL": "https://orbit-api-sg.onrender.com" }
   // Secret (not a var): `wrangler secret put PROXY_SECRET` with the API's ORBIT_PROXY_SECRET, so the API can trust
   // the client IP this Worker forwards (apps/web/worker/index.js).
 }
