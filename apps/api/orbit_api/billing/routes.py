@@ -6,7 +6,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -152,13 +152,18 @@ async def submit_utr(order_id: str, body: UtrIn, background: BackgroundTasks,
                             "That isn't a UTR. It's the 12-digit number your UPI app shows for the payment "
                             "(called UTR, UPI Ref No. or Transaction ID).")
     first_time = p.status != "submitted"
-    p.utr, p.status, p.submitted_at, p.note = utr, "submitted", datetime.now(UTC), None
+    # Conditional: an approval landing meanwhile mustn't be followed by a different UTR on the approved order.
     try:
+        done = await db.execute(
+            update(Payment).where(Payment.id == p.id, Payment.user_id == user.id, Payment.status != "approved")
+            .values(utr=utr, status="submitted", submitted_at=datetime.now(UTC), note=None))
         await db.commit()
     except IntegrityError as e:
         await db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT,
                             "That UTR was already used for a payment. Check the number in your UPI app.") from e
+    if done.rowcount != 1:  # type: ignore[attr-defined]
+        raise HTTPException(status.HTTP_409_CONFLICT, "This payment is already approved.")
     await db.refresh(p)
     s = get_settings()
     if first_time and s.admin_email and not s.is_admin_email(user.email):
@@ -174,7 +179,7 @@ async def submit_utr(order_id: str, body: UtrIn, background: BackgroundTasks,
 
 
 class AdminPayment(UpiOrderOut):
-    user_id: str
+    user_id: str | None  # None: the account was deleted (the payment is kept, so its UTR can't be reused)
     email: str
     name: str | None
     # What the account has right now: a plan granted for a while, if any.
@@ -189,9 +194,11 @@ class AdminPaymentsOut(BaseModel):
 
 
 async def _admin_payment(db: AsyncSession, p: Payment) -> AdminPayment:
-    u = await db.get(User, p.user_id)
-    assert u is not None  # payments go with the account
+    u = await db.get(User, p.user_id) if p.user_id else None
     out = _order_out(p)
+    if u is None:
+        return AdminPayment(**out.model_dump(exclude={"upi_id", "payee_name", "upi_uri"}), user_id=None,
+                            email="(deleted account)", name=None, current_plan=None, current_until=None)
     granted = active_grant(u)
     return AdminPayment(**out.model_dump(exclude={"upi_id", "payee_name", "upi_uri"}), user_id=u.id,
                         email=u.email, name=u.name, current_plan=plan_named(granted).label if granted else None,
@@ -217,6 +224,8 @@ async def admin_payments(_: Annotated[User, Depends(require_admin)], db: Annotat
 class DecisionIn(BaseModel):
     action: Literal["approve", "reject"]
     note: str | None = Field(None, max_length=300)
+    # The UTR the admin checked against the bank statement: if the payer changed it meanwhile, nothing is decided.
+    utr: str | None = Field(None, max_length=32)
 
 
 def _what(p: Payment) -> str:
@@ -236,24 +245,32 @@ async def decide_payment(payment_id: str, body: DecisionIn, background: Backgrou
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found.")
     if p.status != "submitted":
         raise HTTPException(status.HTTP_409_CONFLICT, "Only a payment with a UTR waiting to be checked can be decided.")
-    u = await db.get(User, p.user_id)
-    assert u is not None
+    if body.utr is not None and upi.normalize_utr(body.utr) != p.utr:
+        raise HTTPException(status.HTTP_409_CONFLICT, "The UTR changed since you opened this. Check the new one.")
+    u = await db.get(User, p.user_id) if p.user_id else None
+    if u is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "That account was deleted, so there's nothing to credit.")
     now = datetime.now(UTC)
     web = get_settings().web_url.rstrip("/")
     note = (body.note or "").strip() or None
+    # Decide it once: two approvals at the same moment (a double-click, two tabs) must not both add the credits.
+    decided = await db.execute(
+        update(Payment).where(Payment.id == p.id, Payment.status == "submitted", Payment.utr == p.utr)
+        .values(status="approved" if body.action == "approve" else "rejected", decided_at=now, note=note))
+    if decided.rowcount != 1:  # type: ignore[attr-defined]
+        await db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "This payment was just decided. Reload the list.")
     if body.action == "approve":
         if p.resume_credits:
             credits.add(db, u.id, "resume", p.resume_credits, "purchase", payment_id=p.id)
         if p.interview_minutes:
             credits.add(db, u.id, "interview_seconds", p.interview_minutes * 60, "purchase", payment_id=p.id)
         u.approved = True
-        p.status, p.decided_at, p.note = "approved", now, note
         mail = OutgoingEmail(to=u.email, subject=f"Payment received: {_what(p)} added to Orbit",
                              text=(f"Thanks! We received your ₹{p.amount_inr} payment (UTR {p.utr}).\n\n"
                                    f"Your account now has {_what(p)} more. They don't expire. "
                                    f"Sign in to use them: {web}/login"))
     else:
-        p.status, p.decided_at, p.note = "rejected", now, note
         reason = f"\n\nWhy: {note}" if note else ""
         mail = OutgoingEmail(to=u.email, subject="We couldn't confirm your Orbit payment",
                              text=(f"We couldn't find your ₹{p.amount_inr} payment with UTR {p.utr} in our account."
@@ -261,7 +278,11 @@ async def decide_payment(payment_id: str, body: DecisionIn, background: Backgrou
                                    f"{web}/billing"))
     db.add(AuditLog(user_id=admin.id, action=f"admin.payment.{body.action}",
                     target=f"{p.id} {p.plan} ₹{p.amount_inr} {p.utr}"))
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as e:  # the credits for this payment were already added (uq_credit_entries_payment_kind)
+        await db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "This payment was already credited.") from e
     await db.refresh(p)
     await db.refresh(u)
     background.add_task(send_safely, mail)

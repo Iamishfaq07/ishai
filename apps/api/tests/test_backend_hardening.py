@@ -9,7 +9,8 @@ from orbit_api.config import Settings
 
 
 def _prod(**over: object) -> dict[str, object]:
-    base = dict(ORBIT_ENV="production", ORBIT_JWT_SECRET="x" * 40, ORBIT_SMTP_HOST="smtp.example.com",
+    base = dict(ORBIT_ENV="production", ORBIT_JWT_SECRET="Q8f2LmZr7Tq1VbN4xKc9WsYe3HpJd6Ug",
+                ORBIT_SMTP_HOST="smtp.example.com",
                 ORBIT_DATABASE_URL="postgresql+asyncpg://u:p@db/orbit", DEEPSEEK_API_KEY="sk-x",
                 DEEPGRAM_API_KEY="dg-x", ORBIT_LLM_PROVIDER="auto", ORBIT_STT_PROVIDER="auto",
                 ORBIT_ADMIN_EMAIL="owner@example.com")

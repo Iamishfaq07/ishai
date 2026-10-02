@@ -31,6 +31,7 @@ Reason = Literal["too_long", "too_generic", "inaccurate", "off_topic", "too_form
 # Learned style hints: a reason given at least LEARN_MIN times among the user's last LEARN_WINDOW ratings.
 LEARN_WINDOW = 40
 LEARN_MIN = 3
+MAX_RATINGS_PER_SESSION = 500  # far more answers than any session has
 LEARNED_HINTS: dict[str, str] = {
     "too_long": "They often rate answers too long: keep every answer noticeably tighter than the length setting "
                 "alone would.",
@@ -68,6 +69,17 @@ async def rate_answer(session_id: str, answer_id: str, body: FeedbackIn,
     row = await db.scalar(select(AnswerFeedback).where(AnswerFeedback.answer_id == answer_id))
     if row is not None and row.session_id != session_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Answer not found")
+    answer = await db.get(Answer, answer_id)
+    if answer is not None and answer.session_id != session_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Answer not found")
+    if answer is None and row is None:
+        # Answers are written in the background, so one rated the moment it finished may not be stored yet: that's
+        # fine during the session, and bounded. Afterwards, only real answers of this session can be rated (made-up
+        # ids would skew the feedback the admin and the style hints learn from).
+        rated = await db.scalar(select(func.count()).select_from(AnswerFeedback).where(
+            AnswerFeedback.session_id == session_id)) or 0
+        if session.status == "ended" or rated >= MAX_RATINGS_PER_SESSION:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Answer not found")
     if body.rating is None:
         if row is not None:
             await db.delete(row)

@@ -54,6 +54,8 @@ MIN_IMPORT_CHARS = 80
 score_limit = limit("resume-score", rate_per_s=2, burst=30)
 ai_limit = limit("resume-ai", rate_per_s=0.1, burst=6)
 ai_user_limit = limit_user("resume-ai-user", rate_per_s=40 / 3600, burst=10)
+list_limit = limit_user("resume-list", rate_per_s=1, burst=20)  # each call scores every saved resume
+score_user_limit = limit_user("resume-score-user", rate_per_s=3, burst=40)
 
 
 class ResumeIn(BaseModel):
@@ -100,7 +102,7 @@ async def _owned(db: AsyncSession, resume_id: str, user: User) -> Resume:
     return r
 
 
-@router.get("", response_model=list[ResumeSummary])
+@router.get("", response_model=list[ResumeSummary], dependencies=[Depends(list_limit)])
 async def list_resumes(user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> list[ResumeSummary]:
     rows = (await db.scalars(select(Resume).where(Resume.user_id == user.id)
@@ -173,7 +175,7 @@ class ScoreIn(BaseModel):
     job_text: str = Field("", max_length=MAX_JOB_TEXT)
 
 
-@router.post("/score", response_model=AtsReport, dependencies=[Depends(score_limit)])
+@router.post("/score", response_model=AtsReport, dependencies=[Depends(score_limit), Depends(score_user_limit)])
 async def score(body: ScoreIn, _: Annotated[User, Depends(current_user)]) -> AtsReport:
     return await asyncio.to_thread(score_resume, body.data, body.design, body.job_text)  # CPU work: off the loop
 
@@ -257,7 +259,9 @@ async def _import_text(db: AsyncSession, user: User | None, text: str, kind: str
         log.warning("resume import unusable: %s", e)
         raise HTTPException(status.HTTP_502_BAD_GATEWAY,
                             "The AI couldn't read that resume. Try again, or paste the text instead.") from e
-    data, removed = ground_import(data, text)
+    # What the model saw (it got MAX_SOURCE_CHARS), checked off the event loop: a long source and hundreds of lines
+    # are seconds of regex work.
+    data, removed = await asyncio.to_thread(ground_import, data, text[:ai.MAX_SOURCE_CHARS])
     if removed:
         log.info("resume import: removed %s", "; ".join(removed))
     name = data.basics.name.strip()

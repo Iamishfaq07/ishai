@@ -2,7 +2,20 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, true
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+    true,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from orbit_api.db import Base, EmbeddingType
@@ -98,7 +111,10 @@ class Payment(TimestampMixin, Base):
 
     __tablename__ = "payments"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    # SET NULL, not CASCADE: a deleted account's payments (and their unique UTRs) stay, so a transfer can't be
+    # submitted again from a new account.
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True,
+                                                nullable=True)
     plan: Mapped[str] = mapped_column(String(32))  # the credit pack's id (billing/packs.py)
     amount_inr: Mapped[int] = mapped_column(Integer)
     days: Mapped[int] = mapped_column(Integer)  # 0 for credit packs (older time-limited orders: their days)
@@ -128,7 +144,13 @@ class CreditEntry(TimestampMixin, Base):
     reason: Mapped[str] = mapped_column(String(20))  # welcome | purchase | admin | resume_ai
     payment_id: Mapped[str | None] = mapped_column(String(36))
     ip_hash: Mapped[str | None] = mapped_column(String(64))
-    __table_args__ = (Index("ix_credit_entries_welcome", "reason", "ip_hash", "created_at"),)
+    # Welcome grants: a keyed hash of the inbox (credits.inbox), so one mailbox gets one welcome however it's spelled.
+    email_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    __table_args__ = (Index("ix_credit_entries_welcome", "reason", "ip_hash", "created_at"),
+                      # One grant per payment and kind: approving twice at once can't add a pack's credits twice.
+                      Index("uq_credit_entries_payment_kind", "payment_id", "kind", unique=True,
+                            postgresql_where=text("payment_id IS NOT NULL"),
+                            sqlite_where=text("payment_id IS NOT NULL")))
 
 
 class FreeAiUse(TimestampMixin, Base):

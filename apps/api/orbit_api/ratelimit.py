@@ -24,6 +24,7 @@ ENFORCE_IN_TESTS = False
 
 
 _all_buckets: "weakref.WeakSet[TokenBucket]" = weakref.WeakSet()
+MAX_KEYS = 50_000
 
 
 class TokenBucket:
@@ -33,12 +34,33 @@ class TokenBucket:
         self._buckets: dict[str, tuple[float, float]] = {}
         _all_buckets.add(self)
 
+    def _tokens(self, key: str, now: float) -> float:
+        tokens, last = self._buckets.get(key, (float(self.burst), now))
+        return min(self.burst, tokens + (now - last) * self.rate)
+
+    def _evict(self) -> None:
+        # Full: forget the least recently touched tenth, not everything. Clearing all of it would let a flood of
+        # junk keys reset every throttle (a victim's login bucket included).
+        if len(self._buckets) <= MAX_KEYS:
+            return
+        oldest = sorted(self._buckets.items(), key=lambda kv: kv[1][1])[: MAX_KEYS // 10]
+        for k, _ in oldest:
+            del self._buckets[k]
+
+    def peek(self, key: str) -> bool:
+        """Whether a request would be allowed, without spending a token (e.g. before checking a password)."""
+        return self._tokens(key, time.monotonic()) >= 1
+
+    def spend(self, key: str) -> None:
+        """Take a token whether or not one is left (e.g. after a failed password)."""
+        now = time.monotonic()
+        self._evict()
+        self._buckets[key] = (max(self._tokens(key, now) - 1, -1.0), now)
+
     def allow(self, key: str) -> bool:
         now = time.monotonic()
-        tokens, last = self._buckets.get(key, (float(self.burst), now))
-        tokens = min(self.burst, tokens + (now - last) * self.rate)
-        if len(self._buckets) > 50_000:
-            self._buckets.clear()
+        tokens = self._tokens(key, now)
+        self._evict()
         if tokens < 1:
             self._buckets[key] = (tokens, now)
             return False
@@ -62,10 +84,11 @@ def _valid_ip(value: str | None) -> str | None:
 def client_ip(request: Request) -> str:
     """The caller's IP, for rate limits and the audit log.
 
-    Without ORBIT_PROXY_SECRET: uvicorn's --proxy-headers already put the left-most X-Forwarded-For entry here. With
-    it: the web app's edge proxy (which knows the secret) states the real client IP; any other request is keyed by
-    the right-most X-Forwarded-For entry, the one the host's own edge appended (a client can only add entries to
-    the left), so spoofing the header no longer moves a caller into a fresh bucket.
+    With ORBIT_PROXY_SECRET (production should always have it): the web app's edge proxy, which knows the secret,
+    states the real client IP; any other request is keyed by the right-most X-Forwarded-For entry, the one the host's
+    own edge appended (a client can only add entries to the left), so a spoofed header can't move a caller into a
+    fresh bucket. Without it: uvicorn's --proxy-headers value (the left-most entry). That's what the Worker sets for
+    web visitors, but a direct caller can spoof it, so the server warns at startup in production.
     """
     fallback = request.client.host if request.client else "unknown"
     secret = get_settings().proxy_secret
@@ -78,6 +101,24 @@ def client_ip(request: Request) -> str:
     return (_valid_ip(hops[-1]) if hops else None) or fallback
 
 
+def network_of(ip: str) -> str:
+    """What counts as one caller for limits: an IPv4 address, or an IPv6 /64 (one home or one server usually owns a
+    whole /64, so keying on the full address hands an attacker 2^64 fresh buckets)."""
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return ip
+    if isinstance(addr, ipaddress.IPv6Address):
+        if addr.ipv4_mapped is not None:
+            return str(addr.ipv4_mapped)
+        return str(ipaddress.IPv6Network((addr, 64), strict=False))
+    return str(addr)
+
+
+def client_network(request: Request) -> str:
+    return network_of(client_ip(request))
+
+
 def check(bucket: TokenBucket, key: str, message: str = TOO_MANY) -> None:
     if get_settings().env == "test" and not ENFORCE_IN_TESTS:
         return
@@ -85,12 +126,27 @@ def check(bucket: TokenBucket, key: str, message: str = TOO_MANY) -> None:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, message)
 
 
+def _enforced() -> bool:
+    return get_settings().env != "test" or ENFORCE_IN_TESTS
+
+
+def blocked(bucket: TokenBucket, key: str) -> bool:
+    """Out of tokens (without spending one): for throttles that count only failures."""
+    return _enforced() and not bucket.peek(key)
+
+
+def failed(bucket: TokenBucket, key: str) -> None:
+    """Count a failure (a wrong password) against `key`."""
+    if _enforced():
+        bucket.spend(key)
+
+
 def limit(name: str, rate_per_s: float, burst: int) -> Callable[[Request], None]:
     """Per client IP."""
     bucket = TokenBucket(rate_per_s, burst)
 
     def dep(request: Request) -> None:
-        check(bucket, f"{name}:{client_ip(request)}")
+        check(bucket, f"{name}:{client_network(request)}")
 
     return dep
 

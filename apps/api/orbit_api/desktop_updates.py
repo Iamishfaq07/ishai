@@ -25,13 +25,16 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse, RedirectResponse
 
 from orbit_api.config import get_settings
+from orbit_api.ratelimit import limit
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/desktop", tags=["desktop"])
+# Installer downloads per caller: a real install is one; a loop would burn the GitHub token (see _download_cache).
+download_limit = limit("desktop-download", rate_per_s=10 / 3600, burst=10)
 
 _VERSION = re.compile(r"^(\d{1,4})\.(\d{1,4})\.(\d{1,4})$")
 SUPPORTED = {("windows", "x86_64")}  # Windows-first; macOS/Linux deferred
@@ -161,13 +164,26 @@ async def _parse_github_release(c: httpx.AsyncClient, rel: dict[str, Any], token
                          published=published)
 
 
+# GitHub's signed download link (valid a few minutes), reused for a minute: the download is public, and asking
+# GitHub on every request would let anyone burn the token's hourly quota and break updates for everyone.
+_download_cache: dict[str, tuple[float, str]] = {}
+DOWNLOAD_URL_TTL_S = 60.0
+
+
 async def _github_download_url(release: GitHubRelease) -> str | None:
     cfg = _github_config()
     if cfg is None:
         return None
+    hit = _download_cache.get(release.installer_asset_url)
+    if hit and time.monotonic() < hit[0]:
+        return hit[1]
     async with _http(timeout=10) as c:
         r = await c.get(release.installer_asset_url, headers=_github_headers(cfg[1], raw=True), follow_redirects=False)
-    return r.headers.get("location") if r.status_code in (301, 302, 307) else None
+    location = r.headers.get("location") if r.status_code in (301, 302, 307) else None
+    if location:
+        _download_cache.clear()  # only the latest release's link is ever needed
+        _download_cache[release.installer_asset_url] = (time.monotonic() + DOWNLOAD_URL_TTL_S, location)
+    return location
 
 
 # ---- endpoints ------------------------------------------------------------------------------------------
@@ -212,7 +228,8 @@ async def check_update(target: str, arch: str, current_version: str, request: Re
     }
 
 
-@router.get("/download/{version}/{filename}", name="download_installer", response_model=None)
+@router.get("/download/{version}/{filename}", name="download_installer", response_model=None,
+            dependencies=[Depends(download_limit)])
 async def download_installer(version: str, filename: str) -> FileResponse | RedirectResponse:
     stem = filename.removesuffix("-setup.exe")
     if parse_version(version) is None or stem == filename or not re.fullmatch(r"[\w.-]+", stem):

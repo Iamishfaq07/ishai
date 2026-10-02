@@ -10,16 +10,7 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="referrer" content="no-referrer" />
     <title>Orbit</title>
-    <script>
-      // Apply the saved theme before first paint to avoid a light/dark flash.
-      (function () {
-        try {
-          var pref = localStorage.getItem("orbit.theme") || "dark";
-          var dark = pref === "dark" || (pref === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
-          document.documentElement.classList.toggle("dark", dark);
-        } catch (e) {}
-      })();
-    </script>
+    <script src="/theme-init.js"></script>
   </head>
   <body class="bg-white text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
     <div id="root"></div>

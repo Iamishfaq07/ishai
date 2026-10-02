@@ -13,6 +13,7 @@ the source never gave has to go (an import, a cover letter), the words carrying 
 """
 
 import re
+from functools import lru_cache
 
 from orbit_api.live.keyterms import tech_terms
 from orbit_api.resumes.schema import ResumeData
@@ -38,9 +39,15 @@ def _figures(text: str) -> list[tuple[re.Match[str], str]]:
     return out
 
 
+@lru_cache(maxsize=32)
+def _known_figures(corpus: str) -> frozenset[str]:
+    # Once per corpus, not once per line checked against it (an import checks hundreds of lines against one source).
+    return frozenset(n for _, n in _figures(corpus))
+
+
 def invented_figures(text: str, corpus: str) -> list[str]:
     """The figures in `text` that appear nowhere in `corpus` (as written, e.g. "35%")."""
-    known = {n for _, n in _figures(corpus)}
+    known = _known_figures(corpus)
     return [m.group(0) for m, normal in _figures(text) if normal not in known]
 
 

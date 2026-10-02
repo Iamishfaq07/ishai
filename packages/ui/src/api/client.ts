@@ -1,4 +1,5 @@
 import type {
+  AdminActivityItem,
   AtsReport,
   AccessChange,
   AdminConfig,
@@ -251,15 +252,23 @@ export function createApiClient(options: ApiClientOptions) {
       csrfToken = null;
     },
     updatePrivacy: (req: PrivacyUpdate) => json<User>("/v1/auth/me/privacy", { method: "PATCH", body: body(req) }),
-    deleteAccount: () => json<void>("/v1/auth/me", { method: "DELETE" }),
+    /** Asks for the password again: a session left open somewhere can't delete the account. */
+    deleteAccount: (password: string) => json<void>("/v1/auth/me", { method: "DELETE", body: body({ password }) }),
+    /** A new password; every other device (and any live session) is signed out, this one stays signed in. */
+    changePassword: (currentPassword: string, newPassword: string) =>
+      json<AuthResponse>("/v1/auth/me/password", {
+        method: "POST",
+        body: body({ current_password: currentPassword, new_password: newPassword }),
+      }),
     logoutAll: () => json<void>("/v1/auth/logout-all", { method: "POST" }),
     requestEmailChange: (newEmail: string, password: string) =>
       json<{ status: string }>("/v1/auth/me/email", {
         method: "POST",
         body: body({ new_email: newEmail, password }),
       }),
+    /** Changes the email; it signs nobody in (sign in with the new address and your password). */
     confirmEmailChange: (token: string) =>
-      json<AuthResponse>("/v1/auth/email-change/confirm", { method: "POST", body: body({ token }) }),
+      json<{ email: string }>("/v1/auth/email-change/confirm", { method: "POST", body: body({ token }) }),
     /** Everything Orbit stores about the account, as a JSON file (Blob). */
     exportData: async () => (await raw("/v1/auth/me/export")).blob(),
     requestVerification: () => json<{ status: string }>("/v1/auth/verify-email/request", { method: "POST" }),
@@ -403,7 +412,11 @@ export function createApiClient(options: ApiClientOptions) {
     // Admin / advanced settings
     adminStatus: () => json<{ is_admin: boolean }>("/v1/admin/status"),
     /** Admin: accounts, newest first ("pending" = waiting for access). */
-    adminUsers: (only: "all" | "pending" = "all") => json<AdminUsers>(`/v1/admin/users?only=${only}`),
+    adminUsers: (only: "all" | "pending" = "all", q = "") =>
+      json<AdminUsers>(`/v1/admin/users?only=${only}${q.trim() ? `&q=${encodeURIComponent(q.trim())}` : ""}`),
+    /** Admin: one account's history (credits in and out, sessions and their minutes, payments), newest first. */
+    adminUserActivity: (userId: string) =>
+      json<{ items: AdminActivityItem[] }>(`/v1/admin/users/${encodeURIComponent(userId)}/activity`),
     /** Admin: add resume credits and/or interview minutes to an account (they never expire). */
     giveCredits: (userId: string, add: { resume?: number; interview_minutes?: number }) =>
       json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/credits`, { method: "POST", body: body(add) }),
@@ -413,10 +426,11 @@ export function createApiClient(options: ApiClientOptions) {
     /** Admin: UPI payments ("submitted" = a UTR waiting to be checked). */
     adminPayments: (only: "submitted" | "all" = "submitted") =>
       json<AdminPayments>(`/v1/admin/payments?only=${only}`),
-    decidePayment: (paymentId: string, action: "approve" | "reject", note?: string) =>
+    /** `utr`: the one you checked against the bank statement; if the payer changed it since, nothing is decided. */
+    decidePayment: (paymentId: string, action: "approve" | "reject", note?: string, utr?: string | null) =>
       json<AdminPayment>(`/v1/admin/payments/${encodeURIComponent(paymentId)}`, {
         method: "POST",
-        body: body({ action, note: note ?? null }),
+        body: body({ action, note: note ?? null, ...(utr ? { utr } : {}) }),
       }),
     getLatency: (days = 7) => json<LatencyReport>(`/v1/admin/latency?days=${days}`),
     getCosts: (days = 30) => json<CostReport>(`/v1/admin/costs?days=${days}`),

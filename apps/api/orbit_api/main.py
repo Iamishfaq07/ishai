@@ -9,6 +9,8 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import DBAPIError
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.types import Receive, Scope, Send
 
@@ -52,6 +54,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     s = get_settings()
     if s.env != "production":
         await db.create_all()  # production uses `alembic upgrade head`
+    elif s.proxy_secret is None:
+        logging.getLogger(__name__).warning(
+            "SECURITY: ORBIT_PROXY_SECRET is not set. Callers reaching the API directly can choose their own IP "
+            "(X-Forwarded-For) and so dodge per-IP limits (sign-up, welcome credits). Set it to the web Worker's "
+            "PROXY_SECRET (wrangler secret put PROXY_SECRET).")
     try:
         async with db.sessionmaker()() as session:
             await refresh_runtime_config(session)  # load admin API-key overrides into providers
@@ -128,15 +135,38 @@ class BodyLimit:
         await self.app(scope, receive if length is not None else counted, send)
 
 
+# Postgres refuses U+0000 in text (22021) and in jsonb (22P05). Anything typed can carry one, so it's bad input.
+BAD_TEXT_SQLSTATES = frozenset({"22021", "22P05"})
+
+
+def bad_text(e: DBAPIError) -> bool:
+    orig = e.orig
+    codes = {getattr(orig, "sqlstate", None), getattr(orig, "pgcode", None),
+             getattr(getattr(orig, "__cause__", None), "sqlstate", None)}
+    return bool(codes & BAD_TEXT_SQLSTATES)
+
+
+async def bad_text_handler(request: Request, e: Exception) -> Response:
+    """A NUL character in a name, a resume line or a search: 400 with a reason, instead of a 500 (and an alert)."""
+    if isinstance(e, DBAPIError) and bad_text(e):
+        return JSONResponse({"detail": "That text has a character that can't be saved (a NUL byte). Remove it and "
+                                       "try again."}, status_code=400)
+    raise e
+
+
 def create_app() -> FastAPI:
     s = get_settings()
     configured_plans()  # fail fast on a bad ORBIT_PLANS_JSON / *_MAX_SESSION_MINUTES instead of at first use
     configured_packs()  # and on a bad ORBIT_CREDIT_PACKS_JSON
     if init_sentry(s.sentry_dsn, s.env, running_commit()):
         logging.getLogger(__name__).info("sentry error reporting enabled")
+    # In production neither the docs nor the schema are served: the route map (admin routes included) isn't
+    # anyone's business, and the clients don't need it.
     app = FastAPI(title="Orbit API", version="0.1.0", lifespan=lifespan,
-                  docs_url="/docs" if s.env != "production" else None, redoc_url=None)
+                  docs_url="/docs" if s.env != "production" else None, redoc_url=None,
+                  openapi_url="/openapi.json" if s.env != "production" else None)
     app.middleware("http")(request_id_middleware)
+    app.add_exception_handler(DBAPIError, bad_text_handler)
     # Registered before CORS so it runs *inside* it: its 403s still carry CORS headers the browser can read.
     app.middleware("http")(csrf_middleware)
     app.add_middleware(

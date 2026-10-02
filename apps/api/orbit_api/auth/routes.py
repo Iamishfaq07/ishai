@@ -4,7 +4,7 @@ from urllib.parse import urlsplit
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,10 +27,10 @@ from orbit_api.config import get_settings
 from orbit_api.csrf import token_for as csrf_token_for
 from orbit_api.db import get_db
 from orbit_api.entitlements import awaiting_approval
-from orbit_api.models import AuditLog, LiveSessionRow, User
+from orbit_api.models import AuditLog, LiveSessionRow, ProviderRequest, User
 from orbit_api.providers.email import OutgoingEmail, can_deliver, send_safely
-from orbit_api.ratelimit import TokenBucket, check, client_ip, limit
-from orbit_api.sessions.routes import stop_live
+from orbit_api.ratelimit import TokenBucket, blocked, check, client_ip, client_network, failed, limit
+from orbit_api.sessions.routes import stop_live, stop_user_live
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 auth_limit = limit("auth", rate_per_s=0.2, burst=10)
@@ -38,10 +38,61 @@ email_limit = limit("email", rate_per_s=0.05, burst=5)
 # Account creation: a handful per IP per hour. Login is also throttled per target email, so password guessing
 # spread over many IPs still hits a wall.
 signup_limit = limit("signup", rate_per_s=5 / 3600, burst=5)
-_login_by_email = TokenBucket(rate_per_s=10 / 900, burst=10)
+# Wrong passwords only (a correct one never counts): per account from one network, and per account overall (a
+# guess spread over many networks). Someone else's failures from another network can't lock the owner out, and the
+# overall cap is high enough that it takes a sustained, distributed attack to reach it.
+_login_fail_here = TokenBucket(rate_per_s=10 / 900, burst=10)
+_login_fail_anywhere = TokenBucket(rate_per_s=60 / 900, burst=60)
 _reset_by_email = TokenBucket(rate_per_s=3 / 3600, burst=3)
 # "You already have an account" notices: sign-up attempts with a taken address can't flood its owner's inbox.
 _signup_notice_by_email = TokenBucket(rate_per_s=3 / 3600, burst=3)
+
+
+# The most common long passwords: length alone lets these through.
+_COMMON = frozenset("""
+password123 password1234 password12345 1234567890 12345678910 0123456789 qwertyuiop qwertyuiop1 1q2w3e4r5t
+iloveyou123 iloveyou12 abcdefghij abcdefghijk 1234567890a a1234567890 passw0rd123 password!! welcome123 welcome1234
+letmein123 adminadmin admin12345 administrator 1111111111 0000000000 9876543210 qazwsxedcrfv zaq12wsxcde
+football123 baseball123 sunshine123 princess123 dragon1234 monkey1234 trustno1234 superman123 starwars123
+""".split())
+
+
+def password_problem(password: str, email: str = "") -> str | None:
+    """Why a new password is too easy to guess, or None."""
+    p = password.lower()
+    if p in _COMMON or len(set(p)) < 4:
+        return "That password is too easy to guess. Use a longer phrase or a mix of words, numbers and symbols."
+    local = email.lower().split("@", 1)[0]
+    if len(local) >= 4 and local in p:
+        return "Don't use your email address in your password."
+    return None
+
+
+def _check_password(password: str, email: str = "") -> None:
+    problem = password_problem(password, email)
+    if problem:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, problem)
+
+
+# Wrong current passwords on a signed-in account (email change, password change, delete): a stolen session can't
+# be used to guess the password.
+_password_fail_by_user = TokenBucket(rate_per_s=5 / 3600, burst=5)
+
+
+async def _recheck_password(user: User, password: str) -> None:
+    if blocked(_password_fail_by_user, user.id):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many wrong passwords. Try again later.")
+    if not await verify_password(password, user.password_hash):
+        failed(_password_fail_by_user, user.id)
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "That password isn't right.")
+
+
+async def _sign_out_everywhere(db: AsyncSession, user: User) -> None:
+    """Every session ends (web, desktop, a live session streaming somewhere, a phone following it) and every
+    unused emailed link stops working. Caller commits."""
+    user.token_version += 1
+    await email_tokens.revoke_all(db, user.id)
+    await stop_user_live(user.id)
 
 
 class RegisterIn(BaseModel):
@@ -143,6 +194,7 @@ async def register(body: RegisterIn, request: Request, response: Response, backg
     email = body.email.lower()
     if not get_settings().email_allowed(email):
         raise HTTPException(status.HTTP_403_FORBIDDEN, NOT_ALLOWED)
+    _check_password(body.password, email)
     await require_captcha(body.captcha_token, _ip(request))
     existing = await db.scalar(select(User).where(User.email == email))
     if not _inbox_first():
@@ -200,10 +252,15 @@ async def _verify_token(db: AsyncSession, user: User) -> str:
 @router.post("/login", response_model=AuthOut, dependencies=[Depends(auth_limit)])
 async def login(body: LoginIn, request: Request, response: Response,
                 db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut:
-    check(_login_by_email, body.email.lower(),
-          "Too many sign-in attempts for this account — try again in a few minutes.")
-    user = await db.scalar(select(User).where(User.email == body.email.lower()))
+    email = body.email.lower()
+    here = f"{email}|{client_network(request)}"
+    if blocked(_login_fail_here, here) or blocked(_login_fail_anywhere, email):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
+                            "Too many wrong passwords for this account — try again in a few minutes.")
+    user = await db.scalar(select(User).where(User.email == email))
     if not await verify_password(body.password, user.password_hash if user else None) or user is None:
+        failed(_login_fail_here, here)
+        failed(_login_fail_anywhere, email)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password.")
     if not get_settings().email_allowed(user.email):
         raise HTTPException(status.HTTP_403_FORBIDDEN, NOT_ALLOWED)
@@ -244,19 +301,35 @@ async def update_privacy(body: PrivacyIn, user: Annotated[User, Depends(current_
     return _user_out(u)
 
 
+class DeleteAccountIn(BaseModel):
+    password: str = Field(max_length=256)
+
+
 @router.delete("/me", status_code=204)
-async def delete_account(request: Request, response: Response, user: Annotated[User, Depends(current_user)],
+async def delete_account(body: DeleteAccountIn, request: Request, response: Response,
+                         user: Annotated[User, Depends(current_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> Response:
-    """Deletes the account and, via ON DELETE CASCADE, every document, session and usage row."""
+    """Deletes the account and, via ON DELETE CASCADE, every document, session and usage row. Asks for the password
+    again (a session left open somewhere can't delete it), and never deletes the admin account: whoever registered
+    its email next would be the admin."""
     u = await db.get(User, user.id)
     if u is not None:
+        if get_settings().is_admin_email(u.email):
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
+                                "The admin account can't be deleted from the app.")
+        await _recheck_password(u, body.password)
         # A live session goes first, as End does: otherwise its engine kept streaming (and metering) STT and the
         # LLM for an account that no longer exists, every write failing against the deleted rows.
         for session_id in (await db.scalars(select(LiveSessionRow.id).where(
                 LiveSessionRow.user_id == u.id, LiveSessionRow.status != "ended"))).all():
             await stop_live(u.id, session_id)
+        await stop_user_live(u.id)  # and every phone-share code
         await db.delete(u)
-        db.add(AuditLog(user_id=None, action="auth.delete_account", target=user.id, ip=_ip(request)))
+        # Rows without a foreign key keep no personal data: the account's audit trail loses its IP addresses, and
+        # provider-cost rows lose the link to it (the cost totals stay right).
+        await db.execute(update(AuditLog).where(AuditLog.user_id == u.id).values(ip=None))
+        await db.execute(update(ProviderRequest).where(ProviderRequest.user_id == u.id).values(user_id=None))
+        db.add(AuditLog(user_id=None, action="auth.delete_account", target=user.id))
         await db.commit()
     _clear_cookie(response)
     response.status_code = 204
@@ -291,7 +364,8 @@ def _alert_admin_if_waiting(user: User, background: BackgroundTasks) -> None:
     if s.verification_required and not user.email_verified:
         return
     web = s.web_url.rstrip("/")
-    who = f"{user.name} ({user.email})" if user.name else user.email
+    name = " ".join((user.name or "").split())[:80]  # one line: a name can't carry a message of its own
+    who = f"{name} ({user.email})" if name else user.email
     background.add_task(send_safely, OutgoingEmail(
         to=s.admin_email,
         subject=f"New Orbit sign-up: {user.email}",
@@ -397,8 +471,9 @@ async def confirm_password_reset(body: ResetConfirmIn, request: Request, respons
     if user is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "This reset link is invalid or has expired.")
     newly_verified = not user.email_verified
+    _check_password(body.password, user.email)
     user.password_hash = await hash_password(body.password)
-    user.token_version += 1  # every existing session (web + desktop) is signed out
+    await _sign_out_everywhere(db, user)  # every session, live socket and unused link
     user.email_verified = True  # they just proved control of the inbox
     db.add(AuditLog(user_id=user.id, action="auth.password_reset", ip=_ip(request)))
     await db.commit()
@@ -413,7 +488,7 @@ async def logout_everywhere(request: Request, response: Response, user: Annotate
     u = await db.get(User, user.id)
     if u is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not signed in.")
-    u.token_version += 1
+    await _sign_out_everywhere(db, u)
     db.add(AuditLog(user_id=u.id, action="auth.logout_all", ip=_ip(request)))
     await db.commit()
     _clear_cookie(response)
@@ -465,8 +540,10 @@ async def request_email_change(body: EmailChangeIn, request: Request, user: Anno
     u = await db.get(User, user.id)
     if u is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not signed in.")
-    if not await verify_password(body.password, u.password_hash):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "That password isn't right.")
+    if get_settings().is_admin_email(u.email):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            "The admin account's email is set by ORBIT_ADMIN_EMAIL on the server; change it there.")
+    await _recheck_password(u, body.password)
     if new_email == u.email:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "That's already your email.")
     if not get_settings().email_allowed(new_email):
@@ -481,9 +558,15 @@ async def request_email_change(body: EmailChangeIn, request: Request, user: Anno
     return {"status": "sent"}
 
 
-@router.post("/email-change/confirm", response_model=AuthOut, dependencies=[Depends(auth_limit)])
+class EmailChangedOut(BaseModel):
+    email: str
+
+
+@router.post("/email-change/confirm", response_model=EmailChangedOut, dependencies=[Depends(auth_limit)])
 async def confirm_email_change(body: TokenIn, request: Request, response: Response,
-                               db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut:
+                               db: Annotated[AsyncSession, Depends(get_db)]) -> EmailChangedOut:
+    """Changes the email. It signs nobody in: whoever opens the link (maybe not the account's owner, if the link was
+    passed on) signs in with the password as usual."""
     row = await email_tokens.consume_row(db, body.token, "change_email")
     user = await db.get(User, row.user_id) if row else None
     if row is None or user is None or not row.new_email:
@@ -493,10 +576,36 @@ async def confirm_email_change(body: TokenIn, request: Request, response: Respon
     old = user.email
     user.email = row.new_email
     user.email_verified = True  # opening the link proves control of the new inbox
-    user.token_version += 1  # every other session (web + desktop) signs in again
+    await _sign_out_everywhere(db, user)  # every session signs in again, with the new address
     db.add(AuditLog(user_id=user.id, action="auth.email_changed", target=old, ip=_ip(request)))
     await db.commit()
-    return _auth_out(request, response, user)
+    _clear_cookie(response)
+    return EmailChangedOut(email=user.email)
+
+
+class PasswordChangeIn(BaseModel):
+    current_password: str = Field(max_length=256)
+    new_password: str = Field(min_length=10, max_length=256)
+
+
+@router.post("/me/password", response_model=AuthOut, dependencies=[Depends(auth_limit)])
+async def change_password(body: PasswordChangeIn, request: Request, response: Response,
+                          user: Annotated[User, Depends(current_user)],
+                          db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut:
+    """A new password, with the current one: every other device (and any live session) is signed out; this one
+    stays signed in."""
+    u = await db.get(User, user.id)
+    if u is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not signed in.")
+    await _recheck_password(u, body.current_password)
+    if body.new_password == body.current_password:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Pick a password you haven't used here.")
+    _check_password(body.new_password, u.email)
+    u.password_hash = await hash_password(body.new_password)
+    await _sign_out_everywhere(db, u)
+    db.add(AuditLog(user_id=u.id, action="auth.password_change", ip=_ip(request)))
+    await db.commit()
+    return _auth_out(request, response, u)
 
 
 # ---- data export (brief §42) ------------------------------------------------------------------------------

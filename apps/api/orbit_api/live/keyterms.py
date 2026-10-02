@@ -14,7 +14,8 @@ MAX_KEYTERMS = 50  # Deepgram caps keyterm prompting at about 500 tokens
 _MAX_TERM = 30
 
 # Separators inside a skills line: "Python, Go; AWS (EKS, Lambda) | SAST/DAST • Terraform and Ansible".
-_SPLIT = re.compile(r"\s*(?:[,;|•·()\[\]]|/(?!\w{1,2}\b)|\band\b|&)\s*")
+# (?<!\s): start only where a run of spaces begins, so a long run costs one pass instead of one per space.
+_SPLIT = re.compile(r"(?<!\s)\s*(?:[,;|•·()\[\]]|/(?!\w{1,2}\b)|\band\b|&)\s*")
 _LABEL = re.compile(r"^[^:]{1,40}:\s*")  # "Infrastructure: …"
 # Tech-shaped words in running text: PostgreSQL, gRPC, BigQuery, AWS, EC2, Node.js, C++, C#, .NET, K8s.
 _TECH = re.compile(

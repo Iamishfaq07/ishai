@@ -357,7 +357,8 @@ def test_deleting_the_account_stops_its_live_session(client: TestClient) -> None
     with _live(client, h, sid) as ws:
         _collect(ws, lambda ev: any(e["type"] == "session.started" for e in ev))
         engine = routes._live_engines[sid]
-        assert client.delete("/v1/auth/me", headers=h).status_code == 204
+        gone = client.request("DELETE", "/v1/auth/me", headers=h, json={"password": "correct horse battery"})
+        assert gone.status_code == 204
         assert engine.ended
         assert _close_code(ws) == 4009
     assert client.get("/v1/auth/me", headers=h).status_code == 401

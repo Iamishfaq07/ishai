@@ -28,4 +28,6 @@ EXPOSE 8000
 # X-Forwarded-For. Without it uvicorn trusts only 127.0.0.1, every request appears to come from the proxy, and
 # per-IP rate limits and audit IPs collapse into a single shared value. Set ORBIT_PROXY_SECRET (and the web
 # Worker's PROXY_SECRET) so a caller hitting the API directly can't choose its own address (ratelimit.client_ip).
-CMD ["sh", "-c", "alembic upgrade head && uvicorn orbit_api.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*' --no-server-header"]
+# --ws-max-size: a live socket carries audio frames of at most 64 kB and small JSON; a 16 MB message (the default)
+# would be buffered whole before the app could refuse it.
+CMD ["sh", "-c", "alembic upgrade head && uvicorn orbit_api.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*' --no-server-header --ws-max-size 131072"]

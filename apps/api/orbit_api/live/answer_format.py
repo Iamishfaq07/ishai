@@ -49,7 +49,8 @@ _FENCE = re.compile(r"^\s*```\s*([\w+#-]*)\s*$")
 # says (live_system.md, "HOW IT SOUNDS"). These are the safe, mechanical ones: an em dash (or a spaced en dash) is
 # said as a pause, so it becomes a comma; an opening "Great question." goes; a handful of stiff words become the
 # plain ones. Only whole words change, so a word still streaming in isn't touched until it's complete.
-_DASH = re.compile(r"\s*(?:—|(?<=\s)–(?=\s))\s*")
+# (?<!\s): start only at the beginning of a run of spaces, so 20,000 spaces cost one pass, not 20,000.
+_DASH = re.compile(r"(?<!\s)\s*(?:—|(?<=\s)–(?=\s))\s*")
 _DOUBLED = re.compile(r",\s*([,.;:!?])")
 _OPENER = re.compile(r"^(?:great question|that's a (?:great|good|really good) question|good question|absolutely|"
                      r"certainly|sure thing|of course)\s*[.!,]+\s+(?=\S)", re.IGNORECASE)

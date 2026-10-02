@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     database_url: str = Field(
         "sqlite+aiosqlite:///./orbit.db", validation_alias=AliasChoices("ORBIT_DATABASE_URL")
     )
+    # Postgres TLS (db.connect_args): verify = encrypted and the server's certificate checked (production default);
+    # require = encrypted, certificate not checked; off = whatever the URL says. asyncpg's own default encrypts
+    # without checking who answers, so someone on the network path could pose as the database.
+    database_ssl: Literal["verify", "require", "off"] | None = Field(
+        None, validation_alias=AliasChoices("ORBIT_DATABASE_SSL"))
     redis_url: str | None = Field(None, validation_alias=AliasChoices("ORBIT_REDIS_URL"))
     # How many API processes serve this deployment. Live-session state (WS tickets, socket ownership, the engine
     # a screenshot is routed to, rate limits) is in process memory, so only 1 is supported until it moves to
@@ -203,7 +208,10 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _reject_insecure_production(self) -> "Settings":
         if self.env == "production":
-            if self.jwt_secret.get_secret_value() == _DEV_SECRET or len(self.jwt_secret.get_secret_value()) < 32:
+            secret = self.jwt_secret.get_secret_value()
+            # The .env.example placeholder is 33 characters, so length alone let it through.
+            if (secret == _DEV_SECRET or len(secret) < 32 or "change-me" in secret.lower()
+                    or len(set(secret)) < 12):
                 raise ValueError("ORBIT_JWT_SECRET must be set to a random value of 32+ chars in production")
             # Reject mock explicitly AND the "auto" fallback-to-mock case: a missing key must fail loudly,
             # not silently serve canned answers / fake transcription in production.

@@ -15,6 +15,7 @@ jumps there, and "Fix with AI" asks for a rewrite of exactly that text.
 import re
 from collections import Counter
 from collections.abc import Iterator
+from functools import lru_cache
 from typing import Literal
 
 from pydantic import BaseModel
@@ -367,7 +368,17 @@ def _part_of(key: str, terms: list[str]) -> bool:
     return any(stem in re.split(r"[\s/.-]+", t) or key in re.split(r"[\s/.-]+", t) for t in terms)
 
 
+# Enough for any real job post; the rest can't change the keywords much, and every extra word costs a regex.
+MAX_JOB_SCORE_CHARS = 8_000
+
+
 def extract_keywords(job_text: str, limit: int = 20) -> list[str]:
+    """Cached: re-scoring as the candidate types keeps the same job post (and the work is regexes over all of it)."""
+    return list(_extract_keywords(job_text[:MAX_JOB_SCORE_CHARS], limit))
+
+
+@lru_cache(maxsize=128)
+def _extract_keywords(job_text: str, limit: int) -> tuple[str, ...]:
     """The job post's most searchable terms: known skills first, then product/tech names, then repeated words."""
     norm = _norm(job_text)
     scores: Counter[str] = Counter()
@@ -397,15 +408,19 @@ def extract_keywords(job_text: str, limit: int = 20) -> list[str]:
         scores[key] += 4
         display.setdefault(key, word)
     counts = Counter(w for w in re.findall(r"[a-z][a-z+#-]{3,}", norm) if w not in _STOP and w not in _AMBIGUOUS)
-    for word, n in counts.items():
-        if n >= 3 and not any(word in k for k in scores):
+    # The most repeated few only: each is another pass over the post, and a post of a thousand words said three
+    # times each would otherwise cost a thousand passes.
+    for word, n in counts.most_common(60):
+        if n < 3:
+            break
+        if not any(word in k for k in scores):
             # Capitalised every time it appears: the company's own name ("Brightline"), not a skill.
             seen = re.findall(r"(?<![A-Za-z])" + re.escape(word) + r"(?![A-Za-z])", job_text, re.IGNORECASE)
             if seen and all(s[0].isupper() for s in seen):
                 continue
             scores[word] += n
             display.setdefault(word, word)
-    return [display[k] for k, _ in scores.most_common(limit)]
+    return tuple(display[k] for k, _ in scores.most_common(limit))
 
 
 # The same thing written another way: a resume that says "k8s" has the job post's "Kubernetes" (as Jobscan and Teal

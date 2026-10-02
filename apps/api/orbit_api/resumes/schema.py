@@ -184,13 +184,13 @@ class ResumeDesign(BaseModel):
     @field_validator("accent")
     @classmethod
     def _accent(cls, v: str) -> str:
-        if not _HEX.match(v):
+        if not _HEX.fullmatch(v):  # fullmatch: with .match, "$" lets a trailing newline through
             raise ValueError("accent must be a #rrggbb colour")
         return v.lower()
 
     @field_validator("photo")
     @classmethod
     def _photo(cls, v: str | None) -> str | None:
-        if v is not None and not _PHOTO.match(v):
+        if v is not None and not _PHOTO.fullmatch(v):
             raise ValueError("photo must be a PNG, JPEG or WebP data URL")
         return v

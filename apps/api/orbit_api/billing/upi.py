@@ -12,6 +12,7 @@ statement and approves it, which adds the pack's credits (credits.py). Credits n
 Nothing is charged automatically and nothing renews: a pack is bought when it's wanted.
 """
 
+import re
 import secrets
 from datetime import UTC, datetime, timedelta
 from urllib.parse import quote, urlencode
@@ -30,8 +31,10 @@ def new_reference() -> str:
 
 def normalize_utr(raw: str) -> str | None:
     """The 12-digit UPI reference (UTR / RRN / "UPI Ref No."), with any spaces or dashes taken out."""
-    utr = "".join(ch for ch in raw if ch.isalnum())
-    return utr if len(utr) == 12 and utr.isdigit() else None
+    # ASCII only: "𝟏23456789012" is a different string to the database but the same UTR to a person, so the
+    # unique check would let one transfer be claimed twice.
+    utr = "".join(ch for ch in raw if ch.isascii() and ch.isalnum())
+    return utr if re.fullmatch(r"[0-9]{12}", utr) else None
 
 
 def upi_uri(payment: Payment, plan_label: str) -> str:

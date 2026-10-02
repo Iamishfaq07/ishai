@@ -62,10 +62,13 @@ async def run_async_migrations() -> None:
 
     """
 
+    from orbit_api.db import connect_args
+
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=connect_args(get_settings()),  # the same TLS check as the app
     )
 
     async with connectable.connect() as connection:

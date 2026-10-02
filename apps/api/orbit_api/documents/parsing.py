@@ -14,6 +14,7 @@ then, for a scanned PDF with no text layer, by OCR: PDFium renders the first pag
 """
 
 import io
+import json
 import logging
 import multiprocessing
 import os
@@ -21,6 +22,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import zipfile
 from dataclasses import dataclass
 from multiprocessing.connection import Connection
@@ -46,6 +48,12 @@ OCR_PAGE_TIMEOUT_S = 20.0
 OCR_MAX_SIDE_PX = 4000
 PARSE_MEMORY_BYTES = 768 * 1024 * 1024
 PARSE_CPU_SECONDS = 30
+# Parser children at once, server-wide: each may take hundreds of MB, so a burst of uploads queues instead of running
+# the instance out of memory. A wait past PARSE_QUEUE_S answers "busy" rather than holding the request.
+PARSE_CONCURRENCY = 2
+PARSE_QUEUE_S = 30.0
+_parsers = threading.BoundedSemaphore(PARSE_CONCURRENCY)
+MAX_CHILD_REPLY_BYTES = 8 * 1024 * 1024  # the extracted text, as JSON
 # Set by `isolation_selftest()` at boot if child-process parsing doesn't work on this host; extraction then runs
 # in-process (archive inspection still applies) instead of failing every upload.
 ISOLATION_BROKEN = False
@@ -116,16 +124,21 @@ def _limit_child_resources() -> None:
         resource.setrlimit(resource.RLIMIT_CPU, (PARSE_CPU_SECONDS, PARSE_CPU_SECONDS))
 
 
+def _reply(conn: Connection, status: str, value: str) -> None:
+    # JSON bytes, not pickle: a parser compromised by a hostile file can't hand the server an object to unpickle.
+    conn.send_bytes(json.dumps([status, value]).encode())
+
+
 def _extract_in_child(data: bytes, fmt: str, conn: Connection) -> None:
     try:
         _limit_child_resources()
-        conn.send(("ok", extract_text(data, fmt)))
+        _reply(conn, "ok", extract_text(data, fmt))
     except ParseError as e:
-        conn.send(("error", str(e)))
+        _reply(conn, "error", str(e))
     except MemoryError:
-        conn.send(("error", "This document is too large to process."))
+        _reply(conn, "error", "This document is too large to process.")
     except BaseException:
-        conn.send(("error", "Could not read this document."))
+        _reply(conn, "error", "Could not read this document.")
     finally:
         conn.close()
 
@@ -137,6 +150,15 @@ def extract_text_isolated(data: bytes, fmt: str) -> str:
         inspect_docx_archive(data)
     if fmt not in ("pdf", "docx") or ISOLATION_BROKEN:
         return extract_text(data, fmt)
+    if not _parsers.acquire(timeout=PARSE_QUEUE_S):
+        raise ParseError("Orbit is busy reading other documents. Try again in a minute.")
+    try:
+        return _parse_in_child(data, fmt)
+    finally:
+        _parsers.release()
+
+
+def _parse_in_child(data: bytes, fmt: str) -> str:
     ctx = multiprocessing.get_context("spawn")  # never fork a threaded server
     receiver, sender = ctx.Pipe(duplex=False)
     proc = ctx.Process(target=_extract_in_child, args=(data, fmt, sender), daemon=True)
@@ -145,8 +167,8 @@ def extract_text_isolated(data: bytes, fmt: str) -> str:
     try:
         if not receiver.poll(PDF_PARSE_TIMEOUT_S if fmt == "pdf" else PARSE_TIMEOUT_S):
             raise ParseError("This document took too long to process.")
-        status, value = receiver.recv()
-    except (EOFError, OSError) as e:  # the child died (memory/CPU limit, parser crash)
+        status, value = json.loads(receiver.recv_bytes(MAX_CHILD_REPLY_BYTES))
+    except (EOFError, OSError, json.JSONDecodeError, TypeError) as e:  # the child died (limits, crash), or said junk
         raise ParseError("This document couldn't be processed — it may be malformed or too complex.") from e
     finally:
         proc.join(timeout=1)

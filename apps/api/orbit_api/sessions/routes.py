@@ -293,6 +293,14 @@ async def get_session(session_id: str, user: Annotated[User, Depends(current_use
     )
 
 
+async def stop_user_live(user_id: str) -> None:
+    """Every live session this account is streaming, and any phone following one: after "sign out everywhere" or a
+    password reset, a stolen session mustn't keep listening (and spending the owner's minutes)."""
+    for session_id in list(_live_sockets.get(user_id, {})):
+        await stop_live(user_id, session_id)
+    companion.stop_user_sharing(user_id)  # every code, including for sessions not live yet
+
+
 async def stop_live(user_id: str, session_id: str) -> None:
     """Ended or deleted from elsewhere (another window, the web app, "end it and use this one", deleting it or the
     account) while a socket is still streaming: stop that engine for real — it tells its client `session.ended`
@@ -404,6 +412,17 @@ async def drill_session(session_id: str, user: Annotated[User, Depends(require_v
     return await create_session(body, user, db)
 
 
+def _strip_nul(v: Any) -> Any:
+    """Postgres can't store U+0000 in text: dropped from live client events before anything records them."""
+    if isinstance(v, str):
+        return v.replace("\x00", "")
+    if isinstance(v, list):
+        return [_strip_nul(x) for x in v]
+    if isinstance(v, dict):
+        return {_strip_nul(k): _strip_nul(x) for k, x in v.items()}
+    return v
+
+
 @router.delete("/sessions/{session_id}", status_code=204)
 async def delete_session(session_id: str, user: Annotated[User, Depends(current_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> None:
@@ -411,6 +430,7 @@ async def delete_session(session_id: str, user: Annotated[User, Depends(current_
     # Live right now: stop it first, as End does. Deleting under a running engine left STT and the LLM running
     # (and metered) with every write failing against the deleted row, and the account's live slot taken.
     await stop_live(user.id, session_id)
+    companion.stop_sharing(session_id)  # its phone code goes with it, as on End
     await db.delete(row)
     await db.commit()
 
@@ -684,7 +704,11 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             return
         remaining = await minutes_remaining(db, user_id, row.type)
         plan = await plan_for(db, user_id)
-        prior_session_s = row.duration_s or 0
+        # Time this session already had, from the usage every connection commits each heartbeat (not only the
+        # duration a closed connection adds at teardown): reopening it in a second window can't reset the cap.
+        metered_s = await db.scalar(select(func.coalesce(func.sum(UsageEvent.quantity), 0.0)).where(
+            UsageEvent.session_id == session_id, UsageEvent.metric.in_(("live_seconds", "mock_seconds"))))
+        prior_session_s = max(row.duration_s or 0, int(metered_s or 0))
         if (remaining is not None and remaining <= 0) or prior_session_s >= plan.max_session_minutes * 60:
             await ws.close(code=4003, reason="live minutes exhausted" if remaining is not None and remaining <= 0
                            else "session time limit reached")
@@ -779,9 +803,11 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
                 continue
             try:
                 event = json.loads(text)
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, RecursionError):
                 await engine.send("error", {"code": "bad_json", "message": "invalid JSON"})
                 continue
+            if "\\u0000" in text:
+                event = _strip_nul(event)
             if not isinstance(event, dict) or event.get("type") not in CLIENT_EVENT_TYPES:
                 await engine.send("error", {"code": "unknown_event", "message": "unknown event type"})
                 continue
