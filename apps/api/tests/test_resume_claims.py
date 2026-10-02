@@ -62,3 +62,65 @@ def test_a_cover_letter_figure_from_neither_the_resume_nor_the_job_post_becomes_
     letter = ai.parse_cover_letter(body, data, "We are scaling to 500 services and need a senior backend engineer.")
     assert "by 60%" in letter and "3M transactions" in letter and "500 services" in letter  # all stated somewhere
     assert "by [X%] while" in letter and "45%" not in letter  # the one invented figure
+
+
+SOURCE = """Jane Doe
+Senior Backend Engineer
+jane.doe@example.com | +44 7700 900123 | linkedin.com/in/janedoe
+SKILLS
+Python, Go, Kubernetes, PostgreSQL
+EXPERIENCE
+Acme Corp - Senior Engineer 2021-Present
+- Built payment services handling 10k TPS and cut deploy time from 2 hours to 10 minutes
+"""
+
+
+def _imported() -> Any:
+    from orbit_api.resumes.schema import Basics, Experience, Link, ResumeData, SkillGroup
+
+    return ResumeData(
+        basics=Basics(name="Jane Doe", email="jane.doe@example.com", phone="+44 7700 900123",
+                      summary="Engineer who cut costs by 40% last year.",
+                      links=[Link(label="LinkedIn", url="https://www.linkedin.com/in/janedoe"),
+                             Link(label="GitHub", url="github.com/janedoe")]),
+        experience=[Experience(title="Senior Engineer", company="Acme Corp", start="2021", current=True, bullets=[
+            "Built payment services handling 10k TPS and cut deploy time from 2 hours to 10 minutes",
+            "Reduced chargebacks by 30%"])],
+        skills=[SkillGroup(name="Languages", items=["Python", "Go", "Rust"]),
+                SkillGroup(name="Infra", items=["Kubernetes", "python", "PostgreSQL", "Terraform"]),
+                SkillGroup(name="Invented", items=["Scrum"])])
+
+
+def test_an_import_keeps_what_the_source_backs() -> None:
+    from orbit_api.resumes.claims import ground_import
+
+    out, notes = ground_import(_imported(), SOURCE)
+    assert out.basics.email == "jane.doe@example.com" and out.basics.phone == "+44 7700 900123"
+    assert [link.url for link in out.basics.links] == ["https://www.linkedin.com/in/janedoe"]  # scheme/www don't matter
+    assert out.experience[0].bullets[0].endswith("2 hours to 10 minutes")
+    assert notes  # the invented parts below are reported
+
+
+def test_an_import_drops_skills_links_and_figures_the_source_never_had() -> None:
+    from orbit_api.resumes.claims import ground_import
+
+    out, notes = ground_import(_imported(), SOURCE)
+    assert [g.items for g in out.skills] == [["Python", "Go"], ["Kubernetes", "PostgreSQL"]]  # no Rust/Terraform/Scrum,
+    assert [g.name for g in out.skills] == ["Languages", "Infra"]  # no repeated "python", and the empty group is gone
+    assert [link.label for link in out.basics.links] == ["LinkedIn"]  # the GitHub link wasn't in the source
+    assert out.basics.summary == "Engineer who cut costs by [X%] last year."
+    assert out.experience[0].bullets[1] == "Reduced chargebacks by [X%]"
+    assert any("skill" in n for n in notes) and any("link" in n for n in notes) and any("figure" in n for n in notes)
+
+
+def test_an_import_blanks_contact_details_the_source_never_had() -> None:
+    from orbit_api.resumes.claims import ground_import
+
+    data = _imported()
+    data.basics.email, data.basics.phone = "jane@made-up.example", "+1 555 010 9999"
+    out, notes = ground_import(data, SOURCE)
+    assert out.basics.email == "" and out.basics.phone == ""
+    assert any("email" in n for n in notes) and any("phone" in n for n in notes)
+    # A phone number written differently in the source is still the same number.
+    data.basics.phone = "07700 900123"
+    assert ground_import(data, SOURCE)[0].basics.phone == "07700 900123"

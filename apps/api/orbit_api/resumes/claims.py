@@ -11,6 +11,7 @@ against the whole resume (not just the field being rewritten, since a bullet may
 import re
 
 from orbit_api.live.keyterms import tech_terms
+from orbit_api.resumes.schema import ResumeData
 
 # 40%, $2M, 1,500, 3.5x, 10k, 5+ — but not the digits inside "S3", "k8s", "Python3", "24/7" or a year.
 _NUMBER = re.compile(r"(?<![\w./\[])(\$?\d[\d,]*(?:\.\d+)?)(\s?(?:%|[kKmMbB]\b|[xX]\b|\+))?(?![\w/\]])")
@@ -69,3 +70,78 @@ def fill_invented_figures(after: str, corpus: str) -> tuple[str, int]:
         last = m.end()
         count += 1
     return "".join(pieces) + after[last:], count
+
+
+# ---- import: everything the model read must be in what it was given ------------------------------------------
+
+def _squash(text: str) -> str:
+    return re.sub(r"\s+", "", text.lower())
+
+
+def _url_key(url: str) -> str:
+    return _squash(re.sub(r"^\s*(?:https?://)?(?:www\.)?", "", url.lower())).rstrip("/")
+
+
+def ground_import(data: ResumeData, source: str) -> tuple[ResumeData, list[str]]:
+    """The imported resume with anything the source text doesn't back removed, and what was removed.
+
+    The import prompt says "copy facts exactly", but a model sometimes adds a plausible skill, a placeholder-looking
+    email, a profile link or a metric that the resume never had. Contact details and skills are what recruiters and
+    ATS software read first, so each is checked against the source: an email, phone number or link it doesn't contain
+    is blanked, a skill it never lists is dropped, and a figure it never states becomes a placeholder.
+    """
+    out = data.model_copy(deep=True)
+    notes: list[str] = []
+    flat = _squash(source)
+    digits = re.sub(r"\D", "", source)
+    b = out.basics
+    if b.email and _squash(b.email) not in flat:
+        notes.append("an email address that isn't in the source")
+        b.email = ""
+    phone = re.sub(r"\D", "", b.phone)
+    if b.phone and (len(phone) < 7 or phone[-7:] not in digits):
+        notes.append("a phone number that isn't in the source")
+        b.phone = ""
+    kept = [link for link in b.links if _url_key(link.url) and _url_key(link.url) in flat]
+    if len(kept) != len(b.links):
+        notes.append(f"{len(b.links) - len(kept)} link(s) that aren't in the source")
+        b.links = kept
+
+    seen: set[str] = set()
+    dropped = 0
+    groups = []
+    for group in out.skills:
+        items = []
+        for item in group.items:
+            key = item.lower().strip()
+            if key in seen:
+                continue  # the same skill listed in two groups
+            seen.add(key)
+            if _squash(item) in flat:
+                items.append(item)
+            else:
+                dropped += 1
+        if items:
+            group.items = items
+            groups.append(group)
+    out.skills = groups
+    if dropped:
+        notes.append(f"{dropped} skill(s) the source never lists")
+
+    figures = 0
+
+    def fix(text: str) -> str:
+        nonlocal figures
+        fixed, n = fill_invented_figures(text, source)
+        figures += n
+        return fixed
+
+    b.summary = fix(b.summary)
+    for e in out.experience:
+        e.bullets = [fix(t) for t in e.bullets]
+    for p in out.projects:
+        p.description = fix(p.description)
+        p.bullets = [fix(t) for t in p.bullets]
+    if figures:
+        notes.append(f"{figures} figure(s) the source never states")
+    return out, notes

@@ -1,5 +1,15 @@
 # Implementation log
 
+## Resume import can't add what the source doesn't say (2026-10-02)
+
+- **Imported resumes are checked against the text they came from** (`claims.ground_import`). The import prompt says
+  "copy facts exactly", but a model can add a plausible skill, an email, a profile link or a metric. Now:
+  - an email, phone number or link the source doesn't contain is blanked (a link matches with or without
+    `https://` and `www.`; a phone number matches however it's spaced);
+  - a skill the source never lists is dropped, a skill listed in two groups is kept once, and an empty group goes;
+  - a figure the source never states in a summary, bullet or project becomes a placeholder.
+  - What was removed is logged.
+
 ## Resume AI can't invent facts; cleaner job keywords (2026-10-02)
 
 - **AI rewrites can't add facts** (`resumes/claims.py`). The prompts forbid invented numbers and tools, but nothing

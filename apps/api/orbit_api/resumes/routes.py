@@ -35,6 +35,7 @@ from orbit_api.providers.llm.pricing import estimate_cost
 from orbit_api.ratelimit import limit, limit_user
 from orbit_api.resumes import ai
 from orbit_api.resumes.ats import AtsReport, score_resume
+from orbit_api.resumes.claims import ground_import
 from orbit_api.resumes.docx_export import letter_docx, resume_docx
 from orbit_api.resumes.schema import ResumeData, ResumeDesign
 
@@ -225,6 +226,9 @@ async def _import_text(db: AsyncSession, user: User, text: str, kind: str) -> Im
         log.warning("resume import unusable: %s", e)
         raise HTTPException(status.HTTP_502_BAD_GATEWAY,
                             "The AI couldn't read that resume. Try again, or paste the text instead.") from e
+    data, removed = ground_import(data, text)
+    if removed:
+        log.info("resume import: removed %s", "; ".join(removed))
     name = data.basics.name.strip()
     return ImportOut(data=data, title=f"{name}'s resume" if name else "Imported resume")
 
