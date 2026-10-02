@@ -231,6 +231,8 @@ def test_meter_prefers_the_nearer_limit() -> None:
     sent: list[tuple[str, dict[str, Any]]] = []
 
     class Eng:
+        ended = False
+
         def now_ms(self) -> int:
             return 58_000
 

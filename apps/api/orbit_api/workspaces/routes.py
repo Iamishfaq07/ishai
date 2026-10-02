@@ -73,16 +73,20 @@ async def _check_documents(db: AsyncSession, user: User, ids: list[str]) -> list
     return unique
 
 
-async def _out(db: AsyncSession, ws: Workspace) -> WorkspaceOut:
-    count = await db.scalar(select(func.count()).select_from(LiveSessionRow)
-                            .where(LiveSessionRow.workspace_id == ws.id))
+def _to_out(ws: Workspace, session_count: int, document_ids: list[str]) -> WorkspaceOut:
     return WorkspaceOut(
         id=ws.id, name=ws.name, company=ws.company, role=ws.role, session_type=ws.session_type,
         language=ws.language, answer_language=ws.answer_language, length=ws.length,
         style=ws.style, auto_answer=ws.auto_answer, notes=ws.notes,
-        document_ids=await workspace_document_ids(db, ws.id), created_at=ws.created_at,
-        updated_at=ws.updated_at, last_used_at=ws.last_used_at, session_count=int(count or 0),
+        document_ids=document_ids, created_at=ws.created_at,
+        updated_at=ws.updated_at, last_used_at=ws.last_used_at, session_count=session_count,
     )
+
+
+async def _out(db: AsyncSession, ws: Workspace) -> WorkspaceOut:
+    count = await db.scalar(select(func.count()).select_from(LiveSessionRow)
+                            .where(LiveSessionRow.workspace_id == ws.id))
+    return _to_out(ws, int(count or 0), await workspace_document_ids(db, ws.id))
 
 
 async def _set_documents(db: AsyncSession, ws: Workspace, ids: list[str]) -> None:
@@ -99,7 +103,20 @@ async def list_workspaces(user: Annotated[User, Depends(current_user)],
     """Most recently used first."""
     rows = (await db.scalars(select(Workspace).where(Workspace.user_id == user.id)
                              .order_by(func.coalesce(Workspace.last_used_at, Workspace.created_at).desc()))).all()
-    return [await _out(db, ws) for ws in rows]
+    ids = [ws.id for ws in rows]
+    if not ids:
+        return []
+    # Two grouped queries for the whole list instead of two per setup.
+    counts: dict[str, int] = {
+        wid: int(n) for wid, n in (await db.execute(
+            select(LiveSessionRow.workspace_id, func.count()).where(LiveSessionRow.workspace_id.in_(ids))
+            .group_by(LiveSessionRow.workspace_id))).all() if wid is not None
+    }
+    docs: dict[str, list[str]] = {}
+    for wid, did in (await db.execute(select(WorkspaceDocument.workspace_id, WorkspaceDocument.document_id)
+                                      .where(WorkspaceDocument.workspace_id.in_(ids)))).all():
+        docs.setdefault(wid, []).append(did)
+    return [_to_out(ws, counts.get(ws.id, 0), docs.get(ws.id, [])) for ws in rows]
 
 
 @router.post("", response_model=WorkspaceOut, status_code=201)

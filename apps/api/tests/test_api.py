@@ -401,11 +401,13 @@ def test_screenshot_is_answered_over_the_live_socket(client: TestClient) -> None
 
 
 
-def test_abandoned_sessions_are_ended_and_reported(client: TestClient) -> None:
+def test_abandoned_sessions_are_ended_and_reported(client: TestClient, monkeypatch: Any) -> None:
     """A session closed without End (tab closed, app quit) doesn't stay "live" forever: once it has had no
     connection and no activity for ORBIT_ABANDONED_SESSION_MIN, the sweep ends it and writes its report."""
     from datetime import UTC, datetime, timedelta
+    from types import SimpleNamespace
 
+    from orbit_api.live import carryover
     from orbit_api.sessions.cleanup import end_abandoned_sessions
 
     h = _register(client)
@@ -420,9 +422,17 @@ def test_abandoned_sessions_are_ended_and_reported(client: TestClient) -> None:
     # Not idle long enough yet: left alone (a dropped connection must still be resumable).
     assert run(end_abandoned_sessions, datetime.now(UTC)) == 0
     assert client.get(f"/v1/sessions/{sid}", headers=h).json()["session"]["status"] == "live"
+    # Quiet for longer than the cutoff, but it only just dropped: its state is waiting for the reconnect, so the
+    # sweep leaves it alone (it used to end sessions mid-reconnect after a long silence).
+    later = datetime.now(UTC) + timedelta(hours=2)
+    assert carryover.held(sid)
+    run(end_abandoned_sessions, later)  # (other tests' leftover sessions may be swept: the DB is shared)
+    assert client.get(f"/v1/sessions/{sid}", headers=h).json()["session"]["status"] == "live"
 
-    # Past the cutoff: ended as if End were pressed, with its report.
-    assert run(end_abandoned_sessions, datetime.now(UTC) + timedelta(hours=2)) >= 1
+    # Past the cutoff and no reconnect came (the saved state expired): ended as if End were pressed, with its report.
+    # (Only carryover's clock: patching time.monotonic itself would move the app's event loop too.)
+    monkeypatch.setattr(carryover, "time", SimpleNamespace(monotonic=lambda: time.monotonic() + 3 * 3600))
+    assert run(end_abandoned_sessions, later) >= 1
     detail = _wait_report(client, h, sid)
     assert detail["session"]["status"] == "ended" and detail["session"]["ended_at"] is not None
     assert detail["session"]["report_status"] == "ready"

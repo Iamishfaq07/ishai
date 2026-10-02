@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, true
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from orbit_api.db import Base, EmbeddingType
 
@@ -18,6 +18,19 @@ def utcnow() -> datetime:
 
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+PROVIDER_NAME_LEN = 32
+MODEL_NAME_LEN = 64
+
+
+class FitsProviderNames:
+    """`provider` and `model` as an LLM provider reports them, cut to their columns. Only Postgres enforces
+    String(n): a longer name was a DataError there, and the row (an answer, a cost) was lost."""
+
+    @validates("provider", "model")
+    def _fit(self, key: str, value: str | None) -> str | None:
+        return value[:PROVIDER_NAME_LEN if key == "provider" else MODEL_NAME_LEN] if value else value
 
 
 class User(TimestampMixin, Base):
@@ -267,7 +280,8 @@ class SessionDocument(Base):
     __table_args__ = (UniqueConstraint("session_id", "document_id"),)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     session_id: Mapped[str] = mapped_column(ForeignKey("sessions.id", ondelete="CASCADE"), index=True)
-    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"))
+    # Indexed: deleting a document cascades here, and on Postgres an unindexed FK means a scan per delete.
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), index=True)
 
 
 class SessionTurn(TimestampMixin, Base):
@@ -292,15 +306,15 @@ class Question(TimestampMixin, Base):
     source: Mapped[str] = mapped_column(String(16), default="auto")
 
 
-class Answer(TimestampMixin, Base):
+class Answer(FitsProviderNames, TimestampMixin, Base):
     __tablename__ = "answers"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     session_id: Mapped[str] = mapped_column(ForeignKey("sessions.id", ondelete="CASCADE"), index=True)
     question_id: Mapped[str | None] = mapped_column(String(36))
     status: Mapped[str] = mapped_column(String(16))  # completed | cancelled | failed
     content: Mapped[dict[str, Any] | None] = mapped_column(JSON)
-    provider: Mapped[str] = mapped_column(String(32))
-    model: Mapped[str] = mapped_column(String(64))
+    provider: Mapped[str] = mapped_column(String(PROVIDER_NAME_LEN))
+    model: Mapped[str] = mapped_column(String(MODEL_NAME_LEN))
     first_token_ms: Mapped[int | None] = mapped_column(Integer)
     total_ms: Mapped[int | None] = mapped_column(Integer)
 
@@ -370,13 +384,13 @@ class Job(TimestampMixin, Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
-class ProviderRequest(TimestampMixin, Base):
+class ProviderRequest(FitsProviderNames, TimestampMixin, Base):
     __tablename__ = "provider_requests"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     user_id: Mapped[str | None] = mapped_column(String(36), index=True)
     session_id: Mapped[str | None] = mapped_column(String(36), index=True)
-    provider: Mapped[str] = mapped_column(String(32))
-    model: Mapped[str] = mapped_column(String(64))
+    provider: Mapped[str] = mapped_column(String(PROVIDER_NAME_LEN))
+    model: Mapped[str] = mapped_column(String(MODEL_NAME_LEN))
     request_type: Mapped[str] = mapped_column(String(32))
     input_tokens: Mapped[int] = mapped_column(Integer, default=0)
     output_tokens: Mapped[int] = mapped_column(Integer, default=0)

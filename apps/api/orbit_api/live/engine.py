@@ -10,6 +10,7 @@ import logging
 import re
 import time
 import uuid
+from collections import deque
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field, replace
 from typing import Any, Literal, Protocol
@@ -76,6 +77,15 @@ CHANNEL_SPEAKER: dict[Channel, Speaker] = {"mic": "candidate", "system": "interv
 TICK_S = 0.05
 CHUNK_EMIT_INTERVAL_S = 0.04
 SUMMARY_EVERY_TURNS = 8
+# Client events that each start paid work (an LLM stream, the next mock question): a burst of REQUEST_BURST, then
+# one every REQUEST_EVERY_S, per connection. Far more than a person clicks; a script flooding the socket can't
+# multiply the spend. Extras are dropped.
+CLIENT_REQUESTS = frozenset({"answer.request", "chat.message", "mock.next"})
+REQUEST_BURST = 5
+REQUEST_EVERY_S = 2.0
+# Turn ids a speaker correction may name (the most recent ones), and how many corrections are kept.
+RECENT_TURN_IDS = 500
+MAX_SPEAKER_OVERRIDES = 200
 
 _CHAT_MODIFIERS = ("make", "rewrite", "shorter", "longer", "simpler", "simplify", "expand", "again", "rephrase",
                    "give an example", "add an example", "in star", "star format", "more detail", "less detail",
@@ -296,11 +306,17 @@ class LiveEngine:
         self._tasks: set[asyncio.Task[Any]] = set()
         self._paused = False
         self._ended = False
+        self._end_task: asyncio.Task[None] | None = None
+        self._end_done = asyncio.Event()
+        self._request_tokens = float(REQUEST_BURST)
+        self._request_at = clock()
+        self._throttling = False
         self._audio_bytes = 0
         self.channel_bytes: dict[Channel, int] = {"mic": 0, "system": 0}
         self._turns_since_summary = 0
         self._last_answer_at_ms: int | None = None
         self._speaker_overrides: dict[str, Speaker] = {}
+        self._turn_ids: deque[str] = deque(maxlen=RECENT_TURN_IDS)  # turns this connection started
         # Phone / room mode: who each diarized voice on the mic is (learned), and which voice said each turn.
         self._voices: dict[int, Speaker] = {}
         self._turn_voice: dict[str, int] = {}
@@ -385,12 +401,31 @@ class LiveEngine:
                                             "state": "mock" if self._llm.name == "mock" else "ok"})
         await self._set_state(LiveState.listening)
 
+    @property
+    def ended(self) -> bool:
+        """end() has been called (it may still be writing)."""
+        return self._ended
+
+    async def wait_ended(self) -> None:
+        """Until end() has finished, whoever called it: usage recorded and the client told."""
+        await self._end_done.wait()
+
     async def end(self, *, final: bool = True) -> None:
         """Stop this connection's engine. `final=False` means the client dropped (it will reconnect with a
-        new ticket): usage is recorded but the session stays open and no report is generated."""
-        if self._ended:
-            return
-        self._ended = True
+        new ticket): usage is recorded but the session stays open and no report is generated.
+
+        Ending runs once, as its own task: a second caller (the socket's teardown while End over HTTP is still
+        writing) waits for that one instead of returning while usage and the transcript are half-written, and a
+        caller being cancelled doesn't cut the writes short."""
+        if self._end_task is None:
+            self._ended = True
+            self._end_task = asyncio.ensure_future(self._end(final))
+            self._end_task.add_done_callback(lambda _: self._end_done.set())
+        await asyncio.shield(self._end_task)
+
+    async def _end(self, final: bool) -> None:
+        if self._mock is not None:
+            self._mock.stop()  # a next question being written during a pause: nobody will be asked it
         self._drop_speculation()
         for gen in list(self._gens.values()):
             if not gen.task.done():
@@ -443,8 +478,25 @@ class LiveEngine:
         except ValidationError as e:
             await self.send("error", {"code": "invalid_event", "message": f"{type_}: {e.errors()[0]['msg']}"})
 
+    def _allow_request(self, type_: str) -> bool:
+        """The per-connection token bucket for CLIENT_REQUESTS (refilled on the engine's clock)."""
+        now = self._clock()
+        self._request_tokens = min(REQUEST_BURST, self._request_tokens + (now - self._request_at) / REQUEST_EVERY_S)
+        self._request_at = now
+        if self._request_tokens < 1:
+            if not self._throttling:  # once per flood, not once per dropped event
+                log.warning("session %s: client requests over the limit; dropping %s", self.profile.session_id,
+                            type_)
+            self._throttling = True
+            return False
+        self._request_tokens -= 1
+        self._throttling = False
+        return True
+
     async def _dispatch(self, type_: str, data: dict[str, Any]) -> None:
         if self._ended and type_ != "session.end":
+            return
+        if type_ in CLIENT_REQUESTS and not self._allow_request(type_):
             return
         match type_:
             case "session.start":
@@ -487,7 +539,11 @@ class LiveEngine:
                 await self._chat(ChatMessage.model_validate(data).text)
             case "speaker.correct":
                 sc = SpeakerCorrect.model_validate(data)
+                if sc.turn_id not in self._turn_ids:
+                    return  # not a turn of this connection: nothing it could change (and nothing to store)
                 self._speaker_overrides[sc.turn_id] = sc.speaker
+                while len(self._speaker_overrides) > MAX_SPEAKER_OVERRIDES:
+                    del self._speaker_overrides[next(iter(self._speaker_overrides))]
                 if (voice := self._turn_voice.get(sc.turn_id)) is not None:
                     self._learn_voice(voice, sc.speaker)  # the user's fix also applies to that voice from now on
             case "mock.next":
@@ -511,7 +567,11 @@ class LiveEngine:
 
     async def _pump_stt(self, channel: Channel, session: STTSession) -> None:
         async for ev in session.events():
-            await self.on_transcript(channel, ev)
+            try:
+                await self.on_transcript(channel, ev)
+            except Exception:
+                # One event that trips a bug mustn't end this channel's transcription for the rest of the session.
+                log.exception("session %s: %s transcript event failed", self.profile.session_id, channel)
 
     async def _simulate(self, fixture: str, speed: float) -> None:
         try:
@@ -569,17 +629,20 @@ class LiveEngine:
         speaker = self._channel_speaker(channel, ev.speaker_hint)
         if self._mock is not None and speaker == "candidate" and ev.kind in ("partial", "final"):
             self._mock.on_candidate(ev.text, self.now_ms(), final=ev.kind == "final")
+        turn = self._turns[channel]
+        # SpeechStarted and UtteranceEnd carry no speaker (no diarized words): they belong to whoever's turn is open
+        # on the channel. Phone mode otherwise took them for the interviewer, so the candidate's own question
+        # ("so how would I explain it?") fired as a new question and was answered.
         if ev.kind == "speech_started":
-            if speaker == "interviewer":
+            if self._turn_speaker(channel, turn) == "interviewer":
                 self._finalizer.on_speech_activity(self.now_ms())
                 self._spawn(self._llm.warm())
                 await self._sync_speculation()
             return
 
-        turn = self._turns[channel]
         if ev.kind == "utterance_end":
             if turn and turn.text:
-                if self._speaker_overrides.get(turn.turn_id, speaker) == "interviewer":
+                if self._turn_speaker(channel, turn) == "interviewer":
                     fired = self._finalizer.on_transcript(turn.turn_id, turn.text, self.now_ms(),
                                                           is_final=True, endpoint=True)
                     if fired:
@@ -591,7 +654,7 @@ class LiveEngine:
         if turn is None:
             if not ev.text:
                 return
-            turn = self._turns[channel] = _ChannelTurn(turn_id=str(uuid.uuid4()), start_ms=ev.start_ms)
+            turn = self._turns[channel] = _ChannelTurn(turn_id=self._new_turn_id(), start_ms=ev.start_ms)
             if ev.speaker_hint is not None and channel == "mic":
                 self._turn_voice[turn.turn_id] = ev.speaker_hint
             if speaker == "interviewer":
@@ -637,6 +700,18 @@ class LiveEngine:
             return "candidate" if "interviewer" in self._voices.values() else "interviewer"
         return CHANNEL_SPEAKER[channel]
 
+    def _turn_speaker(self, channel: Channel, turn: _ChannelTurn | None) -> Speaker:
+        """Who said a turn: the user's correction, else its diarized voice (phone mode), else the channel's."""
+        if turn is None:
+            return self._channel_speaker(channel)
+        return self._speaker_overrides.get(turn.turn_id,
+                                           self._channel_speaker(channel, self._turn_voice.get(turn.turn_id)))
+
+    def _new_turn_id(self) -> str:
+        turn_id = str(uuid.uuid4())
+        self._turn_ids.append(turn_id)  # a speaker correction may name it
+        return turn_id
+
     def _learn_voice(self, voice: int, speaker: Speaker) -> None:
         self._voices[voice] = speaker
 
@@ -654,8 +729,7 @@ class LiveEngine:
 
     async def _commit_turn(self, channel: Channel, turn: _ChannelTurn) -> None:
         self._turns[channel] = None
-        spk = self._speaker_overrides.get(turn.turn_id,
-                                          self._channel_speaker(channel, self._turn_voice.get(turn.turn_id)))
+        spk = self._turn_speaker(channel, turn)
         voice = self._turn_voice.get(turn.turn_id)
         if len(self._turn_voice) > 500:  # kept for later "swap" corrections; only recent turns can be swapped
             for old in list(self._turn_voice)[:-200]:
@@ -676,16 +750,26 @@ class LiveEngine:
             self._spawn(self._update_summary())
 
     async def _ticker(self) -> None:
+        failing = False
         while True:
             await asyncio.sleep(TICK_S)
             if self._paused:
                 continue
-            if self._mock is not None:
-                await self._mock.tick(self.now_ms())
-            fired = self._finalizer.tick(self.now_ms())
-            if fired:
-                await self._on_fired(fired)
-            await self._sync_speculation()
+            try:
+                if self._mock is not None:
+                    await self._mock.tick(self.now_ms())
+                fired = self._finalizer.tick(self.now_ms())
+                if fired:
+                    await self._on_fired(fired)
+                await self._sync_speculation()
+            except Exception:
+                # One bad tick mustn't stop every later question firing (or the mock round moving on). Logged once
+                # per run of failures: the ticker runs 20 times a second.
+                if not failing:
+                    log.exception("session %s: tick failed", self.profile.session_id)
+                failing = True
+            else:
+                failing = False
 
     def _detector_context(self) -> DetectorContext:
         since = None
@@ -701,7 +785,7 @@ class LiveEngine:
 
     async def _on_mock_question(self, qid: str, text: str, is_follow_up: bool) -> None:
         """Record the AI interviewer's question like a real interviewer turn (transcript, questions, report)."""
-        turn_id = str(uuid.uuid4())
+        turn_id = self._new_turn_id()
         now = self.now_ms()
         await self.send("transcript.final", {"turn_id": turn_id, "speaker": "interviewer", "text": text,
                                              "start_ms": now, "end_ms": now})
@@ -784,7 +868,9 @@ class LiveEngine:
 
     async def _manual_answer(self, question_text: str | None) -> None:
         if self._mock is not None:  # practice: Orbit never answers for the candidate; "Answer" means "I'm done"
-            await self._mock.next(self.now_ms())
+            # A task, as for mock.next: writing the next question awaits the model, and this runs on the socket's
+            # read loop (audio included).
+            self._spawn(self._mock.next(self.now_ms()))
             return
         # Prefer the question being listened to (it may span a pause) over just the latest utterance.
         text = (question_text or self._finalizer.pending_question() or self._last_interviewer_text or
@@ -850,7 +936,7 @@ class LiveEngine:
             self._start_speculation(d.question_text, kind="hold")
 
     def _start_speculation(self, question: str, *, kind: str) -> None:
-        if self._dedup.check("speculation", question, self.now_ms())[0] == DedupDecision.duplicate:
+        if self._ended or self._dedup.check("speculation", question, self.now_ms())[0] == DedupDecision.duplicate:
             return
         det = detect(question, "interviewer", self._detector_context())
         aid = str(uuid.uuid4())
@@ -874,6 +960,10 @@ class LiveEngine:
         # Serialize: _cancel_active() awaits, so without this lock a manual answer racing auto-answer could
         # both pass cancellation before either registers its generation → two billed LLM streams at once.
         async with self._answer_lock:
+            if self._ended:
+                # end() cancels the generations it can see; one started after (a question firing while it awaits
+                # them, a call queued on this lock) would stream, and bill, after the session is over.
+                return
             spec, self._spec = self._spec, None
             if not (spec is not None and source == "auto" and instruction is None and not images
                     and spec.question == question and spec.qtype == qtype and spec.is_follow_up == is_follow_up
@@ -962,6 +1052,8 @@ class LiveEngine:
         cut_off = False  # the model hit max_tokens mid-answer
         last_emit = 0.0
         attempts = 0
+        started = self._clock()
+        written = 0  # characters the model has streamed, to estimate the cost of a stream cut short
         try:
             while True:
                 try:
@@ -978,6 +1070,7 @@ class LiveEngine:
                             cut_off = True
                         if not chunk.delta:
                             continue
+                        written += len(chunk.delta)
                         if not streamed:
                             streamed = True
                             await out.state(LiveState.streaming)
@@ -996,27 +1089,40 @@ class LiveEngine:
                         continue
                     raise
         except asyncio.CancelledError:
+            # The model was working, and billing, until now: its cost counts even for an early answer nobody saw.
+            await self._rec.provider_request(provider, model, request.request_type, _spent(usage, request, written),
+                                             int((self._clock() - started) * 1000), False)
             if not out.is_open:
-                raise  # an early answer the interviewer outran: never shown, so nothing to tell or record
+                raise  # an early answer the interviewer outran: never shown, so nothing to tell
             gen = self._gens.get(aid)
             reason = gen.cancel_reason if gen else "superseded"
             await out.send("answer.cancelled", {"answer_id": aid, "reason": reason})
             await self._rec.answer(aid, out.question_id, "cancelled", parser.snapshot().model_dump(), provider,
                                    model, first_token_ms, None)
             raise
-        except LLMError as e:
+        except Exception as exc:
+            # Anything else (a bug in the parser, an error the provider didn't wrap) fails the answer like an
+            # internal LLMError, so the client gets answer.failed instead of sitting on "generating" for good.
+            if isinstance(exc, LLMError):
+                err = exc
+                # Log the upstream detail server-side; send the user a generic message (raw provider bodies can
+                # carry account/quota internals).
+                log.warning("answer %s failed: %s: %s", aid, err.code, err)
+            else:
+                err = LLMError("internal", "unexpected error")
+                log.exception("answer %s failed unexpectedly", aid)
+            # Before waiting for an early answer's question: one that never fires still spent this.
+            await self._rec.provider_request(provider, model, request.request_type,
+                                             _spent(usage, request, written) if streamed else usage,
+                                             int((self._clock() - started) * 1000), False)
             await out.opened.wait()  # an early answer reports its failure only if its question fires
             qid = out.question_id
             total = int((self._clock() - out.opened_at) * 1000)
-            # Log the upstream detail server-side; send the user a generic message (raw provider bodies can
-            # carry account/quota internals).
-            log.warning("answer %s failed: %s: %s", aid, e.code, e)
-            user_msg = _USER_ERROR.get(e.code, _USER_ERROR_DEFAULT)
+            user_msg = _USER_ERROR.get(err.code, _USER_ERROR_DEFAULT)
             await out.send("answer.failed", {"answer_id": aid,
-                                              "error": {"code": e.code, "message": user_msg,
-                                                        "retryable": e.retryable}})
+                                              "error": {"code": err.code, "message": user_msg,
+                                                        "retryable": err.retryable}})
             await self._rec.answer(aid, qid, "failed", None, provider, model, first_token_ms, total)
-            await self._rec.provider_request(provider, model, request.request_type, usage, total, False)
             if source == "screenshot":
                 await self._rec.usage("screenshot_failures", 1, f"shotfail:{aid}")
             await out.state(LiveState.error)
@@ -1069,6 +1175,14 @@ class LiveEngine:
         self.memory.rolling_summary = resp.text.strip()[:1200]
         await self._rec.provider_request(resp.provider or self._llm.name, resp.model, "summary", resp.usage,
                                          int((self._clock() - started) * 1000), True)
+
+
+def _spent(usage: Usage, request: LLMRequest, written_chars: int) -> Usage:
+    """What a stream that didn't finish cost. Providers report usage on their last chunk, so a stream cut short is
+    estimated (~4 characters a token, as the mock provider counts): the whole prompt, and what was written."""
+    if usage.input_tokens or usage.output_tokens:
+        return usage
+    return Usage(input_tokens=sum(len(m.content) for m in request.messages) // 4, output_tokens=written_chars // 4)
 
 
 _DEBUG_CUES = re.compile(

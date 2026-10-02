@@ -62,3 +62,9 @@ def take(session_id: str) -> Carryover | None:
 
 def discard(session_id: str) -> None:
     _store.pop(session_id, None)
+
+
+def held(session_id: str) -> bool:
+    """A dropped connection's state is waiting for this session's next one: a reconnect may be on its way."""
+    _prune(time.monotonic())
+    return session_id in _store
