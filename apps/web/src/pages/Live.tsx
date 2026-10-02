@@ -30,9 +30,11 @@ import {
   captureStream,
   openDisplayAudio,
   openMicrophone,
+  sharedSurface,
   supportsDisplayAudio,
   supportsScreenCapture,
   type AudioCapture,
+  type SharedSurface,
 } from "../lib/audio";
 import { errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -115,6 +117,8 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   const [sysState, setSysState] = useState<"off" | "needs_share" | "on" | "error">(systemAudio ? "needs_share" : "off");
   const [sysError, setSysError] = useState<string | null>(null);
   const [sysStarting, setSysStarting] = useState(false);
+  // What was shared: the whole screen's audio makes Zoom mute the user's microphone, so that gets a warning.
+  const [sysSurface, setSysSurface] = useState<SharedSurface | null>(null);
 
   // Bumped on every start/stop so a slow getUserMedia from an earlier attempt (double-tapped Retry, a remount)
   // can't install a second capture that keeps streaming duplicate audio.
@@ -197,8 +201,10 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
         if (gen !== sysGenRef.current) return;
         sysRef.current?.stop();
         sysRef.current = null;
+        setSysSurface(null);
         setSysState("needs_share");
       });
+      setSysSurface(sharedSurface(stream));
       setSysState("on");
     } catch (err) {
       if (gen !== sysGenRef.current) return;
@@ -278,6 +284,13 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
           {sysState === "error"
             ? sysError
             : "To hear the interviewer, share the meeting tab and turn on “Share tab audio”. Only audio is used."}
+        </Notice>
+      )}
+      {sysState === "on" && sysSurface === "monitor" && live.state !== "ended" && (
+        <Notice tone="info">
+          You’re sharing your whole screen’s audio, and Zoom mutes your microphone while that’s on: if it muted you,
+          click Unmute in Zoom. To avoid it, use the Orbit desktop app for the Zoom or Teams app (it listens to the
+          meeting app directly, no screen share), or, if your meeting is in a browser tab, share that tab instead.
         </Notice>
       )}
       {shotError && <Notice tone="error">{shotError}</Notice>}

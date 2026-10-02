@@ -99,20 +99,44 @@ export async function openMicrophone(deviceId?: string): Promise<MediaStream> {
   });
 }
 
+/** What the user picked in the share window: a browser tab, an app window, or the whole screen. */
+export type SharedSurface = "browser" | "window" | "monitor";
+const sharedSurfaces = new WeakMap<MediaStream, SharedSurface>();
+
+/** Which kind of surface a stream from openDisplayAudio came from (null when the browser doesn't say). */
+export function sharedSurface(stream: MediaStream): SharedSurface | null {
+  return sharedSurfaces.get(stream) ?? null;
+}
+
 /**
  * Browser "system audio" = audio of a shared tab/window/screen via getDisplayMedia.
  * Chrome/Edge require video: true and the user must tick "Share tab audio".
  * We drop the video track immediately — no screen pixels are recorded.
+ *
+ * The picker opens on the browser-tab list, without Orbit's own tab: for a meeting in the browser, its tab is the
+ * right share. The whole screen's system audio still works (it's the only way to hear a desktop meeting app from
+ * the browser), but Zoom mutes the user's microphone while a screen is shared with system audio, so the live page
+ * says so when that's what was picked (see sharedSurface).
  */
 export async function openDisplayAudio(): Promise<MediaStream> {
   if (!supportsDisplayAudio()) throw new Error(displayAudioHelp());
+  const options = {
+    video: { displaySurface: "browser" },
+    audio: { suppressLocalAudioPlayback: false },
+    preferCurrentTab: false,
+    selfBrowserSurface: "exclude",
+    surfaceSwitching: "exclude",
+    systemAudio: "include",
+  } as DisplayMediaStreamOptions;
   // Some browsers show the share prompt and then never settle the promise (seen on Android): give up rather than
   // leave the session stuck on "Share tab audio".
   const stream = await withTimeout(
-    navigator.mediaDevices.getDisplayMedia({ video: true, audio: true }),
+    navigator.mediaDevices.getDisplayMedia(options),
     SHARE_TIMEOUT_MS,
     "Tab audio sharing didn't start. Try again, or continue with your microphone only.",
   );
+  const surface = stream.getVideoTracks()[0]?.getSettings().displaySurface;
+  if (surface === "browser" || surface === "window" || surface === "monitor") sharedSurfaces.set(stream, surface);
   stream.getVideoTracks().forEach((t) => {
     t.stop();
     stream.removeTrack(t);
@@ -208,7 +232,8 @@ export function displayAudioHelp(): string {
         ? "On a Mac, Chrome can share a browser tab’s audio but not the Zoom or Teams app: join the meeting in a " +
             "Chrome tab, or use Phone / room audio with the call on your speakers."
         : "In the browser, you’ll share the meeting tab with “Share tab audio” on. Only audio is used — no video is " +
-            "recorded.";
+            "recorded. Meeting in the Zoom or Teams app? Use the Orbit desktop app: sharing your whole screen’s audio " +
+            "from the browser makes Zoom mute your microphone.";
   }
 }
 
