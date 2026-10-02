@@ -21,6 +21,7 @@ format still produces something readable.
 """
 
 import re
+from collections.abc import Callable
 
 from orbit_api.live.events import CodeBlock, DebugInfo, DesignSection, FactSource, LiveAnswer, QuestionType
 
@@ -43,6 +44,47 @@ _REF = re.compile(r"\bF(\d{1,2})\b", re.IGNORECASE)
 _PERSONAL = frozenset({QuestionType.behavioral, QuestionType.resume, QuestionType.leadership, QuestionType.culture})
 _BULLET = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+(.*)$")
 _FENCE = re.compile(r"^\s*```\s*([\w+#-]*)\s*$")
+
+# The spoken answer is read out by a person, and a few marks of machine writing give it away whatever the prompt
+# says (live_system.md, "HOW IT SOUNDS"). These are the safe, mechanical ones: an em dash (or a spaced en dash) is
+# said as a pause, so it becomes a comma; an opening "Great question." goes; a handful of stiff words become the
+# plain ones. Only whole words change, so a word still streaming in isn't touched until it's complete.
+_DASH = re.compile(r"\s*(?:—|(?<=\s)–(?=\s))\s*")
+_DOUBLED = re.compile(r",\s*([,.;:!?])")
+_OPENER = re.compile(r"^(?:great question|that's a (?:great|good|really good) question|good question|absolutely|"
+                     r"certainly|sure thing|of course)\s*[.!,]+\s+(?=\S)", re.IGNORECASE)
+_PLAIN: tuple[tuple[re.Pattern[str], str], ...] = tuple((re.compile(p, re.IGNORECASE), r) for p, r in (
+    (r"\butili[sz]ing\b", "using"),
+    (r"\butili[sz]ed\b", "used"),
+    (r"\butili[sz]es\b", "uses"),
+    (r"\butili[sz]e\b", "use"),
+    (r"\bleveraging\b", "using"),
+    (r"\bleveraged\b(?= (?:the|our|their|a|an|this|that|my|existing|it|them)\b)", "used"),
+    (r"\bleverage\b(?= (?:the|our|their|a|an|this|that|my|existing|it|them)\b)", "use"),
+    (r"\bin order to\b", "to"),
+    (r"\bdelve into\b", "dig into"),
+))
+
+
+def humanize(text: str) -> str:
+    """The mechanical half of making the spoken answer sound like a person (see _DASH above). Idempotent, and stable
+    while the answer streams in (it's applied to every snapshot)."""
+    if not text:
+        return text
+    out = _DASH.sub(", ", text)
+    out = _DOUBLED.sub(r"\1", out)
+    m = _OPENER.match(out)
+    if m:
+        rest = out[m.end():]
+        out = rest[:1].upper() + rest[1:]
+    for pattern, plain in _PLAIN:
+        out = pattern.sub(_keep_case(plain), out)
+    return out
+
+
+def _keep_case(plain: str) -> Callable[[re.Match[str]], str]:
+    """"Utilize" → "Use", "utilize" → "use": the replacement keeps a sentence's opening capital."""
+    return lambda m: plain[:1].upper() + plain[1:] if m.group(0)[:1].isupper() else plain
 
 
 class AnswerStreamParser:
@@ -194,6 +236,9 @@ class AnswerStreamParser:
 
         if stray and not ans.direct_answer:
             ans.direct_answer = " ".join(stray).replace(" \n\n", "\n\n")
+        ans.direct_answer = humanize(ans.direct_answer)
+        if ans.example:
+            ans.example = humanize(ans.example)
         if (ans.grounding is None and ans.direct_answer and self._qtype in _PERSONAL
                 and not any(c.startswith("resume") for c in self._context_used)):
             # Model skipped the label on a question about the user's own past with no verified facts to draw
