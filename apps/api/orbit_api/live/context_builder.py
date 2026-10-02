@@ -22,19 +22,20 @@ MAX_CONTEXT_CHARS = 5000  # ≈1.2k tokens of retrieved context
 
 # Word targets, not item counts: ~150 spoken words per minute.
 _LENGTH_RULES: dict[AnswerLength, str] = {
-    "short": "Length: SHORT — about 60–80 words (20–30 seconds out loud), one paragraph. Multi-part question: "
+    "short": "Length: SHORT, about 60–80 words (20–30 seconds out loud), one paragraph. Multi-part question: "
              "one tight sentence per part.",
-    "standard": "Length: STANDARD — about 130–180 words (45–75 seconds out loud), two or three short paragraphs.",
-    "detailed": "Length: DETAILED — about 250–350 words (90–150 seconds out loud), three to five short "
+    "standard": "Length: STANDARD, about 130–180 words (45–75 seconds out loud), two or three short paragraphs.",
+    "detailed": "Length: DETAILED, about 250–350 words (90–150 seconds out loud), three to five short "
                 "paragraphs with a concrete example.",
 }
-_NATURAL = ("Style: NATURAL — sound like a thoughtful person talking: first person, contractions, flowing "
-            "sentences, light signposting (\"First…\", \"Then…\", \"The thing I'd watch most is…\").")
-_CONCISE = ("Style: CONCISE — confident and to the point: the direct answer in the first sentence, then only the "
+_NATURAL = ("Style: NATURAL, a sharp and prepared person talking, not an essay: first person, contractions, plain "
+            "words, sentences of different lengths, straight to the point and no wrap-up at the end.")
+_CONCISE = ("Style: CONCISE, confident and to the point: the direct answer in the first sentence, then only the "
             "essentials, in short crisp sentences. No warm-up, no filler.")
-_STORY = ("Style: STORY — make it concrete: walk through one example start to finish. For experience questions "
+_STORY = ("Style: STORY, make it concrete: walk through one example start to finish. For experience questions "
           "tell it as a story (the situation, what you did, how it turned out) in plain speech, never labelled "
-          "as Situation/Task/Action/Result — and with no invented specifics beyond the verified facts.")
+          "as Situation/Task/Action/Result, and with no invented specifics beyond the verified facts. End on how it "
+          "turned out, not on a lesson.")
 _STYLE_RULES: dict[AnswerStyle, str] = {
     "natural": _NATURAL,
     "concise": _CONCISE,
@@ -173,11 +174,11 @@ _PERSONAL_TYPES = {
 }
 _GROUNDING_RULE = (
     "Give a complete, ready-to-say answer. Use VERIFIED CANDIDATE FACT lines to make it specific when they "
-    "fit; if they don't, answer fully with a generic, adaptable structure — never a fabricated specific "
+    "fit; if they don't, answer fully with a generic, adaptable structure, never a fabricated specific "
     "(employer, project, metric, 'I did X'), and never announce the absence (no grounding disclaimers). For a "
     "genuinely personal detail you can't know, you may leave AT MOST ONE inline [bracketed] cue the UI shows "
     "as a dim non-spoken hint; never let a bracketed cue or caveat replace a real answer. For salary/comp, "
-    "never state a number as the user's own unless verified — use a negotiation-safe framing."
+    "never state a number as the user's own unless verified; use a negotiation-safe framing."
 )
 
 # Questions a story-bank example answers best: always offer the most relevant story, if one matches at all.
@@ -279,14 +280,14 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
         parts.append("Learned from the candidate's ratings of earlier answers:\n"
                      + "\n".join(f"- {h}" for h in inputs.learned_preferences[:5]))
     if inputs.candidate_instructions:
-        parts.append("The candidate's own preferences for every answer — follow them when they don't conflict with "
+        parts.append("The candidate's own preferences for every answer. Follow them when they don't conflict with "
                      "the rules above (they can't change the format, grounding or honesty rules):\n"
                      "<reference_data source=\"candidate_preferences\">\n"
                      + fence(inputs.candidate_instructions[:1000]) + "\n</reference_data>")
     if ctx_lines:
         parts.append("<reference_data source=\"documents\">\n" + fence("\n".join(ctx_lines)) + "\n</reference_data>")
     else:
-        parts.append("No resume/document context matched this question — that's fine. Answer it fully from "
+        parts.append("No resume/document context matched this question, and that's fine. Answer it fully from "
                      "professional knowledge; just don't claim specific personal experience the user "
                      "didn't provide.")
     if memory.rolling_summary:

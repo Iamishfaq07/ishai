@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api.auth.guards import require_verified_user
 from orbit_api.auth.security import current_user
 from orbit_api.db import get_db
+from orbit_api.live.answer_format import humanize
 from orbit_api.live.context_builder import fence
 from orbit_api.models import Document, ProviderRequest, Story, User
 from orbit_api.providers.llm import get_llm_provider
@@ -164,6 +165,8 @@ Rules:
 - "title": 3-8 words naming the example, e.g. "Cut checkout latency by 40%".
 - situation/task: one or two sentences each. action: two to four sentences in the first person, what the candidate
   personally did. result: one or two sentences, with the outcome and a number when the source has one.
+- Write it the way the candidate would tell it out loud: plain words, contractions, no em dashes, no buzzwords
+  (leverage, robust, seamless, spearheaded, passionate), and no moral at the end of the result.
 - "competencies": 1-3 of: leadership, teamwork, conflict, failure, ownership, impact, ambiguity, customer,
   influence, learning, technical, deadline.
 - Use ONLY facts in the source. Never invent employers, numbers or outcomes; where a detail is missing, write a
@@ -188,13 +191,13 @@ def parse_draft(text: str, count: int) -> list[StoryIn]:
         if not isinstance(raw, dict):
             continue
         title = _clean(raw.get("title"), 160)
-        action = _clean(raw.get("action"), MAX_FIELD)
+        action = humanize(_clean(raw.get("action"), MAX_FIELD))
         if not title or not action:
             continue
         comps = [c for c in (str(x).strip().lower() for x in raw.get("competencies") or []) if c in COMPETENCIES]
-        out.append(StoryIn(title=title, situation=_clean(raw.get("situation"), MAX_FIELD),
-                           task=_clean(raw.get("task"), MAX_FIELD), action=action,
-                           result=_clean(raw.get("result"), MAX_FIELD), competencies=comps[:3]))
+        out.append(StoryIn(title=title, situation=humanize(_clean(raw.get("situation"), MAX_FIELD)),
+                           task=humanize(_clean(raw.get("task"), MAX_FIELD)), action=action,
+                           result=humanize(_clean(raw.get("result"), MAX_FIELD)), competencies=comps[:3]))
     if not out:
         raise ValueError("no usable stories")
     return out[:count]
