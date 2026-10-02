@@ -1,5 +1,21 @@
 # Implementation log
 
+## Resume writing on a phone: no more endless "uploading" / "scoring" (2026-10-02)
+
+- **Every request now has a time limit.** A stalled phone connection (switching wifi and cellular, a tunnel, weak
+  signal) used to leave the screen waiting for ever. Ordinary requests give up after 30 s with "That took too long.
+  Check your connection and try again."; AI calls, uploads and exports get 150 s. The limit is picked from the
+  endpoint, so a new AI endpoint isn't cut off by forgetting to opt in. Requests can also be cancelled.
+- **Importing a resume** shows what's happening, and after 8 s says it's still working (scanned PDFs and long
+  resumes can take a minute or two) with a **Cancel** button. A file over the server's 10 MB limit is refused
+  before uploading it over cellular.
+- **Scoring keeps up on a slow connection.** A new edit cancels the score request still running, so slow replies
+  can't pile up or overwrite a newer score, and the wait before the next request grows while the connection is slow.
+  (On a simulated slow connection: 3 score requests instead of 6.)
+- **Autosave is safe on a slow connection.** Saves go one at a time, so an older save can no longer land after a
+  newer one and overwrite recent edits. After a dropped connection it retries by itself every 5 s and as soon as
+  the phone is back online.
+
 ## Resume import can't add what the source doesn't say (2026-10-02)
 
 - **Imported resumes are checked against the text they came from** (`claims.ground_import`). The import prompt says

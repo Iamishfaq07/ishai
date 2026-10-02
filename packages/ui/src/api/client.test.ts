@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { ApiError, createApiClient } from "./client";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { ApiError, DEFAULT_TIMEOUT_MS, LONG_TIMEOUT_MS, createApiClient, timeoutFor } from "./client";
 
 type Call = { url: string; method: string; headers: Headers };
 
@@ -70,5 +70,49 @@ describe("api client errors", () => {
     const api = createApiClient({ baseUrl: "https://api.test", auth: { mode: "cookie" }, fetchImpl: f.impl });
     const err = (await api.deleteSession("s").catch((e: unknown) => e)) as ApiError;
     expect(err.code).toBe("csrf_token");
+  });
+});
+
+/** A fetch that never answers (a stalled phone connection) but, like the real one, fails when it is aborted. */
+function stalledFetch(): typeof fetch {
+  return ((_input: RequestInfo | URL, init?: RequestInit) =>
+    new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+    })) as typeof fetch;
+}
+
+describe("api client timeouts and cancelling", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("gives up on a stalled request with a message the screen can show", async () => {
+    vi.useFakeTimers();
+    const api = createApiClient({ baseUrl: "https://api.test", auth: { mode: "cookie" }, fetchImpl: stalledFetch() });
+    const pending = api.listDocuments().catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(DEFAULT_TIMEOUT_MS + 1);
+    const err = await pending;
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err).toMatchObject({ status: 0, code: "timeout" });
+  });
+
+  it("gives AI calls, uploads and exports far longer than ordinary ones", () => {
+    expect(timeoutFor("/v1/resumes/score")).toBe(DEFAULT_TIMEOUT_MS);
+    expect(timeoutFor("/v1/resumes/123")).toBe(DEFAULT_TIMEOUT_MS);
+    for (const slow of ["/v1/resumes/import", "/v1/resumes/import-file", "/v1/resumes/suggest",
+      "/v1/resumes/cover-letter", "/v1/resumes/docx", "/v1/prep", "/v1/sessions/s1/review",
+      "/v1/sessions/s1/follow-up?refresh=true", "/v1/stories/draft", "/v1/auth/me/export",
+      "/v1/documents/d1/text"]) {
+      expect(timeoutFor(slow), slow).toBe(LONG_TIMEOUT_MS);
+    }
+    expect(timeoutFor("/v1/documents", new FormData())).toBe(LONG_TIMEOUT_MS); // any upload
+  });
+
+  it("lets the caller cancel, and a cancel is not reported as a network error", async () => {
+    const api = createApiClient({ baseUrl: "https://api.test", auth: { mode: "cookie" }, fetchImpl: stalledFetch() });
+    const ctl = new AbortController();
+    const pending = api.scoreResume({} as never, {} as never, "", { signal: ctl.signal }).catch((e: unknown) => e);
+    ctl.abort();
+    const err = await pending;
+    expect(err).toBeInstanceOf(DOMException);
+    expect(err).toMatchObject({ name: "AbortError" });
   });
 });
