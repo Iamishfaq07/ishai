@@ -5,13 +5,14 @@ import type {
   ResumeEducation,
   ResumeExperience,
   ResumeExtraSection,
+  ResumeLineIssue,
   ResumeProject,
   ResumeSectionKey,
   ResumeSkillGroup,
 } from "@orbit/types";
 import { ChevronDown, Plus, Sparkles, Trash2, X, cx, focusRing } from "@orbit/ui";
 import { Button, Field, Input, Textarea } from "../../components/ui";
-import { EXTRA_PRESETS, MAX_EXTRAS, newId, sectionLabel } from "./model";
+import { EXTRA_PRESETS, MAX_EXTRAS, getAt, newId, sectionLabel } from "./model";
 
 type Update = (fn: (d: ResumeData) => ResumeData) => void;
 
@@ -73,35 +74,106 @@ function TwoCol({ children }: { children: ReactNode }) {
 /** "Rewrite this one with AI", for the field at a path (a bullet, the summary). Absent when the editor has no AI. */
 type Rewrite = ((path: string) => void) | undefined;
 
-function Bullets({ path, bullets, onChange, onRewrite }: { path: string; bullets: string[]; onChange: (b: string[]) => void; onRewrite?: Rewrite }) {
+/** The latest score's line-by-line writing issues, and the resume it scored (to tell which lines changed since). */
+type LineChecks = { issues: ResumeLineIssue[]; scored: ResumeData | null };
+
+const NO_CHECKS: LineChecks = { issues: [], scored: null };
+
+const linkButton = cx("inline-flex items-center gap-1 rounded font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing);
+
+/**
+ * What a recruiter would flag on this line, under it, with the fix: tech names are fixed on the spot, a repeated
+ * bullet can go, and the rest is the line's AI rewrite. Hidden once the line is edited, until the next score.
+ */
+function LineNotes({ path, text, checks, onRewrite, onSet, onRemove, className }: {
+  path: string;
+  text: string;
+  checks: LineChecks;
+  onRewrite?: Rewrite;
+  onSet: (value: string) => void;
+  onRemove?: () => void;
+  className?: string;
+}) {
+  const mine = checks.scored && getAt(checks.scored, path) === text ? checks.issues.filter((i) => i.path === path) : [];
+  if (!mine.length) return null;
+  const spelled = mine.find((i) => i.kind === "casing")?.fixed ?? null;
+  const rewritable = mine.some((i) => i.kind !== "casing" && i.kind !== "duplicate");
+  return (
+    <div className={cx("space-y-1 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-900 dark:text-amber-100", className)}>
+      <ul className="space-y-0.5">
+        {mine.map((i) => (
+          <li key={i.kind}>{i.message}</li>
+        ))}
+      </ul>
+      <div className="flex flex-wrap gap-3">
+        {spelled !== null && (
+          <button type="button" className={linkButton} onClick={() => onSet(spelled)}>
+            Fix the spelling
+          </button>
+        )}
+        {onRemove && mine.some((i) => i.kind === "duplicate") && (
+          <button type="button" className={linkButton} onClick={onRemove}>
+            Remove this one
+          </button>
+        )}
+        {onRewrite && rewritable && (
+          <button type="button" className={linkButton} onClick={() => onRewrite(path)}>
+            <Sparkles className="h-3 w-3" /> Fix with AI
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Bullets({ path, bullets, onChange, onRewrite, checks = NO_CHECKS }: {
+  path: string;
+  bullets: string[];
+  onChange: (b: string[]) => void;
+  onRewrite?: Rewrite;
+  checks?: LineChecks;
+}) {
+  const setBullet = (i: number, value: string) => onChange(bullets.map((x, j) => (j === i ? value : x)));
   return (
     <div className="space-y-2">
       <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Bullets: start with a verb, end with the result (a number if you have one).</p>
       {bullets.map((b, i) => (
-        <div key={i} className="flex items-start gap-1">
-          <span aria-hidden className="mt-2.5 text-zinc-400">•</span>
-          <Textarea
-            aria-label={`Bullet ${i + 1}`}
-            maxLength={400}
-            data-path={`${path}.bullets.${i}`}
-            rows={2}
-            value={b}
-            onChange={(e) => onChange(bullets.map((x, j) => (j === i ? e.target.value : x)))}
-            className="min-h-0 flex-1 scroll-mt-24"
-          />
-          <div className="flex flex-col">
-            <IconButton label={`Move bullet ${i + 1} up`} onClick={() => onChange(move(bullets, i, -1))} disabled={i === 0}>
-              <ChevronDown className="h-3.5 w-3.5 rotate-180" />
-            </IconButton>
-            <IconButton label={`Remove bullet ${i + 1}`} onClick={() => onChange(bullets.filter((_, j) => j !== i))}>
-              <X className="h-3.5 w-3.5" />
-            </IconButton>
-            {onRewrite && b.trim() && (
-              <IconButton label={`Rewrite bullet ${i + 1} with AI`} onClick={() => onRewrite(`${path}.bullets.${i}`)}>
-                <Sparkles className="h-3.5 w-3.5" />
+        <div key={i} className="space-y-1">
+          <div className="flex items-start gap-1">
+            <span aria-hidden className="mt-2.5 text-zinc-400">•</span>
+            <Textarea
+              aria-label={`Bullet ${i + 1}`}
+              maxLength={400}
+              data-path={`${path}.bullets.${i}`}
+              rows={2}
+              spellCheck
+              value={b}
+              onChange={(e) => setBullet(i, e.target.value)}
+              className="min-h-0 flex-1 scroll-mt-24"
+            />
+            <div className="flex flex-col">
+              <IconButton label={`Move bullet ${i + 1} up`} onClick={() => onChange(move(bullets, i, -1))} disabled={i === 0}>
+                <ChevronDown className="h-3.5 w-3.5 rotate-180" />
               </IconButton>
-            )}
+              <IconButton label={`Remove bullet ${i + 1}`} onClick={() => onChange(bullets.filter((_, j) => j !== i))}>
+                <X className="h-3.5 w-3.5" />
+              </IconButton>
+              {onRewrite && b.trim() && (
+                <IconButton label={`Rewrite bullet ${i + 1} with AI`} onClick={() => onRewrite(`${path}.bullets.${i}`)}>
+                  <Sparkles className="h-3.5 w-3.5" />
+                </IconButton>
+              )}
+            </div>
           </div>
+          <LineNotes
+            path={`${path}.bullets.${i}`}
+            text={b}
+            checks={checks}
+            onRewrite={onRewrite}
+            onSet={(value) => setBullet(i, value)}
+            onRemove={() => onChange(bullets.filter((_, j) => j !== i))}
+            className="ml-3 mr-7"
+          />
         </div>
       ))}
       <Button variant="ghost" size="sm" onClick={() => onChange([...bullets, ""])} disabled={bullets.length >= 12}>
@@ -197,8 +269,15 @@ function SkillItems({ id, items, onChange }: { id: string; items: string[]; onCh
   );
 }
 
-export function ContentForm({ data, update, onRewrite }: { data: ResumeData; update: Update; onRewrite?: Rewrite }) {
+export function ContentForm({ data, update, onRewrite, issues = [], scored = null }: {
+  data: ResumeData;
+  update: Update;
+  onRewrite?: Rewrite;
+  issues?: ResumeLineIssue[];
+  scored?: ResumeData | null;
+}) {
   const b = data.basics;
+  const checks: LineChecks = { issues, scored };
   const summaryWords = b.summary.trim() ? b.summary.trim().split(/\s+/).length : 0;
   const setBasics = (patch: Partial<ResumeData["basics"]>) => update((d) => ({ ...d, basics: { ...d.basics, ...patch } }));
   const list = <K extends "experience" | "education" | "skills" | "projects" | "certifications" | "extras">(key: K) => ({
@@ -299,8 +378,9 @@ export function ContentForm({ data, update, onRewrite }: { data: ResumeData; upd
         }
       >
         <Field label="2-3 sentences: who you are, your strongest skills, what you want next" htmlFor="r-summary">
-          <Textarea id="r-summary" maxLength={1500} data-path="basics.summary" rows={4} value={b.summary} onChange={(e) => setBasics({ summary: e.target.value })} className="scroll-mt-24" />
+          <Textarea id="r-summary" maxLength={1500} data-path="basics.summary" rows={4} spellCheck value={b.summary} onChange={(e) => setBasics({ summary: e.target.value })} className="scroll-mt-24" />
         </Field>
+        <LineNotes path="basics.summary" text={b.summary} checks={checks} onRewrite={onRewrite} onSet={(summary) => setBasics({ summary })} />
         {summaryWords > 0 && (
           <p className={cx("text-xs", summaryWords < 25 || summaryWords > 90 ? "text-amber-700 dark:text-amber-300" : "text-zinc-500 dark:text-zinc-400")}>
             {summaryWords} words · aim for 25-90
@@ -337,7 +417,7 @@ export function ContentForm({ data, update, onRewrite }: { data: ResumeData; upd
                 I work here now
               </label>
             </TwoCol>
-            <Bullets path={`experience.${e.id}`} bullets={e.bullets} onChange={(bullets) => exp.patch(e.id, { bullets })} onRewrite={onRewrite} />
+            <Bullets path={`experience.${e.id}`} bullets={e.bullets} onChange={(bullets) => exp.patch(e.id, { bullets })} onRewrite={onRewrite} checks={checks} />
           </div>
         ))}
       </Section>
@@ -383,7 +463,7 @@ export function ContentForm({ data, update, onRewrite }: { data: ResumeData; upd
             <Field label="Description" htmlFor={`pd-${p.id}`}>
               <Textarea id={`pd-${p.id}`} maxLength={600} data-path={`projects.${p.id}.description`} rows={2} value={p.description} onChange={(ev) => projects.patch(p.id, { description: ev.target.value })} />
             </Field>
-            <Bullets path={`projects.${p.id}`} bullets={p.bullets} onChange={(bullets) => projects.patch(p.id, { bullets })} onRewrite={onRewrite} />
+            <Bullets path={`projects.${p.id}`} bullets={p.bullets} onChange={(bullets) => projects.patch(p.id, { bullets })} onRewrite={onRewrite} checks={checks} />
           </div>
         ))}
       </Section>

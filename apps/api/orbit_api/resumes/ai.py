@@ -42,6 +42,7 @@ MAX_SOURCE_CHARS = 24_000
 IMPORT_MAX_TOKENS = 8_000
 MAX_JOB_CHARS = 8_000
 MAX_SUGGESTIONS = 10
+DRAFTS = 3  # a one-field rewrite offers this many to pick from
 MAX_NEW_BULLETS = 3  # per role
 NEW_BULLET_CONFIRM = ("Drafted from your job title, not from your resume. Keep it only if it's true of your "
                       "work, and add a real number if you have one.")
@@ -239,7 +240,16 @@ def suggest_request(data: ResumeData, report: AtsReport, llm: LLMProvider, *, mo
                               for p, (name, have) in addable_roles(data).items()]
     fixing = next((c for c in report.checks if c.id == check and not c.passed and c.fix), None)
     if focus:
-        task = "rewrite this one field"
+        # Three finished drafts to pick from, the way the best resume tools offer them (Resume Worded, Kickresume).
+        style = ("in the job post's words where the resume supports them" if job_text.strip()
+                 else "the most specific and concrete")
+        task = (f"write {DRAFTS} different drafts of this one field, each a complete alternative, as {DRAFTS} "
+                "suggestions for the same path, in this order: impact first (lead with what changed as a result), "
+                f"then shorter and plainer, then {style}. Start each \"reason\" with \"Impact first:\", "
+                "\"Shorter:\" or \"" + ("Matches the job:" if job_text.strip() else "More specific:") + "\"")
+        flagged = [i.message for i in report.issues if i.path == focus and i.kind != "casing"]
+        if flagged:
+            task += ". Every draft must fix what this line was flagged for: " + " ".join(flagged)
     elif fixing:
         task = f"fix this issue wherever it appears (at most {MAX_SUGGESTIONS} changes): {fixing.fix}"
     else:
@@ -264,7 +274,9 @@ def suggest_request(data: ResumeData, report: AtsReport, llm: LLMProvider, *, mo
     )
 
 
-def parse_suggestions(resp: LLMResponse, data: ResumeData) -> list[Suggestion]:
+def parse_suggestions(resp: LLMResponse, data: ResumeData, *, focus: str | None = None) -> list[Suggestion]:
+    """The model's suggestions, checked. With `focus` (a one-field rewrite) up to DRAFTS of them for that field, each
+    labelled as a draft; otherwise at most one rewrite per field."""
     fields = editable_fields(data)
     adds = addable_roles(data)
     corpus = _resume_json(data)  # everything the candidate has said about themselves
@@ -276,11 +288,13 @@ def parse_suggestions(resp: LLMResponse, data: ResumeData) -> list[Suggestion]:
         adding = path in adds
         if not adding and path not in fields:
             continue
+        if focus and path != focus:
+            continue
         label, before = (f"{adds[path][0]}, new bullet", "") if adding else fields[path]
         limit = 1_500 if path == "basics.summary" else 160 if path == "basics.headline" else \
             600 if path.endswith(".description") else 400
         after = _s(raw.get("after"), limit).lstrip("•-* ").strip()
-        key = (path, after.lower() if adding else "")
+        key = (path, after.lower() if adding or focus else "")
         if not after or after == before.strip() or key in seen:
             continue
         if adding and (added[path] >= MAX_NEW_BULLETS or after.lower() in {b.lower() for b in adds[path][1]}):
@@ -309,8 +323,11 @@ def parse_suggestions(resp: LLMResponse, data: ResumeData) -> list[Suggestion]:
         out.append(Suggestion(id=new_id(), path=path, label=label, before=before, after=after, reason=reason,
                               kind="add_bullet" if adding else "rewrite",
                               confirm=NEW_BULLET_CONFIRM if adding else None))
-        if len(out) >= MAX_SUGGESTIONS:
+        if len(out) >= (DRAFTS if focus else MAX_SUGGESTIONS):
             break
+    if focus and len(out) > 1:
+        for n, s in enumerate(out, 1):
+            s.label = f"{s.label} · draft {n} of {len(out)}"
     return out
 
 

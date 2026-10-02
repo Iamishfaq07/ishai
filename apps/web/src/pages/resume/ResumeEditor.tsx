@@ -81,6 +81,8 @@ function ResumeEditor() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("content");
   const [report, setReport] = useState<AtsReport | null>(null);
+  // The resume the report scored: a line's writing issues show only while that line still reads the same.
+  const [scored, setScored] = useState<ResumeData | null>(null);
   const [save, setSave] = useState<{ state: "saved" | "saving" | "dirty" | "error"; error?: string; retry?: boolean }>({
     state: "saved",
   });
@@ -242,6 +244,7 @@ function ResumeEditor() {
           sentAt = null;
           scoreWait.current = Math.min(2_500, Math.max(450, performance.now() - started));
           setReport(r);
+          setScored(resume.data);
         })
         .catch(() => {
           sentAt = null;
@@ -324,7 +327,9 @@ function ResumeEditor() {
     } else {
       update((d) => applySuggestion(d, chosen, newId));
     }
-    setQueue((q) => q.filter((x) => x.id !== s.id));
+    // Picking one draft of a line retires the other drafts (and fixes) of that line: they'd replace the text just set.
+    const replaces = s.kind === "rewrite" || s.kind === "set";
+    setQueue((q) => q.filter((x) => x.id !== s.id && !(replaces && x.path === s.path && (x.kind === "rewrite" || x.kind === "set"))));
   };
 
   /** Every mechanical fix with nothing to confirm (extra skills the resume proves, dates), at once. */
@@ -451,7 +456,15 @@ function ResumeEditor() {
             ))}
           </div>
 
-          {tab === "content" && <ContentForm data={resume.data} update={update} onRewrite={(path) => void askAi("improve", undefined, path)} />}
+          {tab === "content" && (
+            <ContentForm
+              data={resume.data}
+              update={update}
+              onRewrite={(path) => void askAi("improve", undefined, path)}
+              issues={report?.issues ?? []}
+              scored={scored}
+            />
+          )}
           {tab === "score" && (
             <ScorePanel
               resume={resume}

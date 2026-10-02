@@ -381,7 +381,9 @@ async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn, allowan
             mechanical += fixes.skill_suggestions(d, report, body.job_text)
         if check in (None, "dates"):
             mechanical += fixes.date_suggestions(d)
-    need_model = check not in ("dates", *SKILL_CHECKS) or bool(body.focus)
+    if not body.focus and check in (None, "tech_names"):
+        mechanical += fixes.casing_suggestions(d)
+    need_model = check not in ("dates", "tech_names", *SKILL_CHECKS) or bool(body.focus)
     ai_ok = await allowance.can_spend()
     used_ai = False  # something the AI wrote is in `mechanical`, so the free use was worth spending
     if check in SKILL_CHECKS and not body.focus and fixes.skills_needed(d) > sum(
@@ -420,7 +422,7 @@ async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn, allowan
     req = ai.suggest_request(d, report, llm, mode=body.mode, job_text=body.job_text, focus=body.focus, check=check)
     try:
         resp = await _generate(db, user, req, "suggest", allowance)
-        suggestions = ai.parse_suggestions(resp, d)
+        suggestions = ai.parse_suggestions(resp, d, focus=body.focus)
     except HTTPException as e:
         if mechanical:  # the AI is down (or the free use just went), but the mechanical fixes are still good
             if not used_ai:
