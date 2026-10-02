@@ -131,7 +131,8 @@ async def fetch_job_posting(url: str, *, resolve: Resolver = _resolve,
                     raw = bytes(body[:MAX_BYTES]).decode(resp.encoding or "utf-8", errors="replace")
             except httpx.HTTPError as e:
                 raise JobLinkError("Couldn't reach that page. Check the link, or paste the text instead.") from e
-            posting = extract_posting(raw, plain="text/plain" in ctype)
+            # Parsing up to 2 MB of HTML is CPU work: a thread, so it doesn't stall the event loop.
+            posting = await asyncio.to_thread(extract_posting, raw, plain="text/plain" in ctype)
             posting.url = current
             return posting
     raise JobLinkError("That link redirects too many times.")

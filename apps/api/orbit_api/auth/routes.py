@@ -27,9 +27,10 @@ from orbit_api.config import get_settings
 from orbit_api.csrf import token_for as csrf_token_for
 from orbit_api.db import get_db
 from orbit_api.entitlements import awaiting_approval
-from orbit_api.models import AuditLog, User
+from orbit_api.models import AuditLog, LiveSessionRow, User
 from orbit_api.providers.email import OutgoingEmail, can_deliver, send_safely
 from orbit_api.ratelimit import TokenBucket, check, client_ip, limit
+from orbit_api.sessions.routes import stop_live
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 auth_limit = limit("auth", rate_per_s=0.2, burst=10)
@@ -249,6 +250,11 @@ async def delete_account(request: Request, response: Response, user: Annotated[U
     """Deletes the account and, via ON DELETE CASCADE, every document, session and usage row."""
     u = await db.get(User, user.id)
     if u is not None:
+        # A live session goes first, as End does: otherwise its engine kept streaming (and metering) STT and the
+        # LLM for an account that no longer exists, every write failing against the deleted rows.
+        for session_id in (await db.scalars(select(LiveSessionRow.id).where(
+                LiveSessionRow.user_id == u.id, LiveSessionRow.status != "ended"))).all():
+            await stop_live(u.id, session_id)
         await db.delete(u)
         db.add(AuditLog(user_id=None, action="auth.delete_account", target=user.id, ip=_ip(request)))
         await db.commit()

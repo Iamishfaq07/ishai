@@ -2,6 +2,7 @@ import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { CompanionView } from "@orbit/types";
 import {
   AnswerCard,
+  ApiError,
   ChevronLeft,
   ChevronRight,
   LiveClient,
@@ -78,23 +79,54 @@ function EndNote({ title, body }: { title: string; body: string }) {
   );
 }
 
+const CODE_KEY = "orbit.companionCode";
+
+/** The share code from the scanned link (`#<code>`), else the one this tab read before a reload. */
+function readCode(): string {
+  const fromLink = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+  if (fromLink) return fromLink;
+  try {
+    return sessionStorage.getItem(CODE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** The session ended or the code expired: a reload should ask for a fresh scan, not retry a dead code. */
+function forgetCode(): void {
+  try {
+    sessionStorage.removeItem(CODE_KEY);
+  } catch {
+    // storage unavailable: nothing was kept
+  }
+}
+
 /**
  * Phone companion (`/companion#<code>`, no sign-in): a read-only second screen for a live session. The computer
  * shows a QR code; this page follows the live question and answer. Nothing is captured or sent from the phone.
  */
 export function CompanionPage() {
-  const code = useMemo(() => decodeURIComponent(window.location.hash.replace(/^#/, "")), []);
+  const code = useMemo(readCode, []);
   const [view, setView] = useState<CompanionView | null>(null);
   const [error, setError] = useState<string | null>(code ? null : "missing");
 
   useEffect(() => {
     if (!code) return;
-    // Keep the code out of the address bar (and so out of history and screenshots) once it's been read.
+    // Keep the code out of the address bar (and so out of history and screenshots) once it's been read. It stays in
+    // this tab's sessionStorage, so reloading the page (or the phone reloading it) still finds the session.
     window.history.replaceState(null, "", window.location.pathname);
+    try {
+      sessionStorage.setItem(CODE_KEY, code);
+    } catch {
+      // storage unavailable: a reload will need a fresh scan
+    }
     api
       .redeemCompanion(code)
       .then(setView)
-      .catch((err: unknown) => setError(errorText(err)));
+      .catch((err: unknown) => {
+        if (err instanceof ApiError && err.status === 404) forgetCode();
+        setError(errorText(err));
+      });
   }, [code]);
 
   if (error === "missing") {
@@ -150,6 +182,9 @@ function CompanionRoom({ code, view }: { code: string; view: CompanionView }) {
   const ended = live.state === "ended";
   const disconnected = live.connection === "closed" && !ended;
   useWakeLock(!ended && !disconnected);
+  useEffect(() => {
+    if (ended) forgetCode();
+  }, [ended]);
 
   const actions = useMemo(
     () => ({ viewAnswer: (id: string | null) => dispatch({ type: "local/view", answer_id: id }) }),

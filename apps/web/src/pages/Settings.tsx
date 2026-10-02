@@ -183,10 +183,11 @@ function AdvancedConfig() {
       <p className="mb-4 text-sm text-zinc-500">
         Provider keys and models for the whole workspace. Changes apply to new answers immediately.
       </p>
-      {cfg.loading || !form ? (
-        <Spinner />
-      ) : cfg.error ? (
+      {/* The error first: a failed load leaves no form, and checking `!form` first would spin for ever. */}
+      {cfg.error ? (
         <ErrorNote onRetry={cfg.reload}>{errorText(cfg.error)}</ErrorNote>
+      ) : cfg.loading || !form ? (
+        <Spinner />
       ) : (
         <form onSubmit={(e) => void save(e)} className="space-y-5">
           {error && <ErrorNote>{error}</ErrorNote>}

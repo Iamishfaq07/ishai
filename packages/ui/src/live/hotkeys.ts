@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { isDialogOpen } from "../hooks/useFocusTrap";
 
 export type HotkeyAction =
   | "answer"
@@ -57,7 +58,11 @@ export function parseCombo(combo: string): ParsedCombo | null {
   };
 }
 
-export function matchesHotkey(event: KeyboardEvent, combo: string, isMac: boolean): boolean {
+export function matchesHotkey(
+  event: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "shiftKey" | "altKey">,
+  combo: string,
+  isMac: boolean,
+): boolean {
   const parsed = parseCombo(combo);
   if (!parsed) return false;
   const modPressed = isMac ? event.metaKey : event.ctrlKey;
@@ -107,6 +112,29 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/**
+ * Runs the handler bound to this key press, if any. Nothing fires while a dialog is open: with "End this session?"
+ * on screen, Ctrl+Enter mustn't generate an answer (or Ctrl+L pause listening) behind it.
+ */
+export function dispatchHotkey(
+  event: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "shiftKey" | "altKey" | "preventDefault">,
+  map: HotkeyMap,
+  handlers: Partial<Record<HotkeyAction, () => void>>,
+  isMac: boolean,
+): boolean {
+  if (isDialogOpen()) return false;
+  for (const action of Object.keys(map) as HotkeyAction[]) {
+    if (matchesHotkey(event, map[action], isMac)) {
+      const handler = handlers[action];
+      if (!handler) return false;
+      event.preventDefault();
+      handler();
+      return true;
+    }
+  }
+  return false;
+}
+
 /** Window-level shortcuts while Orbit is focused. Handlers are read through a ref, so no re-binding churn. */
 export function useHotkeys(
   map: HotkeyMap,
@@ -119,18 +147,7 @@ export function useHotkeys(
   useEffect(() => {
     if (!enabled) return;
     const isMac = isMacPlatform();
-    const onKeyDown = (event: KeyboardEvent) => {
-      for (const action of Object.keys(map) as HotkeyAction[]) {
-        if (matchesHotkey(event, map[action], isMac)) {
-          const handler = handlersRef.current[action];
-          if (handler) {
-            event.preventDefault();
-            handler();
-          }
-          return;
-        }
-      }
-    };
+    const onKeyDown = (event: KeyboardEvent) => void dispatchHotkey(event, map, handlersRef.current, isMac);
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [map, enabled]);

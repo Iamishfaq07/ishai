@@ -16,6 +16,21 @@ import { clearAsyncCache } from "./useAsync";
 
 export type RegisterOutcome = "signed_in" | "verify_email";
 
+/** The last interview prep (Practice), kept in this browser between visits. */
+export const LAST_PREP_KEY = "orbit.lastPrep";
+// Account data this browser keeps outside the page cache. localStorage is shared by everyone who signs in on the
+// browser, so it goes with the page cache whenever the account changes.
+const ACCOUNT_STORAGE_KEYS = [LAST_PREP_KEY];
+
+function forgetAccount(): void {
+  clearAsyncCache();
+  try {
+    for (const key of ACCOUNT_STORAGE_KEYS) localStorage.removeItem(key);
+  } catch {
+    // storage unavailable: nothing was kept there either
+  }
+}
+
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
@@ -67,10 +82,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => setUnauthorizedHandler(null);
   }, []);
 
-  // Cached page data belongs to one account: dropped before the user changes, so nobody sees the last person's.
+  // Cached page data (and the account's saved bits) belongs to one account: dropped before the user changes, so
+  // nobody sees the last person's.
   const login = useCallback(async (req: LoginRequest) => {
     await api.login(req);
-    clearAsyncCache();
+    forgetAccount();
     setUser(await confirmSession());
   }, []);
 
@@ -78,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (req: RegisterRequest): Promise<RegisterOutcome> => {
     const res = await api.register(req);
     if ("status" in res && res.status === "verify_email") return "verify_email";
-    clearAsyncCache();
+    forgetAccount();
     setUser(await confirmSession());
     return "signed_in";
   }, []);
@@ -87,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api.logout();
     } finally {
-      clearAsyncCache();
+      forgetAccount();
       setUser(null);
     }
   }, []);

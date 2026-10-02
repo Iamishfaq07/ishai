@@ -105,13 +105,13 @@ async def list_resumes(user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> list[ResumeSummary]:
     rows = (await db.scalars(select(Resume).where(Resume.user_id == user.id)
                              .order_by(Resume.updated_at.desc(), Resume.created_at.desc()))).all()
-    out = []
-    for r in rows:
-        data, design = _load(r)
-        out.append(ResumeSummary(id=r.id, title=r.title, name=data.basics.name, headline=data.basics.headline,
-                                 template=design.template, score=score_resume(data, design, r.job_text or "").score,
-                                 has_job=bool((r.job_text or "").strip()), updated_at=r.updated_at))
-    return out
+    loaded = [(r, *_load(r), r.job_text or "") for r in rows]
+    # Scoring is CPU work (keyword matching, every check), once per resume: off the event loop, so a long list
+    # doesn't stall every other request (live sessions included).
+    scores = await asyncio.to_thread(lambda: [score_resume(data, design, job).score for _, data, design, job in loaded])
+    return [ResumeSummary(id=r.id, title=r.title, name=data.basics.name, headline=data.basics.headline,
+                          template=design.template, score=score, has_job=bool(job.strip()), updated_at=r.updated_at)
+            for (r, data, design, job), score in zip(loaded, scores, strict=True)]
 
 
 # Before "/{resume_id}", which would otherwise take "allowance" for an id.
@@ -175,7 +175,7 @@ class ScoreIn(BaseModel):
 
 @router.post("/score", response_model=AtsReport, dependencies=[Depends(score_limit)])
 async def score(body: ScoreIn, _: Annotated[User, Depends(current_user)]) -> AtsReport:
-    return score_resume(body.data, body.design, body.job_text)
+    return await asyncio.to_thread(score_resume, body.data, body.design, body.job_text)  # CPU work: off the loop
 
 
 # ---- Word export --------------------------------------------------------------------------------------------
@@ -371,7 +371,7 @@ async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn, allowan
     fields = ai.editable_fields(d)
     if body.focus and body.focus not in fields:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That part of the resume can't be rewritten.")
-    report = score_resume(d, body.design, body.job_text)
+    report = await asyncio.to_thread(score_resume, d, body.design, body.job_text)
     if body.check and body.check not in {c.id for c in report.checks}:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Unknown check.")
     check = body.check

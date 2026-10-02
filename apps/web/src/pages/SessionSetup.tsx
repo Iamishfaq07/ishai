@@ -289,7 +289,16 @@ export function SessionSetupPage() {
   return (
     <div>
       <PageHeader icon={Rocket} title="New live session" subtitle="Pick your context and audio, then start. You can change answer length live." />
-      <form ref={formRef} onSubmit={(e) => void start(e)} className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <form
+        ref={formRef}
+        onSubmit={(e) => void start(e)}
+        onKeyDown={(e) => {
+          // Enter in a text box would submit the form and start a live session mid-typing. Only the Start button
+          // starts one (Enter on the focused button still presses it: that's a button, not an input).
+          if (e.key === "Enter" && e.target instanceof HTMLInputElement && !e.nativeEvent.isComposing) e.preventDefault();
+        }}
+        className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]"
+      >
         <div className="space-y-6">
           <WorkspaceBar
             api={api}
@@ -563,30 +572,49 @@ function useLevelCapture(kind: "mic" | "system") {
   const captureRef = useRef<AudioCapture | null>(null);
   const stats = useRef(newChannelStats());
   const startedAt = useRef(0);
+  const [starting, setStarting] = useState(false);
+  // Bumped on every start/stop and on unmount, like the live mic: a permission prompt or share picker that answers
+  // late (a double click, leaving the page mid-start) must not leave a capture running that nothing will stop.
+  const genRef = useRef(0);
 
   const stop = () => {
+    genRef.current++;
     captureRef.current?.stop();
     captureRef.current = null;
     setActive(false);
+    setStarting(false);
     setLevel(0);
   };
 
   const start = async (open: () => Promise<MediaStream>) => {
     stop();
+    const gen = genRef.current;
+    setStarting(true);
     setError(null);
     setSummary(null);
     try {
       const stream = await open();
+      if (gen !== genRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
       stats.current = newChannelStats();
       startedAt.current = performance.now();
-      captureRef.current = await captureStream(stream, (f) => {
+      const capture = await captureStream(stream, (f) => {
         setLevel(levelFromRms(f.rms));
         stats.current = addFrame(stats.current, f.rms, performance.now());
       });
-      stream.getAudioTracks()[0]?.addEventListener("ended", stop);
+      if (gen !== genRef.current) {
+        capture.stop();
+        return;
+      }
+      captureRef.current = capture;
+      stream.getAudioTracks()[0]?.addEventListener("ended", () => gen === genRef.current && stop());
       setActive(true);
     } catch (err) {
-      setError(errorText(err));
+      if (gen === genRef.current) setError(errorText(err));
+    } finally {
+      if (gen === genRef.current) setStarting(false);
     }
   };
 
@@ -601,8 +629,15 @@ function useLevelCapture(kind: "mic" | "system") {
     return () => clearInterval(tick);
   }, [active, kind]);
 
-  useEffect(() => () => captureRef.current?.stop(), []);
-  return { level, active, error, summary, start, stop };
+  useEffect(
+    () => () => {
+      genRef.current++;
+      captureRef.current?.stop();
+      captureRef.current = null;
+    },
+    [],
+  );
+  return { level, active, starting, error, summary, start, stop };
 }
 
 function TestResult({ summary }: { summary: ChannelSummary | null }) {
@@ -622,6 +657,7 @@ function MicTest({ deviceId, onGranted }: { deviceId?: string; onGranted: () => 
         <Button
           variant="secondary"
           size="sm"
+          disabled={t.starting}
           onClick={() =>
             t.active
               ? t.stop()
@@ -632,7 +668,7 @@ function MicTest({ deviceId, onGranted }: { deviceId?: string; onGranted: () => 
                 })
           }
         >
-          {t.active ? "Stop test" : "Test microphone"}
+          {t.starting ? "Starting…" : t.active ? "Stop test" : "Test microphone"}
         </Button>
         <div className="flex-1">
           <Meter level={t.level} label="Microphone" />
@@ -649,8 +685,13 @@ function SystemAudioTest() {
   return (
     <div className="mt-3 space-y-2">
       <div className="flex items-center gap-3">
-        <Button variant="secondary" size="sm" onClick={() => (t.active ? t.stop() : void t.start(openDisplayAudio))}>
-          {t.active ? "Stop test" : "Test tab audio"}
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={t.starting}
+          onClick={() => (t.active ? t.stop() : void t.start(openDisplayAudio))}
+        >
+          {t.starting ? "Starting…" : t.active ? "Stop test" : "Test tab audio"}
         </Button>
         <div className="flex-1">
           <Meter level={t.level} label="Tab audio" />

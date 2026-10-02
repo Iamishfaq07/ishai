@@ -361,6 +361,10 @@ class MockInterviewer:
         if not self.finished and not self._busy:
             await self._ask_next(now_ms)
 
+    def stop(self) -> None:
+        """The connection is ending: stop writing a next question nobody will be asked (it's billed)."""
+        self._drop_prefetch()
+
     # ---- flow -----------------------------------------------------------------------------------------------
 
     def _time_up(self, now_ms: int) -> bool:

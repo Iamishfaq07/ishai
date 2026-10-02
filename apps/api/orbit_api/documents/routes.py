@@ -59,10 +59,14 @@ class DocTextOut(BaseModel):
     text: str
 
 
+def _to_out(d: Document, chunk_count: int) -> DocumentOut:
+    return DocumentOut(id=d.id, title=d.title, kind=d.kind, filename=d.filename, size_bytes=d.size_bytes,
+                       status=d.status, error=d.error, chunk_count=chunk_count, created_at=d.created_at)
+
+
 async def _out(db: AsyncSession, d: Document) -> DocumentOut:
     count = await db.scalar(select(func.count()).select_from(DocumentChunk).where(DocumentChunk.document_id == d.id))
-    return DocumentOut(id=d.id, title=d.title, kind=d.kind, filename=d.filename, size_bytes=d.size_bytes,
-                       status=d.status, error=d.error, chunk_count=int(count or 0), created_at=d.created_at)
+    return _to_out(d, int(count or 0))
 
 
 async def _check_quota(db: AsyncSession, user: User) -> None:
@@ -107,7 +111,13 @@ async def list_documents(user: Annotated[User, Depends(current_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> list[DocumentOut]:
     docs = (await db.scalars(select(Document).where(Document.user_id == user.id)
                              .order_by(Document.created_at.desc()))).all()
-    return [await _out(db, d) for d in docs]
+    # One grouped count for the whole list instead of one per document.
+    counts: dict[str, int] = {
+        doc_id: int(n) for doc_id, n in (await db.execute(
+            select(DocumentChunk.document_id, func.count()).where(DocumentChunk.user_id == user.id)
+            .group_by(DocumentChunk.document_id))).all()
+    }
+    return [_to_out(d, counts.get(d.id, 0)) for d in docs]
 
 
 @router.post("", response_model=DocumentOut, status_code=201, dependencies=[Depends(upload_limit)])
@@ -130,8 +140,9 @@ async def upload_document(
     except ParseError as e:
         raise HTTPException(422, str(e)) from e
     # The original bytes are not retained: only extracted text chunks are stored.
+    # The client's Content-Type header as sent, cut to its String(100) column (only Postgres enforces it: a 500).
     doc = Document(user_id=user.id, title=title or filename, kind=kind, filename=filename,
-                   content_type=file.content_type, size_bytes=len(data))
+                   content_type=file.content_type[:100] if file.content_type else None, size_bytes=len(data))
     db.add(doc)
     await db.flush()
     await _ingest(db, doc, text)

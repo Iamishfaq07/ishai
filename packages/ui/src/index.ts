@@ -75,6 +75,7 @@ export {
 } from "./live/hotkeys";
 export { formatElapsed, useElapsed } from "./hooks/useElapsed";
 export { useStickyScroll } from "./hooks/useStickyScroll";
+export { isDialogOpen, useFocusTrap, type FocusTrapOptions } from "./hooks/useFocusTrap";
 export { AnswerCard, type AnswerCardProps } from "./components/AnswerCard";
 export { ChatInput, type ChatInputProps } from "./components/ChatInput";
 export { CodeBlock } from "./components/CodeBlock";
@@ -101,6 +102,7 @@ export { StatusPill, type StatusPillProps } from "./components/StatusPill";
 export { Teleprompter, type TeleprompterProps } from "./components/Teleprompter";
 export { TranscriptView, type TranscriptViewProps } from "./components/TranscriptView";
 export { checkServerUrl, trimTrailingSlashes, type ServerUrlCheck } from "./serverUrl";
+export { MAX_SESSION_DOCUMENTS, practiceDocumentIds } from "./sessionDocuments";
 export { useReportPolling } from "./hooks/useReportPolling";
 export { ReportStatusNote } from "./components/ReportStatusNote";
 export { WorkspaceBar } from "./components/WorkspaceBar";

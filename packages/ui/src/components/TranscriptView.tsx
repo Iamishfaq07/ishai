@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { Speaker } from "@orbit/types";
 import { useStickyScroll } from "../hooks/useStickyScroll";
 import type { TurnView } from "../live/reducer";
@@ -16,7 +17,8 @@ export interface TranscriptViewProps {
   onCorrectSpeaker?: (turnId: string, speaker: Speaker) => void;
 }
 
-export function TranscriptView({ turns, onCorrectSpeaker }: TranscriptViewProps) {
+/** Memoized: it only changes when the turns do, not on every other live update (an answer streaming in). */
+export const TranscriptView = memo(function TranscriptView({ turns, onCorrectSpeaker }: TranscriptViewProps) {
   const last = turns[turns.length - 1];
   const { ref, atBottom, jumpToLatest, onScroll } = useStickyScroll<HTMLDivElement>(
     `${turns.length}:${last?.text.length ?? 0}`,
@@ -80,4 +82,4 @@ export function TranscriptView({ turns, onCorrectSpeaker }: TranscriptViewProps)
       )}
     </div>
   );
-}
+});

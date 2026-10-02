@@ -30,6 +30,17 @@ export function useAsync<T>(fn: () => Promise<T>, deps: readonly unknown[], key?
   const fnRef = useRef(fn);
   fnRef.current = fn;
 
+  // A new key (another tab of a list, another session) swaps in that key's cached data, or nothing, during this
+  // render: the old key's data must not stay on screen until the fetch lands (the "Waiting" list under "Everyone").
+  const [shownKey, setShownKey] = useState(key);
+  if (shownKey !== key) {
+    setShownKey(key);
+    const hit = key !== undefined && cache.has(key);
+    setDataState(hit ? (cache.get(key) as T) : null);
+    setLoading(!hit);
+    setError(null);
+  }
+
   useEffect(() => {
     let cancelled = false;
     const cached = key !== undefined && cache.has(key);

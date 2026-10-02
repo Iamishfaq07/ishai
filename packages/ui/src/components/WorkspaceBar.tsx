@@ -138,9 +138,10 @@ export function WorkspaceBar({
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && name.trim()) {
+              if (e.key === "Enter") {
+                // Always: this box sits inside the session setup form, and a stray Enter would start the session.
                 e.preventDefault();
-                void save();
+                if (name.trim() && !busy) void save();
               }
               if (e.key === "Escape") setNaming(false);
             }}

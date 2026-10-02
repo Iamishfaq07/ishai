@@ -12,14 +12,15 @@ import {
   Wand2,
   cx,
   focusRing,
+  practiceDocumentIds,
   splitPlaceholders,
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, Select, Textarea } from "../components/ui";
 import { api } from "../lib/api";
+import { LAST_PREP_KEY as LAST_KEY } from "../lib/auth";
 import { errorText } from "../lib/format";
 import type { LiveLaunchState } from "./SessionSetup";
 
-const LAST_KEY = "orbit.lastPrep";
 const MAX_PRACTICE = 8; // a mock drill asks at most eight fixed questions
 
 const CATEGORY: Record<PrepCategory, { label: string; tone: string }> = {
@@ -189,9 +190,7 @@ export function PrepSection({
     setStarting(true);
     setError(null);
     const questions = [...picked].sort((a, b) => a - b).map((i) => result.questions[i]).filter(Boolean) as PrepQuestion[];
-    const contextDocs = (docs ?? [])
-      .filter((d) => d.status === "ready" && (d.kind === "resume" || (source !== "paste" ? d.id === source : false)))
-      .map((d) => d.id);
+    const contextDocs = practiceDocumentIds(docs ?? [], source !== "paste" && source !== "link" ? source : null);
     try {
       const session = await api.createSession({
         title: `Prep practice${result.role ? ` — ${result.role}` : ""}`,

@@ -157,7 +157,7 @@ class ChatMessage(BaseModel):
 
 
 class SpeakerCorrect(BaseModel):
-    turn_id: str
+    turn_id: str = Field(max_length=36)  # a uuid the engine issued
     speaker: Speaker
 
 

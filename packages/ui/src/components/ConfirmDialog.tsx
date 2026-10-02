@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 import { cx, focusRing } from "./cx";
 
 /**
@@ -31,11 +32,9 @@ export function ConfirmHost() {
   const [typed, setTyped] = useState("");
   const confirmRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const restoreFocus = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const onOpen = (e: Event) => {
-      restoreFocus.current = document.activeElement as HTMLElement | null;
       setTyped("");
       setPending((e as CustomEvent<Pending>).detail);
     };
@@ -43,31 +42,26 @@ export function ConfirmHost() {
     return () => window.removeEventListener(EVENT, onOpen);
   }, []);
 
-  useEffect(() => {
-    if (!pending) return;
-    (pending.typeToConfirm ? inputRef.current : confirmRef.current)?.focus();
-  }, [pending]);
+  const close = (ok: boolean) => {
+    pending?.resolve(ok);
+    setPending(null);
+  };
+  // Focus starts on the confirm button (or the type-to-confirm box), stays in the dialog, and goes back on close.
+  const dialogRef = useFocusTrap<HTMLDivElement>(pending !== null, {
+    onEscape: () => close(false),
+    initialFocus: () => (pending?.typeToConfirm ? inputRef.current : confirmRef.current),
+  });
 
   if (!pending) return null;
   const canConfirm = !pending.typeToConfirm || typed === pending.typeToConfirm;
-  const close = (ok: boolean) => {
-    pending.resolve(ok);
-    setPending(null);
-    restoreFocus.current?.focus?.();
-  };
 
   return (
     <div
       className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-black/50 p-4"
       onMouseDown={(e) => e.target === e.currentTarget && close(false)}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") {
-          e.preventDefault();
-          close(false);
-        }
-      }}
     >
       <div
+        ref={dialogRef}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="orbit-confirm-title"
