@@ -20,6 +20,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from orbit_api.resumes.claims import _GENERIC, _figures
+from orbit_api.resumes.lint import LineIssue, line_count, line_issues
 from orbit_api.resumes.schema import ResumeData, ResumeDesign
 
 Category = Literal["contact", "sections", "summary", "experience", "skills", "readability", "layout", "keywords"]
@@ -61,6 +62,8 @@ class AtsReport(BaseModel):
     checks: list[AtsCheck]
     keywords: AtsKeywords | None = None
     has_job: bool
+    # Line by line (lint.py): every flagged line, so the editor marks each one where it is.
+    issues: list[LineIssue] = []
 
 
 # ---- text helpers --------------------------------------------------------------------------------------------
@@ -140,9 +143,11 @@ PLACEHOLDER = re.compile(r"\[[^\][\n]{1,160}\]")
 # "I", but not the I in "I/O" or "CI/CD".
 _PRONOUN = re.compile(r"(?<![\w/])I(?![\w/])|\b(?:me|my|mine|myself|My|Me)\b")
 # Results said in words: "doubled sign-ups", "cut hundreds of hours".
+# ...and how often, which recruiters and checkers like Resume Worded count as sizing a result ("a weekly report").
 _NUMBER_WORDS = re.compile(r"\b(?:doubl|tripl|quadrupl|halv)(?:ed|ing|es)\b|\b(?:dozens|hundreds|thousands|millions|"
-                           r"billions|two|three|four|five|six|seven|eight|nine|ten|twelve|fifteen|twenty|fifty)\b",
-                           re.IGNORECASE)
+                           r"billions|two|three|four|five|six|seven|eight|nine|ten|twelve|fifteen|twenty|fifty|"
+                           r"daily|weekly|biweekly|monthly|quarterly|annually|yearly|every (?:day|week|sprint|month|"
+                           r"quarter|release))\b", re.IGNORECASE)
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
 _WORD = re.compile(r"[A-Za-z][A-Za-z0-9+#.\-']*")
 _MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
@@ -387,12 +392,30 @@ def extract_keywords(job_text: str, limit: int = 20) -> list[str]:
     return [display[k] for k, _ in scores.most_common(limit)]
 
 
+# The same thing written another way: a resume that says "k8s" has the job post's "Kubernetes" (as Jobscan and Teal
+# count it). Both directions: the post may use either form.
+SYNONYMS: tuple[frozenset[str], ...] = tuple(frozenset(g) for g in (
+    {"javascript", "js"}, {"typescript", "ts"}, {"kubernetes", "k8s"}, {"postgresql", "postgres", "psql"},
+    {"aws", "amazon web services"}, {"gcp", "google cloud", "google cloud platform"}, {"azure", "microsoft azure"},
+    {"machine learning", "ml"}, {"artificial intelligence", "ai"}, {"natural language processing", "nlp"},
+    {"ci/cd", "continuous integration", "continuous delivery", "continuous deployment"},
+    {"node.js", "nodejs", "node"}, {"react", "react.js", "reactjs"}, {"vue", "vue.js", "vuejs"},
+    {"c#", "csharp"}, {"user experience", "ux"}, {"user interface", "ui"},
+    {"search engine optimization", "seo"}, {"customer relationship management", "crm"},
+    {"a/b testing", "ab testing", "split testing"},
+    {"power bi", "powerbi"}, {"rest", "restful", "rest api", "rest apis"}, {"sql", "structured query language"},
+))
+_SYNONYM_OF = {term: group for group in SYNONYMS for term in group}
+
+
 def match_keywords(keywords: list[str], data: ResumeData) -> AtsKeywords:
     text = _norm(resume_text(data))
     matched: list[str] = []
     missing: list[str] = []
     for kw in keywords:
-        (matched if _term_pattern(kw).search(text) else missing).append(kw)
+        forms = _SYNONYM_OF.get(kw.lower(), frozenset({kw}))
+        found = any(_term_pattern(f).search(text) for f in forms | {kw})
+        (matched if found else missing).append(kw)
     return AtsKeywords(matched=matched, missing=missing)
 
 
@@ -454,7 +477,7 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
            f"Your summary has {summary_words} words; aim for 25-90 so it's read in full.",
            "basics.summary", ai_fixable=True)
 
-    # experience (28)
+    # experience (26)
     roles = [e for e in data.experience if e.title.strip() or e.company.strip()]
     bullets = list(_bullets(data))
     complete = [e for e in roles if e.title.strip() and e.company.strip() and e.start.strip()
@@ -474,7 +497,7 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
 
     if bullets:
         weak = [(p, t) for p, t in bullets if not is_action_verb(_first_word(t))]
-        _check(checks, "action_verbs", "experience", "Bullets start with an action verb", 5,
+        _check(checks, "action_verbs", "experience", "Bullets start with an action verb", 4,
                1 - len(weak) / len(bullets),
                f"{len(bullets) - len(weak)} of {len(bullets)} bullets start with an action verb. Lead with what you "
                "did: Led, Built, Reduced, Launched.", weak[0][0] if weak else None, ai_fixable=True)
@@ -496,7 +519,7 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
         if overused:
             word = overused[0][0]
             repeat_at = [p for p, t in bullets if _first_word(t) == word][allowed]
-        _check(checks, "varied_verbs", "experience", "Opening verbs are varied", 2, 0 if overused else 1.0,
+        _check(checks, "varied_verbs", "experience", "Opening verbs are varied", 1, 0 if overused else 1.0,
                (f"{overused[0][1]} bullets start with \"{overused[0][0].capitalize()}\". Vary them"
                 + (f": {VERB_ALTERNATIVES[overused[0][0]]}." if overused[0][0] in VERB_ALTERNATIVES else ".")
                 ) if overused else None, repeat_at, ai_fixable=True)
@@ -506,10 +529,10 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
                "Drop \"I\" and \"my\": resume bullets start with the verb.",
                first_person[0][0] if first_person else None, ai_fixable=True)
     else:
-        for id_, label, pts in (("action_verbs", "Bullets start with an action verb", 5),
+        for id_, label, pts in (("action_verbs", "Bullets start with an action verb", 4),
                                 ("quantified", "At least half the bullets have a number", 7),
                                 ("bullet_length", "Bullets are 8-35 words", 3),
-                                ("varied_verbs", "Opening verbs are varied", 2),
+                                ("varied_verbs", "Opening verbs are varied", 1),
                                 ("no_pronouns", "No \"I\" or \"my\" in bullets", 1)):
             _check(checks, id_, "experience", label, pts, 0, "Add bullets describing what you achieved in each role.",
                    "experience", ai_fixable=bool(roles))
@@ -519,7 +542,7 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
            f"You list {n_skills} skill{'s' if n_skills != 1 else ''}; list at least 8 tools, languages and methods you "
            "really use.", "skills", ai_fixable=True)
 
-    # readability (12)
+    # readability (14: clear_writing and tech_names are line by line, see lint.py)
     total_words = len(_words(resume_text(data)))
     _check(checks, "length", "readability", "300-1,000 words (1-2 pages)", 3,
            1.0 if 300 <= total_words <= 1000 else total_words / 300 if total_words < 300 else 0.5,
@@ -555,15 +578,31 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
     fields = [(p, t) for p, t in text_fields(data) if t.strip()]
     unfilled = [(p, m.group(0)) for p, t in fields if (m := PLACEHOLDER.search(t))]
     n_unfilled = len(unfilled)
-    _check(checks, "placeholders", "readability", "No [placeholders] left to fill", 3, 0 if unfilled else 1.0,
+    _check(checks, "placeholders", "readability", "No [placeholders] left to fill", 2, 0 if unfilled else 1.0,
            (f"{n_unfilled} line{'s' if n_unfilled != 1 else ''} still {'have' if n_unfilled != 1 else 'has'} a "
-            f"placeholder like {unfilled[0][1]}: fill in the real detail or remove it, or it prints as-is."
-            ) if unfilled else None, unfilled[0][0] if unfilled else None)
+            f"placeholder like {unfilled[0][1]}: rewrite {'them' if n_unfilled != 1 else 'it'} as finished text, "
+            "using a real number if you have one, or it prints as-is."
+            ) if unfilled else None, unfilled[0][0] if unfilled else None,
+           ai_fixable=bool(unfilled))  # the AI rewrites them complete, without inventing a number
     cliched = [(p, m.group(1)) for p, t in fields if (m := _CLICHE.search(t))]
-    _check(checks, "cliches", "readability", "No clichés like \"team player\"", 2, 0 if cliched else 1.0,
+    _check(checks, "cliches", "readability", "No clichés like \"team player\"", 1, 0 if cliched else 1.0,
            (f"\"{cliched[0][1]}\" claims a quality instead of showing it. Replace it with what you did that proves it."
             ) if cliched else None, cliched[0][0] if cliched else None,
            ai_fixable=bool(cliched) and not cliched[0][0].startswith(("education.", "extras.")))
+    issues = line_issues(data)
+    unclear = [i for i in issues if i.kind != "casing"]
+    unclear_lines = {i.path for i in unclear}
+    n_bullets = line_count(data) or 1
+    _check(checks, "clear_writing", "readability", "Every line reads clearly (strong opener, active, no filler)", 3,
+           1 - len(unclear_lines) / n_bullets,
+           (f"{len(unclear_lines)} line{'s' if len(unclear_lines) != 1 else ''} could read stronger. First: "
+            f"{unclear[0].message} Fix weak openers (\"Responsible for\", \"Helped\"), the passive voice, filler words "
+            "and a past role written in the present tense.") if unclear else None,
+           unclear[0].path if unclear else None, ai_fixable=bool(unclear))
+    miscased = [i for i in issues if i.kind == "casing"]
+    _check(checks, "tech_names", "readability", "Tools and tech spelled the standard way", 1, 0 if miscased else 1.0,
+           miscased[0].message if miscased else None, miscased[0].path if miscased else None,
+           ai_fixable=bool(miscased))  # fixed mechanically (fixes.casing_suggestions): no AI, no credit
 
     # layout (4)
     _check(checks, "single_column", "layout", "Single-column template", 2, 0 if design.template == "sidebar" else 1.0,
@@ -595,4 +634,4 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
     possible = sum(c.max_points for c in checks)
     score = round(100 * earned / possible) if possible else 0
     return AtsReport(score=score, verdict=_verdict(score), categories=categories, checks=checks, keywords=keywords,
-                     has_job=has_job)
+                     has_job=has_job, issues=issues)

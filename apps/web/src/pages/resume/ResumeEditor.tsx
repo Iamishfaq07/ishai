@@ -81,6 +81,8 @@ function ResumeEditor() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("content");
   const [report, setReport] = useState<AtsReport | null>(null);
+  // The resume the report scored: a line's writing issues show only while that line still reads the same.
+  const [scored, setScored] = useState<ResumeData | null>(null);
   const [save, setSave] = useState<{ state: "saved" | "saving" | "dirty" | "error"; error?: string; retry?: boolean }>({
     state: "saved",
   });
@@ -242,6 +244,7 @@ function ResumeEditor() {
           sentAt = null;
           scoreWait.current = Math.min(2_500, Math.max(450, performance.now() - started));
           setReport(r);
+          setScored(resume.data);
         })
         .catch(() => {
           sentAt = null;
@@ -324,7 +327,9 @@ function ResumeEditor() {
     } else {
       update((d) => applySuggestion(d, chosen, newId));
     }
-    setQueue((q) => q.filter((x) => x.id !== s.id));
+    // Picking one draft of a line retires the other drafts (and fixes) of that line: they'd replace the text just set.
+    const replaces = s.kind === "rewrite" || s.kind === "set";
+    setQueue((q) => q.filter((x) => x.id !== s.id && !(replaces && x.path === s.path && (x.kind === "rewrite" || x.kind === "set"))));
   };
 
   /** Every mechanical fix with nothing to confirm (extra skills the resume proves, dates), at once. */
@@ -451,7 +456,15 @@ function ResumeEditor() {
             ))}
           </div>
 
-          {tab === "content" && <ContentForm data={resume.data} update={update} onRewrite={(path) => void askAi("improve", undefined, path)} />}
+          {tab === "content" && (
+            <ContentForm
+              data={resume.data}
+              update={update}
+              onRewrite={(path) => void askAi("improve", undefined, path)}
+              issues={report?.issues ?? []}
+              scored={scored}
+            />
+          )}
           {tab === "score" && (
             <ScorePanel
               resume={resume}
@@ -778,9 +791,8 @@ function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; o
     <div className="space-y-4">
       <Panel title="Cover letter">
         <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-300">
-          Written from your resume and the job post. It never adds facts: where a detail would help, it leaves a
-          <mark className="mx-1 rounded bg-amber-200/70 px-0.5 text-amber-950 dark:bg-amber-400/30 dark:text-amber-100">[placeholder]</mark>
-          for you to fill in. Edit it freely: it's saved with this resume.
+          Written from your resume and the job post, ready to send. It never invents facts or numbers: it uses what your
+          resume says. Edit it freely: it's saved with this resume.
         </p>
         {!hasJob && (
           <p className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">
@@ -1060,9 +1072,7 @@ function AiPanel({
     <div className="space-y-4">
       <Panel title="Let the AI fix it">
         <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-300">
-          It rewrites weak lines, adds the skills and bullets you're missing, puts numbers where they belong and tidies dates, one change at a time: you accept or skip each. It can't know your real figures, so it leaves a
-          <mark className="mx-1 rounded bg-amber-200/70 px-0.5 text-amber-950 dark:bg-amber-400/30 dark:text-amber-100">[placeholder]</mark>
-          for you to fill in, and anything it can't prove from your resume comes with a warning to check it's true.
+          It rewrites weak lines, adds the skills and bullets you're missing, makes the impact of each line clear and tidies dates, one change at a time: you accept or skip each. Every suggestion is finished, ready-to-use text. It never makes up numbers: it uses the ones in your resume, and where there are none it shows the impact in words. Anything it can't prove from your resume comes with a warning to check it's true.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button disabled={Boolean(busy)} onClick={() => onAsk("improve")}>

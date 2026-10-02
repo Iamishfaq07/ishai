@@ -131,6 +131,43 @@ def skill_suggestions(data: ResumeData, report: AtsReport, job_text: str = "") -
     return out
 
 
+def casing_suggestions(data: ResumeData) -> list[Suggestion]:
+    """Tool and tech names written the standard way ("github" -> "GitHub"), one "set" per line: mechanical, so
+    they're free on every plan and apply in bulk with the other safe fixes."""
+    from orbit_api.resumes.lint import line_issues
+
+    out: list[Suggestion] = []
+    labels = {p: label for p, (label, _) in _field_labels(data).items()}
+    for issue in line_issues(data):
+        if issue.kind != "casing" or issue.fixed is None:
+            continue
+        before = _text_at(data, issue.path)
+        if before is None or before == issue.fixed:
+            continue
+        out.append(Suggestion(id=new_id(), path=issue.path, label=labels.get(issue.path, "Spelling"), before=before,
+                              after=issue.fixed, reason=issue.message, kind="set"))
+    return out
+
+
+def _field_labels(data: ResumeData) -> dict[str, tuple[str, str]]:
+    from orbit_api.resumes.ai import editable_fields
+
+    return editable_fields(data)
+
+
+def _text_at(data: ResumeData, path: str) -> str | None:
+    """The text at a summary or bullet path ("experience.<id>.bullets.2"), if it's there."""
+    if path == "basics.summary":
+        return data.basics.summary
+    parts = path.split(".")
+    if len(parts) == 4 and parts[2] == "bullets" and parts[3].isdigit():
+        items = data.experience if parts[0] == "experience" else data.projects if parts[0] == "projects" else []
+        for item in items:
+            if item.id == parts[1] and int(parts[3]) < len(item.bullets):
+                return item.bullets[int(parts[3])]
+    return None
+
+
 def skills_needed(data: ResumeData) -> int:
     return max(0, MIN_SKILLS - len(current_skills(data)))
 

@@ -1,12 +1,12 @@
-"""AI rewrites may reword the candidate's text but never add facts: invented figures become placeholders, invented
-tools drop the suggestion."""
+"""AI rewrites may reword the candidate's text but never add facts, and never leave a [placeholder]: a suggestion with
+an invented figure or tool is dropped; an import or a cover letter loses the invented figure with its words."""
 
 import json
 from typing import Any
 
 from orbit_api.providers.llm.base import LLMResponse, Usage
 from orbit_api.resumes import ai
-from orbit_api.resumes.claims import fill_invented_figures, invented_terms
+from orbit_api.resumes.claims import invented_figures, invented_terms, strip_invented_figures
 from tests.test_resumes import strong_resume
 
 CORPUS = json.dumps({"summary": "Backend engineer, 7 years, Python, Go, Kubernetes",
@@ -14,19 +14,29 @@ CORPUS = json.dumps({"summary": "Backend engineer, 7 years, Python, Go, Kubernet
                                  "Cut deploy time from 2 hours to 10 minutes", "Reduced chargebacks by 30%"]})
 
 
-def test_figures_the_resume_never_stated_become_placeholders() -> None:
-    text, n = fill_invented_figures("Cut deploy time by 40% across 12 teams, saving $2M and 3.5x latency", CORPUS)
-    assert text == "Cut deploy time by [X%] across [N] teams, saving [$X] and [N]x latency" and n == 4
+def test_figures_the_resume_never_stated_are_found_and_taken_out_with_their_words() -> None:
+    assert invented_figures("Cut deploy time by 40% across 12 teams, saving $2M and 3.5x latency", CORPUS) == [
+        "40%", "12", "$2M", "3.5x"]
+    for text, plain in (
+        ("Cut deploy time by 40% across the platform", "Cut deploy time across the platform"),
+        ("Made checkout 35% faster for shoppers", "Made checkout faster for shoppers"),
+        ("Automated reviews, saving 12 hours a week for the team", "Automated reviews for the team"),
+        ("Grew sign-ups (up 40%) after the redesign", "Grew sign-ups after the redesign"),
+        ("Reduced spend by $200k per year with reserved instances", "Reduced spend with reserved instances"),
+        ("Hit 99.9% uptime. Kept on-call quiet.", "Kept on-call quiet."),
+    ):
+        assert strip_invented_figures(text, CORPUS) == (plain, 1), text
+        assert "[" not in plain
 
 
 def test_figures_the_resume_does_state_are_kept_in_any_spelling() -> None:
     for same in ("Reduced chargebacks by 30% for a 10K TPS platform", "Cut deploys from 2 hours to 10 minutes"):
-        assert fill_invented_figures(same, CORPUS) == (same, 0)
+        assert strip_invented_figures(same, CORPUS) == (same, 0) and invented_figures(same, CORPUS) == []
 
 
 def test_years_and_digits_inside_names_are_not_figures() -> None:
     same = "Ran 24/7 on-call for the S3 and EC2 estate in 2023 on Python3"
-    assert fill_invented_figures(same, CORPUS) == (same, 0)
+    assert strip_invented_figures(same, CORPUS) == (same, 0)
 
 
 def test_tools_the_resume_never_mentions_are_caught_and_ones_it_does_are_not() -> None:
@@ -39,7 +49,7 @@ def _resp(items: list[dict[str, Any]]) -> LLMResponse:
     return LLMResponse(text=json.dumps({"suggestions": items}), model="m", usage=Usage())
 
 
-def test_suggestions_with_invented_facts_are_fixed_or_dropped() -> None:
+def test_suggestions_with_invented_facts_or_placeholders_are_dropped() -> None:
     data = strong_resume()
     first, second = (f"experience.{data.experience[0].id}.bullets.0", f"experience.{data.experience[0].id}.bullets.1")
     corpus_has = json.dumps(data.model_dump(mode="json"))
@@ -48,10 +58,14 @@ def test_suggestions_with_invented_facts_are_fixed_or_dropped() -> None:
         {"path": first, "after": "Led the ledger migration, cutting reconciliation time by 60% and costs by 35%",
          "reason": "Result."},
         {"path": second, "after": "Automated releases with Pulumi for every team", "reason": "Tooling."},
+        {"path": second, "after": "Built 12 Python microservices serving [N] users a day", "reason": "Scope."},
+        {"path": second, "after": "Built 12 Python microservices on Kubernetes that X% of teams use"},
+        {"path": second, "after": "Built 12 Python microservices on Kubernetes and Docker serving 3M transactions "
+                                  "a day for every product team", "reason": "Shows who relies on it."},
     ]), data)
-    assert [s.path for s in got] == [first]  # the invented tool dropped its suggestion
-    assert got[0].after == "Led the ledger migration, cutting reconciliation time by 60% and costs by [X%]"
-    assert got[0].reason == "Result. Replace the bracketed figure with your real number."
+    # The invented 35%, the invented tool and both placeholders are gone; the finished, honest rewrite stays.
+    assert [s.after for s in got] == [
+        "Built 12 Python microservices on Kubernetes and Docker serving 3M transactions a day for every product team"]
 
 
 def test_a_rewrite_that_loses_a_real_figure_is_dropped() -> None:
@@ -65,7 +79,7 @@ def test_a_rewrite_that_loses_a_real_figure_is_dropped() -> None:
     assert got == []  # the candidate's own 60% is the strongest part: never traded for vaguer words or a guess
 
 
-def test_a_cover_letter_figure_from_neither_the_resume_nor_the_job_post_becomes_a_placeholder() -> None:
+def test_a_cover_letter_figure_from_neither_the_resume_nor_the_job_post_is_taken_out() -> None:
     data = strong_resume()
     paragraph = ("I led the ledger migration to event sourcing on Kafka, cutting reconciliation time by 60%, and I "
                  "cut cloud spend by 45% while serving 3M transactions a day. Your post mentions scaling to 500 "
@@ -73,7 +87,8 @@ def test_a_cover_letter_figure_from_neither_the_resume_nor_the_job_post_becomes_
     body = "Dear Hiring Manager,\n\n" + paragraph * 2 + "\n\nSincerely,\nSam Lee"
     letter = ai.parse_cover_letter(body, data, "We are scaling to 500 services and need a senior backend engineer.")
     assert "by 60%" in letter and "3M transactions" in letter and "500 services" in letter  # all stated somewhere
-    assert "by [X%] while" in letter and "45%" not in letter  # the one invented figure
+    assert "45%" not in letter and "[" not in letter  # the one invented figure, gone with its words
+    assert "cut cloud spend while serving" in letter
 
 
 SOURCE = """Jane Doe
@@ -120,8 +135,8 @@ def test_an_import_drops_skills_links_and_figures_the_source_never_had() -> None
     assert [g.items for g in out.skills] == [["Python", "Go"], ["Kubernetes", "PostgreSQL"]]  # no Rust/Terraform/Scrum,
     assert [g.name for g in out.skills] == ["Languages", "Infra"]  # no repeated "python", and the empty group is gone
     assert [link.label for link in out.basics.links] == ["LinkedIn"]  # the GitHub link wasn't in the source
-    assert out.basics.summary == "Engineer who cut costs by [X%] last year."
-    assert out.experience[0].bullets[1] == "Reduced chargebacks by [X%]"
+    assert out.basics.summary == "Engineer who cut costs last year."
+    assert out.experience[0].bullets[1] == "Reduced chargebacks"
     assert any("skill" in n for n in notes) and any("link" in n for n in notes) and any("figure" in n for n in notes)
 
 

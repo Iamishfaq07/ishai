@@ -846,6 +846,15 @@ export interface AtsCheck {
   ai_fixable: boolean;
 }
 
+/** A writing problem on one line (a bullet, the summary), shown under that line in the editor. */
+export interface ResumeLineIssue {
+  path: string;
+  kind: "weak_opener" | "passive" | "filler" | "tense" | "duplicate" | "casing";
+  message: string;
+  /** "casing" only: the whole line with the names fixed, applied as is. */
+  fixed: string | null;
+}
+
 export interface AtsReport {
   score: number;
   verdict: string;
@@ -853,6 +862,8 @@ export interface AtsReport {
   checks: AtsCheck[];
   keywords: { matched: string[]; missing: string[] } | null;
   has_job: boolean;
+  /** Line-by-line writing issues; absent from servers older than the check. */
+  issues?: ResumeLineIssue[];
 }
 
 export interface ResumeImportRequest {
