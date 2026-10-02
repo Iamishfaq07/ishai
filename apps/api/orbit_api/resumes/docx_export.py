@@ -96,7 +96,14 @@ class _Writer:
             rfonts.set(qn(attr), WORD_FONT[design.font])
         normal.paragraph_format.space_after = Pt(0)
         normal.paragraph_format.line_spacing = 1.15
-        self.doc.core_properties.title = "Resume"
+
+    def properties(self, kind: str, name: str) -> None:
+        """What Word's File > Info shows, and what some job portals read: the candidate, not "python-docx"."""
+        props = self.doc.core_properties
+        name = name.strip()
+        props.title = f"{name} - {kind}" if name else kind
+        props.author = props.last_modified_by = name
+        props.comments = props.subject = props.keywords = props.category = ""
 
     def par(self, text: str = "", *, bold: bool = False, size: float | None = None, color: RGBColor | None = None,
             style: str | None = None, after: float = 0) -> Paragraph:
@@ -212,6 +219,7 @@ def resume_docx(data: ResumeData, design: ResumeDesign) -> bytes:
                 if issued:
                     p.add_run(" · " + issued)
 
+    w.properties("Resume", b.name)
     buf = io.BytesIO()
     w.doc.save(buf)
     return buf.getvalue()
@@ -237,7 +245,7 @@ def letter_docx(text: str, data: ResumeData, design: ResumeDesign) -> bytes:
             if i:
                 p.add_run().add_break()
             p.add_run(line.strip())
-    w.doc.core_properties.title = "Cover letter"
+    w.properties("Cover letter", b.name)
     buf = io.BytesIO()
     w.doc.save(buf)
     return buf.getvalue()

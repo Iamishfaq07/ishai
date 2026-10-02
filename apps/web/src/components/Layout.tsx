@@ -274,25 +274,37 @@ function WaitingForAccess() {
   const { pathname } = useLocation();
   const [admin, setAdmin] = useState(false);
   const [count, setCount] = useState(0);
+  const [payments, setPayments] = useState(0);
   useEffect(() => {
     api.adminStatus().then((s) => setAdmin(s.is_admin)).catch(() => undefined);
   }, []);
   useEffect(() => {
     if (!admin) return;
-    const load = () => void api.adminUsers("pending").then((r) => setCount(r.users.length)).catch(() => undefined);
+    const load = () => {
+      void api.adminUsers("pending").then((r) => setCount(r.users.length)).catch(() => undefined);
+      void api.adminPayments("submitted").then((r) => setPayments(r.waiting)).catch(() => undefined);
+    };
     load();
     const t = window.setInterval(load, 60_000);
     return () => window.clearInterval(t);
   }, [admin, pathname]);
-  if (!admin || !count) return null;
+  if (!admin || !(count || payments)) return null;
+  const badge =
+    "mr-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-amber-500/30 hover:bg-amber-500/25 dark:text-amber-200";
   return (
-    <Link
-      to="/admin/users"
-      className="mr-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-amber-500/30 hover:bg-amber-500/25 dark:text-amber-200"
-      aria-label={`${count} new ${count === 1 ? "account is" : "accounts are"} waiting for access`}
-    >
-      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
-      {count} waiting
-    </Link>
+    <>
+      {payments > 0 && (
+        <Link to="/admin/payments" className={badge} aria-label={`${payments} UPI ${payments === 1 ? "payment" : "payments"} to check`}>
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
+          {payments} to check
+        </Link>
+      )}
+      {count > 0 && (
+        <Link to="/admin/users" className={badge} aria-label={`${count} new ${count === 1 ? "account is" : "accounts are"} waiting for access`}>
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
+          {count} waiting
+        </Link>
+      )}
+    </>
   );
 }

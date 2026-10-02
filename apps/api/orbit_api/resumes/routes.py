@@ -13,15 +13,18 @@
   ("focus"). The editor applies them one accepted change at a time.
 - `POST /v1/resumes/cover-letter`: an AI cover letter from the resume and job post, grounded the same way; the
   editor saves it with the resume. `POST /v1/resumes/cover-letter/docx` downloads it as a Word file.
+- Without a plan that includes resume AI, AI actions draw on one free use (resumes/allowance.py); after that they
+  answer `402 upgrade_required`. `GET .../allowance` says what's left.
 """
 
 import asyncio
 import json
 import logging
+from collections.abc import Awaitable
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,6 +40,7 @@ from orbit_api.providers.llm.base import LLMError, LLMRequest, LLMResponse
 from orbit_api.providers.llm.pricing import estimate_cost
 from orbit_api.ratelimit import limit, limit_user
 from orbit_api.resumes import ai, fixes
+from orbit_api.resumes.allowance import Allowance, AllowanceOut, allowance_for
 from orbit_api.resumes.ats import AtsReport, score_resume
 from orbit_api.resumes.claims import ground_import
 from orbit_api.resumes.docx_export import letter_docx, resume_docx
@@ -114,6 +118,14 @@ async def list_resumes(user: Annotated[User, Depends(current_user)],
                                  template=design.template, score=score_resume(data, design, r.job_text or "").score,
                                  has_job=bool((r.job_text or "").strip()), updated_at=r.updated_at))
     return out
+
+
+# Before "/{resume_id}", which would otherwise take "allowance" for an id.
+@router.get("/allowance", response_model=AllowanceOut)
+async def my_allowance(request: Request, user: Annotated[User, Depends(current_user)],
+                       db: Annotated[AsyncSession, Depends(get_db)]) -> AllowanceOut:
+    """Whether the AI is unlimited on this plan, or how many free AI actions are left (and what upgrading costs)."""
+    return await (await allowance_for(db, user, request)).status()
 
 
 @router.post("", response_model=ResumeOut, status_code=201)
@@ -206,12 +218,33 @@ async def guest_ai_gate(db: Annotated[AsyncSession, Depends(get_db)]) -> None:
                             "keep going.")
 
 
-async def _generate(db: AsyncSession, user: User | None, req: LLMRequest, what: str) -> LLMResponse:
+async def account_allowance(request: Request, user: Annotated[User, Depends(require_verified_user)],
+                            db: Annotated[AsyncSession, Depends(get_db)]) -> Allowance:
+    return await allowance_for(db, user, request)
+
+
+async def guest_allowance(request: Request, db: Annotated[AsyncSession, Depends(get_db)]) -> Allowance:
+    return await allowance_for(db, None, request)
+
+
+async def _spend[T](allowance: Allowance, work: Awaitable[T]) -> T:
+    """Runs an AI request, giving the free use back if it fails: an outage or a garbled answer mustn't spend it."""
+    try:
+        return await work
+    except Exception:
+        await allowance.release()
+        raise
+
+
+async def _generate(db: AsyncSession, user: User | None, req: LLMRequest, what: str,
+                    allowance: Allowance) -> LLMResponse:
+    await allowance.claim()  # 402 once the free use is spent
     llm = get_llm_provider()
     try:
         resp = await llm.generate(req)
     except LLMError as e:
         log.warning("resume %s failed: %s", what, e)
+        await allowance.release()
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
                             "The AI isn't available right now. Try again in a moment.") from e
     db.add(ProviderRequest(user_id=user.id if user else None, provider=llm.name, model=resp.model,
@@ -234,13 +267,13 @@ class ImportOut(BaseModel):
     title: str
 
 
-async def _import_text(db: AsyncSession, user: User | None, text: str, kind: str) -> ImportOut:
+async def _import_text(db: AsyncSession, user: User | None, text: str, kind: str, allowance: Allowance) -> ImportOut:
     text = text.strip()
     if len(text) < MIN_IMPORT_CHARS:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
                             "There isn't enough text to read a resume from. Paste the whole resume or profile.")
     llm = get_llm_provider()
-    resp = await _generate(db, user, ai.import_request(text, kind, llm), "import")
+    resp = await _generate(db, user, ai.import_request(text, kind, llm), "import", allowance)
     try:
         data = ai.parse_structured(resp.text)
     except (ValueError, json.JSONDecodeError) as e:
@@ -256,16 +289,17 @@ async def _import_text(db: AsyncSession, user: User | None, text: str, kind: str
 
 @router.post("/import", response_model=ImportOut, dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
 async def import_resume(body: ImportIn, user: Annotated[User, Depends(require_verified_user)],
-                        db: Annotated[AsyncSession, Depends(get_db)]) -> ImportOut:
+                        db: Annotated[AsyncSession, Depends(get_db)],
+                        allowance: Annotated[Allowance, Depends(account_allowance)]) -> ImportOut:
     if body.source == "document":
         doc = await db.get(Document, body.document_id) if body.document_id else None
         if doc is None or doc.user_id != user.id:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Document not found.")
-        return await _import_text(db, user, doc.source_text or "", "resume")
-    return await _import_text(db, user, body.text or "", body.source)
+        return await _spend(allowance, _import_text(db, user, doc.source_text or "", "resume", allowance))
+    return await _spend(allowance, _import_text(db, user, body.text or "", body.source, allowance))
 
 
-async def _import_upload(db: AsyncSession, user: User | None, file: UploadFile) -> ImportOut:
+async def _import_upload(db: AsyncSession, user: User | None, file: UploadFile, allowance: Allowance) -> ImportOut:
     """A resume file, or a LinkedIn profile saved as PDF (profile → More → Save to PDF). The file itself isn't
     kept: only the structured result goes back to the editor."""
     max_bytes = get_settings().max_upload_bytes
@@ -279,14 +313,15 @@ async def _import_upload(db: AsyncSession, user: User | None, file: UploadFile) 
     except ParseError as e:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e
     kind = "linkedin" if "linkedin" in text[:4_000].lower() else "resume"
-    return await _import_text(db, user, text, kind)
+    return await _spend(allowance, _import_text(db, user, text, kind, allowance))
 
 
 @router.post("/import-file", response_model=ImportOut, dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
 async def import_resume_file(file: Annotated[UploadFile, File()],
                              user: Annotated[User, Depends(require_verified_user)],
-                             db: Annotated[AsyncSession, Depends(get_db)]) -> ImportOut:
-    return await _import_upload(db, user, file)
+                             db: Annotated[AsyncSession, Depends(get_db)],
+                             allowance: Annotated[Allowance, Depends(account_allowance)]) -> ImportOut:
+    return await _import_upload(db, user, file, allowance)
 
 
 # ---- cover letter ------------------------------------------------------------------------------------------
@@ -301,13 +336,14 @@ class CoverLetterOut(BaseModel):
     text: str
 
 
-async def _cover_letter(db: AsyncSession, user: User | None, body: CoverLetterIn) -> CoverLetterOut:
+async def _cover_letter(db: AsyncSession, user: User | None, body: CoverLetterIn,
+                        allowance: Allowance) -> CoverLetterOut:
     """A cover letter from what the resume says and what the job post asks for; nothing is invented."""
     d = body.data
     if not (d.basics.name.strip() and (d.experience or d.projects or d.basics.summary.strip())):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
                             "Add your name and some experience first: the letter is written from your resume.")
-    resp = await _generate(db, user, ai.cover_letter_request(d, body.job_text), "cover letter")
+    resp = await _generate(db, user, ai.cover_letter_request(d, body.job_text), "cover letter", allowance)
     try:
         return CoverLetterOut(text=ai.parse_cover_letter(resp.text, d, body.job_text))
     except ValueError as e:
@@ -318,8 +354,9 @@ async def _cover_letter(db: AsyncSession, user: User | None, body: CoverLetterIn
 @router.post("/cover-letter", response_model=CoverLetterOut,
              dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
 async def cover_letter(body: CoverLetterIn, user: Annotated[User, Depends(require_verified_user)],
-                       db: Annotated[AsyncSession, Depends(get_db)]) -> CoverLetterOut:
-    return await _cover_letter(db, user, body)
+                       db: Annotated[AsyncSession, Depends(get_db)],
+                       allowance: Annotated[Allowance, Depends(account_allowance)]) -> CoverLetterOut:
+    return await _spend(allowance, _cover_letter(db, user, body, allowance))
 
 
 class LetterDocxIn(BaseModel):
@@ -339,15 +376,18 @@ class SuggestIn(BaseModel):
 
 class SuggestOut(BaseModel):
     suggestions: list[fixes.Suggestion]
+    # The free AI use is spent: these are only the fixes worked out without the AI; upgrading adds the AI's.
+    upgrade_required: bool = False
 
 
 SKILL_CHECKS = frozenset({"has_skills", "skills_count"})
 
 
-async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn) -> SuggestOut:
+async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn, allowance: Allowance) -> SuggestOut:
     """Fixes for the resume, whichever the problem is. Skills and dates are worked out on the server with no AI call
-    (instant, nothing invented); wording, missing bullets and numbers come from the model, checked against the resume.
-    `check` names one ATS problem to fix; without it you get the best fixes across the whole resume."""
+    (instant, nothing invented, and free on every plan); wording, missing bullets and numbers come from the model,
+    checked against the resume. `check` names one ATS problem to fix; without it you get the best fixes across the
+    whole resume. Once the free AI use is spent, the AI-free fixes still come back, marked `upgrade_required`."""
     if body.mode == "tailor" and not body.job_text.strip():
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Add the job post first.")
     d = body.data
@@ -365,10 +405,17 @@ async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn) -> Sugg
         if check in (None, "dates"):
             mechanical += fixes.date_suggestions(d)
     need_model = check not in ("dates", *SKILL_CHECKS) or bool(body.focus)
+    ai_ok = await allowance.can_spend()
+    used_ai = False  # something the AI wrote is in `mechanical`, so the free use was worth spending
     if check in SKILL_CHECKS and not body.focus and fixes.skills_needed(d) > sum(
             len(s.after.split(", ")) for s in mechanical if s.kind == "add_skill" and s.confirm is None):
+        if not ai_ok:
+            if not mechanical:
+                raise allowance.exhausted()
+            return SuggestOut(suggestions=mechanical, upgrade_required=True)
         # Not enough the resume proves or the job asks for: ask the model what the role usually needs.
-        resp = await _generate(db, user, ai.skills_request(d, get_llm_provider(), fixes.skills_needed(d)), "skills")
+        resp = await _generate(db, user, ai.skills_request(d, get_llm_provider(), fixes.skills_needed(d)), "skills",
+                               allowance)
         try:
             idea = ai.parse_skill_ideas(resp, d, [x for s in mechanical for x in s.after.split(", ")])
         except (ValueError, json.JSONDecodeError) as e:
@@ -376,27 +423,39 @@ async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn) -> Sugg
             idea = None
         if idea:
             mechanical.append(idea)
+            used_ai = True
     if not need_model:
         if not mechanical:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Nothing to add here: this part looks fine.")
+        if not used_ai:
+            await allowance.release()
         return SuggestOut(suggestions=mechanical)
     rewrite = any(t.strip() for _, t in fields.values()) or bool(ai.addable_roles(d)) or body.focus == "basics.summary"
     if not rewrite:
         if mechanical:
             return SuggestOut(suggestions=mechanical)
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Add some experience first, then ask the AI.")
+    if not ai_ok:
+        if mechanical:  # the fixes that need no AI are still good
+            return SuggestOut(suggestions=mechanical, upgrade_required=True)
+        raise allowance.exhausted()
     llm = get_llm_provider()
     req = ai.suggest_request(d, report, llm, mode=body.mode, job_text=body.job_text, focus=body.focus, check=check)
     try:
-        resp = await _generate(db, user, req, "suggest")
+        resp = await _generate(db, user, req, "suggest", allowance)
         suggestions = ai.parse_suggestions(resp, d)
-    except HTTPException:
-        if mechanical:  # the AI is down, but the mechanical fixes are still good
-            return SuggestOut(suggestions=mechanical)
+    except HTTPException as e:
+        if mechanical:  # the AI is down (or the free use just went), but the mechanical fixes are still good
+            if not used_ai:
+                await allowance.release()
+            spent = e.status_code == status.HTTP_402_PAYMENT_REQUIRED
+            return SuggestOut(suggestions=mechanical, upgrade_required=spent)
         raise
     except (ValueError, json.JSONDecodeError) as e:
         log.warning("resume suggestions unusable: %s", e)
         if mechanical:
+            if not used_ai:
+                await allowance.release()
             return SuggestOut(suggestions=mechanical)
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "The AI's answer came back garbled. Try again.") from e
     return SuggestOut(suggestions=[*mechanical, *suggestions])
@@ -404,8 +463,9 @@ async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn) -> Sugg
 
 @router.post("/suggest", response_model=SuggestOut, dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
 async def suggest(body: SuggestIn, user: Annotated[User, Depends(require_verified_user)],
-                  db: Annotated[AsyncSession, Depends(get_db)]) -> SuggestOut:
-    return await _suggest(db, user, body)
+                  db: Annotated[AsyncSession, Depends(get_db)],
+                  allowance: Annotated[Allowance, Depends(account_allowance)]) -> SuggestOut:
+    return await _spend(allowance, _suggest(db, user, body, allowance))
 
 
 @router.post("/cover-letter/docx", dependencies=[Depends(score_limit)],
@@ -440,26 +500,36 @@ async def guest_letter_docx(body: LetterDocxIn) -> Response:
 
 
 GUEST_AI = [Depends(guest_ai_limit), Depends(guest_ai_gate)]
+GuestAllowance = Annotated[Allowance, Depends(guest_allowance)]
+
+
+@public_router.get("/allowance", response_model=AllowanceOut)
+async def guest_allowance_status(allowance: GuestAllowance) -> AllowanceOut:
+    """Whether this network's free AI action is still there (signed out, it's one per IP address)."""
+    return await allowance.status()
 
 
 @public_router.post("/import", response_model=ImportOut, dependencies=GUEST_AI)
-async def guest_import(body: ImportIn, db: Annotated[AsyncSession, Depends(get_db)]) -> ImportOut:
+async def guest_import(body: ImportIn, db: Annotated[AsyncSession, Depends(get_db)],
+                       allowance: GuestAllowance) -> ImportOut:
     if body.source == "document":  # documents belong to an account
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Paste your resume or upload a file instead.")
-    return await _import_text(db, None, body.text or "", body.source)
+    return await _spend(allowance, _import_text(db, None, body.text or "", body.source, allowance))
 
 
 @public_router.post("/import-file", response_model=ImportOut, dependencies=GUEST_AI)
-async def guest_import_file(file: Annotated[UploadFile, File()],
-                            db: Annotated[AsyncSession, Depends(get_db)]) -> ImportOut:
-    return await _import_upload(db, None, file)
+async def guest_import_file(file: Annotated[UploadFile, File()], db: Annotated[AsyncSession, Depends(get_db)],
+                            allowance: GuestAllowance) -> ImportOut:
+    return await _import_upload(db, None, file, allowance)
 
 
 @public_router.post("/suggest", response_model=SuggestOut, dependencies=GUEST_AI)
-async def guest_suggest(body: SuggestIn, db: Annotated[AsyncSession, Depends(get_db)]) -> SuggestOut:
-    return await _suggest(db, None, body)
+async def guest_suggest(body: SuggestIn, db: Annotated[AsyncSession, Depends(get_db)],
+                        allowance: GuestAllowance) -> SuggestOut:
+    return await _spend(allowance, _suggest(db, None, body, allowance))
 
 
 @public_router.post("/cover-letter", response_model=CoverLetterOut, dependencies=GUEST_AI)
-async def guest_cover_letter(body: CoverLetterIn, db: Annotated[AsyncSession, Depends(get_db)]) -> CoverLetterOut:
-    return await _cover_letter(db, None, body)
+async def guest_cover_letter(body: CoverLetterIn, db: Annotated[AsyncSession, Depends(get_db)],
+                             allowance: GuestAllowance) -> CoverLetterOut:
+    return await _spend(allowance, _cover_letter(db, None, body, allowance))

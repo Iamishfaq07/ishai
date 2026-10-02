@@ -9,7 +9,7 @@ import type {
   ResumeSectionKey,
   ResumeSkillGroup,
 } from "@orbit/types";
-import { ChevronDown, Plus, Trash2, X, cx, focusRing } from "@orbit/ui";
+import { ChevronDown, Plus, Sparkles, Trash2, X, cx, focusRing } from "@orbit/ui";
 import { Button, Field, Input, Textarea } from "../../components/ui";
 import { EXTRA_PRESETS, MAX_EXTRAS, newId, sectionLabel } from "./model";
 
@@ -70,7 +70,10 @@ function TwoCol({ children }: { children: ReactNode }) {
   return <div className="grid gap-3 sm:grid-cols-2">{children}</div>;
 }
 
-function Bullets({ path, bullets, onChange }: { path: string; bullets: string[]; onChange: (b: string[]) => void }) {
+/** "Rewrite this one with AI", for the field at a path (a bullet, the summary). Absent when the editor has no AI. */
+type Rewrite = ((path: string) => void) | undefined;
+
+function Bullets({ path, bullets, onChange, onRewrite }: { path: string; bullets: string[]; onChange: (b: string[]) => void; onRewrite?: Rewrite }) {
   return (
     <div className="space-y-2">
       <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Bullets: start with a verb, end with the result (a number if you have one).</p>
@@ -93,6 +96,11 @@ function Bullets({ path, bullets, onChange }: { path: string; bullets: string[];
             <IconButton label={`Remove bullet ${i + 1}`} onClick={() => onChange(bullets.filter((_, j) => j !== i))}>
               <X className="h-3.5 w-3.5" />
             </IconButton>
+            {onRewrite && b.trim() && (
+              <IconButton label={`Rewrite bullet ${i + 1} with AI`} onClick={() => onRewrite(`${path}.bullets.${i}`)}>
+                <Sparkles className="h-3.5 w-3.5" />
+              </IconButton>
+            )}
           </div>
         </div>
       ))}
@@ -189,8 +197,9 @@ function SkillItems({ id, items, onChange }: { id: string; items: string[]; onCh
   );
 }
 
-export function ContentForm({ data, update }: { data: ResumeData; update: Update }) {
+export function ContentForm({ data, update, onRewrite }: { data: ResumeData; update: Update; onRewrite?: Rewrite }) {
   const b = data.basics;
+  const summaryWords = b.summary.trim() ? b.summary.trim().split(/\s+/).length : 0;
   const setBasics = (patch: Partial<ResumeData["basics"]>) => update((d) => ({ ...d, basics: { ...d.basics, ...patch } }));
   const list = <K extends "experience" | "education" | "skills" | "projects" | "certifications" | "extras">(key: K) => ({
     set: (items: ResumeData[K]) => update((d) => ({ ...d, [key]: items })),
@@ -278,10 +287,25 @@ export function ContentForm({ data, update }: { data: ResumeData; update: Update
         </div>
       </Section>
 
-      <Section id="summary" title="Summary">
+      <Section
+        id="summary"
+        title="Summary"
+        action={
+          onRewrite && (
+            <Button size="sm" variant="ghost" onClick={() => onRewrite("basics.summary")}>
+              <Sparkles className="h-3.5 w-3.5" /> {b.summary.trim() ? "Rewrite with AI" : "Write with AI"}
+            </Button>
+          )
+        }
+      >
         <Field label="2-3 sentences: who you are, your strongest skills, what you want next" htmlFor="r-summary">
           <Textarea id="r-summary" maxLength={1500} data-path="basics.summary" rows={4} value={b.summary} onChange={(e) => setBasics({ summary: e.target.value })} className="scroll-mt-24" />
         </Field>
+        {summaryWords > 0 && (
+          <p className={cx("text-xs", summaryWords < 25 || summaryWords > 90 ? "text-amber-700 dark:text-amber-300" : "text-zinc-500 dark:text-zinc-400")}>
+            {summaryWords} words · aim for 25-90
+          </p>
+        )}
       </Section>
 
       <Section
@@ -313,7 +337,7 @@ export function ContentForm({ data, update }: { data: ResumeData; update: Update
                 I work here now
               </label>
             </TwoCol>
-            <Bullets path={`experience.${e.id}`} bullets={e.bullets} onChange={(bullets) => exp.patch(e.id, { bullets })} />
+            <Bullets path={`experience.${e.id}`} bullets={e.bullets} onChange={(bullets) => exp.patch(e.id, { bullets })} onRewrite={onRewrite} />
           </div>
         ))}
       </Section>
@@ -359,7 +383,7 @@ export function ContentForm({ data, update }: { data: ResumeData; update: Update
             <Field label="Description" htmlFor={`pd-${p.id}`}>
               <Textarea id={`pd-${p.id}`} maxLength={600} data-path={`projects.${p.id}.description`} rows={2} value={p.description} onChange={(ev) => projects.patch(p.id, { description: ev.target.value })} />
             </Field>
-            <Bullets path={`projects.${p.id}`} bullets={p.bullets} onChange={(bullets) => projects.patch(p.id, { bullets })} />
+            <Bullets path={`projects.${p.id}`} bullets={p.bullets} onChange={(bullets) => projects.patch(p.id, { bullets })} onRewrite={onRewrite} />
           </div>
         ))}
       </Section>

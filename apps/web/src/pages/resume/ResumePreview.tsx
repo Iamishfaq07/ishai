@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
 import type { ResumeData, ResumeDesign, ResumeSectionKey } from "@orbit/types";
 import { FONTS, dateRange, extraOf, sectionLabel } from "./model";
 
@@ -32,9 +32,47 @@ function tint(hex: string, amount: number): string {
   return `rgb(${mix((n >> 16) & 255)}, ${mix((n >> 8) & 255)}, ${mix(n & 255)})`;
 }
 
-function contactItems(data: ResumeData): string[] {
+interface Contact {
+  text: string;
+  href?: string | undefined;
+}
+
+/** A web address worth linking: http(s), or a bare domain like "linkedin.com/in/you". Anything else stays text. */
+function webHref(url: string): string | undefined {
+  if (/^https?:\/\/\S+$/i.test(url)) return url;
+  return /^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(url) ? `https://${url}` : undefined;
+}
+
+function contactItems(data: ResumeData): Contact[] {
   const b = data.basics;
-  return [b.email, b.phone, b.location, ...b.links.map((l) => l.url)].map((s) => s.trim()).filter(Boolean);
+  const email = b.email.trim();
+  const phone = b.phone.trim();
+  return [
+    { text: email, href: email.includes("@") ? `mailto:${email}` : undefined },
+    { text: phone, href: phone ? `tel:${phone.replace(/[^\d+]/g, "")}` : undefined },
+    { text: b.location.trim() },
+    ...b.links.map((l) => ({ text: l.url.trim(), href: webHref(l.url.trim()) })),
+  ].filter((c) => c.text);
+}
+
+/** The contact line with real links, so the email, LinkedIn and portfolio click in the downloaded PDF. */
+function ContactLine({ items, sep }: { items: Contact[]; sep: string }) {
+  return (
+    <>
+      {items.map((c, i) => (
+        <Fragment key={`${i}-${c.text}`}>
+          {i > 0 && sep}
+          {c.href ? (
+            <a href={c.href} target={c.href.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer" className="text-inherit no-underline">
+              {c.text}
+            </a>
+          ) : (
+            c.text
+          )}
+        </Fragment>
+      ))}
+    </>
+  );
 }
 
 function hasContent(data: ResumeData, id: ResumeSectionKey): boolean {
@@ -230,8 +268,10 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
           </h1>
           {data.basics.headline && <p className="mt-[3pt] font-medium">{data.basics.headline}</p>}
           <div className="mt-[8pt] space-y-[2pt] break-words text-[0.92em]">
-            {contacts.map((c) => (
-              <p key={c}>{c}</p>
+            {contacts.map((c, i) => (
+              <p key={`${i}-${c.text}`}>
+                <ContactLine items={[c]} sep="" />
+              </p>
             ))}
           </div>
           {data.section_order.filter(inSide).map(section)}
@@ -253,7 +293,7 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
           {name}
         </h1>
         {data.basics.headline && <p style={{ color: accent }} className="mt-[2pt] font-medium">{data.basics.headline}</p>}
-        <p className="mt-[4pt] text-zinc-600">{contacts.join("  ·  ")}</p>
+        <p className="mt-[4pt] text-zinc-600"><ContactLine items={contacts} sep="  ·  " /></p>
       </header>
     ) : t === "modern" ? (
       <header className="flex items-start justify-between gap-4">
@@ -262,7 +302,7 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
             {name}
           </h1>
           {data.basics.headline && <p className="mt-[3pt] text-[1.1em] font-medium">{data.basics.headline}</p>}
-          <p className="mt-[5pt] text-zinc-600">{contacts.join("  |  ")}</p>
+          <p className="mt-[5pt] text-zinc-600"><ContactLine items={contacts} sep="  |  " /></p>
         </div>
         {photoEl("24mm")}
       </header>
@@ -273,7 +313,7 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
             {name}
             {data.basics.headline && <span className="font-normal text-zinc-600"> — {data.basics.headline}</span>}
           </h1>
-          <p className="text-zinc-600">{contacts.join(" · ")}</p>
+          <p className="text-zinc-600"><ContactLine items={contacts} sep=" · " /></p>
         </div>
         {photoEl("16mm")}
       </header>
@@ -304,7 +344,7 @@ export function LetterPreview({ data, design, text }: { data: ResumeData; design
         <h1 style={{ color: design.accent, fontSize: "1.6em", lineHeight: 1.15 }} className="font-bold">
           {data.basics.name || "Your name"}
         </h1>
-        {contacts.length > 0 && <p className="text-zinc-600">{contacts.join("  ·  ")}</p>}
+        {contacts.length > 0 && <p className="text-zinc-600"><ContactLine items={contacts} sep="  ·  " /></p>}
       </header>
       <p style={{ marginTop: space.section }}>{today}</p>
       {blocks.length ? (

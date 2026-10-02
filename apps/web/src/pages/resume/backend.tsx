@@ -70,10 +70,12 @@ export function guestBackend(startOver: () => void): ResumeBackend {
       if (!r) throw new Error("There's no resume on this device yet.");
       return r;
     },
-    save: async (_id, input) => {
-      const current = read();
-      if (!current) return;
-      guestResume.write({ ...current, ...input, cover_letter: input.cover_letter ?? current.cover_letter, updated_at: new Date().toISOString() });
+    save: async (id, input) => {
+      const now = new Date().toISOString();
+      // Gone from storage while open (browsing data cleared in another tab): write the open resume back rather than
+      // dropping the edit and still showing "Saved".
+      const current = read() ?? { ...input, id, cover_letter: input.cover_letter ?? "", created_at: now, updated_at: now };
+      guestResume.write({ ...current, ...input, cover_letter: input.cover_letter ?? current.cover_letter, updated_at: now });
     },
     startOver,
   };

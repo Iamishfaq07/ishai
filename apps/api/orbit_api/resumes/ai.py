@@ -15,7 +15,7 @@ from typing import Any, Literal
 from orbit_api.live.context_builder import fence
 from orbit_api.providers.llm.base import LLMMessage, LLMProvider, LLMRequest, LLMResponse
 from orbit_api.resumes.ats import AtsReport
-from orbit_api.resumes.claims import fill_invented_figures, invented_terms
+from orbit_api.resumes.claims import _figures, fill_invented_figures, invented_terms
 from orbit_api.resumes.fixes import TYPICAL_CONFIRM, Suggestion, current_skills, has_skill, skills_needed
 from orbit_api.resumes.schema import (
     Basics,
@@ -32,7 +32,10 @@ from orbit_api.resumes.schema import (
 
 log = logging.getLogger(__name__)
 
-MAX_SOURCE_CHARS = 14_000
+# A long resume or a LinkedIn PDF (whose Education comes last) runs past 14k characters; the import restates nearly
+# all of it as JSON, so the answer needs room too (IMPORT_MAX_TOKENS), or it's cut off mid-JSON and the import fails.
+MAX_SOURCE_CHARS = 24_000
+IMPORT_MAX_TOKENS = 8_000
 MAX_JOB_CHARS = 8_000
 MAX_SUGGESTIONS = 10
 MAX_NEW_BULLETS = 3  # per role
@@ -131,7 +134,8 @@ def import_request(source_text: str, kind: str, llm: LLMProvider) -> LLMRequest:
     return LLMRequest(
         messages=[LLMMessage("system", IMPORT_SYSTEM), LLMMessage("user", (
             f"<reference_data source=\"{label}\">\n{fence(source_text[:MAX_SOURCE_CHARS])}\n</reference_data>"))],
-        json_mode=llm.supports_structured_output(), max_tokens=3_500, temperature=0.1, request_type="resume_import",
+        json_mode=llm.supports_structured_output(), max_tokens=IMPORT_MAX_TOKENS, temperature=0.1,
+        request_type="resume_import",
     )
 
 
@@ -156,6 +160,22 @@ def editable_fields(data: ResumeData) -> dict[str, tuple[str, str]]:
     return out
 
 
+def field_context(data: ResumeData) -> dict[str, dict[str, object]]:
+    """Where each bullet sits: its role, dates and whether it's the current job (so a current role keeps the present
+    tense and a tailored rewrite knows which job it's in)."""
+    out: dict[str, dict[str, object]] = {}
+    for e in data.experience:
+        ctx: dict[str, object] = {"role": " at ".join(x for x in (e.title, e.company) if x) or "Role",
+                                  "dates": " - ".join(x for x in (e.start, "Present" if e.current else e.end) if x),
+                                  "current": e.current}
+        for i in range(len(e.bullets)):
+            out[f"experience.{e.id}.bullets.{i}"] = ctx
+    for p in data.projects:
+        for key in ("description", *(f"bullets.{i}" for i in range(len(p.bullets)))):
+            out[f"projects.{p.id}.{key}"] = {"project": p.name or "Project"}
+    return out
+
+
 def addable_roles(data: ResumeData) -> dict[str, tuple[str, list[str]]]:
     """Roles with fewer than 2 bullets: "experience.<id>.bullets.+" -> (role name, the bullets it has)."""
     out: dict[str, tuple[str, list[str]]] = {}
@@ -170,8 +190,9 @@ SUGGEST_SYSTEM = """You are an expert resume writer improving a resume so both a
 recruiters rate it highly. You rewrite what the resume says and draft what it is missing, but you never state a \
 specific fact the candidate didn't give.
 
-You get the resume's editable fields as JSON ({"path": ..., "text": ...}), sometimes "roles to add bullets to", the
-issues an ATS check found, and sometimes a job post. Return ONLY a JSON object:
+You get the resume's editable fields as JSON ({"path": ..., "text": ...}, bullets also with their "role", "dates" and
+whether it's the "current" job), sometimes "roles to add bullets to", the issues an ATS check found, and sometimes a
+job post. Return ONLY a JSON object:
 {"suggestions": [{"path": string, "after": string, "reason": string}]}
 
 Rules:
@@ -180,8 +201,9 @@ Rules:
 - A path ending in ".bullets.+" ADDS a new bullet to that role (up to 3 per role, one suggestion each, never
   repeating a bullet it already has). Draft the standard, believable responsibilities of that job title in a
   resume-bullet voice, using only tools the resume already names. Put a bracketed placeholder for every number.
-- Bullets: start with a strong past-tense action verb (present tense for a current role), one line or two (8-35
-  words), no "I"/"my", and show the result.
+- Bullets: start with a strong action verb, past tense for a past role and present tense only where "current" is
+  true; one line or two (8-35 words), no "I"/"my", and show the result.
+- Keep every number, figure and name the original text has: a rewrite that drops "by 35%" or "team of 5" is worse.
 - When asked to add numbers, rewrite the bullet with a bracketed placeholder where each figure belongs, e.g. "by
   [X%]", "[N] users", "$[X]"; the candidate fills in the real value.
 - NEVER invent numbers, tools, employers or outcomes. If a number would make a bullet stronger but the resume
@@ -198,8 +220,9 @@ Rules:
 def suggest_request(data: ResumeData, report: AtsReport, llm: LLMProvider, *, mode: Literal["improve", "tailor"],
                     job_text: str, focus: str | None, check: str | None = None) -> LLMRequest:
     fields = editable_fields(data)
+    context = field_context(data)
     chosen = {focus: fields[focus]} if focus and focus in fields else fields
-    listed = [{"path": p, "text": t}
+    listed = [{"path": p, "text": t, **context.get(p, {})}
               for p, (_, t) in list(chosen.items())[:80]
               if t.strip() or p in ("basics.summary", "basics.headline")]
     roles = [] if focus else [{"path": p, "role": name, "current_bullets": have}
@@ -255,6 +278,13 @@ def parse_suggestions(resp: LLMResponse, data: ResumeData) -> list[Suggestion]:
         invented = invented_terms(after, corpus)
         if invented:
             log.info("resume suggestion for %s dropped: it adds %s", path, ", ".join(invented[:3]))
+            continue
+        # A bullet's real result is its strongest part: "Cut load time by 35%" -> "Improved load time" is worse. (Not
+        # the summary or headline, which sum the resume up and may leave a figure to the bullets.)
+        lost = {n for _, n in _figures(before)} - {n for _, n in _figures(after)} if path.startswith(
+            ("experience.", "projects.")) else set()
+        if lost:
+            log.info("resume suggestion for %s dropped: it loses %s", path, ", ".join(sorted(lost)[:3]))
             continue
         after, filled = fill_invented_figures(after, corpus)
         reason = _s(raw.get("reason"), 240)

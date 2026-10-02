@@ -90,7 +90,8 @@ class Project(BaseModel):
     name: str = Field("", max_length=160)
     link: str = Field("", max_length=300)
     description: str = Field("", max_length=600)
-    bullets: list[str] = Field(default_factory=list, max_length=8)
+    # The same as a role's: the editor shares one bullet list, and a 9th bullet used to fail every save with a 422.
+    bullets: list[str] = Field(default_factory=list, max_length=12)
 
     @field_validator("bullets")
     @classmethod

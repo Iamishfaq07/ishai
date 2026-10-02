@@ -474,7 +474,7 @@ export interface ScreenshotAccepted {
 // ─── Usage / billing ─────────────────────────────────────────────────────────
 
 /** "pending": a new account waiting for the admin (sign-up approval), with nothing included. */
-export type PlanId = "free" | "pro" | "unlimited" | "pending";
+export type PlanId = "free" | "resume_pro" | "pro" | "unlimited" | "pending";
 
 /** GET /v1/plans (public) — what each plan includes. The server is the only source of limits and prices. */
 export interface PlanInfo {
@@ -487,6 +487,61 @@ export interface PlanInfo {
   max_session_minutes: number;
   features: string[];
   price_usd_month: number | null;
+  /** What 30 days cost over UPI, in rupees (null = not for sale over UPI). */
+  price_inr_month?: number | null;
+  /** Can be bought over UPI right now (it has a rupee price and the server has a UPI ID). */
+  buyable?: boolean;
+}
+
+// ─── UPI payments ──────────────────────────────────────────────────────────────
+
+export type UpiOrderStatus = "awaiting_payment" | "submitted" | "approved" | "rejected";
+
+/** A UPI payment for a plan: pay, give the UTR, the admin approves it. */
+export interface UpiOrder {
+  id: string;
+  plan: PlanId;
+  plan_label: string;
+  amount_inr: number;
+  days: number;
+  /** Goes in the UPI note, so the payment can be matched. */
+  reference: string;
+  status: UpiOrderStatus;
+  utr: string | null;
+  /** The admin's reason (rejected), or a note on approval. */
+  note: string | null;
+  created_at: string;
+  submitted_at: string | null;
+  decided_at: string | null;
+  /** How to pay, while there's still something to pay. `upi_uri` is shown as a QR and, on phones, a tap-through link. */
+  upi_id: string | null;
+  payee_name: string | null;
+  upi_uri: string | null;
+}
+
+export interface AdminPayment extends Omit<UpiOrder, "upi_id" | "payee_name" | "upi_uri"> {
+  user_id: string;
+  email: string;
+  name: string | null;
+  /** The plan the account has right now (a running grant), if any. */
+  current_plan: string | null;
+  current_until: string | null;
+}
+
+export interface AdminPayments {
+  upi_configured: boolean;
+  /** Payments with a UTR waiting to be checked. */
+  waiting: number;
+  payments: AdminPayment[];
+}
+
+/** GET /v1/resumes/allowance (or /v1/resume-maker/allowance signed out): the resume AI's free allowance. */
+export interface ResumeAiAllowance {
+  /** The plan includes resume AI: no free-use limit. */
+  unlimited: boolean;
+  free_left: number;
+  free_total: number;
+  upgrade: { plan: PlanId; label: string; price_inr_month: number | null; buyable: boolean };
 }
 
 /** GET /v1/entitlements — the signed-in user's plan, limits, this month's usage and features. */
@@ -536,7 +591,7 @@ export interface AdminUsers {
 }
 
 export type AccessChange =
-  | { action: "grant"; plan: "pro" | "unlimited"; hours: number }
+  | { action: "grant"; plan: "resume_pro" | "pro" | "unlimited"; hours: number }
   | { action: "approve" }
   | { action: "revoke" };
 

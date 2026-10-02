@@ -22,6 +22,7 @@ from orbit_api.resumes.ats import (
     AtsReport,
     _term_pattern,
     date_style,
+    pretty_term,
 )
 from orbit_api.resumes.claims import _GENERIC
 from orbit_api.resumes.schema import ResumeData, new_id
@@ -59,17 +60,7 @@ def current_skills(data: ResumeData) -> set[str]:
     return {i.strip().lower() for g in data.skills for i in g.items if i.strip()}
 
 
-def _pretty(term: str, *texts: str) -> str:
-    """The way the term is written in the first text that has it (with a capital), else a sensible casing."""
-    for text in texts:
-        m = re.search(r"(?<![A-Za-z0-9])" + re.escape(term) + r"(?![A-Za-z0-9+#])", text, re.IGNORECASE)
-        if m and m.group(0) != m.group(0).lower():
-            return m.group(0)
-    if "/" in term and all(len(p) <= 4 for p in term.split("/")):
-        return term.upper()
-    if len(term) <= 3 and " " not in term:
-        return term.upper()
-    return " ".join(w if w.isupper() else w[:1].upper() + w[1:] for w in term.split(" "))
+_pretty = pretty_term
 
 
 def _own_words(data: ResumeData) -> set[str]:

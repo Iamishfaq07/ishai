@@ -4,14 +4,16 @@
 `apps/api/orbit_api/entitlements.py` holds the one plan table. Clients never decide limits: they render
 `GET /v1/plans` (public) and `GET /v1/entitlements` (signed in).
 
-| | Free | Pro | Unlimited |
-|---|---|---|---|
-| Live minutes / month | 30 | 600 | unlimited (fair use) |
-| Mock interview minutes / month | 30 | 300 | unlimited |
-| Screenshots / month | 10 | 500 | unlimited |
-| Documents | 3 | 50 | unlimited |
-| Max length of one session | 60 min | 180 min | 240 min |
-| Features | live, documents, mock, vision | all | all |
+| | Free | Resume Pro | Pro | Unlimited |
+|---|---|---|---|---|
+| Price (UPI, 30 days) | free | ₹299 | not for sale yet | not for sale yet |
+| Resume maker AI | 1 free AI action | unlimited | unlimited | unlimited |
+| Live minutes / month | 30 | 30 | 600 | unlimited (fair use) |
+| Mock interview minutes / month | 30 | 30 | 300 | unlimited |
+| Screenshots / month | 10 | 10 | 500 | unlimited |
+| Documents | 3 | 3 | 50 | unlimited |
+| Max length of one session | 60 min | 60 min | 180 min | 240 min |
+| Features | live, documents, mock, vision | Free's + `resume_ai` | all | all |
 
 These are the defaults. Override any of them without a code change:
 
@@ -24,7 +26,9 @@ FREE_MAX_SESSION_MINUTES=60   PRO_MAX_SESSION_MINUTES=180   UNLIMITED_MAX_SESSIO
 - **Settable per plan:**
   - the limits: `live_minutes`, `mock_minutes`, `screenshots`, `documents`, `max_session_minutes`;
   - `features`, from `live`, `documents`, `mock`, `vision`, `advanced_coding`, `system_design`,
-    `provider_fallback`;
+    `provider_fallback`, `resume_ai`;
+  - `price_inr_month`: what 30 days cost over UPI, in whole rupees (`null` = not for sale). Setting it on Pro, say
+    `{"pro": {"price_inr_month": 999}}`, puts Pro on sale too;
   - the display fields: `label`, `price_usd_month`, `stripe_price_id`.
 - **Unlimited:** `null` means unlimited for a monthly limit. The session ceiling can't be unlimited.
 - **Validation:** unknown plans, keys or features, and negative or non-integer limits stop the API at boot.
@@ -48,10 +52,32 @@ FREE_MAX_SESSION_MINUTES=60   PRO_MAX_SESSION_MINUTES=180   UNLIMITED_MAX_SESSIO
 - **Documents** are counted at upload.
 - **One live session per account** bounds any overshoot to about one heartbeat.
 
-## Payments
-Not live yet: plans exist, but nothing can be bought. Stripe Checkout, the webhook-driven subscription state and
-the customer portal come next. They will set `subscriptions.plan`, and the server derives everything above from
-that.
+## The resume maker's free AI action
+Without a plan that has `resume_ai`, the resume maker's AI has **one free action**: an import, a rewrite, tailoring
+or a cover letter (`apps/api/orbit_api/resumes/allowance.py`).
+- **Who gets it:** one per account, for good, and one per IP address per `ORBIT_FREE_RESUME_AI_IP_DAYS` (default 30;
+  `0` = one per IP for good). Signed-out use counts against the IP. The window exists because mobile networks put
+  thousands of people behind one IP.
+- **What's free anyway:** typing, the ATS score, templates, PDF/Word downloads, and the fixes worked out without
+  the AI (dates, skills the resume already proves).
+- **After it's spent:** AI endpoints answer `402 upgrade_required` with the plan and price, and the editor shows
+  Upgrade. `/suggest` still returns the AI-free fixes, with `upgrade_required: true`.
+- **A failed AI call doesn't spend it.** IPs are stored only as an HMAC (`free_ai_uses.ip_hash`).
+
+## Payments: UPI, checked by the admin
+No payment gateway: people pay `ORBIT_UPI_ID` (shown as `ORBIT_UPI_NAME`) from any UPI app, and the admin confirms
+each payment before the plan turns on (`apps/api/orbit_api/billing/upi.py`).
+1. **Billing → Upgrade** makes an order: the amount, a reference (`ORB…`, in the UPI note), a QR and a `upi://pay`
+   link (on phones, a button that opens GPay / PhonePe / Paytm). The UPI ID and amount are also shown for paying by
+   hand.
+2. **The payer enters the UTR**, the 12-digit number the UPI app shows for the payment. A UTR counts once, for
+   anyone. The admin gets an email.
+3. **The admin opens Settings → Payments** (or the header's "to check" badge), finds the credit in the bank or UPI
+   app by UTR or reference, and approves or rejects it (a reason is shown to the payer, who can send the right UTR).
+4. **Approving grants the plan for 30 days**, added on to a running grant of the same plan, and approves the
+   account if sign-up approval was holding it. Nothing renews or is charged automatically.
+
+Unset `ORBIT_UPI_ID` = nothing is for sale (`buyable: false` in `GET /v1/plans`).
 
 ## What it costs to run (admin → Settings → Costs)
 `GET /v1/admin/costs?days=30` (desktop Settings, admin only) reports:

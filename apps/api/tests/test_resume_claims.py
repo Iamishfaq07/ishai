@@ -45,12 +45,24 @@ def test_suggestions_with_invented_facts_are_fixed_or_dropped() -> None:
     corpus_has = json.dumps(data.model_dump(mode="json"))
     assert "35%" not in corpus_has and "Pulumi" not in corpus_has  # the fixture says neither
     got = ai.parse_suggestions(_resp([
-        {"path": first, "after": "Led the ledger migration, cutting reconciliation time by 35%", "reason": "Result."},
+        {"path": first, "after": "Led the ledger migration, cutting reconciliation time by 60% and costs by 35%",
+         "reason": "Result."},
         {"path": second, "after": "Automated releases with Pulumi for every team", "reason": "Tooling."},
     ]), data)
     assert [s.path for s in got] == [first]  # the invented tool dropped its suggestion
-    assert got[0].after == "Led the ledger migration, cutting reconciliation time by [X%]"
+    assert got[0].after == "Led the ledger migration, cutting reconciliation time by 60% and costs by [X%]"
     assert got[0].reason == "Result. Replace the bracketed figure with your real number."
+
+
+def test_a_rewrite_that_loses_a_real_figure_is_dropped() -> None:
+    data = strong_resume()
+    first = f"experience.{data.experience[0].id}.bullets.0"  # "...cutting reconciliation time by 60%"
+    got = ai.parse_suggestions(_resp([
+        {"path": first, "after": "Led the ledger migration on Kafka, making reconciliation much faster"},
+        {"path": first, "after": "Led the ledger migration, cutting reconciliation time by [X%]"},
+        {"path": first, "after": "Led the ledger migration, cutting reconciliation time by 35%"},
+    ]), data)
+    assert got == []  # the candidate's own 60% is the strongest part: never traded for vaguer words or a guess
 
 
 def test_a_cover_letter_figure_from_neither_the_resume_nor_the_job_post_becomes_a_placeholder() -> None:
