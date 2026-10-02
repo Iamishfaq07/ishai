@@ -4,6 +4,7 @@ Sends only what this question needs: short profile, top retrieved facts, rolling
 turns, and the question. Never the whole resume, JD, transcript, or document library.
 """
 
+import re
 from collections import deque
 from dataclasses import dataclass, field
 from functools import cache
@@ -189,8 +190,19 @@ _MOTIVATION_TYPES = {QuestionType.culture}
 _ANCHORED_TYPES = {QuestionType.resume}
 
 
+# "Tell me about yourself" / "walk me through your background" ask for the whole arc; "your experience WITH Kafka" is
+# about one topic, and gets the facts that match it instead.
+_BROAD_BACKGROUND = re.compile(
+    r"\b(?:tell me about yourself|introduce yourself|about your background|your background|walk me through your "
+    r"(?:resume|cv|background|career|journey)|your career (?:so far|path|story)"
+    r"|your (?:resume|cv)\b(?! (?:says|mentions)))",
+    re.IGNORECASE)
+
+
 def _anchor_hits(index: SessionIndex) -> list[Hit]:
-    anchors: list[IndexedChunk] = index.by_category("resume", ("summary",), 2)
+    # A summary line that's only a name ("Jane Doe") tells the model nothing.
+    summary = [c for c in index.by_category("resume", ("summary",), 4) if len(c.text.split()) >= 4][:2]
+    anchors: list[IndexedChunk] = summary
     anchors += index.by_category("resume", ("experience",), 4)
     return [Hit(c, 1.0) for c in anchors]
 
@@ -200,7 +212,7 @@ def retrieve(index: SessionIndex, inputs: PromptInputs, memory: SessionMemory) -
     if inputs.is_follow_up and memory.questions:
         query = f"{memory.questions[-1]} {inputs.question}"  # follow-ups inherit the prior topic
     hits = index.search(query, inputs.qtype, k=6)
-    if inputs.qtype in _ANCHORED_TYPES:
+    if inputs.qtype in _ANCHORED_TYPES and _BROAD_BACKGROUND.search(inputs.question):
         anchored = _anchor_hits(index)
         seen = {h.chunk.id for h in anchored}
         hits = anchored + [h for h in hits if h.chunk.id not in seen]

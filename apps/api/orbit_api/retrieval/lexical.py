@@ -38,7 +38,14 @@ def stem(tok: str) -> str:
 
 
 def tokenize(text: str) -> list[str]:
-    return [stem(t) for t in _TOKEN.findall(text.lower()) if t not in _STOP]
+    out: list[str] = []
+    for t in _TOKEN.findall(text.lower()):
+        if t in _STOP:
+            continue
+        out.append(stem(t))
+        if "-" in t:  # "fraud-detection" also matches "fraud" and "detection"; the compound keeps its exact match
+            out += [stem(part) for part in t.split("-") if part and part not in _STOP]
+    return out
 
 
 class BM25:

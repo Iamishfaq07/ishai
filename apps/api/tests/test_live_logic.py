@@ -728,3 +728,46 @@ def test_an_answer_cut_off_by_its_token_cap_ends_at_its_last_full_sentence() -> 
                                "Walk me through the project you're most proud of."])
 def test_asking_for_a_story_is_behavioral_whatever_it_is_about(q: str) -> None:
     assert detect(q, "interviewer").question_type is QuestionType.behavioral
+
+
+RESUME_FOR_TOPICS = """Jane Doe
+Senior Backend Engineer, 7 years building payment systems
+EXPERIENCE
+Acme Corp — Senior Engineer (2021–Present)
+- Built payment services handling 10k TPS on Kubernetes with Kafka
+Globex — Software Engineer (2018–2021)
+- Designed a fraud-detection pipeline in Python that reduced chargebacks by 30%
+"""
+
+
+def _topic_index() -> SessionIndex:
+    from orbit_api.documents.parsing import chunk_document
+
+    return SessionIndex([IndexedChunk(f"r{i}", "resume", c.category, c.label, c.text, True, [])
+                         for i, c in enumerate(chunk_document(RESUME_FOR_TOPICS, "resume", "cv"))])
+
+
+def test_experience_with_a_topic_gets_that_topic_not_the_whole_resume() -> None:
+    from orbit_api.live.context_builder import retrieve
+
+    q = "Describe your experience with fraud detection."
+    d = detect(q, "interviewer")
+    assert d.question_type is QuestionType.resume
+    hits = retrieve(_topic_index(), _inputs(q, qtype=d.question_type), SessionMemory())
+    assert "fraud-detection" in hits[0].chunk.text
+
+
+def test_tell_me_about_yourself_skips_a_name_only_summary() -> None:
+    from orbit_api.live.context_builder import retrieve
+
+    hits = retrieve(_topic_index(), _inputs("Tell me about yourself.", qtype=QuestionType.resume), SessionMemory())
+    assert hits[0].chunk.text.startswith("Senior Backend Engineer") and all(h.chunk.text != "Jane Doe" for h in hits)
+
+
+@pytest.mark.parametrize(("q", "qtype"), [
+    ("Where did you go to university?", QuestionType.resume),
+    ("Have you worked with Kafka?", QuestionType.resume),
+    ("How do you prioritize when everything is urgent?", QuestionType.behavioral),
+])
+def test_personal_questions_are_not_typed_technical(q: str, qtype: QuestionType) -> None:
+    assert detect(q, "interviewer").question_type is qtype

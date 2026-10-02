@@ -166,3 +166,10 @@ def test_a_story_question_finds_the_experience_it_is_about() -> None:
     hits = SessionIndex(chunks).search("Tell me about a time you had to scale a service under pressure.",
                                        QuestionType.behavioral)
     assert hits and "payment services" in hits[0].chunk.text
+
+
+def test_hyphenated_words_match_their_parts() -> None:
+    from orbit_api.retrieval.lexical import tokenize
+
+    toks = tokenize("Designed a fraud-detection pipeline")
+    assert {"fraud-detection", "fraud", "detection"} <= set(toks)

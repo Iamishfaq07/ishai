@@ -1,5 +1,19 @@
 # Implementation log
 
+## Topic questions get the matching facts; more personal questions get personal rules (2026-10-02)
+
+- **"Your experience with X" gets X.** Questions typed "resume" were always answered from the profile summary and
+  latest roles (the "tell me about yourself" treatment), so "Describe your experience with fraud detection" never
+  saw the fraud-detection fact. That treatment now applies only to broad background questions ("tell me about
+  yourself", "walk me through your resume/career"); anything with a topic gets the facts that match the topic.
+- **A summary line that's just a name** ("Jane Doe") is no longer sent as context.
+- **Hyphenated words match their parts**: "fraud" finds "fraud-detection". The retrieval benchmark's dev set
+  improved (R@1 0.77 → 0.82, MRR 0.85 → 0.89); the held-out set is unchanged.
+- **More personal questions are typed as personal**, so they get the grounding rules:
+  - education ("Where did you go to university?");
+  - experience with a tool ("Have you worked with Kafka?", "familiar with");
+  - prioritisation and work style.
+
 ## Story questions get story answers, grounded in the resume (2026-10-01)
 
 - **"Tell me about a time…" is always behavioral.** "Tell me about a time you had to scale a service under pressure"
