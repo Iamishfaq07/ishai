@@ -345,9 +345,12 @@ export function createApiClient(options: ApiClientOptions) {
       json<CompanionShare>(`/v1/sessions/${encodeURIComponent(id)}/companion`, { method: "POST" }),
     stopCompanion: (id: string) =>
       json<void>(`/v1/sessions/${encodeURIComponent(id)}/companion`, { method: "DELETE" }),
-    /** On the phone (no login): trade the scanned code for a single-use view ticket. */
+    /**
+     * On the phone (no login): trade the scanned code for a single-use view ticket. The code is the credential, so it
+     * goes in the body: a URL path ends up in server and proxy access logs.
+     */
     redeemCompanion: (code: string) =>
-      json<CompanionView>(`/v1/companion/${encodeURIComponent(code)}`, { method: "POST" }),
+      json<CompanionView>("/v1/companion/redeem", { method: "POST", body: body({ code }) }),
     uploadScreenshot: (id: string, image: Blob) => {
       const form = new FormData();
       form.append("image", image, "screenshot.png");

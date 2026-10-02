@@ -37,9 +37,10 @@ export function MockPanel({ live, actions, voice, ended }: {
           </p>
         )}
         <p className="text-sm text-zinc-500">
+          {/* The server ends the session itself when the round finishes, so there's nothing left to press. */}
           {s?.negotiation
-            ? "End the session for your review: how you anchored, justified and handled pushback, with stronger lines to use, in History."
-            : "End the session for your review: each answer graded, with a stronger way to say it, in History."}
+            ? "Your review is on its way to History: how you anchored, justified and handled pushback, with stronger lines to use."
+            : "Your review is on its way to History: each answer graded, with a stronger way to say it."}
         </p>
       </div>
     );

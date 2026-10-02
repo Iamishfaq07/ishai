@@ -116,10 +116,19 @@ export function CompanionShare({
 
   const copy = () => {
     if (!link) return;
-    void navigator.clipboard.writeText(link).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
+    // Refused (no permission) or missing (insecure page): say so rather than fail silently.
+    const done = (ok: boolean) => {
+      setError(ok ? null : "Couldn't copy the link: the browser blocked the clipboard. Scan the QR code instead.");
+      if (ok) {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }
+    };
+    if (!navigator.clipboard) return done(false);
+    navigator.clipboard.writeText(link).then(
+      () => done(true),
+      () => done(false),
+    );
   };
 
   return (

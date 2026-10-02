@@ -137,3 +137,18 @@ describe("the resume maker's client", () => {
     expect("guest" in api).toBe(false);
   });
 });
+
+describe("phone companion", () => {
+  it("sends the share code in the body, never the URL (paths end up in access logs)", async () => {
+    const seen: Array<{ url: string; method: string; body: unknown }> = [];
+    const impl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      seen.push({ url: String(input), method: init?.method ?? "GET", body: JSON.parse(String(init?.body)) });
+      return new Response(JSON.stringify({ session_id: "s1", title: "Acme", ticket: "t" }), { status: 200 });
+    }) as typeof fetch;
+    const api = createApiClient({ baseUrl: "https://api.test", auth: { mode: "cookie" }, fetchImpl: impl });
+    const code = "a-secret_code-123";
+    expect(await api.redeemCompanion(code)).toEqual({ session_id: "s1", title: "Acme", ticket: "t" });
+    expect(seen).toEqual([{ url: "https://api.test/v1/companion/redeem", method: "POST", body: { code } }]);
+    expect(seen[0]!.url).not.toContain(code);
+  });
+});

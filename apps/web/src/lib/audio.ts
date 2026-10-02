@@ -173,6 +173,18 @@ export function supportsDisplayAudio(): boolean {
   return displayAudioSupport() === "ok";
 }
 
+/**
+ * Whether a screenshot of a window or screen can be taken. Unlike tab audio, Safari and Firefox on a computer can
+ * share video; phones can't share the screen usefully (or at all), even where getDisplayMedia exists.
+ */
+export function supportsScreenCapture(): boolean {
+  return (
+    typeof navigator !== "undefined" &&
+    typeof navigator.mediaDevices?.getDisplayMedia === "function" &&
+    !isMobileDevice()
+  );
+}
+
 /** What to do instead when tab audio can't be shared here (or, on a Mac, what can be shared). */
 export function displayAudioHelp(): string {
   switch (displayAudioSupport()) {

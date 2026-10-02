@@ -130,20 +130,26 @@ export function DeliveryCard({ delivery }: { delivery: DeliveryStats | null | un
 }
 
 function CopyButton({ text, label }: { text: string; label: string }) {
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState<"copied" | "failed" | null>(null);
+  const show = (result: "copied" | "failed") => {
+    setDone(result);
+    setTimeout(() => setDone(null), 1500);
+  };
   return (
     <Button
       variant="secondary"
       size="sm"
-      onClick={() =>
-        void navigator.clipboard.writeText(text).then(() => {
-          setDone(true);
-          setTimeout(() => setDone(false), 1500);
-        })
-      }
+      onClick={() => {
+        // Refused (no permission) or missing (insecure page): say so rather than fail silently.
+        if (!navigator.clipboard) return show("failed");
+        navigator.clipboard.writeText(text).then(
+          () => show("copied"),
+          () => show("failed"),
+        );
+      }}
     >
-      {done ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-      {done ? "Copied" : label}
+      {done === "copied" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+      {done === "copied" ? "Copied" : done === "failed" ? "Couldn’t copy" : label}
     </Button>
   );
 }

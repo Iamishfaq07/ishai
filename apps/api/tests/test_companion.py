@@ -46,6 +46,26 @@ def test_share_code_is_stable_owner_only_and_revocable(client: TestClient) -> No
     assert not any(s.session_id == sid for s in companion._shares.values())  # ending revoked the code
 
 
+def test_redeem_takes_the_code_in_the_body_and_the_path_form_still_works(client: TestClient) -> None:
+    h = _register(client)
+    sid = client.post("/v1/sessions", headers=h, json={"title": "Acme onsite"}).json()["id"]
+    code = _share(client, h, sid)
+    client.cookies.clear()  # the phone isn't signed in
+
+    r = client.post("/v1/companion/redeem", json={"code": code})  # in the body: out of the access logs
+    assert r.status_code == 200, r.text
+    assert r.json()["session_id"] == sid and r.json()["title"] == "Acme onsite" and r.json()["ticket"]
+    with client.websocket_connect(f"/v1/sessions/{sid}/view?ticket={r.json()['ticket']}"):
+        pass  # the ticket opens the phone's view
+    assert client.post("/v1/companion/redeem", json={"code": "not-a-code"}).status_code == 404
+    assert client.post("/v1/companion/redeem", json={}).status_code == 422
+    # Phones still on the older web build send it in the path.
+    assert client.post(f"/v1/companion/{code}").json()["session_id"] == sid
+
+    companion.stop_sharing(sid)
+    assert client.post("/v1/companion/redeem", json={"code": code}).status_code == 404  # revoked
+
+
 def test_view_ticket_is_single_use_and_bound_to_the_session(client: TestClient) -> None:
     h = _register(client)
     sid = client.post("/v1/sessions", headers=h, json={"title": "x"}).json()["id"]

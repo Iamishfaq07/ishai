@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type {
   AnswerFeedback,
   AnswerFeedbackReason,
@@ -86,26 +86,41 @@ export function answerAsText(a: AnswerView["answer"]): string {
 }
 
 function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
+  const [result, setResult] = useState<"copied" | "failed" | null>(null);
   useEffect(() => {
-    if (!copied) return;
-    const t = setTimeout(() => setCopied(false), 1500);
+    if (!result) return;
+    const t = setTimeout(() => setResult(null), 1500);
     return () => clearTimeout(t);
-  }, [copied]);
+  }, [result]);
   return (
     <button
       type="button"
       onClick={() => {
-        void navigator.clipboard?.writeText(text).then(() => setCopied(true));
+        // The clipboard can be missing (insecure page) or refused (no permission): say so instead of doing nothing.
+        if (!navigator.clipboard) return setResult("failed");
+        navigator.clipboard.writeText(text).then(
+          () => setResult("copied"),
+          () => setResult("failed"),
+        );
       }}
       title="Copy this answer"
       className={cx(
         "rounded-md px-2 py-0.5 text-xs font-medium",
-        copied ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800",
+        result === "copied"
+          ? "text-emerald-600 dark:text-emerald-400"
+          : result === "failed"
+            ? "text-rose-600 dark:text-rose-400"
+            : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800",
         focusRing,
       )}
     >
-      {copied ? <span className="inline-flex animate-pop items-center gap-1">Copied <Check className="h-3.5 w-3.5" /></span> : "Copy"}
+      {result === "copied" ? (
+        <span className="inline-flex animate-pop items-center gap-1">Copied <Check className="h-3.5 w-3.5" /></span>
+      ) : result === "failed" ? (
+        "Couldn’t copy"
+      ) : (
+        "Copy"
+      )}
     </button>
   );
 }
@@ -225,7 +240,11 @@ function SectionLabel({ children, block = false }: { children: string; block?: b
   return block ? <h3 className={cx(cls, "mb-1")}>{children}</h3> : <span className={cls}>{children}</span>;
 }
 
-export function AnswerCard({
+/**
+ * Memoized: the live panel re-renders on every transcript update, and re-rendering the answer (code highlighting
+ * included) each time is wasted work while it hasn't changed. Callers pass stable callbacks to keep that working.
+ */
+export const AnswerCard = memo(function AnswerCard({
   answer, pinned, onPin, onRetry, onStop, compact = false, autoAnswer, progress, onTogglePoint, reader, onCodeLanguage,
   onShorter, onLonger, readOnly = false, rating = null, onRate,
 }: AnswerCardProps) {
@@ -571,7 +590,7 @@ export function AnswerCard({
       </span>
     </section>
   );
-}
+});
 
 function sourceKind(kind: string): string {
   return kind === "resume" ? "Resume" : kind === "job_description" ? "Job description" : kind === "notes" ? "Notes" : "Document";

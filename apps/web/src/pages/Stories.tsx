@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { STORY_COMPETENCIES, type Story, type StoryCompetency, type StoryInput } from "@orbit/types";
 import {
@@ -312,11 +312,15 @@ function StoryCard({ story, onEdit, onDelete }: { story: StoryInput; onEdit: () 
 }
 
 type Editing = { id: string | null; initial: StoryInput; heading: string; fromDraft?: number };
+// Each draft gets an id of its own: the editor is keyed on it (so editing another draft starts from that draft) and
+// saving or discarding removes exactly that one, even after new drafts were added in front of it.
+type Draft = { id: number; story: StoryInput };
 
 export function StoriesPage() {
   const stories = useAsync(() => api.listStories(), [], "stories");
   const [editing, setEditing] = useState<Editing | null>(null);
-  const [drafts, setDrafts] = useState<StoryInput[]>([]);
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const nextDraftId = useRef(0);
   const [drafting, setDrafting] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [notes, setNotes] = useState("");
@@ -342,19 +346,17 @@ export function StoriesPage() {
     } else {
       const saved = await api.createStory(s);
       stories.setData((prev) => [saved, ...(prev ?? [])]);
-      if (editing.fromDraft !== undefined) setDrafts((d) => d.filter((_, i) => i !== editing.fromDraft));
+      if (editing.fromDraft !== undefined) setDrafts((d) => d.filter((x) => x.id !== editing.fromDraft));
     }
     setEditing(null);
   };
 
-  const saveDraft = async (i: number) => {
-    const d = drafts[i];
-    if (!d) return;
+  const saveDraft = async (d: Draft) => {
     setError(null);
     try {
-      const saved = await api.createStory(d);
+      const saved = await api.createStory(d.story);
       stories.setData((prev) => [saved, ...(prev ?? [])]);
-      setDrafts((prev) => prev.filter((_, j) => j !== i));
+      setDrafts((prev) => prev.filter((x) => x.id !== d.id));
     } catch (err) {
       setError(errorText(err));
     }
@@ -369,7 +371,8 @@ export function StoriesPage() {
       if (!r.grounded) {
         setNote("Upload your resume first — stories are drafted from it.");
       } else {
-        setDrafts((prev) => [...r.stories, ...prev]);
+        const fresh = r.stories.map((story) => ({ id: nextDraftId.current++, story }));
+        setDrafts((prev) => [...fresh, ...prev]);
         if (source === "notes") {
           setNotes("");
           setNotesOpen(false);
@@ -455,7 +458,13 @@ export function StoriesPage() {
       )}
 
       {editing && (
-        <StoryEditor key={editing.id ?? `new-${editing.heading}`} initial={editing.initial} heading={editing.heading} onSave={save} onCancel={() => setEditing(null)} />
+        <StoryEditor
+          key={editing.id ?? (editing.fromDraft !== undefined ? `draft-${editing.fromDraft}` : `new-${editing.heading}`)}
+          initial={editing.initial}
+          heading={editing.heading}
+          onSave={save}
+          onCancel={() => setEditing(null)}
+        />
       )}
 
       {drafts.length > 0 && (
@@ -467,20 +476,20 @@ export function StoriesPage() {
             Check each one matches what really happened and fill in the highlighted details. Only saved stories are used.
           </p>
           <div className="grid gap-4 md:grid-cols-2">
-            {drafts.map((d, i) => (
-              <div key={`${d.title}-${i}`} className="space-y-2">
+            {drafts.map((d) => (
+              <div key={d.id} className="space-y-2">
                 <StoryCard
-                  story={d}
+                  story={d.story}
                   onEdit={() => {
-                    setEditing({ id: null, initial: d, heading: "Edit draft", fromDraft: i });
+                    setEditing({ id: null, initial: d.story, heading: "Edit draft", fromDraft: d.id });
                     window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
                 />
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => void saveDraft(i)}>
+                  <Button size="sm" onClick={() => void saveDraft(d)}>
                     <Check className="h-3.5 w-3.5" /> Save
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setDrafts((prev) => prev.filter((_, j) => j !== i))}>
+                  <Button size="sm" variant="ghost" onClick={() => setDrafts((prev) => prev.filter((x) => x.id !== d.id))}>
                     Discard
                   </Button>
                 </div>

@@ -1,5 +1,11 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { DEV_FIXTURES, type AnswerFeedbackReason, type AnswerRating, type CodingLanguage } from "@orbit/types";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  DEV_FIXTURES,
+  type AnswerFeedbackReason,
+  type AnswerLength,
+  type AnswerRating,
+  type CodingLanguage,
+} from "@orbit/types";
 import { formatElapsed, useElapsed } from "../hooks/useElapsed";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useStickyScroll } from "../hooks/useStickyScroll";
@@ -52,6 +58,21 @@ const SIDE_TABS: Array<{ id: SideTab; label: string; icon: LucideIcon }> = [
 ];
 
 const SIDE_PANEL_KEY = "orbit.sidePanel";
+const LENGTH_STEPS: readonly AnswerLength[] = ["short", "standard", "detailed"];
+
+/** The session timer on its own: its once-a-second tick re-renders this, not the whole panel. */
+function SessionClock({ startedAt, running, dragRegion }: { startedAt: number | null; running: boolean; dragRegion?: boolean }) {
+  const elapsed = useElapsed(startedAt, running);
+  return (
+    <span
+      data-tauri-drag-region={dragRegion ? "" : undefined}
+      className="ml-auto font-mono text-xs tabular-nums text-zinc-500"
+      aria-label="Session time"
+    >
+      {formatElapsed(elapsed)}
+    </span>
+  );
+}
 
 /** Wide screens remember whether the side panel is shown; phones always start with it closed (it covers the answer). */
 function useSidePanel(wide: boolean): [boolean, (open: boolean) => void] {
@@ -124,7 +145,6 @@ export function LivePanel(props: LivePanelProps) {
 
   const ended = live.state === "ended";
   const paused = live.state === "paused";
-  const elapsed = useElapsed(live.startedAt, !ended && !paused);
   const answer = selectDisplayedAnswer(live);
   const question = selectDisplayedQuestion(live);
   const mockQuestion = useMemo(
@@ -183,21 +203,51 @@ export function LivePanel(props: LivePanelProps) {
     else setSideOpen(false);
   };
 
-  const retry = () => actions.answer(question?.text);
+  // The answer card and transcript are memoized: everything handed to them stays the same function between live
+  // updates (it only changes with the answer or question it acts on).
+  const answerId = answer?.answer_id ?? null;
+  const questionText = question?.text;
+  const retry = useCallback(() => actions.answer(questionText), [actions, questionText]);
+  const pin = useCallback(
+    (pinned: boolean) => {
+      if (answerId) actions.pin(answerId, pinned);
+    },
+    [actions, answerId],
+  );
+  const rateAnswer = props.ratings?.rate;
+  const rate = useCallback(
+    (r: AnswerRating | null, why?: AnswerFeedbackReason | null) => {
+      if (answerId) rateAnswer?.(answerId, r, why);
+    },
+    [rateAnswer, answerId],
+  );
+  const codeLanguage = useCallback(
+    (lang: CodingLanguage) => {
+      if (questionText !== undefined) actions.setCodingLanguage(lang, questionText);
+    },
+    [actions, questionText],
+  );
 
   // "Shorter" / "Longer": step the answer length and re-ask the same question. Only for spoken answers to a
   // question (not chat replies or screenshots), and not while one is still streaming.
-  const LENGTH_STEPS = ["short", "standard", "detailed"] as const;
   const lengthIndex = LENGTH_STEPS.indexOf(live.settings.length);
   const canResize = Boolean(
     answer && question && !ended && answer.status === "complete" && (answer.source === "auto" || answer.source === "manual"),
   );
-  const resizeTo = (index: number) => () => {
-    const next = LENGTH_STEPS[index];
-    if (!next || !question) return;
-    actions.setLength(next);
-    actions.answer(question.text); // same socket, in order: the new length applies to this answer
-  };
+  const shorterLength = LENGTH_STEPS[lengthIndex - 1];
+  const longerLength = LENGTH_STEPS[lengthIndex + 1];
+  const resizeTo = useCallback(
+    (next: AnswerLength | undefined) => {
+      if (!next || questionText === undefined) return null;
+      return () => {
+        actions.setLength(next);
+        actions.answer(questionText); // same socket, in order: the new length applies to this answer
+      };
+    },
+    [actions, questionText],
+  );
+  const onShorter = useMemo(() => resizeTo(shorterLength), [resizeTo, shorterLength]);
+  const onLonger = useMemo(() => resizeTo(longerLength), [resizeTo, longerLength]);
   const mockStt = live.providers.stt?.state === "mock";
 
   return (
@@ -217,13 +267,7 @@ export function LivePanel(props: LivePanelProps) {
           </h1>
         )}
         <StatusPill state={live.state} connection={live.connection} stt={live.providers.stt?.state} />
-        <span
-          data-tauri-drag-region={props.dragRegion ? "" : undefined}
-          className="ml-auto font-mono text-xs tabular-nums text-zinc-500"
-          aria-label="Session time"
-        >
-          {formatElapsed(elapsed)}
-        </span>
+        <SessionClock startedAt={live.startedAt} running={!ended && !paused} dragRegion={props.dragRegion} />
         {props.headerEnd}
         {!compact && (
           <button
@@ -251,7 +295,8 @@ export function LivePanel(props: LivePanelProps) {
         >
           {compact ? <Maximize2 className="h-3.5 w-3.5" /> : <Minimize2 className="h-3.5 w-3.5" />}
         </button>
-        {compact && (
+        {/* Mocks have no control bar, so End lives here in both modes (the only way to stop a mock early). */}
+        {(compact || props.mockInterview) && (
           <button
             type="button"
             onClick={props.onEnd}
@@ -304,31 +349,18 @@ export function LivePanel(props: LivePanelProps) {
           <AnswerCard
             answer={answer}
             pinned={Boolean(answer && live.pinnedAnswerId === answer.answer_id)}
-            onPin={(pinned) => answer && actions.pin(answer.answer_id, pinned)}
+            onPin={pin}
             onRetry={retry}
             onStop={actions.stop}
-            {...(props.ratings && answer
-              ? {
-                  rating: props.ratings.get(answer.answer_id),
-                  onRate: (r: AnswerRating | null, why?: AnswerFeedbackReason | null) =>
-                    props.ratings?.rate(answer.answer_id, r, why),
-                }
-              : {})}
+            {...(props.ratings && answer ? { rating: props.ratings.get(answer.answer_id), onRate: rate } : {})}
             compact={compact}
             autoAnswer={live.settings.auto_answer}
             progress={keyPoints?.progress ?? null}
             {...(keyPoints ? { onTogglePoint: keyPoints.toggle } : {})}
             reader={reader}
-            {...(canResize
-              ? {
-                  onShorter: lengthIndex > 0 ? resizeTo(lengthIndex - 1) : null,
-                  onLonger: lengthIndex < LENGTH_STEPS.length - 1 ? resizeTo(lengthIndex + 1) : null,
-                }
-              : {})}
+            {...(canResize ? { onShorter, onLonger } : {})}
             // Screenshots can't be re-run (the image isn't kept), so their code has no language picker.
-            {...(answer && answer.source !== "screenshot" && question && !ended
-              ? { onCodeLanguage: (lang: CodingLanguage) => actions.setCodingLanguage(lang, question.text) }
-              : {})}
+            {...(answer && answer.source !== "screenshot" && question && !ended ? { onCodeLanguage: codeLanguage } : {})}
           />
           </>
           )}
@@ -380,10 +412,7 @@ export function LivePanel(props: LivePanelProps) {
               </button>
             </div>
             {sideTab === "transcript" && (
-              <TranscriptView
-                turns={turns}
-                onCorrectSpeaker={(turnId, speaker) => actions.correctSpeaker(turnId, speaker)}
-              />
+              <TranscriptView turns={turns} onCorrectSpeaker={actions.correctSpeaker} />
             )}
             {sideTab === "chat" && <ChatLog live={live} />}
             {sideTab === "reading" && <Teleprompter answer={answer} />}
@@ -424,7 +453,8 @@ export function LivePanel(props: LivePanelProps) {
         </div>
       )}
 
-      {/* Practice mode: no answer/screenshot/chat controls (Orbit never answers for you); End is in the header. */}
+      {/* Practice mode: no answer/screenshot/chat controls (Orbit never answers for you); End is in the header in
+          either mode. */}
       {!props.mockInterview && <ControlBar
         length={live.settings.length}
         autoAnswer={live.settings.auto_answer}

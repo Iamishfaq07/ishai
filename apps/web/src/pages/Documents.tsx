@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { DOCUMENT_ACCEPT, type DocumentKind, type OrbitDocument } from "@orbit/types";
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../components/ui";
-import { confirmDialog, FileUp, FolderOpen } from "@orbit/ui";
+import { confirmDialog, FileUp, FolderOpen, useFocusTrap } from "@orbit/ui";
 import { api } from "../lib/api";
 import { errorText, formatBytes, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -259,13 +259,8 @@ function EditModal({
     }
   }, [loaded.data]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // Focus moves into the dialog and stays there; Escape closes it and focus returns to its Edit button.
+  const dialogRef = useFocusTrap<HTMLDivElement>(true, { onEscape: onClose });
 
   const editable = loaded.data?.editable ?? false;
 
@@ -289,6 +284,7 @@ function EditModal({
 
   return (
     <div
+      ref={dialogRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       role="dialog"
       aria-modal="true"
