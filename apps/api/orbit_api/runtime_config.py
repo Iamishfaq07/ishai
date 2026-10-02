@@ -92,9 +92,28 @@ def _decrypt_secret(token: str) -> str | None:
         return None
 
 
+# Where the admin may point the DeepSeek client in production: its own API. The stored key goes to this host on every
+# call, so a stolen admin session mustn't be able to redirect it (or aim the server at an internal address).
+_DEEPSEEK_HOSTS = frozenset({"api.deepseek.com"})
+
+
 def validate_value(key: str, value: str) -> str:
+    from urllib.parse import urlsplit
+
+    from orbit_api.config import get_settings
+
     if key in _PROVIDER_CHOICES and value not in _PROVIDER_CHOICES[key]:
         raise ValueError(f"{key} must be one of {sorted(_PROVIDER_CHOICES[key])}")
+    production = get_settings().env == "production"
+    if production and key in _PROVIDER_CHOICES and value == "mock":
+        raise ValueError("Demo (mock) providers can't be turned on in production")
+    if key == "deepseek_base_url" and value:
+        parts = urlsplit(value.strip())
+        if production and (parts.scheme != "https" or (parts.hostname or "").lower() not in _DEEPSEEK_HOSTS
+                           or parts.username or parts.password or parts.port not in (None, 443)):
+            raise ValueError("deepseek_base_url must be https://api.deepseek.com in production")
+        if parts.scheme not in ("http", "https") or not parts.hostname:
+            raise ValueError("deepseek_base_url must be an http(s) URL")
     return value
 
 

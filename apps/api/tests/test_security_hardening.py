@@ -207,3 +207,30 @@ async def test_audio_faster_than_real_time_is_dropped(monkeypatch: pytest.Monkey
     assert eng.channel_bytes["system"] - sent <= 10 * live_engine.AUDIO_RATE_BYTES + 32_000
     await eng.handle_client({"type": "session.start", "data": "not a dict"})  # a bad message, not a crash
     await eng.end(final=True)
+
+
+def test_admin_config_cant_redirect_the_ai_key_or_go_mock_in_production(monkeypatch: pytest.MonkeyPatch) -> None:
+    from orbit_api.config import get_settings
+    from orbit_api.runtime_config import validate_value
+
+    assert validate_value("deepseek_base_url", "http://localhost:9999") == "http://localhost:9999"  # dev: anything
+    monkeypatch.setattr(get_settings(), "env", "production")
+    assert validate_value("deepseek_base_url", "https://api.deepseek.com") == "https://api.deepseek.com"
+    for bad in ("https://evil.example/v1", "http://api.deepseek.com", "https://api.deepseek.com:8443",
+                "https://user:pw@api.deepseek.com", "http://169.254.169.254/latest"):
+        with pytest.raises(ValueError):
+            validate_value("deepseek_base_url", bad)
+    with pytest.raises(ValueError):
+        validate_value("llm_provider", "mock")
+
+
+def test_logged_paths_hide_tickets_and_share_codes() -> None:
+    import logging
+
+    from orbit_api.observability import RedactArgs, redact
+
+    assert redact("POST /v1/companion/AbCdEfGhIjKlMnOpQrStUv123") == "POST /v1/companion/[redacted]"
+    record = logging.LogRecord("uvicorn.access", 20, "x", 1, '%s - "%s %s"', (
+        "1.2.3.4", "GET", "/v1/sessions/s/live?ticket=SECRET123456"), None)
+    RedactArgs().filter(record)
+    assert "SECRET" not in record.getMessage() and "ticket=[redacted]" in record.getMessage()

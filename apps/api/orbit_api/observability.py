@@ -31,6 +31,8 @@ _SECRET_PATTERNS = [
     (re.compile(r"eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"), "[jwt-redacted]"),
     (re.compile(r"(?i)((?:ticket|token|api_key|key|password)=)[^&\s\"']+"), r"\1[redacted]"),
     (re.compile(r"(?i)(token\s+)[a-f0-9]{32,}"), r"\1[redacted]"),  # Deepgram "Authorization: Token <hex>"
+    # A phone-share code in a path (the old POST /v1/companion/<code>): a reusable credential for hours.
+    (re.compile(r"(/v1/companion/)[A-Za-z0-9_-]{16,}"), r"\1[redacted]"),
 ]
 _REQUEST_ID_OK = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
 
@@ -55,6 +57,19 @@ class ContextFilter(logging.Filter):
         redacted = redact(message)
         if redacted != message or record.args:
             record.msg, record.args = redacted, None
+        return True
+
+
+class RedactArgs(logging.Filter):
+    """For uvicorn's own loggers (access lines, WebSocket accepts), which log request paths, query strings included,
+    and don't go through the root handler: redacts each argument in place, so uvicorn's formatters still get the
+    arguments they expect."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.msg, str):
+            record.msg = redact(record.msg)
+        if isinstance(record.args, tuple):
+            record.args = tuple(redact(a) if isinstance(a, str) else a for a in record.args)
         return True
 
 
@@ -87,6 +102,10 @@ def configure_logging(fmt: str) -> None:
     root.setLevel(logging.INFO)
     # httpx logs every request URL at INFO; signed download URLs and provider URLs don't belong in logs.
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    for name in ("uvicorn.access", "uvicorn.error"):
+        logger = logging.getLogger(name)
+        if not any(isinstance(f, RedactArgs) for f in logger.filters):
+            logger.addFilter(RedactArgs())
 
 
 async def request_id_middleware(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
