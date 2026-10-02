@@ -28,8 +28,14 @@ export function UpdateBanner() {
     setError(null);
     setProgress({ kind: "downloading", downloaded: 0, total: null });
     installUpdate(setProgress).catch((err: unknown) => {
+      console.warn("Update install failed:", err);
       setProgress(null);
-      setError(String(err));
+      const text = String(err);
+      setError(
+        /live session|Microsoft Store/i.test(text)
+          ? text
+          : "The update didn't install. Check your connection and try again in a minute.",
+      );
     });
   };
 

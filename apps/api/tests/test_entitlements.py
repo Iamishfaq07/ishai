@@ -106,7 +106,7 @@ def test_mock_and_live_share_the_interview_credits(monkeypatch: pytest.MonkeyPat
         _add_usage(uid, "mock_seconds", 20 * 60)  # the 20 welcome minutes, spent on mock interviews
         for kind in ("mock", "interview"):
             r = c.post("/v1/sessions", headers=h, json={"title": "x", "type": kind})
-            assert r.status_code == 402 and "credit pack" in r.text
+            assert r.status_code == 402 and "Buy a pack" in r.text
 
 
 def test_plans_with_their_own_allowance_keep_mock_and_live_apart(monkeypatch: pytest.MonkeyPatch) -> None:

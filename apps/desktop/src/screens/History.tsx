@@ -24,6 +24,14 @@ import { api } from "../api";
 import { downloadText, errText, formatClock, formatDate, formatDuration, SESSION_TYPE_LABEL } from "../format";
 import { TitleBar } from "../TitleBar";
 
+/** How a question reached Orbit, as the History list says it. */
+const SOURCE_LABEL: Record<string, string> = {
+  auto: "Heard in the call",
+  manual: "You asked for an answer",
+  chat: "From chat",
+  screenshot: "From a screenshot",
+};
+
 /** Past sessions: a list, and a detail view with summary / transcript / Q&A. */
 export function HistoryScreen({ onBack, onResume, onDrill }: {
   onBack: () => void;
@@ -90,8 +98,8 @@ function SessionList({ onOpen, onResume }: { onOpen: (id: string) => void; onRes
                     <p className="truncate font-medium">
                       {s.title}
                       {s.status !== "ended" && (
-                        <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                          {s.status === "live" ? "Live" : "Not started"}
+                        <span className="ml-2 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                          {s.status === "live" ? "Unfinished" : "Not started"}
                         </span>
                       )}
                     </p>
@@ -378,7 +386,7 @@ function QuestionsView({ detail }: { detail: SessionDetail }) {
               <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 font-medium capitalize text-indigo-700 dark:text-indigo-300">
                 {q.is_follow_up ? "follow-up" : q.type.replace("_", " ")}
               </span>
-              <span>{q.source}</span>
+              <span>{SOURCE_LABEL[q.source] ?? "Detected"}</span>
               <span>{formatDate(q.created_at)}</span>
             </div>
             <p className="font-medium">{q.text}</p>
@@ -395,10 +403,7 @@ function QuestionsView({ detail }: { detail: SessionDetail }) {
                     <CodeBlock code={a.content.code} />
                   </div>
                 )}
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <p className="text-xs text-zinc-400">
-                    {a.first_token_ms !== null && `${a.model ?? "model"} · first token ${Math.round(a.first_token_ms)} ms`}
-                  </p>
+                <div className="mt-2 flex items-center justify-end gap-2">
                   <AnswerRatingButtons value={ratings.get(a.id)} onRate={(r, why) => ratings.rate(a.id, r, why)} />
                 </div>
               </div>

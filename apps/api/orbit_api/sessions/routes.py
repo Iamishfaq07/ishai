@@ -101,7 +101,7 @@ _teardowns: set[asyncio.Task[None]] = set()  # strong refs so an in-flight teard
 LOW_MINUTES_WARNING_S = 5 * 60
 _OUT_OF_MINUTES = {False: "You've used this month's live minutes.", True: "You've used this month's mock minutes."}
 # Credit plans: live and mock share one balance, and it doesn't refill; a pack adds more.
-OUT_OF_CREDITS = "You're out of interview minutes. Buy a credit pack in Plan & billing to keep going."
+OUT_OF_CREDITS = "You're out of interview minutes. Buy a pack to keep going."
 
 
 def _out_of_minutes(plan: Plan, mock: bool) -> str:

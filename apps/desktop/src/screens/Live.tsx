@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OrbitSession } from "@orbit/types";
 import {
+  Button,
+  CreditCard,
+  OrbitLogo,
   Pin,
   PinOff,
   X,
@@ -26,11 +29,13 @@ import {
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { API_URL, WEB_URL, api } from "../api";
 import {
   REGION_CAPTURED_EVENT,
   base64ToBytes,
   deviceStatusText,
+  friendlyAudioError,
   openRegionSelector,
   startCapture,
   stopCapture,
@@ -125,16 +130,18 @@ export function LiveScreen({
               window.setTimeout(() => setCaptureNote((n) => (n === text ? null : n)), 4000);
             }
           } else {
-            setCaptureNote(ev.message);
+            setCaptureNote(friendlyAudioError(ev.message));
           }
         },
       );
       const notes: string[] = [];
-      if (launch.systemAudio && info.systemError) notes.push(`${info.systemError} Listening through your microphone only.`);
-      if (info.micError) notes.push(`${info.micError} The interviewer is still captured.`);
+      if (launch.systemAudio && info.systemError) {
+        notes.push(`${friendlyAudioError(info.systemError)} Until then Orbit hears your microphone only.`);
+      }
+      if (info.micError) notes.push(`${friendlyAudioError(info.micError)} The interviewer is still heard.`);
       if (notes.length) setCaptureNote(notes.join(" "));
     } catch (err) {
-      setCaptureNote(`Audio capture failed: ${String(err)}`);
+      setCaptureNote(friendlyAudioError(err));
     }
   }, [client, launch.micDeviceId, launch.systemAudio, launch.systemProcessId, launch.systemDevice]);
 
@@ -172,7 +179,10 @@ export function LiveScreen({
   }, [uploadShot]);
 
   const screenshot = useCallback(() => {
-    openRegionSelector().catch((err: unknown) => setShotNote(`Screenshot failed: ${String(err)}`));
+    openRegionSelector().catch((err: unknown) => {
+      console.warn("Screenshot failed:", err);
+      setShotNote("Couldn't take the screenshot. Try again.");
+    });
   }, []);
 
   // ── Global shortcuts (registered app-wide; see globalShortcuts.ts) ────
@@ -202,10 +212,15 @@ export function LiveScreen({
     setEnding(true);
     actions.end();
   };
+  // Ended by running out of minutes (or the session time limit): say so and offer the fix, instead of dropping the
+  // user on Home a moment later with no explanation.
+  const limitEnded = live.state === "ended" && Boolean(live.usage?.limitReached) && !ending;
+  const buyMinutes = useCallback(() => void openUrl(`${WEB_URL}/billing`), []);
   useEffect(() => {
     if (!ending && live.state !== "ended") return;
     void stopCapture();
     const done = () => onExit();
+    if (limitEnded) return;
     if (live.state === "ended") {
       const t = setTimeout(done, 800);
       return () => clearTimeout(t);
@@ -214,7 +229,7 @@ export function LiveScreen({
       api.endSession(session.id).catch(() => undefined).finally(done);
     }, 3000);
     return () => clearTimeout(t);
-  }, [ending, live.state, onExit, session.id]);
+  }, [ending, live.state, limitEnded, onExit, session.id]);
 
   const win = getCurrentWindow();
   const notice =
@@ -239,6 +254,39 @@ export function LiveScreen({
       </div>
     ) : undefined;
 
+  if (limitEnded) {
+    const outOfMinutes = live.usage?.reason !== "session";
+    return (
+      <div className="flex h-full flex-col">
+        <div data-tauri-drag-region="" className="flex h-10 shrink-0 items-center justify-end px-2">
+          <WindowButtons minimize={() => void win.minimize()} hide={requestClose} />
+        </div>
+        <div role="alert" className="flex flex-1 flex-col items-center justify-center gap-3 px-6 pb-8 text-center">
+          <OrbitLogo size={36} />
+          <h1 className="font-display text-lg font-semibold tracking-tight">
+            {outOfMinutes ? "You're out of interview minutes" : "This session reached its time limit"}
+          </h1>
+          <p className="max-w-xs text-sm text-zinc-600 dark:text-zinc-300">
+            {outOfMinutes
+              ? "So the session has ended. Your transcript and report are saved in History. Buy a pack to keep going: minutes land in your account as soon as the payment is approved."
+              : "So it has ended. Your transcript and report are saved in History. Start a new session to keep going."}
+          </p>
+          <div className="mt-1 flex flex-wrap justify-center gap-2">
+            {outOfMinutes && (
+              <Button onClick={buyMinutes}>
+                <CreditCard className="h-4 w-4" />
+                Buy minutes
+              </Button>
+            )}
+            <Button variant={outOfMinutes ? "secondary" : "primary"} onClick={onExit}>
+              Back to home
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <LivePanel
       mockInterview={session.type === "mock"}
@@ -250,9 +298,10 @@ export function LiveScreen({
       onModeChange={changeMode}
       onEnd={end}
       onReconnect={() => client.connect()}
-          onEndOtherSession={async (id) => {
-            await api.endSession(id);
-          }}
+      onEndOtherSession={async (id) => {
+        await api.endSession(id);
+      }}
+      onBuyMinutes={buyMinutes}
       onScreenshot={VISION_ENABLED ? screenshot : undefined}
       screenshotUnavailableReason="Screenshot analysis isn’t enabled yet."
       hotkeys={hotkeys}

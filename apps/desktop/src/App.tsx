@@ -91,11 +91,34 @@ export function App() {
     return () => setUnauthorizedHandler(null);
   }, [signOut]);
 
-  // The hub + management screens get room; the session config/overlay stay compact. Live sizes itself.
+  // Started offline with a saved sign-in: load the account once the connection is back (focus, "online", or every
+  // 30 s), so Settings and the banners don't stay stuck on "reconnect".
+  const reloadUser = useCallback(() => {
+    api
+      .me()
+      .then(setUser)
+      .catch((err: unknown) => {
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) void signOut();
+      });
+  }, [signOut]);
+  const signedInOffline = user === null && screen.name !== "boot" && screen.name !== "login";
   useEffect(() => {
-    if (screen.name === "home" || screen.name === "documents" || screen.name === "settings" || screen.name === "history") {
+    if (!signedInOffline) return;
+    window.addEventListener("focus", reloadUser);
+    window.addEventListener("online", reloadUser);
+    const t = window.setInterval(reloadUser, 30_000);
+    return () => {
+      window.removeEventListener("focus", reloadUser);
+      window.removeEventListener("online", reloadUser);
+      window.clearInterval(t);
+    };
+  }, [signedInOffline, reloadUser]);
+
+  // Sign-in, the hub and the management screens get room; the session config/overlay stay compact. Live sizes itself.
+  useEffect(() => {
+    if (["login", "home", "documents", "settings", "history"].includes(screen.name)) {
       void applyPanelMode("expanded");
-    } else if (screen.name === "setup" || screen.name === "login") {
+    } else if (screen.name === "setup") {
       void applyPanelMode("compact");
     }
   }, [screen.name]);
@@ -175,11 +198,16 @@ export function App() {
         return user ? (
           <SettingsScreen user={user} onUser={setUser} onSignOut={() => void signOut()} onBack={home} />
         ) : (
-          <div className="flex h-full items-center justify-center p-6 text-center text-sm text-zinc-500">
-            Reconnect to load your account, then open Settings again.
-            <button type="button" className="ml-2 underline" onClick={home}>
-              Back
-            </button>
+          <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center text-sm text-zinc-500">
+            <p>Orbit can't reach your account right now. Check your internet connection.</p>
+            <span className="flex gap-3">
+              <button type="button" className="font-medium text-indigo-600 underline dark:text-indigo-300" onClick={reloadUser}>
+                Try again
+              </button>
+              <button type="button" className="underline" onClick={home}>
+                Back
+              </button>
+            </span>
           </div>
         );
       case "live":

@@ -308,9 +308,11 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       onModeChange={setMode}
       onEnd={endSession}
       onReconnect={() => client.connect()}
-          onEndOtherSession={async (id) => {
-            await api.endSession(id);
-          }}
+      onEndOtherSession={async (id) => {
+        await api.endSession(id);
+      }}
+      // A new tab: leaving this one would drop the live session (and its audio capture).
+      onBuyMinutes={() => window.open("/billing", "_blank", "noopener")}
       onScreenshot={VISION_ENABLED && supportsScreenCapture() ? () => void takeScreenshot() : undefined}
       screenshotUnavailableReason={!VISION_ENABLED ? "Screenshot analysis isn’t enabled yet." : "This browser can’t capture the screen."}
       hotkeys={hotkeys}
