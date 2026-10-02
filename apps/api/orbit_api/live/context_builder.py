@@ -63,9 +63,13 @@ def live_system_prompt() -> str:
     return (Path(__file__).resolve().parents[1] / "prompts" / "live_system.md").read_text(encoding="utf-8")
 
 
+_FENCE_TAG = re.compile(r"<\s*(/?)\s*reference_data", re.IGNORECASE)
+
+
 def fence(text: str) -> str:
-    """Neutralise attempts to close the reference fence from inside untrusted text."""
-    return text.replace("<reference_data", "‹reference_data").replace("</reference_data", "‹/reference_data")
+    """Neutralise attempts to open or close the reference fence from inside untrusted text, in any case and spacing
+    ("</REFERENCE_DATA>", "< /reference_data>"): a job post or a document can't step outside its data block."""
+    return _FENCE_TAG.sub(lambda m: f"‹{m.group(1)}reference_data", text)
 
 
 @dataclass
