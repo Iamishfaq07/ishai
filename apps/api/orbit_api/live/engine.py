@@ -83,6 +83,9 @@ SUMMARY_EVERY_TURNS = 8
 CLIENT_REQUESTS = frozenset({"answer.request", "chat.message", "mock.next"})
 REQUEST_BURST = 5
 REQUEST_EVERY_S = 2.0
+# Audio faster than real time is dropped (see LiveEngine._audio_paced): 16 kHz PCM16 is 32 kB/s.
+AUDIO_RATE_BYTES = 32_000 * 1.25
+AUDIO_BURST_BYTES = 32_000 * 6
 # Turn ids a speaker correction may name (the most recent ones), and how many corrections are kept.
 RECENT_TURN_IDS = 500
 MAX_SPEAKER_OVERRIDES = 200
@@ -313,6 +316,9 @@ class LiveEngine:
         self._throttling = False
         self._audio_bytes = 0
         self.channel_bytes: dict[Channel, int] = {"mic": 0, "system": 0}
+        # Per-channel pacing (see _audio_paced): bytes allowed now, and when it was last topped up.
+        self._audio_budget: dict[Channel, tuple[float, int]] = {}
+        self._audio_dropped = 0
         self._turns_since_summary = 0
         self._last_answer_at_ms: int | None = None
         self._speaker_overrides: dict[str, Speaker] = {}
@@ -460,6 +466,8 @@ class LiveEngine:
             return  # unknown channel or not whole PCM16 samples
         channel: Channel = "mic" if frame[0] == 0 else "system"
         pcm = frame[1:]
+        if not self._audio_paced(channel, len(pcm)):
+            return
         self._audio_bytes += len(pcm)
         if self.channel_bytes[channel] == 0:
             # First audio on this channel: tell the client the server is actually hearing it.
@@ -470,9 +478,25 @@ class LiveEngine:
             await session.send_audio(pcm)
             self._audio_clock[channel].sent(len(pcm), self.now_ms())
 
+    def _audio_paced(self, channel: Channel, n: int) -> bool:
+        """Audio arrives at most about as fast as it's spoken (16 kHz PCM16: 32 kB/s, with headroom and a few seconds
+        of burst for a reconnect's backlog). Minutes are metered by the wall clock but transcription is billed per
+        second of audio, so a client streaming recordings at 20x real time would cost 20x what it pays for: what's
+        faster than real time is dropped."""
+        now = self.now_ms()
+        tokens, last = self._audio_budget.get(channel, (float(AUDIO_BURST_BYTES), now))
+        tokens = min(float(AUDIO_BURST_BYTES), tokens + max(now - last, 0) / 1000 * AUDIO_RATE_BYTES)
+        if n > tokens:
+            self._audio_budget[channel] = (tokens, now)
+            self._audio_dropped += n
+            return False
+        self._audio_budget[channel] = (tokens - n, now)
+        return True
+
     async def handle_client(self, raw: dict[str, Any]) -> None:
         type_ = raw.get("type")
-        data = raw.get("data") or {}
+        data = raw.get("data")
+        data = data if isinstance(data, dict) else {}  # {"data": "x"} is a bad message, not a crash
         try:
             await self._dispatch(str(type_), data)
         except ValidationError as e:
@@ -1099,6 +1123,10 @@ class LiveEngine:
             await out.send("answer.cancelled", {"answer_id": aid, "reason": reason})
             await self._rec.answer(aid, out.question_id, "cancelled", parser.snapshot().model_dump(), provider,
                                    model, first_token_ms, None)
+            if source == "screenshot" and streamed:
+                # Stopped after it had streamed: the candidate saw (most of) the answer, so the screenshot counts.
+                # Free only if nothing came back. Same key as a completed one, so it's never charged twice.
+                await self._rec.usage("screenshots", 1, f"shot:{out.question_id}")
             raise
         except Exception as exc:
             # Anything else (a bug in the parser, an error the provider didn't wrap) fails the answer like an

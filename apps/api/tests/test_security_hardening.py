@@ -174,3 +174,24 @@ def test_the_signup_notice_name_is_one_short_line() -> None:
         m.setattr(auth_routes, "awaiting_approval", lambda _u: True)
         auth_routes._alert_admin_if_waiting(user, Tasks())  # type: ignore[arg-type]
     assert sent and "\n\nURGENT" not in sent[0].text and len(sent[0].text.splitlines()[0]) < 200
+
+
+async def test_audio_faster_than_real_time_is_dropped(monkeypatch: pytest.MonkeyPatch) -> None:
+    from orbit_api.live import engine as live_engine
+    from orbit_api.providers.llm.mock import MockLLMProvider
+    from tests.test_engine import _engine
+
+    eng, _sink = await _engine(MockLLMProvider())
+    clock = [0]
+    monkeypatch.setattr(eng, "now_ms", lambda: clock[0])
+    frame = b"\x01" + b"\x00" * 32_000  # one second of system audio
+    for _ in range(30):  # 30 s of audio, all at once
+        await eng.handle_audio(frame)
+    sent = eng.channel_bytes["system"]
+    assert sent <= live_engine.AUDIO_BURST_BYTES + 32_000 and eng._audio_dropped > 0
+    clock[0] += 10_000  # ten real seconds later: about ten seconds more is accepted
+    for _ in range(30):
+        await eng.handle_audio(frame)
+    assert eng.channel_bytes["system"] - sent <= 10 * live_engine.AUDIO_RATE_BYTES + 32_000
+    await eng.handle_client({"type": "session.start", "data": "not a dict"})  # a bad message, not a crash
+    await eng.end(final=True)
