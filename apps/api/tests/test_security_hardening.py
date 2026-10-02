@@ -34,10 +34,17 @@ def test_ipv6_callers_are_grouped_by_their_slash_64() -> None:
     assert credits.ip_hash("2001:db8:1:2::1") == credits.ip_hash("2001:db8:1:2:9::9")
 
 
-def test_the_client_ip_is_the_hop_the_host_added_not_one_the_caller_wrote() -> None:
+def test_the_client_ip_is_the_hop_the_host_added_not_one_the_caller_wrote(monkeypatch: pytest.MonkeyPatch) -> None:
+    from pydantic import SecretStr
+
+    from orbit_api.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "proxy_secret", SecretStr("s" * 32))
     assert client_ip(_request({"X-Forwarded-For": "1.2.3.4, 198.51.100.20"})) == "198.51.100.20"
     assert client_ip(_request({})) == "10.0.0.9"
     assert client_ip(_request({"X-Forwarded-For": "not-an-ip"})) == "10.0.0.9"
+    worker = {"X-Orbit-Proxy-Secret": "s" * 32, "X-Orbit-Client-IP": "203.0.113.50", "X-Forwarded-For": "9.9.9.9"}
+    assert client_ip(_request(worker)) == "203.0.113.50"  # only the Worker may say who the visitor is
 
 
 def test_a_full_bucket_table_forgets_the_oldest_not_everyone(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -52,7 +59,12 @@ def test_a_full_bucket_table_forgets_the_oldest_not_everyone(monkeypatch: pytest
 
 def test_wrong_passwords_from_elsewhere_dont_lock_the_owner_out(client: TestClient,
                                                                 monkeypatch: pytest.MonkeyPatch) -> None:
+    from pydantic import SecretStr
+
+    from orbit_api.config import get_settings
+
     monkeypatch.setattr(ratelimit, "ENFORCE_IN_TESTS", True)
+    monkeypatch.setattr(get_settings(), "proxy_secret", SecretStr("s" * 32))  # X-Forwarded-For's last hop counts
     ratelimit.reset_all()
     email = f"owner-{uuid.uuid4().hex[:8]}@example.com"
     assert client.post("/v1/auth/register", json={"email": email, "password": PW}).status_code == 201

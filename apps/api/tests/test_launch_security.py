@@ -257,7 +257,8 @@ def test_captcha_required_on_signup_when_configured(monkeypatch: pytest.MonkeyPa
 
 
 def _prod(**kw: object) -> Settings:
-    base = dict(ORBIT_ENV="production", ORBIT_JWT_SECRET="p" * 40, DEEPSEEK_API_KEY="k", DEEPGRAM_API_KEY="k",
+    base = dict(ORBIT_ENV="production", ORBIT_JWT_SECRET="Q8f2LmZr7Tq1VbN4xKc9WsYe3HpJd6Ug", DEEPSEEK_API_KEY="k",
+                DEEPGRAM_API_KEY="k",
                 ORBIT_DATABASE_URL="postgresql+asyncpg://u:p@h/db", ORBIT_ADMIN_EMAIL="owner@example.com",
                 ORBIT_LLM_PROVIDER="deepseek", ORBIT_STT_PROVIDER="deepgram")
     base.update({k: str(v) for k, v in kw.items()})

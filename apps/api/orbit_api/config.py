@@ -203,7 +203,10 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _reject_insecure_production(self) -> "Settings":
         if self.env == "production":
-            if self.jwt_secret.get_secret_value() == _DEV_SECRET or len(self.jwt_secret.get_secret_value()) < 32:
+            secret = self.jwt_secret.get_secret_value()
+            # The .env.example placeholder is 33 characters, so length alone let it through.
+            if (secret == _DEV_SECRET or len(secret) < 32 or "change-me" in secret.lower()
+                    or len(set(secret)) < 12):
                 raise ValueError("ORBIT_JWT_SECRET must be set to a random value of 32+ chars in production")
             # Reject mock explicitly AND the "auto" fallback-to-mock case: a missing key must fail loudly,
             # not silently serve canned answers / fake transcription in production.

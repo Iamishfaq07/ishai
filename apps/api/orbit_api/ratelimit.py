@@ -84,15 +84,18 @@ def _valid_ip(value: str | None) -> str | None:
 def client_ip(request: Request) -> str:
     """The caller's IP, for rate limits and the audit log.
 
-    The web app's edge proxy (which knows ORBIT_PROXY_SECRET) states the real client IP. Any other request is keyed
-    by the right-most X-Forwarded-For entry, the one the host's own edge appended: a client can only add entries to
-    the left, so a spoofed header can't move a caller into a fresh bucket. (uvicorn's --proxy-headers takes the
-    left-most entry, which the caller controls, so `request.client` is only the last resort.)
+    With ORBIT_PROXY_SECRET (production should always have it): the web app's edge proxy, which knows the secret,
+    states the real client IP; any other request is keyed by the right-most X-Forwarded-For entry, the one the host's
+    own edge appended (a client can only add entries to the left), so a spoofed header can't move a caller into a
+    fresh bucket. Without it: uvicorn's --proxy-headers value (the left-most entry). That's what the Worker sets for
+    web visitors, but a direct caller can spoof it, so the server warns at startup in production.
     """
     fallback = request.client.host if request.client else "unknown"
     secret = get_settings().proxy_secret
+    if secret is None:
+        return fallback
     sent = request.headers.get(PROXY_SECRET_HEADER, "")
-    if secret is not None and sent and hmac.compare_digest(sent.encode(), secret.get_secret_value().encode()):
+    if sent and hmac.compare_digest(sent.encode(), secret.get_secret_value().encode()):
         return _valid_ip(request.headers.get(CLIENT_IP_HEADER)) or fallback
     hops = [h for h in ",".join(request.headers.getlist("x-forwarded-for")).split(",") if h.strip()]
     return (_valid_ip(hops[-1]) if hops else None) or fallback
