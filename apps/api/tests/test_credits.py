@@ -113,14 +113,14 @@ def test_each_resume_ai_action_spends_a_credit_then_offers_a_pack(client: TestCl
     h = _signup(client, _new_ip())
     before = client.get("/v1/resumes/allowance", headers=h).json()
     assert before["unlimited"] is False and before["credits_left"] == 1
-    assert before["upgrade"]["pack"] == "starter" and before["upgrade"]["price_inr"] == 999
+    assert before["upgrade"]["pack"] == "starter" and before["upgrade"]["price_inr"] == 1499
 
     assert client.post("/v1/resumes/cover-letter", headers=h, json=_letter()).status_code == 200
     assert client.get("/v1/resumes/allowance", headers=h).json()["credits_left"] == 0
     again = client.post("/v1/resumes/cover-letter", headers=h, json=_letter())
     assert again.status_code == 402
     detail = again.json()["detail"]
-    assert detail["code"] == "upgrade_required" and detail["pack"] == "starter" and "₹999" in detail["message"]
+    assert detail["code"] == "upgrade_required" and detail["pack"] == "starter" and "₹1499" in detail["message"]
     assert client.post("/v1/resumes/import", headers=h, json={"source": "text", "text": "x" * 200}).status_code == 402
     # Fixes that need no AI stay free, and say what a pack adds.
     s = client.post("/v1/resumes/suggest", headers=h, json={"data": strong_resume().model_dump(mode="json"),
@@ -164,7 +164,7 @@ def test_there_is_no_signed_out_resume_maker(client: TestClient) -> None:
 def test_packs_are_listed_and_need_a_upi_id(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(get_settings(), "upi_id", None)
     packs = {p["id"]: p for p in client.get("/v1/billing/packs").json()}
-    assert packs["starter"] == {"id": "starter", "label": "Starter", "price_inr": 999, "resume_credits": 30,
+    assert packs["starter"] == {"id": "starter", "label": "Starter", "price_inr": 1499, "resume_credits": 30,
                                 "interview_minutes": 60, "buyable": False}
     assert set(packs) == {"starter", "plus", "pro"}
     h = _register(client)
@@ -210,9 +210,9 @@ def test_buying_a_pack_over_upi(monkeypatch: pytest.MonkeyPatch) -> None:
         order = client.post("/v1/billing/upi/orders", headers=h, json={"pack": "starter"})
         assert order.status_code == 201
         o = order.json()
-        assert (o["amount_inr"], o["resume_credits"], o["interview_minutes"]) == (999, 30, 60)
+        assert (o["amount_inr"], o["resume_credits"], o["interview_minutes"]) == (1499, 30, 60)
         assert o["label"] == "Starter pack" and o["status"] == "awaiting_payment" and o["reference"].startswith("ORB")
-        assert o["upi_uri"].startswith("upi://pay?pa=owner%40okicici") and "am=999.00" in o["upi_uri"]
+        assert o["upi_uri"].startswith("upi://pay?pa=owner%40okicici") and "am=1499.00" in o["upi_uri"]
         assert o["reference"] in o["upi_uri"] and "pn=Ishfaq" in o["upi_uri"]
         # Opening the page again hands back the same order.
         assert client.post("/v1/billing/upi/orders", headers=h, json={"pack": "starter"}).json()["id"] == o["id"]
