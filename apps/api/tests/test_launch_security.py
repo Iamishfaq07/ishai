@@ -268,8 +268,13 @@ def test_production_refuses_unverifiable_or_unsafe_signup() -> None:
     assert _prod().verification_required  # admin-only: fine without SMTP
     with pytest.raises(ValueError, match="SMTP"):
         _prod(ORBIT_ALLOWED_EMAILS="friend@example.com")
-    with pytest.raises(ValueError, match="not allowed with public sign-up"):
-        _prod(ORBIT_ALLOWED_EMAILS="*", ORBIT_EMAIL_VERIFICATION="off", ORBIT_SIGNUP_APPROVAL="false")
+    # Fully open (no verification, no approval): a new account's only free spend is its welcome credits, one per
+    # network and capped per day, so it's allowed, as long as that daily cap stays bounded.
+    open_free = _prod(ORBIT_ALLOWED_EMAILS="*", ORBIT_EMAIL_VERIFICATION="off", ORBIT_SIGNUP_APPROVAL="false")
+    assert open_free.public_signup and not open_free.approval_required and not open_free.verification_required
+    with pytest.raises(ValueError, match="ORBIT_WELCOME_DAILY"):
+        _prod(ORBIT_ALLOWED_EMAILS="*", ORBIT_EMAIL_VERIFICATION="off", ORBIT_SIGNUP_APPROVAL="false",
+              ORBIT_WELCOME_DAILY="5000")
     # With sign-up approval (on by default in production) nobody spends anything before the admin looks, so open
     # sign-up without SMTP is allowed: the admin sees new accounts in the app instead of by email.
     open_approved = _prod(ORBIT_ALLOWED_EMAILS="*", ORBIT_EMAIL_VERIFICATION="off")

@@ -224,34 +224,25 @@ function BusyNote({ onCancel }: { onCancel: () => void }) {
   );
 }
 
-/** The ways to start a resume. Signed out (`guest`), the resume is kept on this device and "from your documents" is left out. */
-export function NewResume({ onClose, guest = false, onCreated }: { onClose?: () => void; guest?: boolean; onCreated?: (imported: boolean) => void }) {
+/** The ways to start a resume. */
+export function NewResume({ onClose }: { onClose?: () => void }) {
   const navigate = useNavigate();
-  const tools = guest ? api.guest : api;
-  const sources = guest ? SOURCES.filter((s) => s.id !== "document") : SOURCES;
+  const tools = api;
+  const sources = SOURCES;
   const [source, setSource] = useState<Source | null>(null);
   const [text, setText] = useState("");
   const [docId, setDocId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [upgrade, setUpgrade] = useState(false);
-  // Importing is an AI action: say whether it takes the free AI edit (or needs Resume Pro) before it's spent.
-  const allowance = useAsync(() => tools.resumeAllowance().catch(() => null), [guest], guest ? "resume-allowance-guest" : "resume-allowance");
+  // Importing is an AI action: say whether it spends a resume credit (or needs a pack) before it's spent.
+  const allowance = useAsync(() => tools.resumeAllowance().catch(() => null), [], "resume-allowance");
   const ai = allowance.data;
   const fileRef = useRef<HTMLInputElement>(null);
-  const docs = useAsync(() => (guest ? Promise.resolve([] as Awaited<ReturnType<typeof api.listDocuments>>) : api.listDocuments()), [guest], guest ? "documents-guest" : "documents");
+  const docs = useAsync(() => api.listDocuments(), [], "documents");
   const resumeDocs = (docs.data ?? []).filter((d) => d.kind === "resume" && d.status === "ready");
 
   const create = async (title: string, data?: ResumeData) => {
-    if (guest) {
-      try {
-        guestResume.create(newResume(title, data));
-      } catch {
-        throw new Error("This browser won't let us keep a resume on your device (a private window, or storage turned off). Use a normal window.");
-      }
-      onCreated?.(Boolean(data));
-      return;
-    }
     const r = await api.createResume(newResume(title, data));
     navigate(`/documents/resumes/${r.id}`, { state: { imported: Boolean(data) } });
   };
@@ -384,7 +375,7 @@ export function NewResume({ onClose, guest = false, onCreated }: { onClose?: () 
           </button>
         )}
         <h2 className="flex-1 font-display text-lg font-semibold">
-          {source ? sources.find((s) => s.id === source)!.label : guest ? "Start your resume" : "New resume"}
+          {source ? sources.find((s) => s.id === source)!.label : "New resume"}
         </h2>
         {onClose && (
           <button type="button" onClick={onClose} aria-label="Close" className={cx("rounded-md p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-white", focusRing)}>
@@ -397,18 +388,18 @@ export function NewResume({ onClose, guest = false, onCreated }: { onClose?: () 
         <div role="status" className="mb-4 space-y-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-950 ring-1 ring-amber-500/30 dark:text-amber-100">
           <p>{error} Starting from scratch is always free.</p>
           <Link
-            to={guest ? "/register" : `/billing?plan=${ai?.upgrade.plan ?? "resume_pro"}`}
+            to={`/billing?pack=${ai?.upgrade?.pack ?? ""}`}
             className={cx("inline-flex rounded-xl bg-amber-500 px-3 py-1.5 font-medium text-white hover:bg-amber-600", focusRing)}
           >
-            {guest ? "Create an account to upgrade" : `Upgrade${ai?.upgrade.price_inr_month ? ` · ${priceText(ai.upgrade.price_inr_month)}` : ""}`}
+            {ai?.upgrade ? `Get credits · ${priceText(ai.upgrade.price_inr)}` : "Get credits"}
           </Link>
         </div>
       )}
       {ai && !ai.unlimited && !error && source && source !== "scratch" && (
         <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-400">
-          {ai.free_left > 0
-            ? "Importing uses your 1 free AI edit. Starting from scratch is always free."
-            : `You've used your free AI edit, so importing needs ${ai.upgrade.label}. Starting from scratch is always free.`}
+          {ai.credits_left > 0
+            ? `Importing uses 1 resume credit (you have ${ai.credits_left}). Starting from scratch is always free.`
+            : "You're out of resume credits, so importing needs a credit pack. Starting from scratch is always free."}
         </p>
       )}
       {busy && source && source !== "scratch" && <BusyNote onCancel={cancel} />}

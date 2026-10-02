@@ -70,9 +70,14 @@ export function UpiCheckout({ order: initial, onClose, onChanged }: { order: Upi
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-lg font-semibold">
-            {order.plan_label} · ₹{order.amount_inr} for {order.days} days
+            {order.label} · ₹{order.amount_inr.toLocaleString("en-IN")}
           </h2>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Pay with any UPI app: Google Pay, PhonePe, Paytm, BHIM or your bank's app.</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            {[order.interview_minutes ? `${order.interview_minutes} interview minutes` : "", order.resume_credits ? `${order.resume_credits} resume AI credits` : ""]
+              .filter(Boolean)
+              .join(" + ")}
+            , never expire. Pay with any UPI app: Google Pay, PhonePe, Paytm, BHIM or your bank's app.
+          </p>
         </div>
         <button type="button" onClick={onClose} aria-label="Close" className={cx("rounded-md p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-white", focusRing)}>
           <X className="h-4 w-4" />
@@ -85,8 +90,8 @@ export function UpiCheckout({ order: initial, onClose, onChanged }: { order: Upi
           <div className="space-y-1">
             <p className="font-medium">Thanks! We've got your UTR ({order.utr}).</p>
             <p>
-              We check it against our bank account and turn on {order.plan_label}, usually within a few hours. You'll get an
-              email, and this page will show it. Paid the wrong amount or typed the UTR wrong? Fix it below until it's checked.
+              We check it against our bank account and add your credits, usually within a few hours. You'll get an email,
+              and this page will show it. Paid the wrong amount or typed the UTR wrong? Fix it below until it's checked.
             </p>
           </div>
         </div>

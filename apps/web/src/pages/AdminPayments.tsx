@@ -81,12 +81,12 @@ function PaymentRow({ payment: p, onChange }: { payment: AdminPayment; onChange:
   const [error, setError] = useState<string | null>(null);
   const decide = async (action: "approve" | "reject") => {
     if (action === "approve") {
-      const replacing = p.current_plan && p.current_plan !== p.plan_label;
+      const what = [p.resume_credits ? `${p.resume_credits} resume credits` : "", p.interview_minutes ? `${p.interview_minutes} interview minutes` : ""]
+        .filter(Boolean)
+        .join(" and ");
       const ok = await confirmDialog({
         title: `Approve ₹${p.amount_inr} from ${p.email}?`,
-        body: `Only if ₹${p.amount_inr} with UTR ${p.utr} is in your account. ${p.plan_label} turns on for ${p.days} days${
-          replacing ? `, replacing their ${p.current_plan}` : p.current_plan ? ", added on to the time they have" : ""
-        }.`,
+        body: `Only if ₹${p.amount_inr} with UTR ${p.utr} is in your account. ${what} are added to their account.`,
         confirmLabel: "Approve",
       });
       if (!ok) return;
@@ -106,7 +106,7 @@ function PaymentRow({ payment: p, onChange }: { payment: AdminPayment; onChange:
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate font-medium">
-            ₹{p.amount_inr} · {p.plan_label} · {p.name ? `${p.name} · ${p.email}` : p.email}
+            ₹{p.amount_inr} · {p.label} · {p.name ? `${p.name} · ${p.email}` : p.email}
           </p>
           <p className="mt-0.5 text-sm tabular-nums">
             UTR <strong>{p.utr}</strong> · reference <strong>{p.reference}</strong>

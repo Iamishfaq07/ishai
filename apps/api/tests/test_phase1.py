@@ -78,6 +78,10 @@ def test_streamed_deepseek_usage_reports_cache_hits() -> None:
     assert (resp.usage.input_tokens, resp.usage.cached_input_tokens, resp.usage.output_tokens) == (900, 640, 12)
 
 
+# Free accounts' interview time: the welcome credits (credits.py).
+WELCOME_S = 20 * 60
+
+
 # ---- helpers -----------------------------------------------------------------------------------------------
 
 
@@ -167,7 +171,7 @@ def test_session_is_warned_then_ended_at_the_live_minute_limit(fast_client: Test
     from starlette.websockets import WebSocketDisconnect
 
     h, uid = _user(fast_client)
-    _add_usage(uid, "live_seconds", 30 * 60 - 2)  # free plan: 30 min; 2 s left
+    _add_usage(uid, "live_seconds", WELCOME_S - 2)  # free plan: the 20 welcome minutes; 2 s left
     sid = _session(fast_client, h)
     events: list[dict[str, Any]] = []
     try:
@@ -183,7 +187,7 @@ def test_session_is_warned_then_ended_at_the_live_minute_limit(fast_client: Test
     assert statuses[-1] == {"minutes_remaining": 0, "limit_reached": True, "reason": "monthly"}
     assert fast_client.get(f"/v1/sessions/{sid}", headers=h).json()["session"]["status"] == "ended"
     usage = fast_client.get("/v1/usage", headers=h).json()
-    assert 30.0 <= usage["live_minutes_used"] <= 30.1  # stopped at the limit, not minutes past it
+    assert 20.0 <= usage["live_minutes_used"] <= 20.1  # stopped at the limit, not minutes past it
     # no way back in: a new session or a ticket is refused
     assert fast_client.post("/v1/sessions", headers=h, json={"title": "again"}).status_code == 402
 
@@ -222,7 +226,7 @@ def test_a_second_session_cannot_double_the_allowance(fast_client: TestClient) -
     from starlette.websockets import WebSocketDisconnect
 
     h, uid = _user(fast_client)
-    _add_usage(uid, "live_seconds", 30 * 60 - 3)
+    _add_usage(uid, "live_seconds", WELCOME_S - 3)
     a, b = _session(fast_client, h), _session(fast_client, h)
     ended = False
     try:
@@ -235,7 +239,7 @@ def test_a_second_session_cannot_double_the_allowance(fast_client: TestClient) -
     except WebSocketDisconnect:
         pass
     assert ended
-    assert sum(q for _, q in _live_rows(uid)) <= 30 * 60 + 3  # overshoot bounded by about one heartbeat
+    assert sum(q for _, q in _live_rows(uid)) <= WELCOME_S + 3  # overshoot bounded by about one heartbeat
 
 
 def test_unlimited_admin_is_metered_but_never_cut_off(monkeypatch: pytest.MonkeyPatch) -> None:

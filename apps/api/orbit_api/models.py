@@ -86,9 +86,12 @@ class Payment(TimestampMixin, Base):
     __tablename__ = "payments"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    plan: Mapped[str] = mapped_column(String(32))
+    plan: Mapped[str] = mapped_column(String(32))  # the credit pack's id (billing/packs.py)
     amount_inr: Mapped[int] = mapped_column(Integer)
-    days: Mapped[int] = mapped_column(Integer)
+    days: Mapped[int] = mapped_column(Integer)  # 0 for credit packs (older time-limited orders: their days)
+    # What the pack gave when it was bought, so changing the packs later doesn't change an order already paid for.
+    resume_credits: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    interview_minutes: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     reference: Mapped[str] = mapped_column(String(16), unique=True)
     # awaiting_payment → submitted (UTR given) → approved | rejected (a rejected one can be submitted again)
     status: Mapped[str] = mapped_column(String(20), default="awaiting_payment", index=True)
@@ -96,6 +99,23 @@ class Payment(TimestampMixin, Base):
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     note: Mapped[str | None] = mapped_column(String(300))  # the admin's reason, shown to the payer
+
+
+class CreditEntry(TimestampMixin, Base):
+    """One movement of an account's credits (credits.py): + from the welcome grant, a UPI pack or the admin; − for a
+    resume-AI action. Interview minutes are spent through the usage rows instead (live and mock seconds), so only
+    their grants are here. No foreign key: a welcome grant's network (`ip_hash`) must outlive a deleted account, or
+    deleting and signing up again would hand out another one."""
+
+    __tablename__ = "credit_entries"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), index=True)
+    kind: Mapped[str] = mapped_column(String(20))  # resume | interview_seconds
+    amount: Mapped[int] = mapped_column(Integer)  # signed
+    reason: Mapped[str] = mapped_column(String(20))  # welcome | purchase | admin | resume_ai
+    payment_id: Mapped[str | None] = mapped_column(String(36))
+    ip_hash: Mapped[str | None] = mapped_column(String(64))
+    __table_args__ = (Index("ix_credit_entries_welcome", "reason", "ip_hash", "created_at"),)
 
 
 class FreeAiUse(TimestampMixin, Base):

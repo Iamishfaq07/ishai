@@ -37,7 +37,8 @@ def app_with(monkeypatch: pytest.MonkeyPatch, **env: str) -> Iterator[TestClient
 
 def test_defaults_and_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     p = entitlements.plans()
-    assert p["free"].live_minutes == 30 and p["free"].max_session_minutes == 60
+    assert p["free"].credits and p["free"].max_session_minutes == 60  # interview time comes from credits
+    assert not p["pro"].credits and p["pro"].live_minutes == 600
     assert p["unlimited"].live_minutes is None and p["unlimited"].max_session_minutes == 240  # still a ceiling
     monkeypatch.setenv("ORBIT_PLANS_JSON", json.dumps({
         "pro": {"live_minutes": 900, "price_usd_month": 29, "stripe_price_id": "price_123"},
@@ -79,7 +80,8 @@ def test_invalid_plan_config_fails_fast(monkeypatch: pytest.MonkeyPatch, bad: di
 def test_plans_endpoint_is_public_and_hides_stripe_ids(monkeypatch: pytest.MonkeyPatch) -> None:
     with app_with(monkeypatch, ORBIT_PLANS_JSON=json.dumps({"pro": {"stripe_price_id": "price_secret"}})) as c:
         plans = c.get("/v1/plans").json()
-        assert [p["name"] for p in plans] == ["free", "resume_pro", "pro", "unlimited"]
+        assert [p["name"] for p in plans] == ["free", "pro", "unlimited"]
+        assert plans[0]["welcome"] == {"resume_credits": 1, "interview_minutes": 20}
         assert "price_secret" not in json.dumps(plans) and all("stripe_price_id" not in p for p in plans)
 
 
@@ -91,15 +93,27 @@ def test_entitlements_report_limits_usage_and_features(monkeypatch: pytest.Monke
         c.post("/v1/documents/text", headers=h,
                json={"kind": "notes", "title": "n", "text": "some notes here about the role"})
         e = c.get("/v1/entitlements", headers=h).json()
-        assert e["plan"] == "free" and e["limits"]["live_minutes"] == 30 and e["limits"]["max_session_minutes"] == 60
-        assert e["usage"] == {"live_minutes": 10.0, "mock_minutes": 2.0, "screenshots": 0, "documents": 1}
+        # Free: one interview balance (the 20 welcome minutes) that live and mock both draw on.
+        assert e["plan"] == "free" and e["limits"]["live_minutes"] == 20 and e["limits"]["max_session_minutes"] == 60
+        assert e["usage"] == {"live_minutes": 12.0, "mock_minutes": 12.0, "screenshots": 0, "documents": 1}
+        assert e["credits"] == {"resume": 1, "interview_minutes_left": 8.0, "interview_minutes_total": 20.0}
         assert e["features"]["vision"] is True and e["features"]["system_design"] is False
 
 
-def test_mock_interviews_draw_on_their_own_allowance(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_mock_and_live_share_the_interview_credits(monkeypatch: pytest.MonkeyPatch) -> None:
     with app_with(monkeypatch) as c:
         h, uid = _user(c)
-        _add_usage(uid, "mock_seconds", 30 * 60)  # free: 30 mock minutes, all used
+        _add_usage(uid, "mock_seconds", 20 * 60)  # the 20 welcome minutes, spent on mock interviews
+        for kind in ("mock", "interview"):
+            r = c.post("/v1/sessions", headers=h, json={"title": "x", "type": kind})
+            assert r.status_code == 402 and "credit pack" in r.text
+
+
+def test_plans_with_their_own_allowance_keep_mock_and_live_apart(monkeypatch: pytest.MonkeyPatch) -> None:
+    with app_with(monkeypatch, ORBIT_PLANS_JSON=json.dumps({"pro": {"mock_minutes": 1}})) as c:
+        h, uid = _user(c)
+        _grant(c, uid, "pro")
+        _add_usage(uid, "mock_seconds", 60)  # pro: 1 mock minute here, all used
         r = c.post("/v1/sessions", headers=h, json={"title": "m", "type": "mock"})
         assert r.status_code == 402 and "mock minutes" in r.text
         assert c.post("/v1/sessions", headers=h, json={"title": "i"}).status_code == 201  # live minutes untouched
@@ -133,6 +147,23 @@ def test_features_gate_screenshots_and_mock(monkeypatch: pytest.MonkeyPatch) -> 
             assert r.status_code == 403 and r.json()["detail"]["code"] == "feature_unavailable"
             ws.send_text(json.dumps({"type": "session.end", "data": {}}))
             _collect(ws, lambda ev: any(e["type"] == "session.ended" for e in ev))
+
+
+def _grant(c: TestClient, uid: str, plan: str) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import User
+
+    async def go() -> None:
+        async with sessionmaker()() as db:
+            u = await db.get(User, uid)
+            assert u is not None
+            u.grant_plan, u.grant_until = plan, datetime.now(UTC) + timedelta(days=1)
+            await db.commit()
+
+    assert c.portal is not None
+    c.portal.call(go)
 
 
 def _metric_rows(c: TestClient, sid: str) -> dict[str, float]:

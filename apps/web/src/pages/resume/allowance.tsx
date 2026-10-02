@@ -5,9 +5,9 @@ import { ApiError, Crown, Sparkles, cx, focusRing } from "@orbit/ui";
 import { useBackend } from "./backend";
 
 /**
- * The resume AI's free allowance. Without Resume Pro there's one free AI action (per account, and per network); the
- * server enforces it (`402 upgrade_required`) and says what's left (`/allowance`). The editor shows it, offers the
- * upgrade, and refreshes it after each AI call.
+ * The resume AI's credits. On the Free plan each AI action (import, rewrite, tailoring, cover letter) spends one
+ * resume credit: the welcome credit, then credits from a pack. The server enforces it (`402 upgrade_required`) and
+ * says what's left (`/allowance`); the editor shows it, offers a pack, and refreshes it after each AI call.
  */
 export interface AllowanceState {
   allowance: ResumeAiAllowance | null;
@@ -24,29 +24,27 @@ export function useResumeAllowance(): AllowanceState {
     backend.tools
       .resumeAllowance()
       .then(setAllowance)
-      .catch(() => undefined); // an older server without the endpoint: no allowance shown, the AI still answers
+      .catch(() => undefined); // an older server without the endpoint: no credits shown, the AI still answers
   }, [backend]);
   useEffect(refresh, [refresh]);
   return { allowance, refresh };
 }
 
-/** The server said the free AI use is spent. */
+/** The server said there are no resume credits left. */
 export const isUpgradeError = (err: unknown): boolean => err instanceof ApiError && err.code === "upgrade_required";
 
-/** "₹299/month", or nothing when the plan has no rupee price. */
+/** "₹499", or nothing without a price. */
 export function priceText(price: number | null | undefined): string {
-  return price ? `₹${price}/month` : "";
+  return price ? `₹${price}` : "";
 }
 
-/** Where upgrading starts: the billing page with Resume Pro picked, or (signed out) making an account first. */
+/** Where buying credits starts: Plan & billing, with the cheapest pack that has resume credits opened. */
 export function UpgradeLink({ className, children }: { className?: string; children?: ReactNode }) {
-  const backend = useBackend();
   const { allowance } = useAllowance();
-  const plan = allowance?.upgrade.plan ?? "resume_pro";
-  const to = backend.guest ? "/register" : `/billing?plan=${plan}`;
+  const offer = allowance?.upgrade;
   return (
     <Link
-      to={to}
+      to={`/billing?pack=${offer?.pack ?? ""}`}
       className={cx(
         "inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-amber-600",
         focusRing,
@@ -54,60 +52,54 @@ export function UpgradeLink({ className, children }: { className?: string; child
       )}
     >
       <Crown className="h-4 w-4" />
-      {children ?? (backend.guest ? "Create an account to upgrade" : `Upgrade${allowance?.upgrade.price_inr_month ? ` · ${priceText(allowance.upgrade.price_inr_month)}` : ""}`)}
+      {children ?? (offer ? `Get credits · from ${priceText(offer.price_inr)}` : "Get credits")}
     </Link>
   );
 }
 
-/** What an AI action costs right now, for the line under AI buttons: nothing on Resume Pro, the free use, or Upgrade. */
+/** What an AI action costs right now, for the line under AI buttons. */
 export function AiCostNote({ className }: { className?: string }) {
   const { allowance } = useAllowance();
   if (!allowance || allowance.unlimited) return null;
   return (
     <p className={cx("text-xs text-zinc-500 dark:text-zinc-400", className)}>
-      {allowance.free_left > 0
-        ? "This uses your 1 free AI edit."
-        : "You've used your free AI edit. Fixes that need no AI (skills, dates) stay free."}
+      {allowance.credits_left > 0
+        ? `Uses 1 resume credit. You have ${allowance.credits_left}.`
+        : "You're out of resume credits. Fixes that need no AI (skills, dates) stay free."}
     </p>
   );
 }
 
-/** The editor's banner: how much free AI is left, and what Resume Pro adds. Hidden on Resume Pro. */
+/** The editor's banner: resume credits left, and what a pack adds. Hidden on plans with unlimited resume AI. */
 export function AllowanceBanner() {
   const { allowance } = useAllowance();
   if (!allowance || allowance.unlimited) return null;
-  const spent = allowance.free_left <= 0;
-  const label = allowance.upgrade.label;
+  const left = allowance.credits_left;
+  const offer = allowance.upgrade;
   return (
     <div
       role="note"
       className={cx(
         "mb-4 flex flex-col gap-2 rounded-xl p-3 text-sm ring-1 sm:flex-row sm:items-center sm:gap-3",
-        spent
+        left <= 0
           ? "bg-amber-500/10 text-amber-950 ring-amber-500/30 dark:text-amber-100"
           : "bg-zinc-500/5 text-zinc-700 ring-zinc-500/15 dark:text-zinc-300",
       )}
     >
       <Sparkles className="hidden h-4 w-4 shrink-0 sm:block" aria-hidden />
       <span className="min-w-0 sm:flex-1">
-        {spent ? (
-          <>
-            <strong>You've used your free AI edit.</strong> {label} unlocks unlimited AI rewrites, tailoring to each job,
-            imports and cover letters. Typing, the ATS score and downloads stay free.
-          </>
-        ) : (
-          <>
-            <strong>1 free AI edit included.</strong> Use it on an import, a rewrite, tailoring or a cover letter.{" "}
-            {label} makes the AI unlimited.
-          </>
-        )}
+        <strong>
+          {left <= 0 ? "You're out of resume credits." : `${left} resume credit${left === 1 ? "" : "s"} left.`}
+        </strong>{" "}
+        Each AI import, rewrite, tailoring or cover letter uses one; typing, the ATS score and downloads are free.
+        {offer && ` The ${offer.label} pack adds ${offer.resume_credits} credits${offer.interview_minutes ? ` and ${offer.interview_minutes} interview minutes` : ""} for ${priceText(offer.price_inr)}, and they never expire.`}
       </span>
       <UpgradeLink className="shrink-0" />
     </div>
   );
 }
 
-/** An AI error, with the upgrade button when it's the free use running out. */
+/** An AI error, with the button to get credits when that's what it is. */
 export function AiErrorNote({ error, upgrade, className }: { error: string; upgrade: boolean; className?: string }) {
   return (
     <div role="status" className={cx("text-sm", upgrade ? "space-y-2" : "", className)}>

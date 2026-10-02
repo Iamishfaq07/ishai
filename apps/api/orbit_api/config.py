@@ -35,17 +35,18 @@ class Settings(BaseSettings):
     )
     upload_dir: str = Field("./uploads", validation_alias=AliasChoices("ORBIT_UPLOAD_DIR"))
     max_upload_bytes: int = 10 * 1024 * 1024
-    # The free resume maker works without an account. Its AI calls cost money with nobody to bill, so besides a strict
-    # per-IP limit there is a cap on all signed-out AI calls per rolling 24 hours (0 turns the signed-out AI off).
-    guest_resume_ai_daily_limit: int = Field(300, ge=0, validation_alias=AliasChoices("ORBIT_GUEST_RESUME_AI_DAILY"))
-    # Without a plan that includes resume AI, there's one free AI action per account for good, and one per IP
-    # address per this many days (0 = one per IP for good). See resumes/allowance.py.
-    free_resume_ai_ip_days: int = Field(30, ge=0, validation_alias=AliasChoices("ORBIT_FREE_RESUME_AI_IP_DAYS"))
-    # And at most this many free AI actions a rolling day across everyone (new accounts and signed out alike), so open
-    # sign-up can't run up an open-ended bill. 0 turns the free action off; paid plans aren't affected.
-    free_resume_ai_daily_limit: int = Field(200, ge=0, validation_alias=AliasChoices("ORBIT_FREE_RESUME_AI_DAILY"))
+    # Welcome credits for a new account (credits.py): resume-AI credits and interview minutes, once. Sign-up is open
+    # without email verification, so they go to one account per network (IP) per ORBIT_WELCOME_IP_DAYS (0 = one per
+    # network for good), and to at most ORBIT_WELCOME_DAILY accounts a rolling day: fake accounts can't farm them.
+    welcome_resume_credits: int = Field(1, ge=0, validation_alias=AliasChoices("ORBIT_WELCOME_RESUME_CREDITS"))
+    welcome_interview_minutes: int = Field(20, ge=0, validation_alias=AliasChoices("ORBIT_WELCOME_INTERVIEW_MINUTES"))
+    welcome_ip_days: int = Field(30, ge=0, validation_alias=AliasChoices("ORBIT_WELCOME_IP_DAYS",
+                                                                         "ORBIT_FREE_RESUME_AI_IP_DAYS"))
+    welcome_daily_limit: int = Field(100, ge=0, validation_alias=AliasChoices("ORBIT_WELCOME_DAILY"))
+    # Credit packs for sale over UPI, overriding the defaults in billing/packs.py (validated at startup).
+    credit_packs_json: str | None = Field(None, validation_alias=AliasChoices("ORBIT_CREDIT_PACKS_JSON"))
     # UPI payments (billing/upi.py): the UPI ID people pay to and the name their UPI app shows. Unset = nothing can
-    # be bought. Each payment is checked by the admin against the bank statement (UTR) before the plan turns on.
+    # be bought. Each payment is checked by the admin against the bank statement (UTR) before its credits land.
     upi_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_UPI_ID"))
     upi_name: str = Field("Orbit", validation_alias=AliasChoices("ORBIT_UPI_NAME"))
 
@@ -233,13 +234,13 @@ class Settings(BaseSettings):
                                  "socket ownership, screenshot routing, rate limits). See docs/DECISIONS.md D12.")
             if not (self.admin_email and "@" in self.admin_email):
                 raise ValueError("ORBIT_ADMIN_EMAIL must be set in production (the admin is never inferred)")
-            # Anyone other than the admin can sign in → they must be able to prove their inbox, or turn
-            # verification off explicitly: for a private, owner-vetted list of exact addresses, or with sign-up
-            # approval on, where nobody can spend anything until the admin has looked at the account.
-            if self.public_signup and not self.verification_required and not self.approval_required:
-                raise ValueError("ORBIT_EMAIL_VERIFICATION=off is not allowed with public sign-up "
-                                 "(ORBIT_ALLOWED_EMAILS contains '*' or an @domain entry) unless "
-                                 "ORBIT_SIGNUP_APPROVAL is on")
+            # Public sign-up without email verification or approval is allowed: a new account's only free
+            # spend is its welcome credits (credits.py), which go to one account per network and to a capped
+            # number a day, so throwaway addresses can't farm provider spend.
+            if self.public_signup and not self.verification_required and not self.approval_required \
+                    and self.welcome_daily_limit > 1_000:
+                raise ValueError("Public sign-up with ORBIT_EMAIL_VERIFICATION=off and no sign-up approval needs "
+                                 "ORBIT_WELCOME_DAILY at 1000 or less (welcome credits are the free spend)")
             if self.verification_required and self.others_can_sign_in and not self.smtp_host:
                 raise ValueError("Email verification is required for non-admin users but ORBIT_SMTP_HOST is not "
                                  "set, so nobody could verify. Configure SMTP, or for a private list of exact "

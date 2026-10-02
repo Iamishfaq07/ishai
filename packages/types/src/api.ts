@@ -474,7 +474,7 @@ export interface ScreenshotAccepted {
 // ─── Usage / billing ─────────────────────────────────────────────────────────
 
 /** "pending": a new account waiting for the admin (sign-up approval), with nothing included. */
-export type PlanId = "free" | "resume_pro" | "pro" | "unlimited" | "pending";
+export type PlanId = "free" | "pro" | "unlimited" | "pending";
 
 /** GET /v1/plans (public) — what each plan includes. The server is the only source of limits and prices. */
 export interface PlanInfo {
@@ -487,23 +487,35 @@ export interface PlanInfo {
   max_session_minutes: number;
   features: string[];
   price_usd_month: number | null;
-  /** What 30 days cost over UPI, in rupees (null = not for sale over UPI). */
-  price_inr_month?: number | null;
-  /** Can be bought over UPI right now (it has a rupee price and the server has a UPI ID). */
-  buyable?: boolean;
+  /** Interview minutes and resume AI come from credits (the Free plan), not a monthly allowance. */
+  credits?: boolean;
+  /** Credit plans: what a new account starts with. */
+  welcome?: { resume_credits: number; interview_minutes: number };
 }
 
-// ─── UPI payments ──────────────────────────────────────────────────────────────
+// ─── Credits and UPI payments ──────────────────────────────────────────────────
+
+/** GET /v1/billing/packs (public) — a credit pack for sale over UPI. Credits never expire. */
+export interface CreditPack {
+  id: string;
+  label: string;
+  price_inr: number;
+  resume_credits: number;
+  interview_minutes: number;
+  /** Can be bought right now (the server has a UPI ID). */
+  buyable: boolean;
+}
 
 export type UpiOrderStatus = "awaiting_payment" | "submitted" | "approved" | "rejected";
 
-/** A UPI payment for a plan: pay, give the UTR, the admin approves it. */
+/** A UPI payment for a credit pack: pay, give the UTR, the admin approves it, the credits land. */
 export interface UpiOrder {
   id: string;
-  plan: PlanId;
-  plan_label: string;
+  pack: string;
+  label: string;
   amount_inr: number;
-  days: number;
+  resume_credits: number;
+  interview_minutes: number;
   /** Goes in the UPI note, so the payment can be matched. */
   reference: string;
   status: UpiOrderStatus;
@@ -535,16 +547,15 @@ export interface AdminPayments {
   payments: AdminPayment[];
 }
 
-/** GET /v1/resumes/allowance (or /v1/resume-maker/allowance signed out): the resume AI's free allowance. */
+/** GET /v1/resumes/allowance: resume credits left (one per AI action), and the cheapest pack that adds more. */
 export interface ResumeAiAllowance {
-  /** The plan includes resume AI: no free-use limit. */
+  /** The plan includes resume AI: no credits needed. */
   unlimited: boolean;
-  free_left: number;
-  free_total: number;
-  upgrade: { plan: PlanId; label: string; price_inr_month: number | null; buyable: boolean };
+  credits_left: number;
+  upgrade: { pack: string; label: string; price_inr: number; resume_credits: number; interview_minutes: number; buyable: boolean } | null;
 }
 
-/** GET /v1/entitlements — the signed-in user's plan, limits, this month's usage and features. */
+/** GET /v1/entitlements — the signed-in user's plan, limits, this month's usage, features and credits. */
 export interface Entitlements {
   plan: PlanId;
   label: string;
@@ -559,6 +570,8 @@ export interface Entitlements {
   };
   usage: { live_minutes: number; mock_minutes: number; screenshots: number; documents: number };
   features: Record<string, boolean>;
+  /** Credit plans (Free): what's left to spend; it never expires. Null on plans with their own allowance. */
+  credits?: { resume: number | null; interview_minutes_left: number; interview_minutes_total: number } | null;
 }
 
 export interface Usage {
@@ -583,6 +596,9 @@ export interface AdminUser {
   plan_label: string;
   grant_until: string | null;
   live_minutes_this_month: number;
+  /** Credits left (Free plan balance; never expires). */
+  resume_credits: number;
+  interview_minutes_left: number;
 }
 
 export interface AdminUsers {
@@ -591,7 +607,7 @@ export interface AdminUsers {
 }
 
 export type AccessChange =
-  | { action: "grant"; plan: "resume_pro" | "pro" | "unlimited"; hours: number }
+  | { action: "grant"; plan: "pro" | "unlimited"; hours: number }
   | { action: "approve" }
   | { action: "revoke" };
 

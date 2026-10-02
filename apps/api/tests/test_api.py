@@ -213,7 +213,7 @@ def test_core_acceptance_flow(client: TestClient) -> None:
     md = client.get(f"/v1/sessions/{sid}/export.md", headers=h)
     assert md.status_code == 200 and "Tell me about yourself." in md.text
     usage = client.get("/v1/usage", headers=h).json()
-    assert usage["plan"] == "free" and usage["live_minutes_limit"] == 30
+    assert usage["plan"] == "free" and usage["live_minutes_limit"] == 20  # the welcome interview credits
     assert client.post(f"/v1/sessions/{sid}/live-ticket", headers=h).status_code == 409
 
 

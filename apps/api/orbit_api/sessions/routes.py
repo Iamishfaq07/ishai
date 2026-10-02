@@ -23,13 +23,13 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orbit_api import jobs
+from orbit_api import credits, jobs
 from orbit_api.auth.guards import require_verified_user
 from orbit_api.auth.security import TICKET_TTL_S, current_user, issue_ticket, redeem_ticket
 from orbit_api.config import get_settings
 from orbit_api.csrf import websocket_origin_allowed
 from orbit_api.db import get_db, sessionmaker
-from orbit_api.entitlements import minutes_metric, minutes_remaining, plan_for, usage_this_month
+from orbit_api.entitlements import Plan, minutes_metric, minutes_remaining, plan_for, usage_this_month
 from orbit_api.live import carryover
 from orbit_api.live.context_builder import SessionMemory
 from orbit_api.live.engine import LiveEngine, SessionProfile
@@ -100,6 +100,12 @@ MAX_SCREENSHOT_BYTES = 8 * 1024 * 1024
 _teardowns: set[asyncio.Task[None]] = set()  # strong refs so an in-flight teardown isn't garbage-collected
 LOW_MINUTES_WARNING_S = 5 * 60
 _OUT_OF_MINUTES = {False: "You've used this month's live minutes.", True: "You've used this month's mock minutes."}
+# Credit plans: live and mock share one balance, and it doesn't refill; a pack adds more.
+OUT_OF_CREDITS = "You're out of interview minutes. Buy a credit pack in Plan & billing to keep going."
+
+
+def _out_of_minutes(plan: Plan, mock: bool) -> str:
+    return OUT_OF_CREDITS if plan.credits else _OUT_OF_MINUTES[mock]
 SESSION_TIME_LIMIT = "session_time_limit"
 ReportStatus = Literal["pending", "ready", "failed"] | None
 
@@ -214,7 +220,7 @@ async def create_session(body: SessionIn, user: Annotated[User, Depends(require_
             "code": "feature_unavailable", "message": "Mock interviews aren't included in your plan."})
     remaining = await minutes_remaining(db, user.id, body.type)
     if remaining is not None and remaining <= 0:
-        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, _OUT_OF_MINUTES[body.type == "mock"])
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, _out_of_minutes(plan, body.type == "mock"))
     document_ids = list(body.document_ids)
     if body.workspace_id:
         ws = await owned_workspace(db, body.workspace_id, user)
@@ -434,9 +440,9 @@ async def live_ticket(session_id: str, user: Annotated[User, Depends(require_ver
     # Enforce the monthly quota here (not just at session create) so reconnects can't stream unlimited after
     # the cap is hit — and the per-session ceiling, so a session that already ran its maximum can't reopen.
     remaining = await minutes_remaining(db, user.id, row.type)
-    if remaining is not None and remaining <= 0:
-        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, _OUT_OF_MINUTES[row.type == "mock"])
     plan = await plan_for(db, user.id)
+    if remaining is not None and remaining <= 0:
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, _out_of_minutes(plan, row.type == "mock"))
     if (row.duration_s or 0) >= plan.max_session_minutes * 60:
         raise HTTPException(status.HTTP_409_CONFLICT, detail={
             "code": SESSION_TIME_LIMIT,
@@ -489,10 +495,17 @@ async def usage(user: Annotated[User, Depends(current_user)],
                 db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
     """Legacy summary (older clients). New clients read GET /v1/entitlements."""
     plan = await plan_for(db, user.id)
+    live_limit: int | None
+    if plan.credits:
+        granted_s, used_s = await credits.interview_seconds(db, user.id)
+        live_used, live_limit = round(used_s / 60, 1), round(granted_s / 60)
+    else:
+        live_used = round(await usage_this_month(db, user.id, "live_seconds") / 60, 1)
+        live_limit = plan.live_minutes
     return {
         "plan": plan.name,
-        "live_minutes_used": round(await usage_this_month(db, user.id, "live_seconds") / 60, 1),
-        "live_minutes_limit": plan.live_minutes,
+        "live_minutes_used": live_used,
+        "live_minutes_limit": live_limit,
         "screenshots_used": int(await usage_this_month(db, user.id, "screenshots")),
         "screenshots_limit": plan.screenshots,
     }

@@ -1,22 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CreditCard, Crown, cx } from "@orbit/ui";
-import type { Entitlements, PlanInfo, UpiOrder } from "@orbit/types";
+import { CreditCard, Crown, FileText, Mic, cx } from "@orbit/ui";
+import type { CreditPack, Entitlements, UpiOrder } from "@orbit/types";
 import { Button, Card, ErrorNote, PageHeader, Spinner } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { UpiCheckout } from "./UpiCheckout";
-
-/** Human copy for server feature names. Unknown names are skipped rather than shown raw. */
-const FEATURE_COPY: Record<string, string> = {
-  vision: "Screenshot answers",
-  mock: "Mock interviews",
-  advanced_coding: "Advanced coding help",
-  system_design: "System design mode",
-  provider_fallback: "Backup AI when the main one is down",
-};
-const RESUME_AI = "Unlimited resume AI: rewrites, tailoring, imports, cover letters";
 
 function Bar({ used, limit }: { used: number; limit: number | null }) {
   const pct = limit ? Math.min(100, Math.round((used / limit) * 100)) : 0;
@@ -30,6 +20,49 @@ function Bar({ used, limit }: { used: number; limit: number | null }) {
   );
 }
 
+function minutes(n: number): string {
+  return `${Math.round(n)} min`;
+}
+
+/** The credits left on a Free account: resume AI and interview minutes (live and mock share them). */
+function CreditRows({ e }: { e: Entitlements }) {
+  const c = e.credits;
+  if (!c) return null;
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+          <Mic className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex justify-between text-sm">
+            <span>Interview minutes</span>
+            <span className="tabular-nums font-medium">{minutes(c.interview_minutes_left)} left</span>
+          </div>
+          <p className="text-xs text-zinc-500">Live interviews and mock interviews both use these.</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+          <FileText className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex justify-between text-sm">
+            <span>Resume AI credits</span>
+            <span className="tabular-nums font-medium">{c.resume === null ? "unlimited" : `${c.resume} left`}</span>
+          </div>
+          <p className="text-xs text-zinc-500">One per AI import, rewrite, tailoring or cover letter.</p>
+        </div>
+      </div>
+      <p className="text-xs text-zinc-500">
+        Credits never expire. Screenshots: {e.usage.screenshots} / {e.limits.screenshots ?? "∞"} this month · Documents:{" "}
+        {e.usage.documents} / {e.limits.documents ?? "∞"} · Sessions up to {e.limits.max_session_minutes} min.
+      </p>
+    </div>
+  );
+}
+
+/** Plans with their own monthly allowance (Pro or Unlimited, granted by the admin). */
 function UsageRows({ e }: { e: Entitlements }) {
   const rows = [
     { label: "Live minutes", used: Math.round(e.usage.live_minutes), limit: e.limits.live_minutes },
@@ -56,57 +89,28 @@ function UsageRows({ e }: { e: Entitlements }) {
   );
 }
 
-function limitLine(n: number | null, unit: string): string {
-  return n === null ? `Unlimited ${unit}` : `${n} ${unit}`;
-}
-
-function priceLine(p: PlanInfo): string {
-  if (p.price_inr_month) return `₹${p.price_inr_month} / month`;
-  if (p.price_inr_month === 0 || p.price_usd_month === 0) return "Free";
-  if (p.price_usd_month) return `$${p.price_usd_month} / month`;
-  return "Pricing coming soon";
-}
-
-function PlanCard({ p, current, busy, onBuy }: { p: PlanInfo; current: string | null; busy: boolean; onBuy: (p: PlanInfo) => void }) {
-  const features = p.features.map((f) => FEATURE_COPY[f]).filter((f): f is string => Boolean(f));
-  const mine = p.name === current;
-  const free = p.price_inr_month === 0 || p.price_usd_month === 0;
+function PackCard({ p, best, busy, onBuy }: { p: CreditPack; best: boolean; busy: boolean; onBuy: (p: CreditPack) => void }) {
+  const perMinute = p.interview_minutes ? p.price_inr / p.interview_minutes : null;
   return (
-    <Card className={cx("flex flex-col", mine ? "ring-2 ring-indigo-500" : p.buyable ? "ring-1 ring-amber-500/40" : undefined)}>
-      <h3 className="flex items-center gap-1.5 font-semibold">
-        {p.buyable && <Crown className="h-4 w-4 text-amber-500" />}
-        {p.label}
-      </h3>
-      <p className="mt-1 text-sm text-zinc-500">{priceLine(p)}</p>
-      <ul className="mt-3 flex-1 space-y-1.5 text-sm text-zinc-600 dark:text-zinc-400">
-        <li className={p.features.includes("resume_ai") ? "font-medium text-zinc-800 dark:text-zinc-200" : undefined}>
-          · {p.features.includes("resume_ai") ? RESUME_AI : "1 free resume AI edit"}
-        </li>
-        <li>· {limitLine(p.live_minutes, "live minutes / month")}</li>
-        <li>· {limitLine(p.mock_minutes, "mock minutes / month")}</li>
-        <li>· {limitLine(p.screenshots, "screenshots / month")}</li>
-        <li>· {limitLine(p.documents, "documents")}</li>
-        <li>· Sessions up to {p.max_session_minutes} min</li>
-        {features.map((f) => (
-          <li key={f}>· {f}</li>
-        ))}
-      </ul>
-      {p.buyable ? (
-        <Button className="mt-4 w-full" disabled={busy} onClick={() => onBuy(p)}>
-          <Crown className="h-4 w-4" /> {mine ? `Add 30 days · ₹${p.price_inr_month}` : `Upgrade · ₹${p.price_inr_month}`}
-        </Button>
-      ) : (
-        <p
-          className={cx(
-            "mt-4 rounded-xl px-3 py-2 text-center text-xs font-medium",
-            mine
-              ? "bg-indigo-500/10 text-indigo-700 ring-1 ring-indigo-500/25 dark:text-indigo-200"
-              : "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",
-          )}
-        >
-          {mine ? "Your current plan" : free ? "Included" : "Upgrades coming soon"}
-        </p>
+    <Card className={cx("relative flex flex-col", best ? "ring-2 ring-amber-500/70" : "ring-1 ring-zinc-500/10")}>
+      {best && (
+        <span className="absolute -top-2.5 left-4 rounded-full bg-amber-500 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-white">
+          Best value
+        </span>
       )}
+      <h3 className="flex items-center gap-1.5 font-semibold">
+        <Crown className="h-4 w-4 text-amber-500" /> {p.label}
+      </h3>
+      <p className="mt-1 font-display text-2xl font-semibold">₹{p.price_inr.toLocaleString("en-IN")}</p>
+      <ul className="mt-3 flex-1 space-y-1.5 text-sm text-zinc-600 dark:text-zinc-400">
+        {p.interview_minutes > 0 && <li>· {p.interview_minutes} interview minutes (live or mock)</li>}
+        {p.resume_credits > 0 && <li>· {p.resume_credits} resume AI credits</li>}
+        <li>· Never expire, no subscription</li>
+        {perMinute && <li className="text-xs text-zinc-500">≈ ₹{perMinute.toFixed(perMinute < 10 ? 1 : 0)} per interview minute</li>}
+      </ul>
+      <Button className="mt-4 w-full" disabled={busy || !p.buyable} onClick={() => onBuy(p)} title={p.buyable ? undefined : "UPI payments aren't set up yet"}>
+        Buy · ₹{p.price_inr.toLocaleString("en-IN")}
+      </Button>
     </Card>
   );
 }
@@ -114,7 +118,7 @@ function PlanCard({ p, current, busy, onBuy }: { p: PlanInfo; current: string | 
 const STATUS: Record<UpiOrder["status"], { label: string; tone: string }> = {
   awaiting_payment: { label: "Not paid yet", tone: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-300" },
   submitted: { label: "Checking your payment", tone: "bg-amber-500/10 text-amber-800 dark:text-amber-200" },
-  approved: { label: "Paid", tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" },
+  approved: { label: "Paid · credits added", tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" },
   rejected: { label: "Couldn't confirm", tone: "bg-rose-500/10 text-rose-700 dark:text-rose-300" },
 };
 
@@ -129,7 +133,7 @@ function Payments({ orders, onOpen }: { orders: UpiOrder[]; onOpen: (o: UpiOrder
         {shown.map((o) => (
           <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
             <span className="font-medium">
-              {o.plan_label} · ₹{o.amount_inr}
+              {o.label} · ₹{o.amount_inr}
             </span>
             <span className="text-zinc-500">{formatDate(o.submitted_at ?? o.created_at)}</span>
             <span className="tabular-nums text-zinc-500">UTR {o.utr}</span>
@@ -147,30 +151,30 @@ function Payments({ orders, onOpen }: { orders: UpiOrder[]; onOpen: (o: UpiOrder
   );
 }
 
+/** Home's summary card: credits on Free, the monthly allowance otherwise. */
 export function UsageSummary() {
   const ent = useAsync(() => api.entitlements(), [], "entitlements");
   if (ent.loading) return <Spinner />;
   if (ent.error) return <ErrorNote onRetry={ent.reload}>{errorText(ent.error)}</ErrorNote>;
   if (!ent.data) return null;
-  return <UsageRows e={ent.data} />;
+  return ent.data.credits ? <CreditRows e={ent.data} /> : <UsageRows e={ent.data} />;
 }
 
 export function BillingPage() {
   const ent = useAsync(() => api.entitlements(), [], "entitlements");
-  const plans = useAsync(() => api.listPlans(), [], "plans");
+  const packs = useAsync(() => api.listPacks(), [], "packs");
   const orders = useAsync(() => api.listUpiOrders().catch(() => [] as UpiOrder[]), [], "upi-orders");
-  const current = ent.data?.plan ?? null;
   const [params, setParams] = useSearchParams();
   const [order, setOrder] = useState<UpiOrder | null>(null);
   const [starting, setStarting] = useState(false);
   const [buyError, setBuyError] = useState<string | null>(null);
   const checkoutRef = useRef<HTMLDivElement>(null);
 
-  const buy = async (p: PlanInfo) => {
+  const buy = async (p: CreditPack) => {
     setStarting(true);
     setBuyError(null);
     try {
-      setOrder(await api.createUpiOrder(p.name));
+      setOrder(await api.createUpiOrder(p.id));
     } catch (err) {
       setBuyError(errorText(err));
     } finally {
@@ -178,30 +182,35 @@ export function BillingPage() {
     }
   };
 
-  // Arriving from "Upgrade" in the resume maker (/billing?plan=resume_pro): open that plan's checkout straight away.
-  const wanted = params.get("plan");
+  // Arriving from "Get credits" elsewhere (/billing?pack=starter): open that pack's checkout straight away.
+  const wanted = params.get("pack");
   useEffect(() => {
-    if (!wanted || !plans.data) return;
-    const p = plans.data.find((x) => x.name === wanted && x.buyable);
+    if (wanted === null || !packs.data) return;
+    const p = packs.data.find((x) => x.id === wanted && x.buyable);
     setParams({}, { replace: true });
     if (p) void buy(p);
-  }, [wanted, plans.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [wanted, packs.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (order) checkoutRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [order?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const e = ent.data;
+  const list = packs.data ?? [];
+  // The middle pack is the usual pick; with one or two, none is singled out.
+  const bestId = list.length >= 3 ? [...list].sort((a, b) => a.price_inr - b.price_inr)[1]?.id : undefined;
+
   return (
     <div>
-      <PageHeader icon={CreditCard} title="Plan & billing" subtitle="Your plan, this month’s usage, and upgrades." />
+      <PageHeader icon={CreditCard} title="Plan & billing" subtitle="Your credits, and packs to top up. Credits never expire." />
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">
-          <h2 className="mb-1 font-semibold">This month</h2>
+          <h2 className="mb-1 font-semibold">{e?.credits ? "Your credits" : "This month"}</h2>
           <p className="mb-4 text-sm text-zinc-500">
-            Current plan: <span className="font-medium text-zinc-800 dark:text-zinc-200">{ent.data?.label ?? "—"}</span>
-            {ent.data?.until && (
+            Plan: <span className="font-medium text-zinc-800 dark:text-zinc-200">{e?.label ?? "—"}</span>
+            {e?.until && (
               <span className="block">
-                Until {new Date(ent.data.until).toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric" })}
+                Until {new Date(e.until).toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric" })}
               </span>
             )}
           </p>
@@ -209,26 +218,36 @@ export function BillingPage() {
             <Spinner />
           ) : ent.error ? (
             <ErrorNote onRetry={ent.reload}>{errorText(ent.error)}</ErrorNote>
-          ) : ent.data ? (
-            <UsageRows e={ent.data} />
+          ) : e ? (
+            e.credits ? <CreditRows e={e} /> : <UsageRows e={e} />
           ) : null}
         </Card>
 
         <div className="space-y-4 lg:col-span-2">
-          <div className="grid gap-4 sm:grid-cols-2">
-            {plans.loading ? (
-              <Spinner />
-            ) : plans.error ? (
-              <ErrorNote onRetry={plans.reload}>{errorText(plans.error)}</ErrorNote>
-            ) : (
-              (plans.data ?? []).map((p) => <PlanCard key={p.name} p={p} current={current} busy={starting} onBuy={(x) => void buy(x)} />)
-            )}
-          </div>
-          {buyError && <ErrorNote>{buyError}</ErrorNote>}
-          <p className="text-xs text-zinc-500">
-            Paid over UPI, 30 days at a time. Nothing renews or is charged automatically: when the 30 days end you're back
-            on Free, and you can buy another month whenever you like.
-          </p>
+          {e && !e.credits ? (
+            <Card>
+              <p className="text-sm text-zinc-600 dark:text-zinc-300">
+                Your plan includes its own monthly allowance, so you don't need credit packs.
+              </p>
+            </Card>
+          ) : (
+            <>
+              <div className="grid gap-4 pt-2 sm:grid-cols-3">
+                {packs.loading ? (
+                  <Spinner />
+                ) : packs.error ? (
+                  <ErrorNote onRetry={packs.reload}>{errorText(packs.error)}</ErrorNote>
+                ) : (
+                  list.map((p) => <PackCard key={p.id} p={p} best={p.id === bestId} busy={starting} onBuy={(x) => void buy(x)} />)
+                )}
+              </div>
+              {buyError && <ErrorNote>{buyError}</ErrorNote>}
+              <p className="text-xs text-zinc-500">
+                Pay once over UPI (Google Pay, PhonePe, Paytm or any bank app). Nothing renews or is charged automatically,
+                and the credits are added as soon as your payment is checked.
+              </p>
+            </>
+          )}
           <div ref={checkoutRef} className="scroll-mt-20">
             {order && (
               <UpiCheckout

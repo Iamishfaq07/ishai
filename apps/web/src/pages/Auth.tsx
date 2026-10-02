@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { AudioLines, FileText, OrbitWordmark, PlanetHero, ShieldCheck, Sparkles, cx, focusRing, type LucideIcon } from "@orbit/ui";
+import { AudioLines, FileText, MessagesSquare, OrbitWordmark, PlanetHero, ShieldCheck, Sparkles, Target, cx, type LucideIcon } from "@orbit/ui";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button, ErrorNote, Field, Input } from "../components/ui";
 import { api } from "../lib/api";
@@ -7,37 +7,60 @@ import { useAuth } from "../lib/auth";
 import { errorText } from "../lib/format";
 import { Captcha, useCaptchaConfig } from "../components/Captcha";
 
-const AUTH_POINTS: Array<{ icon: LucideIcon; text: string }> = [
-  { icon: AudioLines, text: "Hears the question the moment it’s asked" },
-  { icon: Sparkles, text: "Answers in your voice, grounded in your resume" },
-  { icon: ShieldCheck, text: "Your documents stay private to your account" },
+/** What Orbit does, on the sign-in and sign-up screens (the side panel on wide screens, under the form on phones). */
+const FEATURES: Array<{ icon: LucideIcon; title: string; text: string }> = [
+  { icon: AudioLines, title: "Live interview copilot", text: "Hears the question the moment it's asked and answers in your voice, from your resume." },
+  { icon: FileText, title: "Resume maker", text: "ATS score out of 100, AI rewrites tailored to the job, Word and PDF, cover letters." },
+  { icon: MessagesSquare, title: "Mock interviews", text: "Practise with an AI interviewer, then get a scorecard and the questions to redo." },
+  { icon: Target, title: "Interview prep", text: "Likely questions for a job post, with answers drawn from your own experience." },
+  { icon: ShieldCheck, title: "Private", text: "Your documents and transcripts stay in your account. Delete them any time." },
 ];
 
-/** The free resume maker needs no account, so the sign-in and sign-up screens say so and link straight to it. */
-function FreeResumeMaker() {
+/** "Free to start: 1 resume AI credit + 20 interview minutes", from the server (it decides the welcome credits). */
+function useWelcome(): string | null {
+  const [text, setText] = useState<string | null>(null);
+  useEffect(() => {
+    api
+      .listPlans()
+      .then((plans) => {
+        const w = plans.find((p) => p.welcome)?.welcome;
+        if (!w || !(w.resume_credits || w.interview_minutes)) return;
+        const parts = [
+          w.interview_minutes ? `${w.interview_minutes} interview minutes` : "",
+          w.resume_credits ? `${w.resume_credits} resume AI credit${w.resume_credits === 1 ? "" : "s"}` : "",
+        ].filter(Boolean);
+        setText(`Free to start: ${parts.join(" + ")}. No card needed.`);
+      })
+      .catch(() => undefined);
+  }, []);
+  return text;
+}
+
+function FeatureList({ compact = false }: { compact?: boolean }) {
   return (
-    <Link
-      to="/resume-maker"
-      className={cx(
-        "mt-4 flex items-center gap-3 rounded-2xl border border-indigo-500/25 bg-indigo-500/5 p-4 transition-colors hover:border-indigo-500/50 hover:bg-indigo-500/10",
-        focusRing,
-      )}
-    >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-300">
-        <FileText className="h-5 w-5" aria-hidden />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium">
-          Free resume maker <span className="ml-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">Free</span>
-        </span>
-        <span className="block text-xs text-zinc-500 dark:text-zinc-400">ATS score and AI fixes. No account needed.</span>
-      </span>
-      <span aria-hidden className="text-zinc-400">→</span>
-    </Link>
+    <ul className={compact ? "grid gap-3 sm:grid-cols-2" : "space-y-4"}>
+      {FEATURES.map(({ icon: Icon, title, text }) => (
+        <li key={title} className="flex items-start gap-3">
+          <span
+            className={cx(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+              compact ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300" : "bg-white/10 text-indigo-200 ring-1 ring-white/10",
+            )}
+          >
+            <Icon className="h-4 w-4" aria-hidden />
+          </span>
+          <span className="min-w-0">
+            <span className={cx("block text-sm font-medium", compact ? "" : "text-white")}>{title}</span>
+            <span className={cx("block text-xs", compact ? "text-zinc-500 dark:text-zinc-400" : "text-zinc-400")}>{text}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
-function AuthShell({ title, subtitle, children, freeResume = false }: { title: string; subtitle: string; children: ReactNode; freeResume?: boolean }) {
+function AuthShell({ title, subtitle, children, features = false }: { title: string; subtitle: string; children: ReactNode; features?: boolean }) {
+  const welcome = useWelcome();
   return (
     <div className="grid min-h-full lg:grid-cols-2">
       <aside className="dark relative hidden overflow-hidden border-r border-white/5 bg-zinc-950 p-12 text-white lg:flex lg:flex-col">
@@ -47,20 +70,18 @@ function AuthShell({ title, subtitle, children, freeResume = false }: { title: s
         />
         <OrbitWordmark size={30} className="relative" />
         <div className="relative my-auto">
-          <PlanetHero className="mx-auto w-80 motion-safe:animate-float xl:w-96" />
-          <h2 className="mt-10 max-w-md font-display text-4xl font-semibold leading-tight tracking-tight">
+          <PlanetHero className="mx-auto w-64 motion-safe:animate-float xl:w-80" />
+          <h2 className="mt-8 max-w-md font-display text-4xl font-semibold leading-tight tracking-tight">
             Walk into every interview <span className="text-gradient">with backup.</span>
           </h2>
-          <ul className="mt-6 space-y-3">
-            {AUTH_POINTS.map(({ icon: Icon, text }) => (
-              <li key={text} className="flex items-center gap-3 text-sm text-zinc-300">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/10">
-                  <Icon className="h-4 w-4 text-indigo-200" />
-                </span>
-                {text}
-              </li>
-            ))}
-          </ul>
+          <div className="mt-6 max-w-md">
+            <FeatureList />
+          </div>
+          {welcome && (
+            <p className="mt-6 inline-flex items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1 text-sm font-medium text-emerald-300 ring-1 ring-emerald-400/30">
+              <Sparkles className="h-4 w-4" aria-hidden /> {welcome}
+            </p>
+          )}
         </div>
       </aside>
 
@@ -74,7 +95,16 @@ function AuthShell({ title, subtitle, children, freeResume = false }: { title: s
             <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>
           </div>
           <div className="glass-panel rounded-2xl p-6 sm:p-7">{children}</div>
-          {freeResume && <FreeResumeMaker />}
+          {features && (
+            <section aria-label="What Orbit does" className="mt-6 space-y-4 lg:hidden">
+              {welcome && (
+                <p className="rounded-xl bg-emerald-500/10 px-3 py-2 text-center text-sm font-medium text-emerald-800 ring-1 ring-emerald-500/25 dark:text-emerald-200">
+                  {welcome}
+                </p>
+              )}
+              <FeatureList compact />
+            </section>
+          )}
         </div>
       </main>
     </div>
@@ -113,7 +143,7 @@ export function LoginPage() {
   };
 
   return (
-    <AuthShell title="Welcome back" subtitle="Sign in to start a live session" freeResume>
+    <AuthShell title="Welcome back" subtitle="Sign in to Orbit AI" features>
       <form onSubmit={(e) => void submit(e)} className="space-y-4">
         <Field label="Email" htmlFor="email">
           <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -188,7 +218,7 @@ export function RegisterPage() {
   };
 
   return (
-    <AuthShell title="Create your account" subtitle="Your real-time interview and meeting copilot" freeResume>
+    <AuthShell title="Create your account" subtitle="Interview copilot, resume maker and practice, in one account" features>
       <form onSubmit={(e) => void submit(e)} className="space-y-4">
         <Field label="Name" htmlFor="name">
           <Input id="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />

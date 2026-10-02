@@ -10,6 +10,7 @@ import type {
   ApiErrorBody,
   AuthConfig,
   CostReport,
+  CreditPack,
   Entitlements,
   PlanInfo,
   AuthResponse,
@@ -186,7 +187,7 @@ export function createApiClient(options: ApiClientOptions) {
 
   const body = (value: unknown): string => JSON.stringify(value);
 
-  /** The resume tools that don't touch saved resumes, for the account API (`/v1/resumes`) or the free no-account one. */
+  /** The resume tools that don't touch saved resumes (score, AI, Word). */
   const resumeTools = (base: string) => ({
     scoreResume: (data: ResumeData, design: ResumeDesign, jobText: string, opts: RequestOptions = {}) =>
       json<AtsReport>(`${base}/score`, {
@@ -227,7 +228,7 @@ export function createApiClient(options: ApiClientOptions) {
         method: "POST",
         body: body(req),
       }),
-    /** Unlimited AI on this plan, or how many free AI actions are left (and what upgrading costs). */
+    /** Unlimited AI on this plan, or how many resume credits are left (and the cheapest pack that adds more). */
     resumeAllowance: () => json<ResumeAiAllowance>(`${base}/allowance`),
   });
 
@@ -318,8 +319,6 @@ export function createApiClient(options: ApiClientOptions) {
       json<Resume>(`/v1/resumes/${encodeURIComponent(id)}`, { method: "PUT", body: body(req) }),
     deleteResume: (id: string) => json<void>(`/v1/resumes/${encodeURIComponent(id)}`, { method: "DELETE" }),
     ...resumeTools("/v1/resumes"),
-    /** The free resume maker: the same tools with no account (the resume stays on the device). */
-    guest: resumeTools("/v1/resume-maker"),
 
     /** Interview prep: likely questions from a job description, with answers drawn from the resume. */
     prep: (req: PrepRequest) => json<PrepResponse>("/v1/prep", { method: "POST", body: body(req) }),
@@ -380,9 +379,11 @@ export function createApiClient(options: ApiClientOptions) {
     // Plans / entitlements
     listPlans: () => json<PlanInfo[]>("/v1/plans"),
     entitlements: () => json<Entitlements>("/v1/entitlements"),
-    /** Start paying for a plan over UPI (an open order for the same plan is handed back). */
-    createUpiOrder: (plan: string) =>
-      json<UpiOrder>("/v1/billing/upi/orders", { method: "POST", body: body({ plan }) }),
+    /** The credit packs for sale (public). */
+    listPacks: () => json<CreditPack[]>("/v1/billing/packs"),
+    /** Start paying for a credit pack over UPI (an open order for the same pack is handed back). */
+    createUpiOrder: (pack: string) =>
+      json<UpiOrder>("/v1/billing/upi/orders", { method: "POST", body: body({ pack }) }),
     listUpiOrders: () => json<UpiOrder[]>("/v1/billing/upi/orders"),
     /** "I've paid": the 12-digit UTR from the UPI app, for the admin to check. */
     submitUtr: (orderId: string, utr: string) =>
@@ -395,6 +396,9 @@ export function createApiClient(options: ApiClientOptions) {
     adminStatus: () => json<{ is_admin: boolean }>("/v1/admin/status"),
     /** Admin: accounts, newest first ("pending" = waiting for access). */
     adminUsers: (only: "all" | "pending" = "all") => json<AdminUsers>(`/v1/admin/users?only=${only}`),
+    /** Admin: add resume credits and/or interview minutes to an account (they never expire). */
+    giveCredits: (userId: string, add: { resume?: number; interview_minutes?: number }) =>
+      json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/credits`, { method: "POST", body: body(add) }),
     /** Admin: grant a plan for a while, approve for good, or revoke. */
     setUserAccess: (userId: string, change: AccessChange) =>
       json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/access`, { method: "POST", body: body(change) }),

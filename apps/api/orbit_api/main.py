@@ -15,6 +15,7 @@ from starlette.types import Receive, Scope, Send
 from orbit_api import db, jobs
 from orbit_api.admin.routes import router as admin_router
 from orbit_api.auth.routes import router as auth_router
+from orbit_api.billing.packs import packs as configured_packs
 from orbit_api.billing.routes import router as billing_router
 from orbit_api.config import get_settings
 from orbit_api.csrf import HEADER as CSRF_HEADER
@@ -29,7 +30,6 @@ from orbit_api.prep.routes import router as prep_router
 from orbit_api.providers import health as dependency_health
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.stt import create_stt_provider
-from orbit_api.resumes.routes import public_router as resume_maker_router
 from orbit_api.resumes.routes import router as resumes_router
 from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.runtime_config import refresh as refresh_runtime_config
@@ -131,6 +131,7 @@ class BodyLimit:
 def create_app() -> FastAPI:
     s = get_settings()
     configured_plans()  # fail fast on a bad ORBIT_PLANS_JSON / *_MAX_SESSION_MINUTES instead of at first use
+    configured_packs()  # and on a bad ORBIT_CREDIT_PACKS_JSON
     if init_sentry(s.sentry_dsn, s.env, running_commit()):
         logging.getLogger(__name__).info("sentry error reporting enabled")
     app = FastAPI(title="Orbit API", version="0.1.0", lifespan=lifespan,
@@ -205,7 +206,6 @@ def create_app() -> FastAPI:
     app.include_router(stories_router)
     app.include_router(feedback_router)
     app.include_router(resumes_router)
-    app.include_router(resume_maker_router)
     return app
 
 

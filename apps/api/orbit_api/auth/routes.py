@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from orbit_api import credits
 from orbit_api.auth import email_tokens
 from orbit_api.auth.captcha import public_config as captcha_config
 from orbit_api.auth.captcha import require_captcha
@@ -183,6 +184,9 @@ async def _create_user(db: AsyncSession, request: Request, email: str, body: Reg
     db.add(user)
     await db.flush()
     db.add(AuditLog(user_id=user.id, action="auth.register", ip=_ip(request)))
+    # The welcome credits (1 resume-AI credit, 20 interview minutes): one account per network, capped a day.
+    if not s.is_admin_email(email):
+        await credits.grant_welcome(db, user, client_ip(request))
     return user
 
 
