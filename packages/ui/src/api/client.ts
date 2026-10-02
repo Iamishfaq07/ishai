@@ -92,6 +92,25 @@ export interface ApiClientOptions {
 
 export type ApiClient = ReturnType<typeof createApiClient>;
 
+/** How long a request may take before it gives up: a stalled phone connection otherwise leaves the screen waiting for
+ * ever. Calls that run the AI or move big files say so with LONG_TIMEOUT_MS. */
+export const DEFAULT_TIMEOUT_MS = 30_000;
+export const LONG_TIMEOUT_MS = 150_000;
+
+// Endpoints that run the AI, read a file or build one: slow on purpose, so they get LONG_TIMEOUT_MS. Matching by path
+// means a new AI endpoint can't be cut off by forgetting to opt in; an explicit `timeoutMs` still wins.
+const SLOW_PATH =
+  /\/(?:import|import-file|suggest|cover-letter|docx|review|follow-up|draft|prep|import-link|drill|retry|screenshots|export|export\.md|text)(?:[/?]|$)/;
+
+export function timeoutFor(path: string, body?: unknown): number {
+  return body instanceof FormData || SLOW_PATH.test(path) ? LONG_TIMEOUT_MS : DEFAULT_TIMEOUT_MS;
+}
+
+export interface RequestOptions {
+  /** Cancels the request (a newer one replaces it, or the user pressed Cancel). */
+  signal?: AbortSignal;
+}
+
 export function createApiClient(options: ApiClientOptions) {
   const baseUrl = trimTrailingSlashes(options.baseUrl);
   const doFetch = options.fetchImpl ?? ((input: RequestInfo | URL, init?: RequestInit) => fetch(input, init));
@@ -101,7 +120,8 @@ export function createApiClient(options: ApiClientOptions) {
   let csrfToken: string | null = null;
   const UNSAFE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-  async function raw(path: string, init: RequestInit = {}): Promise<Response> {
+  async function raw(path: string, request: RequestInit & { timeoutMs?: number } = {}): Promise<Response> {
+    const { timeoutMs = timeoutFor(path, request.body), signal: caller, ...init } = request;
     const headers = new Headers(init.headers);
     if (options.auth.mode === "bearer") {
       const token = options.auth.getToken();
@@ -112,15 +132,31 @@ export function createApiClient(options: ApiClientOptions) {
     if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json");
     }
+    // One controller for both ways out: the caller cancelling, and the time limit.
+    const controller = new AbortController();
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, timeoutMs);
+    const cancel = () => controller.abort();
+    if (caller?.aborted) controller.abort();
+    else caller?.addEventListener("abort", cancel, { once: true });
     let response: Response;
     try {
       response = await doFetch(`${baseUrl}${path}`, {
         ...init,
         headers,
+        signal: controller.signal,
         credentials: options.auth.mode === "cookie" ? "include" : "omit",
       });
     } catch {
+      if (caller?.aborted) throw new DOMException("The request was cancelled.", "AbortError");
+      if (timedOut) throw new ApiError(0, "That took too long. Check your connection and try again.", "timeout");
       throw new ApiError(0, "Can't reach Orbit. Check your internet connection.", "offline");
+    } finally {
+      clearTimeout(timer);
+      caller?.removeEventListener("abort", cancel);
     }
     if (!response.ok) {
       if (response.status === 401) options.onUnauthorized?.();
@@ -129,7 +165,7 @@ export function createApiClient(options: ApiClientOptions) {
     return response;
   }
 
-  async function json<T>(path: string, init: RequestInit = {}): Promise<T> {
+  async function json<T>(path: string, init: RequestInit & { timeoutMs?: number } = {}): Promise<T> {
     const response = await raw(path, init);
     if (response.status === 204) return undefined as T;
     const data = (await response.json()) as T;
@@ -232,15 +268,29 @@ export function createApiClient(options: ApiClientOptions) {
     updateResume: (id: string, req: ResumeInput) =>
       json<Resume>(`/v1/resumes/${encodeURIComponent(id)}`, { method: "PUT", body: body(req) }),
     deleteResume: (id: string) => json<void>(`/v1/resumes/${encodeURIComponent(id)}`, { method: "DELETE" }),
-    scoreResume: (data: ResumeData, design: ResumeDesign, jobText: string) =>
-      json<AtsReport>("/v1/resumes/score", { method: "POST", body: body({ data, design, job_text: jobText }) }),
-    importResume: (req: ResumeImportRequest) =>
-      json<ResumeImportResponse>("/v1/resumes/import", { method: "POST", body: body(req) }),
-    importResumeFile: (file: File | Blob, filename?: string) => {
+    scoreResume: (data: ResumeData, design: ResumeDesign, jobText: string, opts: RequestOptions = {}) =>
+      json<AtsReport>("/v1/resumes/score", {
+        method: "POST",
+        body: body({ data, design, job_text: jobText }),
+        ...(opts.signal ? { signal: opts.signal } : {}),
+      }),
+    importResume: (req: ResumeImportRequest, opts: RequestOptions = {}) =>
+      json<ResumeImportResponse>("/v1/resumes/import", {
+        method: "POST",
+        body: body(req),
+        timeoutMs: LONG_TIMEOUT_MS,
+        ...(opts.signal ? { signal: opts.signal } : {}),
+      }),
+    importResumeFile: (file: File | Blob, filename?: string, opts: RequestOptions = {}) => {
       const form = new FormData();
       if (filename) form.append("file", file, filename);
       else form.append("file", file);
-      return json<ResumeImportResponse>("/v1/resumes/import-file", { method: "POST", body: form });
+      return json<ResumeImportResponse>("/v1/resumes/import-file", {
+        method: "POST",
+        body: form,
+        timeoutMs: LONG_TIMEOUT_MS,
+        ...(opts.signal ? { signal: opts.signal } : {}),
+      });
     },
     /** A cover letter from the resume and (if given) the job post; nothing it says goes beyond them. */
     coverLetter: (data: ResumeData, jobText: string) =>

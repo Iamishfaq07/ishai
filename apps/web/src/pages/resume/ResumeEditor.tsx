@@ -23,6 +23,7 @@ import {
   Upload,
   Wand2,
   X,
+  ApiError,
   confirmDialog,
   cx,
   focusRing,
@@ -67,7 +68,13 @@ export function ResumeEditorPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("content");
   const [report, setReport] = useState<AtsReport | null>(null);
-  const [save, setSave] = useState<{ state: "saved" | "saving" | "dirty" | "error"; error?: string }>({ state: "saved" });
+  const [save, setSave] = useState<{ state: "saved" | "saving" | "dirty" | "error"; error?: string; retry?: boolean }>({
+    state: "saved",
+  });
+  // One save at a time: on a slow connection a second PUT could otherwise overtake the first and the older text would
+  // land last. When the running one finishes it bumps `flush`, which re-checks whether more edits are waiting.
+  const saving = useRef(false);
+  const [flush, setFlush] = useState(0);
   const [queue, setQueue] = useState<ResumeSuggestion[]>([]);
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -149,15 +156,36 @@ export function ResumeEditorPage() {
   useEffect(() => {
     if (!resume || save.state !== "dirty") return;
     const t = window.setTimeout(() => {
+      if (saving.current) return;
+      saving.current = true;
       setSave({ state: "saving" });
       const { title, data, design, job_text, cover_letter } = resume;
       api
         .updateResume(resume.id, { title: title.trim() || "Untitled resume", data, design, job_text, cover_letter })
         .then(() => setSave((s) => (s.state === "saving" ? { state: "saved" } : s)))
-        .catch((err: unknown) => setSave({ state: "error", error: errorText(err) }));
+        // A dropped or stalled connection (status 0) is worth trying again on its own; a refusal is not.
+        .catch((err: unknown) =>
+          setSave({ state: "error", error: errorText(err), retry: err instanceof ApiError && err.status === 0 }),
+        )
+        .finally(() => {
+          saving.current = false;
+          setFlush((n) => n + 1);
+        });
     }, 900);
     return () => window.clearTimeout(t);
-  }, [resume, save.state]);
+  }, [resume, save.state, flush]);
+
+  // After a dropped connection, save again in a few seconds, or the moment the phone is back online.
+  useEffect(() => {
+    if (save.state !== "error" || !save.retry) return;
+    const again = () => setSave((s) => (s.state === "error" ? { state: "dirty" } : s));
+    const t = window.setTimeout(again, 5_000);
+    window.addEventListener("online", again);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("online", again);
+    };
+  }, [save]);
 
   // Don't lose the last edits when leaving mid-save.
   const unsaved = useRef(false);
@@ -181,13 +209,36 @@ export function ResumeEditorPage() {
     [],
   );
 
-  // Re-score as you type (deterministic and cheap on the server).
+  // Re-score as you type (deterministic and cheap on the server). Only the latest edit's score matters: a new edit
+  // cancels the request still running, so slow replies can't pile up or land after a newer one. After a slow (or failed)
+  // score, wait longer before the next, so a poor connection isn't hammered with a request per pause.
+  const scoreWait = useRef(450);
   useEffect(() => {
     if (!resume) return;
+    const ctl = new AbortController();
+    let sentAt: number | null = null;
     const t = window.setTimeout(() => {
-      api.scoreResume(resume.data, resume.design, resume.job_text).then(setReport).catch(() => undefined);
-    }, 450);
-    return () => window.clearTimeout(t);
+      const started = (sentAt = performance.now());
+      api
+        .scoreResume(resume.data, resume.design, resume.job_text, { signal: ctl.signal })
+        .then((r) => {
+          sentAt = null;
+          scoreWait.current = Math.min(2_500, Math.max(450, performance.now() - started));
+          setReport(r);
+        })
+        .catch(() => {
+          sentAt = null;
+          if (!ctl.signal.aborted) scoreWait.current = 2_500;
+        });
+    }, scoreWait.current);
+    return () => {
+      window.clearTimeout(t);
+      // Cancelled while still waiting on the server: the connection is slow, so wait longer before the next one.
+      if (sentAt !== null) {
+        scoreWait.current = Math.min(2_500, Math.max(scoreWait.current * 1.6, performance.now() - sentAt));
+      }
+      ctl.abort();
+    };
   }, [resume?.data, resume?.design, resume?.job_text]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Jump to the text a fix is about, once its tab is showing.

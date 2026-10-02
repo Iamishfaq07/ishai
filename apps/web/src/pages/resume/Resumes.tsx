@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { ResumeData, ResumeSummary } from "@orbit/types";
 import {
@@ -165,6 +165,29 @@ const SOURCES: Array<{ id: Source; label: string; hint: string; icon: typeof Fil
   { id: "document", label: "From your documents", hint: "A resume you already gave Orbit.", icon: FolderOpen },
 ];
 
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // the server's limit, checked before uploading over a phone connection
+
+/** Shown while a file or text is being read: says it's still going, and lets the person stop waiting. */
+function BusyNote({ onCancel }: { onCancel: () => void }) {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setSlow(true), 8_000);
+    return () => window.clearTimeout(t);
+  }, []);
+  return (
+    <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-xl bg-indigo-500/10 p-3 text-sm text-indigo-900 dark:text-indigo-200">
+      <span className="min-w-0 flex-1">
+        {slow
+          ? "Still working. Scanned PDFs, long resumes and slow connections can take up to a minute or two."
+          : "Reading your resume…"}
+      </span>
+      <Button variant="secondary" size="sm" onClick={onCancel}>
+        Cancel
+      </Button>
+    </div>
+  );
+}
+
 function NewResume({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const [source, setSource] = useState<Source | null>(null);
@@ -181,26 +204,36 @@ function NewResume({ onClose }: { onClose: () => void }) {
     navigate(`/documents/resumes/${r.id}`, { state: { imported: Boolean(data) } });
   };
 
-  const run = async (job: () => Promise<void>) => {
+  // The running import, so "Cancel" can stop waiting on a slow connection.
+  const running = useRef<AbortController | null>(null);
+  const run = async (job: (signal: AbortSignal) => Promise<void>) => {
+    const controller = new AbortController();
+    running.current = controller;
     setBusy(true);
     setError(null);
     try {
-      await job();
+      await job(controller.signal);
     } catch (err) {
-      setError(errorText(err));
+      if (!(err instanceof DOMException && err.name === "AbortError")) setError(errorText(err)); // a cancel is silent
       setBusy(false);
     }
   };
+  const cancel = () => running.current?.abort();
 
-  const importFile = (file: File) =>
-    void run(async () => {
-      const res = await api.importResumeFile(file, file.name);
+  const importFile = (file: File) => {
+    if (file.size > MAX_FILE_BYTES) {
+      setError("That file is over 10 MB. Export a smaller PDF, or paste the text instead.");
+      return;
+    }
+    void run(async (signal) => {
+      const res = await api.importResumeFile(file, file.name, { signal });
       await create(res.title, res.data);
     });
+  };
 
   const importText = (kind: "text" | "linkedin") =>
-    void run(async () => {
-      const res = await api.importResume({ source: kind, text });
+    void run(async (signal) => {
+      const res = await api.importResume({ source: kind, text }, { signal });
       await create(res.title, res.data);
     });
 
@@ -275,8 +308,8 @@ function NewResume({ onClose }: { onClose: () => void }) {
         <Button
           disabled={busy}
           onClick={() =>
-            void run(async () => {
-              const res = await api.importResume({ source: "document", document_id: docId || resumeDocs[0]!.id });
+            void run(async (signal) => {
+              const res = await api.importResume({ source: "document", document_id: docId || resumeDocs[0]!.id }, { signal });
               await create(res.title, res.data);
             })
           }
@@ -303,6 +336,7 @@ function NewResume({ onClose }: { onClose: () => void }) {
         </button>
       </div>
       {error && <div className="mb-4"><ErrorNote>{error}</ErrorNote></div>}
+      {busy && source && source !== "scratch" && <BusyNote onCancel={cancel} />}
       {source ? (
         body
       ) : (
