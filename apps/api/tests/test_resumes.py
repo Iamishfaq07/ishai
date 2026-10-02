@@ -324,7 +324,9 @@ def test_suggestions_name_the_exact_text_they_replace(client: TestClient) -> Non
     r = client.post("/v1/resumes/suggest", headers=h, json={"data": data, "mode": "improve"})
     assert r.status_code == 200, r.text
     fields = ai.editable_fields(strong_resume().model_validate(data))
-    for s in r.json()["suggestions"]:
+    rewrites = [s for s in r.json()["suggestions"] if s["kind"] == "rewrite"]
+    assert rewrites
+    for s in rewrites:
         assert s["path"] in fields and s["before"] == fields[s["path"]][1] and s["after"] != s["before"]
 
     first_bullet = f"experience.{data['experience'][0]['id']}.bullets.0"

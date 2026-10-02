@@ -33,7 +33,7 @@ import { Button, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } fr
 import { api } from "../../lib/api";
 import { downloadText, errorText } from "../../lib/format";
 import { ContentForm } from "./ContentForm";
-import { ACCENTS, FONTS, SPACING, TEMPLATES, getAt, newId, photoToDataUrl, resumeToText, setAt } from "./model";
+import { ACCENTS, FONTS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, resumeToText, suggestedSkills } from "./model";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
 
@@ -51,15 +51,20 @@ const HISTORY_GROUP_MS = 1200;
 const TABS: Array<{ id: Tab; label: string; icon: typeof FileText }> = [
   { id: "content", label: "Content", icon: PenLine },
   { id: "score", label: "ATS score", icon: Gauge },
-  { id: "ai", label: "AI rewrite", icon: Wand2 },
+  { id: "ai", label: "AI fixes", icon: Wand2 },
   { id: "design", label: "Design", icon: Palette },
   { id: "letter", label: "Cover letter", icon: Mail },
 ];
 
-/** The text "Fix with AI" can rewrite: a summary, headline, bullet or project description. */
-function rewritable(path: string | null): path is string {
-  return Boolean(path && /^(basics\.(summary|headline)|experience\.[^.]+\.bullets\.\d+|projects\.[^.]+\.(description|bullets\.\d+))$/.test(path));
-}
+/** What the spinner says while the AI works on each kind of problem. */
+const FIX_BUSY: Record<string, string> = {
+  has_skills: "Finding skills to add…",
+  skills_count: "Finding skills to add…",
+  keywords: "Matching the job post…",
+  dates: "Fixing the dates…",
+  bullets_per_role: "Drafting bullets…",
+  quantified: "Finding where numbers fit…",
+};
 
 export function ResumeEditorPage() {
   const { resumeId = "" } = useParams();
@@ -264,13 +269,13 @@ export function ResumeEditorPage() {
     setFocusTarget(target);
   };
 
-  const askAi = async (mode: "improve" | "tailor", focus?: string) => {
+  const askAi = async (mode: "improve" | "tailor", check?: string) => {
     if (!resume) return;
     setTab("ai");
-    setAiBusy(focus ? "Rewriting that line…" : mode === "tailor" ? "Tailoring to the job…" : "Reading your resume…");
+    setAiBusy((check && FIX_BUSY[check]) || (mode === "tailor" ? "Tailoring to the job…" : check ? "Working on that fix…" : "Reading your resume…"));
     setAiError(null);
     try {
-      const res = await api.suggestResume({ data: resume.data, design: resume.design, job_text: resume.job_text, mode, ...(focus ? { focus } : {}) });
+      const res = await api.suggestResume({ data: resume.data, design: resume.design, job_text: resume.job_text, mode, ...(check ? { check } : {}) });
       setQueue(res.suggestions);
       if (!res.suggestions.length) setAiError("Nothing to change: the AI thinks this already reads well.");
     } catch (err) {
@@ -280,14 +285,25 @@ export function ResumeEditorPage() {
     }
   };
 
-  const accept = (s: ResumeSuggestion) => {
+  /** Apply one suggestion; `picked` narrows an add_skill to the skills the candidate ticked. */
+  const accept = (s: ResumeSuggestion, picked?: string[]) => {
     if (!resume) return;
-    if (getAt(resume.data, s.path) !== s.before) {
-      setAiError("That text changed since the suggestion was made, so it was skipped.");
+    const chosen = picked ? { ...s, after: picked.join(", ") } : s;
+    if (!canApply(resume.data, s)) {
+      setAiError("That part of the resume changed since the suggestion was made, so it was skipped.");
     } else {
-      update((d) => setAt(d, s.path, s.after));
+      update((d) => applySuggestion(d, chosen, newId));
     }
     setQueue((q) => q.filter((x) => x.id !== s.id));
+  };
+
+  /** Every mechanical fix with nothing to confirm (extra skills the resume proves, dates), at once. */
+  const acceptSafe = () => {
+    const safe = queue.filter(isSafeFix);
+    if (!safe.length) return;
+    update((d) => safe.reduce((acc, s) => applySuggestion(acc, s, newId), d));
+    setQueue((q) => q.filter((x) => !safe.includes(x)));
+    setAiError(null);
   };
 
   const placeholders = report?.checks.find((c) => c.id === "placeholders" && !c.passed) ?? null;
@@ -408,15 +424,9 @@ export function ResumeEditorPage() {
               resume={resume}
               report={report}
               onJob={(job_text) => change((r) => ({ ...r, job_text }))}
-              onAddSkill={(kw) =>
-                update((d) => {
-                  if (!d.skills.length) return { ...d, skills: [{ id: newId(), name: "Skills", items: [kw] }] };
-                  const [first, ...rest] = d.skills;
-                  return { ...d, skills: [{ ...first!, items: [...first!.items, kw] }, ...rest] };
-                })
-              }
+              onAddSkill={(kw) => update((d) => addSkills(d, [kw], newId))}
               onShow={showTarget}
-              onFixWithAi={(check) => void (rewritable(check.target) ? askAi("improve", check.target) : askAi(check.category === "keywords" ? "tailor" : "improve"))}
+              onFixWithAi={(check) => void askAi(check.category === "keywords" ? "tailor" : "improve", check.id)}
             />
           )}
           {tab === "ai" && (
@@ -427,6 +437,7 @@ export function ResumeEditorPage() {
               queue={queue}
               onAsk={(mode) => void askAi(mode)}
               onAccept={accept}
+              onAcceptSafe={acceptSafe}
               onSkip={(s) => setQueue((q) => q.filter((x) => x.id !== s.id))}
               onShowJob={() => setTab("score")}
             />
@@ -979,6 +990,7 @@ function AiPanel({
   queue,
   onAsk,
   onAccept,
+  onAcceptSafe,
   onSkip,
   onShowJob,
 }: {
@@ -987,18 +999,20 @@ function AiPanel({
   error: string | null;
   queue: ResumeSuggestion[];
   onAsk: (mode: "improve" | "tailor") => void;
-  onAccept: (s: ResumeSuggestion) => void;
+  onAccept: (s: ResumeSuggestion, picked?: string[]) => void;
+  onAcceptSafe: () => void;
   onSkip: (s: ResumeSuggestion) => void;
   onShowJob: () => void;
 }) {
   const current = queue[0];
+  const safe = queue.filter(isSafeFix).length;
   return (
     <div className="space-y-4">
-      <Panel title="Let the AI rewrite it">
+      <Panel title="Let the AI fix it">
         <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-300">
-          It rewrites what's already there, one change at a time: you accept or skip each. It never adds facts; where a number would help, it leaves a
+          It rewrites weak lines, adds the skills and bullets you're missing, puts numbers where they belong and tidies dates, one change at a time: you accept or skip each. It can't know your real figures, so it leaves a
           <mark className="mx-1 rounded bg-amber-200/70 px-0.5 text-amber-950 dark:bg-amber-400/30 dark:text-amber-100">[placeholder]</mark>
-          for you to fill in.
+          for you to fill in, and anything it can't prove from your resume comes with a warning to check it's true.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button disabled={Boolean(busy)} onClick={() => onAsk("improve")}>
@@ -1016,25 +1030,75 @@ function AiPanel({
       </Panel>
       {busy && <Spinner label={busy} />}
       {error && !busy && <p role="status" className="text-sm text-zinc-600 dark:text-zinc-300">{error}</p>}
-      {current && !busy && (
-        <Panel title={`Suggestion 1 of ${queue.length}`}>
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{current.label}</p>
-          {current.before && <p className="mt-2 rounded-lg bg-rose-500/5 p-2 text-sm text-zinc-500 line-through decoration-rose-400/60 dark:text-zinc-400">{current.before}</p>}
-          <p className="mt-2 rounded-lg bg-emerald-500/10 p-2 text-sm text-zinc-900 dark:text-zinc-100">
-            <Highlighted text={current.after} />
-          </p>
-          {current.reason && <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{current.reason}</p>}
-          <div className="mt-3 flex gap-2">
-            <Button onClick={() => onAccept(current)}>
-              <Check className="h-4 w-4" /> Accept
-            </Button>
-            <Button variant="secondary" onClick={() => onSkip(current)}>
-              Skip
-            </Button>
-          </div>
-        </Panel>
+      {safe > 0 && !busy && (
+        <Button variant="secondary" onClick={onAcceptSafe}>
+          <Check className="h-4 w-4" /> Apply the {safe} safe fix{safe === 1 ? "" : "es"} at once
+        </Button>
       )}
+      {current && !busy && <SuggestionCard key={current.id} s={current} total={queue.length} onAccept={onAccept} onSkip={onSkip} />}
     </div>
+  );
+}
+
+const ACCEPT_LABEL = { rewrite: "Accept", set: "Accept", add_skill: "Add skills", add_bullet: "Add bullet" } as const;
+
+function SuggestionCard({ s, total, onAccept, onSkip }: { s: ResumeSuggestion; total: number; onAccept: (s: ResumeSuggestion, picked?: string[]) => void; onSkip: (s: ResumeSuggestion) => void }) {
+  const kind = s.kind ?? "rewrite";
+  const skills = kind === "add_skill" ? suggestedSkills(s) : [];
+  const [off, setOff] = useState<Set<string>>(new Set());
+  const picked = skills.filter((x) => !off.has(x));
+  const toggle = (skill: string) =>
+    setOff((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(skill)) next.add(skill);
+      return next;
+    });
+  return (
+    <Panel title={`Suggestion 1 of ${total}`}>
+      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{s.label}</p>
+      {s.before && <p className="mt-2 rounded-lg bg-rose-500/5 p-2 text-sm text-zinc-500 line-through decoration-rose-400/60 dark:text-zinc-400">{s.before}</p>}
+      {kind === "add_skill" ? (
+        <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Skills to add">
+          {skills.map((skill) => (
+            <button
+              key={skill}
+              type="button"
+              aria-pressed={!off.has(skill)}
+              onClick={() => toggle(skill)}
+              className={cx(
+                "rounded-full border px-2.5 py-1 text-sm transition-colors",
+                off.has(skill)
+                  ? "border-zinc-200 text-zinc-400 line-through dark:border-white/10 dark:text-zinc-500"
+                  : "border-emerald-500/40 bg-emerald-500/10 text-zinc-900 dark:text-zinc-100",
+                focusRing,
+              )}
+            >
+              {off.has(skill) ? <X className="mr-1 inline h-3 w-3" aria-hidden /> : <Plus className="mr-1 inline h-3 w-3" aria-hidden />}
+              {skill}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-2 rounded-lg bg-emerald-500/10 p-2 text-sm text-zinc-900 dark:text-zinc-100">
+          <Highlighted text={s.after} />
+        </p>
+      )}
+      {s.reason && <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{s.reason}</p>}
+      {s.confirm && (
+        <p role="note" className="mt-2 flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-sm text-amber-950 dark:text-amber-100">
+          <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> {s.confirm}
+        </p>
+      )}
+      <div className="mt-3 flex gap-2">
+        <Button disabled={kind === "add_skill" && !picked.length} onClick={() => onAccept(s, kind === "add_skill" ? picked : undefined)}>
+          <Check className="h-4 w-4" /> {ACCEPT_LABEL[kind]}
+          {kind === "add_skill" && picked.length !== 1 ? ` (${picked.length})` : ""}
+        </Button>
+        <Button variant="secondary" onClick={() => onSkip(s)}>
+          Skip
+        </Button>
+      </div>
+    </Panel>
   );
 }
 
