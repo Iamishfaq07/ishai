@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AudioLines, cx, focusRing, HistoryIcon } from "@orbit/ui";
+import { AudioLines, confirmDialog, cx, focusRing, HistoryIcon } from "@orbit/ui";
 import { Button, Card, EmptyState, ErrorNote, PageHeader, Spinner } from "../components/ui";
 import { api } from "../lib/api";
 import { SESSION_TYPE_LABEL, errorText, formatDate, formatDuration } from "../lib/format";
@@ -14,8 +14,17 @@ export function SessionsPage() {
   // Unfinished sessions first (resume or end them), then the rest newest first as the server sends them.
   const sorted = [...(sessions.data ?? [])].sort((a, b) => Number(a.status === "ended") - Number(b.status === "ended"));
 
-  // Ending writes the summary report, like pressing End in the session.
+  // Ending writes the summary report, like pressing End in the session. It can't be undone, so ask first (as Live does).
   const end = async (id: string) => {
+    if (
+      !(await confirmDialog({
+        title: "End this session?",
+        body: "It can't be resumed afterwards. The transcript and report are saved to History.",
+        confirmLabel: "End session",
+        danger: true,
+      }))
+    )
+      return;
     setEnding(id);
     setEndError(null);
     try {

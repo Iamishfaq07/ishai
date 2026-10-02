@@ -31,6 +31,7 @@ import {
   openDisplayAudio,
   openMicrophone,
   supportsDisplayAudio,
+  supportsScreenCapture,
   type AudioCapture,
 } from "../lib/audio";
 import { errorText } from "../lib/format";
@@ -108,8 +109,12 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   const sysRef = useRef<AudioCapture | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
   const [micOn, setMicOn] = useState(false);
-  const [sysState, setSysState] = useState<"off" | "needs_share" | "on" | "error">(launch.systemAudio ? "needs_share" : "off");
+  // Mocks and phone / room sessions listen through the microphone only. Resuming from Home or Sessions carries no
+  // launch state (the default asks for tab audio), so the session type decides here.
+  const systemAudio = launch.systemAudio && session.type !== "mock" && session.type !== "phone";
+  const [sysState, setSysState] = useState<"off" | "needs_share" | "on" | "error">(systemAudio ? "needs_share" : "off");
   const [sysError, setSysError] = useState<string | null>(null);
+  const [sysStarting, setSysStarting] = useState(false);
 
   // Bumped on every start/stop so a slow getUserMedia from an earlier attempt (double-tapped Retry, a remount)
   // can't install a second capture that keeps streaming duplicate audio.
@@ -160,33 +165,51 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
     };
   }, [startMic, stopMic]);
 
+  // The same guard for tab audio: a share picker answered after a second click, after End, or after leaving the
+  // page must not start a capture that nothing stops.
+  const sysGenRef = useRef(0);
+  const stopSystemAudio = useCallback(() => {
+    sysGenRef.current++;
+    sysRef.current?.stop();
+    sysRef.current = null;
+  }, []);
   const startSystemAudio = async () => {
+    const gen = ++sysGenRef.current;
     setSysError(null);
     sysRef.current?.stop();
+    sysRef.current = null;
+    setSysStarting(true);
     try {
       const stream = await openDisplayAudio();
-      sysRef.current = await captureStream(stream, (f) => {
+      if (gen !== sysGenRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      const capture = await captureStream(stream, (f) => {
         if (!pausedRef.current && !interviewerSpeakingRef.current) client.sendAudio(AUDIO_CHANNEL.system, f.pcm);
       });
+      if (gen !== sysGenRef.current) {
+        capture.stop();
+        return;
+      }
+      sysRef.current = capture;
       stream.getAudioTracks()[0]?.addEventListener("ended", () => {
+        if (gen !== sysGenRef.current) return;
         sysRef.current?.stop();
         sysRef.current = null;
         setSysState("needs_share");
       });
       setSysState("on");
     } catch (err) {
+      if (gen !== sysGenRef.current) return;
       setSysError(errorText(err));
       setSysState("error");
+    } finally {
+      if (gen === sysGenRef.current) setSysStarting(false);
     }
   };
 
-  useEffect(
-    () => () => {
-      sysRef.current?.stop();
-      sysRef.current = null;
-    },
-    [],
-  );
+  useEffect(() => stopSystemAudio, [stopSystemAudio]);
 
   // ── Screenshot ─────────────────────────────────────────────────────────
   const [shot, setShot] = useState<Blob | null>(null);
@@ -225,7 +248,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   useEffect(() => {
     if (!ending && live.state !== "ended") return;
     stopMic();
-    sysRef.current?.stop();
+    stopSystemAudio();
     if (live.state === "ended") {
       const t = setTimeout(() => navigate(`/sessions/${session.id}`), 600);
       return () => clearTimeout(t);
@@ -238,7 +261,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
         .finally(() => navigate(`/sessions/${session.id}`));
     }, 3000);
     return () => clearTimeout(t);
-  }, [ending, live.state, navigate, session.id, stopMic]);
+  }, [ending, live.state, navigate, session.id, stopMic, stopSystemAudio]);
 
   const notice = (
     <>
@@ -248,7 +271,10 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
         </Notice>
       )}
       {(sysState === "needs_share" || sysState === "error") && live.state !== "ended" && (
-        <Notice tone={sysState === "error" ? "error" : "info"} action={{ label: "Share tab audio", onClick: () => void startSystemAudio() }}>
+        <Notice
+          tone={sysState === "error" ? "error" : "info"}
+          action={{ label: sysStarting ? "Sharing…" : "Share tab audio", onClick: () => void startSystemAudio(), disabled: sysStarting }}
+        >
           {sysState === "error"
             ? sysError
             : "To hear the interviewer, share the meeting tab and turn on “Share tab audio”. Only audio is used."}
@@ -272,7 +298,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
           onEndOtherSession={async (id) => {
             await api.endSession(id);
           }}
-      onScreenshot={VISION_ENABLED && supportsDisplayAudio() ? () => void takeScreenshot() : undefined}
+      onScreenshot={VISION_ENABLED && supportsScreenCapture() ? () => void takeScreenshot() : undefined}
       screenshotUnavailableReason={!VISION_ENABLED ? "Screenshot analysis isn’t enabled yet." : "This browser can’t capture the screen."}
       hotkeys={hotkeys}
       title={session.title}
@@ -347,7 +373,7 @@ function Notice({
 }: {
   tone: "info" | "error";
   children: ReactNode;
-  action?: { label: string; onClick: () => void };
+  action?: { label: string; onClick: () => void; disabled?: boolean };
 }) {
   return (
     <div
@@ -360,7 +386,12 @@ function Notice({
     >
       <span className="flex-1">{children}</span>
       {action && (
-        <button type="button" onClick={action.onClick} className={cx("shrink-0 rounded-md bg-white/70 px-2 py-1 font-medium dark:bg-white/10", focusRing)}>
+        <button
+          type="button"
+          onClick={action.onClick}
+          disabled={action.disabled}
+          className={cx("shrink-0 rounded-md bg-white/70 px-2 py-1 font-medium disabled:opacity-50 dark:bg-white/10", focusRing)}
+        >
           {action.label}
         </button>
       )}

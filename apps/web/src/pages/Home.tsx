@@ -200,6 +200,9 @@ export function HomePage() {
             </div>
             {documents.loading ? (
               <Spinner />
+            ) : documents.error ? (
+              // Not "upload your resume": the documents may well be there, the list just didn't load.
+              <ErrorNote onRetry={documents.reload}>{errorText(documents.error)}</ErrorNote>
             ) : readyDocs.length === 0 ? (
               <p className="text-sm text-zinc-500">Upload your resume and a job description so answers are grounded in your background.</p>
             ) : (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { READ_ALOUD_RATES, speechChunks } from "./readAloud";
 import { pickVoice } from "./useInterviewerVoice";
 
@@ -69,11 +69,17 @@ export function useReadAloud(lang = "en"): ReadAloud {
   // On-device voices only, so the answer text never leaves the machine ("Online (Natural)" voices are a Microsoft
   // cloud service). Online voices are offered, labelled, only when no local voice exists for the language.
   const base = lang.split("-")[0]!.toLowerCase();
-  const matching = all.filter((v) => v.lang.toLowerCase().startsWith(base));
-  const local = matching.filter((v) => v.localService);
-  const voices = local.length > 0 ? local : matching;
+  const voices = useMemo(() => {
+    const matching = all.filter((v) => v.lang.toLowerCase().startsWith(base));
+    const local = matching.filter((v) => v.localService);
+    return local.length > 0 ? local : matching;
+  }, [all, base]);
   const voice = voices.find((v) => v.voiceURI === voiceId) ?? (voices.length > 0 ? pickVoice(voices, lang) : undefined);
   settings.current = { rate, voice };
+  const voiceOptions = useMemo(
+    () => voices.map((v) => ({ id: v.voiceURI, name: v.localService ? v.name : `${v.name} (online)` })),
+    [voices],
+  );
 
   const stop = useCallback(() => {
     run.current += 1;
@@ -144,18 +150,23 @@ export function useReadAloud(lang = "en"): ReadAloud {
     store(VOICE_KEY, id);
   }, []);
 
-  return {
-    supported: Boolean(synth),
-    status,
-    key,
-    rate,
-    setRate,
-    voices: voices.map((v) => ({ id: v.voiceURI, name: v.localService ? v.name : `${v.name} (online)` })),
-    voiceId: voice?.voiceURI ?? null,
-    setVoiceId,
-    play,
-    pause,
-    resume,
-    stop,
-  };
+  // One object while nothing changes, so the (memoized) answer card doesn't re-render on every live update.
+  const voiceUri = voice?.voiceURI ?? null;
+  return useMemo(
+    () => ({
+      supported: Boolean(synth),
+      status,
+      key,
+      rate,
+      setRate,
+      voices: voiceOptions,
+      voiceId: voiceUri,
+      setVoiceId,
+      play,
+      pause,
+      resume,
+      stop,
+    }),
+    [synth, status, key, rate, setRate, voiceOptions, voiceUri, setVoiceId, play, pause, resume, stop],
+  );
 }

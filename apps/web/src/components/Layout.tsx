@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate, useNavigationType } fr
 import {
   ChevronDown,
   CreditCard,
+  ErrorBoundary,
   FolderOpen,
   HistoryIcon,
   House,
@@ -137,16 +138,20 @@ export function Layout() {
       <main id="main" className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
         {/* Keyed on the route so each page fades up in. */}
         <div key={location.pathname} className="animate-fade-up">
-          {/* Inside the layout: the nav stays put while a page's code arrives. */}
-          <Suspense
-            fallback={
-              <div className="flex min-h-[40vh] items-center justify-center">
-                <Spinner />
-              </div>
-            }
-          >
-            <Outlet />
-          </Suspense>
+          {/* Inside the layout, and reset by that key on every navigation: a page that fails to load (its code gone
+              after a deploy) or to render shows an error with Reload while the nav stays usable. */}
+          <ErrorBoundary>
+            {/* Inside the layout: the nav stays put while a page's code arrives. */}
+            <Suspense
+              fallback={
+                <div className="flex min-h-[40vh] items-center justify-center">
+                  <Spinner />
+                </div>
+              }
+            >
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
         </div>
       </main>
 

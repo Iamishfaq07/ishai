@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 import { cx, focusRing } from "./cx";
 
 export interface ScreenshotPreviewProps {
@@ -13,6 +14,8 @@ export function ScreenshotPreview({ image, onAnalyze, onRetake, onCancel }: Scre
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A modal over the panel: focus starts on Analyze, Tab stays inside, Escape cancels (not mid-upload).
+  const dialogRef = useFocusTrap<HTMLDivElement>(true, { onEscape: () => !busy && onCancel() });
 
   useEffect(() => {
     const objectUrl = URL.createObjectURL(image);
@@ -33,6 +36,7 @@ export function ScreenshotPreview({ image, onAnalyze, onRetake, onCancel }: Scre
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label="Screenshot preview"

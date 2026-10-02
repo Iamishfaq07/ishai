@@ -9,6 +9,9 @@ import { useAsync } from "../lib/useAsync";
 
 const H = 180;
 const PAD = { top: 16, right: 36, bottom: 24, left: 28 };
+// Just enough plot area to draw into: the chart follows its card down to the narrowest phone instead of overflowing.
+const MIN_W = PAD.left + PAD.right + 60;
+const TIP_W = 208;
 
 function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
   const ref = useRef<T>(null);
@@ -16,7 +19,7 @@ function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const ro = new ResizeObserver(([entry]) => entry && setWidth(Math.max(280, Math.round(entry.contentRect.width))));
+    const ro = new ResizeObserver(([entry]) => entry && setWidth(Math.max(MIN_W, Math.round(entry.contentRect.width))));
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -65,7 +68,8 @@ function ScoreChart({ points }: { points: ProgressPoint[] }) {
         aria-label={`Review score over your last ${points.length} scored sessions, latest ${last?.overall_score ?? "–"} out of 5`}
         onPointerMove={onMove}
         onPointerLeave={() => setHover(null)}
-        className="block touch-none"
+        // pan-y: a finger dragging up or down still scrolls the page; sideways moves the crosshair.
+        className="block touch-pan-y"
       >
         {[1, 2, 3, 4, 5].map((t) => (
           <g key={t}>
@@ -103,8 +107,12 @@ function ScoreChart({ points }: { points: ProgressPoint[] }) {
       {hp && hc && (
         <div
           role="status"
-          className="glass-panel pointer-events-none absolute z-10 w-52 rounded-xl p-2.5 text-xs shadow-lg"
-          style={{ left: Math.min(Math.max(hc[0] - 104, 0), width - 208), top: Math.max(hc[1] - 96, 0) }}
+          className="glass-panel pointer-events-none absolute z-10 rounded-xl p-2.5 text-xs shadow-lg"
+          style={{
+            width: Math.min(TIP_W, width),
+            left: Math.max(0, Math.min(hc[0] - TIP_W / 2, width - TIP_W)),
+            top: Math.max(hc[1] - 96, 0),
+          }}
         >
           <p className="truncate font-medium">{hp.title}</p>
           <p className="text-zinc-500 dark:text-zinc-400">

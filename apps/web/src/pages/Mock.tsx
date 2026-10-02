@@ -2,13 +2,15 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import type { MockDifficulty, MockInterviewType, MockPersona } from "@orbit/types";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select } from "../components/ui";
-import { MOCK_INTERVIEW_ENABLED, Target } from "@orbit/ui";
+import { MOCK_INTERVIEW_ENABLED, Target, practiceDocumentIds } from "@orbit/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { PrepSection } from "./Prep";
 import { ProgressSection } from "./Progress";
 import type { LiveLaunchState } from "./SessionSetup";
+
+const NO_JD = "none";
 
 const TYPES: Array<{ value: MockInterviewType; label: string }> = [
   { value: "behavioral", label: "Behavioral" },
@@ -50,6 +52,10 @@ function MockSetup() {
   const [offer, setOffer] = useState("");
   const [company, setCompany] = useState("");
   const [target, setTarget] = useState("");
+  // Which job description the interviewer asks about: the newest by default (like Prep), or none.
+  const jds = (docs.data ?? []).filter((d) => d.kind === "job_description" && d.status === "ready");
+  const [jdChoice, setJdChoice] = useState<string | null>(null);
+  const jdId = jdChoice === NO_JD ? null : (jds.find((d) => d.id === jdChoice) ?? jds[0])?.id ?? null;
   const negotiation = interviewType === "negotiation";
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -58,9 +64,7 @@ function MockSetup() {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const contextDocs = (docs.data ?? [])
-      .filter((d) => d.status === "ready" && (d.kind === "resume" || d.kind === "job_description"))
-      .map((d) => d.id);
+    const contextDocs = practiceDocumentIds(docs.data ?? [], jdId);
     try {
       const session = await api.createSession({
         title: negotiation
@@ -162,6 +166,18 @@ function MockSetup() {
                 </Field>
               </>
             )}
+            {jds.length > 0 && (
+              <Field label="Job description" htmlFor="mock-jd" hint="Questions fit this role. Your resume is always used.">
+                <Select id="mock-jd" value={jdId ?? NO_JD} onChange={(e) => setJdChoice(e.target.value)}>
+                  {jds.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.title}
+                    </option>
+                  ))}
+                  <option value={NO_JD}>None: just my resume</option>
+                </Select>
+              </Field>
+            )}
             <Field label="Duration" htmlFor="mock-duration">
               <Select id="mock-duration" value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
                 {[10, 20, 30, 45].map((m) => (
@@ -175,7 +191,7 @@ function MockSetup() {
           <p className="text-xs text-zinc-500">
             {negotiation
               ? "The AI plays a recruiter who has just made you this offer. Negotiate out loud; your review grades how you anchored, justified and handled pushback. Only your microphone is used."
-              : "Uses your ready resume and job descriptions for context. Only your microphone is used."}
+              : "Uses your resume and the job description you picked for context. Only your microphone is used."}
           </p>
           {error && <ErrorNote>{error}</ErrorNote>}
           <Button type="submit" disabled={busy || (negotiation && offer.trim().length < 2)}>

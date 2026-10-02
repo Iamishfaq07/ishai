@@ -5,8 +5,9 @@ answer without capturing anything. Flow:
 
 1. `POST /v1/sessions/{id}/companion` (owner) → a share `code`, valid until the session ends or 4 h pass. The same
    code is returned while it's valid, so the QR stays stable; `DELETE` stops sharing and disconnects phones.
-2. `POST /v1/companion/{code}` (no login — the code is the credential; 256-bit random, rate-limited) → a
-   single-use, 60 s view ticket, like live tickets.
+2. `POST /v1/companion/redeem` with `{"code": …}` (no login — the code is the credential; 256-bit random,
+   rate-limited) → a single-use, 60 s view ticket, like live tickets. The code travels in the body because URL paths
+   end up in access logs; the older `POST /v1/companion/{code}` still works for phones on an older web build.
 3. `WS /v1/sessions/{id}/view?ticket=…` → the events the live socket gets (minus interim transcript), replaying the
    recent ones first so a phone joining mid-session catches up. Anything the phone sends is ignored.
 
@@ -25,7 +26,7 @@ from dataclasses import dataclass, field
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user
@@ -132,6 +133,10 @@ class ShareOut(BaseModel):
     expires_in: int
 
 
+class RedeemIn(BaseModel):
+    code: str = Field(min_length=1, max_length=200)
+
+
 class RedeemOut(BaseModel):
     session_id: str
     title: str
@@ -162,8 +167,7 @@ async def end_sharing(session_id: str, user: Annotated[User, Depends(current_use
     stop_sharing(session_id)
 
 
-@router.post("/companion/{code}", response_model=RedeemOut, dependencies=[Depends(redeem_limit)])
-async def redeem(code: str) -> RedeemOut:
+def _redeem(code: str) -> RedeemOut:
     now = time.monotonic()
     _prune(now)
     share = _shares.get(code)
@@ -172,6 +176,18 @@ async def redeem(code: str) -> RedeemOut:
     ticket = secrets.token_urlsafe(32)
     _view_tickets[ticket] = (share.session_id, now + VIEW_TICKET_TTL_S)
     return RedeemOut(session_id=share.session_id, title=share.title, ticket=ticket)
+
+
+@router.post("/companion/redeem", response_model=RedeemOut, dependencies=[Depends(redeem_limit)])
+async def redeem(body: RedeemIn) -> RedeemOut:
+    return _redeem(body.code)
+
+
+# The old form, with the code in the path (and so in access logs): kept for phones still running an older web build.
+# Declared after /companion/redeem so that path is never taken for a code; both share one rate limit.
+@router.post("/companion/{code}", response_model=RedeemOut, dependencies=[Depends(redeem_limit)])
+async def redeem_in_path(code: str) -> RedeemOut:
+    return _redeem(code)
 
 
 @router.websocket("/sessions/{session_id}/view")
