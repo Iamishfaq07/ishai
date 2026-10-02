@@ -211,7 +211,7 @@ SKILL_VOCAB: tuple[str, ...] = tuple(sorted({
     # engineering
     "python", "java", "javascript", "typescript", "go", "golang", "rust", "c++", "c#", "ruby", "php", "kotlin", "swift",
     "scala", "sql", "nosql", "html", "css", "react", "angular", "vue", "node.js", "next.js", "django", "flask",
-    "fastapi", "spring", "rails", ".net", "graphql", "rest", "grpc", "microservices", "kubernetes", "docker",
+    "fastapi", "spring", "ruby on rails", ".net", "graphql", "rest", "grpc", "microservices", "kubernetes", "docker",
     "terraform", "ansible", "aws", "azure", "gcp", "google cloud", "linux", "git", "ci/cd", "jenkins",
     "github actions", "postgresql", "postgres", "mysql", "mongodb", "redis", "kafka", "rabbitmq", "elasticsearch",
     "spark", "hadoop", "airflow", "snowflake", "dbt", "bigquery", "tableau", "power bi", "looker", "excel",
@@ -245,6 +245,7 @@ excellent good great new using use used including include includes within well p
 preferred responsibilities responsible opportunity join help helping make makes looking seeking ideal knowledge
 skills skill understanding related relevant based level high highly etc will you'll we're our us day days time
 part full support ensure across environment fast paced world class every best like other others
+remote hybrid onsite pto benefits salary equity bonus insurance dental vision
 """.split())
 
 
@@ -283,9 +284,10 @@ def extract_keywords(job_text: str, limit: int = 20) -> list[str]:
     # Product and tech names. CamelCase and acronyms anywhere mid-sentence ("GraphQL", "SOC2"); a plain capitalised
     # word ("Datadog") only in a list-like spot ("with X", "in X", "X, Y", "(X)"), so a company name after "at" or a
     # job title isn't mistaken for a skill.
-    for m in re.finditer(r"(?:(\b[a-z]+|[,(/])\s?)([A-Z][a-z]*[A-Z][A-Za-z0-9]*|[A-Z]{2,6}[0-9]?|[A-Z][a-z]{2,})\b",
+    # (A lowercase word must be followed by a space: "gRPC" is one word, not "g" then "RPC".)
+    for m in re.finditer(r"(?:(\b[a-z]+\s|[,(/]\s?))([A-Z][a-z]*[A-Z][A-Za-z0-9]*|[A-Z]{2,6}[0-9]?|[A-Z][a-z]{2,})\b",
                          job_text):
-        before, word = m.group(1), m.group(2)
+        before, word = m.group(1).strip(), m.group(2)
         plain = word[0].isupper() and word[1:].islower()
         if plain and before not in _LIST_LEAD:
             continue

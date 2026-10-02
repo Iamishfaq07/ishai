@@ -401,3 +401,14 @@ def test_parse_cover_letter_strips_wrappers_and_rejects_scraps() -> None:
     assert "\n\n\n" not in ai.parse_cover_letter(body)
     with pytest.raises(ValueError):
         ai.parse_cover_letter("Sorry, I can't.")
+
+
+def test_job_keywords_skip_fragments_perks_and_lookalike_words() -> None:
+    from orbit_api.resumes.ats import extract_keywords
+
+    job = ("Northwind builds payment rails for merchants. Remote or hybrid.\n"
+           "Requirements\n- Experience with gRPC and PostgreSQL\n- Benefits include equity, health insurance and PTO\n")
+    got = {k.lower() for k in extract_keywords(job)}
+    assert {"grpc", "postgresql"} <= got
+    assert not got & {"rpc", "rails", "remote", "hybrid", "pto"}  # "gRPC" isn't "g"+"RPC"; "rails" isn't Ruby on Rails
+    assert "ruby on rails" in {k.lower() for k in extract_keywords("We use Ruby on Rails and PostgreSQL daily.")}

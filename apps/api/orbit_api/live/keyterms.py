@@ -45,7 +45,7 @@ def _skill_terms(line: str) -> list[str]:
     return out
 
 
-def _tech_terms(text: str) -> list[str]:
+def tech_terms(text: str) -> list[str]:
     return [m.group(0) for m in _TECH.finditer(text)] + [m.group(0) for m in _NAME.finditer(text)]
 
 
@@ -60,9 +60,9 @@ def extract_keyterms(chunks: Iterable[IndexedChunk], *, company: str | None = No
     if role:
         ranked += [m.group(0) for m in _TECH.finditer(role)]  # "SRE", "iOS": not "Senior" or "Engineer"
     ranked += [t for c in chunks if c.category == "skill" for t in _skill_terms(c.text)]
-    ranked += [t for c in chunks if c.doc_kind == "job_description" for t in _tech_terms(c.text)]
+    ranked += [t for c in chunks if c.doc_kind == "job_description" for t in tech_terms(c.text)]
     ranked += [t for c in chunks if c.doc_kind != "job_description" and c.category != "skill"
-               for t in _tech_terms(c.text)]
+               for t in tech_terms(c.text)]
     seen: set[str] = set()
     out: list[str] = []
     for term in ranked:
