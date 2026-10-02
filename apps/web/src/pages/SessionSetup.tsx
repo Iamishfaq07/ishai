@@ -495,7 +495,9 @@ export function SessionSetupPage() {
                 {systemAudio && supportsDisplayAudio() && <SystemAudioTest />}
               </div>
               <p className="text-xs text-zinc-500">
-                For the most reliable interviewer capture (any app, not just a browser tab), use the Orbit desktop app.
+                For the most reliable interviewer capture (any app, not just a browser tab), use the Orbit desktop app. It's
+                also the way to hear the Zoom or Teams app: sharing your whole screen's audio from the browser makes Zoom
+                mute your microphone.
               </p>
             </div>
           </Card>
