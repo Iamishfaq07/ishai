@@ -1,12 +1,17 @@
 # Render Blueprint for the Orbit API (free tier, no credit card required).
 # Deploy: Render dashboard → New → Blueprint → pick this repo.
+# The live service (orbit-api-sg, Singapore) was created with these settings through Render's API; the old Ohio
+# Blueprint is paused with auto-sync off. Don't sync it: a Blueprint-made service gets NEW generated secrets
+# (ORBIT_JWT_SECRET signs everyone out; ORBIT_CONFIG_SECRET can't read saved settings) unless you copy the old ones.
 # The web app is hosted separately on Cloudflare Pages; the DB is Neon (set ORBIT_DATABASE_URL below).
 services:
   - type: web
-    name: orbit-api
+    name: orbit-api-sg
     runtime: docker
     plan: free
-    region: ohio # closest to a us-east-2 Neon database; change if your Neon region differs
+    # Next to the Neon database (aws-ap-southeast-1) and ~90 ms from India. Render can't move a service between
+    # regions: a new region means a new service (and a new URL for the clients).
+    region: singapore
     dockerfilePath: ./apps/api/Dockerfile
     dockerContext: ./apps/api
     healthCheckPath: /ready
@@ -30,7 +35,7 @@ services:
         sync: false
       - key: ORBIT_CORS_ORIGINS # JSON array or comma-separated: the Pages URL + tauri origins
         sync: false
-      # This service's own https URL (e.g. https://orbit-api-5kcx.onrender.com): links it hands out (desktop
+      # This service's own https URL (e.g. https://orbit-api-sg.onrender.com): links it hands out (desktop
       # installer downloads) are built from it, never from the request's Host header.
       - key: ORBIT_API_PUBLIC_URL
         sync: false
