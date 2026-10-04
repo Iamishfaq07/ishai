@@ -1,5 +1,17 @@
 # Implementation log
 
+## Dotted "thinking orbs" for loading and AI activity (2026-10-04)
+
+- Loading spinners, the live "Thinking…" / "Answering" / "Hearing speech" status, the answer card's thinking state and
+  the session-report banner now use the animated dotted orbs from
+  [thinking-orbs](https://github.com/Jakubantalik/thinking-orbs) (MIT, © Jakub Antalik), in the shared UI package so
+  the web app and the desktop app both get them.
+- The animation says what is going on: `searching` while reading a resume or the job post, `composing` while writing
+  (letter, rewrites, answers), `solving` while thinking an answer through, `listening` while hearing speech,
+  `connecting` while joining a session, `weaving` for uploads and tailoring. Page-level loads use the large orb.
+- Monochrome, follows light/dark, a still frame under "reduce motion", paused when offscreen or the tab is hidden.
+- Fixed a doubled ellipsis ("Reading your resume......") in loading messages.
+
 ## The resume maker is free for everyone, no account (2026-10-02)
 
 - **Open to anyone at `/resume-maker`, linked from the sign-in and sign-up screens** ("Free resume maker, no account

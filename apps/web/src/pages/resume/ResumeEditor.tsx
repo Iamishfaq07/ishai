@@ -69,6 +69,11 @@ const FIX_BUSY: Record<string, string> = {
   quantified: "Finding where numbers fit…",
 };
 
+/** The orb for what the AI is doing, from the words on screen: reading or scanning, combining with a job post, writing. */
+function busyState(label: string): "searching" | "weaving" | "composing" {
+  return /read|find|match|scor|fix/i.test(label) ? "searching" : /tailor/i.test(label) ? "weaving" : "composing";
+}
+
 /** The resume editor, for a resume in the signed-in account. */
 export function ResumeEditorPage() {
   return <ResumeEditor />;
@@ -431,7 +436,7 @@ function ResumeEditor() {
   };
 
   if (loadError) return <ErrorNote>{loadError}</ErrorNote>;
-  if (!resume) return <Spinner label="Opening your resume" />;
+  if (!resume) return <Spinner label="Opening your resume" state="searching" big />;
 
   return (
     <AllowanceContext.Provider value={allowance}>
@@ -928,7 +933,7 @@ function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; o
         <AiCostNote className="mt-2" />
         {error && (upgrade ? <AiErrorNote className="mt-2" error={error} upgrade /> : <p className="mt-2 text-sm text-rose-600">{error}</p>)}
       </Panel>
-      {busy && <Spinner label="Writing your letter" />}
+      {busy && <Spinner label="Writing your letter" state="composing" />}
       {(text || !busy) && (
         <Panel title="Your letter" action={fills.length > 0 ? <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">{fills.length} to fill in</span> : undefined}>
           <Textarea aria-label="Letter text" rows={18} maxLength={6000} value={text} onChange={(e) => onText(e.target.value)} placeholder="Write it yourself, or let the AI draft it above." />
@@ -1030,7 +1035,7 @@ function ScorePanel({
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [showPassed, setShowPassed] = useState(false);
-  if (!report) return <Spinner label="Scoring" />;
+  if (!report) return <Spinner label="Scoring" state="searching" />;
   const failed = report.checks.filter((c) => !c.passed).sort((a, b) => b.max_points - b.points - (a.max_points - a.points));
   const passed = report.checks.filter((c) => c.passed);
   const fixable = failed.filter((c) => fixKind(c) !== "you" && (c.category !== "keywords" || report.has_job)).length;
@@ -1235,8 +1240,12 @@ function AiPanel({
         </div>
         <AiCostNote className="mt-2" />
       </Panel>
-      {busy && <Spinner label={busy} />}
+<<<<<<< HEAD
       {error && !busy && <AiErrorNote error={error} upgrade={upgrade} />}
+=======
+      {busy && <Spinner label={busy} state={busyState(busy)} />}
+      {error && !busy && <p role="status" className="text-sm text-zinc-600 dark:text-zinc-300">{error}</p>}
+>>>>>>> 4342d94 (Use thinking-orbs animations for loading and AI activity)
       {safe > 0 && !busy && (
         <Button variant="secondary" onClick={onAcceptSafe}>
           <Check className="h-4 w-4" /> Apply the {safe} safe fix{safe === 1 ? "" : "es"} at once

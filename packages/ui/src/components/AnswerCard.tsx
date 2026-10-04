@@ -14,6 +14,7 @@ import { AnswerRatingButtons } from "./AnswerRating";
 import { CodeBlock } from "./CodeBlock";
 import { cx, focusRing } from "./cx";
 import { PulseRings } from "./Illustrations";
+import { Orb } from "./Orb";
 import { OrbitLogo } from "./OrbitLogo";
 import { ArrowRight, Check, Circle, Maximize2, Minimize2, Pause, PenLine, Play, Square, Volume2 } from "../icons";
 
@@ -386,11 +387,7 @@ export const AnswerCard = memo(function AnswerCard({
         {thinking && (
           <div className="animate-fade-in space-y-2.5" role="status" aria-label="Thinking">
             <p className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-              <span className="inline-flex gap-1" aria-hidden="true">
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 motion-safe:animate-bounce" />
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 motion-safe:animate-bounce [animation-delay:120ms]" />
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 motion-safe:animate-bounce [animation-delay:240ms]" />
-              </span>
+              <Orb state="solving" />
               Thinking…
             </p>
             <div className="skeleton-line h-3 w-11/12 motion-safe:animate-shimmer" aria-hidden="true" />

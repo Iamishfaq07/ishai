@@ -1,3 +1,4 @@
+import { Orb } from "./Orb";
 import { cx, focusRing } from "./cx";
 
 /** Session-detail banner for the background report: generating, or failed (the transcript is still saved). */
@@ -14,7 +15,7 @@ export function ReportStatusNote({ status, onRetry }: { status: string | null | 
           : "bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-100",
       )}
     >
-      {pending && <span className="h-2 w-2 animate-pulse rounded-full bg-indigo-500" aria-hidden />}
+      {pending && <Orb state="composing" />}
       <span className="flex-1">
         {pending
           ? "Generating the report… this page updates on its own."

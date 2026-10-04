@@ -15,7 +15,7 @@ import {
   practiceDocumentIds,
   splitPlaceholders,
 } from "@orbit/ui";
-import { Button, Card, ErrorNote, Field, Input, Select, Textarea } from "../components/ui";
+import { Button, Card, ErrorNote, Field, Input, Select, Spinner, Textarea } from "../components/ui";
 import { api } from "../lib/api";
 import { LAST_PREP_KEY as LAST_KEY } from "../lib/auth";
 import { errorText } from "../lib/format";
@@ -332,8 +332,9 @@ export function PrepSection({
           )}
           <Button type="submit" disabled={busy || source === "link" || (source === "paste" && pasted.trim().length < 40)}>
             <Wand2 className="h-4 w-4" />
-            {busy ? "Reading the job description…" : result ? "Generate again" : "Generate my questions"}
+            {busy ? "Generating…" : result ? "Generate again" : "Generate my questions"}
           </Button>
+          {busy && <Spinner label="Reading the job description" state="searching" />}
           {busy && (
             <div className="space-y-2" aria-hidden="true">
               {[80, 64, 72].map((w) => (

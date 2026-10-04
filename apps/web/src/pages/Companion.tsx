@@ -136,7 +136,7 @@ export function CompanionPage() {
   if (!view) {
     return (
       <Shell>
-        <Spinner label="Connecting to your session" />
+        <Spinner label="Connecting to your session" state="connecting" big />
       </Shell>
     );
   }

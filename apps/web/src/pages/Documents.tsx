@@ -124,7 +124,7 @@ export function DocumentsPage() {
                 className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-indigo-500"
               />
             </Field>
-            {uploading && <Spinner label="Uploading" />}
+            {uploading && <Spinner label="Uploading" state="weaving" />}
           </div>
         </Card>
 
