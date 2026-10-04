@@ -1240,12 +1240,8 @@ function AiPanel({
         </div>
         <AiCostNote className="mt-2" />
       </Panel>
-<<<<<<< HEAD
-      {error && !busy && <AiErrorNote error={error} upgrade={upgrade} />}
-=======
       {busy && <Spinner label={busy} state={busyState(busy)} />}
-      {error && !busy && <p role="status" className="text-sm text-zinc-600 dark:text-zinc-300">{error}</p>}
->>>>>>> 4342d94 (Use thinking-orbs animations for loading and AI activity)
+      {error && !busy && <AiErrorNote error={error} upgrade={upgrade} />}
       {safe > 0 && !busy && (
         <Button variant="secondary" onClick={onAcceptSafe}>
           <Check className="h-4 w-4" /> Apply the {safe} safe fix{safe === 1 ? "" : "es"} at once
