@@ -51,7 +51,7 @@ export function LivePage() {
   if (detail.loading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Spinner label="Preparing session" />
+        <Spinner label="Preparing session" state="connecting" big />
       </div>
     );
   }

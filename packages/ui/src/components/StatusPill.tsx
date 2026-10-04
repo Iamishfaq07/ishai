@@ -1,18 +1,18 @@
 import type { LiveState, ProviderState } from "@orbit/types";
 import type { ConnectionStatus } from "../live/client";
 import { cx } from "./cx";
-import { OrbitLogo } from "./OrbitLogo";
+import { Orb } from "./Orb";
 
 type Tone = "idle" | "live" | "busy" | "warn" | "error" | "done";
 
-type Motion = "pulse" | "wave" | "spin";
+type Motion = "pulse" | "wave" | "spin" | "think";
 
 const STATE_META: Record<LiveState, { label: string; tone: Tone; pulse?: boolean; motion?: Motion }> = {
   idle: { label: "Ready", tone: "idle" },
   listening: { label: "Listening", tone: "live", pulse: true },
   speech_detected: { label: "Hearing speech", tone: "live", pulse: true, motion: "wave" },
   question_detected: { label: "Question detected", tone: "busy" },
-  generating: { label: "Thinking…", tone: "busy", pulse: true, motion: "spin" },
+  generating: { label: "Thinking…", tone: "busy", pulse: true, motion: "think" },
   streaming: { label: "Answering", tone: "busy", pulse: true, motion: "spin" },
   answer_complete: { label: "Listening", tone: "live", pulse: true },
   follow_up_detected: { label: "Follow-up detected", tone: "busy" },
@@ -75,22 +75,12 @@ export function StatusPill({ state, connection, stt }: StatusPillProps) {
   );
 }
 
-/** Listening: a breathing dot. Hearing speech: a live sound wave. Thinking/answering: the Orbit mark, ring spinning. */
+/** Listening: a breathing dot. Hearing speech: the listening orb. Thinking: the solving orb. Answering: the composing orb. */
 function Indicator({ motion, pulse, dot }: { motion?: Motion; pulse: boolean; dot: string }) {
-  if (motion === "wave") {
-    return (
-      <span className="flex h-3 items-center gap-[2px]" aria-hidden="true">
-        {[0, 150, 300, 450].map((delay) => (
-          <span
-            key={delay}
-            className={cx("h-3 w-[2px] origin-center rounded-full motion-safe:animate-wave", dot)}
-            style={{ animationDelay: `${delay}ms` }}
-          />
-        ))}
-      </span>
-    );
-  }
-  if (motion === "spin") return <OrbitLogo size={13} busy animated={false} />;
+  // The orb is 20px; the pill's line is shorter, so it overlaps the padding rather than stretching the pill.
+  if (motion === "wave") return <Orb state="listening" className="-mx-1 -my-1.5" />;
+  if (motion === "think") return <Orb state="solving" className="-mx-1 -my-1.5" />;
+  if (motion === "spin") return <Orb state="composing" className="-mx-1 -my-1.5" />;
   return (
     <span className="relative flex h-2 w-2" aria-hidden="true">
       {pulse && (

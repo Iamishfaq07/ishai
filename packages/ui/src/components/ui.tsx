@@ -7,7 +7,7 @@ import type {
   TextareaHTMLAttributes,
 } from "react";
 import { cx, focusRing } from "./cx";
-import { OrbitLogo } from "./OrbitLogo";
+import { Orb, type OrbState } from "./Orb";
 import { SpotIllustration } from "./Illustrations";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
@@ -161,12 +161,19 @@ export function Toggle({
   );
 }
 
-/** Loading: the Orbit mark with its ring spinning. */
-export function Spinner({ label = "Loading" }: { label?: string }) {
+/** Loading: a dotted orb whose animation says what is going on (`state`), with the words beside it. `big` stacks a
+ *  larger orb over the words, for a page or panel that is loading. */
+export function Spinner({ label = "Loading", state = "working", big = false }: { label?: string; state?: OrbState; big?: boolean }) {
   return (
-    <span role="status" className="inline-flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-      <OrbitLogo size={20} busy />
-      {label}…
+    <span
+      role="status"
+      className={cx(
+        "inline-flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400",
+        big && "flex w-full flex-col justify-center gap-3 py-12 text-center",
+      )}
+    >
+      <Orb state={state} size={big ? 64 : 20} />
+      {label.replace(/[.…]+$/, "")}…
     </span>
   );
 }

@@ -13,6 +13,7 @@ import {
   Trash2,
   UserRound,
   X,
+  Orb,
   confirmDialog,
   cx,
   focusRing,
@@ -120,7 +121,7 @@ export function ResumesPage() {
       {creating && <NewResume onClose={() => setCreating(false)} />}
       {actionError && <div className="mb-4"><ErrorNote>{actionError}</ErrorNote></div>}
       {list.loading && !list.data ? (
-        <Spinner label="Loading your resumes" />
+        <Spinner label="Loading your resumes" state="searching" />
       ) : list.error ? (
         <ErrorNote onRetry={list.reload}>{errorText(list.error)}</ErrorNote>
       ) : !list.data?.length ? (
@@ -212,6 +213,7 @@ function BusyNote({ onCancel }: { onCancel: () => void }) {
   }, []);
   return (
     <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-xl bg-indigo-500/10 p-3 text-sm text-indigo-900 dark:text-indigo-200">
+      <Orb state="searching" />
       <span className="min-w-0 flex-1">
         {slow
           ? "Still working. Scanned PDFs, long resumes and slow connections can take up to a minute or two."
