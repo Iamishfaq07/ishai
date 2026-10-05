@@ -94,6 +94,27 @@ _CHAT_MODIFIERS = ("make", "rewrite", "shorter", "longer", "simpler", "simplify"
                    "give an example", "add an example", "in star", "star format", "more detail", "less detail",
                    "more technical", "what should i say")
 
+# A chat message that only asks for code for the question already on screen: "give me the code", "code it", "now in
+# Java", "what about C++?". Anything with a topic of its own ("code for binary search") is a new question.
+_CODE_ASKS = frozenset({"code", "coding", "snippet", "implementation", "implement", "program", "pseudocode",
+                        "solution", "function", "script", "solve"})
+_CODE_LANGUAGES = frozenset({"python", "java", "javascript", "js", "typescript", "ts", "c", "cpp", "csharp", "go",
+                             "golang", "rust", "sql", "kotlin", "swift", "ruby", "php", "scala"})
+_CODE_ASK_FILLER = frozenset({
+    "give", "me", "the", "a", "an", "write", "show", "can", "could", "would", "you", "please", "pls", "now", "it",
+    "its", "it's", "in", "for", "this", "that", "same", "of", "with", "just", "also", "too", "convert", "to",
+    "translate", "rewrite", "redo", "do", "provide", "share", "send", "need", "want", "i", "i'd", "full", "complete",
+    "working", "sample", "using", "use", "language", "version", "one", "answer", "then", "ok", "okay", "and", "as",
+    "into", "actual", "some", "what", "about", "how", "let's", "lets", "see", "type", "out", "up", "instead", "again",
+    "only", "here", "above", "previous", "last", "question", "problem", "so", "form", "like", "plz",
+})
+
+
+def is_code_request(text: str) -> bool:
+    words = tokens(text)
+    return (any(w in _CODE_ASKS or w in _CODE_LANGUAGES for w in words)
+            and all(w in _CODE_ASKS or w in _CODE_LANGUAGES or w in _CODE_ASK_FILLER for w in words))
+
 # User-facing answer.failed messages, keyed by LLMError.code — never expose raw upstream bodies.
 _USER_ERROR = {
     "rate_limited": "The AI is rate-limited right now. Try again in a moment.",
@@ -302,6 +323,8 @@ class LiveEngine:
         self._stt_down_detail: str | None = None
         self._turns: dict[Channel, _ChannelTurn | None] = {"mic": None, "system": None}
         self._last_interviewer_text = ""
+        # The question whose latest answer had code: "make it shorter" on it, or a follow-up to it, keeps the code.
+        self._coded_question: str | None = None
         self._gens: dict[str, _Generation] = {}
         self._active: str | None = None  # answer id currently shown/streaming
         self._answer_lock = asyncio.Lock()  # serializes _start_answer (no double generations)
@@ -914,11 +937,16 @@ class LiveEngine:
 
     async def _chat(self, text: str) -> None:
         low = text.lower()
-        if self.memory.questions and any(m in low for m in _CHAT_MODIFIERS):
+        code_ask = is_code_request(text)
+        if self.memory.questions and (code_ask or any(m in low for m in _CHAT_MODIFIERS)):
+            # A change to the last answer ("make it shorter", "give me the code", "now in Java"). Asked for code, or
+            # rewriting an answer that had code, it stays a coding answer.
             q = self.memory.questions[-1]
-            await self._start_answer(None, q, classify_type(normalize(q)), True, "chat", instruction=text)
+            qtype = QuestionType.coding if code_ask or q == self._coded_question else classify_type(normalize(q))
+            await self._start_answer(None, q, qtype, True, "chat", instruction=text)
         else:
-            await self._start_answer(None, text, classify_type(normalize(text)), False, "chat")
+            qtype = QuestionType.coding if code_ask else classify_type(normalize(text))
+            await self._start_answer(None, text, qtype, False, "chat")
 
     async def _cancel_active(self, reason: str, *, include_pinned: bool = False, keep: str | None = None) -> None:
         for gen in list(self._gens.values()):
@@ -1012,14 +1040,27 @@ class LiveEngine:
                 if self._gens[old].task.done():
                     del self._gens[old]
 
+    def _answer_type(self, qtype: QuestionType) -> QuestionType:
+        """The type an answer is written as. A follow-up to an answer that had code ("what if the array is sorted?")
+        is a coding one, and in a coding interview or assessment so is any technical question (the candidate is there
+        to write code): typed "technical", they used to come back as prose only."""
+        if qtype == QuestionType.follow_up and self._coded_question is not None and self.memory.questions[-1:] == [
+                self._coded_question]:
+            return QuestionType.coding
+        if qtype == QuestionType.technical and self.profile.session_type in ("coding", "assessment"):
+            return QuestionType.coding
+        return qtype
+
     async def _run_answer(
         self, aid: str, qid: str | None, question: str, qtype: QuestionType, is_follow_up: bool, source: str,
         instruction: str | None, images: list[LLMImage], out: _AnswerOut,
     ) -> None:
+        qtype = self._answer_type(qtype)
         is_code = qtype == QuestionType.coding or self.profile.session_type == "coding"
         reasoning = choose_reasoning_level(qtype, estimate_complexity(question), self.profile.session_type)
         mode = answer_mode(qtype, question, source, is_code, self.profile.features)
-        is_code = is_code or mode == "debug"  # a bug report is a coding answer (code format, code-sized budget)
+        # A bug report is a coding answer (code format, code-sized budget), and a screenshot may well be one.
+        is_code = is_code or mode == "debug" or source == "screenshot"
         # A screenshot's "question" is our own instruction text, not the interviewer's asks.
         asks = question_parts(question) if source != "screenshot" else [question]
         inputs = PromptInputs(
@@ -1031,8 +1072,11 @@ class LiveEngine:
             company=self.profile.company, parts=asks,
         )
         built = build_prompt(self._index, inputs, self.memory)
-        budget = CODE_MAX_TOKENS if is_code or mode == "design" else MAX_TOKENS[self.settings.length]
-        if not is_code and mode != "design":
+        # Technical questions get room for code as well: the model writes it when the question turns out to need it,
+        # and a solution cut off at a prose-sized budget is no answer. (The length rules keep the talk track short.)
+        roomy = is_code or mode == "design" or qtype in (QuestionType.technical, QuestionType.follow_up)
+        budget = CODE_MAX_TOKENS if roomy else MAX_TOKENS[self.settings.length]
+        if not roomy:
             # Room for every part of a multi-part question: a capped answer stops mid-way and skips the last parts.
             budget = int(budget * min(MULTI_PART_MAX_FACTOR, 1 + MULTI_PART_EXTRA * (len(asks) - 1)))
         # Live answers always run on the fast model. The reasoning model's hidden chain-of-thought put its
@@ -1175,6 +1219,7 @@ class LiveEngine:
             self.memory.answers.pop()  # a rewrite ("make it shorter") replaces what the last answer said
         self.memory.last_answer_brief = (final.direct_answer + " " + " | ".join(final.talking_points))[:600]
         self.memory.note_answer(question, final)
+        self._coded_question = question if final.code is not None and final.code.content else None
         await self._rec.answer(aid, qid, "completed", final.model_dump(), provider, model, first_token_ms,
                                total_ms)
         await self._rec.provider_request(provider, model, request.request_type, usage, total_ms, True)
@@ -1228,12 +1273,14 @@ _CODE_CONTEXT = re.compile(
 
 def answer_mode(qtype: QuestionType, question: str, source: str, is_code: bool, features: frozenset[str]) -> str:
     """Which structured format an answer uses (brief §29–§30), gated by plan features."""
+    if source == "screenshot":
+        # Only the model sees what the image is, in any session: a coding problem gets code, an error the fix (the
+        # debug format where the plan has it), anything else a plain answer.
+        return "debug_if_error" if "advanced_coding" in features else "screenshot"
     if qtype == QuestionType.system_design and "system_design" in features:
         return "design"
     if "advanced_coding" not in features:
         return "normal"
-    if is_code and source == "screenshot":
-        return "debug_if_error"
     code_bug = qtype == QuestionType.technical and bool(_CODE_CONTEXT.search(question))
     if (is_code or code_bug) and _DEBUG_CUES.search(question):
         return "debug"

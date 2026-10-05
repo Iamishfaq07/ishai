@@ -391,9 +391,10 @@ async def test_an_early_answer_still_streaming_when_its_question_fires_keeps_str
 async def test_a_multi_part_question_gets_a_bigger_budget_and_its_parts_listed() -> None:
     llm = MockLLMProvider()
     eng, sink = await _engine(llm)
-    await _ask(eng, "What is dependency injection?")
+    # (not a technical question: those get room for code whatever their parts, test_coding_answers.py)
+    await _ask(eng, "Why do you want to work here?")
     await sink.wait_for("answer.completed")
-    await eng.on_transcript("mic", TranscriptEvent("final", "So it means passing things in", 0, 100, endpoint=True))
+    await eng.on_transcript("mic", TranscriptEvent("final", "So I like the product", 0, 100, endpoint=True))
     await _ask(eng, "Tell me about a time you disagreed with your manager. How did you resolve it, and what was "
                     "the outcome?")
     await sink.wait_for("answer.completed", 2)

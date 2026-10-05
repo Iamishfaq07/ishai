@@ -25,6 +25,7 @@ import type { LiveActions } from "../live/useLiveSession";
 import { AnswerCard } from "./AnswerCard";
 import type { AnswerRatings } from "./AnswerRating";
 import { ChatInput } from "./ChatInput";
+import { CodeBlock } from "./CodeBlock";
 import { ControlBar } from "./ControlBar";
 import { MockPanel } from "./MockPanel";
 import { cx, focusRing } from "./cx";
@@ -627,8 +628,8 @@ function Banners({
 function ChatLog({ live }: { live: LiveViewState }) {
   // Follow new replies like the transcript does — key on chat length + streamed length of the last reply.
   const last = live.chat[live.chat.length - 1];
-  const lastLen =
-    last?.kind === "answer" ? (live.answers[last.answer_id]?.answer.talking_points.length ?? 0) : 0;
+  const lastAnswer = last?.kind === "answer" ? live.answers[last.answer_id]?.answer : undefined;
+  const lastLen = lastAnswer ? lastAnswer.talking_points.length + (lastAnswer.code?.content.length ?? 0) : 0;
   const { ref, onScroll } = useStickyScroll<HTMLOListElement>(`${live.chat.length}:${lastLen}`);
   if (live.chat.length === 0) {
     return (
@@ -673,6 +674,19 @@ function ChatAnswer({ answer }: { answer: AnswerView | undefined }) {
             <li key={i}>{p}</li>
           ))}
         </ul>
+      )}
+      {/* "Give me the code" in chat: the reply's code, not just its words */}
+      {a.code?.content && (
+        <div className="pt-1.5">
+          <CodeBlock code={a.code} />
+        </div>
+      )}
+      {(a.time_complexity || a.space_complexity) && (
+        <p className="text-xs text-zinc-500">
+          {[a.time_complexity && `Time ${a.time_complexity}`, a.space_complexity && `Space ${a.space_complexity}`]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
       )}
     </div>
   );

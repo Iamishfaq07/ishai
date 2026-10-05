@@ -160,9 +160,13 @@ plus `follow_up_detected`, `stt_reconnecting`, `ai_reconnecting`, `error`, `paus
   - `design` for system-design questions on plans with `system_design`;
   - `debug` for coding questions, or technical questions with code context, that carry bug cues (error,
     traceback, failing, wrong output…), on plans with `advanced_coding`;
-  - coding screenshots let the model use the debug format only if the image shows an error.
+  - screenshots, in any session, let the model decide from the image: a coding problem gets a coding answer (talk
+    track plus `code`), an error the debug format (on plans with `advanced_coding`; otherwise the fix in `code`),
+    anything else a plain answer.
 
-`code` may be `null`. `context_used` lists source labels (e.g. `"resume: Acme Corp — AppSec lead"`),
+`code` may be `null`. Any answer can carry `code`, not only coding ones: a technical answer whose question turned out
+to need code, or a snippet that makes a point. In a coding or assessment session technical questions are answered as
+coding ones (`type: "coding"`), and so is a follow-up to an answer that had code. `context_used` lists source labels (e.g. `"resume: Acme Corp — AppSec lead"`),
 never raw document text.
 
 ## Re-drill

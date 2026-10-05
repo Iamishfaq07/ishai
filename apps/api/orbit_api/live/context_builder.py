@@ -52,7 +52,8 @@ _SESSION_RULES: dict[SessionType, str] = {
     "interview": "Context: job interview. The user is the candidate.",
     "phone": "Context: phone/room-audio interview. The user is the candidate.",
     "meeting": "Context: professional meeting. Help the user contribute clearly; no candidate framing.",
-    "coding": "Context: coding interview. Prefer approach + code + complexity.",
+    "coding": "Context: coding interview. The user is the candidate, solving problems live: technical questions get "
+              "the talk track and then working code.",
     "assessment": "Context: online assessment PRACTICE. Teach the approach clearly.",
     "mock": "Context: mock interview practice.",
 }
@@ -161,11 +162,33 @@ _MODE_RULES = {
               "why, and the fix). Then ROOTCAUSE: (one line), FIX: (the minimal change, one line), WHY: (why it "
               "failed, one line), DIFF: followed by a ```diff fenced unified diff of the minimal fix, then CODE: "
               "with the full corrected code."),
-    "debug_if_error": ("If the image shows an error, a stack trace, a failing test or wrong output, use DEBUG "
-                       "MODE: after ANSWER write ROOTCAUSE:, FIX:, WHY: (one line each), DIFF: with a ```diff "
-                       "fenced minimal fix, then CODE: with the corrected code. Otherwise answer it as a normal "
-                       "coding question."),
+    "debug_if_error": ("SCREENSHOT: first work out what the image shows. A coding problem (a task to write, implement "
+                       "or solve, a problem statement, an editor with a task in it) gets a coding answer: the short "
+                       "spoken ANSWER, then PROBLEM:, CODE: <language> with the complete, runnable solution in a "
+                       "fenced block, TIME:, SPACE:, EDGE: and TESTS:. An error, a stack trace, a failing test or "
+                       "wrong output gets DEBUG MODE: after ANSWER write ROOTCAUSE:, FIX:, WHY: (one line each), "
+                       "DIFF: with a ```diff fenced minimal fix, then CODE: with the corrected code. Anything else "
+                       "(a multiple-choice or written question, a diagram) gets the ANSWER, with CODE only if it "
+                       "helps."),
+    "screenshot": ("SCREENSHOT: first work out what the image shows. A coding problem (a task to write, implement or "
+                   "solve, a problem statement, an editor with a task in it) gets a coding answer: the short spoken "
+                   "ANSWER, then PROBLEM:, CODE: <language> with the complete, runnable solution in a fenced block, "
+                   "TIME:, SPACE:, EDGE: and TESTS:. An error or failing test gets the cause and the fix in ANSWER and "
+                   "the corrected code under CODE:. Anything else (a multiple-choice or written question, a diagram) "
+                   "gets the ANSWER, with CODE only if it helps."),
 }
+
+# Every coding answer, outside the debug and design formats. Without it the model often answered in prose only.
+_CODE_RULE = ("CODING ANSWER: ANSWER is the short spoken talk track, never code. After it you MUST write PROBLEM:, "
+              "then CODE: <language> on its own line followed by the complete, runnable solution in a ```<language> "
+              "fenced block, then TIME:, SPACE:, EDGE: and TESTS:. Never answer a coding question in prose alone. A "
+              "conceptual question still gets a short code example that shows the idea.")
+# A technical question the detector didn't call coding may still be one ("so, how would you do that in Python?"): the
+# model, which reads the whole conversation, decides.
+_MAYBE_CODE_RULE = ("If answering this properly means writing code (they ask you to write, implement, solve or code "
+                    "something), answer it as a coding question: the spoken ANSWER, then CODE: <language> with the "
+                    "complete solution in a ```<language> fenced block, then TIME: and SPACE:. A short snippet under "
+                    "CODE: is also fine when it makes a technical point clearer. Code never goes inside ANSWER.")
 
 # Question types that ask for the user's own story/position, where invented specifics are most tempting.
 _PERSONAL_TYPES = {
@@ -271,9 +294,12 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
             _STYLE_RULES[inputs.style] if inputs.qtype != QuestionType.coding else "",
             f"Answer language: {(inputs.answer_language or '').strip() or 'English'}",
             (f"Write any code in {_LANGUAGE_NAMES.get(inputs.coding_language, inputs.coding_language)} unless the "
-             "question names a different language.") if inputs.coding_language else "",
+             "question or the user's request names a different language.") if inputs.coding_language else "",
             _GROUNDING_RULE if inputs.qtype in _PERSONAL_TYPES or inputs.is_follow_up else "",
             _MODE_RULES.get(inputs.mode, ""),
+            _CODE_RULE if inputs.qtype == QuestionType.coding and inputs.mode == "normal" else "",
+            _MAYBE_CODE_RULE if inputs.qtype in (QuestionType.technical, QuestionType.follow_up)
+            and inputs.mode == "normal" else "",
             f"Question type: {inputs.qtype.value}" + (" (follow-up to the previous question)" if inputs.is_follow_up
                                                      else ""),
         ]
