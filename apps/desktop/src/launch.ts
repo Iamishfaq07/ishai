@@ -1,9 +1,9 @@
-import type { SessionType } from "@orbit/types";
+import type { OrbitSession, SessionType } from "@orbit/types";
 import type { AudioApp } from "./native";
 
 /**
- * Which audio a session captures: the interviewer's app or output picked on Setup. Plain functions over plain data
- * (no React, no Tauri) so they can be tested.
+ * Which audio a session captures: the interviewer's app or output picked on Setup, kept across launches, and rebuilt
+ * for a rejoin. Plain functions over plain data (no React, no Tauri) so they can be tested.
  */
 
 /** What the live screen captures. */
@@ -21,6 +21,8 @@ export interface DesktopLaunch {
 export const MIC_KEY = "orbit.micDeviceId";
 /** The output last picked under "Listen to": "out:default" | "out:communications" | "out:<endpoint id>". */
 export const OUTPUT_KEY = "orbit.outputSource";
+/** The audio of the session last started or rejoined, so rejoining it hears the same app again. */
+const LAST_LAUNCH_KEY = "orbit.lastLaunch";
 
 /**
  * Session types with an interviewer on the other end of a call. Phone / room: everyone is heard through the
@@ -98,4 +100,64 @@ export function checkChosenApp(apps: AudioApp[], pid: number, exe: string): Chos
   if (!app) return { kind: "gone" };
   const playing = app.active ? undefined : apps.find((a) => a.active && a.pid !== app.pid);
   return playing ? { kind: "idle", app, playing } : { kind: "ok", app };
+}
+
+/** "out:communications" → "communications"; nothing saved = the default output. */
+function outputDevice(saved: string | null): string | undefined {
+  return saved?.startsWith("out:") ? saved.slice(4) : undefined;
+}
+
+interface LastLaunch extends DesktopLaunch {
+  sessionId: string;
+}
+
+export interface SavedAudio {
+  micDeviceId: string | null;
+  output: string | null;
+  last: LastLaunch | null;
+}
+
+export function loadSavedAudio(storage: Pick<Storage, "getItem"> = localStorage): SavedAudio {
+  let last: LastLaunch | null = null;
+  try {
+    const parsed = JSON.parse(storage.getItem(LAST_LAUNCH_KEY) ?? "null") as LastLaunch | null;
+    if (parsed && typeof parsed.sessionId === "string" && typeof parsed.systemAudio === "boolean") last = parsed;
+  } catch {
+    // unreadable: rejoin from the saved choices
+  }
+  return { micDeviceId: storage.getItem(MIC_KEY), output: storage.getItem(OUTPUT_KEY), last };
+}
+
+/** Called whenever a session starts or is rejoined. */
+export function rememberLaunch(
+  sessionId: string,
+  launch: DesktopLaunch,
+  storage: Pick<Storage, "setItem"> = localStorage,
+): void {
+  const last: LastLaunch = { sessionId, ...launch };
+  storage.setItem(LAST_LAUNCH_KEY, JSON.stringify(last));
+}
+
+/**
+ * The audio for rejoining `session`: what that session last ran with, else the saved microphone and output. Its
+ * app is looked up again by exe (it may have restarted under a new PID); if it isn't running now, capture waits for
+ * it (process_loopback.rs). Phone and mock sessions never capture system audio.
+ */
+export function rejoinLaunch(
+  session: Pick<OrbitSession, "id" | "type">,
+  saved: SavedAudio,
+  apps: AudioApp[],
+  isMac: boolean,
+): DesktopLaunch {
+  const last = saved.last?.sessionId === session.id ? saved.last : null;
+  const mic = last ? last.micDeviceId : (saved.micDeviceId ?? undefined);
+  const micOnly: DesktopLaunch = { systemAudio: false, ...(mic ? { micDeviceId: mic } : {}) };
+  if (isMac || !usesSystemAudio(session.type) || last?.systemAudio === false) return micOnly;
+  if (last?.systemProcessExe) {
+    const app = findApp(apps, last.systemProcessId, last.systemProcessExe);
+    const pid = app?.pid ?? last.systemProcessId;
+    if (pid) return { ...micOnly, systemAudio: true, systemProcessId: pid, systemProcessExe: app?.exe ?? last.systemProcessExe };
+  }
+  const device = (last && !last.systemProcessExe ? last.systemDevice : undefined) ?? outputDevice(saved.output);
+  return { ...micOnly, systemAudio: true, ...(device ? { systemDevice: device } : {}) };
 }

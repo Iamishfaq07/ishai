@@ -45,20 +45,10 @@ import {
 import { requestClose } from "../CloseDialog";
 import { useShortcutHandler, type GlobalAction } from "../globalShortcuts";
 import { GlassButton } from "../GlassControls";
+import type { DesktopLaunch } from "../launch";
 import { WindowButtons } from "../TitleBar";
 import { setLiveSession } from "../updates";
 import { applyPanelMode, setAlwaysOnTop } from "../windowing";
-
-export interface DesktopLaunch {
-  micDeviceId?: string;
-  systemAudio: boolean;
-  /** Capture only this app's audio (process tree); undefined = an output device. */
-  systemProcessId?: number;
-  /** That app's exe: capture finds the app again if it restarts during the session. */
-  systemProcessExe?: string;
-  /** Output to capture when no app is chosen: "default" | "communications" | endpoint id. */
-  systemDevice?: string;
-}
 
 const MODE_KEY = "orbit.desktop.panelMode";
 const PIN_KEY = "orbit.desktop.alwaysOnTop";

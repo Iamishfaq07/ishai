@@ -5,11 +5,12 @@ import { api, setAccessToken, setUnauthorizedHandler } from "./api";
 import { CloseDialog } from "./CloseDialog";
 import { stepGlass } from "./glass";
 import { useGlobalShortcuts, useShortcutHandler, type GlobalAction } from "./globalShortcuts";
-import { clearToken, loadToken } from "./native";
+import { loadSavedAudio, rejoinLaunch, rememberLaunch, usesSystemAudio, type DesktopLaunch } from "./launch";
+import { clearToken, listAudioApps, loadToken } from "./native";
 import { DocumentsScreen } from "./screens/Documents";
 import { HistoryScreen } from "./screens/History";
 import { HomeScreen } from "./screens/Home";
-import { LiveScreen, type DesktopLaunch } from "./screens/Live";
+import { LiveScreen } from "./screens/Live";
 import { LoginScreen } from "./screens/Login";
 import { SettingsScreen } from "./screens/Settings";
 import { IS_MAC, SetupScreen } from "./screens/Setup";
@@ -125,16 +126,21 @@ export function App() {
   }, [screen.name]);
 
   const home = () => setScreen({ name: "home" });
-  // Rejoin an existing (live/created) session with default audio (system on Windows, default mic).
+  const goLive = (session: OrbitSession, launch: DesktopLaunch) => {
+    rememberLaunch(session.id, launch);
+    setScreen({ name: "live", session, launch });
+  };
+  // Rejoin an existing (live/created) session with the audio it was set up with (launch.ts): its app found again,
+  // else the saved mic and output; never system audio for phone or mock sessions.
   const resume = async (session: OrbitSession) => {
     if (!(await confirmSessionDuringUpdate())) return;
-    setScreen({ name: "live", session, launch: { systemAudio: !IS_MAC } });
+    const apps = !IS_MAC && usesSystemAudio(session.type) ? await listAudioApps() : [];
+    goLive(session, rejoinLaunch(session, loadSavedAudio(), apps, IS_MAC));
   };
   // A drill is a mock round: the interviewer is Orbit itself, so only the (remembered) mic is captured.
   const drill = async (session: OrbitSession) => {
     if (!(await confirmSessionDuringUpdate())) return;
-    const mic = localStorage.getItem("orbit.micDeviceId");
-    setScreen({ name: "live", session, launch: { systemAudio: false, ...(mic ? { micDeviceId: mic } : {}) } });
+    goLive(session, rejoinLaunch(session, loadSavedAudio(), [], IS_MAC));
   };
 
   return (
@@ -189,7 +195,7 @@ export function App() {
             initialType={screen.initialType}
             onSignOut={() => void signOut()}
             onBack={home}
-            onStart={(session, launch) => setScreen({ name: "live", session, launch })}
+            onStart={goLive}
             onOpenDocuments={() => setScreen({ name: "documents" })}
             onOpenHistory={() => setScreen({ name: "history" })}
             onOpenSettings={() => setScreen({ name: "settings" })}
