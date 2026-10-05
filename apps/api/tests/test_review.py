@@ -2,12 +2,15 @@
 
 import json
 import time
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
+from orbit_api.providers.llm.base import LLMChunk, LLMError, LLMProvider, LLMRequest
 from orbit_api.sessions.report import QAPair, build_review, pair_questions_with_answers
 
 T0 = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
@@ -100,3 +103,49 @@ def test_review_of_a_session_where_nothing_was_captured_says_so(client: TestClie
     assert client.post(f"/v1/sessions/{sid}/end", headers=h).status_code == 200
     r = client.post(f"/v1/sessions/{sid}/review", headers=h)
     assert r.status_code == 409 and "Nothing was captured" in r.json()["detail"]
+
+
+class _Down(LLMProvider):
+    name = "down"
+
+    def model_for(self, reasoning: Any) -> str:
+        return "down-1"
+
+    async def stream(self, request: LLMRequest) -> AsyncIterator[LLMChunk]:
+        raise LLMError("http_503", "provider down", retryable=True)
+        yield LLMChunk()  # pragma: no cover
+
+
+def test_regenerating_keeps_the_follow_up_and_a_failed_one_keeps_the_review(
+        client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Regenerate used to drop the saved follow-up email, and on a provider error replace the report with a
+    facts-only one: the review was gone (and the drill refused with no_review). So could the report job's retry."""
+    from orbit_api.sessions import report
+    from tests.test_api import _register, _wait_report
+
+    h = _register(client)
+    sid = client.post("/v1/sessions", headers=h, json={"title": "Regenerate me"}).json()["id"]
+    ticket = client.post(f"/v1/sessions/{sid}/live-ticket", headers=h).json()["ticket"]
+    with client.websocket_connect(f"/v1/sessions/{sid}/live?ticket={ticket}") as ws:
+        _collect(ws, lambda ev: any(e["type"] == "session.started" for e in ev))
+        ws.send_text(json.dumps({"type": "dev.simulate", "data": {"fixture": "behavioral_interview", "speed": 25}}))
+        _collect(ws, lambda ev: sum(e["type"] == "answer.completed" for e in ev) >= 2)
+        ws.send_text(json.dumps({"type": "session.end", "data": {}}))
+        _collect(ws, lambda ev: any(e["type"] == "session.ended" for e in ev))
+    assert _wait_report(client, h, sid)["summary"]["review"]
+    assert client.post(f"/v1/sessions/{sid}/follow-up", headers=h).status_code == 200
+
+    assert client.post(f"/v1/sessions/{sid}/review", headers=h).status_code == 200
+    kept = client.get(f"/v1/sessions/{sid}", headers=h).json()["summary"]
+    assert kept["review"] and kept["follow_up"]["thank_you"]["body"]  # the email survives a regenerate
+
+    monkeypatch.setattr(report, "get_llm_provider", lambda: _Down())
+    r = client.post(f"/v1/sessions/{sid}/review", headers=h)
+    assert r.status_code == 502 and "earlier review is unchanged" in r.json()["detail"]
+    assert client.get(f"/v1/sessions/{sid}", headers=h).json()["summary"] == kept
+    drill = client.post(f"/v1/sessions/{sid}/drill", headers=h)
+    assert drill.status_code == 201 or drill.json()["detail"]["code"] == "nothing_to_drill"  # not no_review
+
+    with pytest.raises(RuntimeError, match="narrative unavailable"):  # the job retries later...
+        client.portal.call(report.run_report_job, {"session_id": sid})  # type: ignore[union-attr]
+    assert client.get(f"/v1/sessions/{sid}", headers=h).json()["summary"] == kept  # ...without wiping it now

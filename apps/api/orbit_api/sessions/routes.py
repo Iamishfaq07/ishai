@@ -373,7 +373,8 @@ async def delete_transcript(session_id: str, user: Annotated[User, Depends(curre
 @router.post("/sessions/{session_id}/review", dependencies=[Depends(review_limit), Depends(review_user_limit)])
 async def review_session(session_id: str, user: Annotated[User, Depends(require_verified_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
-    """(Re)generate the post-session report + review scorecard for an ended session."""
+    """(Re)generate the post-session report + review scorecard for an ended session. A failed attempt leaves the
+    stored report (and its review) as it was."""
     row = await _owned(db, session_id, user)
     if row.status != "ended":
         raise HTTPException(status.HTTP_409_CONFLICT, "End the session first — reviews cover finished sessions.")
@@ -387,7 +388,9 @@ async def review_session(session_id: str, user: Annotated[User, Depends(require_
     except TimeoutError as e:
         raise HTTPException(status.HTTP_504_GATEWAY_TIMEOUT, "The review took too long — try again.") from e
     if not report.get("review"):
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Couldn't generate a review for this session.")
+        stored = await db.scalar(select(SessionSummary.content).where(SessionSummary.session_id == row.id))
+        kept = " Your earlier review is unchanged." if isinstance(stored, dict) and stored.get("review") else ""
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Couldn't generate a review for this session.{kept}")
     return report
 
 

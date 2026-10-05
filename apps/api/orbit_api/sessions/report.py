@@ -15,6 +15,7 @@ from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import jobs
 from orbit_api.db import sessionmaker
@@ -209,33 +210,52 @@ async def generate_report(session_id: str) -> dict[str, Any]:
                                        input_tokens=resp.usage.input_tokens, output_tokens=resp.usage.output_tokens,
                                        cached_input_tokens=resp.usage.cached_input_tokens,
                                        estimated_cost_usd=estimate_cost(resp.model, resp.usage)))
+                await db.commit()  # the call's cost, whether or not this report is kept
             except (LLMError, json.JSONDecodeError, ValueError) as e:
                 log.warning("report narrative unavailable: %s", e)
                 narrative_failed = True
 
-        existing = await db.scalar(select(SessionSummary).where(SessionSummary.session_id == session_id))
-        if existing:
-            existing.content = report
-            await db.commit()
-        else:
-            db.add(SessionSummary(session_id=session_id, content=report))
-            try:
-                await db.commit()
-            except IntegrityError:
-                # A concurrent run (recorder + REST /end) inserted first; update its row instead of crashing.
-                await db.rollback()
-                row2 = await db.scalar(select(SessionSummary).where(SessionSummary.session_id == session_id))
-                if row2 is not None:
-                    row2.content = report
-                    await db.commit()
-        # Not stored: tells the durable job to retry the narrative.
+        await _store(db, session_id, report)
+        # Tells the durable job to retry the narrative.
         return {**report, "narrative_failed": True} if narrative_failed else report
+
+
+def _completeness(content: dict[str, Any] | None) -> int:
+    """How much of a report the model managed: 2 the narrative and the scorecard, 1 the narrative, 0 the facts only
+    (the narrative failed, or there was nothing to write about)."""
+    if not content:
+        return 0
+    if content.get("review"):
+        return 2
+    return 1 if content.get("generated_by") else 0
+
+
+async def _store(db: AsyncSession, session_id: str, report: dict[str, Any]) -> bool:
+    """Save the report as the session's, merged into what's there (keys it doesn't write, like the follow-up email
+    from insights.py, are kept), unless the stored one is more complete: a regenerate or a job retry whose narrative
+    hit a provider error mustn't replace a good review with a facts-only report. Returns whether it saved."""
+    for _ in range(2):
+        existing = await db.scalar(select(SessionSummary).where(SessionSummary.session_id == session_id))
+        if existing is not None:
+            if _completeness(report) < _completeness(existing.content):
+                return False
+            existing.content = {**(existing.content or {}), **report}
+            await db.commit()
+            return True
+        db.add(SessionSummary(session_id=session_id, content=report))
+        try:
+            await db.commit()
+            return True
+        except IntegrityError:
+            await db.rollback()  # a concurrent run (recorder + REST /end) inserted first: merge into its row
+    return False
 
 
 @jobs.handler("report")
 async def run_report_job(payload: dict[str, Any]) -> None:
-    """Durable-job entry point. The facts-only report is saved even when the narrative fails; raising then
-    lets the job retry the narrative (a transient provider error shouldn't leave a report without it)."""
+    """Durable-job entry point. When the narrative fails, the facts-only report is saved only if there's no better
+    one; raising then lets the job retry the narrative (a transient provider error shouldn't leave a report without
+    it)."""
     report = await generate_report(str(payload["session_id"]))
     if report.get("narrative_failed"):
         raise RuntimeError("report narrative unavailable (provider error); will retry")
