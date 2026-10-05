@@ -149,3 +149,42 @@ def test_regenerating_keeps_the_follow_up_and_a_failed_one_keeps_the_review(
     with pytest.raises(RuntimeError, match="narrative unavailable"):  # the job retries later...
         client.portal.call(report.run_report_job, {"session_id": sid})  # type: ignore[union-attr]
     assert client.get(f"/v1/sessions/{sid}", headers=h).json()["summary"] == kept  # ...without wiping it now
+
+
+def test_the_report_on_a_long_session_covers_all_of_it(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """25 questions and a transcript over the 12,000 characters the model gets: the narrative used to see only the
+    end (the running summary was never sent), and the scorecard said nothing about the questions it left out."""
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import LiveSessionRow, Question, SessionTurn
+    from orbit_api.providers.llm.mock import MockLLMProvider
+    from orbit_api.sessions import report
+    from tests.test_api import _register
+
+    h = _register(client)
+    sid = client.post("/v1/sessions", headers=h, json={"title": "Marathon"}).json()["id"]
+
+    async def plant() -> None:
+        async with sessionmaker()() as db:
+            row = await db.get(LiveSessionRow, sid)
+            assert row is not None
+            row.status, row.rolling_summary = "ended", "EARLY: walked through the payments ledger migration."
+            for i in range(25):
+                at = T0 + timedelta(minutes=2 * i)
+                db.add(Question(id=f"{sid[:8]}-q{i}", session_id=sid, text=f"Question number {i}?", type="technical",
+                                confidence=0.9, created_at=at))
+                db.add(SessionTurn(id=f"{sid[:8]}-t{i}", session_id=sid, speaker="candidate",
+                                   text=f"Answer {i}. " + "We shipped it. " * 40, start_ms=i, end_ms=i + 1,
+                                   created_at=at + timedelta(seconds=30)))
+            await db.commit()
+
+    llm = MockLLMProvider()
+    monkeypatch.setattr(report, "get_llm_provider", lambda: llm)
+    assert client.portal is not None
+    client.portal.call(plant)
+    review = client.portal.call(report.generate_report, sid)["review"]
+    prompt = llm.requests[-1].messages[-1].content
+    assert "EARLY: walked through the payments ledger migration." in prompt  # the part the excerpt cut
+    assert "- Question number 0?" in prompt and "- Question number 4?" in prompt  # earlier questions, listed
+    assert "Q1: Question number 5?" in prompt and "Q20: Question number 24?" in prompt  # the scored ones
+    assert len(review["items"]) == 20 and review["questions_total"] == 25
+    assert review["note"] == "Only the last 20 of this session's 25 questions were scored."

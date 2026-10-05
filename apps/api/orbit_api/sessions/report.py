@@ -3,6 +3,9 @@
 The scorecard grades what the candidate ACTUALLY said: each interviewer question is paired server-side with
 the candidate turns that followed it (before the next question), and the model only scores that pairing. A
 question the candidate didn't answer gets no score. Old summaries without `review` stay valid.
+
+A long session's narrative covers all of it (the end of the transcript, the session's running summary and its
+earlier questions); its scorecard grades the last MAX_REVIEW_QUESTIONS questions and says so (`review.note`).
 """
 
 import json
@@ -31,6 +34,10 @@ log = logging.getLogger(__name__)
 MAX_REVIEW_QUESTIONS = 20
 MAX_ANSWER_CHARS = 1500  # per question, sent to the model
 YOU_SAID_CHARS = 600  # per question, stored for the UI
+# A long session doesn't fit: the model gets the end of its transcript, plus the running summary of the whole session
+# and the earlier questions (texts only), so the narrative covers all of it. Only the last questions are scored.
+MAX_TRANSCRIPT_CHARS = 12_000
+MAX_EARLIER_QUESTIONS_CHARS = 4_000
 
 _SYSTEM = (
     "You write a practical post-session report and review for someone who just finished an interview or "
@@ -174,11 +181,25 @@ async def generate_report(session_id: str) -> dict[str, Any]:
 
         narrative_failed = False
         if questions or turns:
-            pairs = pair_questions_with_answers(questions, turns)[-MAX_REVIEW_QUESTIONS:]
-            convo = "\n".join(f"{t.speaker}: {t.text}" for t in turns)[-12_000:] or "\n".join(
-                f"interviewer: {q.text}" for q in questions)
+            all_pairs = pair_questions_with_answers(questions, turns)
+            pairs = all_pairs[-MAX_REVIEW_QUESTIONS:]
+            transcript = "\n".join(f"{t.speaker}: {t.text}" for t in turns)
+            convo = transcript[-MAX_TRANSCRIPT_CHARS:] or "\n".join(f"interviewer: {q.text}" for q in questions)
             user = (f"Session type: {row.type}. Role: {row.role or 'n/a'}.\n"
                     f"<reference_data source=\"transcript\">\n{fence(convo)}\n</reference_data>")
+            cut = len(transcript) > MAX_TRANSCRIPT_CHARS
+            if (cut or not turns) and row.rolling_summary:
+                # What the excerpt doesn't show (or, with transcripts off, the only account of what was said).
+                lead = ("The transcript above is only the END of a long session. What came before, as a running "
+                        "summary (cover it in the summary and topics too):" if cut else
+                        "No transcript was kept. A running summary of the session:")
+                user += (f"\n\n{lead}\n<reference_data source=\"earlier_summary\">\n{fence(row.rolling_summary)}\n"
+                         "</reference_data>")
+            if len(all_pairs) > len(pairs):
+                earlier = "\n".join(f"- {p.question[:200]}" for p in all_pairs[:-len(pairs)])
+                user += ("\n\nEarlier questions (not scored; cover them in the summary and topics):\n"
+                         "<reference_data source=\"earlier_questions\">\n"
+                         f"{fence(earlier[:MAX_EARLIER_QUESTIONS_CHARS])}\n</reference_data>")
             system = _SYSTEM
             negotiation = (row.mock_config or {}).get("negotiation") if row.type == "mock" else None
             if isinstance(negotiation, dict):
@@ -203,7 +224,12 @@ async def generate_report(session_id: str) -> dict[str, Any]:
                             "suggested_preparation"):
                     if data.get(key):
                         report[key] = data[key]
-                report["review"] = build_review(data.get("review"), pairs)
+                review = build_review(data.get("review"), pairs)
+                if review is not None and len(all_pairs) > len(pairs):
+                    review["questions_total"] = len(all_pairs)
+                    review["note"] = (f"Only the last {len(pairs)} of this session's {len(all_pairs)} questions "
+                                      "were scored.")
+                report["review"] = review
                 report["generated_by"] = llm.name
                 db.add(ProviderRequest(user_id=row.user_id, session_id=session_id, provider=llm.name,
                                        model=resp.model, request_type="report",
