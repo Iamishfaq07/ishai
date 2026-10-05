@@ -3,7 +3,9 @@ live-session teardown — today, end-of-session reports.
 
 Every API process runs one worker loop (started in the app lifespan). A job is claimed with a conditional
 UPDATE (status queued → running), so two processes can never run the same job. Failures retry with backoff
-up to MAX_ATTEMPTS; a job left "running" by a crashed process is re-queued after STALE_AFTER.
+up to MAX_ATTEMPTS. A job interrupted by shutdown (every deploy) goes straight back in the queue, the attempt not
+counted; one left "running" by a process that died is re-queued when the next one starts (one API instance, D12),
+and by any worker after STALE_AFTER.
 """
 
 import asyncio
@@ -80,6 +82,28 @@ async def _claim(db: AsyncSession, job_id: str) -> bool:
     return bool(getattr(res, "rowcount", 0))
 
 
+async def _requeue(job_id: str) -> None:
+    """Back in the queue now, the claim's attempt taken back: the job was interrupted, it didn't fail."""
+    async with sessionmaker()() as db:
+        await db.execute(update(Job).where(Job.id == job_id, Job.status == "running")
+                         .values(status="queued", attempts=Job.attempts - 1, run_after=datetime.now(UTC)))
+        await db.commit()
+
+
+async def requeue_interrupted() -> int:
+    """At startup: jobs still "running" were cut off with the previous process (killed before it could put them
+    back). They're queued again now rather than after STALE_AFTER: with one API instance (D12) nothing else is
+    running them. Returns how many."""
+    async with sessionmaker()() as db:
+        res = await db.execute(update(Job).where(Job.status == "running")
+                               .values(status="queued", run_after=datetime.now(UTC)))
+        await db.commit()
+    n = int(getattr(res, "rowcount", 0) or 0)
+    if n:
+        log.info("re-queued %d job(s) the previous process left running", n)
+    return n
+
+
 async def run_due_jobs(limit: int = 5) -> int:
     """Run up to `limit` due jobs; returns how many ran. Also re-queues jobs orphaned by a crashed worker."""
     now = datetime.now(UTC)
@@ -109,6 +133,13 @@ async def run_due_jobs(limit: int = 5) -> int:
             if fn is None:
                 raise RuntimeError(f"no handler for job kind {kind!r}")
             await asyncio.wait_for(fn(payload), timeout=JOB_TIMEOUT_S)
+        except asyncio.CancelledError:
+            # Shutdown mid-job (a deploy): the next process picks it up at once. Shielded, so the write completes
+            # although this task is being cancelled; the cancellation goes on whatever happens to it.
+            log.info("job %s (%s) interrupted by shutdown; re-queued", job_id, kind)
+            with contextlib.suppress(Exception):
+                await asyncio.shield(_requeue(job_id))
+            raise
         except Exception as e:
             error = f"{type(e).__name__}: {e}"[:2000]
             log.warning("job %s (%s) attempt %d failed: %s", job_id, kind, attempts, error)
@@ -129,6 +160,10 @@ async def run_due_jobs(limit: int = 5) -> int:
 
 
 async def worker(poll_s: float) -> None:
+    try:
+        await requeue_interrupted()
+    except Exception:
+        log.exception("couldn't re-queue interrupted jobs; they're retried after %s", STALE_AFTER)
     while True:
         try:
             if await run_due_jobs() == 0:

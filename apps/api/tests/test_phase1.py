@@ -433,3 +433,74 @@ def test_job_left_running_by_a_crashed_worker_is_recovered(monkeypatch: pytest.M
         while not done and time.monotonic() < deadline:
             time.sleep(0.05)
     assert done
+
+
+async def _job_state(key: str) -> tuple[str, int]:
+    from sqlalchemy import select
+
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import Job
+
+    async with sessionmaker()() as db:
+        job = await db.scalar(select(Job).where(Job.dedupe_key == key))
+        assert job is not None
+        return job.status, job.attempts
+
+
+def _until_done(c: TestClient, key: str, timeout_s: float = 5) -> tuple[str, int]:
+    deadline = time.monotonic() + timeout_s
+    while (state := _call(c, _job_state, key))[0] != "done" and time.monotonic() < deadline:
+        time.sleep(0.05)
+    return state  # type: ignore[no-any-return]
+
+
+def test_a_job_cut_off_by_a_deploy_runs_again_at_once_without_spending_an_attempt() -> None:
+    """A deploy shut the worker down mid-job: the job stayed "running" for STALE_AFTER (10 min), and the cancelled
+    attempt counted toward MAX_ATTEMPTS."""
+    from orbit_api import jobs
+    from orbit_api.main import create_app
+
+    runs: list[int] = []
+
+    @jobs.handler("test_deploy")
+    async def long_job(payload: dict[str, Any]) -> None:
+        runs.append(len(runs))
+        if len(runs) == 1:
+            await asyncio.sleep(60)  # the deploy comes while the first run is still going
+
+    key = f"d:{uuid.uuid4()}"
+    with TestClient(create_app()) as c:
+        _call(c, jobs.enqueue_now, "test_deploy", {}, key)
+        deadline = time.monotonic() + 5
+        while not runs and time.monotonic() < deadline:
+            time.sleep(0.02)
+        assert runs == [0]
+    with TestClient(create_app()) as c:  # the next process
+        assert _until_done(c, key) == ("done", 1)
+    assert runs == [0, 1]
+
+
+def test_a_job_left_running_by_a_killed_process_runs_when_the_next_one_starts() -> None:
+    from orbit_api import db, jobs
+    from orbit_api.main import create_app
+    from orbit_api.models import Job
+
+    done: list[bool] = []
+
+    @jobs.handler("test_killed")
+    async def killed(payload: dict[str, Any]) -> None:
+        done.append(True)
+
+    key = f"k:{uuid.uuid4()}"
+
+    async def plant() -> None:  # the process died mid-job a moment ago: not stale yet
+        async with db.sessionmaker()() as s:
+            s.add(Job(kind="test_killed", payload={}, status="running", attempts=1, dedupe_key=key))
+            await s.commit()
+        await db.dispose()  # this loop's connections go with it
+
+    asyncio.run(plant())
+    with TestClient(create_app()) as c:
+        # Picked up straight away. The killed attempt still counts: the job may be what took the process down.
+        assert _until_done(c, key) == ("done", 2)
+    assert done == [True]
