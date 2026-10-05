@@ -12,6 +12,11 @@ describe("read aloud text", () => {
     expect(text).not.toContain("[");
   });
 
+  it("reads values in brackets (an example's input and output), which aren't fill-ins", () => {
+    expect(speechText(answer("For nums [2, 7, 11, 15] and target 9, I return [0, 1].")))
+      .toBe("For nums [2, 7, 11, 15] and target 9, I return [0, 1].");
+  });
+
   it("is empty when there's nothing to say", () => {
     expect(speechText(answer(""))).toBe("");
   });
