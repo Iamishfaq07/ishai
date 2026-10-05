@@ -81,6 +81,8 @@ SUMMARY_EVERY_TURNS = 8
 # one every REQUEST_EVERY_S, per connection. Far more than a person clicks; a script flooding the socket can't
 # multiply the spend. Extras are dropped.
 CLIENT_REQUESTS = frozenset({"answer.request", "chat.message", "mock.next"})
+# After the provider's UtteranceEnd, how long a turn whose last words were still provisional waits for their final.
+UTTERANCE_FINAL_WAIT_MS = 1500
 REQUEST_BURST = 5
 REQUEST_EVERY_S = 2.0
 # Audio faster than real time is dropped (see LiveEngine._audio_paced): 16 kHz PCM16 is 32 kB/s.
@@ -228,6 +230,7 @@ class _ChannelTurn:
     partial: str = ""
     start_ms: int = 0
     end_ms: int = 0
+    utterance_end_ms: int | None = None  # the utterance ended while its last words were still provisional
 
     @property
     def text(self) -> str:
@@ -760,10 +763,27 @@ class LiveEngine:
                                                           is_final=True, endpoint=True)
                     if fired:
                         await self._on_fired(fired)
-                await self._commit_turn(channel, turn)
+                if turn.partial:
+                    # Words still provisional: their final is on its way (it often comes after UtteranceEnd). Committed
+                    # now, that final arrived as a new turn and the words were said twice ("Write a Write a function…").
+                    # The ticker commits it if the final never comes.
+                    turn.utterance_end_ms = self.now_ms()
+                else:
+                    await self._commit_turn(channel, turn)
                 await self._sync_speculation()
             return
 
+        # Phone / room mode: a result's speaker is reliable only once it's final (interim labels are provisional; the
+        # candidate's first words were often "the interviewer's"). Finals decide the turn's voice, and a change of voice
+        # inside a turn starts a new one.
+        diarized = channel == "mic" and self.profile.session_type == "phone"
+        if diarized and turn is not None and ev.kind == "final" and ev.speaker_hint is not None:
+            if turn.committed and self._turn_voice.get(turn.turn_id) not in (None, ev.speaker_hint):
+                turn.partial = ""
+                await self._commit_turn(channel, turn)
+                turn = None
+            else:
+                self._turn_voice[turn.turn_id] = ev.speaker_hint
         if turn is None:
             if not ev.text:
                 return
@@ -783,7 +803,8 @@ class LiveEngine:
             self._track_stt_latency(channel, turn, ev)
 
         await self.send("transcript.partial", {"turn_id": turn.turn_id, "speaker": spk, "text": turn.text})
-        if spk == "interviewer":
+        provisional = diarized and ev.kind != "final"  # who said it isn't known yet
+        if spk == "interviewer" and not provisional:
             self._last_interviewer_text = turn.text
             if self.state in (LiveState.listening, LiveState.answer_complete):
                 await self._set_state(LiveState.speech_detected)
@@ -793,11 +814,11 @@ class LiveEngine:
             )
             if fired:
                 await self._on_fired(fired)
-        elif spk == "candidate" and ev.text:
+        elif spk == "candidate" and ev.text and not provisional:
             fired = self._finalizer.on_candidate_speech(self.now_ms(), turn.text)
             if fired:
                 await self._on_fired(fired)
-        if ev.kind == "final" and ev.endpoint:
+        if ev.kind == "final" and (ev.endpoint or turn.utterance_end_ms is not None):
             await self._commit_turn(channel, turn)
         await self._sync_speculation()
 
@@ -848,8 +869,11 @@ class LiveEngine:
             for old in list(self._turn_voice)[:-200]:
                 del self._turn_voice[old]
         if voice is not None and turn.turn_id not in self._speaker_overrides and not self._voices:
-            # The first voice to ask a real question is the interviewer; every other voice is the candidate.
-            if detect(turn.text, "interviewer", self._detector_context()).should_generate:
+            # The first voice to ask anything ("Can you hear me okay?" counts) is the interviewer; every other voice is
+            # the candidate. Until then everyone counts as the interviewer, so the candidate's "Yes, I can hear you
+            # fine" was stitched into the first question when only a real question taught the voice.
+            if turn.text.rstrip().endswith("?") or detect(turn.text, "interviewer",
+                                                          self._detector_context()).should_generate:
                 self._learn_voice(voice, "interviewer")
         await self.send("transcript.final", {"turn_id": turn.turn_id, "speaker": spk, "text": turn.text,
                                              "start_ms": turn.start_ms, "end_ms": turn.end_ms})
@@ -871,6 +895,11 @@ class LiveEngine:
             try:
                 if self._mock is not None:
                     await self._mock.tick(self.now_ms())
+                for ch in ("mic", "system"):
+                    turn = self._turns[ch]
+                    if (turn is not None and turn.utterance_end_ms is not None
+                            and self.now_ms() - turn.utterance_end_ms >= UTTERANCE_FINAL_WAIT_MS):
+                        await self._commit_turn(ch, turn)  # the final never came: keep what was heard
                 fired = self._finalizer.tick(self.now_ms())
                 if fired:
                     await self._on_fired(fired)
