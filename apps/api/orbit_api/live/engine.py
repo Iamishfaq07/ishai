@@ -81,6 +81,12 @@ SUMMARY_EVERY_TURNS = 8
 # one every REQUEST_EVERY_S, per connection. Far more than a person clicks; a script flooding the socket can't
 # multiply the spend. Extras are dropped.
 CLIENT_REQUESTS = frozenset({"answer.request", "chat.message", "mock.next"})
+# A candidate turn made of the interviewer's words (≥ this share) is their voice leaking into the mic (speakers, no
+# headphones): kept off the transcript and the conversation. From ECHO_SUSPECT_OVERLAP it waits ECHO_CONFIRM_S for the
+# interviewer's own words before deciding (the mic's copy is often transcribed first).
+ECHO_TRANSCRIPT_OVERLAP = 0.85
+ECHO_SUSPECT_OVERLAP = 0.5
+ECHO_CONFIRM_S = 1.5
 # After the provider's UtteranceEnd, how long a turn whose last words were still provisional waits for their final.
 UTTERANCE_FINAL_WAIT_MS = 1500
 REQUEST_BURST = 5
@@ -370,6 +376,8 @@ class LiveEngine:
         self._stt_down_detail: str | None = None
         self._turns: dict[Channel, _ChannelTurn | None] = {"mic": None, "system": None}
         self._last_interviewer_text = ""
+        # Candidate turns that may be the interviewer's voice in the mic, waiting for the interviewer's own words.
+        self._deferred: dict[str, tuple[Channel, _ChannelTurn]] = {}
         # The question whose latest answer had code: "make it shorter" on it, or a follow-up to it, keeps the code.
         self._coded_question: str | None = None
         self._noted_qid: str | None = None  # the question the last memory entry is for
@@ -525,6 +533,8 @@ class LiveEngine:
             turn = self._turns[ch]
             if turn and turn.text:
                 await self._commit_turn(ch, turn)
+        for ch, turn in list(self._deferred.values()):  # still waiting to be told apart from the interviewer's echo
+            await self._commit_turn(ch, turn, echo_checked=True)
         await self._stt.stop()
         for t in list(self._tasks):
             t.cancel()
@@ -861,8 +871,10 @@ class LiveEngine:
             if ev.kind == "final":
                 self.latency.add("stt_final", now - ended)
 
-    async def _commit_turn(self, channel: Channel, turn: _ChannelTurn) -> None:
-        self._turns[channel] = None
+    async def _commit_turn(self, channel: Channel, turn: _ChannelTurn, *, echo_checked: bool = False) -> None:
+        if self._turns[channel] is turn:
+            self._turns[channel] = None
+        self._deferred.pop(turn.turn_id, None)
         spk = self._turn_speaker(channel, turn)
         voice = self._turn_voice.get(turn.turn_id)
         if len(self._turn_voice) > 500:  # kept for later "swap" corrections; only recent turns can be swapped
@@ -875,6 +887,20 @@ class LiveEngine:
             if turn.text.rstrip().endswith("?") or detect(turn.text, "interviewer",
                                                           self._detector_context()).should_generate:
                 self._learn_voice(voice, "interviewer")
+        if (spk == "candidate" and channel == "mic" and self.profile.session_type != "phone"
+                and turn.turn_id not in self._speaker_overrides):
+            # Speakers without headphones: the mic hears the interviewer too, and that copy came out as "You: <the
+            # interviewer's question>" in the transcript, the conversation the model reads, and the review.
+            overlap = self._finalizer.interviewer_overlap(turn.text)
+            if overlap >= ECHO_TRANSCRIPT_OVERLAP:
+                await self.send("transcript.final", {"turn_id": turn.turn_id, "speaker": spk, "text": turn.text,
+                                                     "start_ms": turn.start_ms, "end_ms": turn.end_ms, "echo": True})
+                return
+            if overlap >= ECHO_SUSPECT_OVERLAP and not echo_checked:
+                # The mic's copy is often transcribed before the interviewer's own: decide once their words are in.
+                self._deferred[turn.turn_id] = (channel, turn)
+                self._spawn(self._commit_later(channel, turn))
+                return
         await self.send("transcript.final", {"turn_id": turn.turn_id, "speaker": spk, "text": turn.text,
                                              "start_ms": turn.start_ms, "end_ms": turn.end_ms})
         self.memory.add_turn(spk, turn.text)
@@ -885,6 +911,11 @@ class LiveEngine:
         if self._turns_since_summary >= SUMMARY_EVERY_TURNS:
             self._turns_since_summary = 0
             self._spawn(self._update_summary())
+
+    async def _commit_later(self, channel: Channel, turn: _ChannelTurn) -> None:
+        await asyncio.sleep(ECHO_CONFIRM_S)
+        if turn.turn_id in self._deferred:
+            await self._commit_turn(channel, turn, echo_checked=True)
 
     async def _ticker(self) -> None:
         failing = False

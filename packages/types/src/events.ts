@@ -202,6 +202,8 @@ export interface ServerEventMap {
     text: string;
     start_ms: number;
     end_ms: number;
+    /** The interviewer's voice heard by the mic (speakers, no headphones): not something the candidate said. */
+    echo?: boolean;
   };
   "question.detected": {
     question_id: string;

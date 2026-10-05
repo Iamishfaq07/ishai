@@ -359,3 +359,43 @@ async def test_an_utterance_end_whose_final_never_comes_still_commits_the_turn()
     await sink.wait_for("transcript.final", timeout=3.0)
     assert sink.of("transcript.final")[0]["text"] == "Right, okay"
     await eng.end()
+
+
+# ---- speakers, no headphones: the interviewer's voice in the mic --------------------------------------------------
+
+
+async def test_the_interviewers_voice_in_the_mic_is_not_the_candidate_speaking() -> None:
+    eng, sink, _ = _engine()
+    await eng.start()
+    question = "Tell me about a time you disagreed with a teammate on a technical decision."
+    await _ask(eng, question)
+    await _ask(eng, "Tell me about the time you disagreed with a teammate on a technical decision.", channel="mic")
+    mic = [t for t in sink.of("transcript.final") if t["speaker"] == "candidate"]
+    assert len(mic) == 1 and mic[0].get("echo") is True
+    assert [t.speaker for t in eng.memory.recent] == ["interviewer"]
+    await eng.end()
+
+
+async def test_an_echo_transcribed_before_the_interviewers_own_words_is_caught() -> None:
+    eng, sink, _ = _engine()
+    await eng.start()
+    await eng.on_transcript("system", TranscriptEvent("partial", "What's the difference between a process", 0, 100))
+    await _ask(eng, "What's the difference between a process and a thread?", channel="mic")
+    assert sink.of("transcript.final") == []  # half the words known yet: it waits for the interviewer's
+    await _ask(eng, "What's the difference between a process and a thread?")
+    await asyncio.sleep(1.7)
+    mic = [t for t in sink.of("transcript.final") if t["speaker"] == "candidate"]
+    assert len(mic) == 1 and mic[0].get("echo") is True
+    await eng.end()
+
+
+async def test_an_answer_that_reuses_the_questions_words_is_the_candidate() -> None:
+    eng, sink, _ = _engine()
+    await eng.start()
+    await _ask(eng, "How would you find the bottleneck in a slow checkout service?")
+    await _ask(eng, "So for the checkout service I'd profile the slowest endpoint first.", channel="mic")
+    await asyncio.sleep(0.1)
+    mic = [t for t in sink.of("transcript.final") if t["speaker"] == "candidate"]
+    assert len(mic) == 1 and "echo" not in mic[0]
+    assert eng.memory.recent[-1].speaker == "candidate"
+    await eng.end()

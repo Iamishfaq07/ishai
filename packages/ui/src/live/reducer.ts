@@ -27,6 +27,8 @@ export interface TurnView {
   final: boolean;
   start_ms: number | null;
   end_ms: number | null;
+  /** The interviewer's voice in the mic: not shown, and not the candidate speaking. */
+  echo?: boolean;
 }
 
 export interface QuestionView {
@@ -491,6 +493,7 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
         final: true,
         start_ms: action.data.start_ms,
         end_ms: action.data.end_ms,
+        ...(action.data.echo ? { echo: true } : {}),
       });
 
     // ── questions ────────────────────────────────────────────────────────
