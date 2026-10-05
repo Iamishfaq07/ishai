@@ -97,7 +97,7 @@ Answers are spoken first-person prose (`direct_answer`, paragraphs separated by 
 | `state.changed` | `{ state: LiveState }` |
 | `audio.mic_status` / `audio.system_status` | `{ state: "idle"\|"connected"\|"reconnecting"\|"error", detail? }` — sent when a channel's first audio arrives |
 | `transcript.partial` | `{ turn_id, speaker, text }` — replaces the previous partial for `turn_id` |
-| `transcript.final` | `{ turn_id, speaker, text, start_ms, end_ms }` |
+| `transcript.final` | `{ turn_id, speaker, text, start_ms, end_ms, echo? }` — `echo: true`: the interviewer's voice heard by the mic (speakers, no headphones), not the candidate; clients drop the line (it isn't stored or used as conversation) |
 | `question.detected` | `{ question_id, turn_id, text, type, confidence, is_follow_up }` |
 | `question.updated` | `{ question_id, text }` |
 | `answer.started` | `{ answer_id, question_id, length, reasoning: "light"\|"deep", source: "auto"\|"manual"\|"chat"\|"screenshot" }` |

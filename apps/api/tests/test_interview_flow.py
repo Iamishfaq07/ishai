@@ -130,3 +130,20 @@ def test_set_up_and_questions_are_still_carried_over() -> None:
 def test_introductions_are_about_the_candidate(text: str) -> None:
     assert classify_type(normalize(text)) is QuestionType.resume
     assert _BROAD_BACKGROUND.search(text)
+
+
+def test_speech_long_after_a_question_does_not_revive_it() -> None:
+    # Desktop, the candidate's answer not heard (only speaker echo on the mic): 21 s after the intro question,
+    # Deepgram's SpeechStarted counted as "the interviewer resumed", the old question came back as held, and every
+    # later question was stitched onto it.
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=1500)
+    f.on_transcript("t1", "Tell me a bit about yourself.", 0, is_final=True, endpoint=True)
+    assert _fire(f, 0, 2000)
+    f.on_speech_activity(21_000)
+    f.on_transcript("t2", "Okay.", 21_200, is_final=True, endpoint=True)
+    f.on_speech_activity(24_000)
+    f.on_transcript("t3", "Tell me about a time you disagreed with a teammate.", 26_000, is_final=True,
+                    endpoint=True)
+    fired = _fire(f, 26_000, 29_000)
+    assert fired and fired.detection.question_text == (  # type: ignore[attr-defined]
+        "Tell me about a time you disagreed with a teammate.")

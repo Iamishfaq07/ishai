@@ -157,10 +157,17 @@ class QuestionFinalizer:
 
     def on_speech_activity(self, now_ms: int) -> None:
         """VAD says the interviewer is still talking — push the silence window out."""
-        if self._pending:
-            self._pending.last_speech_ms = now_ms
-            if self._pending.endpointed:
-                self._pending.resumed_ms = now_ms
+        p = self._pending
+        if p is None:
+            return
+        if p.endpointed and p.endpoint_ms is not None and now_ms - p.endpoint_ms > CONTINUE_WINDOW_MS:
+            # Long after the question (the candidate's answer wasn't heard: mic muted, headphones with a quiet mic):
+            # new speech, not the interviewer resuming. Taken as a resumption, it revived the old question as held,
+            # and every later question was stitched onto it.
+            return
+        p.last_speech_ms = now_ms
+        if p.endpointed:
+            p.resumed_ms = now_ms
 
     def on_candidate_speech(self, now_ms: int, text: str = "") -> FinalizedQuestion | None:
         """The candidate is talking. A real start of their answer (not "mm-hmm", not the interviewer's voice
@@ -188,10 +195,19 @@ class QuestionFinalizer:
 
     def _is_echo(self, text: str) -> bool:
         words = tokens(text)
+        return bool(words) and self._overlap(words) >= ECHO_OVERLAP
+
+    def interviewer_overlap(self, text: str) -> float:
+        """The share of these (candidate) words the interviewer just said: near 1 for their voice heard by the mic.
+        0 for under three words: "Yes." / "Okay, sure." match anything."""
+        words = tokens(text)
+        return self._overlap(words) if len(words) >= 3 else 0.0
+
+    def _overlap(self, words: list[str]) -> float:
         heard = {w for _, ws in self._recent for w in ws}
         if self._pending is not None:
             heard |= set(tokens(self._pending.full_text))
-        return bool(words) and sum(w in heard for w in words) >= ECHO_OVERLAP * len(words)
+        return sum(w in heard for w in words) / len(words) if words else 0.0
 
     def _settle_claim(self, now_ms: int) -> FinalizedQuestion | None:
         claim = self._claim

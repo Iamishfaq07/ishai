@@ -25,7 +25,7 @@ export function useKeyPointProgress(live: LiveViewState, answer: AnswerView | nu
     return live.turnOrder
       .slice(answer.spoken_from)
       .map((id) => live.turns[id])
-      .filter((t) => t?.speaker === "candidate")
+      .filter((t) => t?.speaker === "candidate" && !t.echo)
       .map((t) => t!.text)
       .join(" ");
   }, [live.turnOrder, live.turns, answer]);

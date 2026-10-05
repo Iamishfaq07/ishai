@@ -72,6 +72,18 @@ describe("transcript", () => {
     expect(s.turns.t1).toMatchObject({ text: "Tell me about yourself.", final: true, end_ms: 1800 });
   });
 
+  it("marks the interviewer's voice heard by the mic as an echo, not the candidate speaking", () => {
+    const s = run([
+      ev("transcript.partial", { turn_id: "t2", speaker: "candidate", text: "Tell me about" }),
+      ev("transcript.final", {
+        turn_id: "t2", speaker: "candidate", text: "Tell me about yourself.", start_ms: 0, end_ms: 1, echo: true,
+      }),
+    ]);
+    expect(s.turns.t2).toMatchObject({ final: true, echo: true });
+    const plain = run([ev("transcript.final", { turn_id: "t3", speaker: "candidate", text: "So I", start_ms: 0, end_ms: 1 })]);
+    expect(plain.turns.t3?.echo).toBeUndefined();
+  });
+
   it("returns the same object for identical partials (no re-render churn)", () => {
     const a = run([ev("transcript.partial", { turn_id: "t1", speaker: "interviewer", text: "Hi" })]);
     const b = liveReducer(a, ev("transcript.partial", { turn_id: "t1", speaker: "interviewer", text: "Hi" }));

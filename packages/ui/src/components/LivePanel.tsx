@@ -169,7 +169,8 @@ export function LivePanel(props: LivePanelProps) {
   const answerHistory = useAnswerHistory(live, actions);
   const { step } = answerHistory;
   const turns = useMemo(
-    () => live.turnOrder.map((id) => live.turns[id]).filter((t): t is TurnView => Boolean(t)),
+    // The interviewer's voice heard by the mic is dropped: it read as "You: <their question>".
+    () => live.turnOrder.map((id) => live.turns[id]).filter((t): t is TurnView => Boolean(t) && !t?.echo),
     [live.turnOrder, live.turns],
   );
   const liveInterviewerTurn = useMemo(() => {
