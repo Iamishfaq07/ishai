@@ -106,6 +106,7 @@ _live_engines: dict[str, LiveEngine] = {}
 MAX_SCREENSHOT_BYTES = 8 * 1024 * 1024
 _teardowns: set[asyncio.Task[None]] = set()  # strong refs so an in-flight teardown isn't garbage-collected
 LOW_MINUTES_WARNING_S = 5 * 60
+METER_STOP_S = 5.0  # a closing connection waits this long for the minute meter's beat in progress
 _OUT_OF_MINUTES = {False: "You've used this month's live minutes.", True: "You've used this month's mock minutes."}
 # Credit plans: live and mock share one balance, and it doesn't refill; a pack adds more.
 OUT_OF_CREDITS = "You're out of interview minutes. Buy a pack to keep going."
@@ -641,34 +642,38 @@ async def _commit_live_seconds(user_id: str, session_id: str, minutes: Interview
 
 async def _meter_live_minutes(ws: WebSocket, engine: LiveEngine, user_id: str, session_id: str,
                               minutes: InterviewTime, limit_ending: asyncio.Event, *, session_type: str = "interview",
-                              prior_session_s: int = 0, max_session_s: int | None = None) -> None:
+                              prior_session_s: int = 0, max_session_s: int | None = None,
+                              stop: asyncio.Event | None = None) -> None:
     """Server-side enforcement of two limits: the monthly allowance (live or mock minutes) and the per-session
     ceiling (plan.max_session_minutes, including earlier connections of this session). Usage is committed every
     heartbeat (a crash loses at most one interval), the client is warned 5 minutes before either limit with
     `usage.status {reason}`, and at a limit the session ends gracefully: transcript and usage are written and the
     report is queued, exactly like a normal end. One live session per account bounds any overshoot to one
-    heartbeat."""
+    heartbeat.
+
+    `stop`: the connection has closed. The meter finishes the beat in progress and returns, rather than being
+    cancelled: a beat cut off mid-query could leave its connection holding a lock (SQLite) or half a transaction, and
+    the recorder's final usage write must come after the last beat's (both set the same row)."""
     heartbeat = get_settings().live_heartbeat_s
+    stop = stop or asyncio.Event()
     warned: set[str] = set()
-    while not engine.ended:
+    while not engine.ended and not stop.is_set():
         now_s = engine.now_ms() // 1000
         row = minutes.row
         try:
-            # Shielded: the teardown cancels this task, and a beat cut off mid-query could leave its connection
-            # holding a lock (SQLite) or half a transaction. Cancelling waits only ever interrupt the sleep.
-            month_s = await asyncio.shield(_commit_live_seconds(user_id, session_id, minutes, now_s, session_type))
+            month_s = await _commit_live_seconds(user_id, session_id, minutes, now_s, session_type)
         except Exception:
             # Fail open for this beat (never cut a live interview off on a DB blip), but loudly; the final
             # usage is still written durably by the recorder at teardown.
             log.exception("live-minute heartbeat failed for session %s", session_id)
-            await _beat(engine, heartbeat)
+            await _beat(engine, heartbeat, stop)
             continue
         if minutes.row != row:
             warned.discard("monthly")  # the plan changed: the new balance's low-minutes warning is news
         session_s = None if max_session_s is None else max_session_s - (prior_session_s + now_s)
         limits = [(r, s) for r, s in (("monthly", month_s), ("session", session_s)) if s is not None]
         if not limits:
-            await _beat(engine, heartbeat)
+            await _beat(engine, heartbeat, stop)
             continue
         reason, remaining_s = min(limits, key=lambda x: x[1])
         if remaining_s <= 0:
@@ -685,7 +690,9 @@ async def _meter_live_minutes(ws: WebSocket, engine: LiveEngine, user_id: str, s
             await engine.send("usage.status", {"minutes_remaining": round(remaining_s / 60, 1),
                                                "limit_reached": False, "reason": reason})
         # Wake exactly at the limit when it falls before the next beat.
-        await _beat(engine, max(1.0, min(heartbeat, remaining_s)))
+        await _beat(engine, max(1.0, min(heartbeat, remaining_s)), stop)
+    if stop.is_set():
+        return  # the connection closed: its teardown ends the engine
     # The engine ended without this connection closing: a mock round that ran its course (End and the limits close
     # the socket themselves). Metering stops here (the recorder wrote the final usage at the end), and the socket
     # closes once the client has `session.ended`, so it stops streaming audio and the account's live slot frees up.
@@ -694,10 +701,14 @@ async def _meter_live_minutes(ws: WebSocket, engine: LiveEngine, user_id: str, s
         await ws.close(code=4009, reason="session has ended")
 
 
-async def _beat(engine: LiveEngine, seconds: float) -> None:
-    """Sleep until the next heartbeat, or until the engine ends (whichever is first)."""
-    with contextlib.suppress(TimeoutError):
-        await asyncio.wait_for(engine.wait_ended(), seconds)
+async def _beat(engine: LiveEngine, seconds: float, stop: asyncio.Event) -> None:
+    """Sleep until the next heartbeat, or until the engine ends or the meter is stopped (whichever is first)."""
+    waits = {asyncio.ensure_future(engine.wait_ended()), asyncio.ensure_future(stop.wait())}
+    try:
+        await asyncio.wait(waits, timeout=seconds, return_when=asyncio.FIRST_COMPLETED)
+    finally:
+        for w in waits:
+            w.cancel()
 
 
 @router.websocket("/sessions/{session_id}/live")
@@ -801,9 +812,10 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
     _live_engines[session_id] = engine
     explicit_end = False
     limit_ending = asyncio.Event()
+    stop_metering = asyncio.Event()
     meter = asyncio.create_task(_meter_live_minutes(
         ws, engine, user_id, session_id, minutes, limit_ending, session_type=profile.session_type,
-        prior_session_s=prior_session_s, max_session_s=plan.max_session_minutes * 60))
+        prior_session_s=prior_session_s, max_session_s=plan.max_session_minutes * 60, stop=stop_metering))
     try:
         if previous is not None:
             with contextlib.suppress(Exception):
@@ -853,10 +865,12 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
                 carryover.save(session_id, engine.carryover())
 
         async def teardown() -> None:
+            # At a limit the meter is ending the session itself: it's let finish (report enqueue included). Else it
+            # finishes the beat in progress and returns; cancelled only if that hangs (a database that doesn't answer).
             if not limit_ending.is_set():
-                meter.cancel()  # else let it finish ending the session (report enqueue included)
+                stop_metering.set()
             with contextlib.suppress(asyncio.CancelledError, Exception):
-                await meter
+                await (meter if limit_ending.is_set() else asyncio.wait_for(meter, METER_STOP_S))
             await engine.end(final=explicit_end)
             await recorder.close()
             with contextlib.suppress(Exception):
