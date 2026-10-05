@@ -392,8 +392,9 @@ unsafe fn open(pid: u32) -> Result<(IAudioClient, IAudioCaptureClient, HANDLE), 
 
 /// Starts capturing the app `pid` belongs to (its process tree) on its own COM thread, and keeps following it (see
 /// the module docs). `exe` finds the app again after it restarts, or right away when `pid` is stale (a session
-/// rejoined after the meeting app restarted). Returns once capture is running (or failed); the thread exits when
-/// `stop` is set.
+/// rejoined after the meeting app restarted); if the app isn't running at all, capture starts anyway and waits for
+/// it, reported `lost` until it's there. Returns once capture is running (or failed); the thread exits when `stop`
+/// is set.
 pub fn spawn(
     pid: u32,
     exe: Option<String>,
@@ -410,18 +411,16 @@ pub fn spawn(
                 .filter(|e| !e.trim().is_empty())
                 .or_else(|| process_table().get(&pid).map(|(_, e)| e.clone()))
                 .unwrap_or_default();
-            let name = if exe.is_empty() {
-                "the meeting app".to_string()
-            } else {
-                friendly_name(&exe)
-            };
-            match locate(pid, &exe) {
-                Some(target) => supervise(target, &exe, &name, ready_tx, &sink, &stop),
-                None => {
-                    let _ =
-                        ready_tx.send(Err(format!("App audio unavailable: {name} isn't running.")));
-                }
+            let target = locate(pid, &exe);
+            if target.is_none() && exe.is_empty() {
+                // a dead PID and no exe to wait for
+                let _ = ready_tx.send(Err(
+                    "App audio unavailable: the app isn't running.".to_string()
+                ));
+                return;
             }
+            let name = friendly_name(&exe);
+            supervise(target, pid, &exe, &name, ready_tx, &sink, &stop);
         })
         .map_err(|e| e.to_string())?;
     match ready_rx.recv_timeout(Duration::from_secs(8)) {
@@ -432,9 +431,11 @@ pub fn spawn(
 }
 
 /// The capture loop: (re)activate, pump, and on a failure or the app quitting report `lost` and try again — on the
-/// same process while it runs, else wherever the app restarts. The first activation's result goes to `ready`.
+/// same process while it runs, else wherever the app (re)starts (`target` None: not running yet). The first
+/// activation's result goes to `ready`.
 fn supervise(
-    mut pid: u32,
+    mut target: Option<u32>,
+    pid_hint: u32,
     exe: &str,
     name: &str,
     ready: mpsc::Sender<Result<(), String>>,
@@ -443,8 +444,18 @@ fn supervise(
 ) {
     let mut ready = Some(ready);
     let mut backoff = FIRST_BACKOFF;
-    let mut watch = ProcessWatch::new(pid, exe);
+    let mut watch = target.map(|pid| ProcessWatch::new(pid, exe));
     while !stop.load(Ordering::Relaxed) {
+        let Some(pid) = target else {
+            if let Some(tx) = ready.take() {
+                let _ = tx.send(Ok(()));
+            }
+            status(sink, CHANNEL_SYSTEM, "lost", name);
+            if !wait_for_app(&mut target, &mut watch, pid_hint, exe, &mut backoff, stop) {
+                return;
+            }
+            continue;
+        };
         match unsafe { open(pid) } {
             Ok((client, capture, event)) => {
                 backoff = FIRST_BACKOFF;
@@ -465,7 +476,7 @@ fn supervise(
                         CHANNEL_SYSTEM,
                         sink,
                         stop,
-                        || watch.exited(),
+                        || watch.as_ref().is_some_and(ProcessWatch::exited),
                     )
                 };
                 unsafe {
@@ -489,20 +500,35 @@ fn supervise(
             }
         }
         status(sink, CHANNEL_SYSTEM, "lost", name);
-        loop {
-            thread::sleep(backoff);
-            backoff = (backoff * 2).min(MAX_BACKOFF);
-            if stop.load(Ordering::Relaxed) {
-                return;
-            }
-            if !watch.exited() {
-                break; // still running: the stream itself failed, reopen on the same process
-            }
-            if let Some(next) = locate(pid, exe) {
-                pid = next;
-                watch = ProcessWatch::new(pid, exe);
-                break;
-            }
+        if !wait_for_app(&mut target, &mut watch, pid_hint, exe, &mut backoff, stop) {
+            return;
+        }
+    }
+}
+
+/// Sleeps (with backoff) until there's something to capture again: the same process while it still runs (the stream
+/// failed, not the app), else the app wherever it (re)started. False if stopped meanwhile.
+fn wait_for_app(
+    target: &mut Option<u32>,
+    watch: &mut Option<ProcessWatch>,
+    pid_hint: u32,
+    exe: &str,
+    backoff: &mut Duration,
+    stop: &AtomicBool,
+) -> bool {
+    loop {
+        thread::sleep(*backoff);
+        *backoff = (*backoff * 2).min(MAX_BACKOFF);
+        if stop.load(Ordering::Relaxed) {
+            return false;
+        }
+        if watch.as_ref().is_some_and(|w| !w.exited()) {
+            return true;
+        }
+        if let Some(next) = locate(target.unwrap_or(pid_hint), exe) {
+            *target = Some(next);
+            *watch = Some(ProcessWatch::new(next, exe));
+            return true;
         }
     }
 }

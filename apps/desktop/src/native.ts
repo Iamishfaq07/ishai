@@ -84,8 +84,9 @@ export function friendlyAudioError(err: unknown): string {
     return `Another app is holding ${what} for itself. Close that app (or turn off its exclusive mode), then click Retry.`;
   }
   if (/list audio (devices|apps)/i.test(raw)) return "Couldn't read your audio devices. Click Retry, or restart Orbit.";
-  const gone = /app audio unavailable: (.+) isn't running/i.exec(raw);
-  if (gone) return `${gone[1]} isn't running. Open it, then click Retry, or pick “Default output” under Listen to.`;
+  if (/app audio.*isn't running/i.test(raw)) {
+    return "That app isn't running. Open it, then click Retry, or pick “Default output” under Listen to.";
+  }
   if (/app audio/i.test(raw)) return "Couldn't listen to that app. Pick “Default output” under Listen to, or restart the meeting app.";
   return `Couldn't start ${what}. Check it's connected, then click Retry.`;
 }
