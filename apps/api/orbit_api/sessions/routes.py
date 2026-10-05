@@ -29,7 +29,14 @@ from orbit_api.auth.security import TICKET_TTL_S, current_user, issue_ticket, re
 from orbit_api.config import get_settings
 from orbit_api.csrf import websocket_origin_allowed
 from orbit_api.db import get_db, sessionmaker
-from orbit_api.entitlements import Plan, minutes_metric, minutes_remaining, plan_for, usage_this_month
+from orbit_api.entitlements import (
+    Plan,
+    minutes_metric,
+    minutes_remaining,
+    plan_for,
+    usage_pool,
+    usage_this_month,
+)
 from orbit_api.live import carryover
 from orbit_api.live.context_builder import SessionMemory
 from orbit_api.live.engine import LiveEngine, SessionProfile
@@ -66,7 +73,7 @@ from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.retrieval.index import IndexedChunk, SessionIndex, chunk_body
 from orbit_api.sessions import companion
 from orbit_api.sessions.feedback import learned_preferences, session_feedback
-from orbit_api.sessions.recorder import DbRecorder, upsert_usage
+from orbit_api.sessions.recorder import DbRecorder, InterviewTime, upsert_usage
 from orbit_api.sessions.report import generate_report
 from orbit_api.stories.routes import MAX_STORIES, index_chunk, story_text
 from orbit_api.workspaces.routes import owned_workspace, workspace_document_ids
@@ -528,7 +535,7 @@ async def usage(user: Annotated[User, Depends(current_user)],
         granted_s, used_s = await credits.interview_seconds(db, user.id)
         live_used, live_limit = round(used_s / 60, 1), round(granted_s / 60)
     else:
-        live_used = round(await usage_this_month(db, user.id, "live_seconds") / 60, 1)
+        live_used = round(await usage_this_month(db, user.id, "live_seconds", usage_pool(plan)) / 60, 1)
         live_limit = plan.live_minutes
     return {
         "plan": plan.name,
@@ -611,21 +618,26 @@ async def drain_teardowns(timeout_s: float = 15) -> None:
         await asyncio.wait(set(_teardowns), timeout=timeout_s)
 
 
-async def _commit_live_seconds(user_id: str, session_id: str, usage_key: str, seconds: int,
+async def _commit_live_seconds(user_id: str, session_id: str, minutes: InterviewTime, seconds: int,
                                session_type: str = "interview") -> float | None:
-    """Commit this connection's running time (idempotent upsert) and return the user's remaining seconds this
-    month for this kind of session, across ALL their sessions (None = unlimited)."""
+    """Commit this connection's running time (idempotent upsert) and return the user's remaining seconds for this
+    kind of session, across ALL their sessions (None = unlimited). The time goes to the balance of the plan the
+    account was on: when that changed since the last beat (a grant started or ran out), the time so far stays on the
+    old balance and from here on it's metered on the new one (InterviewTime.switch)."""
     async with sessionmaker()() as db:
-        await upsert_usage(db, UsageEvent(user_id=user_id, session_id=session_id,
-                                          metric=minutes_metric(session_type), quantity=seconds,
-                                          idempotency_key=usage_key, created_at=datetime.now(UTC)))
+        plan = await plan_for(db, user_id)
+        pool = usage_pool(plan)
+        minutes.pool = minutes.pool or pool
+        await upsert_usage(db, minutes.event(user_id, session_id, seconds))
         await db.commit()
-        remaining = await minutes_remaining(db, user_id, session_type)
+        if pool != minutes.pool:
+            minutes.switch(pool, seconds)
+        remaining = await minutes_remaining(db, user_id, session_type, plan)
     return None if remaining is None else remaining * 60
 
 
 async def _meter_live_minutes(ws: WebSocket, engine: LiveEngine, user_id: str, session_id: str,
-                              usage_key: str, limit_ending: asyncio.Event, *, session_type: str = "interview",
+                              minutes: InterviewTime, limit_ending: asyncio.Event, *, session_type: str = "interview",
                               prior_session_s: int = 0, max_session_s: int | None = None) -> None:
     """Server-side enforcement of two limits: the monthly allowance (live or mock minutes) and the per-session
     ceiling (plan.max_session_minutes, including earlier connections of this session). Usage is committed every
@@ -637,14 +649,17 @@ async def _meter_live_minutes(ws: WebSocket, engine: LiveEngine, user_id: str, s
     warned: set[str] = set()
     while not engine.ended:
         now_s = engine.now_ms() // 1000
+        row = minutes.row
         try:
-            month_s = await _commit_live_seconds(user_id, session_id, usage_key, now_s, session_type)
+            month_s = await _commit_live_seconds(user_id, session_id, minutes, now_s, session_type)
         except Exception:
             # Fail open for this beat (never cut a live interview off on a DB blip), but loudly; the final
             # usage is still written durably by the recorder at teardown.
             log.exception("live-minute heartbeat failed for session %s", session_id)
             await _beat(engine, heartbeat)
             continue
+        if minutes.row != row:
+            warned.discard("monthly")  # the plan changed: the new balance's low-minutes warning is news
         session_s = None if max_session_s is None else max_session_s - (prior_session_s + now_s)
         limits = [(r, s) for r, s in (("monthly", month_s), ("session", session_s)) if s is not None]
         if not limits:
@@ -749,10 +764,10 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
         async with send_lock:
             await ws.send_text(json.dumps(msg, separators=(",", ":")))
 
-    # One live_seconds row per connection, keyed so heartbeats and the final write all set the same row.
-    usage_key = f"live:{uuid.uuid4()}"
-    recorder = DbRecorder(session_id, user_id, store_transcripts=store_transcripts, usage_key=usage_key,
-                          usage_metric=minutes_metric(profile.session_type))
+    # One live_seconds row per connection (one more each time the plan changes mid-session), keyed so heartbeats and
+    # the final write all set the same row, and charged to the balance of the plan it's on.
+    minutes = InterviewTime(f"live:{uuid.uuid4()}", minutes_metric(profile.session_type), pool=usage_pool(plan))
+    recorder = DbRecorder(session_id, user_id, store_transcripts=store_transcripts, minutes=minutes)
     # A reconnect picks up the conversation where it was: from the engine still attached (a second window took
     # over) or the state the dropped one left (live/carryover.py). After a server restart, the saved summary.
     attached = _live_engines.get(session_id)
@@ -782,7 +797,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
     explicit_end = False
     limit_ending = asyncio.Event()
     meter = asyncio.create_task(_meter_live_minutes(
-        ws, engine, user_id, session_id, usage_key, limit_ending, session_type=profile.session_type,
+        ws, engine, user_id, session_id, minutes, limit_ending, session_type=profile.session_type,
         prior_session_s=prior_session_s, max_session_s=plan.max_session_minutes * 60))
     try:
         if previous is not None:

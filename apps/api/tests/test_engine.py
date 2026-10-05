@@ -304,7 +304,7 @@ def test_recorder_updates_the_stored_question_text(client: Any) -> None:
     user_id = client.get("/v1/auth/me", headers=h).json()["id"]
 
     async def record() -> None:
-        rec = DbRecorder(sid, user_id, store_transcripts=True, usage_key=None, usage_metric="live_seconds")
+        rec = DbRecorder(sid, user_id, store_transcripts=True)
         await rec.question("q-grow", None, "How do you prevent security gates from slowing engineering?",
                            "technical", 0.9, False, "auto")
         await rec.question_text("q-grow", "How do you prevent security gates from slowing engineering? "

@@ -22,6 +22,7 @@ from orbit_api.providers.stt.base import TranscriptEvent
 from orbit_api.providers.stt.mock import MockSTTProvider
 from orbit_api.retrieval.index import SessionIndex
 from orbit_api.sessions import routes
+from orbit_api.sessions.recorder import InterviewTime
 from tests.test_api import _close_code, _collect, _live, _register
 from tests.test_engine import Sink
 from tests.test_mock_interview import Spy
@@ -287,7 +288,8 @@ async def test_metering_stops_and_the_socket_closes_when_the_engine_ends_itself(
         monkeypatch: pytest.MonkeyPatch) -> None:
     commits: list[int] = []
 
-    async def commit(user_id: str, session_id: str, key: str, seconds: int, session_type: str = "") -> float:
+    async def commit(user_id: str, session_id: str, minutes: InterviewTime, seconds: int,
+                     session_type: str = "") -> float:
         commits.append(seconds)
         return 3600.0
 
@@ -300,8 +302,8 @@ async def test_metering_stops_and_the_socket_closes_when_the_engine_ends_itself(
     monkeypatch.setattr(routes, "_commit_live_seconds", commit)
     eng, sink = _engine()
     await eng.start()
-    meter = asyncio.ensure_future(routes._meter_live_minutes(Socket(), eng, "u", "s1", "k",  # type: ignore[arg-type]
-                                                             asyncio.Event()))
+    meter = asyncio.ensure_future(routes._meter_live_minutes(Socket(), eng, "u", "s1",  # type: ignore[arg-type]
+                                                             InterviewTime("k"), asyncio.Event()))
     await asyncio.sleep(0.05)
     beats = len(commits)
     await eng.end()  # as a mock round that runs its course ends its own engine

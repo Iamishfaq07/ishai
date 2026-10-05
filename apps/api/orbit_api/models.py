@@ -375,6 +375,10 @@ class UsageEvent(TimestampMixin, Base):
     # Set for events written more than once (retries, live-minute heartbeats): writers upsert on it, so a
     # retry or a repeated heartbeat never double-counts. e.g. "live:<connection id>", "shot:<question id>".
     idempotency_key: Mapped[str | None] = mapped_column(String(128))
+    # Interview time (live_seconds, mock_seconds): the balance it came out of, fixed when the row is written —
+    # "credits", or the name of the plan whose monthly allowance it used (entitlements.usage_pool). NULL counts
+    # against every balance, as every row did before pools were recorded.
+    pool: Mapped[str | None] = mapped_column(String(16))
 
 
 class FailedWrite(TimestampMixin, Base):

@@ -11,6 +11,11 @@ mock interviews, `screenshots` for delivered screenshot answers. Documents are c
 
 The Free plan is credit-based (`Plan.credits`): its interview minutes (live and mock together) and resume AI come
 from credits (credits.py: a welcome grant, UPI packs), which never expire, instead of a monthly allowance.
+
+Interview time is charged to one balance as it's metered, and each usage row says which (`usage.pool`, see
+`usage_pool`): the credits, or the allowance of the plan in force then. A plan's allowance counts only its own rows,
+the credits only theirs, so time on a Pro grant doesn't come out of the credits when the grant ends, and credits spent
+earlier in the month don't shrink a Pro allowance.
 """
 
 import json
@@ -20,7 +25,7 @@ from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits
@@ -171,12 +176,13 @@ def _month_start() -> datetime:
     return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
-async def usage_this_month(db: AsyncSession, user_id: str, metric: str) -> float:
-    total = await db.scalar(
-        select(func.coalesce(func.sum(UsageEvent.quantity), 0.0)).where(
-            UsageEvent.user_id == user_id, UsageEvent.metric == metric, UsageEvent.created_at >= _month_start()
-        )
-    )
+async def usage_this_month(db: AsyncSession, user_id: str, metric: str, pool: str | None = None) -> float:
+    """This calendar month's total of `metric`; with `pool`, only the interview time drawn from that balance (and
+    rows from before pools were recorded)."""
+    where = [UsageEvent.user_id == user_id, UsageEvent.metric == metric, UsageEvent.created_at >= _month_start()]
+    if pool is not None:
+        where.append(or_(UsageEvent.pool == pool, UsageEvent.pool.is_(None)))
+    total = await db.scalar(select(func.coalesce(func.sum(UsageEvent.quantity), 0.0)).where(*where))
     return float(total or 0.0)
 
 
@@ -185,16 +191,24 @@ def minutes_metric(session_type: str) -> str:
     return "mock_seconds" if session_type == "mock" else "live_seconds"
 
 
-async def minutes_remaining(db: AsyncSession, user_id: str, session_type: str = "interview") -> float | None:
+def usage_pool(plan: Plan) -> str:
+    """The balance interview time comes out of while `plan` is the account's (`usage.pool`): the credits on a credit
+    plan, else that plan's own monthly allowance. Fixed on each usage row when it's written."""
+    return credits.POOL if plan.credits else plan.name
+
+
+async def minutes_remaining(db: AsyncSession, user_id: str, session_type: str = "interview",
+                            plan: Plan | None = None) -> float | None:
     """Minutes left for this kind of session (None = unlimited): the interview credits on a credit plan (live and
-    mock draw on the same balance), else this month's allowance."""
-    plan = await plan_for(db, user_id)
+    mock draw on the same balance), else what this month's allowance has left after the time used on this plan.
+    `plan`: the account's plan when the caller already has it."""
+    plan = plan or await plan_for(db, user_id)
     if plan.credits:
         return await credits.interview_minutes_left(db, user_id)
     limit = plan.mock_minutes if session_type == "mock" else plan.live_minutes
     if limit is None:
         return None
-    used = await usage_this_month(db, user_id, minutes_metric(session_type)) / 60
+    used = await usage_this_month(db, user_id, minutes_metric(session_type), usage_pool(plan)) / 60
     return max(limit - used, 0.0)
 
 
@@ -208,8 +222,8 @@ async def for_user(db: AsyncSession, user: User) -> dict[str, Any]:
     docs = await db.scalar(select(func.count()).select_from(Document).where(Document.user_id == user.id))
     grant_until = user.grant_until if active_grant(user) else None
     limits: dict[str, Any] = {k: getattr(plan, k) for k in _INT_FIELDS}
-    live_used = round(await usage_this_month(db, user.id, "live_seconds") / 60, 1)
-    mock_used = round(await usage_this_month(db, user.id, "mock_seconds") / 60, 1)
+    live_used = round(await usage_this_month(db, user.id, "live_seconds", usage_pool(plan)) / 60, 1)
+    mock_used = round(await usage_this_month(db, user.id, "mock_seconds", usage_pool(plan)) / 60, 1)
     wallet: dict[str, Any] | None = None
     if plan.credits:
         granted_s, used_s = await credits.interview_seconds(db, user.id)

@@ -76,8 +76,38 @@ async def upsert_usage(db: AsyncSession, event: UsageEvent) -> None:
         existing = await db.scalar(select(UsageEvent).where(UsageEvent.idempotency_key == event.idempotency_key))
         if existing is not None:
             existing.quantity = max(existing.quantity, event.quantity)
+            existing.pool = existing.pool or event.pool
             return
     db.add(event)
+
+
+@dataclass
+class InterviewTime:
+    """One live connection's interview time (`live_seconds` or `mock_seconds`), as one usage row per balance it drew
+    on. The heartbeat and the final write at teardown both set the current row to the time since it began (upserted
+    on its key, so a repeat never double-counts). When the account's plan changes mid-session (a grant starts or runs
+    out), the heartbeat leaves that row where it is and `switch`es: the time from then on goes to a new row, under the
+    new plan's pool. So time on a Pro grant never comes out of the credits once the grant ends, nor the reverse."""
+
+    key: str | None  # the connection's, "live:<uuid>"; its later rows are "<key>:2", "<key>:3"… (None: unkeyed)
+    metric: str = "live_seconds"
+    pool: str | None = None  # entitlements.usage_pool of the plan the current row draws on
+    row: int = 1
+    since_s: int = 0  # connection time at which the current row began
+
+    @property
+    def row_key(self) -> str | None:
+        return self.key if self.key is None or self.row == 1 else f"{self.key}:{self.row}"
+
+    def event(self, user_id: str, session_id: str, seconds: float) -> UsageEvent:
+        """The current row, `seconds` into the connection."""
+        return UsageEvent(user_id=user_id, session_id=session_id, metric=self.metric,
+                          quantity=max(seconds - self.since_s, 0), idempotency_key=self.row_key, pool=self.pool,
+                          created_at=datetime.now(UTC))
+
+    def switch(self, pool: str, seconds: int) -> None:
+        """From `seconds` on, the time goes to a new row on `pool`."""
+        self.pool, self.row, self.since_s = pool, self.row + 1, seconds
 
 
 async def write_once(obj: Base) -> None:
@@ -208,14 +238,13 @@ async def replay_failed_writes() -> int:
 
 class DbRecorder:
     def __init__(self, session_id: str, user_id: str, *, store_transcripts: bool,
-                 usage_key: str | None = None, usage_metric: str = "live_seconds") -> None:
+                 minutes: InterviewTime | None = None) -> None:
         self.session_id = session_id
         self.user_id = user_id
         self.store_transcripts = store_transcripts
-        # "live_seconds", or "mock_seconds" for mock interviews (their own monthly allowance).
-        self.usage_metric = usage_metric
-        # Idempotency key of this connection's live_seconds row (shared with the live-minute heartbeat).
-        self.usage_key = usage_key
+        # This connection's interview time: shared with the live-minute heartbeat, which moves it to a new row when
+        # the plan changes. `live_seconds`, or `mock_seconds` for mock interviews (their own monthly allowance).
+        self.minutes = minutes or InterviewTime(None)
         self._queue: asyncio.Queue[Any] = asyncio.Queue()
         self._worker = asyncio.create_task(self._run())
 
@@ -278,9 +307,10 @@ class DbRecorder:
 
     async def _finish(self, duration_s: int, stt_seconds: float, summary: str,
                       metrics: dict[str, list[int]] | None, *, end: bool) -> None:
-        await self.usage(self.usage_metric, duration_s, self.usage_key)
+        self._put(self.minutes.event(self.user_id, self.session_id, duration_s))
         if stt_seconds:
-            await self.usage("stt_seconds", stt_seconds, f"stt:{self.usage_key}" if self.usage_key else None)
+            key = self.minutes.key
+            await self.usage("stt_seconds", stt_seconds, f"stt:{key}" if key else None)
         await self.flush()
 
         async def close_row() -> None:
