@@ -56,6 +56,7 @@ async def end_abandoned_sessions(now: datetime | None = None) -> int:
                 continue
             row.status = "ended"
             row.ended_at = last_activity  # when it actually stopped, not when the sweep noticed
+            row.carryover = None  # the dropped connection's saved state: nothing will continue it
             await jobs.enqueue(db, "report", {"session_id": row.id}, jobs.report_key(row.id))
             companion.stop_sharing(row.id)
             ended += 1

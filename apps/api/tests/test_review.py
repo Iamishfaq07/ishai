@@ -2,12 +2,15 @@
 
 import json
 import time
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
+from orbit_api.providers.llm.base import LLMChunk, LLMError, LLMProvider, LLMRequest
 from orbit_api.sessions.report import QAPair, build_review, pair_questions_with_answers
 
 T0 = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
@@ -100,3 +103,88 @@ def test_review_of_a_session_where_nothing_was_captured_says_so(client: TestClie
     assert client.post(f"/v1/sessions/{sid}/end", headers=h).status_code == 200
     r = client.post(f"/v1/sessions/{sid}/review", headers=h)
     assert r.status_code == 409 and "Nothing was captured" in r.json()["detail"]
+
+
+class _Down(LLMProvider):
+    name = "down"
+
+    def model_for(self, reasoning: Any) -> str:
+        return "down-1"
+
+    async def stream(self, request: LLMRequest) -> AsyncIterator[LLMChunk]:
+        raise LLMError("http_503", "provider down", retryable=True)
+        yield LLMChunk()  # pragma: no cover
+
+
+def test_regenerating_keeps_the_follow_up_and_a_failed_one_keeps_the_review(
+        client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Regenerate used to drop the saved follow-up email, and on a provider error replace the report with a
+    facts-only one: the review was gone (and the drill refused with no_review). So could the report job's retry."""
+    from orbit_api.sessions import report
+    from tests.test_api import _register, _wait_report
+
+    h = _register(client)
+    sid = client.post("/v1/sessions", headers=h, json={"title": "Regenerate me"}).json()["id"]
+    ticket = client.post(f"/v1/sessions/{sid}/live-ticket", headers=h).json()["ticket"]
+    with client.websocket_connect(f"/v1/sessions/{sid}/live?ticket={ticket}") as ws:
+        _collect(ws, lambda ev: any(e["type"] == "session.started" for e in ev))
+        ws.send_text(json.dumps({"type": "dev.simulate", "data": {"fixture": "behavioral_interview", "speed": 25}}))
+        _collect(ws, lambda ev: sum(e["type"] == "answer.completed" for e in ev) >= 2)
+        ws.send_text(json.dumps({"type": "session.end", "data": {}}))
+        _collect(ws, lambda ev: any(e["type"] == "session.ended" for e in ev))
+    assert _wait_report(client, h, sid)["summary"]["review"]
+    assert client.post(f"/v1/sessions/{sid}/follow-up", headers=h).status_code == 200
+
+    assert client.post(f"/v1/sessions/{sid}/review", headers=h).status_code == 200
+    kept = client.get(f"/v1/sessions/{sid}", headers=h).json()["summary"]
+    assert kept["review"] and kept["follow_up"]["thank_you"]["body"]  # the email survives a regenerate
+
+    monkeypatch.setattr(report, "get_llm_provider", lambda: _Down())
+    r = client.post(f"/v1/sessions/{sid}/review", headers=h)
+    assert r.status_code == 502 and "earlier review is unchanged" in r.json()["detail"]
+    assert client.get(f"/v1/sessions/{sid}", headers=h).json()["summary"] == kept
+    drill = client.post(f"/v1/sessions/{sid}/drill", headers=h)
+    assert drill.status_code == 201 or drill.json()["detail"]["code"] == "nothing_to_drill"  # not no_review
+
+    with pytest.raises(RuntimeError, match="narrative unavailable"):  # the job retries later...
+        client.portal.call(report.run_report_job, {"session_id": sid})  # type: ignore[union-attr]
+    assert client.get(f"/v1/sessions/{sid}", headers=h).json()["summary"] == kept  # ...without wiping it now
+
+
+def test_the_report_on_a_long_session_covers_all_of_it(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """25 questions and a transcript over the 12,000 characters the model gets: the narrative used to see only the
+    end (the running summary was never sent), and the scorecard said nothing about the questions it left out."""
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import LiveSessionRow, Question, SessionTurn
+    from orbit_api.providers.llm.mock import MockLLMProvider
+    from orbit_api.sessions import report
+    from tests.test_api import _register
+
+    h = _register(client)
+    sid = client.post("/v1/sessions", headers=h, json={"title": "Marathon"}).json()["id"]
+
+    async def plant() -> None:
+        async with sessionmaker()() as db:
+            row = await db.get(LiveSessionRow, sid)
+            assert row is not None
+            row.status, row.rolling_summary = "ended", "EARLY: walked through the payments ledger migration."
+            for i in range(25):
+                at = T0 + timedelta(minutes=2 * i)
+                db.add(Question(id=f"{sid[:8]}-q{i}", session_id=sid, text=f"Question number {i}?", type="technical",
+                                confidence=0.9, created_at=at))
+                db.add(SessionTurn(id=f"{sid[:8]}-t{i}", session_id=sid, speaker="candidate",
+                                   text=f"Answer {i}. " + "We shipped it. " * 40, start_ms=i, end_ms=i + 1,
+                                   created_at=at + timedelta(seconds=30)))
+            await db.commit()
+
+    llm = MockLLMProvider()
+    monkeypatch.setattr(report, "get_llm_provider", lambda: llm)
+    assert client.portal is not None
+    client.portal.call(plant)
+    review = client.portal.call(report.generate_report, sid)["review"]
+    prompt = llm.requests[-1].messages[-1].content
+    assert "EARLY: walked through the payments ledger migration." in prompt  # the part the excerpt cut
+    assert "- Question number 0?" in prompt and "- Question number 4?" in prompt  # earlier questions, listed
+    assert "Q1: Question number 5?" in prompt and "Q20: Question number 24?" in prompt  # the scored ones
+    assert len(review["items"]) == 20 and review["questions_total"] == 25
+    assert review["note"] == "Only the last 20 of this session's 25 questions were scored."

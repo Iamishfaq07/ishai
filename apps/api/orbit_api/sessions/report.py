@@ -3,6 +3,9 @@
 The scorecard grades what the candidate ACTUALLY said: each interviewer question is paired server-side with
 the candidate turns that followed it (before the next question), and the model only scores that pairing. A
 question the candidate didn't answer gets no score. Old summaries without `review` stay valid.
+
+A long session's narrative covers all of it (the end of the transcript, the session's running summary and its
+earlier questions); its scorecard grades the last MAX_REVIEW_QUESTIONS questions and says so (`review.note`).
 """
 
 import json
@@ -15,6 +18,7 @@ from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import jobs
 from orbit_api.db import sessionmaker
@@ -24,12 +28,17 @@ from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMRequest
 from orbit_api.providers.llm.pricing import estimate_cost
 from orbit_api.sessions.delivery import delivery_stats
+from orbit_api.sessions.recorder import replay_failed_writes
 
 log = logging.getLogger(__name__)
 
 MAX_REVIEW_QUESTIONS = 20
 MAX_ANSWER_CHARS = 1500  # per question, sent to the model
 YOU_SAID_CHARS = 600  # per question, stored for the UI
+# A long session doesn't fit: the model gets the end of its transcript, plus the running summary of the whole session
+# and the earlier questions (texts only), so the narrative covers all of it. Only the last questions are scored.
+MAX_TRANSCRIPT_CHARS = 12_000
+MAX_EARLIER_QUESTIONS_CHARS = 4_000
 
 _SYSTEM = (
     "You write a practical post-session report and review for someone who just finished an interview or "
@@ -147,6 +156,11 @@ def build_review(data: Any, pairs: Sequence[QAPair]) -> dict[str, Any] | None:
 
 
 async def generate_report(session_id: str) -> dict[str, Any]:
+    try:
+        # Turns and questions whose writes failed during a DB outage: in the report, not only in a later restart's.
+        await replay_failed_writes()
+    except Exception:
+        log.warning("replaying failed writes before the report of %s failed", session_id, exc_info=True)
     async with sessionmaker()() as db:
         row = await db.get(LiveSessionRow, session_id)
         if row is None:
@@ -173,11 +187,25 @@ async def generate_report(session_id: str) -> dict[str, Any]:
 
         narrative_failed = False
         if questions or turns:
-            pairs = pair_questions_with_answers(questions, turns)[-MAX_REVIEW_QUESTIONS:]
-            convo = "\n".join(f"{t.speaker}: {t.text}" for t in turns)[-12_000:] or "\n".join(
-                f"interviewer: {q.text}" for q in questions)
+            all_pairs = pair_questions_with_answers(questions, turns)
+            pairs = all_pairs[-MAX_REVIEW_QUESTIONS:]
+            transcript = "\n".join(f"{t.speaker}: {t.text}" for t in turns)
+            convo = transcript[-MAX_TRANSCRIPT_CHARS:] or "\n".join(f"interviewer: {q.text}" for q in questions)
             user = (f"Session type: {row.type}. Role: {row.role or 'n/a'}.\n"
                     f"<reference_data source=\"transcript\">\n{fence(convo)}\n</reference_data>")
+            cut = len(transcript) > MAX_TRANSCRIPT_CHARS
+            if (cut or not turns) and row.rolling_summary:
+                # What the excerpt doesn't show (or, with transcripts off, the only account of what was said).
+                lead = ("The transcript above is only the END of a long session. What came before, as a running "
+                        "summary (cover it in the summary and topics too):" if cut else
+                        "No transcript was kept. A running summary of the session:")
+                user += (f"\n\n{lead}\n<reference_data source=\"earlier_summary\">\n{fence(row.rolling_summary)}\n"
+                         "</reference_data>")
+            if len(all_pairs) > len(pairs):
+                earlier = "\n".join(f"- {p.question[:200]}" for p in all_pairs[:-len(pairs)])
+                user += ("\n\nEarlier questions (not scored; cover them in the summary and topics):\n"
+                         "<reference_data source=\"earlier_questions\">\n"
+                         f"{fence(earlier[:MAX_EARLIER_QUESTIONS_CHARS])}\n</reference_data>")
             system = _SYSTEM
             negotiation = (row.mock_config or {}).get("negotiation") if row.type == "mock" else None
             if isinstance(negotiation, dict):
@@ -202,40 +230,64 @@ async def generate_report(session_id: str) -> dict[str, Any]:
                             "suggested_preparation"):
                     if data.get(key):
                         report[key] = data[key]
-                report["review"] = build_review(data.get("review"), pairs)
+                review = build_review(data.get("review"), pairs)
+                if review is not None and len(all_pairs) > len(pairs):
+                    review["questions_total"] = len(all_pairs)
+                    review["note"] = (f"Only the last {len(pairs)} of this session's {len(all_pairs)} questions "
+                                      "were scored.")
+                report["review"] = review
                 report["generated_by"] = llm.name
                 db.add(ProviderRequest(user_id=row.user_id, session_id=session_id, provider=llm.name,
                                        model=resp.model, request_type="report",
                                        input_tokens=resp.usage.input_tokens, output_tokens=resp.usage.output_tokens,
                                        cached_input_tokens=resp.usage.cached_input_tokens,
                                        estimated_cost_usd=estimate_cost(resp.model, resp.usage)))
+                await db.commit()  # the call's cost, whether or not this report is kept
             except (LLMError, json.JSONDecodeError, ValueError) as e:
                 log.warning("report narrative unavailable: %s", e)
                 narrative_failed = True
 
-        existing = await db.scalar(select(SessionSummary).where(SessionSummary.session_id == session_id))
-        if existing:
-            existing.content = report
-            await db.commit()
-        else:
-            db.add(SessionSummary(session_id=session_id, content=report))
-            try:
-                await db.commit()
-            except IntegrityError:
-                # A concurrent run (recorder + REST /end) inserted first; update its row instead of crashing.
-                await db.rollback()
-                row2 = await db.scalar(select(SessionSummary).where(SessionSummary.session_id == session_id))
-                if row2 is not None:
-                    row2.content = report
-                    await db.commit()
-        # Not stored: tells the durable job to retry the narrative.
+        await _store(db, session_id, report)
+        # Tells the durable job to retry the narrative.
         return {**report, "narrative_failed": True} if narrative_failed else report
+
+
+def _completeness(content: dict[str, Any] | None) -> int:
+    """How much of a report the model managed: 2 the narrative and the scorecard, 1 the narrative, 0 the facts only
+    (the narrative failed, or there was nothing to write about)."""
+    if not content:
+        return 0
+    if content.get("review"):
+        return 2
+    return 1 if content.get("generated_by") else 0
+
+
+async def _store(db: AsyncSession, session_id: str, report: dict[str, Any]) -> bool:
+    """Save the report as the session's, merged into what's there (keys it doesn't write, like the follow-up email
+    from insights.py, are kept), unless the stored one is more complete: a regenerate or a job retry whose narrative
+    hit a provider error mustn't replace a good review with a facts-only report. Returns whether it saved."""
+    for _ in range(2):
+        existing = await db.scalar(select(SessionSummary).where(SessionSummary.session_id == session_id))
+        if existing is not None:
+            if _completeness(report) < _completeness(existing.content):
+                return False
+            existing.content = {**(existing.content or {}), **report}
+            await db.commit()
+            return True
+        db.add(SessionSummary(session_id=session_id, content=report))
+        try:
+            await db.commit()
+            return True
+        except IntegrityError:
+            await db.rollback()  # a concurrent run (recorder + REST /end) inserted first: merge into its row
+    return False
 
 
 @jobs.handler("report")
 async def run_report_job(payload: dict[str, Any]) -> None:
-    """Durable-job entry point. The facts-only report is saved even when the narrative fails; raising then
-    lets the job retry the narrative (a transient provider error shouldn't leave a report without it)."""
+    """Durable-job entry point. When the narrative fails, the facts-only report is saved only if there's no better
+    one; raising then lets the job retry the narrative (a transient provider error shouldn't leave a report without
+    it)."""
     report = await generate_report(str(payload["session_id"]))
     if report.get("narrative_failed"):
         raise RuntimeError("report narrative unavailable (provider error); will retry")

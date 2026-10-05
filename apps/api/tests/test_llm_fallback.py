@@ -88,6 +88,51 @@ async def test_thinking_gets_extra_first_token_headroom() -> None:
     assert fp._budget(req(thinking="max")) > fp._budget(req())
 
 
+@pytest.mark.parametrize("why", ["no backup", "plan without fallback", "backup down"])
+async def test_with_nowhere_to_fail_over_a_slow_first_token_is_waited_for(why: str) -> None:
+    """The budget is for failing over. Without a backup (render.yaml configures none) a first token at 11 s used to
+    be cut off at 10 s, retried by the engine, cut off again: "That took too long" instead of a late answer."""
+    primary = Scripted("deepseek", ["late ", "but here"], stall_s=0.3)
+    backup = None if why == "no backup" else Scripted("backup", ["b"])
+    if why == "backup down":
+        for _ in range(3):
+            health.record("backup", "llm", False, error="http_503")
+    text, _ = await collect(FallbackProvider(primary, backup, first_token_timeout_s=0.05),
+                            req(allow_fallback=why != "plan without fallback"))
+    assert text == "late but here" and primary.calls == 1
+
+
+async def test_a_stuck_primary_with_no_backup_still_times_out(monkeypatch: pytest.MonkeyPatch) -> None:
+    from orbit_api.providers.llm import fallback
+
+    monkeypatch.setattr(fallback, "NO_BACKUP_FIRST_TOKEN_S", 0.1)
+    with pytest.raises(LLMError) as e:
+        await collect(FallbackProvider(Scripted("deepseek", ["x"], stall_s=1.0), None, first_token_timeout_s=0.05),
+                      req())
+    assert e.value.code == "timeout" and e.value.retryable
+
+
+async def test_engine_answers_late_rather_than_failing_without_a_backup() -> None:
+    from orbit_api.live.engine import LiveEngine, SessionProfile
+    from orbit_api.live.events import LiveSettings
+    from orbit_api.providers.stt.base import TranscriptEvent
+    from orbit_api.providers.stt.mock import MockSTTProvider
+    from orbit_api.retrieval.index import SessionIndex
+    from tests.test_engine import Sink
+
+    primary = Scripted("deepseek", ["ANSWER: Put each item in a set ", "and report the repeats.\n"], stall_s=0.3)
+    sink = Sink()
+    eng = LiveEngine(SessionProfile("s1", "interview", "Engineer", "en", "en", dev_mode=True),
+                     LiveSettings(response_timing="quick"), send=sink,
+                     llm=FallbackProvider(primary, None, first_token_timeout_s=0.05), stt=MockSTTProvider(),
+                     index=SessionIndex([]))
+    await eng.start()
+    await eng.on_transcript("system", TranscriptEvent("final", "How would you find duplicates?", 0, 100, endpoint=True))
+    await sink.wait_for("answer.completed")
+    assert not sink.of("answer.failed") and primary.calls == 1
+    await eng.end()
+
+
 async def test_never_switches_models_mid_answer() -> None:
     primary, backup = Scripted("deepseek", ["one ", "two"], error=E503, at=1), Scripted("backup", ["other"])
     got: list[str] = []

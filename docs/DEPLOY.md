@@ -54,7 +54,9 @@ and the previous deploy keeps serving). Health: `/health` (liveness + deployed `
 jobs, dead-lettered writes) is in Postgres.
 
 **Background work runs in the API process.** Session reports are DB-backed jobs picked up by a worker inside each
-API process; there's no separate worker service to deploy. Dead-lettered live-session writes are replayed on boot.
+API process; there's no separate worker service to deploy. A job cut off by a deploy goes back in the queue (and
+one still "running" at boot is re-queued at once: with one instance, it was the previous process's). Dead-lettered
+live-session writes are replayed on boot, every minute, before each session's report and at shutdown.
 
 **Checking the real providers.** `RUN_PROVIDER_SMOKE=true uv run pytest tests/smoke -v` (from `apps/api`, keys from
 the environment or `.env`) makes a handful of real DeepSeek + Deepgram calls — text, streaming, JSON, vision,

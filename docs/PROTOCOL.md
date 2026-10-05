@@ -18,8 +18,9 @@ should fetch a new ticket and reconnect with backoff.
 **One live session per account.** A second live session is refused at `POST …/live-ticket` with `409
 {"detail": {"code": "live_session_active", "session_id", "title", "message"}}` before any audio or AI spend. The
 client closes for good, shows the message, and offers **End it and use this one**: `POST /v1/sessions/{other}/end`,
-then reconnect. Ticket errors 401/402/403/404/409 are never retried, and the server's message is shown as-is
-(for example "Verify your email…").
+then reconnect. The ticket's other 409s carry their own codes too: `session_ended` (the session has ended and can't
+be reopened) and `session_time_limit` (it ran its maximum length). Ticket errors 401/402/403/404/409 are never
+retried, and the server's message is shown as-is (for example "Verify your email…").
 
 **Ending from elsewhere.** `POST /v1/sessions/{id}/end` also stops that session's live socket if one is open. The
 engine sends `session.ended`, records usage, and the socket closes with `4009`.
@@ -34,7 +35,9 @@ AI narrative). `GET /v1/sessions[/{id}]` exposes `report_status`: `"pending"` wh
 
 **Live-minute metering (server-authoritative).** Each connection's live time is committed every
 `ORBIT_LIVE_HEARTBEAT_S` (15 s) as one idempotent usage row, so a crash loses at most one interval and a retried
-write never double-counts. Remaining minutes are computed across all of the user's sessions at every beat: under
+write never double-counts. The row is charged to the balance of the account's plan (the credits, or a plan's own
+allowance); if the plan changes mid-session (a grant starts or runs out), the rest of the connection goes to a new row
+on the new balance. Remaining minutes are computed across all of the user's sessions at every beat: under
 5 minutes the server sends `usage.status { minutes_remaining, limit_reached: false }` once; at zero it sends
 `usage.status { minutes_remaining: 0, limit_reached: true }`, ends the session (report included) and closes with
 `4003`. Concurrent sessions can overshoot by at most about one heartbeat each.
@@ -49,8 +52,10 @@ listening: a client whose user had paused sends `session.pause` again right afte
 - **Mock rounds:** they pick up at the same question and place ("2 of 3"), and the question is re-sent as
   `mock.question` with the same `question_id`. The round's clock keeps running, and a question that was being
   written when the connection dropped is asked by the new engine.
-- **Where it's kept:** process memory only, for at most `ORBIT_ABANDONED_SESSION_MIN`, and dropped when the
-  session ends. After a server restart, the saved rolling summary seeds the new engine.
+- **Where it's kept:** in process memory, for at most `ORBIT_ABANDONED_SESSION_MIN`, and on the session row
+  (`sessions.carryover`, written every heartbeat and when the connection drops), so a server restart (every deploy)
+  continues the session too. Both are dropped when the session ends. Without transcript storage, the copy on the row
+  leaves out what was said word for word (recent turns, mock answers).
 
 ## Envelope (both directions, JSON text frames)
 

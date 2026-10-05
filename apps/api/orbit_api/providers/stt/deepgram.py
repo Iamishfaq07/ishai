@@ -24,11 +24,15 @@ log = logging.getLogger(__name__)
 KEEPALIVE_S = 4.0
 BYTES_PER_MS = 32  # PCM16 mono 16 kHz
 MAX_BUFFERED_AUDIO_BYTES = 16_000 * 2 * 5  # 5 s of PCM16 retained while reconnecting
+RECONNECT_BACKOFF_S = 0.25  # doubles per failed attempt, up to 5 s
 # Handshake rejections that retrying can't fix: invalid stream settings (400, e.g. a language the model doesn't
-# support), bad/revoked key (401/403), out of credit (402).
+# support), out of credit (402).
 FATAL_HANDSHAKE = {400: "Deepgram rejected the transcription settings (unsupported language?)",
-                   401: "the Deepgram API key was rejected", 402: "the Deepgram account is out of credit",
-                   403: "the Deepgram API key was rejected"}
+                   402: "the Deepgram account is out of credit"}
+# A rejected key (401/403) is given up on only after AUTH_RETRIES more rejections in a row (about 8 s of backoff): a
+# brief auth hiccup at Deepgram's end used to end transcription for the rest of the session.
+AUTH_REJECTED = {401: "the Deepgram API key was rejected", 403: "the Deepgram API key was rejected"}
+AUTH_RETRIES = 5
 
 
 def build_url(model: str, cfg: STTConfig) -> str:
@@ -111,7 +115,8 @@ class DeepgramSession(STTSession):
             await asyncio.wait_for(self._connected.wait(), timeout=5)
 
     async def _run(self) -> None:
-        backoff = 0.25
+        backoff = RECONNECT_BACKOFF_S
+        rejected = 0  # handshakes in a row that refused the key
         while not self._closed:
             attempt_at = time.monotonic()
             try:
@@ -123,7 +128,7 @@ class DeepgramSession(STTSession):
                     health.record("deepgram", "stt", True, int((time.monotonic() - attempt_at) * 1000))
                     self._connected.set()
                     await self._queue.put(TranscriptEvent(kind="status", status="connected"))
-                    backoff = 0.25
+                    backoff, rejected = RECONNECT_BACKOFF_S, 0
                     self._start_socket_timeline()
                     for chunk in self._backlog:
                         await ws.send(chunk)
@@ -144,12 +149,14 @@ class DeepgramSession(STTSession):
             except InvalidStatus as e:
                 code = e.response.status_code
                 health.record("deepgram", "stt", False, error=f"http_{code}")
-                if code in FATAL_HANDSHAKE:
+                if code in AUTH_REJECTED:
+                    rejected += 1
+                fatal = FATAL_HANDSHAKE.get(code) or (AUTH_REJECTED[code] if rejected > AUTH_RETRIES else None)
+                if fatal:
                     log.error("deepgram handshake rejected (%s); not retrying", code)
                     self.state = "down"
                     self._connected.set()  # unblock connect(); the session is down, not pending
-                    await self._queue.put(TranscriptEvent(kind="status", status="down",
-                                                          text=FATAL_HANDSHAKE[code]))
+                    await self._queue.put(TranscriptEvent(kind="status", status="down", text=fatal))
                     break
                 log.warning("deepgram handshake failed: HTTP %s", code)
             except Exception as e:

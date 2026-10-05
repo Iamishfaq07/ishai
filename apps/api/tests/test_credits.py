@@ -1,26 +1,32 @@
 """Credits: a new account's welcome credits (one per network, capped a day), resume credits spent per AI action, and
 credit packs bought over UPI (order, the payer's UTR, the admin's approval). The signed-out resume maker is gone."""
 
+import importlib.util
+import json
+import time
 import uuid
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
-from sqlalchemy import update
+from sqlalchemy import select, update
 
 from orbit_api import credits
 from orbit_api.config import get_settings
 from orbit_api.db import sessionmaker
-from orbit_api.models import CreditEntry
+from orbit_api.models import CreditEntry, UsageEvent
 from orbit_api.providers.llm.base import LLMError
 from orbit_api.resumes import allowance
-from tests.test_api import _register
+from orbit_api.sessions import routes
+from orbit_api.sessions.recorder import DbRecorder, InterviewTime
+from tests.test_api import _collect, _live, _register
 from tests.test_phase1 import _add_usage
 from tests.test_resumes import JOB, strong_resume
-from tests.test_signup_approval import _client, _outbox
+from tests.test_signup_approval import _client, _outbox, _set_grant_until
 from tests.test_signup_approval import _register as _register_named
 
 PROXY = "p" * 32
@@ -302,3 +308,190 @@ def test_the_admin_and_pro_grants_dont_use_credits(monkeypatch: pytest.MonkeyPat
         assert e["features"]["resume_ai"] is True and e["credits"] is None and e["limits"]["live_minutes"] == 600
     finally:
         gen.close()
+
+
+# ---- which balance interview time comes out of ---------------------------------------------------------------------
+
+
+def _grant(client: TestClient, admin: dict[str, str], user_id: str, plan: str = "pro") -> None:
+    r = client.post(f"/v1/admin/users/{user_id}/access", headers=admin,
+                    json={"action": "grant", "plan": plan, "hours": 48})
+    assert r.status_code == 200, r.text
+
+
+def _spend(client: TestClient, user_id: str, seconds: float, pool: str, metric: str = "live_seconds") -> None:
+    """Interview time already metered on `pool` (an earlier session)."""
+    async def go() -> None:
+        async with sessionmaker()() as db:
+            db.add(UsageEvent(user_id=user_id, metric=metric, quantity=seconds, pool=pool))
+            await db.commit()
+
+    client.portal.call(go)  # type: ignore[union-attr]
+
+
+def _pools(client: TestClient, session_id: str) -> dict[str | None, float]:
+    async def go() -> dict[str | None, float]:
+        async with sessionmaker()() as db:
+            rows = (await db.scalars(select(UsageEvent).where(UsageEvent.session_id == session_id,
+                                                              UsageEvent.metric == "live_seconds"))).all()
+            out: dict[str | None, float] = {}
+            for r in rows:
+                out[r.pool] = out.get(r.pool, 0) + r.quantity
+            return out
+
+    return client.portal.call(go)  # type: ignore[union-attr, no-any-return]
+
+
+def test_time_on_a_grant_never_comes_out_of_the_credits(monkeypatch: pytest.MonkeyPatch) -> None:
+    """20 welcome minutes, then Pro for 48 hours and a 45-minute interview on it: when the grant ends the 20 minutes
+    are still there (the interview used to be charged to them too, leaving 0 and a 402)."""
+    admin_email = f"admin-{uuid.uuid4().hex[:8]}@example.com"
+    gen = _client(monkeypatch, ORBIT_ADMIN_EMAIL=admin_email)
+    client = next(gen)
+    try:
+        admin, _ = _register_named(client, admin_email)
+        h, user = _register_named(client, f"g-{uuid.uuid4().hex[:8]}@example.com")
+        _grant(client, admin, user["id"])
+        sid = client.post("/v1/sessions", headers=h, json={"title": "on the grant"}).json()["id"]
+        # 45 minutes of it, metered as the live socket's heartbeat meters it.
+        left = client.portal.call(routes._commit_live_seconds, user["id"], sid,  # type: ignore[union-attr]
+                                  InterviewTime(f"live:{uuid.uuid4()}"), 45 * 60)
+        assert left == (600 - 45) * 60
+        during = client.get("/v1/entitlements", headers=h).json()
+        assert during["plan"] == "pro" and during["usage"]["live_minutes"] == 45.0
+        assert _pools(client, sid) == {"pro": 45 * 60}
+
+        _set_grant_until(client, user["id"], datetime.now(UTC) - timedelta(minutes=1))
+        assert _wallet(client, h) == {"resume": 1, "interview_minutes_left": 20.0, "interview_minutes_total": 20.0}
+        assert client.post("/v1/sessions", headers=h, json={"title": "after the grant"}).status_code == 201
+    finally:
+        gen.close()
+
+
+def test_when_the_plan_changes_mid_interview_the_rest_goes_to_the_new_balance(monkeypatch: pytest.MonkeyPatch) -> None:
+    """One connection, metered while a grant runs out: its time so far stays on the grant, and from the next beat
+    on (and in the final write at teardown) it's metered on the credits, as a row of its own."""
+    admin_email = f"admin-{uuid.uuid4().hex[:8]}@example.com"
+    gen = _client(monkeypatch, ORBIT_ADMIN_EMAIL=admin_email)
+    client = next(gen)
+    try:
+        admin, _ = _register_named(client, admin_email)
+        h, user = _register_named(client, f"g-{uuid.uuid4().hex[:8]}@example.com")
+        uid = user["id"]
+        _grant(client, admin, uid)
+        sid = client.post("/v1/sessions", headers=h, json={"title": "grant runs out"}).json()["id"]
+        minutes = InterviewTime(f"live:{uuid.uuid4()}", pool="pro")
+        run = client.portal.call  # type: ignore[union-attr]
+        run(routes._commit_live_seconds, uid, sid, minutes, 30 * 60)
+        _set_grant_until(client, uid, datetime.now(UTC) - timedelta(seconds=1))
+        # The beat after the grant ran out: the 20 credit minutes are all there, nothing cut off.
+        assert run(routes._commit_live_seconds, uid, sid, minutes, 30 * 60 + 15) == 20 * 60
+        assert (minutes.pool, minutes.row, minutes.since_s) == ("credits", 2, 30 * 60 + 15)
+
+        async def teardown() -> None:
+            rec = DbRecorder(sid, uid, store_transcripts=True, minutes=minutes)
+            await rec.detached(30 * 60 + 45, 0.0, "")
+            await rec.close()
+
+        run(teardown)
+        assert _pools(client, sid) == {"pro": 30 * 60 + 15, "credits": 30}
+        assert _wallet(client, h)["interview_minutes_left"] == 19.5
+    finally:
+        gen.close()
+
+
+def test_a_grant_running_out_mid_interview_keeps_it_going_on_the_credits(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Over the socket: an hour already used on a Pro grant, more than the 20 credit minutes. The grant runs out
+    mid-interview; the next heartbeat used to cut the interview off ("out of minutes")."""
+    admin_email = f"admin-{uuid.uuid4().hex[:8]}@example.com"
+    gen = _client(monkeypatch, ORBIT_ADMIN_EMAIL=admin_email, ORBIT_LIVE_HEARTBEAT_S="0.1")
+    client = next(gen)
+    try:
+        admin, _ = _register_named(client, admin_email)
+        h, user = _register_named(client, f"g-{uuid.uuid4().hex[:8]}@example.com")
+        _grant(client, admin, user["id"])
+        _spend(client, user["id"], 60 * 60, "pro")
+        sid = client.post("/v1/sessions", headers=h, json={"title": "live"}).json()["id"]
+        with _live(client, h, sid) as ws:
+            _collect(ws, lambda ev: any(e["type"] == "session.started" for e in ev))
+            time.sleep(1.1)
+            _set_grant_until(client, user["id"], datetime.now(UTC) - timedelta(seconds=1))
+            time.sleep(2.1)  # heartbeats on the credits now (over a second of them: usage counts whole seconds)
+            ws.send_text(json.dumps({"type": "session.end", "data": {}}))
+            events = _collect(ws, lambda ev: any(e["type"] == "session.ended" for e in ev))
+        assert not [e for e in events if e["type"] == "usage.status" and e["data"]["limit_reached"]]
+        pools = _pools(client, sid)
+        assert set(pools) == {"pro", "credits"} and pools["pro"] >= 1 and 1 <= pools["credits"] < 60
+        assert _wallet(client, h)["interview_minutes_left"] >= 19  # the hour on Pro didn't come out of them
+    finally:
+        gen.close()
+
+
+def test_credits_spent_earlier_dont_shrink_a_plan_allowance(monkeypatch: pytest.MonkeyPatch) -> None:
+    admin_email = f"admin-{uuid.uuid4().hex[:8]}@example.com"
+    gen = _client(monkeypatch, ORBIT_ADMIN_EMAIL=admin_email,
+                  ORBIT_PLANS_JSON=json.dumps({"pro": {"live_minutes": 15}}))
+    client = next(gen)
+    try:
+        admin, _ = _register_named(client, admin_email)
+        h, user = _register_named(client, f"g-{uuid.uuid4().hex[:8]}@example.com")
+        _spend(client, user["id"], 15 * 60, credits.POOL)  # on Free, earlier this month
+        _grant(client, admin, user["id"])
+        e = client.get("/v1/entitlements", headers=h).json()
+        assert e["plan"] == "pro" and e["usage"]["live_minutes"] == 0.0
+        assert client.post("/v1/sessions", headers=h, json={"title": "on Pro"}).status_code == 201
+        _set_grant_until(client, user["id"], datetime.now(UTC) - timedelta(minutes=1))
+        assert _wallet(client, h)["interview_minutes_left"] == 5.0
+    finally:
+        gen.close()
+
+
+def test_a_beat_racing_the_final_usage_write_is_not_an_error(client: TestClient,
+                                                             monkeypatch: pytest.MonkeyPatch) -> None:
+    """session.end right after connecting: the recorder's final write can insert the connection's row while the first
+    heartbeat is inserting it too. The beat failed with an IntegrityError (logged as a failed heartbeat)."""
+    h = _register(client)
+    uid = client.get("/v1/auth/me", headers=h).json()["id"]
+    sid = client.post("/v1/sessions", headers=h, json={"title": "quick end"}).json()["id"]
+    key = f"live:{uuid.uuid4()}"
+    final = UsageEvent(user_id=uid, session_id=sid, metric="live_seconds", quantity=30, pool=credits.POOL,
+                       idempotency_key=key)
+
+    async def final_write_first() -> None:
+        async with sessionmaker()() as db:
+            db.add(final)
+            await db.commit()
+
+    async def looked_before_it_landed(db: Any, event: UsageEvent) -> None:
+        db.add(event)  # the beat's lookup ran before the final write's insert: it inserts too
+
+    client.portal.call(final_write_first)  # type: ignore[union-attr]
+    monkeypatch.setattr(routes, "upsert_usage", looked_before_it_landed)
+    left = client.portal.call(routes._commit_live_seconds, uid, sid,  # type: ignore[union-attr]
+                              InterviewTime(key, pool=credits.POOL), 5)
+    assert left == 20 * 60 - 30  # the final write's 30 seconds are what counts
+
+def test_existing_usage_is_given_the_grant_it_was_metered_on() -> None:
+    """The migration that added usage.pool replays the admin's grants from the audit log, as set_access applied them."""
+    path = Path(__file__).parents[1] / "alembic" / "versions" / "45a95e374d53_usage_pool.py"
+    spec = importlib.util.spec_from_file_location("usage_pool_migration", path)
+    assert spec is not None and spec.loader is not None
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+    t0 = datetime(2026, 10, 3, 12, 0)  # naive, as SQLite returns it
+    windows = migration.grant_windows([
+        (t0, "admin.access.grant", "u1 pro 2.0h"),
+        (t0 + timedelta(hours=1), "admin.access.grant", "u1 pro 2.0h"),  # extends the running grant to t0+4h
+        (t0 + timedelta(hours=5), "admin.access.grant", "u1 unlimited 10.0h"),
+        (t0 + timedelta(hours=6), "admin.access.revoke", "u1"),
+        (t0, "admin.access.grant", "u2 pro 1.0h"),
+        (t0 + timedelta(minutes=30), "admin.access.grant", "u2 unlimited 1.0h"),  # replaces it from then
+        (t0, "admin.access.approve", "u3"),
+        (t0, "admin.access.grant", "garbage"),
+    ])
+    at = t0.replace(tzinfo=UTC)
+    assert windows["u1"] == [[at, at + timedelta(hours=4), "pro"],
+                             [at + timedelta(hours=5), at + timedelta(hours=6), "unlimited"]]
+    assert windows["u2"] == [[at, at + timedelta(minutes=30), "pro"],
+                             [at + timedelta(minutes=30), at + timedelta(minutes=90), "unlimited"]]
+    assert windows["u3"] == []

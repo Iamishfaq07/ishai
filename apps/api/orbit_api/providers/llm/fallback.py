@@ -1,11 +1,15 @@
 """Primary LLM (DeepSeek) with an optional backup (launch brief §12). Always wraps the primary, so health and the
-first-token budget apply even when no backup is configured.
+circuit breaker apply even when no backup is configured.
 
 Rules:
 - The primary gets every request unless its circuit breaker is open.
 - The backup takes over only when the primary fails **before its first token**. That includes a first token that
   doesn't arrive within the time budget. Once text has streamed, a failure is raised as-is: an answer is never
   silently continued by a different model mid-sentence.
+- The budget is for failing over: when no backup can take the request (none configured, a plan without
+  fallback, an image it can't read, or the backup itself down), a slow first token is waited for, up to
+  NO_BACKUP_FIRST_TOKEN_S for a primary that's really stuck. Cutting it off at the budget only turned a late answer
+  into a failed one.
 - Failures that mean "try elsewhere" trigger it: 429, 5xx, timeouts, network errors, and account problems
   (401/402/403: bad key, no credit). A bad request (400) or an image the backup can't read doesn't, because the
   backup would fail the same way.
@@ -30,6 +34,9 @@ log = logging.getLogger(__name__)
 ACCOUNT_CODES = frozenset({"http_401", "http_402", "http_403"})
 # Chain-of-thought delays the first token by design (measured up to ~6 s at "max"); don't count that as an outage.
 THINKING_EXTRA_S = 12.0
+# With nowhere to fail over to: a slow primary (DeepSeek under load answering at 11 s) still answers; one that's
+# stuck this long fails, and the engine retries it once.
+NO_BACKUP_FIRST_TOKEN_S = 45.0
 
 
 class CircuitBreaker:
@@ -81,11 +88,19 @@ class FallbackProvider(LLMProvider):
         await self.primary.warm()
 
     def _budget(self, request: LLMRequest) -> float:
-        return self.first_token_timeout_s + (THINKING_EXTRA_S if request.thinking != "off" else 0.0)
+        """How long the primary has for its first token before the request moves on."""
+        wait = (self.first_token_timeout_s if self._backup_ready(request)
+                else max(self.first_token_timeout_s, NO_BACKUP_FIRST_TOKEN_S))
+        return wait + (THINKING_EXTRA_S if request.thinking != "off" else 0.0)
 
     def _backup_can_take(self, request: LLMRequest) -> bool:
         return (self.fallback is not None and request.allow_fallback
                 and (not request.images or self.fallback.supports_vision()))
+
+    def _backup_ready(self, request: LLMRequest) -> bool:
+        """A backup could answer this request if the primary is slow: it can take it, and isn't down itself."""
+        return (self._backup_can_take(request) and self.fallback is not None
+                and health.state_of(self.fallback.name) != "down")
 
     async def stream(self, request: LLMRequest) -> AsyncIterator[LLMChunk]:
         reason = "circuit_open"

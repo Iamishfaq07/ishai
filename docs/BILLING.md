@@ -65,6 +65,10 @@ FREE_MAX_SESSION_MINUTES=60   PRO_MAX_SESSION_MINUTES=180   UNLIMITED_MAX_SESSIO
 - **Interview time:** checked at session create, live ticket and socket connect, and committed every heartbeat
   (15 s). A warning comes 5 minutes before the end, then the session ends cleanly: transcript and usage are written
   and the report is queued. On Free that's the credit balance; on Pro, this month's live or mock allowance.
+- **Each minute comes out of one balance:** the plan the account is on when it's metered decides, and the usage row
+  records it (`usage.pool`: `credits`, `pro`, `unlimited`). Time on a Pro or Unlimited grant never comes out of the
+  credits, even after the grant ends, and credits spent earlier in the month don't shrink a Pro allowance. When a
+  grant starts or runs out mid-interview, the next heartbeat moves the rest of the session to the new balance.
 - **Session ceiling:** a session's total time across reconnects is capped at `max_session_minutes`, even on
   Unlimited, with the same warning and graceful end (`usage.status {reason: "session"}`). A capped session can't be
   reopened (`409 session_time_limit`).

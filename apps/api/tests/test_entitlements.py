@@ -227,6 +227,7 @@ def test_session_is_warned_then_ended_at_its_ceiling_and_cannot_reopen(monkeypat
 def test_meter_prefers_the_nearer_limit() -> None:
     """Unit check of the choice: a session near its ceiling ends for "session" even with minutes to spare."""
     from orbit_api.sessions import routes
+    from orbit_api.sessions.recorder import InterviewTime
 
     sent: list[tuple[str, dict[str, Any]]] = []
 
@@ -252,8 +253,8 @@ def test_meter_prefers_the_nearer_limit() -> None:
     orig = routes._commit_live_seconds
     routes._commit_live_seconds = plenty  # type: ignore[assignment]
     try:
-        asyncio.run(routes._meter_live_minutes(WS(), Eng(), "u", "s", "k", asyncio.Event(),  # type: ignore[arg-type]
-                                               prior_session_s=2, max_session_s=60))
+        asyncio.run(routes._meter_live_minutes(WS(), Eng(), "u", "s", InterviewTime("k"),  # type: ignore[arg-type]
+                                               asyncio.Event(), prior_session_s=2, max_session_s=60))
     finally:
         routes._commit_live_seconds = orig  # type: ignore[assignment]
     assert ("usage.status", {"minutes_remaining": 0, "limit_reached": True, "reason": "session"}) in sent

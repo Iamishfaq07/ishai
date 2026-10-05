@@ -3,8 +3,10 @@
 Two balances (rows in `credit_entries`):
 - **resume**: one per resume-maker AI action (import, rewrite, tailor, cover letter); spent by resumes/allowance.py.
 - **interview_seconds**: live interviews and mock interviews alike. The grants are entries; the spending is the
-  usage rows the live socket already meters every heartbeat (`live_seconds` + `mock_seconds`), counted from the
-  account's first interview grant, so a session ends cleanly when the balance runs out.
+  usage rows the live socket already meters every heartbeat (`live_seconds` + `mock_seconds`) while the account is on
+  a credit plan (`usage.pool` "credits"), counted from the account's first interview grant, so a session ends
+  cleanly when the balance runs out. Time used on a plan with its own allowance (a Pro or Unlimited grant) is
+  metered under that plan instead and never comes out of the credits, even after the grant ends.
 
 Credits come from:
 - **the welcome grant** at sign-up (ORBIT_WELCOME_RESUME_CREDITS = 1 and ORBIT_WELCOME_INTERVIEW_MINUTES = 20). Sign-up
@@ -24,7 +26,7 @@ import hmac
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
-from sqlalchemy import exists, func, select
+from sqlalchemy import ColumnElement, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.config import get_settings
@@ -32,6 +34,8 @@ from orbit_api.models import CreditEntry, UsageEvent, User
 
 Kind = Literal["resume", "interview_seconds"]
 INTERVIEW_METRICS = ("live_seconds", "mock_seconds")
+# `usage.pool` of interview time spent from the credits (entitlements.usage_pool).
+POOL = "credits"
 # Like the rate limits: in the test environment every account gets its welcome credits (the suite signs everyone up
 # from one address); welcome tests flip this.
 ENFORCE_IN_TESTS = False
@@ -110,15 +114,21 @@ async def resume_balance(db: AsyncSession, user_id: str) -> int:
     return max(int(total or 0), 0)
 
 
+def _spent_from_credits() -> ColumnElement[bool]:
+    """Interview time that came out of the credits: metered while the account was on a credit plan (or before pools
+    were recorded). Time on a plan with its own allowance is that plan's, not the credits'."""
+    return UsageEvent.metric.in_(INTERVIEW_METRICS) & or_(UsageEvent.pool == POOL, UsageEvent.pool.is_(None))
+
+
 async def interview_seconds(db: AsyncSession, user_id: str) -> tuple[int, float]:
-    """(granted, used): interview seconds granted, and live + mock seconds used since the first grant."""
+    """(granted, used): interview seconds granted, and live + mock seconds spent from them since the first grant."""
     granted, since = (await db.execute(
         select(func.coalesce(func.sum(CreditEntry.amount), 0), func.min(CreditEntry.created_at))
         .where(CreditEntry.user_id == user_id, CreditEntry.kind == "interview_seconds"))).one()
     if since is None:
         return 0, 0.0
     used = await db.scalar(select(func.coalesce(func.sum(UsageEvent.quantity), 0.0)).where(
-        UsageEvent.user_id == user_id, UsageEvent.metric.in_(INTERVIEW_METRICS), UsageEvent.created_at >= since))
+        UsageEvent.user_id == user_id, _spent_from_credits(), UsageEvent.created_at >= since))
     return int(granted or 0), float(used or 0.0)
 
 
@@ -144,7 +154,7 @@ async def balances(db: AsyncSession, user_ids: list[str]) -> dict[str, tuple[int
         used = {uid: float(total or 0) for uid, total in (await db.execute(
             select(UsageEvent.user_id, func.sum(UsageEvent.quantity))
             .join(first, first.c.uid == UsageEvent.user_id)
-            .where(UsageEvent.metric.in_(INTERVIEW_METRICS), UsageEvent.created_at >= first.c.since)
+            .where(_spent_from_credits(), UsageEvent.created_at >= first.c.since)
             .group_by(UsageEvent.user_id))).all()}
     return {uid: (max(resume.get(uid, 0), 0), max(granted.get(uid, 0) - used.get(uid, 0.0), 0.0) / 60)
             for uid in user_ids}

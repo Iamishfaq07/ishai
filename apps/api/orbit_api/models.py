@@ -230,6 +230,9 @@ class LiveSessionRow(TimestampMixin, Base):
     instructions: Mapped[str | None] = mapped_column(Text)
     # The saved setup this session was started from (kept if the workspace is later deleted, as NULL).
     workspace_id: Mapped[str | None] = mapped_column(ForeignKey("workspaces.id", ondelete="SET NULL"), index=True)
+    # What the live connection remembers (live/carryover.py, as JSON): saved every heartbeat and when it drops, so a
+    # server restart mid-session continues the conversation and the mock round. Cleared when the session ends.
+    carryover: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
 
 
 class Workspace(TimestampMixin, Base):
@@ -375,6 +378,10 @@ class UsageEvent(TimestampMixin, Base):
     # Set for events written more than once (retries, live-minute heartbeats): writers upsert on it, so a
     # retry or a repeated heartbeat never double-counts. e.g. "live:<connection id>", "shot:<question id>".
     idempotency_key: Mapped[str | None] = mapped_column(String(128))
+    # Interview time (live_seconds, mock_seconds): the balance it came out of, fixed when the row is written —
+    # "credits", or the name of the plan whose monthly allowance it used (entitlements.usage_pool). NULL counts
+    # against every balance, as every row did before pools were recorded.
+    pool: Mapped[str | None] = mapped_column(String(16))
 
 
 class FailedWrite(TimestampMixin, Base):

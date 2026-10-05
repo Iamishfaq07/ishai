@@ -25,7 +25,7 @@ Built from scratch in this repo, starting 2026-09-23 (it held only a generated R
 | Session memory, follow-up stitching, chat mode, manual answer, pin / clear, cancellation, answer history | ✅ tested |
 | Session report (background DB job), review scores, transcript, Markdown export, privacy toggles | ✅ tested |
 | Entitlements (free / pro / unlimited), live-minute heartbeat metering + mid-session enforcement, config-driven LLM cost (cache hit/miss, peak/off-peak) | ✅ tested; plans can't be bought yet (no billing, D17) |
-| Durable persistence: recorder retries → `failed_writes` dead letters → spool → replay on boot | ✅ tested |
+| Durable persistence: recorder retries → `failed_writes` dead letters → spool → memory; replayed on boot, every minute, before each report and at shutdown | ✅ tested |
 | Observability: JSON logs with request / user / session ids and redaction, latency metrics per session (`GET /v1/admin/latency`), optional Sentry | ✅ (Sentry off until `ORBIT_SENTRY_DSN` is set, D18) |
 | Windows desktop (Tauri 2): native WASAPI mic + loopback + per-app capture, device follow / reopen, region screenshots, tray, global shortcuts, signed auto-update, per-user NSIS installer | ✅ driven end-to-end on real hardware |
 | Web app on the same shared live UI (`packages/ui`) | ✅ |

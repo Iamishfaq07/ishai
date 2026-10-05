@@ -39,7 +39,7 @@ from orbit_api.sessions.cleanup import running_sweeper
 from orbit_api.sessions.companion import router as companion_router
 from orbit_api.sessions.feedback import router as feedback_router
 from orbit_api.sessions.insights import router as insights_router
-from orbit_api.sessions.recorder import replay_failed_writes
+from orbit_api.sessions.recorder import replay_failed_writes, running_replayer
 from orbit_api.sessions.routes import drain_teardowns
 from orbit_api.sessions.routes import router as sessions_router
 from orbit_api.stories.routes import router as stories_router
@@ -73,10 +73,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         await replay_failed_writes()  # dead-lettered live-session writes from a previous outage
     except Exception:
-        logging.getLogger(__name__).exception("replaying failed writes failed; will retry next start")
-    async with jobs.running_worker(s.job_poll_s), running_sweeper(s.session_sweep_s):
+        logging.getLogger(__name__).exception("replaying failed writes failed; the replayer retries")
+    async with jobs.running_worker(s.job_poll_s), running_sweeper(s.session_sweep_s), running_replayer():
         yield
         await drain_teardowns()
+        # A last try for writes that failed during an outage: the spool file and memory go with this process.
+        with contextlib.suppress(Exception):
+            await asyncio.wait_for(replay_failed_writes(), timeout=10)
     with contextlib.suppress(Exception):
         await selftest
     if warming is not None:
