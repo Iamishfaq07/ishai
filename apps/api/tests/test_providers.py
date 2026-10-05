@@ -74,27 +74,87 @@ def test_deepgram_url_and_parsing() -> None:
     assert parse_message({"type": "Metadata"}) is None
 
 
-async def test_deepgram_rejected_key_goes_down_without_retrying(monkeypatch: pytest.MonkeyPatch) -> None:
+def _rejecting(monkeypatch: pytest.MonkeyPatch, status: int) -> list[int]:
+    """Every Deepgram handshake answered with `status`; returns the list the attempts are counted in."""
     from websockets.datastructures import Headers
     from websockets.exceptions import InvalidStatus
     from websockets.http11 import Response
 
     from orbit_api.providers.stt import deepgram
 
-    attempts = 0
+    attempts: list[int] = []
 
     def reject(*_a: object, **_k: object) -> object:
-        nonlocal attempts
-        attempts += 1
-        raise InvalidStatus(Response(401, "Unauthorized", Headers()))
+        attempts.append(status)
+        raise InvalidStatus(Response(status, "Rejected", Headers()))
 
     monkeypatch.setattr(deepgram.websockets, "connect", reject)
-    session = deepgram.DeepgramSession("bad-key", "nova-3", STTConfig())
+    monkeypatch.setattr(deepgram, "RECONNECT_BACKOFF_S", 0.001)
+    return attempts
+
+
+@pytest.mark.parametrize(("status", "text"), [(400, "settings"), (402, "out of credit")])
+async def test_deepgram_settings_or_credit_rejections_go_down_without_retrying(
+        monkeypatch: pytest.MonkeyPatch, status: int, text: str) -> None:
+    from orbit_api.providers.stt import deepgram
+
+    attempts = _rejecting(monkeypatch, status)
+    session = deepgram.DeepgramSession("key", "nova-3", STTConfig())
     await session.connect()
     events = [ev async for ev in session.events()]
     assert [(e.kind, e.status) for e in events] == [("status", "down")]
-    assert "rejected" in events[0].text and attempts == 1
+    assert text in events[0].text and attempts == [status]
     await session.close()
+
+
+@pytest.mark.parametrize("status", [401, 403])
+async def test_deepgram_rejected_key_is_retried_before_going_down(monkeypatch: pytest.MonkeyPatch,
+                                                                  status: int) -> None:
+    from orbit_api.providers.stt import deepgram
+
+    attempts = _rejecting(monkeypatch, status)
+    session = deepgram.DeepgramSession("bad-key", "nova-3", STTConfig())
+    await session.connect()
+    events = [ev async for ev in session.events()]
+    assert [e.status for e in events] == ["reconnecting"] * deepgram.AUTH_RETRIES + ["down"]
+    assert "rejected" in events[-1].text and len(attempts) == deepgram.AUTH_RETRIES + 1
+    await session.close()
+
+
+async def test_deepgram_transcribes_after_a_brief_auth_hiccup(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A transient 401 at Deepgram's end used to end transcription for the whole connection (minutes still billed)."""
+    from http import HTTPStatus
+    from typing import Any
+
+    import websockets
+
+    from orbit_api.providers.stt import deepgram
+
+    monkeypatch.setattr(deepgram, "RECONNECT_BACKOFF_S", 0.001)
+    handshakes: list[int] = []
+
+    def auth(connection: Any, request: Any) -> Any:
+        handshakes.append(len(handshakes))
+        return connection.respond(HTTPStatus.UNAUTHORIZED, "Unauthorized\n") if len(handshakes) <= 2 else None
+
+    async def deepgram_server(ws: Any) -> None:
+        await ws.send(json.dumps({"type": "Results", "is_final": True, "speech_final": True, "start": 0.0,
+                                  "duration": 1.0, "channel": {"alternatives": [{"transcript": "hello there"}]}}))
+        await ws.wait_closed()
+
+    async with websockets.serve(deepgram_server, "127.0.0.1", 0, process_request=auth) as server:
+        session = deepgram.DeepgramSession("key", "nova-3", STTConfig())
+        session._url = f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}/"
+        await session.connect()
+        assert session.state == "connected" and len(handshakes) == 3
+        got = []
+        async for ev in session.events():
+            got.append((ev.kind, ev.status or ev.text))
+            if ev.kind == "final":
+                break
+        await session.close()
+    assert got == [("status", "reconnecting"), ("status", "reconnecting"), ("status", "connected"),
+                   ("final", "hello there")]
 
 
 def test_reasoner_gets_chain_of_thought_headroom() -> None:
