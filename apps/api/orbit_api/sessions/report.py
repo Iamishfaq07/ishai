@@ -28,6 +28,7 @@ from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMRequest
 from orbit_api.providers.llm.pricing import estimate_cost
 from orbit_api.sessions.delivery import delivery_stats
+from orbit_api.sessions.recorder import replay_failed_writes
 
 log = logging.getLogger(__name__)
 
@@ -155,6 +156,11 @@ def build_review(data: Any, pairs: Sequence[QAPair]) -> dict[str, Any] | None:
 
 
 async def generate_report(session_id: str) -> dict[str, Any]:
+    try:
+        # Turns and questions whose writes failed during a DB outage: in the report, not only in a later restart's.
+        await replay_failed_writes()
+    except Exception:
+        log.warning("replaying failed writes before the report of %s failed", session_id, exc_info=True)
     async with sessionmaker()() as db:
         row = await db.get(LiveSessionRow, session_id)
         if row is None:

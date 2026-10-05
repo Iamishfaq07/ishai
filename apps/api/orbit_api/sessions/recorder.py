@@ -1,9 +1,12 @@
 """Persists live-session events off the hot path: the engine enqueues, a single worker writes in order.
 
 Nothing is dropped on a transient DB failure. Each write is retried with backoff; a write that still fails
-goes to the `failed_writes` dead-letter table, and if even that is unreachable, to a local spool file. Both
-are replayed at startup (`replay_failed_writes`). Retries are safe: rows have fixed primary keys (a
-duplicate insert means an earlier attempt landed) and metered usage is upserted on its idempotency key.
+goes to the `failed_writes` dead-letter table, and if even that is unreachable, to a local spool file (failing that,
+to memory). All three are replayed (`replay_failed_writes`) at startup, every REPLAY_EVERY_S while the API runs
+(`running_replayer`), before a session's report is written (so it includes them) and once more at shutdown: a host
+whose disk goes with the process (Render) never sees the spool file at the next start. Retries are safe: rows have
+fixed primary keys (a duplicate insert means an earlier attempt landed) and metered usage is upserted on its
+idempotency key.
 """
 
 import asyncio
@@ -13,13 +16,13 @@ import logging
 import os
 import tempfile
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import DateTime, delete, select, update
+from sqlalchemy import DateTime, delete, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,8 +47,13 @@ log = logging.getLogger(__name__)
 WRITE_ATTEMPTS = 5
 BACKOFF_S = 0.25  # doubles per attempt: 0.25, 0.5, 1, 2 s
 FAILED_WRITE_KEEP_DAYS = 30  # a dead letter still failing this long is given up on (it holds transcript text)
+REPLAY_EVERY_S = 60.0
+MAX_HELD = 10_000  # dead letters kept in memory when neither the DB nor the spool file takes them
 _MODELS: dict[str, type[Base]] = {m.__name__: m for m in (Answer, ProviderRequest, Question, SessionTurn,
                                                            UsageEvent)}
+_held: list[dict[str, Any]] = []  # {"kind", "payload", "error"}, as spooled: retried while this process lives
+_still_failing: set[str] = set()  # dead letters whose replay failed (warned about once, retried every round)
+_replaying: tuple[asyncio.AbstractEventLoop, asyncio.Lock] | None = None
 
 
 def spool_path() -> Path:
@@ -188,52 +196,115 @@ async def _dead_letter(kind: str, payload: dict[str, Any], error: str) -> None:
         return
     except Exception:
         log.exception("recorder: dead-letter table unavailable; spooling to disk")
+    item = {"kind": kind, "payload": payload, "error": error[:4000]}
     try:
         with spool_path().open("a", encoding="utf-8") as f:
-            f.write(json.dumps({"kind": kind, "payload": payload, "error": error[:4000]}) + "\n")
+            f.write(json.dumps(item) + "\n")
+        return
     except Exception:
-        # Last resort. Metadata only: payloads can hold transcript text, which must not reach logs.
-        log.critical("recorder: LOST %s write for session %s (no DB, no spool)", kind, payload.get("session_id"))
+        log.exception("recorder: spool file unavailable; holding the write in memory")
+    # Last resort: retried by the replayer while this process lives. Metadata only in logs: payloads can hold
+    # transcript text.
+    if len(_held) >= MAX_HELD:
+        lost = _held.pop(0)
+        log.critical("recorder: LOST %s write for session %s (no DB, no spool, memory full)", lost["kind"],
+                     lost["payload"].get("session_id"))
+    _held.append(item)
+    log.critical("recorder: %s write for session %s held in memory (no DB, no spool)", kind, payload.get("session_id"))
+
+
+def _lock() -> asyncio.Lock:
+    """One replay at a time (the replayer, a report and shutdown can overlap), on whichever loop runs them."""
+    global _replaying
+    loop = asyncio.get_running_loop()
+    if _replaying is None or _replaying[0] is not loop:
+        _replaying = (loop, asyncio.Lock())
+    return _replaying[1]
+
+
+async def _db_reachable() -> bool:
+    try:
+        async with sessionmaker()() as db:
+            await db.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False
 
 
 async def replay_failed_writes() -> int:
-    """Re-apply dead-lettered and spooled writes (called at startup). Returns how many landed."""
-    done = 0
-    path = spool_path()
-    if path.exists():
-        lines = path.read_text(encoding="utf-8").splitlines()
-        path.unlink()
-        for line in lines:
-            with contextlib.suppress(Exception):
-                item = json.loads(line)
-                if await write_durably(_from_payload(item["kind"], item["payload"])):
-                    done += 1
-    async with sessionmaker()() as db:
-        # Dead letters hold transcript text: anything already replayed, or still failing after 30 days, goes.
-        await db.execute(delete(FailedWrite).where(
-            FailedWrite.replayed_at.is_not(None)
-            | (FailedWrite.created_at < datetime.now(UTC) - timedelta(days=FAILED_WRITE_KEEP_DAYS))))
-        await db.commit()
-        pending = (await db.scalars(select(FailedWrite).where(FailedWrite.replayed_at.is_(None))
-                                    .order_by(FailedWrite.created_at).limit(1000))).all()
-    for fw in pending:
-        try:
-            if fw.kind not in _MODELS:
-                raise KeyError(fw.kind)
-            await write_once(_from_payload(fw.kind, fw.payload))
-        except IntegrityError:
-            pass  # already written
-        except Exception:
-            log.warning("replay of failed write %s still failing", fw.id)
-            continue
+    """Re-apply dead-lettered writes: those held in memory, the spool file, and the failed_writes table. Skipped
+    while the database is still unreachable (they stay where they are for the next round). Returns how many
+    landed."""
+    async with _lock():
+        if not await _db_reachable():
+            return 0
+        done = 0
+        held = _held[:]
+        _held.clear()
+        for item in held:
+            if await write_durably(_from_payload(item["kind"], item["payload"])):
+                done += 1
+        path = spool_path()
+        if path.exists():
+            lines = path.read_text(encoding="utf-8").splitlines()
+            path.unlink()
+            for line in lines:
+                with contextlib.suppress(Exception):
+                    item = json.loads(line)
+                    if await write_durably(_from_payload(item["kind"], item["payload"])):
+                        done += 1
         async with sessionmaker()() as db:
-            # Written (or its session is gone): the copy of the transcript in the dead letter isn't needed.
-            await db.execute(delete(FailedWrite).where(FailedWrite.id == fw.id))
+            # Dead letters hold transcript text: anything already replayed, or still failing after 30 days, goes.
+            await db.execute(delete(FailedWrite).where(
+                FailedWrite.replayed_at.is_not(None)
+                | (FailedWrite.created_at < datetime.now(UTC) - timedelta(days=FAILED_WRITE_KEEP_DAYS))))
             await db.commit()
-        done += 1
-    if done:
-        log.info("recorder: replayed %d failed writes", done)
-    return done
+            pending = (await db.scalars(select(FailedWrite).where(FailedWrite.replayed_at.is_(None))
+                                        .order_by(FailedWrite.created_at).limit(1000))).all()
+        for fw in pending:
+            try:
+                if fw.kind not in _MODELS:
+                    raise KeyError(fw.kind)
+                await write_once(_from_payload(fw.kind, fw.payload))
+            except IntegrityError:
+                pass  # already written
+            except Exception:
+                if fw.id not in _still_failing:  # retried every round: said once
+                    _still_failing.add(fw.id)
+                    log.warning("replay of failed write %s still failing", fw.id)
+                continue
+            async with sessionmaker()() as db:
+                # Written (or its session is gone): the copy of the transcript in the dead letter isn't needed.
+                await db.execute(delete(FailedWrite).where(FailedWrite.id == fw.id))
+                await db.commit()
+            done += 1
+        if done:
+            log.info("recorder: replayed %d failed writes", done)
+        return done
+
+
+async def replayer(interval_s: float = REPLAY_EVERY_S) -> None:
+    """Replays failed writes every `interval_s` while the API runs: once the database is back, writes from an outage
+    land then, not at the next restart."""
+    while True:
+        await asyncio.sleep(interval_s)
+        try:
+            await replay_failed_writes()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("replaying failed writes failed; trying again in %.0f s", interval_s)
+
+
+@contextlib.asynccontextmanager
+async def running_replayer(interval_s: float = REPLAY_EVERY_S) -> AsyncIterator[asyncio.Task[None]]:
+    task = asyncio.create_task(replayer(interval_s))
+    try:
+        yield task
+    finally:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError, Exception):
+            await task
 
 
 class DbRecorder:

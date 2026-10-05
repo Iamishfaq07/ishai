@@ -365,6 +365,92 @@ def test_transient_db_failures_are_retried_and_permanent_ones_dead_lettered(monk
         assert _call(c, count, UsageEvent, UsageEvent.user_id == uid, UsageEvent.metric == "screenshots") == 1
 
 
+async def _usage_rows(user_id: str, metric: str) -> int:
+    from sqlalchemy import func, select
+
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import UsageEvent
+
+    async with sessionmaker()() as db:
+        return int(await db.scalar(select(func.count()).select_from(UsageEvent).where(
+            UsageEvent.user_id == user_id, UsageEvent.metric == metric)) or 0)
+
+
+def test_spooled_writes_land_while_the_api_runs(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Spooled writes (the DB was unreachable even for the dead-letter table) were replayed only at the next start,
+    and on a host whose disk goes with the process (Render) the spool file is gone by then."""
+    from orbit_api.main import create_app
+    from orbit_api.models import UsageEvent
+    from orbit_api.sessions import recorder
+
+    with TestClient(create_app()) as c:
+        _, uid = _user(c)
+        spooled = UsageEvent(id=str(uuid.uuid4()), user_id=uid, metric="test_spooled", quantity=3)
+        with recorder.spool_path().open("a", encoding="utf-8") as f:
+            f.write(json.dumps({"kind": "UsageEvent", "payload": recorder._to_payload(spooled), "error": "x"}) + "\n")
+        assert c.portal is not None
+        replayer = c.portal.start_task_soon(recorder.replayer, 0.05)
+        try:
+            deadline = time.monotonic() + 5
+            while _call(c, _usage_rows, uid, "test_spooled") == 0 and time.monotonic() < deadline:
+                time.sleep(0.05)
+            assert _call(c, _usage_rows, uid, "test_spooled") == 1 and not recorder.spool_path().exists()
+        finally:
+            replayer.cancel()
+
+
+def test_with_no_db_and_no_spool_a_write_is_held_in_memory_until_it_lands(monkeypatch: pytest.MonkeyPatch) -> None:
+    """It used to be logged as LOST."""
+    from orbit_api.main import create_app
+    from orbit_api.models import UsageEvent
+    from orbit_api.sessions import recorder
+
+    async def down(obj: Any) -> None:
+        raise ConnectionError("database unreachable")
+
+    def no_table(**_k: Any) -> Any:
+        raise ConnectionError("database unreachable")
+
+    with TestClient(create_app()) as c:
+        _, uid = _user(c)
+        with monkeypatch.context() as outage:
+            outage.setattr(recorder, "BACKOFF_S", 0.001)
+            outage.setattr(recorder, "write_once", down)
+            outage.setattr(recorder, "FailedWrite", no_table)
+            outage.setattr(recorder, "spool_path", lambda: recorder.Path(str(uuid.uuid4())) / "no" / "spool.jsonl")
+            assert not _call(c, recorder.write_durably, UsageEvent(user_id=uid, metric="test_held", quantity=1))
+            assert [h["payload"]["metric"] for h in recorder._held] == ["test_held"]
+        assert _call(c, recorder.replay_failed_writes) >= 1  # the database is back
+        assert _call(c, _usage_rows, uid, "test_held") == 1 and recorder._held == []
+
+
+def test_the_report_includes_writes_that_failed_during_an_outage(client: TestClient) -> None:
+    """A question whose write was dead-lettered while the DB was out: the report written right after the session
+    ended left it out (the dead letters were replayed only at the next start)."""
+    from datetime import timedelta
+
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import FailedWrite, Question
+    from orbit_api.sessions import recorder
+    from tests.test_api import _register, _wait_report
+
+    h = _register(client)
+    sid = client.post("/v1/sessions", headers=h, json={"title": "outage"}).json()["id"]
+    question = Question(id=str(uuid.uuid4()), session_id=sid, text="How do you shard a ledger?", type="technical",
+                        confidence=0.9, created_at=datetime.now(UTC) - timedelta(minutes=1))
+
+    async def dead_letter() -> None:
+        async with sessionmaker()() as db:
+            db.add(FailedWrite(kind="Question", payload=recorder._to_payload(question), error="db down"))
+            await db.commit()
+
+    _call(client, dead_letter)
+    assert client.post(f"/v1/sessions/{sid}/end", headers=h).status_code == 200
+    detail = _wait_report(client, h, sid)
+    assert detail["summary"]["questions_asked"] == ["How do you shard a ledger?"]
+    assert [q["text"] for q in detail["questions"]] == ["How do you shard a ledger?"]
+
+
 # ---- durable report jobs -----------------------------------------------------------------------------------
 
 
