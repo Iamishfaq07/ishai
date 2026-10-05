@@ -69,6 +69,17 @@ export interface LiveViewState {
   connectionInfo: CloseInfo | null;
   state: LiveState;
   settings: LiveSettings;
+  /**
+   * The settings this client asked for: the initial ones plus every change made here. They win over the server's
+   * copy, which can be older (`session.started` goes out before the server has read `session.start`, and a new
+   * connection's engine starts from the session's saved settings), and they're re-sent on every (re)connect.
+   */
+  requestedSettings: Partial<LiveSettings>;
+  /**
+   * The user paused listening. Kept across a reconnect (the new engine starts unpaused, so the pause is sent again),
+   * and the UI stays paused meanwhile instead of flashing "Listening".
+   */
+  userPaused: boolean;
   startedAt: number | null;
   turnOrder: string[];
   turns: Record<string, TurnView>;
@@ -112,6 +123,7 @@ export type LocalAction =
   | { type: "local/view"; answer_id: string | null }
   | { type: "local/chat_sent"; id: string; text: string; ts: number }
   | { type: "local/settings"; settings: Partial<LiveSettings> }
+  | { type: "local/pause"; paused: boolean }
   | { type: "local/speaker"; turn_id: string; speaker: Speaker }
   | { type: "local/dismiss_error" };
 
@@ -124,6 +136,8 @@ export function initialLiveState(settings: Partial<LiveSettings> = {}): LiveView
     connectionInfo: null,
     state: "idle",
     settings: { ...DEFAULT_LIVE_SETTINGS, ...settings },
+    requestedSettings: { ...settings },
+    userPaused: false,
     startedAt: null,
     turnOrder: [],
     turns: {},
@@ -238,7 +252,20 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
       return { ...s, chat: [...s.chat, { kind: "user", id: action.id, text: action.text, ts: action.ts }] };
 
     case "local/settings":
-      return { ...s, settings: { ...s.settings, ...action.settings } };
+      return {
+        ...s,
+        settings: { ...s.settings, ...action.settings },
+        requestedSettings: { ...s.requestedSettings, ...action.settings },
+      };
+
+    case "local/pause":
+      // Shown right away (also while disconnected: the pause is queued, and re-sent on the next connect).
+      if (s.state === "ended") return s;
+      return {
+        ...s,
+        userPaused: action.paused,
+        state: action.paused ? "paused" : s.state === "paused" ? "listening" : s.state,
+      };
 
     case "local/speaker": {
       const turn = s.turns[action.turn_id];
@@ -249,20 +276,27 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
       return { ...s, lastError: null };
 
     // ── session ──────────────────────────────────────────────────────────
+    // The server's settings are the base; what this client asked for goes on top (the server applies it from
+    // `session.start` / `settings.update`, but its echo can predate them).
     case "session.started":
       return {
         ...s,
-        state: action.data.state,
-        settings: action.data.settings,
+        // A new engine starts listening; a user who paused stays paused (the hook sends the pause again).
+        state: s.userPaused ? "paused" : action.data.state,
+        settings: { ...action.data.settings, ...s.requestedSettings },
         startedAt: s.startedAt ?? action.ts,
       };
     case "session.paused":
+      return { ...s, userPaused: true, state: action.data.state, settings: { ...action.data.settings, ...s.requestedSettings } };
     case "session.resumed":
+      return { ...s, userPaused: false, state: action.data.state, settings: { ...action.data.settings, ...s.requestedSettings } };
     case "session.ended":
-      return { ...s, state: action.data.state, settings: action.data.settings };
+      return { ...s, state: action.data.state, settings: { ...action.data.settings, ...s.requestedSettings } };
 
     case "state.changed":
-      return { ...s, state: action.data.state };
+      // Paused, the server still reports work it does for the user (a chat reply streaming, transcription
+      // reconnecting) and then "listening", while it isn't listening: stay paused until they resume.
+      return { ...s, state: s.userPaused && action.data.state !== "ended" ? "paused" : action.data.state };
 
     case "audio.mic_status":
       return { ...s, mic: action.data };

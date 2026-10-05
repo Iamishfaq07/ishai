@@ -205,6 +205,61 @@ describe("session + status", () => {
     expect(s.startedAt).not.toBeNull();
   });
 
+  it("keeps the settings this client asked for over the server's older echo", () => {
+    // session.started goes out before the server reads session.start, with the session's saved settings and the
+    // defaults for the rest (thinking, wait, code language).
+    const serverDefaults = { auto_answer: true, length: "standard", style: "natural", thinking: "off", response_timing: "balanced" } as const;
+    let s = initialLiveState({ auto_answer: true, length: "standard", style: "natural", thinking: "high", response_timing: "patient", coding_language: "java" });
+    s = run([ev("session.started", { state: "listening", settings: serverDefaults })], s);
+    expect(s.settings).toMatchObject({ thinking: "high", response_timing: "patient", coding_language: "java" });
+
+    // Changes made during the session survive the next connection's echo too.
+    s = run([{ type: "local/settings", settings: { auto_answer: false, length: "short", style: "concise" } }], s);
+    s = run([ev("session.started", { state: "listening", settings: serverDefaults })], s);
+    expect(s.settings).toMatchObject({ auto_answer: false, length: "short", style: "concise", thinking: "high" });
+    expect(s.requestedSettings).toEqual({
+      auto_answer: false, length: "short", style: "concise", thinking: "high", response_timing: "patient", coding_language: "java",
+    });
+  });
+
+  it("uses the server's settings for anything this client never set (the phone companion sets nothing)", () => {
+    const s = run([ev("session.started", { state: "listening", settings: { auto_answer: false, length: "detailed", style: "story" } })]);
+    expect(s.settings).toMatchObject({ auto_answer: false, length: "detailed", style: "story" });
+  });
+
+  it("stays paused through a reconnect until the user resumes", () => {
+    let s = run([
+      ev("session.started", { state: "listening", settings: { auto_answer: true, length: "standard", style: "natural" } }),
+      { type: "local/pause", paused: true },
+    ]);
+    expect(s.state).toBe("paused");
+    // The new connection's engine starts unpaused: no "Listening" flash while the pause is re-sent.
+    s = run([
+      { type: "local/connection", status: "reconnecting" },
+      { type: "local/connection", status: "open" },
+      ev("session.started", { state: "listening", settings: { auto_answer: true, length: "standard", style: "natural" } }),
+      ev("state.changed", { state: "listening" }),
+    ], s);
+    expect(s.state).toBe("paused");
+    s = run([ev("session.paused", { state: "paused", settings: { auto_answer: true, length: "standard", style: "natural" } })], s);
+    expect(s.userPaused).toBe(true);
+
+    s = run([{ type: "local/pause", paused: false }], s);
+    expect(s.state).toBe("listening");
+    s = run([ev("state.changed", { state: "speech_detected" })], s);
+    expect(s.state).toBe("speech_detected");
+  });
+
+  it("a chat reply written while paused doesn't make the UI look unpaused", () => {
+    const s = run([
+      ev("session.paused", { state: "paused", settings: { auto_answer: true, length: "standard", style: "natural" } }),
+      ev("state.changed", { state: "generating" }),
+      ev("state.changed", { state: "answer_complete" }),
+    ]);
+    expect(s.state).toBe("paused");
+    expect(run([ev("state.changed", { state: "ended" })], s).state).toBe("ended");
+  });
+
   it("records provider and audio status", () => {
     const s = run([
       ev("provider.status", { provider: "stt", name: "mock", state: "mock" }),
