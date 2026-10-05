@@ -9,7 +9,8 @@ const SIZES: Record<PanelMode, { width: number; height: number }> = {
 
 /**
  * Resizes the floating window for the panel mode. Position and custom sizes are persisted by
- * tauri-plugin-window-state; this only runs when the user switches modes.
+ * tauri-plugin-window-state; this runs when a screen needs its size (a session opens in its saved mode) or the user
+ * switches modes.
  */
 export async function applyPanelMode(mode: PanelMode): Promise<void> {
   const { width, height } = SIZES[mode];

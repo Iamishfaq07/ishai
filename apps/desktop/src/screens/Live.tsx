@@ -95,11 +95,11 @@ export function LiveScreen({
   });
 
   // ── Window behaviour ──────────────────────────────────────────────────
-  const changeMode = (next: PanelMode) => {
-    setMode(next);
-    localStorage.setItem(MODE_KEY, next);
-    void applyPanelMode(next);
-  };
+  // Sized for the saved mode as the session opens (Setup leaves the window compact), and on every switch.
+  useEffect(() => {
+    localStorage.setItem(MODE_KEY, mode);
+    void applyPanelMode(mode);
+  }, [mode]);
   useEffect(() => {
     localStorage.setItem(PIN_KEY, String(onTop));
     void setAlwaysOnTop(onTop);
@@ -343,7 +343,7 @@ export function LiveScreen({
       live={live}
       actions={actions}
       mode={mode}
-      onModeChange={changeMode}
+      onModeChange={setMode}
       onEnd={end}
       onReconnect={() => client.connect()}
       onEndOtherSession={async (id) => {
