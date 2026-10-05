@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AUDIO_CHANNEL, type OrbitSession } from "@orbit/types";
+import { AUDIO_CHANNEL, type OrbitSession, type User } from "@orbit/types";
 import {
   Button,
   CreditCard,
@@ -46,6 +46,7 @@ import { requestClose } from "../CloseDialog";
 import { useShortcutHandler, type GlobalAction } from "../globalShortcuts";
 import { GlassButton } from "../GlassControls";
 import type { DesktopLaunch } from "../launch";
+import { SignInAgain } from "../SignInAgain";
 import { WindowButtons } from "../TitleBar";
 import { setLiveSession } from "../updates";
 import { applyPanelMode, setAlwaysOnTop } from "../windowing";
@@ -60,10 +61,17 @@ export function LiveScreen({
   session,
   launch,
   onExit,
+  signInExpired,
+  email,
+  onSignedInAgain,
 }: {
   session: OrbitSession;
   launch: DesktopLaunch;
   onExit: () => void;
+  /** A request was refused (401): the sign-in expired. The session stays up and asks to sign in again. */
+  signInExpired: boolean;
+  email: string | null;
+  onSignedInAgain: (user: User) => void;
 }) {
   const [mode, setMode] = useState<PanelMode>(() => (localStorage.getItem(MODE_KEY) as PanelMode | null) ?? "compact");
   const [onTop, setOnTop] = useState(() => localStorage.getItem(PIN_KEY) !== "false");
@@ -249,9 +257,26 @@ export function LiveScreen({
 
   const win = getCurrentWindow();
   const captureLines = [captureNotes.start, captureNotes.mic, captureNotes.system].filter((t): t is string => Boolean(t));
+  // The socket that carries audio and answers needs no sign-in once open, so the session carries on; reconnecting
+  // (and screenshots, ratings…) needs it again.
+  const disconnected = live.connection === "closed" && live.state !== "ended";
   const notice =
-    captureLines.length > 0 || shotNote ? (
+    signInExpired || captureLines.length > 0 || shotNote ? (
       <div className="space-y-px">
+        {signInExpired && (
+          <SignInAgain
+            email={email}
+            message={
+              disconnected
+                ? "Your sign-in has expired, so Orbit can't reconnect. Sign in again to carry on with this session."
+                : "Your sign-in has expired. The session carries on, but sign in again so Orbit can reconnect if the connection drops."
+            }
+            onSignedIn={(user) => {
+              onSignedInAgain(user);
+              if (disconnected) client.connect();
+            }}
+          />
+        )}
         {captureLines.length > 0 && (
           <div className="flex items-center gap-2 bg-amber-50 px-4 py-1.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
             <span className="flex-1">

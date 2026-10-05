@@ -50,7 +50,7 @@ import {
 import { getVersion } from "@tauri-apps/api/app";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { WEB_URL, api } from "../api";
+import { WEB_URL, accessTokenExpiresAt, api } from "../api";
 import { openBilling, useEntitlements } from "../credits";
 import {
   deviceStatusText,
@@ -65,7 +65,9 @@ import {
   type NativeAudioDevice,
 } from "../native";
 import { PreflightPanel, type LocalAudioState } from "../PreflightPanel";
+import { SignInAgain } from "../SignInAgain";
 import { TitleBar } from "../TitleBar";
+import { roughDuration } from "../token";
 import { UpdateBanner } from "../UpdateBanner";
 import { confirmSessionDuringUpdate, useUpdate } from "../updates";
 import { WorkspaceBar } from "../WorkspaceBar";
@@ -139,6 +141,7 @@ export function SetupScreen({
   notice,
   initialType,
   onSignOut,
+  onSignedInAgain,
   onStart,
   onBack,
   onOpenDocuments,
@@ -150,6 +153,7 @@ export function SetupScreen({
   notice?: ReactNode;
   initialType?: SessionType;
   onSignOut: () => void;
+  onSignedInAgain: (user: User) => void;
   onStart: (session: OrbitSession, launch: DesktopLaunch) => void;
   onBack: () => void;
   onOpenDocuments: () => void;
@@ -226,6 +230,14 @@ export function SetupScreen({
   const [starting, setStarting] = useState(false);
   const restartingToUpdate = useUpdate().phase === "installing";
   const plan = useEntitlements();
+  // The sign-in runs out at a fixed time; a session that outlives it can't reconnect or send screenshots until the
+  // user signs in again. Warn while it could happen during the longest session the plan allows (plus a margin).
+  const signInLeft = (() => {
+    const expiresAt = accessTokenExpiresAt();
+    return expiresAt === null ? null : expiresAt - Date.now();
+  })();
+  const signInEndsSoon =
+    signInLeft !== null && signInLeft < ((plan?.limits.max_session_minutes ?? 240) + 30) * 60_000;
   const [mockPersona, setMockPersona] = useState<MockPersona>("hiring_manager");
   const [mockType, setMockType] = useState<MockInterviewType>("mixed");
   const [mockDifficulty, setMockDifficulty] = useState<MockDifficulty>("medium");
@@ -883,6 +895,19 @@ export function SetupScreen({
         <div className="space-y-2 border-t border-zinc-200 p-3 dark:border-zinc-800">
           <PreflightPanel local={localState} onStatus={onPreflight} />
           {plan?.credits && <MinutesLeft left={plan.credits.interview_minutes_left} />}
+          {signInEndsSoon && signInLeft !== null && (
+            <div className="overflow-hidden rounded-lg">
+              <SignInAgain
+                email={user?.email ?? null}
+                message={
+                  signInLeft <= 0
+                    ? "Your sign-in has expired. Sign in again to start a session."
+                    : `Your sign-in expires in ${roughDuration(signInLeft)}, maybe during this session. Sign in again now so nothing interrupts it.`
+                }
+                onSignedIn={onSignedInAgain}
+              />
+            </div>
+          )}
           {/* Not folded into the checklist's tips: an interview that can't hear the interviewer is the costly mistake. */}
           {interviewerAudioUsed && !systemAudio && CALL_TYPES.has(type) && (
             <div role="status" className="flex items-start gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">

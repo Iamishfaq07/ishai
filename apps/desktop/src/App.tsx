@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { OrbitSession, SessionType, User } from "@orbit/types";
 import { ApiError, ApprovalBanner, ConfirmHost, OrbitLogo, SpaceBackdrop, VerifyEmailBanner } from "@orbit/ui";
 import { api, setAccessToken, setUnauthorizedHandler } from "./api";
@@ -72,8 +72,26 @@ export function App() {
     setScreen({ name: "login" });
   }, []);
 
+  // A 401 means the sign-in is gone (desktop sign-ins expire 7 days after signing in). During a live session that
+  // mustn't end the interview: the live screen stays and asks to sign in again (its audio socket keeps going).
+  // Anywhere else it signs out.
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
+  const [signInExpired, setSignInExpired] = useState(false);
+  const onUnauthorized = useCallback(() => {
+    if (screenRef.current.name === "live") setSignInExpired(true);
+    else void signOut();
+  }, [signOut]);
   useEffect(() => {
-    setUnauthorizedHandler(() => void signOut());
+    if (screen.name !== "live") setSignInExpired(false);
+  }, [screen.name]);
+  const signedInAgain = (fresh: User) => {
+    setUser(fresh);
+    setSignInExpired(false);
+  };
+
+  useEffect(() => {
+    setUnauthorizedHandler(onUnauthorized);
     (async () => {
       const token = await loadToken().catch(() => null);
       if (!token) {
@@ -91,16 +109,16 @@ export function App() {
       }
     })();
     return () => setUnauthorizedHandler(null);
-  }, [signOut]);
+  }, [signOut, onUnauthorized]);
 
   // Started offline with a saved sign-in: load the account once the connection is back (focus, "online", or every
-  // 30 s), so Settings and the banners don't stay stuck on "reconnect".
+  // 30 s), so Settings and the banners don't stay stuck on "reconnect". (A 401 already went to onUnauthorized.)
   const reloadUser = useCallback(() => {
     api
       .me()
       .then(setUser)
       .catch((err: unknown) => {
-        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) void signOut();
+        if (err instanceof ApiError && err.status === 403) void signOut();
       });
   }, [signOut]);
   const signedInOffline = user === null && screen.name !== "boot" && screen.name !== "login";
@@ -194,6 +212,7 @@ export function App() {
             notice={verifyNotice}
             initialType={screen.initialType}
             onSignOut={() => void signOut()}
+            onSignedInAgain={setUser}
             onBack={home}
             onStart={goLive}
             onOpenDocuments={() => setScreen({ name: "documents" })}
@@ -222,7 +241,16 @@ export function App() {
           </div>
         );
       case "live":
-        return <LiveScreen session={screen.session} launch={screen.launch} onExit={home} />;
+        return (
+          <LiveScreen
+            session={screen.session}
+            launch={screen.launch}
+            onExit={home}
+            signInExpired={signInExpired}
+            email={user?.email ?? null}
+            onSignedInAgain={signedInAgain}
+          />
+        );
     }
   }
 }
