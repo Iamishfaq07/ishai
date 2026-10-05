@@ -87,6 +87,24 @@ _CODING_PROMPT = re.compile(r"\bgiven (?:a|an|two|the|n|k)\b|\breturn (?:the|all
 # Screen-share / call logistics that start like requests but aren't interview questions.
 _LOGISTICS = ("share your screen", "share my screen", "let me share", "can you see my screen", "can you hear me",
               "you're on mute", "you are on mute", "turn on your camera", "let me know when")
+# The interviewer checking in, a yes/no to say, not a question to answer: answered, they also cancelled the answer the
+# candidate was reading. Only as the whole (short) sentence: "Does that make sense, and how would you test it?" asks.
+_CHECK_INS = ("does that make sense", "does this make sense", "is that clear", "is this clear", "is my audio",
+              "is the audio", "can you hear", "are you able to hear", "are you able to see my", "is my screen",
+              "are you still there", "are you there", "can you see my",
+              "can you see what i", "can you see the document", "can you see the doc", "can you see the screen",
+              "do you see my screen", "do you need a minute", "do you need a moment", "do you need a second",
+              "do you need more time", "do you need some time", "shall we move on", "should we move on",
+              "can we move on", "ready to move on", "are you ready", "ready to start", "shall we start",
+              "should we start", "shall we begin", "any questions so far", "are we good", "all good", "sound good",
+              "is that okay", "is that ok", "are you okay with that", "good to go", "did i lose you", "did we lose you",
+              "are you with me", "tell me when you're ready", "tell me when you are ready")
+# Talk around the interview, never part of a question: the call itself and the interviewer's note-taking. Not carried
+# over onto the next question ("I'll make a note of that." <pause> "Let's do a coding question...").
+_ASIDES = ("you cut out", "you're cutting out", "you're breaking up", "you broke up", "you froze", "you're frozen",
+           "bad connection", "my internet", "lost you for", "i'll make a note", "let me make a note", "let me note",
+           "i'll note that", "noting that down", "let me write that", "i'm writing that", "i'm taking notes",
+           "taking some notes", "jotting")
 # Phrases that turn a statement into a question even mid-sentence.
 _EMBEDDED = ("could you", "can you", "would you", "do you", "have you", "are you", "what would", "how would")
 
@@ -136,9 +154,9 @@ _TYPE_RULES: list[tuple[QuestionType, tuple[str, ...]]] = [
                                   "high availability", "load balancer", "sharding", "rate limiter",
                                   "microservice", "capacity", "qps", "requests per second",
                                   "design twitter", "design instagram", "design a url", "design youtube")),
-    (QuestionType.resume, ("tell me about yourself", "introduce yourself", "walk me through your",
-                           "your background", "your resume", "your experience", "your current role",
-                           "your last role", "your previous role", "your role at", "at your last",
+    (QuestionType.resume, ("tell me about yourself", "about yourself", "introduce yourself",
+                           "walk me through your", "your background", "your resume", "your experience",
+                           "your current role", "your last role", "your previous role", "your role at", "at your last",
                            "in your current", "your career", "your last project", "your current project",
                            "your recent project", "your most recent project", "a recent project", "a project you",
                            "university", "college", "your degree", "your education", "you studied", "did you study",
@@ -328,16 +346,59 @@ _LEAD_IN = ("let's talk about", "lets talk about", "moving on", "switching gears
             "my next question", "next question", "the next question", "the next thing", "next i want", "next i'd like",
             "i want to ask about", "i'd like to ask about", "let's move on to", "let's switch to", "let's shift to",
             "switching to", "turning to", "let's go back to", "going back to", "let's dig into", "let's dive into",
-            "on the topic of", "speaking of", "let's look at", "let's turn to", "this one is about", "this is about")
+            "on the topic of", "speaking of", "let's look at", "let's turn to", "this one is about", "this is about",
+            # a new round or topic ("Let's do a quick coding question.", "Let's switch gears.", "One more question.")
+            "let's do a", "let's do another", "let's do some", "let's try a", "let's try another", "let's start with",
+            "let's begin with", "let's get into", "let's jump into", "let's jump to", "let's move to",
+            "let's change gears", "let's switch gears", "let's shift gears", "changing gears", "let's change topics",
+            "let's switch topics", "changing topics", "a different topic", "another question", "one more question",
+            "a different question", "last question", "final question", "my last question", "let's wrap up with",
+            "i'd like to switch", "i want to switch", "let's go to", "let's move over to", "let's head to",
+            "for the next part", "for this next part", "in this next part")
 _OPENERS = frozenset({"so", "okay", "ok", "now", "alright", "and", "right", "well", "um", "uh"})
+# The interviewer moving on: what follows is a new question, never more of the last one. Narrower than _LEAD_IN:
+# "Let's talk about the architecture." or "You mentioned Kafka." may well still be about the same question.
+_NEW_TOPIC = ("moving on", "switching gears", "next question", "my next question", "the next question",
+              "the next thing", "next i want", "next i'd like", "let's move on", "let's switch to", "let's shift to",
+              "switching to", "let's do a", "let's do another", "let's try a", "let's try another",
+              "let's change gears", "let's switch gears", "let's shift gears", "changing gears", "let's change topics",
+              "let's switch topics", "changing topics", "a different topic", "another question", "one more question",
+              "a different question", "last question", "final question", "my last question", "i'd like to switch",
+              "i want to switch",
+              "let's move to", "let's move over to", "let's go to", "let's jump to", "let's go back to",
+              "going back to", "for the next part", "for this next part", "in this next part", "let's wrap up with")
+
+
+def _without_openers(sentence: str) -> str:
+    toks = normalize(sentence).split()
+    while toks and toks[0] in _OPENERS:
+        toks = toks[1:]
+    return " ".join(toks)
 
 
 def _is_lead_in(sentence: str) -> bool:
     """Framing that names the topic of the question that follows ("So, my next question is about testing.")."""
-    toks = normalize(sentence).split()
-    while toks and toks[0] in _OPENERS:
-        toks = toks[1:]
-    return " ".join(toks).startswith(_LEAD_IN)
+    return _without_openers(sentence).startswith(_LEAD_IN)
+
+
+def starts_new_topic(text: str) -> bool:
+    """The interviewer opens by moving on ("Let's switch to system design.", "Okay, next question.", "Moving on."):
+    a new question, not the continuation of the one before. Fillers before it are skipped."""
+    for sentence in (x.strip() for x in _SENTENCE.split(text.strip())):
+        if not sentence:
+            continue
+        if _without_openers(sentence).startswith(_NEW_TOPIC):
+            return True
+        if not _is_noise(sentence):
+            return False
+    return False
+
+
+def _is_aside(sentence: str) -> bool:
+    """Talk around the interview that isn't itself a question (a question that mentions a connection still is one)."""
+    n = normalize(sentence)
+    return ((any(p in n for p in _ASIDES) or any(p in n for p in _LOGISTICS))
+            and not _detect_one(sentence, "interviewer").is_question)
 
 
 def _is_noise(sentence: str) -> bool:
@@ -345,17 +406,30 @@ def _is_noise(sentence: str) -> bool:
     toks = n.split()
     return (not toks or n in _FILLERS or bool(_WAIT_PHRASE.match(n))
             or any(n.startswith(p) for p in _PLEASANTRIES)
-            or (len(toks) <= 3 and all(t in _FILLER_TOKENS for t in toks)))
+            or (len(toks) <= 3 and all(t in _FILLER_TOKENS for t in toks))
+            or _is_reassurance(sentence, n))
+
+
+# Said to put the candidate at ease after asking: added to a question it restarted the answer being read ("How would
+# you design a rate limiter? <pause> Take your time, no rush."). One that also asks something isn't just this.
+_REASSURANCE = ("take your time", "no rush", "no pressure", "no worries", "whenever you're ready", "when you're ready",
+                "feel free to think", "think out loud", "take a moment", "take a second", "take a minute",
+                "take a few seconds", "you can start whenever", "go for it", "there's no wrong answer",
+                "there is no wrong answer")
+
+
+def _is_reassurance(sentence: str, n: str) -> bool:
+    return (len(n.split()) <= 10 and _without_openers(sentence).startswith(_REASSURANCE)
+            and not _detect_one(sentence, "interviewer").is_question)
 
 
 def _question_span(sentences: list[str]) -> tuple[int, int] | None:
-    """(first, last) sentence index of the last question in a turn, with a framing lead-in just before it."""
+    """(first, last) sentence index of the last question in a turn. A framing lead-in before it ("Next question.")
+    isn't part of what's scored: scored together, "Next question. Write a function that reverses a list." read as a
+    statement (0.15) and was never answered. question_in_context still keeps the lead-in with the question."""
     for i in range(len(sentences) - 1, -1, -1):
         if not _is_noise(sentences[i]) and _detect_one(sentences[i], "interviewer", DetectorContext()).is_question:
-            start = i
-            if i > 0 and not _is_noise(sentences[i - 1]) and _is_lead_in(sentences[i - 1]):
-                start = i - 1
-            return start, i
+            return i, i
     return None
 
 
@@ -453,17 +527,27 @@ def question_in_context(text: str) -> str:
 def lead_in(text: str, max_words: int) -> str:
     """Interviewer set-up before the actual question ("Let's talk about image classification.") — kept as
     part of the question, minus fillers/pleasantries/bare acknowledgements ("Great.", "Okay, thanks."), and
-    trimmed from the front to the last `max_words` words."""
-    kept = [x.strip() for x in _SENTENCE.split(text.strip())
-            if x.strip() and not _is_noise(x) and (len(tokens(x)) > 3 or _detect_one(x, "interviewer").is_question)]
+    trimmed from the front to the last `max_words` words. Talk around the interview ("I'll make a note of that.",
+    "You cut out for a second.") and reactions to the last answer ("Right, good.") aren't set-up, so they stay out
+    unless they open like one ("Okay, so let's say you have a queue...")."""
+    def keep(x: str) -> bool:
+        if _is_noise(x):
+            return False
+        if _detect_one(x, "interviewer").is_question:
+            return True
+        reaction = _is_reaction(x) and not (_without_openers(x).startswith(_SETUP) or _is_lead_in(x))
+        return len(tokens(x)) > 3 and not reaction and not _is_aside(x)
+
+    kept = [x.strip() for x in _SENTENCE.split(text.strip()) if x.strip() and keep(x)]
     while kept and sum(len(tokens(x)) for x in kept) > max_words:
         kept.pop(0)
     return " ".join(kept)
 
 
 def continue_question(question: str, more: str) -> str:
-    """A held question plus what the interviewer added after pausing, minus fillers ("okay", "um")."""
-    kept = [x.strip() for x in _SENTENCE.split(more.strip()) if x.strip() and not _is_noise(x)]
+    """A held question plus what the interviewer added after pausing, minus fillers ("okay", "um") and talk around
+    the interview ("Sorry, you cut out.")."""
+    kept = [x.strip() for x in _SENTENCE.split(more.strip()) if x.strip() and not _is_noise(x) and not _is_aside(x)]
     return " ".join([question.strip(), *kept]).strip()
 
 
@@ -555,6 +639,9 @@ def _detect_one(text: str, speaker: Speaker, ctx: DetectorContext | None = None)
         return result(0.02, QuestionType.small_talk)
     if any(p in norm for p in _LOGISTICS):
         reasons.append("call_logistics")
+        return result(0.05, QuestionType.small_talk)
+    if len(toks) <= 9 and _without_openers(raw).startswith(_CHECK_INS):
+        reasons.append("check_in")
         return result(0.05, QuestionType.small_talk)
 
     score = 0.0

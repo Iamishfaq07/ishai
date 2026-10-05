@@ -82,5 +82,6 @@ async def classify(llm: LLMProvider, utterance: str, previous_question: str | No
     result = parse(resp.text, utterance)
     if result is None:
         log.warning("question classifier returned unparseable output")
-        return None
+        # Not answered (as if unavailable), but the call still cost something: the caller records the response.
+        return Classification("non_question", False, "", resp)
     return Classification(result.kind, result.should_answer, result.normalized_question, resp)

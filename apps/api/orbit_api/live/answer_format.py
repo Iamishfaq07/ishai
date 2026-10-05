@@ -44,6 +44,19 @@ _REF = re.compile(r"\bF(\d{1,2})\b", re.IGNORECASE)
 _PERSONAL = frozenset({QuestionType.behavioral, QuestionType.resume, QuestionType.leadership, QuestionType.culture})
 _BULLET = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+(.*)$")
 _FENCE = re.compile(r"^\s*```\s*([\w+#-]*)\s*$")
+# Inside code, only the tags the model writes AFTER the code end a block whose closing fence is missing, and only as it
+# writes them: uppercase, at the start of the line, not an assignment. A docstring's "Time: O(n)", a typed local
+# "answer: int = 0", a field "code: string;" are code (matched case-insensitively, they ended the block and the rest of
+# the solution was lost or landed in the spoken answer).
+_TRAILER = re.compile(r"^(?:TIME|SPACE|EDGE|TESTS|FOLLOWUP|SOURCES|POINTS)\s*:\s*(.*)$")
+_ASSIGNMENT = re.compile(r"\s=\s|;\s*$")
+# A fence before anything else, followed by the reply's first tag, wraps the whole reply: it isn't code.
+_OPENING_TAG = re.compile(r"^(?:GROUNDED|ANSWER)\s*:")
+
+
+def _ends_code(line: str) -> bool:
+    m = _TRAILER.match(line)
+    return m is not None and not _ASSIGNMENT.search(m.group(1))
 
 # The spoken answer is read out by a person, and a few marks of machine writing give it away whatever the prompt
 # says (live_system.md, "HOW IT SOUNDS"). These are the safe, mechanical ones: an em dash (or a spaced en dash) is
@@ -97,9 +110,15 @@ class AnswerStreamParser:
         self._question = question
         self._qtype = qtype
         self._context_used = context_used
+        self._done = False
 
     def feed(self, delta: str) -> LiveAnswer:
         self._buf += delta
+        return self.snapshot()
+
+    def finish(self) -> LiveAnswer:
+        """The answer once the stream has ended: a last line still without its newline counts as complete."""
+        self._done = True
         return self.snapshot()
 
     @property
@@ -110,6 +129,7 @@ class AnswerStreamParser:
         ans = LiveAnswer(question=self._question, type=self._qtype, context_used=list(self._context_used))
         section: str | None = None
         in_code = False
+        wrapper = False  # the open block began before anything else: it may be a fence around the whole reply
         code_lang = ""
         code_tagged = False  # a CODE: line arrived: show the code box even before its first line streams
         code_lines: list[str] = []  # the block being read
@@ -120,12 +140,14 @@ class AnswerStreamParser:
         stray: list[str] = []
         para_break = False  # a blank line inside the spoken answer starts a new paragraph
 
-        for line in self._buf.split("\n"):
+        lines = self._buf.split("\n")
+        last = len(lines) - 1  # the line still being written (complete only once the stream ends)
+        for i, line in enumerate(lines):
             tag = _TAG.match(line.strip())
             if in_diff:
-                if tag or _FENCE.match(line):
+                if _ends_code(line) or _FENCE.match(line):
                     in_diff = False
-                    if not tag:
+                    if not _ends_code(line):
                         continue
                 else:
                     diff_lines.append(line)
@@ -134,9 +156,13 @@ class AnswerStreamParser:
                 in_diff = True
                 continue
             if in_code:
-                # A real tag line (TIME/SPACE/FOLLOWUP/…) ends the code block even if the model's closing
-                # fence is missing or mismatched — otherwise trailing sections would be swallowed as code.
-                if tag:
+                # A trailer tag (TIME/SPACE/FOLLOWUP/…) ends the code block even if the model's closing fence is
+                # missing or mismatched — otherwise trailing sections would be swallowed as code.
+                if wrapper and not code_lines and _OPENING_TAG.match(line):
+                    in_code = wrapper = False  # "```text" then "GROUNDED: …": a fence around the reply, not code
+                    blocks.pop()
+                    code_lang = ""
+                elif _ends_code(line):
                     in_code = False
                 elif _FENCE.match(line):
                     in_code = False
@@ -153,9 +179,18 @@ class AnswerStreamParser:
                 # after the talk track with no CODE: line, and read as prose it became a wall of words. (A ``` inside
                 # a sentence isn't a fence: _FENCE needs the whole line.)
                 in_code = True
+                wrapper = section is None and not blocks and not stray and not ans.grounding and not ans.direct_answer
                 code_lines = []
                 blocks.append((section == "CODE", code_lines))
                 code_lang = fence.group(1).lower() or code_lang
+                continue
+            if section == "CODE" and not _ends_code(line):
+                # Code under CODE: with no fence around it is still code, indentation and blank lines kept, and so is
+                # a line that only looks like a tag ("answer: int = 0").
+                if not blocks or not blocks[-1][0] or blocks[-1][1] is not code_lines:
+                    code_lines = []
+                    blocks.append((True, code_lines))
+                code_lines.append(line)
                 continue
 
             if tag:
@@ -206,8 +241,11 @@ class AnswerStreamParser:
                 elif section == "DIFF":
                     ans.debug = ans.debug or DebugInfo()
                 elif section == "POINTS":
-                    ans.key_points = [p.strip(" .•-")[:MAX_KEY_POINT_CHARS]
-                                      for p in value.split("|") if p.strip(" .•-")][:MAX_KEY_POINTS]
+                    # Only a whole line: a label still streaming ("Team" of "Team alignment") would be ticked off by
+                    # the candidate saying one word, and the tick stuck once the full label arrived.
+                    if self._done or i < last:
+                        ans.key_points = [p.strip(" .•-")[:MAX_KEY_POINT_CHARS]
+                                          for p in value.split("|") if p.strip(" .•-")][:MAX_KEY_POINTS]
                     section = None  # one line; nothing continues it
                 continue
 
@@ -217,13 +255,6 @@ class AnswerStreamParser:
             if section in ("ROOTCAUSE", "FIX", "WHY") and line.strip() and ans.debug is not None:
                 key = {"ROOTCAUSE": "root_cause", "FIX": "fix", "WHY": "why"}[section]
                 setattr(ans.debug, key, f"{getattr(ans.debug, key) or ''} {line.strip()}".strip()[:600])
-                continue
-            if section == "CODE":
-                # Code under CODE: with no fence around it is still code, indentation and blank lines kept.
-                if not blocks or not blocks[-1][0] or blocks[-1][1] is not code_lines:
-                    code_lines = []
-                    blocks.append((True, code_lines))
-                code_lines.append(line)
                 continue
 
             bullet = _BULLET.match(line)

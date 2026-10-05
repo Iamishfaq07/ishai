@@ -197,9 +197,11 @@ def test_key_points_are_parsed_capped_and_kept_out_of_the_answer() -> None:
     from orbit_api.live.answer_format import AnswerStreamParser
     from orbit_api.live.events import QuestionType
 
-    a = AnswerStreamParser("How do you secure CI/CD?", QuestionType.technical, []).feed(
-        "GROUNDED: general\nANSWER: I start at the pull request.\n\nThen gates.\n"
-        "FOLLOWUP: What about DAST?\nPOINTS: Start at PR | SAST + SCA | Risk-based blocking | - | x | y | z | extra")
+    p = AnswerStreamParser("How do you secure CI/CD?", QuestionType.technical, [])
+    a = p.feed("GROUNDED: general\nANSWER: I start at the pull request.\n\nThen gates.\nFOLLOWUP: What about DAST?\n"
+               "POINTS: Start at PR | SAST + SCA | Risk-based blocking | - | x | y | z | extra")
+    assert a.key_points == []  # still streaming: the last label may be cut off
+    a = p.finish()
     assert a.key_points == ["Start at PR", "SAST + SCA", "Risk-based blocking", "x", "y", "z"]  # blanks dropped, cap 6
     assert "POINTS" not in a.direct_answer and a.follow_up == "What about DAST?"
 

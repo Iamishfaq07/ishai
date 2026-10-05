@@ -222,7 +222,8 @@ _ANCHORED_TYPES = {QuestionType.resume}
 # "Tell me about yourself" / "walk me through your background" ask for the whole arc; "your experience WITH Kafka" is
 # about one topic, and gets the facts that match it instead.
 _BROAD_BACKGROUND = re.compile(
-    r"\b(?:tell me about yourself|introduce yourself|about your background|your background|walk me through your "
+    r"\b(?:(?:tell me|talk) (?:a (?:bit|little) |more )?about yourself|introduce yourself|about your background"
+    r"|your background|walk me through your "
     r"(?:resume|cv|background|career|journey)|your career (?:so far|path|story)"
     r"|your (?:resume|cv)\b(?! (?:says|mentions)))",
     re.IGNORECASE)

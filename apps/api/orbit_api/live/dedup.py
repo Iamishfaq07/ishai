@@ -13,6 +13,10 @@ from orbit_api.live.question_detector import tokens
 
 COOLDOWN_MS = 20_000
 SIMILARITY_THRESHOLD = 0.8
+# Words whose presence or absence doesn't change what's being asked.
+_FILLER = frozenset({"the", "a", "an", "and", "so", "okay", "ok", "um", "uh", "like", "just", "really", "then", "now",
+                     "well", "you", "can", "could", "would", "please", "me", "actually", "basically", "right",
+                     "alright", "yeah", "maybe", "quickly", "briefly", "again"})
 
 
 class DedupDecision(StrEnum):
@@ -48,19 +52,26 @@ class Deduplicator:
     def __init__(self) -> None:
         self._seen: list[_Seen] = []
 
-    def check(self, turn_id: str, text: str, now_ms: int) -> tuple[DedupDecision, str | None]:
-        """Returns the decision and, for duplicate/extends, the matching earlier question id."""
+    def check(self, turn_id: str, text: str, now_ms: int, *,
+              continues: bool = False) -> tuple[DedupDecision, str | None]:
+        """Returns the decision and, for duplicate/extends, the matching earlier question id. `continues`: the
+        finalizer stitched this question onto the one it held (said after a pause), so starting with an earlier
+        question's words means it's that question, grown; otherwise, on another turn, it's a new question that
+        happens to start the same way ("Why?" … "Why not use DynamoDB instead?")."""
         toks = tokens(text)
         self._seen = [s for s in self._seen if now_ms - s.at_ms <= COOLDOWN_MS]
         for s in reversed(self._seen):
             if s.toks == toks:
                 return DedupDecision.duplicate, s.question_id
+            same = continues or s.turn_id == turn_id
             # A stitched continuation starts with the exact earlier question, however long the pause was.
-            if _is_prefix(s.toks, toks):
+            if same and _is_prefix(s.toks, toks):
                 return DedupDecision.extends, s.question_id
-            if _is_prefix(toks, s.toks):
+            if same and _is_prefix(toks, s.toks):
                 return DedupDecision.duplicate, s.question_id  # a fragment of what we already answered
-            if similarity(s.toks, toks) >= SIMILARITY_THRESHOLD:
+            # Rephrased: nearly the same words, and the ones that differ don't carry meaning ("So tell me about
+            # yourself" / "Tell me about yourself"). "…if the array is sorted?" after "…if the array is empty?" isn't.
+            if similarity(s.toks, toks) >= SIMILARITY_THRESHOLD and set(s.toks) ^ set(toks) <= _FILLER:
                 return DedupDecision.duplicate, s.question_id
         return DedupDecision.new, None
 
