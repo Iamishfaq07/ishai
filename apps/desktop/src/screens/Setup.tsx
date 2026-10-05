@@ -58,6 +58,7 @@ import {
   listAudioApps,
   listAudioDevices,
   listOutputDevices,
+  newCaptureId,
   startCapture,
   stopCapture,
   type AudioApp,
@@ -411,6 +412,7 @@ export function SetupScreen({
         systemAudio,
         ...(micId ? { micDeviceId: micId } : {}),
         ...(systemAudio && appPid ? { systemProcessId: Number(appPid) } : {}),
+        ...(systemAudio && appPid && selectedApp ? { systemProcessExe: selectedApp.exe } : {}),
         ...(systemAudio && systemDevice ? { systemDevice } : {}),
       });
     } catch (err) {
@@ -810,6 +812,7 @@ export function SetupScreen({
               micId={micId || undefined}
               systemAudio={systemAudio}
               systemProcessId={appPid ? Number(appPid) : undefined}
+              systemProcessExe={appPid ? selectedApp?.exe : undefined}
               systemDevice={systemDevice}
               micLabel={localState.micName ?? "default"}
               listenTo={appPid ? `app: ${selectedApp?.exe.split(/[\\/]/).pop() ?? "unknown"}` : `output: ${outputName(systemDevice) ?? "default"}`}
@@ -908,6 +911,7 @@ function AudioTest({
   micId,
   systemAudio,
   systemProcessId,
+  systemProcessExe,
   systemDevice,
   micLabel,
   listenTo,
@@ -917,6 +921,7 @@ function AudioTest({
   micId?: string;
   systemAudio: boolean;
   systemProcessId?: number | undefined;
+  systemProcessExe?: string | undefined;
   systemDevice?: string | undefined;
   micLabel: string;
   listenTo: string;
@@ -929,6 +934,8 @@ function AudioTest({
   const [summaries, setSummaries] = useState<{ mic: ChannelSummary; system: ChannelSummary | null } | null>(null);
   const [copied, setCopied] = useState(false);
   const runningRef = useRef(false);
+  // The test's capture (0: none), so stopping the test can never stop a live session's capture.
+  const captureId = useRef(0);
   const stats = useRef({ mic: newChannelStats(), system: newChannelStats() });
   const startedAt = useRef(0);
   const events = useRef<DiagnosticsEvent[]>([]);
@@ -946,7 +953,9 @@ function AudioTest({
     runningRef.current = false;
     setRunning(false);
     setLevels([0, 0]);
-    await stopCapture().catch(() => undefined);
+    const id = captureId.current;
+    captureId.current = 0;
+    if (id) await stopCapture(id).catch(() => undefined);
   };
 
   const start = async () => {
@@ -955,12 +964,16 @@ function AudioTest({
     stats.current = { mic: newChannelStats(), system: newChannelStats() };
     events.current = [];
     setSummaries(null);
+    const id = newCaptureId();
+    captureId.current = id;
     try {
       runningRef.current = true;
       const options = {
+        captureId: id,
         ...(micId ? { micDeviceId: micId } : {}),
         systemAudio,
         ...(systemProcessId ? { systemProcessId } : {}),
+        ...(systemProcessExe ? { systemProcessExe } : {}),
         ...(systemDevice ? { systemDevice } : {}),
       };
       const t0 = performance.now();
@@ -969,7 +982,7 @@ function AudioTest({
         events.current.length < 50 &&
         events.current.push({ t: Math.round((performance.now() - t0) / 100) / 10, channel, kind, detail });
       const info = await startCapture(options, (ev) => {
-        if (!runningRef.current) return;
+        if (!runningRef.current || captureId.current !== id) return;
         const channel = ev.channel === AUDIO_CHANNEL.mic ? "mic" : "system";
         if (ev.kind === "frame") {
           addFrame(stats.current[channel], ev.rms, performance.now());
@@ -987,6 +1000,7 @@ function AudioTest({
           setNote(friendlyAudioError(ev.message));
         }
       });
+      if (captureId.current !== id) return; // stopped (or the screen closed) while it was starting
       if (info.micError) {
         log("mic", "error", info.micError);
         setNote(friendlyAudioError(info.micError));
@@ -997,7 +1011,9 @@ function AudioTest({
       }
       setRunning(true);
     } catch (err) {
+      if (captureId.current !== id) return; // stopped while starting: nothing went wrong
       runningRef.current = false;
+      captureId.current = 0;
       events.current.push({ t: 0, channel: "mic", kind: "error", detail: String(err) });
       setNote(friendlyAudioError(err));
     }
@@ -1016,7 +1032,9 @@ function AudioTest({
 
   useEffect(
     () => () => {
-      if (runningRef.current) void stopCapture();
+      // Its own capture only: by now the live session may already be starting its own.
+      if (captureId.current) void stopCapture(captureId.current);
+      captureId.current = 0;
     },
     [],
   );

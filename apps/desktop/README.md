@@ -41,9 +41,9 @@ run with `WEBVIEW2_USER_DATA_FOLDER` pointing at a temp folder. Clear both after
 | Command | What it does |
 |---|---|
 | `list_audio_devices` / `list_output_devices` | Microphones and output devices (WASAPI endpoint ids, with default / communications flags) |
-| `list_audio_apps` | Apps currently playing audio, grouped by process tree (for "listen to one app") |
-| `start_capture(micDeviceId?, systemAudio, systemProcessId?, systemDevice?, onEvent)` | Mic → channel 0. Interviewer → channel 1, from one app (process loopback) or an output device (`"default"`, `"communications"`, or an endpoint id). Mixed to mono, resampled to 16 kHz, and sent as base64 PCM16LE frames every 50 ms over a Tauri `Channel`, which the webview forwards to the API socket |
-| `stop_capture` | Stops and drops both streams |
+| `list_audio_apps` | Apps with an audio session on any output device (the call often plays on the communications device), grouped by process tree, playing ones first (for "listen to one app") |
+| `start_capture(captureId, micDeviceId?, systemAudio, systemProcessId?, systemProcessExe?, systemDevice?, onEvent)` | Mic → channel 0. Interviewer → channel 1, from one app (process loopback; the exe finds it again if it restarts) or an output device (`"default"`, `"communications"`, or an endpoint id). WASAPI mixes to mono and resamples to 16 kHz; sent as base64 PCM16LE frames every 50 ms over a Tauri `Channel`, which the webview forwards to the API socket. Async: opening devices never blocks the window |
+| `stop_capture(captureId)` | Stops that capture's streams, and only that capture's (a late stop from the audio test can't end the live session's) |
 | `open_region_selector` / `capture_region(x,y,w,h)` / `capture_screen` | Transparent always-on-top selector over the current monitor; one-shot capture with xcap, cropped and PNG-encoded |
 | `save_token` / `load_token` / `clear_token` | Orbit session token in Windows Credential Manager (`access_token.ai.orbit.desktop`) |
 | `check_update` / `install_update` | Signed update check against the API's manifest; install refuses while a live session is running |
@@ -52,6 +52,9 @@ run with `WEBVIEW2_USER_DATA_FOLDER` pointing at a temp folder. Clear both after
 **Audio capture** is native WASAPI (`wasapi_capture.rs`, `process_loopback.rs`) and supervised:
 - **Unplugged device or changed default:** capture reopens and follows the new device, and fills the gap with
   silence so the transcript timeline stays continuous.
+- **One app:** a failing stream (e.g. the audio service restarted) is re-activated, and if the app quits, capture
+  follows it when it starts again (same exe, new process). Windows doesn't report a dead target itself (process
+  loopback on a dead PID just delivers silence), so Orbit watches the app's process.
 - **Status:** the UI gets `status` events for each change.
 
 No audio is written to disk. Provider API keys (DeepSeek, Deepgram) never reach the desktop app: audio goes to the

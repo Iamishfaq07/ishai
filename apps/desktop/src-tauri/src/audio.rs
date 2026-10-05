@@ -7,11 +7,14 @@
 //! cpal streams are `!Send`, so they live on a dedicated thread that parks until `stop_capture`.
 //!
 //! System audio:
-//! - Windows: WASAPI loopback — cpal opens an *input* stream on the default *output* device.
+//! - Windows: WASAPI loopback of an output device (wasapi_capture.rs) or of one app (process_loopback.rs).
 //! - macOS: requires ScreenCaptureKit (not implemented yet) — reported explicitly, never faked.
 //! - Linux: not supported yet (would use a PulseAudio/PipeWire monitor source).
+//!
+//! The commands are async and do their blocking work (COM, opening devices: up to 8 s per channel) on the blocking
+//! pool, so the window keeps painting and taking input meanwhile.
 
-use std::sync::{mpsc, Mutex};
+use std::sync::{mpsc, Mutex, MutexGuard};
 use std::thread;
 
 use base64::Engine;
@@ -52,17 +55,15 @@ pub struct CaptureInfo {
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum CaptureEvent {
     /// `pcm`: base64 PCM16LE mono 16 kHz. `rms`: 0..1 for level meters.
-    Frame {
-        channel: u8,
-        pcm: String,
-        rms: f32,
-    },
-    Error {
-        channel: u8,
-        message: String,
-    },
+    Frame { channel: u8, pcm: String, rms: f32 },
+    /// A stream error the cpal path (not Windows) can't recover from. Windows reports trouble as `Status` and
+    /// recovers by itself.
+    #[cfg_attr(target_os = "windows", allow(dead_code))]
+    Error { channel: u8, message: String },
     /// Device lifecycle (Windows): `active` | `fallback` (chosen device missing, using the default) |
     /// `lost` (reopening) | `restored` | `switched` (Windows changed the default), with the device in use.
+    /// One app's capture reports the same states with the app's name: `lost` when its stream fails or the app
+    /// quits, `restored` once it's captured again (on the same process, or where the app restarted).
     Status {
         channel: u8,
         state: String,
@@ -70,20 +71,71 @@ pub enum CaptureEvent {
     },
 }
 
+/// Which capture owns the audio devices. Captures are told apart by an id the webview picks, so a late stop from
+/// one screen (the setup's audio test, unmounting) can't end the capture the next one (the live session) just
+/// started — and the id is known before the start returns, so a capture can be stopped while it's still opening.
 #[derive(Default)]
-pub struct CaptureState {
-    stop: Mutex<Option<mpsc::Sender<()>>>,
+pub struct CaptureState(Mutex<Slot>);
+
+#[derive(Default)]
+struct Slot {
+    current: Option<Running>,
+}
+
+struct Running {
+    id: u64,
+    /// None while the capture is still opening its devices.
+    stop: Option<mpsc::Sender<()>>,
 }
 
 impl CaptureState {
-    /// True while a capture thread is running (a live session is recording).
-    pub fn is_active(&self) -> bool {
-        self.stop.lock().map(|g| g.is_some()).unwrap_or(false)
+    fn slot(&self) -> MutexGuard<'_, Slot> {
+        self.0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
-    fn stop_existing(&self) {
-        if let Ok(mut guard) = self.stop.lock() {
-            if let Some(tx) = guard.take() {
+    /// True while a capture is starting or running (a live session, or the audio test, is listening).
+    pub fn is_active(&self) -> bool {
+        self.slot().current.is_some()
+    }
+
+    /// Claims the devices for capture `id`, stopping whatever had them.
+    fn begin(&self, id: u64) -> Result<(), String> {
+        let mut slot = self.slot();
+        if let Some(Running { stop: Some(tx), .. }) = slot.current.take() {
+            let _ = tx.send(());
+        }
+        slot.current = Some(Running { id, stop: None });
+        Ok(())
+    }
+
+    /// Capture `id` is running: keep its stop switch — unless it was stopped or replaced while opening, in which
+    /// case it stops now and this returns false.
+    fn started(&self, id: u64, stop: mpsc::Sender<()>) -> bool {
+        let mut slot = self.slot();
+        match slot.current.as_mut() {
+            Some(running) if running.id == id => {
+                running.stop = Some(stop);
+                true
+            }
+            _ => {
+                let _ = stop.send(());
+                false
+            }
+        }
+    }
+
+    /// Stops capture `id` (`None`: whichever is running). Does nothing if another capture has replaced it.
+    fn stop(&self, id: Option<u64>) {
+        let mut slot = self.slot();
+        let matches = match (&slot.current, id) {
+            (Some(running), Some(id)) => running.id == id,
+            (Some(_), None) => true,
+            (None, _) => false,
+        };
+        if matches {
+            if let Some(Running { stop: Some(tx), .. }) = slot.current.take() {
                 let _ = tx.send(());
             }
         }
@@ -103,22 +155,37 @@ fn endpoints(flow: crate::wasapi_capture::Flow) -> Result<Vec<AudioDevice>, Stri
         .collect())
 }
 
+/// Runs blocking device work on the blocking pool (see the module docs).
+async fn blocking<T: Send + 'static>(
+    work: impl FnOnce() -> Result<T, String> + Send + 'static,
+) -> Result<T, String> {
+    tauri::async_runtime::spawn_blocking(work)
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 /// Microphones.
 #[tauri::command]
-pub fn list_audio_devices() -> Result<Vec<AudioDevice>, String> {
-    #[cfg(target_os = "windows")]
-    return endpoints(crate::wasapi_capture::Flow::Microphone);
-    #[cfg(not(target_os = "windows"))]
-    list_cpal_inputs()
+pub async fn list_audio_devices() -> Result<Vec<AudioDevice>, String> {
+    blocking(|| {
+        #[cfg(target_os = "windows")]
+        return endpoints(crate::wasapi_capture::Flow::Microphone);
+        #[cfg(not(target_os = "windows"))]
+        list_cpal_inputs()
+    })
+    .await
 }
 
 /// Output devices whose sound can be captured (loopback). Windows only.
 #[tauri::command]
-pub fn list_output_devices() -> Result<Vec<AudioDevice>, String> {
-    #[cfg(target_os = "windows")]
-    return endpoints(crate::wasapi_capture::Flow::Output);
-    #[cfg(not(target_os = "windows"))]
-    Ok(Vec::new())
+pub async fn list_output_devices() -> Result<Vec<AudioDevice>, String> {
+    blocking(|| {
+        #[cfg(target_os = "windows")]
+        return endpoints(crate::wasapi_capture::Flow::Output);
+        #[cfg(not(target_os = "windows"))]
+        Ok(Vec::new())
+    })
+    .await
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -137,19 +204,67 @@ fn list_cpal_inputs() -> Result<Vec<AudioDevice>, String> {
         .collect())
 }
 
+/// What to capture (see `start_capture`).
+struct Request {
+    mic_device_id: Option<String>,
+    system_audio: bool,
+    system_process_id: Option<u32>,
+    system_process_exe: Option<String>,
+    system_device: Option<String>,
+}
+
 #[tauri::command]
-pub fn start_capture(
+#[allow(clippy::too_many_arguments)]
+pub async fn start_capture(
     state: tauri::State<'_, CaptureState>,
+    // Picked by the webview; `stop_capture` with the same id stops this capture and no other.
+    capture_id: u64,
     mic_device_id: Option<String>,
     system_audio: bool,
     // Windows: capture only this app's process tree (Zoom, Teams, the browser…). None = an output device.
     system_process_id: Option<u32>,
+    // Windows: that app's exe, to find it again if it restarted (new PID) before or during the capture.
+    system_process_exe: Option<String>,
     // Windows: which output to capture when no app is chosen: "default" | "communications" | endpoint id.
     system_device: Option<String>,
     on_event: Channel<CaptureEvent>,
 ) -> Result<CaptureInfo, String> {
-    state.stop_existing();
+    state.begin(capture_id)?;
+    let request = Request {
+        mic_device_id,
+        system_audio,
+        system_process_id,
+        system_process_exe,
+        system_device,
+    };
+    match blocking(move || open_capture(request, on_event)).await {
+        Ok((info, stop)) => {
+            if state.started(capture_id, stop) {
+                Ok(info)
+            } else {
+                Err("Audio capture was stopped before it started.".into())
+            }
+        }
+        Err(e) => {
+            state.stop(Some(capture_id));
+            Err(e)
+        }
+    }
+}
 
+/// Opens the requested sources on a capture thread that parks until its stop switch (the returned sender) fires
+/// or is dropped. Blocks until both sources opened or failed.
+fn open_capture(
+    request: Request,
+    on_event: Channel<CaptureEvent>,
+) -> Result<(CaptureInfo, mpsc::Sender<()>), String> {
+    let Request {
+        mic_device_id,
+        system_audio,
+        system_process_id,
+        system_process_exe,
+        system_device,
+    } = request;
     let (stop_tx, stop_rx) = mpsc::channel::<()>();
     let (ready_tx, ready_rx) = mpsc::channel::<Result<CaptureInfo, String>>();
 
@@ -189,6 +304,7 @@ pub fn start_capture(
                         // one app's process tree (Zoom, Teams, the browser…)
                         Some(pid) => crate::process_loopback::spawn(
                             pid,
+                            system_process_exe,
                             on_event.clone(),
                             native_stop.clone(),
                         ),
@@ -212,7 +328,7 @@ pub fn start_capture(
             }
             #[cfg(not(target_os = "windows"))]
             {
-                let _ = (system_process_id, &system_device);
+                let _ = (system_process_id, &system_process_exe, &system_device);
                 let host = cpal::default_host();
                 match open_mic(&host, mic_device_id.as_deref(), on_event.clone()) {
                     Ok(stream) => {
@@ -266,15 +382,13 @@ pub fn start_capture(
     let info = ready_rx
         .recv()
         .map_err(|_| "audio thread exited unexpectedly".to_string())??;
-    if let Ok(mut guard) = state.stop.lock() {
-        *guard = Some(stop_tx);
-    }
-    Ok(info)
+    Ok((info, stop_tx))
 }
 
+/// Stops capture `capture_id` (without one: whatever is capturing).
 #[tauri::command]
-pub fn stop_capture(state: tauri::State<'_, CaptureState>) {
-    state.stop_existing();
+pub fn stop_capture(state: tauri::State<'_, CaptureState>, capture_id: Option<u64>) {
+    state.stop(capture_id);
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -364,6 +478,8 @@ where
         .map_err(|e| e.to_string())
 }
 
+// Windows captures in the transcriber's format already (the audio engine converts), so only the cpal path converts.
+#[cfg_attr(target_os = "windows", allow(dead_code))]
 pub(crate) fn to_i16(v: f32) -> i16 {
     let clamped = v.clamp(-1.0, 1.0);
     if clamped < 0.0 {
@@ -389,8 +505,10 @@ pub(crate) fn encode_frame(channel: u8, samples: &[i16]) -> CaptureEvent {
     }
 }
 
-/// Linear-interpolating resampler with a one-pole low-pass ahead of decimation.
-/// Good enough for speech-to-text; not intended for music playback.
+/// Linear-interpolating resampler with a one-pole low-pass ahead of decimation, for the cpal path (not Windows,
+/// where WASAPI resamples). The one-pole filter lets some content above 8 kHz alias into the speech band when
+/// decimating 48 kHz by 3, so Windows doesn't use it any more.
+#[cfg_attr(target_os = "windows", allow(dead_code))]
 pub(crate) struct Resampler {
     step: f64,
     pos: f64,
@@ -400,6 +518,7 @@ pub(crate) struct Resampler {
     lp: f32,
 }
 
+#[cfg_attr(target_os = "windows", allow(dead_code))]
 impl Resampler {
     pub(crate) fn new(from_rate: u32, to_rate: u32) -> Self {
         let from = f64::from(from_rate.max(1));
@@ -484,5 +603,58 @@ mod tests {
             .decode(pcm)
             .unwrap();
         assert_eq!(bytes, vec![0x01, 0x00, 0xfe, 0xff]);
+    }
+
+    /// A running capture's stop switch, and whether it has been flipped.
+    fn switch() -> (mpsc::Sender<()>, mpsc::Receiver<()>) {
+        mpsc::channel()
+    }
+    fn stopped(rx: &mpsc::Receiver<()>) -> bool {
+        // a sent stop, or the sender dropped: either way the capture thread stops
+        !matches!(rx.try_recv(), Err(mpsc::TryRecvError::Empty))
+    }
+
+    #[test]
+    fn a_late_stop_from_an_earlier_capture_does_not_stop_the_next() {
+        let state = CaptureState::default();
+        let (test_tx, test_rx) = switch();
+        state.begin(1).unwrap();
+        assert!(state.started(1, test_tx));
+        // the live session starts (stopping the audio test), then the test's unmount stop arrives
+        let (live_tx, live_rx) = switch();
+        state.begin(2).unwrap();
+        assert!(stopped(&test_rx));
+        assert!(state.started(2, live_tx));
+        state.stop(Some(1));
+        assert!(!stopped(&live_rx));
+        assert!(state.is_active());
+        state.stop(Some(2));
+        assert!(stopped(&live_rx));
+        assert!(!state.is_active());
+    }
+
+    #[test]
+    fn a_capture_stopped_while_opening_stops_once_it_is_up() {
+        let state = CaptureState::default();
+        state.begin(7).unwrap();
+        assert!(state.is_active()); // opening counts: the updater must wait for it
+        state.stop(Some(7));
+        let (tx, rx) = switch();
+        assert!(!state.started(7, tx));
+        assert!(stopped(&rx));
+        assert!(!state.is_active());
+    }
+
+    #[test]
+    fn a_replaced_capture_stops_once_it_is_up() {
+        let state = CaptureState::default();
+        state.begin(1).unwrap();
+        state.begin(2).unwrap(); // a retry while the first was still opening
+        let (old_tx, old_rx) = switch();
+        assert!(!state.started(1, old_tx));
+        assert!(stopped(&old_rx));
+        let (tx, rx) = switch();
+        assert!(state.started(2, tx));
+        assert!(!stopped(&rx));
     }
 }

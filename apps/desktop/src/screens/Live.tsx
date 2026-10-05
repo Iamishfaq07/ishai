@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { OrbitSession } from "@orbit/types";
+import { AUDIO_CHANNEL, type OrbitSession } from "@orbit/types";
 import {
   Button,
   CreditCard,
@@ -36,6 +36,7 @@ import {
   base64ToBytes,
   deviceStatusText,
   friendlyAudioError,
+  newCaptureId,
   openRegionSelector,
   startCapture,
   stopCapture,
@@ -52,12 +53,17 @@ export interface DesktopLaunch {
   systemAudio: boolean;
   /** Capture only this app's audio (process tree); undefined = an output device. */
   systemProcessId?: number;
+  /** That app's exe: capture finds the app again if it restarts during the session. */
+  systemProcessExe?: string;
   /** Output to capture when no app is chosen: "default" | "communications" | endpoint id. */
   systemDevice?: string;
 }
 
 const MODE_KEY = "orbit.desktop.panelMode";
 const PIN_KEY = "orbit.desktop.alwaysOnTop";
+
+/** What's wrong with audio, kept per source: the interviewer's audio coming up must not clear the mic's warning. */
+type CaptureNotes = Partial<Record<"start" | "mic" | "system", string | null>>;
 
 export function LiveScreen({
   session,
@@ -71,7 +77,7 @@ export function LiveScreen({
   const [mode, setMode] = useState<PanelMode>(() => (localStorage.getItem(MODE_KEY) as PanelMode | null) ?? "compact");
   const [onTop, setOnTop] = useState(() => localStorage.getItem(PIN_KEY) !== "false");
   const [hotkeys] = useState(loadHotkeys);
-  const [captureNote, setCaptureNote] = useState<string | null>(null);
+  const [captureNotes, setCaptureNotes] = useState<CaptureNotes>({});
   const [shotNote, setShotNote] = useState<string | null>(null);
 
   const ratings = useAnswerRatings(api, session.id);
@@ -109,46 +115,60 @@ export function LiveScreen({
   }, []);
   pausedRef.current = live.state === "paused" || live.state === "ended";
 
+  // The capture this screen owns (0: none). Each start (Retry) gets a new id, so a stop only ever ends this screen's
+  // own capture, and events from one that was replaced are ignored.
+  const captureId = useRef(0);
   const startAudio = useCallback(async () => {
-    setCaptureNote(null);
+    const id = newCaptureId();
+    captureId.current = id;
+    const current = () => captureId.current === id;
+    const note = (key: keyof CaptureNotes, text: string | null) => {
+      if (current()) setCaptureNotes((n) => ({ ...n, [key]: text }));
+    };
+    setCaptureNotes({});
     try {
       const info = await startCapture(
         {
+          captureId: id,
           systemAudio: launch.systemAudio,
           ...(launch.micDeviceId ? { micDeviceId: launch.micDeviceId } : {}),
           ...(launch.systemProcessId ? { systemProcessId: launch.systemProcessId } : {}),
+          ...(launch.systemProcessExe ? { systemProcessExe: launch.systemProcessExe } : {}),
           ...(launch.systemDevice ? { systemDevice: launch.systemDevice } : {}),
         },
         (ev) => {
+          if (!current()) return;
           if (ev.kind === "frame") {
             if (!pausedRef.current && !interviewerSpeakingRef.current) client.sendAudioBytes(ev.channel, base64ToBytes(ev.pcm));
-          } else if (ev.kind === "status") {
-            // Device came back / switched: clear the "disconnected" note after a moment.
+            return;
+          }
+          const key = ev.channel === AUDIO_CHANNEL.mic ? "mic" : "system";
+          if (ev.kind === "status") {
+            // Device (or the meeting app) came back / switched: clear the "disconnected" note after a moment.
             const text = deviceStatusText(ev);
-            setCaptureNote(text);
+            note(key, text);
             if (text && (ev.state === "restored" || ev.state === "switched")) {
-              window.setTimeout(() => setCaptureNote((n) => (n === text ? null : n)), 4000);
+              window.setTimeout(() => setCaptureNotes((n) => (n[key] === text ? { ...n, [key]: null } : n)), 4000);
             }
           } else {
-            setCaptureNote(friendlyAudioError(ev.message));
+            note(key, friendlyAudioError(ev.message));
           }
         },
       );
-      const notes: string[] = [];
       if (launch.systemAudio && info.systemError) {
-        notes.push(`${friendlyAudioError(info.systemError)} Until then Orbit hears your microphone only.`);
+        note("system", `${friendlyAudioError(info.systemError)} Until then Orbit hears your microphone only.`);
       }
-      if (info.micError) notes.push(`${friendlyAudioError(info.micError)} The interviewer is still heard.`);
-      if (notes.length) setCaptureNote(notes.join(" "));
+      if (info.micError) note("mic", `${friendlyAudioError(info.micError)} The interviewer is still heard.`);
     } catch (err) {
-      setCaptureNote(friendlyAudioError(err));
+      note("start", friendlyAudioError(err));
     }
-  }, [client, launch.micDeviceId, launch.systemAudio, launch.systemProcessId, launch.systemDevice]);
+  }, [client, launch.micDeviceId, launch.systemAudio, launch.systemProcessId, launch.systemProcessExe, launch.systemDevice]);
 
   useEffect(() => {
     void startAudio();
     return () => {
-      void stopCapture();
+      void stopCapture(captureId.current);
+      captureId.current = 0;
     };
   }, [startAudio]);
 
@@ -218,7 +238,7 @@ export function LiveScreen({
   const buyMinutes = useCallback(() => void openUrl(`${WEB_URL}/billing`), []);
   useEffect(() => {
     if (!ending && live.state !== "ended") return;
-    void stopCapture();
+    void stopCapture(captureId.current);
     const done = () => onExit();
     if (limitEnded) return;
     if (live.state === "ended") {
@@ -232,12 +252,19 @@ export function LiveScreen({
   }, [ending, live.state, limitEnded, onExit, session.id]);
 
   const win = getCurrentWindow();
+  const captureLines = [captureNotes.start, captureNotes.mic, captureNotes.system].filter((t): t is string => Boolean(t));
   const notice =
-    captureNote || shotNote ? (
+    captureLines.length > 0 || shotNote ? (
       <div className="space-y-px">
-        {captureNote && (
+        {captureLines.length > 0 && (
           <div className="flex items-center gap-2 bg-amber-50 px-4 py-1.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
-            <span className="flex-1">{captureNote}</span>
+            <span className="flex-1">
+              {captureLines.map((line, i) => (
+                <span key={i} className="block">
+                  {line}
+                </span>
+              ))}
+            </span>
             <button type="button" onClick={() => void startAudio()} className={cx("font-medium underline", focusRing)}>
               Retry
             </button>
