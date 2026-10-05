@@ -87,6 +87,18 @@ _CODING_PROMPT = re.compile(r"\bgiven (?:a|an|two|the|n|k)\b|\breturn (?:the|all
 # Screen-share / call logistics that start like requests but aren't interview questions.
 _LOGISTICS = ("share your screen", "share my screen", "let me share", "can you see my screen", "can you hear me",
               "you're on mute", "you are on mute", "turn on your camera", "let me know when")
+# The interviewer checking in, a yes/no to say, not a question to answer: answered, they also cancelled the answer the
+# candidate was reading. Only as the whole (short) sentence: "Does that make sense, and how would you test it?" asks.
+_CHECK_INS = ("does that make sense", "does this make sense", "is that clear", "is this clear", "is my audio",
+              "is the audio", "can you hear", "are you able to hear", "are you able to see my", "is my screen",
+              "are you still there", "are you there", "can you see my",
+              "can you see what i", "can you see the document", "can you see the doc", "can you see the screen",
+              "do you see my screen", "do you need a minute", "do you need a moment", "do you need a second",
+              "do you need more time", "do you need some time", "shall we move on", "should we move on",
+              "can we move on", "ready to move on", "are you ready", "ready to start", "shall we start",
+              "should we start", "shall we begin", "any questions so far", "are we good", "all good", "sound good",
+              "is that okay", "is that ok", "are you okay with that", "good to go", "did i lose you", "did we lose you",
+              "are you with me", "tell me when you're ready", "tell me when you are ready")
 # Talk around the interview, never part of a question: the call itself and the interviewer's note-taking. Not carried
 # over onto the next question ("I'll make a note of that." <pause> "Let's do a coding question...").
 _ASIDES = ("you cut out", "you're cutting out", "you're breaking up", "you broke up", "you froze", "you're frozen",
@@ -394,7 +406,21 @@ def _is_noise(sentence: str) -> bool:
     toks = n.split()
     return (not toks or n in _FILLERS or bool(_WAIT_PHRASE.match(n))
             or any(n.startswith(p) for p in _PLEASANTRIES)
-            or (len(toks) <= 3 and all(t in _FILLER_TOKENS for t in toks)))
+            or (len(toks) <= 3 and all(t in _FILLER_TOKENS for t in toks))
+            or _is_reassurance(sentence, n))
+
+
+# Said to put the candidate at ease after asking: added to a question it restarted the answer being read ("How would
+# you design a rate limiter? <pause> Take your time, no rush."). One that also asks something isn't just this.
+_REASSURANCE = ("take your time", "no rush", "no pressure", "no worries", "whenever you're ready", "when you're ready",
+                "feel free to think", "think out loud", "take a moment", "take a second", "take a minute",
+                "take a few seconds", "you can start whenever", "go for it", "there's no wrong answer",
+                "there is no wrong answer")
+
+
+def _is_reassurance(sentence: str, n: str) -> bool:
+    return (len(n.split()) <= 10 and _without_openers(sentence).startswith(_REASSURANCE)
+            and not _detect_one(sentence, "interviewer").is_question)
 
 
 def _question_span(sentences: list[str]) -> tuple[int, int] | None:
@@ -613,6 +639,9 @@ def _detect_one(text: str, speaker: Speaker, ctx: DetectorContext | None = None)
         return result(0.02, QuestionType.small_talk)
     if any(p in norm for p in _LOGISTICS):
         reasons.append("call_logistics")
+        return result(0.05, QuestionType.small_talk)
+    if len(toks) <= 9 and _without_openers(raw).startswith(_CHECK_INS):
+        reasons.append("check_in")
         return result(0.05, QuestionType.small_talk)
 
     score = 0.0

@@ -90,9 +90,35 @@ AUDIO_BURST_BYTES = 32_000 * 6
 RECENT_TURN_IDS = 500
 MAX_SPEAKER_OVERRIDES = 200
 
-_CHAT_MODIFIERS = ("make", "rewrite", "shorter", "longer", "simpler", "simplify", "expand", "again", "rephrase",
-                   "give an example", "add an example", "in star", "star format", "more detail", "less detail",
-                   "more technical", "what should i say")
+# A chat message that changes the answer on screen ("make it shorter", "give an example", "rewrite it in STAR"), as
+# whole words: by substring, "against" was "again", "makes" was "make", "startups" was "in star", and questions like
+# "How do you protect against SQL injection?" re-answered the interviewer's last question instead.
+_REWRITE = re.compile(
+    r"\b(?:make|rewrite|shorter|shorten|longer|lengthen|simpler|simplify|expand|again|rephrase|redo|"
+    r"give an example|add an example|another example|in star|star format|more detail|less detail|more technical|"
+    r"less technical|more concise|more casual|more formal|what should i say)\b")
+# The answer itself, referred to ("make IT shorter", "expand on the second POINT").
+_ANSWER_REFS = frozenset({"it", "this", "that", "answer", "response", "version", "them", "point", "points", "part",
+                          "paragraph", "line", "bit", "one"})
+_REWRITE_FILLER = frozenset({
+    "please", "pls", "can", "could", "would", "you", "the", "a", "an", "and", "with", "in", "of", "for", "to", "me",
+    "my", "little", "lot", "more", "less", "much", "way", "just", "also", "now", "so", "too", "i", "we", "should",
+    "say", "okay", "ok", "thanks", "sound", "about", "on", "bit", "some", "into", "like", "really", "slightly",
+    "first", "second", "third", "last", "format", "style", "words", "version",
+})
+
+
+def is_rewrite_request(text: str) -> bool:
+    """A request to change the answer on screen, not a question of its own: a rewrite word, and nothing else said
+    but fillers and (at most a few words about) the answer itself. "Give an example of polymorphism in Java" is a new
+    question; "make it shorter and mention Kafka" is a rewrite."""
+    n = normalize(text)
+    if not _REWRITE.search(n):
+        return False
+    rest = [w for w in _REWRITE.sub(" ", n).split() if w not in _REWRITE_FILLER and w not in _ANSWER_REFS]
+    if not rest:
+        return True
+    return len(rest) <= 3 and any(w in _ANSWER_REFS for w in n.split())
 
 # A chat message that only asks for code for the question already on screen: "give me the code", "code it", "now in
 # Java", "what about C++?". Anything with a topic of its own ("code for binary search") is a new question.
@@ -149,6 +175,10 @@ MULTI_PART_EXTRA = 0.2
 MULTI_PART_MAX_FACTOR = 1.6
 
 SCREENSHOT_LABEL = "📷 Screenshot"
+# The last screenshot is kept for asking about it again ("Try again", "now in Java"), this long and this many times.
+SHOT_KEEP_MS = 10 * 60_000
+SHOT_REASKS = 3
+_SHOT_GONE = "That screenshot is no longer available. Take a new one to ask about it again."
 SCREENSHOT_PROMPT = (
     "The user captured a screenshot of their screen (it's attached). Read it carefully and answer exactly what "
     "it asks. A coding problem: say the approach, then the code, time/space complexity and edge cases. A "
@@ -275,6 +305,20 @@ class _Generation:
     out: _AnswerOut
     pinned: bool = False
     cancel_reason: str = "superseded"
+    question: str = ""  # what it answers
+    cancelling: bool = False  # cancel() was called: its handler is writing the "cancelled" bookkeeping
+
+    def cancel(self, reason: str) -> None:
+        self.cancel_reason = reason
+        self.cancelling = True
+        self.task.cancel()
+
+
+@dataclass
+class _KeptShot:
+    image: LLMImage
+    at_ms: int
+    reasks: int = 0
 
 
 @dataclass
@@ -325,6 +369,8 @@ class LiveEngine:
         self._last_interviewer_text = ""
         # The question whose latest answer had code: "make it shorter" on it, or a follow-up to it, keeps the code.
         self._coded_question: str | None = None
+        self._noted_qid: str | None = None  # the question the last memory entry is for
+        self._last_shot: _KeptShot | None = None
         self._gens: dict[str, _Generation] = {}
         self._active: str | None = None  # answer id currently shown/streaming
         self._answer_lock = asyncio.Lock()  # serializes _start_answer (no double generations)
@@ -386,6 +432,10 @@ class LiveEngine:
             log.debug("send failed for %s", type_)
 
     async def _set_state(self, state: LiveState) -> None:
+        if self._paused and state not in (LiveState.paused, LiveState.ended):
+            # An answer finishing, an error, STT reconnecting while paused: shown, they cleared the client's "Paused"
+            # (banner gone, audio sent again) while the server still dropped everything.
+            return
         if state != self.state:
             self.state = state
             await self.send("state.changed", {"state": state.value})
@@ -411,6 +461,12 @@ class LiveEngine:
                                                 "detail": "Connecting to transcription…"})
         # Both provider sockets handshake concurrently: sequential connects doubled time-to-ready.
         sessions = await asyncio.gather(*(self._stt.start(configs[c]) for c in channels))
+        if self._ended:
+            # end() ran while the sockets were still opening (End from the other device, the client's REST fallback
+            # during a slow reconnect): it had nothing to close then. Close them now and start nothing, or both
+            # streams stayed open (KeepAlive defeats the provider's idle timeout) with their pumps running for good.
+            await self._stt.stop()
+            return
         for channel, session in zip(channels, sessions, strict=True):
             self._stt_sessions[channel] = session
             self._stt_state[channel] = session.state
@@ -457,9 +513,10 @@ class LiveEngine:
             self._mock.stop()  # a next question being written during a pause: nobody will be asked it
         self._drop_speculation()
         for gen in list(self._gens.values()):
-            if not gen.task.done():
-                gen.cancel_reason = "session_ended"
-                gen.task.cancel()
+            # One already being cancelled (superseded just before End) is left to finish its bookkeeping: cancelled
+            # again, its "cancelled" record was never written.
+            if not gen.task.done() and not gen.cancelling:
+                gen.cancel("session_ended")
         await asyncio.gather(*(g.task for g in self._gens.values()), return_exceptions=True)
         for ch in ("mic", "system"):
             turn = self._turns[ch]
@@ -552,11 +609,21 @@ class LiveEngine:
             case "session.pause":
                 self._paused = True
                 self._drop_speculation()
+                # A question held in the "wait before answering" window, or a turn still open, must not fire or be
+                # continued on resume, however much later.
+                self._finalizer.reset()
+                for ch in ("mic", "system"):
+                    if (turn := self._turns[ch]) is not None and turn.text:
+                        await self._commit_turn(ch, turn)
+                    self._turns[ch] = None
                 await self._set_state(LiveState.paused)
                 await self.send("session.paused", {"state": "paused", "settings": self.settings.model_dump()})
             case "session.resume":
                 self._paused = False
+                self._finalizer.reset()
                 await self._set_state(LiveState.listening)
+                if self._stt_aggregate()[0] == "reconnecting":
+                    await self._set_state(LiveState.stt_reconnecting)
                 await self.send("session.resumed", {"state": "listening", "settings": self.settings.model_dump()})
             case "session.end":
                 await self.end()
@@ -577,8 +644,7 @@ class LiveEngine:
                 # Stop writing the answer on screen but keep what's there (Clear removes it).
                 gen = self._gens.get(self._active) if self._active else None
                 if gen is not None and gen.out.is_open and not gen.task.done():
-                    gen.cancel_reason = "stopped"
-                    gen.task.cancel()
+                    gen.cancel("stopped")
                     with contextlib.suppress(asyncio.CancelledError, Exception):
                         await gen.task
                     await self._set_state(LiveState.listening)
@@ -822,9 +888,15 @@ class LiveEngine:
         since = None
         if self._last_answer_at_ms is not None:
             since = (self.now_ms() - self._last_answer_at_ms) / 1000
+        previous = self.memory.questions[-1] if self.memory.questions else None
+        gen = self._gens.get(self._active) if self._active else None
+        if gen is not None and gen.question and gen.out.is_open and not gen.task.done():
+            # The answer on screen is still being written: its question is the one a follow-up refers to ("And what
+            # was the throughput?" while the Kafka answer streams), though it isn't in memory yet.
+            previous, since = gen.question, 0.0
         return DetectorContext(
             session_type=self.profile.session_type,
-            previous_question=self.memory.questions[-1] if self.memory.questions else None,
+            previous_question=previous,
             seconds_since_previous_answer=since,
         )
 
@@ -854,11 +926,11 @@ class LiveEngine:
 
     async def _on_fired(self, fired: FinalizedQuestion) -> None:
         if fired.trigger != "classify":
-            await self._on_question(fired.turn_id, fired.detection.question_text)
+            await self._on_question(fired.turn_id, fired.detection.question_text, continues=fired.continues)
         elif self.settings.auto_answer:  # click-to-answer mode never auto-answers, so don't pay to classify
-            self._spawn(self._classify_then_answer(fired.turn_id, fired.detection.question_text))
+            self._spawn(self._classify_then_answer(fired.turn_id, fired.detection.question_text, fired.continues))
 
-    async def _classify_then_answer(self, turn_id: str, text: str) -> None:
+    async def _classify_then_answer(self, turn_id: str, text: str, continues: bool = False) -> None:
         started = self._clock()
         # Start answering while the classifier decides: if it says "answer", the words are already there.
         self._drop_speculation()
@@ -880,15 +952,15 @@ class LiveEngine:
         if (spec is not None and spec.kind == "classify" and spec.question == text
                 and similarity(tokens(question), tokens(text)) >= CLASSIFY_SAME_QUESTION):
             question = text  # only lightly reworded: keep the answer that's already being written
-        await self._on_question(turn_id, question)
+        await self._on_question(turn_id, question, continues=continues)
         if self._spec is not None and self._spec.kind == "classify":
             self._drop_speculation()  # not used (a duplicate, or reworded into a different question)
 
-    async def _on_question(self, turn_id: str, text: str) -> None:
+    async def _on_question(self, turn_id: str, text: str, *, continues: bool = False) -> None:
         if not self.settings.auto_answer:
             return
         now = self.now_ms()
-        decision, prior_qid = self._dedup.check(turn_id, text, now)
+        decision, prior_qid = self._dedup.check(turn_id, text, now, continues=continues)
         if decision == DedupDecision.duplicate:
             return
         det = detect(text, "interviewer", self._detector_context())
@@ -919,14 +991,28 @@ class LiveEngine:
             # read loop (audio included).
             self._spawn(self._mock.next(self.now_ms()))
             return
-        # Prefer the question being listened to (it may span a pause) over just the latest utterance.
-        text = (question_text or self._finalizer.pending_question() or self._last_interviewer_text or
+        if question_text and question_text.strip() == SCREENSHOT_LABEL:
+            # "Try again" on a screenshot answer: the label means nothing to the model, the image does.
+            if (shot := self._kept_shot()) is None:
+                await self.send("error", {"code": "screenshot_expired", "message": _SHOT_GONE})
+                return
+            await self._answer_shot(shot)
+            return
+        # Prefer the question being listened to (it may span a pause, or have been closed by the candidate starting to
+        # answer) over just the latest utterance.
+        held = None if question_text else self._finalizer.pending_question(self.now_ms())
+        text = (question_text or held or self._last_interviewer_text or
                 next((t.text for t in reversed(self.memory.recent) if t.speaker == "interviewer"), "")).strip()
         if not text:
             await self.send("error", {"code": "no_question", "message": "No interviewer question to answer yet."})
             return
         det = detect(text, "interviewer", self._detector_context())
         qtype = det.question_type if det.is_question else classify_type(normalize(text))
+        if held:
+            # The question as the auto-answer would fire it ("Okay, great. What is…" → "What is…"), marked as
+            # answered: otherwise it fired again when the wait ended, as a second card that cancelled this answer.
+            text = det.question_text if det.is_question else text
+            self._finalizer.mark_answered(text)
         qid = str(uuid.uuid4())
         self._dedup.record(qid, "manual", text, self.now_ms())
         await self.send("question.detected", {"question_id": qid, "turn_id": None, "text": text,
@@ -936,14 +1022,20 @@ class LiveEngine:
         await self._start_answer(qid, text, qtype, det.is_follow_up, "manual")
 
     async def _chat(self, text: str) -> None:
-        low = text.lower()
         code_ask = is_code_request(text)
-        if self.memory.questions and (code_ask or any(m in low for m in _CHAT_MODIFIERS)):
+        if self.memory.questions and (code_ask or is_rewrite_request(text)):
             # A change to the last answer ("make it shorter", "give me the code", "now in Java"). Asked for code, or
             # rewriting an answer that had code, it stays a coding answer.
             q = self.memory.questions[-1]
+            images: list[LLMImage] = []
+            if q == SCREENSHOT_PROMPT:
+                # The question was the screenshot: without the image, the rewrite answered nothing it could see.
+                if (shot := self._kept_shot()) is None:
+                    await self.send("error", {"code": "screenshot_expired", "message": _SHOT_GONE})
+                    return
+                images = [shot]
             qtype = QuestionType.coding if code_ask or q == self._coded_question else classify_type(normalize(q))
-            await self._start_answer(None, q, qtype, True, "chat", instruction=text)
+            await self._start_answer(None, q, qtype, True, "chat", instruction=text, images=images)
         else:
             qtype = QuestionType.coding if code_ask else classify_type(normalize(text))
             await self._start_answer(None, text, qtype, False, "chat")
@@ -952,14 +1044,26 @@ class LiveEngine:
         for gen in list(self._gens.values()):
             if gen.task.done() or (gen.pinned and not include_pinned) or gen.answer_id == keep:
                 continue
-            gen.cancel_reason = reason
-            gen.task.cancel()
+            gen.cancel(reason)
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await gen.task
 
     async def answer_screenshot(self, image: LLMImage) -> str:
         """Answer whatever the captured screenshot shows (coding problem, MCQ, error, diagram…). Returns the
         question id; the answer streams like any other."""
+        self._last_shot = _KeptShot(image, self.now_ms())
+        return await self._answer_shot(image)
+
+    def _kept_shot(self) -> LLMImage | None:
+        """The last screenshot, for asking about it again ("Try again", "now in Java"): it isn't re-uploaded, and the
+        question text alone ("📷 Screenshot") means nothing to the model. Kept a few minutes, a few re-asks."""
+        shot = self._last_shot
+        if shot is None or self.now_ms() - shot.at_ms > SHOT_KEEP_MS or shot.reasks >= SHOT_REASKS:
+            return None
+        shot.reasks += 1
+        return shot.image
+
+    async def _answer_shot(self, image: LLMImage) -> str:
         qid = str(uuid.uuid4())
         qtype = QuestionType.coding if self.profile.session_type in ("coding", "assessment") else QuestionType.technical
         await self.send("question.detected", {"question_id": qid, "turn_id": None, "text": SCREENSHOT_LABEL,
@@ -988,22 +1092,22 @@ class LiveEngine:
             self._start_speculation(d.question_text, kind="hold")
 
     def _start_speculation(self, question: str, *, kind: str) -> None:
-        if self._ended or self._dedup.check("speculation", question, self.now_ms())[0] == DedupDecision.duplicate:
+        if self._ended or self._dedup.check("speculation", question, self.now_ms(),
+                                            continues=True)[0] == DedupDecision.duplicate:
             return
         det = detect(question, "interviewer", self._detector_context())
         aid = str(uuid.uuid4())
         out = _AnswerOut(self, speculative=True)
         task = asyncio.ensure_future(self._run_answer(aid, None, question, det.question_type, det.is_follow_up,
                                                       "auto", None, [], out))
-        gen = _Generation(aid, None, task, out)
+        gen = _Generation(aid, None, task, out, question=question)
         self._gens[aid] = gen
         self._spec = _Speculation(question, det.question_type, det.is_follow_up, gen, kind)
 
     def _drop_speculation(self) -> None:
         spec, self._spec = self._spec, None
         if spec is not None and not spec.gen.out.is_open and not spec.gen.task.done():
-            spec.gen.cancel_reason = "speculation"
-            spec.gen.task.cancel()
+            spec.gen.cancel("speculation")
 
     async def _start_answer(
         self, qid: str | None, question: str, qtype: QuestionType, is_follow_up: bool, source: str,
@@ -1017,11 +1121,14 @@ class LiveEngine:
                 # them, a call queued on this lock) would stream, and bill, after the session is over.
                 return
             spec, self._spec = self._spec, None
-            if not (spec is not None and source == "auto" and instruction is None and not images
+            # "Answer" pressed during the wait gets the answer that was already being written for it, too.
+            if not (spec is not None and source in ("auto", "manual") and instruction is None and not images
                     and spec.question == question and spec.qtype == qtype and spec.is_follow_up == is_follow_up
                     and not spec.gen.task.done()):
                 spec = None  # not this question: cancelled with the rest just below
             await self._cancel_active("superseded", keep=spec.gen.answer_id if spec else None)
+            if self._ended:
+                return  # end() ran while that cancel was awaited: a new answer would stream (and bill) after it
             if spec is not None:
                 # Started early, while the question was held: show it now, with whatever already streamed.
                 spec.gen.question_id = qid
@@ -1032,13 +1139,31 @@ class LiveEngine:
                 out = _AnswerOut(self, qid)
                 task = asyncio.ensure_future(
                     self._run_answer(aid, qid, question, qtype, is_follow_up, source, instruction, images or [], out))
-                self._gens[aid] = _Generation(aid, qid, task, out)
+                self._gens[aid] = _Generation(aid, qid, task, out, question=question)
                 self._active = aid
         # keep only recent generation handles
         if len(self._gens) > 20:
             for old in list(self._gens)[:-20]:
                 if self._gens[old].task.done():
                     del self._gens[old]
+
+    def _remember(self, qid: str | None, question: str, answer: LiveAnswer, source: str,
+                  instruction: str | None) -> None:
+        """What the candidate was shown goes into memory: follow-ups, rewrites and later answers build on it."""
+        if source == "chat" and instruction is not None:
+            if self.memory.answers:
+                self.memory.answers.pop()  # a rewrite ("make it shorter") replaces what the last answer said
+        elif qid is not None and qid == self._noted_qid and self.memory.questions:
+            # The same question again (grown after a pause, or finished after it was cut off): replace, don't repeat.
+            self.memory.questions[-1] = question
+            if self.memory.answers:
+                self.memory.answers.pop()
+        else:
+            self.memory.questions.append(question)
+        self._noted_qid = qid
+        self.memory.last_answer_brief = (answer.direct_answer + " " + " | ".join(answer.talking_points))[:600]
+        self.memory.note_answer(question, answer)
+        self._coded_question = question if answer.code is not None and answer.code.content else None
 
     def _answer_type(self, qtype: QuestionType) -> QuestionType:
         """The type an answer is written as. A follow-up to an answer that had code ("what if the array is sorted?")
@@ -1164,6 +1289,10 @@ class LiveEngine:
                 raise  # an early answer the interviewer outran: never shown, so nothing to tell
             gen = self._gens.get(aid)
             reason = gen.cancel_reason if gen else "superseded"
+            if streamed and reason in ("superseded", "stopped") and (source != "chat" or instruction is None):
+                # The candidate was reading it (maybe saying it) when the interviewer cut in: the follow-up builds on
+                # it. Forgotten, the next prompt's "previous answer" was the one before.
+                self._remember(out.question_id, question, finalize_grounding(parser.snapshot()), source, instruction)
             await out.send("answer.cancelled", {"answer_id": aid, "reason": reason})
             await self._rec.answer(aid, out.question_id, "cancelled", parser.snapshot().model_dump(), provider,
                                    model, first_token_ms, None)
@@ -1201,10 +1330,16 @@ class LiveEngine:
             await out.state(LiveState.listening)
             return
 
-        await out.opened.wait()  # an early answer completes only once its question has fired (cancelled otherwise)
+        try:
+            await out.opened.wait()  # an early answer completes only once its question has fired (cancelled otherwise)
+        except asyncio.CancelledError:
+            # Written in full while held, then dropped (the interviewer kept going): it still cost what it wrote.
+            await self._rec.provider_request(provider, model, request.request_type, usage,
+                                             int((self._clock() - started) * 1000), False)
+            raise
         qid = out.question_id
         total_ms = int((self._clock() - out.opened_at) * 1000)
-        final: LiveAnswer = finalize_grounding(parser.snapshot())
+        final: LiveAnswer = finalize_grounding(parser.finish())
         if cut_off:
             log.warning("answer %s hit its token budget (%d): trimmed to its last full sentence", aid,
                         request.max_tokens)
@@ -1213,13 +1348,7 @@ class LiveEngine:
                                              "latency": {"first_token_ms": first_token_ms, "total_ms": total_ms}})
         await out.state(LiveState.answer_complete)
         self._last_answer_at_ms = self.now_ms()
-        if source != "chat" or instruction is None:
-            self.memory.questions.append(question)
-        elif self.memory.answers:
-            self.memory.answers.pop()  # a rewrite ("make it shorter") replaces what the last answer said
-        self.memory.last_answer_brief = (final.direct_answer + " " + " | ".join(final.talking_points))[:600]
-        self.memory.note_answer(question, final)
-        self._coded_question = question if final.code is not None and final.code.content else None
+        self._remember(qid, question, final, source, instruction)
         await self._rec.answer(aid, qid, "completed", final.model_dump(), provider, model, first_token_ms,
                                total_ms)
         await self._rec.provider_request(provider, model, request.request_type, usage, total_ms, True)
@@ -1281,7 +1410,11 @@ def answer_mode(qtype: QuestionType, question: str, source: str, is_code: bool, 
         return "design"
     if "advanced_coding" not in features:
         return "normal"
-    code_bug = qtype == QuestionType.technical and bool(_CODE_CONTEXT.search(question))
-    if (is_code or code_bug) and _DEBUG_CUES.search(question):
+    # A bug to fix needs code to fix ("my code throws a KeyError", "this test is failing", a stack trace), whatever the
+    # type or session: by bug words alone, "Write a function that retries failed requests", "…without crashing on an
+    # empty list" or, in a coding session, "Tell me about a time you failed" were answered as a root cause and a diff.
+    code_bug = qtype in (QuestionType.coding, QuestionType.technical, QuestionType.follow_up) and bool(
+        _CODE_CONTEXT.search(question))
+    if code_bug and _DEBUG_CUES.search(question):
         return "debug"
     return "normal"

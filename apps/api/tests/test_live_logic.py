@@ -127,8 +127,12 @@ def test_dedup_growing_fragments() -> None:
     assert d.check("t1", "Tell me about yourself", 0)[0] == DedupDecision.new
     d.record("q1", "t1", "Tell me about yourself", 0)
     assert d.check("t1", "Tell me about yourself", 100) == (DedupDecision.duplicate, "q1")
-    assert d.check("t2", "Tell me about", 200)[0] == DedupDecision.duplicate
+    assert d.check("t1", "Tell me about", 200)[0] == DedupDecision.duplicate  # the same turn, still growing
+    assert d.check("t2", "Tell me about", 200, continues=True)[0] == DedupDecision.duplicate  # stitched onto it
     assert d.check("t1", "Tell me about yourself and your team", 300) == (DedupDecision.extends, "q1")
+    # another turn that merely starts the same way is a new question ("Why?" … "Why not use DynamoDB instead?")
+    assert d.check("t2", "Tell me about yourself and your team", 300)[0] == DedupDecision.new
+    assert d.check("t2", "Tell me about yourself and your team", 300, continues=True)[0] == DedupDecision.extends
 
 
 def test_dedup_similar_rephrase_within_cooldown_then_expires() -> None:

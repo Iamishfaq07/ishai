@@ -26,6 +26,7 @@ Talk around the interview ("I'll make a note of that.", "You cut out.") is never
 this is fully deterministic under test.
 """
 
+import re
 from collections import deque
 from dataclasses import dataclass, replace
 
@@ -66,6 +67,23 @@ RECENT_INTERVIEWER_MS = 8000
 # their words arrive - bounded, in case the VAD event was just noise.
 RESUME_HOLD_MS = 2000
 MAX_STITCHED_WORDS = 120
+# How long a manual "Answer" still gets the question the candidate's answer closed.
+CLOSED_QUESTION_MS = 120_000
+
+
+# What a candidate says while listening: none of it is the start of their answer. The mic is transcribed with filler
+# words on, so "Um, uh, okay" and "Okay, got it." have three words and used to end the interviewer's question.
+_BACKCHANNEL_PHRASES = re.compile(r"\b(?:(?:that )?makes sense|i see|got it|sounds good|fair enough|of course|"
+                                  r"for sure|go ahead|all right)\b")
+_BACKCHANNEL_WORDS = frozenset({"okay", "ok", "right", "so", "yeah", "yes", "yep", "yup", "sure", "mm", "mhm", "hmm",
+                                "uh", "um", "huh", "oh", "ah", "cool", "great", "nice", "alright", "perfect", "thanks",
+                                "interesting", "totally", "exactly", "absolutely", "definitely", "true", "wow", "and"})
+
+
+def answer_words(text: str) -> list[str]:
+    """The words of candidate speech that could be an answer: backchannels and fillers removed."""
+    n = _BACKCHANNEL_PHRASES.sub(" ", " ".join(tokens(text)))
+    return [w for w in n.split() if w not in _BACKCHANNEL_WORDS]
 
 
 @dataclass
@@ -74,6 +92,7 @@ class FinalizedQuestion:
     detection: Detection
     # endpoint | question_mark | silence | max_silence | classify (ambiguous: ask the classifier before answering)
     trigger: str
+    continues: bool = False  # stitched onto the question held before a pause: a grown version of it
 
 
 @dataclass
@@ -103,6 +122,9 @@ class QuestionFinalizer:
         self.context = DetectorContext()
         self._claim: tuple[int, str] | None = None  # candidate speech that may be the start of their answer
         self._recent: deque[tuple[int, list[str]]] = deque()  # recent interviewer words, for echo checks
+        # The last question the candidate's answer closed (whole, as it was held), for a manual "Answer" after they
+        # started talking ("Okay, let me think…"): it used to get only the interviewer's last sentence.
+        self._closed: tuple[str, int] | None = None
 
     def on_transcript(
         self, turn_id: str, text: str, now_ms: int, *, is_final: bool, endpoint: bool = False
@@ -145,7 +167,7 @@ class QuestionFinalizer:
         leaking into the mic) ends the interviewer's question: stop holding it (fire if complete) and never
         stitch later interviewer words onto it. Confirmed after ECHO_CONFIRM_MS (see tick)."""
         p = self._pending
-        if p is None or len(tokens(text)) < CANDIDATE_ANSWER_MIN_WORDS:
+        if p is None or len(answer_words(text)) < CANDIDATE_ANSWER_MIN_WORDS:
             return self._settle_claim(now_ms)
         if self._is_echo(text):
             return None
@@ -192,16 +214,29 @@ class QuestionFinalizer:
             p.resumed_ms = None
             p.endpoint_ms = now_ms - self.grace_ms
             fired = self._evaluate(now_ms)
+        if detect(p.full_text, "interviewer", self.context).is_question:
+            self._closed = (p.full_text, now_ms)
         self._pending = None
         return fired
 
-    def pending_question(self) -> str | None:
+    def pending_question(self, now_ms: int | None = None) -> str | None:
         """The whole question currently being listened to (for a manual "Answer"), including any parts said
-        before a pause — whether or not it already auto-fired."""
+        before a pause — whether or not it already auto-fired. If there's none (the candidate started answering, or
+        the interviewer only said "Okay." since), the question their answer closed, for CLOSED_QUESTION_MS."""
         p = self._pending
-        if p is None:
-            return None
-        return p.full_text if detect(p.full_text, "interviewer", self.context).is_question else None
+        if p is not None and detect(p.full_text, "interviewer", self.context).is_question:
+            return p.full_text
+        if self._closed is not None and (now_ms is None or now_ms - self._closed[1] <= CLOSED_QUESTION_MS):
+            return self._closed[0]
+        return None
+
+    def mark_answered(self, question: str) -> None:
+        """A manual "Answer" took the question being held: the auto-answer mustn't fire it again when the wait ends
+        (the texts differ when the turn opened with a reaction, "Okay, great. What is…"), only if it grows."""
+        p = self._pending
+        if p is not None:
+            p.fired_text = p.full_text
+            p.fired_question = question
 
     def _held_question(self, p: _Pending | None, now_ms: int) -> str:
         """If the interviewer is still going (no candidate answer in between, within the continuation window),
@@ -232,6 +267,8 @@ class QuestionFinalizer:
 
     def reset(self) -> None:
         self._pending = None
+        self._claim = None
+        self._closed = None
 
     def _evaluate(self, now_ms: int) -> FinalizedQuestion | None:
         p = self._pending
@@ -269,7 +306,8 @@ class QuestionFinalizer:
                 return None
         p.fired_text = full
         p.fired_question = d.question_text
-        return FinalizedQuestion(turn_id=p.turn_id, detection=d, trigger=trigger)
+        return FinalizedQuestion(turn_id=p.turn_id, detection=d, trigger=trigger,
+                                 continues=bool(p.held_question))
 
     def speculation(self, now_ms: int) -> Detection | None:
         """The question as it will fire, while it's held only for the patience window ("wait before answering"):

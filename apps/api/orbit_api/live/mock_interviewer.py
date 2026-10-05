@@ -99,17 +99,20 @@ class MockConfig(BaseModel):
 
 _CONTINUING = re.compile(r"(?:,|\b(?:and|but|so|because|or|which|that|then|like|um+|uh+|the|a|an|to|of|with|if))\s*$",
                          re.IGNORECASE)
-_WRAPPED_UP = re.compile(r"(?:\bso yeah|that'?s (?:it|all|about it|basically it)|and that'?s (?:how|why|what)\b.*|"
-                         r"i'?m done|that'?s my answer|hope that answers.*)[.!]?\s*$", re.IGNORECASE)
+# Only as the answer's last words: "…and that's why I picked Kafka, because the" is still going ("and that's why" with
+# anything after it matched, and the interviewer cut in after 1.2 s).
+_WRAPPED_UP = re.compile(r"(?:\bso yeah|that'?s (?:it|all|about it|basically it)|"
+                         r"and that'?s (?:how|why|what)\b[^,;.!?]{0,40}|"
+                         r"i'?m done|that'?s my answer|hope that answers[^,;.!?]{0,30})[.!]?\s*$", re.IGNORECASE)
 
 
 def answer_silence_ms(answer: str) -> int:
     """How long a pause ends this answer: longer if they trailed off mid-thought, shorter if they wrapped up."""
     text = answer.strip()
-    if _WRAPPED_UP.search(text):
-        return WRAPPED_UP_MS
     if _CONTINUING.search(text):
         return TRAILING_OFF_MS
+    if _WRAPPED_UP.search(text):
+        return WRAPPED_UP_MS
     if len(text.split()) >= LONG_ANSWER_WORDS:
         return LONG_ANSWER_MS
     return ANSWER_SILENCE_MS
