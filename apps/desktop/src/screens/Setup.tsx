@@ -67,6 +67,7 @@ import {
 import { PreflightPanel, type LocalAudioState } from "../PreflightPanel";
 import { TitleBar } from "../TitleBar";
 import { UpdateBanner } from "../UpdateBanner";
+import { confirmSessionDuringUpdate, useUpdate } from "../updates";
 import { WorkspaceBar } from "../WorkspaceBar";
 import type { DesktopLaunch } from "./Live";
 
@@ -208,6 +209,7 @@ export function SetupScreen({
   // Why Start didn't work, shown by the Start button (the screen scrolls; the general error sits far above it).
   const [startError, setStartError] = useState<{ text: string; buy: boolean } | null>(null);
   const [starting, setStarting] = useState(false);
+  const restartingToUpdate = useUpdate().phase === "installing";
   const plan = useEntitlements();
   const [mockPersona, setMockPersona] = useState<MockPersona>("hiring_manager");
   const [mockType, setMockType] = useState<MockInterviewType>("mixed");
@@ -373,6 +375,8 @@ export function SetupScreen({
   const start = async (e: FormEvent) => {
     e.preventDefault();
     if (blockers.length > 0 && !overrideBlockers) return;
+    // An update that's about to restart Orbit would end the session: ask first.
+    if (!(await confirmSessionDuringUpdate())) return;
     setStarting(true);
     setError(null);
     setStartError(null);
@@ -839,16 +843,23 @@ export function SetupScreen({
           )}
           <button
             type="submit"
-            disabled={starting || (negotiation && offer.trim().length < 2) || (blockers.length > 0 && !overrideBlockers)}
+            disabled={
+              starting ||
+              restartingToUpdate ||
+              (negotiation && offer.trim().length < 2) ||
+              (blockers.length > 0 && !overrideBlockers)
+            }
             className={cx("w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50", focusRing)}
           >
             {starting
               ? "Starting…"
-              : blockers.length > 0 && !overrideBlockers
-                ? outOfMinutes
-                  ? "Out of interview minutes"
-                  : `Fix ${blockers.length} problem${blockers.length === 1 ? "" : "s"} to start`
-                : "Start Session"}
+              : restartingToUpdate
+                ? "Restarting to update…"
+                : blockers.length > 0 && !overrideBlockers
+                  ? outOfMinutes
+                    ? "Out of interview minutes"
+                    : `Fix ${blockers.length} problem${blockers.length === 1 ? "" : "s"} to start`
+                  : "Start Session"}
           </button>
           {outOfMinutes && !starting && (
             <Button className="w-full" variant="secondary" onClick={() => openBilling()}>

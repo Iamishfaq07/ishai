@@ -138,6 +138,7 @@ pub fn run() {
             secrets::load_token,
             secrets::clear_token,
             updater::check_update,
+            updater::download_update,
             updater::install_update,
             quit_app,
         ])

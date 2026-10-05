@@ -46,7 +46,7 @@ run with `WEBVIEW2_USER_DATA_FOLDER` pointing at a temp folder. Clear both after
 | `stop_capture(captureId)` | Stops that capture's streams, and only that capture's (a late stop from the audio test can't end the live session's) |
 | `open_region_selector` / `capture_region(x,y,w,h)` / `capture_screen` | Transparent always-on-top selector over the current monitor; one-shot capture with xcap, cropped and PNG-encoded |
 | `save_token` / `load_token` / `clear_token` | Orbit session token in Windows Credential Manager (`access_token.ai.orbit.desktop`) |
-| `check_update` / `install_update` | Signed update check against the API's manifest; install refuses while a live session is running |
+| `check_update` / `download_update` / `install_update` | Signed update check against the API's manifest. Downloading (signature-checked) and installing are separate: installing closes Orbit, so it refuses while anything is capturing, and the UI lets the update wait until a session is over ("Restart to update") |
 | `quit_app` | Real quit (the close button can hide to the tray instead) |
 
 **Audio capture** is native WASAPI (`wasapi_capture.rs`, `process_loopback.rs`) and supervised:

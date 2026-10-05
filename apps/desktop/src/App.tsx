@@ -13,6 +13,7 @@ import { LiveScreen, type DesktopLaunch } from "./screens/Live";
 import { LoginScreen } from "./screens/Login";
 import { SettingsScreen } from "./screens/Settings";
 import { IS_MAC, SetupScreen } from "./screens/Setup";
+import { confirmSessionDuringUpdate } from "./updates";
 import { applyPanelMode, toggleMainWindow } from "./windowing";
 
 function onAppShortcut(action: GlobalAction): void {
@@ -125,9 +126,13 @@ export function App() {
 
   const home = () => setScreen({ name: "home" });
   // Rejoin an existing (live/created) session with default audio (system on Windows, default mic).
-  const resume = (session: OrbitSession) => setScreen({ name: "live", session, launch: { systemAudio: !IS_MAC } });
+  const resume = async (session: OrbitSession) => {
+    if (!(await confirmSessionDuringUpdate())) return;
+    setScreen({ name: "live", session, launch: { systemAudio: !IS_MAC } });
+  };
   // A drill is a mock round: the interviewer is Orbit itself, so only the (remembered) mic is captured.
-  const drill = (session: OrbitSession) => {
+  const drill = async (session: OrbitSession) => {
+    if (!(await confirmSessionDuringUpdate())) return;
     const mic = localStorage.getItem("orbit.micDeviceId");
     setScreen({ name: "live", session, launch: { systemAudio: false, ...(mic ? { micDeviceId: mic } : {}) } });
   };

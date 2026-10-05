@@ -26,6 +26,7 @@ import { api } from "../api";
 import { openBilling, useEntitlements } from "../credits";
 import { formatDate, formatDuration, SESSION_TYPE_LABEL } from "../format";
 import { TitleBar, TitleBarButton } from "../TitleBar";
+import { UpdateBanner } from "../UpdateBanner";
 
 const QUICK_START: Array<{ type: SessionType; title: string; body: string; icon: LucideIcon }> = [
   { type: "interview", title: "Interview", body: "Live answers grounded in your resume and the JD.", icon: Briefcase },
@@ -91,6 +92,8 @@ export function HomeScreen({
         <TitleBarButton icon={LogOut} label="Sign out" onClick={onSignOut} />
       </TitleBar>
       {notice}
+      {/* Also where "Restart to update" waits after a session, for an update downloaded before it. */}
+      <UpdateBanner />
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="mx-auto max-w-4xl space-y-6">
           <section className="glass-panel gradient-border relative animate-fade-up overflow-hidden rounded-3xl p-5 sm:p-7">

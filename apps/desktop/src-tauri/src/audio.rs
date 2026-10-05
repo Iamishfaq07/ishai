@@ -80,6 +80,8 @@ pub struct CaptureState(Mutex<Slot>);
 #[derive(Default)]
 struct Slot {
     current: Option<Running>,
+    /// The updater is handing over to the installer, which closes Orbit: no capture may start any more.
+    installing: bool,
 }
 
 struct Running {
@@ -100,9 +102,12 @@ impl CaptureState {
         self.slot().current.is_some()
     }
 
-    /// Claims the devices for capture `id`, stopping whatever had them.
+    /// Claims the devices for capture `id`, stopping whatever had them. Refused once an update is installing.
     fn begin(&self, id: u64) -> Result<(), String> {
         let mut slot = self.slot();
+        if slot.installing {
+            return Err("Orbit is restarting to finish an update.".into());
+        }
         if let Some(Running { stop: Some(tx), .. }) = slot.current.take() {
             let _ = tx.send(());
         }
@@ -139,6 +144,21 @@ impl CaptureState {
                 let _ = tx.send(());
             }
         }
+    }
+
+    /// For the updater, just before it runs the installer (which closes Orbit): true if nothing is capturing, and
+    /// from then on no capture can start. `end_install` undoes it if the installer didn't start.
+    pub fn begin_install(&self) -> bool {
+        let mut slot = self.slot();
+        if slot.current.is_some() {
+            return false;
+        }
+        slot.installing = true;
+        true
+    }
+
+    pub fn end_install(&self) {
+        self.slot().installing = false;
     }
 }
 
@@ -656,5 +676,17 @@ mod tests {
         let (tx, rx) = switch();
         assert!(state.started(2, tx));
         assert!(!stopped(&rx));
+    }
+
+    #[test]
+    fn an_install_waits_for_capture_and_then_blocks_it() {
+        let state = CaptureState::default();
+        state.begin(1).unwrap();
+        assert!(!state.begin_install());
+        state.stop(None);
+        assert!(state.begin_install());
+        assert!(state.begin(2).is_err());
+        state.end_install(); // the installer didn't start
+        assert!(state.begin(2).is_ok());
     }
 }

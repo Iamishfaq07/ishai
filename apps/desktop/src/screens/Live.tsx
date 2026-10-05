@@ -46,6 +46,7 @@ import { requestClose } from "../CloseDialog";
 import { useShortcutHandler, type GlobalAction } from "../globalShortcuts";
 import { GlassButton } from "../GlassControls";
 import { WindowButtons } from "../TitleBar";
+import { setLiveSession } from "../updates";
 import { applyPanelMode, setAlwaysOnTop } from "../windowing";
 
 export interface DesktopLaunch {
@@ -105,6 +106,11 @@ export function LiveScreen({
     localStorage.setItem(PIN_KEY, String(onTop));
     void setAlwaysOnTop(onTop);
   }, [onTop]);
+  // An update never installs (restarting Orbit) while this screen is open.
+  useEffect(() => {
+    setLiveSession(true);
+    return () => setLiveSession(false);
+  }, []);
 
   // ── Native audio capture → live socket ────────────────────────────────
   const pausedRef = useRef(false);

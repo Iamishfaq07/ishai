@@ -185,15 +185,20 @@ export interface UpdateInfo {
   notes: string | null;
   date: string | null;
 }
-export type UpdateProgress = { kind: "downloading"; downloaded: number; total: number | null } | { kind: "installing" };
+export type UpdateProgress = { kind: "downloading"; downloaded: number; total: number | null } | { kind: "verifying" };
 
 export function checkUpdate(apiUrl: string): Promise<UpdateInfo | null> {
   return invoke<UpdateInfo | null>("check_update", { apiUrl });
 }
 
-/** Downloads, verifies the signature, and hands off to the installer (which relaunches Orbit). */
-export function installUpdate(onProgress: (p: UpdateProgress) => void): Promise<void> {
+/** Downloads the update and verifies its signature. Nothing is installed yet. */
+export function downloadUpdate(onProgress: (p: UpdateProgress) => void): Promise<void> {
   const channel = new Channel<UpdateProgress>();
   channel.onmessage = onProgress;
-  return invoke<void>("install_update", { onEvent: channel });
+  return invoke<void>("download_update", { onEvent: channel });
+}
+
+/** Hands the downloaded update to the installer, which closes Orbit and relaunches it. Refused while capturing. */
+export function installUpdate(): Promise<void> {
+  return invoke<void>("install_update");
 }
