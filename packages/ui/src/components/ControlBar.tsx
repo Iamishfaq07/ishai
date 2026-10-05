@@ -84,7 +84,9 @@ export function ControlBar(props: ControlBarProps) {
 
   return (
     <div className="border-t border-zinc-200 px-3 py-2 dark:border-white/[0.06]">
-      <div className="flex items-center gap-1">
+      {/* Wraps rather than pushing End out of view when even the icon-only phone layout doesn't fit (320 px, or the
+          large text size). */}
+      <div className="flex flex-wrap items-center gap-1">
         <button
           type="button"
           onClick={props.onAnswer}
@@ -172,7 +174,9 @@ export function ControlBar(props: ControlBarProps) {
                 className={cx(btn, "text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10", focusRing)}
               >
                 <Square className="h-3.5 w-3.5" />
-                End
+                {/* Icon only on phones, like the buttons beside it (it asks before ending). */}
+                <span className="hidden sm:inline">End</span>
+                <span className="sr-only sm:hidden">End</span>
               </button>
             </>
           )}

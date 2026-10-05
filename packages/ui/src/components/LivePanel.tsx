@@ -69,7 +69,7 @@ function SessionClock({ startedAt, running, dragRegion }: { startedAt: number | 
   return (
     <span
       data-tauri-drag-region={dragRegion ? "" : undefined}
-      className="ml-auto font-mono text-xs tabular-nums text-zinc-500"
+      className="ml-auto shrink-0 font-mono text-xs tabular-nums text-zinc-500"
       aria-label="Session time"
     >
       {formatElapsed(elapsed)}
@@ -294,13 +294,16 @@ export function LivePanel(props: LivePanelProps) {
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      {/* One row that never pushes its buttons out of view (on a phone, End is a mock's only way to stop): the clock
+          and the buttons keep their size, and the status pill truncates when even that is too much (320 px). The title
+          is left to screen readers on phones and in the compact overlay: there "Reconnecting…" matters more. */}
       <header
         data-tauri-drag-region={props.dragRegion ? "" : undefined}
-        className="flex select-none items-center gap-2.5 border-b border-zinc-200 px-4 py-2.5 dark:border-white/[0.06]"
+        className="flex select-none items-center gap-1.5 border-b border-zinc-200 px-3 py-2.5 dark:border-white/[0.06] sm:gap-2.5 sm:px-4"
       >
         <OrbitLogo size={18} busy={live.state === "generating" || live.state === "streaming"} />
-        {compact && <h1 className="sr-only">{props.title ?? "Orbit"}</h1>}
-        {!compact && (
+        {(compact || !wide) && <h1 className="sr-only">{props.title ?? "Orbit"}</h1>}
+        {!compact && wide && (
           <h1
             data-tauri-drag-region={props.dragRegion ? "" : undefined}
             className="max-w-[40%] truncate font-display text-sm font-semibold tracking-tight"
@@ -320,7 +323,7 @@ export function LivePanel(props: LivePanelProps) {
             title={sideOpen ? "Hide transcript panel" : "Show transcript, chat and reading"}
             aria-label={sideOpen ? "Hide transcript panel" : "Show transcript panel"}
             className={cx(
-              "rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/5 dark:hover:text-zinc-200",
+              "shrink-0 rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/5 dark:hover:text-zinc-200",
               sideOpen && "text-indigo-600 dark:text-indigo-300",
               focusRing,
             )}
@@ -333,7 +336,7 @@ export function LivePanel(props: LivePanelProps) {
           onClick={() => props.onModeChange(compact ? "expanded" : "compact")}
           title={compact ? "Expand" : "Compact"}
           aria-label={compact ? "Switch to expanded mode" : "Switch to compact mode"}
-          className={cx("rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/5 dark:hover:text-zinc-200", focusRing)}
+          className={cx("shrink-0 rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/5 dark:hover:text-zinc-200", focusRing)}
         >
           {compact ? <Maximize2 className="h-3.5 w-3.5" /> : <Minimize2 className="h-3.5 w-3.5" />}
         </button>
@@ -343,7 +346,7 @@ export function LivePanel(props: LivePanelProps) {
             type="button"
             onClick={props.onEnd}
             disabled={ended}
-            className={cx("rounded px-1.5 text-xs text-rose-600 hover:bg-rose-50 disabled:opacity-40 dark:text-rose-400 dark:hover:bg-rose-950/40", focusRing)}
+            className={cx("shrink-0 rounded px-1.5 text-xs text-rose-600 hover:bg-rose-50 disabled:opacity-40 dark:text-rose-400 dark:hover:bg-rose-950/40", focusRing)}
           >
             End
           </button>
