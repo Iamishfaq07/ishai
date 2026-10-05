@@ -10,11 +10,13 @@ import { formatElapsed, useElapsed } from "../hooks/useElapsed";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useStickyScroll } from "../hooks/useStickyScroll";
 import { DEFAULT_HOTKEYS, useHotkeys, type HotkeyMap } from "../live/hotkeys";
-import { useAnswerHistory } from "../live/useAnswerHistory";
+import { CODING_LANGUAGES } from "../live/preferences";
+import { historyLabel, useAnswerHistory, type AnswerHistory } from "../live/useAnswerHistory";
 import { useInterviewerVoice } from "../live/useInterviewerVoice";
 import { useKeyPointProgress } from "../live/useKeyPointProgress";
 import { useReadAloud } from "../live/useReadAloud";
 import {
+  selectAskAgain,
   selectDisplayedAnswer,
   selectDisplayedQuestion,
   type AnswerView,
@@ -67,7 +69,7 @@ function SessionClock({ startedAt, running, dragRegion }: { startedAt: number | 
   return (
     <span
       data-tauri-drag-region={dragRegion ? "" : undefined}
-      className="ml-auto font-mono text-xs tabular-nums text-zinc-500"
+      className="ml-auto shrink-0 font-mono text-xs tabular-nums text-zinc-500"
       aria-label="Session time"
     >
       {formatElapsed(elapsed)}
@@ -108,6 +110,8 @@ export interface LivePanelProps {
   onEndOtherSession?: (sessionId: string) => Promise<void>;
   /** Where to buy more interview minutes (the billing page), offered when they run low or out. */
   onBuyMinutes?: () => void;
+  /** Open the session's transcript and review, offered once a mock round is over. */
+  onViewReport?: () => void;
   onScreenshot?: () => void;
   screenshotUnavailableReason?: string;
   hotkeys?: HotkeyMap;
@@ -162,8 +166,8 @@ export function LivePanel(props: LivePanelProps) {
   // Chat replies and screenshot answers aren't spoken to the interviewer: no checklist for those.
   const keyPoints = useKeyPointProgress(live, answer && (answer.source === "auto" || answer.source === "manual")
     ? answer : null);
-  const { history, index: historyIndex, browsing, newAnswer: newSinceBrowsing, step, backToLive } =
-    useAnswerHistory(live, actions);
+  const answerHistory = useAnswerHistory(live, actions);
+  const { step } = answerHistory;
   const turns = useMemo(
     () => live.turnOrder.map((id) => live.turns[id]).filter((t): t is TurnView => Boolean(t)),
     [live.turnOrder, live.turns],
@@ -209,8 +213,27 @@ export function LivePanel(props: LivePanelProps) {
   // The answer card and transcript are memoized: everything handed to them stays the same function between live
   // updates (it only changes with the answer or question it acts on).
   const answerId = answer?.answer_id ?? null;
-  const questionText = question?.text;
-  const retry = useCallback(() => actions.answer(questionText), [actions, questionText]);
+  const source = answer?.source;
+  // How the shown answer is asked again (see selectAskAgain), as plain values so the callbacks below stay put.
+  const again = selectAskAgain(live, answer);
+  const againVia = again?.via ?? null;
+  const againText = again?.text;
+  const screenshot = again?.via === "answer" && again.screenshot;
+  const pinnedId = live.pinnedAnswerId;
+  const viewedId = live.viewedAnswerId;
+  // Asking again from the card: show the new answer as it comes (a pinned or browsed one would hide it).
+  const followLive = useCallback(() => {
+    if (pinnedId) actions.pin(pinnedId, false);
+    if (viewedId) actions.viewAnswer(null);
+  }, [actions, pinnedId, viewedId]);
+  const retry = useMemo(() => {
+    if (!againVia) return undefined;
+    return () => {
+      followLive();
+      if (againVia === "chat") actions.chat(againText ?? "");
+      else actions.answer(againText);
+    };
+  }, [actions, againText, againVia, followLive]);
   const pin = useCallback(
     (pinned: boolean) => {
       if (answerId) actions.pin(answerId, pinned);
@@ -226,28 +249,44 @@ export function LivePanel(props: LivePanelProps) {
   );
   const codeLanguage = useCallback(
     (lang: CodingLanguage) => {
-      if (questionText !== undefined) actions.setCodingLanguage(lang, questionText);
+      followLive();
+      if (source === "chat") {
+        // A chat reply has no question to ask again: say it in chat, and the server rewrites the code it's about.
+        actions.setCodingLanguage(lang);
+        actions.chat(`Now in ${CODING_LANGUAGES.find((l) => l.value === lang)?.label ?? lang}`);
+      } else if (againVia === "answer" && againText !== undefined) {
+        actions.setCodingLanguage(lang, againText);
+      }
     },
-    [actions, questionText],
+    [actions, againText, againVia, followLive, source],
+  );
+  // A chat reply's picker only while it's the latest answer: "now in Java" applies to what the server answered last.
+  const offerLanguage = Boolean(
+    answer && !ended &&
+      (source === "chat"
+        ? answer.status === "complete" && answer.answer_id === live.currentAnswerId
+        : againVia === "answer" && againText !== undefined),
   );
 
   // "Shorter" / "Longer": step the answer length and re-ask the same question. Only for spoken answers to a
   // question (not chat replies or screenshots), and not while one is still streaming.
   const lengthIndex = LENGTH_STEPS.indexOf(live.settings.length);
   const canResize = Boolean(
-    answer && question && !ended && answer.status === "complete" && (answer.source === "auto" || answer.source === "manual"),
+    answer && againVia === "answer" && againText !== undefined && !screenshot && !ended && answer.status === "complete" &&
+      (source === "auto" || source === "manual"),
   );
   const shorterLength = LENGTH_STEPS[lengthIndex - 1];
   const longerLength = LENGTH_STEPS[lengthIndex + 1];
   const resizeTo = useCallback(
     (next: AnswerLength | undefined) => {
-      if (!next || questionText === undefined) return null;
+      if (!next || againVia !== "answer" || againText === undefined) return null;
       return () => {
+        followLive();
         actions.setLength(next);
-        actions.answer(questionText); // same socket, in order: the new length applies to this answer
+        actions.answer(againText); // same socket, in order: the new length applies to this answer
       };
     },
-    [actions, questionText],
+    [actions, againText, againVia, followLive],
   );
   const onShorter = useMemo(() => resizeTo(shorterLength), [resizeTo, shorterLength]);
   const onLonger = useMemo(() => resizeTo(longerLength), [resizeTo, longerLength]);
@@ -255,13 +294,16 @@ export function LivePanel(props: LivePanelProps) {
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      {/* One row that never pushes its buttons out of view (on a phone, End is a mock's only way to stop): the clock
+          and the buttons keep their size, and the status pill truncates when even that is too much (320 px). The title
+          is left to screen readers on phones and in the compact overlay: there "Reconnecting…" matters more. */}
       <header
         data-tauri-drag-region={props.dragRegion ? "" : undefined}
-        className="flex select-none items-center gap-2.5 border-b border-zinc-200 px-4 py-2.5 dark:border-white/[0.06]"
+        className="flex select-none items-center gap-1.5 border-b border-zinc-200 px-3 py-2.5 dark:border-white/[0.06] sm:gap-2.5 sm:px-4"
       >
         <OrbitLogo size={18} busy={live.state === "generating" || live.state === "streaming"} />
-        {compact && <h1 className="sr-only">{props.title ?? "Orbit"}</h1>}
-        {!compact && (
+        {(compact || !wide) && <h1 className="sr-only">{props.title ?? "Orbit"}</h1>}
+        {!compact && wide && (
           <h1
             data-tauri-drag-region={props.dragRegion ? "" : undefined}
             className="max-w-[40%] truncate font-display text-sm font-semibold tracking-tight"
@@ -281,7 +323,7 @@ export function LivePanel(props: LivePanelProps) {
             title={sideOpen ? "Hide transcript panel" : "Show transcript, chat and reading"}
             aria-label={sideOpen ? "Hide transcript panel" : "Show transcript panel"}
             className={cx(
-              "rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/5 dark:hover:text-zinc-200",
+              "shrink-0 rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/5 dark:hover:text-zinc-200",
               sideOpen && "text-indigo-600 dark:text-indigo-300",
               focusRing,
             )}
@@ -294,7 +336,7 @@ export function LivePanel(props: LivePanelProps) {
           onClick={() => props.onModeChange(compact ? "expanded" : "compact")}
           title={compact ? "Expand" : "Compact"}
           aria-label={compact ? "Switch to expanded mode" : "Switch to compact mode"}
-          className={cx("rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/5 dark:hover:text-zinc-200", focusRing)}
+          className={cx("shrink-0 rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/5 dark:hover:text-zinc-200", focusRing)}
         >
           {compact ? <Maximize2 className="h-3.5 w-3.5" /> : <Minimize2 className="h-3.5 w-3.5" />}
         </button>
@@ -304,7 +346,7 @@ export function LivePanel(props: LivePanelProps) {
             type="button"
             onClick={props.onEnd}
             disabled={ended}
-            className={cx("rounded px-1.5 text-xs text-rose-600 hover:bg-rose-50 disabled:opacity-40 dark:text-rose-400 dark:hover:bg-rose-950/40", focusRing)}
+            className={cx("shrink-0 rounded px-1.5 text-xs text-rose-600 hover:bg-rose-50 disabled:opacity-40 dark:text-rose-400 dark:hover:bg-rose-950/40", focusRing)}
           >
             End
           </button>
@@ -340,26 +382,23 @@ export function LivePanel(props: LivePanelProps) {
       <div className={cx("relative flex min-h-0 flex-1", sideVisible && "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]")}>
         <main className="flex min-h-0 min-w-0 flex-1 flex-col">
           {props.mockInterview ? (
-            <MockPanel live={live} actions={actions} voice={voice} ended={ended} />
+            <MockPanel
+              live={live}
+              actions={actions}
+              voice={voice}
+              ended={ended}
+              {...(props.onViewReport ? { onViewReport: props.onViewReport } : {})}
+            />
           ) : (
           <>
           <QuestionCard question={question} liveTurn={liveInterviewerTurn} compact={compact} />
           <div className="mx-4 h-px bg-gradient-to-r from-transparent via-zinc-200 to-transparent dark:via-white/10" />
-          {history.length > 1 && !live.pinnedAnswerId && (
-            <HistoryNav
-              index={historyIndex}
-              total={history.length}
-              browsing={browsing}
-              newAnswer={newSinceBrowsing}
-              onStep={step}
-              onLive={backToLive}
-            />
-          )}
+          {answerHistory.liveIndex > 0 && !live.pinnedAnswerId && <HistoryNav nav={answerHistory} />}
           <AnswerCard
             answer={answer}
             pinned={Boolean(answer && live.pinnedAnswerId === answer.answer_id)}
             onPin={pin}
-            onRetry={retry}
+            {...(retry ? { onRetry: retry } : {})}
             onStop={actions.stop}
             {...(props.ratings && answer ? { rating: props.ratings.get(answer.answer_id), onRate: rate } : {})}
             compact={compact}
@@ -368,8 +407,7 @@ export function LivePanel(props: LivePanelProps) {
             {...(keyPoints ? { onTogglePoint: keyPoints.toggle } : {})}
             reader={reader}
             {...(canResize ? { onShorter, onLonger } : {})}
-            // Screenshots can't be re-run (the image isn't kept), so their code has no language picker.
-            {...(answer && answer.source !== "screenshot" && question && !ended ? { onCodeLanguage: codeLanguage } : {})}
+            {...(offerLanguage ? { onCodeLanguage: codeLanguage } : {})}
           />
           </>
           )}
@@ -423,7 +461,7 @@ export function LivePanel(props: LivePanelProps) {
             {sideTab === "transcript" && (
               <TranscriptView turns={turns} onCorrectSpeaker={actions.correctSpeaker} />
             )}
-            {sideTab === "chat" && <ChatLog live={live} />}
+            {sideTab === "chat" && <ChatLog live={live} {...(!ended ? { onAsk: actions.chat } : {})} />}
             {sideTab === "reading" && <Teleprompter answer={answer} />}
             {sideTab === "chat" && <ChatInput ref={chatRef} onSend={actions.chat} disabled={ended} />}
           </aside>
@@ -534,7 +572,13 @@ function Banners({
         {label}
       </button>
     ) : undefined;
-  // Out of minutes before connecting (the ticket was refused with 402): reconnecting can't help, buying can.
+  const reconnect = onReconnect ? (
+    <button type="button" onClick={onReconnect} className={cx("shrink-0 font-medium underline", focusRing)}>
+      Reconnect
+    </button>
+  ) : undefined;
+  // Out of minutes before connecting (the ticket was refused with 402): buying helps, and Reconnect then picks the
+  // session up (minutes bought in another tab don't reconnect this one by themselves).
   const outOfMinutes = live.connectionInfo?.code === "http_402";
 
   const other = live.connectionInfo?.code === "live_session_active" ? live.connectionInfo.sessionId : undefined;
@@ -546,18 +590,19 @@ function Banners({
       action: <EndOtherButton onEnd={() => onEndOtherSession(other)} onDone={onReconnect} />,
     });
   } else if (live.connection === "closed" && live.state !== "ended" && live.connectionDetail && outOfMinutes) {
-    items.push({ key: "conn", tone: "error", text: live.connectionDetail, action: buy("Buy minutes") });
-  } else if (live.connection === "closed" && live.state !== "ended" && live.connectionDetail) {
     items.push({
       key: "conn",
       tone: "error",
       text: live.connectionDetail,
-      action: onReconnect ? (
-        <button type="button" onClick={onReconnect} className={cx("font-medium underline", focusRing)}>
-          Reconnect
-        </button>
-      ) : undefined,
+      action: (
+        <span className="flex shrink-0 items-center gap-3">
+          {buy("Buy minutes")}
+          {reconnect}
+        </span>
+      ),
     });
+  } else if (live.connection === "closed" && live.state !== "ended" && live.connectionDetail) {
+    items.push({ key: "conn", tone: "error", text: live.connectionDetail, action: reconnect });
   }
   if (live.mic.state === "error") items.push({ key: "mic", tone: "error", text: live.mic.detail ?? "Microphone unavailable." });
   if (live.system.state === "error")
@@ -625,12 +670,17 @@ function Banners({
   );
 }
 
-function ChatLog({ live }: { live: LiveViewState }) {
-  // Follow new replies like the transcript does — key on chat length + streamed length of the last reply.
+function ChatLog({ live, onAsk }: { live: LiveViewState; onAsk?: (text: string) => void }) {
+  // Follow new replies like the transcript does: key on the chat's length, how much of the last reply has streamed
+  // (replies are mostly prose), and its status and the "no reply" notes, which add a line.
   const last = live.chat[live.chat.length - 1];
-  const lastAnswer = last?.kind === "answer" ? live.answers[last.answer_id]?.answer : undefined;
-  const lastLen = lastAnswer ? lastAnswer.talking_points.length + (lastAnswer.code?.content.length ?? 0) : 0;
-  const { ref, onScroll } = useStickyScroll<HTMLOListElement>(`${live.chat.length}:${lastLen}`);
+  const lastReply = last?.kind === "answer" ? live.answers[last.answer_id] : undefined;
+  const a = lastReply?.answer;
+  const lastLen = a
+    ? a.direct_answer.length + a.talking_points.reduce((n, p) => n + p.length, 0) + (a.code?.content.length ?? 0)
+    : 0;
+  const notes = live.chat.reduce((n, c) => n + (c.kind === "user" && c.unanswered ? 1 : 0), 0);
+  const { ref, onScroll } = useStickyScroll<HTMLOListElement>(`${live.chat.length}:${lastLen}:${lastReply?.status}:${notes}`);
   if (live.chat.length === 0) {
     return (
       <p className="flex-1 px-4 py-6 text-center text-sm text-zinc-500">
@@ -647,12 +697,20 @@ function ChatLog({ live }: { live: LiveViewState }) {
     >
       {live.chat.map((entry) =>
         entry.kind === "user" ? (
-          <li key={entry.id} className="ml-8 rounded-2xl rounded-br-md bg-gradient-to-br from-indigo-500 to-indigo-700 px-3.5 py-2 text-white shadow-glow-sm">
-            {entry.text}
+          <li key={entry.id} className="ml-8">
+            <p className="rounded-2xl rounded-br-md bg-gradient-to-br from-indigo-500 to-indigo-700 px-3.5 py-2 text-white shadow-glow-sm">
+              {entry.text}
+            </p>
+            {entry.unanswered && (
+              <p className="mt-1 text-right text-xs text-rose-600 dark:text-rose-400">
+                {entry.unanswered.reason}{" "}
+                {onAsk && entry.unanswered.retryable && <ChatAction onClick={() => onAsk(entry.text)}>Send again</ChatAction>}
+              </p>
+            )}
           </li>
         ) : (
           <li key={entry.id} className="mr-4 rounded-2xl rounded-bl-md bg-zinc-100 px-3.5 py-2 ring-1 ring-zinc-200 dark:bg-white/[0.04] dark:ring-white/[0.06]">
-            <ChatAnswer answer={live.answers[entry.answer_id]} />
+            <ChatAnswer answer={live.answers[entry.answer_id]} {...(onAsk ? { onAsk } : {})} />
           </li>
         ),
       )}
@@ -660,10 +718,45 @@ function ChatLog({ live }: { live: LiveViewState }) {
   );
 }
 
-function ChatAnswer({ answer }: { answer: AnswerView | undefined }) {
+function ChatAction({ onClick, children }: { onClick: () => void; children: string }) {
+  return (
+    <button type="button" onClick={onClick} className={cx("font-medium underline", focusRing)}>
+      {children}
+    </button>
+  );
+}
+
+/** Why a chat reply stopped early, said in its bubble (it used to stay on "Thinking…" when nothing had come yet). */
+function stoppedNote(answer: AnswerView): string {
+  if (answer.cancel_reason === "superseded") {
+    return answer.has_content ? "Stopped part-way: a newer question took over." : "Stopped: a newer question took over.";
+  }
+  if (answer.cancel_reason === "session_ended") return "Stopped: the session ended.";
+  return answer.has_content ? "Stopped part-way." : "Stopped.";
+}
+
+function ChatAnswer({ answer, onAsk }: { answer: AnswerView | undefined; onAsk?: (text: string) => void }) {
   if (!answer) return null;
-  if (answer.status === "failed") return <span className="text-rose-600">{answer.error?.message ?? "Failed."}</span>;
-  if (!answer.has_content) return <span className="text-zinc-500">Thinking…</span>;
+  // Asking again sends the same message (a reply's message is known only on the computer that sent it).
+  const askAgain = onAsk && answer.prompt ? () => onAsk(answer.prompt as string) : undefined;
+  if (answer.status === "failed") {
+    return (
+      <span className="text-rose-600 dark:text-rose-400">
+        {answer.error?.message ?? "Failed."}{" "}
+        {askAgain && answer.error?.retryable !== false && <ChatAction onClick={askAgain}>Try again</ChatAction>}
+      </span>
+    );
+  }
+  if (!answer.has_content) {
+    if (answer.status === "cancelled") {
+      return (
+        <span className="text-zinc-500">
+          {stoppedNote(answer)} {askAgain ? <ChatAction onClick={askAgain}>Ask again</ChatAction> : "Ask again."}
+        </span>
+      );
+    }
+    return <span className="text-zinc-500">Thinking…</span>;
+  }
   const a = answer.answer;
   return (
     <div className="space-y-1">
@@ -688,51 +781,45 @@ function ChatAnswer({ answer }: { answer: AnswerView | undefined }) {
             .join(" · ")}
         </p>
       )}
+      {answer.status === "cancelled" && <p className="text-xs text-zinc-500">{stoppedNote(answer)}</p>}
     </div>
   );
 }
 
 /** "‹ 3 of 5 ›" through earlier answers, with a way back to the live one. */
-function HistoryNav(props: {
-  index: number;
-  total: number;
-  browsing: boolean;
-  newAnswer: boolean;
-  onStep: (delta: number) => void;
-  onLive: () => void;
-}) {
+function HistoryNav({ nav }: { nav: AnswerHistory }) {
   const navBtn = cx(
     "inline-flex items-center rounded-md px-1 py-0.5 text-sm text-zinc-500 hover:bg-zinc-100 disabled:opacity-30 dark:hover:bg-zinc-800",
     focusRing,
   );
   return (
     <div className="flex animate-fade-in items-center gap-1 px-4 pt-2 text-xs text-zinc-500 dark:text-zinc-400">
-      <button type="button" className={navBtn} onClick={() => props.onStep(-1)} disabled={props.index <= 0}
+      <button type="button" className={navBtn} onClick={() => nav.step(-1)} disabled={!nav.canPrev}
               title="Previous answer (Alt+←)" aria-label="Previous answer">
         <ChevronLeft className="h-4 w-4" />
       </button>
       <span className="tabular-nums" aria-live="polite">
-        {props.index + 1} of {props.total}
+        {historyLabel(nav)}
       </span>
-      <button type="button" className={navBtn} onClick={() => props.onStep(1)} disabled={props.index >= props.total - 1}
+      <button type="button" className={navBtn} onClick={() => nav.step(1)} disabled={!nav.canNext}
               title="Next answer (Alt+→)" aria-label="Next answer">
         <ChevronRight className="h-4 w-4" />
       </button>
       <span className="flex-1" />
-      {props.browsing && (
+      {nav.browsing && (
         <button
           type="button"
-          onClick={props.onLive}
+          onClick={nav.backToLive}
           className={cx(
             "flex items-center gap-1.5 rounded-full px-2 py-0.5 font-medium",
-            props.newAnswer
+            nav.newAnswer
               ? "animate-fade-up bg-indigo-600 text-white hover:bg-indigo-500"
               : "text-indigo-700 hover:bg-indigo-500/10 dark:text-indigo-300",
             focusRing,
           )}
         >
-          <span className={cx("h-1.5 w-1.5 rounded-full", props.newAnswer ? "animate-ping bg-white" : "bg-emerald-500")} />
-          {props.newAnswer ? "New answer — back to live" : "Back to live"}
+          <span className={cx("h-1.5 w-1.5 rounded-full", nav.newAnswer ? "animate-ping bg-white" : "bg-emerald-500")} />
+          {nav.newAnswer ? "New answer — back to live" : "Back to live"}
         </button>
       )}
     </div>

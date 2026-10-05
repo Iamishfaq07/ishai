@@ -12,6 +12,11 @@ describe("read aloud text", () => {
     expect(text).not.toContain("[");
   });
 
+  it("reads values in brackets (an example's input and output), which aren't fill-ins", () => {
+    expect(speechText(answer("For nums [2, 7, 11, 15] and target 9, I return [0, 1].")))
+      .toBe("For nums [2, 7, 11, 15] and target 9, I return [0, 1].");
+  });
+
   it("is empty when there's nothing to say", () => {
     expect(speechText(answer(""))).toBe("");
   });
@@ -37,7 +42,7 @@ describe("manual key point overrides", () => {
 
   it("a click ticks a point the transcript missed, and NEXT moves on", () => {
     const auto = scoreKeyPoints(POINTS, ANSWER, "");
-    const p = applyOverrides(auto, new Map([[0, true]]));
+    const p = applyOverrides(auto, new Map([[POINTS[0]!, true]]));
     expect(p.points[0]).toMatchObject({ covered: true, manual: true });
     expect(p.next).toBe(1);
   });
@@ -45,13 +50,13 @@ describe("manual key point overrides", () => {
   it("a click unticks a false match", () => {
     const auto = scoreKeyPoints(POINTS, ANSWER, "I start with the build");
     expect(auto.points[0]!.covered).toBe(true);
-    const p = applyOverrides(auto, new Map([[0, false]]));
+    const p = applyOverrides(auto, new Map([[POINTS[0]!, false]]));
     expect(p.points[0]!.covered).toBe(false);
     expect(p.next).toBe(0);
   });
 
   it("all ticked by hand: nothing is next", () => {
-    const p = applyOverrides(scoreKeyPoints(POINTS, ANSWER, ""), new Map([[0, true], [1, true], [2, true]]));
+    const p = applyOverrides(scoreKeyPoints(POINTS, ANSWER, ""), new Map(POINTS.map((label) => [label, true])));
     expect(p.next).toBeNull();
   });
 });

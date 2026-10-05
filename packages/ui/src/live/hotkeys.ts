@@ -112,12 +112,27 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+const NON_TEXT_INPUTS = new Set(["button", "checkbox", "color", "file", "hidden", "image", "radio", "range", "reset", "submit"]);
+
+/** Whether a key press goes into a text field (the chat box, a search field, anything contenteditable). */
+function isTyping(target: EventTarget | null | undefined): boolean {
+  const el = target as { tagName?: string; type?: string; isContentEditable?: boolean } | null | undefined;
+  if (!el) return false;
+  if (el.isContentEditable) return true;
+  const tag = el.tagName?.toLowerCase();
+  return tag === "textarea" || (tag === "input" && !NON_TEXT_INPUTS.has((el.type || "text").toLowerCase()));
+}
+
 /**
  * Runs the handler bound to this key press, if any. Nothing fires while a dialog is open: with "End this session?"
- * on screen, Ctrl+Enter mustn't generate an answer (or Ctrl+L pause listening) behind it.
+ * on screen, Ctrl+Enter mustn't generate an answer (or Ctrl+L pause listening) behind it. While typing in a text
+ * field only Ctrl/Cmd shortcuts apply (Ctrl/Cmd+Enter in the chat box still answers): the rest are text editing
+ * there, like Option+←/→ moving by word on macOS.
  */
 export function dispatchHotkey(
-  event: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "shiftKey" | "altKey" | "preventDefault">,
+  event: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "shiftKey" | "altKey" | "preventDefault"> & {
+    target?: EventTarget | null;
+  },
   map: HotkeyMap,
   handlers: Partial<Record<HotkeyAction, () => void>>,
   isMac: boolean,
@@ -125,6 +140,11 @@ export function dispatchHotkey(
   if (isDialogOpen()) return false;
   for (const action of Object.keys(map) as HotkeyAction[]) {
     if (matchesHotkey(event, map[action], isMac)) {
+      if (!parseCombo(map[action])?.mod && isTyping(event.target)) {
+        // Elsewhere Alt+←/→ is the browser's Back/Forward: in the chat box that would leave the live session.
+        if (!isMac && event.altKey && (event.key === "ArrowLeft" || event.key === "ArrowRight")) event.preventDefault();
+        return false;
+      }
       const handler = handlers[action];
       if (!handler) return false;
       event.preventDefault();

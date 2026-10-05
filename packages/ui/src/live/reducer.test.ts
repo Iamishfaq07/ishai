@@ -7,13 +7,18 @@ import {
   type ServerEventMap,
   type ServerEventType,
 } from "@orbit/types";
+import { SESSION_ENDED } from "./client";
 import {
+  CONNECTION_LOST,
+  SCREENSHOT_QUESTION,
   initialLiveState,
   liveReducer,
   selectAnswerHistory,
+  selectAskAgain,
   selectDisplayedAnswer,
   selectDisplayedQuestion,
   selectLatestInterviewerTurn,
+  selectLatestScreenshotQuestionId,
   type LiveAction,
   type LiveViewState,
 } from "./reducer";
@@ -194,6 +199,169 @@ describe("answers", () => {
   });
 });
 
+describe("chat replies", () => {
+  const chatStarted = (answerId: string) =>
+    ev("answer.started", {
+      answer_id: answerId,
+      question_id: null as unknown as string, // the server sends null: a chat reply answers no interviewer question
+      length: "standard",
+      reasoning: "light",
+      source: "chat",
+    });
+
+  it("show what was asked in chat as their question, not the interviewer's previous one", () => {
+    let s = run([
+      detected("q1"),
+      started("a1", "q1"),
+      { type: "local/chat_sent", id: "u1", text: "Give me an example", ts: 1 },
+      chatStarted("c1"),
+    ]);
+    expect(s.answers.c1?.prompt).toBe("Give me an example");
+    expect(selectDisplayedAnswer(s)?.answer_id).toBe("c1");
+    expect(selectDisplayedQuestion(s)).toMatchObject({ text: "Give me an example", source: "chat" });
+
+    // The interviewer asks something new: it shows on top, as it does over any previous answer.
+    s = run([detected("q2", "t2")], s);
+    expect(selectDisplayedQuestion(s)?.question_id).toBe("q2");
+    // Browsing back to the reply shows its message again.
+    s = run([{ type: "local/view", answer_id: "c1" }], s);
+    expect(selectDisplayedQuestion(s)).toMatchObject({ text: "Give me an example", source: "chat" });
+  });
+
+  it("are paired with their messages in order, even when two are sent before either reply starts", () => {
+    const s = run([
+      { type: "local/chat_sent", id: "u1", text: "first", ts: 1 },
+      { type: "local/chat_sent", id: "u2", text: "second", ts: 2 },
+      chatStarted("c1"),
+      chatStarted("c1"), // a repeat changes nothing
+      chatStarted("c2"),
+    ]);
+    expect([s.answers.c1?.prompt, s.answers.c2?.prompt]).toEqual(["first", "second"]);
+    expect(s.pendingChat).toEqual([]);
+  });
+
+  it("are asked again by sending their message (Try again), not by re-asking the interviewer's question", () => {
+    const s = run([
+      detected("q1"),
+      started("a1", "q1"),
+      { type: "local/chat_sent", id: "u1", text: "Give me an example", ts: 1 },
+      chatStarted("c1"),
+    ]);
+    expect(selectAskAgain(s, s.answers.c1 ?? null)).toEqual({ via: "chat", text: "Give me an example" });
+    // The phone companion doesn't know what was typed: nothing to send.
+    const companion = run([chatStarted("c9")]);
+    expect(selectAskAgain(companion, companion.answers.c9 ?? null)).toBeNull();
+  });
+});
+
+describe("a dropped connection", () => {
+  const open = { type: "local/connection", status: "open" } as const;
+  const drop = { type: "local/connection", status: "reconnecting", detail: "connection lost (1006)" } as const;
+
+  it("fails the answers it was writing (Try again instead of “Thinking…” and a Stop that does nothing)", () => {
+    const s = run([
+      open,
+      detected("q1"), started("a1", "q1"),
+      ev("answer.completed", { answer_id: "a1", answer: answer(["done"]), latency: { first_token_ms: 1, total_ms: 2 } }),
+      detected("q2", "t2"), started("a2", "q2"), ev("answer.chunk", { answer_id: "a2", partial: answer(["half"]) }),
+      detected("q3", "t3"), started("a3", "q3"), // still thinking
+      drop,
+    ]);
+    expect(s.answers.a1?.status).toBe("complete");
+    expect(s.answers.a2).toMatchObject({ status: "failed", error: CONNECTION_LOST, has_content: true });
+    expect(s.answers.a3).toMatchObject({ status: "failed", error: { retryable: true } });
+    // Closing for good does the same.
+    const closed = run([open, detected("q1"), started("a1", "q1"), { type: "local/connection", status: "closed" }]);
+    expect(closed.answers.a1?.status).toBe("failed");
+  });
+
+  it("fails a chat reply that was streaming, which keeps its message for Try again", () => {
+    const s = run([open, { type: "local/chat_sent", id: "u1", text: "Give me an example", ts: 1 }, started("c1", "q1", "chat"), drop]);
+    expect(s.answers.c1).toMatchObject({ status: "failed", prompt: "Give me an example" });
+  });
+
+  it("that can't come back because the session ended elsewhere ends it here too", () => {
+    const s = run([
+      open, detected("q1"), started("a1", "q1"),
+      drop,
+      { type: "local/connection", status: "closed", detail: "Session has ended", info: { code: SESSION_ENDED } },
+    ]);
+    expect(s.state).toBe("ended");
+    expect(s.answers.a1?.status).toBe("failed");
+    // Any other permanent close leaves the session as it was (the banner offers Reconnect).
+    const other = run([open, { type: "local/connection", status: "closed", detail: "Not authorized", info: { code: "http_401" } }]);
+    expect(other.state).toBe("idle");
+  });
+
+  it("marks a chat message whose reply hadn't started as lost, and still pairs a queued one after the reconnect", () => {
+    let s = run([open, { type: "local/chat_sent", id: "u1", text: "sent, then the socket died", ts: 1 }, drop]);
+    expect(s.chat[0]).toMatchObject({ kind: "user", unanswered: { retryable: true } });
+    expect(s.pendingChat).toEqual([]);
+    // Sent while reconnecting: the client queues it for the next connection, whose reply answers it.
+    s = run([{ type: "local/chat_sent", id: "u2", text: "queued", ts: 2 }, open, started("c1", "q1", "chat")], s);
+    expect(s.answers.c1?.prompt).toBe("queued");
+    expect(s.chat[1]).not.toHaveProperty("unanswered");
+  });
+});
+
+describe("a chat message the server refuses", () => {
+  it("stops waiting and says why, so the next reply is paired with the next message", () => {
+    const gone = "That screenshot is no longer available. Take a new one to ask about it again.";
+    let s = run([
+      { type: "local/chat_sent", id: "u1", text: "now in Java", ts: 1 },
+      ev("error", { code: "screenshot_expired", message: gone }),
+    ]);
+    expect(s.chat[0]).toMatchObject({ unanswered: { reason: gone, retryable: false } });
+    expect(s.lastError?.code).toBe("screenshot_expired");
+    s = run([{ type: "local/chat_sent", id: "u2", text: "What's a heap?", ts: 2 }, started("c1", "q1", "chat")], s);
+    expect(s.answers.c1?.prompt).toBe("What's a heap?");
+  });
+
+  it("too long: the server's validation error answers it", () => {
+    const s = run([
+      { type: "local/chat_sent", id: "u1", text: "x".repeat(4001), ts: 1 },
+      ev("error", { code: "invalid_event", message: "chat.message: String should have at most 4000 characters" }),
+    ]);
+    expect(s.pendingChat).toEqual([]);
+    expect(s.chat[0]).toMatchObject({ unanswered: { retryable: false } });
+  });
+
+  it("other errors leave waiting messages alone", () => {
+    const s = run([
+      { type: "local/chat_sent", id: "u1", text: "hi", ts: 1 },
+      ev("error", { code: "no_question", message: "No interviewer question to answer yet." }),
+    ]);
+    expect(s.pendingChat).toHaveLength(1);
+  });
+});
+
+describe("asking an answer again", () => {
+  const shot = (qid: string) =>
+    ev("question.detected", { question_id: qid, turn_id: null, text: SCREENSHOT_QUESTION, type: "technical", confidence: 1, is_follow_up: false });
+  const shotStarted = (answerId: string, qid: string) =>
+    ev("answer.started", { answer_id: answerId, question_id: qid, length: "standard", reasoning: "light", source: "screenshot" });
+
+  it("uses the answer's own question, even when a newer one is on the card", () => {
+    const s = run([detected("q1"), started("a1", "q1"), detected("q2", "t2")]);
+    expect(selectDisplayedQuestion(s)?.question_id).toBe("q2");
+    expect(selectAskAgain(s, selectDisplayedAnswer(s))).toEqual({ via: "answer", text: "Question q1", screenshot: false });
+  });
+
+  it("asks the screenshot question for the newest screenshot only (the server keeps that image)", () => {
+    let s = run([shot("s1"), shotStarted("a1", "s1")]);
+    expect(selectLatestScreenshotQuestionId(s)).toBe("s1");
+    expect(selectAskAgain(s, s.answers.a1 ?? null)).toEqual({ via: "answer", text: SCREENSHOT_QUESTION, screenshot: true });
+    s = run([shot("s2"), shotStarted("a2", "s2")], s);
+    expect(selectAskAgain(s, s.answers.a1 ?? null)).toBeNull();
+    expect(selectAskAgain(s, s.answers.a2 ?? null)).toMatchObject({ text: SCREENSHOT_QUESTION });
+  });
+
+  it("leaves the question to the server when it isn't known here", () => {
+    const s = run([ev("answer.chunk", { answer_id: "a9", partial: answer(["x"]) })]);
+    expect(selectAskAgain(s, s.answers.a9 ?? null)).toEqual({ via: "answer", text: undefined, screenshot: false });
+  });
+});
+
 describe("session + status", () => {
   it("tracks state, settings, and start time", () => {
     const s = run([
@@ -203,6 +371,61 @@ describe("session + status", () => {
     expect(s.state).toBe("question_detected");
     expect(s.settings.length).toBe("short");
     expect(s.startedAt).not.toBeNull();
+  });
+
+  it("keeps the settings this client asked for over the server's older echo", () => {
+    // session.started goes out before the server reads session.start, with the session's saved settings and the
+    // defaults for the rest (thinking, wait, code language).
+    const serverDefaults = { auto_answer: true, length: "standard", style: "natural", thinking: "off", response_timing: "balanced" } as const;
+    let s = initialLiveState({ auto_answer: true, length: "standard", style: "natural", thinking: "high", response_timing: "patient", coding_language: "java" });
+    s = run([ev("session.started", { state: "listening", settings: serverDefaults })], s);
+    expect(s.settings).toMatchObject({ thinking: "high", response_timing: "patient", coding_language: "java" });
+
+    // Changes made during the session survive the next connection's echo too.
+    s = run([{ type: "local/settings", settings: { auto_answer: false, length: "short", style: "concise" } }], s);
+    s = run([ev("session.started", { state: "listening", settings: serverDefaults })], s);
+    expect(s.settings).toMatchObject({ auto_answer: false, length: "short", style: "concise", thinking: "high" });
+    expect(s.requestedSettings).toEqual({
+      auto_answer: false, length: "short", style: "concise", thinking: "high", response_timing: "patient", coding_language: "java",
+    });
+  });
+
+  it("uses the server's settings for anything this client never set (the phone companion sets nothing)", () => {
+    const s = run([ev("session.started", { state: "listening", settings: { auto_answer: false, length: "detailed", style: "story" } })]);
+    expect(s.settings).toMatchObject({ auto_answer: false, length: "detailed", style: "story" });
+  });
+
+  it("stays paused through a reconnect until the user resumes", () => {
+    let s = run([
+      ev("session.started", { state: "listening", settings: { auto_answer: true, length: "standard", style: "natural" } }),
+      { type: "local/pause", paused: true },
+    ]);
+    expect(s.state).toBe("paused");
+    // The new connection's engine starts unpaused: no "Listening" flash while the pause is re-sent.
+    s = run([
+      { type: "local/connection", status: "reconnecting" },
+      { type: "local/connection", status: "open" },
+      ev("session.started", { state: "listening", settings: { auto_answer: true, length: "standard", style: "natural" } }),
+      ev("state.changed", { state: "listening" }),
+    ], s);
+    expect(s.state).toBe("paused");
+    s = run([ev("session.paused", { state: "paused", settings: { auto_answer: true, length: "standard", style: "natural" } })], s);
+    expect(s.userPaused).toBe(true);
+
+    s = run([{ type: "local/pause", paused: false }], s);
+    expect(s.state).toBe("listening");
+    s = run([ev("state.changed", { state: "speech_detected" })], s);
+    expect(s.state).toBe("speech_detected");
+  });
+
+  it("a chat reply written while paused doesn't make the UI look unpaused", () => {
+    const s = run([
+      ev("session.paused", { state: "paused", settings: { auto_answer: true, length: "standard", style: "natural" } }),
+      ev("state.changed", { state: "generating" }),
+      ev("state.changed", { state: "answer_complete" }),
+    ]);
+    expect(s.state).toBe("paused");
+    expect(run([ev("state.changed", { state: "ended" })], s).state).toBe("ended");
   });
 
   it("records provider and audio status", () => {

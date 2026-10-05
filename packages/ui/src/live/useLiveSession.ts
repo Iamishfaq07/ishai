@@ -59,9 +59,9 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
   const { apiBaseUrl, sessionId, initialSettings, autoConnect = true } = options;
   const [live, dispatch] = useReducer(liveReducer, initialSettings, initialLiveState);
 
-  // Latest settings/options through refs, so reconnects resend current state without rebuilding the client.
-  const settingsRef = useRef(live.settings);
-  settingsRef.current = live.settings;
+  // Latest state/options through refs, so reconnects resend current state without rebuilding the client.
+  const liveRef = useRef(live);
+  liveRef.current = live;
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
@@ -75,7 +75,7 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
         apiBaseUrl,
         sessionId,
         getTicket: () => optionsRef.current.getTicket(),
-        onOpen: (c) => c.send("session.start", { settings: settingsRef.current }),
+        onOpen: (c) => resumeSession(c, liveRef.current),
       }),
     [apiBaseUrl, sessionId],
   );
@@ -93,13 +93,18 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
     };
   }, [client, autoConnect]);
 
-  const liveRef = useRef(live);
-  liveRef.current = live;
-
   const updateSettings = useCallback(
     (patch: Partial<LiveSettings>) => {
       dispatch({ type: "local/settings", settings: patch });
       client.send("settings.update", patch);
+    },
+    [client],
+  );
+
+  const setPaused = useCallback(
+    (paused: boolean) => {
+      dispatch({ type: "local/pause", paused });
+      client.send(paused ? "session.pause" : "session.resume", {});
     },
     [client],
   );
@@ -146,10 +151,9 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
         updateSettings({ coding_language });
         if (regenerateFor) client.send("answer.request", { question_text: regenerateFor });
       },
-      pause: () => client.send("session.pause", {}),
-      resume: () => client.send("session.resume", {}),
-      togglePause: () =>
-        client.send(liveRef.current.state === "paused" ? "session.resume" : "session.pause", {}),
+      pause: () => setPaused(true),
+      resume: () => setPaused(false),
+      togglePause: () => setPaused(!liveRef.current.userPaused),
       end: () => client.send("session.end", {}),
       simulate: (fixture, speed) => client.send("dev.simulate", speed ? { fixture, speed } : { fixture }),
       correctSpeaker: (turnId, speaker) => {
@@ -158,8 +162,18 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
       },
       dismissError: () => dispatch({ type: "local/dismiss_error" }),
     }),
-    [client, updateSettings],
+    [client, updateSettings, setPaused],
   );
 
   return { live, actions, client };
+}
+
+/**
+ * What a (re)connect sends first: the settings the user asked for (the new connection's engine starts from the
+ * session's saved ones) and, if they paused, the pause (it starts listening). Sent before the queued messages are
+ * flushed, so a change made while disconnected that isn't rendered yet still arrives after these.
+ */
+export function resumeSession(client: Pick<LiveClient, "send">, live: LiveViewState): void {
+  client.send("session.start", { settings: live.requestedSettings });
+  if (live.userPaused && live.state !== "ended") client.send("session.pause", {});
 }

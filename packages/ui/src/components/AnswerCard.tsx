@@ -22,7 +22,8 @@ export interface AnswerCardProps {
   answer: AnswerView | null;
   pinned: boolean;
   onPin: (pinned: boolean) => void;
-  onRetry: () => void;
+  /** Ask again after a failure; left out when nothing can be (a chat reply whose message isn't known, say). */
+  onRetry?: () => void;
   /** Stop writing this answer, keeping what's there (shown while it streams). */
   onStop?: () => void;
   compact?: boolean;
@@ -399,7 +400,7 @@ export const AnswerCard = memo(function AnswerCard({
         {answer.status === "failed" && (
           <div className="rounded-lg border border-rose-300/60 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
             <p>{answer.error?.message ?? "The answer couldn’t be generated."}</p>
-            {answer.error?.retryable !== false && !readOnly && (
+            {answer.error?.retryable !== false && !readOnly && onRetry && (
               <button type="button" onClick={onRetry} className={cx("mt-2 font-medium underline", focusRing)}>
                 Try again
               </button>
@@ -574,7 +575,9 @@ export const AnswerCard = memo(function AnswerCard({
         {answer.status === "cancelled" && (
           <p className="mt-3 text-xs text-zinc-400">
             {answer.cancel_reason === "stopped"
-              ? "Stopped. Press Answer to write it again."
+              ? answer.source === "chat"
+                ? "Stopped. Ask again in chat for the whole reply."
+                : "Stopped. Press Answer to write it again."
               : answer.cancel_reason === "superseded"
                 ? "Stopped — a newer question took over."
                 : "Stopped."}

@@ -48,6 +48,7 @@ const OPEN = 1;
 /** Server close codes that mean "don't retry" (auth / session gone / ended / taken over elsewhere /
  * too many live sessions). Retrying 4010 would make two windows steal the session back and forth. */
 const TERMINAL_CLOSE_CODES = new Set([1000, 4001, 4003, 4004, 4009, 4010, 4029]);
+const CLOSE_SESSION_ENDED = 4009;
 const MAX_QUEUED_CONTROL = 64;
 
 type EventListener = (event: ServerEvent) => void;
@@ -56,6 +57,13 @@ export interface CloseInfo {
   code: string;
   sessionId?: string;
 }
+
+/**
+ * CloseInfo code for "this session is over" (ended from another window or device while this one was away): there's
+ * nothing to reconnect to, so the UI treats it as ended.
+ */
+export const SESSION_ENDED = "session_ended";
+
 type StatusListener = (status: ConnectionStatus, detail?: string, info?: CloseInfo) => void;
 
 export class LiveClient {
@@ -162,9 +170,12 @@ export class LiveClient {
       const status = e?.status;
       if (status === 401 || status === 402 || status === 403 || status === 404 || status === 409) {
         const sessionId = typeof e?.details?.session_id === "string" ? e.details.session_id : undefined;
+        // ApiError's default code says nothing ("http_error"): keep the status, so a 402 can offer "Buy minutes". The
+        // ticket's 409s that aren't "Session has ended" carry a code of their own (live_session_active,
+        // session_time_limit).
+        const known = e?.code && e.code !== "http_error" ? e.code : undefined;
         this.setStatus("closed", e?.message || "Not authorized for this session", {
-          // ApiError's default code says nothing ("http_error"): keep the status, so a 402 can offer "Buy minutes".
-          code: e?.code && e.code !== "http_error" ? e.code : `http_${status}`,
+          code: known ?? (status === 409 ? SESSION_ENDED : `http_${status}`),
           ...(sessionId ? { sessionId } : {}),
         });
         return;
@@ -204,7 +215,7 @@ export class LiveClient {
       this.socket = null;
       if (this.closedByUser) return;
       if (TERMINAL_CLOSE_CODES.has(ev.code)) {
-        this.setStatus("closed", ev.reason || undefined);
+        this.setStatus("closed", ev.reason || undefined, ev.code === CLOSE_SESSION_ENDED ? { code: SESSION_ENDED } : undefined);
         return;
       }
       this.scheduleRetry(ev.reason || `connection lost (${ev.code})`);

@@ -58,17 +58,18 @@ export function StatusPill({ state, connection, stt }: StatusPillProps) {
   return (
     // Not an aria-live region: this label changes on every state transition (listening → hearing →
     // detected → thinking → answering …); announcing each one would talk over the answer. The answer
-    // card's result region carries aria-live instead. `title` keeps it discoverable on hover.
+    // card's result region carries aria-live instead. `title` keeps it discoverable on hover. In a crowded header
+    // (a phone) the label truncates rather than pushing the buttons after it out of view.
     <span
       className={cx(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium tracking-wide ring-1 transition-colors",
+        "inline-flex min-w-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium tracking-wide ring-1 transition-colors",
         tone.text,
         tone.pill,
       )}
       title={meta.label}
     >
       <Indicator motion={"motion" in meta ? meta.motion : undefined} pulse={Boolean(meta.pulse)} dot={tone.dot} />
-      <span key={meta.label} className="animate-fade-in">
+      <span key={meta.label} className="min-w-0 animate-fade-in truncate">
         {meta.label}
       </span>
     </span>
@@ -82,7 +83,7 @@ function Indicator({ motion, pulse, dot }: { motion?: Motion; pulse: boolean; do
   if (motion === "think") return <Orb state="solving" className="-mx-1 -my-1.5" />;
   if (motion === "spin") return <Orb state="composing" className="-mx-1 -my-1.5" />;
   return (
-    <span className="relative flex h-2 w-2" aria-hidden="true">
+    <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
       {pulse && (
         <span className={cx("absolute inline-flex h-full w-full rounded-full opacity-60 motion-safe:animate-ping", dot)} />
       )}

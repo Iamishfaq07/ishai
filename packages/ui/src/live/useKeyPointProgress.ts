@@ -11,11 +11,12 @@ export interface KeyPoints {
 /**
  * Live key-point progress for the displayed answer. Ticks are sticky per answer (a point, once said, stays
  * ticked even if the transcript is later corrected), manual ticks override them, and everything resets when a
- * different answer is shown.
+ * different answer is shown. Both are kept by the point's label, so a label that changes while the answer streams
+ * starts unticked instead of inheriting the tick of what used to be in its place.
  */
 export function useKeyPointProgress(live: LiveViewState, answer: AnswerView | null): KeyPoints | null {
-  const memory = useRef<{ answerId: string | null; covered: Set<number> }>({ answerId: null, covered: new Set() });
-  const [overrides, setOverrides] = useState<{ answerId: string | null; map: Map<number, boolean> }>({
+  const memory = useRef<{ answerId: string | null; covered: Set<string> }>({ answerId: null, covered: new Set() });
+  const [overrides, setOverrides] = useState<{ answerId: string | null; map: Map<string, boolean> }>({
     answerId: null,
     map: new Map(),
   });
@@ -36,7 +37,7 @@ export function useKeyPointProgress(live: LiveViewState, answer: AnswerView | nu
     if (labels.length === 0) return null;
     if (memory.current.answerId !== answer.answer_id) memory.current = { answerId: answer.answer_id, covered: new Set() };
     const auto = scoreKeyPoints(labels, answer.answer.direct_answer, spoken, memory.current.covered);
-    auto.points.forEach((p, i) => p.covered && memory.current.covered.add(i));
+    auto.points.forEach((p) => p.covered && memory.current.covered.add(p.label));
     return applyOverrides(auto, overrides.answerId === answer.answer_id ? overrides.map : new Map());
   }, [answer, spoken, overrides]);
 
@@ -49,7 +50,7 @@ export function useKeyPointProgress(live: LiveViewState, answer: AnswerView | nu
       if (!answerId || !point) return;
       setOverrides((prev) => {
         const map = new Map(prev.answerId === answerId ? prev.map : []);
-        map.set(index, !point.covered);
+        map.set(point.label, !point.covered);
         return { answerId, map };
       });
     },

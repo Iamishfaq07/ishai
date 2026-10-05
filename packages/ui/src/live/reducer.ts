@@ -18,7 +18,7 @@ import {
   type Speaker,
   type MockRoundSummary,
 } from "@orbit/types";
-import type { CloseInfo, ConnectionStatus } from "./client";
+import { SESSION_ENDED, type CloseInfo, type ConnectionStatus } from "./client";
 
 export interface TurnView {
   turn_id: string;
@@ -36,7 +36,13 @@ export interface QuestionView {
   type: QuestionType;
   confidence: number;
   is_follow_up: boolean;
+  /** "chat": what was typed in chat, shown above a chat reply (not something the interviewer asked). */
+  source?: "chat";
 }
+
+/** The question the server gives a screenshot. Asking it again (`answer.request`) re-answers the last screenshot
+ * with its image (the server keeps the newest one). */
+export const SCREENSHOT_QUESTION = "📷 Screenshot";
 
 export type AnswerStatus = "streaming" | "complete" | "cancelled" | "failed";
 
@@ -56,10 +62,16 @@ export interface AnswerView {
   cancel_reason?: CancelReason | null;
   /** Index into turnOrder when the answer appeared (candidate turns from here count toward key points). */
   spoken_from: number;
+  /** Chat replies: what was asked in chat (the server's events don't say). Try again asks it again. */
+  prompt?: string;
 }
 
 export type ChatEntry =
-  | { kind: "user"; id: string; text: string; ts: number }
+  /**
+   * `unanswered`: no reply is coming, and why: the connection dropped before it started (sending it again can work),
+   * or the server refused the message (an expired screenshot to rewrite, a message too long).
+   */
+  | { kind: "user"; id: string; text: string; ts: number; unanswered?: { reason: string; retryable: boolean } }
   | { kind: "answer"; id: string; answer_id: string };
 
 export interface LiveViewState {
@@ -69,6 +81,17 @@ export interface LiveViewState {
   connectionInfo: CloseInfo | null;
   state: LiveState;
   settings: LiveSettings;
+  /**
+   * The settings this client asked for: the initial ones plus every change made here. They win over the server's
+   * copy, which can be older (`session.started` goes out before the server has read `session.start`, and a new
+   * connection's engine starts from the session's saved settings), and they're re-sent on every (re)connect.
+   */
+  requestedSettings: Partial<LiveSettings>;
+  /**
+   * The user paused listening. Kept across a reconnect (the new engine starts unpaused, so the pause is sent again),
+   * and the UI stays paused meanwhile instead of flashing "Listening".
+   */
+  userPaused: boolean;
   startedAt: number | null;
   turnOrder: string[];
   turns: Record<string, TurnView>;
@@ -83,7 +106,15 @@ export interface LiveViewState {
   pinnedAnswerId: string | null;
   /** Browsing an earlier answer (local only); null = follow the live answer. */
   viewedAnswerId: string | null;
+  /** The live answer when browsing began: a different one since then is a new answer to go back to. */
+  browseFromAnswerId: string | null;
   chat: ChatEntry[];
+  /**
+   * Chat messages still waiting for their reply, oldest first: the server answers them in order. `sentOpen`: it went
+   * out on an open socket, so if that drops the reply is lost; one sent while disconnected waits in the client's
+   * queue for the next connection.
+   */
+  pendingChat: Array<{ id: string; text: string; sentOpen: boolean }>;
   mic: AudioStatus;
   system: AudioStatus;
   providers: Partial<Record<ProviderKind, ProviderStatus>>;
@@ -112,6 +143,7 @@ export type LocalAction =
   | { type: "local/view"; answer_id: string | null }
   | { type: "local/chat_sent"; id: string; text: string; ts: number }
   | { type: "local/settings"; settings: Partial<LiveSettings> }
+  | { type: "local/pause"; paused: boolean }
   | { type: "local/speaker"; turn_id: string; speaker: Speaker }
   | { type: "local/dismiss_error" };
 
@@ -124,6 +156,8 @@ export function initialLiveState(settings: Partial<LiveSettings> = {}): LiveView
     connectionInfo: null,
     state: "idle",
     settings: { ...DEFAULT_LIVE_SETTINGS, ...settings },
+    requestedSettings: { ...settings },
+    userPaused: false,
     startedAt: null,
     turnOrder: [],
     turns: {},
@@ -134,8 +168,10 @@ export function initialLiveState(settings: Partial<LiveSettings> = {}): LiveView
     currentQuestionId: null,
     currentAnswerId: null,
     viewedAnswerId: null,
+    browseFromAnswerId: null,
     pinnedAnswerId: null,
     chat: [],
+    pendingChat: [],
     mic: { state: "idle" },
     system: { state: "idle" },
     providers: {},
@@ -155,8 +191,58 @@ export function selectDisplayedAnswer(s: LiveViewState): AnswerView | null {
 
 export function selectDisplayedQuestion(s: LiveViewState): QuestionView | null {
   const answer = selectDisplayedAnswer(s);
-  if ((s.pinnedAnswerId || s.viewedAnswerId) && answer) return s.questions[answer.question_id] ?? null;
-  return s.currentQuestionId ? (s.questions[s.currentQuestionId] ?? null) : null;
+  if ((s.pinnedAnswerId || s.viewedAnswerId) && answer) {
+    return answer.source === "chat" ? chatQuestion(answer) : (s.questions[answer.question_id] ?? null);
+  }
+  if (s.currentQuestionId) return s.questions[s.currentQuestionId] ?? null;
+  // A chat reply sits under what was asked in chat, not the interviewer's previous question.
+  return answer?.source === "chat" ? chatQuestion(answer) : null;
+}
+
+function chatQuestion(answer: AnswerView): QuestionView {
+  return {
+    question_id: `chat:${answer.answer_id}`,
+    turn_id: null,
+    text: answer.prompt ?? "",
+    type: answer.answer.type,
+    confidence: 1,
+    is_follow_up: false,
+    source: "chat",
+  };
+}
+
+/** The newest screenshot's question: the only screenshot the server can answer again. */
+export function selectLatestScreenshotQuestionId(s: LiveViewState): string | null {
+  for (let i = s.questionOrder.length - 1; i >= 0; i--) {
+    const q = s.questions[s.questionOrder[i] as string];
+    if (q?.text === SCREENSHOT_QUESTION) return q.question_id;
+  }
+  return null;
+}
+
+export type AskAgain =
+  | { via: "chat"; text: string }
+  /** `text` undefined: the question isn't known here, so the server answers the one it's listening to. */
+  | { via: "answer"; text: string | undefined; screenshot: boolean };
+
+/**
+ * How an answer is asked again (Try again, Shorter/Longer, another code language), or null when it can't be:
+ * - a chat reply: its chat message, sent again (the phone companion never sees what was typed);
+ * - a screenshot: the screenshot question, which the server answers with the newest image it kept, so only the
+ *   newest screenshot can be;
+ * - anything else: its own question. Not simply the one on the card: a newly detected question shows above the
+ *   previous answer until its own answer starts.
+ */
+export function selectAskAgain(s: LiveViewState, answer: AnswerView | null): AskAgain | null {
+  if (!answer) return null;
+  if (answer.source === "chat") return answer.prompt ? { via: "chat", text: answer.prompt } : null;
+  const own = s.questions[answer.question_id]?.text;
+  if (answer.source === "screenshot" || own === SCREENSHOT_QUESTION) {
+    return answer.question_id === selectLatestScreenshotQuestionId(s)
+      ? { via: "answer", text: SCREENSHOT_QUESTION, screenshot: true }
+      : null;
+  }
+  return { via: "answer", text: own, screenshot: false };
 }
 
 /**
@@ -199,6 +285,53 @@ function patchAnswer(s: LiveViewState, id: string, patch: Partial<AnswerView>): 
   return { ...s, answers: { ...s.answers, [id]: { ...existing, ...patch } } };
 }
 
+export const CONNECTION_LOST: ProtocolError = {
+  code: "connection_lost",
+  message: "The connection dropped before this answer finished.",
+  retryable: true,
+};
+
+/**
+ * The socket is gone, and the server's engine for it with everything in flight: no answer it was writing will
+ * finish (its answer.cancelled can't arrive, and the next connection's engine has no active answer, so Stop can't
+ * reach it), and no chat message sent on it will be answered. Fail those answers so Try again shows instead of
+ * "Thinking…" forever, and mark the messages.
+ */
+function interrupt(s: LiveViewState): LiveViewState {
+  let answers = s.answers;
+  for (const a of Object.values(s.answers)) {
+    if (a.status !== "streaming") continue;
+    if (answers === s.answers) answers = { ...s.answers };
+    answers[a.answer_id] = { ...a, status: "failed", error: CONNECTION_LOST };
+  }
+  const lost = new Set(s.pendingChat.filter((p) => p.sentOpen).map((p) => p.id));
+  const next = answers === s.answers ? s : { ...s, answers };
+  return unanswered(next, lost, { reason: "The connection dropped before Orbit replied.", retryable: true });
+}
+
+/** These chat messages won't get a reply: they stop waiting (so a later reply isn't taken for theirs) and say why. */
+function unanswered(
+  s: LiveViewState,
+  ids: ReadonlySet<string>,
+  why: { reason: string; retryable: boolean },
+): LiveViewState {
+  if (ids.size === 0) return s;
+  return {
+    ...s,
+    pendingChat: s.pendingChat.filter((p) => !ids.has(p.id)),
+    chat: s.chat.map((c) => (c.kind === "user" && ids.has(c.id) ? { ...c, unanswered: why } : c)),
+  };
+}
+
+/**
+ * Errors the server sends instead of a chat reply: a rewrite of a screenshot it no longer keeps, or a message it
+ * refused (too long). It handles chat messages in order, so it's the oldest one still waiting. ("screenshot_expired"
+ * also answers a screenshot's Try again; with a chat message waiting at that same moment, that one is taken for it.)
+ */
+function refusesChat(error: { code: string; message: string }): boolean {
+  return error.code === "screenshot_expired" || (error.code === "invalid_event" && error.message.startsWith("chat.message"));
+}
+
 function placeholderAnswer(answer_id: string, question_id: string): AnswerView {
   return {
     answer_id,
@@ -218,8 +351,14 @@ function placeholderAnswer(answer_id: string, question_id: string): AnswerView {
 export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState {
   switch (action.type) {
     // ── local ────────────────────────────────────────────────────────────
-    case "local/connection":
-      return { ...s, connection: action.status, connectionDetail: action.detail ?? null, connectionInfo: action.info ?? null };
+    case "local/connection": {
+      const next = { ...s, connection: action.status, connectionDetail: action.detail ?? null, connectionInfo: action.info ?? null };
+      if (action.status === "open") return next;
+      // Ended while this client was away (from another window or device): it never got session.ended, and
+      // reconnecting can't work, so it's over here too (capture stops, the page can point to the review).
+      const over = action.status === "closed" && action.info?.code === SESSION_ENDED;
+      return interrupt(over ? { ...next, state: "ended" } : next);
+    }
 
     case "local/pin": {
       if (!action.pinned) {
@@ -229,16 +368,46 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
     }
 
     case "local/clear":
-      return { ...s, currentQuestionId: null, currentAnswerId: null, pinnedAnswerId: null, viewedAnswerId: null };
+      return {
+        ...s,
+        currentQuestionId: null,
+        currentAnswerId: null,
+        pinnedAnswerId: null,
+        viewedAnswerId: null,
+        browseFromAnswerId: null,
+      };
 
-    case "local/view":
-      return { ...s, viewedAnswerId: action.answer_id && action.answer_id in s.answers ? action.answer_id : null };
+    case "local/view": {
+      const viewed = action.answer_id && action.answer_id in s.answers ? action.answer_id : null;
+      return {
+        ...s,
+        viewedAnswerId: viewed,
+        browseFromAnswerId: viewed === null ? null : s.viewedAnswerId === null ? s.currentAnswerId : s.browseFromAnswerId,
+      };
+    }
 
     case "local/chat_sent":
-      return { ...s, chat: [...s.chat, { kind: "user", id: action.id, text: action.text, ts: action.ts }] };
+      return {
+        ...s,
+        chat: [...s.chat, { kind: "user", id: action.id, text: action.text, ts: action.ts }],
+        pendingChat: [...s.pendingChat, { id: action.id, text: action.text, sentOpen: s.connection === "open" }],
+      };
 
     case "local/settings":
-      return { ...s, settings: { ...s.settings, ...action.settings } };
+      return {
+        ...s,
+        settings: { ...s.settings, ...action.settings },
+        requestedSettings: { ...s.requestedSettings, ...action.settings },
+      };
+
+    case "local/pause":
+      // Shown right away (also while disconnected: the pause is queued, and re-sent on the next connect).
+      if (s.state === "ended") return s;
+      return {
+        ...s,
+        userPaused: action.paused,
+        state: action.paused ? "paused" : s.state === "paused" ? "listening" : s.state,
+      };
 
     case "local/speaker": {
       const turn = s.turns[action.turn_id];
@@ -249,20 +418,27 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
       return { ...s, lastError: null };
 
     // ── session ──────────────────────────────────────────────────────────
+    // The server's settings are the base; what this client asked for goes on top (the server applies it from
+    // `session.start` / `settings.update`, but its echo can predate them).
     case "session.started":
       return {
         ...s,
-        state: action.data.state,
-        settings: action.data.settings,
+        // A new engine starts listening; a user who paused stays paused (the hook sends the pause again).
+        state: s.userPaused ? "paused" : action.data.state,
+        settings: { ...action.data.settings, ...s.requestedSettings },
         startedAt: s.startedAt ?? action.ts,
       };
     case "session.paused":
+      return { ...s, userPaused: true, state: action.data.state, settings: { ...action.data.settings, ...s.requestedSettings } };
     case "session.resumed":
+      return { ...s, userPaused: false, state: action.data.state, settings: { ...action.data.settings, ...s.requestedSettings } };
     case "session.ended":
-      return { ...s, state: action.data.state, settings: action.data.settings };
+      return { ...s, state: action.data.state, settings: { ...action.data.settings, ...s.requestedSettings } };
 
     case "state.changed":
-      return { ...s, state: action.data.state };
+      // Paused, the server still reports work it does for the user (a chat reply streaming, transcription
+      // reconnecting) and then "listening", while it isn't listening: stay paused until they resume.
+      return { ...s, state: s.userPaused && action.data.state !== "ended" ? "paused" : action.data.state };
 
     case "audio.mic_status":
       return { ...s, mic: action.data };
@@ -341,6 +517,9 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
     case "answer.started": {
       const { answer_id, question_id, length, reasoning, source } = action.data;
       const existing = s.answers[answer_id];
+      const threaded = s.chat.some((c) => c.kind === "answer" && c.answer_id === answer_id);
+      // A new chat reply answers the oldest message still waiting: the server handles chat messages in order.
+      const asked = source === "chat" && !threaded ? s.pendingChat[0] : undefined;
       const view: AnswerView = {
         ...(existing ?? placeholderAnswer(answer_id, question_id)),
         question_id,
@@ -349,6 +528,7 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
         source,
         // Transcript position when this answer appeared: candidate speech after it counts toward its key points.
         spoken_from: existing?.spoken_from ?? s.turnOrder.length,
+        ...(asked ? { prompt: asked.text } : {}),
       };
       const seen = answer_id in s.answers;
       return {
@@ -356,11 +536,11 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
         answers: { ...s.answers, [answer_id]: view },
         answerOrder: seen ? s.answerOrder : [...s.answerOrder, answer_id],
         currentAnswerId: answer_id,
-        currentQuestionId: question_id in s.questions ? question_id : s.currentQuestionId,
-        chat:
-          source === "chat" && !s.chat.some((c) => c.kind === "answer" && c.answer_id === answer_id)
-            ? [...s.chat, { kind: "answer", id: `a-${answer_id}`, answer_id }]
-            : s.chat,
+        // A chat reply's "question" is its chat message (see selectDisplayedQuestion), until the interviewer asks
+        // something new.
+        currentQuestionId: source === "chat" ? null : question_id in s.questions ? question_id : s.currentQuestionId,
+        chat: source === "chat" && !threaded ? [...s.chat, { kind: "answer", id: `a-${answer_id}`, answer_id }] : s.chat,
+        pendingChat: asked ? s.pendingChat.slice(1) : s.pendingChat,
       };
     }
     case "answer.chunk": {
@@ -412,8 +592,11 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
     case "answer.failed":
       return patchAnswer(s, action.data.answer_id, { status: "failed", error: action.data.error });
 
-    case "error":
-      return { ...s, lastError: action.data };
+    case "error": {
+      const next = { ...s, lastError: action.data };
+      const oldest = refusesChat(action.data) ? next.pendingChat[0] : undefined;
+      return oldest ? unanswered(next, new Set([oldest.id]), { reason: action.data.message, retryable: false }) : next;
+    }
 
     default: {
       const _exhaustive: never = action;
