@@ -446,6 +446,31 @@ def test_credits_spent_earlier_dont_shrink_a_plan_allowance(monkeypatch: pytest.
         gen.close()
 
 
+def test_a_beat_racing_the_final_usage_write_is_not_an_error(client: TestClient,
+                                                             monkeypatch: pytest.MonkeyPatch) -> None:
+    """session.end right after connecting: the recorder's final write can insert the connection's row while the first
+    heartbeat is inserting it too. The beat failed with an IntegrityError (logged as a failed heartbeat)."""
+    h = _register(client)
+    uid = client.get("/v1/auth/me", headers=h).json()["id"]
+    sid = client.post("/v1/sessions", headers=h, json={"title": "quick end"}).json()["id"]
+    key = f"live:{uuid.uuid4()}"
+    final = UsageEvent(user_id=uid, session_id=sid, metric="live_seconds", quantity=30, pool=credits.POOL,
+                       idempotency_key=key)
+
+    async def final_write_first() -> None:
+        async with sessionmaker()() as db:
+            db.add(final)
+            await db.commit()
+
+    async def looked_before_it_landed(db: Any, event: UsageEvent) -> None:
+        db.add(event)  # the beat's lookup ran before the final write's insert: it inserts too
+
+    client.portal.call(final_write_first)  # type: ignore[union-attr]
+    monkeypatch.setattr(routes, "upsert_usage", looked_before_it_landed)
+    left = client.portal.call(routes._commit_live_seconds, uid, sid,  # type: ignore[union-attr]
+                              InterviewTime(key, pool=credits.POOL), 5)
+    assert left == 20 * 60 - 30  # the final write's 30 seconds are what counts
+
 def test_existing_usage_is_given_the_grant_it_was_metered_on() -> None:
     """The migration that added usage.pool replays the admin's grants from the audit log, as set_access applied them."""
     path = Path(__file__).parents[1] / "alembic" / "versions" / "45a95e374d53_usage_pool.py"

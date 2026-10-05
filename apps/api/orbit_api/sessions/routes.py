@@ -21,6 +21,7 @@ from fastapi import (
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits, jobs
@@ -638,7 +639,12 @@ async def _commit_live_seconds(user_id: str, session_id: str, minutes: Interview
         pool = usage_pool(plan)
         minutes.pool = minutes.pool or pool
         await upsert_usage(db, minutes.event(user_id, session_id, seconds))
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError:
+            # The session ended while this beat ran (the client's session.end): the recorder's final write inserted
+            # the row first, with the whole connection's time.
+            await db.rollback()
         if pool != minutes.pool:
             minutes.switch(pool, seconds)
         remaining = await minutes_remaining(db, user_id, session_type, plan)
