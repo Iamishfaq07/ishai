@@ -34,7 +34,9 @@ run a bare `tauri build` for a release.
 
 **Test builds** that must not touch your real sign-in: compile with `ORBIT_KEYRING_SERVICE=ai.orbit.desktop.test` and
 run with `WEBVIEW2_USER_DATA_FOLDER` pointing at a temp folder. Clear both afterwards with
-`Remove-Item Env:NAME`, because an empty-but-set value still takes effect.
+`Remove-Item Env:NAME`, because an empty-but-set value still takes effect. Orbit is single-instance (launching it again
+brings the running one forward); a test build runs under its keyring service as its identifier, so it's a separate app
+from the installed Orbit: it runs next to it, and keeps its own window positions.
 
 ## What's native (Rust, `src-tauri/src`)
 

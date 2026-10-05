@@ -76,7 +76,20 @@ fn show_main(app: &tauri::AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let mut context = tauri::generate_context!();
+    // A test build (secrets.rs) is a separate app on this PC: with its own identifier the single-instance guard
+    // never hands a test launch over to the installed Orbit (or the reverse), and window positions are kept apart.
+    if let Some(identifier) = secrets::test_build_identifier() {
+        context.config_mut().identifier = identifier;
+    }
+
     tauri::Builder::default()
+        // First, per the plugin's docs: a second launch (Start menu, shortcut) while Orbit runs, maybe hidden in the
+        // tray, brings this window back instead of starting another Orbit whose tray icon and global shortcuts
+        // would clash with this one's.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            show_main(app)
+        }))
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
@@ -142,7 +155,7 @@ pub fn run() {
             updater::install_update,
             quit_app,
         ])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("error while running Orbit");
 }
 
