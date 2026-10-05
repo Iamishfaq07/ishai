@@ -16,27 +16,66 @@ const STOP = new Set(
     .split(" "),
 );
 
-/** Abbreviations labels use for things people say in full ("PR" — "pull request"), as stems. */
-const ALIASES: Record<string, string[]> = {
-  pr: ["pull", "reque"], prs: ["pull", "reque"], ci: ["conti", "integ"], cd: ["conti", "deliv", "deplo"],
-  db: ["datab"], k8s: ["kuber"], api: ["inter"], auth: ["authe", "authz"], authn: ["authe"], authz: ["autho"],
-  sla: ["servi", "level"], slo: ["servi", "level", "objec"], ml: ["machi", "learn"], qa: ["quali", "testi"],
+/**
+ * Abbreviations labels use for things people say in full ("PR": "pull request"), each expansion as the starts of its
+ * words. An expansion counts only when all of it is said, word after word: matching any one stem of it ticked "CI/CD
+ * pipeline" from "okay let me continue", "API design" from "interesting design problem", "Small PRs" from "a small
+ * request" and "Define the SLA" from "at a high level I would define".
+ */
+const ALIASES: Record<string, string[][]> = {
+  pr: [["pull", "request"]],
+  prs: [["pull", "request"]],
+  ci: [["continuous", "integrat"]],
+  cd: [["continuous", "deliver"], ["continuous", "deploy"]],
+  db: [["database"]],
+  k8s: [["kubernetes"]],
+  api: [["application", "programming", "interface"]],
+  auth: [["authenticat"], ["authoriz"], ["authoris"]],
+  authn: [["authenticat"]],
+  authz: [["authoriz"], ["authoris"]],
+  sla: [["service", "level", "agreement"]],
+  slo: [["service", "level", "objective"]],
+  ml: [["machine", "learning"]],
+  qa: [["quality", "assurance"]],
 };
+
+function words(text: string): string[] {
+  return text.toLowerCase().match(/[a-z0-9+#]+/g) ?? [];
+}
 
 export function contentWords(text: string): Set<string> {
   const out = new Set<string>();
-  for (const raw of text.toLowerCase().match(/[a-z0-9+#]+/g) ?? []) {
+  for (const raw of words(text)) {
     if (raw.length < 2 || STOP.has(raw)) continue;
     out.add(raw.length > 5 ? raw.slice(0, 5) : raw);
   }
   return out;
 }
 
-/** A label's words plus the full forms of its abbreviations: a hit on either counts. */
-function labelWords(label: string): Set<string> {
-  const words = contentWords(label);
-  for (const w of [...words]) for (const alias of ALIASES[w] ?? []) words.add(alias);
-  return words;
+/** Some text, ready to match: its content-word stems, and all its words in order (for abbreviation expansions). */
+interface Said {
+  stems: Set<string>;
+  words: string[];
+}
+
+function said(text: string): Said {
+  return { stems: contentWords(text), words: words(text) };
+}
+
+function saysExpansion(said: string[], expansion: string[]): boolean {
+  for (let i = 0; i + expansion.length <= said.length; i++) {
+    if (expansion.every((start, j) => (said[i + j] as string).startsWith(start))) return true;
+  }
+  return false;
+}
+
+/** How many of a label's words `text` has: the word itself, or for an abbreviation all of its expansion. */
+function labelHits(label: Set<string>, text: Said): number {
+  let n = 0;
+  for (const w of label) {
+    if (text.stems.has(w) || (ALIASES[w] ?? []).some((expansion) => saysExpansion(text.words, expansion))) n += 1;
+  }
+  return n;
 }
 
 function sentences(text: string): string[] {
@@ -77,41 +116,42 @@ export interface KeyPointProgress {
   next: number | null;
 }
 
-/** Pure scoring: which points `spoken` covers. `alreadyCovered` keeps earlier ticks (never un-ticks). */
+/**
+ * Pure scoring: which points `spoken` covers. `alreadyCovered` keeps earlier ticks (never un-ticks), by label: a
+ * label that has changed since (the answer was still streaming) is scored as it is now.
+ */
 export function scoreKeyPoints(
   labels: string[],
   answerText: string,
   spoken: string,
-  alreadyCovered: ReadonlySet<number> = new Set(),
+  alreadyCovered: ReadonlySet<string> = new Set(),
 ): KeyPointProgress {
-  const said = contentWords(spoken);
-  const answerSentences = sentences(answerText).map(contentWords);
+  const heard = said(spoken);
+  const answerSentences = sentences(answerText).map(said);
   let cursor = 0; // align points to answer sentences in order
-  const points = labels.map((label, i) => {
+  const points = labels.map((label) => {
     const plain = contentWords(label); // what "most of the label" is measured against
-    const words = labelWords(label); // + abbreviation expansions, which also count as hits
     let support = new Set<string>();
     let best = 0;
     const from = cursor;
     for (let j = from; j < answerSentences.length; j++) {
-      const score = overlap(words, answerSentences[j]!);
+      const score = labelHits(plain, answerSentences[j]!);
       if (score > best) {
         best = score;
-        support = answerSentences[j]!;
+        support = answerSentences[j]!.stems;
         cursor = j;
       }
     }
-    let labelHits = overlap(plain, said);
-    for (const w of plain) if (!said.has(w) && (ALIASES[w] ?? []).some((a) => said.has(a))) labelHits += 1;
+    const hits = labelHits(plain, heard);
     const needed = Math.max(1, Math.ceil(plain.size * 0.6));
-    const byLabel = plain.size > 0 && labelHits >= needed;
+    const byLabel = plain.size > 0 && hits >= needed;
     // Sharing generic topic words with a long sentence ("build", "scan") isn't enough on its own: a looser match
     // must also include one of the point's own words.
-    const sentenceHits = overlap(support, said);
+    const sentenceHits = overlap(support, heard.stems);
     const bySentence =
       support.size >= 4 &&
-      (sentenceHits >= support.size * 0.45 || (labelHits >= 1 && sentenceHits >= Math.max(3, support.size * 0.3)));
-    return { label, covered: alreadyCovered.has(i) || byLabel || bySentence };
+      (sentenceHits >= support.size * 0.45 || (hits >= 1 && sentenceHits >= Math.max(3, support.size * 0.3)));
+    return { label, covered: alreadyCovered.has(label) || byLabel || bySentence };
   });
   return { points, next: nextPoint(points) };
 }
@@ -126,12 +166,13 @@ function nextPoint(points: PointProgress[]): number | null {
 
 /**
  * The candidate's own clicks win over the automatic ticks: `true` ticks a point they said (the transcript missed
- * it), `false` unticks one they didn't say (a false match). NEXT then moves accordingly.
+ * it), `false` unticks one they didn't say (a false match). NEXT then moves accordingly. Keyed by label, like the
+ * automatic ticks: a click applies to that point, not to whatever later sits in its place.
  */
-export function applyOverrides(progress: KeyPointProgress, overrides: ReadonlyMap<number, boolean>): KeyPointProgress {
+export function applyOverrides(progress: KeyPointProgress, overrides: ReadonlyMap<string, boolean>): KeyPointProgress {
   if (overrides.size === 0) return progress;
-  const points = progress.points.map((p, i) => {
-    const manual = overrides.get(i);
+  const points = progress.points.map((p) => {
+    const manual = overrides.get(p.label);
     return manual === undefined ? p : { ...p, covered: manual, manual: true };
   });
   return { points, next: nextPoint(points) };

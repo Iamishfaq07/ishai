@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contentWords, fallbackPoints, scoreKeyPoints } from "./coverage";
+import { applyOverrides, contentWords, fallbackPoints, scoreKeyPoints } from "./coverage";
 
 const ANSWER =
   "I'd start at the pull request and the build, so problems show up before anything ships. " +
@@ -39,9 +39,39 @@ describe("key point coverage", () => {
   });
 
   it("never un-ticks, and reports done when everything is covered", () => {
-    const p = scoreKeyPoints(POINTS, ANSWER, "unrelated words", new Set([0, 1, 2, 3, 4]));
+    const p = scoreKeyPoints(POINTS, ANSWER, "unrelated words", new Set(POINTS));
     expect(p.points.every((x) => x.covered)).toBe(true);
     expect(p.next).toBeNull();
+  });
+
+  it("a tick doesn't survive its label changing (scored as the label is now)", () => {
+    // "DAST in integ…" was ticked while the answer streamed; the finished label is different words.
+    const p = scoreKeyPoints(["Start at PR and build", "Shift-left threat modelling"], ANSWER, "unrelated words", new Set(["DAST in integ"]));
+    expect(p.points.map((x) => x.covered)).toEqual([false, false]);
+    const kept = applyOverrides(p, new Map([["Shift-left threat modelling", true]]));
+    expect(kept.points.map((x) => x.covered)).toEqual([false, true]);
+  });
+
+  it("an abbreviation counts only when its whole expansion is said", () => {
+    const covered = (label: string, spoken: string) => scoreKeyPoints([label], "", spoken).points[0]!.covered;
+    // Each of these used to tick on one generic word of the expansion.
+    expect(covered("CI/CD pipeline", "okay let me continue")).toBe(false);
+    expect(covered("CI/CD pipeline", "we continue deploying through the pipeline")).toBe(false);
+    expect(covered("API design", "that's an interesting design problem")).toBe(false);
+    expect(covered("Small PRs", "it was a small request")).toBe(false);
+    expect(covered("Define the SLA", "at a high level I would define it")).toBe(false);
+    expect(covered("Auth service", "I authored the service")).toBe(false);
+    // Said in full, they still count.
+    expect(covered("CI/CD pipeline", "a continuous integration and continuous deployment pipeline")).toBe(true);
+    expect(covered("Small PRs", "keep pull requests small")).toBe(true);
+    expect(covered("Define the SLA", "first define the service level agreement")).toBe(true);
+    expect(covered("Auth service", "an authentication service")).toBe(true);
+  });
+
+  it("an answer's own abbreviation matches the sentence that spells it out", () => {
+    // "PR" in the label aligns with "pull request" in the answer, so paraphrasing that sentence ticks it.
+    const p = scoreKeyPoints(["Start at PR"], ANSWER, "begin at the pull request and the build so problems show up early");
+    expect(p.points[0]!.covered).toBe(true);
   });
 
   it("an on-topic answer that makes different points ticks none of these", () => {

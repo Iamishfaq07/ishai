@@ -37,7 +37,7 @@ describe("manual key point overrides", () => {
 
   it("a click ticks a point the transcript missed, and NEXT moves on", () => {
     const auto = scoreKeyPoints(POINTS, ANSWER, "");
-    const p = applyOverrides(auto, new Map([[0, true]]));
+    const p = applyOverrides(auto, new Map([[POINTS[0]!, true]]));
     expect(p.points[0]).toMatchObject({ covered: true, manual: true });
     expect(p.next).toBe(1);
   });
@@ -45,13 +45,13 @@ describe("manual key point overrides", () => {
   it("a click unticks a false match", () => {
     const auto = scoreKeyPoints(POINTS, ANSWER, "I start with the build");
     expect(auto.points[0]!.covered).toBe(true);
-    const p = applyOverrides(auto, new Map([[0, false]]));
+    const p = applyOverrides(auto, new Map([[POINTS[0]!, false]]));
     expect(p.points[0]!.covered).toBe(false);
     expect(p.next).toBe(0);
   });
 
   it("all ticked by hand: nothing is next", () => {
-    const p = applyOverrides(scoreKeyPoints(POINTS, ANSWER, ""), new Map([[0, true], [1, true], [2, true]]));
+    const p = applyOverrides(scoreKeyPoints(POINTS, ANSWER, ""), new Map(POINTS.map((label) => [label, true])));
     expect(p.next).toBeNull();
   });
 });
