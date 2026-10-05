@@ -24,14 +24,16 @@ export interface QuestionCardProps {
 
 export function QuestionCard({ question, liveTurn, compact = false }: QuestionCardProps) {
   const showLive = liveTurn && !liveTurn.final && (!question || liveTurn.turn_id !== question.turn_id);
-  const typeLabel = question ? (question.is_follow_up ? "Follow-up" : TYPE_LABEL[question.type]) : undefined;
+  // A chat reply's "question" is the chat message it answers.
+  const chat = question?.source === "chat";
+  const typeLabel = question && !chat ? (question.is_follow_up ? "Follow-up" : TYPE_LABEL[question.type]) : undefined;
 
   return (
-    <section aria-label="Interviewer question" className={cx("px-4", compact ? "py-2.5" : "py-3")}>
+    <section aria-label={chat ? "Your chat message" : "Interviewer question"} className={cx("px-4", compact ? "py-2.5" : "py-3")}>
       {!compact && (
         <div className="mb-1 flex items-center gap-2">
           <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
-            Interviewer
+            {chat ? "You asked in chat" : "Interviewer"}
           </h2>
           {typeLabel && (
             <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
@@ -42,7 +44,9 @@ export function QuestionCard({ question, liveTurn, compact = false }: QuestionCa
       )}
       {question ? (
         <p className={cx("font-medium leading-snug text-zinc-900 dark:text-zinc-50", compact ? "text-[0.9375rem]" : "text-[1.0625rem]")}>
-          {question.text}
+          {chat && compact && <span className="font-normal text-zinc-500 dark:text-zinc-400">You asked: </span>}
+          {/* The phone companion doesn't see what was typed, only that it's a chat reply. */}
+          {question.text || (chat ? "A reply to your chat message" : "")}
         </p>
       ) : !showLive ? (
         <p className="text-sm text-zinc-500 dark:text-zinc-400">Waiting for the interviewer’s question…</p>

@@ -8,12 +8,15 @@ import {
   type ServerEventType,
 } from "@orbit/types";
 import {
+  SCREENSHOT_QUESTION,
   initialLiveState,
   liveReducer,
   selectAnswerHistory,
+  selectAskAgain,
   selectDisplayedAnswer,
   selectDisplayedQuestion,
   selectLatestInterviewerTurn,
+  selectLatestScreenshotQuestionId,
   type LiveAction,
   type LiveViewState,
 } from "./reducer";
@@ -191,6 +194,88 @@ describe("answers", () => {
       started("a1", "q1", "chat"),
     ]);
     expect(s.chat.map((c) => c.kind)).toEqual(["user", "answer"]);
+  });
+});
+
+describe("chat replies", () => {
+  const chatStarted = (answerId: string) =>
+    ev("answer.started", {
+      answer_id: answerId,
+      question_id: null as unknown as string, // the server sends null: a chat reply answers no interviewer question
+      length: "standard",
+      reasoning: "light",
+      source: "chat",
+    });
+
+  it("show what was asked in chat as their question, not the interviewer's previous one", () => {
+    let s = run([
+      detected("q1"),
+      started("a1", "q1"),
+      { type: "local/chat_sent", id: "u1", text: "Give me an example", ts: 1 },
+      chatStarted("c1"),
+    ]);
+    expect(s.answers.c1?.prompt).toBe("Give me an example");
+    expect(selectDisplayedAnswer(s)?.answer_id).toBe("c1");
+    expect(selectDisplayedQuestion(s)).toMatchObject({ text: "Give me an example", source: "chat" });
+
+    // The interviewer asks something new: it shows on top, as it does over any previous answer.
+    s = run([detected("q2", "t2")], s);
+    expect(selectDisplayedQuestion(s)?.question_id).toBe("q2");
+    // Browsing back to the reply shows its message again.
+    s = run([{ type: "local/view", answer_id: "c1" }], s);
+    expect(selectDisplayedQuestion(s)).toMatchObject({ text: "Give me an example", source: "chat" });
+  });
+
+  it("are paired with their messages in order, even when two are sent before either reply starts", () => {
+    const s = run([
+      { type: "local/chat_sent", id: "u1", text: "first", ts: 1 },
+      { type: "local/chat_sent", id: "u2", text: "second", ts: 2 },
+      chatStarted("c1"),
+      chatStarted("c1"), // a repeat changes nothing
+      chatStarted("c2"),
+    ]);
+    expect([s.answers.c1?.prompt, s.answers.c2?.prompt]).toEqual(["first", "second"]);
+    expect(s.pendingChat).toEqual([]);
+  });
+
+  it("are asked again by sending their message (Try again), not by re-asking the interviewer's question", () => {
+    const s = run([
+      detected("q1"),
+      started("a1", "q1"),
+      { type: "local/chat_sent", id: "u1", text: "Give me an example", ts: 1 },
+      chatStarted("c1"),
+    ]);
+    expect(selectAskAgain(s, s.answers.c1 ?? null)).toEqual({ via: "chat", text: "Give me an example" });
+    // The phone companion doesn't know what was typed: nothing to send.
+    const companion = run([chatStarted("c9")]);
+    expect(selectAskAgain(companion, companion.answers.c9 ?? null)).toBeNull();
+  });
+});
+
+describe("asking an answer again", () => {
+  const shot = (qid: string) =>
+    ev("question.detected", { question_id: qid, turn_id: null, text: SCREENSHOT_QUESTION, type: "technical", confidence: 1, is_follow_up: false });
+  const shotStarted = (answerId: string, qid: string) =>
+    ev("answer.started", { answer_id: answerId, question_id: qid, length: "standard", reasoning: "light", source: "screenshot" });
+
+  it("uses the answer's own question, even when a newer one is on the card", () => {
+    const s = run([detected("q1"), started("a1", "q1"), detected("q2", "t2")]);
+    expect(selectDisplayedQuestion(s)?.question_id).toBe("q2");
+    expect(selectAskAgain(s, selectDisplayedAnswer(s))).toEqual({ via: "answer", text: "Question q1", screenshot: false });
+  });
+
+  it("asks the screenshot question for the newest screenshot only (the server keeps that image)", () => {
+    let s = run([shot("s1"), shotStarted("a1", "s1")]);
+    expect(selectLatestScreenshotQuestionId(s)).toBe("s1");
+    expect(selectAskAgain(s, s.answers.a1 ?? null)).toEqual({ via: "answer", text: SCREENSHOT_QUESTION, screenshot: true });
+    s = run([shot("s2"), shotStarted("a2", "s2")], s);
+    expect(selectAskAgain(s, s.answers.a1 ?? null)).toBeNull();
+    expect(selectAskAgain(s, s.answers.a2 ?? null)).toMatchObject({ text: SCREENSHOT_QUESTION });
+  });
+
+  it("leaves the question to the server when it isn't known here", () => {
+    const s = run([ev("answer.chunk", { answer_id: "a9", partial: answer(["x"]) })]);
+    expect(selectAskAgain(s, s.answers.a9 ?? null)).toEqual({ via: "answer", text: undefined, screenshot: false });
   });
 });
 

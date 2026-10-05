@@ -237,7 +237,6 @@ function CompanionRoom({ code, view }: { code: string; view: CompanionView }) {
           answer={answer}
           pinned={pinned}
           onPin={(p) => answer && dispatch({ type: "local/pin", answer_id: answer.answer_id, pinned: p })}
-          onRetry={() => undefined}
           readOnly
           autoAnswer={live.settings.auto_answer}
         />

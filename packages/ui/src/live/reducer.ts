@@ -36,7 +36,13 @@ export interface QuestionView {
   type: QuestionType;
   confidence: number;
   is_follow_up: boolean;
+  /** "chat": what was typed in chat, shown above a chat reply (not something the interviewer asked). */
+  source?: "chat";
 }
+
+/** The question the server gives a screenshot. Asking it again (`answer.request`) re-answers the last screenshot
+ * with its image (the server keeps the newest one). */
+export const SCREENSHOT_QUESTION = "📷 Screenshot";
 
 export type AnswerStatus = "streaming" | "complete" | "cancelled" | "failed";
 
@@ -56,6 +62,8 @@ export interface AnswerView {
   cancel_reason?: CancelReason | null;
   /** Index into turnOrder when the answer appeared (candidate turns from here count toward key points). */
   spoken_from: number;
+  /** Chat replies: what was asked in chat (the server's events don't say). Try again asks it again. */
+  prompt?: string;
 }
 
 export type ChatEntry =
@@ -95,6 +103,8 @@ export interface LiveViewState {
   /** Browsing an earlier answer (local only); null = follow the live answer. */
   viewedAnswerId: string | null;
   chat: ChatEntry[];
+  /** Chat messages still waiting for their reply, oldest first: the server answers them in order. */
+  pendingChat: Array<{ id: string; text: string }>;
   mic: AudioStatus;
   system: AudioStatus;
   providers: Partial<Record<ProviderKind, ProviderStatus>>;
@@ -150,6 +160,7 @@ export function initialLiveState(settings: Partial<LiveSettings> = {}): LiveView
     viewedAnswerId: null,
     pinnedAnswerId: null,
     chat: [],
+    pendingChat: [],
     mic: { state: "idle" },
     system: { state: "idle" },
     providers: {},
@@ -169,8 +180,58 @@ export function selectDisplayedAnswer(s: LiveViewState): AnswerView | null {
 
 export function selectDisplayedQuestion(s: LiveViewState): QuestionView | null {
   const answer = selectDisplayedAnswer(s);
-  if ((s.pinnedAnswerId || s.viewedAnswerId) && answer) return s.questions[answer.question_id] ?? null;
-  return s.currentQuestionId ? (s.questions[s.currentQuestionId] ?? null) : null;
+  if ((s.pinnedAnswerId || s.viewedAnswerId) && answer) {
+    return answer.source === "chat" ? chatQuestion(answer) : (s.questions[answer.question_id] ?? null);
+  }
+  if (s.currentQuestionId) return s.questions[s.currentQuestionId] ?? null;
+  // A chat reply sits under what was asked in chat, not the interviewer's previous question.
+  return answer?.source === "chat" ? chatQuestion(answer) : null;
+}
+
+function chatQuestion(answer: AnswerView): QuestionView {
+  return {
+    question_id: `chat:${answer.answer_id}`,
+    turn_id: null,
+    text: answer.prompt ?? "",
+    type: answer.answer.type,
+    confidence: 1,
+    is_follow_up: false,
+    source: "chat",
+  };
+}
+
+/** The newest screenshot's question: the only screenshot the server can answer again. */
+export function selectLatestScreenshotQuestionId(s: LiveViewState): string | null {
+  for (let i = s.questionOrder.length - 1; i >= 0; i--) {
+    const q = s.questions[s.questionOrder[i] as string];
+    if (q?.text === SCREENSHOT_QUESTION) return q.question_id;
+  }
+  return null;
+}
+
+export type AskAgain =
+  | { via: "chat"; text: string }
+  /** `text` undefined: the question isn't known here, so the server answers the one it's listening to. */
+  | { via: "answer"; text: string | undefined; screenshot: boolean };
+
+/**
+ * How an answer is asked again (Try again, Shorter/Longer, another code language), or null when it can't be:
+ * - a chat reply: its chat message, sent again (the phone companion never sees what was typed);
+ * - a screenshot: the screenshot question, which the server answers with the newest image it kept, so only the
+ *   newest screenshot can be;
+ * - anything else: its own question. Not simply the one on the card: a newly detected question shows above the
+ *   previous answer until its own answer starts.
+ */
+export function selectAskAgain(s: LiveViewState, answer: AnswerView | null): AskAgain | null {
+  if (!answer) return null;
+  if (answer.source === "chat") return answer.prompt ? { via: "chat", text: answer.prompt } : null;
+  const own = s.questions[answer.question_id]?.text;
+  if (answer.source === "screenshot" || own === SCREENSHOT_QUESTION) {
+    return answer.question_id === selectLatestScreenshotQuestionId(s)
+      ? { via: "answer", text: SCREENSHOT_QUESTION, screenshot: true }
+      : null;
+  }
+  return { via: "answer", text: own, screenshot: false };
 }
 
 /**
@@ -249,7 +310,11 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
       return { ...s, viewedAnswerId: action.answer_id && action.answer_id in s.answers ? action.answer_id : null };
 
     case "local/chat_sent":
-      return { ...s, chat: [...s.chat, { kind: "user", id: action.id, text: action.text, ts: action.ts }] };
+      return {
+        ...s,
+        chat: [...s.chat, { kind: "user", id: action.id, text: action.text, ts: action.ts }],
+        pendingChat: [...s.pendingChat, { id: action.id, text: action.text }],
+      };
 
     case "local/settings":
       return {
@@ -375,6 +440,9 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
     case "answer.started": {
       const { answer_id, question_id, length, reasoning, source } = action.data;
       const existing = s.answers[answer_id];
+      const threaded = s.chat.some((c) => c.kind === "answer" && c.answer_id === answer_id);
+      // A new chat reply answers the oldest message still waiting: the server handles chat messages in order.
+      const asked = source === "chat" && !threaded ? s.pendingChat[0] : undefined;
       const view: AnswerView = {
         ...(existing ?? placeholderAnswer(answer_id, question_id)),
         question_id,
@@ -383,6 +451,7 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
         source,
         // Transcript position when this answer appeared: candidate speech after it counts toward its key points.
         spoken_from: existing?.spoken_from ?? s.turnOrder.length,
+        ...(asked ? { prompt: asked.text } : {}),
       };
       const seen = answer_id in s.answers;
       return {
@@ -390,11 +459,11 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
         answers: { ...s.answers, [answer_id]: view },
         answerOrder: seen ? s.answerOrder : [...s.answerOrder, answer_id],
         currentAnswerId: answer_id,
-        currentQuestionId: question_id in s.questions ? question_id : s.currentQuestionId,
-        chat:
-          source === "chat" && !s.chat.some((c) => c.kind === "answer" && c.answer_id === answer_id)
-            ? [...s.chat, { kind: "answer", id: `a-${answer_id}`, answer_id }]
-            : s.chat,
+        // A chat reply's "question" is its chat message (see selectDisplayedQuestion), until the interviewer asks
+        // something new.
+        currentQuestionId: source === "chat" ? null : question_id in s.questions ? question_id : s.currentQuestionId,
+        chat: source === "chat" && !threaded ? [...s.chat, { kind: "answer", id: `a-${answer_id}`, answer_id }] : s.chat,
+        pendingChat: asked ? s.pendingChat.slice(1) : s.pendingChat,
       };
     }
     case "answer.chunk": {

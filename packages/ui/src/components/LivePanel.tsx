@@ -10,11 +10,13 @@ import { formatElapsed, useElapsed } from "../hooks/useElapsed";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useStickyScroll } from "../hooks/useStickyScroll";
 import { DEFAULT_HOTKEYS, useHotkeys, type HotkeyMap } from "../live/hotkeys";
+import { CODING_LANGUAGES } from "../live/preferences";
 import { useAnswerHistory } from "../live/useAnswerHistory";
 import { useInterviewerVoice } from "../live/useInterviewerVoice";
 import { useKeyPointProgress } from "../live/useKeyPointProgress";
 import { useReadAloud } from "../live/useReadAloud";
 import {
+  selectAskAgain,
   selectDisplayedAnswer,
   selectDisplayedQuestion,
   type AnswerView,
@@ -209,8 +211,27 @@ export function LivePanel(props: LivePanelProps) {
   // The answer card and transcript are memoized: everything handed to them stays the same function between live
   // updates (it only changes with the answer or question it acts on).
   const answerId = answer?.answer_id ?? null;
-  const questionText = question?.text;
-  const retry = useCallback(() => actions.answer(questionText), [actions, questionText]);
+  const source = answer?.source;
+  // How the shown answer is asked again (see selectAskAgain), as plain values so the callbacks below stay put.
+  const again = selectAskAgain(live, answer);
+  const againVia = again?.via ?? null;
+  const againText = again?.text;
+  const screenshot = again?.via === "answer" && again.screenshot;
+  const pinnedId = live.pinnedAnswerId;
+  const viewedId = live.viewedAnswerId;
+  // Asking again from the card: show the new answer as it comes (a pinned or browsed one would hide it).
+  const followLive = useCallback(() => {
+    if (pinnedId) actions.pin(pinnedId, false);
+    if (viewedId) actions.viewAnswer(null);
+  }, [actions, pinnedId, viewedId]);
+  const retry = useMemo(() => {
+    if (!againVia) return undefined;
+    return () => {
+      followLive();
+      if (againVia === "chat") actions.chat(againText ?? "");
+      else actions.answer(againText);
+    };
+  }, [actions, againText, againVia, followLive]);
   const pin = useCallback(
     (pinned: boolean) => {
       if (answerId) actions.pin(answerId, pinned);
@@ -226,28 +247,44 @@ export function LivePanel(props: LivePanelProps) {
   );
   const codeLanguage = useCallback(
     (lang: CodingLanguage) => {
-      if (questionText !== undefined) actions.setCodingLanguage(lang, questionText);
+      followLive();
+      if (source === "chat") {
+        // A chat reply has no question to ask again: say it in chat, and the server rewrites the code it's about.
+        actions.setCodingLanguage(lang);
+        actions.chat(`Now in ${CODING_LANGUAGES.find((l) => l.value === lang)?.label ?? lang}`);
+      } else if (againVia === "answer" && againText !== undefined) {
+        actions.setCodingLanguage(lang, againText);
+      }
     },
-    [actions, questionText],
+    [actions, againText, againVia, followLive, source],
+  );
+  // A chat reply's picker only while it's the latest answer: "now in Java" applies to what the server answered last.
+  const offerLanguage = Boolean(
+    answer && !ended &&
+      (source === "chat"
+        ? answer.status === "complete" && answer.answer_id === live.currentAnswerId
+        : againVia === "answer" && againText !== undefined),
   );
 
   // "Shorter" / "Longer": step the answer length and re-ask the same question. Only for spoken answers to a
   // question (not chat replies or screenshots), and not while one is still streaming.
   const lengthIndex = LENGTH_STEPS.indexOf(live.settings.length);
   const canResize = Boolean(
-    answer && question && !ended && answer.status === "complete" && (answer.source === "auto" || answer.source === "manual"),
+    answer && againVia === "answer" && againText !== undefined && !screenshot && !ended && answer.status === "complete" &&
+      (source === "auto" || source === "manual"),
   );
   const shorterLength = LENGTH_STEPS[lengthIndex - 1];
   const longerLength = LENGTH_STEPS[lengthIndex + 1];
   const resizeTo = useCallback(
     (next: AnswerLength | undefined) => {
-      if (!next || questionText === undefined) return null;
+      if (!next || againVia !== "answer" || againText === undefined) return null;
       return () => {
+        followLive();
         actions.setLength(next);
-        actions.answer(questionText); // same socket, in order: the new length applies to this answer
+        actions.answer(againText); // same socket, in order: the new length applies to this answer
       };
     },
-    [actions, questionText],
+    [actions, againText, againVia, followLive],
   );
   const onShorter = useMemo(() => resizeTo(shorterLength), [resizeTo, shorterLength]);
   const onLonger = useMemo(() => resizeTo(longerLength), [resizeTo, longerLength]);
@@ -359,7 +396,7 @@ export function LivePanel(props: LivePanelProps) {
             answer={answer}
             pinned={Boolean(answer && live.pinnedAnswerId === answer.answer_id)}
             onPin={pin}
-            onRetry={retry}
+            {...(retry ? { onRetry: retry } : {})}
             onStop={actions.stop}
             {...(props.ratings && answer ? { rating: props.ratings.get(answer.answer_id), onRate: rate } : {})}
             compact={compact}
@@ -368,8 +405,7 @@ export function LivePanel(props: LivePanelProps) {
             {...(keyPoints ? { onTogglePoint: keyPoints.toggle } : {})}
             reader={reader}
             {...(canResize ? { onShorter, onLonger } : {})}
-            // Screenshots can't be re-run (the image isn't kept), so their code has no language picker.
-            {...(answer && answer.source !== "screenshot" && question && !ended ? { onCodeLanguage: codeLanguage } : {})}
+            {...(offerLanguage ? { onCodeLanguage: codeLanguage } : {})}
           />
           </>
           )}
