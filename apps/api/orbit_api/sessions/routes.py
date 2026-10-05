@@ -654,7 +654,9 @@ async def _meter_live_minutes(ws: WebSocket, engine: LiveEngine, user_id: str, s
         now_s = engine.now_ms() // 1000
         row = minutes.row
         try:
-            month_s = await _commit_live_seconds(user_id, session_id, minutes, now_s, session_type)
+            # Shielded: the teardown cancels this task, and a beat cut off mid-query could leave its connection
+            # holding a lock (SQLite) or half a transaction. Cancelling waits only ever interrupt the sleep.
+            month_s = await asyncio.shield(_commit_live_seconds(user_id, session_id, minutes, now_s, session_type))
         except Exception:
             # Fail open for this beat (never cut a live interview off on a DB blip), but loudly; the final
             # usage is still written durably by the recorder at teardown.
