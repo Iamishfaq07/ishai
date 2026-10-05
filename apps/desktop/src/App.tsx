@@ -29,7 +29,7 @@ type Screen =
   | { name: "home" }
   | { name: "setup"; initialType?: SessionType }
   | { name: "documents" }
-  | { name: "history" }
+  | { name: "history"; sessionId?: string }
   | { name: "settings" }
   | { name: "live"; session: OrbitSession; launch: DesktopLaunch };
 
@@ -223,7 +223,14 @@ export function App() {
       case "documents":
         return <DocumentsScreen onBack={home} />;
       case "history":
-        return <HistoryScreen onBack={home} onResume={resume} onDrill={drill} />;
+        return (
+          <HistoryScreen
+            onBack={home}
+            onResume={resume}
+            onDrill={drill}
+            {...(screen.sessionId ? { initialSessionId: screen.sessionId } : {})}
+          />
+        );
       case "settings":
         return user ? (
           <SettingsScreen user={user} onUser={setUser} onSignOut={() => void signOut()} onBack={home} />
@@ -246,6 +253,7 @@ export function App() {
             session={screen.session}
             launch={screen.launch}
             onExit={home}
+            onViewReview={() => setScreen({ name: "history", sessionId: screen.session.id })}
             signInExpired={signInExpired}
             email={user?.email ?? null}
             onSignedInAgain={signedInAgain}

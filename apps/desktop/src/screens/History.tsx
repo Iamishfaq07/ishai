@@ -33,13 +33,15 @@ const SOURCE_LABEL: Record<string, string> = {
 };
 
 /** Past sessions: a list, and a detail view with summary / transcript / Q&A. */
-export function HistoryScreen({ onBack, onResume, onDrill }: {
+export function HistoryScreen({ onBack, onResume, onDrill, initialSessionId }: {
   onBack: () => void;
   onResume: (session: OrbitSession) => void;
   /** Opens a new re-drill session (mock, mic only). */
   onDrill: (session: OrbitSession) => void;
+  /** Open on this session's review (e.g. from a session that just ended). */
+  initialSessionId?: string;
 }) {
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(initialSessionId ?? null);
 
   return (
     <div className="flex h-full flex-col">

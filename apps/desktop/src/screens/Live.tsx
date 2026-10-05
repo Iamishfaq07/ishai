@@ -57,10 +57,40 @@ const PIN_KEY = "orbit.desktop.alwaysOnTop";
 /** What's wrong with audio, kept per source: the interviewer's audio coming up must not clear the mic's warning. */
 type CaptureNotes = Partial<Record<"start" | "mic" | "system", string | null>>;
 
+/** Why the session ended, when this window's End didn't end it. */
+type EndedReason = "minutes" | "time_limit" | "elsewhere" | "ended";
+
+/** The live client's code for a session ended from another window or device (packages/ui live/client.ts). */
+const SESSION_ENDED = "session_ended";
+
+const ENDED_COPY: Record<EndedReason, { title: string; body: string }> = {
+  minutes: {
+    title: "You're out of interview minutes",
+    body:
+      "So the session has ended. Your transcript and report are saved in History. Buy a pack to keep going: minutes " +
+      "land in your account as soon as the payment is approved.",
+  },
+  time_limit: {
+    title: "This session reached its time limit",
+    body: "So it has ended. Your transcript and report are saved in History. Start a new session to keep going.",
+  },
+  elsewhere: {
+    title: "This session was ended elsewhere",
+    body:
+      "It was ended from another window or device, so there's nothing to reconnect to. Its transcript and report are " +
+      "saved in History.",
+  },
+  ended: {
+    title: "This session has ended",
+    body: "Its transcript and report are saved in History.",
+  },
+};
+
 export function LiveScreen({
   session,
   launch,
   onExit,
+  onViewReview,
   signInExpired,
   email,
   onSignedInAgain,
@@ -68,6 +98,8 @@ export function LiveScreen({
   session: OrbitSession;
   launch: DesktopLaunch;
   onExit: () => void;
+  /** This session's transcript and review (History). */
+  onViewReview: () => void;
   /** A request was refused (401): the sign-in expired. The session stays up and asks to sign in again. */
   signInExpired: boolean;
   email: string | null;
@@ -230,39 +262,65 @@ export function LiveScreen({
 
   // ── End ───────────────────────────────────────────────────────────────
   const [ending, setEnding] = useState(false);
+  const ended = live.state === "ended";
   const end = async () => {
     // Ending finalizes the session + report; the compact always-on-top window makes End easy to misclick.
     if (!(await confirmDialog({ title: "End this session?", body: "The transcript and report are saved to History.", confirmLabel: "End session", danger: true }))) return;
     setEnding(true);
     actions.end();
   };
-  // Ended by running out of minutes (or the session time limit): say so and offer the fix, instead of dropping the
-  // user on Home a moment later with no explanation.
-  const limitEnded = live.state === "ended" && Boolean(live.usage?.limitReached) && !ending;
+  // Only End here goes back home by itself. Ended any other way, the screen stays and says why, instead of dropping
+  // the user on Home a moment later with no explanation: out of minutes, the time limit, ended from another window or
+  // device. A mock round that finished keeps its own end screen (the round summary) with the way to the review.
+  const limit = live.usage?.limitReached ? live.usage.reason : null;
+  const endedWhy: EndedReason | null =
+    !ended || ending
+      ? null
+      : limit
+        ? limit === "session"
+          ? "time_limit"
+          : "minutes"
+        : live.connectionInfo?.code === SESSION_ENDED
+          ? "elsewhere"
+          : session.type === "mock"
+            ? null
+            : "ended";
+  const mockOver = ended && !ending && !endedWhy;
   const buyMinutes = useCallback(() => void openUrl(`${WEB_URL}/billing`), []);
   useEffect(() => {
-    if (!ending && live.state !== "ended") return;
+    if (!ending && !ended) return;
     void stopCapture(captureId.current);
-    const done = () => onExit();
-    if (limitEnded) return;
-    if (live.state === "ended") {
-      const t = setTimeout(done, 800);
+    if (ended) {
+      if (!ending) return; // the ended screen (below) takes it from here
+      const t = setTimeout(onExit, 800);
       return () => clearTimeout(t);
     }
+    // End pressed but the server hasn't confirmed: end it over HTTP, then leave.
     const t = setTimeout(() => {
-      api.endSession(session.id).catch(() => undefined).finally(done);
+      api.endSession(session.id).catch(() => undefined).finally(onExit);
     }, 3000);
     return () => clearTimeout(t);
-  }, [ending, live.state, limitEnded, onExit, session.id]);
+  }, [ending, ended, onExit, session.id]);
 
   const win = getCurrentWindow();
-  const captureLines = [captureNotes.start, captureNotes.mic, captureNotes.system].filter((t): t is string => Boolean(t));
+  // Capture stops when the session ends: what it last said no longer matters.
+  const captureLines = ended
+    ? []
+    : [captureNotes.start, captureNotes.mic, captureNotes.system].filter((t): t is string => Boolean(t));
   // The socket that carries audio and answers needs no sign-in once open, so the session carries on; reconnecting
   // (and screenshots, ratings…) needs it again.
-  const disconnected = live.connection === "closed" && live.state !== "ended";
+  const disconnected = live.connection === "closed" && !ended;
   const notice =
-    signInExpired || captureLines.length > 0 || shotNote ? (
+    mockOver || signInExpired || captureLines.length > 0 || shotNote ? (
       <div className="space-y-px">
+        {mockOver && (
+          <div className="flex items-center gap-2 bg-indigo-50 px-4 py-1.5 text-xs text-indigo-900 dark:bg-indigo-950/50 dark:text-indigo-200">
+            <span className="flex-1">This round is over.</span>
+            <button type="button" onClick={onExit} className={cx("font-medium underline", focusRing)}>
+              Back to home
+            </button>
+          </div>
+        )}
         {signInExpired && (
           <SignInAgain
             email={email}
@@ -302,8 +360,9 @@ export function LiveScreen({
       </div>
     ) : undefined;
 
-  if (limitEnded) {
-    const outOfMinutes = live.usage?.reason !== "session";
+  if (endedWhy) {
+    const copy = ENDED_COPY[endedWhy];
+    const outOfMinutes = endedWhy === "minutes";
     return (
       <div className="flex h-full flex-col">
         <div data-tauri-drag-region="" className="flex h-10 shrink-0 items-center justify-end px-2">
@@ -311,14 +370,8 @@ export function LiveScreen({
         </div>
         <div role="alert" className="flex flex-1 flex-col items-center justify-center gap-3 px-6 pb-8 text-center">
           <OrbitLogo size={36} />
-          <h1 className="font-display text-lg font-semibold tracking-tight">
-            {outOfMinutes ? "You're out of interview minutes" : "This session reached its time limit"}
-          </h1>
-          <p className="max-w-xs text-sm text-zinc-600 dark:text-zinc-300">
-            {outOfMinutes
-              ? "So the session has ended. Your transcript and report are saved in History. Buy a pack to keep going: minutes land in your account as soon as the payment is approved."
-              : "So it has ended. Your transcript and report are saved in History. Start a new session to keep going."}
-          </p>
+          <h1 className="font-display text-lg font-semibold tracking-tight">{copy.title}</h1>
+          <p className="max-w-xs text-sm text-zinc-600 dark:text-zinc-300">{copy.body}</p>
           <div className="mt-1 flex flex-wrap justify-center gap-2">
             {outOfMinutes && (
               <Button onClick={buyMinutes}>
@@ -326,7 +379,10 @@ export function LiveScreen({
                 Buy minutes
               </Button>
             )}
-            <Button variant={outOfMinutes ? "secondary" : "primary"} onClick={onExit}>
+            <Button variant={outOfMinutes ? "secondary" : "primary"} onClick={onViewReview}>
+              View review
+            </Button>
+            <Button variant="secondary" onClick={onExit}>
               Back to home
             </Button>
           </div>
@@ -350,6 +406,7 @@ export function LiveScreen({
         await api.endSession(id);
       }}
       onBuyMinutes={buyMinutes}
+      onViewReport={onViewReview}
       onScreenshot={VISION_ENABLED ? screenshot : undefined}
       screenshotUnavailableReason="Screenshot analysis isn’t enabled yet."
       hotkeys={hotkeys}
@@ -358,7 +415,7 @@ export function LiveScreen({
       notice={notice}
       headerEnd={
         <>
-          <CompanionShare api={api} sessionId={session.id} webUrl={WEB_URL} disabled={live.state === "ended"} />
+          <CompanionShare api={api} sessionId={session.id} webUrl={WEB_URL} disabled={ended} />
           <button
             type="button"
             onClick={() => setOnTop((v) => !v)}
