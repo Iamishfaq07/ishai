@@ -230,6 +230,9 @@ class LiveSessionRow(TimestampMixin, Base):
     instructions: Mapped[str | None] = mapped_column(Text)
     # The saved setup this session was started from (kept if the workspace is later deleted, as NULL).
     workspace_id: Mapped[str | None] = mapped_column(ForeignKey("workspaces.id", ondelete="SET NULL"), index=True)
+    # What the live connection remembers (live/carryover.py, as JSON): saved every heartbeat and when it drops, so a
+    # server restart mid-session continues the conversation and the mock round. Cleared when the session ends.
+    carryover: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
 
 
 class Workspace(TimestampMixin, Base):

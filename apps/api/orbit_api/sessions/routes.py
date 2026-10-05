@@ -3,7 +3,7 @@ import contextlib
 import json
 import logging
 import uuid
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
@@ -332,6 +332,7 @@ async def end_session(session_id: str, user: Annotated[User, Depends(current_use
     if row.status != "ended":
         row.status = "ended"
         row.ended_at = datetime.now(UTC)
+        row.carryover = None  # a dropped connection's saved state: nothing will continue it
         # Durable report job, deduped per session: a live connection ending at the same moment re-arms the
         # same job instead of adding a second LLM call.
         await jobs.enqueue(db, "report", {"session_id": row.id}, jobs.report_key(row.id))
@@ -366,6 +367,9 @@ async def delete_transcript(session_id: str, user: Annotated[User, Depends(curre
         raise HTTPException(status.HTTP_409_CONFLICT, "End the live session first.")
     await db.execute(delete(SessionTurn).where(SessionTurn.session_id == row.id))
     await db.execute(delete(Question).where(Question.session_id == row.id))
+    # A dropped connection's saved state holds recent turns and questions too.
+    row.carryover = None
+    carryover.discard(row.id)
     db.add(AuditLog(user_id=user.id, action="session.delete_transcript", target=row.id))
     await db.commit()
     return Response(status_code=204)
@@ -643,13 +647,14 @@ async def _commit_live_seconds(user_id: str, session_id: str, minutes: Interview
 async def _meter_live_minutes(ws: WebSocket, engine: LiveEngine, user_id: str, session_id: str,
                               minutes: InterviewTime, limit_ending: asyncio.Event, *, session_type: str = "interview",
                               prior_session_s: int = 0, max_session_s: int | None = None,
-                              stop: asyncio.Event | None = None) -> None:
+                              stop: asyncio.Event | None = None,
+                              keep: Callable[[], Awaitable[None]] | None = None) -> None:
     """Server-side enforcement of two limits: the monthly allowance (live or mock minutes) and the per-session
     ceiling (plan.max_session_minutes, including earlier connections of this session). Usage is committed every
     heartbeat (a crash loses at most one interval), the client is warned 5 minutes before either limit with
     `usage.status {reason}`, and at a limit the session ends gracefully: transcript and usage are written and the
     report is queued, exactly like a normal end. One live session per account bounds any overshoot to one
-    heartbeat.
+    heartbeat. `keep` runs on each beat too: it saves the conversation so far on the session row.
 
     `stop`: the connection has closed. The meter finishes the beat in progress and returns, rather than being
     cancelled: a beat cut off mid-query could leave its connection holding a lock (SQLite) or half a transaction, and
@@ -670,6 +675,8 @@ async def _meter_live_minutes(ws: WebSocket, engine: LiveEngine, user_id: str, s
             continue
         if minutes.row != row:
             warned.discard("monthly")  # the plan changed: the new balance's low-minutes warning is news
+        if keep is not None:
+            await keep()
         session_s = None if max_session_s is None else max_session_s - (prior_session_s + now_s)
         limits = [(r, s) for r, s in (("monthly", month_s), ("session", session_s)) if s is not None]
         if not limits:
@@ -709,6 +716,16 @@ async def _beat(engine: LiveEngine, seconds: float, stop: asyncio.Event) -> None
     finally:
         for w in waits:
             w.cancel()
+
+
+async def _save_carryover(session_id: str, state: dict[str, Any]) -> None:
+    """A live session's state onto its row (live/carryover.py), unless the session has ended since: then there's
+    nothing to continue, and ending cleared it."""
+    async with sessionmaker()() as db:
+        await db.execute(update(LiveSessionRow)
+                         .where(LiveSessionRow.id == session_id, LiveSessionRow.status != "ended")
+                         .values(carryover=state))
+        await db.commit()
 
 
 @router.websocket("/sessions/{session_id}/live")
@@ -767,6 +784,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
                                 style=row.style)
         store_transcripts = user.store_transcripts
         saved_summary = row.rolling_summary or ""
+        saved_state = row.carryover
 
     mine = _live_sockets.setdefault(user_id, {})
     if session_id not in mine and len(mine) >= MAX_LIVE_SESSIONS_PER_USER:
@@ -785,11 +803,14 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
     minutes = InterviewTime(f"live:{uuid.uuid4()}", minutes_metric(profile.session_type), pool=usage_pool(plan))
     recorder = DbRecorder(session_id, user_id, store_transcripts=store_transcripts, minutes=minutes)
     # A reconnect picks up the conversation where it was: from the engine still attached (a second window took
-    # over) or the state the dropped one left (live/carryover.py). After a server restart, the saved summary.
+    # over) or the state the dropped one left (live/carryover.py). After a server restart (every deploy) that's gone
+    # from memory: the copy saved on the session row, else (a row from before that copy existed) the saved summary.
     attached = _live_engines.get(session_id)
     dropped = carryover.take(session_id) if attached is None else None
     carryover.discard(session_id)
     resume = attached.carryover() if attached is not None else dropped
+    if resume is None:
+        resume = carryover.from_json(saved_state)
     if resume is None and saved_summary:
         resume = carryover.Carryover(memory=SessionMemory(rolling_summary=saved_summary))
     # Built before the socket takes the account's live slot: a provider that can't be created (no Deepgram key,
@@ -813,9 +834,27 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
     explicit_end = False
     limit_ending = asyncio.Event()
     stop_metering = asyncio.Event()
+    kept = saved_state
+
+    async def keep(*, dropping: bool = False) -> None:
+        """The conversation so far onto the session row (when it changed): every heartbeat, and when the connection
+        drops. Only while this connection has the session; a newer one that took over keeps its own."""
+        nonlocal kept
+        if _live_engines.get(session_id) is not (None if dropping else engine):
+            return  # another connection has the session now
+        state = carryover.to_json(engine.carryover(), transcripts=store_transcripts)
+        if state == kept:
+            return
+        try:
+            await _save_carryover(session_id, state)
+            kept = state
+        except Exception:
+            log.warning("couldn't save the live state of session %s", session_id, exc_info=True)
+
     meter = asyncio.create_task(_meter_live_minutes(
         ws, engine, user_id, session_id, minutes, limit_ending, session_type=profile.session_type,
-        prior_session_s=prior_session_s, max_session_s=plan.max_session_minutes * 60, stop=stop_metering))
+        prior_session_s=prior_session_s, max_session_s=plan.max_session_minutes * 60, stop=stop_metering,
+        keep=keep))
     try:
         if previous is not None:
             with contextlib.suppress(Exception):
@@ -854,6 +893,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             del mine[session_id]
             if not mine:
                 _live_sockets.pop(user_id, None)
+        left_open = False
         if _live_engines.get(session_id) is engine:
             del _live_engines[session_id]
             # Dropped without ending: the next connection continues this conversation. (A newer engine that
@@ -863,6 +903,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
                 carryover.discard(session_id)
             else:
                 carryover.save(session_id, engine.carryover())
+                left_open = True
 
         async def teardown() -> None:
             # At a limit the meter is ending the session itself: it's let finish (report enqueue included). Else it
@@ -873,6 +914,8 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
                 await (meter if limit_ending.is_set() else asyncio.wait_for(meter, METER_STOP_S))
             await engine.end(final=explicit_end)
             await recorder.close()
+            if left_open:  # and on the row, with its last turns: the copy in memory doesn't survive a restart
+                await keep(dropping=True)
             with contextlib.suppress(Exception):
                 await ws.close()
 

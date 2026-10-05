@@ -320,6 +320,7 @@ class DbRecorder:
                     if end:
                         row.status = "ended"
                         row.ended_at = row.ended_at or datetime.now(UTC)
+                        row.carryover = None  # nothing to continue
                     row.duration_s = (row.duration_s or 0) + duration_s
                     row.rolling_summary = summary or row.rolling_summary
                     if metrics:  # accumulate across reconnects
