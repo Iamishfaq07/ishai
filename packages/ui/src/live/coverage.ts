@@ -62,9 +62,9 @@ function said(text: string): Said {
   return { stems: contentWords(text), words: words(text) };
 }
 
-function saysExpansion(said: string[], expansion: string[]): boolean {
-  for (let i = 0; i + expansion.length <= said.length; i++) {
-    if (expansion.every((start, j) => (said[i + j] as string).startsWith(start))) return true;
+function saysExpansion(spoken: string[], expansion: string[]): boolean {
+  for (let i = 0; i + expansion.length <= spoken.length; i++) {
+    if (expansion.every((start, j) => (spoken[i + j] as string).startsWith(start))) return true;
   }
   return false;
 }

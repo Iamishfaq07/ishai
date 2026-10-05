@@ -576,7 +576,7 @@ export const AnswerCard = memo(function AnswerCard({
           <p className="mt-3 text-xs text-zinc-400">
             {answer.cancel_reason === "stopped"
               ? answer.source === "chat"
-                ? "Stopped. Ask again in chat to get it all."
+                ? "Stopped. Ask again in chat for the whole reply."
                 : "Stopped. Press Answer to write it again."
               : answer.cancel_reason === "superseded"
                 ? "Stopped — a newer question took over."

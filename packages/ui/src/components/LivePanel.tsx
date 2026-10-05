@@ -728,7 +728,9 @@ function ChatAction({ onClick, children }: { onClick: () => void; children: stri
 
 /** Why a chat reply stopped early, said in its bubble (it used to stay on "Thinking…" when nothing had come yet). */
 function stoppedNote(answer: AnswerView): string {
-  if (answer.cancel_reason === "superseded") return answer.has_content ? "Stopped part-way: a newer question took over." : "Stopped: a newer question took over.";
+  if (answer.cancel_reason === "superseded") {
+    return answer.has_content ? "Stopped part-way: a newer question took over." : "Stopped: a newer question took over.";
+  }
   if (answer.cancel_reason === "session_ended") return "Stopped: the session ended.";
   return answer.has_content ? "Stopped part-way." : "Stopped.";
 }

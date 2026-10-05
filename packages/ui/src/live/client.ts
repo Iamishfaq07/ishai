@@ -63,6 +63,7 @@ export interface CloseInfo {
  * nothing to reconnect to, so the UI treats it as ended.
  */
 export const SESSION_ENDED = "session_ended";
+
 type StatusListener = (status: ConnectionStatus, detail?: string, info?: CloseInfo) => void;
 
 export class LiveClient {
