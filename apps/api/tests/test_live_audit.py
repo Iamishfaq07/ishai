@@ -304,3 +304,58 @@ async def test_end_during_start_leaves_no_transcription_running() -> None:
 
 def test_the_mock_interviewer_does_not_cut_in_mid_sentence() -> None:
     assert answer_silence_ms("and that's why I picked Kafka over RabbitMQ, because the") == TRAILING_OFF_MS
+
+
+# ---- phone mode: one mic, two voices ------------------------------------------------------------------------------
+
+
+def _mic(kind: str, text: str, voice: int, *, endpoint: bool = False) -> TranscriptEvent:
+    return TranscriptEvent(kind, text, 0, 100, endpoint=endpoint, speaker_hint=voice)  # type: ignore[arg-type]
+
+
+async def test_phone_mode_trusts_the_final_speaker_not_the_interim_one() -> None:
+    # Real Deepgram on one mic: interim results gave the candidate's first words the interviewer's number (0); the
+    # final corrected it (1). The turn kept the interim's voice, so the candidate's answer became "interviewer".
+    eng, sink, _ = _engine(session_type="phone")
+    await eng.start()
+    await eng.on_transcript("mic", _mic("final", "Can you hear me okay?", 0, endpoint=True))
+    await eng.on_transcript("mic", _mic("partial", "Yes. I can hear", 0))
+    await eng.on_transcript("mic", _mic("final", "Yes. I can hear you fine.", 1, endpoint=True))
+    finals = [(t["speaker"], t["text"]) for t in sink.of("transcript.final")]
+    assert finals == [("interviewer", "Can you hear me okay?"), ("candidate", "Yes. I can hear you fine.")]
+    await eng.end()
+
+
+async def test_phone_mode_a_change_of_voice_inside_a_turn_splits_it() -> None:
+    eng, sink, _ = _engine(session_type="phone")
+    await eng.start()
+    await eng.on_transcript("mic", _mic("final", "What is dependency injection?", 0, endpoint=True))
+    await eng.on_transcript("mic", _mic("final", "Okay.", 0))
+    await eng.on_transcript("mic", _mic("final", "So you pass the dependencies in.", 1, endpoint=True))
+    finals = [(t["speaker"], t["text"]) for t in sink.of("transcript.final")]
+    assert finals[-2:] == [("interviewer", "Okay."), ("candidate", "So you pass the dependencies in.")]
+    await eng.end()
+
+
+async def test_an_utterance_end_before_the_final_does_not_say_the_words_twice() -> None:
+    # "Write a" (still interim) when UtteranceEnd came, then the final for the whole sentence: committed at the
+    # UtteranceEnd, the final was a new turn and the question read "Write a Write a function…".
+    eng, sink, _ = _engine()
+    await eng.start()
+    await eng.on_transcript("system", TranscriptEvent("partial", "Write a", 0, 100))
+    await eng.on_transcript("system", TranscriptEvent("utterance_end", "", 0, 100, endpoint=True))
+    await eng.on_transcript("system", TranscriptEvent("final", "Write a function that reverses a linked list.", 0, 900))
+    await sink.wait_for("question.detected")
+    assert [t["text"] for t in sink.of("transcript.final")] == ["Write a function that reverses a linked list."]
+    assert sink.of("question.detected")[0]["text"] == "Write a function that reverses a linked list."
+    await eng.end()
+
+
+async def test_an_utterance_end_whose_final_never_comes_still_commits_the_turn() -> None:
+    eng, sink, _ = _engine()
+    await eng.start()
+    await eng.on_transcript("system", TranscriptEvent("partial", "Right, okay", 0, 100))
+    await eng.on_transcript("system", TranscriptEvent("utterance_end", "", 0, 100, endpoint=True))
+    await sink.wait_for("transcript.final", timeout=3.0)
+    assert sink.of("transcript.final")[0]["text"] == "Right, okay"
+    await eng.end()

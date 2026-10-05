@@ -178,6 +178,14 @@ _MODE_RULES = {
                    "gets the ANSWER, with CODE only if it helps."),
 }
 
+# Right before the question, where it weighs most: the two AI habits the system prompt's rules alone didn't stop
+# (measured with tools/orbit-drive/voice_probe.py: 23 corrective contrasts in 21 answers, "security isn't a
+# nice-to-have, it's the whole point" in every "why work here").
+_VOICE_CHECK = ("Check the spoken answer before you write it. Say what things are, never what they aren't: no \"isn't "
+                "X, it's Y\", no \"not just X\", no \", not X\" or \"rather than X\" tacked on. And stop on the last "
+                "concrete point or on what happened: no final sentence that sums up, gives a lesson or says what "
+                "mattered.")
+
 # Every coding answer, outside the debug and design formats. Without it the model often answered in prose only.
 _CODE_RULE = ("CODING ANSWER: ANSWER is the short spoken talk track, never code. After it you MUST write PROBLEM:, "
               "then CODE: <language> on its own line followed by the complete, runnable solution in a ```<language> "
@@ -344,6 +352,7 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
         parts.append(f"This question has {len(inputs.parts)} parts. Answer every one, in this order, giving each its "
                      "share (a multi-part answer may run up to a third over the length target), with at least one "
                      f"POINTS label per part:\n{asks}")
+    parts.append(_VOICE_CHECK)
     parts.append("QUESTION: " + fence(inputs.question))
 
     return BuiltPrompt(

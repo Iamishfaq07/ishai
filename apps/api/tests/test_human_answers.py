@@ -2,8 +2,9 @@
 mechanical tells the model still slips in are cleaned as the answer streams (answer_format.humanize)."""
 
 from orbit_api.live.answer_format import AnswerStreamParser, humanize
-from orbit_api.live.context_builder import live_system_prompt
+from orbit_api.live.context_builder import PromptInputs, SessionMemory, build_prompt, live_system_prompt
 from orbit_api.live.events import QuestionType
+from orbit_api.retrieval.index import SessionIndex
 
 
 def test_dashes_become_pauses_but_ranges_stay() -> None:
@@ -49,3 +50,13 @@ def test_the_prompt_asks_for_a_human_voice_and_has_no_em_dashes_itself() -> None
     prompt = live_system_prompt()
     assert "HOW IT SOUNDS" in prompt and "corrective contrasts" in prompt and "wrap-up" in prompt
     assert "—" not in prompt  # the model copies the prompt's own punctuation
+
+
+def test_the_last_thing_before_the_question_is_the_voice_check() -> None:
+    # The system prompt's rules alone left "isn't a nice-to-have, it's the whole point" in every "why work here".
+    inputs = PromptInputs("Why do you want to work here?", QuestionType.culture, False, "interview", None, "standard",
+                          "natural", "en")
+    user = build_prompt(SessionIndex([]), inputs, SessionMemory()).messages[1].content
+    check, question = user.rsplit("\n\n", 2)[-2:]
+    assert "never what they aren't" in check and "sums up" in check and "—" not in check
+    assert question == "QUESTION: Why do you want to work here?"
