@@ -295,12 +295,43 @@ describe("a dropped connection", () => {
 
   it("marks a chat message whose reply hadn't started as lost, and still pairs a queued one after the reconnect", () => {
     let s = run([open, { type: "local/chat_sent", id: "u1", text: "sent, then the socket died", ts: 1 }, drop]);
-    expect(s.chat[0]).toMatchObject({ kind: "user", lost: true });
+    expect(s.chat[0]).toMatchObject({ kind: "user", unanswered: { retryable: true } });
     expect(s.pendingChat).toEqual([]);
     // Sent while reconnecting: the client queues it for the next connection, whose reply answers it.
     s = run([{ type: "local/chat_sent", id: "u2", text: "queued", ts: 2 }, open, started("c1", "q1", "chat")], s);
     expect(s.answers.c1?.prompt).toBe("queued");
-    expect(s.chat[1]).not.toHaveProperty("lost");
+    expect(s.chat[1]).not.toHaveProperty("unanswered");
+  });
+});
+
+describe("a chat message the server refuses", () => {
+  it("stops waiting and says why, so the next reply is paired with the next message", () => {
+    const gone = "That screenshot is no longer available. Take a new one to ask about it again.";
+    let s = run([
+      { type: "local/chat_sent", id: "u1", text: "now in Java", ts: 1 },
+      ev("error", { code: "screenshot_expired", message: gone }),
+    ]);
+    expect(s.chat[0]).toMatchObject({ unanswered: { reason: gone, retryable: false } });
+    expect(s.lastError?.code).toBe("screenshot_expired");
+    s = run([{ type: "local/chat_sent", id: "u2", text: "What's a heap?", ts: 2 }, started("c1", "q1", "chat")], s);
+    expect(s.answers.c1?.prompt).toBe("What's a heap?");
+  });
+
+  it("too long: the server's validation error answers it", () => {
+    const s = run([
+      { type: "local/chat_sent", id: "u1", text: "x".repeat(4001), ts: 1 },
+      ev("error", { code: "invalid_event", message: "chat.message: String should have at most 4000 characters" }),
+    ]);
+    expect(s.pendingChat).toEqual([]);
+    expect(s.chat[0]).toMatchObject({ unanswered: { retryable: false } });
+  });
+
+  it("other errors leave waiting messages alone", () => {
+    const s = run([
+      { type: "local/chat_sent", id: "u1", text: "hi", ts: 1 },
+      ev("error", { code: "no_question", message: "No interviewer question to answer yet." }),
+    ]);
+    expect(s.pendingChat).toHaveLength(1);
   });
 });
 

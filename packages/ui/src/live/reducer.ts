@@ -67,8 +67,11 @@ export interface AnswerView {
 }
 
 export type ChatEntry =
-  /** `lost`: the connection dropped before its reply started, so none will come. */
-  | { kind: "user"; id: string; text: string; ts: number; lost?: boolean }
+  /**
+   * `unanswered`: no reply is coming, and why: the connection dropped before it started (sending it again can work),
+   * or the server refused the message (an expired screenshot to rewrite, a message too long).
+   */
+  | { kind: "user"; id: string; text: string; ts: number; unanswered?: { reason: string; retryable: boolean } }
   | { kind: "answer"; id: string; answer_id: string };
 
 export interface LiveViewState {
@@ -302,13 +305,31 @@ function interrupt(s: LiveViewState): LiveViewState {
     answers[a.answer_id] = { ...a, status: "failed", error: CONNECTION_LOST };
   }
   const lost = new Set(s.pendingChat.filter((p) => p.sentOpen).map((p) => p.id));
-  if (answers === s.answers && lost.size === 0) return s;
+  const next = answers === s.answers ? s : { ...s, answers };
+  return unanswered(next, lost, { reason: "The connection dropped before Orbit replied.", retryable: true });
+}
+
+/** These chat messages won't get a reply: they stop waiting (so a later reply isn't taken for theirs) and say why. */
+function unanswered(
+  s: LiveViewState,
+  ids: ReadonlySet<string>,
+  why: { reason: string; retryable: boolean },
+): LiveViewState {
+  if (ids.size === 0) return s;
   return {
     ...s,
-    answers,
-    pendingChat: lost.size ? s.pendingChat.filter((p) => !lost.has(p.id)) : s.pendingChat,
-    chat: lost.size ? s.chat.map((c) => (c.kind === "user" && lost.has(c.id) ? { ...c, lost: true } : c)) : s.chat,
+    pendingChat: s.pendingChat.filter((p) => !ids.has(p.id)),
+    chat: s.chat.map((c) => (c.kind === "user" && ids.has(c.id) ? { ...c, unanswered: why } : c)),
   };
+}
+
+/**
+ * Errors the server sends instead of a chat reply: a rewrite of a screenshot it no longer keeps, or a message it
+ * refused (too long). It handles chat messages in order, so it's the oldest one still waiting. ("screenshot_expired"
+ * also answers a screenshot's Try again; with a chat message waiting at that same moment, that one is taken for it.)
+ */
+function refusesChat(error: { code: string; message: string }): boolean {
+  return error.code === "screenshot_expired" || (error.code === "invalid_event" && error.message.startsWith("chat.message"));
 }
 
 function placeholderAnswer(answer_id: string, question_id: string): AnswerView {
@@ -571,8 +592,11 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
     case "answer.failed":
       return patchAnswer(s, action.data.answer_id, { status: "failed", error: action.data.error });
 
-    case "error":
-      return { ...s, lastError: action.data };
+    case "error": {
+      const next = { ...s, lastError: action.data };
+      const oldest = refusesChat(action.data) ? next.pendingChat[0] : undefined;
+      return oldest ? unanswered(next, new Set([oldest.id]), { reason: action.data.message, retryable: false }) : next;
+    }
 
     default: {
       const _exhaustive: never = action;

@@ -672,15 +672,15 @@ function Banners({
 
 function ChatLog({ live, onAsk }: { live: LiveViewState; onAsk?: (text: string) => void }) {
   // Follow new replies like the transcript does: key on the chat's length, how much of the last reply has streamed
-  // (replies are mostly prose), and its status and the lost-message notes, which add a line.
+  // (replies are mostly prose), and its status and the "no reply" notes, which add a line.
   const last = live.chat[live.chat.length - 1];
   const lastReply = last?.kind === "answer" ? live.answers[last.answer_id] : undefined;
   const a = lastReply?.answer;
   const lastLen = a
     ? a.direct_answer.length + a.talking_points.reduce((n, p) => n + p.length, 0) + (a.code?.content.length ?? 0)
     : 0;
-  const lost = live.chat.reduce((n, c) => n + (c.kind === "user" && c.lost ? 1 : 0), 0);
-  const { ref, onScroll } = useStickyScroll<HTMLOListElement>(`${live.chat.length}:${lastLen}:${lastReply?.status}:${lost}`);
+  const notes = live.chat.reduce((n, c) => n + (c.kind === "user" && c.unanswered ? 1 : 0), 0);
+  const { ref, onScroll } = useStickyScroll<HTMLOListElement>(`${live.chat.length}:${lastLen}:${lastReply?.status}:${notes}`);
   if (live.chat.length === 0) {
     return (
       <p className="flex-1 px-4 py-6 text-center text-sm text-zinc-500">
@@ -701,10 +701,10 @@ function ChatLog({ live, onAsk }: { live: LiveViewState; onAsk?: (text: string) 
             <p className="rounded-2xl rounded-br-md bg-gradient-to-br from-indigo-500 to-indigo-700 px-3.5 py-2 text-white shadow-glow-sm">
               {entry.text}
             </p>
-            {entry.lost && (
+            {entry.unanswered && (
               <p className="mt-1 text-right text-xs text-rose-600 dark:text-rose-400">
-                The connection dropped before Orbit replied.{" "}
-                {onAsk && <ChatAction onClick={() => onAsk(entry.text)}>Send again</ChatAction>}
+                {entry.unanswered.reason}{" "}
+                {onAsk && entry.unanswered.retryable && <ChatAction onClick={() => onAsk(entry.text)}>Send again</ChatAction>}
               </p>
             )}
           </li>
