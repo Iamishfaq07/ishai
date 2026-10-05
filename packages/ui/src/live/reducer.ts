@@ -67,7 +67,8 @@ export interface AnswerView {
 }
 
 export type ChatEntry =
-  | { kind: "user"; id: string; text: string; ts: number }
+  /** `lost`: the connection dropped before its reply started, so none will come. */
+  | { kind: "user"; id: string; text: string; ts: number; lost?: boolean }
   | { kind: "answer"; id: string; answer_id: string };
 
 export interface LiveViewState {
@@ -103,8 +104,12 @@ export interface LiveViewState {
   /** Browsing an earlier answer (local only); null = follow the live answer. */
   viewedAnswerId: string | null;
   chat: ChatEntry[];
-  /** Chat messages still waiting for their reply, oldest first: the server answers them in order. */
-  pendingChat: Array<{ id: string; text: string }>;
+  /**
+   * Chat messages still waiting for their reply, oldest first: the server answers them in order. `sentOpen`: it went
+   * out on an open socket, so if that drops the reply is lost; one sent while disconnected waits in the client's
+   * queue for the next connection.
+   */
+  pendingChat: Array<{ id: string; text: string; sentOpen: boolean }>;
   mic: AudioStatus;
   system: AudioStatus;
   providers: Partial<Record<ProviderKind, ProviderStatus>>;
@@ -274,6 +279,35 @@ function patchAnswer(s: LiveViewState, id: string, patch: Partial<AnswerView>): 
   return { ...s, answers: { ...s.answers, [id]: { ...existing, ...patch } } };
 }
 
+export const CONNECTION_LOST: ProtocolError = {
+  code: "connection_lost",
+  message: "The connection dropped before this answer finished.",
+  retryable: true,
+};
+
+/**
+ * The socket is gone, and the server's engine for it with everything in flight: no answer it was writing will
+ * finish (its answer.cancelled can't arrive, and the next connection's engine has no active answer, so Stop can't
+ * reach it), and no chat message sent on it will be answered. Fail those answers so Try again shows instead of
+ * "Thinking…" forever, and mark the messages.
+ */
+function interrupt(s: LiveViewState): LiveViewState {
+  let answers = s.answers;
+  for (const a of Object.values(s.answers)) {
+    if (a.status !== "streaming") continue;
+    if (answers === s.answers) answers = { ...s.answers };
+    answers[a.answer_id] = { ...a, status: "failed", error: CONNECTION_LOST };
+  }
+  const lost = new Set(s.pendingChat.filter((p) => p.sentOpen).map((p) => p.id));
+  if (answers === s.answers && lost.size === 0) return s;
+  return {
+    ...s,
+    answers,
+    pendingChat: lost.size ? s.pendingChat.filter((p) => !lost.has(p.id)) : s.pendingChat,
+    chat: lost.size ? s.chat.map((c) => (c.kind === "user" && lost.has(c.id) ? { ...c, lost: true } : c)) : s.chat,
+  };
+}
+
 function placeholderAnswer(answer_id: string, question_id: string): AnswerView {
   return {
     answer_id,
@@ -293,8 +327,10 @@ function placeholderAnswer(answer_id: string, question_id: string): AnswerView {
 export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState {
   switch (action.type) {
     // ── local ────────────────────────────────────────────────────────────
-    case "local/connection":
-      return { ...s, connection: action.status, connectionDetail: action.detail ?? null, connectionInfo: action.info ?? null };
+    case "local/connection": {
+      const next = { ...s, connection: action.status, connectionDetail: action.detail ?? null, connectionInfo: action.info ?? null };
+      return action.status === "open" ? next : interrupt(next);
+    }
 
     case "local/pin": {
       if (!action.pinned) {
@@ -313,7 +349,7 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
       return {
         ...s,
         chat: [...s.chat, { kind: "user", id: action.id, text: action.text, ts: action.ts }],
-        pendingChat: [...s.pendingChat, { id: action.id, text: action.text }],
+        pendingChat: [...s.pendingChat, { id: action.id, text: action.text, sentOpen: s.connection === "open" }],
       };
 
     case "local/settings":

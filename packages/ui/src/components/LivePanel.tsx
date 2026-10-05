@@ -459,7 +459,7 @@ export function LivePanel(props: LivePanelProps) {
             {sideTab === "transcript" && (
               <TranscriptView turns={turns} onCorrectSpeaker={actions.correctSpeaker} />
             )}
-            {sideTab === "chat" && <ChatLog live={live} />}
+            {sideTab === "chat" && <ChatLog live={live} {...(!ended ? { onAsk: actions.chat } : {})} />}
             {sideTab === "reading" && <Teleprompter answer={answer} />}
             {sideTab === "chat" && <ChatInput ref={chatRef} onSend={actions.chat} disabled={ended} />}
           </aside>
@@ -661,12 +661,17 @@ function Banners({
   );
 }
 
-function ChatLog({ live }: { live: LiveViewState }) {
-  // Follow new replies like the transcript does — key on chat length + streamed length of the last reply.
+function ChatLog({ live, onAsk }: { live: LiveViewState; onAsk?: (text: string) => void }) {
+  // Follow new replies like the transcript does: key on the chat's length, how much of the last reply has streamed
+  // (replies are mostly prose), and its status and the lost-message notes, which add a line.
   const last = live.chat[live.chat.length - 1];
-  const lastAnswer = last?.kind === "answer" ? live.answers[last.answer_id]?.answer : undefined;
-  const lastLen = lastAnswer ? lastAnswer.talking_points.length + (lastAnswer.code?.content.length ?? 0) : 0;
-  const { ref, onScroll } = useStickyScroll<HTMLOListElement>(`${live.chat.length}:${lastLen}`);
+  const lastReply = last?.kind === "answer" ? live.answers[last.answer_id] : undefined;
+  const a = lastReply?.answer;
+  const lastLen = a
+    ? a.direct_answer.length + a.talking_points.reduce((n, p) => n + p.length, 0) + (a.code?.content.length ?? 0)
+    : 0;
+  const lost = live.chat.reduce((n, c) => n + (c.kind === "user" && c.lost ? 1 : 0), 0);
+  const { ref, onScroll } = useStickyScroll<HTMLOListElement>(`${live.chat.length}:${lastLen}:${lastReply?.status}:${lost}`);
   if (live.chat.length === 0) {
     return (
       <p className="flex-1 px-4 py-6 text-center text-sm text-zinc-500">
@@ -683,12 +688,20 @@ function ChatLog({ live }: { live: LiveViewState }) {
     >
       {live.chat.map((entry) =>
         entry.kind === "user" ? (
-          <li key={entry.id} className="ml-8 rounded-2xl rounded-br-md bg-gradient-to-br from-indigo-500 to-indigo-700 px-3.5 py-2 text-white shadow-glow-sm">
-            {entry.text}
+          <li key={entry.id} className="ml-8">
+            <p className="rounded-2xl rounded-br-md bg-gradient-to-br from-indigo-500 to-indigo-700 px-3.5 py-2 text-white shadow-glow-sm">
+              {entry.text}
+            </p>
+            {entry.lost && (
+              <p className="mt-1 text-right text-xs text-rose-600 dark:text-rose-400">
+                The connection dropped before Orbit replied.{" "}
+                {onAsk && <ChatAction onClick={() => onAsk(entry.text)}>Send again</ChatAction>}
+              </p>
+            )}
           </li>
         ) : (
           <li key={entry.id} className="mr-4 rounded-2xl rounded-bl-md bg-zinc-100 px-3.5 py-2 ring-1 ring-zinc-200 dark:bg-white/[0.04] dark:ring-white/[0.06]">
-            <ChatAnswer answer={live.answers[entry.answer_id]} />
+            <ChatAnswer answer={live.answers[entry.answer_id]} {...(onAsk ? { onAsk } : {})} />
           </li>
         ),
       )}
@@ -696,10 +709,43 @@ function ChatLog({ live }: { live: LiveViewState }) {
   );
 }
 
-function ChatAnswer({ answer }: { answer: AnswerView | undefined }) {
+function ChatAction({ onClick, children }: { onClick: () => void; children: string }) {
+  return (
+    <button type="button" onClick={onClick} className={cx("font-medium underline", focusRing)}>
+      {children}
+    </button>
+  );
+}
+
+/** Why a chat reply stopped early, said in its bubble (it used to stay on "Thinking…" when nothing had come yet). */
+function stoppedNote(answer: AnswerView): string {
+  if (answer.cancel_reason === "superseded") return answer.has_content ? "Stopped part-way: a newer question took over." : "Stopped: a newer question took over.";
+  if (answer.cancel_reason === "session_ended") return "Stopped: the session ended.";
+  return answer.has_content ? "Stopped part-way." : "Stopped.";
+}
+
+function ChatAnswer({ answer, onAsk }: { answer: AnswerView | undefined; onAsk?: (text: string) => void }) {
   if (!answer) return null;
-  if (answer.status === "failed") return <span className="text-rose-600">{answer.error?.message ?? "Failed."}</span>;
-  if (!answer.has_content) return <span className="text-zinc-500">Thinking…</span>;
+  // Asking again sends the same message (a reply's message is known only on the computer that sent it).
+  const askAgain = onAsk && answer.prompt ? () => onAsk(answer.prompt as string) : undefined;
+  if (answer.status === "failed") {
+    return (
+      <span className="text-rose-600 dark:text-rose-400">
+        {answer.error?.message ?? "Failed."}{" "}
+        {askAgain && answer.error?.retryable !== false && <ChatAction onClick={askAgain}>Try again</ChatAction>}
+      </span>
+    );
+  }
+  if (!answer.has_content) {
+    if (answer.status === "cancelled") {
+      return (
+        <span className="text-zinc-500">
+          {stoppedNote(answer)} {askAgain ? <ChatAction onClick={askAgain}>Ask again</ChatAction> : "Ask again."}
+        </span>
+      );
+    }
+    return <span className="text-zinc-500">Thinking…</span>;
+  }
   const a = answer.answer;
   return (
     <div className="space-y-1">
@@ -724,6 +770,7 @@ function ChatAnswer({ answer }: { answer: AnswerView | undefined }) {
             .join(" · ")}
         </p>
       )}
+      {answer.status === "cancelled" && <p className="text-xs text-zinc-500">{stoppedNote(answer)}</p>}
     </div>
   );
 }

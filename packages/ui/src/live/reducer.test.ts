@@ -8,6 +8,7 @@ import {
   type ServerEventType,
 } from "@orbit/types";
 import {
+  CONNECTION_LOST,
   SCREENSHOT_QUESTION,
   initialLiveState,
   liveReducer,
@@ -249,6 +250,43 @@ describe("chat replies", () => {
     // The phone companion doesn't know what was typed: nothing to send.
     const companion = run([chatStarted("c9")]);
     expect(selectAskAgain(companion, companion.answers.c9 ?? null)).toBeNull();
+  });
+});
+
+describe("a dropped connection", () => {
+  const open = { type: "local/connection", status: "open" } as const;
+  const drop = { type: "local/connection", status: "reconnecting", detail: "connection lost (1006)" } as const;
+
+  it("fails the answers it was writing (Try again instead of “Thinking…” and a Stop that does nothing)", () => {
+    const s = run([
+      open,
+      detected("q1"), started("a1", "q1"),
+      ev("answer.completed", { answer_id: "a1", answer: answer(["done"]), latency: { first_token_ms: 1, total_ms: 2 } }),
+      detected("q2", "t2"), started("a2", "q2"), ev("answer.chunk", { answer_id: "a2", partial: answer(["half"]) }),
+      detected("q3", "t3"), started("a3", "q3"), // still thinking
+      drop,
+    ]);
+    expect(s.answers.a1?.status).toBe("complete");
+    expect(s.answers.a2).toMatchObject({ status: "failed", error: CONNECTION_LOST, has_content: true });
+    expect(s.answers.a3).toMatchObject({ status: "failed", error: { retryable: true } });
+    // Closing for good does the same.
+    const closed = run([open, detected("q1"), started("a1", "q1"), { type: "local/connection", status: "closed" }]);
+    expect(closed.answers.a1?.status).toBe("failed");
+  });
+
+  it("fails a chat reply that was streaming, which keeps its message for Try again", () => {
+    const s = run([open, { type: "local/chat_sent", id: "u1", text: "Give me an example", ts: 1 }, started("c1", "q1", "chat"), drop]);
+    expect(s.answers.c1).toMatchObject({ status: "failed", prompt: "Give me an example" });
+  });
+
+  it("marks a chat message whose reply hadn't started as lost, and still pairs a queued one after the reconnect", () => {
+    let s = run([open, { type: "local/chat_sent", id: "u1", text: "sent, then the socket died", ts: 1 }, drop]);
+    expect(s.chat[0]).toMatchObject({ kind: "user", lost: true });
+    expect(s.pendingChat).toEqual([]);
+    // Sent while reconnecting: the client queues it for the next connection, whose reply answers it.
+    s = run([{ type: "local/chat_sent", id: "u2", text: "queued", ts: 2 }, open, started("c1", "q1", "chat")], s);
+    expect(s.answers.c1?.prompt).toBe("queued");
+    expect(s.chat[1]).not.toHaveProperty("lost");
   });
 });
 
