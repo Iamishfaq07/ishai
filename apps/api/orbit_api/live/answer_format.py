@@ -111,7 +111,10 @@ class AnswerStreamParser:
         section: str | None = None
         in_code = False
         code_lang = ""
-        code_lines: list[str] = []
+        code_tagged = False  # a CODE: line arrived: show the code box even before its first line streams
+        code_lines: list[str] = []  # the block being read
+        # Every code block: (written under CODE:, its lines). The solution under CODE: wins over snippets elsewhere.
+        blocks: list[tuple[bool, list[str]]] = []
         in_diff = False
         diff_lines: list[str] = []
         stray: list[str] = []
@@ -137,6 +140,8 @@ class AnswerStreamParser:
                     in_code = False
                 elif _FENCE.match(line):
                     in_code = False
+                    if section == "CODE":
+                        section = None  # anything after the closing fence is not more code
                     continue
                 else:
                     code_lines.append(line)
@@ -144,11 +149,13 @@ class AnswerStreamParser:
             elif _FENCE.match(line):
                 fence = _FENCE.match(line)
                 assert fence is not None
-                # Only a fence inside a CODE section (or a coding question) opens a code block — a stray ```
-                # in EXAMPLE prose must not be mistaken for code.
-                if section == "CODE" or self._qtype == QuestionType.coding:
-                    in_code = True
-                    code_lang = fence.group(1) or code_lang
+                # A fence on its own line opens a code block wherever it is: the model often writes the code right
+                # after the talk track with no CODE: line, and read as prose it became a wall of words. (A ``` inside
+                # a sentence isn't a fence: _FENCE needs the whole line.)
+                in_code = True
+                code_lines = []
+                blocks.append((section == "CODE", code_lines))
+                code_lang = fence.group(1).lower() or code_lang
                 continue
 
             if tag:
@@ -171,7 +178,8 @@ class AnswerStreamParser:
                 elif section == "EXAMPLE":
                     ans.example = value or None
                 elif section == "CODE":
-                    code_lang = value.lower() or code_lang
+                    code_lang = value.strip("` ").lower() or code_lang
+                    code_tagged = True
                 elif section == "TIME":
                     ans.time_complexity = value or None
                 elif section == "SPACE":
@@ -210,6 +218,13 @@ class AnswerStreamParser:
                 key = {"ROOTCAUSE": "root_cause", "FIX": "fix", "WHY": "why"}[section]
                 setattr(ans.debug, key, f"{getattr(ans.debug, key) or ''} {line.strip()}".strip()[:600])
                 continue
+            if section == "CODE":
+                # Code under CODE: with no fence around it is still code, indentation and blank lines kept.
+                if not blocks or not blocks[-1][0] or blocks[-1][1] is not code_lines:
+                    code_lines = []
+                    blocks.append((True, code_lines))
+                code_lines.append(line)
+                continue
 
             bullet = _BULLET.match(line)
             if bullet and section in (None, "ANSWER"):
@@ -245,8 +260,10 @@ class AnswerStreamParser:
             # Model skipped the label on a question about the user's own past with no verified facts to draw
             # on: whatever it said about "me" is illustrative.
             ans.grounding = "example"
-        if code_lines or code_lang:
-            ans.code = CodeBlock(language=code_lang or "text", content="\n".join(code_lines).rstrip())
+        solution = [lines for under_code, lines in blocks if under_code] or [lines for _, lines in blocks]
+        content = "\n\n".join(t for t in ("\n".join(lines).strip("\n").rstrip() for lines in solution) if t)
+        if content or code_tagged:
+            ans.code = CodeBlock(language=code_lang or "text", content=content)
         if diff_lines:
             ans.debug = ans.debug or DebugInfo()
             ans.debug.diff = "\n".join(diff_lines).rstrip()[:6000]

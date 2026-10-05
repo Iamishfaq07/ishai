@@ -1,5 +1,31 @@
 # Implementation log
 
+## Coding questions get code, in every session, in chat and from screenshots (2026-10-05)
+
+Reported: coding questions came back as English only, even in a Coding interview, and in chat. Measured with real
+DeepSeek on 16 everyday coding asks (spoken and typed, coding and normal interviews): 45 of 56 got code before, 56 of 56
+after, and chat follow-ups ("give me the code", "now in Java") 6 of 6.
+
+- **Code was thrown away.** The model often writes the code straight after the talk track without a `CODE:` line;
+  unless the question had been typed "coding", the parser read it as prose and the code was crushed into the spoken
+  answer as one line. A fenced block now counts as code wherever it is, unfenced code under `CODE:` is kept, and the
+  solution under `CODE:` wins over a snippet in the talk track.
+- **Coding asks were typed "technical"** ("write a program…", palindrome, Fibonacci, "detect a cycle in a directed
+  graph", "merge two sorted lists", "check whether a number is prime"). More of the ways people name problems and ask
+  for code, as whole words where a prefix would misfire ("code for" isn't "code formatting", "a trie" isn't "a
+  tried"), plus a small "verb + data" rule for plain tasks ("count the words in a sentence").
+- **The prompt now asks for the code**: coding answers MUST have `CODE:` with the complete solution, then
+  complexity, edge cases and tests. In a Coding interview or assessment every technical question is a coding one. In a
+  normal interview a technical question may still turn out to need code ("so how would you get the top ten in
+  Python?"): the model decides, with room in the token budget for it. A follow-up to an answer that had code stays a
+  coding answer.
+- **Chat:** "give me the code", "code it", "now in Java", "what about C++?" redo the question on screen as code
+  instead of being a new question, and "make it shorter" on a code answer keeps the code. The chat panel now shows the
+  reply's code block (it showed only the words).
+- **Screenshots in any session:** the model works out what the image shows. A coding problem gets the talk track plus
+  the full solution, an error gets the fix (debug format where the plan has it), a multiple-choice question a plain
+  answer. Screenshot answers always have a code-sized budget (normal-interview screenshots had a prose-sized one).
+
 ## Dotted "thinking orbs" for loading and AI activity (2026-10-04)
 
 - Loading spinners, the live "Thinking…" / "Answering" / "Hearing speech" status, the answer card's thinking state and

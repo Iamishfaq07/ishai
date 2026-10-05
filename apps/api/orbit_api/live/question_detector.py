@@ -107,7 +107,29 @@ _TYPE_RULES: list[tuple[QuestionType, tuple[str, ...]]] = [
                            "subarray", "substring", "subsequence",
                            "linked list", "binary tree", "time complexity", "big o", "optimize this code",
                            "optimise this code", "this code", "the code", "string reversal", "two sum",
-                           "hash map", "recursion", "sql query", "write a query", "debug this")),
+                           "hash map", "recursion", "sql query", "write a query", "debug this",
+                           # how people name the classic problems and ask for code out loud
+                           "write a program", "write a script", "write a method", "write a class", "write an algorithm",
+                           "write some code", "write the code", "write a sql", "write a python", "write a java",
+                           "show me the code", "give me the code", "pseudocode", "pseudo code",
+                           "palindrom", "anagram", "fibonacci", "factorial", "fizzbuzz", "fizz buzz", "prime number",
+                           "parenthes", "balanced bracket", "dynamic programming", "memoiz", "binary search",
+                           "bubble sort", "merge sort", "quick sort", "quicksort", "insertion sort", "selection sort",
+                           "heap sort", "heapsort", "counting sort", "radix sort", "sorting algorithm", "sorted list",
+                           "sorted array", "two sorted", "directed graph", "undirected graph", "weighted graph",
+                           "acyclic graph", "graph travers", "tree travers", "inorder", "preorder", "postorder",
+                           "level order", "depth first", "breadth first", "topological sort", "shortest path",
+                           "dijkstra", "connected component", "number of islands", "detect a cycle", "has a cycle",
+                           "cycle detection", "lru cache", "lfu cache", "reverse a string", "reverse a number",
+                           "reverse an integer", "reverse the string", "reverse a word", "reverse the word",
+                           "reverse words", "reverse a sentence", "second largest", "second highest",
+                           "second smallest", "kth largest", "kth smallest", "missing number", "duplicate number",
+                           "remove duplicates", "find duplicates", "find the duplicate", "sum of digits", "even or odd",
+                           "odd or even", "vowel", "frequency of each", "count the frequency", "count the occurrences",
+                           "occurrences of each", "sliding window", "two pointer", "kadane", "n queens",
+                           "sudoku solver", "tower of hanoi", "rotate a matrix", "spiral matrix", "2d matrix",
+                           "matrix multiplication", "binary search tree", "min heap", "max heap", "prefix tree",
+                           "longest common", "longest increasing", "string compression", "compress a string")),
     (QuestionType.system_design, ("design a", "design an", "design the", "how would you design",
                                   "how would you build", "build a system", "let's design", "scale",
                                   "architecture", "architect", "distributed", "throughput",
@@ -233,10 +255,32 @@ def _imperative_strength(norm: str) -> float:
 _DATA_CUES = re.compile(r"\b(?:table|tables|query|queries|sql|column|columns|rows|select|join|schema)\b")
 
 
+# Coding cues that must match as whole words: "code for" isn't "code formatting", "a trie" isn't "a tried and tested",
+# "top k" isn't "top KPIs".
+_CODING_WORDS = ("bfs", "dfs", "bst", "code it", "code this", "code that", "code up", "code for", "a trie", "the trie",
+                 "using a stack", "with a stack", "top k", "a matrix", "the matrix", "a graph with")
+
+
+def _type_pattern(qtype: QuestionType, needles: tuple[str, ...]) -> re.Pattern[str]:
+    pattern = r"\b(?:" + "|".join(re.escape(n) for n in needles) + ")"
+    if qtype is QuestionType.coding:
+        pattern += r"|\b(?:" + "|".join(re.escape(n) for n in _CODING_WORDS) + r")\b"
+    return re.compile(pattern)
+
+
 # Needles match at the start of a word: "backpressure" is not about "pressure", "escalate" is not "scale".
 _TYPE_PATTERNS: list[tuple[QuestionType, re.Pattern[str]]] = [
-    (qtype, re.compile(r"\b(?:" + "|".join(re.escape(n) for n in needles) + ")")) for qtype, needles in _TYPE_RULES
+    (qtype, _type_pattern(qtype, needles)) for qtype, needles in _TYPE_RULES
 ]
+
+# A small programming task said plainly ("check whether a number is prime", "merge two lists", "count the words in a
+# sentence"): a verb that does something to data, then the data. Only for questions no other type claimed.
+_CODING_TASK = re.compile(
+    r"\b(?:find|count|check|reverse|sort|merge|remove|print|return|compute|calculate|detect|convert|rotate|flatten|"
+    r"traverse|search|swap|split|validate|sum|generate|delete|insert|parse|group|filter|compress|encode|decode|"
+    r"transpose|partition|shuffle|determine)\b(?: \w+){0,5}? (?:strings?|substrings?|lists?|arrays?|integers?|"
+    r"numbers?|digits?|words?|characters?|chars?|nodes?|trees?|matrix|matrices|elements?|duplicates?|sentences?|"
+    r"vowels?|intervals?)\b")
 
 
 # Asking for a story is behavioral whatever the story is about: "Tell me about a time you had to scale a service" is
@@ -254,6 +298,8 @@ def classify_type(norm: str) -> QuestionType:
     for qtype, pattern in _TYPE_PATTERNS:
         if pattern.search(norm):
             return qtype
+    if _CODING_TASK.search(norm):
+        return QuestionType.coding
     return QuestionType.technical
 
 
