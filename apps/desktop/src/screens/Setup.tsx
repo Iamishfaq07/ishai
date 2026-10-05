@@ -69,7 +69,7 @@ import { TitleBar } from "../TitleBar";
 import { UpdateBanner } from "../UpdateBanner";
 import { confirmSessionDuringUpdate, useUpdate } from "../updates";
 import { WorkspaceBar } from "../WorkspaceBar";
-import type { DesktopLaunch } from "./Live";
+import { MIC_KEY, OUTPUT_KEY, checkChosenApp, nextSource, usesSystemAudio, type DesktopLaunch } from "../launch";
 
 const TYPES: Array<{ value: SessionType; label: string }> = [
   { value: "interview", label: "Interview" },
@@ -110,15 +110,18 @@ function docError(err: unknown): string {
 }
 
 export const IS_MAC = /Mac/i.test(navigator.userAgent);
-/** Meeting apps pre-selected as the interviewer audio source when they're running. */
-const MEETING_APPS = new Set(["zoom.exe", "ms-teams.exe", "teams.exe", "webexmta.exe", "ciscocollabhost.exe", "skype.exe", "slack.exe", "discord.exe"]);
 
 const control =
   "block w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-sm dark:border-zinc-800 dark:bg-zinc-900";
 
-const MIC_KEY = "orbit.micDeviceId";
 const WORKSPACE_KEY = "orbit.workspaceId";
-const OUTPUT_KEY = "orbit.outputSource";
+const savedOutput = () => localStorage.getItem(OUTPUT_KEY) ?? "out:default";
+
+/** Session types where the other side of a call is the point: losing their audio silently is the costly mistake. */
+const CALL_TYPES: ReadonlySet<SessionType> = new Set(["interview", "coding", "meeting"]);
+
+/** Why Start stopped to ask about the interviewer's app (shown by the Start button). */
+type AppWarning = { kind: "idle"; app: AudioApp; playing: AudioApp } | { kind: "gone"; text: string };
 
 /** " (Speakers — Realtek)" for the current default / communications output, if known. */
 function defaultName(outputs: NativeAudioDevice[], communications: boolean): string {
@@ -178,33 +181,45 @@ export function SetupScreen({
     setMicIdState(id);
     localStorage.setItem(MIC_KEY, id);
   };
-  const [systemAudio, setSystemAudio] = useState(!IS_MAC);
+  // The user's own choice. Phone and mock sessions don't use interviewer audio; switching back to another type
+  // brings the choice back instead of leaving it off for good.
+  const [systemAudioChoice, setSystemAudioChoice] = useState(true);
+  const interviewerAudioUsed = !IS_MAC && usesSystemAudio(type);
+  const systemAudio = interviewerAudioUsed && systemAudioChoice;
   const [apps, setApps] = useState<AudioApp[]>([]);
+  const appsRef = useRef<AudioApp[]>([]);
   // What to listen to: "app:<pid>" (one app), or an output: "out:default" | "out:communications" | "out:<id>".
-  const [source, setSource] = useState<string>(() => localStorage.getItem(OUTPUT_KEY) ?? "out:default");
+  const [source, setSource] = useState<string>(savedOutput);
   const appTouched = useRef(false);
   const appPid = source.startsWith("app:") ? source.slice(4) : "";
   const systemDevice = source.startsWith("out:") ? source.slice(4) : undefined;
+  const [appWarning, setAppWarning] = useState<AppWarning | null>(null);
+  // An app the user chose to keep at Start although it was silent: not asked about again.
+  const keptIdleApp = useRef<number | null>(null);
   const chooseSource = (value: string) => {
     appTouched.current = true;
     setSource(value);
+    setAppWarning(null);
     if (value.startsWith("out:")) localStorage.setItem(OUTPUT_KEY, value);
   };
-
-  const refreshApps = () => {
-    void listAudioApps().then((list) => {
-      setApps(list);
-      const savedOutput = localStorage.getItem(OUTPUT_KEY) ?? "out:default";
-      if (appTouched.current) {
-        // keep the user's choice unless that app has gone away
-        setSource((s) => (s.startsWith("app:") && !list.some((a) => `app:${a.pid}` === s) ? savedOutput : s));
-        return;
-      }
-      const meeting = list.find((a) => MEETING_APPS.has(a.exe.toLowerCase()));
-      setSource(meeting ? `app:${meeting.pid}` : savedOutput);
-    });
-    void listOutputDevices().then(setOutputs);
+  const showApps = (list: AudioApp[]) => {
+    const previous = appsRef.current;
+    appsRef.current = list;
+    setApps(list);
+    setSource((s) => nextSource(s, previous, list, appTouched.current, savedOutput()));
   };
+
+  // Stable (showApps only uses refs and state setters), so the focus listener below is added once.
+  const refreshApps = useCallback(() => {
+    void listAudioApps().then(showApps);
+    void listOutputDevices().then(setOutputs);
+  }, []);
+  // Back from the meeting app is when what's playing changes (the call started): read the list again.
+  useEffect(() => {
+    if (IS_MAC) return;
+    window.addEventListener("focus", refreshApps);
+    return () => window.removeEventListener("focus", refreshApps);
+  }, [refreshApps]);
   const [error, setError] = useState<string | null>(null);
   // Why Start didn't work, shown by the Start button (the screen scrolls; the general error sits far above it).
   const [startError, setStartError] = useState<{ text: string; buy: boolean } | null>(null);
@@ -273,11 +288,7 @@ export function SetupScreen({
     listAudioDevices()
       .then(setDevices)
       .catch((err: unknown) => setError(friendlyAudioError(`Couldn't list audio devices: ${String(err)}`)));
-  }, []);
-
-  useEffect(() => {
-    if (type === "phone" || type === "mock") setSystemAudio(false);
-  }, [type]);
+  }, [refreshApps]);
 
   const refreshDocs = async (selectId?: string): Promise<void> => {
     const list = await api.listDocuments();
@@ -360,23 +371,56 @@ export function SetupScreen({
   const selectedApp = appPid ? apps.find((a) => String(a.pid) === appPid) : undefined;
   // Browsers run every tab in one process tree, so "this app only" would overpromise for Chrome/Edge/Firefox.
   const selectedIsBrowser = selectedApp ? isBrowserExe(selectedApp.exe) : false;
+  // The chosen app is silent while another one plays: the interview is most likely over there.
+  const otherPlaying = selectedApp && !selectedApp.active ? apps.find((a) => a.active && a.pid !== selectedApp.pid) : undefined;
   const localState: LocalAudioState = {
     micName: (micDevice ?? devices.find((d) => d.isDefault) ?? devices[0])?.name ?? null,
     systemAudio,
+    systemAudioUsed: usesSystemAudio(type),
     interviewerSource: appPid
       ? selectedIsBrowser
         ? `Capturing ${selectedApp?.name ?? "the browser"} (all its tabs)`
         : `Capturing ${selectedApp?.name ?? "the selected app"} only`
       : `Capturing ${outputName(systemDevice) ?? "the default output"}`,
+    interviewerWarning:
+      selectedApp && otherPlaying ? `${selectedApp.name} isn't playing any sound, but ${otherPlaying.name} is.` : null,
     hasResume: selectedDocs.some((d) => d.kind === "resume"),
     hasJobDescription: selectedDocs.some((d) => d.kind === "job_description"),
   };
+  /** Submit again once the state just set has rendered (start() reads it from the next render). */
+  const startAgain = () => setTimeout(() => formRef.current?.requestSubmit(), 0);
 
   const start = async (e: FormEvent) => {
     e.preventDefault();
     if (blockers.length > 0 && !overrideBlockers) return;
     // An update that's about to restart Orbit would end the session: ask first.
     if (!(await confirmSessionDuringUpdate())) return;
+    setAppWarning(null);
+    // The app list can be minutes old: check against a fresh one that the chosen app is still there and is the one
+    // playing. (An empty list is more likely a failed read than no audio at all: then don't second-guess.)
+    let app = selectedApp;
+    if (systemAudio && selectedApp) {
+      const list = await listAudioApps();
+      if (list.length > 0) {
+        appsRef.current = list;
+        setApps(list);
+        const check = checkChosenApp(list, selectedApp.pid, selectedApp.exe);
+        if (check.kind === "gone") {
+          const fallback = savedOutput();
+          setSource(fallback);
+          setAppWarning({
+            kind: "gone",
+            text: `${selectedApp.name} isn't open any more, so Listen to is back on ${outputName(fallback.slice(4)) ?? "the default output"}. Pick another app there, or press Start again.`,
+          });
+          return;
+        }
+        if (check.kind === "idle" && keptIdleApp.current !== check.app.pid) {
+          setAppWarning(check);
+          return;
+        }
+        app = check.app; // the same app, maybe restarted under a new PID
+      }
+    }
     setStarting(true);
     setError(null);
     setStartError(null);
@@ -415,8 +459,8 @@ export function SetupScreen({
       onStart(session, {
         systemAudio,
         ...(micId ? { micDeviceId: micId } : {}),
-        ...(systemAudio && appPid ? { systemProcessId: Number(appPid) } : {}),
-        ...(systemAudio && appPid && selectedApp ? { systemProcessExe: selectedApp.exe } : {}),
+        ...(systemAudio && appPid ? { systemProcessId: app?.pid ?? Number(appPid) } : {}),
+        ...(systemAudio && app ? { systemProcessExe: app.exe } : {}),
         ...(systemAudio && systemDevice ? { systemDevice } : {}),
       });
     } catch (err) {
@@ -743,12 +787,12 @@ export function SetupScreen({
                 )}
               </select>
             </label>
-            <label className={cx("flex items-start gap-2 text-xs", (IS_MAC || type === "phone") && "opacity-60")}>
+            <label className={cx("flex items-start gap-2 text-xs", !interviewerAudioUsed && "opacity-60")}>
               <input
                 type="checkbox"
                 checked={systemAudio}
-                disabled={IS_MAC || type === "phone"}
-                onChange={(e) => setSystemAudio(e.target.checked)}
+                disabled={!interviewerAudioUsed}
+                onChange={(e) => setSystemAudioChoice(e.target.checked)}
                 className="mt-0.5"
               />
               <span>
@@ -758,7 +802,9 @@ export function SetupScreen({
                     ? "macOS system audio capture (ScreenCaptureKit) isn’t implemented yet — Orbit will listen through your microphone."
                     : type === "phone"
                       ? "Phone / room mode uses your microphone only."
-                      : "Kept separate from your mic, so Orbit knows who's speaking."}
+                      : type === "mock"
+                        ? "Mock interviews use your microphone only: the interviewer is Orbit itself."
+                        : "Kept separate from your mic, so Orbit knows who's speaking."}
                 </span>
               </span>
             </label>
@@ -810,6 +856,12 @@ export function SetupScreen({
                       : "Everything this output plays is captured. Pick your meeting app to ignore other sounds."}
                   {!appPid && " If a device is unplugged, Orbit switches to the default and back by itself."}
                 </p>
+                {selectedApp && otherPlaying && (
+                  <p role="status" className="text-xs text-amber-700 dark:text-amber-300">
+                    {selectedApp.name} isn't playing any sound right now, but {otherPlaying.name} is. Pick the app your
+                    interview is in.
+                  </p>
+                )}
               </div>
             )}
             <AudioTest
@@ -831,6 +883,51 @@ export function SetupScreen({
         <div className="space-y-2 border-t border-zinc-200 p-3 dark:border-zinc-800">
           <PreflightPanel local={localState} onStatus={onPreflight} />
           {plan?.credits && <MinutesLeft left={plan.credits.interview_minutes_left} />}
+          {/* Not folded into the checklist's tips: an interview that can't hear the interviewer is the costly mistake. */}
+          {interviewerAudioUsed && !systemAudio && CALL_TYPES.has(type) && (
+            <div role="status" className="flex items-start gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+              <span className="flex-1">Interviewer audio is off: Orbit only hears your microphone, not the other side of the call.</span>
+              <button type="button" onClick={() => setSystemAudioChoice(true)} className={cx("shrink-0 font-medium underline", focusRing)}>
+                Turn it on
+              </button>
+            </div>
+          )}
+          {appWarning?.kind === "idle" && (
+            <div role="alert" className="space-y-1 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+              <p>
+                {appWarning.app.name} isn't playing any sound, but {appWarning.playing.name} is. If your interview is in{" "}
+                {appWarning.playing.name}, Orbit won't hear the interviewer.
+              </p>
+              <span className="flex flex-wrap gap-x-3 gap-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    chooseSource(`app:${appWarning.playing.pid}`);
+                    startAgain();
+                  }}
+                  className={cx("font-medium underline", focusRing)}
+                >
+                  Listen to {appWarning.playing.name}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    keptIdleApp.current = appWarning.app.pid;
+                    setAppWarning(null);
+                    startAgain();
+                  }}
+                  className={cx("underline", focusRing)}
+                >
+                  Start with {appWarning.app.name}
+                </button>
+              </span>
+            </div>
+          )}
+          {appWarning?.kind === "gone" && (
+            <p role="alert" className="rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+              {appWarning.text}
+            </p>
+          )}
           {startError && (
             <div role="alert" className="flex items-start gap-2 rounded-lg bg-rose-500/10 px-3 py-2 text-xs text-rose-800 dark:text-rose-200">
               <span className="flex-1">{startError.text}</span>

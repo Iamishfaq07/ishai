@@ -6,8 +6,12 @@ import { API_URL, api } from "./api";
 export interface LocalAudioState {
   micName: string | null; // null = no microphone found
   systemAudio: boolean;
+  /** False for session types that only use the mic (phone / room, mock): then "off" is expected, not a problem. */
+  systemAudioUsed: boolean;
   /** "Capturing: Microsoft Teams" / "Capturing: Speakers (Realtek)". */
   interviewerSource: string | null;
+  /** E.g. the chosen app is silent while another one plays. */
+  interviewerWarning: string | null;
   hasResume: boolean;
   hasJobDescription: boolean;
 }
@@ -27,10 +31,15 @@ function localChecks(s: LocalAudioState): PreflightCheck[] {
         },
   );
   out.push(
-    !s.systemAudio
-      ? { id: "system", label: "Interviewer audio", status: "warn", detail: "Off — Orbit only hears your microphone.",
-          fix: "Turn on interviewer audio below so Orbit can tell who's speaking." }
-      : { id: "system", label: "Interviewer audio", status: "ok", detail: s.interviewerSource ?? "Default output" },
+    !s.systemAudioUsed
+      ? { id: "system", label: "Interviewer audio", status: "ok", detail: "Not used: this session listens through your microphone." }
+      : !s.systemAudio
+        ? { id: "system", label: "Interviewer audio", status: "warn", detail: "Off — Orbit only hears your microphone.",
+            fix: "Turn on interviewer audio below so Orbit can tell who's speaking." }
+        : s.interviewerWarning
+          ? { id: "system", label: "Interviewer audio", status: "warn", detail: s.interviewerWarning,
+              fix: "Pick the app your interview is in under Listen to." }
+          : { id: "system", label: "Interviewer audio", status: "ok", detail: s.interviewerSource ?? "Default output" },
   );
   out.push(
     s.hasResume
