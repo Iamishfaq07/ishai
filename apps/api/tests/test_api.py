@@ -274,7 +274,8 @@ def test_network_drop_does_not_end_session_and_client_can_reconnect(client: Test
     assert "duration_seconds" in detail["session"]
 
     ticket3 = client.post(f"/v1/sessions/{sid}/live-ticket", headers=h)
-    assert ticket3.status_code == 409  # ended sessions are closed for good
+    assert ticket3.status_code == 409  # ended sessions are closed for good, and the client can tell why
+    assert ticket3.json()["detail"] == {"code": "session_ended", "message": "Session has ended"}
 
 
 def _wait_report(client: TestClient, h: dict[str, str], sid: str, timeout_s: float = 10) -> dict[str, Any]:

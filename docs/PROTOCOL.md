@@ -18,8 +18,9 @@ should fetch a new ticket and reconnect with backoff.
 **One live session per account.** A second live session is refused at `POST …/live-ticket` with `409
 {"detail": {"code": "live_session_active", "session_id", "title", "message"}}` before any audio or AI spend. The
 client closes for good, shows the message, and offers **End it and use this one**: `POST /v1/sessions/{other}/end`,
-then reconnect. Ticket errors 401/402/403/404/409 are never retried, and the server's message is shown as-is
-(for example "Verify your email…").
+then reconnect. The ticket's other 409s carry their own codes too: `session_ended` (the session has ended and can't
+be reopened) and `session_time_limit` (it ran its maximum length). Ticket errors 401/402/403/404/409 are never
+retried, and the server's message is shown as-is (for example "Verify your email…").
 
 **Ending from elsewhere.** `POST /v1/sessions/{id}/end` also stops that session's live socket if one is open. The
 engine sends `session.ended`, records usage, and the socket closes with `4009`.

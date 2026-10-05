@@ -115,6 +115,7 @@ OUT_OF_CREDITS = "You're out of interview minutes. Buy a pack to keep going."
 def _out_of_minutes(plan: Plan, mock: bool) -> str:
     return OUT_OF_CREDITS if plan.credits else _OUT_OF_MINUTES[mock]
 SESSION_TIME_LIMIT = "session_time_limit"
+SESSION_ENDED = "session_ended"  # a live ticket for a session that has ended: it can't be reopened
 ReportStatus = Literal["pending", "ready", "failed"] | None
 
 
@@ -471,7 +472,7 @@ async def live_ticket(session_id: str, user: Annotated[User, Depends(require_ver
                       db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
     row = await _owned(db, session_id, user)
     if row.status == "ended":
-        raise HTTPException(status.HTTP_409_CONFLICT, "Session has ended")
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={"code": SESSION_ENDED, "message": "Session has ended"})
     other = next((sid for sid in _live_sockets.get(user.id, {}) if sid != session_id), None)
     if other is not None and len(_live_sockets.get(user.id, {})) >= MAX_LIVE_SESSIONS_PER_USER:
         running = await db.get(LiveSessionRow, other)
