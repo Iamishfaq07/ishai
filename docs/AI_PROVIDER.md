@@ -21,7 +21,9 @@ request → circuit breaker closed? → DeepSeek ── first token within budge
                     └─ open (3 straight failures, 30 s) ───────────────► backup directly; then one trial
 ```
 
-- **First-token budget:** `ORBIT_LLM_FIRST_TOKEN_TIMEOUT_S` (10 s), plus 12 s when thinking is on.
+- **First-token budget:** `ORBIT_LLM_FIRST_TOKEN_TIMEOUT_S` (10 s), plus 12 s when thinking is on. It's for failing
+  over, so it applies only when a backup could take the request. With none (not configured, a plan without
+  fallback, an image it can't read, or the backup itself down), a slow DeepSeek is waited for, up to 45 s.
 - **No switching mid-answer:** once DeepSeek has streamed text, a failure surfaces as a failed answer (and the
   engine's one retry). Two models are never spliced into one answer.
 - **Not failed over:**

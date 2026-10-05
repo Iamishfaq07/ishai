@@ -56,10 +56,12 @@ metrics. LLM cost is estimated from config-driven prices with cache-hit/miss and
 unpriced model records cost `NULL` (unknown) with a warning — never `$0`.
 
 **D15 — Live-session writes are durable.** The recorder retries each write with backoff; what still fails goes to
-`failed_writes` (or a local spool file if the DB is unreachable) and is replayed at startup. Live teardown runs in
-a shielded task so a cancelled handler (server shutdown) can't abort usage/transcript writes. Reports are DB-backed
-jobs (`jobs` table) run by a worker in each API process, so ending a session is instant and a restart can't lose
-a report.
+`failed_writes` (or a local spool file if the DB is unreachable, failing that memory) and is replayed at startup,
+every minute while the API runs, before a session's report and at shutdown: the host's disk doesn't outlive the
+process, so the spool can't wait for a restart. Live teardown runs in a shielded task so a cancelled handler (server
+shutdown) can't abort usage/transcript writes. Reports are DB-backed jobs (`jobs` table) run by a worker in each API
+process, so ending a session is instant and a restart can't lose a report: a job cut off by shutdown goes straight
+back in the queue.
 
 **D16 — Remote servers must be HTTPS.** The desktop "Server" override accepts plain `http://` only for this
 machine (`localhost`, `127.0.0.1`, `[::1]`) or in a development build; an insecure saved override is ignored.
