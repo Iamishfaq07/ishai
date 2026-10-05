@@ -5,7 +5,7 @@ use base64::Engine;
 use serde::Serialize;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
-const OVERLAY_LABEL: &str = "region";
+pub(crate) const OVERLAY_LABEL: &str = "region";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -17,17 +17,14 @@ pub struct Capture {
 
 struct TargetMonitor {
     xcap: xcap::Monitor,
-    /// Monitor size in physical pixels (as Tauri reports it).
+    /// Monitor origin and size in physical pixels (as Tauri reports them).
+    physical_x: i32,
+    physical_y: i32,
     physical_width: u32,
-    scale_factor: f64,
 }
 
-/// The monitor under `window_label` (falls back to the main window).
-fn target_monitor(app: &AppHandle, window_label: &str) -> Result<TargetMonitor, String> {
-    let window = app
-        .get_webview_window(window_label)
-        .or_else(|| app.get_webview_window("main"))
-        .ok_or("Orbit window not found")?;
+/// The monitor under `window`.
+fn target_monitor(window: &tauri::WebviewWindow) -> Result<TargetMonitor, String> {
     let monitor = window
         .current_monitor()
         .map_err(|e| e.to_string())?
@@ -40,9 +37,46 @@ fn target_monitor(app: &AppHandle, window_label: &str) -> Result<TargetMonitor, 
         .map_err(|e| format!("Screen capture unavailable: {e}"))?;
     Ok(TargetMonitor {
         xcap,
+        physical_x: pos.x,
+        physical_y: pos.y,
         physical_width: size.width,
-        scale_factor: monitor.scale_factor(),
     })
+}
+
+/// A selection in the overlay's CSS pixels → a crop of the monitor image `(x, y, width, height)`. The overlay's
+/// client area starts at `overlay_origin` (physical, virtual-screen coordinates), which needn't be the monitor's
+/// origin (the window is placed in logical units, which mixed-DPI monitors convert ambiguously), so its real
+/// position is used. `scale` is the overlay's DPI scale; `image_ratio` = image pixels per physical pixel. Clamped
+/// to the image; None if nothing of the selection is on it.
+fn selection_crop(
+    selection: (f64, f64, f64, f64),
+    overlay_origin: (i32, i32),
+    monitor_origin: (i32, i32),
+    scale: f64,
+    image_ratio: f64,
+    image_size: (u32, u32),
+) -> Option<(u32, u32, u32, u32)> {
+    let (x, y, width, height) = selection;
+    // One axis: where `start..start + len` (CSS px) lands in the image, clamped to it.
+    let span = |start: f64, len: f64, overlay: i32, monitor: i32, size: u32| {
+        let to_image = |css: f64| {
+            ((f64::from(overlay - monitor) + css * scale) * image_ratio)
+                .round()
+                .clamp(0.0, f64::from(size))
+        };
+        (to_image(start), to_image(start + len))
+    };
+    let (left, right) = span(x, width, overlay_origin.0, monitor_origin.0, image_size.0);
+    let (top, bottom) = span(y, height, overlay_origin.1, monitor_origin.1, image_size.1);
+    if right - left < 1.0 || bottom - top < 1.0 {
+        return None;
+    }
+    Some((
+        left as u32,
+        top as u32,
+        (right - left) as u32,
+        (bottom - top) as u32,
+    ))
 }
 
 fn encode_png(width: u32, height: u32, rgba: &[u8]) -> Result<String, String> {
@@ -83,7 +117,10 @@ fn crop_rgba(
 
 #[tauri::command]
 pub async fn capture_screen(app: AppHandle) -> Result<Capture, String> {
-    let target = target_monitor(&app, "main")?;
+    let main = app
+        .get_webview_window("main")
+        .ok_or("Orbit window not found")?;
+    let target = target_monitor(&main)?;
     let image = target
         .xcap
         .capture_image()
@@ -96,7 +133,7 @@ pub async fn capture_screen(app: AppHandle) -> Result<Capture, String> {
     })
 }
 
-/// `x/y/width/height` are logical (CSS) pixels relative to the overlay's monitor origin.
+/// `x/y/width/height` are logical (CSS) pixels in the overlay window.
 #[tauri::command]
 pub async fn capture_region(
     app: AppHandle,
@@ -108,31 +145,35 @@ pub async fn capture_region(
     if width < 1.0 || height < 1.0 {
         return Err("Selection is empty".into());
     }
-    let target = target_monitor(&app, OVERLAY_LABEL)?;
+    // Hidden while capturing (so it isn't in the shot), but still where the selection was made.
+    let overlay = app
+        .get_webview_window(OVERLAY_LABEL)
+        .ok_or("The selection window was closed")?;
+    let origin = overlay.inner_position().map_err(|e| e.to_string())?;
+    let scale = overlay.scale_factor().map_err(|e| e.to_string())?;
+    let target = target_monitor(&overlay)?;
     let image = target
         .xcap
         .capture_image()
         .map_err(|e| format!("Screenshot failed: {e}"))?;
     let (img_w, img_h) = (image.width(), image.height());
 
-    // logical → physical, then physical → image pixels (the capture may differ from the reported size).
+    // physical → image pixels: the capture may differ from the reported size.
     let ratio = if target.physical_width > 0 {
         f64::from(img_w) / f64::from(target.physical_width)
     } else {
         1.0
     };
-    let k = target.scale_factor * ratio;
-    let to_px = |v: f64| (v * k).round().max(0.0) as u32;
-
-    let (rgba, w, h) = crop_rgba(
-        image.as_raw(),
-        img_w,
-        img_h,
-        to_px(x),
-        to_px(y),
-        to_px(width),
-        to_px(height),
-    );
+    let (cx, cy, cw, ch) = selection_crop(
+        (x, y, width, height),
+        (origin.x, origin.y),
+        (target.physical_x, target.physical_y),
+        scale,
+        ratio,
+        (img_w, img_h),
+    )
+    .ok_or("The selection is outside the screen")?;
+    let (rgba, w, h) = crop_rgba(image.as_raw(), img_w, img_h, cx, cy, cw, ch);
     Ok(Capture {
         png_base64: encode_png(w, h, &rgba)?,
         width: w,
@@ -179,7 +220,64 @@ pub async fn open_region_selector(app: AppHandle) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::crop_rgba;
+    use super::{crop_rgba, selection_crop};
+
+    const IMAGE: (u32, u32) = (2880, 1620);
+
+    #[test]
+    fn a_selection_maps_through_the_overlays_scale() {
+        // overlay exactly on the monitor at 150 %
+        assert_eq!(
+            selection_crop((10.0, 20.0, 100.0, 50.0), (0, 0), (0, 0), 1.5, 1.0, IMAGE),
+            Some((15, 30, 150, 75))
+        );
+        // the capture came back at half the reported size
+        assert_eq!(
+            selection_crop((10.0, 20.0, 100.0, 50.0), (0, 0), (0, 0), 1.5, 0.5, IMAGE),
+            Some((8, 15, 75, 38))
+        );
+    }
+
+    #[test]
+    fn the_overlays_real_position_is_used_not_the_monitor_origin() {
+        // second monitor at x=1920; the overlay landed 8 px right and 4 px down of its corner
+        assert_eq!(
+            selection_crop(
+                (10.0, 20.0, 100.0, 50.0),
+                (1928, 4),
+                (1920, 0),
+                1.0,
+                1.0,
+                IMAGE
+            ),
+            Some((18, 24, 100, 50))
+        );
+        // a monitor left of the primary (negative coordinates)
+        assert_eq!(
+            selection_crop(
+                (10.0, 20.0, 100.0, 50.0),
+                (-1920, 0),
+                (-1920, 0),
+                1.0,
+                1.0,
+                IMAGE
+            ),
+            Some((10, 20, 100, 50))
+        );
+    }
+
+    #[test]
+    fn a_selection_partly_off_the_monitor_is_clamped_and_one_fully_off_is_refused() {
+        // overlay starts 50 px left of the monitor: the left 40 px of the selection aren't on it
+        assert_eq!(
+            selection_crop((10.0, 0.0, 100.0, 50.0), (-50, 0), (0, 0), 1.0, 1.0, IMAGE),
+            Some((0, 0, 60, 50))
+        );
+        assert_eq!(
+            selection_crop((0.0, 0.0, 40.0, 40.0), (-50, 0), (0, 0), 1.0, 1.0, IMAGE),
+            None
+        );
+    }
 
     #[test]
     fn crops_and_clamps() {
