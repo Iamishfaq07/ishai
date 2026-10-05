@@ -38,7 +38,10 @@ write never double-counts. Remaining minutes are computed across all of the user
 5 minutes the server sends `usage.status { minutes_remaining, limit_reached: false }` once; at zero it sends
 `usage.status { minutes_remaining: 0, limit_reached: true }`, ends the session (report included) and closes with
 `4003`. Concurrent sessions can overshoot by at most about one heartbeat each.
-Clients send `session.start` with their current settings on every (re)connect.
+Clients send `session.start` with the settings the user chose on every (re)connect: the initial ones plus every change
+made in the session. A new connection's engine starts from the session's saved settings, and `session.started` goes
+out before `session.start` is read, so clients keep their own choices over that echo. A new engine also starts
+listening: a client whose user had paused sends `session.pause` again right after `session.start`.
 
 **A reconnect continues the session** (`live/carryover.py`):
 - **Conversation:** the new engine keeps the recent turns, rolling summary and questions asked, so follow-ups still
