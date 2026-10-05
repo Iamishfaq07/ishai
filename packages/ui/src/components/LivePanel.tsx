@@ -110,6 +110,8 @@ export interface LivePanelProps {
   onEndOtherSession?: (sessionId: string) => Promise<void>;
   /** Where to buy more interview minutes (the billing page), offered when they run low or out. */
   onBuyMinutes?: () => void;
+  /** Open the session's transcript and review, offered once a mock round is over. */
+  onViewReport?: () => void;
   onScreenshot?: () => void;
   screenshotUnavailableReason?: string;
   hotkeys?: HotkeyMap;
@@ -377,7 +379,13 @@ export function LivePanel(props: LivePanelProps) {
       <div className={cx("relative flex min-h-0 flex-1", sideVisible && "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]")}>
         <main className="flex min-h-0 min-w-0 flex-1 flex-col">
           {props.mockInterview ? (
-            <MockPanel live={live} actions={actions} voice={voice} ended={ended} />
+            <MockPanel
+              live={live}
+              actions={actions}
+              voice={voice}
+              ended={ended}
+              {...(props.onViewReport ? { onViewReport: props.onViewReport } : {})}
+            />
           ) : (
           <>
           <QuestionCard question={question} liveTurn={liveInterviewerTurn} compact={compact} />
@@ -561,7 +569,13 @@ function Banners({
         {label}
       </button>
     ) : undefined;
-  // Out of minutes before connecting (the ticket was refused with 402): reconnecting can't help, buying can.
+  const reconnect = onReconnect ? (
+    <button type="button" onClick={onReconnect} className={cx("shrink-0 font-medium underline", focusRing)}>
+      Reconnect
+    </button>
+  ) : undefined;
+  // Out of minutes before connecting (the ticket was refused with 402): buying helps, and Reconnect then picks the
+  // session up (minutes bought in another tab don't reconnect this one by themselves).
   const outOfMinutes = live.connectionInfo?.code === "http_402";
 
   const other = live.connectionInfo?.code === "live_session_active" ? live.connectionInfo.sessionId : undefined;
@@ -573,18 +587,19 @@ function Banners({
       action: <EndOtherButton onEnd={() => onEndOtherSession(other)} onDone={onReconnect} />,
     });
   } else if (live.connection === "closed" && live.state !== "ended" && live.connectionDetail && outOfMinutes) {
-    items.push({ key: "conn", tone: "error", text: live.connectionDetail, action: buy("Buy minutes") });
-  } else if (live.connection === "closed" && live.state !== "ended" && live.connectionDetail) {
     items.push({
       key: "conn",
       tone: "error",
       text: live.connectionDetail,
-      action: onReconnect ? (
-        <button type="button" onClick={onReconnect} className={cx("font-medium underline", focusRing)}>
-          Reconnect
-        </button>
-      ) : undefined,
+      action: (
+        <span className="flex shrink-0 items-center gap-3">
+          {buy("Buy minutes")}
+          {reconnect}
+        </span>
+      ),
     });
+  } else if (live.connection === "closed" && live.state !== "ended" && live.connectionDetail) {
+    items.push({ key: "conn", tone: "error", text: live.connectionDetail, action: reconnect });
   }
   if (live.mic.state === "error") items.push({ key: "mic", tone: "error", text: live.mic.detail ?? "Microphone unavailable." });
   if (live.system.state === "error")

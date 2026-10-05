@@ -7,6 +7,7 @@ import {
   type ServerEventMap,
   type ServerEventType,
 } from "@orbit/types";
+import { SESSION_ENDED } from "./client";
 import {
   CONNECTION_LOST,
   SCREENSHOT_QUESTION,
@@ -277,6 +278,19 @@ describe("a dropped connection", () => {
   it("fails a chat reply that was streaming, which keeps its message for Try again", () => {
     const s = run([open, { type: "local/chat_sent", id: "u1", text: "Give me an example", ts: 1 }, started("c1", "q1", "chat"), drop]);
     expect(s.answers.c1).toMatchObject({ status: "failed", prompt: "Give me an example" });
+  });
+
+  it("that can't come back because the session ended elsewhere ends it here too", () => {
+    const s = run([
+      open, detected("q1"), started("a1", "q1"),
+      drop,
+      { type: "local/connection", status: "closed", detail: "Session has ended", info: { code: SESSION_ENDED } },
+    ]);
+    expect(s.state).toBe("ended");
+    expect(s.answers.a1?.status).toBe("failed");
+    // Any other permanent close leaves the session as it was (the banner offers Reconnect).
+    const other = run([open, { type: "local/connection", status: "closed", detail: "Not authorized", info: { code: "http_401" } }]);
+    expect(other.state).toBe("idle");
   });
 
   it("marks a chat message whose reply hadn't started as lost, and still pairs a queued one after the reconnect", () => {

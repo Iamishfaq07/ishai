@@ -18,7 +18,7 @@ import {
   type Speaker,
   type MockRoundSummary,
 } from "@orbit/types";
-import type { CloseInfo, ConnectionStatus } from "./client";
+import { SESSION_ENDED, type CloseInfo, type ConnectionStatus } from "./client";
 
 export interface TurnView {
   turn_id: string;
@@ -332,7 +332,11 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
     // ── local ────────────────────────────────────────────────────────────
     case "local/connection": {
       const next = { ...s, connection: action.status, connectionDetail: action.detail ?? null, connectionInfo: action.info ?? null };
-      return action.status === "open" ? next : interrupt(next);
+      if (action.status === "open") return next;
+      // Ended while this client was away (from another window or device): it never got session.ended, and
+      // reconnecting can't work, so it's over here too (capture stops, the page can point to the review).
+      const over = action.status === "closed" && action.info?.code === SESSION_ENDED;
+      return interrupt(over ? { ...next, state: "ended" } : next);
     }
 
     case "local/pin": {

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AUDIO_CHANNEL, PROTOCOL_VERSION, type ServerEvent } from "@orbit/types";
-import { LiveClient, type WebSocketLike } from "./client";
+import { LiveClient, SESSION_ENDED, type WebSocketLike } from "./client";
 import { encodeAudioBytes, encodeAudioFrame, parseServerFrame, toWebSocketUrl } from "./framing";
 
 class FakeSocket implements WebSocketLike {
@@ -231,6 +231,37 @@ describe("LiveClient", () => {
     c2.connect();
     await flush();
     expect(s2.at(-1)).toBe("Verify your email to use this.");
+  });
+
+  it("says the session is over when the ticket is refused because it ended (it used to offer a Reconnect that never works)", async () => {
+    // The ticket's other 409s carry their own code; "Session has ended" is the plain one.
+    const ended = Object.assign(new Error("Session has ended"), { status: 409, code: "http_error" });
+    const statuses: Array<[string, string | undefined, unknown]> = [];
+    const client = makeClient({ getTicket: async () => Promise.reject(ended) });
+    client.onStatus((s, d, info) => statuses.push([s, d, info]));
+    client.connect();
+    await flush();
+    expect(statuses.at(-1)).toEqual(["closed", "Session has ended", { code: SESSION_ENDED }]);
+
+    const limit = Object.assign(new Error("This session reached the 60-minute limit."), { status: 409, code: "session_time_limit" });
+    const c2 = makeClient({ getTicket: async () => Promise.reject(limit) });
+    const infos: unknown[] = [];
+    c2.onStatus((_s, _d, info) => infos.push(info));
+    c2.connect();
+    await flush();
+    expect(infos.at(-1)).toEqual({ code: "session_time_limit" });
+  });
+
+  it("says the session is over when the socket closes with 4009", async () => {
+    const infos: unknown[] = [];
+    const client = makeClient();
+    client.onStatus((_s, _d, info) => infos.push(info));
+    client.connect();
+    await flush();
+    (FakeSocket.instances[0] as FakeSocket).open();
+    (FakeSocket.instances[0] as FakeSocket).close(4009, "session has ended");
+    expect(client.connectionStatus).toBe("closed");
+    expect(infos.at(-1)).toEqual({ code: SESSION_ENDED });
   });
 
   it("does not retry when the minutes are used up (402)", async () => {

@@ -7,11 +7,13 @@ import { cx, focusRing } from "./cx";
  * Mock interview view: the AI interviewer's question (spoken aloud), whose turn it is, and controls. Orbit never
  * suggests answers here — it's practice; the report afterwards grades what was said.
  */
-export function MockPanel({ live, actions, voice, ended }: {
+export function MockPanel({ live, actions, voice, ended, onViewReport }: {
   live: LiveViewState;
   actions: LiveActions;
   voice: InterviewerVoice;
   ended: boolean;
+  /** Open the transcript and review, offered once the session has ended. */
+  onViewReport?: () => void;
 }) {
   const q = live.mock;
   const btn = cx("rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium hover:bg-zinc-50 disabled:opacity-40 " +
@@ -42,6 +44,11 @@ export function MockPanel({ live, actions, voice, ended }: {
             ? "Your review is on its way to History: how you anchored, justified and handled pushback, with stronger lines to use."
             : "Your review is on its way to History: each answer graded, with a stronger way to say it."}
         </p>
+        {ended && onViewReport && (
+          <button type="button" onClick={onViewReport} className={cx(btn, "mt-2")}>
+            See the transcript and review
+          </button>
+        )}
       </div>
     );
   }

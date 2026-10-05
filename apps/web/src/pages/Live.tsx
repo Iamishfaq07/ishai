@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ApiError,
   CompanionShare,
+  CreditCard,
   useAnswerRatings,
   Headphones,
   LivePanel,
@@ -23,7 +24,7 @@ import {
   type PanelMode,
   confirmDialog,
 } from "@orbit/ui";
-import { ErrorNote, Spinner } from "../components/ui";
+import { Button, ErrorNote, Spinner } from "../components/ui";
 import { LIVE_URL, api } from "../lib/api";
 import {
   captureScreenFrame,
@@ -246,16 +247,20 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
 
   // ── End session ────────────────────────────────────────────────────────
   const [ending, setEnding] = useState(false);
+  const ended = live.state === "ended";
   const endSession = async () => {
     if (!(await confirmDialog({ title: "End this session?", body: "The transcript and report are saved to History.", confirmLabel: "End session", danger: true }))) return;
     setEnding(true);
     actions.end();
   };
   useEffect(() => {
-    if (!ending && live.state !== "ended") return;
+    if (!ending && !ended) return;
     stopMic();
     stopSystemAudio();
-    if (live.state === "ended") {
+    if (ended) {
+      // Ended with End here: on to the transcript and review. Ended any other way (minutes ran out, the time limit,
+      // the mock round finished, ended elsewhere), the page stays and says why, with what to do next (below).
+      if (!ending) return;
       const t = setTimeout(() => navigate(`/sessions/${session.id}`), 600);
       return () => clearTimeout(t);
     }
@@ -267,7 +272,19 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
         .finally(() => navigate(`/sessions/${session.id}`));
     }, 3000);
     return () => clearTimeout(t);
-  }, [ending, live.state, navigate, session.id, stopMic, stopSystemAudio]);
+  }, [ending, ended, navigate, session.id, stopMic, stopSystemAudio]);
+  // Why it ended, when End here didn't end it. A mock round that finished keeps its own end screen instead (the round
+  // summary, and the way to the review).
+  const limit = live.usage?.limitReached ? live.usage.reason : null;
+  const endedWhy: EndedReason | null = !ended || ending
+    ? null
+    : limit === "monthly"
+      ? "minutes"
+      : limit === "session"
+        ? "time_limit"
+        : session.type === "mock"
+          ? null
+          : "elsewhere";
 
   const notice = (
     <>
@@ -313,6 +330,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       }}
       // A new tab: leaving this one would drop the live session (and its audio capture).
       onBuyMinutes={() => window.open("/billing", "_blank", "noopener")}
+      onViewReport={() => navigate(`/sessions/${session.id}`)}
       onScreenshot={VISION_ENABLED && supportsScreenCapture() ? () => void takeScreenshot() : undefined}
       screenshotUnavailableReason={!VISION_ENABLED ? "Screenshot analysis isn’t enabled yet." : "This browser can’t capture the screen."}
       hotkeys={hotkeys}
@@ -358,8 +376,62 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
             mode === "compact" ? "w-[380px] max-h-[560px]" : "mx-auto max-w-6xl",
           )}
         >
-          {panel}
+          {endedWhy ? <EndedScreen reason={endedWhy} session={session} /> : panel}
         </div>
+      </div>
+    </div>
+  );
+}
+
+type EndedReason = "minutes" | "time_limit" | "elsewhere";
+
+const ENDED_COPY: Record<EndedReason, { title: string; body: string }> = {
+  minutes: {
+    title: "You’re out of interview minutes",
+    body:
+      "So the session has ended. Its transcript and review are saved under Sessions. Buy a pack to keep going: " +
+      "minutes land in your account as soon as the payment is approved.",
+  },
+  time_limit: {
+    title: "This session reached its time limit",
+    body: "So it has ended. Its transcript and review are saved under Sessions. Start a new session to keep going.",
+  },
+  elsewhere: {
+    title: "This session has ended",
+    body:
+      "It was ended from another window or device, so there’s nothing to reconnect to. Its transcript and review are " +
+      "saved under Sessions.",
+  },
+};
+
+/** Why the session ended when this page didn't end it, and what to do next (it used to jump to the review unexplained). */
+function EndedScreen({ reason, session }: { reason: EndedReason; session: OrbitSession }) {
+  const navigate = useNavigate();
+  const copy = ENDED_COPY[reason];
+  return (
+    <div
+      role="alert"
+      className="flex h-full flex-col items-center justify-center gap-3 bg-white px-6 py-10 text-center dark:bg-zinc-950"
+    >
+      <OrbitLogo size={36} />
+      <h1 className="font-display text-lg font-semibold tracking-tight">{copy.title}</h1>
+      <p className="max-w-sm text-sm text-zinc-600 dark:text-zinc-300">{copy.body}</p>
+      <div className="mt-1 flex flex-wrap justify-center gap-2">
+        {reason === "minutes" && (
+          // This tab is free now (the session is over): no need for a new one.
+          <Button onClick={() => navigate("/billing")}>
+            <CreditCard className="h-4 w-4" />
+            Buy minutes
+          </Button>
+        )}
+        <Button variant={reason === "minutes" ? "secondary" : "primary"} onClick={() => navigate(`/sessions/${session.id}`)}>
+          View transcript & review
+        </Button>
+        {reason === "time_limit" && (
+          <Button variant="secondary" onClick={() => navigate(session.type === "mock" ? "/mock" : "/start")}>
+            Start a new session
+          </Button>
+        )}
       </div>
     </div>
   );
