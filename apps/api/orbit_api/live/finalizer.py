@@ -18,7 +18,9 @@ Continuation: real interviewers pause for seconds mid-question ("Walk me through
 <2 s> Start with data, then preprocessing…"). Until the CANDIDATE starts talking, anything the
 interviewer says within CONTINUE_WINDOW_MS of their last endpoint is stitched onto the question —
 even if it already fired — and the combined question fires again (dedup treats it as `extends`, so the
-answer is regenerated for the whole question). A manual "Answer" likewise gets the whole question.
+answer is regenerated for the whole question). A manual "Answer" likewise gets the whole question. Not when the
+interviewer opens by moving on ("Let's switch to system design.", "Next question."): that's a new question.
+Talk around the interview ("I'll make a note of that.", "You cut out.") is never carried over.
 
 `tick(now_ms)` must be called periodically (the engine does every ~50 ms); the clock is injected so
 this is fully deterministic under test.
@@ -34,6 +36,7 @@ from orbit_api.live.question_detector import (
     detect,
     is_complete,
     lead_in,
+    starts_new_topic,
     tokens,
 )
 
@@ -109,7 +112,8 @@ class QuestionFinalizer:
         early = self._settle_claim(now_ms)
         p = self._pending
         if p is None or p.turn_id != turn_id:
-            held = self._held_question(p, now_ms)
+            # "Let's switch to system design. How would you design…" is a new question, however soon it comes.
+            held = "" if starts_new_topic(text) else self._held_question(p, now_ms)
             held_conf = self._confidence_of(p) if held and p is not None else 0.0
             answered = held if held and p is not None and p.fired_question == held else None
             p = self._pending = _Pending(turn_id=turn_id, text=text, last_speech_ms=now_ms, held_question=held,
@@ -119,6 +123,10 @@ class QuestionFinalizer:
                 p.last_speech_ms = now_ms
                 p.resumed_ms = None
             p.text = text
+            if p.held_question and starts_new_topic(text):
+                # The turn's first words ("Let's") didn't say it yet; now it's clear the interviewer moved on.
+                p.held_question, p.held_confidence, p.answered = "", 0.0, None
+                p.fired_text = p.fired_question = None
         if is_final and endpoint:
             p.endpointed = True
             p.endpoint_ms = now_ms
