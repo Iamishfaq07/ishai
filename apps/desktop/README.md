@@ -87,17 +87,20 @@ In-window shortcuts (`@orbit/ui` `HotkeyMap`, desktop uses the defaults):
 | Focus chat | Ctrl + K |
 | Clear | Ctrl + Shift + C |
 
-System-wide shortcuts work while another app is focused. They're rebindable in **Settings → Global shortcuts**, and
-deliberately avoid combos other apps rely on (Ctrl+Enter, Ctrl+Shift+S, Teams' Ctrl+Shift+M…):
+System-wide shortcuts work while another app is focused. They're rebindable in **Settings → Global shortcuts**. A
+global shortcut takes its combo away from every other app, so the defaults avoid every shortcut Microsoft Teams,
+Zoom and Google Meet document, and Ctrl + Alt + a letter or digit (AltGr on many keyboard layouts). The one overlap:
+Teams in a browser uses Ctrl + Shift + 1…9 to jump between its app-bar apps (`globalShortcuts.ts` has the details).
+People still on the old defaults (Ctrl + Shift + O / Y, Ctrl + Alt + P, …) are moved to these:
 
 | Action | Default |
 |---|---|
-| Show / hide Orbit | Ctrl + Shift + O |
-| Answer | Ctrl + Shift + Enter |
+| Show / hide Orbit | Ctrl + Shift + 1 |
+| Answer | Ctrl + Alt + Space |
 | Screenshot region | Ctrl + Shift + 2 |
-| Previous / next answer | Ctrl + Alt + ← / → |
-| Copy answer | Ctrl + Shift + Y |
-| Pause / resume | Ctrl + Alt + P |
+| Previous / next answer | Ctrl + Alt + PgUp / PgDn |
+| Copy answer | Ctrl + Shift + 3 |
+| Pause / resume | Ctrl + Shift + 4 |
 | More / less transparent | Ctrl + Alt + ↓ / ↑ |
 
 ## Before a session
