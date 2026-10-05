@@ -12,6 +12,7 @@ import {
   StatusPill,
   cx,
   focusRing,
+  historyLabel,
   initialLiveState,
   liveReducer,
   selectDisplayedAnswer,
@@ -190,7 +191,7 @@ function CompanionRoom({ code, view }: { code: string; view: CompanionView }) {
     () => ({ viewAnswer: (id: string | null) => dispatch({ type: "local/view", answer_id: id }) }),
     [],
   );
-  const { history, index, browsing, newAnswer, step, backToLive } = useAnswerHistory(live, actions);
+  const nav = useAnswerHistory(live, actions);
   const answer = selectDisplayedAnswer(live);
   const question: QuestionView | null =
     selectDisplayedQuestion(live) ??
@@ -242,36 +243,36 @@ function CompanionRoom({ code, view }: { code: string; view: CompanionView }) {
         />
       </main>
 
-      {history.length > 1 && (
+      {nav.liveIndex > 0 && (
         <nav
           aria-label="Earlier answers"
           className="flex items-center gap-2 border-t border-zinc-200 bg-white/80 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] text-xs dark:border-white/[0.06] dark:bg-zinc-950/80"
         >
           <button
             type="button"
-            onClick={() => step(-1)}
-            disabled={pinned || index <= 0}
+            onClick={() => nav.step(-1)}
+            disabled={!nav.canPrev}
             className={cx("inline-flex items-center gap-1 rounded-lg px-3 py-2 disabled:opacity-40", focusRing)}
           >
             <ChevronLeft className="h-4 w-4" /> Earlier
           </button>
           <span className="flex-1 text-center tabular-nums text-zinc-500 dark:text-zinc-400">
-            {browsing ? (
+            {nav.browsing ? (
               <button
                 type="button"
-                onClick={backToLive}
+                onClick={nav.backToLive}
                 className={cx("rounded-lg px-2 py-1 font-medium text-indigo-600 dark:text-indigo-300", focusRing)}
               >
-                {newAnswer ? "New answer — back to live" : "Back to live"}
+                {nav.newAnswer ? "New answer — back to live" : "Back to live"}
               </button>
             ) : (
-              `${index + 1} of ${history.length}`
+              historyLabel(nav)
             )}
           </span>
           <button
             type="button"
-            onClick={() => step(1)}
-            disabled={pinned || index >= history.length - 1}
+            onClick={() => nav.step(1)}
+            disabled={!nav.canNext}
             className={cx("inline-flex items-center gap-1 rounded-lg px-3 py-2 disabled:opacity-40", focusRing)}
           >
             Later <ChevronRight className="h-4 w-4" />

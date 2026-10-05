@@ -11,7 +11,7 @@ import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useStickyScroll } from "../hooks/useStickyScroll";
 import { DEFAULT_HOTKEYS, useHotkeys, type HotkeyMap } from "../live/hotkeys";
 import { CODING_LANGUAGES } from "../live/preferences";
-import { useAnswerHistory } from "../live/useAnswerHistory";
+import { historyLabel, useAnswerHistory, type AnswerHistory } from "../live/useAnswerHistory";
 import { useInterviewerVoice } from "../live/useInterviewerVoice";
 import { useKeyPointProgress } from "../live/useKeyPointProgress";
 import { useReadAloud } from "../live/useReadAloud";
@@ -164,8 +164,8 @@ export function LivePanel(props: LivePanelProps) {
   // Chat replies and screenshot answers aren't spoken to the interviewer: no checklist for those.
   const keyPoints = useKeyPointProgress(live, answer && (answer.source === "auto" || answer.source === "manual")
     ? answer : null);
-  const { history, index: historyIndex, browsing, newAnswer: newSinceBrowsing, step, backToLive } =
-    useAnswerHistory(live, actions);
+  const answerHistory = useAnswerHistory(live, actions);
+  const { step } = answerHistory;
   const turns = useMemo(
     () => live.turnOrder.map((id) => live.turns[id]).filter((t): t is TurnView => Boolean(t)),
     [live.turnOrder, live.turns],
@@ -382,16 +382,7 @@ export function LivePanel(props: LivePanelProps) {
           <>
           <QuestionCard question={question} liveTurn={liveInterviewerTurn} compact={compact} />
           <div className="mx-4 h-px bg-gradient-to-r from-transparent via-zinc-200 to-transparent dark:via-white/10" />
-          {history.length > 1 && !live.pinnedAnswerId && (
-            <HistoryNav
-              index={historyIndex}
-              total={history.length}
-              browsing={browsing}
-              newAnswer={newSinceBrowsing}
-              onStep={step}
-              onLive={backToLive}
-            />
-          )}
+          {answerHistory.liveIndex > 0 && !live.pinnedAnswerId && <HistoryNav nav={answerHistory} />}
           <AnswerCard
             answer={answer}
             pinned={Boolean(answer && live.pinnedAnswerId === answer.answer_id)}
@@ -776,46 +767,39 @@ function ChatAnswer({ answer, onAsk }: { answer: AnswerView | undefined; onAsk?:
 }
 
 /** "‹ 3 of 5 ›" through earlier answers, with a way back to the live one. */
-function HistoryNav(props: {
-  index: number;
-  total: number;
-  browsing: boolean;
-  newAnswer: boolean;
-  onStep: (delta: number) => void;
-  onLive: () => void;
-}) {
+function HistoryNav({ nav }: { nav: AnswerHistory }) {
   const navBtn = cx(
     "inline-flex items-center rounded-md px-1 py-0.5 text-sm text-zinc-500 hover:bg-zinc-100 disabled:opacity-30 dark:hover:bg-zinc-800",
     focusRing,
   );
   return (
     <div className="flex animate-fade-in items-center gap-1 px-4 pt-2 text-xs text-zinc-500 dark:text-zinc-400">
-      <button type="button" className={navBtn} onClick={() => props.onStep(-1)} disabled={props.index <= 0}
+      <button type="button" className={navBtn} onClick={() => nav.step(-1)} disabled={!nav.canPrev}
               title="Previous answer (Alt+←)" aria-label="Previous answer">
         <ChevronLeft className="h-4 w-4" />
       </button>
       <span className="tabular-nums" aria-live="polite">
-        {props.index + 1} of {props.total}
+        {historyLabel(nav)}
       </span>
-      <button type="button" className={navBtn} onClick={() => props.onStep(1)} disabled={props.index >= props.total - 1}
+      <button type="button" className={navBtn} onClick={() => nav.step(1)} disabled={!nav.canNext}
               title="Next answer (Alt+→)" aria-label="Next answer">
         <ChevronRight className="h-4 w-4" />
       </button>
       <span className="flex-1" />
-      {props.browsing && (
+      {nav.browsing && (
         <button
           type="button"
-          onClick={props.onLive}
+          onClick={nav.backToLive}
           className={cx(
             "flex items-center gap-1.5 rounded-full px-2 py-0.5 font-medium",
-            props.newAnswer
+            nav.newAnswer
               ? "animate-fade-up bg-indigo-600 text-white hover:bg-indigo-500"
               : "text-indigo-700 hover:bg-indigo-500/10 dark:text-indigo-300",
             focusRing,
           )}
         >
-          <span className={cx("h-1.5 w-1.5 rounded-full", props.newAnswer ? "animate-ping bg-white" : "bg-emerald-500")} />
-          {props.newAnswer ? "New answer — back to live" : "Back to live"}
+          <span className={cx("h-1.5 w-1.5 rounded-full", nav.newAnswer ? "animate-ping bg-white" : "bg-emerald-500")} />
+          {nav.newAnswer ? "New answer — back to live" : "Back to live"}
         </button>
       )}
     </div>

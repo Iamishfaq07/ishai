@@ -103,6 +103,8 @@ export interface LiveViewState {
   pinnedAnswerId: string | null;
   /** Browsing an earlier answer (local only); null = follow the live answer. */
   viewedAnswerId: string | null;
+  /** The live answer when browsing began: a different one since then is a new answer to go back to. */
+  browseFromAnswerId: string | null;
   chat: ChatEntry[];
   /**
    * Chat messages still waiting for their reply, oldest first: the server answers them in order. `sentOpen`: it went
@@ -163,6 +165,7 @@ export function initialLiveState(settings: Partial<LiveSettings> = {}): LiveView
     currentQuestionId: null,
     currentAnswerId: null,
     viewedAnswerId: null,
+    browseFromAnswerId: null,
     pinnedAnswerId: null,
     chat: [],
     pendingChat: [],
@@ -340,10 +343,23 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
     }
 
     case "local/clear":
-      return { ...s, currentQuestionId: null, currentAnswerId: null, pinnedAnswerId: null, viewedAnswerId: null };
+      return {
+        ...s,
+        currentQuestionId: null,
+        currentAnswerId: null,
+        pinnedAnswerId: null,
+        viewedAnswerId: null,
+        browseFromAnswerId: null,
+      };
 
-    case "local/view":
-      return { ...s, viewedAnswerId: action.answer_id && action.answer_id in s.answers ? action.answer_id : null };
+    case "local/view": {
+      const viewed = action.answer_id && action.answer_id in s.answers ? action.answer_id : null;
+      return {
+        ...s,
+        viewedAnswerId: viewed,
+        browseFromAnswerId: viewed === null ? null : s.viewedAnswerId === null ? s.currentAnswerId : s.browseFromAnswerId,
+      };
+    }
 
     case "local/chat_sent":
       return {
