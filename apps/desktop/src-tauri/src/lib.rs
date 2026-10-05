@@ -7,16 +7,50 @@ mod updater;
 #[cfg(target_os = "windows")]
 mod wasapi_capture;
 
-use std::time::Duration;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
-use tauri::{Manager, WindowEvent};
+use tauri::{Emitter, Manager, WindowEvent};
 
-/// "Quit Orbit" from the close dialog (the tray menu quits the same way).
+/// Asks the window to confirm a tray "Quit Orbit" (CloseDialog.tsx).
+const CONFIRM_QUIT_EVENT: &str = "orbit:confirm-quit";
+
+/// "Quit Orbit" from the close dialog.
 #[tauri::command]
 fn quit_app(app: tauri::AppHandle) {
     app.exit(0);
+}
+
+/// When the tray's "Quit Orbit" was last clicked.
+#[derive(Default)]
+struct QuitRequest(Mutex<Option<Instant>>);
+
+impl QuitRequest {
+    /// Remembers this request; true if there was another one within `window`.
+    fn repeated(&self, window: Duration) -> bool {
+        let mut last = self
+            .0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let again = last.is_some_and(|at| at.elapsed() < window);
+        *last = Some(Instant::now());
+        again
+    }
+}
+
+/// Tray "Quit Orbit". While Orbit is capturing (a live session, most likely) the window comes forward and asks
+/// first, as the close dialog does: quitting ends the session. A second Quit within a few seconds quits anyway, in
+/// case the window can't answer.
+fn tray_quit(app: &tauri::AppHandle) {
+    let repeated = app.state::<QuitRequest>().repeated(Duration::from_secs(5));
+    if repeated || !app.state::<audio::CaptureState>().is_active() {
+        app.exit(0);
+        return;
+    }
+    show_main(app);
+    let _ = app.emit_to("main", CONFIRM_QUIT_EVENT, ());
 }
 
 fn protect_window(window: &tauri::WebviewWindow) {
@@ -50,6 +84,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(audio::CaptureState::default())
         .manage(updater::PendingUpdate::default())
+        .manage(QuitRequest::default())
         .on_window_event(|window, event| {
             if matches!(
                 event,
@@ -70,7 +105,7 @@ pub fn run() {
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => show_main(app),
-                    "quit" => app.exit(0),
+                    "quit" => tray_quit(app),
                     _ => {}
                 });
             if let Some(icon) = app.default_window_icon() {
@@ -108,4 +143,18 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running Orbit");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::QuitRequest;
+    use std::time::Duration;
+
+    #[test]
+    fn a_second_tray_quit_soon_after_the_first_quits_anyway() {
+        let quit = QuitRequest::default();
+        assert!(!quit.repeated(Duration::from_secs(5)));
+        assert!(quit.repeated(Duration::from_secs(5)));
+        assert!(!quit.repeated(Duration::ZERO)); // long after: asks again
+    }
 }
