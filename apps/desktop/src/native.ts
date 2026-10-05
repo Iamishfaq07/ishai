@@ -71,6 +71,7 @@ export function deviceStatusText(ev: { channel: AudioChannel; state: DeviceState
 export function friendlyAudioError(err: unknown): string {
   const raw = err instanceof Error ? err.message : String(err);
   console.warn("Audio:", raw);
+  if (/restarting to finish an update/i.test(raw)) return "Orbit is restarting to finish an update. It's back in a moment.";
   const what = /^(system audio|app audio|interviewer)/i.test(raw) ? "the meeting audio" : "the microphone";
   if (/0x80070005|access is denied/i.test(raw)) {
     return what === "the microphone"

@@ -69,7 +69,7 @@ import { SignInAgain } from "../SignInAgain";
 import { TitleBar } from "../TitleBar";
 import { roughDuration } from "../token";
 import { UpdateBanner } from "../UpdateBanner";
-import { confirmSessionDuringUpdate, useUpdate } from "../updates";
+import { confirmSessionDuringUpdate, useUpdatePhase } from "../updates";
 import { WorkspaceBar } from "../WorkspaceBar";
 import { MIC_KEY, OUTPUT_KEY, checkChosenApp, nextSource, usesSystemAudio, type DesktopLaunch } from "../launch";
 
@@ -228,7 +228,9 @@ export function SetupScreen({
   // Why Start didn't work, shown by the Start button (the screen scrolls; the general error sits far above it).
   const [startError, setStartError] = useState<{ text: string; buy: boolean } | null>(null);
   const [starting, setStarting] = useState(false);
-  const restartingToUpdate = useUpdate().phase === "installing";
+  const restartingToUpdate = useUpdatePhase() === "installing";
+  // Start awaits a couple of things before `starting` disables the button: a second click meanwhile is ignored.
+  const startBusy = useRef(false);
   const plan = useEntitlements();
   // The sign-in runs out at a fixed time; a session that outlives it can't reconnect or send screenshots until the
   // user signs in again. Warn while it could happen during the longest session the plan allows (plus a margin).
@@ -404,7 +406,16 @@ export function SetupScreen({
 
   const start = async (e: FormEvent) => {
     e.preventDefault();
-    if (blockers.length > 0 && !overrideBlockers) return;
+    if (startBusy.current || (blockers.length > 0 && !overrideBlockers)) return;
+    startBusy.current = true;
+    try {
+      await startSession();
+    } finally {
+      startBusy.current = false;
+    }
+  };
+
+  const startSession = async () => {
     // An update that's about to restart Orbit would end the session: ask first.
     if (!(await confirmSessionDuringUpdate())) return;
     setAppWarning(null);
@@ -422,7 +433,7 @@ export function SetupScreen({
           setSource(fallback);
           setAppWarning({
             kind: "gone",
-            text: `${selectedApp.name} isn't open any more, so Listen to is back on ${outputName(fallback.slice(4)) ?? "the default output"}. Pick another app there, or press Start again.`,
+            text: `${selectedApp.name} isn't open any more, so Orbit will listen to ${outputName(fallback.slice(4)) ?? "the default output"} instead. Pick another app under Listen to, or press Start again.`,
           });
           return;
         }

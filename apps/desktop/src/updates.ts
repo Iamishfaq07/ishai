@@ -51,6 +51,11 @@ export function useUpdate(): UpdateState {
   return useSyncExternalStore(subscribe, () => state);
 }
 
+/** Just the phase: re-renders on phase changes only, not on every download chunk. */
+export function useUpdatePhase(): UpdatePhase {
+  return useSyncExternalStore(subscribe, () => state.phase);
+}
+
 let checked = false;
 /** Checks once per run (again later only if it failed). Failures are quiet: an offline check shouldn't nag. */
 export function checkForUpdate(): void {
@@ -76,9 +81,13 @@ export function setLiveSession(active: boolean): void {
 export function startUpdate(): void {
   if (state.phase !== "available") return;
   set({ phase: "downloading", downloaded: 0, total: null, verifying: false, installWhenReady: true, error: null });
+  let shown = 0;
   downloadUpdate((p) => {
-    if (p.kind === "downloading") set({ downloaded: p.downloaded, total: p.total });
-    else set({ verifying: true });
+    if (p.kind === "verifying") return set({ verifying: true });
+    // Progress comes per network chunk: a few updates a second are plenty for the banner.
+    if (performance.now() - shown < 200) return;
+    shown = performance.now();
+    set({ downloaded: p.downloaded, total: p.total });
   })
     .then(() => {
       set({ phase: "ready", verifying: false });
