@@ -331,6 +331,8 @@ async def import_resume_file(file: Annotated[UploadFile, File()],
 class CoverLetterIn(BaseModel):
     data: ResumeData
     job_text: str = Field("", max_length=MAX_JOB_TEXT)
+    tone: ai.LetterTone = "professional"
+    length: ai.LetterLength = "standard"
 
 
 class CoverLetterOut(BaseModel):
@@ -344,7 +346,8 @@ async def _cover_letter(db: AsyncSession, user: User | None, body: CoverLetterIn
     if not (d.basics.name.strip() and (d.experience or d.projects or d.basics.summary.strip())):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
                             "Add your name and some experience first: the letter is written from your resume.")
-    resp = await _generate(db, user, ai.cover_letter_request(d, body.job_text), "cover letter", allowance)
+    req = ai.cover_letter_request(d, body.job_text, tone=body.tone, length=body.length)
+    resp = await _generate(db, user, req, "cover letter", allowance)
     try:
         return CoverLetterOut(text=ai.parse_cover_letter(resp.text, d, body.job_text))
     except ValueError as e:

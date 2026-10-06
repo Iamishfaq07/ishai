@@ -1,4 +1,5 @@
-"""Resume maker: the Naukri and LinkedIn profile kit and the outreach messages (resumes/kit.py)."""
+"""Resume maker: the Naukri and LinkedIn profile kit and the outreach messages (resumes/kit.py), and cover letter
+tone and length."""
 
 import json
 from typing import Any
@@ -244,3 +245,19 @@ def test_each_kit_generation_spends_one_credit_and_a_failure_gives_it_back(
     assert credits_left(client, h) == 0
     out = client.post("/v1/resumes/outreach", headers=h, json={**body, "kind": "thank_you"})
     assert out.status_code == 402 and out.json()["detail"]["code"] == "upgrade_required"
+
+
+# ---- cover letter options ---------------------------------------------------------------------------------------
+
+
+def test_cover_letter_tone_and_length_reach_the_prompt(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    h = _register(client)
+    body = {"data": strong_resume().model_dump(mode="json"), "job_text": JOB}
+    llm = mock_llm(monkeypatch)
+    assert client.post("/v1/resumes/cover-letter", headers=h,
+                       json={**body, "tone": "confident", "length": "short"}).status_code == 200
+    assert client.post("/v1/resumes/cover-letter", headers=h, json=body).status_code == 200
+    short, default = (r.messages[-1].content for r in llm.requests)
+    assert "confident" in short and "150-200 words" in short and llm.requests[0].max_tokens == 600
+    assert "professional" in default and "250-350 words" in default
+    assert client.post("/v1/resumes/cover-letter", headers=h, json={**body, "tone": "angry"}).status_code == 422

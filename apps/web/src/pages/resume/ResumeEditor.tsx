@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { Link, useLocation, useParams } from "react-router-dom";
-import type { AtsReport, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
+import type { AtsReport, CoverLetterLength, CoverLetterTone, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
 import {
   ArrowLeft,
   Check,
@@ -875,6 +875,16 @@ function PrintCopy({ data, design, letter }: { data: ResumeData; design: ResumeD
   );
 }
 
+const LETTER_TONES: ReadonlyArray<{ id: CoverLetterTone; label: string }> = [
+  { id: "professional", label: "Professional" },
+  { id: "warm", label: "Warm" },
+  { id: "confident", label: "Confident" },
+];
+const LETTER_LENGTHS: ReadonlyArray<{ id: CoverLetterLength; label: string }> = [
+  { id: "short", label: "Short · 150-200 words" },
+  { id: "standard", label: "Standard · 250-350" },
+];
+
 function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; onText: (text: string) => void; onShowJob: () => void; onPrint: () => void }) {
   const backend = useBackend();
   const { refresh } = useAllowance();
@@ -883,6 +893,8 @@ function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; o
   const [upgrade, setUpgrade] = useState(false);
   const [copied, setCopied] = useState(false);
   const [word, setWord] = useState<"idle" | "busy" | "error">("idle");
+  const [tone, setTone] = useState<CoverLetterTone>("professional");
+  const [length, setLength] = useState<CoverLetterLength>("standard");
   const text = resume.cover_letter;
   const hasJob = Boolean(resume.job_text.trim());
   const fills = text.match(FILL) ?? [];
@@ -893,7 +905,7 @@ function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; o
     setError(null);
     setUpgrade(false);
     try {
-      onText((await backend.tools.coverLetter(resume.data, resume.job_text)).text);
+      onText((await backend.tools.coverLetter(resume.data, resume.job_text, { tone, length })).text);
     } catch (err) {
       setError(errorText(err));
       setUpgrade(isUpgradeError(err));
@@ -926,6 +938,10 @@ function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; o
             </Button>
           </p>
         )}
+        <div className="mb-3 flex flex-wrap gap-4">
+          <Segmented label="Tone" options={LETTER_TONES} value={tone} onChange={setTone} />
+          <Segmented label="Length" options={LETTER_LENGTHS} value={length} onChange={setLength} />
+        </div>
         <Button disabled={busy} onClick={() => void write()}>
           <Sparkles className="h-4 w-4" /> {busy ? "Writing…" : text.trim() ? "Write a new one" : "Write my cover letter"}
         </Button>

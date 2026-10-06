@@ -11,6 +11,8 @@ import type {
   ApiErrorBody,
   AuthConfig,
   CostReport,
+  CoverLetterLength,
+  CoverLetterTone,
   CreditPack,
   LinkedInProfile,
   NaukriProfile,
@@ -224,8 +226,8 @@ export function createApiClient(options: ApiClientOptions) {
       });
     },
     /** A cover letter from the resume and (if given) the job post; nothing it says goes beyond them. */
-    coverLetter: (data: ResumeData, jobText: string) =>
-      json<{ text: string }>(`${base}/cover-letter`, { method: "POST", body: body({ data, job_text: jobText }) }),
+    coverLetter: (data: ResumeData, jobText: string, opts: { tone?: CoverLetterTone; length?: CoverLetterLength } = {}) =>
+      json<{ text: string }>(`${base}/cover-letter`, { method: "POST", body: body({ data, job_text: jobText, ...opts }) }),
     /** Naukri's resume headline, profile summary and key skills, from the resume (one resume credit). */
     naukriProfile: (data: ResumeData, jobText: string) =>
       json<NaukriProfile>(`${base}/naukri-profile`, { method: "POST", body: body({ data, job_text: jobText }), timeoutMs: LONG_TIMEOUT_MS }),

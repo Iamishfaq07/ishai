@@ -1085,6 +1085,12 @@ export interface ResumeSkillGapResponse {
   gaps: ResumeSkillGap[];
   /** The job keywords the resume already shows. */
   matched: string[];
+}
+
+/** Cover letter options: the voice, and short (150-200 words) or standard (250-350). */
+export type CoverLetterTone = "professional" | "warm" | "confident";
+export type CoverLetterLength = "short" | "standard";
+
 /** Naukri's profile fields, from the resume: headline (≤250 characters), profile summary (≤1,000), key skills. */
 export interface NaukriProfile {
   headline: string;
