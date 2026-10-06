@@ -126,7 +126,7 @@ def parse_structured(text: str) -> ResumeData:
     skills = [SkillGroup(id=new_id(), name=_s(g.get("name"), 60), items=_list(g.get("items"), 40, 60))
               for g in _dicts(raw.get("skills"), 10) if _list(g.get("items"), 40, 60)]
     projects = [Project(id=new_id(), name=_s(p.get("name"), 160), link=_s(p.get("link"), 300),
-                        description=_s(p.get("description"), 600), bullets=_list(p.get("bullets"), 8, 400))
+                        description=_s(p.get("description"), 600), bullets=_list(p.get("bullets"), 12, 400))
                 for p in _dicts(raw.get("projects"), 10) if _s(p.get("name"), 160)]
     certifications = [Certification(id=new_id(), name=_s(c.get("name"), 160), issuer=_s(c.get("issuer"), 160),
                                     date=_s(c.get("date"), 40))

@@ -8,6 +8,7 @@
   structured data. Nothing is saved until the editor creates the resume.
 - `POST /v1/resumes/suggest`: AI rewrites, whole-resume ("improve"), for a job post ("tailor"), or one field
   ("focus"). The editor applies them one accepted change at a time.
+- Every AI route reads `data.visible()`: a section hidden from the resume never reaches the AI.
 - `POST /v1/resumes/cover-letter`: an AI cover letter from the resume and job post, grounded the same way; the
   editor saves it with the resume. `POST /v1/resumes/cover-letter/docx` downloads it as a Word file.
 - `POST /v1/resumes/prep/questions` and `/prep/skill-gap`: interview prep from the resume (resumes/interview_prep.py):
@@ -20,6 +21,7 @@
 import asyncio
 import json
 import logging
+import time
 from collections.abc import Awaitable
 from datetime import datetime
 from typing import Annotated, Literal
@@ -36,7 +38,7 @@ from orbit_api.db import get_db
 from orbit_api.documents.parsing import ParseError, detect_format, extract_text_isolated
 from orbit_api.models import Document, ProviderRequest, Resume, User
 from orbit_api.providers.llm import get_llm_provider
-from orbit_api.providers.llm.base import LLMError, LLMRequest, LLMResponse
+from orbit_api.providers.llm.base import LLMError, LLMProvider, LLMRequest, LLMResponse, Usage
 from orbit_api.providers.llm.pricing import estimate_cost
 from orbit_api.ratelimit import limit, limit_user
 from orbit_api.resumes import ai, autofix, fixes, interview_prep
@@ -217,22 +219,38 @@ async def _spend[T](allowance: Allowance, work: Awaitable[T]) -> T:
         raise
 
 
+def _configured_model(llm: LLMProvider, req: LLMRequest) -> str:
+    try:
+        return llm.model_for(req.reasoning)
+    except Exception:  # a stand-in provider that can't say: the failure is still recorded
+        return llm.name
+
+
 async def _generate(db: AsyncSession, user: User | None, req: LLMRequest, what: str,
                     allowance: Allowance) -> LLMResponse:
     await allowance.claim()  # 402 once the free use is spent
     llm = get_llm_provider()
+    started = time.perf_counter()
     try:
         resp = await llm.generate(req)
     except LLMError as e:
         log.warning("resume %s failed: %s", what, e)
+        # A failed call goes in the cost log too (ok=False), under the provider that was asked.
+        model = _configured_model(llm, req)
+        db.add(ProviderRequest(user_id=user.id if user else None, provider=llm.name, model=model,
+                               request_type=req.request_type, estimated_cost_usd=estimate_cost(model, Usage()),
+                               latency_ms=int((time.perf_counter() - started) * 1000), ok=False))
+        await db.commit()
         await allowance.release()
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
                             "The AI isn't available right now. Try again in a moment.") from e
-    db.add(ProviderRequest(user_id=user.id if user else None, provider=llm.name, model=resp.model,
+    # Who actually answered: the backup when the primary failed over (resp.provider), else the primary.
+    db.add(ProviderRequest(user_id=user.id if user else None, provider=resp.provider or llm.name, model=resp.model,
                            request_type=req.request_type,
                            input_tokens=resp.usage.input_tokens, output_tokens=resp.usage.output_tokens,
                            cached_input_tokens=resp.usage.cached_input_tokens,
-                           estimated_cost_usd=estimate_cost(resp.model, resp.usage)))
+                           latency_ms=int((time.perf_counter() - started) * 1000),
+                           estimated_cost_usd=estimate_cost(resp.model, resp.usage), ok=True))
     await db.commit()
     return resp
 
@@ -322,7 +340,7 @@ class CoverLetterOut(BaseModel):
 async def _cover_letter(db: AsyncSession, user: User | None, body: CoverLetterIn,
                         allowance: Allowance) -> CoverLetterOut:
     """A cover letter from what the resume says and what the job post asks for; nothing is invented."""
-    d = body.data
+    d = body.data.visible()  # a hidden section isn't on the resume: the AI never sees it
     if not (d.basics.name.strip() and (d.experience or d.projects or d.basics.summary.strip())):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
                             "Add your name and some experience first: the letter is written from your resume.")
@@ -373,7 +391,7 @@ async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn, allowan
     whole resume. Once the free AI use is spent, the AI-free fixes still come back, marked `upgrade_required`."""
     if body.mode == "tailor" and not body.job_text.strip():
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Add the job post first.")
-    d = body.data
+    d = body.data.visible()  # a hidden section isn't on the resume: the AI never sees it
     fields = ai.editable_fields(d)
     if body.focus and body.focus not in fields:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That part of the resume can't be rewritten.")
@@ -459,6 +477,7 @@ async def fix(body: autofix.FixIn, user: Annotated[User, Depends(require_verifie
               allowance: Annotated[Allowance, Depends(account_allowance)]) -> autofix.FixOut:
     """"Fix with AI" from the ATS score: one check (or all of them) fixed, applied and re-checked here, with what
     only the candidate can answer (a number, a claim to confirm) handed back. One AI action at most."""
+    body = body.model_copy(update={"data": body.data.visible()})  # hidden sections never reach the AI
     if body.check and body.check not in {c.id for c in (await asyncio.to_thread(
             score_resume, body.data, body.design, body.job_text)).checks}:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Unknown check.")

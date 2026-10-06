@@ -547,7 +547,14 @@ function ResumeEditor() {
               resume={resume}
               report={report}
               onJob={(job_text) => change((r) => ({ ...r, job_text }))}
-              onAddSkill={(kw) => update((d) => addSkills(d, [kw], newId))}
+              onAddSkill={(kw) =>
+                // A keyword from the job post isn't proof: the candidate says they have it, as with the AI's job-post skills.
+                void confirmDialog({
+                  title: `Add “${kw}” to your skills?`,
+                  body: "It comes from the job post, not your resume. Add it only if you've really used it: interviewers ask about every skill you list.",
+                  confirmLabel: "I have it, add it",
+                }).then((ok) => ok && update((d) => addSkills(d, [kw], newId)))
+              }
               onShow={showTarget}
               fixing={fixing}
               onFix={(check) => void runFix(check)}
