@@ -7,7 +7,9 @@
   `POST /v1/resumes/import-file` (PDF, DOCX or TXT, including LinkedIn's "Save to PDF"): AI reads it into
   structured data. Nothing is saved until the editor creates the resume.
 - `POST /v1/resumes/suggest`: AI rewrites, whole-resume ("improve"), for a job post ("tailor"), or one field
-  ("focus"). The editor applies them one accepted change at a time.
+  ("focus"); "shorten" tightens the longest lines to fit one page (resumes/shorten.py). The editor applies them one
+  accepted change at a time.
+- Naukri and LinkedIn profiles and outreach messages from the resume: resumes/kit.py.
 - Every AI route reads `data.visible()`: a section hidden from the resume never reaches the AI.
 - `POST /v1/resumes/cover-letter`: an AI cover letter from the resume and job post, grounded the same way; the
   editor saves it with the resume. `POST /v1/resumes/cover-letter/docx` downloads it as a Word file.
@@ -41,7 +43,7 @@ from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError, LLMProvider, LLMRequest, LLMResponse, Usage
 from orbit_api.providers.llm.pricing import estimate_cost
 from orbit_api.ratelimit import limit, limit_user
-from orbit_api.resumes import ai, autofix, fixes, interview_prep
+from orbit_api.resumes import ai, autofix, fixes, interview_prep, shorten
 from orbit_api.resumes.allowance import Allowance, AllowanceOut, allowance_for
 from orbit_api.resumes.ats import AtsReport, score_resume
 from orbit_api.resumes.claims import ground_import
@@ -373,9 +375,11 @@ class SuggestIn(BaseModel):
     data: ResumeData
     design: ResumeDesign = Field(default_factory=ResumeDesign)
     job_text: str = Field("", max_length=MAX_JOB_TEXT)
-    mode: Literal["improve", "tailor"] = "improve"
+    mode: Literal["improve", "tailor", "shorten"] = "improve"
     focus: str | None = Field(None, max_length=120)
     check: str | None = Field(None, max_length=40)  # the ATS check to fix, by id
+    # "shorten": how many printed lines the resume is over one page at its most compact layout (the editor measures).
+    lines_over: int | None = Field(None, ge=1, le=200)
 
 
 class SuggestOut(BaseModel):
@@ -399,6 +403,12 @@ async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn, allowan
     if body.focus and body.focus not in fields:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That part of the resume can't be rewritten.")
     report = await asyncio.to_thread(score_resume, d, body.design, body.job_text)
+    if body.mode == "shorten":  # "Shorten with AI to fit one page": its own lines and checks (resumes/shorten.py)
+        shorter = await shorten.suggestions(d, report, body.lines_over, get_llm_provider(),
+                                            lambda req: _generate(db, user, req, "shorten", allowance))
+        if not shorter:  # every line it wrote lost a fact or wasn't shorter: nothing to show, nothing spent
+            await allowance.release()
+        return SuggestOut(suggestions=shorter)
     if body.check and body.check not in {c.id for c in report.checks}:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Unknown check.")
     check = body.check

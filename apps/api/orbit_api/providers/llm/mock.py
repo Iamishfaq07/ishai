@@ -161,6 +161,12 @@ def _mock_resume_kit(request_type: str, body: str) -> str:
     skills = [s for s in resume.get("skills") or [] if isinstance(s, str)]
     bullets = [b for r in roles for b in r.get("bullets") or []][:3]
     work = " ".join(b.rstrip(".") + "." for b in bullets) or "Work across the roles on the resume."
+    if request_type == "resume_shorten":
+        filler = {"the", "a", "an", "successfully", "various", "very", "really", "that"}
+        return json.dumps({"suggestions": [
+            {"path": line["path"], "after": " ".join(w for w in str(line.get("text", "")).split()
+                                                     if w.lower() not in filler),
+             "reason": "(mock) Dropped the filler words."} for line in _reference(body, "lines_to_shorten")]})
     if request_type == "resume_naukri":
         return json.dumps({"headline": " | ".join([title, ", ".join(skills[:3]), "(mock) profile"]),
                            "summary": f"(mock) {title} with this work behind me. {work}",
@@ -241,7 +247,7 @@ class MockLLMProvider(LLMProvider):
                 for f in fields if isinstance(f, dict) and "path" in f][:3]})
         if request.request_type == "resume_fix":
             return _mock_resume_fix(request.messages[-1].content if request.messages else "")
-        if request.request_type in ("resume_naukri", "resume_linkedin", "resume_outreach"):
+        if request.request_type in ("resume_naukri", "resume_linkedin", "resume_outreach", "resume_shorten"):
             return _mock_resume_kit(request.request_type, request.messages[-1].content if request.messages else "")
         if request.request_type == "resume_skills":
             return json.dumps({"skills": ["Git", "Agile", "Jira", "Linux", "Code review", "Testing", "Communication"]})

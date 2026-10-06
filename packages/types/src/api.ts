@@ -1017,11 +1017,14 @@ export interface ResumeSuggestRequest {
   data: ResumeData;
   design?: ResumeDesign;
   job_text?: string;
-  mode?: "improve" | "tailor";
+  /** "shorten": tighten the longest lines so the resume fits one page, keeping every figure and tool. */
+  mode?: "improve" | "tailor" | "shorten";
   /** Rewrite just this one field. */
   focus?: string;
   /** Fix this ATS check, by id ("skills_count", "dates", "quantified"…). */
   check?: string;
+  /** "shorten": how many printed lines it's over one page at its most compact layout. */
+  lines_over?: number;
 }
 
 // ─── Interview prep from the resume (POST /v1/resumes/prep/*, nothing stored) ──

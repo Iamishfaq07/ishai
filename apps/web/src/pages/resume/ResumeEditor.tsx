@@ -28,6 +28,7 @@ import {
   confirmDialog,
   cx,
   focusRing,
+  linesOver,
   splitPlaceholders,
 } from "@orbit/ui";
 import { Button, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
@@ -301,14 +302,17 @@ function ResumeEditor() {
     setFocusTarget(target);
   };
 
-  /** `focus`: rewrite just that one field (a bullet's ✨, the summary's "Rewrite with AI"). */
-  const askAi = async (mode: "improve" | "tailor", check?: string, focus?: string) => {
+  /** `focus`: rewrite just that one field (a bullet's ✨, the summary's "Rewrite with AI"). "shorten": the longest
+   *  lines, to fit one page, `linesOver` printed lines too long at the most compact layout. */
+  const askAi = async (mode: "improve" | "tailor" | "shorten", check?: string, focus?: string, linesOver?: number) => {
     if (!resume) return;
     setTab("ai");
     setAiBusy(
       focus
         ? focus === "basics.summary" ? "Writing your summary…" : "Rewriting that line…"
-        : (check && FIX_BUSY[check]) || (mode === "tailor" ? "Tailoring to the job…" : check ? "Working on that fix…" : "Reading your resume…"),
+        : mode === "shorten"
+          ? "Shortening your longest lines…"
+          : (check && FIX_BUSY[check]) || (mode === "tailor" ? "Tailoring to the job…" : check ? "Working on that fix…" : "Reading your resume…"),
     );
     setAiError(null);
     setAiUpgrade(false);
@@ -320,11 +324,18 @@ function ResumeEditor() {
         mode: focus && resume.job_text.trim() ? "tailor" : mode,
         ...(check ? { check } : {}),
         ...(focus ? { focus } : {}),
+        ...(mode === "shorten" && linesOver ? { lines_over: linesOver } : {}),
       });
       setQueue(res.suggestions);
       if (res.upgrade_required) {
         setAiUpgrade(true);
         setAiError("These are the fixes that need no AI. AI rewrites, new bullets and tailoring need resume credits: you're out.");
+      } else if (mode === "shorten") {
+        setAiError(
+          res.suggestions.length
+            ? "Shorter versions of your longest lines, every number and tool kept. Accept the ones you like, then press Fit to one page again."
+            : "The AI couldn't shorten these lines without losing a number or a tool, so nothing changed and no credit was used.",
+        );
       } else if (!res.suggestions.length) setAiError("Nothing to change: the AI thinks this already reads well.");
     } catch (err) {
       setAiError(errorText(err));
@@ -631,6 +642,8 @@ function ResumeEditor() {
                 data={resume.data}
                 design={resume.design}
                 onFit={(design) => change((r) => ({ ...r, design }))}
+                onShorten={(linesOver) => void askAi("shorten", undefined, undefined, linesOver)}
+                shortening={aiBusy !== null}
                 highlight={tab === "ai" ? (queue[0] ? [queue[0].path] : []) : tab === "content" ? (editing ? [editing] : []) : tab === "score" ? pointing : []}
               />
             )}
@@ -753,7 +766,22 @@ function previewTarget(root: Element, path: string): HTMLElement | null {
   return null;
 }
 
-function ScaledPage({ data, design, onFit, highlight = [] }: { data: ResumeData; design: ResumeDesign; onFit: (design: ResumeDesign) => void; highlight?: string[] }) {
+function ScaledPage({
+  data,
+  design,
+  onFit,
+  onShorten,
+  shortening = false,
+  highlight = [],
+}: {
+  data: ResumeData;
+  design: ResumeDesign;
+  onFit: (design: ResumeDesign) => void;
+  /** When the layout alone can't fit one page: shorten the longest lines with AI, this many printed lines over. */
+  onShorten?: (linesOver: number) => void;
+  shortening?: boolean;
+  highlight?: string[];
+}) {
   const { box, page, scale, realHeight } = useScaledPage(design.page);
   // Mark what's being looked at, and bring the first one into view inside the preview column (not the whole page).
   const marked = highlight.join("|");
@@ -775,8 +803,13 @@ function ScaledPage({ data, design, onFit, highlight = [] }: { data: ResumeData;
   }, [marked, data, design, scale]); // eslint-disable-line react-hooks/exhaustive-deps -- `marked` stands for `highlight`
   const [fitting, setFitting] = useState(false);
   const [fitNote, setFitNote] = useState<string | null>(null);
+  // Printed lines still over one page at the most compact layout, once Fit to one page has tried them all.
+  const [over, setOver] = useState(0);
   const { pages, breaks } = pageLayout(realHeight, design);
-  useEffect(() => setFitNote(null), [data]);
+  useEffect(() => {
+    setFitNote(null);
+    setOver(0);
+  }, [data]);
   // Printing keeps each role, project and school whole, so a break inside one moves to its top: show it there.
   const [guides, setGuides] = useState<number[]>([]);
   const breakKey = breaks.join(",");
@@ -801,11 +834,16 @@ function ScaledPage({ data, design, onFit, highlight = [] }: { data: ResumeData;
         </span>
         {pages > 2 && <span className="text-xs text-zinc-600 dark:text-zinc-400">Recruiters rarely read past page 2: trim older roles.</span>}
         {pages > 1 && (
-          <Button size="sm" variant="ghost" disabled={fitting} onClick={() => { setFitNote(null); setFitting(true); }}>
+          <Button size="sm" variant="ghost" disabled={fitting} onClick={() => { setFitNote(null); setOver(0); setFitting(true); }}>
             Fit to one page
           </Button>
         )}
         {fitNote && <span role="status" className="text-xs text-zinc-600 dark:text-zinc-400">{fitNote}</span>}
+        {over > 0 && pages > 1 && onShorten && (
+          <Button size="sm" variant="secondary" disabled={shortening} onClick={() => onShorten(over)} title="The AI tightens your longest lines, keeping every number and tool. You accept or skip each. Uses 1 resume credit.">
+            <Sparkles className="h-3.5 w-3.5" /> Shorten with AI
+          </Button>
+        )}
       </div>
       <div ref={box} className="relative w-full" aria-label={`Resume preview, ${pages} page${pages === 1 ? "" : "s"}`} role="img" style={{ height: realHeight * scale }}>
         <div ref={page} style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "max-content" }} className="overflow-hidden rounded-sm shadow-xl ring-1 ring-black/5">
@@ -820,14 +858,19 @@ function ScaledPage({ data, design, onFit, highlight = [] }: { data: ResumeData;
       {fitting && (
         <FitMeasurer
           data={data}
-          candidates={fitCandidates(design)}
-          onDone={(fit) => {
+          candidates={fitCandidates(design).length ? fitCandidates(design) : [design]}
+          onDone={(fit, linesOver) => {
             setFitting(false);
             if (fit) {
               onFit(fit);
               setFitNote(`Fitted: ${fit.spacing} spacing, ${fit.font_size} pt text.`);
             } else {
-              setFitNote("Still over a page at the smallest readable size. Trim older roles or bullets, or keep two pages.");
+              setOver(linesOver);
+              setFitNote(
+                onShorten
+                  ? `Still about ${linesOver} line${linesOver === 1 ? "" : "s"} over at the smallest readable size. Shorten the longest lines with AI (every number and tool kept), trim older roles, or keep two pages.`
+                  : "Still over a page at the smallest readable size. Trim older roles or bullets, or keep two pages.",
+              );
             }
           }}
         />
@@ -844,12 +887,23 @@ function fitCandidates(d: ResumeDesign): ResumeDesign[] {
   return out;
 }
 
-/** Lays the candidates out off-screen, once, and reports the first that fits on one page (or null). */
-function FitMeasurer({ data, candidates, onDone }: { data: ResumeData; candidates: ResumeDesign[]; onDone: (fit: ResumeDesign | null) => void }) {
+/** How many printed lines a resume `heightPx` tall is over one page in `design` (at least 1). */
+function overflowLines(heightPx: number, design: ResumeDesign): number {
+  const pageH = PAGE_MM[design.page].h * MM_TO_PX;
+  const pad = Math.max(0, pageH - (pageLayout(Math.max(heightPx, 2 * pageH), design).breaks[0] ?? pageH)); // break 1 = pageH - pad
+  const lineHeight = LINE_HEIGHTS.find((l) => l.id === (design.line_height ?? "normal"))?.value ?? 1.4;
+  return linesOver(heightPx - 2 * pad, pageH - 2 * pad, design.font_size, lineHeight);
+}
+
+/** Lays the candidates out off-screen, once, and reports the first that fits on one page (or null, with how many
+ *  lines the last, most compact one is still over). */
+function FitMeasurer({ data, candidates, onDone }: { data: ResumeData; candidates: ResumeDesign[]; onDone: (fit: ResumeDesign | null, linesOver: number) => void }) {
   const refs = useRef<Array<HTMLDivElement | null>>([]);
   useLayoutEffect(() => {
     const fit = candidates.find((c, i) => pageLayout(refs.current[i]?.offsetHeight ?? Infinity, c).pages === 1) ?? null;
-    onDone(fit);
+    const last = candidates.length - 1;
+    const tightest = candidates[last];
+    onDone(fit, fit || !tightest ? 0 : overflowLines(refs.current[last]?.offsetHeight ?? 0, tightest));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- measured once, on mount
   return createPortal(
     <div aria-hidden className="print:hidden" style={{ position: "fixed", left: -100_000, top: 0, visibility: "hidden", pointerEvents: "none" }}>
