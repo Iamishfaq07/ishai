@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 from orbit_api.resumes.claims import _GENERIC, _figures
 from orbit_api.resumes.lint import LineIssue, line_count, line_issues
-from orbit_api.resumes.schema import ResumeData, ResumeDesign
+from orbit_api.resumes.schema import Project, ResumeData, ResumeDesign
 
 Category = Literal["contact", "sections", "summary", "experience", "skills", "readability", "layout", "keywords"]
 CATEGORY_LABELS: dict[Category, str] = {
@@ -253,7 +253,7 @@ def resume_text(data: ResumeData) -> str:
     for p in data.projects:
         lines += [p.name, p.description, *p.bullets]
     for ed in data.education:
-        lines += [f"{ed.degree} {ed.field} {ed.school}", ed.details]
+        lines += [f"{ed.degree} {ed.field} {ed.school}", ed.grade, ed.details]
     for c in data.certifications:
         lines += [f"{c.name} {c.issuer}"]
     for x in data.extras:
@@ -261,12 +261,14 @@ def resume_text(data: ResumeData) -> str:
     return "\n".join(line for line in lines if line and line.strip())
 
 
-def _bullets(data: ResumeData) -> Iterator[tuple[str, str]]:
-    """(path, text) of every non-empty experience bullet."""
-    for e in data.experience:
-        for i, text in enumerate(e.bullets):
+def _bullets(data: ResumeData, *, projects: bool = False) -> Iterator[tuple[str, str]]:
+    """(path, text) of every non-empty experience bullet, or with `projects` every project bullet."""
+    section = "projects" if projects else "experience"
+    entries = [(p.id, p.bullets) for p in data.projects] if projects else [(e.id, e.bullets) for e in data.experience]
+    for id_, texts in entries:
+        for i, text in enumerate(texts):
             if text.strip():
-                yield f"experience.{e.id}.bullets.{i}", text.strip()
+                yield f"{section}.{id_}.bullets.{i}", text.strip()
 
 
 # ---- job keywords --------------------------------------------------------------------------------------------
@@ -466,6 +468,23 @@ def _check(checks: list[AtsCheck], id_: str, category: Category, label: str, max
                            fix_kind=None if passed else kind, paths=[] if passed else list(paths or [])))
 
 
+def _project_checks(checks: list[AtsCheck], projects: list[Project]) -> None:
+    """A fresher's roles_complete and bullets_per_role: each project named, with what was built (a description or
+    bullets), and 2-6 bullets, the way a role is held to a title, dates and 2-6 bullets."""
+    complete = [p for p in projects if p.name.strip() and (p.description.strip() or any(x.strip() for x in p.bullets))]
+    incomplete = next((p for p in projects if p not in complete), None)
+    _check(checks, "roles_complete", "experience", "Every project has a name and what you built", 6,
+           len(complete) / len(projects),
+           f"Give \"{incomplete.name or 'each project'}\" a name and a line on what you built." if incomplete else None,
+           f"projects.{incomplete.id}" if incomplete else None)
+    counts = [len([x for x in p.bullets if x.strip()]) for p in projects]
+    thin = next((p for p, n in zip(projects, counts, strict=True) if not 2 <= n <= 6), None)
+    _check(checks, "bullets_per_role", "experience", "2-6 bullets per project", 4,
+           sum(1 for n in counts if 2 <= n <= 6) / len(projects),
+           f"Give \"{thin.name or 'each project'}\" 2-6 bullets: what you built, with what, and the result."
+           if thin else None, f"projects.{thin.id}" if thin else None)
+
+
 def _verdict(score: int) -> str:
     return "Strong" if score >= 80 else "Good" if score >= 65 else "Needs work" if score >= 45 else "Weak"
 
@@ -495,11 +514,17 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
 
     # sections (10)
     has_exp = any(e.title.strip() or e.company.strip() for e in data.experience)
+    # A student or fresher with no job yet: their projects are judged the way roles are, and two with bullets count
+    # as experience (an internship is a role already), so a strong first resume isn't scored as if it were empty.
+    projects = [p for p in data.projects if p.name.strip() or any(x.strip() for x in p.bullets)]
+    fresher = not has_exp and bool(projects)
     has_edu = any(e.school.strip() or e.degree.strip() for e in data.education)
     n_skills = sum(len([i for i in s.items if i.strip()]) for s in data.skills)
-    _check(checks, "has_experience", "sections", "An Experience section", 4, 1.0 if has_exp else 0,
-           "Add your work experience: it's what ATS software weighs most. Internships and volunteer roles count.",
-           "experience")
+    _check(checks, "has_experience", "sections",
+           "Experience: an internship, or 2+ projects with bullets" if fresher else "An Experience section", 4,
+           1.0 if has_exp or sum(1 for p in projects if any(x.strip() for x in p.bullets)) >= 2 else 0,
+           "Add your work experience: it's what ATS software weighs most. Internships and volunteer roles count, and "
+           "so do two projects with bullets if you're a student.", "experience")
     _check(checks, "has_education", "sections", "An Education section", 3, 1.0 if has_edu else 0,
            "Add your education: many ATS filters check for a degree or school.", "education")
     _check(checks, "has_skills", "sections", "A Skills section", 3, 1.0 if n_skills else 0,
@@ -516,22 +541,26 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
 
     # experience (26)
     roles = [e for e in data.experience if e.title.strip() or e.company.strip()]
-    bullets = list(_bullets(data))
-    complete = [e for e in roles if e.title.strip() and e.company.strip() and e.start.strip()
-                and (e.end.strip() or e.current)]
-    incomplete = next((e for e in roles if e not in complete), None)
-    _check(checks, "roles_complete", "experience", "Every role has a title, company and dates", 6,
-           len(complete) / len(roles) if roles else 0,
-           f"Fill in the title, company and dates for {incomplete.title or incomplete.company or 'each role'}."
-           if incomplete else "Add at least one role with a title, company and dates.",
-           f"experience.{incomplete.id}" if incomplete else "experience")
-    thin = next((e for e in roles if not 2 <= len([x for x in e.bullets if x.strip()]) <= 6), None)
-    _check(checks, "bullets_per_role", "experience", "2-6 bullets per role", 4,
-           (sum(1 for e in roles if 2 <= len([x for x in e.bullets if x.strip()]) <= 6) / len(roles)) if roles else 0,
-           f"Give \"{thin.title or thin.company}\" 2-6 bullets: fewer looks thin, more gets skimmed." if thin
-           else "Add 2-6 bullets to each role.", f"experience.{thin.id}" if thin else "experience",
-           ai_fixable=any(len([x for x in e.bullets if x.strip()]) < 2 for e in roles),
-           paths=[f"experience.{e.id}.bullets.+" for e in roles if len([x for x in e.bullets if x.strip()]) < 2])
+    bullets = list(_bullets(data, projects=fresher))
+    if fresher:
+        _project_checks(checks, projects)
+    else:
+        complete = [e for e in roles if e.title.strip() and e.company.strip() and e.start.strip()
+                    and (e.end.strip() or e.current)]
+        incomplete = next((e for e in roles if e not in complete), None)
+        _check(checks, "roles_complete", "experience", "Every role has a title, company and dates", 6,
+               len(complete) / len(roles) if roles else 0,
+               f"Fill in the title, company and dates for {incomplete.title or incomplete.company or 'each role'}."
+               if incomplete else "Add at least one role with a title, company and dates.",
+               f"experience.{incomplete.id}" if incomplete else "experience")
+        thin = next((e for e in roles if not 2 <= len([x for x in e.bullets if x.strip()]) <= 6), None)
+        _check(checks, "bullets_per_role", "experience", "2-6 bullets per role", 4,
+               (sum(1 for e in roles if 2 <= len([x for x in e.bullets if x.strip()]) <= 6) / len(roles))
+               if roles else 0,
+               f"Give \"{thin.title or thin.company}\" 2-6 bullets: fewer looks thin, more gets skimmed." if thin
+               else "Add 2-6 bullets to each role.", f"experience.{thin.id}" if thin else "experience",
+               ai_fixable=any(len([x for x in e.bullets if x.strip()]) < 2 for e in roles),
+               paths=[f"experience.{e.id}.bullets.+" for e in roles if len([x for x in e.bullets if x.strip()]) < 2])
 
     if bullets:
         weak = [(p, t) for p, t in bullets if not is_action_verb(_first_word(t))]
@@ -576,8 +605,11 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
                                 ("bullet_length", "Bullets are 8-35 words", 3),
                                 ("varied_verbs", "Opening verbs are varied", 1),
                                 ("no_pronouns", "No \"I\" or \"my\" in bullets", 1)):
-            _check(checks, id_, "experience", label, pts, 0, "Add bullets describing what you achieved in each role.",
-                   "experience", ai_fixable=bool(roles), paths=[f"experience.{e.id}.bullets.+" for e in roles])
+            _check(checks, id_, "experience", label, pts, 0,
+                   "Add bullets to each project: what you built, with what, and the result." if fresher
+                   else "Add bullets describing what you achieved in each role.",
+                   "projects" if fresher else "experience", ai_fixable=bool(roles),
+                   paths=[f"experience.{e.id}.bullets.+" for e in roles])
 
     # skills (7)
     _check(checks, "skills_count", "skills", "At least 8 skills listed", 7, n_skills / 8,

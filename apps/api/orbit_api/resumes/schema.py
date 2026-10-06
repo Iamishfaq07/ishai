@@ -16,7 +16,8 @@ EXTRA_PREFIX = "extra:"  # an extra section's place in section_order: "extra:<it
 MAX_EXTRAS = 5
 
 # All single-column (ATS-safe) except "sidebar".
-Template = Literal["classic", "modern", "compact", "sidebar", "elegant", "minimal", "bold", "executive"]
+Template = Literal["classic", "modern", "compact", "sidebar", "elegant", "minimal", "bold", "executive", "campus",
+                   "harvard"]
 Font = Literal["inter", "arial", "georgia", "garamond", "grotesk", "calibri", "cambria", "helvetica", "times",
                "trebuchet"]
 Spacing = Literal["compact", "normal", "relaxed"]
@@ -77,6 +78,9 @@ class Education(BaseModel):
     start: str = Field("", max_length=40)
     end: str = Field("", max_length=40)
     details: str = Field("", max_length=600)
+    # The score as the marksheet gives it: "8.6 / 10 CGPA", "92%", "First Class". Resumes saved before it existed
+    # load with it empty.
+    grade: str = Field("", max_length=60)
 
 
 class SkillGroup(BaseModel):

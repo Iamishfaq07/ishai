@@ -19,6 +19,10 @@ const ADD_LABEL: Record<string, string> = {
   bullets_per_role: "Edit the bullets",
 };
 
+/** A fresher's roles_complete points at a project, not a role. */
+const addLabel = (c: AtsCheck): string =>
+  c.id === "roles_complete" && c.target?.startsWith("projects.") ? "Fill in the project" : (ADD_LABEL[c.id] ?? "Add it");
+
 /** While a fix runs: what it's doing, so a minute-long "fix everything" doesn't look stuck. */
 export function fixBusyText(check: string): string {
   if (check === "all") return "Fixing everything: rewriting the flagged lines, then checking the result again…";
@@ -62,7 +66,7 @@ export function FixActions({ check: c, report, busy, onFix, onShow }: {
       )}
       {kind === "you" && c.target && (
         <Button size="sm" variant="secondary" onClick={() => onShow(c.target)}>
-          <PenLine className="h-3.5 w-3.5" /> {ADD_LABEL[c.id] ?? "Add it"}
+          <PenLine className="h-3.5 w-3.5" /> {addLabel(c)}
         </Button>
       )}
       {kind !== "you" && c.target && (
@@ -149,7 +153,7 @@ export function FixResult({ result, report, busy, error, onUndo, onKeep, onSkip,
               </span>
               {fixKind(c) === "you" && c.target && (
                 <Button size="sm" variant="secondary" onClick={() => onShow(c.target)}>
-                  <PenLine className="h-3.5 w-3.5" /> {ADD_LABEL[c.id] ?? "Add it"}
+                  <PenLine className="h-3.5 w-3.5" /> {addLabel(c)}
                 </Button>
               )}
             </li>

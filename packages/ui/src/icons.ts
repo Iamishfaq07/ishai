@@ -39,6 +39,7 @@ export {
   FileUp,
   FolderOpen,
   Gauge,
+  GraduationCap,
   Headphones,
   HistoryIcon,
   Info,

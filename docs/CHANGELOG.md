@@ -1,5 +1,39 @@
 # Implementation log
 
+## Resume maker for students and freshers: CGPA, Campus and Harvard templates, fair scores without a job (2026-10-07)
+
+Most people using the Resume maker are Indian job seekers, many of them students applying through campus placements,
+Naukri and LinkedIn. Their resumes lead with education and projects, carry a CGPA and Class 10/12 marks, and have no
+full-time job yet, which the editor, the templates and the ATS score didn't allow for.
+
+- **CGPA or percentage on every education entry** (`grade`, optional, up to 60 characters; older resumes load with it
+  empty). The form labels it "CGPA or percentage" ("8.6 / 10 CGPA, or 92%"), and the degree and school fields now say
+  how to enter Class 12 and Class 10 (board and school, year, percentage). It prints in every template (under the
+  degree, before the details; flush right on the degree line in Campus and Harvard), and goes into the Word file, the
+  plain-text copy and what the AI reads of the resume.
+- **AI import reads it**: the prompt maps a CGPA, percentage or class into `grade`, school results into education and
+  internships into experience. Grounding keeps a grade only when the source states it ("8.71/10" backs "8.71 / 10
+  CGPA"; "91.60%" backs "91.6%"); one it never gives is blanked. Checked on real DeepSeek with an NIT fresher resume.
+- **New extra sections**: Positions of Responsibility, Achievements, Relevant coursework, Extracurricular activities,
+  Personal details (with a note: MNC, startup and tech recruiters usually prefer it left out; some government and
+  traditional employers expect it) and Declaration (starts with the standard one line).
+- **"Student / fresher" in New resume**: a one-page Campus resume ordered education, projects, skills, internships,
+  positions of responsibility, achievements, the last two ready to fill in.
+- **Two ATS-safe single-column templates**, with Quick looks of their own:
+  - *Campus*, in the style of Jake's resume: centred small-caps name, a " | " contact line, small-caps headings over
+    a hairline, tight spacing, school or company in bold with the dates flush right and the degree or role in italics
+    below.
+  - *Harvard*: a serif name and centred bold uppercase headings over a rule, with generous spacing.
+  - Both print to A4 and Letter (page 2 keeps its margin), show where pages break and work with "Fit to one page".
+    The Word file keeps their look: centred header, small-caps or centred serif headings, two-line entries.
+  - Word headings in every template are now set in the resume's font: Word's Heading 1 theme font used to win over
+    it, so they came out in the theme's font whatever was chosen.
+- **Fair scores for freshers.** A resume with no job but with projects is judged on its projects: two with bullets
+  count as experience, and project bullets are held to the same checks as a role's (complete, 2-6 bullets, numbers,
+  action verbs, length). A B.Tech fresher with two good projects and no internship scored 53 and now scores 93.
+  Resumes with any role score exactly as before.
+- Web unit tests now run in `apps/web` (vitest).
+
 ## Coding questions get code, in every session, in chat and from screenshots (2026-10-05)
 
 Reported: coding questions came back as English only, even in a Coding interview, and in chat. Measured with real

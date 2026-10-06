@@ -1,11 +1,17 @@
 import { Fragment, type CSSProperties, type ReactNode } from "react";
 import type { ResumeData, ResumeDesign, ResumeSectionKey } from "@orbit/types";
-import { FONTS, LINE_HEIGHTS, dateRange, extraOf, sectionLabel, shownSections } from "./model";
+import { FONTS, LINE_HEIGHTS, SERIF_FONTS, dateRange, extraOf, sectionLabel, shownSections } from "./model";
 
 const SPACE = {
   compact: { section: "9pt", item: "5pt", pad: "12mm" },
   normal: { section: "13pt", item: "7pt", pad: "16mm" },
   relaxed: { section: "17pt", item: "10pt", pad: "20mm" },
+} as const;
+// Campus is tighter between sections and entries. The page padding stays, so pages break where pageLayout says.
+const CAMPUS_GAPS = {
+  compact: { section: "6pt", item: "4pt" },
+  normal: { section: "8pt", item: "5pt" },
+  relaxed: { section: "11pt", item: "6pt" },
 } as const;
 
 export const PAGE_MM = { a4: { w: 210, h: 297 }, letter: { w: 215.9, h: 279.4 } } as const;
@@ -106,27 +112,51 @@ function Fill({ text }: { text: string }) {
 }
 
 /**
+ * Campus and Harvard entries: the school or company in bold with the dates flush right, and the degree or role in
+ * italics below, with the grade or location flush right.
+ */
+function Stacked({ title, dates, sub, side }: { title: string; dates: string; sub: string; side: string }) {
+  return (
+    <>
+      <div className="flex items-baseline justify-between gap-x-3">
+        <p className="min-w-0 font-bold">{title}</p>
+        {dates && <p className="shrink-0 whitespace-nowrap">{dates}</p>}
+      </div>
+      {(sub || side) && (
+        <div className="flex items-baseline justify-between gap-x-3 italic">
+          <p className="min-w-0">{sub}</p>
+          {side && <p className="shrink-0 whitespace-nowrap">{side}</p>}
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
  * One resume page (or more, when it runs long), drawn at real size in mm. Always dark text on white paper, whatever
  * the app theme, because it's what gets printed to PDF. Headings use the standard section names ATS software
  * looks for.
  */
 export function ResumePreview({ data, design }: { data: ResumeData; design: ResumeDesign }) {
-  const space = SPACE[design.spacing];
+  const space = design.template === "campus" ? { ...SPACE[design.spacing], ...CAMPUS_GAPS[design.spacing] } : SPACE[design.spacing];
   const font = FONTS.find((f) => f.id === design.font)?.stack ?? FONTS[0]!.stack;
   const page = PAGE_MM[design.page];
   const accent = design.accent;
   const t = design.template;
   const photo = design.show_photo && design.photo ? design.photo : null;
   const sidebar = t === "sidebar";
+  const stacked = t === "campus" || t === "harvard";
 
   const lineHeight = LINE_HEIGHTS.find((l) => l.id === (design.line_height ?? "normal"))?.value ?? 1.4;
   const serif = "Georgia, 'Times New Roman', serif";
+  // Harvard's name and headings: the chosen font if it's a serif, else Georgia.
+  const titleFont = SERIF_FONTS.has(design.font) ? font : serif;
   const style: CSSProperties = {
     width: `${page.w}mm`,
     minHeight: `${page.h}mm`,
     fontFamily: font,
     fontSize: `${design.font_size}pt`,
-    lineHeight: t === "compact" ? lineHeight - 0.1 : lineHeight,
+    lineHeight: t === "compact" || t === "campus" ? lineHeight - 0.1 : lineHeight,
     padding: sidebar ? 0 : space.pad,
     color: "#18181b",
     background: "#ffffff",
@@ -182,6 +212,28 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
         </h2>
       );
     }
+    if (t === "campus") {
+      // Small capitals over a hairline, as in the LaTeX resumes recruiters know ("Jake's resume"), in the body's font
+      // (the app's own h1/h2 style would set them in Space Grotesk).
+      return (
+        <h2
+          style={{ color: accent, fontFamily: font, fontVariant: "small-caps", fontSize: "1.2em", letterSpacing: "0.03em", lineHeight: 1.2, borderBottom: `0.75pt solid ${accent}`, marginBottom: "3pt", paddingBottom: "0.5pt" }}
+          className="font-semibold"
+        >
+          {label}
+        </h2>
+      );
+    }
+    if (t === "harvard") {
+      return (
+        <h2
+          style={{ color: accent, fontFamily: titleFont, fontSize: "1em", letterSpacing: "0.08em", borderBottom: `0.75pt solid ${accent}`, marginBottom: space.item, paddingBottom: "1.5pt" }}
+          className="text-center font-bold uppercase"
+        >
+          {label}
+        </h2>
+      );
+    }
     return (
       <h2
         style={{ color: accent, borderColor: accent, fontSize: "1em", marginBottom: space.item, paddingBottom: "2pt" }}
@@ -197,7 +249,7 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
   const bullets = (items: string[], base?: string) => {
     const list = items.map((text, i) => ({ text, i })).filter((b) => b.text.trim());
     return list.length ? (
-      <ul className="mt-[2pt] list-disc space-y-[1.5pt] pl-[1.2em]">
+      <ul className={`mt-[2pt] list-disc pl-[1.2em] ${t === "campus" ? "space-y-[0.5pt]" : "space-y-[1.5pt]"}`}>
         {list.map((b) => (
           <li key={b.i} data-rpath={base ? `${base}.bullets.${b.i}` : undefined}>
             <Fill text={b.text} />
@@ -219,31 +271,55 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     if (id === "experience") {
       body = data.experience.map((e) => (
         <div key={e.id} data-rpath={`experience.${e.id}`} style={{ marginBottom: space.item }} className="break-inside-avoid">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-            <p>
-              <span className="font-bold">{e.title}</span>
-              {e.company && <span>{e.title ? ", " : ""}{e.company}</span>}
-              {e.location && <span className="text-zinc-600"> · {e.location}</span>}
-            </p>
-            <p className="whitespace-nowrap text-zinc-600">{dateRange(e.start, e.end, e.current)}</p>
-          </div>
+          {stacked ? (
+            <Stacked title={e.company || e.title} dates={dateRange(e.start, e.end, e.current)} sub={e.company ? e.title : ""} side={e.location} />
+          ) : (
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+              <p>
+                <span className="font-bold">{e.title}</span>
+                {e.company && <span>{e.title ? ", " : ""}{e.company}</span>}
+                {e.location && <span className="text-zinc-600"> · {e.location}</span>}
+              </p>
+              <p className="whitespace-nowrap text-zinc-600">{dateRange(e.start, e.end, e.current)}</p>
+            </div>
+          )}
           {bullets(e.bullets, `experience.${e.id}`)}
         </div>
       ));
     }
     if (id === "education") {
-      body = data.education.map((e) => (
-        <div key={e.id} data-rpath={`education.${e.id}`} style={{ marginBottom: space.item }} className="break-inside-avoid">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-            <p>
-              <span className="font-bold">{[e.degree, e.field].filter(Boolean).join(", ") || e.school}</span>
-              {(e.degree || e.field) && e.school && <span>, {e.school}</span>}
-            </p>
-            <p className="whitespace-nowrap text-zinc-600">{dateRange(e.start, e.end)}</p>
+      body = data.education.map((e) => {
+        const degree = [e.degree, e.field].filter(Boolean).join(", ");
+        const grade = e.grade?.trim() ?? "";
+        return (
+          <div key={e.id} data-rpath={`education.${e.id}`} style={{ marginBottom: space.item }} className="break-inside-avoid">
+            {stacked ? (
+              <>
+                <Stacked title={e.school || degree} dates={dateRange(e.start, e.end)} sub={e.school ? degree : ""} side={grade} />
+                {e.details && <p><Fill text={e.details} /></p>}
+              </>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                  <p>
+                    <span className="font-bold">{degree || e.school}</span>
+                    {degree && e.school && <span>, {e.school}</span>}
+                  </p>
+                  <p className="whitespace-nowrap text-zinc-600">{dateRange(e.start, e.end)}</p>
+                </div>
+                {/* The grade leads the line under the degree: campus filters and recruiters look for it first. */}
+                {(grade || e.details) && (
+                  <p className="text-zinc-700">
+                    {grade && <span className="font-medium text-zinc-900">{grade}</span>}
+                    {grade && e.details && " · "}
+                    {e.details && <Fill text={e.details} />}
+                  </p>
+                )}
+              </>
+            )}
           </div>
-          {e.details && <p className="text-zinc-700"><Fill text={e.details} /></p>}
-        </div>
-      ));
+        );
+      });
     }
     if (id === "skills") {
       body = (
@@ -328,7 +404,25 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
   }
 
   const header =
-    t === "classic" ? (
+    t === "campus" ? (
+      <header data-rpath="basics" className="text-center">
+        {photo && <div className="absolute" style={{ top: space.pad, right: space.pad }}>{photoEl("22mm")}</div>}
+        <h1 data-rpath="basics.name" style={{ fontFamily: font, fontSize: "2.15em", lineHeight: 1.1, fontVariant: "small-caps", letterSpacing: "0.02em" }} className="font-bold">
+          {name}
+        </h1>
+        {data.basics.headline && <p data-rpath="basics.headline" className="mt-[1pt]">{data.basics.headline}</p>}
+        <p className="mt-[2pt] text-zinc-700"><ContactLine items={contacts} sep=" | " /></p>
+      </header>
+    ) : t === "harvard" ? (
+      <header data-rpath="basics" className="text-center">
+        {photo && <div className="absolute" style={{ top: space.pad, right: space.pad }}>{photoEl("22mm")}</div>}
+        <h1 data-rpath="basics.name" style={{ fontFamily: titleFont, fontSize: "1.9em", lineHeight: 1.15 }} className="font-bold">
+          {name}
+        </h1>
+        {data.basics.headline && <p data-rpath="basics.headline" className="mt-[2pt] italic">{data.basics.headline}</p>}
+        <p className="mt-[3pt] text-zinc-700"><ContactLine items={contacts} sep="  •  " /></p>
+      </header>
+    ) : t === "classic" ? (
       // Not positioned itself: a positioned header is painted after the sections, so the PDF's text would list
       // the name and contacts last, which confuses ATS parsers. The photo is placed against the page instead.
       <header data-rpath="basics" className="text-center">

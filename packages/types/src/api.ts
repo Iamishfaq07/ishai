@@ -737,7 +737,17 @@ export type ResumeSectionId = "summary" | "experience" | "education" | "skills" 
 /** A place in `section_order`: a standard section, or "extra:<id>" for one of `extras`. */
 export type ResumeSectionKey = ResumeSectionId | `extra:${string}`;
 /** All single-column (ATS-safe) except "sidebar". */
-export type ResumeTemplate = "classic" | "modern" | "compact" | "sidebar" | "elegant" | "minimal" | "bold" | "executive";
+export type ResumeTemplate =
+  | "classic"
+  | "modern"
+  | "compact"
+  | "sidebar"
+  | "elegant"
+  | "minimal"
+  | "bold"
+  | "executive"
+  | "campus"
+  | "harvard";
 export type ResumeFont =
   | "inter"
   | "arial"
@@ -786,6 +796,8 @@ export interface ResumeEducation {
   start: string;
   end: string;
   details: string;
+  /** The score as the marksheet gives it: "8.6 / 10 CGPA", "92%". Absent on resumes saved before it existed. */
+  grade?: string;
 }
 
 export interface ResumeSkillGroup {
