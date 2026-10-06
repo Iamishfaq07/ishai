@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import type { ResumeData, ResumeSummary } from "@orbit/types";
+import type { ResumeData, ResumeInput, ResumeSummary } from "@orbit/types";
 import {
   ArrowLeft,
   ClipboardCheck,
@@ -8,6 +8,7 @@ import {
   FileText,
   FileUp,
   FolderOpen,
+  GraduationCap,
   Plus,
   ScanText,
   Trash2,
@@ -25,7 +26,7 @@ import { useAsync } from "../../lib/useAsync";
 import { LibraryTabs } from "../Stories";
 import { isUpgradeError, priceText } from "./allowance";
 import { guestResume } from "./backend";
-import { newResume } from "./model";
+import { fresherResume, newResume } from "./model";
 
 export function scoreTone(score: number): string {
   return score >= 80
@@ -192,10 +193,11 @@ export function ResumesPage() {
   );
 }
 
-type Source = "scratch" | "file" | "linkedin" | "text" | "document";
+type Source = "scratch" | "fresher" | "file" | "linkedin" | "text" | "document";
 
 const SOURCES: Array<{ id: Source; label: string; hint: string; icon: typeof FileText }> = [
   { id: "scratch", label: "Start from scratch", hint: "A blank resume, section by section.", icon: Plus },
+  { id: "fresher", label: "Student / fresher", hint: "One page for campus placements: education first, then projects.", icon: GraduationCap },
   { id: "file", label: "Import a PDF or Word file", hint: "We read it into editable sections.", icon: FileUp },
   { id: "linkedin", label: "Import your LinkedIn profile", hint: "From LinkedIn's “Save to PDF”, or pasted.", icon: UserRound },
   { id: "text", label: "Paste text", hint: "Copy from anywhere and paste it in.", icon: ClipboardCheck },
@@ -244,10 +246,11 @@ export function NewResume({ onClose }: { onClose?: () => void }) {
   const docs = useAsync(() => api.listDocuments(), [], "documents");
   const resumeDocs = (docs.data ?? []).filter((d) => d.kind === "resume" && d.status === "ready");
 
-  const create = async (title: string, data?: ResumeData) => {
-    const r = await api.createResume(newResume(title, data));
-    navigate(`/documents/resumes/${r.id}`, { state: { imported: Boolean(data) } });
+  const open = async (input: ResumeInput, imported: boolean) => {
+    const r = await api.createResume(input);
+    navigate(`/documents/resumes/${r.id}`, { state: { imported } });
   };
+  const create = (title: string, data?: ResumeData) => open(newResume(title, data), Boolean(data));
 
   // The running import, so "Cancel" can stop waiting on a slow connection.
   const running = useRef<AbortController | null>(null);
@@ -414,7 +417,9 @@ export function NewResume({ onClose }: { onClose?: () => void }) {
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => (id === "scratch" ? void run(() => create("My resume")) : setSource(id))}
+                onClick={() =>
+                  id === "scratch" ? void run(() => create("My resume")) : id === "fresher" ? void run(() => open(fresherResume(), false)) : setSource(id)
+                }
                 className={cx(
                   "flex w-full items-start gap-3 rounded-xl border border-zinc-200 p-3 text-left transition-colors hover:border-indigo-400 hover:bg-indigo-500/5 dark:border-white/10",
                   focusRing,

@@ -252,7 +252,8 @@ function ExtraEditor({ x, i, n, onPatch, onMove, onRemove }: {
   onMove: (by: -1 | 1) => void;
   onRemove: () => void;
 }) {
-  const placeholder = EXTRA_PRESETS.find((p) => p.title.toLowerCase() === x.title.trim().toLowerCase())?.placeholder ?? "One item per line";
+  const preset = EXTRA_PRESETS.find((p) => p.title.toLowerCase() === x.title.trim().toLowerCase());
+  const placeholder = preset?.placeholder ?? "One item per line";
   const items = x.items.length ? x.items : [""];
   const setItems = (next: string[]) => onPatch({ items: next });
   return (
@@ -274,6 +275,7 @@ function ExtraEditor({ x, i, n, onPatch, onMove, onRemove }: {
         </div>
         <ItemTools i={i} n={n} label={x.title || "section"} onMove={onMove} onRemove={onRemove} />
       </div>
+      {preset?.note && <p className="-mt-1 text-xs text-zinc-500 dark:text-zinc-400">{preset.note}</p>}
       <div className="space-y-2">
         {items.map((item, j) => (
           <div key={j} className="flex items-center gap-1">
@@ -353,11 +355,11 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
   const certs = list("certifications");
   const extras = list("extras");
   const usedTitles = new Set(data.extras.map((x) => x.title.trim().toLowerCase()));
-  const addExtra = (title: string, style: ResumeExtraSection["style"]) => {
+  const addExtra = (title: string, style: ResumeExtraSection["style"], fill = "") => {
     const id = newId();
     update((d) => ({
       ...d,
-      extras: [...d.extras, { id, title, items: [""], style }],
+      extras: [...d.extras, { id, title, items: [fill], style }],
       section_order: [...d.section_order, `extra:${id}` as ResumeSectionKey],
     }));
     window.setTimeout(() => {
@@ -585,27 +587,39 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
         id="education"
         title="Education"
         action={
-          <Button size="sm" variant="secondary" onClick={() => edu.set([...data.education, { id: newId(), school: "", degree: "", field: "", start: "", end: "", details: "" } as ResumeEducation])} disabled={data.education.length >= 10}>
+          <Button size="sm" variant="secondary" onClick={() => edu.set([...data.education, { id: newId(), school: "", degree: "", field: "", start: "", end: "", grade: "", details: "" } as ResumeEducation])} disabled={data.education.length >= 10}>
             <Plus className="h-3.5 w-3.5" /> Add education
           </Button>
         }
       >
+        <p className="-mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+          Most recent first. Students and freshers: add Class 12 and Class 10 as their own entries, with the board, the year and your percentage.
+        </p>
         {data.education.map((e, i) => (
           <div key={e.id} data-path={`education.${e.id}`} tabIndex={-1} className="scroll-mt-24 space-y-3 rounded-xl border border-zinc-200 p-3 outline-none dark:border-white/10">
             <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-sm font-medium">{e.school || "New education"}</p>
+              <p className="truncate text-sm font-medium">{[e.degree, e.school].filter(Boolean).join(", ") || "New education"}</p>
               <ItemTools i={i} n={data.education.length} label="education" onMove={(by) => edu.set(move(data.education, i, by))} onRemove={() => edu.set(data.education.filter((x) => x.id !== e.id))} />
             </div>
             <TwoCol>
-              <Field label="School" htmlFor={`es-${e.id}`}><Input id={`es-${e.id}`} maxLength={160} value={e.school} onChange={(ev) => edu.patch(e.id, { school: ev.target.value })} /></Field>
-              <Field label="Degree" htmlFor={`ed-${e.id}`}><Input id={`ed-${e.id}`} maxLength={160} value={e.degree} placeholder="BSc" onChange={(ev) => edu.patch(e.id, { degree: ev.target.value })} /></Field>
-              <Field label="Field of study" htmlFor={`ef-${e.id}`}><Input id={`ef-${e.id}`} maxLength={160} value={e.field} onChange={(ev) => edu.patch(e.id, { field: ev.target.value })} /></Field>
+              <Field label="School, college or university" htmlFor={`es-${e.id}`}>
+                <Input id={`es-${e.id}`} maxLength={160} value={e.school} placeholder="IIT Delhi, or Delhi Public School (CBSE)" onChange={(ev) => edu.patch(e.id, { school: ev.target.value })} />
+              </Field>
+              <Field label="Degree or class" htmlFor={`ed-${e.id}`}>
+                <Input id={`ed-${e.id}`} maxLength={160} value={e.degree} placeholder="B.Tech, or Class 12 (PCM)" onChange={(ev) => edu.patch(e.id, { degree: ev.target.value })} />
+              </Field>
+              <Field label="Field of study" htmlFor={`ef-${e.id}`}>
+                <Input id={`ef-${e.id}`} maxLength={160} value={e.field} placeholder="Computer Science" onChange={(ev) => edu.patch(e.id, { field: ev.target.value })} />
+              </Field>
               <div className="grid grid-cols-2 gap-2">
-                <Field label="Start" htmlFor={`e1-${e.id}`}><Input id={`e1-${e.id}`} maxLength={40} value={e.start} placeholder="2016" onChange={(ev) => edu.patch(e.id, { start: ev.target.value })} /></Field>
-                <Field label="End" htmlFor={`e2-${e.id}`}><Input id={`e2-${e.id}`} maxLength={40} value={e.end} placeholder="2020" onChange={(ev) => edu.patch(e.id, { end: ev.target.value })} /></Field>
+                <Field label="Start" htmlFor={`e1-${e.id}`}><Input id={`e1-${e.id}`} maxLength={40} value={e.start} placeholder="2021" onChange={(ev) => edu.patch(e.id, { start: ev.target.value })} /></Field>
+                <Field label="End" htmlFor={`e2-${e.id}`}><Input id={`e2-${e.id}`} maxLength={40} value={e.end} placeholder="2025" onChange={(ev) => edu.patch(e.id, { end: ev.target.value })} /></Field>
               </div>
+              <Field label="CGPA or percentage (optional)" htmlFor={`eg-${e.id}`} hint="As on your marksheet, with the scale.">
+                <Input id={`eg-${e.id}`} maxLength={60} value={e.grade ?? ""} placeholder="8.6 / 10 CGPA, or 92%" onChange={(ev) => edu.patch(e.id, { grade: ev.target.value })} />
+              </Field>
             </TwoCol>
-            <Field label="Details (optional)" htmlFor={`ex-${e.id}`} hint="Honours, GPA if strong, relevant coursework.">
+            <Field label="Details (optional)" htmlFor={`ex-${e.id}`} hint="Honours, rank, scholarships.">
               <Input id={`ex-${e.id}`} maxLength={600} value={e.details} onChange={(ev) => edu.patch(e.id, { details: ev.target.value })} />
             </Field>
           </div>
@@ -652,7 +666,7 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
             </p>
             <div className="flex flex-wrap gap-1.5">
               {EXTRA_PRESETS.filter((p) => !usedTitles.has(p.title.toLowerCase())).map((p) => (
-                <Button key={p.title} size="sm" variant="secondary" onClick={() => addExtra(p.title, p.style)}>
+                <Button key={p.title} size="sm" variant="secondary" onClick={() => addExtra(p.title, p.style, p.fill)}>
                   <Plus className="h-3.5 w-3.5" /> {p.title}
                 </Button>
               ))}

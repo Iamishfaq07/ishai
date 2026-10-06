@@ -1,8 +1,9 @@
 """The resume as a Word file: one plain column in reading order, built from real Word styles (headings, bullet
 lists, a right tab stop for dates), so ATS software and recruiters who ask for .docx read it cleanly.
 
-Only the design choices that survive in Word carry over: font, size, accent colour, spacing and page size. The
-layout is always single-column and has no photo, since that's what ATS parsers read most reliably.
+Only the design choices that survive in Word carry over: font, size, accent colour, spacing and page size, and the
+Campus and Harvard templates' headings and two-line entries. The layout is always single-column and has no photo,
+since that's what ATS parsers read most reliably.
 """
 
 import io
@@ -10,7 +11,7 @@ from datetime import UTC, datetime
 
 from docx import Document
 from docx.document import Document as DocxDocument
-from docx.enum.text import WD_TAB_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Mm, Pt, RGBColor
@@ -30,10 +31,18 @@ SECTION_LABEL: dict[str, str] = {
 WORD_FONT = {"inter": "Calibri", "arial": "Arial", "georgia": "Georgia", "garamond": "Garamond",
              "grotesk": "Calibri", "calibri": "Calibri", "cambria": "Cambria", "helvetica": "Arial",
              "times": "Times New Roman", "trebuchet": "Trebuchet MS"}
+SERIF_FONTS = frozenset({"georgia", "garamond", "cambria", "times"})
+# Campus and Harvard keep their look in Word: the name and contact line centred, their own headings (Campus in small
+# capitals, Harvard centred in a serif), and each entry on two lines: the school or company in bold with the dates
+# flush right, the degree or role in italics below with the grade or location flush right.
+STACKED = frozenset({"campus", "harvard"})
+CONTACT_SEP = {"campus": " | ", "harvard": "  •  "}
 LINE_SPACING = {"tight": 1.05, "normal": 1.15, "airy": 1.3}
 PAGE_MM = {"a4": (210, 297), "letter": (215.9, 279.4)}
 # Page margin, gap before a section heading, gap after an entry: the same steps as the preview.
 SPACING = {"compact": (12, 9, 5), "normal": (16, 13, 7), "relaxed": (20, 17, 10)}
+# Campus is tighter between sections and entries (the margin stays), as on the preview.
+CAMPUS_GAPS = {"compact": (6, 4), "normal": (8, 5), "relaxed": (11, 6)}
 
 
 def _date_range(start: str, end: str, current: bool = False) -> str:
@@ -82,7 +91,14 @@ class _Writer:
         self.doc: DocxDocument = Document()
         self.accent = RGBColor.from_string(design.accent.lstrip("#").upper())
         self.accent_hex = design.accent
+        self.template = design.template
+        self.stacked = design.template in STACKED
+        # Harvard's name and headings are always a serif: the chosen one, or Georgia next to a sans-serif body.
+        serif = design.template != "harvard" or design.font in SERIF_FONTS
+        self.title_font = WORD_FONT[design.font] if serif else "Georgia"
         margin, self.section_gap, self.item_gap = SPACING[design.spacing]
+        if design.template == "campus":
+            self.section_gap, self.item_gap = CAMPUS_GAPS[design.spacing]
         section = self.doc.sections[0]
         width, height = PAGE_MM[design.page]
         section.page_width, section.page_height = Mm(width), Mm(height)
@@ -98,6 +114,11 @@ class _Writer:
             rfonts.set(qn(attr), WORD_FONT[design.font])
         normal.paragraph_format.space_after = Pt(0)
         normal.paragraph_format.line_spacing = LINE_SPACING[design.line_height]
+        # Heading 1 comes with theme fonts, which Word puts ahead of the font a run names: without them the headings
+        # are set in the resume's font (Harvard's serif), not the theme's.
+        heading_fonts = self.doc.styles["Heading 1"].element.get_or_add_rPr().get_or_add_rFonts()
+        for attr in ("w:asciiTheme", "w:hAnsiTheme", "w:eastAsiaTheme", "w:cstheme"):
+            heading_fonts.attrib.pop(qn(attr), None)
 
     def properties(self, kind: str, name: str) -> None:
         """What Word's File > Info shows, and what some job portals read: the candidate, not "python-docx"."""
@@ -123,24 +144,36 @@ class _Writer:
     def heading(self, label: str) -> None:
         # A real Heading 1 so parsers and screen readers see the section structure, styled to match the resume.
         p = self.doc.add_paragraph(style="Heading 1")
-        run = p.add_run(label.upper())
-        run.font.size = Pt(11)
+        campus = self.template == "campus"
+        run = p.add_run(label if campus else label.upper())
+        run.font.size = Pt(12 if campus else 11)
+        if campus:
+            run.font.small_caps = True
         run.font.color.rgb = self.accent
-        run.font.name = self.doc.styles["Normal"].font.name
+        run.font.name = self.title_font
         run.bold = True
+        if self.template == "harvard":
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         fmt = p.paragraph_format
         fmt.space_before, fmt.space_after, fmt.keep_with_next = Pt(self.section_gap), Pt(3), True
         _bottom_border(p, self.accent_hex)
 
-    def entry_line(self, left: list[tuple[str, bool]], right: str) -> None:
+    def entry_line(self, left: list[tuple[str, bool]], right: str, *, italic: bool = False) -> None:
         """"Title, Company · Location" on the left and the dates flush right, on one line."""
         p = self.doc.add_paragraph()
         p.paragraph_format.tab_stops.add_tab_stop(self.text_width, WD_TAB_ALIGNMENT.RIGHT)
         p.paragraph_format.keep_with_next = True
         for text, bold in left:
-            p.add_run(text).bold = bold
+            run = p.add_run(text)
+            run.bold, run.italic = bold, italic
         if right:
-            p.add_run("\t" + right)
+            p.add_run("\t" + right).italic = italic
+
+    def stacked_entry(self, top: str, dates: str, sub: str, side: str) -> None:
+        """Campus and Harvard: "Company<tab>dates" with the company in bold, then "Role<tab>location" in italics."""
+        self.entry_line([(top, True)], dates)
+        if sub or side:
+            self.entry_line([(sub, False)], side, italic=True)
 
     def bullets(self, items: list[str]) -> None:
         for item in items:
@@ -157,12 +190,18 @@ def resume_docx(data: ResumeData, design: ResumeDesign) -> bytes:
     w = _Writer(design)
     data = data.visible()
     b = data.basics
-    w.par(b.name.strip() or "Your name", bold=True, size=design.font_size * 2)
+    header = [w.par(b.name.strip() or "Your name", bold=True, size=design.font_size * 2)]
+    header[0].runs[0].font.name = w.title_font
+    if w.template == "campus":
+        header[0].runs[0].font.small_caps = True
     if b.headline.strip():
-        w.par(b.headline.strip(), color=w.accent, size=design.font_size * 1.1)
+        header.append(w.par(b.headline.strip(), color=w.accent, size=design.font_size * 1.1))
     contacts = [s.strip() for s in (b.email, b.phone, b.location, *(link.url for link in b.links)) if s.strip()]
     if contacts:
-        w.par("  ·  ".join(contacts))
+        header.append(w.par(CONTACT_SEP.get(w.template, "  ·  ").join(contacts)))
+    if w.stacked:
+        for p in header:
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     for section in data.section_order:
         if not _has_content(data, section):
@@ -179,6 +218,12 @@ def resume_docx(data: ResumeData, design: ResumeDesign) -> bytes:
             w.par(b.summary.strip())
         elif section == "experience":
             for e in data.experience:
+                if w.stacked:
+                    w.stacked_entry(e.company or e.title, _date_range(e.start, e.end, e.current),
+                                    e.title if e.company else "", e.location)
+                    w.bullets(e.bullets)
+                    w.gap()
+                    continue
                 left = [(e.title, True)] if e.title else []
                 if e.company:
                     left.append(((", " if e.title else "") + e.company, False))
@@ -190,12 +235,21 @@ def resume_docx(data: ResumeData, design: ResumeDesign) -> bytes:
         elif section == "education":
             for ed in data.education:
                 degree = ", ".join(p for p in (ed.degree, ed.field) if p)
+                if w.stacked:
+                    w.stacked_entry(ed.school or degree, _date_range(ed.start, ed.end), degree if ed.school else "",
+                                    ed.grade.strip())
+                    if ed.details.strip():
+                        w.par(ed.details.strip())
+                    w.gap()
+                    continue
                 left = [(degree or ed.school, True)]
                 if degree and ed.school:
                     left.append((", " + ed.school, False))
                 w.entry_line(left, _date_range(ed.start, ed.end))
-                if ed.details.strip():
-                    w.par(ed.details.strip())
+                # The grade leads the line under the degree ("8.6 / 10 CGPA · Dean's list"), as on the preview.
+                below = "  ·  ".join(x for x in (ed.grade.strip(), ed.details.strip()) if x)
+                if below:
+                    w.par(below)
                 w.gap()
         elif section == "skills":
             for group in data.skills:

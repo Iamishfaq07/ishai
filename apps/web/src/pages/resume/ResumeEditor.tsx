@@ -1349,6 +1349,11 @@ function TemplateSketch({ template, accent }: { template: ResumeDesign["template
       <span className="block h-[3px] w-1/4 rounded-full bg-zinc-400" />
     ) : template === "executive" ? (
       <span className="block h-[5px] w-full rounded-sm" style={{ background: accent, opacity: 0.25, borderLeft: `2px solid ${accent}` }} />
+    ) : template === "campus" || template === "harvard" ? (
+      // A short heading over a hairline: left for Campus, centred for Harvard.
+      <span className={cx("block border-b pb-0.5", template === "harvard" && "flex justify-center")} style={{ borderColor: accent }}>
+        <span className="block h-[3px] w-1/4 rounded-full" style={{ background: accent }} />
+      </span>
     ) : (
       <span className="block h-[3px] w-1/3 rounded-full" style={{ background: accent }} />
     );
@@ -1376,9 +1381,10 @@ function TemplateSketch({ template, accent }: { template: ResumeDesign["template
               <span className="block h-[5px] w-1/2 rounded-full bg-white/90" />
             </span>
           ) : (
-            <span className={cx("mb-1.5 block", ["classic", "elegant"].includes(template) && "flex flex-col items-center")}>
+            <span className={cx("mb-1.5 block", ["classic", "elegant", "campus", "harvard"].includes(template) && "flex flex-col items-center")}>
               <span className="block h-[5px] w-1/2 rounded-full" style={{ background: ["modern", "executive"].includes(template) ? accent : "#3f3f46" }} />
               {template === "elegant" && <span className="mt-1 block h-[2px] w-full border-y border-zinc-400" />}
+              {(template === "campus" || template === "harvard") && <span className="mt-1 block h-[2px] w-3/4 rounded-full bg-zinc-300" />}
             </span>
           )}
           {body}

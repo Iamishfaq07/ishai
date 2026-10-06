@@ -1,6 +1,7 @@
 import type {
   ResumeData,
   ResumeDesign,
+  ResumeEducation,
   ResumeExtraSection,
   ResumeFont,
   ResumeInput,
@@ -25,13 +26,35 @@ export const DEFAULT_ORDER: ResumeSectionId[] = ["summary", "experience", "skill
 
 export const MAX_EXTRAS = 5;
 
-/** Ready-made extra sections: the usual ones, each shown the way it reads best. */
-export const EXTRA_PRESETS: Array<{ title: string; style: ResumeExtraSection["style"]; placeholder: string }> = [
+export const DECLARATION = "I hereby declare that the information above is true to the best of my knowledge.";
+
+/**
+ * Ready-made extra sections: the usual ones, each shown the way it reads best. `note` is advice shown with the
+ * section; `fill` is the line it starts with.
+ */
+export const EXTRA_PRESETS: Array<{ title: string; style: ResumeExtraSection["style"]; placeholder: string; note?: string; fill?: string }> = [
   { title: "Languages", style: "inline", placeholder: "Spanish (fluent)" },
   { title: "Awards", style: "bullets", placeholder: "Engineering Excellence Award, Acme, 2023" },
+  { title: "Achievements", style: "bullets", placeholder: "Winner, Smart India Hackathon 2023, out of 120 teams" },
+  { title: "Positions of Responsibility", style: "bullets", placeholder: "General Secretary, Coding Club: ran a 300-student hackathon" },
+  { title: "Relevant coursework", style: "inline", placeholder: "Data Structures and Algorithms" },
+  { title: "Extracurricular activities", style: "bullets", placeholder: "NSS volunteer: taught maths to 30 children every weekend" },
   { title: "Volunteering", style: "bullets", placeholder: "Mentor, Code Club: taught 12 students Python weekly" },
   { title: "Publications", style: "bullets", placeholder: "“Scaling ledgers”, PyCon talk, 2022" },
   { title: "Interests", style: "inline", placeholder: "Trail running" },
+  {
+    title: "Personal details",
+    style: "bullets",
+    placeholder: "Date of birth: 14 Aug 2003",
+    note: "Date of birth, nationality, languages known. MNC, startup and tech recruiters usually prefer this left out; some government and traditional employers expect it.",
+  },
+  {
+    title: "Declaration",
+    style: "inline",
+    placeholder: DECLARATION,
+    note: "One line, last on the page. Some government and traditional employers expect it; most private ones don't.",
+    fill: DECLARATION,
+  },
 ];
 
 /** The extra section a `section_order` entry ("extra:<id>") names. */
@@ -60,8 +83,13 @@ export const TEMPLATES: Array<{ id: ResumeTemplate; label: string; note: string 
   { id: "minimal", label: "Minimal", note: "No colour blocks, lots of white space, small grey headings." },
   { id: "bold", label: "Bold", note: "A band of your colour behind the name. Stands out, still one column." },
   { id: "executive", label: "Executive", note: "Name left, headline in your colour, tinted section bars." },
+  { id: "campus", label: "Campus", note: "Small-caps headings, tight lines, dates on the right. Fits a fresher's page." },
+  { id: "harvard", label: "Harvard", note: "Serif, centred headings, generous space. The classic US style." },
   { id: "sidebar", label: "Sidebar", note: "Two columns. Looks great; some ATS read it out of order." },
 ];
+
+/** Fonts with serifs: Harvard's name and headings use the chosen one, or a serif next to a sans-serif body. */
+export const SERIF_FONTS: ReadonlySet<ResumeFont> = new Set<ResumeFont>(["georgia", "garamond", "cambria", "times"]);
 
 export const FONTS: Array<{ id: ResumeFont; label: string; stack: string }> = [
   { id: "inter", label: "Inter", stack: "'Inter Variable', Inter, Arial, sans-serif" },
@@ -96,6 +124,8 @@ export const LOOKS: Array<{ label: string; design: Pick<ResumeDesign, "template"
   { label: "Academic", design: { template: "elegant", accent: "#7c2d12", font: "garamond" } },
   { label: "Simple", design: { template: "minimal", accent: "#334155", font: "helvetica" } },
   { label: "Finance", design: { template: "classic", accent: "#0f766e", font: "georgia" } },
+  { label: "Campus", design: { template: "campus", accent: "#111827", font: "cambria" } },
+  { label: "Harvard", design: { template: "harvard", accent: "#111827", font: "times" } },
 ];
 
 export const ACCENTS = [
@@ -135,6 +165,27 @@ export function defaultDesign(): ResumeDesign {
 
 export function newResume(title = "My resume", data: ResumeData = emptyData()): ResumeInput {
   return { title, data, design: defaultDesign(), job_text: "" };
+}
+
+/**
+ * "Student / fresher": a one-page Campus resume laid out for placements. Education leads, then projects, skills,
+ * internships, positions of responsibility and achievements, the last two ready to fill in.
+ */
+export function fresherResume(makeId: () => string = newId): ResumeInput {
+  const roles = makeId();
+  const wins = makeId();
+  const data: ResumeData = {
+    ...emptyData(),
+    education: [{ id: makeId(), school: "", degree: "", field: "", start: "", end: "", grade: "", details: "" }],
+    projects: [{ id: makeId(), name: "", link: "", description: "", bullets: [""] }],
+    extras: [
+      { id: roles, title: "Positions of Responsibility", items: [""], style: "bullets" },
+      { id: wins, title: "Achievements", items: [""], style: "bullets" },
+    ],
+    // An empty summary doesn't print, so Education leads; a summary written later goes on top, where recruiters look.
+    section_order: ["summary", "education", "projects", "skills", "experience", `extra:${roles}`, `extra:${wins}`, "certifications"],
+  };
+  return { title: "My resume", data, design: { ...defaultDesign(), template: "campus", accent: "#111827", font: "cambria" }, job_text: "" };
 }
 
 /**
@@ -249,6 +300,11 @@ export function dateRange(start: string, end: string, current = false): string {
   return [start.trim(), to].filter(Boolean).join(" – ");
 }
 
+/** The line under a degree: its grade, then the details ("8.6 / 10 CGPA · Dean's list"). */
+export function gradeLine(e: Pick<ResumeEducation, "grade" | "details">): string {
+  return [e.grade?.trim(), e.details.trim()].filter(Boolean).join(" · ");
+}
+
 /** The resume as plain text: what "Save to Documents" gives live sessions to answer from. */
 export function resumeToText(data: ResumeData): string {
   const b = data.basics;
@@ -274,7 +330,7 @@ export function resumeToText(data: ResumeData): string {
     if (section === "education" && data.education.length) {
       out.push("", "EDUCATION");
       for (const e of data.education) {
-        out.push(`${[e.degree, e.field].filter(Boolean).join(", ")} — ${e.school} (${dateRange(e.start, e.end)})`, e.details);
+        out.push(`${[e.degree, e.field].filter(Boolean).join(", ")} — ${e.school} (${dateRange(e.start, e.end)})`, gradeLine(e));
       }
     }
     if (section === "certifications" && data.certifications.length) {

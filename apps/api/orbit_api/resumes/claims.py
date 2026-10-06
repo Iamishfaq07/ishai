@@ -112,13 +112,29 @@ def _url_key(url: str) -> str:
     return _squash(re.sub(r"^\s*(?:https?://)?(?:www\.)?", "", url.lower())).rstrip("/")
 
 
+# The scale after a grade ("8.6 / 10", "3.7 out of 4"): implied by "CGPA" or "GPA", so the source needn't write it.
+_GRADE_SCALE = re.compile(r"(?:/|\bout of)\s*(?:4|5|10|100)(?:\.0+)?(?!\d)", re.IGNORECASE)
+_DECIMAL = re.compile(r"\d+(?:\.\d+)?")
+
+
+def _grade_stated(grade: str, source: str) -> bool:
+    """Whether the source gives this grade: its numbers ("8.6" of "8.6 / 10 CGPA"; "8.60" counts), or for one in
+    words ("First Class"), the words."""
+    numbers = _DECIMAL.findall(_GRADE_SCALE.sub("", grade))
+    if not numbers:
+        return _squash(grade) in _squash(source)
+    stated = {f"{float(n):g}" for n in _DECIMAL.findall(source)}
+    return all(f"{float(n):g}" in stated for n in numbers)
+
+
 def ground_import(data: ResumeData, source: str) -> tuple[ResumeData, list[str]]:
     """The imported resume with anything the source text doesn't back removed, and what was removed.
 
     The import prompt says "copy facts exactly", but a model sometimes adds a plausible skill, a placeholder-looking
     email, a profile link or a metric that the resume never had. Contact details and skills are what recruiters and
     ATS software read first, so each is checked against the source: an email, phone number or link it doesn't contain
-    is blanked, a skill it never lists is dropped, and a figure it never states is taken out with its words.
+    is blanked, a skill it never lists is dropped, and a figure it never states is taken out with its words. A CGPA
+    or percentage the source never gives is blanked too: campus filters cut on it.
     """
     out = data.model_copy(deep=True)
     notes: list[str] = []
@@ -157,6 +173,13 @@ def ground_import(data: ResumeData, source: str) -> tuple[ResumeData, list[str]]
     out.skills = groups
     if dropped:
         notes.append(f"{dropped} skill(s) the source never lists")
+    grades = 0
+    for ed in out.education:
+        if ed.grade and not _grade_stated(ed.grade, source):
+            ed.grade = ""
+            grades += 1
+    if grades:
+        notes.append(f"{grades} grade(s) the source never gives")
 
     figures = 0
 
