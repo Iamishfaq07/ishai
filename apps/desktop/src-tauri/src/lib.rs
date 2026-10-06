@@ -107,7 +107,9 @@ pub fn run() {
         .on_window_event(|window, event| {
             if matches!(
                 event,
-                WindowEvent::Focused(_) | WindowEvent::ScaleFactorChanged { .. } | WindowEvent::ThemeChanged(_)
+                WindowEvent::Focused(_)
+                    | WindowEvent::ScaleFactorChanged { .. }
+                    | WindowEvent::ThemeChanged(_)
             ) {
                 if let Some(webview) = window.app_handle().get_webview_window(window.label()) {
                     protect_window(&webview);
