@@ -116,6 +116,18 @@ export {
   storyFromQuestion,
 } from "./resumePrep";
 export { linkedDocument, rememberDocument } from "./resume/storage";
+export {
+  KIT_LIMITS,
+  KIT_SHOWN_FIRST,
+  MESSAGE_WORDS,
+  countWords,
+  linesOver,
+  loadKit,
+  saveKit,
+  shownFirst,
+  skillList,
+  type SavedKit,
+} from "./resume/kit";
 export { useReportPolling } from "./hooks/useReportPolling";
 export { ReportStatusNote } from "./components/ReportStatusNote";
 export { WorkspaceBar } from "./components/WorkspaceBar";

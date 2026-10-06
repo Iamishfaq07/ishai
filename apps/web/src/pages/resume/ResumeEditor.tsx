@@ -18,6 +18,7 @@ import {
   PenLine,
   Plus,
   Redo2,
+  Send,
   Sparkles,
   Undo2,
   Upload,
@@ -38,11 +39,12 @@ import { useBackend } from "./backend";
 import { FixActions, FixResult, fixKind } from "./FixPanel";
 import { InterviewPrep, usePrepState } from "./InterviewPrep";
 import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, suggestedSkills } from "./model";
+import { ProfileKitPanel } from "./ProfileKit";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
 import { SaveToDocuments } from "./SaveToDocuments";
 
-type Tab = "content" | "score" | "ai" | "design" | "letter" | "prep";
+type Tab = "content" | "score" | "ai" | "design" | "letter" | "prep" | "kit";
 
 /** What undo/redo restores: everything the user edits. */
 type Snapshot = Pick<Resume, "title" | "data" | "design" | "job_text" | "cover_letter">;
@@ -53,14 +55,15 @@ const HISTORY_LIMIT = 100;
 /** Edits closer together than this, in the same field, undo as one step (a burst of typing). */
 const HISTORY_GROUP_MS = 1200;
 
-/** `short`: the label where the column is narrow. */
+/** `short`: the label where the editor shares the width with the preview. */
 const TABS: Array<{ id: Tab; label: string; short?: string; icon: typeof FileText }> = [
   { id: "content", label: "Content", icon: PenLine },
-  { id: "score", label: "ATS score", icon: Gauge },
+  { id: "score", label: "ATS score", short: "Score", icon: Gauge },
   { id: "ai", label: "AI fixes", icon: Wand2 },
   { id: "design", label: "Design", icon: Palette },
   { id: "letter", label: "Cover letter", short: "Letter", icon: Mail },
   { id: "prep", label: "Interview prep", short: "Prep", icon: MessagesSquare },
+  { id: "kit", label: "Profiles & outreach", short: "Outreach", icon: Send },
 ];
 
 /** What the spinner says while the AI works on each kind of problem. */
@@ -503,26 +506,27 @@ function ResumeEditor() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <div className="min-w-0">
-          <div role="tablist" aria-label="Resume editor" className="sticky top-16 z-10 mb-4 flex gap-1 rounded-xl bg-zinc-100/90 p-1 backdrop-blur-sm dark:bg-zinc-900/90">
+          <div role="tablist" aria-label="Resume editor" className="sticky top-16 z-10 mb-4 flex flex-wrap gap-1 rounded-xl bg-zinc-100/90 p-1 backdrop-blur-sm dark:bg-zinc-900/90">
             {TABS.map(({ id, label, short, icon: Icon }) => (
               <button
                 key={id}
                 role="tab"
                 aria-selected={tab === id}
                 aria-label={label}
+                title={short ? label : undefined}
                 type="button"
                 onClick={() => setTab(id)}
                 className={cx(
-                  "flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1.5 text-sm font-medium",
+                  "flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1 py-1.5 xl:px-2 text-sm font-medium",
                   tab === id ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
                   focusRing,
                 )}
               >
-                {/* Icons alone on phones, labels from there up (six tabs leave no room for both), short ones where
-                    the editor sits beside the preview in a narrow column. */}
+                {/* Icons alone on phones, labels from there up (seven tabs leave no room for both), short ones where
+                    the editor sits beside the preview; a column too narrow even for those wraps onto a second row. */}
                 <Icon className="h-4 w-4 shrink-0 sm:hidden" aria-hidden />
-                <span className={cx("hidden sm:inline", short && "lg:hidden xl:inline")}>{label}</span>
-                {short && <span className="hidden lg:inline xl:hidden">{short}</span>}
+                <span className={cx("hidden sm:inline", short && "lg:hidden")}>{label}</span>
+                {short && <span className="hidden lg:inline">{short}</span>}
                 {id === "ai" && queue.length > 0 && <span className="rounded-full bg-indigo-600 px-1.5 text-[0.625rem] text-white">{queue.length}</span>}
               </button>
             ))}
@@ -606,6 +610,7 @@ function ResumeEditor() {
             />
           )}
           {tab === "prep" && <InterviewPrep resume={resume} prep={prep} onShowJob={() => setTab("score")} />}
+          {tab === "kit" && <ProfileKitPanel resume={resume} onShowJob={() => setTab("score")} />}
         </div>
 
         <div className="min-w-0">

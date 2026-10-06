@@ -77,6 +77,7 @@ export {
   ScrollText,
   ScanText,
   Search,
+  Send,
   Smartphone,
   SettingsIcon,
   ShieldCheck,
