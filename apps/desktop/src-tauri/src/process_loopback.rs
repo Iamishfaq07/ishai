@@ -3,8 +3,15 @@
 //! Captures only what one process tree plays — e.g. Zoom, Teams or the browser running the meeting —
 //! instead of every sound on the PC. Whole-system loopback picks up games, videos and notifications,
 //! which pollutes the interviewer transcript and keeps the speech-to-text VAD from hearing silence.
+//!
+//! Supervised like endpoint capture (wasapi_capture.rs, whose stream setup and pump it shares): a failing stream
+//! (e.g. the Windows audio service restarted) reports `lost` and is re-activated with backoff, and so is the app
+//! quitting: when it starts again (same exe, new process) capture follows it. Windows itself never says the app is
+//! gone (process loopback on a dead, or never existing, PID activates fine and delivers silence for ever), so the
+//! app's process is watched instead.
 
-use std::collections::HashMap;
+use std::cmp::Reverse;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc};
 use std::thread;
@@ -15,35 +22,31 @@ use tauri::ipc::Channel;
 use windows::core::{implement, Interface, Ref, HRESULT};
 use windows::Win32::Foundation::{CloseHandle, HANDLE, WAIT_OBJECT_0};
 use windows::Win32::Media::Audio::{
-    eConsole, eRender, ActivateAudioInterfaceAsync, AudioSessionStateActive,
+    eRender, ActivateAudioInterfaceAsync, AudioSessionStateActive,
     IActivateAudioInterfaceAsyncOperation, IActivateAudioInterfaceCompletionHandler,
     IActivateAudioInterfaceCompletionHandler_Impl, IAudioCaptureClient, IAudioClient,
     IAudioSessionControl2, IAudioSessionManager2, IMMDeviceEnumerator, MMDeviceEnumerator,
-    AUDCLNT_BUFFERFLAGS_SILENT, AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM,
-    AUDCLNT_STREAMFLAGS_EVENTCALLBACK, AUDCLNT_STREAMFLAGS_LOOPBACK,
-    AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY, AUDIOCLIENT_ACTIVATION_PARAMS,
-    AUDIOCLIENT_ACTIVATION_PARAMS_0, AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK,
-    AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS, PROCESS_LOOPBACK_MODE_INCLUDE_TARGET_PROCESS_TREE,
-    VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK, WAVEFORMATEX, WAVE_FORMAT_PCM,
+    AUDIOCLIENT_ACTIVATION_PARAMS, AUDIOCLIENT_ACTIVATION_PARAMS_0,
+    AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK, AUDIOCLIENT_PROCESS_LOOPBACK_PARAMS,
+    DEVICE_STATE_ACTIVE, PROCESS_LOOPBACK_MODE_INCLUDE_TARGET_PROCESS_TREE,
+    VIRTUAL_AUDIO_DEVICE_PROCESS_LOOPBACK,
 };
 use windows::Win32::System::Com::StructuredStorage::{
     PROPVARIANT, PROPVARIANT_0, PROPVARIANT_0_0, PROPVARIANT_0_0_0,
 };
-use windows::Win32::System::Com::{
-    CoCreateInstance, CoInitializeEx, CoUninitialize, BLOB, CLSCTX_ALL, COINIT_MULTITHREADED,
-};
+use windows::Win32::System::Com::{CoCreateInstance, BLOB, CLSCTX_ALL};
 use windows::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS,
 };
-use windows::Win32::System::Threading::{CreateEventW, SetEvent, WaitForSingleObject};
+use windows::Win32::System::Threading::{
+    CreateEventW, OpenProcess, SetEvent, WaitForSingleObject, PROCESS_SYNCHRONIZE,
+};
 use windows::Win32::System::Variant::VT_BLOB;
 
-use crate::audio::{
-    encode_frame, to_i16, CaptureEvent, Resampler, CHANNEL_SYSTEM, FRAME_SAMPLES, TARGET_RATE,
+use crate::audio::{CaptureEvent, CHANNEL_SYSTEM};
+use crate::wasapi_capture::{
+    pump, start_stream, status, Com, Ended, Flow, FIRST_BACKOFF, MAX_BACKOFF,
 };
-
-const CAPTURE_RATE: u32 = 48_000;
-const CAPTURE_CHANNELS: u16 = 2;
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -138,55 +141,172 @@ pub fn root_process(pid: u32, table: &HashMap<u32, (u32, String)>) -> u32 {
     current
 }
 
-/// Apps that currently hold an audio session on the default output device, grouped by process tree.
-#[tauri::command]
-pub fn list_audio_apps() -> Result<Vec<AudioApp>, String> {
-    unsafe {
-        let com = CoInitializeEx(None, COINIT_MULTITHREADED);
-        let result = (|| -> windows::core::Result<Vec<AudioApp>> {
-            let enumerator: IMMDeviceEnumerator =
-                CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
-            let device = enumerator.GetDefaultAudioEndpoint(eRender, eConsole)?;
-            let manager: IAudioSessionManager2 = device.Activate(CLSCTX_ALL, None)?;
-            let sessions = manager.GetSessionEnumerator()?;
-            let table = process_table();
-            let own_root = root_process(std::process::id(), &table);
-            let mut apps: HashMap<u32, AudioApp> = HashMap::new();
-            for i in 0..sessions.GetCount()? {
-                let control: IAudioSessionControl2 = sessions.GetSession(i)?.cast()?;
-                let pid = control.GetProcessId().unwrap_or(0);
-                if pid == 0 {
-                    continue; // system sounds
-                }
-                let root = root_process(pid, &table);
-                if root == own_root {
-                    continue; // never offer to capture Orbit itself
-                }
-                let exe = table
-                    .get(&root)
-                    .map(|(_, e)| e.clone())
-                    .unwrap_or_else(|| format!("pid {root}"));
-                let active = control
-                    .GetState()
-                    .map(|s| s == AudioSessionStateActive)
-                    .unwrap_or(false);
-                apps.entry(root)
-                    .and_modify(|a| a.active |= active)
-                    .or_insert(AudioApp {
-                        pid: root,
-                        name: friendly_name(&exe),
-                        exe,
-                        active,
-                    });
+/// `(process id, playing now)` for every app audio session on every active output device. Not just the default
+/// one: Teams and Zoom often play the call on the *communications* device (a headset, Bluetooth hands-free) while
+/// everything else uses the speakers, so the default device alone misses exactly the meeting app. Process loopback
+/// isn't tied to a device, so an app found on any of them can be captured.
+unsafe fn output_sessions() -> windows::core::Result<Vec<(u32, bool)>> {
+    let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
+    let devices = enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE)?;
+    let mut out = Vec::new();
+    for i in 0..devices.GetCount()? {
+        // One device failing (a Bluetooth headset mid-reconnect) mustn't hide the apps on the others.
+        let Ok(device) = devices.Item(i) else {
+            continue;
+        };
+        let Ok(manager) = device.Activate::<IAudioSessionManager2>(CLSCTX_ALL, None) else {
+            continue;
+        };
+        let Ok(sessions) = manager.GetSessionEnumerator() else {
+            continue;
+        };
+        for j in 0..sessions.GetCount().unwrap_or(0) {
+            let Ok(control) = sessions
+                .GetSession(j)
+                .and_then(|s| s.cast::<IAudioSessionControl2>())
+            else {
+                continue;
+            };
+            let pid = control.GetProcessId().unwrap_or(0);
+            if pid == 0 {
+                continue; // system sounds
             }
-            let mut list: Vec<AudioApp> = apps.into_values().collect();
-            list.sort_by(|a, b| b.active.cmp(&a.active).then_with(|| a.name.cmp(&b.name)));
-            Ok(list)
-        })();
-        if com.is_ok() {
-            CoUninitialize();
+            let active = control
+                .GetState()
+                .map(|s| s == AudioSessionStateActive)
+                .unwrap_or(false);
+            out.push((pid, active));
         }
-        result.map_err(|e| format!("Couldn't list audio apps: {e}"))
+    }
+    Ok(out)
+}
+
+/// One entry per app (process tree) from `(process id, playing)` sessions, never Orbit itself. An app is playing if
+/// any of its sessions is, on any device. Playing apps first, then by name.
+fn group_apps(
+    sessions: &[(u32, bool)],
+    table: &HashMap<u32, (u32, String)>,
+    own_root: u32,
+) -> Vec<AudioApp> {
+    let mut apps: HashMap<u32, AudioApp> = HashMap::new();
+    for &(pid, active) in sessions {
+        let root = root_process(pid, table);
+        if root == own_root {
+            continue; // never offer to capture Orbit itself
+        }
+        let exe = table
+            .get(&root)
+            .map(|(_, e)| e.clone())
+            .unwrap_or_else(|| format!("pid {root}"));
+        apps.entry(root)
+            .and_modify(|a| a.active |= active)
+            .or_insert(AudioApp {
+                pid: root,
+                name: friendly_name(&exe),
+                exe,
+                active,
+            });
+    }
+    let mut list: Vec<AudioApp> = apps.into_values().collect();
+    list.sort_by(|a, b| b.active.cmp(&a.active).then_with(|| a.name.cmp(&b.name)));
+    list
+}
+
+/// Apps that hold an audio session on any output device, grouped by process tree.
+#[tauri::command]
+pub async fn list_audio_apps() -> Result<Vec<AudioApp>, String> {
+    // COM and the process snapshot block: off the async runtime, like the device lists (audio.rs).
+    tauri::async_runtime::spawn_blocking(|| {
+        let _com = Com::init();
+        let table = process_table();
+        let own_root = root_process(std::process::id(), &table);
+        unsafe { output_sessions() }
+            .map(|sessions| group_apps(&sessions, &table, own_root))
+            .map_err(|e| format!("Couldn't list audio apps: {e}"))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// The process tree to capture for the app the user picked: `pid` while it's still that program, else (the app
+/// quit and started again, e.g. a rejoined session) the tree running the same exe — one that's playing first, then
+/// one with any audio session, then the lowest PID. None while it isn't running.
+fn find_target(
+    pid: u32,
+    exe: &str,
+    table: &HashMap<u32, (u32, String)>,
+    sessions: &[(u32, bool)],
+    own_root: u32,
+) -> Option<u32> {
+    if table
+        .get(&pid)
+        .is_some_and(|(_, e)| e.eq_ignore_ascii_case(exe))
+    {
+        return Some(pid);
+    }
+    let roots: HashSet<u32> = table
+        .iter()
+        .filter(|(_, (_, e))| e.eq_ignore_ascii_case(exe))
+        .map(|(&p, _)| root_process(p, table))
+        .filter(|&root| root != own_root)
+        .collect();
+    // 2 = playing, 1 = has a session.
+    let mut score: HashMap<u32, u8> = HashMap::new();
+    for &(session_pid, active) in sessions {
+        let root = root_process(session_pid, table);
+        if roots.contains(&root) {
+            let s = score.entry(root).or_insert(0);
+            *s = (*s).max(if active { 2 } else { 1 });
+        }
+    }
+    roots
+        .into_iter()
+        .max_by_key(|root| (score.get(root).copied().unwrap_or(0), Reverse(*root)))
+}
+
+/// `find_target` against the running system (needs COM on this thread).
+fn locate(pid: u32, exe: &str) -> Option<u32> {
+    let table = process_table();
+    let own_root = root_process(std::process::id(), &table);
+    let sessions = unsafe { output_sessions() }.unwrap_or_default();
+    find_target(pid, exe, &table, &sessions, own_root)
+}
+
+/// Notices the captured app quitting (see the module docs). Holding the handle also keeps Windows from reusing its
+/// PID meanwhile.
+struct ProcessWatch {
+    pid: u32,
+    exe: String,
+    handle: Option<HANDLE>,
+}
+
+impl ProcessWatch {
+    fn new(pid: u32, exe: &str) -> Self {
+        // A refusal (e.g. the app runs elevated) only means looking it up in the process list instead.
+        let handle = unsafe { OpenProcess(PROCESS_SYNCHRONIZE, false, pid) }.ok();
+        Self {
+            pid,
+            exe: exe.to_string(),
+            handle,
+        }
+    }
+
+    fn exited(&self) -> bool {
+        match self.handle {
+            // A zero timeout only polls: signalled = the process has exited.
+            Some(handle) => unsafe { WaitForSingleObject(handle, 0) == WAIT_OBJECT_0 },
+            None => !process_table()
+                .get(&self.pid)
+                .is_some_and(|(_, e)| e.eq_ignore_ascii_case(&self.exe)),
+        }
+    }
+}
+
+impl Drop for ProcessWatch {
+    fn drop(&mut self) {
+        if let Some(handle) = self.handle.take() {
+            let _ = unsafe { CloseHandle(handle) };
+        }
     }
 }
 
@@ -243,129 +363,64 @@ unsafe fn activate_process_loopback(pid: u32) -> Result<IAudioClient, String> {
         Some(&*prop as *const PROPVARIANT),
         &handler,
     )
-    .map_err(|e| format!("Couldn't start app audio capture: {e}"))?;
+    .map_err(|e| format!("couldn't start app audio capture: {e}"))?;
     let waited = WaitForSingleObject(done, 5000);
     let _ = CloseHandle(done); // handler may still fire; it SetEvents a closed handle harmlessly
     if waited != WAIT_OBJECT_0 {
-        return Err("App audio capture timed out".to_string());
+        return Err("activation timed out".to_string());
     }
     let mut hr = HRESULT(0);
     let mut unknown = None;
     operation
         .GetActivateResult(&mut hr, &mut unknown)
         .map_err(|e| e.to_string())?;
-    hr.ok()
-        .map_err(|e| format!("App audio capture was refused: {e}"))?;
+    hr.ok().map_err(|e| format!("capture was refused: {e}"))?;
     // `params`/`prop` (referenced by the blob) have outlived the completed async activation.
     unknown
-        .ok_or("No audio client returned")?
+        .ok_or("no audio client returned")?
         .cast::<IAudioClient>()
         .map_err(|e| e.to_string())
 }
 
-/// Starts capturing `pid`'s process tree on its own COM thread. Returns once capture is running
-/// (or failed); the thread exits when `stop` is set.
+/// Activates process loopback on `pid`'s tree and starts it in the transcriber's format (16 kHz mono PCM16): the
+/// audio engine converts with its quality resampler, so nothing above 8 kHz folds back into the speech band.
+unsafe fn open(pid: u32) -> Result<(IAudioClient, IAudioCaptureClient, HANDLE), String> {
+    let client = activate_process_loopback(pid)?;
+    let (capture, event) = start_stream(&client, true)?;
+    Ok((client, capture, event))
+}
+
+/// Starts capturing the app `pid` belongs to (its process tree) on its own COM thread, and keeps following it (see
+/// the module docs). `exe` finds the app again after it restarts, or right away when `pid` is stale (a session
+/// rejoined after the meeting app restarted); if the app isn't running at all, capture starts anyway and waits for
+/// it, reported `lost` until it's there. Returns once capture is running (or failed); the thread exits when `stop`
+/// is set.
 pub fn spawn(
     pid: u32,
+    exe: Option<String>,
     sink: Channel<CaptureEvent>,
     stop: Arc<AtomicBool>,
 ) -> Result<thread::JoinHandle<()>, String> {
     let (ready_tx, ready_rx) = mpsc::channel::<Result<(), String>>();
     let handle = thread::Builder::new()
         .name("orbit-app-audio".into())
-        .spawn(move || unsafe {
-            let com = CoInitializeEx(None, COINIT_MULTITHREADED);
-            let run = || -> Result<(), String> {
-                let client = activate_process_loopback(pid)?;
-                let format = WAVEFORMATEX {
-                    wFormatTag: WAVE_FORMAT_PCM as u16,
-                    nChannels: CAPTURE_CHANNELS,
-                    nSamplesPerSec: CAPTURE_RATE,
-                    wBitsPerSample: 16,
-                    nBlockAlign: CAPTURE_CHANNELS * 2,
-                    nAvgBytesPerSec: CAPTURE_RATE * u32::from(CAPTURE_CHANNELS) * 2,
-                    cbSize: 0,
-                };
-                client
-                    .Initialize(
-                        AUDCLNT_SHAREMODE_SHARED,
-                        AUDCLNT_STREAMFLAGS_LOOPBACK
-                            | AUDCLNT_STREAMFLAGS_EVENTCALLBACK
-                            | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM
-                            | AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY,
-                        1_000_000, // 100 ms buffer (100-ns units)
-                        0,
-                        &format,
-                        None,
-                    )
-                    .map_err(|e| format!("App audio init failed: {e}"))?;
-                let event = CreateEventW(None, false, false, None).map_err(|e| e.to_string())?;
-                client.SetEventHandle(event).map_err(|e| e.to_string())?;
-                let capture: IAudioCaptureClient =
-                    client.GetService().map_err(|e| e.to_string())?;
-                client.Start().map_err(|e| e.to_string())?;
-                let _ = ready_tx.send(Ok(()));
-
-                let mut resampler = Resampler::new(CAPTURE_RATE, TARGET_RATE);
-                let mut pending: Vec<i16> = Vec::with_capacity(FRAME_SAMPLES * 2);
-                while !stop.load(Ordering::Relaxed) {
-                    if WaitForSingleObject(event, 100) != WAIT_OBJECT_0 {
-                        continue;
-                    }
-                    loop {
-                        let packet = capture.GetNextPacketSize().unwrap_or(0);
-                        if packet == 0 {
-                            break;
-                        }
-                        let mut data: *mut u8 = std::ptr::null_mut();
-                        let mut frames = 0u32;
-                        let mut flags = 0u32;
-                        if capture
-                            .GetBuffer(&mut data, &mut frames, &mut flags, None, None)
-                            .is_err()
-                        {
-                            break;
-                        }
-                        let silent = flags & (AUDCLNT_BUFFERFLAGS_SILENT.0 as u32) != 0;
-                        let frame_count = frames as usize;
-                        // Only build a slice over a real buffer: a silent packet may come with a null (or
-                        // stale) pointer, and from_raw_parts on null is UB even if never read.
-                        let samples: Option<&[i16]> =
-                            if silent || data.is_null() || frame_count == 0 {
-                                None
-                            } else {
-                                Some(std::slice::from_raw_parts(
-                                    data as *const i16,
-                                    frame_count * usize::from(CAPTURE_CHANNELS),
-                                ))
-                            };
-                        packet_to_mono(
-                            samples,
-                            frame_count,
-                            usize::from(CAPTURE_CHANNELS),
-                            |mono| resampler.push(mono, |v| pending.push(to_i16(v))),
-                        );
-                        let _ = capture.ReleaseBuffer(frames);
-                        while pending.len() >= FRAME_SAMPLES {
-                            let chunk: Vec<i16> = pending.drain(..FRAME_SAMPLES).collect();
-                            let _ = sink.send(encode_frame(CHANNEL_SYSTEM, &chunk));
-                        }
-                    }
-                }
-                let _ = client.Stop();
-                let _ = CloseHandle(event);
-                Ok(())
-            };
-            if let Err(e) = run() {
-                let _ = ready_tx.send(Err(e.clone()));
-                let _ = sink.send(CaptureEvent::Error {
-                    channel: CHANNEL_SYSTEM,
-                    message: e,
-                });
+        .spawn(move || {
+            let _com = Com::init();
+            // No exe given: follow whatever program `pid` is now.
+            let exe = exe
+                .filter(|e| !e.trim().is_empty())
+                .or_else(|| process_table().get(&pid).map(|(_, e)| e.clone()))
+                .unwrap_or_default();
+            let target = locate(pid, &exe);
+            if target.is_none() && exe.is_empty() {
+                // a dead PID and no exe to wait for
+                let _ = ready_tx.send(Err(
+                    "App audio unavailable: the app isn't running.".to_string()
+                ));
+                return;
             }
-            if com.is_ok() {
-                CoUninitialize();
-            }
+            let name = friendly_name(&exe);
+            supervise(target, pid, &exe, &name, ready_tx, &sink, &stop);
         })
         .map_err(|e| e.to_string())?;
     match ready_rx.recv_timeout(Duration::from_secs(8)) {
@@ -375,69 +430,112 @@ pub fn spawn(
     }
 }
 
-/// Down-mix one WASAPI packet of interleaved PCM16 to mono. `None` (silent flag / null buffer) yields
-/// `frames` zeros, so silence keeps the stream's timing. A buffer shorter than `frames * channels` is only
-/// read as far as it goes, the rest padded with silence.
-fn packet_to_mono(
-    samples: Option<&[i16]>,
-    frames: usize,
-    channels: usize,
-    mut out: impl FnMut(f32),
+/// The capture loop: (re)activate, pump, and on a failure or the app quitting report `lost` and try again — on the
+/// same process while it runs, else wherever the app (re)starts (`target` None: not running yet). The first
+/// activation's result goes to `ready`.
+fn supervise(
+    mut target: Option<u32>,
+    pid_hint: u32,
+    exe: &str,
+    name: &str,
+    ready: mpsc::Sender<Result<(), String>>,
+    sink: &Channel<CaptureEvent>,
+    stop: &AtomicBool,
 ) {
-    let Some(samples) = samples.filter(|_| channels > 0) else {
-        for _ in 0..frames {
-            out(0.0);
+    let mut ready = Some(ready);
+    let mut backoff = FIRST_BACKOFF;
+    let mut watch = target.map(|pid| ProcessWatch::new(pid, exe));
+    while !stop.load(Ordering::Relaxed) {
+        let Some(pid) = target else {
+            if let Some(tx) = ready.take() {
+                let _ = tx.send(Ok(()));
+            }
+            status(sink, CHANNEL_SYSTEM, "lost", name);
+            if !wait_for_app(&mut target, &mut watch, pid_hint, exe, &mut backoff, stop) {
+                return;
+            }
+            continue;
+        };
+        match unsafe { open(pid) } {
+            Ok((client, capture, event)) => {
+                backoff = FIRST_BACKOFF;
+                let state = match ready.take() {
+                    Some(tx) => {
+                        let _ = tx.send(Ok(()));
+                        "active"
+                    }
+                    None => "restored",
+                };
+                status(sink, CHANNEL_SYSTEM, state, name);
+                let ended = unsafe {
+                    pump(
+                        &client,
+                        &capture,
+                        event,
+                        Flow::Output,
+                        CHANNEL_SYSTEM,
+                        sink,
+                        stop,
+                        || watch.as_ref().is_some_and(ProcessWatch::exited),
+                    )
+                };
+                unsafe {
+                    let _ = client.Stop();
+                    let _ = CloseHandle(event);
+                }
+                match ended {
+                    Ended::Stopped => break,
+                    Ended::Switch => eprintln!("orbit: {name} quit; waiting for it to start again"),
+                    Ended::Lost(why) => {
+                        eprintln!("orbit: app audio stream lost ({why}); reopening")
+                    }
+                }
+            }
+            Err(e) => {
+                if let Some(tx) = ready.take() {
+                    let _ = tx.send(Err(format!("App audio unavailable: {e}")));
+                    return;
+                }
+                eprintln!("orbit: app audio didn't reopen ({e}); retrying");
+            }
         }
-        return;
-    };
-    for i in 0..frames {
-        let frame = samples.get(i * channels..(i + 1) * channels);
-        out(frame.map_or(0.0, |f| {
-            f.iter().map(|&s| f32::from(s) / 32768.0).sum::<f32>() / channels as f32
-        }));
+        status(sink, CHANNEL_SYSTEM, "lost", name);
+        if !wait_for_app(&mut target, &mut watch, pid_hint, exe, &mut backoff, stop) {
+            return;
+        }
     }
 }
 
-#[cfg(test)]
-mod packet_tests {
-    use super::packet_to_mono;
-
-    fn run(samples: Option<&[i16]>, frames: usize, channels: usize) -> Vec<f32> {
-        let mut v = Vec::new();
-        packet_to_mono(samples, frames, channels, |m| v.push(m));
-        v
-    }
-
-    #[test]
-    fn silent_or_null_packet_yields_zeros_without_reading() {
-        assert_eq!(run(None, 3, 2), vec![0.0, 0.0, 0.0]);
-    }
-
-    #[test]
-    fn zero_frames_yields_nothing() {
-        assert!(run(Some(&[]), 0, 2).is_empty());
-        assert!(run(None, 0, 2).is_empty());
-    }
-
-    #[test]
-    fn stereo_is_averaged_and_mono_passes_through() {
-        assert_eq!(
-            run(Some(&[16384, 0, -16384, -16384]), 2, 2),
-            vec![0.25, -0.5]
-        );
-        assert_eq!(run(Some(&[16384, -32768]), 2, 1), vec![0.5, -1.0]);
-    }
-
-    #[test]
-    fn short_buffer_and_zero_channels_never_panic() {
-        assert_eq!(run(Some(&[16384, 16384, 100]), 3, 2), vec![0.5, 0.0, 0.0]);
-        assert_eq!(run(Some(&[1, 2]), 2, 0), vec![0.0, 0.0]);
+/// Sleeps (with backoff) until there's something to capture again: the same process while it still runs (the stream
+/// failed, not the app), else the app wherever it (re)started. False if stopped meanwhile.
+fn wait_for_app(
+    target: &mut Option<u32>,
+    watch: &mut Option<ProcessWatch>,
+    pid_hint: u32,
+    exe: &str,
+    backoff: &mut Duration,
+    stop: &AtomicBool,
+) -> bool {
+    loop {
+        thread::sleep(*backoff);
+        *backoff = (*backoff * 2).min(MAX_BACKOFF);
+        if stop.load(Ordering::Relaxed) {
+            return false;
+        }
+        if watch.as_ref().is_some_and(|w| !w.exited()) {
+            return true;
+        }
+        if let Some(next) = locate(target.unwrap_or(pid_hint), exe) {
+            *target = Some(next);
+            *watch = Some(ProcessWatch::new(next, exe));
+            return true;
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::root_process;
+    use super::{find_target, group_apps, root_process};
     use std::collections::HashMap;
 
     fn table(rows: &[(u32, u32, &str)]) -> HashMap<u32, (u32, String)> {
@@ -488,5 +586,90 @@ mod tests {
         let t = table(&[(40, 4, "svchost.exe"), (41, 999, "game.exe")]);
         assert_eq!(root_process(40, &t), 40);
         assert_eq!(root_process(41, &t), 41);
+    }
+
+    fn system() -> HashMap<u32, (u32, String)> {
+        table(&[
+            (1, 0, "explorer.exe"),
+            (10, 1, "chrome.exe"),
+            (11, 10, "chrome.exe"),
+            (20, 1, "ms-teams.exe"),
+            (21, 20, "msedgewebview2.exe"),
+            (30, 1, "slack.exe"),
+            (40, 1, "orbit-desktop.exe"),
+            (41, 40, "msedgewebview2.exe"),
+        ])
+    }
+
+    #[test]
+    fn apps_merge_across_output_devices() {
+        // Chrome: an idle session on the speakers, the call on the headset. Teams idle; Slack idle; Orbit playing.
+        let sessions = [
+            (11, false),
+            (11, true),
+            (21, false),
+            (30, false),
+            (41, true),
+        ];
+        let apps = group_apps(&sessions, &system(), 40);
+        let got: Vec<(u32, &str, bool)> = apps
+            .iter()
+            .map(|a| (a.pid, a.name.as_str(), a.active))
+            .collect();
+        assert_eq!(
+            got,
+            vec![
+                (10, "Google Chrome", true),
+                (20, "Microsoft Teams", false),
+                (30, "Slack", false),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_running_app_keeps_its_process() {
+        assert_eq!(
+            find_target(20, "MS-Teams.exe", &system(), &[], 40),
+            Some(20)
+        );
+    }
+
+    #[test]
+    fn a_restarted_app_is_found_by_exe() {
+        // Zoom 50 quit; Zoom came back as 60 (idle) and a second instance 70 is in the call.
+        let t = table(&[
+            (1, 0, "explorer.exe"),
+            (60, 1, "Zoom.exe"),
+            (70, 1, "Zoom.exe"),
+            (71, 70, "Zoom.exe"),
+            (80, 1, "chrome.exe"),
+        ]);
+        assert_eq!(
+            find_target(50, "zoom.exe", &t, &[(60, false), (71, true)], 0),
+            Some(70)
+        );
+        // nothing playing: one with a session beats one without; else the lowest pid
+        assert_eq!(find_target(50, "zoom.exe", &t, &[(70, false)], 0), Some(70));
+        assert_eq!(find_target(50, "zoom.exe", &t, &[], 0), Some(60));
+    }
+
+    #[test]
+    fn a_reused_pid_is_not_the_app() {
+        // pid 20 now belongs to another program: follow the exe instead (or report it gone)
+        let t = table(&[
+            (1, 0, "explorer.exe"),
+            (20, 1, "notepad.exe"),
+            (90, 1, "ms-teams.exe"),
+        ]);
+        assert_eq!(find_target(20, "ms-teams.exe", &t, &[], 0), Some(90));
+        assert_eq!(find_target(20, "zoom.exe", &t, &[], 0), None);
+    }
+
+    #[test]
+    fn never_targets_orbit_itself() {
+        assert_eq!(
+            find_target(999, "orbit-desktop.exe", &system(), &[(41, true)], 40),
+            None
+        );
     }
 }

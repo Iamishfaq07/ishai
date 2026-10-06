@@ -71,6 +71,7 @@ export function deviceStatusText(ev: { channel: AudioChannel; state: DeviceState
 export function friendlyAudioError(err: unknown): string {
   const raw = err instanceof Error ? err.message : String(err);
   console.warn("Audio:", raw);
+  if (/restarting to finish an update/i.test(raw)) return "Orbit is restarting to finish an update. It's back in a moment.";
   const what = /^(system audio|app audio|interviewer)/i.test(raw) ? "the meeting audio" : "the microphone";
   if (/0x80070005|access is denied/i.test(raw)) {
     return what === "the microphone"
@@ -84,6 +85,9 @@ export function friendlyAudioError(err: unknown): string {
     return `Another app is holding ${what} for itself. Close that app (or turn off its exclusive mode), then click Retry.`;
   }
   if (/list audio (devices|apps)/i.test(raw)) return "Couldn't read your audio devices. Click Retry, or restart Orbit.";
+  if (/app audio.*isn't running/i.test(raw)) {
+    return "That app isn't running. Open it, then click Retry, or pick “Default output” under Listen to.";
+  }
   if (/app audio/i.test(raw)) return "Couldn't listen to that app. Pick “Default output” under Listen to, or restart the meeting app.";
   return `Couldn't start ${what}. Check it's connected, then click Retry.`;
 }
@@ -96,28 +100,47 @@ export interface AudioApp {
   active: boolean;
 }
 
-/** Apps currently able to play sound — the candidates for per-app interviewer capture. */
+/** Apps holding an audio session on any output device — the candidates for per-app interviewer capture. */
 export function listAudioApps(): Promise<AudioApp[]> {
   return invoke<AudioApp[]>("list_audio_apps").catch(() => []);
 }
 
-export function startCapture(
-  options: { micDeviceId?: string; systemAudio: boolean; systemProcessId?: number; systemDevice?: string },
-  onEvent: (event: CaptureEvent) => void,
-): Promise<CaptureInfo> {
+export interface CaptureOptions {
+  /** From `newCaptureId()`: `stopCapture(id)` then stops this capture and never one started after it. */
+  captureId: number;
+  micDeviceId?: string;
+  systemAudio: boolean;
+  /** Capture only this app's process tree. */
+  systemProcessId?: number;
+  /** That app's exe: finds it again if it restarted (a new PID). */
+  systemProcessExe?: string;
+  /** Output to capture when no app is chosen: "default" | "communications" | endpoint id. */
+  systemDevice?: string;
+}
+
+// Random per page load, so ids from before a reload (whose capture may still be running) never repeat.
+let captureSeq = Math.floor(Math.random() * 1e9) * 1000;
+export function newCaptureId(): number {
+  captureSeq += 1;
+  return captureSeq;
+}
+
+export function startCapture(options: CaptureOptions, onEvent: (event: CaptureEvent) => void): Promise<CaptureInfo> {
   const channel = new Channel<CaptureEvent>();
   channel.onmessage = onEvent;
   return invoke<CaptureInfo>("start_capture", {
+    captureId: options.captureId,
     micDeviceId: options.micDeviceId ?? null,
     systemAudio: options.systemAudio,
     systemProcessId: options.systemProcessId ?? null,
+    systemProcessExe: options.systemProcessExe ?? null,
     systemDevice: options.systemDevice ?? null,
     onEvent: channel,
   });
 }
 
-export function stopCapture(): Promise<void> {
-  return invoke<void>("stop_capture");
+export function stopCapture(captureId: number): Promise<void> {
+  return invoke<void>("stop_capture", { captureId });
 }
 
 export function openRegionSelector(): Promise<void> {
@@ -164,15 +187,20 @@ export interface UpdateInfo {
   notes: string | null;
   date: string | null;
 }
-export type UpdateProgress = { kind: "downloading"; downloaded: number; total: number | null } | { kind: "installing" };
+export type UpdateProgress = { kind: "downloading"; downloaded: number; total: number | null } | { kind: "verifying" };
 
 export function checkUpdate(apiUrl: string): Promise<UpdateInfo | null> {
   return invoke<UpdateInfo | null>("check_update", { apiUrl });
 }
 
-/** Downloads, verifies the signature, and hands off to the installer (which relaunches Orbit). */
-export function installUpdate(onProgress: (p: UpdateProgress) => void): Promise<void> {
+/** Downloads the update and verifies its signature. Nothing is installed yet. */
+export function downloadUpdate(onProgress: (p: UpdateProgress) => void): Promise<void> {
   const channel = new Channel<UpdateProgress>();
   channel.onmessage = onProgress;
-  return invoke<void>("install_update", { onEvent: channel });
+  return invoke<void>("download_update", { onEvent: channel });
+}
+
+/** Hands the downloaded update to the installer, which closes Orbit and relaunches it. Refused while capturing. */
+export function installUpdate(): Promise<void> {
+  return invoke<void>("install_update");
 }

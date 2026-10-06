@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ArrowDownToLine, Power, OrbitLogo, cx, focusRing } from "@orbit/ui";
 
@@ -7,6 +8,8 @@ import { ArrowDownToLine, Power, OrbitLogo, cx, focusRing } from "@orbit/ui";
 export type CloseAction = "ask" | "tray" | "quit";
 const KEY = "orbit.closeAction";
 const REQUEST_EVENT = "orbit:request-close";
+/** The tray's "Quit Orbit" while audio is being captured (src-tauri/src/lib.rs). */
+const CONFIRM_QUIT_EVENT = "orbit:confirm-quit";
 
 export function loadCloseAction(): CloseAction {
   const v = localStorage.getItem(KEY);
@@ -28,7 +31,7 @@ const quitApp = () => void invoke("quit_app");
 /**
  * Graphical "close Orbit?" dialog for the × button and Alt+F4: hide to tray, quit, or cancel — with
  * "remember my choice". A remembered choice still asks while a live session is running: hiding keeps it listening
- * (and using interview minutes) out of sight, quitting ends it.
+ * (and using interview minutes) out of sight, quitting ends it. The tray's "Quit Orbit" asks too, during a session.
  */
 export function CloseDialog({ liveActive }: { liveActive: boolean }) {
   const [open, setOpen] = useState(false);
@@ -57,6 +60,18 @@ export function CloseDialog({ liveActive }: { liveActive: boolean }) {
       void unlisten.then((fn) => fn());
     };
   }, [onRequest]);
+
+  // Quit from the tray: the user already chose to quit, so only a live session (which quitting ends) asks first.
+  useEffect(() => {
+    const unlisten = listen(CONFIRM_QUIT_EVENT, () => {
+      if (!liveRef.current) return quitApp();
+      setRemember(false);
+      setOpen(true);
+    });
+    return () => {
+      void unlisten.then((fn) => fn());
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;

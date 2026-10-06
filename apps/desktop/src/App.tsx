@@ -1,18 +1,20 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { OrbitSession, SessionType, User } from "@orbit/types";
 import { ApiError, ApprovalBanner, ConfirmHost, OrbitLogo, SpaceBackdrop, VerifyEmailBanner } from "@orbit/ui";
 import { api, setAccessToken, setUnauthorizedHandler } from "./api";
 import { CloseDialog } from "./CloseDialog";
 import { stepGlass } from "./glass";
 import { useGlobalShortcuts, useShortcutHandler, type GlobalAction } from "./globalShortcuts";
-import { clearToken, loadToken } from "./native";
+import { loadSavedAudio, rejoinLaunch, rememberLaunch, usesSystemAudio, type DesktopLaunch } from "./launch";
+import { clearToken, listAudioApps, loadToken } from "./native";
 import { DocumentsScreen } from "./screens/Documents";
 import { HistoryScreen } from "./screens/History";
 import { HomeScreen } from "./screens/Home";
-import { LiveScreen, type DesktopLaunch } from "./screens/Live";
+import { LiveScreen } from "./screens/Live";
 import { LoginScreen } from "./screens/Login";
 import { SettingsScreen } from "./screens/Settings";
 import { IS_MAC, SetupScreen } from "./screens/Setup";
+import { confirmSessionDuringUpdate } from "./updates";
 import { applyPanelMode, toggleMainWindow } from "./windowing";
 
 function onAppShortcut(action: GlobalAction): void {
@@ -27,7 +29,7 @@ type Screen =
   | { name: "home" }
   | { name: "setup"; initialType?: SessionType }
   | { name: "documents" }
-  | { name: "history" }
+  | { name: "history"; sessionId?: string }
   | { name: "settings" }
   | { name: "live"; session: OrbitSession; launch: DesktopLaunch };
 
@@ -70,8 +72,26 @@ export function App() {
     setScreen({ name: "login" });
   }, []);
 
+  // A 401 means the sign-in is gone (desktop sign-ins expire 7 days after signing in). During a live session that
+  // mustn't end the interview: the live screen stays and asks to sign in again (its audio socket keeps going).
+  // Anywhere else it signs out.
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
+  const [signInExpired, setSignInExpired] = useState(false);
+  const onUnauthorized = useCallback(() => {
+    if (screenRef.current.name === "live") setSignInExpired(true);
+    else void signOut();
+  }, [signOut]);
   useEffect(() => {
-    setUnauthorizedHandler(() => void signOut());
+    if (screen.name !== "live") setSignInExpired(false);
+  }, [screen.name]);
+  const signedInAgain = (fresh: User) => {
+    setUser(fresh);
+    setSignInExpired(false);
+  };
+
+  useEffect(() => {
+    setUnauthorizedHandler(onUnauthorized);
     (async () => {
       const token = await loadToken().catch(() => null);
       if (!token) {
@@ -89,16 +109,16 @@ export function App() {
       }
     })();
     return () => setUnauthorizedHandler(null);
-  }, [signOut]);
+  }, [signOut, onUnauthorized]);
 
   // Started offline with a saved sign-in: load the account once the connection is back (focus, "online", or every
-  // 30 s), so Settings and the banners don't stay stuck on "reconnect".
+  // 30 s), so Settings and the banners don't stay stuck on "reconnect". (A 401 already went to onUnauthorized.)
   const reloadUser = useCallback(() => {
     api
       .me()
       .then(setUser)
       .catch((err: unknown) => {
-        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) void signOut();
+        if (err instanceof ApiError && err.status === 403) void signOut();
       });
   }, [signOut]);
   const signedInOffline = user === null && screen.name !== "boot" && screen.name !== "login";
@@ -124,12 +144,21 @@ export function App() {
   }, [screen.name]);
 
   const home = () => setScreen({ name: "home" });
-  // Rejoin an existing (live/created) session with default audio (system on Windows, default mic).
-  const resume = (session: OrbitSession) => setScreen({ name: "live", session, launch: { systemAudio: !IS_MAC } });
+  const goLive = (session: OrbitSession, launch: DesktopLaunch) => {
+    rememberLaunch(session.id, launch);
+    setScreen({ name: "live", session, launch });
+  };
+  // Rejoin an existing (live/created) session with the audio it was set up with (launch.ts): its app found again,
+  // else the saved mic and output; never system audio for phone or mock sessions.
+  const resume = async (session: OrbitSession) => {
+    if (!(await confirmSessionDuringUpdate())) return;
+    const apps = !IS_MAC && usesSystemAudio(session.type) ? await listAudioApps() : [];
+    goLive(session, rejoinLaunch(session, loadSavedAudio(), apps, IS_MAC));
+  };
   // A drill is a mock round: the interviewer is Orbit itself, so only the (remembered) mic is captured.
-  const drill = (session: OrbitSession) => {
-    const mic = localStorage.getItem("orbit.micDeviceId");
-    setScreen({ name: "live", session, launch: { systemAudio: false, ...(mic ? { micDeviceId: mic } : {}) } });
+  const drill = async (session: OrbitSession) => {
+    if (!(await confirmSessionDuringUpdate())) return;
+    goLive(session, rejoinLaunch(session, loadSavedAudio(), [], IS_MAC));
   };
 
   return (
@@ -183,8 +212,9 @@ export function App() {
             notice={verifyNotice}
             initialType={screen.initialType}
             onSignOut={() => void signOut()}
+            onSignedInAgain={setUser}
             onBack={home}
-            onStart={(session, launch) => setScreen({ name: "live", session, launch })}
+            onStart={goLive}
             onOpenDocuments={() => setScreen({ name: "documents" })}
             onOpenHistory={() => setScreen({ name: "history" })}
             onOpenSettings={() => setScreen({ name: "settings" })}
@@ -193,7 +223,14 @@ export function App() {
       case "documents":
         return <DocumentsScreen onBack={home} />;
       case "history":
-        return <HistoryScreen onBack={home} onResume={resume} onDrill={drill} />;
+        return (
+          <HistoryScreen
+            onBack={home}
+            onResume={resume}
+            onDrill={drill}
+            {...(screen.sessionId ? { initialSessionId: screen.sessionId } : {})}
+          />
+        );
       case "settings":
         return user ? (
           <SettingsScreen user={user} onUser={setUser} onSignOut={() => void signOut()} onBack={home} />
@@ -211,7 +248,17 @@ export function App() {
           </div>
         );
       case "live":
-        return <LiveScreen session={screen.session} launch={screen.launch} onExit={home} />;
+        return (
+          <LiveScreen
+            session={screen.session}
+            launch={screen.launch}
+            onExit={home}
+            onViewReview={() => setScreen({ name: "history", sessionId: screen.session.id })}
+            signInExpired={signInExpired}
+            email={user?.email ?? null}
+            onSignedInAgain={signedInAgain}
+          />
+        );
     }
   }
 }

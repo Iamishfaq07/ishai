@@ -17,9 +17,30 @@ const fn service_name(configured: Option<&'static str>) -> &'static str {
     }
 }
 
+/// A test build's app identifier (lib.rs runs it as a separate app): its keyring service, kept to characters that
+/// are safe in a folder and mutex name. None for the real app.
+pub(crate) fn test_build_identifier() -> Option<String> {
+    identifier_for(SERVICE)
+}
+
+fn identifier_for(service: &str) -> Option<String> {
+    (service != DEFAULT_SERVICE).then(|| {
+        service
+            .chars()
+            .map(|c| {
+                if c.is_ascii_alphanumeric() || c == '.' || c == '-' {
+                    c
+                } else {
+                    '-'
+                }
+            })
+            .collect()
+    })
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{service_name, DEFAULT_SERVICE};
+    use super::{identifier_for, service_name, DEFAULT_SERVICE};
 
     #[test]
     fn empty_or_missing_service_falls_back_to_the_real_app() {
@@ -28,6 +49,19 @@ mod tests {
         assert_eq!(
             service_name(Some("ai.orbit.desktop.test")),
             "ai.orbit.desktop.test"
+        );
+    }
+
+    #[test]
+    fn only_test_builds_get_their_own_identifier() {
+        assert_eq!(identifier_for(DEFAULT_SERVICE), None);
+        assert_eq!(
+            identifier_for("ai.orbit.desktop.test").as_deref(),
+            Some("ai.orbit.desktop.test")
+        );
+        assert_eq!(
+            identifier_for("orbit polish/test").as_deref(),
+            Some("orbit-polish-test")
         );
     }
 }

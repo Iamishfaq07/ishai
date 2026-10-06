@@ -40,7 +40,8 @@ use crate::audio::{encode_frame, CaptureEvent, FRAME_SAMPLES, TARGET_RATE};
 
 /// How often a stream following the default device checks whether Windows switched it.
 const DEFAULT_CHECK: Duration = Duration::from_secs(1);
-const MAX_BACKOFF: Duration = Duration::from_secs(2);
+pub(crate) const FIRST_BACKOFF: Duration = Duration::from_millis(250);
+pub(crate) const MAX_BACKOFF: Duration = Duration::from_secs(2);
 /// No packet for this long on a loopback stream means nothing is playing: feed silence so the transcriber
 /// hears the pause (end-of-speech detection needs it) and the audio timeline keeps pace with the clock.
 const SILENCE_GAP: Duration = Duration::from_millis(100);
@@ -81,9 +82,9 @@ pub struct Endpoint {
     pub is_communications: bool,
 }
 
-struct Com(bool);
+pub(crate) struct Com(bool);
 impl Com {
-    fn init() -> Self {
+    pub(crate) fn init() -> Self {
         Com(unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) }.is_ok())
     }
 }
@@ -204,15 +205,16 @@ unsafe fn resolve(
 }
 
 /// Why a stream stopped.
-enum Ended {
+pub(crate) enum Ended {
     Stopped,
     /// The device went away or errored: reopen after a pause.
     Lost(String),
-    /// Following the default, and Windows switched it: reopen immediately.
-    DefaultChanged,
+    /// The periodic check asked for it: Windows switched the default device (reopen on the new one), or the app
+    /// being captured quit (process_loopback.rs).
+    Switch,
 }
 
-fn status(sink: &Channel<CaptureEvent>, channel: u8, state: &str, device: &str) {
+pub(crate) fn status(sink: &Channel<CaptureEvent>, channel: u8, state: &str, device: &str) {
     let _ = sink.send(CaptureEvent::Status {
         channel,
         state: state.to_string(),
@@ -273,7 +275,7 @@ pub fn spawn(
                 let name = unsafe { device_name(&device) };
                 match unsafe { open_client(&device, flow) } {
                     Ok((client, capture, event)) => {
-                        backoff = Duration::from_millis(250);
+                        backoff = FIRST_BACKOFF;
                         let state = if let Some(tx) = ready.take() {
                             let _ = tx.send(Ok(()));
                             if fell_back {
@@ -325,7 +327,7 @@ pub fn spawn(
                         }
                         match ended {
                             Ended::Stopped => break,
-                            Ended::DefaultChanged => continue,
+                            Ended::Switch => continue,
                             Ended::Lost(why) => {
                                 eprintln!("orbit: {label} stream lost ({why}); reopening");
                                 status(&sink, channel, "lost", &name);
@@ -369,7 +371,16 @@ unsafe fn open_client(
     let client: IAudioClient = device
         .Activate(CLSCTX_ALL, None)
         .map_err(|e| e.to_string())?;
-    // Ask for the transcriber's format directly; the audio engine converts (channel mix + quality SRC).
+    let (capture, event) = start_stream(&client, flow == Flow::Output)?;
+    Ok((client, capture, event))
+}
+
+/// Initializes and starts `client` in the transcriber's format (16 kHz mono PCM16). The audio engine converts
+/// (channel mix + quality SRC), for an endpoint and for an app's process loopback alike (process_loopback.rs).
+pub(crate) unsafe fn start_stream(
+    client: &IAudioClient,
+    loopback: bool,
+) -> Result<(IAudioCaptureClient, windows::Win32::Foundation::HANDLE), String> {
     let format = WAVEFORMATEX {
         wFormatTag: WAVE_FORMAT_PCM as u16,
         nChannels: 1,
@@ -382,7 +393,7 @@ unsafe fn open_client(
     let mut flags = AUDCLNT_STREAMFLAGS_EVENTCALLBACK
         | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM
         | AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY;
-    if flow == Flow::Output {
+    if loopback {
         flags |= AUDCLNT_STREAMFLAGS_LOOPBACK;
     }
     client
@@ -396,7 +407,7 @@ unsafe fn open_client(
         Ok(capture)
     };
     match setup() {
-        Ok(capture) => Ok((client, capture, event)),
+        Ok(capture) => Ok((capture, event)),
         Err(e) => {
             let _ = CloseHandle(event);
             Err(e)
@@ -404,8 +415,10 @@ unsafe fn open_client(
     }
 }
 
+/// Streams `capture` to `sink` as 50 ms frames until `stop`, the stream fails (`Lost`), or `should_switch` (asked
+/// once a second) says to reopen (`Switch`).
 #[allow(clippy::too_many_arguments)]
-unsafe fn pump(
+pub(crate) unsafe fn pump(
     _client: &IAudioClient,
     capture: &IAudioCaptureClient,
     event: windows::Win32::Foundation::HANDLE,
@@ -441,7 +454,8 @@ unsafe fn pump(
                 return Ended::Lost(e.message());
             }
             let n = frames as usize;
-            // Never build a slice over a silent/null buffer (see process_loopback.rs).
+            // Only build a slice over a real buffer: a silent packet may come with a null (or stale) pointer, and
+            // from_raw_parts on null is UB even if never read.
             if flags & (AUDCLNT_BUFFERFLAGS_SILENT.0 as u32) != 0 || data.is_null() || n == 0 {
                 pending.resize(pending.len() + n, 0);
             } else {
@@ -461,7 +475,7 @@ unsafe fn pump(
         if last_check.elapsed() >= DEFAULT_CHECK {
             last_check = Instant::now();
             if should_switch() {
-                return Ended::DefaultChanged;
+                return Ended::Switch;
             }
         }
     }

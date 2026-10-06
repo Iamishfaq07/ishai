@@ -1,4 +1,5 @@
 import { checkServerUrl, createApiClient, type ServerUrlCheck } from "@orbit/ui";
+import { tokenExpiry } from "./token";
 
 const API_URL_KEY = "orbit.apiUrl";
 export const DEFAULT_API_URL: string = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -32,12 +33,29 @@ let onUnauthorized: (() => void) | null = null;
 export function setAccessToken(token: string | null): void {
   accessToken = token;
 }
+/** When the current sign-in expires (ms since the epoch), if the token says. */
+export function accessTokenExpiresAt(): number | null {
+  return accessToken ? tokenExpiry(accessToken) : null;
+}
 export function setUnauthorizedHandler(handler: (() => void) | null): void {
   onUnauthorized = handler;
+}
+
+let signingIn = 0;
+/** Runs a sign-in request. Its 401 is a wrong password, an answer to show, not a reason to sign the user out. */
+export async function signInRequest<T>(request: () => Promise<T>): Promise<T> {
+  signingIn += 1;
+  try {
+    return await request();
+  } finally {
+    signingIn -= 1;
+  }
 }
 
 export const api = createApiClient({
   baseUrl: API_URL,
   auth: { mode: "bearer", getToken: () => accessToken },
-  onUnauthorized: () => onUnauthorized?.(),
+  onUnauthorized: () => {
+    if (signingIn === 0) onUnauthorized?.();
+  },
 });

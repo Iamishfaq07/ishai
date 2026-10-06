@@ -176,9 +176,9 @@ setting: `powershell -ExecutionPolicy Bypass -File .\scripts\release-desktop.ps1
 docs\releases\X.Y.Z.md` (Windows PowerShell 5.1 or 7 both work; `-Sign` also needs `pwsh`). It clears `ORBIT_KEYRING_SERVICE`
 (only test builds set it), builds the signed installer, and refuses to continue unless rustc's dep-info shows the
 variable unset. 0.1.11 was built with the variable left at an empty string and looked for the saved sign-in under
-an empty service name; `secrets.rs` now also treats an empty value as unset. To verify any built exe, run it with
-an isolated `WEBVIEW2_USER_DATA_FOLDER` and call `load_token` over CDP: a real build finds the installed app's
-saved sign-in (read-only).
+an empty service name; `secrets.rs` now also treats an empty value as unset. To verify any built exe, quit the installed Orbit (a real build is single-instance and would hand over to
+it), run the exe with an isolated `WEBVIEW2_USER_DATA_FOLDER` and call `load_token` over CDP: a real build finds the
+installed app's saved sign-in (read-only).
 
 ## Install, upgrade, uninstall
 

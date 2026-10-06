@@ -7,16 +7,50 @@ mod updater;
 #[cfg(target_os = "windows")]
 mod wasapi_capture;
 
-use std::time::Duration;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
-use tauri::{Manager, WindowEvent};
+use tauri::{Emitter, Manager, WindowEvent};
 
-/// "Quit Orbit" from the close dialog (the tray menu quits the same way).
+/// Asks the window to confirm a tray "Quit Orbit" (CloseDialog.tsx).
+const CONFIRM_QUIT_EVENT: &str = "orbit:confirm-quit";
+
+/// "Quit Orbit" from the close dialog.
 #[tauri::command]
 fn quit_app(app: tauri::AppHandle) {
     app.exit(0);
+}
+
+/// When the tray's "Quit Orbit" was last clicked.
+#[derive(Default)]
+struct QuitRequest(Mutex<Option<Instant>>);
+
+impl QuitRequest {
+    /// Remembers this request; true if there was another one within `window`.
+    fn repeated(&self, window: Duration) -> bool {
+        let mut last = self
+            .0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let again = last.is_some_and(|at| at.elapsed() < window);
+        *last = Some(Instant::now());
+        again
+    }
+}
+
+/// Tray "Quit Orbit". While Orbit is capturing (a live session, most likely) the window comes forward and asks
+/// first, as the close dialog does: quitting ends the session. A second Quit within a few seconds quits anyway, in
+/// case the window can't answer.
+fn tray_quit(app: &tauri::AppHandle) {
+    let repeated = app.state::<QuitRequest>().repeated(Duration::from_secs(5));
+    if repeated || !app.state::<audio::CaptureState>().is_active() {
+        app.exit(0);
+        return;
+    }
+    show_main(app);
+    let _ = app.emit_to("main", CONFIRM_QUIT_EVENT, ());
 }
 
 fn protect_window(window: &tauri::WebviewWindow) {
@@ -42,18 +76,40 @@ fn show_main(app: &tauri::AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let mut context = tauri::generate_context!();
+    // A test build (secrets.rs) is a separate app on this PC: with its own identifier the single-instance guard
+    // never hands a test launch over to the installed Orbit (or the reverse), and window positions are kept apart.
+    if let Some(identifier) = secrets::test_build_identifier() {
+        context.config_mut().identifier = identifier;
+    }
+
     tauri::Builder::default()
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        // First, per the plugin's docs: a second launch (Start menu, shortcut) while Orbit runs, maybe hidden in the
+        // tray, brings this window back instead of starting another Orbit whose tray icon and global shortcuts
+        // would clash with this one's.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            show_main(app)
+        }))
+        // The region selector is placed over its monitor each time it opens: restoring its last geometry would put
+        // it on the wrong spot (or the wrong monitor).
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_denylist(&[screen::OVERLAY_LABEL])
+                .build(),
+        )
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(audio::CaptureState::default())
         .manage(updater::PendingUpdate::default())
+        .manage(QuitRequest::default())
         .on_window_event(|window, event| {
             if matches!(
                 event,
-                WindowEvent::Focused(_) | WindowEvent::ScaleFactorChanged { .. } | WindowEvent::ThemeChanged(_)
+                WindowEvent::Focused(_)
+                    | WindowEvent::ScaleFactorChanged { .. }
+                    | WindowEvent::ThemeChanged(_)
             ) {
                 if let Some(webview) = window.app_handle().get_webview_window(window.label()) {
                     protect_window(&webview);
@@ -70,7 +126,7 @@ pub fn run() {
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => show_main(app),
-                    "quit" => app.exit(0),
+                    "quit" => tray_quit(app),
                     _ => {}
                 });
             if let Some(icon) = app.default_window_icon() {
@@ -103,9 +159,24 @@ pub fn run() {
             secrets::load_token,
             secrets::clear_token,
             updater::check_update,
+            updater::download_update,
             updater::install_update,
             quit_app,
         ])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("error while running Orbit");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::QuitRequest;
+    use std::time::Duration;
+
+    #[test]
+    fn a_second_tray_quit_soon_after_the_first_quits_anyway() {
+        let quit = QuitRequest::default();
+        assert!(!quit.repeated(Duration::from_secs(5)));
+        assert!(quit.repeated(Duration::from_secs(5)));
+        assert!(!quit.repeated(Duration::ZERO)); // long after: asks again
+    }
 }

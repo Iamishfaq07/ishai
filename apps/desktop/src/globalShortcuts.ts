@@ -5,8 +5,17 @@ import { register, unregister, unregisterAll } from "@tauri-apps/plugin-global-s
  * System-wide shortcuts (they work while another app — Zoom, Teams, the browser — is focused).
  *
  * Registered once for the whole app; a press is broadcast as an `orbit:shortcut` window event. The App handles
- * window/transparency actions itself; the live screen handles the session ones. Defaults deliberately avoid
- * combos other apps rely on system-wide (Ctrl+Shift+←/→ selects words, Ctrl+Shift+M is Teams' mute…).
+ * window/transparency actions itself; the live screen handles the session ones.
+ *
+ * A global shortcut takes its combo away from every other app, so the defaults avoid all the shortcuts Microsoft
+ * Teams (desktop and web), Zoom and Google Meet document, and combos people rely on everywhere (Ctrl+Shift+←/→
+ * selects words…). They're Ctrl+Shift + a digit, and Ctrl+Alt + a key that types nothing (Space, arrows, Page Up/
+ * Down): Ctrl+Alt + a letter or digit is AltGr on many keyboard layouts (AltGr+Q = @, AltGr+E = €) and would block
+ * typing. One overlap is left: Teams *in a browser* jumps between its app-bar apps with Ctrl+Shift+1…9 (navigation,
+ * not call controls). The old defaults collided with calls: Ctrl+Shift+O (Teams: camera on/off; Zoom: AI panel),
+ * Ctrl+Shift+Y (Teams: admit from the lobby; Zoom: reactions), Ctrl+Alt+P (Meet: participants), and Teams'
+ * Ctrl+Shift+Enter and Ctrl+Alt+←/→. Whoever still has those is moved to the new ones (`migrateShortcuts`).
+ * Chosen for Windows; a macOS build needs its own (Cmd+Shift+3/4 take screenshots there).
  */
 export type GlobalAction =
   | "toggleWindow"
@@ -20,16 +29,42 @@ export type GlobalAction =
   | "lessTransparent";
 
 export const GLOBAL_DEFAULTS: Record<GlobalAction, string> = {
+  toggleWindow: "CommandOrControl+Shift+1",
+  answer: "CommandOrControl+Alt+Space",
+  screenshot: "CommandOrControl+Shift+2",
+  prevAnswer: "CommandOrControl+Alt+PageUp",
+  nextAnswer: "CommandOrControl+Alt+PageDown",
+  copyAnswer: "CommandOrControl+Shift+3",
+  togglePause: "CommandOrControl+Shift+4",
+  moreTransparent: "CommandOrControl+Alt+Down",
+  lessTransparent: "CommandOrControl+Alt+Up",
+};
+
+/** The defaults these replaced (see above). An action still bound to its old default was never changed by the user. */
+const OLD_DEFAULTS: Partial<Record<GlobalAction, string>> = {
   toggleWindow: "CommandOrControl+Shift+O",
   answer: "CommandOrControl+Shift+Enter",
-  screenshot: "CommandOrControl+Shift+2",
   prevAnswer: "CommandOrControl+Alt+Left",
   nextAnswer: "CommandOrControl+Alt+Right",
   copyAnswer: "CommandOrControl+Shift+Y",
   togglePause: "CommandOrControl+Alt+P",
-  moreTransparent: "CommandOrControl+Alt+Down",
-  lessTransparent: "CommandOrControl+Alt+Up",
 };
+
+/**
+ * Saved bindings with the old defaults moved to the new ones: only actions still on their old default move (a combo
+ * the user picked stays), and never onto a combo another action is already bound to.
+ */
+export function migrateShortcuts(saved: Partial<Record<GlobalAction, string>>): Partial<Record<GlobalAction, string>> {
+  const out = { ...saved };
+  const bound = (action: GlobalAction) => out[action] ?? GLOBAL_DEFAULTS[action];
+  for (const action of Object.keys(OLD_DEFAULTS) as GlobalAction[]) {
+    if (out[action] !== OLD_DEFAULTS[action]) continue;
+    const next = GLOBAL_DEFAULTS[action];
+    const taken = (Object.keys(GLOBAL_DEFAULTS) as GlobalAction[]).some((a) => a !== action && bound(a) === next);
+    if (!taken) delete out[action]; // back on the default
+  }
+  return out;
+}
 
 export const GLOBAL_LABELS: Record<GlobalAction, string> = {
   toggleWindow: "Show / hide Orbit",
@@ -56,7 +91,7 @@ const CHANGED_EVENT = "orbit:shortcuts-changed";
 export function loadShortcuts(): Record<GlobalAction, string> {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? "{}") as Partial<Record<GlobalAction, string>>;
-    return { ...GLOBAL_DEFAULTS, ...saved };
+    return { ...GLOBAL_DEFAULTS, ...migrateShortcuts(saved) };
   } catch {
     return { ...GLOBAL_DEFAULTS };
   }
@@ -88,10 +123,10 @@ export function acceleratorFromEvent(e: KeyboardEvent): string | null {
 
 /** "Ctrl+Alt+←" for display. */
 export function formatAccelerator(acc: string): string {
-  const arrows: Record<string, string> = { Left: "←", Right: "→", Up: "↑", Down: "↓" };
+  const short: Record<string, string> = { Left: "←", Right: "→", Up: "↑", Down: "↓", PageUp: "PgUp", PageDown: "PgDn" };
   return acc
     .split("+")
-    .map((p) => (p === "CommandOrControl" ? "Ctrl" : (arrows[p] ?? p)))
+    .map((p) => (p === "CommandOrControl" ? "Ctrl" : (short[p] ?? p)))
     .join("+");
 }
 

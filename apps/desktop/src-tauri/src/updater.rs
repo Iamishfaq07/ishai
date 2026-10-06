@@ -7,8 +7,13 @@
 //!
 //! Transport policy: https everywhere, except plain http to localhost/127.0.0.1 for local development.
 //! (The plugin-level `dangerousInsecureTransportProtocol` flag is on only so this check can decide.)
+//!
+//! Downloading and installing are separate steps, because installing closes Orbit (on Windows the plugin starts the
+//! installer, then exits the process). The download can run while the user sets up; the install re-checks right
+//! before it starts that nothing is capturing, so it never closes Orbit under a live session — the webview offers
+//! "Restart to update" once the session is over instead.
 
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
 
 use serde::Serialize;
@@ -19,7 +24,23 @@ use tauri_plugin_updater::{Update, UpdaterExt};
 use crate::audio::CaptureState;
 
 #[derive(Default)]
-pub struct PendingUpdate(Mutex<Option<Update>>);
+pub struct PendingUpdate(Mutex<Pending>);
+
+#[derive(Default)]
+struct Pending {
+    update: Option<Update>,
+    /// The downloaded, signature-checked installer, waiting for `install_update`.
+    installer: Option<Vec<u8>>,
+    downloading: bool,
+}
+
+impl PendingUpdate {
+    fn lock(&self) -> MutexGuard<'_, Pending> {
+        self.0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+}
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -30,11 +51,26 @@ pub struct UpdateInfo {
     date: Option<String>,
 }
 
+impl UpdateInfo {
+    fn of(update: &Update) -> Self {
+        UpdateInfo {
+            version: update.version.clone(),
+            current_version: update.current_version.clone(),
+            notes: update.body.clone(),
+            date: update.date.map(|d| d.to_string()),
+        }
+    }
+}
+
 #[derive(Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum UpdateProgress {
-    Downloading { downloaded: u64, total: Option<u64> },
-    Installing,
+    Downloading {
+        downloaded: u64,
+        total: Option<u64>,
+    },
+    /// Downloaded; checking the signature.
+    Verifying,
 }
 
 /// Builds `{api}/v1/desktop/update/{target}/{arch}/{version}` and enforces the transport policy.
@@ -88,6 +124,13 @@ pub async fn check_update(
     if is_packaged() {
         return Ok(None); // the Microsoft Store updates this install
     }
+    {
+        // Downloading (or downloaded) already: that is the update, don't swap it for a fresh check.
+        let state = pending.lock();
+        if state.downloading || state.installer.is_some() {
+            return Ok(state.update.as_ref().map(UpdateInfo::of));
+        }
+    }
     let current = app.package_info().version.to_string();
     let endpoint = endpoint_for(&api_url, "windows", std::env::consts::ARCH, &current)?;
     let updater = app
@@ -101,50 +144,80 @@ pub async fn check_update(
         .check()
         .await
         .map_err(|e| format!("Update check failed: {e}"))?;
-    let info = update.as_ref().map(|u| UpdateInfo {
-        version: u.version.clone(),
-        current_version: u.current_version.clone(),
-        notes: u.body.clone(),
-        date: u.date.map(|d| d.to_string()),
-    });
-    *pending.0.lock().map_err(|_| "update state poisoned")? = update;
-    Ok(info)
+    let mut state = pending.lock();
+    if !(state.downloading || state.installer.is_some()) {
+        state.update = update;
+    }
+    Ok(state.update.as_ref().map(UpdateInfo::of))
 }
 
+/// Downloads the pending update and checks its signature, keeping the installer for `install_update`.
 #[tauri::command]
-pub async fn install_update(
+pub async fn download_update(
     pending: State<'_, PendingUpdate>,
-    capture: State<'_, CaptureState>,
     on_event: Channel<UpdateProgress>,
 ) -> Result<(), String> {
     if is_packaged() {
         return Err("This copy of Orbit is updated by the Microsoft Store.".to_string());
     }
-    // Never restart the app under someone mid-interview.
-    if capture.is_active() {
-        return Err("Finish or end your live session before updating.".to_string());
-    }
-    let update = pending
-        .0
-        .lock()
-        .map_err(|_| "update state poisoned")?
-        .take()
-        .ok_or("No update is ready — check for updates first.")?;
+    let update = {
+        let mut state = pending.lock();
+        if state.installer.is_some() {
+            return Ok(());
+        }
+        if state.downloading {
+            return Err("The update is already downloading.".to_string());
+        }
+        let update = state
+            .update
+            .clone()
+            .ok_or("No update is ready — check for updates first.")?;
+        state.downloading = true;
+        update
+    };
     let mut downloaded: u64 = 0;
-    update
-        .download_and_install(
+    let result = update
+        .download(
             |chunk, total| {
                 downloaded += chunk as u64;
                 let _ = on_event.send(UpdateProgress::Downloading { downloaded, total });
             },
             || {
-                let _ = on_event.send(UpdateProgress::Installing);
+                let _ = on_event.send(UpdateProgress::Verifying);
             },
         )
-        .await
-        .map_err(|e| format!("Update failed: {e}"))?;
-    // On Windows the NSIS installer takes over (passive mode) and relaunches Orbit when done.
+        .await;
+    let mut state = pending.lock();
+    state.downloading = false;
+    state.installer = Some(result.map_err(|e| format!("Update download failed: {e}"))?);
     Ok(())
+}
+
+/// Runs the downloaded installer, which closes Orbit (on Windows the NSIS installer takes over in passive mode and
+/// relaunches Orbit when done). Re-checked right here, not just in the UI: nothing may be capturing, and nothing
+/// can start capturing from now on, so a live session never loses Orbit under it.
+#[tauri::command]
+pub async fn install_update(
+    pending: State<'_, PendingUpdate>,
+    capture: State<'_, CaptureState>,
+) -> Result<(), String> {
+    if is_packaged() {
+        return Err("This copy of Orbit is updated by the Microsoft Store.".to_string());
+    }
+    let state = pending.lock();
+    let (Some(update), Some(installer)) = (state.update.as_ref(), state.installer.as_ref()) else {
+        return Err("The update hasn't been downloaded yet.".to_string());
+    };
+    if !capture.begin_install() {
+        return Err(
+            "Orbit is still listening. End the session (or stop the audio test), then restart to update."
+                .to_string(),
+        );
+    }
+    // On Windows this returns only if the installer didn't start; on success the plugin exits Orbit for it.
+    let result = update.install(installer);
+    capture.end_install();
+    result.map_err(|e| format!("Update failed: {e}"))
 }
 
 #[cfg(test)]
