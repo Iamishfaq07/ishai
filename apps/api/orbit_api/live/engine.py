@@ -768,18 +768,18 @@ class LiveEngine:
 
         if ev.kind == "utterance_end":
             if turn and turn.text:
-                if self._turn_speaker(channel, turn) == "interviewer":
-                    fired = self._finalizer.on_transcript(turn.turn_id, turn.text, self.now_ms(),
-                                                          is_final=True, endpoint=True)
-                    if fired:
-                        await self._on_fired(fired)
+                if 0 < ev.end_ms <= turn.start_ms:
+                    # It ends speech from before this turn began: UtteranceEnd can come seconds late, after the next
+                    # sentence has started. Taken for this turn's end, "Write a function that checks whether a" fired.
+                    return
                 if turn.partial:
-                    # Words still provisional: their final is on its way (it often comes after UtteranceEnd). Committed
-                    # now, that final arrived as a new turn and the words were said twice ("Write a Write a function…").
-                    # The ticker commits it if the final never comes.
+                    # Words still provisional: their final is on its way (it often comes after UtteranceEnd), or the
+                    # speaker is still going (it has also come mid-sentence). Not the end yet: committed now, the final
+                    # arrived as a new turn ("Write a Write a function…") and the question fired half-said. The final
+                    # ends it; new words cancel it; the ticker ends it if neither comes.
                     turn.utterance_end_ms = self.now_ms()
                 else:
-                    await self._commit_turn(channel, turn)
+                    await self._end_turn(channel, turn)
                 await self._sync_speculation()
             return
 
@@ -802,10 +802,13 @@ class LiveEngine:
                 self._turn_voice[turn.turn_id] = ev.speaker_hint
             if speaker == "interviewer":
                 self._spawn(self._llm.warm())
+        endpoint = ev.endpoint or (ev.kind == "final" and turn.utterance_end_ms is not None)
         if ev.kind == "final":
             turn.committed = f"{turn.committed} {ev.text}".strip()
             turn.partial = ""
         else:
+            if ev.text and ev.text != turn.partial:
+                turn.utterance_end_ms = None  # still talking: that UtteranceEnd wasn't the end
             turn.partial = ev.text
         turn.end_ms = max(turn.end_ms, ev.end_ms)
         spk = self._speaker_overrides.get(turn.turn_id, speaker)
@@ -820,7 +823,7 @@ class LiveEngine:
                 await self._set_state(LiveState.speech_detected)
             self._finalizer.context = self._detector_context()
             fired = self._finalizer.on_transcript(
-                turn.turn_id, turn.text, self.now_ms(), is_final=ev.kind == "final", endpoint=ev.endpoint
+                turn.turn_id, turn.text, self.now_ms(), is_final=ev.kind == "final", endpoint=endpoint
             )
             if fired:
                 await self._on_fired(fired)
@@ -828,9 +831,18 @@ class LiveEngine:
             fired = self._finalizer.on_candidate_speech(self.now_ms(), turn.text)
             if fired:
                 await self._on_fired(fired)
-        if ev.kind == "final" and (ev.endpoint or turn.utterance_end_ms is not None):
+        if ev.kind == "final" and endpoint:
             await self._commit_turn(channel, turn)
         await self._sync_speculation()
+
+    async def _end_turn(self, channel: Channel, turn: _ChannelTurn) -> None:
+        """The provider says the utterance is over (UtteranceEnd), with no final to carry the endpoint: the
+        interviewer's question may fire, then the turn is committed."""
+        if self._turn_speaker(channel, turn) == "interviewer":
+            fired = self._finalizer.on_transcript(turn.turn_id, turn.text, self.now_ms(), is_final=True, endpoint=True)
+            if fired:
+                await self._on_fired(fired)
+        await self._commit_turn(channel, turn)
 
     def _channel_speaker(self, channel: Channel, voice: int | None = None) -> Speaker:
         # Phone / room audio (a phone on speaker, an in-person room): the one microphone hears both people. Voices
@@ -930,7 +942,7 @@ class LiveEngine:
                     turn = self._turns[ch]
                     if (turn is not None and turn.utterance_end_ms is not None
                             and self.now_ms() - turn.utterance_end_ms >= UTTERANCE_FINAL_WAIT_MS):
-                        await self._commit_turn(ch, turn)  # the final never came: keep what was heard
+                        await self._end_turn(ch, turn)  # the final never came: keep what was heard
                 fired = self._finalizer.tick(self.now_ms())
                 if fired:
                     await self._on_fired(fired)

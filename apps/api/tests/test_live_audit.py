@@ -361,6 +361,67 @@ async def test_an_utterance_end_whose_final_never_comes_still_commits_the_turn()
     await eng.end()
 
 
+def _deepgram_like(clock: Any) -> tuple[LiveEngine, Sink, MockLLMProvider]:
+    eng, sink, llm = _engine(clock=clock)
+    eng._finalizer.provider_endpoints = True  # endpoints come from the provider, as with Deepgram
+    return eng, sink, llm
+
+
+async def _whole_question_once(eng: LiveEngine, sink: Sink, question: str) -> None:
+    await sink.wait_for("question.detected")
+    assert [t["text"] for t in sink.of("transcript.final")] == [question]
+    assert [q["text"] for q in sink.of("question.detected")] == [question]
+    assert sink.of("question.updated") == []
+    await eng.end()
+
+
+async def test_a_late_utterance_end_does_not_end_the_sentence_after_it() -> None:
+    # Desktop E2E: the UtteranceEnd for "Let's do a quick coding question." came after "Write a function that checks
+    # whether a string is a" had begun. It ended that turn: the question fired half-said, and the rest of the sentence
+    # came in as a new turn repeating its words ("…ignoring Write a function that checks…").
+    now = {"t": 0.0}
+    eng, sink, _ = _deepgram_like(lambda: now["t"])
+    await eng.start()
+    await eng.on_transcript("system", TranscriptEvent("partial", "Write a function that checks whether a", 2000, 3500))
+    await eng.on_transcript("system", TranscriptEvent("utterance_end", "", 1900, 1900, endpoint=True))
+    now["t"] += 2.0  # past the wait for a final that never comes
+    await asyncio.sleep(0.2)
+    assert sink.of("transcript.final") == [] and sink.of("question.detected") == []
+    question = "Write a function that checks whether a string is a palindrome."
+    await eng.on_transcript("system", TranscriptEvent("final", question, 2000, 5000, endpoint=True))
+    await _whole_question_once(eng, sink, question)
+
+
+async def test_words_after_an_utterance_end_mean_the_speaker_is_still_going() -> None:
+    now = {"t": 0.0}
+    eng, sink, _ = _deepgram_like(lambda: now["t"])
+    await eng.start()
+    await eng.on_transcript("system", TranscriptEvent("partial", "Write a function that checks whether a string is a",
+                                                      0, 2500))
+    await eng.on_transcript("system", TranscriptEvent("utterance_end", "", 2400, 2400, endpoint=True))
+    now["t"] += 0.5
+    await eng.on_transcript("system", TranscriptEvent("partial", "Write a function that checks whether a string is a "
+                                                      "palindrome, ignoring", 0, 3000))
+    now["t"] += 1.5
+    await asyncio.sleep(0.2)
+    assert sink.of("transcript.final") == [] and sink.of("question.detected") == []
+    question = "Write a function that checks whether a string is a palindrome, ignoring case."
+    await eng.on_transcript("system", TranscriptEvent("final", question, 0, 4000))  # is_final, not speech_final
+    await eng.on_transcript("system", TranscriptEvent("utterance_end", "", 3900, 3900, endpoint=True))
+    await _whole_question_once(eng, sink, question)
+
+
+async def test_the_final_after_an_utterance_end_ends_the_question() -> None:
+    now = {"t": 0.0}
+    eng, sink, _ = _deepgram_like(lambda: now["t"])
+    await eng.start()
+    await eng.on_transcript("system", TranscriptEvent("partial", "Write a function that reverses a", 0, 1500))
+    await eng.on_transcript("system", TranscriptEvent("utterance_end", "", 1800, 1800, endpoint=True))
+    question = "Write a function that reverses a linked list."
+    await eng.on_transcript("system", TranscriptEvent("final", question, 0, 2000))  # no speech_final of its own
+    await _whole_question_once(eng, sink, question)
+
+
 # ---- speakers, no headphones: the interviewer's voice in the mic --------------------------------------------------
 
 
