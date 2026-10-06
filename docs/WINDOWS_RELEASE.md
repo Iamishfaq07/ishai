@@ -46,7 +46,7 @@ cd apps/api
 uv run python -m orbit_api.stage_release ../../artifact "$ORBIT_DESKTOP_UPDATES_DIR" --notes "What's new"
 ```
 
-This refuses unsigned installers and never overwrites a published version. Installed clients pick the new version up on their next launch. The update check runs only on the setup screen, and installs are refused while a live session is recording.
+This refuses unsigned installers and never overwrites a published version. Installed apps check when they open, every hour while running (even hidden in the tray), and when brought back after 10 minutes or more. A newer version appears as **Update to X.Y.Z** in the title bar of every screen, and as a banner with the release notes on Home and Setup. It never shows during a live session, and installs are refused while audio is being captured.
 
 ## 3. Public download (the web app's Download button)
 

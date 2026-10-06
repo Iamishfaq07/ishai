@@ -497,7 +497,7 @@ export function SetupScreen({
 
   return (
     <div className="flex h-full flex-col">
-      <TitleBar>
+      <TitleBar update={false}>
         <button type="button" onClick={onBack} className={cx("inline-flex items-center gap-1 rounded px-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
           <ArrowLeft className="h-3.5 w-3.5" />
           Home

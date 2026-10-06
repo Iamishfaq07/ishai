@@ -14,7 +14,7 @@ import { LiveScreen } from "./screens/Live";
 import { LoginScreen } from "./screens/Login";
 import { SettingsScreen } from "./screens/Settings";
 import { IS_MAC, SetupScreen } from "./screens/Setup";
-import { confirmSessionDuringUpdate } from "./updates";
+import { confirmSessionDuringUpdate, useUpdateChecks } from "./updates";
 import { applyPanelMode, toggleMainWindow } from "./windowing";
 
 function onAppShortcut(action: GlobalAction): void {
@@ -36,6 +36,7 @@ type Screen =
 export function App() {
   useGlobalShortcuts();
   useShortcutHandler(onAppShortcut);
+  useUpdateChecks();
   const [screen, setScreen] = useState<Screen>({ name: "boot" });
   const [user, setUser] = useState<User | null>(null);
   // Paid features are locked until the email is verified — but only on servers that require it.

@@ -3,9 +3,11 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Minus, X, OrbitLogo, cx, focusRing, type LucideIcon } from "@orbit/ui";
 import { requestClose } from "./CloseDialog";
 import { GlassButton } from "./GlassControls";
+import { UpdatePill } from "./UpdateBanner";
 
-/** Frameless-window chrome: drag handle, transparency, minimize, and close (asks: hide to tray or quit). */
-export function TitleBar({ title = "Orbit", children }: { title?: string; children?: ReactNode }) {
+/** Frameless-window chrome: drag handle, an update when there is one (`update={false}` on screens showing the
+ * UpdateBanner instead), transparency, minimize, and close (asks: hide to tray or quit). */
+export function TitleBar({ title = "Orbit", update = true, children }: { title?: string; update?: boolean; children?: ReactNode }) {
   const win = getCurrentWindow();
   return (
     <div
@@ -17,6 +19,7 @@ export function TitleBar({ title = "Orbit", children }: { title?: string; childr
         {title === "Orbit" ? "orbit" : title}
       </span>
       <span data-tauri-drag-region="" className="flex-1 self-stretch" />
+      {update && <UpdatePill />}
       {children}
       <GlassButton />
       <WindowButtons minimize={() => void win.minimize()} hide={requestClose} />

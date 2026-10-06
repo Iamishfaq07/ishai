@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { confirmDialog } from "@orbit/ui";
 import { API_URL } from "./api";
 import { checkUpdate, downloadUpdate, installUpdate, type UpdateInfo } from "./native";
@@ -47,8 +47,12 @@ function subscribe(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
+export function getUpdateState(): UpdateState {
+  return state;
+}
+
 export function useUpdate(): UpdateState {
-  return useSyncExternalStore(subscribe, () => state);
+  return useSyncExternalStore(subscribe, getUpdateState);
 }
 
 /** Just the phase: re-renders on phase changes only, not on every download chunk. */
@@ -56,19 +60,47 @@ export function useUpdatePhase(): UpdatePhase {
   return useSyncExternalStore(subscribe, () => state.phase);
 }
 
-let checked = false;
-/** Checks once per run (again later only if it failed). Failures are quiet: an offline check shouldn't nag. */
-export function checkForUpdate(): void {
-  if (checked) return;
-  checked = true;
+/** While Orbit runs (often hidden in the tray for days), a release is noticed within the hour. */
+export const RECHECK_MS = 60 * 60 * 1000;
+/** Brought back to the front after this long: check again (it's when the user will see the offer). */
+export const FOCUS_RECHECK_MS = 10 * 60 * 1000;
+
+let lastChecked: number | null = null;
+let checking = false;
+/**
+ * Asks the server for a newer version, unless the last successful check is younger than `minAgeMs`. A newer release
+ * than the one on offer replaces it; nothing is asked while an update is downloading or installing (that one stays).
+ * Failures are quiet (an offline check shouldn't nag) and retried at the next chance.
+ */
+export function checkForUpdate(minAgeMs = 0): void {
+  if (checking || (state.phase !== "idle" && state.phase !== "available")) return;
+  if (lastChecked !== null && performance.now() - lastChecked < minAgeMs) return;
+  checking = true;
   checkUpdate(API_URL)
     .then((info) => {
-      if (info && state.phase === "idle") set({ phase: "available", info });
+      lastChecked = performance.now();
+      if (state.phase !== "idle" && state.phase !== "available") return;
+      if (info && info.version !== state.info?.version) set({ phase: "available", info, error: null });
+      else if (!info && state.phase === "available") set({ phase: "idle", info: null, error: null }); // withdrawn
     })
-    .catch((err: unknown) => {
-      checked = false;
-      console.info("Update check skipped:", err);
+    .catch((err: unknown) => console.info("Update check skipped:", err))
+    .finally(() => {
+      checking = false;
     });
+}
+
+/** For the whole app (App): check at launch, every hour, and when Orbit comes back to the front after a while. */
+export function useUpdateChecks(): void {
+  useEffect(() => {
+    checkForUpdate();
+    const timer = window.setInterval(() => checkForUpdate(), RECHECK_MS);
+    const onFocus = () => checkForUpdate(FOCUS_RECHECK_MS);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
 }
 
 let liveSession = false;

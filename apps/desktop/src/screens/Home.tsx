@@ -85,7 +85,7 @@ export function HomeScreen({
 
   return (
     <div className="flex h-full flex-col">
-      <TitleBar>
+      <TitleBar update={false}>
         <TitleBarButton icon={FolderOpen} label="Documents" onClick={onOpenDocuments} />
         <TitleBarButton icon={HistoryIcon} label="History" onClick={onOpenHistory} />
         <TitleBarButton icon={SettingsIcon} label="Settings" onClick={onOpenSettings} />
