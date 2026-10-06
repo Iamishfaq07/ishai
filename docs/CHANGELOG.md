@@ -1,5 +1,48 @@
 # Implementation log
 
+## Resume maker: Naukri and LinkedIn profiles, outreach messages, Shorten with AI (2026-10-07)
+
+- **New "Profiles & outreach" tab** ("Outreach" in the tab bar), each generation one resume credit
+  (`resumes/kit.py`, `pages/resume/ProfileKit.tsx`):
+  - **Naukri profile** (`POST /v1/resumes/naukri-profile`): resume headline (≤250 characters, role, years and
+    strongest skills first because search results show about 60), profile summary (≤1,000) and 10-15 key skills.
+  - **LinkedIn profile** (`POST /v1/resumes/linkedin-profile`): headline (≤220), About (≤2,600, opening with what
+    they do and a result because about 265 characters show before "see more") and the top 5 skills.
+  - **Messages** (`POST /v1/resumes/outreach`), with optional name, company, role and "anything to mention": a
+    referral request (LinkedIn connection note ≤200 characters, which fits free accounts, plus a LinkedIn or WhatsApp
+    message), an email to HR or a recruiter (subject and ≤150 words), a follow-up after applying (≤100 words) and a
+    thank-you after an interview (≤120 words).
+  - **Grounded the same way as the rest**: only the visible resume, the job post and what the candidate typed. A
+    figure or a tool none of those give goes with its sentence (or its part of a headline), skills are only ones the
+    resume shows, years of experience come from the dates (internships left out), a headline never gets a rank the
+    resume doesn't give ("Senior" from the job post), and a sentence opening with a made-up referrer is dropped. The
+    greeting and sign-off are written by the server from the recipient's name and the resume's contact details.
+    Dashes, "I hope this finds you well" and the like are taken out; every field is cut to its limit at a sentence
+    or separator.
+  - Output is edited in place with counters (what a site shows first, characters or words against the limit) and
+    Copy buttons, and is kept in this browser per resume. Verified with real DeepSeek on an Indian data-analyst
+    resume and a Swiggy job post.
+- **Shorten with AI to fit one page**: when Fit to one page can't get there with spacing and text size, it offers
+  "Shorten with AI" (`mode: "shorten"` on `/v1/resumes/suggest`, `resumes/shorten.py`). The lines that give a printed
+  line back for the fewest words go first (weak ones a little earlier, the summary if long), sized to how many lines
+  over it is; a second pass retries lines still too long. Each shorter line must keep every figure, tool and
+  negation; one that only lost filler or its last clause is a safe fix ("Apply the safe fixes"), a reworded one is
+  read first. One credit, given back when nothing survives the checks.
+- **Cover letter tone and length**: professional, warm or confident; short (150-200 words) or standard (250-350).
+- **Fixes from an audit**:
+  - Hidden sections never reach the AI: `/suggest`, `/fix` and `/cover-letter` read `data.visible()`, like the
+    score and the Word file (tested for every AI route).
+  - The resume AI's cost log records the provider that actually answered (the backup after a failover), the
+    latency, and failed calls (`ok=False`).
+  - Import keeps up to 12 project bullets (it cut them at 8; the schema allows 12).
+  - A missing keyword chip on the ATS tab asks "Add it only if you've really used it" before adding the skill.
+  - "Use in Orbit" updates the document it made for this resume instead of adding a copy each time
+    (`replace_id` on `POST /v1/documents/text`: updated in place when it's still yours, no quota check; otherwise a
+    new one), and says why it couldn't save: the document limit (with a link to Documents), an account waiting for
+    approval, no connection. The browser remembers which document goes with which resume.
+- Security matrices: the new routes and `/fix` are in the per-user AI rate-limit matrix; `replace_id` naming someone
+  else's document leaves it alone and makes the caller their own.
+
 ## Interview prep from your resume, practised in a mock interview (2026-10-07)
 
 A new **Interview prep** tab in the resume editor turns the resume into interview practice, which other resume
