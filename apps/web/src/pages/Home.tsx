@@ -353,9 +353,11 @@ function GettingStarted({
   );
 }
 
-/** The web app captures a shared browser tab; the desktop app captures whole-system and per-app audio. */
+/** The web app captures a shared browser tab; the desktop app captures whole-system and per-app audio. The latest
+ * installer, from the free public download site (scripts/publish-download.ps1): GitHub release downloads need a
+ * GitHub sign-in while the repo is private. */
 const DESKTOP_DOWNLOAD_URL: string =
-  import.meta.env.VITE_DESKTOP_DOWNLOAD_URL ?? "https://github.com/Iamishfaq07/ishai/releases/latest";
+  import.meta.env.VITE_DESKTOP_DOWNLOAD_URL ?? "https://orbit-downloads.ishfaq.workers.dev/Orbit-Setup.exe";
 
 function DesktopPromo() {
   // The desktop app is Windows-only: elsewhere, say how to get the best capture from the browser instead.
@@ -398,8 +400,6 @@ function DesktopPromo() {
         </div>
         <a
           href={DESKTOP_DOWNLOAD_URL}
-          target="_blank"
-          rel="noreferrer"
           className={cx(
             "btn-sheen inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-indigo-700 shadow-lg hover:bg-indigo-50",
             focusRing,

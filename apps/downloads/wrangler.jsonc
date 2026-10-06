@@ -1,0 +1,12 @@
+// The public download site for the Windows installer: a Cloudflare Worker with static assets only (no script).
+// GitHub release downloads need a GitHub sign-in while the repo is private, so the web app's "Download for Windows"
+// button points here. Free: static-asset requests aren't billed or metered, no card on the account; 25 MiB per file.
+//
+// Not connected to git (Workers Builds deploys only the web app's root wrangler.jsonc): scripts/publish-download.ps1
+// stages ./dist and deploys it. Each deploy replaces the whole site, so it holds the latest release only.
+{
+  "name": "orbit-downloads",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  "assets": { "directory": "dist" }
+}

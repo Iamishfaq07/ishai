@@ -22,7 +22,8 @@ you can speak from.
 - **A good citizen.** A compact always-on-top window with adjustable transparency, a system tray, rebindable global
   shortcuts, and signed auto-updates. Accessible (WCAG AA) in light and dark themes.
 
-Download the Windows app from [Releases](https://github.com/Iamishfaq07/ishai/releases/latest). It updates itself.
+Download the Windows app from [orbit-downloads.ishfaq.workers.dev](https://orbit-downloads.ishfaq.workers.dev) (free, no
+sign-in; also on [Releases](https://github.com/Iamishfaq07/ishai/releases/latest)). It updates itself.
 
 ## Stack
 

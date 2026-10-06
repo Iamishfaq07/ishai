@@ -18,6 +18,7 @@
 .EXAMPLE
   ./scripts/release-desktop.ps1 -Version 0.1.13                  # build + checks only
   ./scripts/release-desktop.ps1 -Version 0.1.13 -Sign -Publish   # signed + gh release create (-NotesFile)
+                                                                 # + the public download (publish-download.ps1)
 #>
 param(
   [Parameter(Mandatory)] [ValidatePattern('^\d+\.\d+\.\d+$')] [string]$Version,
@@ -96,4 +97,11 @@ if ($Publish) {
   $notes = if ($NotesFile) { @("--notes-file", $NotesFile) } else { @("--generate-notes") }
   gh release create "v$Version" $installer "$installer.sig" --target $sha --title "Orbit $Version" @notes
   if ($LASTEXITCODE) { throw "gh release create failed" }
+  # The web app's Download button: the free public copy (GitHub downloads need a sign-in while the repo is private).
+  try { & "$PSScriptRoot\publish-download.ps1" -Version $Version -Installer $installer }
+  catch {
+    Write-Warning "Released on GitHub (installed apps update), but the download site wasn't updated: $_"
+    Write-Warning "Retry with: scripts/publish-download.ps1 -Version $Version"
+    exit 1
+  }
 }
