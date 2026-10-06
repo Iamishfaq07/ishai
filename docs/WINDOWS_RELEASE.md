@@ -48,6 +48,28 @@ uv run python -m orbit_api.stage_release ../../artifact "$ORBIT_DESKTOP_UPDATES_
 
 This refuses unsigned installers and never overwrites a published version. Installed clients pick the new version up on their next launch. The update check runs only on the setup screen, and installs are refused while a live session is recording.
 
+## 3. Public download (the web app's Download button)
+
+GitHub release downloads need a GitHub sign-in while the repo is private, so new users download from
+**https://orbit-downloads.ishfaq.workers.dev** instead: a Cloudflare Worker with static assets only
+(`apps/downloads/wrangler.jsonc`). It's free (static-asset requests aren't billed, no card needed) and takes files
+up to 25 MiB. It isn't connected to git, so web deploys never touch it.
+
+```powershell
+./scripts/publish-download.ps1 -Version 0.2.0   # release-desktop.ps1 -Publish runs this after gh release create
+```
+
+- **What it serves:**
+  - `/Orbit-Setup.exe`: always the latest installer, downloaded as `Orbit_X.Y.Z_x64-setup.exe`. The web button and
+    README link here.
+  - `/v/X.Y.Z/…`: the same file under its versioned path.
+  - `/latest.json`: version, size, SHA-256 and the updater signature.
+  - `/`: a small download page.
+- **Latest only:** each deploy replaces the whole site.
+- **Check:** the script downloads the live file again and compares its SHA-256 with the local installer.
+- **Cloudflare sign-in, once per machine:** `pnpm dlx wrangler@4 login`, or `CLOUDFLARE_API_TOKEN` with "Workers
+  Scripts: Edit".
+
 ## Update signing key (minisign), not code signing
 
 - **Public key:** `plugins.updater.pubkey` in `tauri.conf.json`.

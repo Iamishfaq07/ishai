@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- Template: scripts/publish-download.ps1 fills the {{…}} fields and serves the result as the site's index.html. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Download Orbit for Windows</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0b0b14; color: #f4f4f5; }
+    main { max-width: 32rem; margin: 1.5rem; padding: 2rem; border-radius: 1.5rem;
+           background: linear-gradient(135deg, #4f46e5, #3730a3 55%, #18181b); box-shadow: 0 20px 60px #4f46e540; }
+    h1 { margin: 0 0 .5rem; font-size: 1.5rem; }
+    p { margin: .5rem 0; line-height: 1.5; color: #e0e7ff; }
+    a.button { display: inline-block; margin: 1rem 0 .5rem; padding: .8rem 1.4rem; border-radius: .8rem;
+               background: #fff; color: #4338ca; font-weight: 600; text-decoration: none; }
+    a.button:hover { background: #eef2ff; }
+    small { display: block; color: #c7d2fe; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Orbit for Windows</h1>
+    <p>Real-time interview help that hears any call app. Windows 10 and 11, installs without admin rights, and
+      updates itself.</p>
+    <a class="button" href="/Orbit-Setup.exe">Download Orbit {{VERSION}}</a>
+    <small>{{FILE}} · {{SIZE}} · released {{DATE}}</small>
+    <small>SHA-256 {{SHA256}}</small>
+    <p>Windows may say "Windows protected your PC" because the installer isn't code-signed yet: choose
+      <b>More info</b>, then <b>Run anyway</b>.</p>
+  </main>
+</body>
+</html>
