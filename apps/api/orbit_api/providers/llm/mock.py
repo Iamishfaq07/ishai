@@ -106,6 +106,49 @@ def _mock_resume_import(body: str) -> str:
         "certifications": []})
 
 
+def _resume_ref(body: str) -> dict[str, Any]:
+    m = re.search(r'<reference_data source="resume">\s*(\{.*?\})\s*</reference_data>', body, re.S)
+    try:
+        data = json.loads(m.group(1)) if m else {}
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _mock_prep_questions(body: str) -> str:
+    """Two questions per role (one behavioural, its outline the role's own words) and one per project, plus one from the
+    job post when there is one: grounded, so they come back as written."""
+    resume = _resume_ref(body)
+    out: list[dict[str, Any]] = []
+    for role in resume.get("roles", []):
+        bullets = [str(b) for b in role.get("bullets", [])] or [str(role.get("title") or "the work")]
+        out += [{"group": role["id"], "type": "behavioral",
+                 "question": f"(mock) Walk me through your work at {role.get('company') or 'that job'}.",
+                 "outline": [f"Situation: {role.get('title', '')} at {role.get('company', '')}",
+                             f"Action: {bullets[0]}"],
+                 "missing": [], "defend": "(mock) Be ready to say what was yours alone.", "example": "(mock) Example"},
+                {"group": role["id"], "type": "technical", "question": f"(mock) How did this work: {bullets[-1]}?",
+                 "outline": [bullets[-1]], "missing": [], "defend": "", "example": ""}]
+    out += [{"group": p["id"], "type": "technical", "question": f"(mock) Why did you build {p.get('name')} this way?",
+             "outline": [str(p.get("description") or p.get("name"))], "missing": [], "defend": "", "example": ""}
+            for p in resume.get("projects", [])]
+    if 'source="job_post"' in body:
+        out.append({"group": "job", "type": "role", "question": "(mock) What in this job post fits your experience?",
+                    "outline": [], "missing": ["Add the part of the job you've done before"], "defend": "",
+                    "example": ""})
+    return json.dumps({"role": "(mock) Role", "questions": out})
+
+
+def _mock_skill_gap(body: str) -> str:
+    """Every missing keyword to prepare for, the first one not to claim."""
+    m = re.search(r'<reference_data source="missing">\s*(\[.*?\])\s*</reference_data>', body, re.S)
+    missing = json.loads(m.group(1)) if m else []
+    return json.dumps({"gaps": [
+        {"skill": kw, "verdict": "dont_claim" if i == 0 else "prepare", "evidence": "", "say": "",
+         "prepare": f"(mock) Read up on {kw}.", "note": "(mock) Say you haven't used it yet."}
+        for i, kw in enumerate(missing)]})
+
+
 class MockLLMProvider(LLMProvider):
     name = "mock"
 
@@ -182,6 +225,10 @@ class MockLLMProvider(LLMProvider):
                     "cut release time by [a number you can cite], and I led the work end to end.\n\n[mock] What "
                     "draws me to this team is the scale of the problem. I'd welcome the chance to talk.\n\n"
                     f"Sincerely,\n{name}")
+        if request.request_type == "resume_prep_questions":
+            return _mock_prep_questions(request.messages[-1].content if request.messages else "")
+        if request.request_type == "resume_skill_gap":
+            return _mock_skill_gap(request.messages[-1].content if request.messages else "")
         if request.request_type == "follow_up":
             return json.dumps({
                 "debrief": {"went_well": ["[mock] clear example"], "to_improve": ["[mock] add a metric"],

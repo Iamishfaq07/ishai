@@ -817,6 +817,8 @@ AI_ROUTES: list[tuple[str, str, dict[str, Any], int]] = [
     ("POST", "/v1/resumes/import-file", {}, 10),
     ("POST", "/v1/resumes/suggest", {"json": {}}, 10),
     ("POST", "/v1/resumes/cover-letter", {"json": {}}, 10),
+    ("POST", "/v1/resumes/prep/questions", {"json": {}}, 10),
+    ("POST", "/v1/resumes/prep/skill-gap", {"json": {}}, 10),
     ("POST", "/v1/sessions", {"json": {}}, 10),
     ("POST", "/v1/sessions/{sid}/drill", {}, 10),
     ("POST", "/v1/sessions/{sid}/review", {}, 3),

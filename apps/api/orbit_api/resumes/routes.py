@@ -10,6 +10,8 @@
   ("focus"). The editor applies them one accepted change at a time.
 - `POST /v1/resumes/cover-letter`: an AI cover letter from the resume and job post, grounded the same way; the
   editor saves it with the resume. `POST /v1/resumes/cover-letter/docx` downloads it as a Word file.
+- `POST /v1/resumes/prep/questions` and `/prep/skill-gap`: interview prep from the resume (resumes/interview_prep.py):
+  the questions an interviewer will ask about it, and what the job post asks for that it doesn't show.
 - Without a plan that includes resume AI, each AI action spends a resume credit (resumes/allowance.py); with none
   left they answer `402 upgrade_required`. `GET /v1/resumes/allowance` says what's left. There's no signed-out
   resume maker: it's part of the Orbit account.
@@ -37,7 +39,7 @@ from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError, LLMRequest, LLMResponse
 from orbit_api.providers.llm.pricing import estimate_cost
 from orbit_api.ratelimit import limit, limit_user
-from orbit_api.resumes import ai, autofix, fixes
+from orbit_api.resumes import ai, autofix, fixes, interview_prep
 from orbit_api.resumes.allowance import Allowance, AllowanceOut, allowance_for
 from orbit_api.resumes.ats import AtsReport, score_resume
 from orbit_api.resumes.claims import ground_import
@@ -480,3 +482,32 @@ async def fix(body: autofix.FixIn, user: Annotated[User, Depends(require_verifie
 async def cover_letter_docx(body: LetterDocxIn, _: Annotated[User, Depends(current_user)]) -> Response:
     content = await asyncio.to_thread(letter_docx, body.text, body.data, body.design)
     return Response(content, media_type=DOCX_TYPE, headers={"Cache-Control": "no-store"})
+
+
+# ---- interview prep from the resume ---------------------------------------------------------------------------
+
+
+@router.post("/prep/questions", response_model=interview_prep.QuestionsOut,
+             dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
+async def prep_questions(body: interview_prep.PrepIn, user: Annotated[User, Depends(require_verified_email)],
+                         db: Annotated[AsyncSession, Depends(get_db)],
+                         allowance: Annotated[Allowance, Depends(account_allowance)]) -> interview_prep.QuestionsOut:
+    """The questions an interviewer will ask about this resume, each with an outline from it and what to defend."""
+    return await _spend(allowance, interview_prep.questions(
+        body, get_llm_provider(), lambda req: _generate(db, user, req, "prep questions", allowance)))
+
+
+@router.post("/prep/skill-gap", response_model=interview_prep.SkillGapOut,
+             dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
+async def prep_skill_gap(body: interview_prep.PrepIn, user: Annotated[User, Depends(require_verified_email)],
+                         db: Annotated[AsyncSession, Depends(get_db)],
+                         allowance: Annotated[Allowance, Depends(account_allowance)]) -> interview_prep.SkillGapOut:
+    """What the job post asks for that the resume doesn't show: related experience, what to prepare, or don't claim."""
+    async def run() -> interview_prep.SkillGapOut:
+        out = await interview_prep.skill_gap(
+            body, get_llm_provider(), lambda req: _generate(db, user, req, "skill gap", allowance))
+        if not out.gaps:  # the resume shows everything the post asks for: nothing to spend the credit on
+            await allowance.release()
+        return out
+
+    return await _spend(allowance, run())

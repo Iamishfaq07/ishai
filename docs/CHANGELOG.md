@@ -1,5 +1,41 @@
 # Implementation log
 
+## Interview prep from your resume, practised in a mock interview (2026-10-07)
+
+A new **Interview prep** tab in the resume editor turns the resume into interview practice, which other resume
+builders can't do: they stop at the document.
+
+- **Questions from my resume** (1 resume credit): what an interviewer is most likely to ask about this resume, 2 to 4
+  for each role and project, plus 3 to 5 from the job post when there is one, grouped by role and project with copy
+  buttons. They name the resume's own lines ("You cut failed UPI payments by 35% with idempotent retries. What was
+  the failure rate before, and how did you measure the 35%?"), never "Tell me about yourself".
+  - Each has an **answer outline built only from the resume** (Situation, Task, Action, Result for behavioural ones).
+    A figure or tool the resume doesn't state is taken out (resumes/claims.py); a part the resume doesn't give, or a
+    note that only names a topic, becomes a prompt for you instead ("Add the baseline failure rate").
+  - **Be ready to defend**: where the interviewer will push. What they push on is found first, without the AI, and
+    handed to the model: big numbers, team sizes and "led"/"owned", skills listed with nothing behind them, short
+    stints (under a year, internships aside), gaps of more than four months, and no current role.
+  - Real DeepSeek, a 3-role resume with a job post: 15-17 questions in about 12 s.
+- **Skill gap for this job** (1 resume credit; needs a job post): every job keyword the resume lacks, the same list as
+  the ATS score's, plus up to 4 other requirements the post states ("5+ years" is dropped when the resume shows them).
+  Each gets "you have related experience: say it like…", "prepare: …" or "don't claim it". Related experience must
+  quote a real resume line, or it's downgraded. Keywords that aren't skills (the company's name, a city) can be
+  skipped. Nothing missing: no credit spent.
+- **Practise these in a mock interview**: tick up to 8 (each role's first question is ticked first) and Orbit's AI
+  interviewer asks them, in order, as a "prep" drill (`MockConfig.drill`, no migration), marked "From your prep".
+  A question with a defend note gets a live follow-up that pushes there ("what was your specific role, versus the
+  other engineers?"). The resume and the job post are saved to Documents for the round, reusing the document "Use in
+  Orbit" made (same kind and title, brought up to date) instead of adding a copy. The session is created on the
+  server, so the desktop app can start or rejoin it too.
+- **Save to my stories**: a behavioural outline goes to the story bank as a STAR draft, the parts to fill in left as
+  [prompts], so live interviews can use it.
+- Hidden sections never reach the AI. Results stay while the editor is open; nothing is stored on the server.
+- The editor's tabs show labels without icons from tablet width up (six don't fit with both), with "Letter" and "Prep"
+  where the editor sits beside the preview in a narrow column.
+- Fixed: a year before a comma ("Aug 2020,") counted as an invented figure, so grounding took it out of AI text.
+- API: `POST /v1/resumes/prep/questions` and `POST /v1/resumes/prep/skill-gap` (`{data, job_text}`); the shared client
+  has `resumeQuestions` and `resumeSkillGap`. Drill items accept `feedback` from the web types too.
+
 ## Resume maker for students and freshers: CGPA, Campus and Harvard templates, fair scores without a job (2026-10-07)
 
 Most people using the Resume maker are Indian job seekers, many of them students applying through campus placements,
