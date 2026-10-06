@@ -54,6 +54,8 @@ def test_deepgram_timestamps_continue_across_a_reconnect() -> None:
     s._start_socket_timeline()  # new socket: its t=0 is where the backlog starts (3.0 s)
     ev = s.shift(TranscriptEvent("final", "again", 100, 400))
     assert (ev.start_ms, ev.end_ms) == (3_100, 3_400)
+    assert s.shift(TranscriptEvent("utterance_end", "", 380, 380, endpoint=True)).end_ms == 3_380  # same timeline
+    assert s.shift(TranscriptEvent("utterance_end", "", 0, 0, endpoint=True)).end_ms == 0  # unknown stays unknown
 
 
 async def test_engine_measures_legs_from_the_end_of_speech() -> None:

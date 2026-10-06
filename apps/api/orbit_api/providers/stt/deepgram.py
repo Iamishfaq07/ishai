@@ -85,7 +85,10 @@ def parse_message(msg: dict[str, Any]) -> TranscriptEvent | None:
     if mtype == "SpeechStarted":
         return TranscriptEvent(kind="speech_started")
     if mtype == "UtteranceEnd":
-        return TranscriptEvent(kind="utterance_end", endpoint=True)
+        # Where the utterance's last word ended. UtteranceEnd can arrive after the next sentence has begun, and this is
+        # how the engine tells which turn it ends. Missing or -1 (no words): 0, unknown.
+        last = max(0, int(float(msg.get("last_word_end") or 0) * 1000))
+        return TranscriptEvent(kind="utterance_end", start_ms=last, end_ms=last, endpoint=True)
     return None
 
 
@@ -176,7 +179,7 @@ class DeepgramSession(STTSession):
         self._offset_ms = self._audio_ms_total - sum(len(c) for c in self._backlog) / BYTES_PER_MS
 
     def shift(self, ev: TranscriptEvent) -> TranscriptEvent:
-        if ev.kind in ("partial", "final") and self._offset_ms:
+        if self._offset_ms and (ev.kind in ("partial", "final") or (ev.kind == "utterance_end" and ev.end_ms)):
             ev.start_ms += int(self._offset_ms)
             ev.end_ms += int(self._offset_ms)
         return ev

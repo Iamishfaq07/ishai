@@ -71,6 +71,9 @@ def test_deepgram_url_and_parsing() -> None:
                            "duration": 1.2, "channel": {"alternatives": [{"transcript": "tell me about yourself"}]}})
     assert final and final.kind == "final" and final.endpoint
     assert parse_message({"type": "UtteranceEnd"}).kind == "utterance_end"  # type: ignore[union-attr]
+    late = parse_message({"type": "UtteranceEnd", "channel": [0, 1], "last_word_end": 2.395})
+    assert late and late.kind == "utterance_end" and late.end_ms == 2395
+    assert parse_message({"type": "UtteranceEnd", "last_word_end": -1}).end_ms == 0  # type: ignore[union-attr]
     assert parse_message({"type": "Metadata"}) is None
 
 
