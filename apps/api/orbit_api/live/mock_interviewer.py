@@ -53,7 +53,8 @@ class DrillItem(BaseModel):
     kind: DrillKind = "retry"
     # Ask one live follow-up on the new answer (probing what the review said was missing).
     follow_up: bool = False
-    # What the review said was weak last time: steers the follow-up, never read out.
+    # What the review said was weak last time: steers the follow-up, never read out. For a "prep" question, where an
+    # interviewer would push on the claim behind it (the resume maker's "be ready to defend" note).
     feedback: str | None = Field(None, max_length=400)
 
 
@@ -553,7 +554,14 @@ class MockInterviewer:
         system = _SYSTEM.format(persona=_PERSONAS[cfg.persona], role=role, difficulty=_DIFFICULTY[cfg.difficulty],
                                 focus=_TYPES[cfg.interview_type])
         follow_ups = self._follow_ups_in_topic()
-        if follow_up_on is not None:
+        if follow_up_on is not None and follow_up_on.kind == "prep":
+            # A question from their prep: probe the resume claim behind it, the way the prep said you would.
+            steer = ("Ask ONE probing follow-up on the candidate's last answer (is_follow_up true), the way an "
+                     "interviewer checks a resume claim: ask for the specifics behind what they just said.")
+            if follow_up_on.feedback:
+                steer += (f"\n<reference_data source=\"what_to_probe\">\n{fence(follow_up_on.feedback)}\n"
+                          "</reference_data>")
+        elif follow_up_on is not None:
             steer = ("Ask ONE probing follow-up on the candidate's last answer (is_follow_up true). Push on what was "
                      "weak before: vague claims, missing results or trade-offs.")
             if follow_up_on.feedback:

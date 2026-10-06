@@ -33,8 +33,8 @@ def _normal(digits: str, suffix: str | None) -> str:
 def _figures(text: str) -> list[tuple[re.Match[str], str]]:
     out = []
     for m in _NUMBER.finditer(text):
-        if not m.group(2) and _YEAR.fullmatch(m.group(1)):
-            continue  # dates aren't figures a rewrite can inflate
+        if not m.group(2) and _YEAR.fullmatch(m.group(1).rstrip(",")):
+            continue  # dates aren't figures a rewrite can inflate (nor is "Aug 2020," before a comma)
         out.append((m, _normal(m.group(1), m.group(2))))
     return out
 
