@@ -130,7 +130,13 @@ export interface MockConfig {
   duration_minutes: number;
   persona?: MockPersona;
   /** A fixed list of questions, asked in order (re-drills, or questions from interview prep: kind "prep"). */
-  drill?: Array<{ question: string; kind?: "retry" | "concise" | "prep"; follow_up?: boolean }>;
+  drill?: Array<{
+    question: string;
+    kind?: "retry" | "concise" | "prep";
+    follow_up?: boolean;
+    /** Steers the follow-up, never read out: what was weak last time, or (prep) where to push on the claim. */
+    feedback?: string;
+  }>;
   /** Required when interview_type is "negotiation". */
   negotiation?: NegotiationSetup;
 }
@@ -1014,4 +1020,67 @@ export interface ResumeSuggestRequest {
   focus?: string;
   /** Fix this ATS check, by id ("skills_count", "dates", "quantified"…). */
   check?: string;
+}
+
+// ─── Interview prep from the resume (POST /v1/resumes/prep/*, nothing stored) ──
+
+/** What a set of questions is about: a role or project (by its id), the job post ("job"), or the whole resume. */
+export interface ResumePrepGroup {
+  id: string;
+  kind: "role" | "project" | "job" | "general";
+  label: string;
+}
+
+export interface ResumeOutlinePoint {
+  /** "Situation", "Task", "Action" or "Result" in a behavioural answer; else "". */
+  label: string;
+  text: string;
+  /** A prompt for you in place of a fact: the resume doesn't say this part ("Add the result you got"). */
+  ask: boolean;
+}
+
+export interface ResumeInterviewQuestion {
+  id: string;
+  /** A ResumePrepGroup id. */
+  group: string;
+  question: string;
+  type: "behavioral" | "technical" | "role" | "motivation";
+  /** Built only from the resume. */
+  outline: ResumeOutlinePoint[];
+  /** Facts only you can add; the resume doesn't say them. */
+  missing: string[];
+  /** Where the interviewer will push; "" when there's nothing to defend. */
+  defend: string;
+  /** A behavioural answer's example in a few words. */
+  example: string;
+}
+
+export interface ResumeQuestionsResponse {
+  /** The job the interviewer is hiring for. */
+  role: string;
+  groups: ResumePrepGroup[];
+  questions: ResumeInterviewQuestion[];
+}
+
+export type ResumeGapVerdict = "related" | "prepare" | "dont_claim";
+
+export interface ResumeSkillGap {
+  skill: string;
+  /** One of the ATS score's missing job keywords (else another requirement in the post). */
+  keyword: boolean;
+  verdict: ResumeGapVerdict;
+  /** related: the resume line it rests on. */
+  evidence: string;
+  /** related: how to say it in the interview. */
+  say: string;
+  /** What to study or practise first. */
+  prepare: string;
+  /** dont_claim: how to answer if it comes up. */
+  note: string;
+}
+
+export interface ResumeSkillGapResponse {
+  gaps: ResumeSkillGap[];
+  /** The job keywords the resume already shows. */
+  matched: string[];
 }

@@ -104,6 +104,17 @@ export { Teleprompter, type TeleprompterProps } from "./components/Teleprompter"
 export { TranscriptView, type TranscriptViewProps } from "./components/TranscriptView";
 export { checkServerUrl, trimTrailingSlashes, type ServerUrlCheck } from "./serverUrl";
 export { MAX_SESSION_DOCUMENTS, practiceDocumentIds } from "./sessionDocuments";
+export {
+  MAX_PRACTICE,
+  defaultPractice,
+  practiceDocuments,
+  practiceDrill,
+  practiceMinutes,
+  prepText,
+  questionText,
+  skillGapText,
+  storyFromQuestion,
+} from "./resumePrep";
 export { useReportPolling } from "./hooks/useReportPolling";
 export { ReportStatusNote } from "./components/ReportStatusNote";
 export { WorkspaceBar } from "./components/WorkspaceBar";

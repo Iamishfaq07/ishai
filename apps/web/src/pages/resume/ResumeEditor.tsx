@@ -13,6 +13,7 @@ import {
   Gauge,
   Link2,
   Mail,
+  MessagesSquare,
   Palette,
   PenLine,
   Plus,
@@ -36,11 +37,12 @@ import { ContentForm } from "./ContentForm";
 import { AiCostNote, AiErrorNote, AllowanceBanner, AllowanceContext, isUpgradeError, useAllowance, useResumeAllowance } from "./allowance";
 import { useBackend } from "./backend";
 import { FixActions, FixResult, fixKind } from "./FixPanel";
+import { InterviewPrep, usePrepState } from "./InterviewPrep";
 import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, resumeToText, suggestedSkills } from "./model";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
 
-type Tab = "content" | "score" | "ai" | "design" | "letter";
+type Tab = "content" | "score" | "ai" | "design" | "letter" | "prep";
 
 /** What undo/redo restores: everything the user edits. */
 type Snapshot = Pick<Resume, "title" | "data" | "design" | "job_text" | "cover_letter">;
@@ -51,12 +53,14 @@ const HISTORY_LIMIT = 100;
 /** Edits closer together than this, in the same field, undo as one step (a burst of typing). */
 const HISTORY_GROUP_MS = 1200;
 
-const TABS: Array<{ id: Tab; label: string; icon: typeof FileText }> = [
+/** `short`: the label where the column is narrow. */
+const TABS: Array<{ id: Tab; label: string; short?: string; icon: typeof FileText }> = [
   { id: "content", label: "Content", icon: PenLine },
   { id: "score", label: "ATS score", icon: Gauge },
   { id: "ai", label: "AI fixes", icon: Wand2 },
   { id: "design", label: "Design", icon: Palette },
-  { id: "letter", label: "Cover letter", icon: Mail },
+  { id: "letter", label: "Cover letter", short: "Letter", icon: Mail },
+  { id: "prep", label: "Interview prep", short: "Prep", icon: MessagesSquare },
 ];
 
 /** What the spinner says while the AI works on each kind of problem. */
@@ -102,6 +106,7 @@ function ResumeEditor() {
   // The free AI use is spent: the AI panel offers the upgrade with its message.
   const [aiUpgrade, setAiUpgrade] = useState(false);
   const allowance = useResumeAllowance();
+  const prep = usePrepState(); // the Interview prep tab's results, kept while the editor is open
   const [notice, setNotice] = useState<string | null>(
     (location.state as { imported?: boolean } | null)?.imported
       ? "We imported your resume. Check each section: the AI reads most resumes well, but not perfectly."
@@ -499,7 +504,7 @@ function ResumeEditor() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <div className="min-w-0">
           <div role="tablist" aria-label="Resume editor" className="sticky top-16 z-10 mb-4 flex gap-1 rounded-xl bg-zinc-100/90 p-1 backdrop-blur-sm dark:bg-zinc-900/90">
-            {TABS.map(({ id, label, icon: Icon }) => (
+            {TABS.map(({ id, label, short, icon: Icon }) => (
               <button
                 key={id}
                 role="tab"
@@ -513,9 +518,11 @@ function ResumeEditor() {
                   focusRing,
                 )}
               >
-                {/* Icons alone on phones; labels alone where the column is narrow; both when there's room. */}
-                <Icon className="h-4 w-4 shrink-0 sm:max-xl:hidden" aria-hidden />
-                <span className="hidden sm:inline">{label}</span>
+                {/* Icons alone on phones, labels from there up (six tabs leave no room for both), short ones where
+                    the editor sits beside the preview in a narrow column. */}
+                <Icon className="h-4 w-4 shrink-0 sm:hidden" aria-hidden />
+                <span className={cx("hidden sm:inline", short && "lg:hidden xl:inline")}>{label}</span>
+                {short && <span className="hidden lg:inline xl:hidden">{short}</span>}
                 {id === "ai" && queue.length > 0 && <span className="rounded-full bg-indigo-600 px-1.5 text-[0.625rem] text-white">{queue.length}</span>}
               </button>
             ))}
@@ -591,6 +598,7 @@ function ResumeEditor() {
               onPrint={() => printDoc("letter")}
             />
           )}
+          {tab === "prep" && <InterviewPrep resume={resume} prep={prep} onShowJob={() => setTab("score")} />}
         </div>
 
         <div className="min-w-0">

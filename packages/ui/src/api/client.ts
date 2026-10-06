@@ -46,6 +46,8 @@ import type {
   ResumeInput,
   ResumeFixRequest,
   ResumeFixResponse,
+  ResumeQuestionsResponse,
+  ResumeSkillGapResponse,
   ResumeSuggestRequest,
   ResumeSuggestion,
   ResumeSummary,
@@ -236,6 +238,20 @@ export function createApiClient(options: ApiClientOptions) {
       json<ResumeFixResponse>(`${base}/fix`, { method: "POST", body: body(req), timeoutMs: LONG_TIMEOUT_MS }),
     /** Unlimited AI on this plan, or how many resume credits are left (and the cheapest pack that adds more). */
     resumeAllowance: () => json<ResumeAiAllowance>(`${base}/allowance`),
+    /** The questions an interviewer will ask about this resume, with answer outlines from it; one resume credit. */
+    resumeQuestions: (data: ResumeData, jobText: string) =>
+      json<ResumeQuestionsResponse>(`${base}/prep/questions`, {
+        method: "POST",
+        body: body({ data, job_text: jobText }),
+        timeoutMs: LONG_TIMEOUT_MS,
+      }),
+    /** What the job post asks for that the resume doesn't show, and what to do about each; one resume credit. */
+    resumeSkillGap: (data: ResumeData, jobText: string) =>
+      json<ResumeSkillGapResponse>(`${base}/prep/skill-gap`, {
+        method: "POST",
+        body: body({ data, job_text: jobText }),
+        timeoutMs: LONG_TIMEOUT_MS,
+      }),
   });
 
   return {
