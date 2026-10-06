@@ -558,6 +558,19 @@ def test_created_objects_always_belong_to_the_caller(world: World, path: str, bo
     world.call("DELETE", f"{listing}/{new_id}", world.b)  # keep B's document quota free
 
 
+def test_a_new_version_of_a_document_cannot_replace_someone_elses(world: World) -> None:
+    """"Use in Orbit" sends the id of the document it made before, to update it in place. Naming A's document must
+    neither touch it nor say whether it exists: B just gets a new document of their own."""
+    before = _owner_view(world)
+    r = world.call("POST", "/v1/documents/text", world.b, json={
+        "title": "Bob's CV", "kind": "resume", "text": "pwned by bob " * 5, "replace_id": "{doc_resume}"})
+    new_id = _created(r)
+    assert r.status_code == 201 and new_id != world.ids["doc_resume"]
+    assert _owner_view(world) == before
+    assert new_id in {d["id"] for d in world.get("/v1/documents", world.b)}
+    world.call("DELETE", f"/v1/documents/{new_id}", world.b)  # keep B's document quota free
+
+
 def test_resume_update_cannot_move_it_to_another_account(world: World) -> None:
     rid = _created(world.call("POST", "/v1/resumes", world.b, json={"title": "Bob's CV"}))
     r = world.call("PUT", f"/v1/resumes/{rid}", world.b, json={"title": "Bob's CV v2", "user_id": world.ids["a_id"],

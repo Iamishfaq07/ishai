@@ -1,5 +1,6 @@
 """Resume maker fixes from an audit: hidden sections never reach the AI, the cost log names the provider that answered
-(with the latency, and failures), and import keeps every project bullet the editor allows."""
+(with the latency, and failures), import keeps every project bullet the editor allows, and "Use in Orbit" updates
+the document it made instead of adding a copy each time."""
 
 import json
 from collections.abc import AsyncIterator
@@ -127,3 +128,36 @@ def test_import_keeps_up_to_twelve_project_bullets() -> None:
     raw = {"basics": {"name": "Asha Rao"},
            "projects": [{"name": "Ledger", "bullets": [f"Built part {i} of the ledger" for i in range(15)]}]}
     assert len(ai.parse_structured(json.dumps(raw)).projects[0].bullets) == 12
+
+
+# ---- "Use in Orbit" updates its document ------------------------------------------------------------------------
+
+
+def test_use_in_orbit_updates_the_document_it_made_instead_of_copying_it(client: TestClient) -> None:
+    h = _register(client)
+    first = client.post("/v1/documents/text", headers=h,
+                        json={"title": "My resume", "kind": "resume", "text": "Sam Lee. Backend engineer at PayCo."})
+    assert first.status_code == 201
+    doc = first.json()["id"]
+    again = client.post("/v1/documents/text", headers=h, json={
+        "title": "My resume v2", "kind": "resume", "text": "Sam Lee. Senior backend engineer at PayCo.",
+        "replace_id": doc})
+    assert again.status_code == 200 and again.json()["id"] == doc and again.json()["title"] == "My resume v2"
+    assert [d["id"] for d in client.get("/v1/documents", headers=h).json()] == [doc]
+    assert "Senior backend" in client.get(f"/v1/documents/{doc}/text", headers=h).json()["text"]
+
+    # At the free plan's limit, a new version still goes in; a new document doesn't, and says why.
+    for n in range(2):
+        assert client.post("/v1/documents/text", headers=h, json={
+            "title": f"Notes {n}", "kind": "notes", "text": "Notes about the ledger migration."}).status_code == 201
+    full = client.post("/v1/documents/text", headers=h, json={"title": "x", "kind": "notes", "text": "y" * 30})
+    assert full.status_code == 402 and "Delete one" in full.json()["detail"]
+    assert client.post("/v1/documents/text", headers=h, json={
+        "title": "My resume v3", "kind": "resume", "text": "Sam Lee. Staff engineer.", "replace_id": doc,
+    }).status_code == 200
+
+    # Deleted meanwhile: a new one is made, as without the id.
+    client.delete(f"/v1/documents/{doc}", headers=h)
+    made = client.post("/v1/documents/text", headers=h, json={
+        "title": "My resume", "kind": "resume", "text": "Sam Lee. Staff engineer at PayCo.", "replace_id": doc})
+    assert made.status_code == 201 and made.json()["id"] != doc

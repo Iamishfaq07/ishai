@@ -18,7 +18,6 @@ import {
   PenLine,
   Plus,
   Redo2,
-  Save,
   Sparkles,
   Undo2,
   Upload,
@@ -38,9 +37,10 @@ import { AiCostNote, AiErrorNote, AllowanceBanner, AllowanceContext, isUpgradeEr
 import { useBackend } from "./backend";
 import { FixActions, FixResult, fixKind } from "./FixPanel";
 import { InterviewPrep, usePrepState } from "./InterviewPrep";
-import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, resumeToText, suggestedSkills } from "./model";
+import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, suggestedSkills } from "./model";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
+import { SaveToDocuments } from "./SaveToDocuments";
 
 type Tab = "content" | "score" | "ai" | "design" | "letter" | "prep";
 
@@ -669,27 +669,6 @@ function SaveState({ state, error, onRetry }: { state: "saved" | "saving" | "dir
         "Saving…"
       )}
     </span>
-  );
-}
-
-function SaveToDocuments({ resume }: { resume: Resume }) {
-  const [state, setState] = useState<"idle" | "busy" | "done" | "error">("idle");
-  return (
-    <Button
-      variant="secondary"
-      disabled={state === "busy"}
-      title="Add this resume to Documents, so live sessions answer from it"
-      onClick={() => {
-        setState("busy");
-        api
-          .createTextDocument({ kind: "resume", title: resume.title, text: resumeToText(resume.data) })
-          .then(() => setState("done"))
-          .catch(() => setState("error"));
-      }}
-    >
-      {state === "done" ? <CircleCheck className="h-4 w-4 text-emerald-600" /> : <Save className="h-4 w-4" />}
-      {state === "done" ? "Saved to Documents" : state === "error" ? "Couldn't save, try again" : "Use in Orbit"}
-    </Button>
   );
 }
 

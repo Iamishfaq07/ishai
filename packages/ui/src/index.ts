@@ -115,6 +115,7 @@ export {
   skillGapText,
   storyFromQuestion,
 } from "./resumePrep";
+export { linkedDocument, rememberDocument } from "./resume/storage";
 export { useReportPolling } from "./hooks/useReportPolling";
 export { ReportStatusNote } from "./components/ReportStatusNote";
 export { WorkspaceBar } from "./components/WorkspaceBar";

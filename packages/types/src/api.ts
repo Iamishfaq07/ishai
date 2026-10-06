@@ -88,6 +88,8 @@ export interface CreateTextDocumentRequest {
   title: string;
   kind: DocumentKind;
   text: string;
+  /** A new version of this document (if it's still yours): updated in place instead of copied. */
+  replace_id?: string;
 }
 
 export interface DocumentText {
