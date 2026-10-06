@@ -290,7 +290,9 @@ def questions_request(data: ResumeData, job_text: str, llm: LLMProvider) -> LLMR
                      f"{fence(json.dumps(probes, ensure_ascii=False))}\n</reference_data>")
     if job_text.strip():
         parts.append("<reference_data source=\"job_post\">\n" + fence(job_text[:MAX_JOB_CHARS]) + "\n</reference_data>")
-    parts.append(f"Task: the questions for {roles} role(s) and {projects} project(s), at most {MAX_QUESTIONS}, "
+    # The month, so "how long" is worked out from the dates rather than guessed ("three years at PayNest").
+    parts.append(f"Today is {datetime.now(UTC):%B %Y}. Task: the questions for {roles} role(s) and {projects} "
+                 f"project(s), at most {MAX_QUESTIONS}, "
                  + ("then 3-5 \"job\" questions from the job post." if job_text.strip()
                     else "and no \"job\" questions (there's no job post)."))
     return LLMRequest(
@@ -308,6 +310,8 @@ _BRACKET = re.compile(r"\[([^\][\n]{1,120})\]")
 _INSTRUCTION = re.compile(r"^(?:add|describe|explain|say|give|name|mention|talk|share|walk|tell|list|state|discuss|"
                           r"outline|highlight|show|be|have|prepare|admit|separate|clarify|include|note|check)\b",
                           re.IGNORECASE)
+# ...or names what to talk about ("how the boundaries were chosen", "what the split changed") without saying it.
+_TOPIC = re.compile(r"^(?:how|what|why|when|where|which|who|whether)\b", re.IGNORECASE)
 # How a prompt in "missing" names a part of the story, so it fills that part instead of being asked twice.
 _STAR_WORDS = {"Situation": ("situation", "context", "where this"), "Task": ("task", "asked to", "goal"),
                "Action": ("action", "you did", "yourself", "steps"), "Result": ("result", "outcome", "impact")}
@@ -384,7 +388,7 @@ def _outline(raw: Any, corpus: str) -> tuple[list[OutlinePoint], list[str]]:
         blanks = [_ask(b) for b in _BRACKET.findall(body)]
         body = _tidy(_BRACKET.sub("", body))
         point: OutlinePoint | None = None
-        if body and _INSTRUCTION.match(body):
+        if body and (_INSTRUCTION.match(body) or _TOPIC.match(body)):
             point = OutlinePoint(label=label, text=_ask(body)[:300], ask=True)
         elif kept := (_grounded(body, corpus) if body else ""):
             point = OutlinePoint(label=label, text=kept[:300])
@@ -397,16 +401,18 @@ def _outline(raw: Any, corpus: str) -> tuple[list[OutlinePoint], list[str]]:
 
 
 def _story(points: list[OutlinePoint], asks: list[str]) -> list[OutlinePoint]:
-    """A behavioural outline as the four parts of the story, in order; a part the resume doesn't give is a prompt
-    (one of the model's own when it names that part, else STAR_ASK). Takes the prompts it uses out of `asks`."""
+    """A behavioural outline as the four parts of the story, in order; a part the resume doesn't give is a prompt:
+    the model's own when one in `asks` names that part (taken out of `asks`, so it isn't asked twice), else STAR_ASK."""
     out: list[OutlinePoint] = []
     for part in STAR:
         have = next((p for p in points if p.label == part), None)
-        if have is None:
+        if have is None or have.ask:
             hint = next((a for a in asks if any(w in a.lower() for w in _STAR_WORDS[part])), None)
             if hint is not None:
                 asks.remove(hint)
-            have = OutlinePoint(label=part, text=hint or STAR_ASK[part], ask=True)
+                have = OutlinePoint(label=part, text=hint, ask=True)
+            elif have is None:
+                have = OutlinePoint(label=part, text=STAR_ASK[part], ask=True)
         out.append(have)
     return (out + [p for p in points if p.label not in STAR])[:MAX_POINTS]
 

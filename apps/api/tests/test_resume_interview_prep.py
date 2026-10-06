@@ -131,6 +131,22 @@ def test_outlines_say_only_what_the_resume_does() -> None:
     assert [g.id for g in out.groups] == [data.experience[0].id, "general", "job"]
 
 
+def test_a_note_that_only_names_the_topic_is_a_prompt_and_is_asked_once() -> None:
+    data = resume()
+    out = ip.parse_questions(_answer({
+        "group": data.experience[0].id, "type": "behavioral",
+        "question": "You led the ledger migration at PayCo. How did you plan it?",
+        "outline": ["Situation: the ledger at PayCo", "Task: led the migration to event sourcing",
+                    "Action: how the work was split across the team", "Result: what the migration changed"],
+        "missing": ["Add the result of the migration, with a number if you have one"], "defend": "", "example": ""}),
+        data.visible(), "")
+    q = out.questions[0]
+    star = {p.label: p for p in q.outline}
+    assert star["Action"].ask and star["Action"].text == "Add how the work was split across the team"
+    assert star["Result"].ask and star["Result"].text.startswith("Add the result of the migration, with a number")
+    assert q.missing == []  # it became the Result part, not a second prompt for the same thing
+
+
 def test_garbage_or_an_empty_answer_is_an_error() -> None:
     with pytest.raises(ValueError):
         ip.parse_questions(_answer(), resume(), "")
