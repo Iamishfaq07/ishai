@@ -41,9 +41,10 @@ no new AI cost.
   shortcuts.
 - **Sign-in and sign-up**: show/hide on password fields, a strength hint, "Takes about a minute", a plain headline,
   the "where it's allowed" line, links to the front page, terms, privacy and contact, 32 px tap targets.
-- **Trust pages, DRAFTS for the owner to review**: `public/terms.html`, `refund.html`, `contact.html`, with the
-  owner-only details (legal name, address, support contacts, grievance officer, courts) and the policy choices
-  (refund window, part-used packs) highlighted in brackets.
+- **Trust pages, DRAFTS, not published**: Terms, Refund and Contact are in `docs/legal-drafts/` (with how to publish
+  them), not served, until the owner fills in the bracketed details (legal name, address, support contacts,
+  grievance officer, courts, GST) and the refund rules. `LEGAL_PAGES_PUBLISHED` in `lib/contact.ts` hides every link
+  to them meanwhile (footer, Help, sign-in, sign-up, the front page's refund answer and "Contact us"); Privacy stays.
 - **Link previews**: description, Open Graph and Twitter tags in `index.html`, a 1200 x 630 image
   (`public/og-image.png`, 77 KB, from `og/og-image.svg`), and per-page titles for `/`, `/resume-ai`, `/jobs` and
   `/warmup` from the Worker (`worker/meta.js`, HTMLRewriter; those four paths are now in `run_worker_first`; the

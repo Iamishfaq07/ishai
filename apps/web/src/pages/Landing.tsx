@@ -18,7 +18,7 @@ import {
 import { Footer } from "../components/Footer";
 import { PRODUCTS, ProductMark, type ProductId } from "../components/products";
 import { api } from "../lib/api";
-import { CONTACT_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
+import { CONTACT_PAGE, REFUND_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
 import { useWelcomeGrant, type WelcomeGrant } from "../lib/welcome";
 
 /**
@@ -430,11 +430,16 @@ function Pricing({ packs, welcome, stats }: { packs: CreditPack[] | null; welcom
         </table>
       </div>
       <p className="mt-3 text-xs text-zinc-600 dark:text-zinc-400">
-        If an AI action fails, its credit comes back. Refunds:{" "}
-        <a href="/refund.html" className={cx("rounded underline underline-offset-2", focusRing)}>
-          see the refund policy
-        </a>
-        .
+        If an AI action fails, its credit comes back.
+        {REFUND_PAGE && (
+          <>
+            {" "}Refunds:{" "}
+            <a href={REFUND_PAGE} className={cx("rounded underline underline-offset-2", focusRing)}>
+              see the refund policy
+            </a>
+            .
+          </>
+        )}
       </p>
     </section>
   );
@@ -481,16 +486,21 @@ function Faq({ welcome, stats }: { welcome: WelcomeGrant | null; stats: JobStats
         your UPI app shows, and then the credits are added. Nothing renews, and what you buy never expires.
       </p>,
     ],
-    [
-      "Can I get a refund?",
-      <p>
-        Yes, for a pack you haven't used, and if a payment went wrong.{" "}
-        <a href="/refund.html" className="underline underline-offset-2">
-          The refund policy
-        </a>{" "}
-        has the details.
-      </p>,
-    ],
+    // The refund answer waits for the owner's refund rules, with the refund page (lib/contact.ts).
+    ...(REFUND_PAGE
+      ? ([
+          [
+            "Can I get a refund?",
+            <p>
+              Yes, for a pack you haven't used, and if a payment went wrong.{" "}
+              <a href={REFUND_PAGE} className="underline underline-offset-2">
+                The refund policy
+              </a>{" "}
+              has the details.
+            </p>,
+          ],
+        ] as Array<[string, ReactNode]>)
+      : []),
     [
       "Does it work on my phone?",
       <p>
@@ -538,13 +548,15 @@ function Faq({ welcome, stats }: { welcome: WelcomeGrant | null; stats: JobStats
           </details>
         ))}
       </div>
-      <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
-        Something else?{" "}
-        <a href={CONTACT_PAGE} className={cx("rounded font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
-          Contact us
-        </a>
-        .
-      </p>
+      {CONTACT_PAGE && (
+        <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
+          Something else?{" "}
+          <a href={CONTACT_PAGE} className={cx("rounded font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
+            Contact us
+          </a>
+          .
+        </p>
+      )}
     </section>
   );
 }

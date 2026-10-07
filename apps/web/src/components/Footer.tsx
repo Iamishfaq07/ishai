@@ -60,11 +60,13 @@ export function Footer({ className }: { className?: string }) {
                 Common questions
               </Link>
             </li>
-            <li>
-              <a href={CONTACT_PAGE} className={link}>
-                Contact us
-              </a>
-            </li>
+            {CONTACT_PAGE && (
+              <li>
+                <a href={CONTACT_PAGE} className={link}>
+                  Contact us
+                </a>
+              </li>
+            )}
           </ul>
         </nav>
         <nav aria-label="Policies">

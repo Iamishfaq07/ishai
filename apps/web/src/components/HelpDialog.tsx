@@ -52,6 +52,7 @@ export default function HelpDialog({ open, onClose, onSearch }: { open: boolean;
   return (
     <Sheet open={open} onClose={onClose} title="Help" titleId="help-title">
       <div className="space-y-7 px-5 py-5">
+        {(whatsapp || mail || CONTACT_PAGE) && (
         <section aria-labelledby="help-contact">
           <h3 id="help-contact" className="font-display text-base font-semibold">
             Talk to a person
@@ -70,13 +71,14 @@ export default function HelpDialog({ open, onClose, onSearch }: { open: boolean;
                 <Mail className="h-4 w-4" aria-hidden /> Email {SUPPORT_EMAIL}
               </a>
             )}
-            {!whatsapp && !mail && (
+            {!whatsapp && !mail && CONTACT_PAGE && (
               <a href={CONTACT_PAGE} className={cx(contactButton, "border border-zinc-200 hover:bg-zinc-900/5 dark:border-white/10 dark:hover:bg-white/5")}>
                 <Mail className="h-4 w-4" aria-hidden /> How to reach us
               </a>
             )}
           </div>
         </section>
+        )}
 
         <section aria-labelledby="help-questions">
           <h3 id="help-questions" className="font-display text-base font-semibold">

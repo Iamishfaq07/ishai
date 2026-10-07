@@ -21,7 +21,7 @@ import { errorText } from "../lib/format";
 import { useWelcomeGrant } from "../lib/welcome";
 import { Captcha, useCaptchaConfig } from "../components/Captcha";
 import { AiPill } from "../components/products";
-import { USE_WHERE_ALLOWED } from "../lib/contact";
+import { CONTACT_PAGE, PRIVACY_PAGE, TERMS_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
 
 type Feature = { icon: LucideIcon; title: string; text: string; ai?: boolean };
 
@@ -178,15 +178,19 @@ function AuthShell({ title, subtitle, children, features = false }: { title: str
             <Link to="/" className={smallLink}>
               What Orbit does
             </Link>
-            <a href="/terms.html" className={smallLink}>
-              Terms
-            </a>
-            <a href="/privacy.html" className={smallLink}>
+            {TERMS_PAGE && (
+              <a href={TERMS_PAGE} className={smallLink}>
+                Terms
+              </a>
+            )}
+            <a href={PRIVACY_PAGE} className={smallLink}>
               Privacy
             </a>
-            <a href="/contact.html" className={smallLink}>
-              Contact
-            </a>
+            {CONTACT_PAGE && (
+              <a href={CONTACT_PAGE} className={smallLink}>
+                Contact
+              </a>
+            )}
           </nav>
         </div>
       </main>
@@ -400,12 +404,18 @@ export function RegisterPage() {
           {busy ? "Creating account…" : "Create account"}
         </Button>
         <p className="text-center text-xs text-zinc-600 dark:text-zinc-400">
-          By creating an account you agree to the{" "}
-          <a href="/terms.html" className="underline underline-offset-2">
-            terms
-          </a>{" "}
-          and the{" "}
-          <a href="/privacy.html" className="underline underline-offset-2">
+          {TERMS_PAGE ? (
+            <>
+              By creating an account you agree to the{" "}
+              <a href={TERMS_PAGE} className="underline underline-offset-2">
+                terms
+              </a>{" "}
+              and the{" "}
+            </>
+          ) : (
+            <>How Orbit handles your data: the </>
+          )}
+          <a href={PRIVACY_PAGE} className="underline underline-offset-2">
             privacy policy
           </a>
           .
