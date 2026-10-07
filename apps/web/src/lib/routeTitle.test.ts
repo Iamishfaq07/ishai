@@ -35,4 +35,15 @@ describe("routeTitle", () => {
   it("has no title for an address it doesn't know", () => {
     expect(routeTitle("/nowhere")).toBeNull();
   });
+
+  it("says what Orbit is on the front page, and Home once signed in", () => {
+    expect(routeTitle("/", true)).toBe("Practise interviews, fix your resume, find jobs");
+    expect(routeTitle("/", false)).toBe("Home");
+    expect(routeTitle("/sessions", true)).toBe("Sessions");
+  });
+
+  it("names the welcome questions and the free practice question", () => {
+    expect(routeTitle("/welcome")).toBe("Welcome");
+    expect(routeTitle("/warmup")).toBe("Practice question");
+  });
 });
