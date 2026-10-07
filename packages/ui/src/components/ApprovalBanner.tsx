@@ -3,7 +3,7 @@ import { cx, focusRing } from "./cx";
 
 /**
  * Shown while a new account waits for the admin to give it access (sign-up approval). Sessions and their AI are
- * locked until then (the API answers 403 `approval_pending`); the resume maker isn't (free allowance, Resume Pro).
+ * locked until then (the API answers 403 `approval_pending`); Resume AI isn't (the welcome credit, credit packs).
  * "Check again" re-reads the account, since access is granted from somewhere else.
  */
 export function ApprovalBanner({ onRecheck, className }: { onRecheck: () => Promise<boolean>; className?: string }) {
@@ -27,8 +27,8 @@ export function ApprovalBanner({ onRecheck, className }: { onRecheck: () => Prom
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="min-w-0">
-          Your account is waiting for approval. The resume maker works already (with 1 free AI edit, or unlimited with
-          Resume Pro); interview sessions unlock when it's approved, and we'll email you.
+          Your account is waiting for approval. Resume AI works already (your free AI credit, then credit packs);
+          interview sessions unlock when it's approved, and we'll email you.
         </span>
         <button type="button" onClick={recheck} disabled={checking} className={cx("font-medium underline underline-offset-2 disabled:opacity-50", focusRing)}>
           {checking ? "Checking…" : "Check again"}

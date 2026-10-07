@@ -225,7 +225,7 @@ function CreditsLine({ credits }: { credits: NonNullable<Entitlements["credits"]
       </span>
       {credits.resume !== null && (
         <span className="tabular-nums">
-          · {credits.resume} resume AI credit{credits.resume === 1 ? "" : "s"}
+          · {credits.resume} Resume AI credit{credits.resume === 1 ? "" : "s"}
         </span>
       )}
       <button

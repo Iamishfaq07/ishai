@@ -186,9 +186,9 @@ function PrivacyCard({ user, onUser, onSignOut }: { user: User; onUser: (u: User
               Your payments
               <ExternalLink className="h-3 w-3 opacity-60" />
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => void openUrl(`${WEB_URL}/documents/resumes`)}>
+            <Button variant="secondary" size="sm" onClick={() => void openUrl(`${WEB_URL}/resume-ai`)}>
               <FileText className="h-3.5 w-3.5" />
-              Resume maker
+              Resume AI
               <ExternalLink className="h-3 w-3 opacity-60" />
             </Button>
             <Button variant="secondary" size="sm" onClick={() => void openUrl(`${WEB_URL}/settings`)}>
