@@ -1,5 +1,20 @@
 # Implementation log
 
+## Jobs: 106 more company boards hiring in India (2026-10-07)
+
+Most matches for an Indian resume came from remote feeds; now most come from companies hiring in Indian cities (an
+engineer's feed; a fresher analyst's goes from a tenth to over a third). `companies.py` goes from 41 to 147 public job boards: 47 more on Greenhouse, 23 on Lever, 13 on Ashby and 23 on
+SmartRecruiters (PhonePe, Bosch, Capco, Brillio, Eurofins, Nagarro, Renesas, LinkedIn, Everpure/Pure Storage,
+HighLevel, Atlys, Emergent, Sprinto, Tide…), each checked live for current posts in India with the feed's own parsers.
+Left out: staffing agencies and gig marketplaces, boards with almost nothing in India, and big boards whose India
+posts are mostly field sales or retail (Paytm Payments Services, H&M) or civil engineering (AECOM).
+
+- Posts in India on the company boards: 1,714 → 5,380; listed now (the last 30 days): 670 → 2,180.
+- A real first refresh of every keyless source (local, real network): 98 s → 289 s; the process's peak memory is
+  unchanged (179 → 180 MB working set), since at most two boards are read at once.
+- A Bengaluru backend engineer (3 years): 16 of 56 matches from company boards in India (29%) → 71 of 111 (64%) for
+  the last 7 days; 30 days: 48 of 93 → 296 of 341. A fresher data analyst in Pune or Hyderabad: 2 of 21 → 11 of 30.
+
 ## Jobs in Resume AI: the latest jobs that match your resume (2026-10-07)
 
 **Resume AI → Jobs** (`/resume-ai/jobs`; `/jobs` redirects there) shows the newest openings that fit the user's
