@@ -109,3 +109,6 @@ export {
   Zap,
   type LucideIcon,
 } from "lucide-react";
+
+// The web app's front door, first run and navigation (help, search, the welcome questions).
+export { CircleQuestionMark, Globe, Keyboard, ListChecks, MessageCircle } from "lucide-react";

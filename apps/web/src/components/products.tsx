@@ -1,10 +1,67 @@
+import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { cx, focusRing, type LucideIcon } from "@orbit/ui";
+import { AudioLines, Briefcase, FileText, cx, focusRing, type LucideIcon } from "@orbit/ui";
+import type { ProductId } from "../lib/onboarding";
 
 /**
- * What Orbit's AI products share in the app: the "AI" pill after their name (Resume AI, Jobs AI) and the tabs between
- * a product's own pages. Light on purpose: the main nav, Home and the sign-in screens import it.
+ * What Orbit's three products share in the app: each one's name, mark and colour, the "AI" pill after their name
+ * (Resume AI, Jobs AI) and the tabs between a product's own pages. Light on purpose: the main nav, Home and the
+ * sign-in screens import it.
  */
+
+export type { ProductId };
+
+/**
+ * Each product's one fixed colour, for its mark and tag only (the user's accent stays for UI state): the interview
+ * copilot is the accent, Resume AI emerald, Jobs AI sky. -700/-800 text on the light tints and -200/-300 on the dark
+ * ones keep small labels at AA contrast.
+ */
+export const PRODUCTS: Record<ProductId, { name: string; short: string; icon: LucideIcon; tile: string; text: string; soft: string }> = {
+  interview: {
+    name: "Interview copilot",
+    short: "Interview",
+    icon: AudioLines,
+    tile: "bg-indigo-500/15 text-indigo-700 ring-indigo-500/25 dark:bg-indigo-400/15 dark:text-indigo-200 dark:ring-indigo-300/20",
+    text: "text-indigo-700 dark:text-indigo-300",
+    soft: "bg-indigo-500/[0.06] ring-indigo-500/20 dark:bg-indigo-400/[0.06] dark:ring-indigo-300/15",
+  },
+  resume: {
+    name: "Resume AI",
+    short: "Resume",
+    icon: FileText,
+    tile: "bg-emerald-500/15 text-emerald-800 ring-emerald-600/25 dark:bg-emerald-400/15 dark:text-emerald-200 dark:ring-emerald-300/20",
+    text: "text-emerald-700 dark:text-emerald-300",
+    soft: "bg-emerald-500/[0.06] ring-emerald-600/20 dark:bg-emerald-400/[0.06] dark:ring-emerald-300/15",
+  },
+  jobs: {
+    name: "Jobs AI",
+    short: "Jobs",
+    icon: Briefcase,
+    tile: "bg-sky-500/15 text-sky-800 ring-sky-600/25 dark:bg-sky-400/15 dark:text-sky-200 dark:ring-sky-300/20",
+    text: "text-sky-700 dark:text-sky-300",
+    soft: "bg-sky-500/[0.06] ring-sky-600/20 dark:bg-sky-400/[0.06] dark:ring-sky-300/15",
+  },
+};
+
+/** A product's mark: its icon on its colour. Decorative; the name beside it says which product it is. */
+export function ProductMark({ product, size = "md", className }: { product: ProductId; size?: "sm" | "md" | "lg"; className?: string }) {
+  const { icon: Icon, tile } = PRODUCTS[product];
+  return (
+    <span
+      aria-hidden="true"
+      className={cx(
+        "flex shrink-0 items-center justify-center ring-1",
+        size === "sm" && "h-7 w-7 rounded-lg",
+        size === "md" && "h-10 w-10 rounded-xl",
+        size === "lg" && "h-12 w-12 rounded-2xl",
+        tile,
+        className,
+      )}
+    >
+      <Icon className={size === "sm" ? "h-4 w-4" : size === "md" ? "h-5 w-5" : "h-6 w-6"} />
+    </span>
+  );
+}
 
 /** The small gradient "AI" tag after "Resume" and "Jobs" in the nav and on the products' cards and headings. */
 export function AiPill({ className }: { className?: string }) {
@@ -37,13 +94,16 @@ export function isCurrent(pathname: string, to: string, end = false): boolean {
   return path === to || (!end && path.startsWith(`${to}/`));
 }
 
-/** The tabs between a product's own pages, under its header. Nothing while it has only the one page. */
-export function ProductTabs({ label, sections }: { label: string; sections: ProductSection[] }) {
+/**
+ * The tabs between a product's own pages, under its header. Nothing while it has only the one page. `action` sits at
+ * the row's end (the interview pages' "Start live").
+ */
+export function ProductTabs({ label, sections, action }: { label: string; sections: ProductSection[]; action?: ReactNode }) {
   const { pathname } = useLocation();
   if (sections.length < 2) return null;
-  return (
+  const tabs = (
     // Scrolls sideways rather than wrapping if a phone is ever too narrow for every tab.
-    <nav aria-label={label} className="-mx-4 mb-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+    <nav aria-label={label} className={cx("-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0", action ? "min-w-0" : "mb-6")}>
       <div className="inline-flex gap-0.5 rounded-xl bg-zinc-500/10 p-1 sm:gap-1">
         {sections.map(({ to, label: name, icon: Icon, end, also, count }) => {
           const current = isCurrent(pathname, to, end) || Boolean(also?.test(pathname));
@@ -70,5 +130,12 @@ export function ProductTabs({ label, sections }: { label: string; sections: Prod
         })}
       </div>
     </nav>
+  );
+  if (!action) return tabs;
+  return (
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+      {tabs}
+      {action}
+    </div>
   );
 }
