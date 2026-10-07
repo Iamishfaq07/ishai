@@ -31,15 +31,18 @@ import {
   JobPlace,
   JobWhen,
   MatchBadge,
+  NoMatchNote,
   PrepareButton,
   SkillsMatch,
   SourceCredit,
   TailorButton,
   TrackButton,
+  TrustBadges,
 } from "./JobCard";
 import { useJobsAi } from "./JobsAi";
 import { linkButton, textLink } from "./links";
-import { STATUSES, STATUS_LABEL, STATUS_TONE, jobFacts, safeUrl, shortDate } from "./model";
+import { STATUSES, STATUS_LABEL, STATUS_TONE, jobFacts, matchBasis, safeUrl, shortDate } from "./model";
+import { SafetyCard } from "./SafetyCard";
 import { EditEntry } from "./Tracker";
 import { JOBS_MATCHES, outreachPath } from "./paths";
 import { useJobActions } from "./useJobActions";
@@ -125,6 +128,8 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
   const original = safeUrl(job.url);
   const facts = jobFacts(job);
   const entry = detail.tracker && job.tracked ? detail.tracker : null;
+  // No match % until there's a resume or skills to match against (model.ts `matchBasis`).
+  const showMatch = profile.data ? matchBasis(profile.data) !== null : false;
 
   return (
     <article aria-labelledby="job-title" className="space-y-6">
@@ -138,8 +143,10 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
             </h1>
             <JobPlace job={job} className="mt-2 sm:text-base" />
             <JobWhen job={job} className="mt-2" />
+            <TrustBadges job={job} className="mt-3" />
+            {!showMatch && <NoMatchNote className="mt-3" />}
           </div>
-          {job.match && <MatchBadge match={job.match} big />}
+          {showMatch && job.match && <MatchBadge match={job.match} big />}
         </div>
         <div className="relative mt-6 flex flex-wrap items-center gap-2">
           <ApplyLink job={job} actions={actions} big />
@@ -171,9 +178,11 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
             <h2 className="font-display text-base font-semibold">About this job</h2>
             {job.snippet ? (
               <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">{job.snippet}</p>
-            ) : (
-              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">The post doesn't come with a summary.</p>
-            )}
+            ) : original ? (
+              <a href={original} target="_blank" rel="noopener" className={cx(linkButton("secondary", "sm"), "mt-3")}>
+                Read the post on {job.direct ? `${job.company}'s site` : "the original site"} <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+              </a>
+            ) : null}
             <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-zinc-200 pt-3 text-xs text-zinc-500 dark:border-white/10 dark:text-zinc-400">
               {/* A summary and a link, not the whole post: the job sources' terms (docs/DECISIONS.md D43). */}
               <span>A summary of the post. The full description is on {job.direct ? `${job.company}'s careers page` : "the original post"}.</span>
@@ -185,7 +194,7 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
             </p>
           </Card>
 
-          {job.match && (job.match.matched.length > 0 || job.match.missing.length > 0) && (
+          {showMatch && job.match && (job.match.matched.length > 0 || job.match.missing.length > 0) && (
             <Card>
               <h2 className="font-display text-base font-semibold">How your resume matches</h2>
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
@@ -250,6 +259,8 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
               changed();
             }}
           />
+
+          <SafetyCard job={{ id: job.id, title: job.title, company: job.company, url: job.url }} />
         </aside>
       </div>
     </article>

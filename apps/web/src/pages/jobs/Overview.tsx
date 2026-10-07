@@ -15,11 +15,12 @@ import {
 } from "@orbit/ui";
 import { Card, ErrorNote, Spinner } from "../../components/ui";
 import { errorText } from "../../lib/format";
+import { ADD_JOB_PATH, FollowUps } from "./FollowUps";
 import { useJobFeed, useJobsAi } from "./JobsAi";
-import { JobWhen, MatchBadge } from "./JobCard";
+import { JobWhen, MatchBadge, TrustBadges } from "./JobCard";
 import { linkButton, textLink } from "./links";
 import { Busy, FirstFetch, NoResume, PortalCard, ProfileCard, firstFetch } from "./Matches";
-import { POSTED_WITHIN, STATUSES, STATUS_LABEL, STATUS_TONE, byStatus, nextUp, shortDate, withTracked } from "./model";
+import { POSTED_WITHIN, STATUSES, STATUS_LABEL, STATUS_TONE, byStatus, matchBasis, nextUp, shortDate, withTracked } from "./model";
 import { JOBS_MATCHES, JOBS_PROFILE, JOBS_TRACKER, jobPath } from "./paths";
 import { JOBS_AI_FEATURES } from "./product";
 
@@ -85,7 +86,9 @@ export function JobsAiHomePage() {
 
 function Overview({ profile }: { profile: JobProfile }) {
   const { tracker, suggesting } = useJobsAi();
-  const { feed, refreshing } = useJobFeed(profile);
+  // Nothing to match against yet: the newest jobs, with no match % (model.ts `matchBasis`).
+  const basis = matchBasis(profile);
+  const { feed, refreshing } = useJobFeed(profile, "", basis ? "best" : "newest");
   const data = feed.data;
   const top = withTracked(data?.items.slice(0, TOP) ?? [], {}, tracker.data);
   const days = POSTED_WITHIN.find((p) => p.days === profile.prefs.posted_within) ?? POSTED_WITHIN[2]!;
@@ -95,7 +98,7 @@ function Overview({ profile }: { profile: JobProfile }) {
       <section aria-labelledby="top-matches" className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <h2 id="top-matches" className="font-display text-lg font-semibold tracking-tight">
-            Your best matches
+            {basis ? "Your best matches" : "The newest jobs"}
             {data && data.total > 0 && (
               <span className="ml-2 text-sm font-normal text-zinc-500 dark:text-zinc-400">
                 <span className="tabular-nums">{data.total}</span> in the {days.label.toLowerCase()}
@@ -105,7 +108,7 @@ function Overview({ profile }: { profile: JobProfile }) {
           <Busy refreshing={refreshing} suggesting={suggesting} />
         </div>
 
-        {!profile.resume && <NoResume />}
+        {!basis && <NoResume blank={Boolean(profile.resume)} />}
 
         {feed.loading && !data ? (
           <Spinner big label={suggesting ? "Reading your resume" : "Finding jobs that match your resume"} state="searching" />
@@ -130,13 +133,13 @@ function Overview({ profile }: { profile: JobProfile }) {
             <ul className="space-y-2.5">
               {top.map((job) => (
                 <li key={job.id}>
-                  <TopMatch job={job} />
+                  <TopMatch job={job} showMatch={basis !== null} />
                 </li>
               ))}
             </ul>
             {data && data.total > top.length && (
               <Link to={JOBS_MATCHES} className={cx(linkButton("secondary"), "w-full")}>
-                See all {data.total} matches <ArrowRight className="h-4 w-4" aria-hidden />
+                See all {data.total} {basis ? "matches" : "jobs"} <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             )}
           </>
@@ -144,6 +147,7 @@ function Overview({ profile }: { profile: JobProfile }) {
       </section>
 
       <aside className="min-w-0 space-y-4" aria-label="Your job search">
+        <FollowUps tracker={tracker} hideWhenEmpty />
         <ProfileCard profile={profile} suggesting={suggesting} />
         <TrackerSummary entries={tracker.data} loading={tracker.loading} />
         <PortalCard portals={data?.portals ?? null} days={days.short} />
@@ -153,13 +157,13 @@ function Overview({ profile }: { profile: JobProfile }) {
 }
 
 /** One of the best matches, in a line: the whole row opens the job's own page. */
-function TopMatch({ job }: { job: JobListing }) {
+function TopMatch({ job, showMatch }: { job: JobListing; showMatch: boolean }) {
   return (
     <Link
       to={jobPath(job.id)}
       className={cx("glass-panel lift group flex items-center gap-3 rounded-2xl p-3.5 hover:border-indigo-400/40 sm:gap-4 sm:p-4 dark:hover:border-indigo-400/30", focusRing)}
     >
-      {job.match ? (
+      {showMatch && job.match ? (
         <MatchBadge match={job.match} />
       ) : (
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-zinc-500/10 text-zinc-500">
@@ -175,7 +179,10 @@ function TopMatch({ job }: { job: JobListing }) {
             {job.place ? ` · ${job.place}` : ""}
           </span>
         </span>
-        <JobWhen job={job} facts={false} className="mt-1" />
+        <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <JobWhen job={job} facts={false} />
+          <TrustBadges job={job} only={["early"]} />
+        </span>
       </span>
       {job.tracked && (
         <span className={cx("hidden shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ring-1 sm:inline", STATUS_TONE[job.tracked.status])}>
@@ -209,7 +216,11 @@ function TrackerSummary({ entries, loading }: { entries: JobTrackerEntry[] | nul
         </div>
       ) : !entries?.length ? (
         <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          Nothing tracked yet. Save jobs from your matches, or say "Yes, I applied" after you apply.
+          Nothing tracked yet. Save jobs from your matches, say "Yes, I applied" after you apply, or{" "}
+          <Link to={ADD_JOB_PATH} className={textLink}>
+            add one you found elsewhere
+          </Link>
+          .
         </p>
       ) : (
         <>

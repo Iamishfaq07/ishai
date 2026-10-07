@@ -45,6 +45,8 @@ import type {
   JobFeed,
   JobFeedQuery,
   JobFitResponse,
+  JobLinkInfo,
+  JobManualTrack,
   JobPrefs,
   JobPrepareResponse,
   JobProfile,
@@ -459,6 +461,11 @@ export function createApiClient(options: ApiClientOptions) {
     updateTrackedJob: (id: string, patch: JobTrackerUpdate) =>
       json<JobTrackerEntry>(`/v1/jobs/tracker/${encodeURIComponent(id)}`, { method: "PATCH", body: body(patch) }),
     untrackJob: (id: string) => json<void>(`/v1/jobs/tracker/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    /** What a job's link says (site, title, company, city), read from its address: nothing is fetched. */
+    jobLinkInfo: (url: string) => json<JobLinkInfo>("/v1/jobs/tracker/link", { method: "POST", body: body({ url }) }),
+    /** Track a job found elsewhere. A 409 "already_tracked" error carries the entry's `id` in `details`. */
+    trackManualJob: (req: JobManualTrack) =>
+      json<JobTrackerEntry>("/v1/jobs/tracker/manual", { method: "POST", body: body(req) }),
 
     /** Interview prep: likely questions from a job description, with answers drawn from the resume. */
     prep: (req: PrepRequest) => json<PrepResponse>("/v1/prep", { method: "POST", body: body(req) }),

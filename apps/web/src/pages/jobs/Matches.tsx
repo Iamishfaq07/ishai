@@ -20,8 +20,21 @@ import { RESUME_AI_HOME, resumePath } from "../resume/paths";
 import { JobCard } from "./JobCard";
 import { PAGE_SIZE, useJobFeed, useJobsAi } from "./JobsAi";
 import { linkButton, textLink } from "./links";
-import { POSTED_WITHIN, WORKPLACES, postedAgo, profileSummary, safeUrl, toggleWorkplace, withTracked } from "./model";
+import {
+  POSTED_WITHIN,
+  WORKPLACES,
+  activeFilterCount,
+  hasQueryWord,
+  matchBasis,
+  postedAgo,
+  profileSummary,
+  safeUrl,
+  toggleQueryWord,
+  toggleWorkplace,
+  withTracked,
+} from "./model";
 import { JOBS_PROFILE } from "./paths";
+import { Sheet } from "./Sheet";
 
 // The pages after the first that were shown last, so coming back from a job's page finds the list as it was left.
 let shownMore: { key: string; items: JobListing[]; page: number; hasMore: boolean } | null = null;
@@ -38,7 +51,7 @@ export function JobMatchesPage() {
       <PageHeader
         icon={Sparkles}
         title="Jobs matched to your resume"
-        subtitle="The latest openings from companies' own career pages and remote job boards, best match first. You apply on the original site."
+        subtitle="From companies' own career pages and remote job boards. You apply on the original site."
         actions={
           profile.data && (
             // Phones have "More filters" beside the quick filters, a little further down.
@@ -63,8 +76,13 @@ function Matches({ profile }: { profile: JobProfile }) {
   const { tracker, suggesting, setProfile } = useJobsAi();
   const [params, setParams] = useSearchParams();
   const query = params.get("q")?.trim() ?? "";
-  const sort: JobSort = params.get("sort") === "newest" ? "newest" : "best";
+  // With nothing to match against (no resume, no skills), "best match" means nothing: newest first.
+  const basis = matchBasis(profile);
+  const defaultSort: JobSort = basis ? "best" : "newest";
+  const asked = params.get("sort");
+  const sort: JobSort = asked === "newest" || asked === "best" ? asked : defaultSort;
   const [text, setText] = useState(query);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const { feed, refreshing, key, restartPolling } = useJobFeed(profile, query, sort);
   // Pages after the first, and tracker changes made on this screen (so a card doesn't wait for a reload).
   const [more, setMore] = useState(shownMore);
@@ -103,7 +121,7 @@ function Matches({ profile }: { profile: JobProfile }) {
     const next = new URLSearchParams(params);
     if (q) next.set("q", q);
     else next.delete("q");
-    if (s === "newest") next.set("sort", s);
+    if (s !== defaultSort) next.set("sort", s);
     else next.delete("sort");
     setParams(next, { replace: true });
     restartPolling();
@@ -116,6 +134,13 @@ function Matches({ profile }: { profile: JobProfile }) {
     setText("");
     setSearch("");
   };
+  /** The quick chips: words the search box understands ("fresher", "internship"), added to or taken out of it. */
+  const toggleWord = (word: string) => {
+    const q = toggleQueryWord(query, word);
+    setText(q);
+    setSearch(q);
+  };
+  const filters = activeFilterCount(profile.prefs, query, sort);
 
   const data = feed.data;
   const hasMore = extra ? extra.hasMore : Boolean(data?.has_more);
@@ -129,6 +154,8 @@ function Matches({ profile }: { profile: JobProfile }) {
           <label htmlFor="job-q" className="sr-only">
             Search your matches
           </label>
+          {/* Phones: the box and "Filters · 2" in one row (Enter searches); the filters open in a sheet. */}
+          <div className="flex min-w-0 flex-1 gap-2">
           <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" aria-hidden />
             <input
@@ -136,6 +163,7 @@ function Matches({ profile }: { profile: JobProfile }) {
               value={text}
               onChange={(e) => setText(e.target.value)}
               maxLength={200}
+              enterKeyHint="search"
               placeholder="Try: remote React jobs in Bangalore, 2 years"
               className={cx(
                 "block w-full rounded-xl border border-zinc-200 bg-white/90 py-2.5 pl-9 pr-9 text-sm placeholder:text-zinc-400 hover:border-zinc-300 focus:border-indigo-500 dark:border-white/10 dark:bg-zinc-950/60 dark:placeholder:text-zinc-500",
@@ -148,7 +176,18 @@ function Matches({ profile }: { profile: JobProfile }) {
               </button>
             )}
           </div>
-          <div className="flex gap-2">
+            <Button variant="secondary" className="shrink-0 sm:hidden" aria-haspopup="dialog" onClick={() => setFiltersOpen(true)}>
+              <SlidersHorizontal className="h-4 w-4" aria-hidden /> Filters
+              {filters > 0 && (
+                <span className="rounded-full bg-indigo-500/15 px-1.5 text-xs tabular-nums text-indigo-700 dark:text-indigo-200">
+                  <span className="sr-only">, </span>
+                  {filters}
+                  <span className="sr-only"> on</span>
+                </span>
+              )}
+            </Button>
+          </div>
+          <div className="hidden gap-2 sm:flex">
             <Button type="submit" className="flex-1 sm:flex-none">
               Search
             </Button>
@@ -162,7 +201,34 @@ function Matches({ profile }: { profile: JobProfile }) {
           </div>
         </form>
 
-        <QuickFilters profile={profile} disabled={suggesting} onSaved={setProfile} />
+        <div className="hidden sm:block">
+          <QuickFilters profile={profile} disabled={suggesting} onSaved={setProfile} words={<WordChips query={query} onToggle={toggleWord} />} />
+        </div>
+        <WordChips query={query} onToggle={toggleWord} className="-mx-4 overflow-x-auto px-4 sm:hidden" />
+        <Sheet
+          open={filtersOpen}
+          title="Filters"
+          onClose={() => setFiltersOpen(false)}
+          footer={
+            <Button className="w-full" onClick={() => setFiltersOpen(false)}>
+              {data ? `Show ${data.total} ${data.total === 1 ? "job" : "jobs"}` : "Show jobs"}
+            </Button>
+          }
+        >
+          <div className="space-y-5">
+            <fieldset>
+              <legend className="mb-2 text-sm font-medium">Sort</legend>
+              <div role="group" aria-label="Sort" className="inline-flex gap-0.5 rounded-xl bg-zinc-500/10 p-1">
+                {(["best", "newest"] as const).map((s) => (
+                  <button key={s} type="button" aria-pressed={sort === s} onClick={() => setSearch(query, s)} className={chipClass(sort === s, "px-3 py-1.5 text-sm")}>
+                    {s === "best" ? "Best match" : "Newest"}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <QuickFilters profile={profile} disabled={suggesting} onSaved={setProfile} layout="sheet" words={<WordChips query={query} onToggle={toggleWord} big />} />
+          </div>
+        </Sheet>
 
         {/* Phones: the profile in a line (the full card and the portal links sit beside the feed on wide screens). */}
         <p className="text-xs text-zinc-500 dark:text-zinc-400 lg:hidden">
@@ -188,14 +254,15 @@ function Matches({ profile }: { profile: JobProfile }) {
         {data && data.total > 0 && (
           <p className="flex flex-wrap items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300" aria-live="polite">
             <span>
-              <strong className="font-semibold tabular-nums">{data.total}</strong> {data.total === 1 ? "match" : "matches"} posted in the {days.label.toLowerCase()}
+              <strong className="font-semibold tabular-nums">{data.total}</strong> {basis ? (data.total === 1 ? "match" : "matches") : data.total === 1 ? "job" : "jobs"} posted
+              in the {days.label.toLowerCase()}
               {sort === "best" ? ", best first" : ", newest first"}
             </span>
             <Busy refreshing={refreshing} suggesting={suggesting} />
           </p>
         )}
 
-        {!profile.resume && <NoResume />}
+        {!basis && <NoResume blank={Boolean(profile.resume)} />}
 
         {feed.loading && !data ? (
           <Spinner big label={suggesting ? "Reading your resume" : "Finding jobs that match your resume"} state="searching" />
@@ -213,6 +280,7 @@ function Matches({ profile }: { profile: JobProfile }) {
                 <li key={job.id}>
                   <JobCard
                     job={job}
+                    showMatch={basis !== null}
                     resumeId={profile.resume?.id ?? null}
                     onTracked={(id, t) => {
                       setChanged((prev) => ({ ...prev, [id]: t }));
@@ -256,11 +324,67 @@ export function Busy({ refreshing, suggesting }: { refreshing: boolean; suggesti
   );
 }
 
+/** A segmented-control chip, on or off. */
+function chipClass(on: boolean, size = "px-2.5 py-1 text-xs"): string {
+  return cx(
+    "whitespace-nowrap rounded-lg font-medium transition-colors disabled:cursor-not-allowed",
+    size,
+    on ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
+    focusRing,
+  );
+}
+
+/**
+ * "Fresher" and "Internship": words the search box already understands (fresher-level posts; internships), toggled in
+ * the search rather than saved to the profile, so they're as quick to take off as to put on.
+ */
+function WordChips({ query, onToggle, big = false, className }: { query: string; onToggle: (word: string) => void; big?: boolean; className?: string }) {
+  return (
+    <div role="group" aria-label="For freshers" className={cx("flex shrink-0 gap-1.5", className)}>
+      {[
+        ["fresher", "Fresher"],
+        ["internship", "Internship"],
+      ].map(([word, label]) => {
+        const on = hasQueryWord(query, word!);
+        return (
+          <button
+            key={word}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onToggle(word!)}
+            className={cx(
+              "shrink-0 whitespace-nowrap rounded-full border font-medium",
+              big ? "px-3.5 py-1.5 text-sm" : "px-3 py-1 text-xs",
+              on ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-700 dark:text-indigo-200" : "border-zinc-200 text-zinc-600 dark:border-white/10 dark:text-zinc-300",
+              focusRing,
+            )}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /**
  * The two filters people change most, a tap away: how recent, and the work mode. Each saves the profile (the feed is
- * worked out from it); everything else is on the Profile page.
+ * worked out from it); everything else is on the Profile page. `layout="sheet"`: labelled, one per row, for the phone's
+ * Filters sheet. `words`: the fresher chips, beside them.
  */
-function QuickFilters({ profile, disabled, onSaved }: { profile: JobProfile; disabled: boolean; onSaved: (p: JobProfile) => void }) {
+function QuickFilters({
+  profile,
+  disabled,
+  onSaved,
+  layout = "row",
+  words,
+}: {
+  profile: JobProfile;
+  disabled: boolean;
+  onSaved: (p: JobProfile) => void;
+  layout?: "row" | "sheet";
+  words?: React.ReactNode;
+}) {
   // Shown at once while it saves; the feed waits for the saved profile, so it never ranks with the old one.
   const [pending, setPending] = useState<JobPrefs | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -277,44 +401,71 @@ function QuickFilters({ profile, disabled, onSaved }: { profile: JobProfile; dis
     }
   };
   const off = disabled || pending !== null;
-  const chip = (on: boolean) =>
-    cx(
-      "whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed",
-      on ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
-      focusRing,
+  const sheet = layout === "sheet";
+  const chip = (on: boolean) => chipClass(on, sheet ? "px-3 py-1.5 text-sm" : undefined);
+  const recent = (
+    <div role="group" aria-label="Posted within" className="inline-flex shrink-0 gap-0.5 rounded-xl bg-zinc-500/10 p-1">
+      {POSTED_WITHIN.map((p) => (
+        <button
+          key={p.days}
+          type="button"
+          disabled={off}
+          aria-pressed={prefs.posted_within === p.days}
+          title={p.label}
+          onClick={() => void save({ ...prefs, posted_within: p.days })}
+          className={chip(prefs.posted_within === p.days)}
+        >
+          {p.short}
+        </button>
+      ))}
+    </div>
+  );
+  const modes = (
+    <div role="group" aria-label="Work mode" className="inline-flex shrink-0 gap-0.5 rounded-xl bg-zinc-500/10 p-1">
+      {WORKPLACES.map((w) => (
+        <button
+          key={w.id}
+          type="button"
+          disabled={off}
+          aria-pressed={prefs.workplace.includes(w.id)}
+          onClick={() => void save({ ...prefs, workplace: toggleWorkplace(prefs.workplace, w.id) })}
+          className={chip(prefs.workplace.includes(w.id))}
+        >
+          {w.label}
+        </button>
+      ))}
+    </div>
+  );
+  if (sheet) {
+    return (
+      <>
+        <fieldset>
+          <legend className="mb-2 text-sm font-medium">Posted in the last</legend>
+          {recent}
+        </fieldset>
+        <fieldset>
+          <legend className="mb-2 text-sm font-medium">Work mode</legend>
+          {modes}
+        </fieldset>
+        {words && (
+          <fieldset>
+            <legend className="mb-2 text-sm font-medium">For freshers</legend>
+            {words}
+          </fieldset>
+        )}
+        {error && <ErrorNote>{error}</ErrorNote>}
+        <Link to={JOBS_PROFILE} className={cx(textLink, "inline-flex items-center gap-1.5 text-sm")}>
+          <SlidersHorizontal className="h-4 w-4" aria-hidden /> Titles, cities, job types and more
+        </Link>
+      </>
     );
+  }
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <div role="group" aria-label="Posted within" className="inline-flex shrink-0 gap-0.5 rounded-xl bg-zinc-500/10 p-1">
-          {POSTED_WITHIN.map((p) => (
-            <button
-              key={p.days}
-              type="button"
-              disabled={off}
-              aria-pressed={prefs.posted_within === p.days}
-              title={p.label}
-              onClick={() => void save({ ...prefs, posted_within: p.days })}
-              className={chip(prefs.posted_within === p.days)}
-            >
-              {p.short}
-            </button>
-          ))}
-        </div>
-        <div role="group" aria-label="Work mode" className="inline-flex shrink-0 gap-0.5 rounded-xl bg-zinc-500/10 p-1">
-          {WORKPLACES.map((w) => (
-            <button
-              key={w.id}
-              type="button"
-              disabled={off}
-              aria-pressed={prefs.workplace.includes(w.id)}
-              onClick={() => void save({ ...prefs, workplace: toggleWorkplace(prefs.workplace, w.id) })}
-              className={chip(prefs.workplace.includes(w.id))}
-            >
-              {w.label}
-            </button>
-          ))}
-        </div>
+        {recent}
+        {modes}
+        {words}
         <Link to={JOBS_PROFILE} className={cx("inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-500/10 dark:text-indigo-300", focusRing)}>
           <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden /> More filters
         </Link>
@@ -324,17 +475,29 @@ function QuickFilters({ profile, disabled, onSaved }: { profile: JobProfile; dis
   );
 }
 
-/** No resume yet: matching needs one (until then the feed is the newest jobs). */
-export function NoResume() {
+/**
+ * Nothing to match against yet (model.ts `matchBasis`): no resume, or (`blank`) one with no title or skills in it.
+ * Until then the feed is the newest jobs, with no match score.
+ */
+export function NoResume({ blank = false }: { blank?: boolean }) {
   return (
     <Card className="flex flex-wrap items-center gap-3">
       <FileText className="h-5 w-5 shrink-0 text-indigo-500" aria-hidden />
       <p className="min-w-0 flex-1 text-sm">
-        <strong className="font-medium">Make a resume to see your matches.</strong> Orbit reads your titles, skills and experience from it. Until then these are
-        the newest jobs.
+        {blank ? (
+          <>
+            <strong className="font-medium">Add your skills to see how you match.</strong> Your resume doesn't list a job title or skills yet: add them in
+            Resume AI, or type your skills into your profile. Until then these are the newest jobs, with no match score.
+          </>
+        ) : (
+          <>
+            <strong className="font-medium">Add your resume to see how you match.</strong> Orbit reads your titles, skills and experience from it. Until then
+            these are the newest jobs, with no match score.
+          </>
+        )}
       </p>
       <Link to={RESUME_AI_HOME} className={linkButton("primary", "sm")}>
-        Open Resume AI
+        {blank ? "Open Resume AI" : "Add your resume"}
       </Link>
     </Card>
   );

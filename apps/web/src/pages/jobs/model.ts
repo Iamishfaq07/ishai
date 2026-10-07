@@ -80,15 +80,18 @@ export function isNew(iso: string, now: number = Date.now()): boolean {
   return now - new Date(iso).getTime() < 24 * 3600 * 1000;
 }
 
-/** The match badge's colour: strong, good, partial, weak. */
+/**
+ * The match badge's colour: strong, good, partial, weak. The -800 shades (zinc-700) keep its small "match" label at
+ * AA contrast on the tinted badge in light mode (axe found the old -700s under `opacity-80` at 3.5–4.3:1).
+ */
 export function matchTone(score: number): string {
   return score >= 80
-    ? "bg-emerald-500/10 text-emerald-700 ring-emerald-500/25 dark:text-emerald-300"
+    ? "bg-emerald-500/10 text-emerald-800 ring-emerald-500/25 dark:text-emerald-300"
     : score >= 65
-      ? "bg-sky-500/10 text-sky-700 ring-sky-500/25 dark:text-sky-300"
+      ? "bg-sky-500/10 text-sky-800 ring-sky-500/25 dark:text-sky-300"
       : score >= 45
-        ? "bg-amber-500/10 text-amber-800 ring-amber-500/25 dark:text-amber-300"
-        : "bg-zinc-500/10 text-zinc-600 ring-zinc-500/20 dark:text-zinc-300";
+        ? "bg-amber-500/10 text-amber-900 ring-amber-500/25 dark:text-amber-300"
+        : "bg-zinc-500/10 text-zinc-700 ring-zinc-500/20 dark:text-zinc-300";
 }
 
 export const VERDICT_TONE: Record<"Strong" | "Good" | "Stretch", string> = {
@@ -258,4 +261,203 @@ export function outreachKindFor(status: JobStatus | null | undefined): OutreachK
 export function jobAsks(match: Pick<JobMatch, "matched" | "missing"> | null, most = 8): string[] {
   const seen = new Set<string>();
   return [...(match?.matched ?? []), ...(match?.missing ?? [])].filter((k) => !seen.has(k.toLowerCase()) && seen.add(k.toLowerCase())).slice(0, most);
+}
+
+// ---- an honest match ----------------------------------------------------------------------------------------------
+
+/**
+ * What a match % can be worked out from: a resume with something in it (its titles and skills fill the profile), or
+ * skills typed into the profile. With neither, every job scores about the same middling number from its place and
+ * how recent it is (the old "42% match" on everything), so no number is shown at all.
+ */
+export function matchBasis(profile: Pick<JobProfile, "resume" | "prefs">): "resume" | "skills" | null {
+  const { skills, titles } = profile.prefs;
+  if (profile.resume && (skills.length > 0 || titles.length > 0)) return "resume";
+  if (skills.length > 0) return "skills";
+  return null;
+}
+
+// ---- trust and freshness: only what Orbit can back -------------------------------------------------------------------
+
+const HOUR_MS = 3600_000;
+/** "Early applicant": posted in the last two days. */
+export const EARLY_HOURS = 48;
+/** Company boards are read every 6 hours: a check older than a day means that board's fetch is failing. */
+export const STILL_OPEN_HOURS = 24;
+
+/**
+ * When the post went up, as far as Orbit can trust it: the earlier of the date the post gives and when Orbit first
+ * saw it (a post without a date is dated when it's fetched, so on its own it would look new for ever).
+ */
+export function postedTime(job: Pick<JobListing, "posted_at" | "first_seen_at">): string {
+  const seen = job.first_seen_at;
+  return seen && Date.parse(seen) < Date.parse(job.posted_at) ? seen : job.posted_at;
+}
+
+/** Posted in the last EARLY_HOURS: applying now is applying early. */
+export function isEarly(job: Pick<JobListing, "posted_at" | "first_seen_at">, now: number = Date.now()): boolean {
+  return now - Date.parse(postedTime(job)) < EARLY_HOURS * HOUR_MS;
+}
+
+/** When Orbit last found the post on the company's own careers page, if that's recent enough to say "still open". */
+export function stillOpenAt(item: { still_listed_at?: string | null }, now: number = Date.now()): string | null {
+  const at = item.still_listed_at;
+  return at && now - Date.parse(at) <= STILL_OPEN_HOURS * HOUR_MS ? at : null;
+}
+
+export interface TrustBadge {
+  id: "early" | "direct" | "open";
+  label: string;
+  /** The longer version, for the badge's title and screen readers. */
+  detail: string;
+}
+
+/**
+ * The badges a job has earned, each backed by data: "Early applicant" (posted under two days ago, by the earlier of
+ * its date and Orbit's first sighting), "Direct from careers page" (the company's own job board, where Apply goes to
+ * the employer) and "Still open" (found on that board at the last check, within a day). Feeds and searches never get
+ * the last two: Orbit can't check those with the employer.
+ */
+export function trustBadges(
+  job: Pick<JobListing, "posted_at" | "first_seen_at" | "direct" | "company" | "still_listed_at">,
+  now: number = Date.now(),
+): TrustBadge[] {
+  const out: TrustBadge[] = [];
+  if (isEarly(job, now)) {
+    out.push({ id: "early", label: "Early applicant", detail: `Posted ${postedAgo(postedTime(job), now).toLowerCase()}: you'd be applying in its first two days` });
+  }
+  if (job.direct) {
+    out.push({ id: "direct", label: "Direct from careers page", detail: `From ${job.company}'s own careers page: Apply goes straight to the employer` });
+  }
+  const open = job.direct ? stillOpenAt(job, now) : null;
+  if (open) {
+    const ago = postedAgo(open, now).toLowerCase();
+    out.push({ id: "open", label: `Still open · checked ${ago}`, detail: `Orbit found it on ${job.company}'s careers page ${ago}` });
+  }
+  return out;
+}
+
+// ---- jobs found elsewhere -----------------------------------------------------------------------------------------
+
+/** A job added by hand (a Naukri or LinkedIn link, or typed in): it has no page in Orbit. */
+export function isManual(entry: Pick<JobTrackerEntry, "listing_id">): boolean {
+  return entry.listing_id.startsWith("ext:");
+}
+
+/** "naukri.com", from a saved link (null when there's none). */
+export function linkHost(url: string): string | null {
+  const safe = safeUrl(url);
+  return safe ? new URL(safe).hostname.replace(/^www\./, "") : null;
+}
+
+// ---- follow-ups ---------------------------------------------------------------------------------------------------
+
+/** Applied this many days ago with no reply (nothing moved, no date set): time to follow up. */
+export const FOLLOW_UP_AFTER_DAYS = 7;
+/** Past this, an application has gone cold: no more nudges. */
+const FOLLOW_UP_UNTIL_DAYS = 45;
+/** An interview or follow-up date this many days ahead shows as coming up. */
+export const SOON_DAYS = 7;
+/** A date further back than this is stale, not "overdue". */
+const OVERDUE_FOR_DAYS = 14;
+
+export type FollowUpKind = "overdue" | "today" | "tomorrow" | "follow_up" | "soon";
+
+export interface FollowUp {
+  entry: JobTrackerEntry;
+  kind: FollowUpKind;
+  /** Days past the date (overdue), until it (soon), or since applying (follow_up). */
+  days: number;
+  /** "Interview with Bosch tomorrow", "Follow up with Razorpay: applied 7 days ago". */
+  text: string;
+  /** About an interview: practising for it is the next step. */
+  interview: boolean;
+}
+
+function dayStart(t: number): number {
+  const d = new Date(t);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+/** Calendar days from `a` to `b` in local time (negative when `b` is earlier). */
+export function daysBetween(a: number, b: number): number {
+  return Math.round((dayStart(b) - dayStart(a)) / 86_400_000);
+}
+
+const FOLLOW_UP_ORDER: Record<FollowUpKind, number> = { overdue: 0, today: 1, tomorrow: 2, follow_up: 3, soon: 4 };
+
+/**
+ * What's due on the tracker, most urgent first: interviews and follow-up dates that are overdue, today or tomorrow
+ * (from `next_at`), applications with no reply after FOLLOW_UP_AFTER_DAYS (applied, nothing moved, no date set), then
+ * interviews later this week. Offers and "not this time" are done.
+ */
+export function followUps(entries: JobTrackerEntry[], now: number = Date.now()): FollowUp[] {
+  const out: FollowUp[] = [];
+  for (const entry of entries) {
+    if (entry.status === "offer" || entry.status === "rejected") continue;
+    const interview = entry.status === "interviewing";
+    if (entry.next_at) {
+      const d = daysBetween(now, Date.parse(entry.next_at));
+      const what = interview ? `Interview with ${entry.company}` : `Follow up with ${entry.company}`;
+      if (d < 0 && d >= -OVERDUE_FOR_DAYS) out.push({ entry, kind: "overdue", days: -d, text: `${what}: was due ${shortDate(entry.next_at)}`, interview });
+      else if (d === 0) out.push({ entry, kind: "today", days: 0, text: `${what} today`, interview });
+      else if (d === 1) out.push({ entry, kind: "tomorrow", days: 1, text: `${what} tomorrow`, interview });
+      // Coming up later this week: only interviews (a follow-up date further off isn't due yet).
+      else if (d > 1 && d <= SOON_DAYS && interview) out.push({ entry, kind: "soon", days: d, text: `${what} on ${shortDate(entry.next_at)}`, interview });
+      continue; // a date is set, so it says when: no "applied N days ago" nudge on top
+    }
+    if (entry.status !== "applied" || !entry.applied_at) continue;
+    const since = daysBetween(Date.parse(entry.applied_at), now);
+    const still = daysBetween(Date.parse(entry.status_at), now);
+    if (since >= FOLLOW_UP_AFTER_DAYS && still >= FOLLOW_UP_AFTER_DAYS && since <= FOLLOW_UP_UNTIL_DAYS) {
+      out.push({ entry, kind: "follow_up", days: since, text: `Follow up with ${entry.company}: applied ${since} days ago`, interview: false });
+    }
+  }
+  // Within a kind: the most overdue and the longest-waiting first; coming up, the nearest first.
+  return out.sort((a, b) => FOLLOW_UP_ORDER[a.kind] - FOLLOW_UP_ORDER[b.kind] || (a.kind === "soon" ? a.days - b.days : b.days - a.days));
+}
+
+/** "Remind me in a week": a week from today at local noon (as the tracker's own date fields are kept). */
+export function inAWeek(now: number = Date.now()): string {
+  const d = new Date(now);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7, 12, 0, 0).toISOString();
+}
+
+/**
+ * Where "Practise" goes for a tracked job: a mock on its saved job post when there is one, else the job's own page
+ * (its Prepare saves the post), else a technical mock for its title.
+ */
+export function practiceLink(
+  entry: Pick<JobTrackerEntry, "document_id" | "live" | "listing_id" | "title">,
+  jobPage: (id: string) => string,
+): string {
+  if (entry.document_id) return `/mock?jd=${encodeURIComponent(entry.document_id)}&preset=tech15`;
+  if (entry.live && !isManual(entry)) return jobPage(entry.listing_id);
+  return `/mock?preset=tech15&role=${encodeURIComponent(entry.title)}`;
+}
+
+// ---- the search box's quick chips ---------------------------------------------------------------------------------
+
+/** Whether the search has this word ("fresher", "internship"), as a whole word. */
+export function hasQueryWord(query: string, word: string): boolean {
+  return query.toLowerCase().split(/\s+/).includes(word.toLowerCase());
+}
+
+/** The search with `word` added (at the end) or taken out: the quick chips are words the search box understands. */
+export function toggleQueryWord(query: string, word: string): string {
+  const words = query.split(/\s+/).filter(Boolean);
+  const on = words.some((w) => w.toLowerCase() === word.toLowerCase());
+  return (on ? words.filter((w) => w.toLowerCase() !== word.toLowerCase()) : [...words, word]).join(" ");
+}
+
+/** How many filters differ from the defaults (the phone's "Filters · 2"). */
+export function activeFilterCount(prefs: Pick<JobPrefs, "posted_within" | "workplace">, query: string, sort: string): number {
+  return (
+    (prefs.posted_within !== 7 ? 1 : 0) +
+    (prefs.workplace.length < 3 ? 1 : 0) +
+    (sort === "newest" ? 1 : 0) +
+    (hasQueryWord(query, "fresher") ? 1 : 0) +
+    (hasQueryWord(query, "internship") ? 1 : 0)
+  );
 }
