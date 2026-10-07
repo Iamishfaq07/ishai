@@ -5,6 +5,7 @@ import { Button, Card, EmptyState, ErrorNote, Input, PageHeader, Spinner } from 
 import { api } from "../lib/api";
 import { errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
+import { AdminTabs } from "./admin/shared";
 
 const TONE: Record<AdminPayment["status"], string> = {
   awaiting_payment: "bg-zinc-500/10 text-zinc-600 ring-zinc-500/20 dark:text-zinc-300",
@@ -35,6 +36,7 @@ export function AdminPaymentsPage() {
         subtitle="UPI payments waiting for you. Find each one in your bank or UPI app by its UTR or the ORB reference in the note, then approve it."
         icon={IndianRupee}
       />
+      <AdminTabs paymentsWaiting={data?.waiting} />
       {data && !data.upi_configured && (
         <p className="mb-4 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">
           UPI isn't set up on this server, so nobody can pay. Set <code>ORBIT_UPI_ID</code> (and <code>ORBIT_UPI_NAME</code>) on the API.

@@ -7,10 +7,12 @@
  */
 export {
   ArrowDownToLine,
+  ArrowUpDown,
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
   AudioLines,
+  Ban,
   BookOpen,
   Bookmark,
   BookmarkCheck,
@@ -55,6 +57,7 @@ export {
   LogOut,
   Mail,
   MapPin,
+  Megaphone,
   Maximize2,
   Menu,
   MessageSquare,

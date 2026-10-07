@@ -22,7 +22,16 @@ export {
   type TextSize,
 } from "./design/design";
 export { VISION_ENABLED, MOCK_INTERVIEW_ENABLED } from "./features";
-export { ApiError, base64ToBlob, createApiClient, type ApiAuth, type ApiClient, type ApiClientOptions } from "./api/client";
+export {
+  ACCOUNT_SUSPENDED,
+  ApiError,
+  base64ToBlob,
+  createApiClient,
+  queryString,
+  type ApiAuth,
+  type ApiClient,
+  type ApiClientOptions,
+} from "./api/client";
 export {
   LiveClient,
   type ConnectionStatus,

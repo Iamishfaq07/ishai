@@ -32,12 +32,18 @@ EDITABLE_KEYS: dict[str, bool] = {
     "deepseek_reasoning_model": False,
     "deepgram_api_key": True,
     "deepgram_model": False,
+    # A site-wide announcement the admin sets (shown above every signed-in page by GET /v1/announcement).
+    "announcement": False,
+    "announcement_tone": False,
 }
+ANNOUNCEMENT_MAX = 300
+ANNOUNCEMENT_TONES = ("info", "warning")
 
 _PROVIDER_CHOICES: dict[str, set[str]] = {
     "llm_provider": {"auto", "deepseek", "mock"},
     "stt_provider": {"auto", "deepgram", "mock"},
 }
+_CHOICES: dict[str, set[str]] = {**_PROVIDER_CHOICES, "announcement_tone": set(ANNOUNCEMENT_TONES)}
 
 # Decrypted overrides, populated by refresh(). None until first load.
 _overrides: dict[str, str] | None = None
@@ -57,6 +63,8 @@ class EffectiveConfig:
     deepseek_reasoning_model: str
     deepgram_api_key: str | None
     deepgram_model: str
+    announcement: str = ""
+    announcement_tone: str = "info"
 
 
 def _fernet() -> Fernet | None:
@@ -102,8 +110,12 @@ def validate_value(key: str, value: str) -> str:
 
     from orbit_api.config import get_settings
 
-    if key in _PROVIDER_CHOICES and value not in _PROVIDER_CHOICES[key]:
-        raise ValueError(f"{key} must be one of {sorted(_PROVIDER_CHOICES[key])}")
+    if key in _CHOICES and value not in _CHOICES[key]:
+        raise ValueError(f"{key} must be one of {sorted(_CHOICES[key])}")
+    if key == "announcement":
+        value = " ".join(value.split())  # one line: it's a banner
+        if len(value) > ANNOUNCEMENT_MAX:
+            raise ValueError(f"The announcement can be at most {ANNOUNCEMENT_MAX} characters")
     production = get_settings().env == "production"
     if production and key in _PROVIDER_CHOICES and value == "mock":
         raise ValueError("Demo (mock) providers can't be turned on in production")
@@ -159,6 +171,8 @@ def get_effective_config() -> EffectiveConfig:
         deepseek_reasoning_model=val("deepseek_reasoning_model", s.deepseek_reasoning_model),
         deepgram_api_key=secret("deepgram_api_key", dg_default),
         deepgram_model=val("deepgram_model", s.deepgram_model),
+        announcement=val("announcement", ""),
+        announcement_tone=val("announcement_tone", "info"),
     )
 
 

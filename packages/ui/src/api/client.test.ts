@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, DEFAULT_TIMEOUT_MS, LONG_TIMEOUT_MS, createApiClient, timeoutFor } from "./client";
+import { ACCOUNT_SUSPENDED, ApiError, DEFAULT_TIMEOUT_MS, LONG_TIMEOUT_MS, createApiClient, queryString, timeoutFor } from "./client";
 
 type Call = { url: string; method: string; headers: Headers };
 
@@ -150,5 +150,47 @@ describe("phone companion", () => {
     expect(await api.redeemCompanion(code)).toEqual({ session_id: "s1", title: "Acme", ticket: "t" });
     expect(seen).toEqual([{ url: "https://api.test/v1/companion/redeem", method: "POST", body: { code } }]);
     expect(seen[0]!.url).not.toContain(code);
+  });
+});
+
+describe("the admin console's client", () => {
+  it("signs a suspended account out like an expired session, keeping the reason for the screen", async () => {
+    const f = fakeFetch([
+      { status: 403, body: { detail: { code: "account_suspended", message: "Your Orbit account is suspended." } } },
+      { status: 403, body: { detail: { code: "email_unverified", message: "Verify your email." } } },
+    ]);
+    const onUnauthorized = vi.fn();
+    const api = createApiClient({ baseUrl: "https://api.test", auth: { mode: "cookie" }, fetchImpl: f.impl, onUnauthorized });
+    const err = (await api.listDocuments().catch((e: unknown) => e)) as ApiError;
+    expect(err.code).toBe(ACCOUNT_SUSPENDED);
+    expect(err.message).toBe("Your Orbit account is suspended.");
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+    await api.listDocuments().catch(() => undefined); // any other 403 is not a sign-out
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it("builds list, CSV, audit and stats addresses from what's set, and deletes with the typed email", async () => {
+    const seen: Array<{ url: string; method: string; body: string | null }> = [];
+    const impl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      seen.push({ url: String(input), method: init?.method ?? "GET", body: init?.body ? String(init.body) : null });
+      return new Response(JSON.stringify({}), { status: 200 });
+    }) as typeof fetch;
+    const api = createApiClient({ baseUrl: "https://api.test", auth: { mode: "cookie" }, fetchImpl: impl });
+    await api.adminUsers("pending");
+    await api.adminUsers("paid", "  asha & co ", { sort: "paid", order: "desc", offset: 50, limit: 50 });
+    await api.adminUsersCsv({ only: "active", q: "" });
+    await api.adminAudit({ scope: "admin", user_id: "u1" });
+    await api.adminStats(30, 330);
+    await api.deleteUser("u/1", "a@b.c");
+    expect(seen.map((s) => s.url.replace("https://api.test", ""))).toEqual([
+      "/v1/admin/users?only=pending",
+      "/v1/admin/users?only=paid&q=asha+%26+co&sort=paid&order=desc&offset=50&limit=50",
+      "/v1/admin/users/export?only=active",
+      "/v1/admin/audit?scope=admin&user_id=u1",
+      "/v1/admin/stats?days=30&tz_offset=330",
+      "/v1/admin/users/u%2F1",
+    ]);
+    expect(seen[5]).toMatchObject({ method: "DELETE", body: JSON.stringify({ confirm_email: "a@b.c" }) });
+    expect(queryString({ a: undefined, b: "", c: 0, d: false })).toBe("?c=0&d=false");
   });
 });

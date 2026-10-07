@@ -29,7 +29,8 @@ from orbit_api.models import (
     Workspace,
 )
 
-_NEVER = {"password_hash", "token_version", "embedding"}
+# admin_note: the admin's private notes on the account (admin/accounts.py), not the account's own data.
+_NEVER = {"password_hash", "token_version", "embedding", "admin_note"}
 
 
 def _row(obj: Any) -> dict[str, Any]:

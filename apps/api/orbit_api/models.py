@@ -35,6 +35,8 @@ class TimestampMixin:
 
 PROVIDER_NAME_LEN = 32
 MODEL_NAME_LEN = 64
+# An account id, its email (up to 320) and a few words: what an admin action on an account records.
+AUDIT_TARGET_LEN = 400
 
 
 class FitsProviderNames:
@@ -64,6 +66,12 @@ class User(TimestampMixin, Base):
     approved: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
     grant_plan: Mapped[str | None] = mapped_column(String(32))
     grant_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Suspended by the admin: can't sign in or use the API until unsuspended (auth/security.current_user). The reason
+    # is shown to the account's owner when they try.
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    suspended_reason: Mapped[str | None] = mapped_column(String(300))
+    # The admin's private notes on the account. Never shown to the account's owner (or in their data export).
+    admin_note: Mapped[str | None] = mapped_column(Text)
 
 
 class AppConfig(Base):
@@ -141,7 +149,9 @@ class CreditEntry(TimestampMixin, Base):
     user_id: Mapped[str] = mapped_column(String(36), index=True)
     kind: Mapped[str] = mapped_column(String(20))  # resume | interview_seconds
     amount: Mapped[int] = mapped_column(Integer)  # signed
-    reason: Mapped[str] = mapped_column(String(20))  # welcome | purchase | admin | resume_ai
+    reason: Mapped[str] = mapped_column(String(20))  # welcome | purchase | admin | admin_remove | resume_ai
+    # The admin's own words for an adjustment by hand ("refund for a dropped call"): shown in the account's history.
+    note: Mapped[str | None] = mapped_column(String(300))
     payment_id: Mapped[str | None] = mapped_column(String(36))
     ip_hash: Mapped[str | None] = mapped_column(String(64))
     # Welcome grants: a keyed hash of the inbox (credits.inbox), so one mailbox gets one welcome however it's spelled.
@@ -431,12 +441,20 @@ class ProviderRequest(FitsProviderNames, TimestampMixin, Base):
 
 
 class AuditLog(TimestampMixin, Base):
+    """Who did what. `user_id` is whoever acted (the admin, for admin.* actions), with no foreign key: the trail
+    outlives a deleted account. Admin actions on an account start `target` with that account's id."""
+
     __tablename__ = "audit_logs"
+    __table_args__ = (Index("ix_audit_logs_created_at", "created_at"),)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     user_id: Mapped[str | None] = mapped_column(String(36), index=True)
     action: Mapped[str] = mapped_column(String(64))
-    target: Mapped[str | None] = mapped_column(String(128))
+    target: Mapped[str | None] = mapped_column(String(AUDIT_TARGET_LEN))
     ip: Mapped[str | None] = mapped_column(String(64))
+
+    @validates("target")
+    def _fit(self, _key: str, value: str | None) -> str | None:
+        return value[:AUDIT_TARGET_LEN] if value else value
 
 
 # ---- Jobs (orbit_api/job_portal) ------------------------------------------------------------------------------

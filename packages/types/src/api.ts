@@ -610,18 +610,28 @@ export interface AdminUser {
   interview_minutes_left: number;
   /** Everything had and used, all time. */
   usage?: AdminUsage;
+  /** Suspended by the admin: can't sign in or use the API. The reason is shown to its owner. */
+  suspended_at?: string | null;
+  suspended_reason?: string | null;
+  /** The admin wrote private notes on it. */
+  has_note?: boolean;
 }
 
 export interface AdminUsage {
   resume_given: number;
+  /** Spent on resume AI actions. */
   resume_used: number;
+  /** Taken away by the admin. */
+  resume_removed?: number;
   interview_minutes_given: number;
+  interview_minutes_removed?: number;
   live_minutes_used: number;
   mock_minutes_used: number;
   sessions: number;
   /** Approved UPI payments. */
   paid_inr: number;
   packs: number;
+  /** The last time the account used Orbit (a session, interview time, resume AI or edits, Jobs AI); not sign-ins. */
   last_active: string | null;
 }
 
@@ -639,7 +649,187 @@ export interface AdminTotals {
 export interface AdminUsers {
   approval_required: boolean;
   users: AdminUser[];
+  /** On the first page only. */
   totals?: AdminTotals | null;
+  /** Accounts matching the filter and search, all pages. */
+  total?: number;
+  offset?: number;
+  has_more?: boolean;
+}
+
+/** "active": used Orbit in the last 7 days · "never_used": signed up and never used it. */
+export type AdminUserFilter = "all" | "pending" | "granted" | "paid" | "active" | "never_used" | "suspended";
+export type AdminUserSort = "created" | "email" | "last_active" | "paid" | "minutes" | "resume_credits";
+
+export interface AdminUserQuery {
+  only?: AdminUserFilter;
+  q?: string;
+  sort?: AdminUserSort;
+  order?: "asc" | "desc";
+  offset?: number;
+  limit?: number;
+}
+
+/** One credit movement on an account (GET /v1/admin/users/{id}). */
+export interface AdminLedgerItem {
+  id: string;
+  at: string;
+  kind: "resume" | "interview_seconds";
+  /** Signed: resume credits, or interview seconds. */
+  amount: number;
+  /** welcome | purchase | admin | admin_remove | resume_ai */
+  reason: string;
+  text: string;
+  amount_text: string;
+  note: string | null;
+  payment_id: string | null;
+}
+
+/** A session's kind, state and minutes: never its title or content. */
+export interface AdminSessionItem {
+  id: string;
+  type: string;
+  status: string;
+  created_at: string;
+  started_at: string | null;
+  ended_at: string | null;
+  minutes: number;
+}
+
+export interface AdminPaymentItem {
+  id: string;
+  pack: string;
+  amount_inr: number;
+  status: UpiOrderStatus;
+  utr: string | null;
+  reference: string;
+  resume_credits: number;
+  interview_minutes: number;
+  created_at: string;
+  submitted_at: string | null;
+  decided_at: string | null;
+  note: string | null;
+}
+
+/** An audit entry: who did what, and (for admin actions) to which account. */
+export interface AdminAuditItem {
+  id: string;
+  at: string;
+  action: string;
+  actor_id: string | null;
+  actor_email: string | null;
+  target: string | null;
+  subject_id: string | null;
+  /** null once that account is deleted (a delete's target keeps its email). */
+  subject_email: string | null;
+  ip: string | null;
+}
+
+export interface AdminContentCounts {
+  documents: number;
+  documents_by_kind: Record<string, number>;
+  resumes: number;
+  stories: number;
+  workspaces: number;
+  sessions: number;
+  sessions_open: number;
+  job_profile: boolean;
+  jobs_tracked: number;
+  jobs_by_status: Record<string, number>;
+  fit_checks: number;
+  fit_checks_30d: number;
+}
+
+/** GET /v1/admin/users/{id}: one account in full. */
+export interface AdminUserDetail {
+  user: AdminUser;
+  /** Private: never shown to the account's owner. */
+  admin_note: string | null;
+  is_you: boolean;
+  /** The admin account: nothing destructive applies. */
+  is_admin_account: boolean;
+  counts: AdminContentCounts;
+  ledger: AdminLedgerItem[];
+  sessions: AdminSessionItem[];
+  payments: AdminPaymentItem[];
+  /** What an admin did to this account, newest first. */
+  admin_actions: AdminAuditItem[];
+  /** The account's own security events: sign-ins, password changes. */
+  events: AdminAuditItem[];
+}
+
+export interface AdminUserPatch {
+  name?: string;
+  email_verified?: boolean;
+  admin_note?: string;
+}
+
+/** POST /v1/admin/users/{id}/credits/remove. A balance never goes below zero. */
+export interface RemoveCreditsRequest {
+  resume?: number;
+  interview_minutes?: number;
+  /** "Set to zero": take whatever is left. */
+  all_resume?: boolean;
+  all_interview?: boolean;
+  /** Shown in the account's history. */
+  reason: string;
+}
+
+export interface RemoveCreditsResult {
+  user: AdminUser;
+  removed_resume: number;
+  removed_interview_minutes: number;
+  /** More was asked for than was left: what was there was taken, and that balance is now zero. */
+  clamped: boolean;
+  message: string;
+}
+
+export interface BulkCreditsResult {
+  given: number;
+  skipped: Array<{ id: string; why: string }>;
+}
+
+export interface AdminAuditPage {
+  items: AdminAuditItem[];
+  total: number;
+  offset: number;
+  has_more: boolean;
+  /** Every action in this scope, for the filter. */
+  actions: string[];
+}
+
+export interface AdminAuditQuery {
+  scope?: "admin" | "all";
+  action?: string;
+  user_id?: string;
+  q?: string;
+  offset?: number;
+  limit?: number;
+}
+
+/** GET /v1/admin/stats: the server at a glance. Days are in the time zone asked for. */
+export interface AdminStats {
+  days: number;
+  signups: Array<{ day: string; value: number }>;
+  interview_minutes: Array<{ day: string; value: number }>;
+  users: number;
+  active_7d: number;
+  active_30d: number;
+  suspended: number;
+  paid_accounts: number;
+  interview_minutes_month: number;
+  resume_credits_used_month: number;
+  fit_checks_month: number;
+  revenue_month_inr: number;
+  revenue_total_inr: number;
+  payments_waiting: number;
+}
+
+/** GET /v1/announcement (public): the site-wide banner, if the admin set one. `id` changes with the text. */
+export interface Announcement {
+  id: string | null;
+  text: string | null;
+  tone: "info" | "warning";
 }
 
 /** One line of an account's history: credits in or out, a session and its minutes, a payment. */
@@ -667,6 +857,9 @@ export interface AdminConfig {
   /** Whether a key is present; the plaintext is never returned. */
   deepseek_api_key_set: boolean;
   deepgram_api_key_set: boolean;
+  /** The site-wide announcement banner ("" = none). */
+  announcement?: string;
+  announcement_tone?: "info" | "warning";
 }
 
 /** Omit a field to leave it unchanged; send "" for a secret to clear it (revert to env). */
@@ -679,6 +872,9 @@ export interface AdminConfigUpdate {
   deepgram_model?: string;
   deepseek_api_key?: string;
   deepgram_api_key?: string;
+  /** "" takes the banner down. */
+  announcement?: string;
+  announcement_tone?: "info" | "warning";
 }
 
 export type LatencyMetric =

@@ -4,12 +4,14 @@ from urllib.parse import urlsplit
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits
 from orbit_api.auth import email_tokens
+from orbit_api.auth.accounts import delete_account as delete_account_and_data
+from orbit_api.auth.accounts import sign_out_everywhere as _sign_out_everywhere
 from orbit_api.auth.captcha import public_config as captcha_config
 from orbit_api.auth.captcha import require_captcha
 from orbit_api.auth.security import (
@@ -21,16 +23,16 @@ from orbit_api.auth.security import (
     hash_password,
     needs_rehash,
     set_session_cookie,
+    suspended_detail,
     verify_password,
 )
 from orbit_api.config import get_settings
 from orbit_api.csrf import token_for as csrf_token_for
 from orbit_api.db import get_db
 from orbit_api.entitlements import awaiting_approval
-from orbit_api.models import AuditLog, LiveSessionRow, ProviderRequest, User
+from orbit_api.models import AuditLog, User
 from orbit_api.providers.email import OutgoingEmail, can_deliver, send_safely
 from orbit_api.ratelimit import TokenBucket, blocked, check, client_ip, client_network, failed, limit
-from orbit_api.sessions.routes import stop_live, stop_user_live
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 auth_limit = limit("auth", rate_per_s=0.2, burst=10)
@@ -85,14 +87,6 @@ async def _recheck_password(user: User, password: str) -> None:
     if not await verify_password(password, user.password_hash):
         failed(_password_fail_by_user, user.id)
         raise HTTPException(status.HTTP_403_FORBIDDEN, "That password isn't right.")
-
-
-async def _sign_out_everywhere(db: AsyncSession, user: User) -> None:
-    """Every session ends (web, desktop, a live session streaming somewhere, a phone following it) and every
-    unused emailed link stops working. Caller commits."""
-    user.token_version += 1
-    await email_tokens.revoke_all(db, user.id)
-    await stop_user_live(user.id)
 
 
 class RegisterIn(BaseModel):
@@ -264,6 +258,10 @@ async def login(body: LoginIn, request: Request, response: Response,
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password.")
     if not get_settings().email_allowed(user.email):
         raise HTTPException(status.HTTP_403_FORBIDDEN, NOT_ALLOWED)
+    if user.suspended_at is not None:  # said only to someone who knows the password: no account enumeration
+        db.add(AuditLog(user_id=user.id, action="auth.login_suspended", ip=_ip(request)))
+        await db.commit()
+        raise HTTPException(status.HTTP_403_FORBIDDEN, suspended_detail(user))
     if needs_rehash(user.password_hash):
         user.password_hash = await hash_password(body.password)
     db.add(AuditLog(user_id=user.id, action="auth.login", ip=_ip(request)))
@@ -318,19 +316,9 @@ async def delete_account(body: DeleteAccountIn, request: Request, response: Resp
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
                                 "The admin account can't be deleted from the app.")
         await _recheck_password(u, body.password)
-        # A live session goes first, as End does: otherwise its engine kept streaming (and metering) STT and the
-        # LLM for an account that no longer exists, every write failing against the deleted rows.
-        for session_id in (await db.scalars(select(LiveSessionRow.id).where(
-                LiveSessionRow.user_id == u.id, LiveSessionRow.status != "ended"))).all():
-            await stop_live(u.id, session_id)
-        await stop_user_live(u.id)  # and every phone-share code
-        await db.delete(u)
-        # Rows without a foreign key keep no personal data: the account's audit trail loses its IP addresses, and
-        # provider-cost rows lose the link to it (the cost totals stay right).
-        await db.execute(update(AuditLog).where(AuditLog.user_id == u.id).values(ip=None))
-        await db.execute(update(ProviderRequest).where(ProviderRequest.user_id == u.id).values(user_id=None))
-        db.add(AuditLog(user_id=None, action="auth.delete_account", target=user.id))
-        await db.commit()
+        # Live work stops first; payments, credit entries and the audit trail stay without personal data
+        # (auth/accounts.py, shared with the admin's delete).
+        await delete_account_and_data(db, u, AuditLog(user_id=None, action="auth.delete_account", target=user.id))
     _clear_cookie(response)
     response.status_code = 204
     return response
@@ -390,7 +378,7 @@ def _already_registered_email(to: str) -> OutgoingEmail:
     )
 
 
-def _reset_email(to: str, token: str) -> OutgoingEmail:
+def reset_email(to: str, token: str) -> OutgoingEmail:
     return OutgoingEmail(
         to=to,
         subject="Reset your Orbit password",
@@ -458,7 +446,7 @@ async def request_password_reset(body: ResetRequestIn, request: Request, backgro
         token = await email_tokens.issue(db, user.id, "reset_password")
         db.add(AuditLog(user_id=user.id, action="auth.password_reset_request", ip=_ip(request)))
         await db.commit()
-        background.add_task(send_safely, _reset_email(user.email, token))
+        background.add_task(send_safely, reset_email(user.email, token))
     return {"status": "If an account exists for that email, a reset link is on its way."}
 
 
@@ -470,6 +458,8 @@ async def confirm_password_reset(body: ResetConfirmIn, request: Request, respons
     user = await db.get(User, user_id) if user_id else None
     if user is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "This reset link is invalid or has expired.")
+    if user.suspended_at is not None:  # nothing changes, and no session: the link stays usable once unsuspended
+        raise HTTPException(status.HTTP_403_FORBIDDEN, suspended_detail(user))
     newly_verified = not user.email_verified
     _check_password(body.password, user.email)
     user.password_hash = await hash_password(body.password)

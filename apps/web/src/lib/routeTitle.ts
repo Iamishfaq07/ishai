@@ -13,6 +13,7 @@ const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/billing/, "Billing"],
   [/^\/admin\/users/, "Users & access"],
   [/^\/admin\/payments/, "Payments"],
+  [/^\/admin\/audit/, "Audit log"],
   [/^\/settings/, "Settings"],
   [/^\/live\//, "Live session"],
   [/^\/companion/, "Phone companion"],

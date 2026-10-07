@@ -15,6 +15,9 @@ from starlette.middleware.gzip import GZipMiddleware
 from starlette.types import Receive, Scope, Send
 
 from orbit_api import db, jobs
+from orbit_api.admin.accounts import router as admin_accounts_router
+from orbit_api.admin.overview import router as admin_overview_router
+from orbit_api.admin.routes import public_router as announcement_router
 from orbit_api.admin.routes import router as admin_router
 from orbit_api.auth.routes import router as auth_router
 from orbit_api.billing.packs import packs as configured_packs
@@ -236,6 +239,9 @@ def create_app() -> FastAPI:
     app.include_router(sessions_router)
     app.include_router(desktop_router)
     app.include_router(admin_router)
+    app.include_router(admin_accounts_router)
+    app.include_router(admin_overview_router)
+    app.include_router(announcement_router)
     app.include_router(workspaces_router)
     app.include_router(preflight_router)
     app.include_router(billing_router)

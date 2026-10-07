@@ -40,6 +40,7 @@ import {
   JobProfilePage,
   AdminUsersPage,
   AdminPaymentsPage,
+  AdminAuditPage,
   prefetchLikelyRoutes,
 } from "./routes";
 
@@ -161,6 +162,7 @@ export function App() {
         <Route path="settings" element={<SettingsPage />} />
         <Route path="admin/users" element={<AdminUsersPage />} />
         <Route path="admin/payments" element={<AdminPaymentsPage />} />
+        <Route path="admin/audit" element={<AdminAuditPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

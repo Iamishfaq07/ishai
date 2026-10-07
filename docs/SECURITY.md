@@ -47,6 +47,17 @@ What protects what, and where it lives in the code. Report issues privately to t
   - the admin (`ORBIT_ADMIN_EMAIL`) needs a verified address too whenever mail can be delivered. Otherwise the first
     person to register it would be admin. Only an admin-only deploy with no SMTP skips this.
 
+## The admin console (`admin/accounts.py`, `admin/overview.py`)
+- **Admin only.** Every route uses `require_admin` (a normal user gets 403, nobody signed in 401), is in the
+  route matrix of `tests/test_security_idor.py`, and writes an `audit_logs` row for every change (reads don't).
+- **Never the admin account.** Suspend, delete, sign-out and taking credits away refuse the acting admin and the
+  admin account (also the admin's address before it's verified). Its "email verified" flag can't be changed there.
+- **Delete** needs the account's email typed (the API checks it too) and goes through the owner's own delete
+  (D45). **Suspension** is checked by `current_user` on every request, at sign-in (after the password), at
+  password-reset confirm and on the live socket; suspending also bumps `token_version` and ends live sessions.
+- **Bounds:** reasons and notes ≤ 300 characters (private notes ≤ 4,000), bulk credits ≤ 100 accounts, CSV ≤ 20,000
+  rows with cells starting `= + - @` quoted so a spreadsheet can't run them as formulas.
+
 ## CSRF (`csrf.py`)
 `SameSite=Lax` already keeps the cookie off cross-site POSTs; this is defence in depth (and covers deployments
 that set `ORBIT_COOKIE_SAMESITE=none`). For POST/PUT/PATCH/DELETE:

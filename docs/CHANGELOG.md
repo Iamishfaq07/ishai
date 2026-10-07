@@ -1,5 +1,60 @@
 # Implementation log
 
+## Admin console: delete, suspend, take credits away, an account in full, the audit log and a dashboard (2026-10-07)
+
+The owner asked for a more capable admin account: delete or remove accounts, take minutes and AI credits away, and
+"more things whatever is best". Users & access becomes a console with three tabs (Users, Payments, Audit log).
+
+- **Delete an account** from its panel, after typing its email (the API checks it too). It goes through the same
+  function as "Delete my account" (`auth/accounts.py`, now shared): live sessions stop first, then everything in the
+  account cascades away. **Approved payments stay on the books** without the account (they were already
+  `ON DELETE SET NULL`), so revenue totals don't change and a UTR can't be reused; the credit ledger and audit trail
+  stay too (no foreign keys, as before), with the admin's notes cleared. The audit entry keeps the id and the email.
+- **Take credits away**: resume credits and/or interview minutes, with a required reason. A balance never goes below
+  zero: asking for more takes what's there, and both the preview and the answer say so. "Set to zero" takes exactly
+  the balance. Each removal is a ledger entry (`admin_remove`, with the reason as its note), so the history explains
+  it; adding credits can carry a note too. Removals don't count as "used".
+- **Suspend / unsuspend**: a suspended account can't sign in (told why, only after the right password), can't use the
+  API (`current_user` answers 403 `account_suspended` with the reason), can't open the live socket or finish a
+  password reset. Suspending signs it out everywhere and ends its live sessions, including one waiting to reconnect;
+  the owner is emailed the reason. **Sign out everywhere** from the panel too (password unchanged).
+- **The account panel** (`?user=` on the list): usage, access (grant / approve / revoke, as before), credits, name,
+  email verified, a password-reset email (the usual link), **private notes** (left out of the owner's data export),
+  and its history in tabs: the full credit ledger, sessions (kind, state, minutes; never titles), payments, admin
+  actions taken on it, its own sign-ins and security events with IPs, and content counts (documents by kind, resumes,
+  stories, setups, Jobs AI profile, tracker and fit checks). Nothing destructive appears for the admin account or
+  yourself, and the API refuses it anyway.
+- **A better list**: filters (Everyone, Waiting, On a grant, Paid, Active 7 days, Never used, Suspended), sortable
+  columns (account, credits left, minutes used, paid, last active, joined), search, 50 at a time with "Load more"
+  (`offset`, `total`, `has_more`), **CSV export** of the filtered list (formula-safe cells), and **bulk "give
+  credits"** to up to 100 selected accounts. "Last active" now means the last use of Orbit: a session, interview
+  time, resume AI or an edit, a Jobs AI fit check or tracker change.
+- **Dashboard strip**: accounts, active in 7 days, revenue this month, payments to check, interview minutes, resume AI
+  credits and Jobs AI fit checks this month, paying accounts, and two small bar charts (sign-ups and interview
+  minutes per day for 30 days, in the admin's own time zone), with hover, arrow-key reading and a table view. Plain
+  SVG, no chart library.
+- **Audit log page** (`/admin/audit`): admin actions or every audited event, filtered by action, by account (as the
+  one who acted or the one it was about) and by search, each linking back to the account. Changing the provider
+  settings is now audited too (key names only, never values).
+- **Site announcement**: a one-line banner (info or warning) set from the dashboard, kept in the runtime config (no
+  new table), shown above every signed-in page by the public `GET /v1/announcement`, dismissed per text.
+- API: `GET/PATCH/DELETE /v1/admin/users/{id}`, `POST /v1/admin/users/{id}/credits/remove`, `/suspend`,
+  `/unsuspend`, `/sign-out`, `/password-reset`, `POST /v1/admin/users/bulk-credits`, `GET /v1/admin/users/export`,
+  `GET /v1/admin/audit`, `GET /v1/admin/stats`, `GET /v1/announcement`; `GET /v1/admin/users` gains `only`
+  filters, `sort`, `order` and `offset`. All admin-only, bounded, in the security route matrix, and audited when they
+  change something.
+- **Migration `f3a9c1e7b5d4`** (on `e9b4c6a2d8f1`): `users.suspended_at`, `users.suspended_reason`,
+  `users.admin_note`, `credit_entries.note`, `audit_logs.target` widened to 400 on Postgres, and an index on
+  `audit_logs.created_at`. Checked up and down on SQLite (test) and Postgres 16. Design note: D45.
+
+**Verified:** API 1,596 tests pass, 17 skipped (+14 console tests, and 14 more routes in the security matrix); the 4
+Windows-only failures from main remain (`test_deploy_image` reads a file as cp1252, three private-IP literals in
+`test_job_link`); ruff, strict mypy (`orbit_api`). Frontend: typecheck and lint (all packages), UI 153 tests (+2), web 54 (+11), desktop 27, web
+build. Migration up, down (a 390-character target truncated to 128) and up again on a local Postgres 16, and
+`downgrade base` / `upgrade head`. The console driven end to end in headless Chrome
+(`tools/orbit-drive/admin-console-drive.mjs`, 20 checks) against the API on SQLite and again on Postgres: no server
+errors, no console errors.
+
 ## Out of AI credits: a clear popup, and no more "List should have at most 10 items" (2026-10-07)
 
 A user with no resume credits saw "List should have at most 10 items after validation, not 11" instead of being told
