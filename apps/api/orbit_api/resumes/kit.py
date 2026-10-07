@@ -10,6 +10,11 @@ tells go (dashes, "I hope this finds you well"), and every field is cut to the s
 separator, never mid-word. The greeting and sign-off of a message are written here, from the recipient's name and
 the resume's contact details, so they can't name someone made up. Each generation is one AI action: one resume
 credit, given back if it fails.
+
+A message can be for a job in Jobs AI (`listing_id`, docs/DECISIONS.md D46): the posting is read here from the job
+cache (its title, company, place, the skills it asks for and its text, cut to the same size as a pasted job post)
+and goes to the model fenced as data, like any job post, with the skills it asks for split into the ones the resume
+shows and the ones it doesn't. The browser never needs the post's full text, which Jobs AI doesn't show (D43).
 """
 
 import asyncio
@@ -26,9 +31,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.guards import require_verified_email
 from orbit_api.db import get_db
+from orbit_api.job_portal.skills import SkillMatcher
 from orbit_api.live.answer_format import humanize
 from orbit_api.live.context_builder import fence
-from orbit_api.models import User
+from orbit_api.models import JobListing, User
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMMessage, LLMRequest
 from orbit_api.resumes.ai import MAX_JOB_CHARS, job_title
@@ -56,6 +62,9 @@ CONNECTION_NOTE = 200
 SUBJECT = 90
 OutreachKind = Literal["referral", "cold_email", "follow_up", "thank_you"]
 MESSAGE_WORDS: dict[str, int] = {"referral": 150, "cold_email": 150, "follow_up": 100, "thank_you": 120}
+# A Jobs AI posting's skills the prompt names (the post's own, read when it was fetched), and how long each may be.
+MAX_REQUIREMENTS = 12
+REQUIREMENT_CHARS = 60
 
 # Words a message may name that no resume needs to: sites, days and months, the people a job hunt writes to.
 _COMMON = frozenset("""
@@ -214,6 +223,15 @@ class OutreachIn(KitIn):
     company: str = Field("", max_length=120)
     role: str = Field("", max_length=120)
     details: str = Field("", max_length=600)  # anything true to mention: "we talked about the Power BI migration"
+    # A job in Jobs AI to write it for: its posting, read here, takes the place of `job_text`, and fills in the
+    # company and role when they're left blank.
+    listing_id: str | None = Field(None, min_length=1, max_length=36)
+
+
+class Requirements(BaseModel):
+    """A posting's skills, split by whether the resume shows them (the job portal's own skill matcher)."""
+    shown: list[str] = []
+    lacking: list[str] = []
 
 
 class OutreachOut(BaseModel):
@@ -329,7 +347,7 @@ def profile_request(kind: Literal["naukri", "linkedin"], data: ResumeData, job_t
     )
 
 
-def outreach_request(body: OutreachIn, data: ResumeData) -> LLMRequest:
+def outreach_request(body: OutreachIn, data: ResumeData, needs: Requirements | None = None) -> LLMRequest:
     role = body.role.strip() or (job_title(body.job_text) if body.job_text.strip() else "")
     inputs = {"recipient": body.recipient.strip() or None, "company": body.company.strip() or None,
               "role": role or None, "details": body.details.strip() or None}
@@ -341,10 +359,43 @@ def outreach_request(body: OutreachIn, data: ResumeData) -> LLMRequest:
     if body.job_text.strip():
         parts.append("<reference_data source=\"job_post\">\n" + fence(body.job_text[:MAX_JOB_CHARS])
                      + "\n</reference_data>")
+    if needs and (needs.shown or needs.lacking):
+        parts.append("The job post's key requirements: lean on the ones the resume shows, and never claim one it "
+                     "doesn't.\n<reference_data source=\"job_requirements\">\n"
+                     + fence(json.dumps({"resume_shows": needs.shown, "resume_does_not_show": needs.lacking},
+                                        ensure_ascii=False))
+                     + "\n</reference_data>")
     llm = get_llm_provider()
     return LLMRequest(messages=[LLMMessage("system", OUTREACH_SYSTEM), LLMMessage("user", "\n\n".join(parts))],
                       json_mode=llm.supports_structured_output(), max_tokens=800, temperature=0.5,
                       request_type="resume_outreach")
+
+
+def listing_post(row: JobListing) -> str:
+    """A Jobs AI posting as a message reads it: its title first (as a pasted post has it, for `job_title`), the
+    company and place, the skills it asks for, then its text, cut to the size of a pasted job post."""
+    places = " · ".join(x for x in (", ".join(row.locations[:3]), (row.workplace or "").capitalize()) if x)
+    head = [row.title, " · ".join(x for x in (row.company, places) if x)]
+    if asked := _asked(row):
+        head.append("Skills it asks for: " + ", ".join(asked))
+    return ("\n".join(x for x in head if x) + "\n\n" + (row.description or row.snippet)).strip()[:MAX_JOB_CHARS]
+
+
+def _asked(row: JobListing) -> list[str]:
+    out: list[str] = []
+    for k in row.keywords or []:
+        k = " ".join(str(k).split())[:REQUIREMENT_CHARS]
+        if k and k not in out:
+            out.append(k)
+    return out[:MAX_REQUIREMENTS]
+
+
+def requirements(row: JobListing, data: ResumeData) -> Requirements:
+    """The posting's skills the resume shows and the ones it doesn't, matched the way Jobs AI matches (synonyms
+    included): against the resume alone, since the message may only claim what the resume says."""
+    matcher = SkillMatcher(resume_text(data), [])
+    asked = _asked(row)
+    return Requirements(shown=[k for k in asked if matcher.has(k)], lacking=[k for k in asked if not matcher.has(k)])
 
 
 # ---- checking what comes back ---------------------------------------------------------------------------------
@@ -597,9 +648,24 @@ async def _linkedin(db: AsyncSession, user: User, body: KitIn, allowance: Allowa
                    "The AI couldn't write your profile. Try again.")
 
 
+async def _for_listing(db: AsyncSession, body: OutreachIn, data: ResumeData) -> tuple[OutreachIn, Requirements]:
+    """The message's job from Jobs AI's cache: its posting as the job post, its company and title where the
+    candidate left them blank. Listings are shared, so any signed-in user may write for any of them."""
+    row = await db.get(JobListing, body.listing_id)
+    if row is None:  # before the credit is claimed: nothing is spent
+        raise HTTPException(status.HTTP_404_NOT_FOUND,
+                            "This job isn't listed any more. Write the message without it, or type the company and "
+                            "role yourself.")
+    return body.model_copy(update={"job_text": listing_post(row), "company": body.company.strip() or row.company[:120],
+                                   "role": body.role.strip() or row.title[:120]}), requirements(row, data)
+
+
 async def _outreach(db: AsyncSession, user: User, body: OutreachIn, allowance: Allowance) -> OutreachOut:
     d = _ready(body.data)
-    resp = await _generate(db, user, outreach_request(body, d), "outreach", allowance)
+    needs = None
+    if body.listing_id:
+        body, needs = await _for_listing(db, body, d)
+    resp = await _generate(db, user, outreach_request(body, d, needs), "outreach", allowance)
     return _parsed(lambda: parse_outreach(resp.text, body, d), "outreach",
                    "The AI couldn't write the message. Try again.")
 
@@ -625,5 +691,6 @@ async def linkedin_profile(body: KitIn, user: Annotated[User, Depends(require_ve
 async def outreach(body: OutreachIn, user: Annotated[User, Depends(require_verified_email)],
                    db: Annotated[AsyncSession, Depends(get_db)],
                    allowance: Annotated[Allowance, Depends(account_allowance)]) -> OutreachOut:
-    """One message: a referral request (connection note and message), a cold email, a follow-up or a thank-you."""
+    """One message: a referral request (connection note and message), a cold email, a follow-up or a thank-you.
+    With `listing_id`, for that job in Jobs AI (404, and nothing spent, once it has left the feed)."""
     return await _spend(allowance, _outreach(db, user, body, allowance))
