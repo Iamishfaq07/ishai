@@ -253,6 +253,24 @@ level is inferred the same way, from the resume once per session, because a fres
 is what an interviewer catches; topics the verified facts never mention get an honest line instead of a faked
 expert's answer. The jargon glossary (`TERMS`) comes after the spoken answer, so it costs no time to the first word.
 
+**D45 — The admin console deletes through the owner's own delete, keeps the books, and never goes below zero.**
+Deleting an account from the console calls the same function as "Delete my account" (`auth/accounts.py`): live work
+stops first, then `ON DELETE CASCADE` takes every document, session, resume, story, job-search row, usage row and link.
+What stays is what has to: **approved payments are kept** (`payments.user_id` is `ON DELETE SET NULL`, since migration
+c4f6a8b0d2e1), so revenue totals and each UTR's unique row survive and a transfer can't be claimed again
+from a new account; the row holds no personal data beyond the UTR and the pack, and shows as "(deleted account)".
+The credit ledger stays too (no foreign key: the welcome grant's network and inbox hashes stop delete-and-re-sign-up
+abuse), with the admin's notes on it cleared, and so does the audit trail (no foreign key), whose delete entry keeps
+the account's id and email so it still says who it was. Taking credits away is a negative ledger entry with the
+admin's reason (`reason=admin_remove`, `note`), never a rewrite of history; the server clamps it to what's left and
+says so, and "set to zero" takes exactly the balance. Suspension is a flag (`users.suspended_at`) checked on every
+request by `current_user`, at sign-in (only after the right password, so it can't be used to probe accounts), at
+password-reset confirm and on the live socket; suspending also signs the account out everywhere and ends its live
+sessions, so nothing already open keeps running. None of the destructive actions work on the admin account or on the
+acting admin. The console shows counts and metadata, never an account's content (documents, transcripts, session
+titles); the admin's private notes are left out of the owner's data export, so they shouldn't hold anything the
+owner would need to see.
+
 **D46 — Job-aware outreach reads the posting on the server, by listing id.** Outreach lives in Jobs AI now, where a
 message should be about a real job. The browser could send the job's text as `job_text`, but Jobs AI only ever shows a
 summary of a post (D43), so it doesn't have the full text, and text from the browser could be anything. So the

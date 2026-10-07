@@ -42,6 +42,17 @@ Deleting an account cascades to every row above (`ON DELETE CASCADE`). The expor
 except secrets (the password hash) and derived search data (chunk embeddings). The documents' full text is
 included instead.
 
+## What the server's admin sees and can do
+The person who runs the server (`ORBIT_ADMIN_EMAIL`) has an admin console (`admin/accounts.py`, `admin/routes.py`):
+- **Sees** each account's email, name, plan, credit balances and their full history, usage (minutes, and counts of
+  documents, resumes, sessions and Jobs AI activity), payments, and the account's security log (sign-ins with their
+  IP addresses). **Never the content:** no document text, transcripts, answers, resumes or session titles.
+- **Can** give or take away credits (each change is in your history with the admin's reason), suspend the account
+  (you're emailed and shown the reason, and can't sign in until it's lifted), sign it out everywhere, email you a
+  password-reset link, and delete it. A deletion is the same as your own (`auth/accounts.py`): everything above
+  goes, and an approved payment stays on the books without the account.
+- The admin's private notes about an account aren't part of your export. Every admin action is in the audit log.
+
 **The free resume maker needs no account.** Signed out, the one resume you make is kept only in your browser
 (`localStorage`); the server never stores it, and it isn't tied to you. Scoring, Word export and the AI are done
 per request and nothing is kept: the text you send for an AI fix goes to the AI provider the same way a signed-in
