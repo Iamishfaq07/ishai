@@ -1,5 +1,18 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { AudioLines, Briefcase, MessagesSquare, OrbitWordmark, PlanetHero, ShieldCheck, Sparkles, cx, type LucideIcon } from "@orbit/ui";
+import { useEffect, useId, useRef, useState, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
+import {
+  AudioLines,
+  Briefcase,
+  Eye,
+  EyeOff,
+  MessagesSquare,
+  OrbitWordmark,
+  PlanetHero,
+  ShieldCheck,
+  Sparkles,
+  cx,
+  focusRing,
+  type LucideIcon,
+} from "@orbit/ui";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button, ErrorNote, Field, Input } from "../components/ui";
 import { api } from "../lib/api";
@@ -8,6 +21,7 @@ import { errorText } from "../lib/format";
 import { useWelcomeGrant } from "../lib/welcome";
 import { Captcha, useCaptchaConfig } from "../components/Captcha";
 import { AiPill } from "../components/products";
+import { USE_WHERE_ALLOWED } from "../components/Footer";
 
 type Feature = { icon: LucideIcon; title: string; text: string; ai?: boolean };
 
@@ -116,10 +130,12 @@ function AuthShell({ title, subtitle, children, features = false }: { title: str
         />
         {/* In the corner, so the three products and what comes with them fit a laptop screen. */}
         <PlanetHero className="pointer-events-none absolute right-6 top-6 w-28 motion-safe:animate-float xl:right-10 xl:top-8 xl:w-44" />
-        <OrbitWordmark size={30} className="relative" />
+        <Link to="/" aria-label="Orbit: what it does" className={cx("relative w-fit rounded-lg", focusRing)}>
+          <OrbitWordmark size={30} />
+        </Link>
         <div className="relative my-auto pt-6 [@media(min-height:800px)]:pt-8">
-          <h2 className="max-w-md font-display text-3xl font-semibold leading-tight tracking-tight [@media(min-height:800px)]:text-4xl">
-            Get the interview, then walk in <span className="text-gradient">with backup.</span>
+          <h2 className="max-w-md text-balance font-display text-3xl font-semibold leading-tight tracking-tight [@media(min-height:800px)]:text-4xl">
+            Practise interviews, fix your resume, find jobs. One account.
           </h2>
           <div className="mt-5 max-w-md [@media(min-height:800px)]:mt-6">
             <FeatureList />
@@ -129,15 +145,18 @@ function AuthShell({ title, subtitle, children, features = false }: { title: str
               <Sparkles className="h-4 w-4" aria-hidden /> {welcome}
             </p>
           )}
+          <p className="mt-5 flex max-w-md items-start gap-2 text-xs text-zinc-300">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden /> {USE_WHERE_ALLOWED}
+          </p>
         </div>
       </aside>
 
       <main className="flex items-center justify-center px-4 py-10 sm:px-6">
         <div className="w-full max-w-sm animate-fade-up">
           <div className="mb-8 text-center">
-            <span className="mb-6 flex justify-center lg:hidden">
+            <Link to="/" aria-label="Orbit: what it does" className={cx("mx-auto mb-6 flex w-fit justify-center rounded-lg lg:hidden", focusRing)}>
               <OrbitWordmark size={34} />
-            </span>
+            </Link>
             <h1 className="font-display text-3xl font-semibold tracking-tight">{title}</h1>
             <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>
           </div>
@@ -150,10 +169,85 @@ function AuthShell({ title, subtitle, children, features = false }: { title: str
                 </p>
               )}
               <FeatureList compact />
+              <p className="flex items-start gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden /> {USE_WHERE_ALLOWED}
+              </p>
             </section>
           )}
+          <nav aria-label="About Orbit" className="mt-6 flex flex-wrap justify-center gap-x-4 text-xs">
+            <Link to="/" className={smallLink}>
+              What Orbit does
+            </Link>
+            <a href="/terms.html" className={smallLink}>
+              Terms
+            </a>
+            <a href="/privacy.html" className={smallLink}>
+              Privacy
+            </a>
+            <a href="/contact.html" className={smallLink}>
+              Contact
+            </a>
+          </nav>
         </div>
       </main>
+    </div>
+  );
+}
+
+/** Under-the-form links: tall enough to tap (24 px and more). */
+const smallLink = cx("inline-flex min-h-8 items-center rounded text-zinc-600 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100", focusRing);
+
+/**
+ * A password box with a show/hide button: people on phones mistype, and seeing what you typed (like pasting) should
+ * stay possible (WCAG 3.3.8). The button sits inside the field's right edge.
+ */
+function PasswordInput(props: InputHTMLAttributes<HTMLInputElement>) {
+  const [shown, setShown] = useState(false);
+  return (
+    <div className="relative">
+      <Input {...props} type={shown ? "text" : "password"} className="pr-12" autoCapitalize="none" spellCheck={false} />
+      <button
+        type="button"
+        onClick={() => setShown((v) => !v)}
+        aria-pressed={shown}
+        aria-label={shown ? "Hide password" : "Show password"}
+        aria-controls={props.id}
+        className={cx("absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-xl text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}
+      >
+        {shown ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+      </button>
+    </div>
+  );
+}
+
+/** A plain-words strength hint for a new password: length matters most, then mixing kinds of characters. */
+function passwordStrength(password: string): { label: string; level: 0 | 1 | 2 | 3 } {
+  if (!password) return { label: "", level: 0 };
+  if (password.length < 10) {
+    const left = 10 - password.length;
+    return { label: `${left} more character${left === 1 ? "" : "s"} needed`, level: 1 };
+  }
+  const kinds = [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/].filter((re) => re.test(password)).length;
+  if (password.length >= 14 || (password.length >= 12 && kinds >= 3)) return { label: "Strong password", level: 3 };
+  return { label: "Good. Longer is stronger: a short sentence works well.", level: 2 };
+}
+
+function StrengthHint({ password, id }: { password: string; id: string }) {
+  const { label, level } = passwordStrength(password);
+  return (
+    <div id={id} className="space-y-1.5">
+      <div aria-hidden="true" className="grid grid-cols-3 gap-1">
+        {[1, 2, 3].map((n) => (
+          <span
+            key={n}
+            className={cx(
+              "h-1 rounded-full",
+              level >= n ? (level === 1 ? "bg-amber-500" : level === 2 ? "bg-indigo-500" : "bg-emerald-500") : "bg-zinc-200 dark:bg-white/10",
+            )}
+          />
+        ))}
+      </div>
+      <p className="text-xs text-zinc-600 dark:text-zinc-400">{label || "At least 10 characters. A short sentence is easy to remember."}</p>
     </div>
   );
 }
@@ -198,29 +292,29 @@ export function LoginPage() {
           <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
         <Field label="Password" htmlFor="password">
-          <Input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <PasswordInput id="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         {error && <ErrorNote>{error}</ErrorNote>}
         <Button type="submit" disabled={busy} className="w-full">
           {busy ? "Signing in…" : "Sign in"}
         </Button>
         <p className="text-center text-sm">
-          <Link to="/forgot-password" className="text-zinc-500 hover:text-zinc-800 hover:underline dark:hover:text-zinc-200">
+          <Link
+            to="/forgot-password"
+            className={cx("inline-flex min-h-8 items-center rounded px-1 text-zinc-600 hover:text-zinc-800 hover:underline dark:text-zinc-400 dark:hover:text-zinc-200", focusRing)}
+          >
             Forgot your password?
           </Link>
         </p>
       </form>
-      <p className="mt-6 text-center text-sm text-zinc-500">
+      <p className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
         New to Orbit?{" "}
-        <Link to="/register" state={from ? { from } : undefined} className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
-          Create an account
+        <Link
+          to="/register"
+          state={from ? { from } : undefined}
+          className={cx("inline-flex min-h-8 items-center rounded font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}
+        >
+          Create a free account
         </Link>
       </p>
     </AuthShell>
@@ -230,9 +324,9 @@ export function LoginPage() {
 export function RegisterPage() {
   const { user, register } = useAuth();
   const navigate = useNavigate();
-  // From Resume AI's or Jobs AI's "Start free": back there after sign-up. Otherwise Documents, to add a resume and a job
-  // post.
+  // Then the three welcome questions; from Resume AI's or Jobs AI's "Start free", back there after them.
   const from = useCameFrom();
+  const strengthId = useId();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -261,8 +355,7 @@ export function RegisterPage() {
         ...(captchaToken ? { captcha_token: captchaToken } : {}),
       });
       if (outcome === "verify_email") setSentTo(email.trim().toLowerCase());
-      else if (from) navigate(from, { replace: true });
-      else navigate("/documents", { replace: true, state: { onboarding: true } });
+      else navigate("/welcome", { replace: true, state: from ? { from } : undefined });
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -271,7 +364,7 @@ export function RegisterPage() {
   };
 
   return (
-    <AuthShell title="Create your account" subtitle="Interview copilot, Resume AI and Jobs AI, in one account" features>
+    <AuthShell title="Create your free account" subtitle="Takes about a minute. Interview copilot, Resume AI and Jobs AI, in one account." features>
       <form onSubmit={(e) => void submit(e)} className="space-y-4">
         <Field label="Name" htmlFor="name">
           <Input id="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -279,26 +372,42 @@ export function RegisterPage() {
         <Field label="Email" htmlFor="email">
           <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
-        <Field label="Password" htmlFor="password" hint="At least 10 characters.">
-          <Input
+        <Field label="Password" htmlFor="password">
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="new-password"
             required
             minLength={10}
             value={password}
+            aria-describedby={strengthId}
             onChange={(e) => setPassword(e.target.value)}
           />
+          <StrengthHint password={password} id={strengthId} />
         </Field>
         {captcha && <Captcha config={captcha} onToken={setCaptchaToken} />}
         {error && <ErrorNote>{error}</ErrorNote>}
         <Button type="submit" disabled={busy || captcha === undefined || (!!captcha && !captchaToken)} className="w-full">
           {busy ? "Creating account…" : "Create account"}
         </Button>
+        <p className="text-center text-xs text-zinc-600 dark:text-zinc-400">
+          By creating an account you agree to the{" "}
+          <a href="/terms.html" className="underline underline-offset-2">
+            terms
+          </a>{" "}
+          and the{" "}
+          <a href="/privacy.html" className="underline underline-offset-2">
+            privacy policy
+          </a>
+          .
+        </p>
       </form>
-      <p className="mt-6 text-center text-sm text-zinc-500">
+      <p className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
         Already have an account?{" "}
-        <Link to="/login" state={from ? { from } : undefined} className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+        <Link
+          to="/login"
+          state={from ? { from } : undefined}
+          className={cx("inline-flex min-h-8 items-center rounded font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}
+        >
           Sign in
         </Link>
       </p>
@@ -436,18 +545,10 @@ export function ResetPasswordPage() {
     <AuthShell title="Choose a new password" subtitle="You'll be signed out on every other device">
       <form onSubmit={(e) => void submit(e)} className="space-y-4">
         <Field label="New password" htmlFor="password" hint="At least 10 characters.">
-          <Input
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={10}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <PasswordInput id="password" autoComplete="new-password" required minLength={10} value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         <Field label="Confirm new password" htmlFor="confirm">
-          <Input id="confirm" type="password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+          <PasswordInput id="confirm" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         </Field>
         {error && (
           <ErrorNote>
