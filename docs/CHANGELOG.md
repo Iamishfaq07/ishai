@@ -1,5 +1,35 @@
 # Implementation log
 
+## Look and feel: Orbit scenes, page transitions, contrast and a light default (2026-10-07)
+
+Part two of the look and feel foundation, on top of the motion levels and feedback primitives below.
+
+- **Eight Orbit scenes** (`packages/ui/src/components/scenes/`, one module each, so a page carries only the ones it
+  shows): Welcome (a planet with a moon per product: interview, resume, jobs), Resume (a page in orbit with its ATS
+  ring), Jobs (a constellation of Bengaluru, Pune, Hyderabad and remote), Practice (a microphone and the scorecard
+  that comes back, one thing still to work on), Tracker empty (three ghost columns), No results (a telescope on an
+  empty patch of sky), Offline (a dish losing its satellite) and Celebration (a burst). Drawn like a star atlas:
+  hairline orbits, paper surfaces, one subject in the accent and one aurora highlight; no gradients or glass, so they
+  hold in light and dark and in all seven accents (checked side by side). Decorative unless given a `title`; one
+  small, finite motion each at Full only. For `EmptyState`'s `art`; `SpotIllustration` stays for small spots. Each
+  is 1.3–2.7 KB of source and in no bundle until a page uses it.
+- **Page transitions:** `withViewTransition(update, to?)`, `viewTransitionOk()` and `useViewTransitionOk(to)` (for
+  React Router's `viewTransition`), with `::view-transition-*` rules on the motion tokens: a 160 ms crossfade, and
+  a morph for elements given a `view-transition-name`. Gentle crossfades without the morph; Off and `/live/*` never
+  start one (checked with `getAnimations()` on the transition's pseudo-elements). Not wired into the nav yet.
+- **Contrast** (axe WCAG 2.2 AA, 390 px): "Get credits" on Resume AI and the Billing "Best value" badge were white on
+  amber (2.1:1); now amber-950 on amber-400 (9:1), and the badge's 10 px capitals are 12 px. In light mode
+  `text-emerald-600` and `text-amber-600` draw in -700 (3.8:1 → 5.5:1, 3.2:1 → 5.0:1), which clears Documents' status
+  line. Error notes' Retry is a 24 px target. Signed-in Resume AI, Billing and Documents are now clean in both themes,
+  as login, Home, Practice, Profile and Settings were: 8 of the 11 scanned pages (18 of 22 page-theme runs, from 13).
+  What's left is in pages other work is changing: the match and ATS labels at 10 px with `opacity-80` (Matches and
+  the public Jobs AI and Resume AI pages, light) and the public Resume AI sample's links inside an `aria-hidden` block.
+- **Light theme follows the system** until someone picks one (`theme-init.js` and Settings' default were "dark";
+  `index.html` no longer hard-codes `class="dark"`), and it follows the system live while open.
+- Figures are tabular by default on the web (`tnum`); headings balance their lines; with data saver on, the night
+  sky leaves out its stars.
+- Size: the JS a page loads first is unchanged by this part (119.53 KB gzip, +2.00 KB over both parts); CSS +0.48 KB.
+
 ## Look and feel foundation: three motion levels, toasts, skeletons, empty states (2026-10-07)
 
 The design layer the front door, onboarding and product work build on (`packages/ui`, shared with the desktop app).

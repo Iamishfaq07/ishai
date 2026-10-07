@@ -14,7 +14,9 @@ Components use plain Tailwind names; the preset maps them to CSS variables (RGB 
 | `aurora-*`    | `--aurora-*`    | Cyan. Brand gradients only (logo, hero glows) — never UI state.         |
 
 Status colours stay Tailwind's own (`emerald` live, `amber` warning, `rose` error).
-Contrast: secondary text is remapped in `base.css` so it passes WCAG AA on every surface in both themes.
+Contrast: secondary text is remapped in `base.css` so it passes WCAG AA on every surface in both themes, and so are
+`text-emerald-600` / `text-amber-600` in light mode (they draw in -700). Small text never takes `opacity-80`; text on
+amber is `text-amber-950` (white on amber is 2.1:1). Figures are tabular by default (`tnum`, web).
 
 ## Type
 
@@ -57,6 +59,10 @@ Contrast: secondary text is remapped in `base.css` so it passes WCAG AA on every
   press-in on touch), `btn-sheen` (primary buttons, hover devices), `animate-float`, `animate-orbit*`,
   `animate-twinkle`, `animate-drift`, `animate-pulse-ring`, `animate-spark`.
 - `scroll-padding` keeps a focused field clear of the sticky header and the phone tab bar.
+- **Page transitions:** same-document View Transitions through `withViewTransition(update, to?)` or React Router's
+  `viewTransition={useViewTransitionOk(to)}`: a 160 ms crossfade, and a morph for an element given a
+  `view-transition-name` (a job card into its page title). Gentle crossfades only; Off and `/live/*` never start
+  one. Leave them off for things done many times a minute or started from the keyboard.
 
 ## Feedback and empty screens
 
@@ -76,7 +82,15 @@ Contrast: secondary text is remapped in `base.css` so it passes WCAG AA on every
 ## Brand
 
 - `OrbitLogo` / `OrbitWordmark` — the mark (`busy` spins the ring; `animated` twinkles the spark).
-- `PlanetHero`, `SpotIllustration`, `PulseRings` — illustrations.
+- `PlanetHero`, `SpotIllustration`, `PulseRings` — illustrations. `SpotIllustration` is for small spots only.
+- **Orbit scenes** (`components/scenes/`, one module each): `WelcomeScene` (a planet with a moon per product),
+  `ResumeScene` (a page in orbit with its ATS ring; `score`), `JobsScene` (a constellation of Bengaluru, Pune,
+  Hyderabad and remote), `PracticeScene` (a microphone and its scorecard), `TrackerScene` (three ghost columns),
+  `NoResultsScene` (a telescope on an empty patch of sky), `OfflineScene` (a dish losing its satellite) and
+  `CelebrationScene` (a burst). Line drawings like a star atlas: hairline orbits, paper surfaces and one subject in
+  the accent, so they hold in both themes and every accent; `title` makes one an image for screen readers, otherwise
+  decorative. One small motion each, at Full only. Pass them to `EmptyState` as `art`. A page gets one gradient
+  headline and one glow at most; secondary cards stay flat.
 - Icons: lucide only, re-exported from `packages/ui/src/icons.ts`.
 - Static copies of the mark: `apps/*/public/favicon.svg`, web `apple-touch-icon.png` / `icon-*.png`,
   desktop `src-tauri/icons/*` (regenerate with `pnpm --filter @orbit/desktop exec tauri icon <1024px png>`).
