@@ -105,7 +105,7 @@ export function baseCommands({ mockEnabled }: { mockEnabled: boolean }): Command
           id: "do-mock",
           title: "Start a mock interview",
           group: "Actions",
-          product: "interview",
+          product: "practice",
           to: "/mock",
           keywords: ["practice", "practise", "mock", "hr round", "interview", "rehearse", "score"],
         },
@@ -117,7 +117,7 @@ export function baseCommands({ mockEnabled }: { mockEnabled: boolean }): Command
       id: "do-warmup",
       title: "Answer a practice question",
       group: "Actions",
-      product: "interview",
+      product: "practice",
       to: "/warmup",
       keywords: ["warm up", "warmup", "question", "tell me about yourself", "free", "practice"],
     },
@@ -149,7 +149,7 @@ export function baseCommands({ mockEnabled }: { mockEnabled: boolean }): Command
       id: "do-story",
       title: "Write a story for behavioural questions",
       group: "Actions",
-      product: "interview",
+      product: "practice",
       to: "/documents/stories",
       keywords: ["star", "tell me about a time", "story bank", "example"],
     },
@@ -164,10 +164,10 @@ export function baseCommands({ mockEnabled }: { mockEnabled: boolean }): Command
     { id: "do-theme", title: "Switch light or dark theme", group: "Actions", run: "theme", keywords: ["dark mode", "light mode", "appearance", "colour", "color"] },
     { id: "go-home", title: "Home", group: "Go to", to: "/", keywords: ["next step", "dashboard", "start", "checklist"] },
     ...(mockEnabled
-      ? [{ id: "go-practice", title: "Practice", group: "Go to" as const, product: "interview" as const, to: "/mock", keywords: ["mock", "progress", "prep", "interview"] }]
+      ? [{ id: "go-practice", title: "Practice", group: "Go to" as const, product: "practice" as const, to: "/mock", keywords: ["mock", "progress", "prep", "interview"] }]
       : []),
-    { id: "go-sessions", title: "Sessions", group: "Go to", product: "interview", to: "/sessions", keywords: ["history", "transcripts", "reports", "interview"] },
-    { id: "go-stories", title: "Story bank", group: "Go to", product: "interview", to: "/documents/stories", keywords: ["stories", "star", "behavioural"] },
+    { id: "go-sessions", title: "Sessions", group: "Go to", product: "interview", to: "/sessions", keywords: ["history", "transcripts", "reports", "interview", "copilot", "live"] },
+    { id: "go-stories", title: "Story bank", group: "Go to", product: "practice", to: "/documents/stories", keywords: ["stories", "star", "behavioural"] },
     {
       id: "go-documents",
       title: "Documents",

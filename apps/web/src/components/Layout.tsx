@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from "react";
 import { Link, Outlet, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import {
   AudioLines,
@@ -45,16 +45,21 @@ const loadPalette = () => import("./CommandPalette");
 const CommandPalette = lazy(loadPalette);
 const HelpDialog = lazy(() => import("./HelpDialog"));
 
-/** The interview copilot's pages: Practice, Sessions, the Story bank, Documents and a new live session. */
-const INTERVIEW_PATH = /^\/(mock|sessions|documents|start)(\/|$)/;
-function isInterviewPath(pathname: string): boolean {
-  return INTERVIEW_PATH.test(pathname);
+/** Practice's pages: mock interviews (with prep and progress) and the story bank. */
+const PRACTICE_PATH = /^\/(mock|documents\/stories)(\/|$)/;
+function isPracticePath(pathname: string): boolean {
+  return PRACTICE_PATH.test(pathname);
+}
+/** The interview copilot's pages: a new live session, past sessions and the documents its answers draw on. */
+const COPILOT_PATH = /^\/(sessions|documents|start)(\/|$)/;
+function isCopilotPath(pathname: string): boolean {
+  return COPILOT_PATH.test(pathname) && !isPracticePath(pathname);
 }
 
 interface NavItem {
   to: string;
   label: string;
-  /** The phone tab bar's shorter label. */
+  /** The shorter label: the phone tab bar's, and the top bar's below 1024 px. */
   short: string;
   icon: LucideIcon;
   product?: ProductId;
@@ -62,18 +67,26 @@ interface NavItem {
   current: (pathname: string) => boolean;
 }
 
-// One item per product, the same on the top bar and the phone tab bar (where "Me" is the fifth): "where am I" always
-// has one of four answers. The interview copilot's daily pages are tabs under "Interview"; Plan & credits, Settings and
-// Help are in the account menu ("Me" on phones). The addresses are the same as before, so nothing redirects.
+// One item per product, the same on the top bar and the phone tab bar (where "Me" is the sixth): the interview copilot
+// (live help) and Practice (mock interviews) are separate products, each with its own tabs. Plan & credits, Settings
+// and Help are in the account menu ("Me" on phones). The addresses are the same as before, so nothing redirects.
 const NAV: NavItem[] = [
   { to: "/", label: "Home", short: "Home", icon: House, current: (p) => p === "/" },
   {
-    to: MOCK_INTERVIEW_ENABLED ? "/mock" : "/sessions",
-    label: "Interview",
-    short: "Interview",
+    to: "/sessions",
+    label: "Interview copilot",
+    short: "Copilot",
     icon: PRODUCTS.interview.icon,
     product: "interview",
-    current: isInterviewPath,
+    current: isCopilotPath,
+  },
+  {
+    to: MOCK_INTERVIEW_ENABLED ? "/mock" : "/documents/stories",
+    label: "Practice",
+    short: "Practice",
+    icon: PRODUCTS.practice.icon,
+    product: "practice",
+    current: isPracticePath,
   },
   {
     to: RESUME_AI_HOME,
@@ -93,15 +106,52 @@ const NAV: NavItem[] = [
   },
 ];
 
-/** The tabs between the interview copilot's pages (as Resume AI and Jobs AI have theirs). */
-const INTERVIEW_SECTIONS: ProductSection[] = [
-  ...(MOCK_INTERVIEW_ENABLED ? [{ to: "/mock", label: "Practice", icon: Target }] : []),
+/** The tabs between each product's own pages (as Resume AI and Jobs AI have theirs). */
+const COPILOT_SECTIONS: ProductSection[] = [
   { to: "/sessions", label: "Sessions", icon: HistoryIcon },
-  { to: "/documents/stories", label: "Story bank", icon: BookOpen },
   { to: "/documents", label: "Documents", icon: FolderOpen, end: true },
+];
+const PRACTICE_SECTIONS: ProductSection[] = [
+  ...(MOCK_INTERVIEW_ENABLED ? [{ to: "/mock", label: "Mock interviews", icon: Target }] : []),
+  { to: "/documents/stories", label: "Story bank", icon: BookOpen },
 ];
 
 const ME_PATH = /^\/(billing|settings)(\/|$)/;
+
+/** How the top bar names its items: full names, the short ones, or icons alone (named on hover and for readers). */
+type NavFit = "full" | "short" | "icons";
+const NAV_FITS: NavFit[] = ["full", "short", "icons"];
+
+/**
+ * The widest naming that fits the top bar right now. Breakpoints can't decide it: the text size setting scales every
+ * label but not the breakpoints, so at 1024 px with large text the full names ran ~100 px into the search button.
+ * It tries each naming on the nav itself and keeps the first that fits, again when the bar or the text size changes.
+ */
+function useNavFit(ref: RefObject<HTMLElement | null>): NavFit {
+  const [fit, setFit] = useState<NavFit>("full");
+  useLayoutEffect(() => {
+    const nav = ref.current;
+    if (!nav) return;
+    const measure = () => {
+      const best = NAV_FITS.find((f) => {
+        nav.dataset.fit = f;
+        return nav.scrollWidth <= nav.clientWidth + 1;
+      }) ?? "icons";
+      nav.dataset.fit = best;
+      setFit(best);
+    };
+    measure();
+    const resized = new ResizeObserver(measure);
+    resized.observe(nav);
+    const textSize = new MutationObserver(measure); // Settings → text size sets the root's font size
+    textSize.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
+    return () => {
+      resized.disconnect();
+      textSize.disconnect();
+    };
+  }, [ref]);
+  return fit;
+}
 
 function initials(name: string | null | undefined, email: string | undefined): string {
   const source = name?.trim() || email?.split("@")[0] || "?";
@@ -163,7 +213,10 @@ export function Layout() {
   // A page change closes the phone's "Me" sheet (its links navigate).
   useEffect(() => setMeOpen(false), [pathname]);
 
-  const interview = isInterviewPath(pathname);
+  const navRef = useRef<HTMLElement>(null);
+  const navFit = useNavFit(navRef);
+  const copilot = isCopilotPath(pathname);
+  const practice = isPracticePath(pathname);
   const meActive = ME_PATH.test(pathname);
   const shortcut = isMacPlatform() ? "⌘K" : "Ctrl K";
 
@@ -182,18 +235,20 @@ export function Layout() {
             <OrbitWordmark size={26} />
           </Link>
 
-          <nav aria-label="Main" className="hidden min-w-0 flex-1 items-center gap-0.5 md:flex lg:gap-1">
-            {NAV.map(({ to, label, icon: Icon, product, current }) => {
+          <nav ref={navRef} aria-label="Main" data-fit={navFit} className="group hidden min-w-0 flex-1 items-center gap-0.5 md:flex lg:gap-1">
+            {NAV.map(({ to, label, short, icon: Icon, product, current }) => {
               const active = current(pathname);
               return (
                 <Link
                   key={to}
                   to={to}
+                  aria-label={label}
+                  title={navFit === "icons" ? label : undefined}
                   aria-current={active ? "page" : undefined}
                   onMouseEnter={() => prefetchRoute(to)}
                   onFocus={() => prefetchRoute(to)}
                   className={cx(
-                    "relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                    "relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition-colors group-data-[fit=short]:gap-1.5 group-data-[fit=short]:px-2",
                     active
                       ? "bg-indigo-500/10 text-indigo-700 dark:bg-white/[0.07] dark:text-white"
                       : "text-zinc-600 hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
@@ -201,7 +256,8 @@ export function Layout() {
                   )}
                 >
                   <Icon className={cx("h-4 w-4", product ? PRODUCTS[product].text : active && "text-indigo-500 dark:text-indigo-300")} aria-hidden />
-                  {label}
+                  <span className="hidden group-data-[fit=full]:inline">{label}</span>
+                  <span className="hidden group-data-[fit=short]:inline">{short}</span>
                   {active && (
                     <span aria-hidden="true" className="absolute inset-x-3 -bottom-[13px] h-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-aurora-400" />
                   )}
@@ -288,10 +344,11 @@ export function Layout() {
       <AnnouncementBanner className="sm:px-6" />
 
       <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
-        {interview && (
+        {practice && PRACTICE_SECTIONS.length > 1 && <ProductTabs label="Practice" sections={PRACTICE_SECTIONS} />}
+        {copilot && (
           <ProductTabs
-            label="Interview"
-            sections={INTERVIEW_SECTIONS}
+            label="Interview copilot"
+            sections={COPILOT_SECTIONS}
             action={
               <Link
                 to="/start"
@@ -347,12 +404,12 @@ export function Layout() {
         </nav>
       </footer>
 
-      {/* Phones: a thumb-reach tab bar, one tab per product and "Me". */}
+      {/* Phones: a thumb-reach tab bar, one tab per product and "Me" (six, which fit a 360 px screen). */}
       <nav
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200/70 bg-white/95 pb-[env(safe-area-inset-bottom)] md:hidden dark:border-white/5 dark:bg-zinc-950/90"
       >
-        <ul className="mx-auto grid max-w-lg grid-cols-5">
+        <ul className="mx-auto grid max-w-lg grid-cols-6">
           {NAV.map(({ to, label, short, icon: Icon, product, current }) => {
             const active = current(pathname);
             return (

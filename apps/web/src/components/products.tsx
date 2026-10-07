@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { AudioLines, Briefcase, FileText, cx, focusRing, type LucideIcon } from "@orbit/ui";
+import { AudioLines, Briefcase, FileText, Target, cx, focusRing, type LucideIcon } from "@orbit/ui";
 import type { ProductId } from "../lib/onboarding";
 
 /**
- * What Orbit's three products share in the app: each one's name, mark and colour, the "AI" pill after their name
+ * What Orbit's products share in the app: each one's name, mark and colour, the "AI" pill after their name
  * (Resume AI, Jobs AI) and the tabs between a product's own pages. Light on purpose: the main nav, Home and the
  * sign-in screens import it.
  */
@@ -13,17 +13,25 @@ export type { ProductId };
 
 /**
  * Each product's one fixed colour, for its mark and tag only (the user's accent stays for UI state): the interview
- * copilot is the accent, Resume AI emerald, Jobs AI sky. -700/-800 text on the light tints and -200/-300 on the dark
+ * copilot is the accent, Practice orange (a hue none of the seven accents uses), Resume AI emerald, Jobs AI sky. -700/-800 text on the light tints and -200/-300 on the dark
  * ones keep small labels at AA contrast.
  */
 export const PRODUCTS: Record<ProductId, { name: string; short: string; icon: LucideIcon; tile: string; text: string; soft: string }> = {
   interview: {
     name: "Interview copilot",
-    short: "Interview",
+    short: "Copilot",
     icon: AudioLines,
     tile: "bg-indigo-500/15 text-indigo-700 ring-indigo-500/25 dark:bg-indigo-400/15 dark:text-indigo-200 dark:ring-indigo-300/20",
     text: "text-indigo-700 dark:text-indigo-300",
     soft: "bg-indigo-500/[0.06] ring-indigo-500/20 dark:bg-indigo-400/[0.06] dark:ring-indigo-300/15",
+  },
+  practice: {
+    name: "Practice",
+    short: "Practice",
+    icon: Target,
+    tile: "bg-orange-500/15 text-orange-800 ring-orange-600/25 dark:bg-orange-400/15 dark:text-orange-200 dark:ring-orange-300/20",
+    text: "text-orange-700 dark:text-orange-300",
+    soft: "bg-orange-500/[0.06] ring-orange-600/20 dark:bg-orange-400/[0.06] dark:ring-orange-300/15",
   },
   resume: {
     name: "Resume AI",

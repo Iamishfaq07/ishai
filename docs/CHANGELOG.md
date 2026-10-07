@@ -1,5 +1,23 @@
 # Implementation log
 
+## Interview copilot and Practice: separate items on the top bar (2026-10-08)
+
+The owner asked for the interview copilot and Practice to each have their own place in the nav: they were one
+"Interview" item whose tabs mixed mock interviews with live sessions.
+
+- **Top bar:** Home · **Interview copilot** · **Practice** · Resume AI · Jobs AI. The copilot's tabs are Sessions and
+  Documents, with Start live session beside them; Practice's are Mock interviews (with prep and progress) and the
+  Story bank. The addresses are unchanged, so nothing redirects.
+- **Practice is its own product** (`ProductId` "practice", orange: a hue none of the seven accents uses): its mark
+  in the nav, Home's "Your tools" (a copilot row with live sessions and a Practice row with mock interviews), the
+  next steps and the search palette.
+- **Phones:** six tabs (Home, Copilot, Practice, Resume, Jobs, Me), which fit a 360 px screen.
+- **The top bar fits at any width and text size:** it measures itself and uses full names, short ones or icons alone
+  (named on hover and for screen readers). Breakpoints couldn't decide it, because the text size setting scales the
+  labels but not the breakpoints: at 1024 px with large text the full names ran ~100 px into the search button.
+- Checked in headless Chrome (`tools/orbit-drive/nav-split-drive.mjs`, 20/20): the current item and tabs on every
+  copilot and Practice page, the bar at 1440 to 768 px with normal and large text, the phone bar at 390 and 360 px.
+
 ## Mini pack: ₹499 for 15 interview minutes and 5 AI credits (2026-10-07)
 
 The cheapest pack was ₹1,999, a big first purchase next to Indian copilots at about ₹499 an hour and Naukri's paid
