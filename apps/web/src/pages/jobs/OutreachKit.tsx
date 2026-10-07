@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { LinkedInProfile, NaukriProfile, OutreachInputs, OutreachKind, OutreachMessage, Resume } from "@orbit/types";
+import type { JobStatus, LinkedInProfile, NaukriProfile, OutreachInputs, OutreachKind, OutreachMessage, Resume } from "@orbit/types";
 import {
   Check,
   Copy,
   Sparkles,
-  Upload,
   KIT_LIMITS,
   KIT_SHOWN_FIRST,
   MESSAGE_WORDS,
@@ -12,24 +11,21 @@ import {
   countWords,
   cx,
   focusRing,
-  loadKit,
-  saveKit,
   shownFirst,
   skillList,
-  type SavedKit,
+  type MessageKit,
 } from "@orbit/ui";
 import { Button, Field, Input, Spinner, Textarea } from "../../components/ui";
+import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
-import { AiCostNote, AiErrorNote, isUpgradeError, useAllowance } from "./allowance";
-import { useBackend } from "./backend";
+import { AiCostNote, AiErrorNote, isUpgradeError, useAllowance } from "../resume/allowance";
+import { outreachKindFor } from "./model";
 
-type Part = "naukri" | "linkedin" | "messages";
-
-const PARTS: Array<{ id: Part; label: string }> = [
-  { id: "naukri", label: "Naukri" },
-  { id: "linkedin", label: "LinkedIn" },
-  { id: "messages", label: "Messages" },
-];
+/**
+ * What Outreach writes (it was Resume AI's "Profiles & outreach" tab): the Naukri and LinkedIn profiles and the
+ * job-hunt messages, from one resume and, for messages, one job. Each one written uses a resume credit; what comes
+ * back is edited here and copied out. The page around them (pickers, what's kept) is Outreach.tsx.
+ */
 
 const KINDS: Array<{ id: OutreachKind; label: string; about: string; details: string }> = [
   {
@@ -59,59 +55,22 @@ const KINDS: Array<{ id: OutreachKind; label: string; about: string; details: st
 ];
 
 /** The job post's first line or sentence: usually the title (as the server reads it, resumes/ai.py job_title). */
-function jobTitle(jobText: string): string {
+export function jobTitle(jobText: string): string {
   const first = jobText.trim().split("\n", 1)[0] ?? "";
   return (first.split(/(?<=[.!?])\s/, 1)[0] ?? "").slice(0, 120);
 }
 
-/**
- * "Profiles & outreach": the Naukri and LinkedIn profiles and the job-hunt messages, written from this resume. Each
- * one written uses a resume credit; what comes back is edited here and copied out. This browser keeps them, per
- * resume, as last edited.
- */
-export function ProfileKitPanel({ resume, onShowJob }: { resume: Resume; onShowJob: () => void }) {
-  const [part, setPart] = useState<Part>("naukri");
-  const [kit, setKit] = useState<SavedKit>(() => loadKit(resume.id));
-  useEffect(() => saveKit(resume.id, kit), [resume.id, kit]);
-  const hasJob = Boolean(resume.job_text.trim());
-
-  return (
-    <div className="space-y-4">
-      <Box title="Profiles & outreach">
-        <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-300">
-          Your Naukri and LinkedIn profiles, and the messages that get referrals and replies, written from this resume
-          {hasJob ? " and the job post" : ""}. Only what your resume says goes in: no made-up numbers, skills or names.
-          Edit anything, then copy it into the site.
-        </p>
-        <div role="group" aria-label="What to write" className="inline-flex gap-1 rounded-xl bg-zinc-500/10 p-1">
-          {PARTS.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              aria-pressed={part === p.id}
-              onClick={() => setPart(p.id)}
-              className={cx("rounded-lg px-3 py-1 text-sm", part === p.id ? "bg-white font-medium shadow-sm dark:bg-white/10" : "text-zinc-500", focusRing)}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </Box>
-      {part === "naukri" && <NaukriPart resume={resume} value={kit.naukri} onChange={(naukri) => setKit((k) => ({ ...k, naukri }))} />}
-      {part === "linkedin" && <LinkedInPart resume={resume} value={kit.linkedin} onChange={(linkedin) => setKit((k) => ({ ...k, linkedin }))} />}
-      {part === "messages" && (
-        <MessagesPart
-          resume={resume}
-          hasJob={hasJob}
-          onShowJob={onShowJob}
-          inputs={kit.inputs ?? {}}
-          onInputs={(inputs) => setKit((k) => ({ ...k, inputs }))}
-          messages={kit.messages ?? {}}
-          onMessage={(m) => setKit((k) => ({ ...k, messages: { ...k.messages, [m.kind]: m } }))}
-        />
-      )}
-    </div>
-  );
+/** The job a message is for: from its page in Jobs AI, or from the tracker once the post has left the feed. */
+export interface OutreachJob {
+  id: string;
+  title: string;
+  company: string;
+  place: string;
+  /** Still in the feed: the server reads its posting for the message. */
+  live: boolean;
+  /** The skills the post asks for. */
+  asks: string[];
+  status: JobStatus | null;
 }
 
 /** One AI call at a time, with its error, the credit note and the allowance refreshed after. */
@@ -137,20 +96,19 @@ function useWrite() {
 const replaceOk = (what: string) =>
   confirmDialog({ title: "Write a new one?", body: `This replaces the ${what} below, with your edits.`, confirmLabel: "Write a new one" });
 
-function WriteButton({ busy, again, label, onClick }: { busy: boolean; again: boolean; label: string; onClick: () => void }) {
+function WriteButton({ busy, again, label, disabled = false, onClick }: { busy: boolean; again: boolean; label: string; disabled?: boolean; onClick: () => void }) {
   return (
-    <Button disabled={busy} onClick={onClick}>
+    <Button disabled={busy || disabled} onClick={onClick}>
       <Sparkles className="h-4 w-4" /> {busy ? "Writing…" : again ? "Write a new one" : label}
     </Button>
   );
 }
 
-function NaukriPart({ resume, value, onChange }: { resume: Resume; value: NaukriProfile | undefined; onChange: (v: NaukriProfile) => void }) {
-  const backend = useBackend();
+export function NaukriPart({ resume, value, onChange }: { resume: Resume; value: NaukriProfile | undefined; onChange: (v: NaukriProfile) => void }) {
   const { busy, error, run } = useWrite();
   const write = async () => {
     if (value && !(await replaceOk("profile"))) return;
-    await run(() => backend.tools.naukriProfile(resume.data, resume.job_text), onChange);
+    await run(() => api.naukriProfile(resume.data, resume.job_text), onChange);
   };
   return (
     <>
@@ -176,12 +134,11 @@ function NaukriPart({ resume, value, onChange }: { resume: Resume; value: Naukri
   );
 }
 
-function LinkedInPart({ resume, value, onChange }: { resume: Resume; value: LinkedInProfile | undefined; onChange: (v: LinkedInProfile) => void }) {
-  const backend = useBackend();
+export function LinkedInPart({ resume, value, onChange }: { resume: Resume; value: LinkedInProfile | undefined; onChange: (v: LinkedInProfile) => void }) {
   const { busy, error, run } = useWrite();
   const write = async () => {
     if (value && !(await replaceOk("profile"))) return;
-    await run(() => backend.tools.linkedinProfile(resume.data, resume.job_text), onChange);
+    await run(() => api.linkedinProfile(resume.data, resume.job_text), onChange);
   };
   return (
     <>
@@ -207,35 +164,46 @@ function LinkedInPart({ resume, value, onChange }: { resume: Resume; value: Link
   );
 }
 
-function MessagesPart({
+export function MessagesPart({
   resume,
-  hasJob,
-  onShowJob,
-  inputs,
-  onInputs,
-  messages,
-  onMessage,
+  jobId,
+  job,
+  jobLoading,
+  slot,
+  onSlot,
 }: {
   resume: Resume;
-  hasJob: boolean;
-  onShowJob: () => void;
-  inputs: OutreachInputs;
-  onInputs: (inputs: OutreachInputs) => void;
-  messages: Partial<Record<OutreachKind, OutreachMessage>>;
-  onMessage: (m: OutreachMessage) => void;
+  /** The job asked for (`?job=`): its messages are kept apart from the rest. */
+  jobId: string | null;
+  /** That job, once it's read (null while it loads, or when none is asked for). */
+  job: OutreachJob | null;
+  jobLoading: boolean;
+  slot: MessageKit;
+  onSlot: (change: (slot: MessageKit) => MessageKit) => void;
 }) {
-  const backend = useBackend();
   const { busy, error, run } = useWrite();
-  const [kind, setKind] = useState<OutreachKind>("referral");
+  const [kind, setKind] = useState<OutreachKind>(() => outreachKindFor(job?.status) ?? "referral");
+  // A job (another one, or the one asked for once it's read) opens on the message for how far along it is.
+  const [kindFor, setKindFor] = useState(job?.id ?? null);
+  if (job && kindFor !== job.id) {
+    setKindFor(job.id);
+    setKind(outreachKindFor(job.status) ?? kind);
+  }
   const meta = KINDS.find((k) => k.id === kind) ?? KINDS[0]!;
-  const current = messages[kind];
-  const set = (patch: Partial<OutreachInputs>) => onInputs({ ...inputs, ...patch });
+  const current = slot.messages?.[kind];
+  // For a job, its company and role until something's typed for it.
+  const inputs: OutreachInputs = slot.inputs ?? (job ? { company: job.company.slice(0, 120), role: job.title.slice(0, 120) } : {});
+  const set = (patch: Partial<OutreachInputs>) => onSlot(() => ({ inputs: { ...inputs, ...patch } }));
+  const onMessage = (m: OutreachMessage) => onSlot((s) => ({ messages: { ...s.messages, [m.kind]: m } }));
+  // The job post pasted on the resume counts only when no job from Jobs AI is asked for.
+  const resumeJob = jobId ? "" : resume.job_text;
   const write = async () => {
     if (current && !(await replaceOk("message"))) return;
     const clean = Object.fromEntries(Object.entries(inputs).map(([k, v]) => [k, (v ?? "").trim()]).filter(([, v]) => v)) as OutreachInputs;
-    await run(() => backend.tools.outreach(resume.data, resume.job_text, kind, clean), onMessage);
+    await run(() => api.outreach(resume.data, resumeJob, kind, clean, job?.live ? job.id : null), onMessage);
   };
   const email = kind !== "referral";
+  const titleHint = job ? job.title : resumeJob.trim() ? jobTitle(resumeJob) : "";
   return (
     <>
       <Box title="Messages">
@@ -257,30 +225,22 @@ function MessagesPart({
           ))}
         </div>
         <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-300">{meta.about}</p>
-        {!hasJob && (
-          <p className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">
-            With the job post added, the message names the role and matches what it asks for.
-            <Button size="sm" variant="secondary" onClick={onShowJob}>
-              <Upload className="h-3.5 w-3.5" /> Add a job post
-            </Button>
-          </p>
-        )}
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label={kind === "thank_you" ? "Interviewer's name" : "Their name"} htmlFor="kit-recipient" hint="Optional">
             <Input id="kit-recipient" maxLength={80} value={inputs.recipient ?? ""} onChange={(e) => set({ recipient: e.target.value })} placeholder="e.g. Priya Sharma" />
           </Field>
-          <Field label="Company" htmlFor="kit-company" hint="Optional">
-            <Input id="kit-company" maxLength={120} value={inputs.company ?? ""} onChange={(e) => set({ company: e.target.value })} placeholder="e.g. Flipkart" />
+          <Field label="Company" htmlFor="kit-company" hint={job ? "From the job post" : "Optional"}>
+            <Input id="kit-company" maxLength={120} value={inputs.company ?? ""} onChange={(e) => set({ company: e.target.value })} placeholder={job?.company || "e.g. Flipkart"} />
           </Field>
-          <Field label="Role" htmlFor="kit-role" hint={hasJob ? "Optional: the job post's title otherwise" : "Optional"}>
-            <Input id="kit-role" maxLength={120} value={inputs.role ?? ""} onChange={(e) => set({ role: e.target.value })} placeholder={(hasJob && jobTitle(resume.job_text)) || "e.g. Data Analyst"} />
+          <Field label="Role" htmlFor="kit-role" hint={job ? "From the job post" : titleHint ? "Optional: the job post's title otherwise" : "Optional"}>
+            <Input id="kit-role" maxLength={120} value={inputs.role ?? ""} onChange={(e) => set({ role: e.target.value })} placeholder={titleHint || "e.g. Data Analyst"} />
           </Field>
           <Field label="Anything to mention" htmlFor="kit-details" hint="Optional, and true: it's used as you write it">
             <Input id="kit-details" maxLength={600} value={inputs.details ?? ""} onChange={(e) => set({ details: e.target.value })} placeholder={meta.details} />
           </Field>
         </div>
         <div className="mt-3">
-          <WriteButton busy={busy} again={Boolean(current)} label={`Write the ${meta.label.toLowerCase()}`} onClick={() => void write()} />
+          <WriteButton busy={busy} disabled={jobLoading} again={Boolean(current)} label={`Write the ${meta.label.toLowerCase()}`} onClick={() => void write()} />
         </div>
         <AiCostNote className="mt-2" />
         {error && <AiErrorNote className="mt-2" error={error.text} upgrade={error.upgrade} />}
@@ -304,7 +264,7 @@ function MessagesPart({
 function Box({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="rounded-2xl border border-zinc-200 bg-white/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-      <h3 className="mb-3 font-display text-base font-semibold">{title}</h3>
+      <h2 className="mb-3 font-display text-base font-semibold">{title}</h2>
       {children}
     </section>
   );

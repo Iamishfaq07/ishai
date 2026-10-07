@@ -1,10 +1,11 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { Outlet, useOutletContext, useSearchParams } from "react-router-dom";
+import { Outlet, useLocation, useOutletContext, useSearchParams } from "react-router-dom";
 import type { JobProfile, JobSort, JobTrackerEntry } from "@orbit/types";
 import { Spinner } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useAsync, type AsyncState } from "../../lib/useAsync";
 import { profileStamp } from "./model";
+import { isOutreach } from "./paths";
 import { JobsAiTabs } from "./product";
 
 /**
@@ -32,13 +33,15 @@ export function JobsAiSection() {
   const tracker = useAsync(() => api.jobTracker(), [], "job-tracker");
   const [suggesting, setSuggesting] = useState(false);
   const [params, setParams] = useSearchParams();
+  const { pathname } = useLocation();
   const setData = profile.setData;
   const setProfile = useCallback((p: JobProfile) => setData(() => p), [setData]);
 
   // "Find jobs that match this resume" (Resume AI) asks for ?resume=<id>: the feed is matched to that resume, read by
   // the AI the way a first profile is. Otherwise, the first visit with a resume lets the AI read it (free, cached per
   // resume; past today's reads it's worked out from the resume as written).
-  const wanted = params.get("resume");
+  // (On Outreach, ?resume= is the resume it writes from: the feed stays matched to the profile's.)
+  const wanted = isOutreach(pathname) ? null : params.get("resume");
   const ran = useRef(false);
   const p = profile.data;
   useEffect(() => {

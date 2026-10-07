@@ -119,13 +119,18 @@ export { linkedDocument, rememberDocument } from "./resume/storage";
 export {
   KIT_LIMITS,
   KIT_SHOWN_FIRST,
+  MAX_JOB_KITS,
   MESSAGE_WORDS,
   countWords,
   linesOver,
   loadKit,
+  messageKit,
   saveKit,
   shownFirst,
   skillList,
+  withMessageKit,
+  type JobMessageKit,
+  type MessageKit,
   type SavedKit,
 } from "./resume/kit";
 export { useReportPolling } from "./hooks/useReportPolling";

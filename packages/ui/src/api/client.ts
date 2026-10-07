@@ -246,11 +246,15 @@ export function createApiClient(options: ApiClientOptions) {
     /** LinkedIn's headline, About and top skills, from the resume (one resume credit). */
     linkedinProfile: (data: ResumeData, jobText: string) =>
       json<LinkedInProfile>(`${base}/linkedin-profile`, { method: "POST", body: body({ data, job_text: jobText }), timeoutMs: LONG_TIMEOUT_MS }),
-    /** A referral request, cold email, follow-up or thank-you note, from the resume (one resume credit). */
-    outreach: (data: ResumeData, jobText: string, kind: OutreachKind, inputs: OutreachInputs = {}) =>
+    /**
+     * A referral request, cold email, follow-up or thank-you note, from the resume (one resume credit). With
+     * `listingId`, for that job in Jobs AI: the server reads its posting (in place of `jobText`) and fills in a blank
+     * company and role from it.
+     */
+    outreach: (data: ResumeData, jobText: string, kind: OutreachKind, inputs: OutreachInputs = {}, listingId: string | null = null) =>
       json<OutreachMessage>(`${base}/outreach`, {
         method: "POST",
-        body: body({ data, job_text: jobText, kind, ...inputs }),
+        body: body({ data, job_text: jobText, kind, ...inputs, ...(listingId ? { listing_id: listingId } : {}) }),
         timeoutMs: LONG_TIMEOUT_MS,
       }),
     /** The cover letter as a Word file, with the resume's name and contact line on top. */

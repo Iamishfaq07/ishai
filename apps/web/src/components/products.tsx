@@ -47,13 +47,14 @@ export function ProductTabs({ label, sections }: { label: string; sections: Prod
       <div className="inline-flex gap-0.5 rounded-xl bg-zinc-500/10 p-1 sm:gap-1">
         {sections.map(({ to, label: name, icon: Icon, end, also, count }) => {
           const current = isCurrent(pathname, to, end) || Boolean(also?.test(pathname));
+          // Phones: a size smaller and tighter, and no count under 380 px, so Jobs AI's five tabs fit a 360 px screen.
           return (
             <Link
               key={to}
               to={to}
               aria-current={current ? "page" : undefined}
               className={cx(
-                "inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1.5 text-sm font-medium transition-colors min-[380px]:px-2.5 sm:px-3",
+                "inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-1.5 py-1.5 text-[0.8125rem] font-medium transition-colors sm:px-3 sm:text-sm",
                 current
                   ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white"
                   : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
@@ -62,7 +63,7 @@ export function ProductTabs({ label, sections }: { label: string; sections: Prod
             >
               <Icon className="hidden h-4 w-4 sm:block" aria-hidden="true" /> {name}
               {count ? (
-                <span className="rounded-full bg-indigo-500/15 px-1.5 text-xs tabular-nums text-indigo-700 dark:text-indigo-200">{count}</span>
+                <span className="hidden rounded-full bg-indigo-500/15 px-1.5 text-xs tabular-nums text-indigo-700 min-[380px]:inline dark:text-indigo-200">{count}</span>
               ) : null}
             </Link>
           );

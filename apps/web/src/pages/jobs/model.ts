@@ -1,15 +1,17 @@
-// Jobs AI's plain logic (no React): labels, "posted 3h ago", the match colours, the tracker's columns, and the small
-// list edits the profile page makes. Kept here so it's unit-tested (model.test.ts).
+// Jobs AI's plain logic (no React): labels, "posted 3h ago", the match colours, the tracker's columns, the small
+// list edits the profile page makes, and which message Outreach starts on. Kept here so it's unit-tested (model.test.ts).
 import type {
   JobEmploymentType,
   JobLevel,
   JobListing,
+  JobMatch,
   JobPostedWithin,
   JobPrefs,
   JobProfile,
   JobStatus,
   JobTrackerEntry,
   JobWorkplace,
+  OutreachKind,
 } from "@orbit/types";
 
 export const STATUSES: JobStatus[] = ["saved", "applied", "interviewing", "offer", "rejected"];
@@ -242,4 +244,18 @@ export function safeUrl(url: string): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * The message Outreach opens on for a job, from how far along it is: a referral before applying, a follow-up once
+ * applied, a thank-you once interviewing. Null when that doesn't say (an offer, "not this time", not on the tracker).
+ */
+export function outreachKindFor(status: JobStatus | null | undefined): OutreachKind | null {
+  return status === "saved" ? "referral" : status === "applied" ? "follow_up" : status === "interviewing" ? "thank_you" : null;
+}
+
+/** A job's skills for Outreach to show, from its match: the ones the resume shows first, each once. */
+export function jobAsks(match: Pick<JobMatch, "matched" | "missing"> | null, most = 8): string[] {
+  const seen = new Set<string>();
+  return [...(match?.matched ?? []), ...(match?.missing ?? [])].filter((k) => !seen.has(k.toLowerCase()) && seen.add(k.toLowerCase())).slice(0, most);
 }
