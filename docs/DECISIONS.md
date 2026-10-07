@@ -239,8 +239,8 @@ the shared key's cost stays bounded: a fit check is one short call, about 3 s, a
 
 **D44 — Answer size is picked per question by rules, and stored as a fourth `length` value.** A yes/no question and
 a system design question need answers ten times apart, and a candidate reads the answer as a script, so its length is
-how long they talk. Asking the model to judge the size itself (one prompt for "say as much as the question needs")
-still gave ~150 words to everything, and a separate classification call would add latency to every answer. The
+how long they talk. One length per session gave ~150 words to everything (plain_probe.py), a model left to judge the
+size would decide it differently on every answer, and a separate classification call would add latency to each. The
 question detector already knows the type and the parts; with the wording ("have you used", "what is", "walk me
 through", "briefly", "in detail") that picks the size deterministically, testably and for free, and the user can
 always override one answer (Shorter / Longer) or the session (a fixed length). `"auto"` is a fourth value of the
