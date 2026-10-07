@@ -1,10 +1,14 @@
 # Orbit AI
 
-A real-time interview and call copilot for Windows. Orbit listens to a live conversation, detects the interviewer's
-questions, grounds its answers in your resume, the job description, and your documents, and streams concise answers
-you can speak from.
+Two products in one account:
 
-## What Orbit does
+- **Interview copilot**, for Windows and the web: Orbit listens to a live conversation, detects the interviewer's
+  questions, grounds its answers in your resume, the job description, and your documents, and streams concise
+  answers you can speak from.
+- **Orbit Resume AI**, on the web: build a resume that gets interviews, with an ATS score, AI rewrites for every
+  job, and interview prep from your own resume.
+
+## Interview copilot
 
 - **Hears both sides, separately.** Your mic and the interviewer's audio (your speakers/headset, or one app such as
   Teams or Zoom) are captured natively on Windows and transcribed live by Deepgram. No diarization guesswork.
@@ -24,6 +28,23 @@ you can speak from.
 
 Download the Windows app from [orbit-downloads.ishfaq.workers.dev](https://orbit-downloads.ishfaq.workers.dev) (free, no
 sign-in; also on [Releases](https://github.com/Iamishfaq07/ishai/releases/latest)). It updates itself.
+
+## Orbit Resume AI
+
+At `/resume-ai` in the web app (a public product page when signed out). Each AI action uses a resume credit: one
+comes free with a new account, more come in UPI packs; typing, the ATS score and downloads are always free.
+
+- **ATS score and keyword match.** A score out of 100, read the way screening software reads a resume, with the job
+  post's missing keywords and a fix for every point.
+- **AI rewrites for every job.** Stronger bullets and a summary, tailored to the job post, one change at a time.
+  Grounded in the resume: a number or tool it doesn't give is never added.
+- **AI import.** From a PDF or Word file, LinkedIn's "Save to PDF", pasted text or a document already in Orbit.
+- **Interview prep from your resume.** The questions it will get you asked with answer outlines, the skills the job
+  wants that it doesn't show, and a mock interview on them.
+- **Campus and fresher mode.** Education first with your CGPA, projects and positions of responsibility, on one page.
+- **Cover letters**, in the tone and length you pick, and **Naukri and LinkedIn profiles and outreach messages**
+  (referral requests, emails to HR, follow-ups, thank-you notes).
+- **10 templates** (Campus and Harvard among them), Word and PDF downloads, and "Shorten with AI" to fit one page.
 
 ## Stack
 

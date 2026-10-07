@@ -3,7 +3,9 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { Spinner } from "./components/ui";
 import { useAuth } from "./lib/auth";
+import { routeTitle } from "./lib/routeTitle";
 import { useDocumentTitle } from "./lib/useDocumentTitle";
+import { RESUME_AI_HOME, isResumeAiHome, movedResumePath } from "./pages/resume/paths";
 import {
   ConfirmEmailChangePage,
   ForgotPasswordPage,
@@ -24,7 +26,8 @@ import {
   SessionsPage,
   SettingsPage,
   StoriesPage,
-  ResumesPage,
+  ResumeAiHomePage,
+  ResumeAiPublicPage,
   ResumeEditorPage,
   AdminUsersPage,
   AdminPaymentsPage,
@@ -40,7 +43,11 @@ export function PageLoading() {
   );
 }
 
-function RequireAuth({ children }: { children: ReactNode }) {
+/**
+ * Signed out, a page asks you to sign in first, except one with a public face (`publicPage`): Resume AI's home shows
+ * its product page there instead.
+ */
+function RequireAuth({ children, publicPage }: { children: ReactNode; publicPage?: (pathname: string) => ReactNode }) {
   const { user, loading } = useAuth();
   const location = useLocation();
   if (loading) {
@@ -50,7 +57,11 @@ function RequireAuth({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (!user) {
+    const page = publicPage?.(location.pathname);
+    if (page) return page;
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
   return <Signed>{children}</Signed>;
 }
 
@@ -60,32 +71,18 @@ function Signed({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-const ROUTE_TITLES: Array<[RegExp, string]> = [
-  [/^\/$/, "Home"],
-  [/^\/start/, "New session"],
-  [/^\/sessions\/[^/]+/, "Session"],
-  [/^\/sessions/, "Sessions"],
-  [/^\/documents\/stories/, "Story bank"],
-  [/^\/documents\/resumes/, "Resume maker"],
-  [/^\/documents/, "Documents"],
-  [/^\/mock/, "Practice"],
-  [/^\/billing/, "Billing"],
-  [/^\/admin\/users/, "Users & access"],
-  [/^\/admin\/payments/, "Payments"],
-  [/^\/settings/, "Settings"],
-  [/^\/live\//, "Live session"],
-  [/^\/companion/, "Phone companion"],
-  [/^\/login/, "Sign in"],
-  [/^\/register/, "Create account"],
-  [/^\/forgot-password/, "Reset password"],
-  [/^\/reset-password/, "Reset password"],
-  [/^\/verify-email/, "Verify email"],
-  [/^\/confirm-email-change/, "Confirm email"],
-];
+/** Signed out at /resume-ai: what Resume AI does, and "Start free". */
+const resumeAiPublicPage = (pathname: string): ReactNode => (isResumeAiHome(pathname) ? <ResumeAiPublicPage /> : null);
+
+/** An old resume maker address (Documents → Resume maker, /resume-maker): the same place in Resume AI. */
+function MovedResume() {
+  const { pathname, search, hash } = useLocation();
+  return <Navigate to={{ pathname: movedResumePath(pathname) ?? RESUME_AI_HOME, search, hash }} replace />;
+}
 
 function useRouteTitle(): void {
   const { pathname } = useLocation();
-  useDocumentTitle(ROUTE_TITLES.find(([re]) => re.test(pathname))?.[1] ?? null);
+  useDocumentTitle(routeTitle(pathname));
 }
 
 export function App() {
@@ -101,9 +98,8 @@ export function App() {
       <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
       {/* Public: the scanned code is the credential, so the phone needn't sign in. */}
       <Route path="/companion" element={<CompanionPage />} />
-      {/* Public: the free resume maker needs no account; the resume stays in the visitor's browser. */}
-      {/* The signed-out resume maker is now part of the account: old links go to sign-up. */}
-      <Route path="/resume-maker" element={<Navigate to="/register" replace />} />
+      {/* The old signed-out resume maker: Resume AI's home, which is its product page when signed out. */}
+      <Route path="/resume-maker" element={<MovedResume />} />
       <Route
         path="/live/:sessionId"
         element={
@@ -114,7 +110,7 @@ export function App() {
       />
       <Route
         element={
-          <RequireAuth>
+          <RequireAuth publicPage={resumeAiPublicPage}>
             <Layout />
           </RequireAuth>
         }
@@ -125,8 +121,14 @@ export function App() {
         <Route path="sessions/:sessionId" element={<SessionDetailPage />} />
         <Route path="documents" element={<DocumentsPage />} />
         <Route path="documents/stories" element={<StoriesPage />} />
-        <Route path="documents/resumes" element={<ResumesPage />} />
-        <Route path="documents/resumes/:resumeId" element={<ResumeEditorPage />} />
+        {/* Resume AI used to be Documents → Resume maker. Signed out, these go through sign-in first, as before. */}
+        <Route path="documents/resumes" element={<MovedResume />} />
+        <Route path="documents/resumes/:resumeId" element={<MovedResume />} />
+        <Route path="resume-ai" element={<ResumeAiHomePage />} />
+        {/* Kept for the Jobs portal, which mounts its page here. Until then the address opens Resume AI's home, so
+            "jobs" is never opened as a resume. */}
+        <Route path="resume-ai/jobs" element={<Navigate to={RESUME_AI_HOME} replace />} />
+        <Route path="resume-ai/:resumeId" element={<ResumeEditorPage />} />
         <Route path="mock" element={<MockPage />} />
         <Route path="billing" element={<BillingPage />} />
         <Route path="settings" element={<SettingsPage />} />

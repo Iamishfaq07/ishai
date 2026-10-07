@@ -1,5 +1,46 @@
 # Implementation log
 
+## Orbit Resume AI: the resume maker becomes Orbit's second product (2026-10-07)
+
+The resume maker was a tab under Documents. It's now **Orbit Resume AI**, a product of its own next to the
+interview copilot, with its own place in the app and a public page.
+
+- **Its own place in the main nav, "Resume AI"** (`components/Layout.tsx`): a Sparkles icon and a small gradient
+  "AI" pill after "Resume" mark it as the AI product, on the top bar and the phone tab bar, in light and dark. The
+  top bar drops its icons between 768 and 1023 px so six destinations fit; the phone bar has a column each and fits
+  a 360 px screen.
+- **New addresses** (`pages/resume/paths.ts`): `/resume-ai` is the product home, `/resume-ai/:resumeId` the editor.
+  `/resume-ai/jobs` is kept for the Jobs portal: until its page is mounted the address opens the product home, so
+  "jobs" is never read as a resume id (also in the nav's prefetch, `pageFor` in `routes.ts`).
+- **Old links still work**: `/documents/resumes` and `/documents/resumes/:id` go to the same place in Resume AI
+  (signed out, through sign-in first, as before), keeping `?` and `#`; `/resume-maker` goes to `/resume-ai`.
+- **The product home** (`pages/resume/Resumes.tsx`): "Build a resume that gets interviews", with "Create a resume"
+  (the usual ways to start) and "Import my resume" (straight to the PDF or Word import), what the AI does as chips
+  (`RESUME_AI_FEATURES` in `pages/resume/product.tsx`, one line each, so Jobs is one more line), your resume
+  credits with the buy link, and your resumes. A tab bar between Resume AI's pages (`RESUME_AI_SECTIONS`) shows
+  once there's more than one.
+- **Home shows the two products side by side**: the interview copilot (start a live session or a mock) and Resume
+  AI (what it does, your best resume's ATS score, Open Resume AI).
+- **Signed out, `/resume-ai` is a public product page** (`pages/resume/ResumeAiPublic.tsx`): what Resume AI does, a
+  sample resume drawn by the real preview with its real ATS score (98, from `/v1/resumes/score`), an example
+  rewrite, and what's free: the welcome credit as the server sets it (`ORBIT_WELCOME_RESUME_CREDITS`), what never
+  uses a credit, and the cheapest pack. Nothing on it calls the AI. "Start free" signs up and comes back to Resume
+  AI; "Sign in" does the same.
+- **Sign-in and sign-up**: the interview copilot and Resume AI lead the features column as Orbit's two products;
+  sign-up's subtitle is "Interview copilot and Resume AI, in one account". Sign-up now honours where the visitor
+  was headed (as sign-in already did), and the links between the two pages and "Go to sign in" carry it along.
+  The side panel's planet moved to the corner so it all fits a 1024 × 720 screen, and its small text is readable in
+  the light theme too.
+- **Documents** keeps uploaded resumes, job descriptions and the Story bank; its tab bar loses "Resume maker" and
+  gains a "Build or improve your resume in Resume AI" link.
+- **Everywhere else**: the editor's back button, Billing's Resume AI credits row (now a link), the approval banner,
+  tab titles ("Resume AI · Orbit", from `lib/routeTitle.ts`, out of `App.tsx`) and "Resume AI credits" spelt the
+  same way throughout.
+- **Desktop app** (copy and links): "Resume maker" is "Resume AI" on the setup screen's note, the Settings button
+  and the sign-in features list; both open `/resume-ai` in the browser.
+- Tests: the old-address mapping, the Jobs address and the product home (`paths.test.ts`), tab titles
+  (`routeTitle.test.ts`) and the nav's prefetch (`routes.test.ts`).
+
 ## Resume maker: Naukri and LinkedIn profiles, outreach messages, Shorten with AI (2026-10-07)
 
 - **New "Profiles & outreach" tab** ("Outreach" in the tab bar), each generation one resume credit

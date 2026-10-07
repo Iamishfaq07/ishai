@@ -1,0 +1,29 @@
+/**
+ * Where Orbit Resume AI lives in the web app: its home (your resumes, or the public product page when signed out),
+ * the editor for each resume, and the address kept for the Jobs portal. Also where the resume maker's old addresses
+ * go now.
+ */
+export const RESUME_AI_HOME = "/resume-ai";
+/** Kept for the Jobs portal ("Jobs matched to your resume"), so it's never read as a resume id. */
+export const RESUME_AI_JOBS = "/resume-ai/jobs";
+
+/** The editor for one resume. */
+export function resumePath(id: string): string {
+  return `${RESUME_AI_HOME}/${encodeURIComponent(id)}`;
+}
+
+/** The product home itself, where a signed-out visitor sees the public page instead of signing in. */
+export function isResumeAiHome(pathname: string): boolean {
+  return /^\/resume-ai\/?$/.test(pathname);
+}
+
+/**
+ * Where an old resume maker address goes now: Documents → Resume maker (/documents/resumes), one resume there
+ * (/documents/resumes/:id) and the old signed-out maker (/resume-maker). Null for any other address.
+ */
+export function movedResumePath(pathname: string): string | null {
+  if (/^\/resume-maker\/?$/.test(pathname)) return RESUME_AI_HOME;
+  const m = /^\/documents\/resumes(?:\/([^/]+))?\/?$/.exec(pathname);
+  if (!m) return null;
+  return m[1] ? `${RESUME_AI_HOME}/${m[1]}` : RESUME_AI_HOME; // the id stays as it was written in the address
+}

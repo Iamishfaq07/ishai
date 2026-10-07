@@ -1,61 +1,104 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { AudioLines, FileText, MessagesSquare, OrbitWordmark, PlanetHero, ShieldCheck, Sparkles, Target, cx, type LucideIcon } from "@orbit/ui";
+import { AudioLines, MessagesSquare, OrbitWordmark, PlanetHero, ShieldCheck, Sparkles, Target, cx, type LucideIcon } from "@orbit/ui";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button, ErrorNote, Field, Input } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { errorText } from "../lib/format";
+import { useWelcomeGrant } from "../lib/welcome";
 import { Captcha, useCaptchaConfig } from "../components/Captcha";
+import { AiPill } from "./resume/product";
 
-/** What Orbit does, on the sign-in and sign-up screens (the side panel on wide screens, under the form on phones). */
-const FEATURES: Array<{ icon: LucideIcon; title: string; text: string }> = [
-  { icon: AudioLines, title: "Live interview copilot", text: "Hears the question the moment it's asked and answers in your voice, from your resume." },
-  { icon: FileText, title: "Resume maker", text: "ATS score out of 100, AI rewrites tailored to the job, Word and PDF, cover letters." },
+type Feature = { icon: LucideIcon; title: string; text: string; ai?: boolean };
+
+/**
+ * What Orbit does, on the sign-in and sign-up screens (the side panel on wide screens, under the form on phones):
+ * its two products first, then what comes with them.
+ */
+const PRODUCTS: Feature[] = [
+  { icon: AudioLines, title: "Interview copilot", text: "Hears the question the moment it's asked and answers in your voice, from your resume." },
+  { icon: Sparkles, title: "Resume", ai: true, text: "ATS score out of 100, AI rewrites for every job, Naukri and LinkedIn profiles, cover letters." },
+];
+const FEATURES: Feature[] = [
   { icon: MessagesSquare, title: "Mock interviews", text: "Practise with an AI interviewer, then get a scorecard and the questions to redo." },
   { icon: Target, title: "Interview prep", text: "Likely questions for a job post, with answers drawn from your own experience." },
   { icon: ShieldCheck, title: "Private", text: "Your documents and transcripts stay in your account. Delete them any time." },
 ];
 
-/** "Free to start: 1 resume AI credit + 20 interview minutes", from the server (it decides the welcome credits). */
+/** "Free to start: 20 interview minutes + 1 Resume AI credit", from the server (it decides the welcome credits). */
 function useWelcome(): string | null {
-  const [text, setText] = useState<string | null>(null);
-  useEffect(() => {
-    api
-      .listPlans()
-      .then((plans) => {
-        const w = plans.find((p) => p.welcome)?.welcome;
-        if (!w || !(w.resume_credits || w.interview_minutes)) return;
-        const parts = [
-          w.interview_minutes ? `${w.interview_minutes} interview minutes` : "",
-          w.resume_credits ? `${w.resume_credits} resume AI credit${w.resume_credits === 1 ? "" : "s"}` : "",
-        ].filter(Boolean);
-        setText(`Free to start: ${parts.join(" + ")}. No card needed.`);
-      })
-      .catch(() => undefined);
-  }, []);
-  return text;
+  const w = useWelcomeGrant();
+  if (!w) return null;
+  const parts = [
+    w.interview_minutes ? `${w.interview_minutes} interview minutes` : "",
+    w.resume_credits ? `${w.resume_credits} Resume AI credit${w.resume_credits === 1 ? "" : "s"}` : "",
+  ].filter(Boolean);
+  return `Free to start: ${parts.join(" + ")}. No card needed.`;
+}
+
+/** "Resume AI" as the nav shows it: "Resume" and the AI pill. */
+function FeatureTitle({ title, ai }: Pick<Feature, "title" | "ai">) {
+  return ai ? (
+    <>
+      {title} <AiPill className="align-[1px]" />
+    </>
+  ) : (
+    <>{title}</>
+  );
 }
 
 function FeatureList({ compact = false }: { compact?: boolean }) {
   return (
-    <ul className={compact ? "grid gap-3 sm:grid-cols-2" : "space-y-4"}>
-      {FEATURES.map(({ icon: Icon, title, text }) => (
-        <li key={title} className="flex items-start gap-3">
-          <span
+    <div className={compact ? "space-y-3" : "space-y-5"}>
+      <ul className={compact ? "grid gap-3 sm:grid-cols-2" : "grid gap-3"} aria-label="Orbit's two products">
+        {PRODUCTS.map(({ icon: Icon, title, text, ai }) => (
+          <li
+            key={title}
             className={cx(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-              compact ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300" : "bg-white/10 text-indigo-200 ring-1 ring-white/10",
+              "flex items-start gap-3 rounded-2xl p-3.5 ring-1",
+              compact ? "glass-panel ring-0" : "bg-white/[0.04] ring-white/10",
             )}
           >
-            <Icon className="h-4 w-4" aria-hidden />
-          </span>
-          <span className="min-w-0">
-            <span className={cx("block text-sm font-medium", compact ? "" : "text-white")}>{title}</span>
-            <span className={cx("block text-xs", compact ? "text-zinc-500 dark:text-zinc-400" : "text-zinc-400")}>{text}</span>
-          </span>
-        </li>
-      ))}
-    </ul>
+            <span
+              className={cx(
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+                ai
+                  ? "bg-gradient-to-br from-indigo-500 to-aurora-500 text-white shadow-glow-sm"
+                  : compact
+                    ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"
+                    : "bg-white/10 text-indigo-200 ring-1 ring-white/10",
+              )}
+            >
+              <Icon className="h-[18px] w-[18px]" aria-hidden />
+            </span>
+            <span className="min-w-0">
+              <span className={cx("block font-display text-[0.9375rem] font-semibold", compact ? "" : "text-white")}>
+                <FeatureTitle title={title} ai={ai} />
+              </span>
+              <span className={cx("mt-0.5 block text-xs", compact ? "text-zinc-500 dark:text-zinc-400" : "text-zinc-300")}>{text}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <ul className={compact ? "grid gap-3 sm:grid-cols-2" : "space-y-3.5 px-1"}>
+        {FEATURES.map(({ icon: Icon, title, text }) => (
+          <li key={title} className="flex items-start gap-3">
+            <span
+              className={cx(
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                compact ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300" : "bg-white/10 text-indigo-200 ring-1 ring-white/10",
+              )}
+            >
+              <Icon className="h-4 w-4" aria-hidden />
+            </span>
+            <span className="min-w-0">
+              <span className={cx("block text-sm font-medium", compact ? "" : "text-white")}>{title}</span>
+              <span className={cx("block text-xs", compact ? "text-zinc-500 dark:text-zinc-400" : "text-zinc-300")}>{text}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -68,11 +111,12 @@ function AuthShell({ title, subtitle, children, features = false }: { title: str
           aria-hidden="true"
           className="pointer-events-none absolute -left-24 top-1/3 h-96 w-96 rounded-full bg-indigo-600/30 blur-3xl"
         />
+        {/* In the corner, so the two products and what comes with them fit a laptop screen. */}
+        <PlanetHero className="pointer-events-none absolute right-6 top-6 w-28 motion-safe:animate-float xl:right-10 xl:top-8 xl:w-44" />
         <OrbitWordmark size={30} className="relative" />
-        <div className="relative my-auto">
-          <PlanetHero className="mx-auto w-64 motion-safe:animate-float xl:w-80" />
-          <h2 className="mt-8 max-w-md font-display text-4xl font-semibold leading-tight tracking-tight">
-            Walk into every interview <span className="text-gradient">with backup.</span>
+        <div className="relative my-auto pt-8">
+          <h2 className="max-w-md font-display text-4xl font-semibold leading-tight tracking-tight">
+            Get the interview, then walk in <span className="text-gradient">with backup.</span>
           </h2>
           <div className="mt-6 max-w-md">
             <FeatureList />
@@ -111,16 +155,18 @@ function AuthShell({ title, subtitle, children, features = false }: { title: str
   );
 }
 
-function useRedirectTarget(): string {
+/** Where the visitor was headed (the page that asked them to sign in, or Resume AI's "Start free"), if anywhere. */
+function useCameFrom(): string | null {
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from;
-  return from && from !== "/login" && from !== "/register" ? from : "/";
+  return from && from.startsWith("/") && from !== "/login" && from !== "/register" ? from : null;
 }
 
 export function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
-  const target = useRedirectTarget();
+  const from = useCameFrom();
+  const target = from ?? "/";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -170,7 +216,7 @@ export function LoginPage() {
       </form>
       <p className="mt-6 text-center text-sm text-zinc-500">
         New to Orbit?{" "}
-        <Link to="/register" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+        <Link to="/register" state={from ? { from } : undefined} className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
           Create an account
         </Link>
       </p>
@@ -181,6 +227,8 @@ export function LoginPage() {
 export function RegisterPage() {
   const { user, register } = useAuth();
   const navigate = useNavigate();
+  // From Resume AI's "Start free": back there after sign-up. Otherwise Documents, to add a resume and a job post.
+  const from = useCameFrom();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -190,8 +238,8 @@ export function RegisterPage() {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
-  if (user) return <Navigate to="/" replace />;
-  if (sentTo) return <CheckInbox email={sentTo} />;
+  if (user) return <Navigate to={from ?? "/"} replace />;
+  if (sentTo) return <CheckInbox email={sentTo} from={from} />;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -209,6 +257,7 @@ export function RegisterPage() {
         ...(captchaToken ? { captcha_token: captchaToken } : {}),
       });
       if (outcome === "verify_email") setSentTo(email.trim().toLowerCase());
+      else if (from) navigate(from, { replace: true });
       else navigate("/documents", { replace: true, state: { onboarding: true } });
     } catch (err) {
       setError(errorText(err));
@@ -218,7 +267,7 @@ export function RegisterPage() {
   };
 
   return (
-    <AuthShell title="Create your account" subtitle="Interview copilot, resume maker and practice, in one account" features>
+    <AuthShell title="Create your account" subtitle="Interview copilot and Resume AI, in one account" features>
       <form onSubmit={(e) => void submit(e)} className="space-y-4">
         <Field label="Name" htmlFor="name">
           <Input id="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -245,7 +294,7 @@ export function RegisterPage() {
       </form>
       <p className="mt-6 text-center text-sm text-zinc-500">
         Already have an account?{" "}
-        <Link to="/login" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+        <Link to="/login" state={from ? { from } : undefined} className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
           Sign in
         </Link>
       </p>
@@ -254,7 +303,7 @@ export function RegisterPage() {
 }
 
 /** After sign-up when the server wants the inbox proven first. Worded the same whether or not the address was new. */
-function CheckInbox({ email }: { email: string }) {
+function CheckInbox({ email, from }: { email: string; from: string | null }) {
   return (
     <AuthShell title="Check your inbox" subtitle="One step left">
       <div role="status" className="space-y-4 text-sm">
@@ -266,7 +315,7 @@ function CheckInbox({ email }: { email: string }) {
           Nothing there after a few minutes? Check spam. If you already had an Orbit account, the email explains how
           to sign in or reset your password instead.
         </p>
-        <Link to="/login" className={`block text-center ${linkClass}`}>
+        <Link to="/login" state={from ? { from } : undefined} className={`block text-center ${linkClass}`}>
           Go to sign in
         </Link>
       </div>

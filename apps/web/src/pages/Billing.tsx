@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { CreditCard, Crown, FileText, Mic, cx } from "@orbit/ui";
+import { Link, useSearchParams } from "react-router-dom";
+import { CreditCard, Crown, Mic, Sparkles, cx, focusRing } from "@orbit/ui";
 import type { CreditPack, Entitlements, UpiOrder } from "@orbit/types";
 import { Button, Card, ErrorNote, PageHeader, Spinner } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
+import { RESUME_AI_HOME } from "./resume/paths";
 import { UpiCheckout } from "./UpiCheckout";
 
 function Bar({ used, limit }: { used: number; limit: number | null }) {
@@ -44,14 +45,20 @@ function CreditRows({ e }: { e: Entitlements }) {
       </div>
       <div className="flex items-center gap-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
-          <FileText className="h-4 w-4" />
+          <Sparkles className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex justify-between text-sm">
             <span>Resume AI credits</span>
             <span className="tabular-nums font-medium">{c.resume === null ? "unlimited" : `${c.resume} left`}</span>
           </div>
-          <p className="text-xs text-zinc-500">One per AI import, rewrite, tailoring or cover letter.</p>
+          <p className="text-xs text-zinc-500">
+            One per AI action in{" "}
+            <Link to={RESUME_AI_HOME} className={cx("font-medium text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}>
+              Resume AI
+            </Link>
+            : an import, rewrite, tailoring, cover letter, profile or message.
+          </p>
         </div>
       </div>
       <p className="text-xs text-zinc-500">
@@ -104,7 +111,7 @@ function PackCard({ p, best, busy, onBuy }: { p: CreditPack; best: boolean; busy
       <p className="mt-1 font-display text-2xl font-semibold">₹{p.price_inr.toLocaleString("en-IN")}</p>
       <ul className="mt-3 flex-1 space-y-1.5 text-sm text-zinc-600 dark:text-zinc-400">
         {p.interview_minutes > 0 && <li>· {p.interview_minutes} interview minutes (live or mock)</li>}
-        {p.resume_credits > 0 && <li>· {p.resume_credits} resume AI credits</li>}
+        {p.resume_credits > 0 && <li>· {p.resume_credits} Resume AI credits</li>}
         <li>· Never expire, no subscription</li>
         {perMinute && <li className="text-xs text-zinc-500">≈ ₹{perMinute.toFixed(perMinute < 10 ? 1 : 0)} per interview minute</li>}
       </ul>

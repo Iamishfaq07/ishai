@@ -4,6 +4,7 @@ import type { OrbitDocument, OrbitSession, SessionType } from "@orbit/types";
 import {
   ArrowRight,
   ArrowUpRight,
+  AudioLines,
   Briefcase,
   Check,
   ClipboardCheck,
@@ -31,6 +32,8 @@ import { useAuth } from "../lib/auth";
 import { SESSION_TYPE_LABEL, errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { UsageSummary } from "./Billing";
+import { RESUME_AI_HOME, resumePath } from "./resume/paths";
+import { AiPill, RESUME_AI_FEATURES, scoreTone } from "./resume/product";
 
 const QUICK_START: Array<{ type: SessionType; title: string; body: string; icon: LucideIcon }> = [
   { type: "interview", title: "Interview", body: "Live answers grounded in your resume and the JD.", icon: Briefcase },
@@ -65,40 +68,46 @@ export function HomePage() {
 
   return (
     <div className="space-y-10">
-      <section className="glass-panel gradient-border relative overflow-hidden rounded-3xl">
-        <div className="grid items-center gap-2 md:grid-cols-[1.2fr_1fr]">
-          <div className="relative z-10 p-6 sm:p-10">
-            <p className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-200">
-              <Sparkles className="h-3.5 w-3.5" />
-              {greeting()}
-              {firstName ? `, ${firstName}` : ""}
-            </p>
-            <h1 className="mt-4 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
-              Your copilot is <span className="text-gradient">in orbit.</span>
-            </h1>
-            <p className="mt-4 max-w-md text-base text-zinc-600 dark:text-zinc-300">
-              Orbit listens, spots the interviewer’s question, and streams a concise answer you can glance at while you
-              speak.
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Button size="lg" onClick={() => navigate("/start")}>
-                Start live session
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-              {MOCK_INTERVIEW_ENABLED && (
-                <Button size="lg" variant="secondary" onClick={() => navigate("/mock")}>
-                  <Target className="h-4 w-4" />
-                  Practice a mock
+      {/* Orbit's two products, side by side: the interview copilot and Resume AI. */}
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] lg:gap-5">
+        <section aria-labelledby="copilot-title" className="glass-panel gradient-border relative overflow-hidden rounded-3xl">
+          {/* In the corner, beside the buttons. Not on phones, so Resume AI and the setup checklist stay in view. */}
+          <PlanetHero className="pointer-events-none absolute bottom-5 right-5 hidden w-24 motion-safe:animate-float md:block xl:bottom-6 xl:right-8 xl:w-32" />
+          <div className="flex h-full flex-col justify-center">
+            <div className="relative z-10 p-6 sm:p-8 xl:p-10">
+              <p className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-200">
+                <Sparkles className="h-3.5 w-3.5" />
+                {greeting()}
+                {firstName ? `, ${firstName}` : ""}
+              </p>
+              <p className="mt-5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-300">
+                <AudioLines className="h-3.5 w-3.5" aria-hidden />
+                Interview copilot
+              </p>
+              <h1 id="copilot-title" className="mt-2 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
+                Your copilot is <span className="text-gradient">in orbit.</span>
+              </h1>
+              <p className="mt-4 max-w-md text-base text-zinc-600 dark:text-zinc-300">
+                Orbit listens, spots the interviewer’s question, and streams a concise answer you can glance at while you
+                speak.
+              </p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Button size="lg" onClick={() => navigate("/start")}>
+                  Start live session
+                  <ArrowRight className="h-4 w-4" />
                 </Button>
-              )}
+                {MOCK_INTERVIEW_ENABLED && (
+                  <Button size="lg" variant="secondary" onClick={() => navigate("/mock")}>
+                    <Target className="h-4 w-4" />
+                    Practice a mock
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
-          {/* Small on phones so the setup checklist below stays in view. */}
-          <div className="relative -mt-6 flex justify-center pb-6 md:mt-0 md:py-8 md:pr-8">
-            <PlanetHero className="w-32 motion-safe:animate-float sm:w-72" />
-          </div>
-        </div>
-      </section>
+        </section>
+        <ResumeAiCard />
+      </div>
 
       {sessions.data && documents.data && (
         <GettingStarted sessions={sessions.data} documents={documents.data} storyCount={stories.data?.length ?? 0} />
@@ -223,6 +232,65 @@ export function HomePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Orbit Resume AI, Home's second product: what it does, how your best resume scores, and the way in. */
+function ResumeAiCard() {
+  const navigate = useNavigate();
+  const resumes = useAsync(() => api.listResumes(), [], "resumes");
+  const list = resumes.data;
+  const best = list?.length ? list.reduce((a, b) => (b.score > a.score ? b : a)) : null;
+  return (
+    <section aria-labelledby="resume-ai-title" className="glass-panel relative flex flex-col overflow-hidden rounded-3xl p-6 sm:p-8">
+      <span aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-60 w-60 rounded-full bg-aurora-400/15 blur-3xl" />
+      <div className="relative flex items-center gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-aurora-500 text-white shadow-glow-sm">
+          <Sparkles className="h-5 w-5" aria-hidden />
+        </span>
+        <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-300">
+          Resume <AiPill className="ml-0.5 align-[1px] normal-case tracking-normal" />
+        </p>
+      </div>
+      <h2 id="resume-ai-title" className="relative mt-4 font-display text-2xl font-semibold leading-tight tracking-tight">
+        Build a resume that gets interviews.
+      </h2>
+      <p className="relative mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+        ATS score, AI rewrites for every job, and interview prep from your own resume.
+      </p>
+      <ul aria-label="What Resume AI does" className="relative mt-4 hidden flex-wrap gap-1.5 sm:flex">
+        {RESUME_AI_FEATURES.slice(0, 4).map(({ icon: Icon, short }) => (
+          <li
+            key={short}
+            className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 text-[0.6875rem] font-medium text-zinc-700 ring-1 ring-zinc-500/15 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10"
+          >
+            <Icon className="h-3 w-3 text-indigo-500 dark:text-indigo-300" aria-hidden />
+            {short}
+          </li>
+        ))}
+      </ul>
+      <div className="relative mt-auto flex flex-wrap items-center gap-3 pt-6">
+        <Button size="lg" onClick={() => navigate(RESUME_AI_HOME)}>
+          {best ? "Open Resume AI" : "Make your resume"}
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+        {best && (
+          <Link
+            to={resumePath(best.id)}
+            className={cx("flex min-w-0 items-center gap-2 rounded-xl py-1 pr-2 text-sm hover:bg-zinc-900/5 dark:hover:bg-white/5", focusRing)}
+            aria-label={`${best.title}: ATS score ${best.score} out of 100. Open it`}
+          >
+            <span className={cx("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-display text-sm font-semibold tabular-nums ring-1", scoreTone(best.score))}>
+              {best.score}
+            </span>
+            <span className="min-w-0 leading-tight">
+              <span className="block text-xs text-zinc-500 dark:text-zinc-400">Best ATS score</span>
+              <span className="block truncate font-medium">{best.title}</span>
+            </span>
+          </Link>
+        )}
+      </div>
+    </section>
   );
 }
 

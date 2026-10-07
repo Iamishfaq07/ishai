@@ -26,13 +26,13 @@ const input =
 /** What Orbit does, beside the sign-in form (under it in a narrow window). */
 const FEATURES: Array<{ icon: LucideIcon; title: string; text: string }> = [
   { icon: AudioLines, title: "Live interview copilot", text: "Hears the question as it's asked and answers in your voice, from your resume." },
+  { icon: FileText, title: "Resume AI", text: "ATS score out of 100, AI rewrites for every job, Naukri and LinkedIn profiles, cover letters." },
   { icon: Code2, title: "Coding rounds", text: "Screenshot a problem for the approach, the code and its complexity." },
   { icon: MessagesSquare, title: "Mock interviews", text: "Practise with an AI interviewer, then get a scorecard and the questions to redo." },
-  { icon: FileText, title: "Resume maker", text: "ATS score out of 100, AI rewrites for the job, Word and PDF, cover letters." },
   { icon: ShieldCheck, title: "Private", text: "Your documents and transcripts stay in your account. Delete them any time." },
 ];
 
-/** "Free to start: 20 interview minutes + 1 resume AI credit", from the server (it decides the welcome credits). */
+/** "Free to start: 20 interview minutes + 1 Resume AI credit", from the server (it decides the welcome credits). */
 function useWelcome(): string | null {
   const [text, setText] = useState<string | null>(null);
   useEffect(() => {
@@ -43,7 +43,7 @@ function useWelcome(): string | null {
         if (!w || !(w.resume_credits || w.interview_minutes)) return;
         const parts = [
           w.interview_minutes ? `${w.interview_minutes} interview minutes` : "",
-          w.resume_credits ? `${w.resume_credits} resume AI credit${w.resume_credits === 1 ? "" : "s"}` : "",
+          w.resume_credits ? `${w.resume_credits} Resume AI credit${w.resume_credits === 1 ? "" : "s"}` : "",
         ].filter(Boolean);
         setText(`Free to start: ${parts.join(" + ")}. No card needed.`);
       })
@@ -104,7 +104,7 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
           <PlanetHero className="pointer-events-none absolute right-5 top-5 w-24 opacity-90 motion-safe:animate-float" />
           <OrbitWordmark size={26} className="relative" />
           <p className="relative mt-3 max-w-xs font-display text-xl font-semibold leading-snug tracking-tight">
-            Your interview copilot, resume maker and practice partner.
+            Your interview copilot and Resume AI, in one account.
           </p>
           <FeatureList className="relative mt-6" />
         </aside>

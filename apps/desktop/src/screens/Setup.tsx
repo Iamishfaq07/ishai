@@ -713,7 +713,7 @@ export function SetupScreen({
               </ul>
             )}
             <StoryBankNote api={api} onManage={() => void openUrl(`${WEB_URL}/documents/stories`)} />
-            <ResumeMakerNote api={api} onOpen={() => void openUrl(`${WEB_URL}/documents/resumes`)} className="mt-1" />
+            <ResumeMakerNote api={api} onOpen={() => void openUrl(`${WEB_URL}/resume-ai`)} className="mt-1" />
           </fieldset>
 
           <div className="grid grid-cols-2 gap-3">

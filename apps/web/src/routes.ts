@@ -15,6 +15,7 @@ const loaders = {
   stories: () => import("./pages/Stories"),
   resumes: () => import("./pages/resume/Resumes"),
   resumeEditor: () => import("./pages/resume/ResumeEditor"),
+  resumeAiPublic: () => import("./pages/resume/ResumeAiPublic"),
   mock: () => import("./pages/Mock"),
   billing: () => import("./pages/Billing"),
   settings: () => import("./pages/Settings"),
@@ -34,8 +35,9 @@ export const SessionsPage = page(loaders.sessions, (m) => m.SessionsPage);
 export const SessionDetailPage = page(loaders.sessionDetail, (m) => m.SessionDetailPage);
 export const DocumentsPage = page(loaders.documents, (m) => m.DocumentsPage);
 export const StoriesPage = page(loaders.stories, (m) => m.StoriesPage);
-export const ResumesPage = page(loaders.resumes, (m) => m.ResumesPage);
+export const ResumeAiHomePage = page(loaders.resumes, (m) => m.ResumeAiHomePage);
 export const ResumeEditorPage = page(loaders.resumeEditor, (m) => m.ResumeEditorPage);
+export const ResumeAiPublicPage = page(loaders.resumeAiPublic, (m) => m.ResumeAiPublicPage);
 export const MockPage = page(loaders.mock, (m) => m.MockPage);
 export const BillingPage = page(loaders.billing, (m) => m.BillingPage);
 export const SettingsPage = page(loaders.settings, (m) => m.SettingsPage);
@@ -43,31 +45,39 @@ export const CompanionPage = page(loaders.companion, (m) => m.CompanionPage);
 export const AdminUsersPage = page(loaders.adminUsers, (m) => m.AdminUsersPage);
 export const AdminPaymentsPage = page(loaders.adminPayments, (m) => m.AdminPaymentsPage);
 
-const BY_PATH: Array<[RegExp, keyof typeof loaders]> = [
+type PageKey = keyof typeof loaders;
+
+const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/$/, "home"],
   [/^\/start/, "setup"],
   [/^\/live\//, "live"],
   [/^\/sessions\/[^/]+/, "sessionDetail"],
   [/^\/sessions/, "sessions"],
   [/^\/documents\/stories/, "stories"],
-  [/^\/documents\/resumes\/[^/]+/, "resumeEditor"],
-  [/^\/documents\/resumes/, "resumes"],
   [/^\/documents/, "documents"],
+  [/^\/resume-ai\/jobs(\/|$)/, null], // the Jobs portal's address: not a resume
+  [/^\/resume-ai\/[^/]+/, "resumeEditor"],
+  [/^\/resume-ai/, "resumes"],
   [/^\/mock/, "mock"],
   [/^\/billing/, "billing"],
   [/^\/settings/, "settings"],
 ];
 
+/** The page whose code an address needs, or null when there's nothing to warm (exported for the unit test). */
+export function pageFor(path: string): PageKey | null {
+  return BY_PATH.find(([re]) => re.test(path))?.[1] ?? null;
+}
+
 /** Start downloading a page's code (no-op once loaded; the browser caches the module). */
 export function prefetchRoute(path: string): void {
-  const hit = BY_PATH.find(([re]) => re.test(path));
-  if (hit) void loaders[hit[1]]().catch(() => undefined);
+  const key = pageFor(path);
+  if (key) void loaders[key]().catch(() => undefined);
 }
 
 /** After sign-in, when the browser is idle: the pages people open next. */
 export function prefetchLikelyRoutes(): void {
   const run = () => {
-    for (const key of ["home", "setup", "sessions", "live", "mock", "documents"] as const) {
+    for (const key of ["home", "setup", "sessions", "live", "mock", "documents", "resumes"] as const) {
       void loaders[key]().catch(() => undefined);
     }
   };
