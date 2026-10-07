@@ -19,6 +19,12 @@ import type {
   ApiErrorBody,
   BulkCreditsResult,
   AuthConfig,
+  ContactReceipt,
+  ContactRequest,
+  InboxMessage,
+  InboxMessagePatch,
+  InboxPage,
+  InboxQuery,
   CostReport,
   CoverLetterLength,
   CoverLetterTone,
@@ -597,6 +603,24 @@ export function createApiClient(options: ApiClientOptions) {
       json<AdminStats>(`/v1/admin/stats${queryString({ days, tz_offset: tzOffsetMinutes })}`),
     /** Public: the site-wide announcement banner, if the admin set one. */
     announcement: () => json<Announcement>("/v1/announcement"),
+    /** Public (signed in or out): leave a message for the team; it waits in the admin's Inbox. */
+    sendContact: (req: ContactRequest) => json<ContactReceipt>("/v1/contact", { method: "POST", body: body(req) }),
+    /** Admin: the Contact page's messages, newest first ("todo" = new and open), with the counts per status. */
+    adminInbox: (query: InboxQuery = {}) =>
+      json<InboxPage>(`/v1/admin/inbox${queryString({ ...query, q: query.q?.trim() })}`),
+    /** Admin: one message in full; an unread one is marked read. */
+    adminInboxMessage: (messageId: string) => json<InboxMessage>(`/v1/admin/inbox/${encodeURIComponent(messageId)}`),
+    /** Admin: done, spam, open again or back to unread; the private note. */
+    updateInboxMessage: (messageId: string, patch: InboxMessagePatch) =>
+      json<InboxMessage>(`/v1/admin/inbox/${encodeURIComponent(messageId)}`, { method: "PATCH", body: body(patch) }),
+    /** Admin: email the sender from Orbit (Reply-To you); the message is then done. */
+    replyInboxMessage: (messageId: string, text: string) =>
+      json<InboxMessage>(`/v1/admin/inbox/${encodeURIComponent(messageId)}/reply`, {
+        method: "POST",
+        body: body({ text }),
+      }),
+    deleteInboxMessage: (messageId: string) =>
+      json<void>(`/v1/admin/inbox/${encodeURIComponent(messageId)}`, { method: "DELETE" }),
     /** Admin: grant a plan for a while, approve for good, or revoke. */
     setUserAccess: (userId: string, change: AccessChange) =>
       json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/access`, { method: "POST", body: body(change) }),

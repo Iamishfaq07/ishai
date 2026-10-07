@@ -12,6 +12,7 @@ const loaders = {
   landing: () => import("./pages/Landing"),
   welcome: () => import("./pages/Welcome"),
   warmup: () => import("./pages/Warmup"),
+  contact: () => import("./pages/Contact"),
   setup: () => import("./pages/SessionSetup"),
   live: () => import("./pages/Live"),
   sessions: () => import("./pages/Sessions"),
@@ -30,6 +31,7 @@ const loaders = {
   adminUsers: () => import("./pages/AdminUsers"),
   adminPayments: () => import("./pages/AdminPayments"),
   adminAudit: () => import("./pages/AdminAudit"),
+  adminInbox: () => import("./pages/AdminInbox"),
 } as const;
 
 function page<M>(load: () => Promise<M>, pick: (m: M) => ComponentType) {
@@ -40,6 +42,7 @@ export const HomePage = page(loaders.home, (m) => m.HomePage);
 export const LandingPage = page(loaders.landing, (m) => m.LandingPage);
 export const WelcomePage = page(loaders.welcome, (m) => m.WelcomePage);
 export const WarmupPage = page(loaders.warmup, (m) => m.WarmupPage);
+export const ContactPage = page(loaders.contact, (m) => m.ContactPage);
 export const SessionSetupPage = page(loaders.setup, (m) => m.SessionSetupPage);
 export const LivePage = page(loaders.live, (m) => m.LivePage);
 export const SessionsPage = page(loaders.sessions, (m) => m.SessionsPage);
@@ -64,6 +67,7 @@ export const CompanionPage = page(loaders.companion, (m) => m.CompanionPage);
 export const AdminUsersPage = page(loaders.adminUsers, (m) => m.AdminUsersPage);
 export const AdminPaymentsPage = page(loaders.adminPayments, (m) => m.AdminPaymentsPage);
 export const AdminAuditPage = page(loaders.adminAudit, (m) => m.AdminAuditPage);
+export const AdminInboxPage = page(loaders.adminInbox, (m) => m.AdminInboxPage);
 
 type PageKey = keyof typeof loaders;
 
@@ -71,6 +75,7 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/$/, "home"],
   [/^\/welcome\/?$/, "welcome"],
   [/^\/warmup\/?$/, "warmup"],
+  [/^\/contact\/?$/, "contact"],
   [/^\/start/, "setup"],
   [/^\/live\//, "live"],
   [/^\/sessions\/[^/]+/, "sessionDetail"],

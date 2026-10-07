@@ -193,4 +193,31 @@ describe("the admin console's client", () => {
     expect(seen[5]).toMatchObject({ method: "DELETE", body: JSON.stringify({ confirm_email: "a@b.c" }) });
     expect(queryString({ a: undefined, b: "", c: 0, d: false })).toBe("?c=0&d=false");
   });
+
+  it("sends the contact form and builds the Inbox's addresses", async () => {
+    const seen: Array<{ url: string; method: string; body: string | null }> = [];
+    const impl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      seen.push({ url: String(input), method: init?.method ?? "GET", body: init?.body ? String(init.body) : null });
+      return new Response(JSON.stringify({}), { status: 200 });
+    }) as typeof fetch;
+    const api = createApiClient({ baseUrl: "https://api.test", auth: { mode: "cookie" }, fetchImpl: impl });
+    await api.sendContact({ name: "Asha", email: "a@b.c", topic: "payment", message: "Where are my credits?" });
+    await api.adminInbox();
+    await api.adminInbox({ status: "new", topic: "report_job", q: "  C-1A2B ", limit: 1 });
+    await api.adminInboxMessage("m/1");
+    await api.updateInboxMessage("m1", { status: "done" });
+    await api.replyInboxMessage("m1", "Sorted.");
+    await api.deleteInboxMessage("m1");
+    expect(seen.map((s) => `${s.method} ${s.url.replace("https://api.test", "")}`)).toEqual([
+      "POST /v1/contact",
+      "GET /v1/admin/inbox",
+      "GET /v1/admin/inbox?status=new&topic=report_job&q=C-1A2B&limit=1",
+      "GET /v1/admin/inbox/m%2F1",
+      "PATCH /v1/admin/inbox/m1",
+      "POST /v1/admin/inbox/m1/reply",
+      "DELETE /v1/admin/inbox/m1",
+    ]);
+    expect(JSON.parse(seen[0]!.body ?? "{}")).toMatchObject({ topic: "payment", name: "Asha" });
+    expect(seen[5]!.body).toBe(JSON.stringify({ text: "Sorted." }));
+  });
 });

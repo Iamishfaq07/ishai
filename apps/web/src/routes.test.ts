@@ -29,6 +29,12 @@ describe("pageFor (what the nav warms before a click)", () => {
     expect(pageFor("/")).toBe("home");
   });
 
+  it("knows the Contact page, and only its address", () => {
+    expect(pageFor("/contact")).toBe("contact");
+    expect(pageFor("/contact/")).toBe("contact");
+    expect(pageFor("/contacts")).toBeNull();
+  });
+
   it("knows the welcome questions and the free practice question, and only those addresses", () => {
     expect(pageFor("/welcome")).toBe("welcome");
     expect(pageFor("/welcome/")).toBe("welcome");

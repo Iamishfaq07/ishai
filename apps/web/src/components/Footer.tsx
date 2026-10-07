@@ -60,19 +60,17 @@ export function Footer({ className }: { className?: string }) {
                 Common questions
               </Link>
             </li>
-            {CONTACT_PAGE && (
-              <li>
-                <a href={CONTACT_PAGE} className={link}>
-                  Contact us
-                </a>
-              </li>
-            )}
+            <li>
+              <Link to={CONTACT_PAGE} className={link}>
+                Contact us
+              </Link>
+            </li>
           </ul>
         </nav>
         <nav aria-label="Policies">
           <h2 className="font-display text-sm font-semibold">Policies</h2>
           <ul className="mt-2 space-y-0.5">
-            {POLICY_LINKS.filter((l) => l.href !== CONTACT_PAGE).map(({ href, label }) => (
+            {POLICY_LINKS.map(({ href, label }) => (
               <li key={href}>
                 <a href={href} className={link}>
                   {label === "Refunds" ? "Refund policy" : label === "Privacy" ? "Privacy policy" : "Terms of use"}

@@ -832,6 +832,129 @@ export interface Announcement {
   tone: "info" | "warning";
 }
 
+// ---- Contact page and the admin's Inbox (POST /v1/contact, /v1/admin/inbox) ----------------------------------
+
+export type ContactTopic = "general" | "payment" | "technical" | "report_job" | "business" | "feedback" | "other";
+/** new = unread · open = read, still to answer · done · spam */
+export type ContactStatus = "new" | "open" | "done" | "spam";
+
+/** What the page that opened the form knows (never typed): a reported job, where the sender came from. */
+export interface ContactContext {
+  listing_id?: string;
+  listing_title?: string;
+  listing_company?: string;
+  listing_url?: string;
+  /** "Asked me to pay a fee" */
+  reason?: string;
+  /** The app page the form was opened from ("/jobs/listing/j3f2"). */
+  page?: string;
+}
+
+/** POST /v1/contact (public, signed in or out). */
+export interface ContactRequest {
+  name: string;
+  email: string;
+  phone?: string;
+  topic: ContactTopic;
+  message: string;
+  context?: ContactContext;
+  /** Signed out, when the server asks for the bot check. */
+  captcha_token?: string;
+  /** The honeypot: always empty from a person. */
+  website?: string;
+}
+
+export interface ContactReceipt {
+  status: "received";
+  /** "C-1A2B3C4D", to quote when writing again. */
+  reference: string;
+}
+
+/** "todo" = new and open (the default) · "new" = unread · "all" = everything, spam too. */
+export type InboxFilter = "todo" | "new" | "done" | "spam" | "all";
+
+export interface InboxQuery {
+  status?: InboxFilter;
+  topic?: ContactTopic;
+  q?: string;
+  offset?: number;
+  limit?: number;
+}
+
+export interface InboxItem {
+  id: string;
+  reference: string;
+  created_at: string;
+  name: string;
+  email: string;
+  topic: ContactTopic;
+  topic_label: string;
+  status: ContactStatus;
+  /** The start of the message, on one line. */
+  snippet: string;
+  /** The account it was sent from, when signed in. */
+  user_id: string | null;
+  listing_title: string | null;
+  replies: number;
+}
+
+export interface InboxCounts {
+  new: number;
+  open: number;
+  done: number;
+  spam: number;
+  todo: number;
+  all: number;
+}
+
+export interface InboxPage {
+  items: InboxItem[];
+  total: number;
+  offset: number;
+  has_more: boolean;
+  /** Every message, whatever the filters: the tabs' numbers and the unread badge. */
+  counts: InboxCounts;
+}
+
+export interface InboxReply {
+  at: string;
+  /** The admin's email. */
+  by: string;
+  text: string;
+}
+
+/** GET /v1/admin/inbox/{id}: one message in full (opening an unread one marks it read). */
+export interface InboxMessage {
+  id: string;
+  reference: string;
+  created_at: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  topic: ContactTopic;
+  topic_label: string;
+  message: string;
+  context: ContactContext | null;
+  status: ContactStatus;
+  read_at: string | null;
+  handled_at: string | null;
+  /** The admin's own; never sent to the sender. */
+  admin_note: string | null;
+  replies: InboxReply[];
+  /** The account it was sent from (null if signed out, or deleted since). */
+  account: { id: string; email: string; name: string | null } | null;
+  /** Messages from the same network in the last 30 days, this one included. */
+  same_network_30d: number;
+  /** This server can send email: reply from Orbit. Else reply from your own mail app. */
+  can_reply: boolean;
+}
+
+export interface InboxMessagePatch {
+  status?: ContactStatus;
+  /** "" clears it. */
+  admin_note?: string;
+}
+
 /** One line of an account's history: credits in or out, a session and its minutes, a payment. */
 export interface AdminActivityItem {
   at: string;

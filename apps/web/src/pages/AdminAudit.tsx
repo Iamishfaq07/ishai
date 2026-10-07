@@ -158,6 +158,15 @@ function AuditRow({ item: i }: { item: AdminAuditItem }) {
       <td className="whitespace-nowrap py-2 pl-3 pr-3 text-zinc-500 tabular-nums dark:text-zinc-400">{when(i.at)}</td>
       <td className="py-2 pr-3">
         {actionLabel(i.action)}
+        {/* An Inbox action: its target starts with the message's id. */}
+        {i.action.startsWith("admin.contact.") && i.action !== "admin.contact.delete" && i.target && (
+          <Link
+            to={`/admin/inbox?status=all&m=${encodeURIComponent(i.target.split(" ", 1)[0] ?? "")}`}
+            className={cx("ml-1.5 text-xs text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}
+          >
+            Open
+          </Link>
+        )}
         {detail && <p className="text-xs text-zinc-500 md:hidden">{detail}</p>}
       </td>
       <td className="max-w-[16rem] py-2 pr-3">

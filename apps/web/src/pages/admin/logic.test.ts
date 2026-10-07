@@ -66,6 +66,7 @@ describe("the audit log", () => {
   it("names actions in words and keeps unknown ones as they are", () => {
     expect(actionLabel("admin.user.delete")).toBe("Deleted the account");
     expect(actionLabel("auth.login_suspended")).toBe("Tried to sign in while suspended");
+    expect(actionLabel("admin.contact.reply")).toBe("Replied to a message");
     expect(actionLabel("admin.something_new")).toBe("admin.something_new");
   });
 

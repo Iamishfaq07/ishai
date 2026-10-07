@@ -548,15 +548,13 @@ function Faq({ welcome, stats }: { welcome: WelcomeGrant | null; stats: JobStats
           </details>
         ))}
       </div>
-      {CONTACT_PAGE && (
-        <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
-          Something else?{" "}
-          <a href={CONTACT_PAGE} className={cx("rounded font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
-            Contact us
-          </a>
-          .
-        </p>
-      )}
+      <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
+        Something else?{" "}
+        <Link to={CONTACT_PAGE} className={cx("rounded font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
+          Contact us
+        </Link>
+        .
+      </p>
     </section>
   );
 }

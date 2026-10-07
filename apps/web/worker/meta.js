@@ -28,6 +28,11 @@ export const PAGE_META = {
     description:
       "Answer a common interview question by typing or speaking, and see what to improve straight away. Free, no account needed.",
   },
+  "/contact": {
+    title: "Contact Orbit AI",
+    description:
+      "Questions, payments, a technical problem or a job that looks wrong: send the Orbit team a message and we'll reply by email.",
+  },
 };
 
 /** The page's own preview, or null for any other address (it keeps index.html's). "/jobs/" counts as "/jobs". */

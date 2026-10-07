@@ -186,11 +186,9 @@ function AuthShell({ title, subtitle, children, features = false }: { title: str
             <a href={PRIVACY_PAGE} className={smallLink}>
               Privacy
             </a>
-            {CONTACT_PAGE && (
-              <a href={CONTACT_PAGE} className={smallLink}>
-                Contact
-              </a>
-            )}
+            <Link to={CONTACT_PAGE} className={smallLink}>
+              Contact
+            </Link>
           </nav>
         </div>
       </main>

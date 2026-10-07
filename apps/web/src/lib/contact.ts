@@ -1,7 +1,7 @@
 /**
- * Where people get help: the support email and WhatsApp number this deployment uses (public build config,
- * VITE_SUPPORT_EMAIL and VITE_SUPPORT_WHATSAPP), and the public policy pages. Without them, Help points to the contact
- * page once it's published (LEGAL_PAGES_PUBLISHED).
+ * Where people get help: the Contact page's form (`/contact`; its messages wait in the admin's Inbox), the support
+ * email and WhatsApp number this deployment may also offer (public build config, VITE_SUPPORT_EMAIL and
+ * VITE_SUPPORT_WHATSAPP, both optional), and the public policy pages.
  */
 export const SUPPORT_EMAIL: string | null = import.meta.env.VITE_SUPPORT_EMAIL?.trim() || null;
 
@@ -22,9 +22,16 @@ export const USE_WHERE_ALLOWED =
   "Built for practice, and for interviews and calls where notes or AI help are allowed. Check the rules first.";
 
 /**
- * The Terms, Refund and Contact pages wait for the owner's details (legal name, address, support contacts, GST) and
- * refund rules: their drafts are in docs/legal-drafts/. To publish them, fill them in, move them to apps/web/public/
- * and set this to true; every link to them (footer, Help, sign-up, the front page's FAQ) appears with it.
+ * The Contact page: the app's own form (pages/Contact.tsx), so a router link (`<Link to={CONTACT_PAGE}>`), and live
+ * whatever LEGAL_PAGES_PUBLISHED says. It supersedes the draft static contact page in docs/legal-drafts/. Links that
+ * prefill it (`?topic=`, `?listing=`) come from `contactHref` in lib/contactForm.ts.
+ */
+export const CONTACT_PAGE = "/contact";
+
+/**
+ * The Terms and Refund pages wait for the owner's details (legal name, address, grievance officer, GST) and refund
+ * rules: their drafts are in docs/legal-drafts/. To publish them, fill them in, move them to apps/web/public/ and set
+ * this to true; every link to them (footer, Help, sign-up, the front page's FAQ) appears with it.
  */
 export const LEGAL_PAGES_PUBLISHED = false;
 
@@ -32,10 +39,9 @@ export const LEGAL_PAGES_PUBLISHED = false;
 export const PRIVACY_PAGE = "/privacy.html";
 export const TERMS_PAGE: string | null = LEGAL_PAGES_PUBLISHED ? "/terms.html" : null;
 export const REFUND_PAGE: string | null = LEGAL_PAGES_PUBLISHED ? "/refund.html" : null;
-export const CONTACT_PAGE: string | null = LEGAL_PAGES_PUBLISHED ? "/contact.html" : null;
+/** The static policy pages, for `<a href>`. Contact isn't one: it's a router link to CONTACT_PAGE. */
 export const POLICY_LINKS: Array<{ href: string; label: string }> = [
   ...(TERMS_PAGE ? [{ href: TERMS_PAGE, label: "Terms" }] : []),
   ...(REFUND_PAGE ? [{ href: REFUND_PAGE, label: "Refunds" }] : []),
   { href: PRIVACY_PAGE, label: "Privacy" },
-  ...(CONTACT_PAGE ? [{ href: CONTACT_PAGE, label: "Contact" }] : []),
 ];
