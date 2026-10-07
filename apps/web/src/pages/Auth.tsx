@@ -323,9 +323,11 @@ export function LoginPage() {
 
 export function RegisterPage() {
   const { user, register } = useAuth();
-  const navigate = useNavigate();
   // Then the three welcome questions; from Resume AI's or Jobs AI's "Start free", back there after them.
   const from = useCameFrom();
+  // Set just before the account is made: the sign-in that comes with it re-renders this page signed in, and that
+  // redirect must go to the welcome questions, not straight on (it used to win over the navigation after sign-up).
+  const signedUp = useRef(false);
   const strengthId = useId();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -336,7 +338,13 @@ export function RegisterPage() {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
-  if (user) return <Navigate to={from ?? "/"} replace />;
+  if (user) {
+    return signedUp.current ? (
+      <Navigate to="/welcome" replace state={from ? { from } : undefined} />
+    ) : (
+      <Navigate to={from ?? "/"} replace />
+    );
+  }
   if (sentTo) return <CheckInbox email={sentTo} from={from} />;
 
   const submit = async (e: FormEvent) => {
@@ -347,6 +355,7 @@ export function RegisterPage() {
     }
     setBusy(true);
     setError(null);
+    signedUp.current = true;
     try {
       const outcome = await register({
         email,
@@ -354,9 +363,10 @@ export function RegisterPage() {
         ...(name.trim() ? { name: name.trim() } : {}),
         ...(captchaToken ? { captcha_token: captchaToken } : {}),
       });
+      // Signed in: this page re-renders with the account and goes to the welcome questions (above).
       if (outcome === "verify_email") setSentTo(email.trim().toLowerCase());
-      else navigate("/welcome", { replace: true, state: from ? { from } : undefined });
     } catch (err) {
+      signedUp.current = false;
       setError(errorText(err));
     } finally {
       setBusy(false);
