@@ -1,5 +1,67 @@
 # Implementation log
 
+## Orbit Jobs AI: Jobs becomes Orbit's third product, with its own nav item and pages (2026-10-07)
+
+Jobs was a tab of Resume AI (`/resume-ai/jobs`). It's now **Orbit Jobs AI**, a product of its own next to the
+interview copilot and Resume AI, with its own place in the nav, its own pages and a public page.
+
+- **Its own nav item, "Jobs AI"** (`components/Layout.tsx`): a Briefcase icon and "Jobs" with the same gradient AI
+  pill as Resume AI (the link reads "Jobs AI" to screen readers), on the top bar and the phone tab bar. To fit, the
+  nav keeps the six daily destinations (Home, Practice, Sessions, Documents, Resume AI, Jobs AI) and **Settings
+  moves beside the account menu**: a gear (highlighted on Settings) and a "Settings" item in the menu, next to Plan
+  & billing. Checked at 1440, 1280, 1024, 900, 800 and 768 px and on 390 and 360 px phones: one row, nothing cut,
+  no sideways scroll; the tab bar's labels drop to 10 px under 380 px so "Documents" and "Resume AI" don't touch.
+- **Its own pages** (`pages/jobs/`, one chunk, `JobsAiPages.ts`), with tabs between them (`ProductTabs` in
+  `components/products.tsx`, which Resume AI's tabs now use too; the tracker tab shows its count):
+  - `/jobs`, **Overview**: "Find jobs that fit your resume", what it does, your four best matches (each opens its
+    job), what the feed looks for, where your applications stand (a count per step and what's coming up next) and
+    the "Search on other sites" links.
+  - `/jobs/matches`, **Matches**: the ranked feed, search, sort, "Search on other sites", and two quick filters a tap
+    away (how recent: 24h / 3 / 7 / 30 days; work mode), which save the profile; the rest is on Profile. `?q=` and
+    `?sort=` are in the address and the pages already loaded are kept, so Back from a job finds the list as it was.
+  - `/jobs/listing/:id`, **a job's own page** (card titles and tracker cards open it): the post's summary with
+    "Read it all" on the original (a snippet and a link, as the sources' terms ask, D43), the key facts the post
+    states, where it's from with its credit, how the resume matches (all the matched and missing skills), the fit
+    check (opened if it was run before, free), its place on the tracker (move it, notes and dates, remove), and every
+    action: Apply then "Did you apply?", Save, Tailor my resume, Prepare, View original post. Back returns where it
+    was opened from; a job that has left the feed says so.
+  - `/jobs/tracker`, **Tracker**: the board (a list with a status filter on phones), as before.
+  - `/jobs/profile`, **Profile**: the search profile as a page instead of a dialog, in sections (your resume, what
+    you're looking for, where, which jobs, where Orbit looks), a live one-line summary beside it, "Unsaved changes"
+    with Save and Discard (a bar above the tab bar on phones), then "See your matches". The resume links to Resume AI.
+  - The pages share one copy of the profile and the tracker (`JobsAi.tsx`); the feed's cache key carries the
+    profile's fingerprint, so a page opened after the profile changed never shows the old feed first.
+- **Signed out, `/jobs` is a public product page** (`pages/jobs/JobsAiPublic.tsx`): what Jobs AI does, an example
+  match drawn with the real card's parts (labelled Example), where the jobs come from and why LinkedIn and Naukri
+  get links instead, how it works, and what's free, with the server's own numbers. "Start free" signs up and comes
+  back to `/jobs`. Its only call is the new public numbers route.
+- **`GET /v1/jobs/stats`** (no session): fresh jobs and companies in the last 7 days, the feeds credited by name,
+  when they were last updated, and the free daily allowances (`ORBIT_JOBS_FIT_DAILY`, `ORBIT_JOBS_PROFILE_DAILY`).
+  Counts only, worked out at most every 10 minutes, never starts a refresh, 30 a burst per network. In the security
+  matrices (public routes, rate limit per network) and tested (`test_jobs.py`).
+- **Old links keep working**: `/resume-ai/jobs` goes to `/jobs/matches`, its `?view=tracker` to `/jobs/tracker`,
+  anything under it to the same place under `/jobs`, keeping the rest of `?` and `#` (signed out, through sign-in
+  for that page). A route of its own, so "jobs" is never opened as a resume (`/resume-ai/jobsearch` still is).
+  `movedJobsPath` in `pages/jobs/paths.ts`; the nav's prefetch (`pageFor`) and tab titles ("Jobs AI · Orbit") know
+  every address.
+- **Resume AI without Jobs**: its tab bar is gone again (one page), the "Jobs matched to your resume" chip and the
+  public page's Jobs feature are out. Cross-links instead: "Find jobs that match your resume" under your resumes, "No
+  job in mind yet? Find jobs that match this resume" in the editor's Job post panel (opens the matches with that
+  resume, read by the AI), and a line on Resume AI's public page. Tailor my resume still opens the copy in Resume AI.
+- **Home shows the three products**: the interview copilot, larger, with what it does as chips, and Resume AI and
+  Jobs AI beside it (side by side under it on tablets, one after another on phones), each with a line and a way in;
+  Jobs AI's shows where your applications stand. Home asks the tracker only, never the job boards.
+- **Sign-in and sign-up**: the three products lead the features column ("Interview prep" folded into them); sign-up's
+  subtitle is "Interview copilot, Resume AI and Jobs AI, in one account". Still fits 1024 × 720 and 1280 × 720 with
+  the welcome note (tighter spacing on screens under 800 px tall).
+- **Desktop app**: Jobs AI in the sign-in features and tagline, and a "Jobs AI" button in Settings next to Resume AI,
+  opening `/jobs` in the browser.
+- Also: the API's "make a resume first" messages name Resume AI (not "Documents → Resume maker"), and Resume AI's
+  list of resumes no longer widens a phone screen when a title is long.
+- Tests: the new addresses and redirects (`pages/jobs/paths.test.ts`), the feed's fingerprint, the tracker state
+  shown on a job, a job's key facts and what's coming up next (`model.test.ts`), the prefetch and tab titles for
+  every Jobs AI page and old address (`routes.test.ts`, `routeTitle.test.ts`).
+
 ## Jobs: 106 more company boards hiring in India (2026-10-07)
 
 Most matches for an Indian resume came from remote feeds; now most come from companies hiring in Indian cities (an

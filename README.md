@@ -1,12 +1,14 @@
 # Orbit AI
 
-Two products in one account:
+Three products in one account:
 
 - **Interview copilot**, for Windows and the web: Orbit listens to a live conversation, detects the interviewer's
   questions, grounds its answers in your resume, the job description, and your documents, and streams concise
   answers you can speak from.
 - **Orbit Resume AI**, on the web: build a resume that gets interviews, with an ATS score, AI rewrites for every
   job, and interview prep from your own resume.
+- **Orbit Jobs AI**, on the web: the latest openings from companies' own career pages and remote job boards,
+  ranked by how well they match your resume, with a free AI fit check and a tracker for what you've applied to.
 
 ## Interview copilot
 
@@ -45,6 +47,25 @@ comes free with a new account, more come in UPI packs; typing, the ATS score and
 - **Cover letters**, in the tone and length you pick, and **Naukri and LinkedIn profiles and outreach messages**
   (referral requests, emails to HR, follow-ups, thank-you notes).
 - **10 templates** (Campus and Harvard among them), Word and PDF downloads, and "Shorten with AI" to fit one page.
+
+## Orbit Jobs AI
+
+At `/jobs` in the web app (a public product page when signed out), with its own pages: an overview, your matches,
+each job's page, the tracker and your search profile. Browsing, matching and the tracker are free; the AI fit check
+and the AI's read of your resume are free too, a few a day (`ORBIT_JOBS_FIT_DAILY`, `ORBIT_JOBS_PROFILE_DAILY`).
+
+- **Matched to your resume.** Every job gets a match score from your titles, skills, experience and city, with the
+  skills it asks for that your resume shows and the ones it doesn't. Search, sort, and filter by how recent and
+  the work mode.
+- **Straight from the source.** Companies' own career pages (Greenhouse, Lever, Ashby and SmartRecruiters boards)
+  and remote job boards that allow it (Himalayas, Remote OK, Jobicy), each credited on the job. Apply opens the
+  original post. LinkedIn, Naukri and other big sites get "Search on" links filled in from your profile; Orbit
+  doesn't copy their listings ([DECISIONS.md](docs/DECISIONS.md) D43).
+- **A free AI fit check** per job: strong, good or a stretch, why you fit, the gaps and honest resume tweaks.
+- **Your search profile**, read from your resume by the AI and yours to change: titles, skills, cities, work mode,
+  level, job types, how recent, sources and words to leave out.
+- **A tracker** from saved to offer, with notes and dates; **Tailor my resume** opens a copy aimed at the job in
+  Resume AI, and **Prepare** saves the job description for a mock interview.
 
 ## Stack
 
