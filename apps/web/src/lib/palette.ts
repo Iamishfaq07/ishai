@@ -149,7 +149,7 @@ export function baseCommands({ mockEnabled }: { mockEnabled: boolean }): Command
       id: "do-story",
       title: "Write a story for behavioural questions",
       group: "Actions",
-      product: "practice",
+      product: "interview",
       to: "/documents/stories",
       keywords: ["star", "tell me about a time", "story bank", "example"],
     },
@@ -168,7 +168,7 @@ export function baseCommands({ mockEnabled }: { mockEnabled: boolean }): Command
       ? [{ id: "go-practice", title: "Practice", group: "Go to" as const, product: "practice" as const, to: "/mock", keywords: ["mock", "progress", "prep", "interview"] }]
       : []),
     { id: "go-sessions", title: "Sessions", group: "Go to", product: "interview", to: "/sessions", keywords: ["history", "transcripts", "reports", "interview", "copilot", "live"] },
-    { id: "go-stories", title: "Story bank", group: "Go to", product: "practice", to: "/documents/stories", keywords: ["stories", "star", "behavioural"] },
+    { id: "go-stories", title: "Story bank", group: "Go to", product: "interview", to: "/documents/stories", keywords: ["stories", "star", "behavioural"] },
     {
       id: "go-documents",
       title: "Documents",

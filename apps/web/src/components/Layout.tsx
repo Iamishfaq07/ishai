@@ -16,7 +16,6 @@ import {
   OrbitWordmark,
   Search,
   SettingsIcon,
-  Target,
   UserRound,
   VerifyEmailBanner,
   ApprovalBanner,
@@ -45,15 +44,16 @@ const loadPalette = () => import("./CommandPalette");
 const CommandPalette = lazy(loadPalette);
 const HelpDialog = lazy(() => import("./HelpDialog"));
 
-/** Practice's pages: mock interviews (with prep and progress) and the story bank. */
-const PRACTICE_PATH = /^\/(mock|documents\/stories)(\/|$)/;
+/** Practice's page: mock interviews, with prep and progress. */
+const PRACTICE_PATH = /^\/mock(\/|$)/;
 function isPracticePath(pathname: string): boolean {
   return PRACTICE_PATH.test(pathname);
 }
-/** The interview copilot's pages: a new live session, past sessions and the documents its answers draw on. */
+/** The interview copilot's pages: a new live session, past sessions, and the documents and stories its answers draw
+ *  on (the story bank is under /documents). */
 const COPILOT_PATH = /^\/(sessions|documents|start)(\/|$)/;
 function isCopilotPath(pathname: string): boolean {
-  return COPILOT_PATH.test(pathname) && !isPracticePath(pathname);
+  return COPILOT_PATH.test(pathname);
 }
 
 interface NavItem {
@@ -67,9 +67,10 @@ interface NavItem {
   current: (pathname: string) => boolean;
 }
 
-// One item per product, the same on the top bar and the phone tab bar (where "Me" is the sixth): the interview copilot
-// (live help) and Practice (mock interviews) are separate products, each with its own tabs. Plan & credits, Settings
-// and Help are in the account menu ("Me" on phones). The addresses are the same as before, so nothing redirects.
+// One item per product, the same on the top bar and the phone tab bar (where "Me" is the last): the interview copilot
+// (live help, with its sessions, documents and story bank) and Practice (mock interviews) are separate products.
+// Plan & credits, Settings and Help are in the account menu ("Me" on phones). The addresses are the same as before, so
+// nothing redirects.
 const NAV: NavItem[] = [
   { to: "/", label: "Home", short: "Home", icon: House, current: (p) => p === "/" },
   {
@@ -80,14 +81,10 @@ const NAV: NavItem[] = [
     product: "interview",
     current: isCopilotPath,
   },
-  {
-    to: MOCK_INTERVIEW_ENABLED ? "/mock" : "/documents/stories",
-    label: "Practice",
-    short: "Practice",
-    icon: PRODUCTS.practice.icon,
-    product: "practice",
-    current: isPracticePath,
-  },
+  // Practice is mock interviews: with them switched off there's nothing to practise here.
+  ...(MOCK_INTERVIEW_ENABLED
+    ? [{ to: "/mock", label: "Practice", short: "Practice", icon: PRODUCTS.practice.icon, product: "practice" as const, current: isPracticePath }]
+    : []),
   {
     to: RESUME_AI_HOME,
     label: "Resume AI",
@@ -106,13 +103,11 @@ const NAV: NavItem[] = [
   },
 ];
 
-/** The tabs between each product's own pages (as Resume AI and Jobs AI have theirs). */
+/** The tabs between the interview copilot's pages (as Resume AI and Jobs AI have theirs). Practice is one page, so it
+ *  has none. */
 const COPILOT_SECTIONS: ProductSection[] = [
   { to: "/sessions", label: "Sessions", icon: HistoryIcon },
   { to: "/documents", label: "Documents", icon: FolderOpen, end: true },
-];
-const PRACTICE_SECTIONS: ProductSection[] = [
-  ...(MOCK_INTERVIEW_ENABLED ? [{ to: "/mock", label: "Mock interviews", icon: Target }] : []),
   { to: "/documents/stories", label: "Story bank", icon: BookOpen },
 ];
 
@@ -216,7 +211,6 @@ export function Layout() {
   const navRef = useRef<HTMLElement>(null);
   const navFit = useNavFit(navRef);
   const copilot = isCopilotPath(pathname);
-  const practice = isPracticePath(pathname);
   const meActive = ME_PATH.test(pathname);
   const shortcut = isMacPlatform() ? "⌘K" : "Ctrl K";
 
@@ -344,7 +338,6 @@ export function Layout() {
       <AnnouncementBanner className="sm:px-6" />
 
       <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
-        {practice && PRACTICE_SECTIONS.length > 1 && <ProductTabs label="Practice" sections={PRACTICE_SECTIONS} />}
         {copilot && (
           <ProductTabs
             label="Interview copilot"
@@ -407,12 +400,12 @@ export function Layout() {
         </nav>
       </footer>
 
-      {/* Phones: a thumb-reach tab bar, one tab per product and "Me" (six, which fit a 360 px screen). */}
+      {/* Phones: a thumb-reach tab bar, one tab per product and "Me" (at most six, which fit a 360 px screen). */}
       <nav
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200/70 bg-white/95 pb-[env(safe-area-inset-bottom)] md:hidden dark:border-white/5 dark:bg-zinc-950/90"
       >
-        <ul className="mx-auto grid max-w-lg grid-cols-6">
+        <ul className={cx("mx-auto grid max-w-lg", NAV.length + 1 >= 6 ? "grid-cols-6" : "grid-cols-5")}>
           {NAV.map(({ to, label, short, icon: Icon, product, current }) => {
             const active = current(pathname);
             return (
