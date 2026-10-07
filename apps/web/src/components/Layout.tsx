@@ -25,6 +25,7 @@ import { useAuth } from "../lib/auth";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { prefetchRoute } from "../routes";
+import { AnnouncementBanner } from "./AnnouncementBanner";
 import { AiPill } from "./products";
 import { Spinner } from "./ui";
 
@@ -186,6 +187,8 @@ export function Layout() {
         />
       )}
 
+      <AnnouncementBanner className="sm:px-6" />
+
       <main id="main" className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
         {/* Keyed on the route so each page fades up in. */}
         <div key={location.pathname} className="animate-fade-up">
@@ -345,7 +348,7 @@ function WaitingForAccess() {
   useEffect(() => {
     if (!admin) return;
     const load = () => {
-      void api.adminUsers("pending").then((r) => setCount(r.users.length)).catch(() => undefined);
+      void api.adminUsers("pending", "", { limit: 1 }).then((r) => setCount(r.total ?? r.users.length)).catch(() => undefined);
       void api.adminPayments("submitted").then((r) => setPayments(r.waiting)).catch(() => undefined);
     };
     load();
@@ -364,7 +367,7 @@ function WaitingForAccess() {
         </Link>
       )}
       {count > 0 && (
-        <Link to="/admin/users" className={badge} aria-label={`${count} new ${count === 1 ? "account is" : "accounts are"} waiting for access`}>
+        <Link to="/admin/users?only=pending" className={badge} aria-label={`${count} new ${count === 1 ? "account is" : "accounts are"} waiting for access`}>
           <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
           {count} waiting
         </Link>

@@ -26,6 +26,12 @@ describe("routeTitle", () => {
     expect(routeTitle("/")).toBe("Home");
   });
 
+  it("names the admin console's pages", () => {
+    expect(routeTitle("/admin/users")).toBe("Users & access");
+    expect(routeTitle("/admin/payments")).toBe("Payments");
+    expect(routeTitle("/admin/audit")).toBe("Audit log");
+  });
+
   it("has no title for an address it doesn't know", () => {
     expect(routeTitle("/nowhere")).toBeNull();
   });

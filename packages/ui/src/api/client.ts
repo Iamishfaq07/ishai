@@ -2,13 +2,22 @@ import type {
   AdminActivityItem,
   AtsReport,
   AccessChange,
+  AdminAuditPage,
+  AdminAuditQuery,
   AdminConfig,
   AdminConfigUpdate,
   AdminPayment,
   AdminPayments,
+  AdminStats,
   AdminUser,
+  AdminUserDetail,
+  AdminUserFilter,
+  AdminUserPatch,
+  AdminUserQuery,
   AdminUsers,
+  Announcement,
   ApiErrorBody,
+  BulkCreditsResult,
   AuthConfig,
   CostReport,
   CoverLetterLength,
@@ -71,6 +80,8 @@ import type {
   ResumeSuggestion,
   ResumeSummary,
   RegisterRequest,
+  RemoveCreditsRequest,
+  RemoveCreditsResult,
   ScreenshotAccepted,
   Story,
   StoryDraftRequest,
@@ -120,6 +131,20 @@ export interface ApiClientOptions {
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;
+
+/** The error code of a request made by (or signing in to) an account the admin suspended. */
+export const ACCOUNT_SUSPENDED = "account_suspended";
+
+/** `?a=1&b=x` from the defined, non-empty values (leading "?" included), or "". */
+export function queryString(params: Record<string, string | number | boolean | null | undefined>): string {
+  const q = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue;
+    q.set(key, String(value));
+  }
+  const text = q.toString();
+  return text ? `?${text}` : "";
+}
 
 /** How long a request may take before it gives up: a stalled phone connection otherwise leaves the screen waiting for
  * ever. Calls that run the AI or move big files say so with LONG_TIMEOUT_MS. */
@@ -188,8 +213,10 @@ export function createApiClient(options: ApiClientOptions) {
       caller?.removeEventListener("abort", cancel);
     }
     if (!response.ok) {
-      if (response.status === 401) options.onUnauthorized?.();
-      throw await toApiError(response);
+      const error = await toApiError(response);
+      // Suspended by the admin: signed out like an expired session; signing in again says why.
+      if (response.status === 401 || error.code === ACCOUNT_SUSPENDED) options.onUnauthorized?.();
+      throw error;
     }
     return response;
   }
@@ -510,15 +537,59 @@ export function createApiClient(options: ApiClientOptions) {
 
     // Admin / advanced settings
     adminStatus: () => json<{ is_admin: boolean }>("/v1/admin/status"),
-    /** Admin: accounts, newest first ("pending" = waiting for access). */
-    adminUsers: (only: "all" | "pending" = "all", q = "") =>
-      json<AdminUsers>(`/v1/admin/users?only=${only}${q.trim() ? `&q=${encodeURIComponent(q.trim())}` : ""}`),
+    /** Admin: accounts, newest first unless sorted ("pending" = waiting for access), a page at a time. */
+    adminUsers: (only: AdminUserFilter = "all", q = "", page: Omit<AdminUserQuery, "only" | "q"> = {}) =>
+      json<AdminUsers>(`/v1/admin/users${queryString({ only, q: q.trim(), ...page })}`),
+    /** Admin: the list as on screen (filter, search, order; every page) as a CSV file. */
+    adminUsersCsv: async (query: Omit<AdminUserQuery, "offset" | "limit">) =>
+      (await raw(`/v1/admin/users/export${queryString({ ...query, q: query.q?.trim() })}`)).blob(),
+    /** Admin: one account in full (profile, wallet, ledger, sessions, content, payments, what was done to it). */
+    adminUser: (userId: string) => json<AdminUserDetail>(`/v1/admin/users/${encodeURIComponent(userId)}`),
+    /** Admin: name, email verified, private notes. */
+    updateAdminUser: (userId: string, patch: AdminUserPatch) =>
+      json<AdminUserDetail>(`/v1/admin/users/${encodeURIComponent(userId)}`, { method: "PATCH", body: body(patch) }),
     /** Admin: one account's history (credits in and out, sessions and their minutes, payments), newest first. */
     adminUserActivity: (userId: string) =>
       json<{ items: AdminActivityItem[] }>(`/v1/admin/users/${encodeURIComponent(userId)}/activity`),
     /** Admin: add resume credits and/or interview minutes to an account (they never expire). */
-    giveCredits: (userId: string, add: { resume?: number; interview_minutes?: number }) =>
+    giveCredits: (userId: string, add: { resume?: number; interview_minutes?: number; note?: string }) =>
       json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/credits`, { method: "POST", body: body(add) }),
+    /** Admin: take credits away, with a reason; never below zero (`clamped` says when less was there). */
+    removeCredits: (userId: string, req: RemoveCreditsRequest) =>
+      json<RemoveCreditsResult>(`/v1/admin/users/${encodeURIComponent(userId)}/credits/remove`, {
+        method: "POST",
+        body: body(req),
+      }),
+    /** Admin: the same credits for up to 100 accounts (the admin account is skipped). */
+    bulkGiveCredits: (req: { user_ids: string[]; resume?: number; interview_minutes?: number; note?: string }) =>
+      json<BulkCreditsResult>("/v1/admin/users/bulk-credits", { method: "POST", body: body(req) }),
+    /** Admin: can't sign in or use Orbit until unsuspended; live sessions stop; they're shown the reason. */
+    suspendUser: (userId: string, reason: string) =>
+      json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/suspend`, { method: "POST", body: body({ reason }) }),
+    unsuspendUser: (userId: string) =>
+      json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/unsuspend`, { method: "POST" }),
+    /** Admin: every device signs in again and live sessions stop; the password stays. */
+    signOutUser: (userId: string) =>
+      json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/sign-out`, { method: "POST" }),
+    /** Admin: email them the usual password-reset link. */
+    sendPasswordReset: (userId: string) =>
+      json<{ status: string; message: string }>(`/v1/admin/users/${encodeURIComponent(userId)}/password-reset`, {
+        method: "POST",
+      }),
+    /** Admin: delete the account; `confirmEmail` must be its email. Its payments stay on the books. */
+    deleteUser: (userId: string, confirmEmail: string) =>
+      json<void>(`/v1/admin/users/${encodeURIComponent(userId)}`, {
+        method: "DELETE",
+        body: body({ confirm_email: confirmEmail }),
+      }),
+    /** Admin: who did what, newest first. */
+    adminAudit: (query: AdminAuditQuery = {}) =>
+      json<AdminAuditPage>(`/v1/admin/audit${queryString({ ...query, q: query.q?.trim() })}`),
+    /** Admin: sign-ups and minutes per day (in this browser's time zone), active accounts, this month's numbers. */
+    adminStats: (days = 30, tzOffsetMinutes = -new Date().getTimezoneOffset()) =>
+      json<AdminStats>(`/v1/admin/stats${queryString({ days, tz_offset: tzOffsetMinutes })}`),
+    /** Public: the site-wide announcement banner, if the admin set one. */
+    announcement: () => json<Announcement>("/v1/announcement"),
     /** Admin: grant a plan for a while, approve for good, or revoke. */
     setUserAccess: (userId: string, change: AccessChange) =>
       json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/access`, { method: "POST", body: body(change) }),

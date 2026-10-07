@@ -25,6 +25,7 @@ const loaders = {
   companion: () => import("./pages/Companion"),
   adminUsers: () => import("./pages/AdminUsers"),
   adminPayments: () => import("./pages/AdminPayments"),
+  adminAudit: () => import("./pages/AdminAudit"),
 } as const;
 
 function page<M>(load: () => Promise<M>, pick: (m: M) => ComponentType) {
@@ -55,6 +56,7 @@ export const SettingsPage = page(loaders.settings, (m) => m.SettingsPage);
 export const CompanionPage = page(loaders.companion, (m) => m.CompanionPage);
 export const AdminUsersPage = page(loaders.adminUsers, (m) => m.AdminUsersPage);
 export const AdminPaymentsPage = page(loaders.adminPayments, (m) => m.AdminPaymentsPage);
+export const AdminAuditPage = page(loaders.adminAudit, (m) => m.AdminAuditPage);
 
 type PageKey = keyof typeof loaders;
 
