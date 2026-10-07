@@ -74,6 +74,8 @@ describe("the audit log", () => {
     expect(auditDetail(`${id} resume-2 interview-0m chargeback`, id)).toBe("resume-2 interview-0m chargeback");
     expect(auditDetail(id, id)).toBe("");
     expect(auditDetail("announcement", null)).toBe("announcement");
+    const payment = "7d1c2b3a-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
+    expect(auditDetail(`${payment} starter ₹499 123456789012`, id)).toBe("starter ₹499 123456789012");
     expect(auditDetail(null, null)).toBe("");
   });
 });

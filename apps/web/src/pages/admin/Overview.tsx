@@ -9,9 +9,10 @@ import { useAsync } from "../../lib/useAsync";
 import { niceCeiling } from "./logic";
 import { count, inr, mins } from "./shared";
 
-/** The server at a glance: a row of numbers, sign-ups and interview minutes per day, and the site announcement. */
-export function AdminOverview() {
-  const stats = useAsync(() => api.adminStats(30), [], "admin-stats");
+/** The server at a glance: a row of numbers, sign-ups and interview minutes per day, and the site announcement.
+ * `version`: bumped by the list when accounts change (a delete, credits for many), so the numbers are re-read. */
+export function AdminOverview({ version = 0 }: { version?: number }) {
+  const stats = useAsync(() => api.adminStats(30), [version], "admin-stats");
   const s = stats.data;
   if (stats.error && !s) return <p className="mb-5 text-sm text-rose-600">Couldn't load the numbers: {errorText(stats.error)}</p>;
   return (

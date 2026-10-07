@@ -271,13 +271,20 @@ def _first_token(target: str | None) -> str | None:
 
 
 async def audit_items(db: AsyncSession, rows: list[AuditLog]) -> list[AuditItem]:
-    """Audit rows with the emails of who acted and who it was about (two lookups for the lot)."""
-    ids = {r.user_id for r in rows if r.user_id} | {t for r in rows if (t := _first_token(r.target))}
+    """Audit rows with the emails of who acted and who it was about, in three lookups for the lot. A payment
+    decision's target starts with the payment's id: it's about the account that paid (none once that's deleted)."""
+    heads = {r.id: _first_token(r.target) for r in rows}
+    paid = {heads[r.id] for r in rows if r.action.startswith("admin.payment.") and heads[r.id]}
+    payer = {pid: uid for pid, uid in (await db.execute(
+        select(Payment.id, Payment.user_id).where(Payment.id.in_(paid)))).all()} if paid else {}
+    subjects = {r.id: payer.get(heads[r.id] or "") if r.action.startswith("admin.payment.") else heads[r.id]
+                for r in rows}
+    ids = {r.user_id for r in rows if r.user_id} | {s for s in subjects.values() if s}
     emails = {uid: email for uid, email in (await db.execute(
         select(User.id, User.email).where(User.id.in_(ids)))).all()} if ids else {}
     out = []
     for r in rows:
-        subject = _first_token(r.target)
+        subject = subjects[r.id]
         out.append(AuditItem(id=r.id, at=_aware(r.created_at), action=r.action, actor_id=r.user_id,
                              actor_email=emails.get(r.user_id) if r.user_id else None, target=r.target,
                              subject_id=subject, subject_email=emails.get(subject) if subject else None, ip=r.ip))

@@ -88,11 +88,14 @@ export function actionLabel(action: string): string {
   return ACTION_LABEL[action] ?? action;
 }
 
-/** What an audit entry says beyond its account: its target without the leading account id. */
+const LEADING_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\s*/i;
+
+/** What an audit entry says beyond its account: its target without the leading id (the account's, or a payment's,
+ * which says nothing to a person). */
 export function auditDetail(target: string | null, subjectId: string | null): string {
   const text = (target ?? "").trim();
   if (subjectId && text.startsWith(subjectId)) return text.slice(subjectId.length).trim();
-  return text;
+  return text.replace(LEADING_ID, "");
 }
 
 /** A dismissed announcement stays dismissed until its text (and so its id) changes. */

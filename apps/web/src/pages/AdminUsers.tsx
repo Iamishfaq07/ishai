@@ -81,6 +81,7 @@ export function AdminUsersPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [note, setNote] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [version, setVersion] = useState(0);
   useEffect(() => setSelected(new Set()), [key]);
 
   const extra = more?.key === key ? more : null;
@@ -97,6 +98,7 @@ export function AdminUsersPage() {
     setMore((prev) => prev && { ...prev, users: prev.users.filter((u) => u.id !== id) });
     setSelected((prev) => new Set([...prev].filter((x) => x !== id)));
     setNote("Account deleted.");
+    setVersion((v) => v + 1);
   };
   const loadMore = async () => {
     setLoadingMore(true);
@@ -137,7 +139,7 @@ export function AdminUsersPage() {
     <>
       <PageHeader title="Users & access" subtitle="Who signed up, what each account has used, and what it may use." icon={Users} />
       <AdminTabs paymentsWaiting={data?.totals?.payments_waiting} />
-      <AdminOverview />
+      <AdminOverview version={version} />
       {data && !data.approval_required && (
         <p className="mb-4 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">
           Sign-up approval is off on this server, so new accounts start on the Free plan. Set <code>ORBIT_SIGNUP_APPROVAL=true</code> to hold them
@@ -179,6 +181,7 @@ export function AdminUsersPage() {
             setSelected(new Set());
             setMore(null);
             setNote(message);
+            setVersion((v) => v + 1);
             list.reload();
           }}
           onClear={() => setSelected(new Set())}

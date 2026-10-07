@@ -496,6 +496,14 @@ def test_the_audit_log_filters_by_action_account_and_search(console: Any) -> Non
     assert "auth.register" in [i["action"] for i in everything["items"]]
     by_email = client.get(f"/v1/admin/audit?q={user['email']}", headers=admin).json()
     assert by_email["total"] == 2
+    # A payment decision is about the account that paid, though its target starts with the payment's id.
+    h, payer = _user(client, "payer")
+    pay = _approved_payment(client, admin, h)
+    decided = client.get("/v1/admin/audit?action=admin.payment.approve", headers=admin).json()["items"][0]
+    assert decided["target"].startswith(pay["id"]) and decided["subject_id"] == payer["id"]
+    assert decided["subject_email"] == payer["email"]
+    theirs = client.get(f"/v1/admin/audit?user_id={payer['id']}", headers=admin).json()["items"]
+    assert [i["action"] for i in theirs] == ["admin.payment.approve"]
     paged = client.get("/v1/admin/audit?limit=1", headers=admin).json()
     assert len(paged["items"]) == 1 and paged["has_more"] is True
     for bad in ("action=DROP%20TABLE", "limit=201", "scope=everyone", f"user_id={'x' * 37}"):
