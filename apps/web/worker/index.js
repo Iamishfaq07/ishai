@@ -9,6 +9,8 @@
 // The cron below: Render's free tier sleeps after 15 min without traffic, and the 30–60 s cold start then lands on
 // whoever opens the app. /health never touches the DB, so pinging it keeps the API process warm without keeping the
 // (separately metered) Neon compute awake.
+import { metaFor, withPageMeta } from "./meta.js";
+
 const API_PREFIX = "/api";
 
 async function proxyToApi(request, env, url) {
@@ -40,6 +42,16 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === API_PREFIX || url.pathname.startsWith(`${API_PREFIX}/`)) {
       return proxyToApi(request, env, url);
+    }
+    // The public pages people share get their own link preview (meta.js). Should rewriting ever fail, the page is
+    // served as it is.
+    if (request.method === "GET" && metaFor(url.pathname)) {
+      const page = await env.ASSETS.fetch(request);
+      try {
+        return withPageMeta(page, url);
+      } catch {
+        return page;
+      }
     }
     return env.ASSETS.fetch(request);
   },
