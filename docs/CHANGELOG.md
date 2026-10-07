@@ -1,5 +1,74 @@
 # Implementation log
 
+## Look and feel: Orbit scenes, page transitions, contrast and a light default (2026-10-07)
+
+Part two of the look and feel foundation, on top of the motion levels and feedback primitives below.
+
+- **Eight Orbit scenes** (`packages/ui/src/components/scenes/`, one module each, so a page carries only the ones it
+  shows): Welcome (a planet with a moon per product: interview, resume, jobs), Resume (a page in orbit with its ATS
+  ring), Jobs (a constellation of Bengaluru, Pune, Hyderabad and remote), Practice (a microphone and the scorecard
+  that comes back, one thing still to work on), Tracker empty (three ghost columns), No results (a telescope on an
+  empty patch of sky), Offline (a dish losing its satellite) and Celebration (a burst). Drawn like a star atlas:
+  hairline orbits, paper surfaces, one subject in the accent and one aurora highlight; no gradients or glass, so they
+  hold in light and dark and in all seven accents (checked side by side). Decorative unless given a `title`; one
+  small, finite motion each at Full only. For `EmptyState`'s `art`; `SpotIllustration` stays for small spots. Each
+  is 1.3–2.7 KB of source and in no bundle until a page uses it.
+- **Page transitions:** `withViewTransition(update, to?)`, `viewTransitionOk()` and `useViewTransitionOk(to)` (for
+  React Router's `viewTransition`), with `::view-transition-*` rules on the motion tokens: a 160 ms crossfade, and
+  a morph for elements given a `view-transition-name`. Gentle crossfades without the morph; Off and `/live/*` never
+  start one (checked with `getAnimations()` on the transition's pseudo-elements). Not wired into the nav yet.
+- **Contrast** (axe WCAG 2.2 AA, 390 px): "Get credits" on Resume AI and the Billing "Best value" badge were white on
+  amber (2.1:1); now amber-950 on amber-400 (9:1), and the badge's 10 px capitals are 12 px. In light mode
+  `text-emerald-600` and `text-amber-600` draw in -700 (3.8:1 → 5.5:1, 3.2:1 → 5.0:1), which clears Documents' status
+  line. Error notes' Retry is a 24 px target. Signed-in Resume AI, Billing and Documents are now clean in both themes,
+  as login, Home, Practice, Profile and Settings were: 8 of the 11 scanned pages (18 of 22 page-theme runs, from 13).
+  What's left is in pages other work is changing: the match and ATS labels at 10 px with `opacity-80` (Matches and
+  the public Jobs AI and Resume AI pages, light) and the public Resume AI sample's links inside an `aria-hidden` block.
+- **Light theme follows the system** until someone picks one (`theme-init.js` and Settings' default were "dark";
+  `index.html` no longer hard-codes `class="dark"`), and it follows the system live while open.
+- Figures are tabular by default on the web (`tnum`); headings balance their lines; with data saver on, the night
+  sky leaves out its stars.
+- Size: the JS a page loads first is unchanged by this part (119.53 KB gzip, +2.00 KB over both parts); CSS +0.48 KB.
+
+## Look and feel foundation: three motion levels, toasts, skeletons, empty states (2026-10-07)
+
+The design layer the front door, onboarding and product work build on (`packages/ui`, shared with the desktop app).
+
+- **Motion tokens** in `design/base.css`, exposed as Tailwind `duration-press|quick|panel|page|moment` and
+  `ease-standard|enter|exit`. Page fades drop from 450 ms to 280 ms; lists stagger 35 ms apart for the first 6
+  items only (the 6th used to wait 300 ms); `appear` fades in an item added later with `@starting-style`.
+- **Animations: Full / Gentle / Off** in Settings → Appearance (web and desktop), replacing the on/off switch.
+  Gentle keeps fades and stops everything that moves; Off stops everything. It's `html[data-motion]`, so it covers
+  every component, old and new. The OS reduced-motion setting caps Full at Gentle (and Settings says so); a device
+  that hasn't chosen starts at Gentle when the OS asks or data saver is on. The old stored switch carries over (on is
+  Full, off is Off), still per device in `orbit.design`, and Settings no longer saves on open (D47).
+  - New `motion-ok:` variant (Full only) next to Tailwind's `motion-safe:`, and `useMotion()` for JS animation. The
+    loading orb (a canvas, which CSS can't stop) now holds still below Full; before, it kept moving with the in-app
+    switch off. The illustrations use `motion-ok:`.
+  - Checked in headless Chrome with `getAnimations()` on 10 signed-in pages and the primitives: with OS reduced
+    motion, or Gentle or Off in Settings (including an old stored `true` or `false`), no transform animation runs and
+    the orb doesn't move; at Full they do.
+- **Hover and press:** card lift and the primary-button sheen only on devices that hover (no stuck lifted card on a
+  phone); cards press in on touch; press feedback only at Full.
+- **A focused field is never hidden** under the sticky header or the phone tab bar (`scroll-padding`, WCAG 2.4.11).
+- **Toasts** (`toast()`, `ToastHost` in `main.tsx`): short confirmations with an optional Undo, in one polite live
+  region so screen readers hear them; three at most, a fourth pushes the oldest out; 5 s (8 s with an action, 7 s for
+  an error), paused while hovered, focused or the tab is hidden; Escape closes one. Bottom centre on phones above the
+  tab bar, bottom right on desktop. The cards' code loads with the first toast, or when the page is idle.
+- **Skeletons** (`Skeleton`: line, card, job card, resume card, session row) shaped like what's coming, with
+  `useLoadPhase()`: nothing for a load under 150 ms, then at least 300 ms so it never blinks. A still tint below Full.
+- **`Button loading`** keeps its label, shows a small orb and ignores presses without losing focus.
+  **`buttonClass()`** gives links the Button look without copying class strings.
+- **Empty states** in four kinds: first use (with `GhostPreview`, a faded outline of the filled screen: cards, rows,
+  or the tracker's three columns), no results, all cleared (a small, still tick) and offline (Try again, announced).
+- **`celebrate()`**: a milestone toast once per device (first mock, first ATS 80+, first Applied…), never in a live
+  session, with a 700 ms orbit burst at Full motion only.
+- **`Term`**: a dotted-underline word with a plain-words meaning on hover, tap or Enter, read with the word by screen
+  readers; a glossary for ATS, JD, UTR, STAR, fit check and tailor.
+- Size: the JS a page loads first grows 1.98 KB gzip (117.53 → 119.51 KB), CSS 1.21 KB (14.75 → 15.96 KB); the burst,
+  skeletons, terms and toast cards are only in the pages that use them. Desktop builds; tests for the motion levels
+  (including the old stored values), the toast queue, the skeleton timing and the milestones.
+
 ## Admin console: delete, suspend, take credits away, an account in full, the audit log and a dashboard (2026-10-07)
 
 The owner asked for a more capable admin account: delete or remove accounts, take minutes and AI credits away, and

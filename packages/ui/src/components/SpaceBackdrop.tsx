@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { motionEnv } from "../design/design";
 import { cx } from "./cx";
 
 /** Deterministic PRNG so the sky is identical on every render and in every screenshot. */
@@ -65,11 +66,14 @@ export const SpaceBackdrop = memo(function SpaceBackdrop({ className }: { classN
           animationDirection: "reverse",
         }}
       />
-      <div className="absolute inset-0 hidden dark:block">
-        <StarLayer stars={FAR} className="opacity-70" />
-        <StarLayer stars={NEAR} className="motion-safe:animate-twinkle-sky" />
-        <StarLayer stars={BRIGHT} className="motion-safe:animate-twinkle-sky [animation-delay:-1.6s] [animation-duration:4.5s]" />
-      </div>
+      {/* With data saver on, no stars: the sky's glow alone (153 fewer shapes to draw on a low-end phone). */}
+      {!motionEnv().saveData && (
+        <div className="absolute inset-0 hidden dark:block">
+          <StarLayer stars={FAR} className="opacity-70" />
+          <StarLayer stars={NEAR} className="motion-safe:animate-twinkle-sky" />
+          <StarLayer stars={BRIGHT} className="motion-safe:animate-twinkle-sky [animation-delay:-1.6s] [animation-duration:4.5s]" />
+        </div>
+      )}
     </div>
   );
 });

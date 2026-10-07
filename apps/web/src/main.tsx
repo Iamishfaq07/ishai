@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { ConfirmHost, ErrorBoundary, SpaceBackdrop, initDesign } from "@orbit/ui";
+import { ConfirmHost, ErrorBoundary, SpaceBackdrop, ToastHost, initDesign } from "@orbit/ui";
 import { App } from "./App";
 import { OutOfCreditsHost } from "./components/OutOfCreditsDialog";
 import { AuthProvider } from "./lib/auth";
@@ -39,6 +39,7 @@ createRoot(root).render(
           <App />
           <ConfirmHost />
           <OutOfCreditsHost />
+          <ToastHost />
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

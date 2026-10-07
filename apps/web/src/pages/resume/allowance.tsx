@@ -46,7 +46,8 @@ export function UpgradeLink({ className, children }: { className?: string; child
     <Link
       to={`/billing?pack=${offer?.pack ?? ""}`}
       className={cx(
-        "inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-amber-600",
+        // Dark text on amber: white on amber-500 is 2.1:1, amber-950 on amber-400 is 9:1.
+        "inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-3 py-1.5 text-sm font-medium text-amber-950 shadow-sm hover:bg-amber-300",
         focusRing,
         className,
       )}

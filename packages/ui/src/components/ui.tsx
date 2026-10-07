@@ -8,11 +8,12 @@ import type {
 } from "react";
 import { cx, focusRing } from "./cx";
 import { Orb, type OrbState } from "./Orb";
-import { SpotIllustration } from "./Illustrations";
+import { SPARK, SpotIllustration } from "./Illustrations";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonSize = "sm" | "md" | "lg";
 
-const VARIANT: Record<Variant, string> = {
+const VARIANT: Record<ButtonVariant, string> = {
   primary:
     "btn-sheen bg-gradient-to-b from-indigo-500 to-indigo-600 text-white shadow-glow-sm hover:from-indigo-400 hover:to-indigo-500 hover:shadow-glow",
   secondary:
@@ -21,27 +22,51 @@ const VARIANT: Record<Variant, string> = {
   danger: "text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10",
 };
 
+/**
+ * The Button look as a class string, for things that act like a button but aren't a <button>: router links,
+ * `<a href>`, a file input's <label>. One source, so a link-button never drifts from the real thing.
+ */
+export function buttonClass(variant: ButtonVariant = "primary", size: ButtonSize = "md", className?: string): string {
+  return cx(
+    // Pressed feedback on touch and click, at Full motion only (buttons get theirs from base.css).
+    "inline-flex select-none items-center justify-center gap-2 rounded-xl font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-quick ease-standard motion-ok:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50",
+    size === "sm" && "px-2.5 py-1.5 text-xs",
+    size === "md" && "px-4 py-2 text-sm",
+    size === "lg" && "px-6 py-3 text-base",
+    VARIANT[variant],
+    focusRing,
+    className,
+  );
+}
+
 export function Button({
   variant = "primary",
   size = "md",
+  loading = false,
   className,
+  children,
+  onClick,
   ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: "sm" | "md" | "lg" }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  /** Busy: keeps its label (no "Starting…" swap), shows a small orb before it and ignores presses. Unlike
+   *  `disabled` it keeps keyboard focus where it was. */
+  loading?: boolean;
+}) {
   return (
     <button
       type="button"
       {...rest}
-      className={cx(
-        // Pressed feedback on touch and click; no transform when motion is reduced.
-        "inline-flex select-none items-center justify-center gap-2 rounded-xl font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-150 enabled:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none",
-        size === "sm" && "px-2.5 py-1.5 text-xs",
-        size === "md" && "px-4 py-2 text-sm",
-        size === "lg" && "px-6 py-3 text-base",
-        VARIANT[variant],
-        focusRing,
-        className,
-      )}
-    />
+      aria-busy={loading || undefined}
+      aria-disabled={loading || rest["aria-disabled"] || undefined}
+      // preventDefault also stops a busy submit button from sending its form again.
+      onClick={loading ? (e) => e.preventDefault() : onClick}
+      className={buttonClass(variant, size, cx(loading && "cursor-progress", className))}
+    >
+      {loading && <Orb size={20} theme={variant === "primary" ? "dark" : "auto"} className={size === "sm" ? "-my-1" : undefined} />}
+      {children}
+    </button>
   );
 }
 
@@ -152,7 +177,7 @@ export function Toggle({
       >
         <span
           className={cx(
-            "absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform motion-reduce:transition-none",
+            "absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform duration-press ease-standard",
             checked ? "translate-x-6" : "translate-x-1",
           )}
         />
@@ -186,7 +211,8 @@ export function ErrorNote({ children, onRetry }: { children: ReactNode; onRetry?
     >
       <span className="flex-1">{children}</span>
       {onRetry && (
-        <button type="button" onClick={onRetry} className={cx("font-medium underline", focusRing)}>
+        // Padded to a 24 px target (WCAG 2.5.8) without moving the text.
+        <button type="button" onClick={onRetry} className={cx("-my-1 rounded px-1 py-1 font-medium underline", focusRing)}>
           Retry
         </button>
       )}
@@ -194,25 +220,83 @@ export function ErrorNote({ children, onRetry }: { children: ReactNode; onRetry?
   );
 }
 
-export function EmptyState({
-  title,
-  body,
-  action,
-  icon,
-}: {
+/**
+ * What a screen says when it has nothing to show: a headline, one line and one imperative action, in four kinds.
+ * - `first-use` (default): nothing yet. `preview` (a GhostPreview) shows, faded, what will fill the screen.
+ * - `no-results`: a search or filter matched nothing. Say what was searched; offer to clear or widen it.
+ * - `cleared`: everything done ("No follow-ups due. Nice."). A small, still celebration unless `art` says otherwise.
+ * - `offline`: couldn't load. Say what happened; `onRetry` adds Try again. Announced like an error.
+ * Never show one while loading: that's a Skeleton. (Kept in this module: it's on most pages.)
+ */
+export type EmptyKind = "first-use" | "no-results" | "cleared" | "offline";
+
+export interface EmptyStateProps {
   title: string;
-  body?: string;
+  body?: ReactNode;
+  /** The one thing to do next: a Button, or a link styled with buttonClass(). */
   action?: ReactNode;
-  /** Shown inside the spot illustration. */
+  kind?: EmptyKind;
+  /** A lucide icon, shown in Orbit's spot illustration. */
   icon?: ComponentType<{ className?: string; strokeWidth?: number }>;
-}) {
+  /** Larger art (one of the Orbit scenes); replaces `icon`. Decorative. */
+  art?: ReactNode;
+  /** First use: a faded picture of the filled screen above the words. Decorative and inert. */
+  preview?: ReactNode;
+  /** Offline: what Try again does. */
+  onRetry?: () => void;
+  className?: string;
+}
+
+export function EmptyState({ title, body, action, kind = "first-use", icon, art, preview, onRetry, className }: EmptyStateProps) {
+  const picture = art ?? (icon ? <SpotIllustration icon={icon} size={96} /> : kind === "cleared" && <ClearedMark />);
+  const ghost = preview != null && preview !== false;
   return (
-    <div className="flex flex-col items-center rounded-2xl border border-dashed border-zinc-300 px-6 py-10 text-center dark:border-white/10">
-      {icon && <SpotIllustration icon={icon} size={96} className="mb-4" />}
-      <p className="font-display text-lg font-medium">{title}</p>
-      {body && <p className="mx-auto mt-1 max-w-md text-sm text-zinc-500 dark:text-zinc-400">{body}</p>}
-      {action && <div className="mt-5">{action}</div>}
+    <div
+      role={kind === "offline" ? "alert" : undefined}
+      className={cx(
+        "relative flex flex-col items-center overflow-hidden rounded-2xl px-6 text-center",
+        kind === "no-results" ? "py-8" : "border border-dashed py-10",
+        kind === "cleared" ? "border-emerald-500/30 dark:border-emerald-400/20" : "border-zinc-300 dark:border-white/10",
+        ghost && "pt-6",
+        className,
+      )}
+    >
+      {ghost && (
+        <div
+          aria-hidden="true"
+          inert
+          className="pointer-events-none mb-2 w-full max-w-2xl select-none opacity-80 [mask-image:linear-gradient(to_bottom,black_35%,transparent_95%)]"
+        >
+          {preview}
+        </div>
+      )}
+      {picture && <div className={cx("mb-4", ghost && "-mt-12")}>{picture}</div>}
+      <p className={cx("text-balance font-display text-lg font-medium", ghost && !picture && "-mt-6")}>{title}</p>
+      {body && <div className="mx-auto mt-1 max-w-md text-pretty text-sm text-zinc-500 dark:text-zinc-400">{body}</div>}
+      {(action || onRetry) && (
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+          {onRetry && (
+            <Button variant="secondary" onClick={onRetry}>
+              Try again
+            </Button>
+          )}
+          {action}
+        </div>
+      )}
     </div>
+  );
+}
+
+/** "All done": a ticked ring with two of Orbit's sparks, still. */
+function ClearedMark() {
+  return (
+    <svg viewBox="0 0 96 96" className="h-20 w-20 overflow-visible" aria-hidden="true" focusable="false">
+      <circle cx="48" cy="48" r="40" className="fill-none stroke-emerald-500/25" strokeDasharray="2 6" />
+      <circle cx="48" cy="48" r="26" className="fill-emerald-500/10 stroke-emerald-500 dark:stroke-emerald-400" strokeWidth="2" />
+      <path d="M37 49 l7.5 7.5 L60 41" className="fill-none stroke-emerald-600 dark:stroke-emerald-300" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={SPARK(84, 20, 6)} className="fill-aurora-400" />
+      <path d={SPARK(12, 70, 4)} className="fill-indigo-400" />
+    </svg>
   );
 }
 

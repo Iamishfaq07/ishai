@@ -14,7 +14,9 @@ Components use plain Tailwind names; the preset maps them to CSS variables (RGB 
 | `aurora-*`    | `--aurora-*`    | Cyan. Brand gradients only (logo, hero glows) — never UI state.         |
 
 Status colours stay Tailwind's own (`emerald` live, `amber` warning, `rose` error).
-Contrast: secondary text is remapped in `base.css` so it passes WCAG AA on every surface in both themes.
+Contrast: secondary text is remapped in `base.css` so it passes WCAG AA on every surface in both themes, and so are
+`text-emerald-600` / `text-amber-600` in light mode (they draw in -700). Small text never takes `opacity-80`; text on
+amber is `text-amber-950` (white on amber is 2.1:1). Figures are tabular by default (`tnum`, web).
 
 ## Type
 
@@ -41,15 +43,54 @@ Contrast: secondary text is remapped in `base.css` so it passes WCAG AA on every
 
 ## Motion
 
-Utilities: `animate-fade-up`, `stagger` (children enter one after another), `lift` (hover), `btn-sheen` (primary
-buttons), `animate-float`, `animate-orbit*`, `animate-twinkle`, `animate-drift`, `animate-pulse-ring`,
-`animate-spark`. All decorative motion uses `motion-safe:` or is disabled by `html.reduce-motion`
-(Settings → Animations) and the OS reduced-motion setting.
+- **Tokens** (`base.css`, Tailwind `duration-*` / `ease-*`): `press` 100 ms, `quick` 160, `panel` 240, `page` 280,
+  `moment` 700 (celebrations only); `ease-standard`, `ease-enter`, `ease-exit`; `--stagger-step` 35 ms. UI motion
+  stays under 300 ms. Animate `transform` and `opacity` only; never `transition: all`.
+- **Three levels** (Settings → Appearance → Animations: Full / Gentle / Off, `DesignPrefs.motion`), applied as
+  `html[data-motion]`. Gentle (`reduced`) keeps fades and drops all movement; Off stops everything. The OS
+  reduced-motion setting caps Full at Gentle; a new device starts at Gentle when the OS asks or data saver is on
+  (D47).
+- **Writing motion:** use `motion-ok:` (Full only) for anything that moves, not `motion-safe:` (which sees only the
+  OS). Anything animated from JS (canvas, `element.animate`, rAF) reads `useMotion()`; the `Orb` already does.
+  Entrances (`animate-fade-in` / `fade-up` / `scale-in` / `rise`, `stagger`, or `.motion-fade` on your own) become
+  fades under Gentle on their own.
+- Utilities: `animate-fade-up` (page), `animate-rise` / `animate-fade-out` (panels, toasts), `stagger` (first 6
+  children, 35 ms apart), `appear` (an item added later, `@starting-style`), `lift` (hover lift where there is hover,
+  press-in on touch), `btn-sheen` (primary buttons, hover devices), `animate-float`, `animate-orbit*`,
+  `animate-twinkle`, `animate-drift`, `animate-pulse-ring`, `animate-spark`.
+- `scroll-padding` keeps a focused field clear of the sticky header and the phone tab bar.
+- **Page transitions:** same-document View Transitions through `withViewTransition(update, to?)` or React Router's
+  `viewTransition={useViewTransitionOk(to)}`: a 160 ms crossfade, and a morph for an element given a
+  `view-transition-name` (a job card into its page title). Gentle crossfades only; Off and `/live/*` never start
+  one. Leave them off for things done many times a minute or started from the keyboard.
+
+## Feedback and empty screens
+
+- **Toasts:** `toast("Copied")`, or `toast({ message, detail, tone, action: { label: "Undo", onClick } })`; one
+  polite live region (`ToastHost`, mounted once in `main.tsx`). Name the action as the button did ("Saved to
+  tracker"). Not for errors that need action (`ErrorNote`) or questions (`confirmDialog`).
+- **Loading:** `Skeleton` (`line`, `card`, `job-card`, `resume-card`, `session-row`) with `useLoadPhase(loading)`
+  (shown after 150 ms, kept at least 300 ms). Buttons keep their label with `loading`. Spinners (`Spinner`, the
+  orb) are for small or unknown-shaped waits.
+- **Empty states:** `EmptyState` with `kind` `first-use` (with a `GhostPreview` of the filled screen), `no-results`,
+  `cleared` or `offline` (`onRetry`). A headline, one line, one imperative action.
+- **Success moments:** `celebrate(milestone, { message, action })`, once per device, never in a live session; the
+  burst plays at Full motion only.
+- **Plain words:** `<Term term="ats">ATS</Term>` (glossary: ats, jd, utr, star, fit-check, tailor) or `tip="…"`.
+- **Links that look like buttons:** `buttonClass(variant, size)`, never a copied class string.
 
 ## Brand
 
 - `OrbitLogo` / `OrbitWordmark` — the mark (`busy` spins the ring; `animated` twinkles the spark).
-- `PlanetHero`, `SpotIllustration`, `PulseRings` — illustrations.
+- `PlanetHero`, `SpotIllustration`, `PulseRings` — illustrations. `SpotIllustration` is for small spots only.
+- **Orbit scenes** (`components/scenes/`, one module each): `WelcomeScene` (a planet with a moon per product),
+  `ResumeScene` (a page in orbit with its ATS ring; `score`), `JobsScene` (a constellation of Bengaluru, Pune,
+  Hyderabad and remote), `PracticeScene` (a microphone and its scorecard), `TrackerScene` (three ghost columns),
+  `NoResultsScene` (a telescope on an empty patch of sky), `OfflineScene` (a dish losing its satellite) and
+  `CelebrationScene` (a burst). Line drawings like a star atlas: hairline orbits, paper surfaces and one subject in
+  the accent, so they hold in both themes and every accent; `title` makes one an image for screen readers, otherwise
+  decorative. One small motion each, at Full only. Pass them to `EmptyState` as `art`. A page gets one gradient
+  headline and one glow at most; secondary cards stay flat.
 - Icons: lucide only, re-exported from `packages/ui/src/icons.ts`.
 - Static copies of the mark: `apps/*/public/favicon.svg`, web `apple-touch-icon.png` / `icon-*.png`,
   desktop `src-tauri/icons/*` (regenerate with `pnpm --filter @orbit/desktop exec tauri icon <1024px png>`).

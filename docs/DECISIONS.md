@@ -281,3 +281,14 @@ skill the resume lacks does the candidate harm; the existing grounding checks st
 in neither the resume nor the post. It stays one resume credit, like any other message, and a listing that has left
 the cache fails before the credit is claimed. The API route stays under `/v1/resumes`: the kit is still written from
 a resume, and a new URL would only churn the clients.
+
+**D47 — Three motion levels, and the OS setting is a ceiling, not a switch.** On/off made people choose between
+everything moving and nothing at all, but "reduce motion" is about movement, not change: fades help people see what
+happened. So Settings offers Full, Gentle (fades only, nothing slides, spins or bounces) and Off, applied as
+`html[data-motion]` so one set of CSS rules covers every component, including ones written before this. The OS
+reduced-motion setting caps Full at Gentle rather than being one more input: a user who asked their phone for less
+motion never gets more because of a setting in Orbit, and a user who chose Off keeps Off. A device that hasn't chosen
+starts at Gentle when the OS asks or data saver is on. The choice stays per device in `orbit.design` (no migration):
+the old switch's `true` reads as Full and `false` as Off, so nobody's choice changes, and Settings saves only after
+a change, so visiting it doesn't pin a device default. Tailwind's `motion-safe:` sees only the OS, so new code
+uses `motion-ok:` and JS animation reads `useMotion()`.

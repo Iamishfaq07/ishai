@@ -101,14 +101,14 @@ function PackCard({ p, best, busy, onBuy }: { p: CreditPack; best: boolean; busy
   return (
     <Card className={cx("relative flex flex-col", best ? "ring-2 ring-amber-500/70" : "ring-1 ring-zinc-500/10")}>
       {best && (
-        <span className="absolute -top-2.5 left-4 rounded-full bg-amber-500 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-white">
+        <span className="absolute -top-3 left-4 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-semibold text-amber-950">
           Best value
         </span>
       )}
       <h3 className="flex items-center gap-1.5 font-semibold">
         <Crown className="h-4 w-4 text-amber-500" /> {p.label}
       </h3>
-      <p className="mt-1 font-display text-2xl font-semibold">₹{p.price_inr.toLocaleString("en-IN")}</p>
+      <p className="mt-1 font-display text-2xl font-semibold tabular-nums">₹{p.price_inr.toLocaleString("en-IN")}</p>
       <ul className="mt-3 flex-1 space-y-1.5 text-sm text-zinc-600 dark:text-zinc-400">
         {p.interview_minutes > 0 && <li>· {p.interview_minutes} interview minutes (live or mock)</li>}
         {p.resume_credits > 0 && <li>· {p.resume_credits} Resume AI credits</li>}

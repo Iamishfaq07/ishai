@@ -1,12 +1,14 @@
 import { useId, type ComponentType } from "react";
 import { cx } from "./cx";
 
-const SPARK = (x: number, y: number, r: number) =>
+/** Orbit's four-point spark (the logo's), centred on x, y with radius r: an SVG path. */
+export const SPARK = (x: number, y: number, r: number) =>
   `M${x} ${y - r} L${x + r * 0.3} ${y - r * 0.3} L${x + r} ${y} L${x + r * 0.3} ${y + r * 0.3} L${x} ${y + r} L${x - r * 0.3} ${y + r * 0.3} L${x - r} ${y} L${x - r * 0.3} ${y - r * 0.3}Z`;
 
 /**
  * Hero art: a ringed planet with an atmosphere, a moon and the Orbit spark circling it. Follows the accent colour.
- * Decorative only. Motion is CSS (orbit + twinkle), so it stops with the reduced-motion setting.
+ * Decorative only. Motion is CSS (orbit + twinkle) at Full motion only (`motion-ok:`), so Gentle, Off and the OS
+ * setting all keep it still.
  */
 export function PlanetHero({ className }: { className?: string }) {
   const id = useId().replace(/:/g, "");
@@ -46,7 +48,7 @@ export function PlanetHero({ className }: { className?: string }) {
       <circle cx="160" cy="160" r="122" fill="none" stroke="rgb(var(--aurora-400))" strokeOpacity="0.12" />
 
       {/* Atmosphere + ring (back half) */}
-      <circle cx="160" cy="160" r="118" fill={`url(#${g("atmo")})`} className="motion-safe:animate-glow-calm" />
+      <circle cx="160" cy="160" r="118" fill={`url(#${g("atmo")})`} className="motion-ok:animate-glow-calm" />
       <g transform="rotate(-16 160 160)">
         <ellipse cx="160" cy="160" rx="138" ry="30" fill="none" stroke={`url(#${g("ring")})`} strokeWidth="5" strokeOpacity="0.55" />
       </g>
@@ -75,19 +77,19 @@ export function PlanetHero({ className }: { className?: string }) {
       </g>
 
       {/* Moon on the outer orbit, spark on the inner one */}
-      <g className="motion-safe:animate-orbit-slow" style={{ transformOrigin: "160px 160px" }}>
+      <g className="motion-ok:animate-orbit-slow" style={{ transformOrigin: "160px 160px" }}>
         <circle cx="160" cy="10" r="11" fill={`url(#${g("moon")})`} />
       </g>
-      <g className="motion-safe:animate-orbit-reverse" style={{ transformOrigin: "160px 160px" }}>
+      <g className="motion-ok:animate-orbit-reverse" style={{ transformOrigin: "160px 160px" }}>
         <path d={SPARK(282, 160, 10)} fill="white" />
         <circle cx="282" cy="160" r="16" fill="rgb(var(--aurora-300))" opacity="0.18" />
       </g>
 
       {/* Distant sparkles */}
-      <path d={SPARK(40, 60, 6)} fill="white" className="motion-safe:animate-twinkle" />
-      <path d={SPARK(292, 262, 5)} fill="white" className="motion-safe:animate-twinkle [animation-delay:-1.2s]" />
-      <circle cx="58" cy="258" r="2" fill="white" className="motion-safe:animate-twinkle [animation-delay:-2s]" />
-      <circle cx="268" cy="44" r="1.6" fill="white" className="motion-safe:animate-twinkle [animation-delay:-0.6s]" />
+      <path d={SPARK(40, 60, 6)} fill="white" className="motion-ok:animate-twinkle" />
+      <path d={SPARK(292, 262, 5)} fill="white" className="motion-ok:animate-twinkle [animation-delay:-1.2s]" />
+      <circle cx="58" cy="258" r="2" fill="white" className="motion-ok:animate-twinkle [animation-delay:-2s]" />
+      <circle cx="268" cy="44" r="1.6" fill="white" className="motion-ok:animate-twinkle [animation-delay:-0.6s]" />
     </svg>
   );
 }
@@ -123,12 +125,12 @@ export function SpotIllustration({
         <circle cx="56" cy="56" r="46" fill="none" stroke="rgb(var(--accent-400))" strokeOpacity="0.35" strokeDasharray="3 6" />
         <circle cx="56" cy="56" r="26" fill={`url(#${id}-orb)`} />
         <circle cx="56" cy="56" r="26" fill="none" stroke="white" strokeOpacity="0.25" />
-        <g className="motion-safe:animate-orbit-calm" style={{ transformOrigin: "56px 56px" }}>
+        <g className="motion-ok:animate-orbit-calm" style={{ transformOrigin: "56px 56px" }}>
           <circle cx="56" cy="10" r="4" fill="rgb(var(--aurora-300))" />
           <circle cx="56" cy="10" r="8" fill="rgb(var(--aurora-300))" opacity="0.2" />
         </g>
-        <path d={SPARK(97, 22, 5)} className="fill-zinc-400 motion-safe:animate-twinkle dark:fill-white" />
-        <circle cx="16" cy="88" r="1.8" className="fill-zinc-400 motion-safe:animate-twinkle [animation-delay:-1.4s] dark:fill-white" />
+        <path d={SPARK(97, 22, 5)} className="fill-zinc-400 motion-ok:animate-twinkle dark:fill-white" />
+        <circle cx="16" cy="88" r="1.8" className="fill-zinc-400 motion-ok:animate-twinkle [animation-delay:-1.4s] dark:fill-white" />
       </svg>
       <span className="absolute inset-0 flex items-center justify-center text-white">
         <Icon className="h-[22%] w-[22%]" strokeWidth={2} />
@@ -141,8 +143,8 @@ export function SpotIllustration({
 export function PulseRings({ className }: { className?: string }) {
   return (
     <span className={cx("pointer-events-none absolute inset-0", className)} aria-hidden="true">
-      <span className="absolute inset-0 rounded-full border border-current motion-safe:animate-pulse-ring" />
-      <span className="absolute inset-0 rounded-full border border-current motion-safe:animate-pulse-ring [animation-delay:0.6s]" />
+      <span className="absolute inset-0 rounded-full border border-current motion-ok:animate-pulse-ring" />
+      <span className="absolute inset-0 rounded-full border border-current motion-ok:animate-pulse-ring [animation-delay:0.6s]" />
     </span>
   );
 }
