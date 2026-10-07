@@ -82,7 +82,7 @@ export function HomePage() {
 
   // Ready once the lists that decide the next step have answered. A list that failed counts as "has it", so Home never
   // asks for a resume the account may well have; its own card says it didn't load.
-  const settled = [sessions, documents, resumes, tracker].every((s) => s.data !== null || s.error !== null);
+  const settled = [sessions, documents, resumes, tracker, profile].every((s) => s.data !== null || s.error !== null);
   const facts = useMemo((): HomeFacts | null => {
     if (!settled) return null;
     const list = resumes.data ?? [];
@@ -318,9 +318,10 @@ function SetUp({ items }: { items: ChecklistItem[] }) {
             onClick={() => setExpanded((e) => !e)}
             aria-expanded={!compact}
             aria-controls="setup-steps"
-            className={cx("inline-flex min-h-10 items-center gap-1 rounded-lg px-2.5 text-sm font-medium text-indigo-700 hover:bg-indigo-500/10 dark:text-indigo-300", focusRing)}
+            className={cx("inline-flex min-h-10 min-w-10 items-center justify-center gap-1 rounded-lg px-2.5 text-sm font-medium text-indigo-700 hover:bg-indigo-500/10 dark:text-indigo-300", focusRing)}
           >
-            {compact ? "Show steps" : "Hide steps"}
+            {/* Under 400 px the chevron alone, so the title keeps its line; the words are still read out. */}
+            <span className="sr-only min-[400px]:not-sr-only">{compact ? "Show steps" : "Hide steps"}</span>
             <ChevronDown className={cx("h-4 w-4 transition-transform", !compact && "rotate-180")} aria-hidden />
           </button>
         )}
