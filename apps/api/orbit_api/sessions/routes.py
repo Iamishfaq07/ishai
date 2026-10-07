@@ -126,7 +126,7 @@ class SessionIn(BaseModel):
     role: str | None = Field(None, max_length=300)
     language: str = Field("en", max_length=16)
     answer_language: str | None = Field(None, max_length=16)
-    length: AnswerLength = "standard"
+    length: AnswerLength = "auto"  # sized per question; clients from before "auto" always send one of the others
     style: AnswerStyle = "natural"
     auto_answer: bool = True
     document_ids: list[str] = Field(default_factory=list, max_length=20)

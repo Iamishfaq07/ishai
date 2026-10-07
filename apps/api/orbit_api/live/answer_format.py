@@ -14,6 +14,7 @@ model emits tagged lines and fenced code; we parse deltas into a `LiveAnswer` af
     ```
     TIME: O(n)
     SPACE: O(n)
+    TERMS: CI = tests run on every push | pod = one running copy of the app   (jargon the answer says, ≤ 3)
     FOLLOWUP: likely next question
 
 Unknown/untagged prose before any tag is treated as the direct answer so a model that ignores the
@@ -23,7 +24,7 @@ format still produces something readable.
 import re
 from collections.abc import Callable
 
-from orbit_api.live.events import CodeBlock, DebugInfo, DesignSection, FactSource, LiveAnswer, QuestionType
+from orbit_api.live.events import CodeBlock, DebugInfo, DesignSection, FactSource, LiveAnswer, QuestionType, Term
 
 # System design sections, in the order the prompt asks for them (keys are matched case-insensitively).
 DESIGN_TITLES = ("Requirements", "Assumptions", "Scale", "APIs", "Data model", "Architecture", "Storage", "Caching",
@@ -31,12 +32,17 @@ DESIGN_TITLES = ("Requirements", "Assumptions", "Scale", "APIs", "Data model", "
 _DESIGN_KEYS = {t.lower().replace("-", "").replace(" ", ""): t for t in DESIGN_TITLES}
 _DESIGN_LINE = re.compile(r"^\s*(?:[-*•]\s*)?([A-Za-z][A-Za-z -]{1,20}?)\s*:\s*(.+)$")
 
-_TAG = re.compile(r"^(GROUNDED|PROBLEM|ANSWER|EXAMPLE|CODE|TIME|SPACE|EDGE|TESTS|FOLLOWUP|SOURCES|POINTS|DESIGN|"
+_TAG = re.compile(r"^(GROUNDED|PROBLEM|ANSWER|EXAMPLE|CODE|TIME|SPACE|EDGE|TESTS|TERMS|FOLLOWUP|SOURCES|POINTS|DESIGN|"
                   r"ROOTCAUSE|FIX|WHY|DIFF)\s*:\s*(.*)$",
                   re.IGNORECASE)
 MAX_LIST_ITEMS = 8
 MAX_KEY_POINTS = 6
 MAX_KEY_POINT_CHARS = 60
+MAX_TERMS = 3
+MAX_TERM_CHARS = 40
+MAX_MEANING_CHARS = 120
+# "term = plain meaning" (the format asks for "="; a colon or a spaced dash is read too).
+_TERM_SPLIT = re.compile(r"\s*(?:=|:|\s[-–]\s)\s*")
 # The model's own label for its personal claims (see live_system.md): only "example" is surfaced to the user.
 _GROUNDING = {"verified": "verified", "inferred": "inferred", "example": "example", "general": "general",
               "unsupported": "example"}
@@ -48,7 +54,7 @@ _FENCE = re.compile(r"^\s*```\s*([\w+#-]*)\s*$")
 # writes them: uppercase, at the start of the line, not an assignment. A docstring's "Time: O(n)", a typed local
 # "answer: int = 0", a field "code: string;" are code (matched case-insensitively, they ended the block and the rest of
 # the solution was lost or landed in the spoken answer).
-_TRAILER = re.compile(r"^(?:TIME|SPACE|EDGE|TESTS|FOLLOWUP|SOURCES|POINTS)\s*:\s*(.*)$")
+_TRAILER = re.compile(r"^(?:TIME|SPACE|EDGE|TESTS|TERMS|FOLLOWUP|SOURCES|POINTS)\s*:\s*(.*)$")
 _ASSIGNMENT = re.compile(r"\s=\s|;\s*$")
 # A fence before anything else, followed by the reply's first tag, wraps the whole reply: it isn't code.
 _OPENING_TAG = re.compile(r"^(?:GROUNDED|ANSWER)\s*:")
@@ -56,7 +62,8 @@ _OPENING_TAG = re.compile(r"^(?:GROUNDED|ANSWER)\s*:")
 
 def _ends_code(line: str) -> bool:
     m = _TRAILER.match(line)
-    return m is not None and not _ASSIGNMENT.search(m.group(1))
+    # A TERMS line is "term = meaning" by format: its " = " is not an assignment.
+    return m is not None and (line.startswith("TERMS") or not _ASSIGNMENT.search(m.group(1)))
 
 # The spoken answer is read out by a person, and a few marks of machine writing give it away whatever the prompt
 # says (live_system.md, "HOW IT SOUNDS"). These are the safe, mechanical ones: an em dash (or a spaced en dash) is
@@ -139,6 +146,7 @@ class AnswerStreamParser:
         diff_lines: list[str] = []
         stray: list[str] = []
         para_break = False  # a blank line inside the spoken answer starts a new paragraph
+        terms: list[Term] = []
 
         lines = self._buf.split("\n")
         last = len(lines) - 1  # the line still being written (complete only once the stream ends)
@@ -240,6 +248,10 @@ class AnswerStreamParser:
                     ans.debug = dbg
                 elif section == "DIFF":
                     ans.debug = ans.debug or DebugInfo()
+                elif section == "TERMS":
+                    if self._done or i < last:  # only a whole line, as POINTS
+                        terms = _terms(value)
+                    section = None
                 elif section == "POINTS":
                     # Only a whole line: a label still streaming ("Team" of "Team alignment") would be ticked off by
                     # the candidate saying one word, and the tick stuck once the full label arrived.
@@ -284,6 +296,9 @@ class AnswerStreamParser:
         if stray and not ans.direct_answer:
             ans.direct_answer = " ".join(stray).replace(" \n\n", "\n\n")
         ans.direct_answer = humanize(ans.direct_answer)
+        # Only the jargon the answer actually says: a glossary of words the user won't say is noise.
+        spoken = ans.direct_answer.lower()
+        ans.terms = [t for t in terms if _says(spoken, t.term)][:MAX_TERMS]
         if ans.example:
             ans.example = humanize(ans.example)
         if (ans.grounding is None and ans.direct_answer and self._qtype in _PERSONAL
@@ -310,6 +325,27 @@ class AnswerStreamParser:
         elif ans.design:
             last = ans.design[-1]
             last.text = f"{last.text} {line.lstrip('-*• ').strip()}".strip()[:800]
+
+
+def _terms(value: str) -> list[Term]:
+    """'CI = tests run on every push | idempotent = safe to repeat' → terms, at most a few, deduplicated."""
+    out: list[Term] = []
+    for entry in value.split("|"):
+        parts = _TERM_SPLIT.split(entry.strip(" .•-"), maxsplit=1)
+        if len(parts) != 2:
+            continue
+        term, meaning = parts[0].strip(" \"'*`"), parts[1].strip(" .\"'")
+        if not term or not meaning or len(term) > MAX_TERM_CHARS or term.lower() in {t.term.lower() for t in out}:
+            continue
+        out.append(Term(term=term, meaning=meaning[:MAX_MEANING_CHARS]))
+    return out[:MAX_TERMS * 2]  # filtered down to what the answer says once it's complete
+
+
+def _says(spoken: str, term: str) -> bool:
+    """The answer uses the term ("Kubernetes", "pods" for "pod", "CI/CD")."""
+    key = term.lower()
+    stem = key[:-1] if key.endswith("s") and len(key) > 3 else key
+    return re.search(r"(?<![\w])" + re.escape(stem), spoken) is not None
 
 
 _SENTENCE_END = re.compile(r"[.!?…][\"')\]]*(?=\s|$)")
