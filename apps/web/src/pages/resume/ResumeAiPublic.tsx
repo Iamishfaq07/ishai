@@ -104,7 +104,7 @@ function SampleResume() {
           <Wand2 className="h-3.5 w-3.5" aria-hidden /> AI rewrite
         </p>
         <p className="mt-1.5 text-xs text-zinc-500 line-through decoration-zinc-400/70 dark:text-zinc-400">
-          Responsible for Power BI dashboards for 40+ store managers instead of 12 weekly Excel reports.
+          Worked on Power BI dashboards for 40+ store managers to replace 12 weekly Excel reports.
         </p>
         <p className="mt-1 text-xs font-medium text-zinc-800 dark:text-zinc-100">
           Built a Power BI sales dashboard used by 40+ store managers, replacing 12 weekly Excel reports.
