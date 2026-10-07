@@ -451,12 +451,17 @@ export function toggleQueryWord(query: string, word: string): string {
   return (on ? words.filter((w) => w.toLowerCase() !== word.toLowerCase()) : [...words, word]).join(" ");
 }
 
-/** How many filters differ from the defaults (the phone's "Filters · 2"). */
-export function activeFilterCount(prefs: Pick<JobPrefs, "posted_within" | "workplace">, query: string, sort: string): number {
+/** How many filters differ from the defaults (the phone's "Filters · 2"). `defaultSort`: newest without a resume. */
+export function activeFilterCount(
+  prefs: Pick<JobPrefs, "posted_within" | "workplace">,
+  query: string,
+  sort: string,
+  defaultSort: string = "best",
+): number {
   return (
     (prefs.posted_within !== 7 ? 1 : 0) +
     (prefs.workplace.length < 3 ? 1 : 0) +
-    (sort === "newest" ? 1 : 0) +
+    (sort !== defaultSort ? 1 : 0) +
     (hasQueryWord(query, "fresher") ? 1 : 0) +
     (hasQueryWord(query, "internship") ? 1 : 0)
   );

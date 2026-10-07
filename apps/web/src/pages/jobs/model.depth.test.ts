@@ -213,5 +213,8 @@ describe("the quick chips and the filters count", () => {
   it("counts the filters that differ from the defaults", () => {
     expect(activeFilterCount({ posted_within: 7, workplace: ["remote", "hybrid", "onsite"] }, "", "best")).toBe(0);
     expect(activeFilterCount({ posted_within: 1, workplace: ["remote"] }, "fresher internship", "newest")).toBe(5);
+    // Without a resume the feed is newest first by default: that isn't a filter the user set.
+    expect(activeFilterCount({ posted_within: 7, workplace: ["remote", "hybrid", "onsite"] }, "", "newest", "newest")).toBe(0);
+    expect(activeFilterCount({ posted_within: 7, workplace: ["remote", "hybrid", "onsite"] }, "", "best", "newest")).toBe(1);
   });
 });

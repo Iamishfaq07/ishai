@@ -140,7 +140,7 @@ function Matches({ profile }: { profile: JobProfile }) {
     setText(q);
     setSearch(q);
   };
-  const filters = activeFilterCount(profile.prefs, query, sort);
+  const filters = activeFilterCount(profile.prefs, query, sort, defaultSort);
 
   const data = feed.data;
   const hasMore = extra ? extra.hasMore : Boolean(data?.has_more);
@@ -496,7 +496,8 @@ export function NoResume({ blank = false }: { blank?: boolean }) {
           </>
         )}
       </p>
-      <Link to={RESUME_AI_HOME} className={linkButton("primary", "sm")}>
+      {/* Its own line on a phone, so the words get the card's full width. */}
+      <Link to={RESUME_AI_HOME} className={cx(linkButton("primary", "sm"), "w-full sm:w-auto")}>
         {blank ? "Open Resume AI" : "Add your resume"}
       </Link>
     </Card>

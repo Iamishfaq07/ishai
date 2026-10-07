@@ -253,6 +253,11 @@ function Question({
   const [checks, setChecks] = useState<Check[] | null>(() => (state.checked[question.id] && answer ? checkAnswer(answer, question, spoken) : null));
   const count = words(answer).length;
   const last = index === total - 1;
+  const feedback = useRef<HTMLDivElement>(null);
+  // The tips come in below the answer: bring them into view (on a phone they'd be off-screen).
+  useEffect(() => {
+    if (checks) feedback.current?.scrollIntoView({ block: "start" });
+  }, [checks]);
 
   const setAnswer = useCallback(
     (text: string, fromVoice = false) =>
@@ -356,21 +361,21 @@ function Question({
         )}
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-2">
-        {!checks && (
+      {!checks && (
+        <div className="mt-5 flex flex-wrap items-center gap-2">
           <Button onClick={check} disabled={count < MIN_WORDS}>
             <Sparkles className="h-4 w-4" aria-hidden /> Check my answer
           </Button>
-        )}
-        {(checks || count < MIN_WORDS) && (
-          <Button variant={checks ? "primary" : "ghost"} onClick={next}>
-            {checks ? (last ? "See my summary" : "Next question") : "Skip this question"} {checks && <ArrowRight className="h-4 w-4" aria-hidden />}
-          </Button>
-        )}
-        {!checks && count > 0 && count < MIN_WORDS && <span className="text-xs text-zinc-500 dark:text-zinc-400">A few more words to check it.</span>}
-      </div>
+          {count < MIN_WORDS && (
+            <Button variant="ghost" onClick={next}>
+              Skip this question
+            </Button>
+          )}
+          {count > 0 && count < MIN_WORDS && <span className="text-xs text-zinc-500 dark:text-zinc-400">A few more words to check it.</span>}
+        </div>
+      )}
 
-      <div aria-live="polite">
+      <div aria-live="polite" ref={feedback} className="scroll-mt-4">
         {checks && (
           <Card className="mt-6 motion-safe:animate-fade-up">
             <h2 className="font-display text-base font-semibold">How it came across</h2>
@@ -391,15 +396,22 @@ function Question({
                 );
               })}
             </ul>
-            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 dark:border-white/10">
-              <Button variant="secondary" size="sm" onClick={() => setChecks(null)}>
-                <Redo2 className="h-4 w-4" aria-hidden /> Improve this answer
-              </Button>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">Rule-based tips, not an AI score: they look for patterns, so use your judgement.</span>
-            </div>
+            <p className="mt-4 border-t border-zinc-200 pt-3 text-xs text-zinc-500 dark:border-white/10 dark:text-zinc-400">
+              Rule-based tips, not an AI score: they look for patterns, so use your judgement.
+            </p>
           </Card>
         )}
       </div>
+      {checks && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Button onClick={next}>
+            {last ? "See my summary" : "Next question"} <ArrowRight className="h-4 w-4" aria-hidden />
+          </Button>
+          <Button variant="secondary" onClick={() => setChecks(null)}>
+            <Redo2 className="h-4 w-4" aria-hidden /> Improve this answer
+          </Button>
+        </div>
+      )}
     </section>
   );
 }

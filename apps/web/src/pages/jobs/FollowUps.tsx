@@ -134,7 +134,8 @@ function FollowUpsCard({ tracker, limit = 3, hideWhenEmpty = false, className }:
                 </span>
               </span>
             </p>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-6 text-xs">
+            {/* Each action at least 24 px tall (WCAG 2.5.8), so a thumb can hit it. */}
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 pl-6 text-xs [&>*]:inline-flex [&>*]:min-h-6 [&>*]:items-center">
               {item.interview ? (
                 item.kind === "overdue" ? (
                   <Link to={JOBS_TRACKER} className={textLink}>
