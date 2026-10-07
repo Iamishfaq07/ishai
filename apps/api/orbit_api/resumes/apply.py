@@ -2,10 +2,9 @@
 fix can be checked before it's sent: apply it, re-score, and see whether the problem is gone."""
 
 from orbit_api.resumes.fixes import Suggestion, current_skills, has_skill
-from orbit_api.resumes.schema import ResumeData, SkillGroup
+from orbit_api.resumes.schema import MAX_SKILL_GROUPS, MAX_SKILLS_PER_GROUP, ResumeData, SkillGroup, fold_skill_groups
 
 MAX_BULLETS = 12
-MAX_SKILLS_PER_GROUP = 40
 
 
 def get_at(data: ResumeData, path: str) -> str | None:
@@ -48,7 +47,8 @@ def set_at(data: ResumeData, path: str, value: str) -> ResumeData:
 
 
 def add_skills(data: ResumeData, skills: list[str]) -> ResumeData:
-    """Into a group called "Skills" (or the only group), else an "Additional skills" group: never repeating one."""
+    """Into a group called "Skills" (or the only group), else an "Additional skills" group: never repeating one. With
+    no room for another group, into the groups that have room."""
     have = current_skills(data)
     fresh: list[str] = []
     for s in skills:
@@ -67,8 +67,10 @@ def add_skills(data: ResumeData, skills: list[str]) -> ResumeData:
                       and len(g.items) + len(fresh) <= MAX_SKILLS_PER_GROUP), None)
         if extra is not None:
             extra.items += fresh
-        elif len(out.skills) < 10:
+        elif len(out.skills) < MAX_SKILL_GROUPS:
             out.skills.append(SkillGroup(name=name, items=fresh[:MAX_SKILLS_PER_GROUP]))
+        else:
+            out.skills = fold_skill_groups([*out.skills, SkillGroup(name=name, items=fresh[:MAX_SKILLS_PER_GROUP])])
     return out
 
 

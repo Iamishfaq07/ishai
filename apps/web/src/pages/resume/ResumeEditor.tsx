@@ -36,6 +36,7 @@ import {
 import { Button, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
 import { api } from "../../lib/api";
 import { downloadText, errorText } from "../../lib/format";
+import { announceOutOfCredits } from "../../lib/outOfCredits";
 import { jobsForResume, outreachPath } from "../jobs/paths";
 import { ContentForm } from "./ContentForm";
 import { AiCostNote, AiErrorNote, AllowanceBanner, AllowanceContext, isUpgradeError, useAllowance, useResumeAllowance } from "./allowance";
@@ -332,6 +333,7 @@ function ResumeEditor() {
       if (res.upgrade_required) {
         setAiUpgrade(true);
         setAiError("These are the fixes that need no AI. AI rewrites, new bullets and tailoring need resume credits: you're out.");
+        announceOutOfCredits({ kind: "resume", offer: allowance.allowance?.upgrade ?? undefined, note: "The fixes that need no AI are ready." });
       } else if (mode === "shorten") {
         setAiError(
           res.suggestions.length
@@ -411,6 +413,7 @@ function ResumeEditor() {
       );
       if (out.upgrade_required) {
         setFixError({ text: "The fixes that need no AI are done. Rewriting lines needs resume credits: you're out.", upgrade: true });
+        announceOutOfCredits({ kind: "resume", offer: allowance.allowance?.upgrade ?? undefined, note: "The fixes that need no AI are done." });
       } else if (out.ai_error) setFixError({ text: out.ai_error, upgrade: false });
     } catch (err) {
       setFixError({ text: errorText(err), upgrade: isUpgradeError(err) });
