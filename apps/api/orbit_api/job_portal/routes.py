@@ -9,6 +9,9 @@ and the tracker. See job_portal/__init__.py for how it fits together.
   `/tailor` (a copy of a resume aimed at the job, opened in the resume maker, whose AI runs on credits as usual),
   `/prepare` (the job description saved to Documents, where Practice's prep and mock interview pick it up).
 - `GET/POST /tracker`, `PATCH/DELETE /tracker/{id}`: saved → applied → interviewing → offer / rejected.
+- `POST /tracker/link`, `POST /tracker/manual`: a job found elsewhere (Naukri, LinkedIn, a campus portal), tracked
+  from its link or typed in (job_portal/manual.py: `listing_id = "ext:<hex>"`, `source = "manual"`). The link is
+  read from its address only; nothing is fetched.
 - `GET /stats`: the one route without a session, for Jobs AI's public page: how many fresh jobs the cache holds and
   the free daily allowances. Counts only, worked out at most every 10 minutes; it never starts a refresh.
 
@@ -25,7 +28,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 
@@ -35,7 +38,7 @@ from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.entitlements import is_admin
 from orbit_api.job_portal import fit as fitcheck
-from orbit_api.job_portal import ranking, refresh
+from orbit_api.job_portal import manual, ranking, refresh
 from orbit_api.job_portal.portals import PORTALS, portal_links
 from orbit_api.job_portal.postings import CITIES, EmploymentType, Level, Workplace
 from orbit_api.job_portal.profile import (
@@ -80,6 +83,8 @@ ai_limit = limit("jobs-ai", rate_per_s=0.2, burst=10)
 ai_user_limit = limit_user("jobs-ai-user", rate_per_s=40 / 3600, burst=10)
 # Tailor and prepare make a resume or a document, and may fetch the post's page once.
 action_limit = limit_user("jobs-action", rate_per_s=30 / 3600, burst=8)
+# Jobs added by hand: no fetch and no AI, but each is a row, so a burst of 20 and 60 an hour (MAX_TRACKED caps them).
+manual_limit = limit_user("jobs-manual", rate_per_s=60 / 3600, burst=20)
 # The public page's numbers, per network (no session): cached, so this only guards against floods.
 stats_limit = limit("jobs-stats", rate_per_s=1, burst=30)
 
@@ -160,6 +165,12 @@ class JobOut(BaseModel):
     apply_url: str
     snippet: str
     salary: str | None
+    # When Orbit first saw the post. A post that doesn't say when it was posted is dated when it's fetched, so the
+    # earlier of this and `posted_at` is as fresh as the post can be trusted to be ("Early applicant").
+    first_seen_at: datetime
+    # When Orbit last found the post still on the company's own careers page (a board's refresh drops posts taken
+    # down). None for feeds and searches, which Orbit can't re-check, so they never say "still open".
+    still_listed_at: datetime | None = None
     match: MatchOut | None = None
     tracked: TrackedRef | None = None
 
@@ -223,6 +234,7 @@ class TrackerOut(BaseModel):
     resume_id: str | None
     document_id: str | None
     live: bool  # the listing is still in the feed's cache (posts are dropped after about 30 days)
+    still_listed_at: datetime | None = None  # as JobOut's: seen on the company's own careers page then
     created_at: datetime
     updated_at: datetime
 
@@ -258,6 +270,13 @@ def _location_line(row: JobListing) -> str:
     return where[:300]
 
 
+def _still_listed(source_id: str, fetched_at: datetime | None) -> datetime | None:
+    """When the post was last seen on the company's own board: a board's fetch replaces its listings (refresh.py), so
+    a post taken down is gone after the next one. Feeds and searches aren't the employer's own word: None."""
+    source = source_named(source_id)
+    return _aware(fetched_at) if source is not None and source.direct and fetched_at is not None else None
+
+
 def _job_out(row: JobListing, match: ranking.Match | None = None, tracked: JobApplication | None = None) -> JobOut:
     source = source_named(row.source)
     attribution = source.attribution if source else None
@@ -270,19 +289,20 @@ def _job_out(row: JobListing, match: ranking.Match | None = None, tracked: JobAp
         workplace=row.workplace,
         employment_type=row.employment_type, level=row.level, experience=_experience(row),
         posted_at=_aware(row.posted_at), url=row.url, apply_url=row.apply_url, snippet=row.snippet,
-        salary=row.salary,
+        salary=row.salary, first_seen_at=_aware(row.created_at or row.posted_at),
+        still_listed_at=_still_listed(row.source, row.fetched_at),
         match=MatchOut(score=match.score, matched=match.matched, missing=match.missing) if match else None,
         tracked=TrackedRef(id=tracked.id, status=tracked.status) if tracked else None)
 
 
-def _tracker_out(t: JobApplication, live: bool) -> TrackerOut:
+def _tracker_out(t: JobApplication, live: bool, still_listed_at: datetime | None = None) -> TrackerOut:
     return TrackerOut(
         id=t.id, listing_id=t.listing_id, source=t.source, company=t.company, title=t.title, location=t.location,
         url=t.url, apply_url=t.apply_url, posted_at=_aware(t.posted_at) if t.posted_at else None,
         status=t.status, notes=t.notes or "", applied_at=_aware(t.applied_at) if t.applied_at else None,
         next_at=_aware(t.next_at) if t.next_at else None, status_at=_aware(t.status_at),
-        resume_id=t.resume_id, document_id=t.document_id, live=live, created_at=_aware(t.created_at),
-        updated_at=_aware(t.updated_at))
+        resume_id=t.resume_id, document_id=t.document_id, live=live, still_listed_at=still_listed_at,
+        created_at=_aware(t.created_at), updated_at=_aware(t.updated_at))
 
 
 def _has_content(r: Resume) -> bool:
@@ -371,15 +391,19 @@ async def _tracked(db: AsyncSession, user: User, listing_ids: list[str]) -> dict
     return {r.listing_id: r for r in rows}
 
 
+async def _room(db: AsyncSession, user: User) -> None:
+    count = await db.scalar(select(func.count()).select_from(JobApplication).where(JobApplication.user_id == user.id))
+    if (count or 0) >= MAX_TRACKED:
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            f"Your tracker holds up to {MAX_TRACKED} jobs. Remove some you're done with first.")
+
+
 async def _track(db: AsyncSession, user: User, row: JobListing, status_: Status = "saved") -> JobApplication:
     """The tracker entry for this job, made (as `status_`) if it isn't there yet."""
     entry = (await _tracked(db, user, [row.id])).get(row.id)
     if entry is not None:
         return entry
-    count = await db.scalar(select(func.count()).select_from(JobApplication).where(JobApplication.user_id == user.id))
-    if (count or 0) >= MAX_TRACKED:
-        raise HTTPException(status.HTTP_409_CONFLICT,
-                            f"Your tracker holds up to {MAX_TRACKED} jobs. Remove some you're done with first.")
+    await _room(db, user)
     now = datetime.now(UTC)
     entry = JobApplication(user_id=user.id, listing_id=row.id, source=row.source, company=row.company,
                            title=row.title, location=_location_line(row), url=row.url, apply_url=row.apply_url,
@@ -586,7 +610,8 @@ async def get_listing(listing_id: str, user: Annotated[User, Depends(current_use
     source = source_named(row.source)
     return DetailOut(job=_job_out(row, _match_for(row, prefs, data), entry),
                      full_text=not (source and source.snippet_only) and len(row.description) >= FULL_TEXT_MIN,
-                     fit=check, tracker=_tracker_out(entry, True) if entry else None)
+                     fit=check, tracker=_tracker_out(entry, True, _still_listed(row.source, row.fetched_at))
+                     if entry else None)
 
 
 @router.post("/listings/{listing_id}/fit", response_model=FitOut,
@@ -742,11 +767,15 @@ async def _owned_entry(db: AsyncSession, entry_id: str, user: User) -> JobApplic
     return entry
 
 
-async def _live(db: AsyncSession, entries: list[JobApplication]) -> set[str]:
-    ids = [e.listing_id for e in entries]
+async def _live(db: AsyncSession, entries: list[JobApplication]) -> dict[str, datetime | None]:
+    """The entries' listings still in the feed's cache: listing id -> when it was last seen on the company's own
+    careers page (None for a feed's or a search's post). Jobs added by hand ("ext:") are never in it."""
+    ids = [e.listing_id for e in entries if not manual.is_manual(e.listing_id)]
     if not ids:
-        return set()
-    return set((await db.scalars(select(JobListing.id).where(JobListing.id.in_(ids)))).all())
+        return {}
+    rows = (await db.execute(select(JobListing.id, JobListing.source, JobListing.fetched_at)
+                             .where(JobListing.id.in_(ids)))).all()
+    return {lid: _still_listed(source, fetched) for lid, source, fetched in rows}
 
 
 @router.get("/tracker", response_model=list[TrackerOut], dependencies=[Depends(read_limit)])
@@ -755,7 +784,7 @@ async def list_tracker(user: Annotated[User, Depends(current_user)],
     rows = list((await db.scalars(select(JobApplication).where(JobApplication.user_id == user.id)
                                   .order_by(JobApplication.status_at.desc()))).all())
     live = await _live(db, rows)
-    return [_tracker_out(r, r.listing_id in live) for r in rows]
+    return [_tracker_out(r, r.listing_id in live, live.get(r.listing_id)) for r in rows]
 
 
 class TrackIn(BaseModel):
@@ -772,7 +801,7 @@ async def track(body: TrackIn, user: Annotated[User, Depends(current_user)],
     _move(entry, body.status)
     await db.commit()
     await db.refresh(entry)
-    return _tracker_out(entry, True)
+    return _tracker_out(entry, True, _still_listed(row.source, row.fetched_at))
 
 
 def _move(entry: JobApplication, to: Status) -> None:
@@ -804,7 +833,8 @@ async def update_tracker(entry_id: str, body: TrackPatch, user: Annotated[User, 
         entry.next_at = None if body.clear_next else body.next_at
     await db.commit()
     await db.refresh(entry)
-    return _tracker_out(entry, bool(await _live(db, [entry])))
+    live = await _live(db, [entry])
+    return _tracker_out(entry, entry.listing_id in live, live.get(entry.listing_id))
 
 
 @router.delete("/tracker/{entry_id}", status_code=204, dependencies=[Depends(read_limit)])
@@ -812,6 +842,135 @@ async def delete_tracker(entry_id: str, user: Annotated[User, Depends(current_us
                          db: Annotated[AsyncSession, Depends(get_db)]) -> None:
     await db.delete(await _owned_entry(db, entry_id, user))
     await db.commit()
+
+
+# ---- jobs found elsewhere ------------------------------------------------------------------------------------------
+
+
+class LinkIn(BaseModel):
+    url: str = Field(max_length=manual.MAX_URL + 100)
+
+
+class LinkOut(BaseModel):
+    url: str  # tidied: what's saved
+    site: str  # "Naukri", "LinkedIn", or the site's host
+    title: str  # "" when the address doesn't say. Read from the address: guesses, for the user to check
+    company: str
+    location: str
+    listing_id: str | None  # the same post is in Orbit's feed: it's tracked as that post, with its own page
+    tracked: TrackedRef | None  # this link is already on the tracker
+
+
+async def _listing_at(db: AsyncSession, *urls: str) -> JobListing | None:
+    """A post in the feed's cache at one of these addresses (its page or its apply link)."""
+    wanted = [u for u in dict.fromkeys(u.strip() for u in urls) if u]
+    if not wanted:
+        return None
+    return (await db.scalars(select(JobListing).options(defer(JobListing.description)).where(
+        or_(JobListing.url.in_(wanted), JobListing.apply_url.in_(wanted))).limit(1))).first()
+
+
+async def _already(db: AsyncSession, user: User, urls: list[str], listing: JobListing | None,
+                   company: str = "", title: str = "") -> JobApplication | None:
+    """This job on the user's tracker already: the same post, the same link, or (typed in, no link) the same company
+    and title among the jobs added by hand."""
+    if listing is not None and (hit := (await _tracked(db, user, [listing.id])).get(listing.id)):
+        return hit
+    mine = select(JobApplication).where(JobApplication.user_id == user.id)
+    wanted = [u for u in dict.fromkeys(u.strip() for u in urls) if u]
+    if wanted:
+        return (await db.scalars(mine.where(or_(JobApplication.url.in_(wanted), JobApplication.apply_url.in_(wanted)))
+                                 .limit(1))).first()
+    if not company or not title:
+        return None
+    key = (company.casefold(), title.casefold())
+    rows = (await db.scalars(mine.where(JobApplication.listing_id.startswith(manual.EXT_PREFIX)))).all()
+    return next((r for r in rows if (r.company.casefold(), r.title.casefold()) == key), None)
+
+
+def _read_link(url: str) -> manual.JobLink:
+    try:
+        return manual.read_link(url)
+    except manual.LinkError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e
+
+
+@router.post("/tracker/link", response_model=LinkOut, dependencies=[Depends(read_limit)])
+async def read_tracker_link(body: LinkIn, user: Annotated[User, Depends(current_user)],
+                            db: Annotated[AsyncSession, Depends(get_db)]) -> LinkOut:
+    """What a job's link says, for "Add a job you found elsewhere" to fill in before saving: the site, and the title,
+    company and city where the address has them. Read from the address alone, never fetched. A post that's in Orbit's
+    feed comes back as that post; a link already on the tracker says so."""
+    link = _read_link(body.url)
+    listing = await _listing_at(db, link.url, body.url)
+    dup = await _already(db, user, [link.url, body.url], listing)
+    title, company, where = ((listing.title, listing.company, _location_line(listing)) if listing is not None
+                             else (link.title, link.company, link.location))
+    return LinkOut(url=link.url, site=link.site, title=title, company=company, location=where,
+                   listing_id=listing.id if listing is not None else None,
+                   tracked=TrackedRef(id=dup.id, status=dup.status) if dup else None)
+
+
+class ManualIn(BaseModel):
+    url: str = Field("", max_length=manual.MAX_URL + 100)
+    company: str = Field("", max_length=200)
+    title: str = Field("", max_length=300)
+    location: str = Field("", max_length=300)
+    status: Status = "saved"
+    applied_at: datetime | None = None  # "applied" (or further along) without one: now
+    next_at: datetime | None = None
+    notes: str = Field("", max_length=4_000)
+    document_id: str | None = Field(None, max_length=36)  # the job post saved to Documents, for Practice
+
+
+@router.post("/tracker/manual", response_model=TrackerOut, status_code=201,
+             dependencies=[Depends(read_limit), Depends(manual_limit)])
+async def track_manual(body: ManualIn, user: Annotated[User, Depends(current_user)],
+                       db: Annotated[AsyncSession, Depends(get_db)]) -> TrackerOut:
+    """Track a job found elsewhere (Naukri, LinkedIn, a campus portal, a company's own site), from its link or typed
+    in. What was typed wins; the rest comes from the link's address. A link that's a post in Orbit's feed is tracked
+    as that post (it keeps its page and its "still open"); one already on the tracker is refused (409,
+    `already_tracked`, with its `id`)."""
+    link = _read_link(body.url) if body.url.strip() else None
+    urls = [link.url, body.url] if link else []
+    listing = await _listing_at(db, *urls)
+    company = manual.clean_text(body.company, 200) or (link.company if link else "")
+    title = manual.clean_text(body.title, 300) or (link.title if link else "")
+    if listing is None and (not company or not title):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            "Add the company and the job title: Orbit couldn't read them from the link." if link
+                            else "Add the company and the job title, or paste the job's link.")
+    doc = await db.get(Document, body.document_id) if body.document_id else None
+    if body.document_id and (doc is None or doc.user_id != user.id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Document not found")
+    dup = await _already(db, user, urls, listing, company, title)
+    if dup is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={
+            "code": "already_tracked", "id": dup.id,
+            "message": f"{dup.title} at {dup.company} is already on your tracker."})
+    now = datetime.now(UTC)
+    if listing is not None:
+        entry = await _track(db, user, listing, body.status)
+    else:
+        await _room(db, user)
+        entry = JobApplication(user_id=user.id, listing_id=manual.new_listing_id(), source=manual.SOURCE,
+                               company=company, title=title,
+                               location=manual.clean_text(body.location, 300) or (link.location if link else ""),
+                               url=link.url if link else "", apply_url=link.url if link else "", posted_at=None,
+                               status=body.status, status_at=now)
+        db.add(entry)
+    if body.applied_at is not None:
+        entry.applied_at = body.applied_at
+    elif entry.applied_at is None and body.status in ("applied", "interviewing", "offer"):
+        entry.applied_at = now
+    entry.next_at = body.next_at
+    entry.notes = manual.clean_notes(body.notes)
+    if doc is not None:
+        entry.document_id = doc.id
+    await db.commit()
+    await db.refresh(entry)
+    return _tracker_out(entry, listing is not None,
+                        _still_listed(listing.source, listing.fetched_at) if listing is not None else None)
 
 
 # ---- public --------------------------------------------------------------------------------------------------------
