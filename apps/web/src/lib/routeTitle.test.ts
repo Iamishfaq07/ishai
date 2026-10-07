@@ -9,7 +9,7 @@ describe("routeTitle", () => {
   });
 
   it("names every Jobs AI page Jobs AI, its old address in Resume AI too", () => {
-    for (const path of ["/jobs", "/jobs/matches", "/jobs/listing/8c1d2e", "/jobs/tracker", "/jobs/profile", "/resume-ai/jobs"]) {
+    for (const path of ["/jobs", "/jobs/matches", "/jobs/listing/8c1d2e", "/jobs/tracker", "/jobs/outreach", "/jobs/profile", "/resume-ai/jobs"]) {
       expect(routeTitle(path)).toBe("Jobs AI");
     }
     expect(routeTitle("/jobsearch")).toBeNull();

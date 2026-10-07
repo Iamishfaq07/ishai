@@ -7,9 +7,11 @@ import {
   factsLine,
   fromDateInput,
   isNew,
+  jobAsks,
   jobFacts,
   matchTone,
   nextUp,
+  outreachKindFor,
   postedAgo,
   profileStamp,
   profileSummary,
@@ -194,5 +196,20 @@ describe("the tracker", () => {
     expect(fromDateInput("")).toBeNull();
     expect(fromDateInput("9/10/2026")).toBeNull();
     expect(dateInput(null)).toBe("");
+  });
+});
+
+describe("Outreach for a job", () => {
+  it("opens on the message for how far along the job is", () => {
+    expect(outreachKindFor("saved")).toBe("referral");
+    expect(outreachKindFor("applied")).toBe("follow_up");
+    expect(outreachKindFor("interviewing")).toBe("thank_you");
+    for (const s of ["offer", "rejected", null, undefined] as const) expect(outreachKindFor(s)).toBeNull();
+  });
+
+  it("shows the job's skills the resume has first, each once, at most a few", () => {
+    expect(jobAsks({ matched: ["Go", "Kafka"], missing: ["Java", "go", "AWS"] })).toEqual(["Go", "Kafka", "Java", "AWS"]);
+    expect(jobAsks({ matched: ["A", "B", "C"], missing: ["D", "E"] }, 4)).toEqual(["A", "B", "C", "D"]);
+    expect(jobAsks(null)).toEqual([]);
   });
 });

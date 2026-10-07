@@ -8,7 +8,7 @@ describe("pageFor (what the nav warms before a click)", () => {
   });
 
   it("warms Jobs AI for every one of its pages", () => {
-    for (const path of ["/jobs", "/jobs/", "/jobs/matches", "/jobs/listing/8c1d2e", "/jobs/tracker", "/jobs/profile"]) {
+    for (const path of ["/jobs", "/jobs/", "/jobs/matches", "/jobs/listing/8c1d2e", "/jobs/tracker", "/jobs/outreach", "/jobs/profile"]) {
       expect(pageFor(path)).toBe("jobs");
     }
     expect(pageFor("/jobsearch")).toBeNull();

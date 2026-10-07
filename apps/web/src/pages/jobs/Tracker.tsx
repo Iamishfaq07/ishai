@@ -9,6 +9,7 @@ import {
   FileText,
   MapPin,
   PenLine,
+  Send,
   Sparkles,
   Target,
   Trash2,
@@ -24,7 +25,7 @@ import { resumePath } from "../resume/paths";
 import { useJobsAi } from "./JobsAi";
 import { linkButton } from "./links";
 import { STATUSES, STATUS_LABEL, STATUS_TONE, byStatus, dateInput, fromDateInput, safeUrl, shortDate } from "./model";
-import { JOBS_MATCHES, jobPath } from "./paths";
+import { JOBS_MATCHES, jobPath, outreachPath } from "./paths";
 
 /** Jobs AI → Tracker: every job saved or applied to, and how far along each one is. */
 export function JobTrackerPage() {
@@ -233,6 +234,14 @@ function TrackerCard({
             <Target className="h-3 w-3" aria-hidden /> Practise
           </Link>
         )}
+        {/* A referral before applying, a follow-up after, a thank-you once interviewing (Outreach picks by status). */}
+        <Link
+          to={outreachPath({ job: entry.listing_id, resume: entry.resume_id })}
+          aria-label={`Write outreach for ${entry.title}`}
+          className={cx("inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}
+        >
+          <Send className="h-3 w-3" aria-hidden /> Write outreach
+        </Link>
       </div>
 
       {editing ? (

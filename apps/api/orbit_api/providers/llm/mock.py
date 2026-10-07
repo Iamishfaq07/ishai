@@ -176,10 +176,19 @@ def _mock_resume_kit(request_type: str, body: str) -> str:
                            "about": f"(mock) What I do as a {title.lower()}. {work}\n\n(mock) What I want next: more "
                                     "of the same work, with a team that relies on it.",
                            "skills": skills[:5]})
-    return json.dumps({"subject": "(mock) About the role", "connection_note": "Hi, (mock) I'd like to connect about "
-                                                                              "the role on your team.",
-                       "body": f"(mock) I'm reaching out about the role on your team. {work}\n\n(mock) Could we talk "
-                               "about it this week?"})
+    # The role and company it's for, and the job's requirements the resume shows, when the prompt gives them.
+    found = re.search(r'<reference_data source="candidate_inputs">\s*(\{.*?\})\s*</reference_data>', body, re.S)
+    inputs = json.loads(found.group(1)) if found else {}
+    found = re.search(r'<reference_data source="job_requirements">\s*(\{.*?\})\s*</reference_data>', body, re.S)
+    shown = [str(s) for s in (json.loads(found.group(1)) if found else {}).get("resume_shows", [])][:3]
+    role, company = inputs.get("role"), inputs.get("company")
+    role = (f"the {role} role" if role else "a role" if company else "the role on your team") + (
+        f" at {company}" if company else "")
+    fit = f" (mock) My resume shows {', '.join(shown)}, which the job asks for." if shown else ""
+    return json.dumps({"subject": "(mock) About the role", "connection_note": f"Hi, (mock) I'd like to connect about "
+                                                                              f"{role}.",
+                       "body": f"(mock) I'm reaching out about {role}. {work}{fit}\n\n(mock) Could we talk about it "
+                               "this week?"})
 
 
 def _mock_jobs(request_type: str, body: str) -> str:

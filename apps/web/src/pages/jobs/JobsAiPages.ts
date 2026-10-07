@@ -4,4 +4,5 @@ export { JobsAiHomePage } from "./Overview";
 export { JobMatchesPage } from "./Matches";
 export { JobDetailPage } from "./JobDetail";
 export { JobTrackerPage } from "./Tracker";
+export { JobOutreachPage } from "./Outreach";
 export { JobProfilePage } from "./Profile";

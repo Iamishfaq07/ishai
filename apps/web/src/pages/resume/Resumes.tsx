@@ -235,7 +235,10 @@ export function ResumeAiHomePage() {
   );
 }
 
-/** The way over to Jobs AI, Orbit's product for finding the jobs a resume fits (each editor has one for its resume). */
+/**
+ * The way over to Jobs AI, Orbit's product for finding the jobs a resume fits and writing to them (each editor has
+ * one for its resume).
+ */
 function FindJobs() {
   return (
     <Link
@@ -254,7 +257,7 @@ function FindJobs() {
           <span className="font-medium text-zinc-700 dark:text-zinc-200">
             Jobs <AiPill className="align-[1px]" />
           </span>{" "}
-          shows the latest openings, ranked by how well they match you, with a free AI fit check.
+          shows the latest openings, ranked by how well they match you, with a free AI fit check and outreach for each job.
         </span>
       </span>
       <ArrowRight className="h-4 w-4 shrink-0 text-zinc-400 transition-transform group-hover:translate-x-0.5 group-hover:text-indigo-500" aria-hidden />

@@ -1,5 +1,35 @@
 # Implementation log
 
+## Outreach moves from Resume AI to Jobs AI, and writes for a job (2026-10-07)
+
+Resume AI's "Profiles & outreach" tab is now Jobs AI's **Outreach** page, `/jobs/outreach` (a new tab between
+Tracker and Profile): the referral requests, emails to HR, follow-ups and thank-you notes, and the Naukri and LinkedIn
+profiles, the same parts and grounding as before (`pages/resume/ProfileKit.tsx` moved to `pages/jobs/Outreach.tsx`).
+
+- **Written from a resume you pick** ("Written from", at the top on phones, beside the page from 1024 px): `?resume=`,
+  else the one edited last. No resume yet: "Make a resume first", with a link to Resume AI.
+- **For a job** ("For a job", messages only): a job on your tracker, or the one opened from a job's page. A job's
+  page has **Write outreach** (written from the resume tailored for it, else the matched one), and so does every
+  tracker card; the message starts as a referral before you apply, a follow-up once applied and a thank-you once
+  interviewing. Company and role are filled in, the post's skills shown; a post that has left the feed uses the
+  tracker's role and company. Messages are kept in this browser per resume and per job (the 20 changed last).
+- **`POST /v1/resumes/outreach` takes `listing_id`** (D46): the server reads that posting from the job cache (title,
+  company, place, its skills and text, cut to 8,000 characters, fenced as data) in place of `job_text`, fills in a
+  blank company and role, and gives the model the post's skills split by whether the resume shows them, with "never
+  claim one it doesn't". Same cost, one resume credit; a listing that's gone is a 404 before anything is spent.
+- **Resume AI's editor**: six tabs, and where Outreach was, a small "Outreach ↗" link to Jobs AI's page for that
+  resume. Tabs were never in the address (the editor's own state), so there's no old URL to redirect: `/resume-ai/:id`
+  still opens the editor. On Outreach, `?resume=` doesn't re-match the job feed to that resume (it does elsewhere in
+  Jobs AI).
+- **Copy**: Resume AI's feature lists lose profiles and outreach (its public page points to Jobs AI instead); Jobs
+  AI's gain "Outreach that gets replies" (its public page's features now in threes, its free note and how-it-works
+  mention it); the sign-in screens (web and desktop) list cover letters and interview prep under Resume and outreach
+  under Jobs. The desktop copy reaches users with the next desktop release.
+- Jobs AI's tabs are a size smaller on phones (and the tracker's count hides under 380 px), so five fit 360 px.
+- Tests: `test_resume_kit.py` (the posting read on the server, fenced and cut to size, typed company and role win,
+  404 spends nothing), `kit.test.ts` (messages per job), `paths.test.ts`, `model.test.ts`, `routes.test.ts`,
+  `routeTitle.test.ts`. Driven in headless Chrome at 1280 and 390 px (`tools/orbit-drive/outreach-move-drive.mjs`).
+
 ## Orbit Jobs AI: Jobs becomes Orbit's third product, with its own nav item and pages (2026-10-07)
 
 Jobs was a tab of Resume AI (`/resume-ai/jobs`). It's now **Orbit Jobs AI**, a product of its own next to the

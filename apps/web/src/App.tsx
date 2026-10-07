@@ -36,6 +36,7 @@ import {
   JobMatchesPage,
   JobDetailPage,
   JobTrackerPage,
+  JobOutreachPage,
   JobProfilePage,
   AdminUsersPage,
   AdminPaymentsPage,
@@ -151,6 +152,7 @@ export function App() {
           <Route path="matches" element={<JobMatchesPage />} />
           <Route path="listing/:listingId" element={<JobDetailPage />} />
           <Route path="tracker" element={<JobTrackerPage />} />
+          <Route path="outreach" element={<JobOutreachPage />} />
           <Route path="profile" element={<JobProfilePage />} />
           <Route path="*" element={<Navigate to={JOBS_AI_HOME} replace />} />
         </Route>

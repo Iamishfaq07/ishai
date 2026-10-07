@@ -46,6 +46,7 @@ export const JobsAiHomePage = page(loaders.jobs, (m) => m.JobsAiHomePage);
 export const JobMatchesPage = page(loaders.jobs, (m) => m.JobMatchesPage);
 export const JobDetailPage = page(loaders.jobs, (m) => m.JobDetailPage);
 export const JobTrackerPage = page(loaders.jobs, (m) => m.JobTrackerPage);
+export const JobOutreachPage = page(loaders.jobs, (m) => m.JobOutreachPage);
 export const JobProfilePage = page(loaders.jobs, (m) => m.JobProfilePage);
 export const JobsAiPublicPage = page(loaders.jobsAiPublic, (m) => m.JobsAiPublicPage);
 export const MockPage = page(loaders.mock, (m) => m.MockPage);

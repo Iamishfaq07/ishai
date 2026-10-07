@@ -53,7 +53,7 @@ function FreeNote({ stats, className }: { stats: JobStats | null; className?: st
       {stats
         ? `and each day you get ${stats.fit_daily} AI fit checks and ${stats.profile_daily} AI reads of your resume, free.`
         : "and a few AI fit checks a day are free."}{" "}
-      Tailoring a resume opens it in Resume AI, where AI rewrites use resume credits.
+      Outreach uses resume credits, and so do AI rewrites when you tailor a resume in Resume AI.
     </p>
   );
 }
@@ -218,7 +218,7 @@ export function JobsAiPublicPage() {
           <p className="mt-2 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">
             You stay in charge: you apply on the original site, and nothing is sent to an employer for you.
           </p>
-          <ul className="stagger mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <ul className="stagger mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {JOBS_AI_FEATURES.map(({ icon: Icon, title, text }) => (
               <li key={title} className="glass-panel rounded-2xl p-5">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-aurora-400/10 text-indigo-600 ring-1 ring-indigo-500/20 dark:text-indigo-300">
@@ -240,7 +240,7 @@ export function JobsAiPublicPage() {
               {[
                 { icon: FileUp, title: "Add your resume", text: "Import the one you have (PDF, Word or LinkedIn's PDF), or make one in Resume AI." },
                 { icon: Sparkles, title: "See your matches", text: "The AI reads it into a search profile you can change, and every new job is scored against it." },
-                { icon: BookmarkCheck, title: "Apply and keep track", text: "Check your fit first, apply on the company's site, and move each application along your tracker." },
+                { icon: BookmarkCheck, title: "Apply and keep track", text: "Check your fit, ask for a referral, apply on the company's site, and move each application along your tracker." },
               ].map(({ icon: Icon, title, text }, i) => (
                 <li key={title} className="flex gap-4">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-aurora-500 text-white shadow-glow-sm">

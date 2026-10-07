@@ -27,8 +27,8 @@ const input =
 /** What Orbit does, beside the sign-in form (under it in a narrow window). */
 const FEATURES: Array<{ icon: LucideIcon; title: string; text: string }> = [
   { icon: AudioLines, title: "Live interview copilot", text: "Hears the question as it's asked and answers in your voice, from your resume." },
-  { icon: FileText, title: "Resume AI", text: "ATS score out of 100, AI rewrites for every job, Naukri and LinkedIn profiles, cover letters." },
-  { icon: Briefcase, title: "Jobs AI", text: "The latest jobs from companies' own career pages, ranked by how well they match your resume." },
+  { icon: FileText, title: "Resume AI", text: "ATS score out of 100, AI rewrites for every job, cover letters and interview prep." },
+  { icon: Briefcase, title: "Jobs AI", text: "The latest jobs from companies' career pages, matched to your resume, and outreach to get referred." },
   { icon: Code2, title: "Coding rounds", text: "Screenshot a problem for the approach, the code and its complexity." },
   { icon: MessagesSquare, title: "Mock interviews", text: "Practise with an AI interviewer, then get a scorecard and the questions to redo." },
   { icon: ShieldCheck, title: "Private", text: "Your documents and transcripts stay in your account. Delete them any time." },

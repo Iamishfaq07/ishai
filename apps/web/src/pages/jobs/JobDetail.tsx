@@ -11,6 +11,7 @@ import {
   FileText,
   PenLine,
   Search,
+  Send,
   Sparkles,
   Target,
   Trash2,
@@ -40,7 +41,7 @@ import { useJobsAi } from "./JobsAi";
 import { linkButton, textLink } from "./links";
 import { STATUSES, STATUS_LABEL, STATUS_TONE, jobFacts, safeUrl, shortDate } from "./model";
 import { EditEntry } from "./Tracker";
-import { JOBS_MATCHES } from "./paths";
+import { JOBS_MATCHES, outreachPath } from "./paths";
 import { useJobActions } from "./useJobActions";
 
 /**
@@ -145,6 +146,14 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
           <TrackButton actions={actions} />
           <TailorButton actions={actions} />
           <PrepareButton actions={actions} />
+          {/* Written from the resume tailored for this job if there is one, else the one it's matched to. */}
+          <Link
+            to={outreachPath({ job: job.id, resume: entry?.resume_id ?? resumeId })}
+            className={linkButton("ghost", "sm")}
+            title="A referral request, an email to HR, a follow-up or a thank-you note for this job"
+          >
+            <Send className="h-4 w-4" aria-hidden /> Write outreach
+          </Link>
           {original && (
             <a href={original} target="_blank" rel="noopener" className={cx(linkButton("ghost", "sm"), "sm:ml-auto")}>
               <ExternalLink className="h-4 w-4" aria-hidden /> View original post

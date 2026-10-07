@@ -4,6 +4,7 @@ import {
   Gauge,
   LayoutGrid,
   Search,
+  Send,
   SlidersHorizontal,
   Sparkles,
   Target,
@@ -11,7 +12,7 @@ import {
   type LucideIcon,
 } from "@orbit/ui";
 import { ProductTabs, type ProductSection } from "../../components/products";
-import { JOBS_AI_HOME, JOBS_MATCHES, JOBS_PROFILE, JOBS_TRACKER } from "./paths";
+import { JOBS_AI_HOME, JOBS_MATCHES, JOBS_OUTREACH, JOBS_PROFILE, JOBS_TRACKER } from "./paths";
 
 /**
  * Orbit Jobs AI, Orbit's third product next to the interview copilot and Resume AI: what it does (its home and the
@@ -71,6 +72,12 @@ export const JOBS_AI_FEATURES: JobsAiFeature[] = [
     text: "A copy of your resume aimed at the job, opened in Resume AI, where you see every change before you keep it.",
   },
   {
+    icon: Send,
+    short: "Outreach + Naukri, LinkedIn profiles",
+    title: "Outreach that gets replies",
+    text: "Referral requests, emails to HR, follow-ups and thank-you notes for each job, and your Naukri and LinkedIn profiles, written from your resume.",
+  },
+  {
     icon: Target,
     short: "Interview prep per job",
     title: "Prepare for the interview",
@@ -84,6 +91,7 @@ export function jobsAiSections(tracked = 0): ProductSection[] {
     { to: JOBS_AI_HOME, label: "Overview", icon: LayoutGrid, end: true },
     { to: JOBS_MATCHES, label: "Matches", icon: Sparkles, also: /^\/jobs\/listing\// },
     { to: JOBS_TRACKER, label: "Tracker", icon: BookmarkCheck, count: tracked },
+    { to: JOBS_OUTREACH, label: "Outreach", icon: Send },
     { to: JOBS_PROFILE, label: "Profile", icon: SlidersHorizontal },
   ];
 }

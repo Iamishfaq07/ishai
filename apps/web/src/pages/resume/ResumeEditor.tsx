@@ -4,6 +4,7 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import type { AtsReport, CoverLetterLength, CoverLetterTone, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
 import {
   ArrowLeft,
+  ArrowUpRight,
   Briefcase,
   Check,
   CircleAlert,
@@ -35,7 +36,7 @@ import {
 import { Button, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
 import { api } from "../../lib/api";
 import { downloadText, errorText } from "../../lib/format";
-import { jobsForResume } from "../jobs/paths";
+import { jobsForResume, outreachPath } from "../jobs/paths";
 import { ContentForm } from "./ContentForm";
 import { AiCostNote, AiErrorNote, AllowanceBanner, AllowanceContext, isUpgradeError, useAllowance, useResumeAllowance } from "./allowance";
 import { useBackend } from "./backend";
@@ -43,12 +44,11 @@ import { FixActions, FixResult, fixKind } from "./FixPanel";
 import { InterviewPrep, usePrepState } from "./InterviewPrep";
 import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, suggestedSkills } from "./model";
 import { RESUME_AI_HOME } from "./paths";
-import { ProfileKitPanel } from "./ProfileKit";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
 import { SaveToDocuments } from "./SaveToDocuments";
 
-type Tab = "content" | "score" | "ai" | "design" | "letter" | "prep" | "kit";
+type Tab = "content" | "score" | "ai" | "design" | "letter" | "prep";
 
 /** What undo/redo restores: everything the user edits. */
 type Snapshot = Pick<Resume, "title" | "data" | "design" | "job_text" | "cover_letter">;
@@ -67,7 +67,6 @@ const TABS: Array<{ id: Tab; label: string; short?: string; icon: typeof FileTex
   { id: "design", label: "Design", icon: Palette },
   { id: "letter", label: "Cover letter", short: "Letter", icon: Mail },
   { id: "prep", label: "Interview prep", short: "Prep", icon: MessagesSquare },
-  { id: "kit", label: "Profiles & outreach", short: "Outreach", icon: Send },
 ];
 
 /** What the spinner says while the AI works on each kind of problem. */
@@ -520,30 +519,46 @@ function ResumeEditor() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <div className="min-w-0">
-          <div role="tablist" aria-label="Resume editor" className="sticky top-16 z-10 mb-4 flex flex-wrap gap-1 rounded-xl bg-zinc-100/90 p-1 backdrop-blur-sm dark:bg-zinc-900/90">
-            {TABS.map(({ id, label, short, icon: Icon }) => (
-              <button
-                key={id}
-                role="tab"
-                aria-selected={tab === id}
-                aria-label={label}
-                title={short ? label : undefined}
-                type="button"
-                onClick={() => setTab(id)}
-                className={cx(
-                  "flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1 py-1.5 xl:px-2 text-sm font-medium",
-                  tab === id ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
-                  focusRing,
-                )}
-              >
-                {/* Icons alone on phones, labels from there up (seven tabs leave no room for both), short ones where
-                    the editor sits beside the preview; a column too narrow even for those wraps onto a second row. */}
-                <Icon className="h-4 w-4 shrink-0 sm:hidden" aria-hidden />
-                <span className={cx("hidden sm:inline", short && "lg:hidden")}>{label}</span>
-                {short && <span className="hidden lg:inline">{short}</span>}
-                {id === "ai" && queue.length > 0 && <span className="rounded-full bg-indigo-600 px-1.5 text-[0.625rem] text-white">{queue.length}</span>}
-              </button>
-            ))}
+          <div className="sticky top-16 z-10 mb-4 flex gap-1 rounded-xl bg-zinc-100/90 p-1 backdrop-blur-sm dark:bg-zinc-900/90">
+            <div role="tablist" aria-label="Resume editor" className="flex min-w-0 flex-1 flex-wrap gap-1">
+              {TABS.map(({ id, label, short, icon: Icon }) => (
+                <button
+                  key={id}
+                  role="tab"
+                  aria-selected={tab === id}
+                  aria-label={label}
+                  title={short ? label : undefined}
+                  type="button"
+                  onClick={() => setTab(id)}
+                  className={cx(
+                    "flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1 py-1.5 xl:px-2 text-sm font-medium",
+                    tab === id ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
+                    focusRing,
+                  )}
+                >
+                  {/* Icons alone on phones, labels from there up (seven items leave no room for both), short ones where
+                      the editor sits beside the preview; a column too narrow even for those wraps onto a second row. */}
+                  <Icon className="h-4 w-4 shrink-0 sm:hidden" aria-hidden />
+                  <span className={cx("hidden sm:inline", short && "lg:hidden")}>{label}</span>
+                  {short && <span className="hidden lg:inline">{short}</span>}
+                  {id === "ai" && queue.length > 0 && <span className="rounded-full bg-indigo-600 px-1.5 text-[0.625rem] text-white">{queue.length}</span>}
+                </button>
+              ))}
+            </div>
+            {/* Where the "Profiles & outreach" tab was: it's Jobs AI's Outreach page now, opened on this resume. */}
+            <Link
+              to={outreachPath({ resume: resume.id })}
+              aria-label="Outreach is now in Jobs AI: open it for this resume"
+              title="Outreach is now in Jobs AI"
+              className={cx(
+                "flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg px-2 py-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
+                focusRing,
+              )}
+            >
+              <Send className="h-4 w-4 shrink-0 sm:hidden" aria-hidden />
+              <span className="hidden sm:inline">Outreach</span>
+              <ArrowUpRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            </Link>
           </div>
 
           {tab === "content" && (
@@ -624,7 +639,6 @@ function ResumeEditor() {
             />
           )}
           {tab === "prep" && <InterviewPrep resume={resume} prep={prep} onShowJob={() => setTab("score")} />}
-          {tab === "kit" && <ProfileKitPanel resume={resume} onShowJob={() => setTab("score")} />}
         </div>
 
         <div className="min-w-0">

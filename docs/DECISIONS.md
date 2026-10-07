@@ -236,3 +236,14 @@ keyword reading), so ranking a thousand cached posts costs nothing and explains 
 adds something: reading a resume into a search profile, and a fit check per job. Both are free so that browsing jobs
 never spends the user's resume credits, and capped per day (with results cached per resume content and per job) so
 the shared key's cost stays bounded: a fit check is one short call, about 3 s, and the cap is configuration.
+
+**D46 — Job-aware outreach reads the posting on the server, by listing id.** Outreach lives in Jobs AI now, where a
+message should be about a real job. The browser could send the job's text as `job_text`, but Jobs AI only ever shows a
+summary of a post (D43), so it doesn't have the full text, and text from the browser could be anything. So the
+browser sends the listing's id and the server reads the posting from its own cache: one source of truth, the same
+size cap and fence as a pasted job post, and nothing new for the browser to hold. The post's skills go to the model
+split by whether the resume shows them (the job portal's own matcher), because a referral request that claims a
+skill the resume lacks does the candidate harm; the existing grounding checks still drop any tool or number that's
+in neither the resume nor the post. It stays one resume credit, like any other message, and a listing that has left
+the cache fails before the credit is claimed. The API route stays under `/v1/resumes`: the kit is still written from
+a resume, and a new URL would only churn the clients.

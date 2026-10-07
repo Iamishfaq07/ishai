@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { JOBS_MATCHES, JOBS_TRACKER, isJobsAiHome, jobPath, jobsForResume, movedJobsPath } from "./paths";
+import { JOBS_MATCHES, JOBS_OUTREACH, JOBS_TRACKER, isJobsAiHome, isOutreach, jobPath, jobsForResume, movedJobsPath, outreachPath } from "./paths";
 
 describe("Jobs AI's addresses", () => {
   it("opens a job under /jobs, its id kept safe in the address", () => {
@@ -12,10 +12,22 @@ describe("Jobs AI's addresses", () => {
     expect(jobsForResume("a&b")).toBe("/jobs/matches?resume=a%26b");
   });
 
+  it("opens Outreach for a job and a resume, each in the query and kept safe there", () => {
+    expect(outreachPath()).toBe("/jobs/outreach");
+    expect(outreachPath({ resume: "3f2a9c" })).toBe("/jobs/outreach?resume=3f2a9c");
+    expect(outreachPath({ job: "8c1d2e", resume: "3f2a9c" })).toBe("/jobs/outreach?job=8c1d2e&resume=3f2a9c");
+    expect(outreachPath({ job: "a&b", resume: null })).toBe("/jobs/outreach?job=a%26b");
+    expect(isOutreach(JOBS_OUTREACH)).toBe(true);
+    expect(isOutreach("/jobs/outreach/")).toBe(true);
+    expect(isOutreach(JOBS_MATCHES)).toBe(false);
+    expect(isOutreach("/jobs/outreachx")).toBe(false);
+  });
+
   it("knows the product home (where a signed-out visitor sees the product page), and nothing under it", () => {
     expect(isJobsAiHome("/jobs")).toBe(true);
     expect(isJobsAiHome("/jobs/")).toBe(true);
     expect(isJobsAiHome(JOBS_MATCHES)).toBe(false);
+    expect(isJobsAiHome(JOBS_OUTREACH)).toBe(false);
     expect(isJobsAiHome("/jobsearch")).toBe(false);
     expect(isJobsAiHome("/resume-ai/jobs")).toBe(false);
   });
