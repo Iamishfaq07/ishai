@@ -1,9 +1,12 @@
-import { Suspense, useEffect, useRef, useState } from "react";
-import { Link, NavLink, Outlet, useLocation, useNavigate, useNavigationType } from "react-router-dom";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { Link, Outlet, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import {
-  Briefcase,
+  AudioLines,
+  BookOpen,
   ChevronDown,
+  CircleQuestionMark,
   CreditCard,
+  Download,
   ErrorBoundary,
   FolderOpen,
   HistoryIcon,
@@ -11,50 +14,95 @@ import {
   LogOut,
   MOCK_INTERVIEW_ENABLED,
   OrbitWordmark,
+  Search,
   SettingsIcon,
-  Sparkles,
   Target,
+  UserRound,
   VerifyEmailBanner,
   ApprovalBanner,
   cx,
   focusRing,
+  isDialogOpen,
+  isMacPlatform,
   type LucideIcon,
 } from "@orbit/ui";
 import { api } from "../lib/api";
+import { isWindows } from "../lib/audio";
 import { useAuth } from "../lib/auth";
+import { DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
+import { isTypingTarget } from "../lib/palette";
+import { SHELL_EVENTS } from "../lib/shell";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { prefetchRoute } from "../routes";
 import { AnnouncementBanner } from "./AnnouncementBanner";
-import { AiPill } from "./products";
+import { Footer } from "./Footer";
+import { PRODUCTS, ProductTabs, type ProductId, type ProductSection } from "./products";
+import { Sheet } from "./Sheet";
 import { Spinner } from "./ui";
 
-// Daily destinations only, the same on the top bar and the phone tab bar. Settings sits beside the account menu (a
-// gear, and in the menu), and Plan & billing in the menu: nobody opens them daily, and six destinations fit a 360 px
-// phone and a 768 px tablet without wrapping. `ai`: Orbit's AI products, Resume AI and Jobs AI ("Resume" / "Jobs" and
-// the gradient AI pill).
-const NAV: Array<{ to: string; label: string; icon: LucideIcon; end?: boolean; ai?: boolean }> = [
-  { to: "/", label: "Home", icon: House, end: true },
-  ...(MOCK_INTERVIEW_ENABLED ? [{ to: "/mock", label: "Practice", icon: Target }] : []),
-  { to: "/sessions", label: "Sessions", icon: HistoryIcon },
-  { to: "/documents", label: "Documents", icon: FolderOpen },
-  { to: RESUME_AI_HOME, label: "Resume AI", icon: Sparkles, ai: true },
-  { to: JOBS_AI_HOME, label: "Jobs AI", icon: Briefcase, ai: true },
+// Their own chunks, downloaded the first time they open (or when the search button is hovered).
+const loadPalette = () => import("./CommandPalette");
+const CommandPalette = lazy(loadPalette);
+const HelpDialog = lazy(() => import("./HelpDialog"));
+
+/** The interview copilot's pages: Practice, Sessions, the Story bank, Documents and a new live session. */
+const INTERVIEW_PATH = /^\/(mock|sessions|documents|start)(\/|$)/;
+function isInterviewPath(pathname: string): boolean {
+  return INTERVIEW_PATH.test(pathname);
+}
+
+interface NavItem {
+  to: string;
+  label: string;
+  /** The phone tab bar's shorter label. */
+  short: string;
+  icon: LucideIcon;
+  product?: ProductId;
+  /** Which addresses the item is current on. */
+  current: (pathname: string) => boolean;
+}
+
+// One item per product, the same on the top bar and the phone tab bar (where "Me" is the fifth): "where am I" always
+// has one of four answers. The interview copilot's daily pages are tabs under "Interview"; Plan & credits, Settings and
+// Help are in the account menu ("Me" on phones). The addresses are the same as before, so nothing redirects.
+const NAV: NavItem[] = [
+  { to: "/", label: "Home", short: "Home", icon: House, current: (p) => p === "/" },
+  {
+    to: MOCK_INTERVIEW_ENABLED ? "/mock" : "/sessions",
+    label: "Interview",
+    short: "Interview",
+    icon: PRODUCTS.interview.icon,
+    product: "interview",
+    current: isInterviewPath,
+  },
+  {
+    to: RESUME_AI_HOME,
+    label: "Resume AI",
+    short: "Resume",
+    icon: PRODUCTS.resume.icon,
+    product: "resume",
+    current: (p) => p === RESUME_AI_HOME || p.startsWith(`${RESUME_AI_HOME}/`),
+  },
+  {
+    to: JOBS_AI_HOME,
+    label: "Jobs AI",
+    short: "Jobs",
+    icon: PRODUCTS.jobs.icon,
+    product: "jobs",
+    current: (p) => p === JOBS_AI_HOME || p.startsWith(`${JOBS_AI_HOME}/`),
+  },
 ];
 
-/** The phone tab bar's columns: one per destination (Tailwind needs the class names written out). */
-const PHONE_COLUMNS: Record<number, string> = { 4: "grid-cols-4", 5: "grid-cols-5", 6: "grid-cols-6" };
+/** The tabs between the interview copilot's pages (as Resume AI and Jobs AI have theirs). */
+const INTERVIEW_SECTIONS: ProductSection[] = [
+  ...(MOCK_INTERVIEW_ENABLED ? [{ to: "/mock", label: "Practice", icon: Target }] : []),
+  { to: "/sessions", label: "Sessions", icon: HistoryIcon },
+  { to: "/documents/stories", label: "Story bank", icon: BookOpen },
+  { to: "/documents", label: "Documents", icon: FolderOpen, end: true },
+];
 
-/** A nav label; Resume AI's is "Resume" with the AI pill, Jobs AI's "Jobs" (their links' aria-labels read the name). */
-function NavLabel({ label, ai, small = false }: { label: string; ai?: boolean; small?: boolean }) {
-  if (!ai) return <>{label}</>;
-  return (
-    <span className={cx("inline-flex items-center", small ? "gap-0.5" : "gap-1")}>
-      {label.replace(/\s*AI$/, "")}
-      <AiPill className={small ? "px-[2px] text-[0.5625rem] leading-[0.75rem]" : undefined} />
-    </span>
-  );
-}
+const ME_PATH = /^\/(billing|settings)(\/|$)/;
 
 function initials(name: string | null | undefined, email: string | undefined): string {
   const source = name?.trim() || email?.split("@")[0] || "?";
@@ -70,16 +118,58 @@ export function Layout() {
     api.authConfig().then((c) => setVerificationRequired(c.email_verification === "required")).catch(() => undefined);
   }, []);
   const location = useLocation();
+  const { pathname } = location;
   const navigate = useNavigate();
   const navigationType = useNavigationType();
   // A new page opens at its top; Back/Forward (POP) keeps the browser's own scroll position.
   useEffect(() => {
     if (navigationType !== "POP") window.scrollTo(0, 0);
-  }, [location.pathname, navigationType]);
-  const signOut = () => void logout().then(() => navigate("/login"));
+  }, [pathname, navigationType]);
+  const signOut = useCallback(() => void logout().then(() => navigate("/login")), [logout, navigate]);
+
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [meOpen, setMeOpen] = useState(false);
+  const openSearch = useCallback(() => setSearchOpen(true), []);
+  const openHelp = useCallback(() => {
+    setMeOpen(false);
+    setHelpOpen(true);
+  }, []);
+
+  // Ctrl+K (⌘K on a Mac) anywhere, "/" when not typing: search. Not over another dialog. The live page has its own
+  // shortcuts (Ctrl+K focuses its chat there) and isn't inside this layout.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || isDialogOpen()) return;
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      } else if (e.key === "/" && !mod && !e.altKey && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    const onHelp = () => setHelpOpen(true);
+    const onSearch = () => setSearchOpen(true);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener(SHELL_EVENTS.help, onHelp);
+    window.addEventListener(SHELL_EVENTS.search, onSearch);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener(SHELL_EVENTS.help, onHelp);
+      window.removeEventListener(SHELL_EVENTS.search, onSearch);
+    };
+  }, []);
+  // A page change closes the phone's "Me" sheet (its links navigate).
+  useEffect(() => setMeOpen(false), [pathname]);
+
+  const interview = isInterviewPath(pathname);
+  const meActive = ME_PATH.test(pathname);
+  const shortcut = isMacPlatform() ? "⌘K" : "Ctrl K";
 
   return (
-    <div className="min-h-full pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
+    <div className="flex min-h-full flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:text-sm dark:focus:bg-zinc-900"
@@ -88,76 +178,85 @@ export function Layout() {
       </a>
 
       <header className="sticky top-0 z-20 border-b border-zinc-200/70 bg-white/90 dark:border-white/5 dark:bg-zinc-950/85">
-        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6 lg:gap-6">
-          <NavLink to="/" className={cx("shrink-0 rounded-lg", focusRing)} aria-label="Orbit home">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6 lg:gap-6">
+          <Link to="/" className={cx("shrink-0 rounded-lg", focusRing)} aria-label="Orbit home">
             <OrbitWordmark size={26} />
-          </NavLink>
+          </Link>
 
-          {/* Narrow laptops and tablets (md): labels only, so six destinations fit beside Settings and the account menu. */}
           <nav aria-label="Main" className="hidden min-w-0 flex-1 items-center gap-0.5 md:flex lg:gap-1">
-            {NAV.map(({ to, label, icon: Icon, end, ai }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={end}
-                aria-label={ai ? label : undefined}
-                onMouseEnter={() => prefetchRoute(to)}
-                onFocus={() => prefetchRoute(to)}
-                className={({ isActive }) =>
-                  cx(
-                    "relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-2.5 py-2 text-sm font-medium transition-colors lg:px-3",
-                    isActive
+            {NAV.map(({ to, label, icon: Icon, product, current }) => {
+              const active = current(pathname);
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  aria-current={active ? "page" : undefined}
+                  onMouseEnter={() => prefetchRoute(to)}
+                  onFocus={() => prefetchRoute(to)}
+                  className={cx(
+                    "relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                    active
                       ? "bg-indigo-500/10 text-indigo-700 dark:bg-white/[0.07] dark:text-white"
                       : "text-zinc-600 hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
                     focusRing,
-                  )
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <Icon
-                      className={cx(
-                        "hidden h-4 w-4 lg:block",
-                        (isActive || ai) && "text-indigo-500 dark:text-indigo-300",
-                      )}
-                    />
-                    <NavLabel label={label} ai={ai} />
-                    {isActive && (
-                      <span className="absolute inset-x-3 -bottom-[13px] h-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-aurora-400" />
-                    )}
-                  </>
-                )}
-              </NavLink>
-            ))}
+                  )}
+                >
+                  <Icon className={cx("h-4 w-4", product ? PRODUCTS[product].text : active && "text-indigo-500 dark:text-indigo-300")} aria-hidden />
+                  {label}
+                  {active && (
+                    <span aria-hidden="true" className="absolute inset-x-3 -bottom-[13px] h-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-aurora-400" />
+                  )}
+                </Link>
+              );
+            })}
           </nav>
 
           <WaitingForAccess />
           <div className="ml-auto flex shrink-0 items-center gap-1 md:ml-0">
-            <NavLink
+            <button
+              type="button"
+              onClick={openSearch}
+              onMouseEnter={() => void loadPalette()}
+              onFocus={() => void loadPalette()}
+              aria-label={`Search (${shortcut})`}
+              aria-haspopup="dialog"
+              className={cx(
+                "flex h-10 w-10 items-center justify-center gap-2 rounded-full text-zinc-600 hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
+                "lg:w-auto lg:justify-start lg:border lg:border-zinc-200 lg:pl-3 lg:pr-2 lg:dark:border-white/10",
+                focusRing,
+              )}
+            >
+              <Search className="h-[18px] w-[18px]" aria-hidden />
+              <span className="hidden text-sm lg:inline">Search</span>
+              <kbd className="hidden rounded-md bg-zinc-500/10 px-1.5 py-0.5 font-sans text-xs text-zinc-600 lg:inline dark:text-zinc-400">{shortcut}</kbd>
+            </button>
+            <Link
               to="/settings"
               aria-label="Settings"
               title="Settings"
+              aria-current={pathname.startsWith("/settings") ? "page" : undefined}
               onMouseEnter={() => prefetchRoute("/settings")}
               onFocus={() => prefetchRoute("/settings")}
-              className={({ isActive }) =>
-                cx(
-                  "flex h-9 w-9 items-center justify-center rounded-full transition-colors",
-                  isActive
-                    ? "bg-indigo-500/10 text-indigo-600 dark:bg-white/[0.07] dark:text-white"
-                    : "text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
-                  focusRing,
-                )
-              }
+              className={cx(
+                "hidden h-10 w-10 items-center justify-center rounded-full transition-colors md:flex",
+                pathname.startsWith("/settings")
+                  ? "bg-indigo-500/10 text-indigo-600 dark:bg-white/[0.07] dark:text-white"
+                  : "text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
+                focusRing,
+              )}
             >
               <SettingsIcon className="h-[18px] w-[18px]" aria-hidden />
-            </NavLink>
-            <AccountMenu
-              name={user?.name ?? null}
-              email={user?.email ?? ""}
-              onSettings={() => navigate("/settings")}
-              onBilling={() => navigate("/billing")}
-              onSignOut={signOut}
-            />
+            </Link>
+            <div className="hidden md:block">
+              <AccountMenu
+                name={user?.name ?? null}
+                email={user?.email ?? ""}
+                onSettings={() => navigate("/settings")}
+                onBilling={() => navigate("/billing")}
+                onHelp={openHelp}
+                onSignOut={signOut}
+              />
+            </div>
           </div>
         </div>
       </header>
@@ -189,15 +288,41 @@ export function Layout() {
 
       <AnnouncementBanner className="sm:px-6" />
 
-      <main id="main" className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
-        {/* Keyed on the route so each page fades up in. */}
-        <div key={location.pathname} className="animate-fade-up">
+      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
+        {interview && (
+          <ProductTabs
+            label="Interview"
+            sections={INTERVIEW_SECTIONS}
+            action={
+              <Link
+                to="/start"
+                aria-current={pathname === "/start" ? "page" : undefined}
+                onMouseEnter={() => prefetchRoute("/start")}
+                onFocus={() => prefetchRoute("/start")}
+                className={cx(
+                  // TODO(ws-a): buttonClass("secondary") once the design layer exports it.
+                  "inline-flex min-h-10 items-center gap-2 rounded-xl border px-3.5 text-sm font-medium transition-colors",
+                  pathname === "/start"
+                    ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-700 dark:text-indigo-200"
+                    : "border-zinc-200 bg-white/90 text-zinc-900 hover:border-zinc-300 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:hover:bg-white/10",
+                  focusRing,
+                )}
+              >
+                <AudioLines className="h-4 w-4 text-indigo-600 dark:text-indigo-300" aria-hidden />
+                Start live session
+              </Link>
+            }
+          />
+        )}
+        {/* Keyed on the route so each page fades up in. TODO(ws-a): view transitions replace this once they ship. */}
+        <div key={pathname} className="animate-fade-up">
           {/* Inside the layout, and reset by that key on every navigation: a page that fails to load (its code gone
               after a deploy) or to render shows an error with Reload while the nav stays usable. */}
           <ErrorBoundary>
             {/* Inside the layout: the nav stays put while a page's code arrives. */}
             <Suspense
               fallback={
+                // TODO(ws-a): a page Skeleton here instead of the spinner.
                 <div className="flex min-h-[40vh] items-center justify-center">
                   <Spinner />
                 </div>
@@ -209,79 +334,206 @@ export function Layout() {
         </div>
       </main>
 
-      {/* Phones: a thumb-reach tab bar instead of a scrolling top nav. */}
+      <Footer variant="app" onHelp={openHelp} />
+
+      {/* Phones: a thumb-reach tab bar, one tab per product and "Me". */}
       <nav
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200/70 bg-white/95 pb-[env(safe-area-inset-bottom)] md:hidden dark:border-white/5 dark:bg-zinc-950/90"
       >
-        <ul className={cx("mx-auto grid max-w-lg", PHONE_COLUMNS[NAV.length])}>
-          {NAV.map(({ to, label, icon: Icon, end, ai }) => (
-            <li key={to} className="min-w-0">
-              <NavLink
-                to={to}
-                end={end}
-                aria-label={ai ? label : undefined}
-                onTouchStart={() => prefetchRoute(to)}
-                className={({ isActive }) =>
-                  cx(
-                    // 10px under 380 px: six labels ("Documents" the widest) fit a 360 px phone with room between them.
-                    "flex flex-col items-center gap-1 whitespace-nowrap px-0.5 pb-2 pt-2.5 text-[10px] font-medium min-[380px]:text-[11px]",
-                    isActive ? "text-indigo-600 dark:text-white" : "text-zinc-500 dark:text-zinc-400",
-                    focusRing,
-                  )
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <span
-                      className={cx(
-                        "flex h-7 w-12 items-center justify-center rounded-full transition-colors",
-                        isActive && "bg-gradient-to-r from-indigo-500/25 to-aurora-400/15",
-                      )}
-                    >
-                      <Icon className={cx("h-5 w-5", isActive ? "text-indigo-600 dark:text-indigo-200" : ai && "text-indigo-500 dark:text-indigo-300")} />
-                    </span>
-                    <NavLabel label={label} ai={ai} small />
-                  </>
-                )}
-              </NavLink>
-            </li>
-          ))}
+        <ul className="mx-auto grid max-w-lg grid-cols-5">
+          {NAV.map(({ to, label, short, icon: Icon, product, current }) => {
+            const active = current(pathname);
+            return (
+              <li key={to} className="min-w-0">
+                <Link
+                  to={to}
+                  aria-label={short !== label ? label : undefined}
+                  aria-current={active ? "page" : undefined}
+                  onTouchStart={() => prefetchRoute(to)}
+                  className={tabClass(active)}
+                >
+                  <TabIcon icon={Icon} active={active} className={product && !active ? PRODUCTS[product].text : undefined} />
+                  {short}
+                </Link>
+              </li>
+            );
+          })}
+          <li className="min-w-0">
+            <button
+              type="button"
+              onClick={() => setMeOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={meOpen}
+              aria-label="Me: plan, settings, help and sign out"
+              className={cx(tabClass(meActive || meOpen), "w-full")}
+            >
+              <TabIcon icon={UserRound} active={meActive || meOpen} />
+              Me
+            </button>
+          </li>
         </ul>
       </nav>
+
+      <Sheet open={meOpen} onClose={() => setMeOpen(false)} title={user?.name || "Your account"} titleId="me-title">
+        <MeMenu
+          email={user?.email ?? ""}
+          onNavigate={(to) => {
+            setMeOpen(false);
+            navigate(to);
+          }}
+          onHelp={openHelp}
+          onSignOut={signOut}
+        />
+      </Sheet>
+
+      {searchOpen && (
+        <Suspense fallback={null}>
+          <CommandPalette onClose={() => setSearchOpen(false)} onHelp={openHelp} onSignOut={signOut} />
+        </Suspense>
+      )}
+      {helpOpen && (
+        <Suspense fallback={null}>
+          <HelpDialog
+            open
+            onClose={() => setHelpOpen(false)}
+            onSearch={() => {
+              setHelpOpen(false);
+              setSearchOpen(true);
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
 
-/** Avatar button → account menu: who's signed in, settings, plan & billing, sign out. */
+/** A phone tab: 12 px labels (the smallest UI text); five of them fit a 360 px phone with room between. */
+function tabClass(active: boolean): string {
+  return cx(
+    "flex min-h-14 flex-col items-center justify-center gap-1 whitespace-nowrap px-0.5 pb-2 pt-2.5 text-xs font-medium",
+    active ? "text-indigo-700 dark:text-white" : "text-zinc-600 dark:text-zinc-400",
+    focusRing,
+  );
+}
+
+function TabIcon({ icon: Icon, active, className }: { icon: LucideIcon; active: boolean; className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cx("flex h-7 w-12 items-center justify-center rounded-full transition-colors", active && "bg-gradient-to-r from-indigo-500/25 to-aurora-400/15")}
+    >
+      <Icon className={cx("h-5 w-5", active ? "text-indigo-700 dark:text-indigo-200" : className)} />
+    </span>
+  );
+}
+
+/** The phone's "Me" tab: the account menu as a sheet, with big rows for thumbs. */
+function MeMenu({
+  email,
+  onNavigate,
+  onHelp,
+  onSignOut,
+}: {
+  email: string;
+  onNavigate: (to: string) => void;
+  onHelp: () => void;
+  onSignOut: () => void;
+}) {
+  const row = cx(
+    "flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-base text-zinc-800 hover:bg-zinc-900/5 dark:text-zinc-100 dark:hover:bg-white/5",
+    focusRing,
+  );
+  const icon = "h-5 w-5 text-zinc-500 dark:text-zinc-400";
+  return (
+    <div className="px-3 pb-4 pt-2">
+      <p className="truncate px-3 pb-2 text-sm text-zinc-600 dark:text-zinc-400">{email}</p>
+      <ul className="space-y-0.5">
+        <li>
+          <button type="button" className={row} onClick={() => onNavigate("/billing")}>
+            <CreditCard className={icon} aria-hidden /> Plan &amp; credits
+          </button>
+        </li>
+        <li>
+          <button type="button" className={row} onClick={() => onNavigate("/settings")}>
+            <SettingsIcon className={icon} aria-hidden /> Settings
+          </button>
+        </li>
+        <li>
+          <button type="button" className={row} onClick={onHelp}>
+            <CircleQuestionMark className={icon} aria-hidden /> Help
+          </button>
+        </li>
+        {isWindows() && (
+          <li>
+            <a href={DESKTOP_DOWNLOAD_URL} className={row}>
+              <Download className={icon} aria-hidden /> Get the Windows app
+            </a>
+          </li>
+        )}
+        <li className="pt-1">
+          <button type="button" className={row} onClick={onSignOut}>
+            <LogOut className={icon} aria-hidden /> Sign out
+          </button>
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+/** Avatar button → account menu: who's signed in, plan & credits, settings, help, the Windows app, sign out. */
 function AccountMenu({
   name,
   email,
   onSettings,
   onBilling,
+  onHelp,
   onSignOut,
 }: {
   name: string | null;
   email: string;
   onSettings: () => void;
   onBilling: () => void;
+  onHelp: () => void;
   onSignOut: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
       if (!ref.current?.contains(e.target as Node)) setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      buttonRef.current?.focus();
+    };
     document.addEventListener("pointerdown", onDown);
     document.addEventListener("keydown", onKey);
+    // Focus starts on the first item, so the arrow keys work straight away.
+    menuRef.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
     return () => {
       document.removeEventListener("pointerdown", onDown);
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
+  // Arrow keys move between the items, as in any menu; Tab leaves it.
+  const onMenuKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const items = [...(menuRef.current?.querySelectorAll<HTMLElement>("[role=menuitem]") ?? [])];
+    const i = items.indexOf(document.activeElement as HTMLElement);
+    const go = (n: number) => {
+      e.preventDefault();
+      items[(n + items.length) % items.length]?.focus();
+    };
+    if (e.key === "ArrowDown") go(i + 1);
+    else if (e.key === "ArrowUp") go(i - 1);
+    else if (e.key === "Home") go(0);
+    else if (e.key === "End") go(items.length - 1);
+    else if (e.key === "Tab") setOpen(false);
+  };
   const item = cx(
     "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-900/5 dark:text-zinc-200 dark:hover:bg-white/5",
     focusRing,
@@ -293,6 +545,7 @@ function AccountMenu({
   return (
     <div ref={ref} className="relative">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
@@ -303,28 +556,42 @@ function AccountMenu({
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-aurora-500 text-xs font-semibold text-white shadow-glow-sm">
           {initials(name, email)}
         </span>
-        <ChevronDown className={cx("h-4 w-4 text-zinc-500 transition-transform", open && "rotate-180")} />
+        <ChevronDown className={cx("h-4 w-4 text-zinc-500 transition-transform", open && "rotate-180")} aria-hidden />
       </button>
       {open && (
         <div
+          ref={menuRef}
           role="menu"
+          aria-label="Account"
+          onKeyDown={onMenuKey}
           className="glass-panel absolute right-0 top-full z-30 mt-2 w-64 animate-scale-in rounded-2xl p-1.5 shadow-xl"
         >
           <div className="px-3 py-2">
             {name && <p className="truncate text-sm font-medium">{name}</p>}
-            <p className="truncate text-xs text-zinc-500">{email}</p>
+            <p className="truncate text-xs text-zinc-600 dark:text-zinc-400">{email}</p>
           </div>
           <div className="my-1 h-px bg-zinc-200 dark:bg-white/10" />
+          <button type="button" role="menuitem" className={item} onClick={choose(onBilling)}>
+            <CreditCard className="h-4 w-4 text-zinc-500" aria-hidden />
+            Plan &amp; credits
+          </button>
           <button type="button" role="menuitem" className={item} onClick={choose(onSettings)}>
-            <SettingsIcon className="h-4 w-4 text-zinc-500" />
+            <SettingsIcon className="h-4 w-4 text-zinc-500" aria-hidden />
             Settings
           </button>
-          <button type="button" role="menuitem" className={item} onClick={choose(onBilling)}>
-            <CreditCard className="h-4 w-4 text-zinc-500" />
-            Plan &amp; billing
+          <button type="button" role="menuitem" className={item} onClick={choose(onHelp)}>
+            <CircleQuestionMark className="h-4 w-4 text-zinc-500" aria-hidden />
+            Help
           </button>
+          {isWindows() && (
+            <a role="menuitem" href={DESKTOP_DOWNLOAD_URL} className={item} onClick={() => setOpen(false)}>
+              <Download className="h-4 w-4 text-zinc-500" aria-hidden />
+              Get the Windows app
+            </a>
+          )}
+          <div className="my-1 h-px bg-zinc-200 dark:bg-white/10" />
           <button type="button" role="menuitem" className={item} onClick={choose(onSignOut)}>
-            <LogOut className="h-4 w-4 text-zinc-500" />
+            <LogOut className="h-4 w-4 text-zinc-500" aria-hidden />
             Sign out
           </button>
         </div>
