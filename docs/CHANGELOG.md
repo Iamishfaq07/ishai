@@ -1,5 +1,49 @@
 # Implementation log
 
+## Practice and Jobs AI depth: Interview Warm-up, one-tap mocks, honest matches, track any job (2026-10-07)
+
+Workstream C, phase 1 of the web roadmap (research/web-roadmap-2026-10-07.md, I1-I4 and J1-J4, J6).
+
+- **Interview Warm-up** (`pages/Warmup.tsx`, for a public `/warmup` route that App.tsx adds): free, no sign-in, no AI
+  and no minutes. Seven tracks (campus HR round, Tell me about yourself, software engineer, data analyst, customer
+  support / BPO, sales, MBA) with 145 questions (`lib/warmup/bank.ts`); five a round, the introduction first. Answer by
+  typing, or by voice where the browser has SpeechRecognition (Indian English; typing elsewhere), and get rule-based
+  tips at once (`lib/warmup/checks.ts`): spoken length, structure for the kind of question (STAR; now, before, next;
+  steps; assumptions; a real weakness; a reason tied to them; an example), numbers, fillers and hedges (Indian
+  English and Hinglish too), and "I" against "we", then a round summary. Typed answers never leave the page. Signed
+  out it ends on "Get an AI score and a mock interview: free account"; signed in, on a 5-minute HR mock.
+- **One-tap mocks on Practice** (`pages/Mock.tsx`, `pages/mockPresets.ts`): a 5-minute HR round (the campus HR
+  questions as a fixed drill), Tell me about yourself (long, with a follow-up, then the 30-second version), a 15-minute
+  technical round for the role in the Jobs AI profile, and Salary talk with a ₹ offer. The job post picked above
+  applies to all; the full form moves under "Customise". `?preset=`, `?role=` and `?jd=` link straight to one.
+- **India copy**: ₹ LPA examples instead of dollars in negotiation practice, the profile's role as the placeholder, a
+  5-minute length, and Prep says why "Generate my questions" can't be pressed yet.
+- **A weekly practice goal** (`lib/weeklyGoal.ts`, `WeeklyGoal` in Progress.tsx): "This week: 2 of 3", counting mock
+  interviews and warm-up answers, weeks in a row, and a freeze that covers one missed week. No reminders. With no
+  sessions yet, Progress shows it with "Do a 5-minute HR round" instead of nothing.
+- **An honest match**: no match % until there's a resume or skills to match against (`matchBasis`); until then the
+  feed is the newest jobs, newest first, with "Add your resume to see how you match" in its place. The match label is
+  12 px at -800 shades (AA in light mode).
+- **Trust and freshness, only where the data backs it**: "Early applicant" (under 48 h old by the earlier of the
+  post's date and when Orbit first saw it), "Direct from careers page" (company boards) and "Still open · checked 3h
+  ago" (company boards, checked within a day). The API now sends `first_seen_at` and `still_listed_at` (company
+  boards only: a board's refresh drops posts taken down; feeds and searches are never re-checked). A "Stay safe"
+  card on job pages and the tracker, and "Report this job" (email or WhatsApp to Orbit when `VITE_SUPPORT_EMAIL` /
+  `VITE_SUPPORT_WHATSAPP` are set, copy the details, cybercrime.gov.in and 1930). Nothing is stored.
+- **Track any job**: "Add a job you found elsewhere" on the tracker (`?add=1`). Paste a Naukri, LinkedIn or any link
+  (`POST /v1/jobs/tracker/link` reads the title, company and city from the address; nothing is fetched) or type it;
+  a company's own page can be read for its text and saved for Practice. `POST /v1/jobs/tracker/manual` saves it with
+  `listing_id = "ext:<hex>"` and `source = "manual"` (no migration), refuses the same job twice (409
+  `already_tracked`), tracks a link that's a post in the feed as that post, and allows 20 a burst, 60 an hour.
+- **Follow-ups** (`pages/jobs/FollowUps.tsx`, no required props, for Home): "Follow up with Razorpay: applied 7 days
+  ago" (write it in Outreach, or done for a week), "Interview with Bosch tomorrow" (practise now). Also on Jobs AI's
+  overview.
+- **Matches on a phone**: the filters in a bottom sheet ("Filters · 2"), Fresher and Internship chips (words the
+  search box understands), salary as a chip, and cards keep Apply and Save (the fit check and the rest are on the
+  job's page).
+- Tests: `tests/test_jobs_manual.py` (33), and vitest for the warm-up checks and bank, the presets, the weekly goal,
+  and the honest-match, badge and follow-up rules.
+
 ## Look and feel: Orbit scenes, page transitions, contrast and a light default (2026-10-07)
 
 Part two of the look and feel foundation, on top of the motion levels and feedback primitives below.

@@ -1440,6 +1440,10 @@ export interface JobListing {
   salary: string | null;
   match: JobMatch | null;
   tracked: { id: string; status: JobStatus } | null;
+  /** When Orbit first saw the post (a post without a date is dated when it's fetched). */
+  first_seen_at?: string;
+  /** When Orbit last found it on the company's own careers page; null for feeds and searches (never re-checked). */
+  still_listed_at?: string | null;
 }
 
 export interface JobFeed {
@@ -1504,6 +1508,8 @@ export interface JobTrackerEntry {
   document_id: string | null;
   /** The listing is still in the feed (posts are dropped after about 30 days). */
   live: boolean;
+  /** As JobListing's: when it was last seen on the company's own careers page. */
+  still_listed_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -1553,4 +1559,36 @@ export interface JobPrepareResponse {
   reused: boolean;
   note: string | null;
   tracker_id: string;
+}
+
+// ---- Jobs found elsewhere (Naukri, LinkedIn, a campus portal): tracked by hand, `listing_id` "ext:…" ----
+
+/** POST /v1/jobs/tracker/link: what a job's link says, read from its address alone (nothing is fetched). */
+export interface JobLinkInfo {
+  /** Tidied (no tracking parameters): what's saved. */
+  url: string;
+  /** "Naukri", "LinkedIn", or the site's host. */
+  site: string;
+  /** "" when the address doesn't say. Guesses from the address, for the user to check. */
+  title: string;
+  company: string;
+  location: string;
+  /** The same post is in Orbit's feed: it's tracked as that post. */
+  listing_id: string | null;
+  /** This link is already on the tracker. */
+  tracked: { id: string; status: JobStatus } | null;
+}
+
+/** POST /v1/jobs/tracker/manual: a link, or a company and title (typed values win over the link's). */
+export interface JobManualTrack {
+  url?: string;
+  company?: string;
+  title?: string;
+  location?: string;
+  status?: JobStatus;
+  applied_at?: string;
+  next_at?: string;
+  notes?: string;
+  /** The job post saved to Documents, for Practice. */
+  document_id?: string;
 }

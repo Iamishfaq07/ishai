@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import type { JobStatus, JobTrackerEntry, JobTrackerUpdate } from "@orbit/types";
 import {
   ArrowUpRight,
@@ -9,6 +9,7 @@ import {
   FileText,
   MapPin,
   PenLine,
+  Plus,
   Send,
   Sparkles,
   Target,
@@ -22,14 +23,42 @@ import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import type { AsyncState } from "../../lib/useAsync";
 import { resumePath } from "../resume/paths";
+import { AddJob } from "./AddJob";
 import { useJobsAi } from "./JobsAi";
 import { linkButton } from "./links";
-import { STATUSES, STATUS_LABEL, STATUS_TONE, byStatus, dateInput, fromDateInput, safeUrl, shortDate } from "./model";
+import {
+  STATUSES,
+  STATUS_LABEL,
+  STATUS_TONE,
+  byStatus,
+  dateInput,
+  fromDateInput,
+  isManual,
+  linkHost,
+  postedAgo,
+  practiceLink,
+  safeUrl,
+  shortDate,
+  stillOpenAt,
+} from "./model";
 import { JOBS_MATCHES, jobPath, outreachPath } from "./paths";
+import { SafetyCard } from "./SafetyCard";
 
-/** Jobs AI → Tracker: every job saved or applied to, and how far along each one is. */
+/**
+ * Jobs AI → Tracker: every job saved or applied to, and how far along each one is, including ones found elsewhere
+ * (Naukri, LinkedIn, a campus portal): "Add a job" (`?add=1` opens it, so Home's follow-ups can link straight here).
+ */
 export function JobTrackerPage() {
   const { tracker } = useJobsAi();
+  const [params, setParams] = useSearchParams();
+  const adding = params.get("add") === "1";
+  const setAdding = (on: boolean) => {
+    const next = new URLSearchParams(params);
+    if (on) next.set("add", "1");
+    else next.delete("add");
+    setParams(next, { replace: true });
+  };
+  const has = Boolean(tracker.data && tracker.data.length > 0);
   return (
     <>
       <PageHeader
@@ -37,14 +66,28 @@ export function JobTrackerPage() {
         title="Your applications"
         subtitle="Saved, applied, interviewing, offer. Move each job along as it goes, with notes and dates."
         actions={
-          tracker.data && tracker.data.length > 0 ? (
-            <Link to={JOBS_MATCHES} className={linkButton("secondary")}>
-              <Sparkles className="h-4 w-4" aria-hidden /> Find more jobs
-            </Link>
-          ) : undefined
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => setAdding(true)} aria-haspopup="dialog">
+              <Plus className="h-4 w-4" aria-hidden /> Add a job
+            </Button>
+            {has && (
+              <Link to={JOBS_MATCHES} className={linkButton("secondary")}>
+                <Sparkles className="h-4 w-4" aria-hidden /> Find more jobs
+              </Link>
+            )}
+          </div>
         }
       />
-      <JobTracker tracker={tracker} />
+      <JobTracker tracker={tracker} onAdd={() => setAdding(true)} />
+      <SafetyCard compact className="mt-6" />
+      <AddJob
+        open={adding}
+        onClose={() => setAdding(false)}
+        onAdded={(entry) => {
+          tracker.setData((prev) => [entry, ...(prev ?? []).filter((e) => e.id !== entry.id)]);
+          tracker.reload();
+        }}
+      />
     </>
   );
 }
@@ -53,7 +96,7 @@ export function JobTrackerPage() {
  * The job tracker: saved → applied → interviewing → offer / not this time, with notes and dates. A board of columns
  * on wide screens; on phones one list, filtered by status, each job with its own status menu.
  */
-export function JobTracker({ tracker }: { tracker: AsyncState<JobTrackerEntry[]> }) {
+export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerEntry[]>; onAdd?: () => void }) {
   const [filter, setFilter] = useState<JobStatus | "all">("all");
   const [error, setError] = useState<string | null>(null);
   const entries = tracker.data ?? [];
@@ -99,11 +142,18 @@ export function JobTracker({ tracker }: { tracker: AsyncState<JobTrackerEntry[]>
       <EmptyState
         icon={BookmarkCheck}
         title="Nothing tracked yet"
-        body="Save jobs from your matches, or say “Yes, I applied” after you apply. Then move each one along: applied, interviewing, offer."
+        body="Save jobs from your matches, or add one you applied to on Naukri, LinkedIn or a campus portal. Then move each one along: applied, interviewing, offer."
         action={
-          <Link to={JOBS_MATCHES} className={linkButton("primary")}>
-            <Sparkles className="h-4 w-4" aria-hidden /> See your matches
-          </Link>
+          <div className="flex flex-wrap justify-center gap-2">
+            {onAdd && (
+              <Button onClick={onAdd}>
+                <Plus className="h-4 w-4" aria-hidden /> Add a job you found elsewhere
+              </Button>
+            )}
+            <Link to={JOBS_MATCHES} className={linkButton(onAdd ? "secondary" : "primary")}>
+              <Sparkles className="h-4 w-4" aria-hidden /> See your matches
+            </Link>
+          </div>
         }
       />
     );
@@ -178,6 +228,8 @@ function TrackerCard({
   const [editing, setEditing] = useState(false);
   const original = safeUrl(entry.url);
   const apply = safeUrl(entry.apply_url);
+  const manual = isManual(entry);
+  const open = entry.live ? stillOpenAt(entry) : null;
   const dates = [
     entry.applied_at ? `Applied ${shortDate(entry.applied_at)}` : `Saved ${shortDate(entry.created_at)}`,
     entry.next_at ? `Next: ${shortDate(entry.next_at)}` : null,
@@ -216,7 +268,15 @@ function TrackerCard({
         {dates.join(" · ")}
       </p>
       {entry.notes && !editing && <p className="mt-1.5 line-clamp-3 whitespace-pre-line text-xs text-zinc-600 dark:text-zinc-300">{entry.notes}</p>}
-      {!entry.live && <p className="mt-1.5 text-xs text-zinc-400">This post is no longer listed in the feed.</p>}
+      {manual ? (
+        <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">Added by you{linkHost(entry.url) ? ` · ${linkHost(entry.url)}` : ""}</p>
+      ) : !entry.live ? (
+        <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">This post is no longer listed in the feed.</p>
+      ) : open ? (
+        <p className="mt-1.5 text-xs text-sky-800 dark:text-sky-300" title="Found on the company's own careers page at Orbit's last check">
+          Still open · checked {postedAgo(open).toLowerCase()}
+        </p>
+      ) : null}
 
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
         {entry.status === "saved" && apply && (
@@ -229,8 +289,8 @@ function TrackerCard({
             <FileText className="h-3 w-3" aria-hidden /> Tailored resume
           </Link>
         )}
-        {entry.document_id && (
-          <Link to={`/mock?jd=${encodeURIComponent(entry.document_id)}`} className={cx("inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
+        {(entry.document_id || entry.status === "interviewing") && (
+          <Link to={practiceLink(entry, jobPath)} className={cx("inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
             <Target className="h-3 w-3" aria-hidden /> Practise
           </Link>
         )}

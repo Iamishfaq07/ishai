@@ -7,6 +7,7 @@ import {
   Building2,
   Check,
   CircleAlert,
+  CircleCheck,
   Clock,
   FileText,
   MapPin,
@@ -18,7 +19,20 @@ import {
   focusRing,
 } from "@orbit/ui";
 import { Button, ErrorNote, Spinner } from "../../components/ui";
-import { STATUS_LABEL, VERDICT_TONE, factsLine, isNew, matchTone, postedAgo, safeUrl, sourceLine } from "./model";
+import { RESUME_AI_HOME } from "../resume/paths";
+import { linkButton, textLink } from "./links";
+import {
+  STATUS_LABEL,
+  VERDICT_TONE,
+  factsLine,
+  matchTone,
+  postedAgo,
+  postedTime,
+  safeUrl,
+  sourceLine,
+  trustBadges,
+  type TrustBadge,
+} from "./model";
 import { JOBS_TRACKER, jobPath } from "./paths";
 import { useJobActions, type FitState, type JobActions } from "./useJobActions";
 
@@ -28,13 +42,16 @@ interface Props {
   resumeId: string | null;
   /** The job's tracker state changed (saved, applied, removed). */
   onTracked: (jobId: string, tracked: JobListing["tracked"]) => void;
+  /** There's something to match against (model.ts `matchBasis`): without it, no match % or skills, only a nudge. */
+  showMatch?: boolean;
 }
 
 /**
  * One job in the feed: what it is, how well it matches, where it's from, and what Orbit can do with it. The title
- * opens the job's own page (everything about it, and the same actions).
+ * opens the job's own page (everything about it, and the same actions). On a phone the card keeps Apply and Save;
+ * the fit check, tailoring and prep are a tap away on the job's page.
  */
-export function JobCard({ job, resumeId, onTracked }: Props) {
+export function JobCard({ job, resumeId, onTracked, showMatch = true }: Props) {
   const actions = useJobActions(job, resumeId, onTracked);
   return (
     <article className="glass-panel rounded-2xl p-4 sm:p-5" aria-labelledby={`job-${job.id}`}>
@@ -48,23 +65,38 @@ export function JobCard({ job, resumeId, onTracked }: Props) {
           <JobPlace job={job} className="mt-1" />
           <JobWhen job={job} className="mt-1" />
         </div>
-        {job.match && <MatchBadge match={job.match} />}
+        {showMatch && job.match && <MatchBadge match={job.match} />}
       </div>
+
+      <TrustBadges job={job} className="mt-2.5" />
 
       {job.snippet && <p className="mt-3 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-300">{job.snippet}</p>}
 
-      {job.match && <SkillsMatch match={job.match} className="mt-3" />}
+      {showMatch ? job.match && <SkillsMatch match={job.match} className="mt-3" /> : <NoMatchNote className="mt-3" />}
 
-      <SourceCredit job={job} className="mt-3" />
+      {/* A company's own post says so in its badge; a feed's post keeps the credit its terms ask for. */}
+      {!job.direct && <SourceCredit job={job} className="mt-3" />}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <ApplyLink job={job} actions={actions} />
         <TrackButton actions={actions} />
-        <Button variant="secondary" size="sm" disabled={actions.fit.loading} aria-expanded={actions.fit.open} onClick={actions.checkFit}>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={actions.fit.loading}
+          aria-expanded={actions.fit.open}
+          onClick={actions.checkFit}
+          className="hidden sm:inline-flex"
+        >
           <Sparkles className="h-4 w-4" aria-hidden /> {actions.fit.result && actions.fit.open ? "Hide fit check" : "Check my fit"}
         </Button>
-        <TailorButton actions={actions} />
-        <PrepareButton actions={actions} />
+        <span className="hidden sm:contents">
+          <TailorButton actions={actions} />
+          <PrepareButton actions={actions} />
+        </span>
+        <Link to={jobPath(job.id)} className={cx(linkButton("ghost", "sm"), "ml-auto sm:hidden")}>
+          Fit check & more <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+        </Link>
       </div>
 
       <ActionNotes actions={actions} />
@@ -91,22 +123,70 @@ export function JobPlace({ job, className }: { job: JobListing; className?: stri
   );
 }
 
-/** "3h ago · New · Full-time · 3-5 years · ₹24L – ₹36L a year" (`facts` false: when it was posted only). */
+/**
+ * "3h ago · Full-time · 3-5 years", then the salary when the post gives one (`facts` false: when it was posted only).
+ * "Posted" is the earlier of the post's own date and when Orbit first saw it (model.ts `postedTime`).
+ */
 export function JobWhen({ job, className, facts = true }: { job: JobListing; className?: string; facts?: boolean }) {
-  const line = facts ? factsLine(job) : "";
+  const line = facts ? factsLine({ ...job, salary: null }) : "";
+  const posted = postedTime(job);
   return (
     <p className={cx("flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400", className)}>
       <span className="inline-flex items-center gap-1">
         <Clock className="h-3 w-3" aria-hidden />
-        <time dateTime={job.posted_at}>{postedAgo(job.posted_at)}</time>
+        <time dateTime={posted}>{postedAgo(posted)}</time>
       </span>
-      {isNew(job.posted_at) && <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 font-medium text-emerald-700 dark:text-emerald-300">New</span>}
       {line && (
         <>
           <span aria-hidden>·</span>
           <span>{line}</span>
         </>
       )}
+      {facts && job.salary && (
+        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-800 dark:text-emerald-200">{job.salary}</span>
+      )}
+    </p>
+  );
+}
+
+const BADGE_TONE: Record<TrustBadge["id"], string> = {
+  early: "bg-emerald-500/10 text-emerald-800 ring-emerald-500/25 dark:text-emerald-200",
+  direct: "bg-indigo-500/10 text-indigo-800 ring-indigo-500/25 dark:text-indigo-200",
+  open: "bg-sky-500/10 text-sky-800 ring-sky-500/25 dark:text-sky-200",
+};
+const BADGE_ICON: Record<TrustBadge["id"], typeof Clock> = { early: Clock, direct: Building2, open: CircleCheck };
+
+/**
+ * "Early applicant", "Direct from careers page", "Still open · checked 3h ago": only the ones the data backs
+ * (model.ts `trustBadges`). `only` keeps some of them (a compact row).
+ */
+export function TrustBadges({ job, only, className }: { job: JobListing; only?: TrustBadge["id"][]; className?: string }) {
+  const badges = trustBadges(job).filter((b) => !only || only.includes(b.id));
+  if (!badges.length) return null;
+  return (
+    <ul className={cx("flex flex-wrap gap-1.5", className)} aria-label="About this post">
+      {badges.map((b) => {
+        const Icon = BADGE_ICON[b.id];
+        return (
+          <li key={b.id} title={b.detail} className={cx("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1", BADGE_TONE[b.id])}>
+            <Icon className="h-3 w-3 shrink-0" aria-hidden />
+            {b.label}
+            <span className="sr-only">: {b.detail}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** In place of a match % when there's nothing to match against yet. */
+export function NoMatchNote({ className }: { className?: string }) {
+  return (
+    <p className={cx("text-xs text-zinc-600 dark:text-zinc-400", className)}>
+      <Link to={RESUME_AI_HOME} className={textLink}>
+        Add your resume
+      </Link>{" "}
+      to see how you match.
     </p>
   );
 }
@@ -124,7 +204,8 @@ export function MatchBadge({ match, big = false }: { match: JobMatch; big?: bool
       title="How well this job matches your profile and resume"
     >
       <span className={cx("font-display font-semibold leading-none tabular-nums", big ? "text-2xl" : "text-lg")}>{match.score}%</span>
-      <span className={cx("leading-none opacity-80", big ? "mt-0.5 text-xs" : "text-[0.625rem]")}>match</span>
+      {/* 12 px and no opacity: small text stays at AA contrast on the tinted badge (axe, light theme). */}
+      <span className={cx("text-xs leading-none", big && "mt-0.5")}>match</span>
     </span>
   );
 }
