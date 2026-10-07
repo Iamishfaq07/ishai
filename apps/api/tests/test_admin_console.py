@@ -330,7 +330,8 @@ def test_a_suspended_account_cant_sign_in_or_use_the_api_and_is_told_why(console
     assert uid in [u["id"] for u in listed]
     # Unsuspended: the old password works again.
     assert client.post(f"/v1/admin/users/{uid}/unsuspend", headers=admin).json()["suspended_at"] is None
-    assert client.post(f"/v1/admin/users/{uid}/unsuspend", headers=admin).status_code == 409
+    again = client.post(f"/v1/admin/users/{uid}/unsuspend", headers=admin)  # already active: nothing changes
+    assert again.status_code == 200 and again.json()["suspended_at"] is None
     assert _login(client, user["email"]).status_code == 200
     events = [e["action"] for e in client.get(f"/v1/admin/users/{uid}", headers=admin).json()["events"]]
     assert "auth.login_suspended" in events

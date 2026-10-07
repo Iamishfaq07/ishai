@@ -404,15 +404,15 @@ def test_someone_elses_object_looks_exactly_like_a_missing_one(world: World, met
 # ---- every non-public route needs a session ------------------------------------------------------------------------
 
 # Reachable without signing in, on purpose: health probes, sign-in/up and the emailed-link endpoints, the public price
-# lists, Jobs AI's public numbers (counts only), the desktop updater, and the phone companion's redeem (the 256-bit
-# share code is the credential).
+# lists, Jobs AI's public numbers (counts only), the site-wide announcement banner, the desktop updater, and the phone
+# companion's redeem (the 256-bit share code is the credential).
 PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("GET", "/health"), ("GET", "/ready"),
     ("GET", "/v1/auth/config"), ("POST", "/v1/auth/register"), ("POST", "/v1/auth/login"),
     ("POST", "/v1/auth/logout"), ("POST", "/v1/auth/verify-email/confirm"),
     ("POST", "/v1/auth/password-reset/request"), ("POST", "/v1/auth/password-reset/confirm"),
     ("POST", "/v1/auth/email-change/confirm"),
-    ("GET", "/v1/plans"), ("GET", "/v1/billing/packs"), ("GET", "/v1/jobs/stats"),
+    ("GET", "/v1/plans"), ("GET", "/v1/billing/packs"), ("GET", "/v1/jobs/stats"), ("GET", "/v1/announcement"),
     ("GET", "/v1/desktop/update/{target}/{arch}/{current_version}"),
     ("GET", "/v1/desktop/download/{version}/{filename}"),
     ("POST", "/v1/companion/redeem"), ("POST", "/v1/companion/{code}"),
@@ -493,6 +493,20 @@ ADMIN_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("POST", "/v1/admin/users/{target}/access", {"json": {"action": "grant", "plan": "unlimited", "hours": 2}}),
     ("POST", "/v1/admin/users/{target}/access", {"json": {"action": "approve"}}),
     ("POST", "/v1/admin/users/{target}/credits", {"json": {"resume": 5, "interview_minutes": 30}}),
+    ("GET", "/v1/admin/users/{target}", {}),
+    ("PATCH", "/v1/admin/users/{target}", {"json": {"name": "Mallory", "admin_note": "idor"}}),
+    ("POST", "/v1/admin/users/{target}/credits/remove", {"json": {"all_resume": True, "reason": "idor check"}}),
+    ("POST", "/v1/admin/users/bulk-credits", {"json": {"user_ids": ["{target}"], "resume": 5}}),
+    ("POST", "/v1/admin/users/{target}/sign-out", {}),
+    ("POST", "/v1/admin/users/{target}/password-reset", {}),
+    ("POST", "/v1/admin/users/{target}/suspend", {"json": {"reason": "idor check"}}),
+    ("POST", "/v1/admin/users/{target}/unsuspend", {}),
+    ("DELETE", "/v1/admin/users/{target}", {"json": {"confirm_email": "{target_email}"}}),
+    ("GET", "/v1/admin/users/export", {}),
+    ("GET", "/v1/admin/users/export?only=paid&q=idor", {}),
+    ("GET", "/v1/admin/audit", {}),
+    ("GET", "/v1/admin/audit?scope=all&user_id={target}", {}),
+    ("GET", "/v1/admin/stats", {}),
     ("GET", "/v1/admin/payments", {}),
     ("GET", "/v1/admin/payments?only=all", {}),
     ("POST", "/v1/admin/payments/{target_order}", {"json": {"action": "approve"}}),
@@ -510,7 +524,8 @@ def test_admin_route_inventory_is_complete() -> None:
 
 @pytest.mark.parametrize(("method", "path", "kw"), ADMIN_ROUTES, ids=ADMIN_IDS)
 def test_admin_routes_refuse_a_normal_user(world: World, method: str, path: str, kw: dict[str, Any]) -> None:
-    ids = {**world.ids, "target": world.ids["a_id"], "target_order": world.ids["order"]}
+    ids = {**world.ids, "target": world.ids["a_id"], "target_email": world.ids["a_email"],
+           "target_order": world.ids["order"]}
     before = _owner_view(world)
     world.client.cookies.clear()
     r = world.client.request(method, _fill(path, ids), headers=world.b, **_fill(kw, ids))
@@ -521,7 +536,8 @@ def test_admin_routes_refuse_a_normal_user(world: World, method: str, path: str,
 
 @pytest.mark.parametrize(("method", "path", "kw"), ADMIN_ROUTES, ids=ADMIN_IDS)
 def test_admin_routes_refuse_anonymous_callers(world: World, method: str, path: str, kw: dict[str, Any]) -> None:
-    ids = {**world.ids, "target": world.ids["a_id"], "target_order": world.ids["order"]}
+    ids = {**world.ids, "target": world.ids["a_id"], "target_email": world.ids["a_email"],
+           "target_order": world.ids["order"]}
     world.client.cookies.clear()
     assert world.client.request(method, _fill(path, ids), **_fill(kw, ids)).status_code == 401
 
@@ -534,10 +550,10 @@ def test_admin_routes_work_for_the_admin(world: World, method: str, path: str, k
     order = _created(c.post("/v1/billing/upi/orders", headers=h, json={"pack": "starter"}))
     assert c.post(f"/v1/billing/upi/orders/{order}/utr", headers=h,
                   json={"utr": f"{uuid.uuid4().int % 10**12:012d}"}).status_code == 200
-    ids = {"target": user["id"], "target_order": order}
+    ids = {"target": user["id"], "target_email": user["email"], "target_order": order}
     c.cookies.clear()
     r = c.request(method, _fill(path, ids), headers=world.admin, **_fill(kw, ids))
-    assert r.status_code == 200, r.text
+    assert r.status_code in (200, 202, 204), r.text  # 202: an email on its way · 204: deleted
 
 
 def test_admin_status_says_who_is_admin_without_a_403(world: World) -> None:

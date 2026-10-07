@@ -527,9 +527,10 @@ async def suspend_user(user_id: str, body: SuspendIn, background: BackgroundTask
 @router.post("/users/{user_id}/unsuspend", response_model=AdminUser)
 async def unsuspend_user(user_id: str, background: BackgroundTasks, admin: Annotated[User, Depends(require_admin)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> AdminUser:
+    """Signing in works again (the password is unchanged). An account that isn't suspended is left as it is."""
     u = await _account(db, user_id)
     if u.suspended_at is None:
-        raise HTTPException(status.HTTP_409_CONFLICT, "That account isn't suspended.")
+        return (await admin_rows(db, [u]))[0]
     u.suspended_at, u.suspended_reason = None, None
     db.add(AuditLog(user_id=admin.id, action="admin.user.unsuspend", target=u.id))
     await db.commit()
