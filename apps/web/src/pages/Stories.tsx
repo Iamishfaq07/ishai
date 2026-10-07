@@ -2,9 +2,9 @@ import { useRef, useState, type FormEvent } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { STORY_COMPETENCIES, type Story, type StoryCompetency, type StoryInput } from "@orbit/types";
 import {
+  ArrowRight,
   BookOpen,
   Check,
-  FileText,
   FolderOpen,
   PenLine,
   Plus,
@@ -19,8 +19,12 @@ import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Spinner,
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
+import { RESUME_AI_HOME } from "./resume/paths";
 
-/** Documents and Story bank are one "your materials" area: both feed every session. */
+/**
+ * Documents and Story bank are one "your materials" area: both feed every session. Making a resume is Resume AI's
+ * (it used to be a tab here), so there's a pointer to it.
+ */
 export function LibraryTabs() {
   const tab = ({ isActive }: { isActive: boolean }) =>
     cx(
@@ -31,17 +35,24 @@ export function LibraryTabs() {
       focusRing,
     );
   return (
-    <nav aria-label="Your materials" className="mb-6 inline-flex gap-1 rounded-xl bg-zinc-500/10 p-1">
-      <NavLink to="/documents" end className={tab}>
-        <FolderOpen className="hidden h-4 w-4 sm:block" aria-hidden="true" /> Documents
-      </NavLink>
-      <NavLink to="/documents/stories" className={tab}>
-        <BookOpen className="hidden h-4 w-4 sm:block" aria-hidden="true" /> Story bank
-      </NavLink>
-      <NavLink to="/documents/resumes" className={tab}>
-        <FileText className="hidden h-4 w-4 sm:block" aria-hidden="true" /> Resume maker
-      </NavLink>
-    </nav>
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+      <nav aria-label="Your materials" className="inline-flex gap-1 rounded-xl bg-zinc-500/10 p-1">
+        <NavLink to="/documents" end className={tab}>
+          <FolderOpen className="hidden h-4 w-4 sm:block" aria-hidden="true" /> Documents
+        </NavLink>
+        <NavLink to="/documents/stories" className={tab}>
+          <BookOpen className="hidden h-4 w-4 sm:block" aria-hidden="true" /> Story bank
+        </NavLink>
+      </nav>
+      <Link
+        to={RESUME_AI_HOME}
+        className={cx("group inline-flex items-center gap-1.5 rounded-lg text-sm font-medium text-indigo-600 dark:text-indigo-300", focusRing)}
+      >
+        <Sparkles className="h-4 w-4" aria-hidden="true" />
+        <span className="group-hover:underline">Build or improve your resume in Resume AI</span>
+        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+      </Link>
+    </div>
   );
 }
 

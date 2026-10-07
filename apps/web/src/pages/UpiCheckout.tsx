@@ -73,7 +73,7 @@ export function UpiCheckout({ order: initial, onClose, onChanged }: { order: Upi
             {order.label} · ₹{order.amount_inr.toLocaleString("en-IN")}
           </h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            {[order.interview_minutes ? `${order.interview_minutes} interview minutes` : "", order.resume_credits ? `${order.resume_credits} resume AI credits` : ""]
+            {[order.interview_minutes ? `${order.interview_minutes} interview minutes` : "", order.resume_credits ? `${order.resume_credits} Resume AI credits` : ""]
               .filter(Boolean)
               .join(" + ")}
             , never expire. Pay with any UPI app: Google Pay, PhonePe, Paytm, BHIM or your bank's app.

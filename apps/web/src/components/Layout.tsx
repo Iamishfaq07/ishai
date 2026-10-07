@@ -11,6 +11,7 @@ import {
   MOCK_INTERVIEW_ENABLED,
   OrbitWordmark,
   SettingsIcon,
+  Sparkles,
   Target,
   VerifyEmailBanner,
   ApprovalBanner,
@@ -20,17 +21,35 @@ import {
 } from "@orbit/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { RESUME_AI_HOME } from "../pages/resume/paths";
+import { AiPill } from "../pages/resume/product";
 import { prefetchRoute } from "../routes";
 import { Spinner } from "./ui";
 
 // Daily destinations only. Plan & billing lives in the account menu (and Settings): nobody checks it daily.
-const NAV: Array<{ to: string; label: string; icon: LucideIcon; end?: boolean }> = [
+// `ai`: Orbit Resume AI, the second product, marked as the AI one ("Resume" and the gradient AI pill).
+const NAV: Array<{ to: string; label: string; icon: LucideIcon; end?: boolean; ai?: boolean }> = [
   { to: "/", label: "Home", icon: House, end: true },
   ...(MOCK_INTERVIEW_ENABLED ? [{ to: "/mock", label: "Practice", icon: Target }] : []),
   { to: "/sessions", label: "Sessions", icon: HistoryIcon },
   { to: "/documents", label: "Documents", icon: FolderOpen },
+  { to: RESUME_AI_HOME, label: "Resume AI", icon: Sparkles, ai: true },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ];
+
+/** The phone tab bar's columns: one per destination (Tailwind needs the class names written out). */
+const PHONE_COLUMNS: Record<number, string> = { 4: "grid-cols-4", 5: "grid-cols-5", 6: "grid-cols-6" };
+
+/** A nav label; Resume AI's is "Resume" with the AI pill (its link's aria-label still reads "Resume AI"). */
+function NavLabel({ label, ai, small = false }: { label: string; ai?: boolean; small?: boolean }) {
+  if (!ai) return <>{label}</>;
+  return (
+    <span className={cx("inline-flex items-center", small ? "gap-0.5" : "gap-1")}>
+      {label.replace(/\s*AI$/, "")}
+      <AiPill className={small ? "px-[2px] text-[0.5625rem] leading-[0.75rem]" : undefined} />
+    </span>
+  );
+}
 
 function initials(name: string | null | undefined, email: string | undefined): string {
   const source = name?.trim() || email?.split("@")[0] || "?";
@@ -64,22 +83,24 @@ export function Layout() {
       </a>
 
       <header className="sticky top-0 z-20 border-b border-zinc-200/70 bg-white/90 dark:border-white/5 dark:bg-zinc-950/85">
-        <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3 sm:px-6">
-          <NavLink to="/" className={cx("rounded-lg", focusRing)} aria-label="Orbit home">
+        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6 lg:gap-6">
+          <NavLink to="/" className={cx("shrink-0 rounded-lg", focusRing)} aria-label="Orbit home">
             <OrbitWordmark size={26} />
           </NavLink>
 
-          <nav aria-label="Main" className="hidden flex-1 items-center gap-1 md:flex">
-            {NAV.map(({ to, label, icon: Icon, end }) => (
+          {/* Narrow laptops and tablets (md): labels only, so six destinations fit beside the account menu. */}
+          <nav aria-label="Main" className="hidden min-w-0 flex-1 items-center gap-0.5 md:flex lg:gap-1">
+            {NAV.map(({ to, label, icon: Icon, end, ai }) => (
               <NavLink
                 key={to}
                 to={to}
                 end={end}
+                aria-label={ai ? label : undefined}
                 onMouseEnter={() => prefetchRoute(to)}
                 onFocus={() => prefetchRoute(to)}
                 className={({ isActive }) =>
                   cx(
-                    "relative flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                    "relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-2.5 py-2 text-sm font-medium transition-colors lg:px-3",
                     isActive
                       ? "bg-indigo-500/10 text-indigo-700 dark:bg-white/[0.07] dark:text-white"
                       : "text-zinc-600 hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
@@ -89,8 +110,13 @@ export function Layout() {
               >
                 {({ isActive }) => (
                   <>
-                    <Icon className={cx("h-4 w-4", isActive && "text-indigo-500 dark:text-indigo-300")} />
-                    {label}
+                    <Icon
+                      className={cx(
+                        "hidden h-4 w-4 lg:block",
+                        (isActive || ai) && "text-indigo-500 dark:text-indigo-300",
+                      )}
+                    />
+                    <NavLabel label={label} ai={ai} />
                     {isActive && (
                       <span className="absolute inset-x-3 -bottom-[13px] h-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-aurora-400" />
                     )}
@@ -160,16 +186,17 @@ export function Layout() {
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200/70 bg-white/95 pb-[env(safe-area-inset-bottom)] md:hidden dark:border-white/5 dark:bg-zinc-950/90"
       >
-        <ul className="mx-auto grid max-w-md grid-cols-5">
-          {NAV.map(({ to, label, icon: Icon, end }) => (
-            <li key={to}>
+        <ul className={cx("mx-auto grid max-w-lg", PHONE_COLUMNS[NAV.length])}>
+          {NAV.map(({ to, label, icon: Icon, end, ai }) => (
+            <li key={to} className="min-w-0">
               <NavLink
                 to={to}
                 end={end}
+                aria-label={ai ? label : undefined}
                 onTouchStart={() => prefetchRoute(to)}
                 className={({ isActive }) =>
                   cx(
-                    "flex flex-col items-center gap-1 px-1 pb-2 pt-2.5 text-[11px] font-medium",
+                    "flex flex-col items-center gap-1 whitespace-nowrap px-0.5 pb-2 pt-2.5 text-[11px] font-medium",
                     isActive ? "text-indigo-600 dark:text-white" : "text-zinc-500 dark:text-zinc-400",
                     focusRing,
                   )
@@ -183,9 +210,9 @@ export function Layout() {
                         isActive && "bg-gradient-to-r from-indigo-500/25 to-aurora-400/15",
                       )}
                     >
-                      <Icon className={cx("h-5 w-5", isActive && "text-indigo-600 dark:text-indigo-200")} />
+                      <Icon className={cx("h-5 w-5", isActive ? "text-indigo-600 dark:text-indigo-200" : ai && "text-indigo-500 dark:text-indigo-300")} />
                     </span>
-                    {label}
+                    <NavLabel label={label} ai={ai} small />
                   </>
                 )}
               </NavLink>

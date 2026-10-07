@@ -40,6 +40,7 @@ import { useBackend } from "./backend";
 import { FixActions, FixResult, fixKind } from "./FixPanel";
 import { InterviewPrep, usePrepState } from "./InterviewPrep";
 import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, suggestedSkills } from "./model";
+import { RESUME_AI_HOME } from "./paths";
 import { ProfileKitPanel } from "./ProfileKit";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
@@ -461,7 +462,7 @@ function ResumeEditor() {
     <AllowanceContext.Provider value={allowance}>
     <div className="animate-fade-up">
       <div className="mb-5 flex flex-wrap items-center gap-3">
-        <Link to="/documents/resumes" aria-label="All resumes" className={cx("rounded-lg p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white", focusRing)}>
+        <Link to={RESUME_AI_HOME} aria-label="All resumes" className={cx("rounded-lg p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white", focusRing)}>
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <Input
