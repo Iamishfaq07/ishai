@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import type { OrbitSession, SessionType } from "@orbit/types";
 import {
   ArrowRight,
+  AudioLines,
   Briefcase,
   Check,
   ChevronDown,
@@ -125,7 +126,8 @@ export function HomePage() {
           Your tools
         </h2>
         <div className="glass-panel divide-y divide-zinc-200/70 overflow-hidden rounded-2xl dark:divide-white/5">
-          <InterviewRow sessions={sessions.data} />
+          <CopilotRow sessions={sessions.data} />
+          {MOCK_INTERVIEW_ENABLED && <PracticeRow sessions={sessions.data} />}
           <ResumeRow />
           <JobsRow />
         </div>
@@ -389,25 +391,34 @@ function ProductRow({ product, status, children }: { product: ProductId; status:
   );
 }
 
-function InterviewRow({ sessions }: { sessions: OrbitSession[] | null }) {
-  const ended = (sessions ?? []).filter((s) => s.status === "ended");
+/** "3 sessions, the last on 7 Oct", or null before the first one ended. */
+function sessionsLine(ended: OrbitSession[], noun: string): string | null {
   const last = ended[0];
+  return last
+    ? `${ended.length} ${noun}${ended.length === 1 ? "" : "s"}, the last on ${formatDate(last.started_at ?? last.created_at)}`
+    : null;
+}
+
+function CopilotRow({ sessions }: { sessions: OrbitSession[] | null }) {
+  const live = (sessions ?? []).filter((s) => s.status === "ended" && s.type !== "mock");
   return (
-    <ProductRow
-      product="interview"
-      status={
-        last
-          ? `${ended.length} ${ended.length === 1 ? "session" : "sessions"}, the last on ${formatDate(last.started_at ?? last.created_at)}`
-          : "Practise out loud with an AI interviewer, or get help during a live call."
-      }
-    >
-      {MOCK_INTERVIEW_ENABLED && (
-        <Link to="/mock" className={secondaryLink}>
-          <Target className="h-4 w-4 text-indigo-600 dark:text-indigo-300" aria-hidden /> Practise
-        </Link>
-      )}
+    <ProductRow product="interview" status={sessionsLine(live, "live session") ?? "Help during a real interview or call: it listens and suggests what to say."}>
       <Link to="/start" className={secondaryLink}>
-        Start live session
+        <AudioLines className={cx("h-4 w-4", PRODUCTS.interview.text)} aria-hidden /> Start live session
+      </Link>
+    </ProductRow>
+  );
+}
+
+function PracticeRow({ sessions }: { sessions: OrbitSession[] | null }) {
+  const mocks = (sessions ?? []).filter((s) => s.status === "ended" && s.type === "mock");
+  return (
+    <ProductRow product="practice" status={sessionsLine(mocks, "mock interview") ?? "Practise out loud with an AI interviewer, then see your score and what to redo."}>
+      <Link to="/mock" className={secondaryLink}>
+        <Target className={cx("h-4 w-4", PRODUCTS.practice.text)} aria-hidden /> Practise
+      </Link>
+      <Link to="/documents/stories" className={secondaryLink}>
+        Story bank
       </Link>
     </ProductRow>
   );

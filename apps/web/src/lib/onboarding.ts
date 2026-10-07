@@ -11,7 +11,9 @@ import type { PresetId } from "../pages/mockPresets";
 export type Goal = "interview" | "resume" | "jobs";
 export type Experience = "fresher" | "early" | "experienced";
 /** Each product's colour and mark (components/products.tsx). */
-export type ProductId = "interview" | "resume" | "jobs";
+/** The products the nav shows: the interview copilot (live help), Practice (mock interviews and the story bank),
+ *  Resume AI and Jobs AI. The welcome question's goals stay three: "interview" covers practising and live help. */
+export type ProductId = "interview" | "practice" | "resume" | "jobs";
 
 export interface WelcomeAnswers {
   goal: Goal | null;
@@ -192,7 +194,7 @@ function catalogue(answers: WelcomeAnswers | null, facts: HomeFacts, now: Date):
   if (soon) {
     steps.push({
       id: "interview-soon",
-      product: "interview",
+      product: "practice",
       title: `Practise for your ${soon.company} interview`,
       body: `It's ${whenLabel(soon.next_at as string, now)}. A mock interview on their job post shows what to work on.`,
       cta: "Practise now",
@@ -202,7 +204,7 @@ function catalogue(answers: WelcomeAnswers | null, facts: HomeFacts, now: Date):
   }
   steps.push({
     id: "warmup",
-    product: "interview",
+    product: "practice",
     title: "Answer one practice question",
     body: "Type or say your answer and see what to improve. It's free and doesn't use your interview minutes.",
     cta: "Try a question",
@@ -233,7 +235,7 @@ function catalogue(answers: WelcomeAnswers | null, facts: HomeFacts, now: Date):
   }
   steps.push({
     id: "practice",
-    product: "interview",
+    product: "practice",
     title: fresher || !answers?.experience ? "Do a 5-minute HR round" : preset === "tmay10" ? "Do a 10-minute practice interview" : "Do a 15-minute technical round",
     body: "An AI interviewer asks, you answer out loud, then you get a score and the answers worth redoing.",
     cta: "Start practising",
@@ -276,7 +278,7 @@ function catalogue(answers: WelcomeAnswers | null, facts: HomeFacts, now: Date):
   }
   steps.push({
     id: "story",
-    product: "interview",
+    product: "practice",
     title: "Write one story for “Tell me about a time…”",
     body: "A real example from your college, internship or job, ready for the questions everyone asks.",
     cta: "Add a story",
