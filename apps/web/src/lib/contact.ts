@@ -17,6 +17,10 @@ export function mailLink(subject: string): string | null {
   return SUPPORT_EMAIL ? `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}` : null;
 }
 
+/** The line Orbit is honest about everywhere it's sold (the front page, sign-up, Help, the public footer). */
+export const USE_WHERE_ALLOWED =
+  "Built for practice, and for interviews and calls where notes or AI help are allowed. Check the rules first.";
+
 /** Static pages, outside the app (full page loads, not router links). */
 export const CONTACT_PAGE = "/contact.html";
 export const POLICY_LINKS: Array<{ href: string; label: string }> = [

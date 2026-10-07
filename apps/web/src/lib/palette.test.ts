@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { baseCommands, isTypingTarget, normalize, recentCommands, scoreCommand, searchCommands, type Command } from "./palette";
+import { baseCommands, normalize, recentCommands, scoreCommand, searchCommands, type Command } from "./palette";
+import { isTypingTarget } from "./shell";
 
 const base = baseCommands({ mockEnabled: true });
 const recent = recentCommands({

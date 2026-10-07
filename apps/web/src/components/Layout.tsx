@@ -30,13 +30,12 @@ import { api } from "../lib/api";
 import { isWindows } from "../lib/audio";
 import { useAuth } from "../lib/auth";
 import { DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
-import { isTypingTarget } from "../lib/palette";
-import { SHELL_EVENTS } from "../lib/shell";
+import { POLICY_LINKS } from "../lib/contact";
+import { SHELL_EVENTS, isTypingTarget } from "../lib/shell";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { prefetchRoute } from "../routes";
 import { AnnouncementBanner } from "./AnnouncementBanner";
-import { Footer } from "./Footer";
 import { PRODUCTS, ProductTabs, type ProductId, type ProductSection } from "./products";
 import { Sheet } from "./Sheet";
 import { Spinner } from "./ui";
@@ -334,7 +333,19 @@ export function Layout() {
         </div>
       </main>
 
-      <Footer variant="app" onHelp={openHelp} />
+      {/* One quiet line under every page: Help in the same place each time, and the policies. */}
+      <footer className="mx-auto w-full max-w-6xl px-4 pb-6 pt-2 text-xs sm:px-6">
+        <nav aria-label="Help and policies" className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-zinc-200/70 pt-4 dark:border-white/5">
+          <button type="button" onClick={openHelp} className={footerLink}>
+            Help
+          </button>
+          {POLICY_LINKS.map(({ href, label }) => (
+            <a key={href} href={href} className={footerLink}>
+              {label}
+            </a>
+          ))}
+        </nav>
+      </footer>
 
       {/* Phones: a thumb-reach tab bar, one tab per product and "Me". */}
       <nav
@@ -407,6 +418,11 @@ export function Layout() {
     </div>
   );
 }
+
+const footerLink = cx(
+  "inline-flex min-h-6 items-center rounded py-1 text-zinc-600 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-white",
+  focusRing,
+);
 
 /** A phone tab: 12 px labels (the smallest UI text); five of them fit a 360 px phone with room between. */
 function tabClass(active: boolean): string {

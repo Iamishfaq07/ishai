@@ -1,10 +1,6 @@
 import { Link } from "react-router-dom";
 import { OrbitWordmark, cx, focusRing } from "@orbit/ui";
-import { CONTACT_PAGE, POLICY_LINKS } from "../lib/contact";
-
-/** The line Orbit is honest about everywhere it's sold (Landing, sign-up, this footer). */
-export const USE_WHERE_ALLOWED =
-  "Built for practice, and for interviews and calls where notes or AI help are allowed. Check the rules first.";
+import { CONTACT_PAGE, POLICY_LINKS, USE_WHERE_ALLOWED } from "../lib/contact";
 
 const link = cx(
   "inline-flex min-h-6 items-center rounded py-1 text-zinc-600 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-white",
@@ -12,28 +8,10 @@ const link = cx(
 );
 
 /**
- * The public pages' footer (Landing, sign-in, the product pages): the products, help and the policies. Signed in,
- * `variant="app"` is one quiet line under every page, with Help in the same place each time.
+ * The public pages' footer (the front page and the product pages): the products, help and the policies. Signed in,
+ * the layout has its own one-line footer (Help and the policies).
  */
-export function Footer({ variant = "public", onHelp, className }: { variant?: "public" | "app"; onHelp?: () => void; className?: string }) {
-  if (variant === "app") {
-    return (
-      <footer className={cx("mx-auto max-w-6xl px-4 pb-6 pt-2 text-xs sm:px-6", className)}>
-        <nav aria-label="Help and policies" className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-zinc-200/70 pt-4 dark:border-white/5">
-          {onHelp && (
-            <button type="button" onClick={onHelp} className={link}>
-              Help
-            </button>
-          )}
-          {POLICY_LINKS.map(({ href, label }) => (
-            <a key={href} href={href} className={link}>
-              {label}
-            </a>
-          ))}
-        </nav>
-      </footer>
-    );
-  }
+export function Footer({ className }: { className?: string }) {
   return (
     <footer className={cx("border-t border-zinc-200/70 dark:border-white/5", className)}>
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm sm:px-6 md:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">

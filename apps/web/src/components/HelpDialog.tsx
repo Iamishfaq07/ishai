@@ -2,9 +2,8 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ChevronDown, Keyboard, Mail, MessageCircle, cx, focusRing, isMacPlatform } from "@orbit/ui";
 import { displayAudioHelp } from "../lib/audio";
-import { CONTACT_PAGE, POLICY_LINKS, SUPPORT_EMAIL, mailLink, whatsappLink } from "../lib/contact";
+import { CONTACT_PAGE, POLICY_LINKS, SUPPORT_EMAIL, USE_WHERE_ALLOWED, mailLink, whatsappLink } from "../lib/contact";
 import { useWelcomeGrant } from "../lib/welcome";
-import { USE_WHERE_ALLOWED } from "./Footer";
 import { Sheet } from "./Sheet";
 
 /**

@@ -21,7 +21,7 @@ import { errorText } from "../lib/format";
 import { useWelcomeGrant } from "../lib/welcome";
 import { Captcha, useCaptchaConfig } from "../components/Captcha";
 import { AiPill } from "../components/products";
-import { USE_WHERE_ALLOWED } from "../components/Footer";
+import { USE_WHERE_ALLOWED } from "../lib/contact";
 
 type Feature = { icon: LucideIcon; title: string; text: string; ai?: boolean };
 

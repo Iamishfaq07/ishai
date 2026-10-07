@@ -14,3 +14,16 @@ export function openSearch(): void {
 }
 
 export const SHELL_EVENTS = { help: HELP, search: SEARCH } as const;
+
+/** True for a keypress in a text field, where "/" is typing, not "open search". */
+export function isTypingTarget(target: EventTarget | null): boolean {
+  if (!target || typeof (target as HTMLElement).tagName !== "string") return false;
+  const el = target as HTMLElement;
+  const tag = el.tagName.toLowerCase();
+  if (tag === "textarea" || tag === "select") return true;
+  if (tag === "input") {
+    const type = ((el as HTMLInputElement).type || "text").toLowerCase();
+    return !["button", "checkbox", "radio", "range", "submit", "reset", "color", "file"].includes(type);
+  }
+  return el.isContentEditable === true;
+}

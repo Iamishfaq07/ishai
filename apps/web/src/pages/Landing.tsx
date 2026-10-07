@@ -15,10 +15,10 @@ import {
   cx,
   focusRing,
 } from "@orbit/ui";
-import { Footer, USE_WHERE_ALLOWED } from "../components/Footer";
+import { Footer } from "../components/Footer";
 import { PRODUCTS, ProductMark, type ProductId } from "../components/products";
 import { api } from "../lib/api";
-import { CONTACT_PAGE } from "../lib/contact";
+import { CONTACT_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
 import { useWelcomeGrant, type WelcomeGrant } from "../lib/welcome";
 
 /**

@@ -95,19 +95,6 @@ export function searchCommands(query: string, commands: Command[], limit = 40): 
   return hits.slice(0, limit).map((x) => x.command);
 }
 
-/** True for a keypress in a text field, where "/" is typing, not "open search". */
-export function isTypingTarget(target: EventTarget | null): boolean {
-  if (!target || typeof (target as HTMLElement).tagName !== "string") return false;
-  const el = target as HTMLElement;
-  const tag = el.tagName.toLowerCase();
-  if (tag === "textarea" || tag === "select") return true;
-  if (tag === "input") {
-    const type = ((el as HTMLInputElement).type || "text").toLowerCase();
-    return !["button", "checkbox", "radio", "range", "submit", "reset", "color", "file"].includes(type);
-  }
-  return el.isContentEditable === true;
-}
-
 /** The pages and actions the palette always has. Practice only when mock interviews are on in this build. */
 export function baseCommands({ mockEnabled }: { mockEnabled: boolean }): Command[] {
   const practice: Command[] = mockEnabled
