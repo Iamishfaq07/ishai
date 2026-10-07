@@ -1128,3 +1128,218 @@ export interface OutreachMessage {
   /** Greeting, message and sign-off, ready to send. */
   message: string;
 }
+
+// ---- Jobs (/v1/jobs): the latest jobs that match the user's resume, the search profile behind them, the tracker ----
+
+export type JobWorkplace = "remote" | "hybrid" | "onsite";
+export type JobEmploymentType = "full_time" | "part_time" | "contract" | "internship";
+export type JobLevel = "fresher" | "junior" | "mid" | "senior";
+/** Posted within this many days. */
+export type JobPostedWithin = 1 | 3 | 7 | 30;
+export type JobStatus = "saved" | "applied" | "interviewing" | "offer" | "rejected";
+export type JobSort = "best" | "newest";
+
+/** What the feed looks for: read from a resume by the AI, then the user's to edit. */
+export interface JobPrefs {
+  titles: string[];
+  skills: string[];
+  /** Cities ("Bengaluru"), or "India" for anywhere in India. Empty: anywhere in India. */
+  locations: string[];
+  workplace: JobWorkplace[];
+  level: JobLevel | null;
+  years: number | null;
+  /** Empty: full-time, part-time and contract (internships too for freshers). */
+  job_types: JobEmploymentType[];
+  posted_within: JobPostedWithin;
+  sources_off: string[];
+  /** The "search on" sites to show, by id. */
+  portals: string[];
+  exclude: string[];
+}
+
+export interface JobSuggestedProfile {
+  titles: string[];
+  level: JobLevel;
+  years: number;
+  skills: string[];
+  locations: string[];
+  /** "resume": worked out without the AI (today's AI reads were used, or the AI was down). */
+  by: "ai" | "resume";
+}
+
+export interface JobResumeRef {
+  id: string;
+  title: string;
+}
+
+export interface JobProfile {
+  prefs: JobPrefs;
+  suggested: JobSuggestedProfile | null;
+  /** The resume the feed is matched to. */
+  resume: JobResumeRef | null;
+  resumes: JobResumeRef[];
+  /** AI profile reads left today; null = no cap. */
+  ai_left: number | null;
+  /** False until the user (or "suggest") saves one; until then it's worked out from the latest resume. */
+  saved: boolean;
+  /** Every "search on" site: id -> name. */
+  portals: Record<string, string>;
+  /** The job sources this server uses. */
+  sources: Array<{ id: string; label: string }>;
+  cities: string[];
+  note: string | null;
+}
+
+export interface JobAttribution {
+  label: string;
+  url: string;
+  /** The source's terms ask for a large credit (Adzuna: at least 116 x 23 px). */
+  large: boolean;
+}
+
+export interface JobSourceStatus {
+  id: string;
+  label: string;
+  kind: "board" | "feed" | "search";
+  listings: number;
+  last_success_at: string | null;
+  refreshing: boolean;
+  failing: boolean;
+}
+
+export interface JobPortalLink {
+  id: string;
+  name: string;
+  url: string;
+}
+
+export interface JobMatch {
+  /** Out of 100. */
+  score: number;
+  matched: string[];
+  missing: string[];
+}
+
+export interface JobListing {
+  id: string;
+  source: string;
+  source_label: string;
+  /** The company's own posting: Apply goes straight to the employer. */
+  direct: boolean;
+  attribution: JobAttribution | null;
+  company: string;
+  title: string;
+  locations: string[];
+  /** One line for the card: "Bengaluru, Pune · Hybrid", "Remote (India)". */
+  place: string;
+  workplace: JobWorkplace | null;
+  employment_type: JobEmploymentType | null;
+  level: JobLevel | null;
+  /** "3-5 years", "5+ years". */
+  experience: string | null;
+  posted_at: string;
+  url: string;
+  apply_url: string;
+  snippet: string;
+  salary: string | null;
+  match: JobMatch | null;
+  tracked: { id: string; status: JobStatus } | null;
+}
+
+export interface JobFeed {
+  items: JobListing[];
+  total: number;
+  page: number;
+  page_size: number;
+  has_more: boolean;
+  /** A source is fetching new posts in the background: ask again in a little while. */
+  refreshing: boolean;
+  sources: JobSourceStatus[];
+  portals: JobPortalLink[];
+  /** What the search box was read as ("Remote", "Bengaluru", "2 years"). */
+  understood: string[];
+  keywords: string;
+  resume: JobResumeRef | null;
+  has_profile: boolean;
+}
+
+export interface JobFeedQuery {
+  q?: string;
+  sort?: JobSort;
+  page?: number;
+  page_size?: number;
+}
+
+export interface JobFitCheck {
+  verdict: "Strong" | "Good" | "Stretch";
+  summary: string;
+  why: string[];
+  gaps: string[];
+  tweaks: Array<{ change: string; why: string }>;
+}
+
+export interface JobFitResponse {
+  check: JobFitCheck;
+  /** Answered from the last check of this job and this resume (free). */
+  cached: boolean;
+  /** Fit checks left today; null = no cap. */
+  left: number | null;
+}
+
+export interface JobTrackerEntry {
+  id: string;
+  listing_id: string;
+  source: string;
+  company: string;
+  title: string;
+  location: string;
+  url: string;
+  apply_url: string;
+  posted_at: string | null;
+  status: JobStatus;
+  notes: string;
+  applied_at: string | null;
+  /** The next interview or follow-up. */
+  next_at: string | null;
+  /** When it last moved. */
+  status_at: string;
+  /** The resume tailored for this job, and the job description saved for interview prep. */
+  resume_id: string | null;
+  document_id: string | null;
+  /** The listing is still in the feed (posts are dropped after about 30 days). */
+  live: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JobTrackerUpdate {
+  status?: JobStatus;
+  notes?: string;
+  applied_at?: string;
+  next_at?: string;
+  clear_next?: boolean;
+}
+
+export interface JobDetail {
+  job: JobListing;
+  /** Orbit has the whole post, not only a snippet. */
+  full_text: boolean;
+  fit: JobFitCheck | null;
+  tracker: JobTrackerEntry | null;
+}
+
+export interface JobTailorResponse {
+  resume_id: string;
+  title: string;
+  note: string | null;
+  /** The job is in the tracker now (saved), with this resume attached. */
+  tracker_id: string;
+}
+
+export interface JobPrepareResponse {
+  document_id: string;
+  title: string;
+  reused: boolean;
+  note: string | null;
+  tracker_id: string;
+}

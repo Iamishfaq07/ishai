@@ -663,6 +663,7 @@ class TailorOut(BaseModel):
     resume_id: str
     title: str
     note: str | None
+    tracker_id: str  # the job is in the tracker now (saved), with this resume attached
 
 
 @router.post("/listings/{listing_id}/tailor", response_model=TailorOut, status_code=201,
@@ -688,7 +689,7 @@ async def tailor(listing_id: str, body: TailorIn, user: Annotated[User, Depends(
     entry = await _track(db, user, row)
     entry.resume_id = copy.id
     await db.commit()
-    return TailorOut(resume_id=copy.id, title=copy.title, note=note)
+    return TailorOut(resume_id=copy.id, title=copy.title, note=note, tracker_id=entry.id)
 
 
 class PrepareOut(BaseModel):
@@ -696,6 +697,7 @@ class PrepareOut(BaseModel):
     title: str
     reused: bool
     note: str | None
+    tracker_id: str  # the tracker entry the job description is attached to
 
 
 @router.post("/listings/{listing_id}/prepare", response_model=PrepareOut, dependencies=[Depends(action_limit)])
@@ -710,7 +712,7 @@ async def prepare(listing_id: str, user: Annotated[User, Depends(require_verifie
     if entry is not None and entry.document_id:
         doc = await db.get(Document, entry.document_id)
         if doc is not None and doc.user_id == user.id:
-            return PrepareOut(document_id=doc.id, title=doc.title, reused=True, note=None)
+            return PrepareOut(document_id=doc.id, title=doc.title, reused=True, note=None, tracker_id=entry.id)
     await _check_quota(db, user)
     text, note = await _full_text(db, row)
     body = _job_text(row, text)
@@ -722,7 +724,7 @@ async def prepare(listing_id: str, user: Annotated[User, Depends(require_verifie
     entry = await _track(db, user, row)
     entry.document_id = doc.id
     await db.commit()
-    return PrepareOut(document_id=doc.id, title=doc.title, reused=False, note=note)
+    return PrepareOut(document_id=doc.id, title=doc.title, reused=False, note=note, tracker_id=entry.id)
 
 
 # ---- tracker -------------------------------------------------------------------------------------------------------

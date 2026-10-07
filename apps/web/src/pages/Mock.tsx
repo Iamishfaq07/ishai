@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { MockDifficulty, MockInterviewType, MockPersona } from "@orbit/types";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select } from "../components/ui";
 import { MOCK_INTERVIEW_ENABLED, Target, practiceDocumentIds } from "@orbit/ui";
@@ -52,9 +52,11 @@ function MockSetup() {
   const [offer, setOffer] = useState("");
   const [company, setCompany] = useState("");
   const [target, setTarget] = useState("");
-  // Which job description the interviewer asks about: the newest by default (like Prep), or none.
+  // Which job description the interviewer asks about: the one a link asked for (Jobs → Prepare: `?jd=`), else the
+  // newest (like Prep), or none.
+  const [params] = useSearchParams();
   const jds = (docs.data ?? []).filter((d) => d.kind === "job_description" && d.status === "ready");
-  const [jdChoice, setJdChoice] = useState<string | null>(null);
+  const [jdChoice, setJdChoice] = useState<string | null>(() => params.get("jd"));
   const jdId = jdChoice === NO_JD ? null : (jds.find((d) => d.id === jdChoice) ?? jds[0])?.id ?? null;
   const negotiation = interviewType === "negotiation";
   const [error, setError] = useState<string | null>(null);

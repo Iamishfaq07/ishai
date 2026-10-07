@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { OrbitDocument, PrepCategory, PrepQuestion, PrepResponse } from "@orbit/types";
 import {
   Check,
@@ -106,11 +106,19 @@ export function PrepSection({
   const [copied, setCopied] = useState(false);
   const [starting, setStarting] = useState(false);
 
-  // Default source: the newest saved job description, else paste.
+  // Default source: the job description a link asked for (Jobs → Prepare: `?jd=`), else the newest, else paste.
+  const [params] = useSearchParams();
+  const asked = params.get("jd");
+  const [askedShown, setAskedShown] = useState(false); // switched to once, when the (re)loaded list has it
   useEffect(() => {
-    if (source || docs === null) return;
-    setSource(jds[0]?.id ?? "paste");
-  }, [docs, jds, source]);
+    if (docs === null) return;
+    if (asked && !askedShown && jds.some((d) => d.id === asked)) {
+      setAskedShown(true);
+      setSource(asked);
+    } else if (!source) {
+      setSource(jds[0]?.id ?? "paste");
+    }
+  }, [docs, jds, source, asked, askedShown]);
 
   useEffect(() => {
     if (!result) return;
