@@ -18,13 +18,16 @@ from typing import Any, Literal, Protocol
 from pydantic import ValidationError
 
 from orbit_api.live.answer_format import AnswerStreamParser, finalize_grounding, trim_cut_off
+from orbit_api.live.background import Background, infer_level
 from orbit_api.live.carryover import Carryover
 from orbit_api.live.classifier import classify
 from orbit_api.live.context_builder import PromptInputs, SessionMemory, build_prompt, fence
 from orbit_api.live.dedup import DedupDecision, Deduplicator, similarity
 from orbit_api.live.events import (
+    AnswerLength,
     AnswerPin,
     AnswerRequest,
+    AnswerSize,
     ChatMessage,
     DevSimulate,
     Envelope,
@@ -53,8 +56,13 @@ from orbit_api.live.routing import (
     CODE_MAX_TOKENS,
     MAX_TALKING_POINTS,
     MAX_TOKENS,
+    SIZE_LENGTH,
+    SIZE_POINTS,
+    SIZE_TOKENS,
     choose_reasoning_level,
     estimate_complexity,
+    pick_size,
+    step_size,
 )
 from orbit_api.providers.llm.base import (
     LLMError,
@@ -114,6 +122,17 @@ _REWRITE_FILLER = frozenset({
     "say", "okay", "ok", "thanks", "sound", "about", "on", "bit", "some", "into", "like", "really", "slightly",
     "first", "second", "third", "last", "format", "style", "words", "version",
 })
+
+
+# A rewrite that changes the size ("make it shorter", "more detail"): on an auto-length session, one size down or up
+# from what the answer it rewrites was given.
+_SHORTER = re.compile(r"\b(?:shorter|shorten|more concise|concise|less detail|briefer|brief|tighter|trim)\b")
+_LONGER = re.compile(r"\b(?:longer|lengthen|expand|more detail|in detail|elaborate|go deeper|more depth)\b")
+
+
+def resize_steps(instruction: str) -> int:
+    n = normalize(instruction)
+    return -1 if _SHORTER.search(n) else 1 if _LONGER.search(n) else 0
 
 
 def is_rewrite_request(text: str) -> bool:
@@ -414,6 +433,12 @@ class LiveEngine:
         self._partial_seen: set[str] = set()
         self._mock: MockInterviewer | None = None
         self._finishing: asyncio.Task[None] | None = None
+        # Who the candidate really is, for answers that sound like them (live/background.py): their level, inferred
+        # once from the resume and role (the "experience" setting overrides it), and the verified facts' text.
+        chunks = index.chunks
+        self._level = infer_level(chunks, profile.role)
+        self._background = Background.of(chunks)
+        self._last_size: tuple[str, AnswerSize] | None = None  # the last answer's question and auto size
         if profile.session_type == "mock":
             self._mock = MockInterviewer(profile.mock or MockConfig(), llm=llm, index=index, role=profile.role,
                                          send=self.send, on_question=self._on_mock_question,
@@ -644,7 +669,7 @@ class LiveEngine:
                 await self._apply_settings(LiveSettingsPatch.model_validate(data))
             case "answer.request":
                 req = AnswerRequest.model_validate(data)
-                await self._manual_answer(req.question_text)
+                await self._manual_answer(req.question_text, size=req.size, simpler=req.simpler)
             case "answer.pin":
                 pin = AnswerPin.model_validate(data)
                 if gen := self._gens.get(pin.answer_id):
@@ -1057,7 +1082,8 @@ class LiveEngine:
         await self._rec.question(qid, turn_id, text, det.question_type.value, det.confidence, det.is_follow_up, "auto")
         await self._start_answer(qid, text, det.question_type, det.is_follow_up, "auto")
 
-    async def _manual_answer(self, question_text: str | None) -> None:
+    async def _manual_answer(self, question_text: str | None, *, size: AnswerSize | None = None,
+                             simpler: bool = False) -> None:
         if self._mock is not None:  # practice: Orbit never answers for the candidate; "Answer" means "I'm done"
             # A task, as for mock.next: writing the next question awaits the model, and this runs on the socket's
             # read loop (audio included).
@@ -1091,7 +1117,7 @@ class LiveEngine:
                                               "type": qtype.value, "confidence": 1.0,
                                               "is_follow_up": det.is_follow_up})
         await self._rec.question(qid, None, text, qtype.value, 1.0, det.is_follow_up, "manual")
-        await self._start_answer(qid, text, qtype, det.is_follow_up, "manual")
+        await self._start_answer(qid, text, qtype, det.is_follow_up, "manual", size=size, simpler=simpler)
 
     async def _chat(self, text: str) -> None:
         code_ask = is_code_request(text)
@@ -1183,7 +1209,8 @@ class LiveEngine:
 
     async def _start_answer(
         self, qid: str | None, question: str, qtype: QuestionType, is_follow_up: bool, source: str,
-        instruction: str | None = None, images: list[LLMImage] | None = None,
+        instruction: str | None = None, images: list[LLMImage] | None = None, *, size: AnswerSize | None = None,
+        simpler: bool = False,
     ) -> None:
         # Serialize: _cancel_active() awaits, so without this lock a manual answer racing auto-answer could
         # both pass cancellation before either registers its generation → two billed LLM streams at once.
@@ -1193,8 +1220,10 @@ class LiveEngine:
                 # them, a call queued on this lock) would stream, and bill, after the session is over.
                 return
             spec, self._spec = self._spec, None
-            # "Answer" pressed during the wait gets the answer that was already being written for it, too.
+            # "Answer" pressed during the wait gets the answer that was already being written for it, too (not
+            # "Shorter" or "Simpler": those ask for a different one).
             if not (spec is not None and source in ("auto", "manual") and instruction is None and not images
+                    and size is None and not simpler
                     and spec.question == question and spec.qtype == qtype and spec.is_follow_up == is_follow_up
                     and not spec.gen.task.done()):
                 spec = None  # not this question: cancelled with the rest just below
@@ -1210,7 +1239,8 @@ class LiveEngine:
                 aid = str(uuid.uuid4())
                 out = _AnswerOut(self, qid)
                 task = asyncio.ensure_future(
-                    self._run_answer(aid, qid, question, qtype, is_follow_up, source, instruction, images or [], out))
+                    self._run_answer(aid, qid, question, qtype, is_follow_up, source, instruction, images or [], out,
+                                     size=size, simpler=simpler))
                 self._gens[aid] = _Generation(aid, qid, task, out, question=question)
                 self._active = aid
         # keep only recent generation handles
@@ -1237,6 +1267,21 @@ class LiveEngine:
         self.memory.note_answer(question, answer)
         self._coded_question = question if answer.code is not None and answer.code.content else None
 
+    def _answer_size(self, question: str, qtype: QuestionType, parts: int, source: str, instruction: str | None,
+                     asked: AnswerSize | None) -> AnswerSize | None:
+        """How much to say, on an "auto" length session (None: the fixed length applies). A size the user asked for
+        (Shorter / Longer on the card) wins; a rewrite in chat ("make it shorter") steps from the size its answer
+        had; anything else is picked from the question (routing.pick_size)."""
+        if asked is not None:
+            return asked
+        if self.settings.length != "auto" or source == "screenshot":
+            return None  # a screenshot's "question" is our own instruction text: it says nothing about size
+        if source == "chat" and instruction is not None:
+            last = self._last_size
+            base = last[1] if last is not None and last[0] == question else pick_size(question, qtype, parts)
+            return step_size(base, resize_steps(instruction))
+        return pick_size(question, qtype, parts)
+
     def _answer_type(self, qtype: QuestionType) -> QuestionType:
         """The type an answer is written as. A follow-up to an answer that had code ("what if the array is sorted?")
         is a coding one, and in a coding interview or assessment so is any technical question (the candidate is there
@@ -1250,7 +1295,8 @@ class LiveEngine:
 
     async def _run_answer(
         self, aid: str, qid: str | None, question: str, qtype: QuestionType, is_follow_up: bool, source: str,
-        instruction: str | None, images: list[LLMImage], out: _AnswerOut,
+        instruction: str | None, images: list[LLMImage], out: _AnswerOut, *, size: AnswerSize | None = None,
+        simpler: bool = False,
     ) -> None:
         qtype = self._answer_type(qtype)
         is_code = qtype == QuestionType.coding or self.profile.session_type == "coding"
@@ -1260,20 +1306,29 @@ class LiveEngine:
         is_code = is_code or mode == "debug" or source == "screenshot"
         # A screenshot's "question" is our own instruction text, not the interviewer's asks.
         asks = question_parts(question) if source != "screenshot" else [question]
+        size = self._answer_size(question, qtype, len(asks), source, instruction, size)
+        # The fixed length nearest the size (older clients know only those), else the session's own.
+        length: AnswerLength = SIZE_LENGTH[size] if size else (
+            "standard" if self.settings.length == "auto" else self.settings.length)
+        experience = self.settings.experience
         inputs = PromptInputs(
             question=question, qtype=qtype, is_follow_up=is_follow_up, session_type=self.profile.session_type,
-            role=self.profile.role, length=self.settings.length, style=self.settings.style,
+            role=self.profile.role, length=length, style=self.settings.style,
             answer_language=self.profile.answer_language or "en",  # English only: no per-session override
             instruction=instruction, coding_language=self.settings.coding_language, mode=mode,
             candidate_instructions=self.profile.instructions, learned_preferences=self.profile.learned,
-            company=self.profile.company, parts=asks,
+            company=self.profile.company, parts=asks, size=size,
+            level=self._level if experience == "auto" else experience,
+            unshown=self._background.unshown(question, qtype) if source != "screenshot" else [], simpler=simpler,
         )
         built = build_prompt(self._index, inputs, self.memory)
         # Technical questions get room for code as well: the model writes it when the question turns out to need it,
         # and a solution cut off at a prose-sized budget is no answer. (The length rules keep the talk track short.)
         roomy = is_code or mode == "design" or qtype in (QuestionType.technical, QuestionType.follow_up)
-        budget = CODE_MAX_TOKENS if roomy else MAX_TOKENS[self.settings.length]
-        if not roomy:
+        budget = CODE_MAX_TOKENS if roomy else (SIZE_TOKENS[size] if size else MAX_TOKENS[length])
+        if size == "brief" and not is_code and mode == "normal":
+            budget = SIZE_TOKENS["brief"]  # one to three sentences need no room for code, or for an essay
+        elif not roomy:
             # Room for every part of a multi-part question: a capped answer stops mid-way and skips the last parts.
             budget = int(budget * min(MULTI_PART_MAX_FACTOR, 1 + MULTI_PART_EXTRA * (len(asks) - 1)))
         # Live answers always run on the fast model. The reasoning model's hidden chain-of-thought put its
@@ -1289,8 +1344,9 @@ class LiveEngine:
         )
         model = self._llm.model_for(request.reasoning)
         provider = self._llm.name  # replaced by whoever actually serves the stream (the backup, on failover)
-        await out.send("answer.started", {"answer_id": aid, "question_id": out.question_id,
-                                          "length": self.settings.length, "reasoning": reasoning, "source": source})
+        await out.send("answer.started", {"answer_id": aid, "question_id": out.question_id, "length": length,
+                                          **({"size": size} if size else {}), "reasoning": reasoning,
+                                          "source": source})
         await out.state(LiveState.generating)
 
         facts = {ref: FactSource(ref=ref, chunk_id=h.chunk.id, doc_kind=h.chunk.doc_kind,
@@ -1298,7 +1354,7 @@ class LiveEngine:
                                  excerpt=chunk_body(h.chunk.category, h.chunk.text)[:240],
                                  verified=h.chunk.verified) for ref, h in built.facts.items()}
         parser = AnswerStreamParser(question, qtype, built.context_used, facts=facts,
-                                    max_points=MAX_TALKING_POINTS[self.settings.length])
+                                    max_points=SIZE_POINTS[size] if size else MAX_TALKING_POINTS[length])
         first_token_ms: int | None = None
         streamed = False
 
@@ -1421,6 +1477,8 @@ class LiveEngine:
         await out.state(LiveState.answer_complete)
         self._last_answer_at_ms = self.now_ms()
         self._remember(qid, question, final, source, instruction)
+        if size is not None:
+            self._last_size = (question, size)
         await self._rec.answer(aid, qid, "completed", final.model_dump(), provider, model, first_token_ms,
                                total_ms)
         await self._rec.provider_request(provider, model, request.request_type, usage, total_ms, True)

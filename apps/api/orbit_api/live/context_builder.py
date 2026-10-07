@@ -10,7 +10,16 @@ from dataclasses import dataclass, field
 from functools import cache
 from pathlib import Path
 
-from orbit_api.live.events import AnswerLength, AnswerStyle, LiveAnswer, QuestionType, SessionType, Speaker
+from orbit_api.live.events import (
+    AnswerLength,
+    AnswerSize,
+    AnswerStyle,
+    ExperienceLevel,
+    LiveAnswer,
+    QuestionType,
+    SessionType,
+    Speaker,
+)
 from orbit_api.providers.llm.base import LLMMessage
 from orbit_api.retrieval.index import Hit, IndexedChunk, SessionIndex
 
@@ -28,6 +37,33 @@ _LENGTH_RULES: dict[AnswerLength, str] = {
     "detailed": "Length: DETAILED, about 250–350 words (90–150 seconds out loud), three to five short "
                 "paragraphs with a concrete example.",
 }
+# The "auto" length: the size routing.pick_size chose for this question.
+_SIZE_RULES: dict[AnswerSize, str] = {
+    "brief": "Length: BRIEF, a quick question: one to three sentences, about 20–50 words (under 15 seconds out "
+             "loud). Answer it and stop; they'll ask if they want more. POINTS: one or two labels.",
+    "short": "Length: SHORT, about 50–80 words (20–30 seconds out loud), one paragraph. Multi-part question: one tight "
+             "sentence per part.",
+    "medium": "Length: MEDIUM, about 90–130 words (35–50 seconds out loud), one or two short paragraphs.",
+    "long": "Length: LONG, about 150–200 words (about a minute out loud), two or three short paragraphs.",
+    "detailed": _LENGTH_RULES["detailed"],
+}
+# The candidate's level (settings, or inferred from the resume and role: live/background.py).
+_LEVEL_RULES: dict[str, str] = {
+    "fresher": "Candidate level: FRESHER (a student or recent graduate). A well-prepared graduate's depth, in plain "
+               "words. Their own work is the projects and internships in the verified facts: never present an "
+               "invented project, course or tool as theirs (a behavioural example story stays generic, as the rules "
+               "say), and never claim production work, on-call, leading a team or years on the job. A big design or "
+               "multi-part question still gets every part, each with the main idea and one reason, not every "
+               "refinement an expert would add.",
+    "junior": "Candidate level: JUNIOR (about 1–2 years in). Hands-on depth, not an architect's: what they'd build and "
+              "check. No claims of designing whole systems or leading teams.",
+    "mid": "Candidate level: MID-LEVEL (about 3–6 years). Practical: features owned end to end, trade-offs made, "
+           "things seen in production.",
+    "senior": "Candidate level: SENIOR. Judgment from experience: the trade-offs and decisions behind the work, said "
+              "plainly, not as a lecture.",
+}
+_SIMPLER = ("SIMPLER: the user asked for this answer again in plainer words. Same substance, everyday words and short "
+            "sentences, at most one technical term, said in passing, as if to a smart friend outside the field.")
 _NATURAL = ("Style: NATURAL, a sharp and prepared person talking, not an essay: first person, contractions, plain "
             "words, sentences of different lengths, straight to the point and no wrap-up at the end.")
 _CONCISE = ("Style: CONCISE, confident and to the point: the direct answer in the first sentence, then only the "
@@ -141,6 +177,14 @@ class PromptInputs:
     company: str | None = None  # from the saved setup or the mock interview, when known
     # The separate asks of a multi-part question (question_detector.question_parts), listed so none is skipped.
     parts: list[str] = field(default_factory=list)
+    # The "auto" length's size for this question (routing.pick_size), or a one-off size the user asked for; None
+    # uses the fixed `length`.
+    size: AnswerSize | None = None
+    # The candidate's level (fresher…senior; never "auto" here), None when unknown.
+    level: ExperienceLevel | None = None
+    # Technologies the question asks about that the verified facts never show (live/background.py).
+    unshown: list[str] = field(default_factory=list)
+    simpler: bool = False  # the card's "Simpler": the same answer in plainer words
 
 
 @dataclass
@@ -180,11 +224,25 @@ _MODE_RULES = {
 
 # Right before the question, where it weighs most: the two AI habits the system prompt's rules alone didn't stop
 # (measured with tools/orbit-drive/voice_probe.py: 23 corrective contrasts in 21 answers, "security isn't a
-# nice-to-have, it's the whole point" in every "why work here").
+# nice-to-have, it's the whole point" in every "why work here"). Then the answer first and plain words: "Are you
+# comfortable with Git?" got reflog and cherry-pick, and simple questions a textbook's vocabulary (plain_probe.py).
 _VOICE_CHECK = ("Check the spoken answer before you write it. Say what things are, never what they aren't: no \"isn't "
                 "X, it's Y\", no \"not just X\", no \", not X\" or \"rather than X\" tacked on. And stop on the last "
                 "concrete point or on what happened: no final sentence that sums up, gives a lesson or says what "
-                "mattered.")
+                "mattered. The first sentence is the whole answer in short, complete enough to stop after (not \"I'd "
+                "start with…\", which only sets up). Words: the interviewer's own and everyday ones, a technical "
+                "term only if they used it or the answer needs it, never a textbook definition, never several terms "
+                "in one sentence.")
+
+
+def _unshown_rule(terms: list[str]) -> str:
+    """A topic the verified facts don't show the user working with: an expert's answer there is what gets caught."""
+    named = fence(", ".join(terms))
+    return (f"The verified facts don't show the user working with {named}. Don't fake hands-on expertise, and don't "
+            "claim they've used it (\"I've used it in my projects\" is a claim too): answer correctly, at the depth "
+            "their background makes believable, from what they know of it and how they'd approach it. Where it "
+            "fits, say once and plainly where their experience stops (\"I haven't used it on a real project yet, but "
+            "the way I'd approach it is…\"), with no apology.")
 
 # Every coding answer, outside the debug and design formats. Without it the model often answered in prose only.
 _CODE_RULE = ("CODING ANSWER: ANSWER is the short spoken talk track, never code. After it you MUST write PROBLEM:, "
@@ -237,6 +295,13 @@ _BROAD_BACKGROUND = re.compile(
     re.IGNORECASE)
 
 
+# "Tell me about a project you're proud of": the resume's projects rarely share a word with it ("College Fest Portal:
+# a small website…"), so none was found and the answer invented a project the user never built.
+_PROJECT_ASK = re.compile(r"\b(?:a|one|your|the) (?:\w+ )?projects? (?:you|that you|you've|you're|you are)\b"
+                          r"|\byour (?:last|latest|current|recent|most recent|favou?rite|biggest|best) projects?\b",
+                          re.IGNORECASE)
+
+
 def _anchor_hits(index: SessionIndex) -> list[Hit]:
     # A summary line that's only a name ("Jane Doe") tells the model nothing.
     summary = [c for c in index.by_category("resume", ("summary",), 4) if len(c.text.split()) >= 4][:2]
@@ -256,6 +321,10 @@ def retrieve(index: SessionIndex, inputs: PromptInputs, memory: SessionMemory) -
         anchored = _anchor_hits(index)
         seen = {h.chunk.id for h in anchored}
         hits = anchored + [h for h in hits if h.chunk.id not in seen]
+    if _PROJECT_ASK.search(inputs.question):
+        seen = {h.chunk.id for h in hits}
+        projects = [Hit(c, 1.0) for c in index.by_category("resume", ("project",), 3) if c.id not in seen]
+        hits = projects + hits
     if inputs.qtype in _STORY_TYPES and not any(h.chunk.doc_kind == "story" for h in hits):
         # "Tell me about a time…": the user's own story-bank example beats any single resume bullet.
         hits = index.search(query, inputs.qtype, k=1, doc_kind="story") + hits
@@ -298,8 +367,9 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
         [
             _SESSION_RULES[inputs.session_type],
             f"Target role: {inputs.role}" if inputs.role else "",
+            _LEVEL_RULES.get(inputs.level or "", ""),
             f"Company: {inputs.company}" if inputs.company else "",
-            _LENGTH_RULES[inputs.length],
+            _SIZE_RULES[inputs.size] if inputs.size else _LENGTH_RULES.get(inputs.length, _LENGTH_RULES["standard"]),
             _STYLE_RULES[inputs.style] if inputs.qtype != QuestionType.coding else "",
             f"Answer language: {(inputs.answer_language or '').strip() or 'English'}",
             (f"Write any code in {_LANGUAGE_NAMES.get(inputs.coding_language, inputs.coding_language)} unless the "
@@ -307,8 +377,9 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
             _GROUNDING_RULE if inputs.qtype in _PERSONAL_TYPES or inputs.is_follow_up else "",
             _MODE_RULES.get(inputs.mode, ""),
             _CODE_RULE if inputs.qtype == QuestionType.coding and inputs.mode == "normal" else "",
+            # (a one-to-three-sentence answer never needs code)
             _MAYBE_CODE_RULE if inputs.qtype in (QuestionType.technical, QuestionType.follow_up)
-            and inputs.mode == "normal" else "",
+            and inputs.mode == "normal" and inputs.size != "brief" else "",
             f"Question type: {inputs.qtype.value}" + (" (follow-up to the previous question)" if inputs.is_follow_up
                                                      else ""),
         ]
@@ -352,6 +423,10 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
         parts.append(f"This question has {len(inputs.parts)} parts. Answer every one, in this order, giving each its "
                      "share (a multi-part answer may run up to a third over the length target), with at least one "
                      f"POINTS label per part:\n{asks}")
+    if inputs.unshown:
+        parts.append(_unshown_rule(inputs.unshown))
+    if inputs.simpler:
+        parts.append(_SIMPLER)
     parts.append(_VOICE_CHECK)
     parts.append("QUESTION: " + fence(inputs.question))
 

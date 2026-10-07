@@ -1,21 +1,25 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import type {
   AnswerLength,
+  AnswerSize,
   AnswerStyle,
+  ClientEventMap,
   CodingLanguage,
+  ExperienceLevel,
   LiveSettings,
   ResponseTiming,
   Speaker,
   ThinkingLevel,
 } from "@orbit/types";
 import { LiveClient, type LiveClientOptions } from "./client";
-import { saveCodingLanguage, saveResponseTiming, saveThinking } from "./preferences";
+import { saveCodingLanguage, saveExperience, saveResponseTiming, saveThinking } from "./preferences";
 import { initialLiveState, liveReducer, type LiveViewState } from "./reducer";
 
 export interface LiveActions {
   /** Manual answer. With no text, the server answers the question it's listening to (which may span a
-   * pause), else the latest interviewer utterance. */
-  answer: (questionText?: string) => void;
+   * pause), else the latest interviewer utterance. `once`: this answer only, a size or plainer words (the card's
+   * Shorter / Longer / Simpler), without changing the session's settings. */
+  answer: (questionText?: string, once?: AnswerOnce) => void;
   clear: () => void;
   /** Stop writing the current answer, keeping what's on screen. */
   stop: () => void;
@@ -26,6 +30,7 @@ export interface LiveActions {
   setAutoAnswer: (on: boolean) => void;
   setResponseTiming: (timing: ResponseTiming) => void;
   setThinking: (level: ThinkingLevel) => void;
+  setExperience: (level: ExperienceLevel) => void;
   /** Preferred code language; with `regenerateFor`, re-answers that question in it right away. */
   setCodingLanguage: (lang: CodingLanguage, regenerateFor?: string) => void;
   /** Mock interview: done answering — the interviewer asks the next question now. */
@@ -39,6 +44,11 @@ export interface LiveActions {
   simulate: (fixture: string, speed?: number) => void;
   correctSpeaker: (turnId: string, speaker: Speaker) => void;
   dismissError: () => void;
+}
+
+export interface AnswerOnce {
+  size?: AnswerSize;
+  simpler?: boolean;
 }
 
 export interface UseLiveSessionOptions extends Omit<LiveClientOptions, "onOpen"> {
@@ -111,12 +121,7 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
 
   const actions = useMemo<LiveActions>(
     () => ({
-      answer: (questionText) => {
-        // Only send explicit text: the server knows the full (possibly paused-and-continued) question,
-        // while the latest transcript turn may be just its second half.
-        const text = questionText?.trim();
-        client.send("answer.request", text ? { question_text: text } : {});
-      },
+      answer: (questionText, once) => client.send("answer.request", answerRequest(questionText, once)),
       clear: () => {
         dispatch({ type: "local/clear" });
         client.send("answer.clear", {});
@@ -146,6 +151,10 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
         saveThinking(thinking);
         updateSettings({ thinking });
       },
+      setExperience: (experience) => {
+        saveExperience(experience);
+        updateSettings({ experience });
+      },
       setCodingLanguage: (coding_language, regenerateFor) => {
         saveCodingLanguage(coding_language);
         updateSettings({ coding_language });
@@ -166,6 +175,20 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
   );
 
   return { live, actions, client };
+}
+
+/**
+ * An `answer.request`'s data. Only explicit text is sent: the server knows the full (possibly paused-and-continued)
+ * question, while the latest transcript turn may be just its second half. The one-off size / plainer words are left
+ * out unless asked for, so a plain "Answer" is exactly what older servers expect.
+ */
+export function answerRequest(questionText?: string, once?: AnswerOnce): ClientEventMap["answer.request"] {
+  const text = questionText?.trim();
+  return {
+    ...(text ? { question_text: text } : {}),
+    ...(once?.size ? { size: once.size } : {}),
+    ...(once?.simpler ? { simpler: true } : {}),
+  };
 }
 
 /**

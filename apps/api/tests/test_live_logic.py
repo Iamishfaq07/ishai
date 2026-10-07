@@ -251,7 +251,7 @@ def test_no_context_still_answers_fully_without_inventing_experience() -> None:
     assert "Answer it fully" in user
     assert "didn't provide" in user  # the only guardrail: no fabricated personal history
     # The system prompt makes "always answer" the top priority.
-    assert "ALWAYS give a complete, expert answer" in built.messages[0].content
+    assert "ALWAYS give a complete, correct answer" in built.messages[0].content
 
 
 def test_token_bucket_limits_bursts() -> None:

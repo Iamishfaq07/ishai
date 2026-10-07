@@ -56,6 +56,10 @@ class SessionIndex:
     def __len__(self) -> int:
         return len(self._chunks)
 
+    @property
+    def chunks(self) -> list[IndexedChunk]:
+        return list(self._chunks)
+
     def search(self, query: str, qtype: QuestionType, *, k: int = 6, doc_kind: str | None = None,
                min_score: float | None = None) -> list[Hit]:
         """Top-k chunks for `query`. `qtype` is accepted for callers/telemetry; ranking no longer boosts by it.

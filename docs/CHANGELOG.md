@@ -1,5 +1,52 @@
 # Implementation log
 
+## Plain-spoken answers: sized to the question, at the candidate's real level (2026-10-07)
+
+A user's feedback: simple questions got hard terminology, every answer was the same length, and someone with no
+background in a topic got an expert's answer that read as AI-generated and didn't survive a follow-up. Measured on 28
+questions (yes/no to system design) for a fresher with a thin resume and a senior engineer, real DeepSeek through the
+real engine (`tools/orbit-drive/plain_probe.py`, two runs on each side): "Have you used Kubernetes?" got ~135 words,
+nearly as much as a URL-shortener design (~215); none of the 48 simple answers was the right size; the fresher's
+answers claimed hands-on work their resume didn't support in 23 of 56.
+
+- **Auto length, the new default** (`routing.pick_size`, D44): each answer gets a size from the question's type and
+  wording, with no model call: **brief** (1–3 sentences: yes/no, "Have you used X?", a notice period), **short**
+  ("What is X?"), **medium** (an intro, why us, strengths, "how does X work"), **long** (a story, an approach),
+  **detailed** (system design, deep or multi-part technical). "Briefly" / "in detail" and extra parts move it. The
+  token budget and key-point cap follow the size. Short / Standard / Detailed stay as fixed choices.
+- **The card says how much to say**: "Quick answer", "Short answer", "Medium answer", "Long answer", "Detailed
+  answer". On an auto session **Shorter / Longer** re-ask that one answer a size down or up (the next question is
+  sized on its own), and a new **Simpler** re-asks it in plainer words. "Make it shorter" in chat steps down too.
+- **Plain words, answer first**: the prompt asks for the interviewer's own words and everyday ones, a technical term
+  only when needed and never a textbook definition (with a bad/good pair), and a first sentence that is a complete
+  answer on its own, so the candidate can stop there.
+- **The candidate's real level** (`live/background.py`): fresher / junior / mid / senior, inferred once per session
+  from the resume (years stated, dated roles, titles, "final-year student") and else the role, or set in setup
+  ("Your experience level", Auto by default). A tool the question asks about that the verified facts never mention
+  gets a believable depth and one honest line ("I haven't used it on a real project yet, but…") instead of faked
+  expertise. A project question now gets the resume's projects (they shared no word with it, so one was invented).
+- **TERMS**: up to 3 technical words the answer says, each with its plain meaning, shown dimmed under the answer
+  (`LiveAnswer.terms`); never read out.
+- "Failure modes" / "failed payments" no longer make a technical question behavioral.
+
+| 112 answers per side (2 runs × 28 questions × 2 candidates) | before (standard) | after (auto) |
+|---|---|---|
+| in the intended size range (±25%) | 49 | 109 |
+| simple questions (yes/no, "what is X") in range | 0 of 48 | 46 of 48 |
+| mean words: brief / short / medium / long / detailed | 135 / 159 / 159 / 178 / 214 | 38 / 63 / 119 / 190 / 344 |
+| jargon per 100 words, simple questions (the probe's list) | 1.91 | 0.88 |
+| judge: jargon, 1–5 | 3.06 | 2.61 |
+| judge: the first sentence answers on its own | 78 | 98 |
+| fresher: claims hands-on work the resume doesn't support | 23 of 56 | 5 of 56 |
+| fresher: depth believable for the background, 1–5 | 3.02 | 4.41 |
+| AI tells (human_probe's checks) | 87 | 61 |
+| judge: sounds human, 1–10 | 8.05 | 8.52 |
+
+Coding answers didn't regress (`code_probe.py`: 14/14 coding questions got code in every session and source, and 3/3
+chat code asks, as in `code_probe_after2.json`), and the first word comes as fast as before (median 893 ms vs 927 ms,
+run side by side). The system prompt grew by ~500 tokens, a cached prefix. Shared UI changes reach the desktop app
+with its next release; installed 0.1.37 and older send only the fixed lengths and work as before.
+
 ## Outreach moves from Resume AI to Jobs AI, and writes for a job (2026-10-07)
 
 Resume AI's "Profiles & outreach" tab is now Jobs AI's **Outreach** page, `/jobs/outreach` (a new tab between

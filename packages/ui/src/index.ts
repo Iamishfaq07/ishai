@@ -51,13 +51,17 @@ export {
   RESPONSE_TIMINGS,
   THINKING_LEVELS,
   CODING_LANGUAGES,
+  EXPERIENCE_LEVELS,
   loadCodingLanguage,
   saveCodingLanguage,
+  loadExperience,
+  saveExperience,
   loadResponseTiming,
   loadThinking,
   saveResponseTiming,
   saveThinking,
 } from "./live/preferences";
+export { SIZE_HINTS, resizeTarget } from "./live/answerSize";
 export { historyLabel, useAnswerHistory, type AnswerHistory } from "./live/useAnswerHistory";
 export { answerAsText } from "./components/AnswerCard";
 export { useLiveSession, type LiveActions, type UseLiveSessionOptions, type UseLiveSessionResult } from "./live/useLiveSession";

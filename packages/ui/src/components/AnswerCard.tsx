@@ -5,6 +5,7 @@ import type {
   AnswerRating as AnswerRatingValue,
   CodingLanguage,
 } from "@orbit/types";
+import { SIZE_HINTS } from "../live/answerSize";
 import type { KeyPointProgress } from "../live/coverage";
 import { splitPlaceholders } from "../live/placeholders";
 import { READ_ALOUD_RATES, speechText } from "../live/readAloud";
@@ -16,7 +17,7 @@ import { cx, focusRing } from "./cx";
 import { PulseRings } from "./Illustrations";
 import { Orb } from "./Orb";
 import { OrbitLogo } from "./OrbitLogo";
-import { ArrowRight, Check, Circle, Maximize2, Minimize2, Pause, PenLine, Play, Square, Volume2 } from "../icons";
+import { ArrowRight, Check, Circle, Feather, Maximize2, Minimize2, Pause, PenLine, Play, Square, Volume2 } from "../icons";
 
 export interface AnswerCardProps {
   answer: AnswerView | null;
@@ -40,6 +41,8 @@ export interface AnswerCardProps {
   /** Re-answer the same question shorter / longer (null = already at that end of the scale). */
   onShorter?: (() => void) | null;
   onLonger?: (() => void) | null;
+  /** Re-answer the same question in plainer words (null = not available for this answer). */
+  onSimpler?: (() => void) | null;
   /** Phone companion: a mirror of the session, so nothing here can act on it (no "Try again"). */
   readOnly?: boolean;
   /** 👍/👎 for this answer (shown once it's complete). */
@@ -248,7 +251,7 @@ function SectionLabel({ children, block = false }: { children: string; block?: b
  */
 export const AnswerCard = memo(function AnswerCard({
   answer, pinned, onPin, onRetry, onStop, compact = false, autoAnswer, progress, onTogglePoint, reader, onCodeLanguage,
-  onShorter, onLonger, readOnly = false, rating = null, onRate,
+  onShorter, onLonger, onSimpler, readOnly = false, rating = null, onRate,
 }: AnswerCardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showExample, setShowExample] = useState(false);
@@ -288,6 +291,9 @@ export const AnswerCard = memo(function AnswerCard({
   const structured = coding || design.length > 0 || Boolean(debug);
   const hasComplexity = Boolean(a.time_complexity || a.space_complexity);
   const reading = Boolean(reader && reader.status !== "idle" && reader.key === answer.answer_id);
+  // How much to say, when the length is automatic: spoken answers only (chat replies and screenshots aren't said).
+  const size = answer.size && (answer.source === "auto" || answer.source === "manual") ? SIZE_HINTS[answer.size] : null;
+  const terms = a.terms ?? [];
 
   return (
     <section aria-label="Suggested answer" className="flex min-h-0 flex-1 flex-col">
@@ -296,6 +302,14 @@ export const AnswerCard = memo(function AnswerCard({
           {answer.source === "chat" ? "Reply" : answer.source === "screenshot" ? "Screenshot answer" : "Answer"}
           {answer.reasoning === "deep" && (
             <span className="ml-2 normal-case tracking-normal text-indigo-600 dark:text-indigo-300">in-depth</span>
+          )}
+          {size && (
+            <span
+              title={size.hint}
+              className="ml-2 rounded-full bg-zinc-100 px-1.5 py-px font-medium normal-case tracking-normal text-zinc-600 dark:bg-white/[0.06] dark:text-zinc-300"
+            >
+              {size.label}
+            </span>
           )}
         </h2>
         <span className="flex flex-wrap items-center justify-end gap-1">
@@ -340,6 +354,16 @@ export const AnswerCard = memo(function AnswerCard({
               >
                 <Maximize2 className="h-3.5 w-3.5" /> <Label compact={compact}>Longer</Label>
               </button>
+              {onSimpler && (
+                <button
+                  type="button"
+                  onClick={onSimpler}
+                  title="Answer this question again in plainer, everyday words"
+                  className={iconBtn(false)}
+                >
+                  <Feather className="h-3.5 w-3.5" /> <Label compact={compact}>Simpler</Label>
+                </button>
+              )}
             </>
           )}
           {answer.has_content && answer.status !== "failed" && <CopyButton text={answerAsText(a)} />}
@@ -430,6 +454,18 @@ export const AnswerCard = memo(function AnswerCard({
               </p>
             ))}
           </div>
+        )}
+
+        {terms.length > 0 && answer.status !== "failed" && (
+          // The jargon the answer says, in plain words: so the candidate knows what they're saying. Never read out.
+          <dl aria-label="Words in this answer" className="mt-2 animate-fade-in space-y-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+            {terms.map((t) => (
+              <div key={t.term} className="flex min-w-0 gap-1">
+                <dt className="flex-none font-medium text-zinc-600 dark:text-zinc-300">{t.term}</dt>
+                <dd className="min-w-0">= {t.meaning}</dd>
+              </div>
+            ))}
+          </dl>
         )}
 
         {progress && answer.status !== "failed" && <KeyPoints progress={progress} compact={compact} {...(onTogglePoint ? { onToggle: onTogglePoint } : {})} />}

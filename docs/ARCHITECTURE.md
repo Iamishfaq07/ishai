@@ -12,7 +12,7 @@ Built from scratch in this repo, starting 2026-09-23 (it held only a generated R
 | Live engine: per-channel STT → turns → question detector (+ AI classifier for the ambiguous band) → finalizer → dedup → retrieval → streamed answer | ✅ tested + real providers |
 | DeepSeek provider: SSE streaming, cache-hit usage, error mapping, thinking levels, **vision** (DeepSeek-V4.1-Flash) | ✅ tested + real API |
 | Deepgram nova-3 streaming STT: reconnect with timestamp continuity, keepalive, backlog, keyterms, `language=multi` for auto | ✅ tested + real API |
-| Answers: spoken first-person prose, **key points** (ticked off as the candidate covers them, or by hand), **Read aloud** (local voices; audio isn't sent while it plays), grounding label (*Suggested details*), coding sections (problem / code / complexity / edge cases / tests) in a chosen language | ✅ tested |
+| Answers: spoken first-person prose, **sized to each question** (auto length: a sentence or two for "Have you used Docker?", two minutes for a design) and pitched at the candidate's level, **key points** (ticked off as the candidate covers them, or by hand), the jargon used with its plain meaning, **Read aloud** (local voices; audio isn't sent while it plays), grounding label (*Suggested details*), coding sections (problem / code / complexity / edge cases / tests) in a chosen language | ✅ tested |
 | Screenshot → vision answer (analysed and discarded; credit spent only on success) | ✅ tested + real desktop build |
 | **Mock interviewer**: persona / type / difficulty / duration, follow-ups, spoken questions (browser TTS), review | ✅ tested + real voice path |
 | **Interview prep**: likely questions from a job description, with why / talking points / suggested answer from the resume, practised as a mock drill | ✅ tested |
@@ -96,13 +96,16 @@ Separate channels (mic → candidate, system → interviewer) instead of diariza
 ## G. Answer pipeline
 1. Detect.
 2. Classify: a heuristic first, and an AI classifier (2.5 s budget) only for the ambiguous 0.35–0.6 band.
-3. Choose the thinking level.
+3. Choose the thinking level, and with the auto length the answer's size (`routing.pick_size`: the question's type
+   and wording, its parts, "briefly" / "in detail"; no model call).
 4. Retrieve the top facts. Question type boosts the relevant ones, verified facts rank higher, and the JD is
    guaranteed a slot.
 5. Build a compact prompt: at most ~1.2k tokens of context, the last 6 turns, a rolling summary, and fenced
-   `<reference_data>`.
+   `<reference_data>`. It carries the candidate's level (inferred once from the resume and role, `live/background.py`,
+   unless the user set one) and the technologies the question asks about that the verified facts never show, so
+   the answer doesn't fake hands-on expertise there.
 6. Stream the answer through an incremental line-format parser. The model writes tagged sections: `GROUNDED:`
-   first, then `PROBLEM` / `ANSWER` / `CODE` / `TIME` / `SPACE` / `EDGE` / `TESTS` / `FOLLOWUP`, and a trailing
+   first, then `PROBLEM` / `ANSWER` / `CODE` / `TIME` / `SPACE` / `EDGE` / `TESTS` / `TERMS` / `FOLLOWUP`, and a trailing
    `POINTS:` line so the first spoken word isn't delayed. The parser sends `answer.chunk` snapshots every ≥40 ms and
    finishes with `answer.completed`, which carries the latency.
 

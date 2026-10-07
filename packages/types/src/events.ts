@@ -38,7 +38,15 @@ export const LIVE_STATES = [
 ] as const;
 export type LiveState = (typeof LIVE_STATES)[number];
 
-export type AnswerLength = "short" | "standard" | "detailed";
+/** "auto" (the default for new sessions) sizes each answer to its question; the others are fixed lengths. */
+export type AnswerLength = "auto" | "short" | "standard" | "detailed";
+/**
+ * What "auto" picked for one answer: brief (1–3 sentences: "Have you used Docker?"), short ("What is an API?"),
+ * medium (intro, why us, "how does X work"), long (a story, an approach), detailed (system design, deep multi-part).
+ */
+export type AnswerSize = "brief" | "short" | "medium" | "long" | "detailed";
+/** The candidate's level answers are pitched at; "auto" infers it from the resume and the role. */
+export type ExperienceLevel = "auto" | "fresher" | "junior" | "mid" | "senior";
 /** Offered styles are natural / concise / story (all spoken prose); the rest are legacy values on older sessions. */
 export type AnswerStyle = "natural" | "concise" | "story" | "bullets" | "star" | "technical" | "executive";
 /** Model thinking effort: off answers immediately; low/high/max add seconds of reasoning before the first word. */
@@ -55,6 +63,8 @@ export interface LiveSettings {
   thinking?: ThinkingLevel;
   /** Preferred language for code in coding answers (unset: the model picks). */
   coding_language?: CodingLanguage;
+  /** Unset or "auto": inferred from the session's resume and role. */
+  experience?: ExperienceLevel;
 }
 
 export type CodingLanguage = "python" | "java" | "javascript" | "typescript" | "cpp" | "csharp" | "go" | "rust" | "sql";
@@ -114,6 +124,13 @@ export interface LiveAnswer {
   design?: Array<{ title: string; text: string }>;
   /** Debug mode: root cause, minimal fix, why it failed, and a unified diff (the corrected code is `code`). */
   debug?: { root_cause: string | null; fix: string | null; why: string | null; diff: string | null } | null;
+  /** Up to 3 technical words the spoken answer uses, with their plain meaning (shown dimmed, never said). */
+  terms?: AnswerTerm[];
+}
+
+export interface AnswerTerm {
+  term: string;
+  meaning: string;
 }
 
 export interface Envelope<TType extends string = string, TData = unknown> {
@@ -131,7 +148,11 @@ export interface ClientEventMap {
   "session.pause": Record<string, never>;
   "session.resume": Record<string, never>;
   "session.end": Record<string, never>;
-  "answer.request": { question_text?: string };
+  /**
+   * `size` / `simpler`: this one answer only (the card's Shorter / Longer / Simpler on an auto-length session); the
+   * session keeps its settings. Servers from before them ignore both.
+   */
+  "answer.request": { question_text?: string; size?: AnswerSize; simpler?: boolean };
   /** Mock interview: the candidate is done answering — ask the next question now. */
   "mock.next": Record<string, never>;
   "answer.pin": { answer_id: string; pinned: boolean };
@@ -218,7 +239,10 @@ export interface ServerEventMap {
   "answer.started": {
     answer_id: string;
     question_id: string;
+    /** The fixed length this answer was written to (never "auto": an auto answer gives the nearest one). */
     length: AnswerLength;
+    /** Auto length: the size picked for this question (or asked for with Shorter / Longer). */
+    size?: AnswerSize;
     reasoning: ReasoningLevel;
     source: AnswerSource;
   };
@@ -256,7 +280,7 @@ export const DEV_FIXTURES = ["behavioral_interview", "technical_interview", "cod
 
 export const DEFAULT_LIVE_SETTINGS: LiveSettings = {
   auto_answer: true,
-  length: "standard",
+  length: "auto",
   style: "natural",
   response_timing: "balanced",
   thinking: "off",

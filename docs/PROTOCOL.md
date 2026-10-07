@@ -77,7 +77,7 @@ Desktop channel 1 is the chosen output device or one app's audio; web channel 1 
 |---|---|
 | `session.start` | `{ settings?: Partial<LiveSettings> }` |
 | `session.pause` / `session.resume` / `session.end` | `{}` |
-| `answer.request` | `{ question_text?: string }` — manual answer; defaults to latest interviewer utterance |
+| `answer.request` | `{ question_text?: string, size?: AnswerSize, simpler?: boolean }` — manual answer; defaults to latest interviewer utterance. `size` / `simpler`: this answer only (the card's Shorter / Longer / Simpler on an auto-length session), the session's settings unchanged; servers before them ignore both |
 | `mock.next` | `{}`. Mock interviews only: "I'm done", so the interviewer moves on without waiting for silence |
 | `answer.pin` | `{ answer_id, pinned: boolean }` — a pinned answer is never auto-cancelled |
 | `answer.clear` | `{}` |
@@ -86,7 +86,17 @@ Desktop channel 1 is the chosen output device or one app's audio; web channel 1 
 | `speaker.correct` | `{ turn_id, speaker }` |
 | `dev.simulate` | `{ fixture, speed?: number (0.5–50) }` — replays a transcript fixture; only when the mock STT provider is active |
 
-`LiveSettings = { auto_answer: boolean, length: "short"|"standard"|"detailed", style: "natural"|"concise"|"story", answer_language?: string, response_timing?: "quick"|"balanced"|"patient", thinking?: "off"|"low"|"high"|"max", coding_language?: "python"|"java"|"javascript"|"typescript"|"cpp"|"csharp"|"go"|"rust"|"sql" }`
+`LiveSettings = { auto_answer: boolean, length: "auto"|"short"|"standard"|"detailed", style: "natural"|"concise"|"story", answer_language?: string, response_timing?: "quick"|"balanced"|"patient", thinking?: "off"|"low"|"high"|"max", coding_language?: "python"|"java"|"javascript"|"typescript"|"cpp"|"csharp"|"go"|"rust"|"sql", experience?: "auto"|"fresher"|"junior"|"mid"|"senior" }`
+
+`length: "auto"` (the default for new sessions; `POST /v1/sessions` without a length gets it) sizes each answer to
+its question, with no model call (`routing.pick_size`): `AnswerSize = "brief"` (1–3 sentences, ~20–50 words: yes/no,
+"Have you used X?", a notice period) | `"short"` (~50–80: "What is X?") | `"medium"` (~90–130: an intro, why us,
+strengths, "how does X work") | `"long"` (~150–200: a story, an approach) | `"detailed"` (~250–350: system design,
+deep or multi-part technical). "Briefly" / "in detail" in the question move it, and so do extra parts. The fixed
+lengths work as before; clients from before "auto" (desktop 0.1.37 and older) send only those.
+
+`experience` pitches answers at the candidate's level; `"auto"` (or unset) infers it from the session's resume (years
+stated, dated roles, titles, "final-year student") and, when that says nothing, the target role.
 
 Answers are spoken first-person prose (`direct_answer`, paragraphs separated by a blank line); `talking_points` is only filled if a model lists anyway. Legacy styles (`bullets`, `star`, `technical`, `executive`) are still accepted and mapped onto the new ones. `thinking` sets the model's reasoning effort (off answers in under a second; low/high/max add ~3–6 s before the first word).
 
@@ -105,7 +115,7 @@ Answers are spoken first-person prose (`direct_answer`, paragraphs separated by 
 | `transcript.final` | `{ turn_id, speaker, text, start_ms, end_ms, echo? }` — `echo: true`: the interviewer's voice heard by the mic (speakers, no headphones), not the candidate; clients drop the line (it isn't stored or used as conversation) |
 | `question.detected` | `{ question_id, turn_id, text, type, confidence, is_follow_up }` |
 | `question.updated` | `{ question_id, text }` |
-| `answer.started` | `{ answer_id, question_id, length, reasoning: "light"\|"deep", source: "auto"\|"manual"\|"chat"\|"screenshot" }` |
+| `answer.started` | `{ answer_id, question_id, length, size?, reasoning: "light"\|"deep", source: "auto"\|"manual"\|"chat"\|"screenshot" }` — `length` is the fixed length the answer was written to (on auto, the one nearest its size, so older clients still get a value they know); `size` only on auto, for the card's "Quick answer" / "Long answer" hint |
 | `answer.chunk` | `{ answer_id, partial: LiveAnswer }` — full parsed state so far (idempotent; render directly) |
 | `answer.completed` | `{ answer_id, answer: LiveAnswer, latency: { first_token_ms, total_ms } }` |
 | `answer.cancelled` | `{ answer_id, reason: "superseded"\|"cleared"\|"session_ended" }` |
@@ -138,7 +148,8 @@ plus `follow_up_detected`, `stt_reconnecting`, `ai_reconnecting`, `error`, `paus
   "time_complexity": null, "space_complexity": null,
   "follow_up": null, "context_used": [],
   "grounding": "verified", "key_points": [],
-  "problem": null, "edge_cases": [], "tests": []
+  "problem": null, "edge_cases": [], "tests": [],
+  "terms": [{ "term": "pod", "meaning": "one running copy of the app" }]
 }
 ```
 
@@ -156,6 +167,9 @@ plus `follow_up_detected`, `stt_reconnecting`, `ai_reconnecting`, `error`, `paus
   `SOURCES:` line. Unknown refs are ignored, never trusted.
 - `key_points`: 3–6 short labels for the points the answer makes, in order. The client ticks them off as the
   candidate says them ("NEXT" guidance, local and deterministic, D25).
+- `terms`: at most 3 technical words the spoken answer actually says, each with its plain meaning (the model's
+  optional `TERMS:` line, `term = meaning | …`; entries the answer doesn't say are dropped). Shown dimmed under the
+  answer so the candidate understands what they're saying; never read out. Absent or `[]` for plain answers.
 - `problem`, `edge_cases`, `tests`: coding answers only. The task restated in one line, edge cases to mention, and
   example tests (`input → expected`).
 

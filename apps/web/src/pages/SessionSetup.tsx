@@ -4,6 +4,7 @@ import type {
   AnswerLength,
   AnswerStyle,
   DocumentKind,
+  ExperienceLevel,
   OrbitDocument,
   PreflightCheck,
   ResponseTiming,
@@ -13,10 +14,13 @@ import type {
 } from "@orbit/types";
 import {
   ANSWER_STYLES,
+  EXPERIENCE_LEVELS,
   RESPONSE_TIMINGS,
   THINKING_LEVELS,
+  loadExperience,
   loadResponseTiming,
   loadThinking,
+  saveExperience,
   saveResponseTiming,
   saveThinking,
   PreflightPanel,
@@ -48,7 +52,8 @@ import {
 import { SESSION_TYPE_LABEL, errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 
-const LENGTHS: Array<{ value: AnswerLength; label: string }> = [
+const LENGTHS: Array<{ value: AnswerLength; label: string; hint?: string }> = [
+  { value: "auto", label: "Auto (fits each question)", hint: "A sentence or two for a quick question, a full answer for a deep one" },
   { value: "short", label: "Short (~30 s spoken)" },
   { value: "standard", label: "Standard (~1 min)" },
   { value: "detailed", label: "Detailed (~2 min)" },
@@ -161,7 +166,8 @@ export function SessionSetupPage() {
   const [type, setType] = useState<SessionType>(SELECTABLE_TYPES.includes(initialType) ? initialType : "interview");
   const [role, setRole] = useState("");
   const [instructions, setInstructions] = useState("");
-  const [length, setLength] = useState<AnswerLength>("standard");
+  const [length, setLength] = useState<AnswerLength>("auto");
+  const [experience, setExperience] = useState<ExperienceLevel>(loadExperience);
   const [style, setStyle] = useState<AnswerStyle>("natural");
   const [thinking, setThinking] = useState<ThinkingLevel>(loadThinking);
   const [autoAnswer, setAutoAnswer] = useState(true);
@@ -342,9 +348,30 @@ export function SessionSetupPage() {
                   ))}
                 </Select>
               </Field>
-              <Field label="Answer length" htmlFor="length">
+              <Field label="Answer length" htmlFor="length" hint={LENGTHS.find((l) => l.value === length)?.hint}>
                 <Select id="length" value={length} onChange={(e) => setLength(e.target.value as AnswerLength)}>
                   {LENGTHS.map((l) => (
+                    <option key={l.value} value={l.value}>
+                      {l.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field
+                label="Your experience level"
+                htmlFor="experience"
+                hint={`${EXPERIENCE_LEVELS.find((l) => l.value === experience)?.hint ?? ""}. Answers are pitched at it.`}
+              >
+                <Select
+                  id="experience"
+                  value={experience}
+                  onChange={(e) => {
+                    const level = e.target.value as ExperienceLevel;
+                    setExperience(level);
+                    saveExperience(level);
+                  }}
+                >
+                  {EXPERIENCE_LEVELS.map((l) => (
                     <option key={l.value} value={l.value}>
                       {l.label}
                     </option>

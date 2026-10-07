@@ -9,7 +9,12 @@ from pydantic import BaseModel, Field
 PROTOCOL_VERSION = 1
 
 Speaker = Literal["interviewer", "candidate", "other"]
-AnswerLength = Literal["short", "standard", "detailed"]
+# "auto" (the default for new sessions) sizes each answer to its question (routing.pick_size); the others are fixed.
+AnswerLength = Literal["auto", "short", "standard", "detailed"]
+# What "auto" picks per question: a sentence or two for "Have you used Docker?", a story's minute, a design's two.
+AnswerSize = Literal["brief", "short", "medium", "long", "detailed"]
+# The candidate's level, which answers are pitched at. "auto" infers it from the resume and the role (live/background).
+ExperienceLevel = Literal["auto", "fresher", "junior", "mid", "senior"]
 # natural / concise / story are the offered styles; the rest are legacy values still stored on older
 # sessions (mapped onto the new ones in context_builder).
 AnswerStyle = Literal["natural", "concise", "story", "bullets", "star", "technical", "executive"]
@@ -53,12 +58,13 @@ class LiveState(StrEnum):
 
 class LiveSettings(BaseModel):
     auto_answer: bool = True
-    length: AnswerLength = "standard"
+    length: AnswerLength = "auto"
     style: AnswerStyle = "natural"
     answer_language: str | None = None
     response_timing: ResponseTiming = "balanced"
     thinking: Thinking = "off"
     coding_language: CodingLanguage | None = None  # None = the model picks (usually Python)
+    experience: ExperienceLevel = "auto"
 
 
 class LiveSettingsPatch(BaseModel):
@@ -69,6 +75,7 @@ class LiveSettingsPatch(BaseModel):
     response_timing: ResponseTiming | None = None
     thinking: Thinking | None = None
     coding_language: CodingLanguage | None = None
+    experience: ExperienceLevel | None = None
 
 
 class CodeBlock(BaseModel):
@@ -102,6 +109,13 @@ class DebugInfo(BaseModel):
     diff: str | None = None  # unified diff of the fix
 
 
+class Term(BaseModel):
+    """A technical word the spoken answer uses, in plain words, so the candidate knows what they're saying."""
+
+    term: str
+    meaning: str
+
+
 class LiveAnswer(BaseModel):
     question: str = ""
     type: QuestionType = QuestionType.technical
@@ -130,6 +144,8 @@ class LiveAnswer(BaseModel):
     design: list[DesignSection] = Field(default_factory=list)
     # Debug mode: root cause / minimal fix / why / diff; the talk track explains it aloud.
     debug: DebugInfo | None = None
+    # Up to 3 technical words the answer uses, with their plain meaning (shown dimmed, never said).
+    terms: list[Term] = Field(default_factory=list)
 
 
 class Envelope(BaseModel):
@@ -145,6 +161,9 @@ class Envelope(BaseModel):
 
 class AnswerRequest(BaseModel):
     question_text: str | None = Field(None, max_length=4000)
+    # One answer only (the card's Shorter / Longer / Simpler on an auto-length session): the session keeps its settings.
+    size: AnswerSize | None = None
+    simpler: bool = False
 
 
 class AnswerPin(BaseModel):

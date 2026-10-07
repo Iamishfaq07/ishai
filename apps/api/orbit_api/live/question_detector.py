@@ -308,11 +308,24 @@ _STORY_ASK = re.compile(r"\b(?:tell me about|describe|give me an example of|shar
                         r"|\b(?:a|one) (?:time|situation) (?:when|where|that|you)\b|\bhave you ever\b")
 
 
+# Failure as a technical subject, not a story ("what failure modes you'd watch for", "a single point of failure",
+# "retry failed payments"): it made a multi-part ML pipeline question "behavioral" (answered as a story, sized as one).
+_TECH_FAILURE = re.compile(r"\bfailure (?:modes?|rates?|domains?|scenarios?|cases?|handling|points?|detection|"
+                           r"recovery)\b|\bpoints? of failure\b|\bfailed (?:requests?|jobs?|pods?|messages?|"
+                           r"deliver(?:y|ies)|payments?|calls?|tests?|retries|builds?|deploys?|deployments?|nodes?)\b")
+
+
+def asks_for_story(norm: str) -> bool:
+    """"Tell me about a time…", "Have you ever…": a story is wanted, not a position (normalized text)."""
+    return bool(_STORY_ASK.search(norm))
+
+
 def classify_type(norm: str) -> QuestionType:
     if _STORY_ASK.search(norm):
         return QuestionType.behavioral
     if _DATA_CUES.search(norm) and any(n in norm for n in ("salary", "salaries", "compensation", "pay")):
         return QuestionType.coding
+    norm = _TECH_FAILURE.sub(" ", norm)
     for qtype, pattern in _TYPE_PATTERNS:
         if pattern.search(norm):
             return qtype
