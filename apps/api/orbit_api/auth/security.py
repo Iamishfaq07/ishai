@@ -99,6 +99,8 @@ def suspended_detail(user: User) -> dict[str, str]:
     """What a suspended account's owner is told when they sign in or call the API: that it's suspended, and the
     admin's reason. No address of the admin's (they can add a way to reach them to the reason)."""
     reason = " ".join((user.suspended_reason or "").split())
+    if reason and not reason.endswith((".", "!", "?")):
+        reason += "."
     message = "Your Orbit account is suspended." + (f" Reason: {reason}" if reason else "")
     message += " If you think this is a mistake, get in touch with the Orbit team."
     return {"code": SUSPENDED, "message": message}

@@ -175,8 +175,8 @@ class LedgerItem(BaseModel):
 
 
 class SessionItem(BaseModel):
+    """A session's kind, state and minutes: never its title or anything said in it (the account's own content)."""
     id: str
-    title: str
     type: str
     status: str
     created_at: datetime
@@ -304,7 +304,7 @@ async def _detail(db: AsyncSession, u: User, admin: User) -> UserDetailOut:
         select(UsageEvent.session_id, func.sum(UsageEvent.quantity))
         .where(UsageEvent.user_id == u.id, UsageEvent.metric.in_(credits.INTERVIEW_METRICS))
         .group_by(UsageEvent.session_id))).all()}
-    sessions = [SessionItem(id=s.id, title=s.title, type=s.type, status=s.status, created_at=_aware(s.created_at),
+    sessions = [SessionItem(id=s.id, type=s.type, status=s.status, created_at=_aware(s.created_at),
                             started_at=_aware(s.started_at) if s.started_at else None,
                             ended_at=_aware(s.ended_at) if s.ended_at else None,
                             minutes=round(used.get(s.id, 0.0) / 60, 1))

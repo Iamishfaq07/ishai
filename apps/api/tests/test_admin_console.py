@@ -298,7 +298,7 @@ def test_a_suspended_account_cant_sign_in_or_use_the_api_and_is_told_why(console
     refused = _login(client, user["email"])
     assert refused.status_code == 403
     detail = refused.json()["detail"]
-    assert detail["code"] == "account_suspended" and "Shared the account" in detail["message"]
+    assert detail["code"] == "account_suspended" and "Reason: Shared the account. If you" in detail["message"]
     assert admin_user["email"] not in detail["message"]  # the admin's address isn't handed out
     mail = next(m for m in reversed(_outbox().sent) if m.to == user["email"])
     assert mail.subject == "Your Orbit account is suspended" and "Shared the account" in mail.text
@@ -368,6 +368,7 @@ def test_an_account_in_full_with_edits_notes_and_a_reset_email(console: Any) -> 
     c = d["counts"]
     assert (c["documents"], c["resumes"], c["sessions"], c["sessions_open"], c["jobs_tracked"]) == (1, 1, 1, 1, 0)
     assert d["user"]["email"] == user["email"] and d["user"]["has_note"] is False
+    assert d["sessions"][0]["type"] == "interview" and "title" not in d["sessions"][0]  # never the account's content
     assert any(e["reason"] == "welcome" for e in d["ledger"])
     assert d["events"][0]["action"] == "auth.register"
 
