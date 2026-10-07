@@ -242,6 +242,8 @@ export function setAt(data: ResumeData, path: string, value: string): ResumeData
 }
 
 export const MAX_SKILLS_PER_GROUP = 40;
+/** The server's limit (resumes/schema.py): an 11th group used to fail every save and AI request with a 422. */
+export const MAX_SKILL_GROUPS = 10;
 const MAX_BULLETS = 12;
 
 /** The skills a suggestion adds, trimmed and without repeats. */
@@ -254,7 +256,8 @@ export function suggestedSkills(s: ResumeSuggestion): string[] {
 }
 
 /** Add skills to the Skills section without repeating any it has: into a group called "Skills" or the only group,
- *  else a new "Additional skills" group, so Kafka never lands under "Languages". */
+ *  else a new "Additional skills" group, so Kafka never lands under "Languages". With no room for another group, into
+ *  the groups that have room (as the server does, resumes/apply.py). */
 export function addSkills(data: ResumeData, skills: string[], makeId: () => string): ResumeData {
   const have = new Set(data.skills.flatMap((g) => g.items.map((i) => i.trim().toLowerCase())));
   const fresh = skills.filter((x) => !have.has(x.toLowerCase()));
@@ -266,7 +269,16 @@ export function addSkills(data: ResumeData, skills: string[], makeId: () => stri
   const name = data.skills.length ? "Additional skills" : "Skills";
   const extra = data.skills.find((g) => g.name === name && g.items.length + fresh.length <= MAX_SKILLS_PER_GROUP);
   if (extra) return { ...data, skills: data.skills.map((g) => (g === extra ? { ...g, items: [...g.items, ...fresh] } : g)) };
-  return { ...data, skills: [...data.skills, { id: makeId(), name, items: fresh.slice(0, MAX_SKILLS_PER_GROUP) }] };
+  if (data.skills.length < MAX_SKILL_GROUPS) {
+    return { ...data, skills: [...data.skills, { id: makeId(), name, items: fresh.slice(0, MAX_SKILLS_PER_GROUP) }] };
+  }
+  const groups = data.skills.map((g) => ({ ...g, items: [...g.items] }));
+  for (const skill of fresh) {
+    const roomiest = groups.reduce((a, b) => (b.items.length < a.items.length ? b : a));
+    if (roomiest.items.length >= MAX_SKILLS_PER_GROUP) break;
+    roomiest.items.push(skill);
+  }
+  return { ...data, skills: groups };
 }
 
 /** Whether a suggestion still fits the resume: the text it replaces hasn't been edited since. */

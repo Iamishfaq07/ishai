@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ResumeData } from "@orbit/types";
-import { DECLARATION, EXTRA_PRESETS, LOOKS, SERIF_FONTS, TEMPLATES, emptyData, fresherResume, gradeLine, resumeToText, sectionLabel, shownSections } from "./model";
+import { DECLARATION, EXTRA_PRESETS, LOOKS, MAX_SKILLS_PER_GROUP, MAX_SKILL_GROUPS, SERIF_FONTS, TEMPLATES, addSkills, emptyData, fresherResume, gradeLine, resumeToText, sectionLabel, shownSections } from "./model";
 
 function ids(): () => string {
   let n = 0;
@@ -88,5 +88,31 @@ describe("presets and templates", () => {
       const look = LOOKS.find((l) => l.design.template === template);
       expect(look && SERIF_FONTS.has(look.design.font)).toBe(true);
     }
+  });
+});
+
+describe("addSkills at the group limit", () => {
+  const groups = (n: number, per = 3) =>
+    Array.from({ length: n }, (_, g) => ({ id: `g${g}`, name: `Group ${g}`, items: Array.from({ length: per + g }, (_, i) => `s${g}-${i}`) }));
+
+  it("never makes an 11th group (the server refuses it): the roomiest group takes the skills", () => {
+    const data = { ...emptyData(), skills: groups(MAX_SKILL_GROUPS) } as ResumeData;
+    const out = addSkills(data, ["Kafka", "Airflow"], ids());
+    expect(out.skills).toHaveLength(MAX_SKILL_GROUPS);
+    expect(out.skills[0]!.items.slice(-2)).toEqual(["Kafka", "Airflow"]);
+    expect(data.skills[0]!.items).not.toContain("Kafka"); // the input isn't changed
+  });
+
+  it("still adds an 'Additional skills' group while there's room for one", () => {
+    const data = { ...emptyData(), skills: groups(3) } as ResumeData;
+    const out = addSkills(data, ["Kafka"], ids());
+    expect(out.skills).toHaveLength(4);
+    expect(out.skills[3]).toMatchObject({ name: "Additional skills", items: ["Kafka"] });
+  });
+
+  it("drops what doesn't fit once every group is full", () => {
+    const full = groups(MAX_SKILL_GROUPS).map((g) => ({ ...g, items: Array.from({ length: MAX_SKILLS_PER_GROUP }, (_, i) => `${g.id}-${i}`) }));
+    const out = addSkills({ ...emptyData(), skills: full } as ResumeData, ["Kafka"], ids());
+    expect(out.skills.every((g) => g.items.length === MAX_SKILLS_PER_GROUP)).toBe(true);
   });
 });

@@ -1,4 +1,5 @@
 import { createApiClient, trimTrailingSlashes } from "@orbit/ui";
+import { watchForOutOfCredits } from "./outOfCredits";
 
 /** Absolute URL for a configured base, which may be relative to this site (e.g. "/api", the Worker's proxy). */
 function absolute(base: string): string {
@@ -20,9 +21,11 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): voi
   unauthorizedHandler = handler;
 }
 
-/** Browser client: auth is the API's httpOnly cookie — no token is ever readable by JS. */
+/** Browser client: auth is the API's httpOnly cookie — no token is ever readable by JS. Any reply that means the
+ *  account is out of credits also opens the out-of-credits dialog (lib/outOfCredits.ts). */
 export const api = createApiClient({
   baseUrl: API_URL,
   auth: { mode: "cookie" },
   onUnauthorized: () => unauthorizedHandler?.(),
+  fetchImpl: watchForOutOfCredits(),
 });

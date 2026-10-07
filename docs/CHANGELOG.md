@@ -1,5 +1,23 @@
 # Implementation log
 
+## Out of AI credits: a clear popup, and no more "List should have at most 10 items" (2026-10-07)
+
+A user with no resume credits saw "List should have at most 10 items after validation, not 11" instead of being told
+they were out of credits. Out of credits, the fixes left are the free ones ("add these skills"), and the editor's
+`addSkills` put skills that didn't fit an existing group into a new one past the server's limit of 10 skill groups. The
+11th group made every save and every AI request a 422 that Pydantic worded, so the 402 "out of credits" never came.
+
+- **No 11th group:** `addSkills` (web `resume/model.ts`) and `add_skills` (`resumes/apply.py`) put skills into the
+  groups that have room once there are 10. `ResumeData` folds an 11th group sent by an older tab into the others
+  instead of refusing the whole resume (`fold_skill_groups`), so nobody stays stuck.
+- **"You're out of AI credits" popup** (`components/OutOfCreditsDialog.tsx`, `lib/outOfCredits.ts`): the web client
+  watches every reply, and a resume AI `402 upgrade_required` (Resume AI, Jobs AI's Outreach, interview prep, …) or a
+  session refused for interview minutes opens one dialog with what a credit is for, the cheapest pack and **Get
+  credits** (→ Plan & billing with that pack). The editor opens it too when only the no-AI fixes came back.
+- Tests: `test_resume_limits.py` (the fold, the fallback, and "out of credits" with an 11th group is a 402, not a
+  422), `outOfCredits.test.ts`, `model.test.ts`. Driven in headless Chrome (`tools/orbit-drive/credits-popup-drive.mjs`,
+  18/18 at 1280 and 390 px).
+
 ## Plain-spoken answers: sized to the question, at the candidate's real level (2026-10-07)
 
 A user's feedback: simple questions got hard terminology, every answer was the same length, and someone with no

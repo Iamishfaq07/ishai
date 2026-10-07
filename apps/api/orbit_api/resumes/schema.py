@@ -14,6 +14,8 @@ SectionId = Literal["summary", "experience", "education", "skills", "projects", 
 DEFAULT_ORDER: list[SectionId] = ["summary", "experience", "skills", "projects", "education", "certifications"]
 EXTRA_PREFIX = "extra:"  # an extra section's place in section_order: "extra:<its id>"
 MAX_EXTRAS = 5
+MAX_SKILL_GROUPS = 10
+MAX_SKILLS_PER_GROUP = 40
 
 # All single-column (ATS-safe) except "sidebar".
 Template = Literal["classic", "modern", "compact", "sidebar", "elegant", "minimal", "bold", "executive", "campus",
@@ -86,12 +88,28 @@ class Education(BaseModel):
 class SkillGroup(BaseModel):
     id: str = Field(default_factory=_id, max_length=40)
     name: str = Field("", max_length=60)
-    items: list[str] = Field(default_factory=list, max_length=40)
+    items: list[str] = Field(default_factory=list, max_length=MAX_SKILLS_PER_GROUP)
 
     @field_validator("items")
     @classmethod
     def _items(cls, v: list[str]) -> list[str]:
         return [i[:60] for i in v]
+
+
+def fold_skill_groups(groups: list[SkillGroup]) -> list[SkillGroup]:
+    """At most MAX_SKILL_GROUPS groups: the skills of any past that join the kept groups with room (the roomiest
+    first), without repeats; whatever doesn't fit is dropped."""
+    kept, extra = groups[:MAX_SKILL_GROUPS], groups[MAX_SKILL_GROUPS:]
+    have = {i.strip().lower() for g in kept for i in g.items}
+    for item in (i.strip() for g in extra for i in g.items):
+        if not item or item.lower() in have:
+            continue
+        roomiest = min(kept, key=lambda g: len(g.items))
+        if len(roomiest.items) >= MAX_SKILLS_PER_GROUP:
+            break
+        roomiest.items.append(item)
+        have.add(item.lower())
+    return kept
 
 
 class Project(BaseModel):
@@ -134,7 +152,7 @@ class ResumeData(BaseModel):
     basics: Basics = Field(default_factory=Basics)
     experience: list[Experience] = Field(default_factory=list, max_length=20)
     education: list[Education] = Field(default_factory=list, max_length=10)
-    skills: list[SkillGroup] = Field(default_factory=list, max_length=10)
+    skills: list[SkillGroup] = Field(default_factory=list, max_length=MAX_SKILL_GROUPS)
     projects: list[Project] = Field(default_factory=list, max_length=10)
     certifications: list[Certification] = Field(default_factory=list, max_length=20)
     extras: list[ExtraSection] = Field(default_factory=list, max_length=MAX_EXTRAS)
@@ -144,6 +162,16 @@ class ResumeData(BaseModel):
     hidden: list[str] = Field(default_factory=list, max_length=16)
     # Own headings for the standard sections ("Work experience" for "experience"); extras have their own titles.
     titles: dict[str, str] = Field(default_factory=dict, max_length=6)
+
+    @field_validator("skills", mode="before")
+    @classmethod
+    def _skill_groups(cls, v: object) -> object:
+        """An 11th skill group (an editor that added one past the limit) used to fail every save and every AI request
+        with "List should have at most 10 items": its skills join the other groups instead. A list far past the limit
+        isn't a resume, so it's left to fail."""
+        if not isinstance(v, list) or not MAX_SKILL_GROUPS < len(v) <= 4 * MAX_SKILL_GROUPS:
+            return v
+        return fold_skill_groups([SkillGroup.model_validate(g) for g in v])
 
     @model_validator(mode="after")
     def _order(self) -> "ResumeData":
