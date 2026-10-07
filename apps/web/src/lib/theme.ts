@@ -9,7 +9,8 @@ export function applyTheme(pref: ThemePref): void {
 }
 
 export function useTheme(): [ThemePref, (pref: ThemePref) => void] {
-  const [pref, setPref] = useState<ThemePref>(() => (localStorage.getItem(KEY) as ThemePref | null) ?? "dark");
+  // Unset follows the system, as public/theme-init.js does before the first paint.
+  const [pref, setPref] = useState<ThemePref>(() => (localStorage.getItem(KEY) as ThemePref | null) ?? "system");
 
   useEffect(() => {
     localStorage.setItem(KEY, pref);

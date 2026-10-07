@@ -211,7 +211,8 @@ export function ErrorNote({ children, onRetry }: { children: ReactNode; onRetry?
     >
       <span className="flex-1">{children}</span>
       {onRetry && (
-        <button type="button" onClick={onRetry} className={cx("font-medium underline", focusRing)}>
+        // Padded to a 24 px target (WCAG 2.5.8) without moving the text.
+        <button type="button" onClick={onRetry} className={cx("-my-1 rounded px-1 py-1 font-medium underline", focusRing)}>
           Retry
         </button>
       )}

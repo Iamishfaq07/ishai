@@ -401,3 +401,11 @@ html:not(.dark) .text-zinc-500,
 html:not(.dark) .text-zinc-400 {
   color: rgb(84 89 122);
 }
+/* Light mode: the -600 status shades are too pale for small text on white (emerald 3.8:1, amber 3.2:1), so they
+   draw in -700 (5.5:1, 5.0:1). Dark mode keeps its own dark: colours. */
+html:not(.dark) .text-emerald-600 {
+  color: rgb(4 120 87);
+}
+html:not(.dark) .text-amber-600 {
+  color: rgb(180 83 9);
+}

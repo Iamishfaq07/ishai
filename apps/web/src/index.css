@@ -10,13 +10,15 @@
   #root {
     height: 100%;
   }
+  /* Figures line up by default (scores, prices, minutes, counts change without the text around them shifting). */
   body {
-    font-feature-settings: "cv11", "ss01";
+    font-feature-settings: "cv11", "ss01", "tnum";
   }
   h1,
   h2,
   h3 {
     @apply font-display tracking-tight;
+    text-wrap: balance;
   }
 }
 
