@@ -219,3 +219,20 @@ and can't invent questions the candidate never struggled with. The AI is used on
 follow-up on the new answer, steered by the old feedback (fenced as data). The drill runs on the normal mock
 machinery, so it's recorded and can be reviewed and drilled again like any session.
 
+
+**D43 — Jobs come from feeds that allow it; the big portals get links, not scraping.** No provider legally offers
+LinkedIn or Naukri listings as data, and scraping LinkedIn, Indeed or Naukri breaks their terms, so Orbit reads none
+of them. It reads companies' own public applicant-tracking-system feeds (Greenhouse, Lever, Ashby, SmartRecruiters:
+no key, every apply link goes straight to the employer, and they're the freshest source for the companies that use
+them), remote-job feeds whose terms allow showing them (Himalayas, Remote OK, Jobicy; not Remotive, whose terms rule
+out a sign-in-only display), and optional search APIs only once their keys are set (Adzuna, JSearch). The rest of the
+market is reached with "Search on LinkedIn / Naukri / …" links prefilled from the profile: no data is fetched, the
+user lands on the portal's own search. Each feed's terms are kept in its module and on the card: credit by name with
+a followed link (Himalayas, Remote OK, Jobicy), Adzuna's logo-sized credit and its own redirect link, a snippet plus
+a link to the original rather than the full text, refreshes no more often than allowed (company boards every 6 h,
+feeds daily) and a back-off on 429. Listings are cached in the database and refreshed in the background by the
+single API instance (D12), so a feed request never waits on a provider. Matching is deterministic (the ATS score's
+keyword reading), so ranking a thousand cached posts costs nothing and explains itself. The AI is used only where it
+adds something: reading a resume into a search profile, and a fit check per job. Both are free so that browsing jobs
+never spends the user's resume credits, and capped per day (with results cached per resume content and per job) so
+the shared key's cost stays bounded: a fit check is one short call, about 3 s, and the cap is configuration.
