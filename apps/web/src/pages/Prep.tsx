@@ -276,7 +276,7 @@ export function PrepSection({
             <Field
               label="Link to the job posting"
               htmlFor="prep-link"
-              hint="Company career pages and job boards like Greenhouse, Lever or Workday work best. Sites that need a sign-in (LinkedIn) can't be read — paste the text instead."
+              hint="Company career pages and job boards like Greenhouse, Lever or Workday work best. Naukri and LinkedIn pages need a sign-in or an app to show the post, so they can't be read: copy the text and paste it instead."
             >
               <div className="flex gap-2">
                 <Input
@@ -325,7 +325,7 @@ export function PrepSection({
                 value={pasted}
                 onChange={(e) => setPasted(e.target.value)}
                 maxLength={20_000}
-                placeholder="Paste the role, responsibilities and requirements…"
+                placeholder="Paste the role, responsibilities and requirements… (from Naukri, LinkedIn, a campus portal or an email from HR)"
               />
             </Field>
           )}
@@ -342,6 +342,15 @@ export function PrepSection({
             <Wand2 className="h-4 w-4" />
             {busy ? "Generating…" : result ? "Generate again" : "Generate my questions"}
           </Button>
+          {/* Say why the button can't be pressed yet, instead of leaving a grey button. */}
+          {!busy && source === "link" && (
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Import the post from its link first, or pick “Paste a job description”.</p>
+          )}
+          {!busy && source === "paste" && pasted.trim().length < 40 && (
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              {jds.length ? "Paste the job post first" : "No job post yet: paste one first"} (a few lines about the role and what it asks for is enough).
+            </p>
+          )}
           {busy && <Spinner label="Reading the job description" state="searching" />}
           {busy && (
             <div className="space-y-2" aria-hidden="true">

@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Progress, ProgressPoint } from "@orbit/types";
-import { ArrowRight, cx, focusRing } from "@orbit/ui";
+import { ArrowRight, Check, Target, cx, focusRing } from "@orbit/ui";
 import { Card, ErrorNote, Spinner } from "../components/ui";
 import { api } from "../lib/api";
 import { SESSION_TYPE_LABEL, errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
+import { GOAL_CHOICES, goalState, loadGoal, loadWarmupLog, saveGoal } from "../lib/weeklyGoal";
 
 const H = 180;
 const PAD = { top: 16, right: 36, bottom: 24, left: 28 };
@@ -151,13 +152,124 @@ function ScoreDelta({ recent, before }: { recent: number | null; before: number 
   );
 }
 
-/** "Your progress": practice cadence, review scores over time and the latest speaking tips. */
+/** What counts toward the weekly goal: mock interviews that ended, and warm-up answers checked in this browser. */
+function practiceTimes(progress: Progress | null): number[] {
+  const mocks = (progress?.points ?? []).filter((p) => p.type === "mock" && p.ended_at).map((p) => Date.parse(p.ended_at!));
+  return [...mocks, ...loadWarmupLog()];
+}
+
+/**
+ * "This week: 2 of 3": the weekly practice goal (lib/weeklyGoal.ts), weeks in a row, and the freeze that keeps a run
+ * through one missed week. No reminders and no guilt: it's only here when you look. `progress` when the page has it;
+ * without it the card loads it itself (sharing the "progress" cache), so Home can mount it with no props. `first`: no
+ * sessions yet, so it also says how to get a first score.
+ */
+export function WeeklyGoal({ progress, first = false, className }: { progress?: Progress | null; first?: boolean; className?: string }) {
+  return progress === undefined ? <OwnProgressGoal className={className} /> : <GoalCard progress={progress} first={first} className={className} />;
+}
+
+function OwnProgressGoal({ className }: { className?: string }) {
+  const progress = useAsync<Progress>(() => api.progress(), [], "progress");
+  if (!progress.data && progress.loading) return null;
+  return <GoalCard progress={progress.data} first={!progress.data || progress.data.summary.sessions === 0} className={className} />;
+}
+
+function GoalCard({ progress, first, className }: { progress: Progress | null; first: boolean; className?: string }) {
+  const [goal, setGoal] = useState(loadGoal);
+  const titleId = useId();
+  const state = goalState(practiceTimes(progress), goal);
+  const pick = (n: number) => {
+    setGoal(n);
+    saveGoal(n);
+  };
+  const left = Math.max(goal - state.done, 0);
+  const days = state.daysLeft === 1 ? "day" : "days";
+  return (
+    <Card className={cx("!p-4 sm:!p-5", className)}>
+      <section aria-labelledby={titleId}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 id={titleId} className="font-display text-base font-semibold">
+              This week: {state.done} of {goal}
+            </h2>
+            <p className="text-sm text-zinc-600 dark:text-zinc-300">
+              {state.met ? (
+                <span className="inline-flex items-center gap-1 font-medium text-emerald-700 dark:text-emerald-300">
+                  <Check className="h-4 w-4" aria-hidden /> Goal met. Nice.
+                </span>
+              ) : (
+                <>
+                  {left} to go, {state.daysLeft} {days} left this week.
+                </>
+              )}{" "}
+              {state.weeks > 0 && (
+                <>
+                  {state.weeks} {state.weeks === 1 ? "week" : "weeks"} in a row.
+                </>
+              )}
+            </p>
+          </div>
+          <div role="group" aria-label="Weekly goal" className="inline-flex shrink-0 items-center gap-0.5 rounded-xl bg-zinc-500/10 p-1 text-xs">
+            {GOAL_CHOICES.map((n) => (
+              <button
+                key={n}
+                type="button"
+                aria-pressed={goal === n}
+                aria-label={n + " a week"}
+                onClick={() => pick(n)}
+                className={cx(
+                  "min-w-7 rounded-lg px-2 py-1 font-medium tabular-nums",
+                  goal === n ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
+                  focusRing,
+                )}
+              >
+                {n}
+              </button>
+            ))}
+            <span className="px-1.5 text-zinc-500 dark:text-zinc-400" aria-hidden>
+              a week
+            </span>
+          </div>
+        </div>
+        <div
+          className="mt-3 h-2 overflow-hidden rounded-full bg-zinc-500/15"
+          role="progressbar"
+          aria-label="This week's practice"
+          aria-valuemin={0}
+          aria-valuemax={goal}
+          aria-valuenow={Math.min(state.done, goal)}
+        >
+          <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-aurora-400" style={{ width: Math.min(state.done / goal, 1) * 100 + "%" }} />
+        </div>
+        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+          Mock interviews and warm-up answers count.{" "}
+          {state.frozeLastWeek
+            ? "Last week was a miss, and your freeze kept the run going."
+            : state.freezeReady
+              ? "A freeze is ready: miss one week and your run stays."
+              : "Your freeze comes back after four weeks on goal."}
+        </p>
+        {first && (
+          <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-zinc-200 pt-3 text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-300">
+            <span className="min-w-0 flex-1">Your first score shows up after your first mock. A 5-minute HR round is the quickest way in.</span>
+            <Link to="/mock?preset=hr5" className={cx("inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
+              <Target className="h-4 w-4" aria-hidden /> Do a 5-minute HR round
+            </Link>
+          </p>
+        )}
+      </section>
+    </Card>
+  );
+}
+
+/** "Your progress": the weekly goal, practice cadence, review scores over time and the latest speaking tips. */
 export function ProgressSection() {
   const progress = useAsync<Progress>(() => api.progress(), [], "progress");
-  if (progress.loading) return <Spinner />;
-  if (progress.error) return <ErrorNote onRetry={progress.reload}>{errorText(progress.error)}</ErrorNote>;
+  if (progress.loading && !progress.data) return <Spinner />;
+  if (progress.error && !progress.data) return <ErrorNote onRetry={progress.reload}>{errorText(progress.error)}</ErrorNote>;
   const data = progress.data;
-  if (!data || data.summary.sessions === 0) return null; // nothing to show yet: the prep/practice below comes first
+  // Nothing scored yet: the goal and how to get a first score, instead of a grid of zeros and "–".
+  if (!data || data.summary.sessions === 0) return <WeeklyGoal progress={data} first />;
 
   const s = data.summary;
   const scored = data.points.filter((p) => p.overall_score !== null);
@@ -165,6 +277,7 @@ export function ProgressSection() {
 
   return (
     <section aria-labelledby="progress-title" className="space-y-4">
+      <WeeklyGoal progress={data} />
       <Card>
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
