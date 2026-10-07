@@ -5,7 +5,7 @@ import { Spinner } from "./components/ui";
 import { useAuth } from "./lib/auth";
 import { routeTitle } from "./lib/routeTitle";
 import { useDocumentTitle } from "./lib/useDocumentTitle";
-import { RESUME_AI_HOME, isResumeAiHome, movedResumePath } from "./pages/resume/paths";
+import { RESUME_AI_HOME, RESUME_AI_JOBS, isResumeAiHome, movedResumePath } from "./pages/resume/paths";
 import {
   ConfirmEmailChangePage,
   ForgotPasswordPage,
@@ -29,6 +29,7 @@ import {
   ResumeAiHomePage,
   ResumeAiPublicPage,
   ResumeEditorPage,
+  JobsPage,
   AdminUsersPage,
   AdminPaymentsPage,
   prefetchLikelyRoutes,
@@ -125,9 +126,9 @@ export function App() {
         <Route path="documents/resumes" element={<MovedResume />} />
         <Route path="documents/resumes/:resumeId" element={<MovedResume />} />
         <Route path="resume-ai" element={<ResumeAiHomePage />} />
-        {/* Kept for the Jobs portal, which mounts its page here. Until then the address opens Resume AI's home, so
-            "jobs" is never opened as a resume. */}
-        <Route path="resume-ai/jobs" element={<Navigate to={RESUME_AI_HOME} replace />} />
+        {/* The Jobs portal, inside Resume AI. Before "resume-ai/:resumeId", so "jobs" is never opened as a resume. */}
+        <Route path="resume-ai/jobs" element={<JobsPage />} />
+        <Route path="jobs" element={<Navigate to={RESUME_AI_JOBS} replace />} />
         <Route path="resume-ai/:resumeId" element={<ResumeEditorPage />} />
         <Route path="mock" element={<MockPage />} />
         <Route path="billing" element={<BillingPage />} />

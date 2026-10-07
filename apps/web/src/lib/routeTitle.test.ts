@@ -5,7 +5,11 @@ describe("routeTitle", () => {
   it("names Resume AI's pages, the product home and each resume alike", () => {
     expect(routeTitle("/resume-ai")).toBe("Resume AI");
     expect(routeTitle("/resume-ai/3f2a9c")).toBe("Resume AI");
-    expect(routeTitle("/resume-ai/jobs")).toBe("Resume AI");
+    expect(routeTitle("/resume-ai/jobsearch")).toBe("Resume AI");
+  });
+
+  it("names the Jobs portal inside Resume AI", () => {
+    expect(routeTitle("/resume-ai/jobs")).toBe("Jobs");
   });
 
   it("keeps Documents and the Story bank apart from Resume AI", () => {

@@ -6,6 +6,7 @@ import { Sparkles, X, cx, focusRing, useFocusTrap } from "@orbit/ui";
 import { Button, ErrorNote, Field, Input, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
+import { RESUME_AI_HOME } from "../resume/paths";
 import { JOB_TYPES, LEVELS, POSTED_WITHIN, WORKPLACES, addItem, toggle, toggleWorkplace } from "./model";
 
 interface Props {
@@ -91,7 +92,7 @@ export function ProfilePanel({ profile, onClose, onSaved }: Props) {
             ) : (
               <p className="text-sm">
                 You don't have a resume yet.{" "}
-                <Link to="/resume-ai" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+                <Link to={RESUME_AI_HOME} className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
                   Make one in Resume AI
                 </Link>{" "}
                 and the AI fills this in from it.

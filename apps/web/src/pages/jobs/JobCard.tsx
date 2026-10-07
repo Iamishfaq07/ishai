@@ -24,10 +24,9 @@ import { Button, ErrorNote, Spinner } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { resumeToText } from "../resume/model";
+import { RESUME_AI_JOBS, resumePath } from "../resume/paths";
 import { STATUS_LABEL, VERDICT_TONE, factsLine, isNew, matchTone, postedAgo, safeUrl, sourceLine } from "./model";
 
-/** Links into the resume editor (the Resume AI section). */
-export const resumePath = (id: string) => `/resume-ai/${encodeURIComponent(id)}`;
 
 interface Props {
   job: JobListing;
@@ -229,7 +228,7 @@ export function JobCard({ job, resumeId, onTracked }: Props) {
         )}
         {tracked && tracked.status !== "saved" ? (
           <Link
-            to="/resume-ai/jobs?view=tracker"
+            to={`${RESUME_AI_JOBS}?view=tracker`}
             className={cx("inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-500/10 dark:text-indigo-300", focusRing)}
           >
             <BookmarkCheck className="h-4 w-4" aria-hidden /> {STATUS_LABEL[tracked.status]}

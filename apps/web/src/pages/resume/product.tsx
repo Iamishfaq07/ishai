@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
-import { FileText, FileUp, Gauge, GraduationCap, Mail, MessagesSquare, Send, Wand2, cx, focusRing, type LucideIcon } from "@orbit/ui";
-import { RESUME_AI_HOME } from "./paths";
+import { Briefcase, FileText, FileUp, Gauge, GraduationCap, Mail, MessagesSquare, Send, Wand2, cx, focusRing, type LucideIcon } from "@orbit/ui";
+import { RESUME_AI_HOME, RESUME_AI_JOBS } from "./paths";
 
 /**
  * Orbit Resume AI, Orbit's second product next to the interview copilot: what marks it in the app (the "AI" pill),
@@ -54,6 +54,12 @@ export const RESUME_AI_FEATURES: ResumeAiFeature[] = [
     text: "Upload your old resume as a PDF or Word file, or LinkedIn's \"Save to PDF\", and it's read into sections you can edit.",
   },
   {
+    icon: Briefcase,
+    short: "Jobs matched to your resume",
+    title: "Jobs matched to your resume",
+    text: "The latest openings from companies' own career pages and remote job boards, ranked by how well they match your resume, with a free AI fit check and a tracker for what you've applied to.",
+  },
+  {
     icon: MessagesSquare,
     short: "Interview prep from your resume",
     title: "Interview prep from your resume",
@@ -79,12 +85,10 @@ export const RESUME_AI_FEATURES: ResumeAiFeature[] = [
   },
 ];
 
-/**
- * Resume AI's own pages, as tabs under its header once there's more than one. The Jobs portal adds
- * `{ to: RESUME_AI_JOBS, label: "Jobs", icon: Briefcase }` here when its page is mounted at /resume-ai/jobs.
- */
+/** Resume AI's own pages, as tabs under its header once there's more than one. */
 export const RESUME_AI_SECTIONS: Array<{ to: string; label: string; icon: LucideIcon; end?: boolean }> = [
   { to: RESUME_AI_HOME, label: "My resumes", icon: FileText, end: true },
+  { to: RESUME_AI_JOBS, label: "Jobs", icon: Briefcase },
 ];
 
 /** The tabs between Resume AI's pages. Nothing while it has only the one. */

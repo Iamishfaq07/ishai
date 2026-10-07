@@ -4,6 +4,7 @@ const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/start/, "New session"],
   [/^\/sessions\/[^/]+/, "Session"],
   [/^\/sessions/, "Sessions"],
+  [/^\/resume-ai\/jobs(\/|$)/, "Jobs"],
   [/^\/resume-ai/, "Resume AI"],
   [/^\/documents\/stories/, "Story bank"],
   [/^\/documents/, "Documents"],

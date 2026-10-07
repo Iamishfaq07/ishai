@@ -300,6 +300,8 @@ def test_admin_user_search_still_finds_by_exact_text(api: Api) -> None:
     ("/v1/admin/users", {"limit": "100000"}), ("/v1/admin/users", {"q": "x" * 500}),
     ("/v1/admin/payments", {"only": "submitted' --"}), ("/v1/admin/latency", {"days": "7 OR 1=1"}),
     ("/v1/admin/costs", {"days": "-1"}), ("/v1/admin/feedback", {"days": "1e9"}),
+    ("/v1/jobs/feed", {"sort": "best' OR 1=1"}), ("/v1/jobs/feed", {"page_size": "100000"}),
+    ("/v1/jobs/feed", {"q": "x" * 500}), ("/v1/jobs/feed", {"page": "0"}),
 ])
 def test_list_filters_only_accept_their_declared_values(api: Api, path: str, params: dict[str, str]) -> None:
     r = api.c.get(path, headers=api.admin, params=params)
@@ -312,7 +314,7 @@ PATH_PAYLOADS = ["1' OR '1'='1", "1 OR 1=1", "'; DROP TABLE documents; --", '" O
 
 @pytest.mark.parametrize("payload", PATH_PAYLOADS)
 @pytest.mark.parametrize("template", ["/v1/documents/{}/text", "/v1/resumes/{}", "/v1/workspaces/{}",
-                                      "/v1/sessions/{}", "/v1/sessions/{}/export.md"])
+                                      "/v1/sessions/{}", "/v1/sessions/{}/export.md", "/v1/jobs/listings/{}"])
 def test_sql_in_path_ids_is_just_an_id_that_doesnt_exist(api: Api, template: str, payload: str) -> None:
     h, _ = _bearer(api.c)
     r = api.c.get(template.format(quote(payload, safe="")), headers=h)
@@ -830,6 +832,11 @@ AI_ROUTES: list[tuple[str, str, dict[str, Any], int]] = [
     ("POST", "/v1/sessions/{sid}/follow-up", {}, 3),
     ("POST", "/v1/sessions/{sid}/screenshots", {}, 10),
     ("POST", "/v1/sessions/{sid}/live-ticket", {}, 20),
+    # Jobs: the free AI (capped per day on top of these) and the actions that may fetch a job post's page.
+    ("POST", "/v1/jobs/profile/suggest", {"json": {}}, 10),
+    ("POST", "/v1/jobs/listings/{sid}/fit", {}, 10),
+    ("POST", "/v1/jobs/listings/{sid}/tailor", {"json": {}}, 8),
+    ("POST", "/v1/jobs/listings/{sid}/prepare", {}, 8),
 ]
 AI_IDS = [f"{m} {p}" for m, p, _, _ in AI_ROUTES]
 

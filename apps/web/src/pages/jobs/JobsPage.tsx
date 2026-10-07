@@ -18,7 +18,9 @@ import { Button, Card, EmptyState, ErrorNote, PageHeader, Select, Spinner } from
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
-import { JobCard, resumePath } from "./JobCard";
+import { RESUME_AI_HOME, resumePath } from "../resume/paths";
+import { ResumeAiTabs } from "../resume/product";
+import { JobCard } from "./JobCard";
 import { ProfilePanel } from "./ProfilePanel";
 import { JobTracker } from "./Tracker";
 import { POSTED_WITHIN, postedAgo, profileSummary, safeUrl } from "./model";
@@ -56,43 +58,46 @@ export function JobsPage() {
 
   return (
     <>
+      <ResumeAiTabs />
       <PageHeader
         icon={Briefcase}
-        title="Jobs"
-        subtitle="The latest openings that match your resume, from companies' own career pages and remote job boards. You apply on the original site."
-        actions={
-          view === "matches" && profile.data ? (
-            <Button variant="secondary" onClick={() => setEditing(true)}>
-              <SlidersHorizontal className="h-4 w-4" aria-hidden /> Customise
-            </Button>
-          ) : undefined
-        }
+        title="Jobs matched to your resume"
+        subtitle="The latest openings from companies' own career pages and remote job boards, best match first. You apply on the original site."
       />
-      <div className="mb-6 inline-flex gap-1 rounded-xl bg-zinc-500/10 p-1" role="tablist" aria-label="Jobs">
-        {(
-          [
-            ["matches", "Matches", Sparkles],
-            ["tracker", "Tracker", BookmarkCheck],
-          ] as const
-        ).map(([id, label, Icon]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={view === id}
-            onClick={() => show(id)}
-            className={cx(
-              "inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-              view === id ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
-              focusRing,
-            )}
-          >
-            <Icon className="h-4 w-4" aria-hidden /> {label}
-            {id === "tracker" && tracker.data && tracker.data.length > 0 && (
-              <span className="rounded-full bg-indigo-500/15 px-1.5 text-xs tabular-nums text-indigo-700 dark:text-indigo-200">{tracker.data.length}</span>
-            )}
-          </button>
-        ))}
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-zinc-200 dark:border-white/10">
+        <div className="flex gap-5" role="tablist" aria-label="Jobs">
+          {(
+            [
+              ["matches", "Matches", Sparkles],
+              ["tracker", "Tracker", BookmarkCheck],
+            ] as const
+          ).map(([id, label, Icon]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={view === id}
+              onClick={() => show(id)}
+              className={cx(
+                "-mb-px inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-0.5 pb-2.5 pt-1 text-sm font-medium transition-colors",
+                view === id
+                  ? "border-indigo-500 text-zinc-900 dark:text-white"
+                  : "border-transparent text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
+                focusRing,
+              )}
+            >
+              <Icon className="h-4 w-4" aria-hidden /> {label}
+              {id === "tracker" && tracker.data && tracker.data.length > 0 && (
+                <span className="rounded-full bg-indigo-500/15 px-1.5 text-xs tabular-nums text-indigo-700 dark:text-indigo-200">{tracker.data.length}</span>
+              )}
+            </button>
+          ))}
+        </div>
+        {view === "matches" && profile.data && (
+          <Button variant="secondary" size="sm" className="mb-2" onClick={() => setEditing(true)}>
+            <SlidersHorizontal className="h-4 w-4" aria-hidden /> Customise
+          </Button>
+        )}
       </div>
 
       {view === "tracker" ? (
@@ -293,7 +298,7 @@ function Matches({
               <strong className="font-medium">Make a resume to see your matches.</strong> Orbit reads your titles, skills and experience from it. Until then
               these are the newest jobs.
             </p>
-            <Link to="/resume-ai" className={cx("rounded-xl bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500", focusRing)}>
+            <Link to={RESUME_AI_HOME} className={cx("rounded-xl bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500", focusRing)}>
               Open Resume AI
             </Link>
           </Card>

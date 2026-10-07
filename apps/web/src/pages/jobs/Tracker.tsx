@@ -19,7 +19,7 @@ import { Button, EmptyState, ErrorNote, Field, Input, Select, Spinner, Textarea 
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import type { AsyncState } from "../../lib/useAsync";
-import { resumePath } from "./JobCard";
+import { RESUME_AI_JOBS, resumePath } from "../resume/paths";
 import { STATUSES, STATUS_LABEL, STATUS_TONE, byStatus, dateInput, fromDateInput, safeUrl, shortDate } from "./model";
 
 /**
@@ -74,7 +74,7 @@ export function JobTracker({ tracker }: { tracker: AsyncState<JobTrackerEntry[]>
         title="Nothing tracked yet"
         body="Save jobs from your matches, or say “Yes, I applied” after you apply. Then move each one along: applied, interviewing, offer."
         action={
-          <Link to="/resume-ai/jobs" className={cx("font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
+          <Link to={RESUME_AI_JOBS} className={cx("font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
             See your matches
           </Link>
         }
