@@ -40,7 +40,7 @@ _CUTSHORT_CITY = {"Bengaluru": "bangalore-bengaluru", "Gurugram": "gurugram", "D
 _INTERNSHALA = (
     (r"\b(python|django)\b", "python-django"), (r"\bjava\b", "java"), (r"\b(android)\b", "android-app-development"),
     (r"\b(data scien|machine learning|ml\b|ai\b)", "data-science"), (r"\bdata analy", "data-analytics"),
-    (r"\b(front ?end|react|angular)", "front-end-development"), (r"\b(back ?end)", "backend-development"),
+    (r"\b(front ?end|react|angular)", "front-end-development"), (r"\b(back ?end)", "back-end-development"),
     (r"\bfull ?stack", "full-stack-development"), (r"\b(web develop)", "web-development"),
     (r"\b(software|developer|engineer|sde)\b", "software-development"),
     (r"\b(digital marketing|seo|performance marketing)", "digital-marketing"), (r"\bmarketing\b", "marketing"),
