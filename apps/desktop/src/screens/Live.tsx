@@ -19,6 +19,7 @@ import {
   loadResponseTiming,
   loadCodingLanguage,
   loadThinking,
+  loadExperience,
   selectDisplayedAnswer,
   useAnswerHistory,
   useLiveSession,
@@ -123,6 +124,7 @@ export function LiveScreen({
       response_timing: loadResponseTiming(),
       thinking: loadThinking(),
       ...(loadCodingLanguage() ? { coding_language: loadCodingLanguage()! } : {}),
+      ...(loadExperience() !== "auto" ? { experience: loadExperience() } : {}),
     },
   });
 

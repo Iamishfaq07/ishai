@@ -524,3 +524,21 @@ describe("mock interview", () => {
     expect(s.mockSummary).toMatchObject({ answered: 2, unanswered: 1, drill: true });
   });
 });
+
+describe("auto length", () => {
+  it("keeps the size picked for each answer, and nothing on a fixed length", () => {
+    const s = run([
+      detected("q1"),
+      ev("answer.started", { answer_id: "a1", question_id: "q1", length: "short", size: "brief", reasoning: "light", source: "auto" }),
+      detected("q2"),
+      started("a2", "q2"),
+    ]);
+    expect(s.answers.a1).toMatchObject({ length: "short", size: "brief" });
+    expect(s.answers.a2?.size).toBeUndefined();
+  });
+
+  it("starts new sessions on auto", () => {
+    expect(initialLiveState().settings.length).toBe("auto");
+    expect(initialLiveState({ length: "short" }).settings.length).toBe("short"); // a session saved before auto
+  });
+});

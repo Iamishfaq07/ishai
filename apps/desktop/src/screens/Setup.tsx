@@ -3,6 +3,7 @@ import type {
   AnswerLength,
   AnswerStyle,
   DocumentKind,
+  ExperienceLevel,
   MockDifficulty,
   MockInterviewType,
   MockPersona,
@@ -29,12 +30,15 @@ import {
   RefreshCw,
   Trash2,
   ANSWER_STYLES,
+  EXPERIENCE_LEVELS,
   RESPONSE_TIMINGS,
   THINKING_LEVELS,
   cx,
   focusRing,
+  loadExperience,
   loadResponseTiming,
   loadThinking,
+  saveExperience,
   saveResponseTiming,
   saveThinking,
   addFrame,
@@ -163,7 +167,8 @@ export function SetupScreen({
   const [type, setType] = useState<SessionType>(initialType ?? "interview");
   const [role, setRole] = useState("");
   const [instructions, setInstructions] = useState("");
-  const [length, setLength] = useState<AnswerLength>("short");
+  const [length, setLength] = useState<AnswerLength>("auto");
+  const [experience, setExperience] = useState<ExperienceLevel>(loadExperience);
   const [style, setStyle] = useState<AnswerStyle>("natural");
   const [thinking, setThinking] = useState<ThinkingLevel>(loadThinking);
   const [autoAnswer, setAutoAnswer] = useState(true);
@@ -720,6 +725,7 @@ export function SetupScreen({
             <label className="block space-y-1">
               <span className="text-xs font-medium">Answer length</span>
               <select value={length} onChange={(e) => setLength(e.target.value as AnswerLength)} className={cx(control, focusRing)}>
+                <option value="auto">Auto (fits each question)</option>
                 <option value="short">Short (~30s)</option>
                 <option value="standard">Standard (~60s)</option>
                 <option value="detailed">Detailed</option>
@@ -737,6 +743,28 @@ export function SetupScreen({
               </select>
             </label>
           </div>
+
+          <label className="block space-y-1">
+            <span className="text-xs font-medium">Your experience level</span>
+            <select
+              value={experience}
+              onChange={(e) => {
+                const level = e.target.value as ExperienceLevel;
+                setExperience(level);
+                saveExperience(level);
+              }}
+              className={cx(control, focusRing)}
+            >
+              {EXPERIENCE_LEVELS.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+            <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">
+              {EXPERIENCE_LEVELS.find((l) => l.value === experience)?.hint}. Answers are pitched at it.
+            </span>
+          </label>
 
           <label className="block space-y-1">
             <span className="text-xs font-medium">Thinking</span>

@@ -4,11 +4,13 @@ import {
   type AnswerFeedbackReason,
   type AnswerLength,
   type AnswerRating,
+  type AnswerSize,
   type CodingLanguage,
 } from "@orbit/types";
 import { formatElapsed, useElapsed } from "../hooks/useElapsed";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useStickyScroll } from "../hooks/useStickyScroll";
+import { resizeTarget } from "../live/answerSize";
 import { DEFAULT_HOTKEYS, useHotkeys, type HotkeyMap } from "../live/hotkeys";
 import { CODING_LANGUAGES } from "../live/preferences";
 import { historyLabel, useAnswerHistory, type AnswerHistory } from "../live/useAnswerHistory";
@@ -61,7 +63,6 @@ const SIDE_TABS: Array<{ id: SideTab; label: string; icon: LucideIcon }> = [
 ];
 
 const SIDE_PANEL_KEY = "orbit.sidePanel";
-const LENGTH_STEPS: readonly AnswerLength[] = ["short", "standard", "detailed"];
 
 /** The session timer on its own: its once-a-second tick re-renders this, not the whole panel. */
 function SessionClock({ startedAt, running, dragRegion }: { startedAt: number | null; running: boolean; dragRegion?: boolean }) {
@@ -269,28 +270,45 @@ export function LivePanel(props: LivePanelProps) {
         : againVia === "answer" && againText !== undefined),
   );
 
-  // "Shorter" / "Longer": step the answer length and re-ask the same question. Only for spoken answers to a
-  // question (not chat replies or screenshots), and not while one is still streaming.
-  const lengthIndex = LENGTH_STEPS.indexOf(live.settings.length);
+  // "Shorter" / "Longer" / "Simpler": re-ask the same question. Only for spoken answers to a question (not chat
+  // replies or screenshots), and not while one is still streaming. A fixed length steps (and keeps) the session's
+  // length; on "auto" only this answer gets the next size, and the next question is sized on its own again.
   const canResize = Boolean(
     answer && againVia === "answer" && againText !== undefined && !screenshot && !ended && answer.status === "complete" &&
       (source === "auto" || source === "manual"),
   );
-  const shorterLength = LENGTH_STEPS[lengthIndex - 1];
-  const longerLength = LENGTH_STEPS[lengthIndex + 1];
+  const answerSize = answer?.size;
+  const shorter = resizeTarget(live.settings.length, answerSize, -1);
+  const longer = resizeTarget(live.settings.length, answerSize, 1);
+  // As plain values, so the callbacks below (and the memoized card) only change when the target does.
+  const shorterLength = shorter && "length" in shorter ? shorter.length : undefined;
+  const shorterSize = shorter && "size" in shorter ? shorter.size : undefined;
+  const longerLength = longer && "length" in longer ? longer.length : undefined;
+  const longerSize = longer && "size" in longer ? longer.size : undefined;
   const resizeTo = useCallback(
-    (next: AnswerLength | undefined) => {
-      if (!next || againVia !== "answer" || againText === undefined) return null;
+    (length: AnswerLength | undefined, size: AnswerSize | undefined) => {
+      if ((!length && !size) || againVia !== "answer" || againText === undefined) return null;
       return () => {
         followLive();
-        actions.setLength(next);
-        actions.answer(againText); // same socket, in order: the new length applies to this answer
+        if (size) {
+          actions.answer(againText, { size });
+        } else if (length) {
+          actions.setLength(length);
+          actions.answer(againText); // same socket, in order: the new length applies to this answer
+        }
       };
     },
     [actions, againText, againVia, followLive],
   );
-  const onShorter = useMemo(() => resizeTo(shorterLength), [resizeTo, shorterLength]);
-  const onLonger = useMemo(() => resizeTo(longerLength), [resizeTo, longerLength]);
+  const onShorter = useMemo(() => resizeTo(shorterLength, shorterSize), [resizeTo, shorterLength, shorterSize]);
+  const onLonger = useMemo(() => resizeTo(longerLength, longerSize), [resizeTo, longerLength, longerSize]);
+  const onSimpler = useMemo(() => {
+    if (againVia !== "answer" || againText === undefined) return null;
+    return () => {
+      followLive();
+      actions.answer(againText, { simpler: true, ...(answerSize ? { size: answerSize } : {}) });
+    };
+  }, [actions, againText, againVia, answerSize, followLive]);
   const mockStt = live.providers.stt?.state === "mock";
 
   return (
@@ -407,7 +425,7 @@ export function LivePanel(props: LivePanelProps) {
             progress={keyPoints?.progress ?? null}
             {...(keyPoints ? { onTogglePoint: keyPoints.toggle } : {})}
             reader={reader}
-            {...(canResize ? { onShorter, onLonger } : {})}
+            {...(canResize ? { onShorter, onLonger, onSimpler } : {})}
             {...(offerLanguage ? { onCodeLanguage: codeLanguage } : {})}
           />
           </>

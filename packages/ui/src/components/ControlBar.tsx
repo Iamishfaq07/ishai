@@ -33,6 +33,7 @@ export interface ControlBarProps {
 }
 
 const LENGTHS: Array<{ value: AnswerLength; label: string; hint: string }> = [
+  { value: "auto", label: "Auto", hint: "Auto — sized to each question: a sentence or two for a quick one, more for a deep one" },
   { value: "short", label: "30s", hint: "Short — about 20–30 seconds of speaking" },
   { value: "standard", label: "60s", hint: "Standard — about 45–75 seconds" },
   { value: "detailed", label: "Detailed", hint: "Detailed — about 90–150 seconds" },

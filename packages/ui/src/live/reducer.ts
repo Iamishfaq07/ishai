@@ -3,6 +3,7 @@ import {
   emptyLiveAnswer,
   type AnswerLatency,
   type AnswerLength,
+  type AnswerSize,
   type AnswerSource,
   type AudioStatus,
   type CancelReason,
@@ -54,6 +55,8 @@ export interface AnswerView {
   status: AnswerStatus;
   answer: LiveAnswer;
   length: AnswerLength;
+  /** Auto length: the size picked for this question ("Quick answer", "Long answer"…). */
+  size?: AnswerSize;
   reasoning: ReasoningLevel;
   source: AnswerSource;
   latency: AnswerLatency | null;
@@ -518,7 +521,7 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
 
     // ── answers ──────────────────────────────────────────────────────────
     case "answer.started": {
-      const { answer_id, question_id, length, reasoning, source } = action.data;
+      const { answer_id, question_id, length, size, reasoning, source } = action.data;
       const existing = s.answers[answer_id];
       const threaded = s.chat.some((c) => c.kind === "answer" && c.answer_id === answer_id);
       // A new chat reply answers the oldest message still waiting: the server handles chat messages in order.
@@ -527,6 +530,7 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
         ...(existing ?? placeholderAnswer(answer_id, question_id)),
         question_id,
         length,
+        ...(size ? { size } : {}),
         reasoning,
         source,
         // Transcript position when this answer appeared: candidate speech after it counts toward its key points.

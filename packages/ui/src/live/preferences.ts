@@ -1,4 +1,4 @@
-import type { AnswerStyle, CodingLanguage, ResponseTiming, ThinkingLevel } from "@orbit/types";
+import type { AnswerStyle, CodingLanguage, ExperienceLevel, ResponseTiming, ThinkingLevel } from "@orbit/types";
 
 /** "Wait before answering" presets — the server holds a detected question this long (finalizer.GRACE_MS). */
 export const RESPONSE_TIMINGS: Array<{ value: ResponseTiming; label: string; hint: string }> = [
@@ -82,6 +82,35 @@ export function loadCodingLanguage(): CodingLanguage | undefined {
 export function saveCodingLanguage(lang: CodingLanguage): void {
   try {
     localStorage.setItem(CODING_KEY, lang);
+  } catch {
+    // storage unavailable — still applies to this session
+  }
+}
+
+/** The candidate's level, which answers are pitched at (a fresher shouldn't sound like a staff engineer). */
+export const EXPERIENCE_LEVELS: Array<{ value: ExperienceLevel; label: string; hint: string }> = [
+  { value: "auto", label: "Auto", hint: "Worked out from your resume and the role" },
+  { value: "fresher", label: "Fresher", hint: "Student or recent graduate: projects, internships, coursework" },
+  { value: "junior", label: "Junior", hint: "About 1–2 years of work" },
+  { value: "mid", label: "Mid-level", hint: "About 3–6 years: features owned end to end" },
+  { value: "senior", label: "Senior", hint: "7+ years, or a senior / lead title" },
+];
+
+const EXPERIENCE_KEY = "orbit.experience";
+
+/** A per-device preference, like thinking: who you are doesn't change per call. */
+export function loadExperience(): ExperienceLevel {
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(EXPERIENCE_KEY) : null;
+    return EXPERIENCE_LEVELS.some((l) => l.value === raw) ? (raw as ExperienceLevel) : "auto";
+  } catch {
+    return "auto";
+  }
+}
+
+export function saveExperience(level: ExperienceLevel): void {
+  try {
+    localStorage.setItem(EXPERIENCE_KEY, level);
   } catch {
     // storage unavailable — still applies to this session
   }

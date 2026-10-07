@@ -38,6 +38,7 @@ export {
   ExternalLink,
   Eye,
   EyeOff,
+  Feather,
   FileText,
   FileUp,
   FolderOpen,

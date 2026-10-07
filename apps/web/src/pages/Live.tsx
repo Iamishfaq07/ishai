@@ -18,6 +18,7 @@ import {
   loadResponseTiming,
   loadCodingLanguage,
   loadThinking,
+  loadExperience,
   useLiveSession,
   VISION_ENABLED,
   type LucideIcon,
@@ -95,6 +96,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       response_timing: loadResponseTiming(),
       thinking: loadThinking(),
       ...(loadCodingLanguage() ? { coding_language: loadCodingLanguage()! } : {}),
+      ...(loadExperience() !== "auto" ? { experience: loadExperience() } : {}),
     },
   });
 
