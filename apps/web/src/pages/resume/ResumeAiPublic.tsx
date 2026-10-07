@@ -4,9 +4,11 @@ import type { CreditPack } from "@orbit/types";
 import { ArrowRight, OrbitWordmark, Palette, Sparkles, Wand2, cx, focusRing } from "@orbit/ui";
 import { api } from "../../lib/api";
 import { useWelcomeGrant } from "../../lib/welcome";
+import { JOBS_AI_HOME } from "../jobs/paths";
 import { TEMPLATES } from "./model";
 import { RESUME_AI_HOME } from "./paths";
-import { AiPill, RESUME_AI_FEATURES, scoreTone } from "./product";
+import { AiPill } from "../../components/products";
+import { RESUME_AI_FEATURES, scoreTone } from "./product";
 import { MM_TO_PX, PAGE_MM, ResumePreview } from "./ResumePreview";
 import { SAMPLE_RESUME } from "./sample";
 
@@ -212,6 +214,13 @@ export function ResumeAiPublicPage() {
           <Link to="/register" state={BACK_HERE} className={cx(primary, "relative mt-6 px-6 py-3 text-base")}>
             Start free <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>
+          <p className="relative mt-5 text-xs text-zinc-500 dark:text-zinc-400">
+            Looking for jobs too?{" "}
+            <Link to={JOBS_AI_HOME} className={cx("font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
+              Jobs AI
+            </Link>{" "}
+            finds the latest openings that fit your resume.
+          </p>
         </section>
       </main>
 

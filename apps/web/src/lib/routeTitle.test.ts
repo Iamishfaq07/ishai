@@ -8,8 +8,11 @@ describe("routeTitle", () => {
     expect(routeTitle("/resume-ai/jobsearch")).toBe("Resume AI");
   });
 
-  it("names the Jobs portal inside Resume AI", () => {
-    expect(routeTitle("/resume-ai/jobs")).toBe("Jobs");
+  it("names every Jobs AI page Jobs AI, its old address in Resume AI too", () => {
+    for (const path of ["/jobs", "/jobs/matches", "/jobs/listing/8c1d2e", "/jobs/tracker", "/jobs/profile", "/resume-ai/jobs"]) {
+      expect(routeTitle(path)).toBe("Jobs AI");
+    }
+    expect(routeTitle("/jobsearch")).toBeNull();
   });
 
   it("keeps Documents and the Story bank apart from Resume AI", () => {

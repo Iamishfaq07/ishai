@@ -1,26 +1,11 @@
-import { NavLink } from "react-router-dom";
-import { Briefcase, FileText, FileUp, Gauge, GraduationCap, Mail, MessagesSquare, Send, Wand2, cx, focusRing, type LucideIcon } from "@orbit/ui";
-import { RESUME_AI_HOME, RESUME_AI_JOBS } from "./paths";
+import { FileText, FileUp, Gauge, GraduationCap, Mail, MessagesSquare, Send, Wand2, type LucideIcon } from "@orbit/ui";
+import { ProductTabs, type ProductSection } from "../../components/products";
+import { RESUME_AI_HOME } from "./paths";
 
 /**
- * Orbit Resume AI, Orbit's second product next to the interview copilot: what marks it in the app (the "AI" pill),
- * what its AI does (the product home and the public page list the same things), and its own pages. Light on
- * purpose: the main nav, Home and the sign-in screens import it.
+ * Orbit Resume AI, one of Orbit's products next to the interview copilot and Jobs AI: what its AI does (the product
+ * home and the public page list the same things) and its own pages. Light on purpose: Home imports it.
  */
-
-/** The small gradient "AI" tag after "Resume" in the nav and on the product's cards and headings. */
-export function AiPill({ className }: { className?: string }) {
-  return (
-    <span
-      className={cx(
-        "inline-flex items-center rounded-[5px] bg-gradient-to-r from-indigo-600 to-aurora-600 px-1 py-px text-[0.625rem] font-bold leading-[0.875rem] tracking-wide text-white shadow-sm",
-        className,
-      )}
-    >
-      AI
-    </span>
-  );
-}
 
 /** One thing the AI does: `short` for the chips on the product home, `text` for the public page. */
 export interface ResumeAiFeature {
@@ -30,10 +15,7 @@ export interface ResumeAiFeature {
   text: string;
 }
 
-/**
- * Only what Resume AI really does today, in the order people need it. One line per feature, so the Jobs portal
- * ("Jobs matched to your resume") adds itself here when it lands.
- */
+/** Only what Resume AI really does today, in the order people need it. Finding jobs is Jobs AI's (pages/jobs). */
 export const RESUME_AI_FEATURES: ResumeAiFeature[] = [
   {
     icon: Gauge,
@@ -52,12 +34,6 @@ export const RESUME_AI_FEATURES: ResumeAiFeature[] = [
     short: "AI import: PDF, Word, LinkedIn",
     title: "Import what you have",
     text: "Upload your old resume as a PDF or Word file, or LinkedIn's \"Save to PDF\", and it's read into sections you can edit.",
-  },
-  {
-    icon: Briefcase,
-    short: "Jobs matched to your resume",
-    title: "Jobs matched to your resume",
-    text: "The latest openings from companies' own career pages and remote job boards, ranked by how well they match your resume, with a free AI fit check and a tracker for what you've applied to.",
   },
   {
     icon: MessagesSquare,
@@ -86,31 +62,11 @@ export const RESUME_AI_FEATURES: ResumeAiFeature[] = [
 ];
 
 /** Resume AI's own pages, as tabs under its header once there's more than one. */
-export const RESUME_AI_SECTIONS: Array<{ to: string; label: string; icon: LucideIcon; end?: boolean }> = [
-  { to: RESUME_AI_HOME, label: "My resumes", icon: FileText, end: true },
-  { to: RESUME_AI_JOBS, label: "Jobs", icon: Briefcase },
-];
+export const RESUME_AI_SECTIONS: ProductSection[] = [{ to: RESUME_AI_HOME, label: "My resumes", icon: FileText, end: true }];
 
 /** The tabs between Resume AI's pages. Nothing while it has only the one. */
 export function ResumeAiTabs() {
-  if (RESUME_AI_SECTIONS.length < 2) return null;
-  const tab = ({ isActive }: { isActive: boolean }) =>
-    cx(
-      "inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors sm:px-3",
-      isActive
-        ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white"
-        : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
-      focusRing,
-    );
-  return (
-    <nav aria-label="Resume AI" className="mb-6 inline-flex gap-1 rounded-xl bg-zinc-500/10 p-1">
-      {RESUME_AI_SECTIONS.map(({ to, label, icon: Icon, end }) => (
-        <NavLink key={to} to={to} end={end} className={tab}>
-          <Icon className="hidden h-4 w-4 sm:block" aria-hidden="true" /> {label}
-        </NavLink>
-      ))}
-    </nav>
-  );
+  return <ProductTabs label="Resume AI" sections={RESUME_AI_SECTIONS} />;
 }
 
 /** The colour of an ATS score, from red (needs work) to green (passes). */

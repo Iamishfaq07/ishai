@@ -1,11 +1,9 @@
 /**
- * Where Orbit Resume AI lives in the web app: its home (your resumes, or the public product page when signed out),
- * the editor for each resume, and the address kept for the Jobs portal. Also where the resume maker's old addresses
- * go now.
+ * Where Orbit Resume AI lives in the web app: its home (your resumes, or the public product page when signed out) and
+ * the editor for each resume. Also where the resume maker's old addresses go now. (`/resume-ai/jobs`, where Jobs
+ * once was, goes to Jobs AI: pages/jobs/paths.ts.)
  */
 export const RESUME_AI_HOME = "/resume-ai";
-/** Kept for the Jobs portal ("Jobs matched to your resume"), so it's never read as a resume id. */
-export const RESUME_AI_JOBS = "/resume-ai/jobs";
 
 /** The editor for one resume. */
 export function resumePath(id: string): string {

@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import {
+  Briefcase,
   ChevronDown,
   CreditCard,
   ErrorBoundary,
@@ -21,26 +22,29 @@ import {
 } from "@orbit/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { RESUME_AI_HOME } from "../pages/resume/paths";
-import { AiPill } from "../pages/resume/product";
 import { prefetchRoute } from "../routes";
+import { AiPill } from "./products";
 import { Spinner } from "./ui";
 
-// Daily destinations only. Plan & billing lives in the account menu (and Settings): nobody checks it daily.
-// `ai`: Orbit Resume AI, the second product, marked as the AI one ("Resume" and the gradient AI pill).
+// Daily destinations only, the same on the top bar and the phone tab bar. Settings sits beside the account menu (a
+// gear, and in the menu), and Plan & billing in the menu: nobody opens them daily, and six destinations fit a 360 px
+// phone and a 768 px tablet without wrapping. `ai`: Orbit's AI products, Resume AI and Jobs AI ("Resume" / "Jobs" and
+// the gradient AI pill).
 const NAV: Array<{ to: string; label: string; icon: LucideIcon; end?: boolean; ai?: boolean }> = [
   { to: "/", label: "Home", icon: House, end: true },
   ...(MOCK_INTERVIEW_ENABLED ? [{ to: "/mock", label: "Practice", icon: Target }] : []),
   { to: "/sessions", label: "Sessions", icon: HistoryIcon },
   { to: "/documents", label: "Documents", icon: FolderOpen },
   { to: RESUME_AI_HOME, label: "Resume AI", icon: Sparkles, ai: true },
-  { to: "/settings", label: "Settings", icon: SettingsIcon },
+  { to: JOBS_AI_HOME, label: "Jobs AI", icon: Briefcase, ai: true },
 ];
 
 /** The phone tab bar's columns: one per destination (Tailwind needs the class names written out). */
 const PHONE_COLUMNS: Record<number, string> = { 4: "grid-cols-4", 5: "grid-cols-5", 6: "grid-cols-6" };
 
-/** A nav label; Resume AI's is "Resume" with the AI pill (its link's aria-label still reads "Resume AI"). */
+/** A nav label; Resume AI's is "Resume" with the AI pill, Jobs AI's "Jobs" (their links' aria-labels read the name). */
 function NavLabel({ label, ai, small = false }: { label: string; ai?: boolean; small?: boolean }) {
   if (!ai) return <>{label}</>;
   return (
@@ -88,7 +92,7 @@ export function Layout() {
             <OrbitWordmark size={26} />
           </NavLink>
 
-          {/* Narrow laptops and tablets (md): labels only, so six destinations fit beside the account menu. */}
+          {/* Narrow laptops and tablets (md): labels only, so six destinations fit beside Settings and the account menu. */}
           <nav aria-label="Main" className="hidden min-w-0 flex-1 items-center gap-0.5 md:flex lg:gap-1">
             {NAV.map(({ to, label, icon: Icon, end, ai }) => (
               <NavLink
@@ -127,12 +131,33 @@ export function Layout() {
           </nav>
 
           <WaitingForAccess />
-          <AccountMenu
-            name={user?.name ?? null}
-            email={user?.email ?? ""}
-            onBilling={() => navigate("/billing")}
-            onSignOut={signOut}
-          />
+          <div className="ml-auto flex shrink-0 items-center gap-1 md:ml-0">
+            <NavLink
+              to="/settings"
+              aria-label="Settings"
+              title="Settings"
+              onMouseEnter={() => prefetchRoute("/settings")}
+              onFocus={() => prefetchRoute("/settings")}
+              className={({ isActive }) =>
+                cx(
+                  "flex h-9 w-9 items-center justify-center rounded-full transition-colors",
+                  isActive
+                    ? "bg-indigo-500/10 text-indigo-600 dark:bg-white/[0.07] dark:text-white"
+                    : "text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
+                  focusRing,
+                )
+              }
+            >
+              <SettingsIcon className="h-[18px] w-[18px]" aria-hidden />
+            </NavLink>
+            <AccountMenu
+              name={user?.name ?? null}
+              email={user?.email ?? ""}
+              onSettings={() => navigate("/settings")}
+              onBilling={() => navigate("/billing")}
+              onSignOut={signOut}
+            />
+          </div>
         </div>
       </header>
 
@@ -196,7 +221,8 @@ export function Layout() {
                 onTouchStart={() => prefetchRoute(to)}
                 className={({ isActive }) =>
                   cx(
-                    "flex flex-col items-center gap-1 whitespace-nowrap px-0.5 pb-2 pt-2.5 text-[11px] font-medium",
+                    // 10px under 380 px: six labels ("Documents" the widest) fit a 360 px phone with room between them.
+                    "flex flex-col items-center gap-1 whitespace-nowrap px-0.5 pb-2 pt-2.5 text-[10px] font-medium min-[380px]:text-[11px]",
                     isActive ? "text-indigo-600 dark:text-white" : "text-zinc-500 dark:text-zinc-400",
                     focusRing,
                   )
@@ -224,15 +250,17 @@ export function Layout() {
   );
 }
 
-/** Avatar button → account menu: who's signed in, plan & billing, sign out. */
+/** Avatar button → account menu: who's signed in, settings, plan & billing, sign out. */
 function AccountMenu({
   name,
   email,
+  onSettings,
   onBilling,
   onSignOut,
 }: {
   name: string | null;
   email: string;
+  onSettings: () => void;
   onBilling: () => void;
   onSignOut: () => void;
 }) {
@@ -260,7 +288,7 @@ function AccountMenu({
     fn();
   };
   return (
-    <div ref={ref} className="relative ml-auto md:ml-0">
+    <div ref={ref} className="relative">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -284,6 +312,10 @@ function AccountMenu({
             <p className="truncate text-xs text-zinc-500">{email}</p>
           </div>
           <div className="my-1 h-px bg-zinc-200 dark:bg-white/10" />
+          <button type="button" role="menuitem" className={item} onClick={choose(onSettings)}>
+            <SettingsIcon className="h-4 w-4 text-zinc-500" />
+            Settings
+          </button>
           <button type="button" role="menuitem" className={item} onClick={choose(onBilling)}>
             <CreditCard className="h-4 w-4 text-zinc-500" />
             Plan &amp; billing

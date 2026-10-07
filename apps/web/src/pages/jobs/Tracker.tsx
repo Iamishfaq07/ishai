@@ -9,18 +9,44 @@ import {
   FileText,
   MapPin,
   PenLine,
+  Sparkles,
   Target,
   Trash2,
   confirmDialog,
   cx,
   focusRing,
 } from "@orbit/ui";
-import { Button, EmptyState, ErrorNote, Field, Input, Select, Spinner, Textarea } from "../../components/ui";
+import { Button, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import type { AsyncState } from "../../lib/useAsync";
-import { RESUME_AI_JOBS, resumePath } from "../resume/paths";
+import { resumePath } from "../resume/paths";
+import { useJobsAi } from "./JobsAi";
+import { linkButton } from "./links";
 import { STATUSES, STATUS_LABEL, STATUS_TONE, byStatus, dateInput, fromDateInput, safeUrl, shortDate } from "./model";
+import { JOBS_MATCHES, jobPath } from "./paths";
+
+/** Jobs AI → Tracker: every job saved or applied to, and how far along each one is. */
+export function JobTrackerPage() {
+  const { tracker } = useJobsAi();
+  return (
+    <>
+      <PageHeader
+        icon={BookmarkCheck}
+        title="Your applications"
+        subtitle="Saved, applied, interviewing, offer. Move each job along as it goes, with notes and dates."
+        actions={
+          tracker.data && tracker.data.length > 0 ? (
+            <Link to={JOBS_MATCHES} className={linkButton("secondary")}>
+              <Sparkles className="h-4 w-4" aria-hidden /> Find more jobs
+            </Link>
+          ) : undefined
+        }
+      />
+      <JobTracker tracker={tracker} />
+    </>
+  );
+}
 
 /**
  * The job tracker: saved → applied → interviewing → offer / not this time, with notes and dates. A board of columns
@@ -74,8 +100,8 @@ export function JobTracker({ tracker }: { tracker: AsyncState<JobTrackerEntry[]>
         title="Nothing tracked yet"
         body="Save jobs from your matches, or say “Yes, I applied” after you apply. Then move each one along: applied, interviewing, offer."
         action={
-          <Link to={RESUME_AI_JOBS} className={cx("font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
-            See your matches
+          <Link to={JOBS_MATCHES} className={linkButton("primary")}>
+            <Sparkles className="h-4 w-4" aria-hidden /> See your matches
           </Link>
         }
       />
@@ -159,7 +185,12 @@ function TrackerCard({
   return (
     <article className={cx("glass-panel rounded-xl", compact ? "p-3" : "p-4")}>
       <h4 className={cx("font-medium leading-snug", compact ? "text-sm" : "text-base")}>
-        {original ? (
+        {/* The job's own page while it's in the feed; after that, the original post. */}
+        {entry.live ? (
+          <Link to={jobPath(entry.listing_id)} className={cx("rounded hover:text-indigo-600 dark:hover:text-indigo-300", focusRing)}>
+            {entry.title}
+          </Link>
+        ) : original ? (
           <a href={original} target="_blank" rel="noopener" className={cx("rounded hover:text-indigo-600 dark:hover:text-indigo-300", focusRing)}>
             {entry.title}
           </a>
@@ -236,7 +267,7 @@ function TrackerCard({
   );
 }
 
-function EditEntry({ entry, onCancel, onSave }: { entry: JobTrackerEntry; onCancel: () => void; onSave: (p: JobTrackerUpdate) => Promise<unknown> }) {
+export function EditEntry({ entry, onCancel, onSave }: { entry: JobTrackerEntry; onCancel: () => void; onSave: (p: JobTrackerUpdate) => Promise<unknown> }) {
   const [notes, setNotes] = useState(entry.notes);
   const [applied, setApplied] = useState(dateInput(entry.applied_at));
   const [next, setNext] = useState(dateInput(entry.next_at));

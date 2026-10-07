@@ -39,6 +39,7 @@ import type {
   JobPrefs,
   JobPrepareResponse,
   JobProfile,
+  JobStats,
   JobStatus,
   JobTailorResponse,
   JobTrackerEntry,
@@ -419,6 +420,8 @@ export function createApiClient(options: ApiClientOptions) {
         timeoutMs: LONG_TIMEOUT_MS,
       }),
     jobTracker: () => json<JobTrackerEntry[]>("/v1/jobs/tracker"),
+    /** Jobs AI's public page: fresh jobs and companies, and the free daily allowances (no session needed). */
+    jobStats: () => json<JobStats>("/v1/jobs/stats"),
     /** Save a job from the feed, or mark it applied (an entry already there moves to `status`). */
     trackJob: (listingId: string, status: JobStatus = "saved") =>
       json<JobTrackerEntry>("/v1/jobs/tracker", { method: "POST", body: body({ listing_id: listingId, status }) }),

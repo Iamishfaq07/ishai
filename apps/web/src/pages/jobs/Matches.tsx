@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import type { JobFeed, JobListing, JobPortalLink, JobProfile, JobSort } from "@orbit/types";
+import type { JobFeed, JobListing, JobPortalLink, JobPrefs, JobProfile, JobSort } from "@orbit/types";
 import {
   ArrowUpRight,
-  BookmarkCheck,
   Briefcase,
   FileText,
   RefreshCw,
@@ -17,164 +16,62 @@ import {
 import { Button, Card, EmptyState, ErrorNote, PageHeader, Select, Spinner } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
-import { useAsync } from "../../lib/useAsync";
 import { RESUME_AI_HOME, resumePath } from "../resume/paths";
-import { ResumeAiTabs } from "../resume/product";
 import { JobCard } from "./JobCard";
-import { ProfilePanel } from "./ProfilePanel";
-import { JobTracker } from "./Tracker";
-import { POSTED_WITHIN, postedAgo, profileSummary, safeUrl } from "./model";
+import { PAGE_SIZE, useJobFeed, useJobsAi } from "./JobsAi";
+import { linkButton, textLink } from "./links";
+import { POSTED_WITHIN, WORKPLACES, postedAgo, profileSummary, safeUrl, toggleWorkplace, withTracked } from "./model";
+import { JOBS_PROFILE } from "./paths";
 
-const PAGE_SIZE = 20;
-const POLL_MS = 6_000;
-const MAX_POLLS = 40; // about four minutes: a first refresh of every source takes one or two
+// The pages after the first that were shown last, so coming back from a job's page finds the list as it was left.
+let shownMore: { key: string; items: JobListing[]; page: number; hasMore: boolean } | null = null;
 
 /**
- * Jobs, inside Resume AI: the latest openings that match the user's resume (from companies' own career pages and
- * remote-job boards that allow it), the profile behind the feed, "search on" links for the sites Orbit can't read,
- * and the tracker. `?view=tracker` opens the tracker.
+ * Jobs AI → Matches: the latest openings that match the user's resume (from companies' own career pages and
+ * remote-job boards that allow it), best first, with the search box, sort and quick filters, and "search on" links
+ * for the sites Orbit can't read. `?q=` and `?sort=` keep the search in the address, so Back returns to it.
  */
-export function JobsPage() {
-  const [params, setParams] = useSearchParams();
-  const view = params.get("view") === "tracker" ? "tracker" : "matches";
-  const profile = useAsync(() => api.jobProfile(), [], "job-profile");
-  const tracker = useAsync(() => api.jobTracker(), [], "job-tracker");
-  const [editing, setEditing] = useState(false);
-  // Bumped when the profile changes: the feed is asked again.
-  const [version, setVersion] = useState(0);
-
-  const show = (v: "matches" | "tracker") => {
-    const next = new URLSearchParams(params);
-    if (v === "tracker") next.set("view", "tracker");
-    else next.delete("view");
-    setParams(next);
-  };
-
-  const saved = (p: JobProfile) => {
-    profile.setData(() => p);
-    setEditing(false);
-    setVersion((n) => n + 1);
-  };
-
+export function JobMatchesPage() {
+  const { profile } = useJobsAi();
   return (
     <>
-      <ResumeAiTabs />
       <PageHeader
-        icon={Briefcase}
+        icon={Sparkles}
         title="Jobs matched to your resume"
         subtitle="The latest openings from companies' own career pages and remote job boards, best match first. You apply on the original site."
+        actions={
+          profile.data && (
+            // Phones have "More filters" beside the quick filters, a little further down.
+            <Link to={JOBS_PROFILE} className={cx(linkButton("secondary"), "hidden sm:inline-flex")}>
+              <SlidersHorizontal className="h-4 w-4" aria-hidden /> Customise
+            </Link>
+          )
+        }
       />
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-zinc-200 dark:border-white/10">
-        <div className="flex gap-5" role="tablist" aria-label="Jobs">
-          {(
-            [
-              ["matches", "Matches", Sparkles],
-              ["tracker", "Tracker", BookmarkCheck],
-            ] as const
-          ).map(([id, label, Icon]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={view === id}
-              onClick={() => show(id)}
-              className={cx(
-                "-mb-px inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-0.5 pb-2.5 pt-1 text-sm font-medium transition-colors",
-                view === id
-                  ? "border-indigo-500 text-zinc-900 dark:text-white"
-                  : "border-transparent text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
-                focusRing,
-              )}
-            >
-              <Icon className="h-4 w-4" aria-hidden /> {label}
-              {id === "tracker" && tracker.data && tracker.data.length > 0 && (
-                <span className="rounded-full bg-indigo-500/15 px-1.5 text-xs tabular-nums text-indigo-700 dark:text-indigo-200">{tracker.data.length}</span>
-              )}
-            </button>
-          ))}
-        </div>
-        {view === "matches" && profile.data && (
-          <Button variant="secondary" size="sm" className="mb-2" onClick={() => setEditing(true)}>
-            <SlidersHorizontal className="h-4 w-4" aria-hidden /> Customise
-          </Button>
-        )}
-      </div>
-
-      {view === "tracker" ? (
-        <JobTracker tracker={tracker} />
-      ) : profile.loading && !profile.data ? (
+      {profile.loading && !profile.data ? (
         <Spinner big label="Getting your job profile" state="searching" />
       ) : profile.error && !profile.data ? (
         <ErrorNote onRetry={profile.reload}>{errorText(profile.error)}</ErrorNote>
       ) : profile.data ? (
-        <Matches
-          profile={profile.data}
-          version={version}
-          onCustomise={() => setEditing(true)}
-          onProfile={saved}
-          onTracked={() => tracker.reload()}
-        />
+        <Matches profile={profile.data} />
       ) : null}
-
-      {editing && profile.data && <ProfilePanel profile={profile.data} onClose={() => setEditing(false)} onSaved={saved} />}
     </>
   );
 }
 
-// The AI fills in a first profile once per visit, when the user has a resume but hasn't saved a profile yet.
-let autoSuggested = false;
-
-function Matches({
-  profile,
-  version,
-  onCustomise,
-  onProfile,
-  onTracked,
-}: {
-  profile: JobProfile;
-  version: number;
-  onCustomise: () => void;
-  onProfile: (p: JobProfile) => void;
-  onTracked: () => void;
-}) {
-  const [text, setText] = useState("");
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<JobSort>("best");
-  const [polls, setPolls] = useState(0);
-  const [suggesting, setSuggesting] = useState(false);
-  const feed = useAsync(() => api.jobFeed({ q: query, sort, page_size: PAGE_SIZE }), [query, sort, version], `job-feed|${query}|${sort}|${version}`);
+function Matches({ profile }: { profile: JobProfile }) {
+  const { tracker, suggesting, setProfile } = useJobsAi();
+  const [params, setParams] = useSearchParams();
+  const query = params.get("q")?.trim() ?? "";
+  const sort: JobSort = params.get("sort") === "newest" ? "newest" : "best";
+  const [text, setText] = useState(query);
+  const { feed, refreshing, key, restartPolling } = useJobFeed(profile, query, sort);
   // Pages after the first, and tracker changes made on this screen (so a card doesn't wait for a reload).
-  const [more, setMore] = useState<{ key: string; items: JobListing[]; page: number; hasMore: boolean } | null>(null);
-  const [tracked, setTracked] = useState<Record<string, JobListing["tracked"]>>({});
+  const [more, setMore] = useState(shownMore);
+  const [changed, setChanged] = useState<Record<string, JobListing["tracked"]>>({});
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState<string | null>(null);
-  const key = `${query}|${sort}|${version}`;
   const extra = more?.key === key ? more : null;
-
-  // First visit with a resume: let the AI read it into titles, skills and cities (free, cached per resume).
-  const ran = useRef(false);
-  useEffect(() => {
-    if (ran.current || autoSuggested || profile.saved || !profile.resume || profile.ai_left === 0) return;
-    ran.current = autoSuggested = true;
-    setSuggesting(true);
-    api
-      .suggestJobProfile(profile.resume.id)
-      .then(onProfile)
-      .catch(() => undefined) // the profile worked out from the resume stays; Customise can try again
-      .finally(() => setSuggesting(false));
-  }, [profile, onProfile]);
-
-  // While a source refreshes in the background, ask again every few seconds (the new posts appear on their own).
-  const refreshing = Boolean(feed.data?.refreshing);
-  const reloadFeed = feed.reload;
-  useEffect(() => {
-    if (!refreshing || polls >= MAX_POLLS) return;
-    const t = window.setTimeout(() => {
-      setPolls((n) => n + 1);
-      reloadFeed();
-    }, POLL_MS);
-    return () => window.clearTimeout(t);
-  }, [refreshing, polls, reloadFeed]);
 
   const items = useMemo(() => {
     const seen = new Set<string>();
@@ -182,10 +79,10 @@ function Matches({
     for (const j of [...(feed.data?.items ?? []), ...(extra?.items ?? [])]) {
       if (seen.has(j.id)) continue;
       seen.add(j.id);
-      out.push(j.id in tracked ? { ...j, tracked: tracked[j.id] ?? null } : j);
+      out.push(j);
     }
-    return out;
-  }, [feed.data, extra, tracked]);
+    return withTracked(out, changed, tracker.data);
+  }, [feed.data, extra, changed, tracker.data]);
 
   const loadMore = async () => {
     const page = (extra?.page ?? 1) + 1;
@@ -193,7 +90,8 @@ function Matches({
     setMoreError(null);
     try {
       const next = await api.jobFeed({ q: query, sort, page, page_size: PAGE_SIZE });
-      setMore({ key, items: [...(extra?.items ?? []), ...next.items], page, hasMore: next.has_more });
+      shownMore = { key, items: [...(extra?.items ?? []), ...next.items], page, hasMore: next.has_more };
+      setMore(shownMore);
     } catch (err) {
       setMoreError(errorText(err));
     } finally {
@@ -201,14 +99,22 @@ function Matches({
     }
   };
 
+  const setSearch = (q: string, s: JobSort = sort) => {
+    const next = new URLSearchParams(params);
+    if (q) next.set("q", q);
+    else next.delete("q");
+    if (s === "newest") next.set("sort", s);
+    else next.delete("sort");
+    setParams(next, { replace: true });
+    restartPolling();
+  };
   const search = (e: FormEvent) => {
     e.preventDefault();
-    setQuery(text.trim());
-    setPolls(0);
+    setSearch(text.trim());
   };
   const clear = () => {
     setText("");
-    setQuery("");
+    setSearch("");
   };
 
   const data = feed.data;
@@ -249,12 +155,14 @@ function Matches({
             <label htmlFor="job-sort" className="sr-only">
               Sort
             </label>
-            <Select id="job-sort" value={sort} onChange={(e) => setSort(e.target.value as JobSort)} className="!w-auto">
+            <Select id="job-sort" value={sort} onChange={(e) => setSearch(query, e.target.value as JobSort)} className="!w-auto">
               <option value="best">Best match</option>
               <option value="newest">Newest</option>
             </Select>
           </div>
         </form>
+
+        <QuickFilters profile={profile} disabled={suggesting} onSaved={setProfile} />
 
         {/* Phones: the profile in a line (the full card and the portal links sit beside the feed on wide screens). */}
         <p className="text-xs text-zinc-500 dark:text-zinc-400 lg:hidden">
@@ -283,26 +191,11 @@ function Matches({
               <strong className="font-semibold tabular-nums">{data.total}</strong> {data.total === 1 ? "match" : "matches"} posted in the {days.label.toLowerCase()}
               {sort === "best" ? ", best first" : ", newest first"}
             </span>
-            {(refreshing || suggesting) && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/10 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-200">
-                <RefreshCw className="h-3 w-3 motion-safe:animate-spin" aria-hidden /> {suggesting ? "Reading your resume" : "Checking for new jobs"}
-              </span>
-            )}
+            <Busy refreshing={refreshing} suggesting={suggesting} />
           </p>
         )}
 
-        {!profile.resume && (
-          <Card className="flex flex-wrap items-center gap-3">
-            <FileText className="h-5 w-5 shrink-0 text-indigo-500" aria-hidden />
-            <p className="min-w-0 flex-1 text-sm">
-              <strong className="font-medium">Make a resume to see your matches.</strong> Orbit reads your titles, skills and experience from it. Until then
-              these are the newest jobs.
-            </p>
-            <Link to={RESUME_AI_HOME} className={cx("rounded-xl bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500", focusRing)}>
-              Open Resume AI
-            </Link>
-          </Card>
-        )}
+        {!profile.resume && <NoResume />}
 
         {feed.loading && !data ? (
           <Spinner big label={suggesting ? "Reading your resume" : "Finding jobs that match your resume"} state="searching" />
@@ -312,7 +205,7 @@ function Matches({
             <PortalCard portals={null} days={days.short} prominent />
           </div>
         ) : data && data.total === 0 ? (
-          <NoMatches feed={data} days={days.label} onCustomise={onCustomise} searching={Boolean(query)} />
+          <NoMatches feed={data} days={days.label} searching={Boolean(query)} />
         ) : (
           <>
             <ul className="space-y-3">
@@ -322,8 +215,8 @@ function Matches({
                     job={job}
                     resumeId={profile.resume?.id ?? null}
                     onTracked={(id, t) => {
-                      setTracked((prev) => ({ ...prev, [id]: t }));
-                      onTracked();
+                      setChanged((prev) => ({ ...prev, [id]: t }));
+                      tracker.reload();
                     }}
                   />
                 </li>
@@ -346,29 +239,123 @@ function Matches({
       </div>
 
       <aside className="hidden space-y-4 lg:sticky lg:top-20 lg:block lg:self-start" aria-label="Your job profile">
-        <ProfileCard profile={profile} suggesting={suggesting} onCustomise={onCustomise} />
+        <ProfileCard profile={profile} suggesting={suggesting} />
         <PortalCard portals={data?.portals ?? null} days={days.short} />
       </aside>
     </div>
   );
 }
 
-function ProfileCard({ profile, suggesting, onCustomise }: { profile: JobProfile; suggesting: boolean; onCustomise: () => void }) {
+/** "Checking for new jobs" while a source refreshes; "Reading your resume" while the AI fills in the profile. */
+export function Busy({ refreshing, suggesting }: { refreshing: boolean; suggesting: boolean }) {
+  if (!refreshing && !suggesting) return null;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/10 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-200">
+      <RefreshCw className="h-3 w-3 motion-safe:animate-spin" aria-hidden /> {suggesting ? "Reading your resume" : "Checking for new jobs"}
+    </span>
+  );
+}
+
+/**
+ * The two filters people change most, a tap away: how recent, and the work mode. Each saves the profile (the feed is
+ * worked out from it); everything else is on the Profile page.
+ */
+function QuickFilters({ profile, disabled, onSaved }: { profile: JobProfile; disabled: boolean; onSaved: (p: JobProfile) => void }) {
+  // Shown at once while it saves; the feed waits for the saved profile, so it never ranks with the old one.
+  const [pending, setPending] = useState<JobPrefs | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const prefs = pending ?? profile.prefs;
+  const save = async (next: JobPrefs) => {
+    setPending(next);
+    setError(null);
+    try {
+      onSaved(await api.saveJobProfile(next, profile.resume?.id ?? null));
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setPending(null);
+    }
+  };
+  const off = disabled || pending !== null;
+  const chip = (on: boolean) =>
+    cx(
+      "whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed",
+      on ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
+      focusRing,
+    );
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <div role="group" aria-label="Posted within" className="inline-flex shrink-0 gap-0.5 rounded-xl bg-zinc-500/10 p-1">
+          {POSTED_WITHIN.map((p) => (
+            <button
+              key={p.days}
+              type="button"
+              disabled={off}
+              aria-pressed={prefs.posted_within === p.days}
+              title={p.label}
+              onClick={() => void save({ ...prefs, posted_within: p.days })}
+              className={chip(prefs.posted_within === p.days)}
+            >
+              {p.short}
+            </button>
+          ))}
+        </div>
+        <div role="group" aria-label="Work mode" className="inline-flex shrink-0 gap-0.5 rounded-xl bg-zinc-500/10 p-1">
+          {WORKPLACES.map((w) => (
+            <button
+              key={w.id}
+              type="button"
+              disabled={off}
+              aria-pressed={prefs.workplace.includes(w.id)}
+              onClick={() => void save({ ...prefs, workplace: toggleWorkplace(prefs.workplace, w.id) })}
+              className={chip(prefs.workplace.includes(w.id))}
+            >
+              {w.label}
+            </button>
+          ))}
+        </div>
+        <Link to={JOBS_PROFILE} className={cx("inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-500/10 dark:text-indigo-300", focusRing)}>
+          <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden /> More filters
+        </Link>
+      </div>
+      {error && <ErrorNote>{error}</ErrorNote>}
+    </div>
+  );
+}
+
+/** No resume yet: matching needs one (until then the feed is the newest jobs). */
+export function NoResume() {
+  return (
+    <Card className="flex flex-wrap items-center gap-3">
+      <FileText className="h-5 w-5 shrink-0 text-indigo-500" aria-hidden />
+      <p className="min-w-0 flex-1 text-sm">
+        <strong className="font-medium">Make a resume to see your matches.</strong> Orbit reads your titles, skills and experience from it. Until then these are
+        the newest jobs.
+      </p>
+      <Link to={RESUME_AI_HOME} className={linkButton("primary", "sm")}>
+        Open Resume AI
+      </Link>
+    </Card>
+  );
+}
+
+/** What the feed looks for, the skills it matches on, and the resume it reads, with the way to change them. */
+export function ProfileCard({ profile, suggesting, className }: { profile: JobProfile; suggesting: boolean; className?: string }) {
   const p = profile.prefs;
   return (
-    <Card className="!p-4">
+    <Card className={cx("!p-4", className)}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-sm font-semibold">Looking for</h2>
           <p className="mt-0.5 text-sm text-zinc-700 dark:text-zinc-200">{profileSummary(p)}</p>
         </div>
-        <Button variant="ghost" size="sm" onClick={onCustomise} aria-label="Customise your feed">
+        <Link to={JOBS_PROFILE} className={linkButton("ghost", "sm")} aria-label="Edit your search profile" title="Edit your search profile">
           <SlidersHorizontal className="h-4 w-4" aria-hidden />
-          <span className="lg:hidden">Customise</span>
-        </Button>
+        </Link>
       </div>
       {p.skills.length > 0 && (
-        <ul className="mt-3 hidden flex-wrap gap-1 sm:flex" aria-label="Your key skills">
+        <ul className="mt-3 flex flex-wrap gap-1" aria-label="Your key skills">
           {p.skills.slice(0, 10).map((s) => (
             <li key={s} className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-xs text-zinc-700 dark:text-zinc-300">
               {s}
@@ -383,10 +370,10 @@ function ProfileCard({ profile, suggesting, onCustomise }: { profile: JobProfile
         ) : profile.resume ? (
           <>
             Matched to{" "}
-            <Link to={resumePath(profile.resume.id)} className={cx("font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
+            <Link to={resumePath(profile.resume.id)} className={textLink}>
               {profile.resume.title}
-            </Link>
-            {profile.suggested?.by === "ai" ? ", read by the AI." : "."}
+            </Link>{" "}
+            in Resume AI{profile.suggested?.by === "ai" ? ", read by the AI." : "."}
           </>
         ) : (
           "No resume yet."
@@ -397,7 +384,7 @@ function ProfileCard({ profile, suggesting, onCustomise }: { profile: JobProfile
 }
 
 /** "Search on LinkedIn / Naukri / …": their own searches, filled in from the profile. No data is read from them. */
-function PortalCard({ portals, days, prominent = false }: { portals: JobPortalLink[] | null; days: string; prominent?: boolean }) {
+export function PortalCard({ portals, days, prominent = false }: { portals: JobPortalLink[] | null; days: string; prominent?: boolean }) {
   if (!portals?.length) {
     return prominent ? (
       <p className="text-sm text-zinc-500 dark:text-zinc-400">You can still search LinkedIn, Naukri and Indeed directly while Orbit can't reach the job boards.</p>
@@ -431,16 +418,12 @@ function PortalCard({ portals, days, prominent = false }: { portals: JobPortalLi
   );
 }
 
-function NoMatches({ feed, days, onCustomise, searching }: { feed: JobFeed; days: string; onCustomise: () => void; searching: boolean }) {
+function NoMatches({ feed, days, searching }: { feed: JobFeed; days: string; searching: boolean }) {
   const down = feed.sources.length > 0 && feed.sources.every((s) => s.failing || (s.listings === 0 && !s.refreshing));
-  const first = feed.refreshing && feed.sources.every((s) => s.listings === 0);
   return (
     <div className="space-y-4">
-      {first ? (
-        <Card className="text-center">
-          <Spinner big label="Fetching the latest jobs from company career pages and remote boards" state="searching" />
-          <p className="-mt-6 pb-4 text-sm text-zinc-500 dark:text-zinc-400">The first time takes a minute or two. They appear here by themselves.</p>
-        </Card>
+      {firstFetch(feed) ? (
+        <FirstFetch />
       ) : down ? (
         <EmptyState
           icon={Briefcase}
@@ -457,9 +440,9 @@ function NoMatches({ feed, days, onCustomise, searching }: { feed: JobFeed; days
               : "Try a longer time range, more job titles or cities, or turn on remote. New jobs come in through the day."
           }
           action={
-            <Button variant="secondary" onClick={onCustomise}>
+            <Link to={JOBS_PROFILE} className={linkButton("secondary")}>
               <SlidersHorizontal className="h-4 w-4" aria-hidden /> Customise your feed
-            </Button>
+            </Link>
           }
         />
       )}
@@ -468,8 +451,22 @@ function NoMatches({ feed, days, onCustomise, searching }: { feed: JobFeed; days
   );
 }
 
+/** The very first refresh of every source: nothing cached yet, posts on their way. */
+export function firstFetch(feed: JobFeed): boolean {
+  return feed.refreshing && feed.sources.every((s) => s.listings === 0);
+}
+
+export function FirstFetch() {
+  return (
+    <Card className="text-center">
+      <Spinner big label="Fetching the latest jobs from company career pages and remote boards" state="searching" />
+      <p className="-mt-6 pb-4 text-sm text-zinc-500 dark:text-zinc-400">The first time takes a minute or two. They appear here by themselves.</p>
+    </Card>
+  );
+}
+
 /** Where the jobs come from, with the credit each feed asks for, and how fresh they are. */
-function SourcesNote({ feed }: { feed: JobFeed }) {
+export function SourcesNote({ feed }: { feed: JobFeed }) {
   const boards = feed.sources.filter((s) => s.kind === "board").map((s) => s.label);
   const latest = feed.sources.map((s) => s.last_success_at).filter((t): t is string => Boolean(t)).sort().pop();
   return (

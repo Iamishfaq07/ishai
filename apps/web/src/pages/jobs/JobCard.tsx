@@ -1,8 +1,6 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import type { JobFitResponse, JobListing, JobStatus } from "@orbit/types";
+import { Link } from "react-router-dom";
+import type { JobListing, JobMatch } from "@orbit/types";
 import {
-  ApiError,
   ArrowUpRight,
   Bookmark,
   BookmarkCheck,
@@ -18,15 +16,11 @@ import {
   X,
   cx,
   focusRing,
-  practiceDocuments,
 } from "@orbit/ui";
 import { Button, ErrorNote, Spinner } from "../../components/ui";
-import { api } from "../../lib/api";
-import { errorText } from "../../lib/format";
-import { resumeToText } from "../resume/model";
-import { RESUME_AI_JOBS, resumePath } from "../resume/paths";
 import { STATUS_LABEL, VERDICT_TONE, factsLine, isNew, matchTone, postedAgo, safeUrl, sourceLine } from "./model";
-
+import { JOBS_TRACKER, jobPath } from "./paths";
+import { useJobActions, type FitState, type JobActions } from "./useJobActions";
 
 interface Props {
   job: JobListing;
@@ -36,238 +30,208 @@ interface Props {
   onTracked: (jobId: string, tracked: JobListing["tracked"]) => void;
 }
 
-/** One job in the feed: what it is, how well it matches, where it's from, and what Orbit can do with it. */
+/**
+ * One job in the feed: what it is, how well it matches, where it's from, and what Orbit can do with it. The title
+ * opens the job's own page (everything about it, and the same actions).
+ */
 export function JobCard({ job, resumeId, onTracked }: Props) {
-  const navigate = useNavigate();
-  const [askApplied, setAskApplied] = useState(false);
-  const [busy, setBusy] = useState<"save" | "applied" | "tailor" | "prepare" | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [note, setNote] = useState<{ text: string; to: string; label: string } | null>(null);
-  const [fit, setFit] = useState<{ loading: boolean; result: JobFitResponse | null; error: string | null; open: boolean }>({
-    loading: false,
-    result: null,
-    error: null,
-    open: false,
-  });
-  const apply = safeUrl(job.apply_url);
-  const original = safeUrl(job.url);
-  const tracked = job.tracked;
-
-  const track = async (status: JobStatus) => {
-    setBusy(status === "applied" ? "applied" : "save");
-    setError(null);
-    try {
-      const entry = await api.trackJob(job.id, status);
-      onTracked(job.id, { id: entry.id, status: entry.status });
-      setAskApplied(false);
-    } catch (err) {
-      setError(errorText(err));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const unsave = async () => {
-    if (!tracked) return;
-    setBusy("save");
-    setError(null);
-    try {
-      await api.untrackJob(tracked.id);
-      onTracked(job.id, null);
-    } catch (err) {
-      setError(errorText(err));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const checkFit = async () => {
-    if (fit.result) {
-      setFit((f) => ({ ...f, open: !f.open }));
-      return;
-    }
-    setFit({ loading: true, result: null, error: null, open: true });
-    try {
-      setFit({ loading: false, result: await api.jobFitCheck(job.id), error: null, open: true });
-    } catch (err) {
-      const limit = err instanceof ApiError && err.code === "fit_check_limit";
-      setFit({ loading: false, result: null, error: limit ? err.message : errorText(err), open: true });
-    }
-  };
-
-  const tailor = async () => {
-    setBusy("tailor");
-    setError(null);
-    try {
-      const r = await api.tailorForJob(job.id, resumeId);
-      if (!tracked) onTracked(job.id, { id: r.tracker_id, status: "saved" });
-      if (r.note) setNote({ text: r.note, to: resumePath(r.resume_id), label: `Open “${r.title}”` });
-      else navigate(resumePath(r.resume_id), { state: { fromJob: job.title } });
-    } catch (err) {
-      setError(errorText(err));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const prepare = async () => {
-    setBusy("prepare");
-    setError(null);
-    try {
-      const r = await api.prepareForJob(job.id);
-      const to = `/mock?jd=${encodeURIComponent(r.document_id)}`;
-      if (!tracked) onTracked(job.id, { id: r.tracker_id, status: "saved" });
-      // Practice reads the resume from Documents: save the matched one there too, the way "Use in Orbit" does (kept
-      // up to date, not copied). Without it the questions still come; the answers just can't use the resume.
-      if (resumeId) {
-        await api
-          .getResume(resumeId)
-          .then((resume) => practiceDocuments(api, { title: resume.title, resumeText: resumeToText(resume.data), jobText: "" }))
-          .catch(() => undefined);
-      }
-      if (r.note) setNote({ text: r.note, to, label: "Go to Practice" });
-      else navigate(to);
-    } catch (err) {
-      setError(errorText(err));
-    } finally {
-      setBusy(null);
-    }
-  };
-
+  const actions = useJobActions(job, resumeId, onTracked);
   return (
     <article className="glass-panel rounded-2xl p-4 sm:p-5" aria-labelledby={`job-${job.id}`}>
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <h3 id={`job-${job.id}`} className="font-display text-base font-semibold leading-snug sm:text-lg">
-            {original ? (
-              <a href={original} target="_blank" rel="noopener" className={cx("rounded hover:text-indigo-600 dark:hover:text-indigo-300", focusRing)}>
-                {job.title}
-              </a>
-            ) : (
-              job.title
-            )}
+            <Link to={jobPath(job.id)} className={cx("rounded hover:text-indigo-600 dark:hover:text-indigo-300", focusRing)}>
+              {job.title}
+            </Link>
           </h3>
-          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-600 dark:text-zinc-300">
-            <span className="inline-flex min-w-0 items-center gap-1">
-              <Building2 className="h-3.5 w-3.5 shrink-0 text-zinc-400" aria-hidden />
-              <span className="truncate">{job.company}</span>
-            </span>
-            {job.place && (
-              <span className="inline-flex min-w-0 items-center gap-1">
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-zinc-400" aria-hidden />
-                <span className="truncate">{job.place}</span>
-              </span>
-            )}
-          </p>
-          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400">
-            <span className="inline-flex items-center gap-1">
-              <Clock className="h-3 w-3" aria-hidden />
-              <time dateTime={job.posted_at}>{postedAgo(job.posted_at)}</time>
-            </span>
-            {isNew(job.posted_at) && (
-              <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 font-medium text-emerald-700 dark:text-emerald-300">New</span>
-            )}
-            {factsLine(job) && (
-              <>
-                <span aria-hidden>·</span>
-                <span>{factsLine(job)}</span>
-              </>
-            )}
-          </p>
+          <JobPlace job={job} className="mt-1" />
+          <JobWhen job={job} className="mt-1" />
         </div>
-        {job.match && (
-          <span
-            className={cx("flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl ring-1", matchTone(job.match.score))}
-            aria-label={`Match ${job.match.score} percent`}
-            title="How well this job matches your profile and resume"
-          >
-            <span className="font-display text-lg font-semibold leading-none tabular-nums">{job.match.score}%</span>
-            <span className="text-[0.625rem] leading-none opacity-80">match</span>
-          </span>
-        )}
+        {job.match && <MatchBadge match={job.match} />}
       </div>
 
       {job.snippet && <p className="mt-3 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-300">{job.snippet}</p>}
 
-      {job.match && (job.match.matched.length > 0 || job.match.missing.length > 0) && (
-        <div className="mt-3 space-y-1.5 text-xs">
-          {job.match.matched.length > 0 && (
-            <ul className="flex flex-wrap gap-1.5" aria-label="Skills you have that this job asks for">
-              {job.match.matched.map((s) => (
-                <li key={s} className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-800 dark:text-emerald-300">
-                  <Check className="h-3 w-3" aria-hidden /> {s}
-                </li>
-              ))}
-            </ul>
-          )}
-          {job.match.missing.length > 0 && (
-            <p className="text-zinc-500 dark:text-zinc-400">
-              <span className="font-medium">Not on your resume:</span> {job.match.missing.slice(0, 4).join(", ")}
-            </p>
-          )}
-        </div>
-      )}
+      {job.match && <SkillsMatch match={job.match} className="mt-3" />}
 
-      <SourceCredit job={job} />
+      <SourceCredit job={job} className="mt-3" />
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        {apply && (
-          <a
-            href={apply}
-            target="_blank"
-            rel="noopener"
-            onClick={() => tracked?.status !== "applied" && setAskApplied(true)}
-            className={cx(
-              "btn-sheen inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 py-1.5 text-sm font-medium text-white shadow-glow-sm hover:from-indigo-400 hover:to-indigo-500",
-              focusRing,
-            )}
-          >
-            Apply <ArrowUpRight className="h-4 w-4" aria-hidden />
-            <span className="sr-only">(opens {job.direct ? `${job.company}'s site` : "the original post"} in a new tab)</span>
-          </a>
-        )}
-        {tracked && tracked.status !== "saved" ? (
-          <Link
-            to={`${RESUME_AI_JOBS}?view=tracker`}
-            className={cx("inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-500/10 dark:text-indigo-300", focusRing)}
-          >
-            <BookmarkCheck className="h-4 w-4" aria-hidden /> {STATUS_LABEL[tracked.status]}
-          </Link>
-        ) : (
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={busy !== null}
-            aria-pressed={Boolean(tracked)}
-            onClick={() => void (tracked ? unsave() : track("saved"))}
-          >
-            {tracked ? <BookmarkCheck className="h-4 w-4 text-indigo-500" aria-hidden /> : <Bookmark className="h-4 w-4" aria-hidden />}
-            {tracked ? "Saved" : "Save"}
-          </Button>
-        )}
-        <Button variant="secondary" size="sm" disabled={fit.loading} aria-expanded={fit.open} onClick={() => void checkFit()}>
-          <Sparkles className="h-4 w-4" aria-hidden /> {fit.result && fit.open ? "Hide fit check" : "Check my fit"}
+        <ApplyLink job={job} actions={actions} />
+        <TrackButton actions={actions} />
+        <Button variant="secondary" size="sm" disabled={actions.fit.loading} aria-expanded={actions.fit.open} onClick={actions.checkFit}>
+          <Sparkles className="h-4 w-4" aria-hidden /> {actions.fit.result && actions.fit.open ? "Hide fit check" : "Check my fit"}
         </Button>
-        <Button variant="ghost" size="sm" disabled={busy !== null} onClick={() => void tailor()} title="A copy of your resume aimed at this job, opened in the editor">
-          <Wand2 className="h-4 w-4" aria-hidden /> {busy === "tailor" ? "Making a copy…" : "Tailor my resume"}
-        </Button>
-        <Button variant="ghost" size="sm" disabled={busy !== null} onClick={() => void prepare()} title="Saves the job description for Practice: interview questions and a mock interview">
-          <Target className="h-4 w-4" aria-hidden /> {busy === "prepare" ? "Saving the job…" : "Prepare"}
-        </Button>
+        <TailorButton actions={actions} />
+        <PrepareButton actions={actions} />
       </div>
 
+      <ActionNotes actions={actions} />
+      {actions.fit.open && <FitPanel fit={actions.fit} onClose={actions.closeFit} onTailor={actions.tailor} className="mt-4" />}
+    </article>
+  );
+}
+
+/** Company and place, with their icons. */
+export function JobPlace({ job, className }: { job: JobListing; className?: string }) {
+  return (
+    <p className={cx("flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-600 dark:text-zinc-300", className)}>
+      <span className="inline-flex min-w-0 items-center gap-1">
+        <Building2 className="h-3.5 w-3.5 shrink-0 text-zinc-400" aria-hidden />
+        <span className="truncate">{job.company}</span>
+      </span>
+      {job.place && (
+        <span className="inline-flex min-w-0 items-center gap-1">
+          <MapPin className="h-3.5 w-3.5 shrink-0 text-zinc-400" aria-hidden />
+          <span className="truncate">{job.place}</span>
+        </span>
+      )}
+    </p>
+  );
+}
+
+/** "3h ago · New · Full-time · 3-5 years · ₹24L – ₹36L a year" (`facts` false: when it was posted only). */
+export function JobWhen({ job, className, facts = true }: { job: JobListing; className?: string; facts?: boolean }) {
+  const line = facts ? factsLine(job) : "";
+  return (
+    <p className={cx("flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400", className)}>
+      <span className="inline-flex items-center gap-1">
+        <Clock className="h-3 w-3" aria-hidden />
+        <time dateTime={job.posted_at}>{postedAgo(job.posted_at)}</time>
+      </span>
+      {isNew(job.posted_at) && <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 font-medium text-emerald-700 dark:text-emerald-300">New</span>}
+      {line && (
+        <>
+          <span aria-hidden>·</span>
+          <span>{line}</span>
+        </>
+      )}
+    </p>
+  );
+}
+
+/** "86% match", coloured from strong to weak. */
+export function MatchBadge({ match, big = false }: { match: JobMatch; big?: boolean }) {
+  return (
+    <span
+      className={cx(
+        "flex shrink-0 flex-col items-center justify-center ring-1",
+        big ? "h-16 w-16 rounded-2xl" : "h-12 w-12 rounded-xl",
+        matchTone(match.score),
+      )}
+      aria-label={`Match ${match.score} percent`}
+      title="How well this job matches your profile and resume"
+    >
+      <span className={cx("font-display font-semibold leading-none tabular-nums", big ? "text-2xl" : "text-lg")}>{match.score}%</span>
+      <span className={cx("leading-none opacity-80", big ? "mt-0.5 text-xs" : "text-[0.625rem]")}>match</span>
+    </span>
+  );
+}
+
+/** The skills the job asks for that the resume shows (ticked), and up to `missing` of those it doesn't. */
+export function SkillsMatch({ match, missing = 4, className }: { match: JobMatch; missing?: number; className?: string }) {
+  if (!match.matched.length && !match.missing.length) return null;
+  return (
+    <div className={cx("space-y-1.5 text-xs", className)}>
+      {match.matched.length > 0 && (
+        <ul className="flex flex-wrap gap-1.5" aria-label="Skills you have that this job asks for">
+          {match.matched.map((s) => (
+            <li key={s} className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-800 dark:text-emerald-300">
+              <Check className="h-3 w-3" aria-hidden /> {s}
+            </li>
+          ))}
+        </ul>
+      )}
+      {match.missing.length > 0 && (
+        <p className="text-zinc-500 dark:text-zinc-400">
+          <span className="font-medium">Not on your resume:</span> {match.missing.slice(0, missing).join(", ")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Apply: the original post in a new tab, then "Did you apply?". */
+export function ApplyLink({ job, actions, big = false }: { job: JobListing; actions: JobActions; big?: boolean }) {
+  const apply = safeUrl(job.apply_url);
+  if (!apply) return null;
+  return (
+    <a
+      href={apply}
+      target="_blank"
+      rel="noopener"
+      onClick={actions.applied}
+      className={cx(
+        "btn-sheen inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 text-sm font-medium text-white shadow-glow-sm hover:from-indigo-400 hover:to-indigo-500",
+        big ? "px-5 py-2.5" : "px-3.5 py-1.5",
+        focusRing,
+      )}
+    >
+      Apply <ArrowUpRight className="h-4 w-4" aria-hidden />
+      <span className="sr-only">(opens {job.direct ? `${job.company}'s site` : "the original post"} in a new tab)</span>
+    </a>
+  );
+}
+
+/** Save (or Saved, to take it off again); once it's further along, its status, linking to the tracker. */
+export function TrackButton({ actions }: { actions: JobActions }) {
+  const { tracked, busy } = actions;
+  if (tracked && tracked.status !== "saved") {
+    return (
+      <Link
+        to={JOBS_TRACKER}
+        className={cx("inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-500/10 dark:text-indigo-300", focusRing)}
+      >
+        <BookmarkCheck className="h-4 w-4" aria-hidden /> {STATUS_LABEL[tracked.status]}
+      </Link>
+    );
+  }
+  return (
+    <Button variant="secondary" size="sm" disabled={busy !== null} aria-pressed={Boolean(tracked)} onClick={actions.toggleSaved}>
+      {tracked ? <BookmarkCheck className="h-4 w-4 text-indigo-500" aria-hidden /> : <Bookmark className="h-4 w-4" aria-hidden />}
+      {tracked ? "Saved" : "Save"}
+    </Button>
+  );
+}
+
+export function TailorButton({ actions }: { actions: JobActions }) {
+  return (
+    <Button variant="ghost" size="sm" disabled={actions.busy !== null} onClick={actions.tailor} title="A copy of your resume aimed at this job, opened in Resume AI">
+      <Wand2 className="h-4 w-4" aria-hidden /> {actions.busy === "tailor" ? "Making a copy…" : "Tailor my resume"}
+    </Button>
+  );
+}
+
+export function PrepareButton({ actions }: { actions: JobActions }) {
+  return (
+    <Button variant="ghost" size="sm" disabled={actions.busy !== null} onClick={actions.prepare} title="Saves the job description for Practice: interview questions and a mock interview">
+      <Target className="h-4 w-4" aria-hidden /> {actions.busy === "prepare" ? "Saving the job…" : "Prepare"}
+    </Button>
+  );
+}
+
+/** What an action has to say: "Did you apply?", an error, or a note with where to go next. */
+export function ActionNotes({ actions }: { actions: JobActions }) {
+  const { askApplied, busy, error, note } = actions;
+  return (
+    <>
       {askApplied && (
         <div role="status" className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-indigo-500/10 p-3 text-sm text-indigo-950 dark:text-indigo-100">
           <span className="min-w-0 flex-1">Did you apply? Orbit can keep track of it for you.</span>
-          <Button size="sm" disabled={busy !== null} onClick={() => void track("applied")}>
+          <Button size="sm" disabled={busy !== null} onClick={() => actions.track("applied")}>
             <Check className="h-4 w-4" aria-hidden /> {busy === "applied" ? "Saving…" : "Yes, I applied"}
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setAskApplied(false)}>
+          <Button variant="ghost" size="sm" onClick={actions.notYet}>
             Not yet
           </Button>
         </div>
       )}
-      {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
+      {error && (
+        <div className="mt-3">
+          <ErrorNote>{error}</ErrorNote>
+        </div>
+      )}
       {note && (
         <div role="status" className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-950 ring-1 ring-amber-500/25 dark:text-amber-100">
           <CircleAlert className="h-4 w-4 shrink-0" aria-hidden />
@@ -277,17 +241,16 @@ export function JobCard({ job, resumeId, onTracked }: Props) {
           </Link>
         </div>
       )}
-      {fit.open && <FitPanel fit={fit} onClose={() => setFit((f) => ({ ...f, open: false }))} onTailor={() => void tailor()} />}
-    </article>
+    </>
   );
 }
 
 /** Where the job came from, with the credit each feed's terms ask for (a followed link, its name). */
-function SourceCredit({ job }: { job: JobListing }) {
+export function SourceCredit({ job, className }: { job: JobListing; className?: string }) {
   const a = job.attribution;
   const link = a ? safeUrl(a.url) : null;
   return (
-    <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+    <p className={cx("text-xs text-zinc-500 dark:text-zinc-400", className)}>
       {job.direct || !a || !link ? (
         sourceLine(job)
       ) : a.large ? (
@@ -314,23 +277,39 @@ function SourceCredit({ job }: { job: JobListing }) {
   );
 }
 
-function FitPanel({
+/**
+ * The AI's fit check: the verdict, why you fit, the gaps and honest tweaks. `onClose` adds a close button; `card`
+ * makes it a card of its own (a job's page) rather than a panel inside one (the feed's cards).
+ */
+export function FitPanel({
   fit,
   onClose,
   onTailor,
+  card = false,
+  className,
 }: {
-  fit: { loading: boolean; result: JobFitResponse | null; error: string | null };
-  onClose: () => void;
+  fit: Pick<FitState, "loading" | "result" | "error">;
+  onClose?: () => void;
   onTailor: () => void;
+  card?: boolean;
+  className?: string;
 }) {
   return (
-    <section aria-label="Fit check" className="mt-4 rounded-2xl border border-zinc-200 bg-white/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+    <section
+      aria-label="Fit check"
+      className={cx(
+        card ? "glass-panel rounded-2xl p-5" : "rounded-2xl border border-zinc-200 bg-white/70 p-4 dark:border-white/10 dark:bg-white/[0.03]",
+        className,
+      )}
+    >
       <div className="mb-2 flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-indigo-500" aria-hidden />
         <h4 className="flex-1 font-display text-sm font-semibold">Fit check</h4>
-        <button type="button" onClick={onClose} aria-label="Close the fit check" className={cx("rounded-md p-1 text-zinc-400 hover:text-zinc-900 dark:hover:text-white", focusRing)}>
-          <X className="h-4 w-4" />
-        </button>
+        {onClose && (
+          <button type="button" onClick={onClose} aria-label="Close the fit check" className={cx("rounded-md p-1 text-zinc-400 hover:text-zinc-900 dark:hover:text-white", focusRing)}>
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
       {fit.loading && <Spinner label="Comparing your resume with this job" state="searching" />}
       {fit.error && <p className="text-sm text-rose-700 dark:text-rose-300">{fit.error}</p>}

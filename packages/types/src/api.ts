@@ -1336,6 +1336,21 @@ export interface JobTailorResponse {
   tracker_id: string;
 }
 
+/** Jobs AI's public numbers (no session): how many fresh jobs Orbit holds, and what's free each day. */
+export interface JobStats {
+  /** Posted in the last `days` days. */
+  jobs: number;
+  companies: number;
+  days: number;
+  /** The job boards credited by name ("Himalayas", "Remote OK", "Jobicy"). */
+  feeds: string[];
+  updated_at: string | null;
+  /** Free AI fit checks a day. */
+  fit_daily: number;
+  /** Free AI profile reads a day. */
+  profile_daily: number;
+}
+
 export interface JobPrepareResponse {
   document_id: string;
   title: string;
