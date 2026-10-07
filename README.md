@@ -44,15 +44,15 @@ comes free with a new account, more come in UPI packs; typing, the ATS score and
 - **Interview prep from your resume.** The questions it will get you asked with answer outlines, the skills the job
   wants that it doesn't show, and a mock interview on them.
 - **Campus and fresher mode.** Education first with your CGPA, projects and positions of responsibility, on one page.
-- **Cover letters**, in the tone and length you pick, and **Naukri and LinkedIn profiles and outreach messages**
-  (referral requests, emails to HR, follow-ups, thank-you notes).
+- **Cover letters**, in the tone and length you pick.
 - **10 templates** (Campus and Harvard among them), Word and PDF downloads, and "Shorten with AI" to fit one page.
 
 ## Orbit Jobs AI
 
 At `/jobs` in the web app (a public product page when signed out), with its own pages: an overview, your matches,
-each job's page, the tracker and your search profile. Browsing, matching and the tracker are free; the AI fit check
-and the AI's read of your resume are free too, a few a day (`ORBIT_JOBS_FIT_DAILY`, `ORBIT_JOBS_PROFILE_DAILY`).
+each job's page, the tracker, Outreach and your search profile. Browsing, matching and the tracker are free; the AI
+fit check and the AI's read of your resume are free too, a few a day (`ORBIT_JOBS_FIT_DAILY`,
+`ORBIT_JOBS_PROFILE_DAILY`).
 
 - **Matched to your resume.** Every job gets a match score from your titles, skills, experience and city, with the
   skills it asks for that your resume shows and the ones it doesn't. Search, sort, and filter by how recent and
@@ -66,6 +66,9 @@ and the AI's read of your resume are free too, a few a day (`ORBIT_JOBS_FIT_DAIL
   level, job types, how recent, sources and words to leave out.
 - **A tracker** from saved to offer, with notes and dates; **Tailor my resume** opens a copy aimed at the job in
   Resume AI, and **Prepare** saves the job description for a mock interview.
+- **Outreach** (`/jobs/outreach`): referral requests, emails to HR, follow-ups and thank-you notes, and the Naukri
+  and LinkedIn profiles, written from one of your resumes. "Write outreach" on a job's page or the tracker writes for
+  that job (the server reads its posting). Each one written uses a resume credit.
 
 ## Stack
 

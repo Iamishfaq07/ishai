@@ -1,4 +1,4 @@
-import { FileText, FileUp, Gauge, GraduationCap, Mail, MessagesSquare, Send, Wand2, type LucideIcon } from "@orbit/ui";
+import { FileText, FileUp, Gauge, GraduationCap, Mail, MessagesSquare, Wand2, type LucideIcon } from "@orbit/ui";
 import { ProductTabs, type ProductSection } from "../../components/products";
 import { RESUME_AI_HOME } from "./paths";
 
@@ -15,7 +15,10 @@ export interface ResumeAiFeature {
   text: string;
 }
 
-/** Only what Resume AI really does today, in the order people need it. Finding jobs is Jobs AI's (pages/jobs). */
+/**
+ * Only what Resume AI really does today, in the order people need it. Finding jobs, and the outreach messages and the
+ * Naukri and LinkedIn profiles written from a resume, are Jobs AI's (pages/jobs).
+ */
 export const RESUME_AI_FEATURES: ResumeAiFeature[] = [
   {
     icon: Gauge,
@@ -52,12 +55,6 @@ export const RESUME_AI_FEATURES: ResumeAiFeature[] = [
     short: "Cover letters",
     title: "Cover letters",
     text: "Written from your resume and the job post, in the tone and length you choose.",
-  },
-  {
-    icon: Send,
-    short: "Naukri + LinkedIn profiles, outreach",
-    title: "Naukri and LinkedIn profiles, and outreach",
-    text: "Headlines and summaries that fit each site's limits, plus referral requests, emails to HR, follow-ups and thank-you notes.",
   },
 ];
 

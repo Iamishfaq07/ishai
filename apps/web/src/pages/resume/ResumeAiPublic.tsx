@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { CreditPack } from "@orbit/types";
-import { ArrowRight, OrbitWordmark, Palette, Sparkles, Wand2, cx, focusRing } from "@orbit/ui";
+import { ArrowRight, OrbitWordmark, Palette, Send, Sparkles, Wand2, cx, focusRing } from "@orbit/ui";
 import { api } from "../../lib/api";
 import { useWelcomeGrant } from "../../lib/welcome";
 import { JOBS_AI_HOME } from "../jobs/paths";
@@ -199,6 +199,19 @@ export function ResumeAiPublicPage() {
               <h3 className="mt-4 font-display text-base font-semibold">{TEMPLATES.length} templates, Word and PDF</h3>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
                 Classic, Modern, Campus, Harvard and more, downloaded as a Word file or a PDF ready to send.
+              </p>
+            </li>
+            <li className="glass-panel rounded-2xl p-5">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-500/10 text-zinc-600 ring-1 ring-zinc-500/15 dark:text-zinc-300">
+                <Send className="h-5 w-5" aria-hidden />
+              </span>
+              <h3 className="mt-4 font-display text-base font-semibold">Outreach, in Jobs AI</h3>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                Referral requests, emails to HR and your Naukri and LinkedIn profiles are written from your resume in{" "}
+                <Link to={JOBS_AI_HOME} className={cx("font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
+                  Jobs AI
+                </Link>
+                , for the jobs you find there.
               </p>
             </li>
           </ul>

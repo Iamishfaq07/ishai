@@ -18,8 +18,8 @@ type Feature = { icon: LucideIcon; title: string; text: string; ai?: boolean };
  */
 const PRODUCTS: Feature[] = [
   { icon: AudioLines, title: "Interview copilot", text: "Hears the question the moment it's asked and answers in your voice, from your resume." },
-  { icon: Sparkles, title: "Resume", ai: true, text: "ATS score out of 100, AI rewrites for every job, Naukri and LinkedIn profiles, cover letters." },
-  { icon: Briefcase, title: "Jobs", ai: true, text: "The latest jobs from companies' own career pages, ranked by how well they match your resume." },
+  { icon: Sparkles, title: "Resume", ai: true, text: "ATS score out of 100, AI rewrites for every job, cover letters and interview prep." },
+  { icon: Briefcase, title: "Jobs", ai: true, text: "The latest jobs from companies' career pages, matched to your resume, and outreach to get referred." },
 ];
 const FEATURES: Feature[] = [
   { icon: MessagesSquare, title: "Mock interviews", text: "Practise with an AI interviewer, then get a scorecard and the questions to redo." },
