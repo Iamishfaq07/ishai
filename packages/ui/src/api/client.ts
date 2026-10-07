@@ -11,7 +11,14 @@ import type {
   ApiErrorBody,
   AuthConfig,
   CostReport,
+  CoverLetterLength,
+  CoverLetterTone,
   CreditPack,
+  LinkedInProfile,
+  NaukriProfile,
+  OutreachInputs,
+  OutreachKind,
+  OutreachMessage,
   Entitlements,
   PlanInfo,
   AuthResponse,
@@ -219,8 +226,21 @@ export function createApiClient(options: ApiClientOptions) {
       });
     },
     /** A cover letter from the resume and (if given) the job post; nothing it says goes beyond them. */
-    coverLetter: (data: ResumeData, jobText: string) =>
-      json<{ text: string }>(`${base}/cover-letter`, { method: "POST", body: body({ data, job_text: jobText }) }),
+    coverLetter: (data: ResumeData, jobText: string, opts: { tone?: CoverLetterTone; length?: CoverLetterLength } = {}) =>
+      json<{ text: string }>(`${base}/cover-letter`, { method: "POST", body: body({ data, job_text: jobText, ...opts }) }),
+    /** Naukri's resume headline, profile summary and key skills, from the resume (one resume credit). */
+    naukriProfile: (data: ResumeData, jobText: string) =>
+      json<NaukriProfile>(`${base}/naukri-profile`, { method: "POST", body: body({ data, job_text: jobText }), timeoutMs: LONG_TIMEOUT_MS }),
+    /** LinkedIn's headline, About and top skills, from the resume (one resume credit). */
+    linkedinProfile: (data: ResumeData, jobText: string) =>
+      json<LinkedInProfile>(`${base}/linkedin-profile`, { method: "POST", body: body({ data, job_text: jobText }), timeoutMs: LONG_TIMEOUT_MS }),
+    /** A referral request, cold email, follow-up or thank-you note, from the resume (one resume credit). */
+    outreach: (data: ResumeData, jobText: string, kind: OutreachKind, inputs: OutreachInputs = {}) =>
+      json<OutreachMessage>(`${base}/outreach`, {
+        method: "POST",
+        body: body({ data, job_text: jobText, kind, ...inputs }),
+        timeoutMs: LONG_TIMEOUT_MS,
+      }),
     /** The cover letter as a Word file, with the resume's name and contact line on top. */
     coverLetterDocx: async (text: string, data: ResumeData, design: ResumeDesign) =>
       (await raw(`${base}/cover-letter/docx`, { method: "POST", body: body({ text, data, design }) })).blob(),

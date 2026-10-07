@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime
 from typing import TYPE_CHECKING, Annotated, Literal
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,6 +43,9 @@ class TextDocIn(BaseModel):
     title: str = Field(min_length=1, max_length=300)
     kind: DocKind
     text: str = Field(min_length=20, max_length=200_000)
+    # The document this one is a new version of (the resume maker's "Use in Orbit", clicked again for the same resume):
+    # updated in place when it's still the caller's, instead of a second copy. Gone, or not theirs: a new one is made.
+    replace_id: str | None = Field(None, max_length=36)
 
 
 class DocPatchIn(BaseModel):
@@ -152,7 +155,14 @@ async def upload_document(
 
 @router.post("/text", response_model=DocumentOut, status_code=201, dependencies=[Depends(upload_limit)])
 async def create_text_document(body: TextDocIn, user: Annotated[User, Depends(require_verified_user)],
-                               db: Annotated[AsyncSession, Depends(get_db)]) -> DocumentOut:
+                               db: Annotated[AsyncSession, Depends(get_db)], response: Response) -> DocumentOut:
+    old = await db.get(Document, body.replace_id) if body.replace_id else None
+    if old is not None and old.user_id == user.id:  # a new version: same document, so no quota check
+        old.title, old.kind, old.size_bytes = body.title, body.kind, len(body.text.encode())
+        await _ingest(db, old, body.text)
+        await db.commit()
+        response.status_code = status.HTTP_200_OK
+        return await _out(db, old)
     await _check_quota(db, user)
     doc = Document(user_id=user.id, title=body.title, kind=body.kind, size_bytes=len(body.text.encode()))
     db.add(doc)

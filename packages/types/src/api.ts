@@ -88,6 +88,8 @@ export interface CreateTextDocumentRequest {
   title: string;
   kind: DocumentKind;
   text: string;
+  /** A new version of this document (if it's still yours): updated in place instead of copied. */
+  replace_id?: string;
 }
 
 export interface DocumentText {
@@ -1015,11 +1017,14 @@ export interface ResumeSuggestRequest {
   data: ResumeData;
   design?: ResumeDesign;
   job_text?: string;
-  mode?: "improve" | "tailor";
+  /** "shorten": tighten the longest lines so the resume fits one page, keeping every figure and tool. */
+  mode?: "improve" | "tailor" | "shorten";
   /** Rewrite just this one field. */
   focus?: string;
   /** Fix this ATS check, by id ("skills_count", "dates", "quantified"…). */
   check?: string;
+  /** "shorten": how many printed lines it's over one page at its most compact layout. */
+  lines_over?: number;
 }
 
 // ─── Interview prep from the resume (POST /v1/resumes/prep/*, nothing stored) ──
@@ -1083,4 +1088,43 @@ export interface ResumeSkillGapResponse {
   gaps: ResumeSkillGap[];
   /** The job keywords the resume already shows. */
   matched: string[];
+}
+
+/** Cover letter options: the voice, and short (150-200 words) or standard (250-350). */
+export type CoverLetterTone = "professional" | "warm" | "confident";
+export type CoverLetterLength = "short" | "standard";
+
+/** Naukri's profile fields, from the resume: headline (≤250 characters), profile summary (≤1,000), key skills. */
+export interface NaukriProfile {
+  headline: string;
+  summary: string;
+  skills: string[];
+}
+
+/** LinkedIn's profile fields, from the resume: headline (≤220 characters), About (≤2,600), top 5 skills. */
+export interface LinkedInProfile {
+  headline: string;
+  about: string;
+  skills: string[];
+}
+
+export type OutreachKind = "referral" | "cold_email" | "follow_up" | "thank_you";
+
+/** What the candidate says about who they're writing to; all optional. */
+export interface OutreachInputs {
+  recipient?: string;
+  company?: string;
+  role?: string;
+  /** Anything true to mention: "we talked about the Power BI migration". */
+  details?: string;
+}
+
+export interface OutreachMessage {
+  kind: OutreachKind;
+  /** The email subject; "" for a LinkedIn or WhatsApp message. */
+  subject: string;
+  /** A referral request's LinkedIn connection note (≤200 characters); "" otherwise. */
+  connection_note: string;
+  /** Greeting, message and sign-off, ready to send. */
+  message: string;
 }

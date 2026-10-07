@@ -148,6 +148,39 @@ def _mock_skill_gap(body: str) -> str:
          "prepare": f"(mock) Read up on {kw}.", "note": "(mock) Say you haven't used it yet."}
         for i, kw in enumerate(missing)]})
 
+def _mock_resume_kit(request_type: str, body: str) -> str:
+    """A Naukri or LinkedIn profile, or a message, put together from the resume in the prompt (nothing added), so
+    the server's checks pass and the editor has something real-looking to show."""
+    m = re.search(r'<reference_data source="resume">\s*(\{.*?\})\s*</reference_data>', body, re.S)
+    try:
+        resume = json.loads(m.group(1)) if m else {}
+    except json.JSONDecodeError:
+        resume = {}
+    roles = resume.get("experience") or [{}]
+    title = roles[0].get("title") or "Professional"
+    skills = [s for s in resume.get("skills") or [] if isinstance(s, str)]
+    bullets = [b for r in roles for b in r.get("bullets") or []][:3]
+    work = " ".join(b.rstrip(".") + "." for b in bullets) or "Work across the roles on the resume."
+    if request_type == "resume_shorten":
+        filler = {"the", "a", "an", "successfully", "various", "very", "really", "that"}
+        return json.dumps({"suggestions": [
+            {"path": line["path"], "after": " ".join(w for w in str(line.get("text", "")).split()
+                                                     if w.lower() not in filler),
+             "reason": "(mock) Dropped the filler words."} for line in _reference(body, "lines_to_shorten")]})
+    if request_type == "resume_naukri":
+        return json.dumps({"headline": " | ".join([title, ", ".join(skills[:3]), "(mock) profile"]),
+                           "summary": f"(mock) {title} with this work behind me. {work}",
+                           "skills": list(reversed(skills))})
+    if request_type == "resume_linkedin":
+        return json.dumps({"headline": " | ".join([title, ", ".join(skills[:3])]),
+                           "about": f"(mock) What I do as a {title.lower()}. {work}\n\n(mock) What I want next: more "
+                                    "of the same work, with a team that relies on it.",
+                           "skills": skills[:5]})
+    return json.dumps({"subject": "(mock) About the role", "connection_note": "Hi, (mock) I'd like to connect about "
+                                                                              "the role on your team.",
+                       "body": f"(mock) I'm reaching out about the role on your team. {work}\n\n(mock) Could we talk "
+                               "about it this week?"})
+
 
 class MockLLMProvider(LLMProvider):
     name = "mock"
@@ -214,6 +247,8 @@ class MockLLMProvider(LLMProvider):
                 for f in fields if isinstance(f, dict) and "path" in f][:3]})
         if request.request_type == "resume_fix":
             return _mock_resume_fix(request.messages[-1].content if request.messages else "")
+        if request.request_type in ("resume_naukri", "resume_linkedin", "resume_outreach", "resume_shorten"):
+            return _mock_resume_kit(request.request_type, request.messages[-1].content if request.messages else "")
         if request.request_type == "resume_skills":
             return json.dumps({"skills": ["Git", "Agile", "Jira", "Linux", "Code review", "Testing", "Communication"]})
         if request.request_type == "cover_letter":

@@ -91,7 +91,7 @@ export function AllowanceBanner() {
         <strong>
           {left <= 0 ? "You're out of resume credits." : `${left} resume credit${left === 1 ? "" : "s"} left.`}
         </strong>{" "}
-        Each AI import, rewrite, tailoring or cover letter uses one; typing, the ATS score and downloads are free.
+        Each AI import, rewrite, tailoring, cover letter, profile or message uses one; typing, the ATS score and downloads are free.
         {offer && ` The ${offer.label} pack adds ${offer.resume_credits} credits${offer.interview_minutes ? ` and ${offer.interview_minutes} interview minutes` : ""} for ${priceText(offer.price_inr)}, and they never expire.`}
       </span>
       <UpgradeLink className="shrink-0" />

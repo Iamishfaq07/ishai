@@ -126,7 +126,7 @@ def parse_structured(text: str) -> ResumeData:
     skills = [SkillGroup(id=new_id(), name=_s(g.get("name"), 60), items=_list(g.get("items"), 40, 60))
               for g in _dicts(raw.get("skills"), 10) if _list(g.get("items"), 40, 60)]
     projects = [Project(id=new_id(), name=_s(p.get("name"), 160), link=_s(p.get("link"), 300),
-                        description=_s(p.get("description"), 600), bullets=_list(p.get("bullets"), 8, 400))
+                        description=_s(p.get("description"), 600), bullets=_list(p.get("bullets"), 12, 400))
                 for p in _dicts(raw.get("projects"), 10) if _s(p.get("name"), 160)]
     certifications = [Certification(id=new_id(), name=_s(c.get("name"), 160), issuer=_s(c.get("issuer"), 160),
                                     date=_s(c.get("date"), 40))
@@ -476,7 +476,8 @@ COVER_SYSTEM = """You write cover letters that read like a specific, capable per
 You get the candidate's resume as JSON and usually the job post. Write the finished letter they will send, as is.
 
 Rules:
-- 250-350 words, 3-4 short paragraphs of plain text: no markdown, bullets, subject line or address block.
+- The length and tone the task asks for, in short paragraphs of plain text: no markdown, bullets, subject line or
+  address block.
 - Open with "Dear <name>," if the job post names the hiring manager, else "Dear Hiring Manager,". Close with
   "Sincerely," and the candidate's name on the next line.
 - Paragraph 1: the role (and the company, if the job post names it) and, in one sentence, why this candidate fits
@@ -512,15 +513,32 @@ def _resume_json(data: ResumeData) -> str:
     return json.dumps(compact, ensure_ascii=False)
 
 
-def cover_letter_request(data: ResumeData, job_text: str) -> LLMRequest:
-    parts = [f"<reference_data source=\"resume\">\n{fence(_resume_json(data))}\n</reference_data>"]
+LetterTone = Literal["professional", "warm", "confident"]
+LetterLength = Literal["short", "standard"]
+LETTER_TONES: dict[str, str] = {
+    "professional": "professional: clear, polite and businesslike",
+    "warm": "warm: friendly and personal, still professional; shows real interest in the team and the work",
+    "confident": "confident: direct and assured; leads with the strongest result and states the fit plainly, with no "
+                 "hedging (\"I think\", \"I hope\", \"I feel\")",
+}
+LETTER_LENGTHS: dict[str, tuple[str, int]] = {  # (what the task asks, max_tokens)
+    "short": ("150-200 words in 3 short paragraphs", 600),
+    "standard": ("250-350 words in 3-4 short paragraphs", 900),
+}
+
+
+def cover_letter_request(data: ResumeData, job_text: str, *, tone: LetterTone = "professional",
+                         length: LetterLength = "standard") -> LLMRequest:
+    words, max_tokens = LETTER_LENGTHS[length]
+    parts = [f"Task: a {LETTER_TONES[tone]} letter of {words}.",
+             f"<reference_data source=\"resume\">\n{fence(_resume_json(data))}\n</reference_data>"]
     if job_text.strip():
         parts.append("<reference_data source=\"job_post\">\n" + fence(job_text[:MAX_JOB_CHARS]) + "\n</reference_data>")
     else:
         parts.append("No job post: write a letter for the role in the headline.")
     return LLMRequest(
         messages=[LLMMessage("system", COVER_SYSTEM), LLMMessage("user", "\n\n".join(parts))],
-        max_tokens=900, temperature=0.5, request_type="cover_letter",
+        max_tokens=max_tokens, temperature=0.5, request_type="cover_letter",
     )
 
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { Link, useLocation, useParams } from "react-router-dom";
-import type { AtsReport, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
+import type { AtsReport, CoverLetterLength, CoverLetterTone, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
 import {
   ArrowLeft,
   Check,
@@ -18,7 +18,7 @@ import {
   PenLine,
   Plus,
   Redo2,
-  Save,
+  Send,
   Sparkles,
   Undo2,
   Upload,
@@ -28,6 +28,7 @@ import {
   confirmDialog,
   cx,
   focusRing,
+  linesOver,
   splitPlaceholders,
 } from "@orbit/ui";
 import { Button, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
@@ -38,11 +39,13 @@ import { AiCostNote, AiErrorNote, AllowanceBanner, AllowanceContext, isUpgradeEr
 import { useBackend } from "./backend";
 import { FixActions, FixResult, fixKind } from "./FixPanel";
 import { InterviewPrep, usePrepState } from "./InterviewPrep";
-import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, resumeToText, suggestedSkills } from "./model";
+import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, suggestedSkills } from "./model";
+import { ProfileKitPanel } from "./ProfileKit";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
+import { SaveToDocuments } from "./SaveToDocuments";
 
-type Tab = "content" | "score" | "ai" | "design" | "letter" | "prep";
+type Tab = "content" | "score" | "ai" | "design" | "letter" | "prep" | "kit";
 
 /** What undo/redo restores: everything the user edits. */
 type Snapshot = Pick<Resume, "title" | "data" | "design" | "job_text" | "cover_letter">;
@@ -53,14 +56,15 @@ const HISTORY_LIMIT = 100;
 /** Edits closer together than this, in the same field, undo as one step (a burst of typing). */
 const HISTORY_GROUP_MS = 1200;
 
-/** `short`: the label where the column is narrow. */
+/** `short`: the label where the editor shares the width with the preview. */
 const TABS: Array<{ id: Tab; label: string; short?: string; icon: typeof FileText }> = [
   { id: "content", label: "Content", icon: PenLine },
-  { id: "score", label: "ATS score", icon: Gauge },
+  { id: "score", label: "ATS score", short: "Score", icon: Gauge },
   { id: "ai", label: "AI fixes", icon: Wand2 },
   { id: "design", label: "Design", icon: Palette },
   { id: "letter", label: "Cover letter", short: "Letter", icon: Mail },
   { id: "prep", label: "Interview prep", short: "Prep", icon: MessagesSquare },
+  { id: "kit", label: "Profiles & outreach", short: "Outreach", icon: Send },
 ];
 
 /** What the spinner says while the AI works on each kind of problem. */
@@ -298,14 +302,17 @@ function ResumeEditor() {
     setFocusTarget(target);
   };
 
-  /** `focus`: rewrite just that one field (a bullet's ✨, the summary's "Rewrite with AI"). */
-  const askAi = async (mode: "improve" | "tailor", check?: string, focus?: string) => {
+  /** `focus`: rewrite just that one field (a bullet's ✨, the summary's "Rewrite with AI"). "shorten": the longest
+   *  lines, to fit one page, `linesOver` printed lines too long at the most compact layout. */
+  const askAi = async (mode: "improve" | "tailor" | "shorten", check?: string, focus?: string, linesOver?: number) => {
     if (!resume) return;
     setTab("ai");
     setAiBusy(
       focus
         ? focus === "basics.summary" ? "Writing your summary…" : "Rewriting that line…"
-        : (check && FIX_BUSY[check]) || (mode === "tailor" ? "Tailoring to the job…" : check ? "Working on that fix…" : "Reading your resume…"),
+        : mode === "shorten"
+          ? "Shortening your longest lines…"
+          : (check && FIX_BUSY[check]) || (mode === "tailor" ? "Tailoring to the job…" : check ? "Working on that fix…" : "Reading your resume…"),
     );
     setAiError(null);
     setAiUpgrade(false);
@@ -317,11 +324,18 @@ function ResumeEditor() {
         mode: focus && resume.job_text.trim() ? "tailor" : mode,
         ...(check ? { check } : {}),
         ...(focus ? { focus } : {}),
+        ...(mode === "shorten" && linesOver ? { lines_over: linesOver } : {}),
       });
       setQueue(res.suggestions);
       if (res.upgrade_required) {
         setAiUpgrade(true);
         setAiError("These are the fixes that need no AI. AI rewrites, new bullets and tailoring need resume credits: you're out.");
+      } else if (mode === "shorten") {
+        setAiError(
+          res.suggestions.length
+            ? "Shorter versions of your longest lines, every number and tool kept. Accept the ones you like, then press Fit to one page again."
+            : "The AI couldn't shorten these lines without losing a number or a tool, so nothing changed and no credit was used.",
+        );
       } else if (!res.suggestions.length) setAiError("Nothing to change: the AI thinks this already reads well.");
     } catch (err) {
       setAiError(errorText(err));
@@ -503,26 +517,27 @@ function ResumeEditor() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <div className="min-w-0">
-          <div role="tablist" aria-label="Resume editor" className="sticky top-16 z-10 mb-4 flex gap-1 rounded-xl bg-zinc-100/90 p-1 backdrop-blur-sm dark:bg-zinc-900/90">
+          <div role="tablist" aria-label="Resume editor" className="sticky top-16 z-10 mb-4 flex flex-wrap gap-1 rounded-xl bg-zinc-100/90 p-1 backdrop-blur-sm dark:bg-zinc-900/90">
             {TABS.map(({ id, label, short, icon: Icon }) => (
               <button
                 key={id}
                 role="tab"
                 aria-selected={tab === id}
                 aria-label={label}
+                title={short ? label : undefined}
                 type="button"
                 onClick={() => setTab(id)}
                 className={cx(
-                  "flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1.5 text-sm font-medium",
+                  "flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1 py-1.5 xl:px-2 text-sm font-medium",
                   tab === id ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
                   focusRing,
                 )}
               >
-                {/* Icons alone on phones, labels from there up (six tabs leave no room for both), short ones where
-                    the editor sits beside the preview in a narrow column. */}
+                {/* Icons alone on phones, labels from there up (seven tabs leave no room for both), short ones where
+                    the editor sits beside the preview; a column too narrow even for those wraps onto a second row. */}
                 <Icon className="h-4 w-4 shrink-0 sm:hidden" aria-hidden />
-                <span className={cx("hidden sm:inline", short && "lg:hidden xl:inline")}>{label}</span>
-                {short && <span className="hidden lg:inline xl:hidden">{short}</span>}
+                <span className={cx("hidden sm:inline", short && "lg:hidden")}>{label}</span>
+                {short && <span className="hidden lg:inline">{short}</span>}
                 {id === "ai" && queue.length > 0 && <span className="rounded-full bg-indigo-600 px-1.5 text-[0.625rem] text-white">{queue.length}</span>}
               </button>
             ))}
@@ -547,7 +562,14 @@ function ResumeEditor() {
               resume={resume}
               report={report}
               onJob={(job_text) => change((r) => ({ ...r, job_text }))}
-              onAddSkill={(kw) => update((d) => addSkills(d, [kw], newId))}
+              onAddSkill={(kw) =>
+                // A keyword from the job post isn't proof: the candidate says they have it, as with the AI's job-post skills.
+                void confirmDialog({
+                  title: `Add “${kw}” to your skills?`,
+                  body: "It comes from the job post, not your resume. Add it only if you've really used it: interviewers ask about every skill you list.",
+                  confirmLabel: "I have it, add it",
+                }).then((ok) => ok && update((d) => addSkills(d, [kw], newId)))
+              }
               onShow={showTarget}
               fixing={fixing}
               onFix={(check) => void runFix(check)}
@@ -599,6 +621,7 @@ function ResumeEditor() {
             />
           )}
           {tab === "prep" && <InterviewPrep resume={resume} prep={prep} onShowJob={() => setTab("score")} />}
+          {tab === "kit" && <ProfileKitPanel resume={resume} onShowJob={() => setTab("score")} />}
         </div>
 
         <div className="min-w-0">
@@ -619,6 +642,8 @@ function ResumeEditor() {
                 data={resume.data}
                 design={resume.design}
                 onFit={(design) => change((r) => ({ ...r, design }))}
+                onShorten={(linesOver) => void askAi("shorten", undefined, undefined, linesOver)}
+                shortening={aiBusy !== null}
                 highlight={tab === "ai" ? (queue[0] ? [queue[0].path] : []) : tab === "content" ? (editing ? [editing] : []) : tab === "score" ? pointing : []}
               />
             )}
@@ -662,27 +687,6 @@ function SaveState({ state, error, onRetry }: { state: "saved" | "saving" | "dir
         "Saving…"
       )}
     </span>
-  );
-}
-
-function SaveToDocuments({ resume }: { resume: Resume }) {
-  const [state, setState] = useState<"idle" | "busy" | "done" | "error">("idle");
-  return (
-    <Button
-      variant="secondary"
-      disabled={state === "busy"}
-      title="Add this resume to Documents, so live sessions answer from it"
-      onClick={() => {
-        setState("busy");
-        api
-          .createTextDocument({ kind: "resume", title: resume.title, text: resumeToText(resume.data) })
-          .then(() => setState("done"))
-          .catch(() => setState("error"));
-      }}
-    >
-      {state === "done" ? <CircleCheck className="h-4 w-4 text-emerald-600" /> : <Save className="h-4 w-4" />}
-      {state === "done" ? "Saved to Documents" : state === "error" ? "Couldn't save, try again" : "Use in Orbit"}
-    </Button>
   );
 }
 
@@ -762,7 +766,22 @@ function previewTarget(root: Element, path: string): HTMLElement | null {
   return null;
 }
 
-function ScaledPage({ data, design, onFit, highlight = [] }: { data: ResumeData; design: ResumeDesign; onFit: (design: ResumeDesign) => void; highlight?: string[] }) {
+function ScaledPage({
+  data,
+  design,
+  onFit,
+  onShorten,
+  shortening = false,
+  highlight = [],
+}: {
+  data: ResumeData;
+  design: ResumeDesign;
+  onFit: (design: ResumeDesign) => void;
+  /** When the layout alone can't fit one page: shorten the longest lines with AI, this many printed lines over. */
+  onShorten?: (linesOver: number) => void;
+  shortening?: boolean;
+  highlight?: string[];
+}) {
   const { box, page, scale, realHeight } = useScaledPage(design.page);
   // Mark what's being looked at, and bring the first one into view inside the preview column (not the whole page).
   const marked = highlight.join("|");
@@ -784,8 +803,13 @@ function ScaledPage({ data, design, onFit, highlight = [] }: { data: ResumeData;
   }, [marked, data, design, scale]); // eslint-disable-line react-hooks/exhaustive-deps -- `marked` stands for `highlight`
   const [fitting, setFitting] = useState(false);
   const [fitNote, setFitNote] = useState<string | null>(null);
+  // Printed lines still over one page at the most compact layout, once Fit to one page has tried them all.
+  const [over, setOver] = useState(0);
   const { pages, breaks } = pageLayout(realHeight, design);
-  useEffect(() => setFitNote(null), [data]);
+  useEffect(() => {
+    setFitNote(null);
+    setOver(0);
+  }, [data]);
   // Printing keeps each role, project and school whole, so a break inside one moves to its top: show it there.
   const [guides, setGuides] = useState<number[]>([]);
   const breakKey = breaks.join(",");
@@ -810,11 +834,16 @@ function ScaledPage({ data, design, onFit, highlight = [] }: { data: ResumeData;
         </span>
         {pages > 2 && <span className="text-xs text-zinc-600 dark:text-zinc-400">Recruiters rarely read past page 2: trim older roles.</span>}
         {pages > 1 && (
-          <Button size="sm" variant="ghost" disabled={fitting} onClick={() => { setFitNote(null); setFitting(true); }}>
+          <Button size="sm" variant="ghost" disabled={fitting} onClick={() => { setFitNote(null); setOver(0); setFitting(true); }}>
             Fit to one page
           </Button>
         )}
         {fitNote && <span role="status" className="text-xs text-zinc-600 dark:text-zinc-400">{fitNote}</span>}
+        {over > 0 && pages > 1 && onShorten && (
+          <Button size="sm" variant="secondary" disabled={shortening} onClick={() => onShorten(over)} title="The AI tightens your longest lines, keeping every number and tool. You accept or skip each. Uses 1 resume credit.">
+            <Sparkles className="h-3.5 w-3.5" /> Shorten with AI
+          </Button>
+        )}
       </div>
       <div ref={box} className="relative w-full" aria-label={`Resume preview, ${pages} page${pages === 1 ? "" : "s"}`} role="img" style={{ height: realHeight * scale }}>
         <div ref={page} style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "max-content" }} className="overflow-hidden rounded-sm shadow-xl ring-1 ring-black/5">
@@ -829,14 +858,19 @@ function ScaledPage({ data, design, onFit, highlight = [] }: { data: ResumeData;
       {fitting && (
         <FitMeasurer
           data={data}
-          candidates={fitCandidates(design)}
-          onDone={(fit) => {
+          candidates={fitCandidates(design).length ? fitCandidates(design) : [design]}
+          onDone={(fit, linesOver) => {
             setFitting(false);
             if (fit) {
               onFit(fit);
               setFitNote(`Fitted: ${fit.spacing} spacing, ${fit.font_size} pt text.`);
             } else {
-              setFitNote("Still over a page at the smallest readable size. Trim older roles or bullets, or keep two pages.");
+              setOver(linesOver);
+              setFitNote(
+                onShorten
+                  ? `Still about ${linesOver} line${linesOver === 1 ? "" : "s"} over at the smallest readable size. Shorten the longest lines with AI (every number and tool kept), trim older roles, or keep two pages.`
+                  : "Still over a page at the smallest readable size. Trim older roles or bullets, or keep two pages.",
+              );
             }
           }}
         />
@@ -853,12 +887,23 @@ function fitCandidates(d: ResumeDesign): ResumeDesign[] {
   return out;
 }
 
-/** Lays the candidates out off-screen, once, and reports the first that fits on one page (or null). */
-function FitMeasurer({ data, candidates, onDone }: { data: ResumeData; candidates: ResumeDesign[]; onDone: (fit: ResumeDesign | null) => void }) {
+/** How many printed lines a resume `heightPx` tall is over one page in `design` (at least 1). */
+function overflowLines(heightPx: number, design: ResumeDesign): number {
+  const pageH = PAGE_MM[design.page].h * MM_TO_PX;
+  const pad = Math.max(0, pageH - (pageLayout(Math.max(heightPx, 2 * pageH), design).breaks[0] ?? pageH)); // break 1 = pageH - pad
+  const lineHeight = LINE_HEIGHTS.find((l) => l.id === (design.line_height ?? "normal"))?.value ?? 1.4;
+  return linesOver(heightPx - 2 * pad, pageH - 2 * pad, design.font_size, lineHeight);
+}
+
+/** Lays the candidates out off-screen, once, and reports the first that fits on one page (or null, with how many
+ *  lines the last, most compact one is still over). */
+function FitMeasurer({ data, candidates, onDone }: { data: ResumeData; candidates: ResumeDesign[]; onDone: (fit: ResumeDesign | null, linesOver: number) => void }) {
   const refs = useRef<Array<HTMLDivElement | null>>([]);
   useLayoutEffect(() => {
     const fit = candidates.find((c, i) => pageLayout(refs.current[i]?.offsetHeight ?? Infinity, c).pages === 1) ?? null;
-    onDone(fit);
+    const last = candidates.length - 1;
+    const tightest = candidates[last];
+    onDone(fit, fit || !tightest ? 0 : overflowLines(refs.current[last]?.offsetHeight ?? 0, tightest));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- measured once, on mount
   return createPortal(
     <div aria-hidden className="print:hidden" style={{ position: "fixed", left: -100_000, top: 0, visibility: "hidden", pointerEvents: "none" }}>
@@ -884,6 +929,16 @@ function PrintCopy({ data, design, letter }: { data: ResumeData; design: ResumeD
   );
 }
 
+const LETTER_TONES: ReadonlyArray<{ id: CoverLetterTone; label: string }> = [
+  { id: "professional", label: "Professional" },
+  { id: "warm", label: "Warm" },
+  { id: "confident", label: "Confident" },
+];
+const LETTER_LENGTHS: ReadonlyArray<{ id: CoverLetterLength; label: string }> = [
+  { id: "short", label: "Short · 150-200 words" },
+  { id: "standard", label: "Standard · 250-350" },
+];
+
 function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; onText: (text: string) => void; onShowJob: () => void; onPrint: () => void }) {
   const backend = useBackend();
   const { refresh } = useAllowance();
@@ -892,6 +947,8 @@ function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; o
   const [upgrade, setUpgrade] = useState(false);
   const [copied, setCopied] = useState(false);
   const [word, setWord] = useState<"idle" | "busy" | "error">("idle");
+  const [tone, setTone] = useState<CoverLetterTone>("professional");
+  const [length, setLength] = useState<CoverLetterLength>("standard");
   const text = resume.cover_letter;
   const hasJob = Boolean(resume.job_text.trim());
   const fills = text.match(FILL) ?? [];
@@ -902,7 +959,7 @@ function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; o
     setError(null);
     setUpgrade(false);
     try {
-      onText((await backend.tools.coverLetter(resume.data, resume.job_text)).text);
+      onText((await backend.tools.coverLetter(resume.data, resume.job_text, { tone, length })).text);
     } catch (err) {
       setError(errorText(err));
       setUpgrade(isUpgradeError(err));
@@ -935,6 +992,10 @@ function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; o
             </Button>
           </p>
         )}
+        <div className="mb-3 flex flex-wrap gap-4">
+          <Segmented label="Tone" options={LETTER_TONES} value={tone} onChange={setTone} />
+          <Segmented label="Length" options={LETTER_LENGTHS} value={length} onChange={setLength} />
+        </div>
         <Button disabled={busy} onClick={() => void write()}>
           <Sparkles className="h-4 w-4" /> {busy ? "Writing…" : text.trim() ? "Write a new one" : "Write my cover letter"}
         </Button>
