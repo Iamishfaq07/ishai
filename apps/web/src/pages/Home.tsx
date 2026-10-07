@@ -406,6 +406,9 @@ function CopilotRow({ sessions }: { sessions: OrbitSession[] | null }) {
       <Link to="/start" className={secondaryLink}>
         <AudioLines className={cx("h-4 w-4", PRODUCTS.interview.text)} aria-hidden /> Start live session
       </Link>
+      <Link to="/documents/stories" className={secondaryLink}>
+        Story bank
+      </Link>
     </ProductRow>
   );
 }
@@ -416,9 +419,6 @@ function PracticeRow({ sessions }: { sessions: OrbitSession[] | null }) {
     <ProductRow product="practice" status={sessionsLine(mocks, "mock interview") ?? "Practise out loud with an AI interviewer, then see your score and what to redo."}>
       <Link to="/mock" className={secondaryLink}>
         <Target className={cx("h-4 w-4", PRODUCTS.practice.text)} aria-hidden /> Practise
-      </Link>
-      <Link to="/documents/stories" className={secondaryLink}>
-        Story bank
       </Link>
     </ProductRow>
   );

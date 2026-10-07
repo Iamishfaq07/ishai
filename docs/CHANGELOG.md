@@ -1,5 +1,13 @@
 # Implementation log
 
+## The story bank moves to the interview copilot (2026-10-08)
+
+The owner asked for the story bank under the interview copilot rather than Practice: it's where live answers find
+"Tell me about a time…" stories. The copilot's tabs are now Sessions · Documents · Story bank (with Start live session
+beside them), and Practice is mock interviews alone, one page with no tab row. Home's copilot row links the story bank,
+and its next step and search entries carry the copilot's mark. With mock interviews switched off, Practice leaves the
+nav (the phone bar then has five tabs). Checked with `tools/orbit-drive/nav-split-drive.mjs` (20/20).
+
 ## Contact page and the admin's Inbox (2026-10-08)
 
 The owner asked for a contact page "as a form to enter details and those will be into my inbox of admin account".

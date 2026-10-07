@@ -10,9 +10,9 @@ import type { PresetId } from "../pages/mockPresets";
 
 export type Goal = "interview" | "resume" | "jobs";
 export type Experience = "fresher" | "early" | "experienced";
-/** Each product's colour and mark (components/products.tsx). */
-/** The products the nav shows: the interview copilot (live help), Practice (mock interviews and the story bank),
- *  Resume AI and Jobs AI. The welcome question's goals stay three: "interview" covers practising and live help. */
+/** The products the nav shows, each with its colour and mark (components/products.tsx): the interview copilot (live
+ *  help, with its documents and story bank), Practice (mock interviews), Resume AI and Jobs AI. The welcome question's
+ *  goals stay three: "interview" covers practising and live help. */
 export type ProductId = "interview" | "practice" | "resume" | "jobs";
 
 export interface WelcomeAnswers {
@@ -278,7 +278,7 @@ function catalogue(answers: WelcomeAnswers | null, facts: HomeFacts, now: Date):
   }
   steps.push({
     id: "story",
-    product: "practice",
+    product: "interview",
     title: "Write one story for “Tell me about a time…”",
     body: "A real example from your college, internship or job, ready for the questions everyone asks.",
     cta: "Add a story",
