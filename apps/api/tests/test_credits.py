@@ -16,6 +16,7 @@ from pydantic import SecretStr
 from sqlalchemy import select, update
 
 from orbit_api import credits
+from orbit_api.billing.packs import DEFAULT_PACKS
 from orbit_api.config import get_settings
 from orbit_api.db import sessionmaker
 from orbit_api.models import CreditEntry, UsageEvent
@@ -119,14 +120,14 @@ def test_each_resume_ai_action_spends_a_credit_then_offers_a_pack(client: TestCl
     h = _signup(client, _new_ip())
     before = client.get("/v1/resumes/allowance", headers=h).json()
     assert before["unlimited"] is False and before["credits_left"] == 1
-    assert before["upgrade"]["pack"] == "starter" and before["upgrade"]["price_inr"] == 1999
+    assert before["upgrade"]["pack"] == "mini" and before["upgrade"]["price_inr"] == 499  # the cheapest pack
 
     assert client.post("/v1/resumes/cover-letter", headers=h, json=_letter()).status_code == 200
     assert client.get("/v1/resumes/allowance", headers=h).json()["credits_left"] == 0
     again = client.post("/v1/resumes/cover-letter", headers=h, json=_letter())
     assert again.status_code == 402
     detail = again.json()["detail"]
-    assert detail["code"] == "upgrade_required" and detail["pack"] == "starter" and "₹1999" in detail["message"]
+    assert detail["code"] == "upgrade_required" and detail["pack"] == "mini" and "₹499" in detail["message"]
     assert client.post("/v1/resumes/import", headers=h, json={"source": "text", "text": "x" * 200}).status_code == 402
     # Fixes that need no AI stay free, and say what a pack adds.
     s = client.post("/v1/resumes/suggest", headers=h, json={"data": strong_resume().model_dump(mode="json"),
@@ -172,7 +173,9 @@ def test_packs_are_listed_and_need_a_upi_id(client: TestClient, monkeypatch: pyt
     packs = {p["id"]: p for p in client.get("/v1/billing/packs").json()}
     assert packs["starter"] == {"id": "starter", "label": "Starter", "price_inr": 1999, "resume_credits": 15,
                                 "interview_minutes": 60, "buyable": False}
-    assert set(packs) == {"starter", "plus", "pro"}
+    assert packs["mini"] == {"id": "mini", "label": "Mini", "price_inr": 499, "resume_credits": 5,
+                             "interview_minutes": 15, "buyable": False}
+    assert set(packs) == {"mini", "starter", "plus", "pro"}
     h = _register(client)
     assert client.post("/v1/billing/upi/orders", headers=h, json={"pack": "starter"}).status_code == 503
     monkeypatch.setattr(get_settings(), "upi_id", "owner@okicici")
@@ -495,3 +498,10 @@ def test_existing_usage_is_given_the_grant_it_was_metered_on() -> None:
     assert windows["u2"] == [[at, at + timedelta(minutes=30), "pro"],
                              [at + timedelta(minutes=30), at + timedelta(minutes=90), "unlimited"]]
     assert windows["u3"] == []
+
+
+def test_mini_pack_costs_the_same_per_minute_as_starter_and_the_bigger_packs_cost_less() -> None:
+    """The entry pack lowers the first purchase without undercutting the packs above it."""
+    per_minute = [p.price_inr / p.interview_minutes for p in sorted(DEFAULT_PACKS, key=lambda p: p.price_inr)]
+    assert round(per_minute[0]) == round(per_minute[1])  # Mini ≈ Starter
+    assert per_minute[1] > per_minute[2] > per_minute[3]  # Starter > Plus > Pro

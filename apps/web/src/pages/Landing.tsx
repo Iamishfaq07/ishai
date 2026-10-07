@@ -362,7 +362,7 @@ function Pricing({ packs, welcome, stats }: { packs: CreditPack[] | null; welcom
         never expires.
       </p>
 
-      <ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <li className={cx(card, "bg-emerald-500/[0.06] ring-emerald-600/25 dark:ring-emerald-400/20")}>
           <p className="font-display text-base font-semibold">Free</p>
           <p className="mt-1 font-display text-3xl font-semibold tabular-nums">₹0</p>
