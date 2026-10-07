@@ -21,6 +21,7 @@ be checked.
 | Sessions: transcript, questions, answers, report | history and review | `session_turns`, `questions`, `answers`, `session_summaries` |
 | Usage (minutes, screenshots) | plan limits | `usage` |
 | Security log (sign-ins, resets, email changes) | account security | `audit_logs` |
+| Messages sent from the Contact page (see below) | answering them | `contact_messages` |
 
 Transcript storage can be switched off (Settings → Privacy → *Store transcripts*). It's then used live and
 discarded when the session ends.
@@ -38,9 +39,28 @@ discarded when the session ends.
 | Sign out of every device | Settings → Privacy | `POST /v1/auth/logout-all` |
 | Delete your account and everything in it | Settings → Privacy | `DELETE /v1/auth/me` |
 
-Deleting an account cascades to every row above (`ON DELETE CASCADE`). The export includes everything above
-except secrets (the password hash) and derived search data (chunk embeddings). The documents' full text is
-included instead.
+Deleting an account cascades to every row above (`ON DELETE CASCADE`), except Contact messages (below). The export
+includes everything above except secrets (the password hash) and derived search data (chunk embeddings). The
+documents' full text is included instead.
+
+## Contact messages
+The Contact page (`/contact`, `contact/routes.py`) works signed in or out. A message is kept in `contact_messages`
+for the admin to answer in the console's Inbox; **no email is sent when one arrives**.
+- **What's kept:** the name, email and (optional) phone or WhatsApp number as typed, the topic, the message, and a
+  small context: a reported job's listing (id, title, company, link, from Orbit's job cache) and the app page the
+  form was opened from. Signed in, the account is linked (`user_id`); nothing is copied from it.
+- **Not kept:** the IP address. Only a keyed hash of the sender's network (an IPv4 address or IPv6 /64, HMAC with
+  the server's secret, as the welcome grant does) is stored, for rate limits and "N messages from this network".
+- **Who sees it:** only the admin (`/admin/inbox`). They can add a private note, mark it done or spam, delete it,
+  and reply: a reply is emailed to the sender from Orbit's address with Reply-To the admin, and kept on the message.
+- **How long:** a message marked done or spam is deleted 12 months after that (`ORBIT_CONTACT_RETENTION_DAYS`,
+  default 365, by the server's periodic sweep); new and open ones stay until handled. The admin can delete any
+  message at any time.
+- **Deleting the account** keeps its messages, with the link to the account cleared (`ON DELETE SET NULL`): they
+  were written to Orbit, and an open question shouldn't vanish. The sender can ask, from the Contact page, for one
+  to be deleted.
+- **The export** includes the account's own messages (sent while signed in) and the replies it was emailed, not the
+  admin's note or the network hash.
 
 ## What the server's admin sees and can do
 The person who runs the server (`ORBIT_ADMIN_EMAIL`) has an admin console (`admin/accounts.py`, `admin/routes.py`):
@@ -52,6 +72,7 @@ The person who runs the server (`ORBIT_ADMIN_EMAIL`) has an admin console (`admi
   password-reset link, and delete it. A deletion is the same as your own (`auth/accounts.py`): everything above
   goes, and an approved payment stays on the books without the account.
 - The admin's private notes about an account aren't part of your export. Every admin action is in the audit log.
+- **Reads, answers and handles Contact messages** in the Inbox (above).
 
 **The free resume maker needs no account.** Signed out, the one resume you make is kept only in your browser
 (`localStorage`); the server never stores it, and it isn't tied to you. Scoring, Word export and the AI are done

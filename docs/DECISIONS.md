@@ -315,3 +315,24 @@ fetch replaces that board's listings, so a post still in the cache was on the em
 and searches are never re-checked, so they don't get it. "Early applicant" uses the earlier of the post's date and
 Orbit's first sighting, because a post without a date is dated at every fetch. No match % is shown until there's a
 resume or skills to match against: without them every job scored about the same middling number.
+
+**D50 — Contact messages go to an Inbox in the admin console, not to email.** The owner asked for a contact form
+whose messages land "in my inbox of admin account", and then chose the console's Inbox only: no email for each new
+message. A message is a row (`contact_messages`) the admin reads, notes, replies to and closes at `/admin/inbox`, with
+an unread count on the console's Inbox tab and a badge in the admin's top bar, which together are the notification.
+Email was the easy alternative, but Orbit's SMTP isn't guaranteed (an admin-only deploy may run without it), a
+mailbox can't show which account or reported job a message is about, and nothing in it is audited. Replying keeps the
+admin's own mailbox in the loop: "Send reply" emails the sender from Orbit's address with Reply-To set to the admin,
+so the conversation carries on in their mail app, and "Reply in your mail app" (a `mailto:` with "Re: <topic>" and
+the message quoted) works on a server without SMTP. Nothing typed ever reaches an email header: the reply goes to the
+address pydantic validated, under a subject built from the fixed topic list and the reference. The form is public and
+works signed out, so the abuse controls are the cheap, invisible ones first: a honeypot (a bot that fills it is told
+"received" and nothing is kept), tight bounds, 5 an hour and 20 a day per network plus a daily cap for everyone
+counted in the table (it survives a restart), and Turnstile for signed-out senders when it's configured (an account
+passed it at sign-up). The network is kept only as a keyed hash, like the welcome grant, so the Inbox can flag a
+flood without storing addresses. The route needs no CSRF token (a signed-out visitor has none), so a browser session
+links a message to its account only when the request carries that session's token; a page elsewhere that makes the
+browser post can't put words in a user's mouth. Deleting an account keeps its messages without the link (SET NULL):
+they were written to Orbit, and an unanswered question shouldn't vanish with the account. Handled messages are
+deleted after 12 months by the existing session sweeper (no new job runner). The Contact page goes live on its own;
+Terms and Refund stay drafts behind `LEGAL_PAGES_PUBLISHED`, and the draft static `contact.html` is superseded.
