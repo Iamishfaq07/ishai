@@ -12,8 +12,7 @@ marked in [brackets] in each file:
 To publish them:
 
 1. Fill in every [bracket] and settle the refund rules.
-2. Move `terms.html` and `refund.html` to `apps/web/public/`. Their links to `/contact.html` should point to
-   `/contact` (the app's Contact page) instead.
+2. Move `terms.html` and `refund.html` to `apps/web/public/` (their contact links already go to `/contact`).
 3. Set `LEGAL_PAGES_PUBLISHED = true` in `apps/web/src/lib/contact.ts`. The links in the footer, Help, sign-in and
    sign-up, and the front page's refund answer all appear with it.
 

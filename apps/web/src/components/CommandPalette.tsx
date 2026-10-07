@@ -9,6 +9,7 @@ import {
   MOCK_INTERVIEW_ENABLED,
   MoonStar,
   Search,
+  Send,
   SettingsIcon,
   cx,
   focusRing,
@@ -32,7 +33,15 @@ const GROUPS: CommandGroup[] = ["Recent", "Actions", "Go to"];
 
 function CommandIcon({ command }: { command: Command }) {
   if (command.product) return <ProductMark product={command.product} size="sm" />;
-  const Icon = command.run ? RUN_ICON[command.run] : command.to === "/billing" ? CreditCard : command.to === "/settings" ? SettingsIcon : House;
+  const Icon = command.run
+    ? RUN_ICON[command.run]
+    : command.to === "/billing"
+      ? CreditCard
+      : command.to === "/settings"
+        ? SettingsIcon
+        : command.to === "/contact"
+          ? Send
+          : House;
   return (
     <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-zinc-500/10 text-zinc-600 ring-1 ring-zinc-500/15 dark:text-zinc-300">
       <Icon className="h-4 w-4" />
