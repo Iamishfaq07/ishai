@@ -15,6 +15,9 @@ from orbit_api.models import (
     AnswerFeedback,
     AuditLog,
     Document,
+    JobApplication,
+    JobFitCheck,
+    JobSearchProfile,
     LiveSessionRow,
     Question,
     Resume,
@@ -67,6 +70,13 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
             .order_by(AnswerFeedback.created_at))).all()],
         "sessions": [{**_row(s), "transcript": turns[s.id], "questions": questions[s.id], "answers": answers[s.id],
                       "report": (summaries[s.id][0]["content"] if summaries[s.id] else None)} for s in sessions],
+        "job_search": {
+            "profile": _row(p) if (p := await db.get(JobSearchProfile, user_id)) else None,
+            "tracker": [_row(t) for t in (await db.scalars(select(JobApplication).where(
+                JobApplication.user_id == user_id).order_by(JobApplication.created_at))).all()],
+            "fit_checks": [_row(f) for f in (await db.scalars(select(JobFitCheck).where(
+                JobFitCheck.user_id == user_id).order_by(JobFitCheck.created_at))).all()],
+        },
         "usage": [_row(u) for u in (await db.scalars(select(UsageEvent).where(UsageEvent.user_id == user_id)
                                                       .order_by(UsageEvent.created_at))).all()],
         "security_log": [{"action": a.action, "ip": a.ip, "at": a.created_at}
