@@ -93,11 +93,13 @@ async def _clear_jobs() -> None:
 
 @pytest.fixture
 def jobs(client: TestClient) -> Iterator[TestClient]:
-    """The app with an empty job cache, and no ranked feed remembered from another test."""
+    """The app with an empty job cache, and no ranked feed or public numbers remembered from another test."""
     run(client, _clear_jobs)
     ranking.clear_cache()
+    job_routes.clear_stats_cache()
     yield client
     ranking.clear_cache()
+    job_routes.clear_stats_cache()
 
 
 def _listing(**kw: Any) -> JobListing:
@@ -925,6 +927,25 @@ def test_deleting_the_account_deletes_its_job_search(jobs: TestClient) -> None:
 
 
 # ---- configuration and the migration --------------------------------------------------------------------------------
+
+
+def test_the_public_numbers_count_fresh_jobs_and_say_whats_free_without_a_session(
+        jobs: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    now = datetime.now(UTC)
+    insert(jobs, _listing(company="Groww"), _listing(company="Groww", title="Site Reliability Engineer"),
+           _listing(company="CRED"), _listing(company="Old Co", posted_at=now - timedelta(days=20)))
+    monkeypatch.setattr(get_settings(), "jobs_fit_daily", 12)
+    monkeypatch.setattr(get_settings(), "jobs_profile_daily", 4)
+    jobs.cookies.clear()
+    body = jobs.get("/v1/jobs/stats").json()
+    assert (body["jobs"], body["companies"], body["days"]) == (3, 2, 7)  # the 20-day-old post isn't fresh
+    assert (body["fit_daily"], body["profile_daily"]) == (12, 4)
+    assert "Himalayas" in body["feeds"] and "Greenhouse" not in body["feeds"]  # boards are the companies' own
+    # Worked out at most every few minutes, whoever asks.
+    insert(jobs, _listing(company="Meesho"))
+    assert jobs.get("/v1/jobs/stats").json()["jobs"] == 3
+    job_routes.clear_stats_cache()
+    assert jobs.get("/v1/jobs/stats").json()["companies"] == 3
 
 
 def test_company_boards_can_be_added_and_taken_off_and_bad_entries_fail_at_startup() -> None:
