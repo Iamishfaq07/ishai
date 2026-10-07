@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { User } from "@orbit/types";
 import {
   AudioLines,
+  Briefcase,
   Button,
   Code2,
   Eye,
@@ -27,6 +28,7 @@ const input =
 const FEATURES: Array<{ icon: LucideIcon; title: string; text: string }> = [
   { icon: AudioLines, title: "Live interview copilot", text: "Hears the question as it's asked and answers in your voice, from your resume." },
   { icon: FileText, title: "Resume AI", text: "ATS score out of 100, AI rewrites for every job, Naukri and LinkedIn profiles, cover letters." },
+  { icon: Briefcase, title: "Jobs AI", text: "The latest jobs from companies' own career pages, ranked by how well they match your resume." },
   { icon: Code2, title: "Coding rounds", text: "Screenshot a problem for the approach, the code and its complexity." },
   { icon: MessagesSquare, title: "Mock interviews", text: "Practise with an AI interviewer, then get a scorecard and the questions to redo." },
   { icon: ShieldCheck, title: "Private", text: "Your documents and transcripts stay in your account. Delete them any time." },
@@ -104,7 +106,7 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
           <PlanetHero className="pointer-events-none absolute right-5 top-5 w-24 opacity-90 motion-safe:animate-float" />
           <OrbitWordmark size={26} className="relative" />
           <p className="relative mt-3 max-w-xs font-display text-xl font-semibold leading-snug tracking-tight">
-            Your interview copilot and Resume AI, in one account.
+            Your interview copilot, Resume AI and Jobs AI, in one account.
           </p>
           <FeatureList className="relative mt-6" />
         </aside>
