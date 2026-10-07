@@ -177,3 +177,30 @@ export { useInterviewerVoice, type InterviewerVoice } from "./live/useInterviewe
 export { MockPanel } from "./components/MockPanel";
 export { ConfirmHost, confirmDialog, type ConfirmOptions } from "./components/ConfirmDialog";
 export * from "./icons";
+
+// Look and feel foundation: motion levels, toasts, skeletons, empty states, celebrations, glossary tips.
+export {
+  MOTION_LEVELS,
+  defaultMotion,
+  effectiveMotion,
+  motionEnv,
+  parseMotion,
+  type MotionEnv,
+  type MotionLevel,
+} from "./design/design";
+export { currentMotion, useMotion } from "./hooks/useMotion";
+export { buttonClass, type ButtonSize, type ButtonVariant } from "./components/ui";
+export { ToastHost, dismissToast, toast, type ToastOptions, type ToastTone } from "./components/Toast";
+export {
+  GhostPreview,
+  Skeleton,
+  SkeletonLine,
+  useLoadPhase,
+  type GhostKind,
+  type LoadPhase,
+  type LoadTiming,
+  type SkeletonVariant,
+} from "./components/Skeleton";
+export { type EmptyKind, type EmptyStateProps } from "./components/ui";
+export { Celebrate, celebrate, claimMilestone, hasCelebrated, type Milestone } from "./components/Celebrate";
+export { GLOSSARY, Term, type GlossaryTerm } from "./components/Term";
