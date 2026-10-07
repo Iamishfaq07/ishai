@@ -237,6 +237,22 @@ adds something: reading a resume into a search profile, and a fit check per job.
 never spends the user's resume credits, and capped per day (with results cached per resume content and per job) so
 the shared key's cost stays bounded: a fit check is one short call, about 3 s, and the cap is configuration.
 
+**D44 — Answer size is picked per question by rules, and stored as a fourth `length` value.** A yes/no question and
+a system design question need answers ten times apart, and a candidate reads the answer as a script, so its length is
+how long they talk. Asking the model to judge the size itself (one prompt for "say as much as the question needs")
+still gave ~150 words to everything, and a separate classification call would add latency to every answer. The
+question detector already knows the type and the parts; with the wording ("have you used", "what is", "walk me
+through", "briefly", "in detail") that picks the size deterministically, testably and for free, and the user can
+always override one answer (Shorter / Longer) or the session (a fixed length). `"auto"` is a fourth value of the
+existing `length` setting rather than a new flag, because the session and saved-setup columns are plain strings (no
+migration) and every place that reads a length already handles it in one spot. Older desktop clients never send
+`"auto"`; `answer.started` keeps a fixed `length` beside the new `size` so they always get a value they know. (One
+mixed case remains until the next desktop release: a setup saved as Auto on the web and opened in desktop 0.1.37
+starts an auto session whose length picker shows no choice, and whose Longer button steps to Short.) The candidate's
+level is inferred the same way, from the resume once per session, because a fresher talking like a staff engineer
+is what an interviewer catches; topics the verified facts never mention get an honest line instead of a faked
+expert's answer. The jargon glossary (`TERMS`) comes after the spoken answer, so it costs no time to the first word.
+
 **D46 — Job-aware outreach reads the posting on the server, by listing id.** Outreach lives in Jobs AI now, where a
 message should be about a real job. The browser could send the job's text as `job_text`, but Jobs AI only ever shows a
 summary of a post (D43), so it doesn't have the full text, and text from the browser could be anything. So the
