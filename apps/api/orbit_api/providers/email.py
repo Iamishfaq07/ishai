@@ -28,6 +28,8 @@ class OutgoingEmail:
     to: str
     subject: str
     text: str
+    # Where the recipient's "Reply" goes, when not back to ORBIT_EMAIL_FROM (an Inbox reply: to the admin).
+    reply_to: str | None = None
 
 
 class EmailSender(ABC):
@@ -51,7 +53,8 @@ class DevOutbox(EmailSender):
         del self.sent[:-100]
         path = dev_outbox_path()
         with path.open("a", encoding="utf-8") as fh:
-            fh.write(f"--- to={email.to} subject={email.subject!r}\n{email.text}\n\n")
+            reply = f" reply_to={email.reply_to}" if email.reply_to else ""
+            fh.write(f"--- to={email.to}{reply} subject={email.subject!r}\n{email.text}\n\n")
         log.info("DEV EMAIL to=%s subject=%r (full text with links in %s)", email.to, email.subject, path)
 
 
@@ -71,6 +74,8 @@ class SmtpSender(EmailSender):
     def _send_sync(self, email: OutgoingEmail) -> None:
         msg = EmailMessage()
         msg["From"], msg["To"], msg["Subject"] = self._from, email.to, email.subject
+        if email.reply_to:
+            msg["Reply-To"] = email.reply_to
         msg.set_content(email.text)
         ctx = ssl.create_default_context()
         if self._port == 465:
@@ -121,6 +126,21 @@ def get_email_sender() -> EmailSender:
 def can_deliver() -> bool:
     """False when production has no SMTP: mail is dropped, so nothing may depend on someone reading it."""
     return not isinstance(get_email_sender(), NoEmailSender)
+
+
+async def send_now(email: OutgoingEmail) -> bool:
+    """Send it in this request and say whether it went: for an admin who is told "sent" (an Inbox reply), where a
+    failure must show instead of vanishing into the log. Never raises."""
+    sender = get_email_sender()
+    started = time.monotonic()
+    try:
+        await sender.send(email)
+    except Exception as e:
+        health.record(sender.name, "email", False, error=type(e).__name__)
+        log.exception("failed to send %r email", email.subject)
+        return False
+    health.record(sender.name, "email", True, int((time.monotonic() - started) * 1000))
+    return True
 
 
 async def send_safely(email: OutgoingEmail) -> None:

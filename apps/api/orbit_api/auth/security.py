@@ -128,6 +128,19 @@ async def current_user(request: Request, response: Response,
     return user
 
 
+async def optional_user(request: Request, response: Response,
+                        db: Annotated[AsyncSession, Depends(get_db)]) -> User | None:
+    """The signed-in account, or None, for routes anyone may use (the Contact page). Whatever `current_user` would
+    refuse (no token, an old one, a suspended or no-longer-allowed account) is None here: the caller is treated as
+    signed out, never told why."""
+    if not token_from_request(request):
+        return None
+    try:
+        return await current_user(request, response, db)
+    except HTTPException:
+        return None
+
+
 def cookie_policy() -> tuple[bool, Literal["lax", "strict", "none"]]:
     """(secure, samesite). In production the web app reaches the API through its own /api proxy, so the cookie is
     first-party and SameSite=Lax (ORBIT_COOKIE_SAMESITE) keeps it off cross-site requests; always Secure there.
