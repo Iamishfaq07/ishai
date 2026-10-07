@@ -49,6 +49,12 @@ describe("searchCommands (the command palette)", () => {
     expect(searchCommands("settngs", all).map((c) => c.id)).toContain("go-settings");
   });
 
+  it("matches loose spelling within a word, not across a whole title", () => {
+    const ids = searchCommands("trac", all).map((c) => c.id);
+    expect(ids[0]).toBe("go-tracker");
+    expect(ids).not.toContain("do-mock"); // "sTaRt A moCk interview"
+  });
+
   it("ignores case, accents and punctuation", () => {
     expect(normalize("  Résumé AI! ")).toBe("resume ai");
     expect(top("RÉSUMÉ AI")).toBe("go-resume-ai");

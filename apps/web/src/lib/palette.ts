@@ -57,7 +57,9 @@ function tokenScore(token: string, title: string[], titleText: string, extra: st
   if (extra.some((w) => w.startsWith(token))) return 60;
   if (titleText.includes(token)) return 40;
   if (extraText.includes(token)) return 30;
-  if (token.length >= 3 && isSubsequence(token, titleText.replace(/ /g, ""))) return 10;
+  // Loose spelling, word by word ("trckr" finds "tracker"); across the whole title it matched nonsense ("trac" in
+  // "sTaRt A moCk").
+  if (token.length >= 3 && title.some((w) => w[0] === token[0] && isSubsequence(token, w))) return 10;
   return 0;
 }
 
