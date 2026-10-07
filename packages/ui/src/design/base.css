@@ -280,6 +280,40 @@ button:not(:disabled) {
     opacity: 0;
   }
 }
+/* Orbit scenes (components/scenes): CelebrationScene's sparks fly out to where they rest; ResumeScene's score ring
+   draws itself (--len is the ring's length). Full motion only, through motion-ok:. */
+@keyframes orbit-burst-in {
+  from {
+    transform: rotate(var(--a)) translateY(0) scale(0.3);
+    opacity: 0;
+  }
+}
+@keyframes orbit-draw {
+  from {
+    stroke-dashoffset: var(--len);
+  }
+}
+
+/* Page transitions (same-document View Transitions: withViewTransition(), or React Router's `viewTransition`). The
+   page crossfades quickly; an element given a view-transition-name morphs into its new place. Gentle keeps the
+   crossfade and drops the morph (the element is simply there); Off never starts one, and stops any that do. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur-quick);
+  animation-timing-function: var(--ease-standard);
+}
+::view-transition-group(*) {
+  animation-duration: var(--dur-page);
+  animation-timing-function: var(--ease-standard);
+}
+:root[data-motion="reduced"]::view-transition-group(*) {
+  animation: none;
+}
+:root[data-motion="off"]::view-transition-group(*),
+:root[data-motion="off"]::view-transition-old(*),
+:root[data-motion="off"]::view-transition-new(*) {
+  animation: none !important;
+}
 
 /* Shimmering placeholder lines ("Thinking…"). */
 .skeleton-line {

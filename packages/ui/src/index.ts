@@ -204,3 +204,15 @@ export {
 export { type EmptyKind, type EmptyStateProps } from "./components/ui";
 export { Celebrate, celebrate, claimMilestone, hasCelebrated, type Milestone } from "./components/Celebrate";
 export { GLOSSARY, Term, type GlossaryTerm } from "./components/Term";
+
+// Look and feel: the Orbit scenes (each its own module, so a page carries only the ones it shows) and page transitions.
+export { type SceneProps } from "./components/scenes/parts";
+export { WelcomeScene } from "./components/scenes/WelcomeScene";
+export { ResumeScene } from "./components/scenes/ResumeScene";
+export { JobsScene } from "./components/scenes/JobsScene";
+export { PracticeScene } from "./components/scenes/PracticeScene";
+export { TrackerScene } from "./components/scenes/TrackerScene";
+export { NoResultsScene } from "./components/scenes/NoResultsScene";
+export { OfflineScene } from "./components/scenes/OfflineScene";
+export { CelebrationScene } from "./components/scenes/CelebrationScene";
+export { useViewTransitionOk, viewTransitionOk, withViewTransition } from "./hooks/useMotion";
