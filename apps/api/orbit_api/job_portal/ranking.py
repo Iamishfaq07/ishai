@@ -11,25 +11,30 @@ score out of 100:
      5  recency: posted today counts most, 30 days ago not at all
 
 A post that's neither close in title nor asking for several of the candidate's skills isn't a match and isn't
-shown; nor is one far off in seniority (a fresher isn't shown "Staff Engineer"). The same job posted on its company's
-board and on a feed is shown once, from the company's board.
+shown; nor is one asking for four or more skills of which the resume shows none, nor one far off in seniority (a
+fresher isn't shown "Staff Engineer"). The same job posted on its company's board and on a feed is shown once, from
+the company's board. Best-first sorting spreads one company's many openings out (each further one sorts a little
+lower), so a single busy employer or agency doesn't fill the first page.
 """
 
 import math
 import re
 import time
+from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from orbit_api.job_portal.postings import CITIES, LEVELS, EmploymentType, Level, Workplace
-from orbit_api.job_portal.skills import WEAK, SkillMatcher
+from orbit_api.job_portal.skills import WEAK, SkillMatcher, display, same_skill
 from orbit_api.job_portal.sources import PRIORITY
 
 W_TITLE, W_SKILLS, W_PLACE, W_EXPERIENCE, W_RECENCY = 0.40, 0.35, 0.10, 0.10, 0.05
 MIN_TITLE = 0.25  # below this, a post needs several of the candidate's skills to count as a match
 MIN_SKILLS_MATCHED = 4
+MIN_SKILLS_ASKED = 4  # a post asking for this many skills, none of them on the resume, isn't a match
+SPREAD_FREE, SPREAD_STEP, SPREAD_MAX = 2, 4, 16
 SKILLS_CONSIDERED = 12
 SHOWN_SKILLS = 6
 TITLE_ORDER_STEP = 0.05  # each title further down the profile's list counts 5% less (the fourth: 85%)
@@ -169,6 +174,7 @@ class Match:
     matched: list[str]
     missing: list[str]
     posted_at: datetime
+    company_key: str = ""  # the company, normalized (for spreading one company's openings out)
 
 
 def _experience_fit(row: Row, level: Level | None, years: float | None) -> float:
@@ -199,6 +205,18 @@ def _place(row: Row, search: Search) -> float | None:
     if set(row.cities) & wanted:
         return 1.0
     return 0.5 if not row.cities else None
+
+
+def _considered(keywords: Iterable[str]) -> list[str]:
+    """The post's skills that say something about fit, each once (synonyms are one skill)."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for k in keywords:
+        key = same_skill(k)
+        if k.lower() not in WEAK and key not in seen:
+            out.append(k)
+            seen.add(key)
+    return out[:SKILLS_CONSIDERED]
 
 
 def _allowed_types(search: Search) -> set[str]:
@@ -246,7 +264,7 @@ def rank(rows: Iterable[Row], search: Search, matcher: SkillMatcher, *, sort: st
             # What the user typed is what they want right now: a post with those words is a match even when it's
             # not one of the profile's titles ("react" for a backend engineer), a little more so in its title.
             title = max(title, 0.6 if keyword_words <= tokens else 0.45)
-        considered =[k for k in row.keywords if k.lower() not in WEAK][:SKILLS_CONSIDERED]
+        considered = _considered(row.keywords)
         matched = [k for k in considered if matcher.has(k)]
         if considered:
             skills = min(1.0, len(matched) / max(min(len(considered), SKILLS_FULL), 3))
@@ -254,11 +272,17 @@ def rank(rows: Iterable[Row], search: Search, matcher: SkillMatcher, *, sort: st
             skills = title * 0.8  # no text to read skills from: the title has to speak for it
         if targets and title < MIN_TITLE and not (len(matched) >= MIN_SKILLS_MATCHED and skills >= 0.4):
             continue
+        # A post that asks for several skills and the resume shows none of them ("SAP ABAP & Backend Developer" for
+        # a Go engineer) isn't a match, however close its title. Unless the user typed what they're looking for.
+        if not keyword_words and not matcher.empty and len(considered) >= MIN_SKILLS_ASKED and not matched:
+            continue
         age_days = max((now - posted).total_seconds() / 86_400, 0.0)
         recency = 1.0 if age_days < 1 else max(0.0, 1 - (age_days - 1) / 29)
         score = W_TITLE * title + W_SKILLS * skills + W_PLACE * place + W_EXPERIENCE * experience + W_RECENCY * recency
-        match = Match(row.id, min(99, max(1, math.floor(score * 100 + 0.5))), matched[:SHOWN_SKILLS],
-                      [k for k in considered if k not in matched][:SHOWN_SKILLS], posted)
+        match = Match(row.id, min(99, max(1, math.floor(score * 100 + 0.5))),
+                      [display(k) for k in matched[:SHOWN_SKILLS]],
+                      [display(k) for k in considered if k not in matched][:SHOWN_SKILLS], posted,
+                      row.dedupe_key.split("|", 1)[0])
         prefer = (PRIORITY.get(row.source, 99), -posted.timestamp())
         kept = best.get(row.dedupe_key)
         if kept is None or prefer < kept[0]:
@@ -266,9 +290,23 @@ def rank(rows: Iterable[Row], search: Search, matcher: SkillMatcher, *, sort: st
     out = [m for _, m in best.values()]
     if sort == "newest":
         out.sort(key=lambda m: (-m.posted_at.timestamp(), -m.score))
-    else:
-        out.sort(key=lambda m: (-m.score, -m.posted_at.timestamp()))
-    return out
+        return out
+    out.sort(key=lambda m: (-m.score, -m.posted_at.timestamp()))
+    return spread(out)
+
+
+def spread(matches: list[Match]) -> list[Match]:
+    """Best first, but one company's many openings don't crowd out everyone else's: each further match from the same
+    company after its first SPREAD_FREE sorts as if it scored SPREAD_STEP lower (up to SPREAD_MAX). The score shown is
+    unchanged."""
+    seen: Counter[str] = Counter()
+    keyed: list[tuple[int, float, Match]] = []
+    for m in matches:
+        n = max(seen[m.company_key] - SPREAD_FREE + 1, 0) if m.company_key else 0
+        keyed.append((m.score - min(n * SPREAD_STEP, SPREAD_MAX), m.posted_at.timestamp(), m))
+        seen[m.company_key] += 1
+    keyed.sort(key=lambda k: (-k[0], -k[1]))
+    return [m for _, _, m in keyed]
 
 
 # ---- a short-lived cache of ranked feeds ----------------------------------------------------------------------

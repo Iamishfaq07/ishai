@@ -13,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 from html import unescape
 from typing import Any, Literal
 
+from orbit_api.job_portal.skills import KEYWORDS_VERSION
 from orbit_api.prep.job_link import html_to_text
 
 Workplace = Literal["remote", "hybrid", "onsite"]
@@ -295,7 +296,8 @@ def listing_id(source: str, external_id: str) -> str:
 
 
 def text_hash(title: str, description: str) -> str:
-    return hashlib.sha256(f"{title}\n{description}".encode()).hexdigest()[:16]
+    """Changes when the post's text does, or the way skills are read from it (KEYWORDS_VERSION)."""
+    return hashlib.sha256(f"{KEYWORDS_VERSION}\n{title}\n{description}".encode()).hexdigest()[:16]
 
 
 def parse_time(value: Any) -> datetime | None:
@@ -345,11 +347,20 @@ def salary_text(lo: Any, hi: Any, currency: Any, period: Any = None) -> str | No
 
 # ---- the listing row ---------------------------------------------------------------------------------------------
 
+# Pictographs some feeds put in titles ("🌎 Backend Developer").
+_PICTOGRAPHS = re.compile("[\U0001F000-\U0001FAFF☀-➿️‍]+")
+# A remote post titled in Spanish, Portuguese, German or French is for people there ("DESARROLLADOR BACKEND JAVA"),
+# whatever its region says.
+_FOREIGN_TITLE = re.compile(r"(?<![a-zà-ÿ])(desarrollador[a]?|ingenier[oa]|programador[a]?|remoto|vaga|"
+                            r"engenheir[oa]|desenvolvedor[a]?|pleno|entwickler(?:in)?|ingénieur|développeur(?:se)?)"
+                            r"(?![a-zà-ÿ])")
+
+
 def normalize(p: Posting, now: datetime | None = None) -> dict[str, Any] | None:
     """The listing row's fields for a post, or None when it shouldn't be listed. Keywords are added later (they're
     the slow part, and only needed when the text changed)."""
     now = now or datetime.now(UTC)
-    title = clean_line(p.title, 300)
+    title = clean_line(_PICTOGRAPHS.sub("", p.title), 300)
     if not title or not p.url.startswith("https://"):
         return None
     # A post dated in the future (a time-zone slip) is new, not first in the "newest" feed for ever.
@@ -362,7 +373,7 @@ def normalize(p: Posting, now: datetime | None = None) -> dict[str, Any] | None:
     cities = find_cities(where + " " + title)
     in_india = (p.country or "").upper() == "IN" or bool(cities) or mentions_india(where)
     if not in_india:
-        if workplace != "remote":
+        if workplace != "remote" or _FOREIGN_TITLE.search(title.lower()):
             return None
         region = remote_region(where)
         if region == "elsewhere" or (region is None and not (p.open_to_india or p.remote_unstated_ok)):

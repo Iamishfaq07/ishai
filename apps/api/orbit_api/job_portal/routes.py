@@ -145,6 +145,7 @@ class JobOut(BaseModel):
     company: str
     title: str
     locations: list[str]
+    place: str  # one line for the card: "Bengaluru, Pune · Hybrid", "Remote (India)"
     workplace: Workplace | None
     employment_type: EmploymentType | None
     level: Level | None
@@ -240,7 +241,12 @@ def _experience(row: JobListing) -> str | None:
 
 
 def _location_line(row: JobListing) -> str:
-    where = ", ".join(row.locations[:2]) if row.locations else ""
+    """"Bengaluru, Pune · Hybrid", "Remote (India)": the cities as Orbit knows them, else what the post says."""
+    cities = row.cities or []
+    if cities:
+        where = ", ".join(cities[:3]) + (f" +{len(cities) - 3}" if len(cities) > 3 else "")
+    else:
+        where = ", ".join(row.locations[:2]) if row.locations else ""
     mode = {"remote": "Remote", "hybrid": "Hybrid"}.get(row.workplace or "")
     if mode and mode.lower() not in where.lower():
         where = f"{where} · {mode}" if where else mode
@@ -255,7 +261,8 @@ def _job_out(row: JobListing, match: ranking.Match | None = None, tracked: JobAp
         direct=bool(source and source.direct),
         attribution=AttributionOut(label=attribution.label, url=attribution.url, large=attribution.large)
         if attribution else None,
-        company=row.company, title=row.title, locations=row.locations or [], workplace=row.workplace,
+        company=row.company, title=row.title, locations=row.locations or [], place=_location_line(row),
+        workplace=row.workplace,
         employment_type=row.employment_type, level=row.level, experience=_experience(row),
         posted_at=_aware(row.posted_at), url=row.url, apply_url=row.apply_url, snippet=row.snippet,
         salary=row.salary,

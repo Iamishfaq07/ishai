@@ -290,6 +290,21 @@ def test_listing_keywords_are_skills_not_boilerplate_or_the_companys_name() -> N
     assert not {"CRED", "CTC", "LPA", "Communication"} & set(kw)
 
 
+def test_skills_read_the_same_on_every_card_once_each_and_not_the_companys_own_products() -> None:
+    kw = listing_keywords("SDE 2 Infra", "Run CI/CD for FamCard. You know GOLANG or Go, Ci/Cd, JAVA and "
+                                         "Postgres / PostgreSQL. Experience with Kubernetes (k8s). Recruiting "
+                                         "and compliance teams. Subject to AEDT notices.", "FamPay")
+    assert "CI/CD" in kw and "Ci/Cd" not in kw and "Java" in kw and "JAVA" not in kw
+    assert kw.count("Go") == 1 and "Golang" not in kw and "GOLANG" not in kw  # synonyms are one skill
+    assert sum(k in ("PostgreSQL", "Postgres") for k in kw) == 1 and "k8s" not in kw
+    assert not {"FamCard", "AEDT", "Recruiting", "Compliance"} & set(kw)
+    # A company whose first word is an everyday one doesn't lose the skills that start with it.
+    assert "Databricks" in listing_keywords("Data Engineer", "PySpark on Databricks and Airflow.", "Data Axle")
+    # "Go" on a resume counts only as the language, written as such.
+    assert SkillMatcher("Built Go services", []).has("Golang")
+    assert not SkillMatcher("Ready to go live with the team", []).has("Go")
+
+
 # ---- the cache and its refresh ---------------------------------------------------------------------------------------
 
 
@@ -488,6 +503,35 @@ def test_filters_place_work_mode_recency_type_seniority_sources_and_exclusions()
     assert "crypto" not in shown(exclude=["crypto"])
 
 
+def test_a_post_asking_for_skills_the_resume_has_none_of_isnt_a_match() -> None:
+    sap = _row(title="SAP ABAP & Backend Developer", keywords=["SAP", "ABAP", "OData", "RICEF", "CDS"])
+    thin = _row(title="Backend Software Engineer", company="B", keywords=["System Design"])
+    out = {m.id for m in ranking.rank([sap, thin], _search(), MATCHER)}
+    assert sap.id not in out and thin.id in out  # a post that says little is still judged by its title
+    # Without a resume (nothing to compare), or when the user searched for it, it's shown.
+    assert sap.id in {m.id for m in ranking.rank([sap], _search(skills=[]), SkillMatcher("", []))}
+    assert sap.id in {m.id for m in ranking.rank([sap], _search(keywords="abap"), MATCHER)}
+
+
+def test_one_companys_many_openings_dont_fill_the_first_page() -> None:
+    agency = [_row(title=f"Backend Engineer {n}", company="Xperteez", external_id=f"x{n}") for n in range(6)]
+    others = [_row(title="Backend Engineer", company=c, keywords=["Go", "Python", "Kafka"]) for c in ("P", "Q")]
+    out = ranking.rank([*agency, *others], _search(), MATCHER)
+    first = [m.company_key for m in out[:4]]
+    assert first.count("xperteez") <= 2 and {"p", "q"} <= set(first)
+    newest = ranking.rank([*agency, *others], _search(), MATCHER, sort="newest")  # (not spread)
+    assert {m.id: m.score for m in out} == {m.id: m.score for m in newest}  # only the order moves, not the scores
+
+
+def test_remote_posts_titled_for_another_language_market_and_pictographs_are_tidied() -> None:
+    base = Posting(source="himalayas", external_id="1", board="q", company="XK", title="DESARROLLADOR BACKEND JAVA",
+                   url="https://himalayas.app/j/1", apply_url="https://himalayas.app/j/1", posted_at=fx.ago(hours=1),
+                   locations=["Remote (worldwide)"], workplace="remote", open_to_india=True)
+    assert normalize(base) is None
+    tidy = normalize(Posting(**{**base.__dict__, "title": "🌎 Backend Java Developer - Remote"}))
+    assert tidy is not None and tidy["title"] == "Backend Java Developer - Remote"
+
+
 def test_the_same_job_twice_is_shown_once_from_the_companys_own_board() -> None:
     feed_copy = _row(source="himalayas", title="Backend Developer", company="Groww Pvt Ltd", workplace="remote",
                      cities=[], country="IN")
@@ -510,6 +554,8 @@ def test_the_search_box_is_read_into_filters_and_keywords() -> None:
     assert p.understood == ["Remote", "2 years", "Bengaluru"]
     p = parse_search("python internships in pune posted today")
     assert p.job_types == ["internship"] and p.level == "fresher" and p.posted_within == 1 and p.keywords == "python"
+    p = parse_search("golang jobs in the last 30 days, gurgaon or noida")
+    assert (p.keywords, p.posted_within, p.locations) == ("golang", 30, ["Gurugram", "Noida"])
     react = _row(title="Frontend Engineer", keywords=["React", "TypeScript"], workplace="remote", cities=[])
     other = _row(title="Backend Engineer", company="X", workplace="remote", cities=[])
     out = ranking.rank([react, other], _search(keywords="react", workplace=["remote"]), MATCHER)
@@ -747,7 +793,7 @@ def test_tailor_makes_a_copy_aimed_at_the_job_and_tracks_it(jobs: TestClient) ->
     out = r.json()
     assert out["resume_id"] != rid and out["note"] is None and out["title"] == "My CV · Groww"
     copy = jobs.get(f"/v1/resumes/{out['resume_id']}", headers=h).json()
-    assert copy["job_text"].startswith("Backend Engineer\nGroww · Bengaluru, India\nOriginal post: https://")
+    assert copy["job_text"].startswith("Backend Engineer\nGroww · Bengaluru\nOriginal post: https://")
     assert "Go and Kafka." in copy["job_text"]
     assert jobs.get(f"/v1/resumes/{rid}", headers=h).json()["job_text"] == ""  # the original is untouched
     tracked = jobs.get("/v1/jobs/tracker", headers=h).json()

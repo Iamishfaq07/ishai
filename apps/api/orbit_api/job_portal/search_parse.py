@@ -11,7 +11,7 @@ from orbit_api.job_portal.postings import _CITY_RE, EmploymentType, Level, Workp
 _STOP = frozenset("""
 job jobs opening openings role roles position positions vacancy vacancies hiring for in at near me with and or of
 the a an any all looking want need work experience exp exper experienced yr yrs year years based city around
-posted post latest recent new show find search
+posted post latest recent new show find search last past this within since
 """.split())
 
 

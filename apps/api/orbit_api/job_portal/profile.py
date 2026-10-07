@@ -190,9 +190,11 @@ Return ONLY a JSON object:
 {"titles": [string], "seniority": "fresher" | "junior" | "mid" | "senior", "skills": [string], "locations": [string]}
 
 Rules:
-- "titles": 3-5 job titles to search for, best fit first: the role they hold or held, the same role under the
-  names Indian job boards use for it (e.g. "Backend Developer" and "Software Engineer"), and one or two honest
-  adjacent roles their experience clearly supports. Plain titles: no seniority words, company names or brackets.
+- "titles": 4-5 job titles to search for, best fit first: the role they hold or held; one or two other names Indian
+  job boards use for that same role (e.g. "Backend Developer", "Software Engineer"); and at least one honest
+  adjacent role: a different role their own work clearly qualifies them for (e.g. "Platform Engineer" for a backend
+  engineer who runs Kubernetes and Terraform, "Data Analyst" for a finance graduate who writes SQL every day). Never
+  a role the resume doesn't support. Plain titles: no seniority words, company names or brackets.
 - "seniority": from the years of experience given and the scope of their work: fresher (students and under 1
   year), junior (1-3 years), mid (3-6), senior (6+, or leading teams or systems).
 - "skills": 10-15 hard skills the resume itself shows (listed, or plainly used in the work), the most useful for
