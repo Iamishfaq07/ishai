@@ -13,7 +13,7 @@ import hashlib
 import json
 import re
 from datetime import UTC, datetime
-from typing import Any, Literal, get_args
+from typing import Literal, get_args
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -23,6 +23,7 @@ from orbit_api.job_portal.sources import all_sources
 from orbit_api.job_portal.sources.base import SearchQuery
 from orbit_api.live.context_builder import fence
 from orbit_api.providers.llm.base import LLMMessage, LLMProvider, LLMRequest
+from orbit_api.resumes.ai import _json  # the resume maker's reader of the model's JSON answer
 from orbit_api.resumes.ats import _norm, _term_pattern, date_key, resume_text
 from orbit_api.resumes.schema import ResumeData
 
@@ -210,13 +211,6 @@ def profile_request(data: ResumeData, years: float, llm: LLMProvider) -> LLMRequ
             f"<reference_data source=\"resume\">\n{fence(_resume_json(data))}\n</reference_data>"))],
         json_mode=llm.supports_structured_output(), max_tokens=600, temperature=0.2, request_type="job_profile",
     )
-
-
-def _json(text: str) -> dict[str, Any]:
-    data = json.loads(text[text.find("{"): text.rfind("}") + 1] or "{}")
-    if not isinstance(data, dict):
-        raise ValueError("not an object")
-    return data
 
 
 def shows_skill(skill: str, text: str) -> bool:

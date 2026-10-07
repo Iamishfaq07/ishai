@@ -12,9 +12,10 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from orbit_api.job_portal.profile import _json, _resume_json
+from orbit_api.job_portal.profile import _resume_json
 from orbit_api.live.context_builder import fence
 from orbit_api.providers.llm.base import LLMMessage, LLMProvider, LLMRequest
+from orbit_api.resumes.ai import _json
 from orbit_api.resumes.ats import resume_text
 from orbit_api.resumes.claims import invented_figures, invented_terms
 from orbit_api.resumes.schema import ResumeData
