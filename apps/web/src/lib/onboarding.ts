@@ -1,4 +1,5 @@
 import type { JobLevel, JobPrefs, JobTrackerEntry } from "@orbit/types";
+import type { PresetId } from "../pages/mockPresets";
 
 /**
  * First run: the three welcome questions (what you're here for, your experience and role, where you want to work), and
@@ -53,11 +54,11 @@ export const PLACE_IDEAS = ["Bengaluru", "Hyderabad", "Pune", "Chennai", "Mumbai
 const LEVEL: Record<Experience, JobLevel> = { fresher: "fresher", early: "junior", experienced: "mid" };
 
 /** The one-tap mock interview each kind of candidate starts with (Practice reads `?preset=`). */
-export type MockPreset = "hr-5" | "intro-10" | "technical-15";
+export type MockPreset = Exclude<PresetId, "salary">;
 export function presetFor(answers: Pick<WelcomeAnswers, "experience"> | null): MockPreset {
-  if (answers?.experience === "experienced") return "technical-15";
-  if (answers?.experience === "early") return "intro-10";
-  return "hr-5";
+  if (answers?.experience === "experienced") return "tech15";
+  if (answers?.experience === "early") return "tmay10";
+  return "hr5";
 }
 
 /** Where someone was headed when they signed up says what they came for (Resume AI's "Start free" → resume). */
@@ -233,11 +234,11 @@ function catalogue(answers: WelcomeAnswers | null, facts: HomeFacts, now: Date):
   steps.push({
     id: "practice",
     product: "interview",
-    title: fresher || !answers?.experience ? "Do a 5-minute HR round" : preset === "intro-10" ? "Do a 10-minute practice interview" : "Do a 15-minute technical round",
+    title: fresher || !answers?.experience ? "Do a 5-minute HR round" : preset === "tmay10" ? "Do a 10-minute practice interview" : "Do a 15-minute technical round",
     body: "An AI interviewer asks, you answer out loud, then you get a score and the answers worth redoing.",
     cta: "Start practising",
     to: facts.mockEnabled ? `/mock?preset=${preset}` : "/start",
-    time: preset === "hr-5" ? "5 minutes" : preset === "intro-10" ? "10 minutes" : "15 minutes",
+    time: preset === "hr5" ? "5 minutes" : preset === "tmay10" ? "10 minutes" : "15 minutes",
     done: facts.mocks > 0,
   });
   steps.push({

@@ -116,7 +116,7 @@ export function HomePage() {
 
       <NextStep steps={steps} welcomed={welcomed} askWelcome={!answers && isNew} />
 
-      <FollowUps />
+      <FollowUps hideWhenEmpty />
 
       {facts && <SetUp items={checklist(answers, facts)} />}
 

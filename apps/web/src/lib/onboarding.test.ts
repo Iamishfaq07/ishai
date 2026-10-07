@@ -100,10 +100,10 @@ describe("nextSteps (Home's 'Your next step')", () => {
     const facts = { ...empty, resumes: 1, bestResume: { id: "r", score: 90 } };
     const practice = (experience: WelcomeAnswers["experience"]) =>
       nextSteps(answers({ goal: "interview", experience }), facts, NOW).find((s) => s.id === "practice");
-    expect(practice("fresher")).toMatchObject({ title: "Do a 5-minute HR round", to: "/mock?preset=hr-5" });
-    expect(practice("early")).toMatchObject({ to: "/mock?preset=intro-10" });
-    expect(practice("experienced")).toMatchObject({ to: "/mock?preset=technical-15" });
-    expect(practice(null)?.to).toBe("/mock?preset=hr-5");
+    expect(practice("fresher")).toMatchObject({ title: "Do a 5-minute HR round", to: "/mock?preset=hr5" });
+    expect(practice("early")).toMatchObject({ to: "/mock?preset=tmay10" });
+    expect(practice("experienced")).toMatchObject({ to: "/mock?preset=tech15" });
+    expect(practice(null)?.to).toBe("/mock?preset=hr5");
   });
 
   it("sends practice to a live session when mock interviews are off", () => {
@@ -217,8 +217,8 @@ describe("goalFromPath and presetFor", () => {
   });
 
   it("starts freshers and the unknown on the HR round", () => {
-    expect(presetFor(null)).toBe("hr-5");
-    expect(presetFor({ experience: "fresher" })).toBe("hr-5");
+    expect(presetFor(null)).toBe("hr5");
+    expect(presetFor({ experience: "fresher" })).toBe("hr5");
   });
 });
 

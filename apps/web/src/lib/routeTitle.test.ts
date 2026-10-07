@@ -44,6 +44,6 @@ describe("routeTitle", () => {
 
   it("names the welcome questions and the free practice question", () => {
     expect(routeTitle("/welcome")).toBe("Welcome");
-    expect(routeTitle("/warmup")).toBe("Practice question");
+    expect(routeTitle("/warmup")).toBe("Interview warm-up");
   });
 });
