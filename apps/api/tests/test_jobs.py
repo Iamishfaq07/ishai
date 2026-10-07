@@ -976,7 +976,7 @@ def test_the_migration_upgrades_and_downgrades_cleanly(tmp_path: Path) -> None:
     jobs_tables = {"job_listings", "job_source_state", "job_search_profiles", "job_applications", "job_fit_checks"}
     alembic("upgrade", "head")
     assert jobs_tables <= tables()
-    alembic("downgrade", "-1")
+    alembic("downgrade", "cd1a7385ee32")  # the revision before the jobs tables (later ones sit on top of it)
     assert not jobs_tables & tables() and "resumes" in tables()
     alembic("upgrade", "head")
     assert jobs_tables <= tables()

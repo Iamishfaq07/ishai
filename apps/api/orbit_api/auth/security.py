@@ -92,6 +92,16 @@ def token_from_request(request: Request) -> str | None:
 
 # A web cookie is re-issued at most this often while it's being used.
 RENEW_AFTER_S = 15 * 60
+SUSPENDED = "account_suspended"
+
+
+def suspended_detail(user: User) -> dict[str, str]:
+    """What a suspended account's owner is told when they sign in or call the API: that it's suspended, and the
+    admin's reason. No address of the admin's (they can add a way to reach them to the reason)."""
+    reason = " ".join((user.suspended_reason or "").split())
+    message = "Your Orbit account is suspended." + (f" Reason: {reason}" if reason else "")
+    message += " If you think this is a mistake, get in touch with the Orbit team."
+    return {"code": SUSPENDED, "message": message}
 
 
 async def current_user(request: Request, response: Response,
@@ -105,6 +115,9 @@ async def current_user(request: Request, response: Response,
     # Re-checked per request so tightening ORBIT_ALLOWED_EMAILS cuts off existing accounts too.
     if not get_settings().email_allowed(user.email):
         raise HTTPException(status.HTTP_403_FORBIDDEN, NOT_ALLOWED)
+    # Suspending also signs the account out everywhere; this catches anything minted in between.
+    if user.suspended_at is not None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, suspended_detail(user))
     user_id_var.set(user.id)  # correlation id for this request's log lines
     from_cookie = not request.headers.get("authorization", "").lower().startswith("bearer ")
     if from_cookie and claims.get("idle") and _now() - int(claims.get("iat", 0)) >= RENEW_AFTER_S:

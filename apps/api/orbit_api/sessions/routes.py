@@ -754,6 +754,9 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
         if row is None or user is None or row.user_id != user_id:
             await ws.close(code=4004, reason="session not found")
             return
+        if user.suspended_at is not None:  # a ticket minted just before the admin suspended the account
+            await ws.close(code=4001, reason="account suspended")
+            return
         if row.status == "ended":
             await ws.close(code=4009, reason="session has ended")
             return
