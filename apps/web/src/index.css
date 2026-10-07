@@ -20,16 +20,8 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
+/* Reduced motion (the OS setting and Settings → Appearance) is handled in base.css through html[data-motion]: the OS
+   setting makes Full play as Gentle, which still fades but never moves. */
 
 /* Resume maker: "Download PDF" prints only the resume (a copy portalled next to #root), at real size. */
 .resume-print {

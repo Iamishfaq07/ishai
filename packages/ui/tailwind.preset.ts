@@ -5,6 +5,7 @@
  * - `indigo-*` is the ACCENT (`--accent-50` … `--accent-950`, set by `applyDesign` from the user's choice).
  * - `zinc-*` is INK: the cool, blue-violet neutrals every surface, border and secondary text is drawn with.
  * - `aurora-*` is the fixed cyan the brand gradients fade into (logo, hero glows) — never used for UI state.
+ * Motion is tokens too (`--dur-*`, `--ease-*` in base.css): `duration-quick`, `ease-enter`, and the animations below.
  * (Untyped on purpose: @orbit/ui doesn't depend on tailwindcss; each app's config types it.)
  */
 const shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
@@ -25,8 +26,19 @@ export default {
         "glow-sm": "0 0 0 1px rgb(var(--accent-400) / 0.2), 0 4px 16px -6px rgb(var(--accent-500) / 0.5)",
         panel: "0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 20px 50px -24px rgb(0 0 0 / 0.6)",
       },
+      // press 100 ms (press, toggle) · quick 160 (hover, small fades) · panel 240 (popover, toast) · page 280 (route
+      // change, card expand) · moment 700 (one-off celebrations only). Exits use ease-exit and run shorter.
+      transitionDuration: {
+        press: "var(--dur-press)",
+        quick: "var(--dur-quick)",
+        panel: "var(--dur-panel)",
+        page: "var(--dur-page)",
+        moment: "var(--dur-moment)",
+      },
+      transitionTimingFunction: { standard: "var(--ease-standard)", enter: "var(--ease-enter)", exit: "var(--ease-exit)" },
       keyframes: {
         "fade-in": { from: { opacity: "0" }, to: { opacity: "1" } },
+        "fade-out": { to: { opacity: "0" } },
         "fade-up": { from: { opacity: "0", transform: "translateY(8px)" }, to: { opacity: "1", transform: "none" } },
         "scale-in": { from: { opacity: "0", transform: "scale(0.94)" }, to: { opacity: "1", transform: "none" } },
         shimmer: { from: { backgroundPosition: "200% 0" }, to: { backgroundPosition: "-200% 0" } },
@@ -52,9 +64,13 @@ export default {
         sheen: { from: { transform: "translateX(-120%) skewX(-20deg)" }, to: { transform: "translateX(220%) skewX(-20deg)" } },
       },
       animation: {
-        "fade-in": "fade-in 0.25s ease-out both",
-        "fade-up": "fade-up 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both",
-        "scale-in": "scale-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both",
+        // Entrances. Under Gentle motion base.css turns each into a plain fade.
+        "fade-in": "fade-in var(--dur-quick) var(--ease-standard) both",
+        "fade-up": "fade-up var(--dur-page) var(--ease-enter) both",
+        "scale-in": "scale-in var(--dur-panel) var(--ease-enter) both",
+        // A panel or toast coming up into view; its exit is the shorter fade-out.
+        rise: "fade-up var(--dur-panel) var(--ease-enter) both",
+        "fade-out": "fade-out var(--dur-quick) var(--ease-exit) both",
         shimmer: "shimmer 1.6s linear infinite",
         orbit: "orbit 6s linear infinite",
         // Decorative loops play for a while, then rest: an idle screen shouldn't keep repainting (battery, jank).
@@ -66,7 +82,7 @@ export default {
         glow: "glow 2.4s ease-in-out infinite",
         "glow-calm": "glow 2.4s ease-in-out 6",
         "orbit-calm": "orbit 9s linear 2",
-        pop: "pop 0.35s ease-out",
+        pop: "pop var(--dur-panel) var(--ease-standard)",
         twinkle: "twinkle 3.2s ease-in-out 5",
         // The sky keeps twinkling, in steps: ~5 repaints a second instead of 60, and it looks the same.
         "twinkle-sky": "twinkle 3.2s steps(16) infinite",
@@ -78,4 +94,13 @@ export default {
       },
     },
   },
+  plugins: [
+    // `motion-ok:` styles apply at Full motion only: the in-app setting (html[data-motion], see design.ts) and the OS
+    // both allow movement. Tailwind's own `motion-safe:` sees only the OS, so prefer this for anything that moves.
+    ({ addVariant }: { addVariant: (name: string, definition: string) => void }) =>
+      addVariant(
+        "motion-ok",
+        '@media (prefers-reduced-motion: no-preference) { :root:not([data-motion="reduced"]):not([data-motion="off"]) & }',
+      ),
+  ],
 };

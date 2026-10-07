@@ -1,17 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /** User-chosen look & feel, shared by the web and desktop apps (stored per device). */
 export type AccentName = "nebula" | "indigo" | "violet" | "sky" | "emerald" | "rose" | "amber";
 export type TextSize = "sm" | "md" | "lg";
+/** Interface animation: everything (`full`), fades only with nothing moving (`reduced`, "Gentle"), or none. */
+export type MotionLevel = "full" | "reduced" | "off";
 
 export interface DesignPrefs {
   accent: AccentName;
   textSize: TextSize;
-  /** Interface animations. Off also applies when the OS asks for reduced motion. */
-  motion: boolean;
+  /** The user's choice. What plays can be less: the OS reduced-motion setting caps Full at Gentle (`effectiveMotion`). */
+  motion: MotionLevel;
 }
 
-export const DEFAULT_DESIGN: DesignPrefs = { accent: "nebula", textSize: "md", motion: true };
+export const DEFAULT_DESIGN: DesignPrefs = { accent: "nebula", textSize: "md", motion: "full" };
 
 type Palette = [string, string, string, string, string, string, string, string, string, string, string];
 const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
@@ -33,19 +35,56 @@ export const TEXT_SIZES: Array<{ value: TextSize; label: string; px: number }> =
   { value: "lg", label: "Large", px: 18 },
 ];
 
+export const MOTION_LEVELS: Array<{ value: MotionLevel; label: string }> = [
+  { value: "full", label: "Full" },
+  { value: "reduced", label: "Gentle" },
+  { value: "off", label: "Off" },
+];
+
+/** What the device asks for: the OS "reduce motion" setting and the browser's data saver (Chromium only). */
+export interface MotionEnv {
+  reducedMotion: boolean;
+  saveData: boolean;
+}
+
+export function motionEnv(): MotionEnv {
+  const reducedMotion =
+    typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const connection = typeof navigator !== "undefined" ? (navigator as { connection?: { saveData?: boolean } }).connection : undefined;
+  return { reducedMotion, saveData: connection?.saveData === true };
+}
+
+/** Where a device starts before anyone picks: Gentle when the OS asks for less motion or data saver is on. */
+export function defaultMotion(env: MotionEnv = motionEnv()): MotionLevel {
+  return env.reducedMotion || env.saveData ? "reduced" : "full";
+}
+
+/** A stored motion choice. Builds before the three levels stored a boolean "Animations" switch: on is Full and off
+ *  is Off, so nobody's choice changes. Anything else falls back to the device default. */
+export function parseMotion(value: unknown, env: MotionEnv = motionEnv()): MotionLevel {
+  if (value === true) return "full";
+  if (value === false) return "off";
+  return MOTION_LEVELS.some((m) => m.value === value) ? (value as MotionLevel) : defaultMotion(env);
+}
+
+/** What actually plays: the user's level, except that the OS reduced-motion setting caps Full at Gentle. */
+export function effectiveMotion(level: MotionLevel, env: MotionEnv = motionEnv()): MotionLevel {
+  return level === "full" && env.reducedMotion ? "reduced" : level;
+}
+
 const STORAGE_KEY = "orbit.design";
 
-export function loadDesign(): DesignPrefs {
+export function loadDesign(env: MotionEnv = motionEnv()): DesignPrefs {
   try {
     const raw = typeof localStorage !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
-    const parsed = raw ? (JSON.parse(raw) as Partial<DesignPrefs>) : {};
+    const parsed = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
     return {
-      accent: parsed.accent && parsed.accent in ACCENTS ? parsed.accent : DEFAULT_DESIGN.accent,
+      accent: typeof parsed.accent === "string" && parsed.accent in ACCENTS ? (parsed.accent as AccentName) : DEFAULT_DESIGN.accent,
       textSize: TEXT_SIZES.some((t) => t.value === parsed.textSize) ? (parsed.textSize as TextSize) : "md",
-      motion: typeof parsed.motion === "boolean" ? parsed.motion : true,
+      motion: parseMotion(parsed.motion, env),
     };
   } catch {
-    return DEFAULT_DESIGN;
+    return { ...DEFAULT_DESIGN, motion: defaultMotion(env) };
   }
 }
 
@@ -57,25 +96,34 @@ export function saveDesign(prefs: DesignPrefs): void {
   }
 }
 
-/** Applies accent (CSS variables behind every `indigo-*` class), root text size and the motion switch. */
-export function applyDesign(prefs: DesignPrefs, root: HTMLElement = document.documentElement): void {
+/** Applies accent (CSS variables behind every `indigo-*` class), root text size and the motion level that plays
+ *  (`html[data-motion]`, read by base.css, the `motion-ok:` variant and `useMotion()`). */
+export function applyDesign(prefs: DesignPrefs, root: HTMLElement = document.documentElement, env: MotionEnv = motionEnv()): void {
   const palette = ACCENTS[prefs.accent].palette;
   SHADES.forEach((shade, i) => root.style.setProperty(`--accent-${shade}`, palette[i] as string));
   root.style.fontSize = `${TEXT_SIZES.find((t) => t.value === prefs.textSize)?.px ?? 16}px`;
-  root.classList.toggle("reduce-motion", !prefs.motion);
+  root.setAttribute("data-motion", effectiveMotion(prefs.motion, env));
 }
 
-/** Call before React renders so the saved look applies without a flash. */
+/** Call before React renders so the saved look applies without a flash. Follows the OS motion setting live. */
 export function initDesign(): void {
   applyDesign(loadDesign());
+  if (typeof window.matchMedia !== "function") return;
+  window.matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", () => applyDesign(loadDesign()));
 }
 
 export function useDesign(): [DesignPrefs, (patch: Partial<DesignPrefs>) => void] {
-  const [prefs, setPrefs] = useState<DesignPrefs>(loadDesign);
+  const [prefs, setPrefs] = useState<DesignPrefs>(() => loadDesign());
+  // Saved once changed, not on open: visiting Settings must not pin today's device default (Gentle while data saver
+  // is on, say) as if the user had chosen it.
+  const changed = useRef(false);
   useEffect(() => {
     applyDesign(prefs);
-    saveDesign(prefs);
+    if (changed.current) saveDesign(prefs);
   }, [prefs]);
-  const update = useCallback((patch: Partial<DesignPrefs>) => setPrefs((p) => ({ ...p, ...patch })), []);
+  const update = useCallback((patch: Partial<DesignPrefs>) => {
+    changed.current = true;
+    setPrefs((p) => ({ ...p, ...patch }));
+  }, []);
   return [prefs, update];
 }
