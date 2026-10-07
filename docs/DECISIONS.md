@@ -292,3 +292,15 @@ starts at Gentle when the OS asks or data saver is on. The choice stays per devi
 the old switch's `true` reads as Full and `false` as Off, so nobody's choice changes, and Settings saves only after
 a change, so visiting it doesn't pin a device default. Tailwind's `motion-safe:` sees only the OS, so new code
 uses `motion-ok:` and JS animation reads `useMotion()`.
+
+**D49 — Jobs found elsewhere are tracked as "ext:" entries, and freshness badges claim only what the cache knows.**
+A job a fresher applied to on Naukri, LinkedIn or a campus portal goes on the same tracker as a feed job, as a
+`JobApplication` whose `listing_id` is `"ext:" + uuid4().hex` (36 characters, the column's size; never a feed id, which
+is "j" + hex) and `source = "manual"`: the column is a plain string, not a foreign key, so no migration. The link is
+read from its address only (Naukri, LinkedIn, Internshala and the ATS boards write the title and company into it) and
+never fetched, since those sites block bots and Orbit doesn't read them (D43); the user checks the guesses before
+saving. The badges follow the same rule. "Still open" is only for a company's own board, because a successful board
+fetch replaces that board's listings, so a post still in the cache was on the employer's page at `fetched_at`; feeds
+and searches are never re-checked, so they don't get it. "Early applicant" uses the earlier of the post's date and
+Orbit's first sighting, because a post without a date is dated at every fetch. No match % is shown until there's a
+resume or skills to match against: without them every job scored about the same middling number.
