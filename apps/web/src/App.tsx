@@ -5,8 +5,8 @@ import { Spinner } from "./components/ui";
 import { useAuth } from "./lib/auth";
 import { routeTitle } from "./lib/routeTitle";
 import { useDocumentTitle } from "./lib/useDocumentTitle";
-import { JOBS_AI_HOME, isJobsAiHome, movedJobsPath } from "./pages/jobs/paths";
-import { RESUME_AI_HOME, isResumeAiHome, movedResumePath } from "./pages/resume/paths";
+import { JOBS_AI_HOME, movedJobsPath } from "./pages/jobs/paths";
+import { RESUME_AI_HOME, movedResumePath } from "./pages/resume/paths";
 import {
   ConfirmEmailChangePage,
   ForgotPasswordPage,
@@ -20,6 +20,9 @@ import {
   CompanionPage,
   DocumentsPage,
   HomePage,
+  LandingPage,
+  WelcomePage,
+  WarmupPage,
   LivePage,
   MockPage,
   SessionDetailPage,
@@ -42,6 +45,7 @@ import {
   AdminPaymentsPage,
   AdminAuditPage,
   prefetchLikelyRoutes,
+  publicPageFor,
 } from "./routes";
 
 /** While a page's code downloads (first visit only; later visits are instant). */
@@ -54,8 +58,8 @@ export function PageLoading() {
 }
 
 /**
- * Signed out, a page asks you to sign in first, except one with a public face (`publicPage`): Resume AI's and Jobs
- * AI's homes show their product pages there instead.
+ * Signed out, a page asks you to sign in first, except one with a public face (`publicPage`): "/" shows the front
+ * page, and Resume AI's and Jobs AI's homes their product pages.
  */
 function RequireAuth({ children, publicPage }: { children: ReactNode; publicPage?: (pathname: string) => ReactNode }) {
   const { user, loading } = useAuth();
@@ -81,9 +85,16 @@ function Signed({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-/** Signed out at /resume-ai or /jobs: what that product does, and "Start free". */
-const publicProductPage = (pathname: string): ReactNode =>
-  isResumeAiHome(pathname) ? <ResumeAiPublicPage /> : isJobsAiHome(pathname) ? <JobsAiPublicPage /> : null;
+/** Signed out at "/", the front page; at /resume-ai or /jobs, what that product does, and "Start free". */
+const PUBLIC_PAGES: Record<NonNullable<ReturnType<typeof publicPageFor>>, ReactNode> = {
+  landing: <LandingPage />,
+  resumeAiPublic: <ResumeAiPublicPage />,
+  jobsAiPublic: <JobsAiPublicPage />,
+};
+const publicProductPage = (pathname: string): ReactNode => {
+  const key = publicPageFor(pathname);
+  return key ? PUBLIC_PAGES[key] : null;
+};
 
 /** An old resume maker address (Documents → Resume maker, /resume-maker): the same place in Resume AI. */
 function MovedResume() {
@@ -100,7 +111,8 @@ function MovedJobs() {
 
 function useRouteTitle(): void {
   const { pathname } = useLocation();
-  useDocumentTitle(routeTitle(pathname));
+  const { user, loading } = useAuth();
+  useDocumentTitle(routeTitle(pathname, !loading && !user));
 }
 
 export function App() {
@@ -116,6 +128,17 @@ export function App() {
       <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
       {/* Public: the scanned code is the credential, so the phone needn't sign in. */}
       <Route path="/companion" element={<CompanionPage />} />
+      {/* Public: one practice question with instant feedback, no account needed (Workstream C's page). */}
+      <Route path="/warmup" element={<WarmupPage />} />
+      {/* Right after sign-up: the three welcome questions, outside the nav so nothing competes with them. */}
+      <Route
+        path="/welcome"
+        element={
+          <RequireAuth>
+            <WelcomePage />
+          </RequireAuth>
+        }
+      />
       {/* The old signed-out resume maker: Resume AI's home, which is its product page when signed out. */}
       <Route path="/resume-maker" element={<MovedResume />} />
       {/* Jobs was a tab of Resume AI: its old addresses go to the same page in Jobs AI (signed out, through sign-in

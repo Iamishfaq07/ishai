@@ -1,5 +1,6 @@
 import { lazy, type ComponentType } from "react";
-import { movedJobsPath } from "./pages/jobs/paths";
+import { isJobsAiHome, movedJobsPath } from "./pages/jobs/paths";
+import { isResumeAiHome } from "./pages/resume/paths";
 
 /**
  * Pages load on demand: the first visit downloads only what that screen needs (sign-in doesn't ship the live
@@ -8,6 +9,9 @@ import { movedJobsPath } from "./pages/jobs/paths";
  */
 const loaders = {
   home: () => import("./pages/Home"),
+  landing: () => import("./pages/Landing"),
+  welcome: () => import("./pages/Welcome"),
+  warmup: () => import("./pages/Warmup"),
   setup: () => import("./pages/SessionSetup"),
   live: () => import("./pages/Live"),
   sessions: () => import("./pages/Sessions"),
@@ -33,6 +37,9 @@ function page<M>(load: () => Promise<M>, pick: (m: M) => ComponentType) {
 }
 
 export const HomePage = page(loaders.home, (m) => m.HomePage);
+export const LandingPage = page(loaders.landing, (m) => m.LandingPage);
+export const WelcomePage = page(loaders.welcome, (m) => m.WelcomePage);
+export const WarmupPage = page(loaders.warmup, (m) => m.WarmupPage);
 export const SessionSetupPage = page(loaders.setup, (m) => m.SessionSetupPage);
 export const LivePage = page(loaders.live, (m) => m.LivePage);
 export const SessionsPage = page(loaders.sessions, (m) => m.SessionsPage);
@@ -62,6 +69,8 @@ type PageKey = keyof typeof loaders;
 
 const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/$/, "home"],
+  [/^\/welcome\/?$/, "welcome"],
+  [/^\/warmup\/?$/, "warmup"],
   [/^\/start/, "setup"],
   [/^\/live\//, "live"],
   [/^\/sessions\/[^/]+/, "sessionDetail"],
@@ -84,6 +93,17 @@ export function pageFor(path: string): PageKey | null {
   const moved = movedJobsPath(path);
   if (moved) return pageFor(moved.pathname);
   return BY_PATH.find(([re]) => re.test(path))?.[1] ?? null;
+}
+
+/**
+ * Signed out, the addresses with a public face instead of the sign-in page: the front page at "/" and the two
+ * product pages. Everything else signed out asks to sign in (exported for the unit test).
+ */
+export function publicPageFor(pathname: string): "landing" | "resumeAiPublic" | "jobsAiPublic" | null {
+  if (pathname === "/") return "landing";
+  if (isResumeAiHome(pathname)) return "resumeAiPublic";
+  if (isJobsAiHome(pathname)) return "jobsAiPublic";
+  return null;
 }
 
 /** Start downloading a page's code (no-op once loaded; the browser caches the module). */

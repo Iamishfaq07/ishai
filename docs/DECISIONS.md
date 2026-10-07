@@ -293,6 +293,17 @@ the old switch's `true` reads as Full and `false` as Off, so nobody's choice cha
 a change, so visiting it doesn't pin a device default. Tailwind's `motion-safe:` sees only the OS, so new code
 uses `motion-ok:` and JS animation reads `useMotion()`.
 
+**D48 — First-run answers live in the browser; the job search profile is their only server copy.** The welcome
+questions decide what Home shows first, which is low-stakes and easy to answer again, so they are kept in
+localStorage per account (`orbit.welcome.<user id>`, several people can share a browser) instead of a new column and
+a migration in a round that allows none. The two answers the server can use, the target role and the city (and the
+experience level), go into the Jobs AI search profile, whose `prefs` is JSON already, so the first job matches are
+about the right jobs. The cost: another device doesn't know the goal, and Home falls back to its general order
+there; and a profile saved this way no longer fills itself from the first resume (the Profile page's "Fill from my
+resume" still does). "Your next step" is picked deterministically from the answers and the account's own data
+(`lib/onboarding.ts`, unit-tested), not by the AI: it costs nothing, explains itself, and never suggests something
+already done.
+
 **D49 — Jobs found elsewhere are tracked as "ext:" entries, and freshness badges claim only what the cache knows.**
 A job a fresher applied to on Naukri, LinkedIn or a campus portal goes on the same tracker as a feed job, as a
 `JobApplication` whose `listing_id` is `"ext:" + uuid4().hex` (36 characters, the column's size; never a feed id, which

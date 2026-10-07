@@ -1,6 +1,8 @@
 /** The browser tab's title for each page ("Sessions · Orbit"). First match wins, so deeper paths come first. */
 const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/$/, "Home"],
+  [/^\/welcome/, "Welcome"],
+  [/^\/warmup/, "Interview warm-up"],
   [/^\/start/, "New session"],
   [/^\/sessions\/[^/]+/, "Session"],
   [/^\/sessions/, "Sessions"],
@@ -25,6 +27,10 @@ const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/confirm-email-change/, "Confirm email"],
 ];
 
-export function routeTitle(pathname: string): string | null {
+/** Signed out, "/" is the front page, which says what Orbit is instead of "Home". */
+const FRONT_PAGE = "Practise interviews, fix your resume, find jobs";
+
+export function routeTitle(pathname: string, signedOut = false): string | null {
+  if (signedOut && pathname === "/") return FRONT_PAGE;
   return ROUTE_TITLES.find(([re]) => re.test(pathname))?.[1] ?? null;
 }

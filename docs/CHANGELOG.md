@@ -1,5 +1,64 @@
 # Implementation log
 
+## Front door, first run and navigation (2026-10-07)
+
+A first-time visitor at `/` used to read "Welcome back / Sign in". Now Orbit has a public front page, a three-question
+welcome after sign-up, a Home that leads with one next step, and a nav with one place per product. No migration and
+no new AI cost.
+
+- **Front page** (`pages/Landing.tsx`, signed out at `/`): "Practise interviews, fix your resume, find jobs.", a live
+  answer card drawn in HTML (plays once when seen; the finished card under reduced motion, the Animations switch or
+  Save-Data), the three products with small labelled mocks, how it works, **prices from `GET /v1/billing/packs`**
+  (never hard-coded) with a "what uses what" table, questions people ask first, and the line "Built for practice,
+  and for interviews and calls where notes or AI help are allowed. Check the rules first." Real numbers only: the
+  public job counts, once there are 50 or more. "Try a practice question first" goes to `/warmup` (Workstream C's
+  page; a placeholder until it lands).
+- **Welcome** (`pages/Welcome.tsx`, `lib/onboarding.ts`, right after sign-up): what you want to do first; your
+  experience and the job you want; where you want to work. A tap each, all skippable. The answers stay in this
+  browser per account; the role, experience and city also go into the Jobs AI search profile (`PUT
+  /v1/jobs/profile`), so the first matches are the right jobs. From a product page's "Start free", the visitor goes
+  back there after. Fixed on the way: sign-up's own "already signed in" redirect used to win over the navigation after
+  sign-up, so new accounts landed on Home instead of where they were sent.
+- **Home** (`pages/Home.tsx`): **"Your next step"** first, picked from the answers and the account's data (an
+  interview on the tracker in the next 3 days first, then the goal's steps, skipping what's done; a follow-up a week
+  after applying), with the two after it; then follow-ups (Workstream C's `jobs/FollowUps.tsx`, a placeholder that
+  renders nothing until it lands); **"Get set up"** across all three products (account pre-ticked; a ring once two
+  are done); a row per product; recent sessions and usage. On a 390 x 844 phone the next step's button is in the
+  first screen.
+- **Nav** (`components/Layout.tsx`): Home, Interview, Resume AI, Jobs AI on the top bar; the same plus **Me** on the
+  phone tab bar (12 px labels, five fit 360 px). Interview is current on Practice, Sessions, Story bank, Documents and
+  New session, which share **Interview tabs** with "Start live session" beside them. Same addresses, nothing
+  redirects. Each product has one colour for its mark (`components/products.tsx`: Interview = accent, Resume AI =
+  emerald, Jobs AI = sky). **Me** is a sheet: Plan & credits, Settings, Help, the Windows app, Sign out; the desktop
+  account menu has the same, with arrow keys.
+- **Search** (`components/CommandPalette.tsx`, `lib/palette.ts`, a lazy chunk): Ctrl+K / ⌘K anywhere in the app,
+  "/" outside text fields, or the search button. Pages, actions (start a mock or a live session, make a resume, find
+  jobs, buy credits, help, switch theme, sign out) and your recent resumes, sessions and tracked jobs. It knows the
+  words people type ("cv", "jd", "upi") and forgives a missing letter. A combobox over a listbox.
+- **Help** in one place (`components/HelpDialog.tsx`, a lazy chunk; account menu, Me, the footer under every page,
+  search): contact (`VITE_SUPPORT_EMAIL`, `VITE_SUPPORT_WHATSAPP`, else the contact page), short answers (what's
+  free, UPI and the UTR, "is it allowed?", hearing the interviewer), the words Orbit uses in plain language, and the
+  shortcuts.
+- **Sign-in and sign-up**: show/hide on password fields, a strength hint, "Takes about a minute", a plain headline,
+  the "where it's allowed" line, links to the front page, terms, privacy and contact, 32 px tap targets.
+- **Trust pages, DRAFTS, not published**: Terms, Refund and Contact are in `docs/legal-drafts/` (with how to publish
+  them), not served, until the owner fills in the bracketed details (legal name, address, support contacts,
+  grievance officer, courts, GST) and the refund rules. `LEGAL_PAGES_PUBLISHED` in `lib/contact.ts` hides every link
+  to them meanwhile (footer, Help, sign-in, sign-up, the front page's refund answer and "Contact us"); Privacy stays.
+- **Link previews**: description, Open Graph and Twitter tags in `index.html`, a 1200 x 630 image
+  (`public/og-image.png`, 77 KB, from `og/og-image.svg`), and per-page titles for `/`, `/resume-ai`, `/jobs` and
+  `/warmup` from the Worker (`worker/meta.js`, HTMLRewriter; those four paths are now in `run_worker_first`; the
+  `/api` proxy and the keep-warm cron are unchanged). The manifest has a description and shortcuts.
+- **Routes** (one commit, on top of the Outreach move): `/` is the front page signed out (`publicPageFor` in
+  `routes.ts`), `/welcome` (signed in, outside the nav), `/warmup` (public). The tab title on the front page says
+  what Orbit is.
+- **Entry chunk**: the front page, welcome, search and Help are lazy chunks. First-load JavaScript is about 3 KB gzip
+  more than before (`index-*.js` is 11 KB gzip bigger, but it now includes the old separately preloaded `api-*.js`
+  chunk, 8 KB).
+- **Not done here**: the product homes' marketing hero collapsing after first use (Resume AI's home and Jobs AI's
+  overview are Workstream C's phase 2 files); `/terms`-style short addresses work on Cloudflare (it serves
+  `terms.html` for `/terms`) but not in `vite dev`, where links use the `.html` names.
+
 ## Practice and Jobs AI depth: Interview Warm-up, one-tap mocks, honest matches, track any job (2026-10-07)
 
 Workstream C, phase 1 of the web roadmap (research/web-roadmap-2026-10-07.md, I1-I4 and J1-J4, J6).

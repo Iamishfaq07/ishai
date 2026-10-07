@@ -19,6 +19,7 @@ import {
   focusRing,
 } from "@orbit/ui";
 import { AiPill } from "../../components/products";
+import { Footer } from "../../components/Footer";
 import { api } from "../../lib/api";
 import { RESUME_AI_HOME } from "../resume/paths";
 import { linkButton, textLink } from "./links";
@@ -151,7 +152,7 @@ export function JobsAiPublicPage() {
   return (
     <div className="min-h-full overflow-x-clip">
       <header className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-4 sm:px-6">
-        <Link to="/login" className={cx("rounded-lg", focusRing)} aria-label="Orbit">
+        <Link to="/" className={cx("rounded-lg", focusRing)} aria-label="Orbit home">
           <OrbitWordmark size={26} />
         </Link>
         <span className="hidden h-5 w-px bg-zinc-300 sm:block dark:bg-white/15" aria-hidden="true" />
@@ -302,12 +303,7 @@ export function JobsAiPublicPage() {
         </section>
       </main>
 
-      <footer className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4 pb-8 text-xs text-zinc-500 sm:px-6 dark:text-zinc-400">
-        <span>Orbit Jobs AI</span>
-        <a href="/privacy.html" className={cx("rounded hover:underline", focusRing)}>
-          Privacy
-        </a>
-      </footer>
+      <Footer />
     </div>
   );
 }

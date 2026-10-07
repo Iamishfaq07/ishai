@@ -1,11 +1,10 @@
 import { useRef, useState, type FormEvent } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { STORY_COMPETENCIES, type Story, type StoryCompetency, type StoryInput } from "@orbit/types";
 import {
   ArrowRight,
   BookOpen,
   Check,
-  FolderOpen,
   PenLine,
   Plus,
   Sparkles,
@@ -22,28 +21,13 @@ import { useAsync } from "../lib/useAsync";
 import { RESUME_AI_HOME } from "./resume/paths";
 
 /**
- * Documents and Story bank are one "your materials" area: both feed every session. Making a resume is Resume AI's
- * (it used to be a tab here), so there's a pointer to it.
+ * Documents and Story bank are one "your materials" area: both feed every session. The tabs between them are the
+ * interview copilot's tabs (Layout); making a resume is Resume AI's (it used to be a tab here), so there's a pointer
+ * to it.
  */
 export function LibraryTabs() {
-  const tab = ({ isActive }: { isActive: boolean }) =>
-    cx(
-      "inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors sm:px-3",
-      isActive
-        ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white"
-        : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
-      focusRing,
-    );
   return (
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-      <nav aria-label="Your materials" className="inline-flex gap-1 rounded-xl bg-zinc-500/10 p-1">
-        <NavLink to="/documents" end className={tab}>
-          <FolderOpen className="hidden h-4 w-4 sm:block" aria-hidden="true" /> Documents
-        </NavLink>
-        <NavLink to="/documents/stories" className={tab}>
-          <BookOpen className="hidden h-4 w-4 sm:block" aria-hidden="true" /> Story bank
-        </NavLink>
-      </nav>
+    <div className="mb-6 flex flex-wrap items-center justify-end gap-x-4 gap-y-3">
       <Link
         to={RESUME_AI_HOME}
         className={cx("group inline-flex items-center gap-1.5 rounded-lg text-sm font-medium text-indigo-600 dark:text-indigo-300", focusRing)}
