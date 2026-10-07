@@ -29,6 +29,16 @@ Contrast: secondary text is remapped in `base.css` so it passes WCAG AA on every
 - `text-gradient` — accent → aurora headline text.
 - `SpaceBackdrop` — the animated sky, mounted once per app.
 
+## Navigation (web)
+
+- **Main nav** (`apps/web/src/components/Layout.tsx`): the daily destinations only, the same on the top bar and the
+  phone tab bar: Home, Practice, Sessions, Documents, Resume AI, Jobs AI. The AI products show their word and the
+  gradient `AiPill` ("Resume", "Jobs"; their links are labelled "Resume AI" and "Jobs AI"). Settings is a gear beside
+  the account menu (and in it, with Plan & billing). The top bar drops its icons between 768 and 1023 px; the tab bar
+  has a column each and fits a 360 px phone.
+- **A product's own pages** sit under its nav item as `ProductTabs` (`components/products.tsx`): Jobs AI's Overview,
+  Matches, Tracker and Profile. The tabs hide while a product has only one page (Resume AI today).
+
 ## Motion
 
 Utilities: `animate-fade-up`, `stagger` (children enter one after another), `lift` (hover), `btn-sheen` (primary

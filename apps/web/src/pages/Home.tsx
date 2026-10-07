@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { OrbitDocument, OrbitSession, SessionType } from "@orbit/types";
 import {
@@ -31,14 +31,24 @@ import { displayAudioHelp, isWindows } from "../lib/audio";
 import { useAuth } from "../lib/auth";
 import { SESSION_TYPE_LABEL, errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
+import { AiPill } from "../components/products";
 import { UsageSummary } from "./Billing";
+import { STATUS_LABEL, byStatus } from "./jobs/model";
+import { JOBS_AI_HOME, JOBS_TRACKER } from "./jobs/paths";
 import { RESUME_AI_HOME, resumePath } from "./resume/paths";
-import { AiPill, RESUME_AI_FEATURES, scoreTone } from "./resume/product";
+import { scoreTone } from "./resume/product";
 
 const QUICK_START: Array<{ type: SessionType; title: string; body: string; icon: LucideIcon }> = [
   { type: "interview", title: "Interview", body: "Live answers grounded in your resume and the JD.", icon: Briefcase },
   { type: "coding", title: "Coding", body: "Screenshot a problem — approach, code, complexity.", icon: Code2 },
   { type: "meeting", title: "Meeting", body: "Stay sharp in professional calls.", icon: Users },
+];
+
+const COPILOT_FEATURES: Array<{ icon: LucideIcon; label: string }> = [
+  { icon: AudioLines, label: "Hears the question as it's asked" },
+  { icon: FileText, label: "Answers from your resume and the JD" },
+  { icon: Code2, label: "Coding help from a screenshot" },
+  ...(MOCK_INTERVIEW_ENABLED ? [{ icon: Target, label: "Mock interviews with a scorecard" }] : []),
 ];
 
 const TYPE_ICON: Record<SessionType, LucideIcon> = {
@@ -68,10 +78,11 @@ export function HomePage() {
 
   return (
     <div className="space-y-10">
-      {/* Orbit's two products, side by side: the interview copilot and Resume AI. */}
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] lg:gap-5">
-        <section aria-labelledby="copilot-title" className="glass-panel gradient-border relative overflow-hidden rounded-3xl">
-          {/* In the corner, beside the buttons. Not on phones, so Resume AI and the setup checklist stay in view. */}
+      {/* Orbit's three products: the interview copilot, the larger card, with Resume AI and Jobs AI beside it (under it
+          on tablets, side by side; one after another on phones). */}
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] lg:gap-5">
+        <section aria-labelledby="copilot-title" className="glass-panel gradient-border relative overflow-hidden rounded-3xl md:col-span-2 lg:col-span-1 lg:row-span-2">
+          {/* In the corner, beside the buttons. Not on phones, so the other products and the setup checklist stay in view. */}
           <PlanetHero className="pointer-events-none absolute bottom-5 right-5 hidden w-24 motion-safe:animate-float md:block xl:bottom-6 xl:right-8 xl:w-32" />
           <div className="flex h-full flex-col justify-center">
             <div className="relative z-10 p-6 sm:p-8 xl:p-10">
@@ -103,10 +114,23 @@ export function HomePage() {
                   </Button>
                 )}
               </div>
+              {/* What it does, beside the other products' one-liners; room for it once the card is tall (lg). */}
+              <ul aria-label="What the interview copilot does" className="mt-7 hidden max-w-lg flex-wrap gap-1.5 sm:flex lg:pr-24 xl:pr-32">
+                {COPILOT_FEATURES.map(({ icon: Icon, label }) => (
+                  <li
+                    key={label}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-xs font-medium text-zinc-700 ring-1 ring-zinc-500/15 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10"
+                  >
+                    <Icon className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-300" aria-hidden />
+                    {label}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </section>
         <ResumeAiCard />
+        <JobsAiCard />
       </div>
 
       {sessions.data && documents.data && (
@@ -235,46 +259,70 @@ export function HomePage() {
   );
 }
 
-/** Orbit Resume AI, Home's second product: what it does, how your best resume scores, and the way in. */
-function ResumeAiCard() {
+/** One of Orbit's AI products on Home: its name with the AI pill, what it's for in a line, the way in, and `extra`. */
+function ProductCard({
+  id,
+  icon: Icon,
+  name,
+  title,
+  line,
+  cta,
+  to,
+  extra,
+}: {
+  id: string;
+  icon: LucideIcon;
+  /** "Resume" for Resume AI: the pill adds "AI". */
+  name: string;
+  title: string;
+  line: string;
+  cta: string;
+  to: string;
+  extra?: ReactNode;
+}) {
   const navigate = useNavigate();
+  return (
+    <section aria-labelledby={id} className="glass-panel relative flex flex-col overflow-hidden rounded-3xl p-5 sm:p-6">
+      <span aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-52 w-52 rounded-full bg-aurora-400/15 blur-3xl" />
+      <div className="relative flex items-center gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-aurora-500 text-white shadow-glow-sm">
+          <Icon className="h-5 w-5" aria-hidden />
+        </span>
+        <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-300">
+          {name} <AiPill className="ml-0.5 align-[1px] normal-case tracking-normal" />
+        </p>
+      </div>
+      <h2 id={id} className="relative mt-3 font-display text-xl font-semibold leading-tight tracking-tight">
+        {title}
+      </h2>
+      <p className="relative mt-1.5 text-sm text-zinc-600 dark:text-zinc-300">{line}</p>
+      <div className="relative mt-auto flex flex-wrap items-center gap-3 pt-5">
+        <Button onClick={() => navigate(to)}>
+          {cta}
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+        {extra}
+      </div>
+    </section>
+  );
+}
+
+/** Orbit Resume AI on Home: what it does, how your best resume scores, and the way in. */
+function ResumeAiCard() {
   const resumes = useAsync(() => api.listResumes(), [], "resumes");
   const list = resumes.data;
   const best = list?.length ? list.reduce((a, b) => (b.score > a.score ? b : a)) : null;
   return (
-    <section aria-labelledby="resume-ai-title" className="glass-panel relative flex flex-col overflow-hidden rounded-3xl p-6 sm:p-8">
-      <span aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-60 w-60 rounded-full bg-aurora-400/15 blur-3xl" />
-      <div className="relative flex items-center gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-aurora-500 text-white shadow-glow-sm">
-          <Sparkles className="h-5 w-5" aria-hidden />
-        </span>
-        <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-300">
-          Resume <AiPill className="ml-0.5 align-[1px] normal-case tracking-normal" />
-        </p>
-      </div>
-      <h2 id="resume-ai-title" className="relative mt-4 font-display text-2xl font-semibold leading-tight tracking-tight">
-        Build a resume that gets interviews.
-      </h2>
-      <p className="relative mt-2 text-sm text-zinc-600 dark:text-zinc-300">
-        ATS score, AI rewrites for every job, and interview prep from your own resume.
-      </p>
-      <ul aria-label="What Resume AI does" className="relative mt-4 hidden flex-wrap gap-1.5 sm:flex">
-        {RESUME_AI_FEATURES.slice(0, 4).map(({ icon: Icon, short }) => (
-          <li
-            key={short}
-            className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 text-[0.6875rem] font-medium text-zinc-700 ring-1 ring-zinc-500/15 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10"
-          >
-            <Icon className="h-3 w-3 text-indigo-500 dark:text-indigo-300" aria-hidden />
-            {short}
-          </li>
-        ))}
-      </ul>
-      <div className="relative mt-auto flex flex-wrap items-center gap-3 pt-6">
-        <Button size="lg" onClick={() => navigate(RESUME_AI_HOME)}>
-          {best ? "Open Resume AI" : "Make your resume"}
-          <ArrowRight className="h-4 w-4" />
-        </Button>
-        {best && (
+    <ProductCard
+      id="resume-ai-title"
+      icon={Sparkles}
+      name="Resume"
+      title="Build a resume that gets interviews."
+      line="ATS score, AI rewrites for every job, and interview prep from your own resume."
+      cta={best ? "Open Resume AI" : "Make your resume"}
+      to={RESUME_AI_HOME}
+      extra={
+        best && (
           <Link
             to={resumePath(best.id)}
             className={cx("flex min-w-0 items-center gap-2 rounded-xl py-1 pr-2 text-sm hover:bg-zinc-900/5 dark:hover:bg-white/5", focusRing)}
@@ -288,9 +336,47 @@ function ResumeAiCard() {
               <span className="block truncate font-medium">{best.title}</span>
             </span>
           </Link>
-        )}
-      </div>
-    </section>
+        )
+      }
+    />
+  );
+}
+
+/** Orbit Jobs AI on Home: what it does, where your applications stand, and the way in. */
+function JobsAiCard() {
+  // The tracker only: cheap, and Home never asks the job boards for anything.
+  const tracker = useAsync(() => api.jobTracker(), [], "job-tracker");
+  const entries = tracker.data ?? [];
+  const columns = byStatus(entries);
+  const going = (["interviewing", "applied", "offer"] as const).filter((s) => columns[s].length > 0);
+  return (
+    <ProductCard
+      id="jobs-ai-title"
+      icon={Briefcase}
+      name="Jobs"
+      title="Find jobs that fit your resume."
+      line="The latest openings from companies' career pages, ranked by how well they match you."
+      cta={entries.length ? "Open Jobs AI" : "Find jobs for you"}
+      to={JOBS_AI_HOME}
+      extra={
+        going.length > 0 && (
+          <Link
+            to={JOBS_TRACKER}
+            className={cx("flex min-w-0 items-center gap-2 rounded-xl py-1 pr-2 text-sm hover:bg-zinc-900/5 dark:hover:bg-white/5", focusRing)}
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 font-display text-sm font-semibold tabular-nums text-indigo-700 ring-1 ring-indigo-500/25 dark:text-indigo-300">
+              {going.reduce((n, s) => n + columns[s].length, 0)}
+            </span>
+            <span className="min-w-0 leading-tight">
+              <span className="block text-xs text-zinc-500 dark:text-zinc-400">Applications</span>
+              <span className="block truncate font-medium">
+                {going.map((s) => `${columns[s].length} ${STATUS_LABEL[s].toLowerCase()}`).join(" · ")}
+              </span>
+            </span>
+          </Link>
+        )
+      }
+    />
   );
 }
 

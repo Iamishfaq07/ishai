@@ -4,6 +4,7 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import type { AtsReport, CoverLetterLength, CoverLetterTone, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
 import {
   ArrowLeft,
+  Briefcase,
   Check,
   CircleAlert,
   CircleCheck,
@@ -34,6 +35,7 @@ import {
 import { Button, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
 import { api } from "../../lib/api";
 import { downloadText, errorText } from "../../lib/format";
+import { jobsForResume } from "../jobs/paths";
 import { ContentForm } from "./ContentForm";
 import { AiCostNote, AiErrorNote, AllowanceBanner, AllowanceContext, isUpgradeError, useAllowance, useResumeAllowance } from "./allowance";
 import { useBackend } from "./backend";
@@ -1163,6 +1165,15 @@ function ScorePanel({
           </Button>
         </form>
         {importError && <p className="mt-2 text-sm text-rose-600">{importError}</p>}
+        {!resume.job_text.trim() && (
+          <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+            No job in mind yet?{" "}
+            <Link to={jobsForResume(resume.id)} className={cx("inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
+              <Briefcase className="h-3.5 w-3.5" aria-hidden /> Find jobs that match this resume
+            </Link>{" "}
+            in Jobs AI.
+          </p>
+        )}
         {report.keywords && (
           <div className="mt-4 space-y-3 text-sm">
             {report.keywords.missing.length > 0 && (

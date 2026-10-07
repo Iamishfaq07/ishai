@@ -5,7 +5,8 @@ import { Spinner } from "./components/ui";
 import { useAuth } from "./lib/auth";
 import { routeTitle } from "./lib/routeTitle";
 import { useDocumentTitle } from "./lib/useDocumentTitle";
-import { RESUME_AI_HOME, RESUME_AI_JOBS, isResumeAiHome, movedResumePath } from "./pages/resume/paths";
+import { JOBS_AI_HOME, isJobsAiHome, movedJobsPath } from "./pages/jobs/paths";
+import { RESUME_AI_HOME, isResumeAiHome, movedResumePath } from "./pages/resume/paths";
 import {
   ConfirmEmailChangePage,
   ForgotPasswordPage,
@@ -29,7 +30,13 @@ import {
   ResumeAiHomePage,
   ResumeAiPublicPage,
   ResumeEditorPage,
-  JobsPage,
+  JobsAiSection,
+  JobsAiHomePage,
+  JobsAiPublicPage,
+  JobMatchesPage,
+  JobDetailPage,
+  JobTrackerPage,
+  JobProfilePage,
   AdminUsersPage,
   AdminPaymentsPage,
   prefetchLikelyRoutes,
@@ -45,8 +52,8 @@ export function PageLoading() {
 }
 
 /**
- * Signed out, a page asks you to sign in first, except one with a public face (`publicPage`): Resume AI's home shows
- * its product page there instead.
+ * Signed out, a page asks you to sign in first, except one with a public face (`publicPage`): Resume AI's and Jobs
+ * AI's homes show their product pages there instead.
  */
 function RequireAuth({ children, publicPage }: { children: ReactNode; publicPage?: (pathname: string) => ReactNode }) {
   const { user, loading } = useAuth();
@@ -72,13 +79,21 @@ function Signed({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-/** Signed out at /resume-ai: what Resume AI does, and "Start free". */
-const resumeAiPublicPage = (pathname: string): ReactNode => (isResumeAiHome(pathname) ? <ResumeAiPublicPage /> : null);
+/** Signed out at /resume-ai or /jobs: what that product does, and "Start free". */
+const publicProductPage = (pathname: string): ReactNode =>
+  isResumeAiHome(pathname) ? <ResumeAiPublicPage /> : isJobsAiHome(pathname) ? <JobsAiPublicPage /> : null;
 
 /** An old resume maker address (Documents → Resume maker, /resume-maker): the same place in Resume AI. */
 function MovedResume() {
   const { pathname, search, hash } = useLocation();
   return <Navigate to={{ pathname: movedResumePath(pathname) ?? RESUME_AI_HOME, search, hash }} replace />;
+}
+
+/** An address from when Jobs was a tab of Resume AI (/resume-ai/jobs…): the same page in Jobs AI. */
+function MovedJobs() {
+  const { pathname, search, hash } = useLocation();
+  const to = movedJobsPath(pathname, search) ?? { pathname: JOBS_AI_HOME, search: "" };
+  return <Navigate to={{ ...to, hash }} replace />;
 }
 
 function useRouteTitle(): void {
@@ -101,6 +116,9 @@ export function App() {
       <Route path="/companion" element={<CompanionPage />} />
       {/* The old signed-out resume maker: Resume AI's home, which is its product page when signed out. */}
       <Route path="/resume-maker" element={<MovedResume />} />
+      {/* Jobs was a tab of Resume AI: its old addresses go to the same page in Jobs AI (signed out, through sign-in
+          there). A route of its own, so "jobs" is never opened as a resume by "resume-ai/:resumeId". */}
+      <Route path="/resume-ai/jobs/*" element={<MovedJobs />} />
       <Route
         path="/live/:sessionId"
         element={
@@ -111,7 +129,7 @@ export function App() {
       />
       <Route
         element={
-          <RequireAuth publicPage={resumeAiPublicPage}>
+          <RequireAuth publicPage={publicProductPage}>
             <Layout />
           </RequireAuth>
         }
@@ -126,10 +144,16 @@ export function App() {
         <Route path="documents/resumes" element={<MovedResume />} />
         <Route path="documents/resumes/:resumeId" element={<MovedResume />} />
         <Route path="resume-ai" element={<ResumeAiHomePage />} />
-        {/* The Jobs portal, inside Resume AI. Before "resume-ai/:resumeId", so "jobs" is never opened as a resume. */}
-        <Route path="resume-ai/jobs" element={<JobsPage />} />
-        <Route path="jobs" element={<Navigate to={RESUME_AI_JOBS} replace />} />
         <Route path="resume-ai/:resumeId" element={<ResumeEditorPage />} />
+        {/* Orbit Jobs AI: its pages share the tabs, the search profile and the tracker (pages/jobs/JobsAi.tsx). */}
+        <Route path="jobs" element={<JobsAiSection />}>
+          <Route index element={<JobsAiHomePage />} />
+          <Route path="matches" element={<JobMatchesPage />} />
+          <Route path="listing/:listingId" element={<JobDetailPage />} />
+          <Route path="tracker" element={<JobTrackerPage />} />
+          <Route path="profile" element={<JobProfilePage />} />
+          <Route path="*" element={<Navigate to={JOBS_AI_HOME} replace />} />
+        </Route>
         <Route path="mock" element={<MockPage />} />
         <Route path="billing" element={<BillingPage />} />
         <Route path="settings" element={<SettingsPage />} />

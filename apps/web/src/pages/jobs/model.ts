@@ -1,11 +1,12 @@
-// The Jobs page's plain logic (no React): labels, "posted 3h ago", the match colours, the tracker's columns, and the
-// small list edits the profile panel makes. Kept here so it's unit-tested (model.test.ts).
+// Jobs AI's plain logic (no React): labels, "posted 3h ago", the match colours, the tracker's columns, and the small
+// list edits the profile page makes. Kept here so it's unit-tested (model.test.ts).
 import type {
   JobEmploymentType,
   JobLevel,
   JobListing,
   JobPostedWithin,
   JobPrefs,
+  JobProfile,
   JobStatus,
   JobTrackerEntry,
   JobWorkplace,
@@ -99,6 +100,22 @@ export function factsLine(job: Pick<JobListing, "employment_type" | "experience"
   return [employmentLabel(job.employment_type), job.experience, job.salary].filter(Boolean).join(" · ");
 }
 
+/** A job's key facts for its own page, only those the post states: [label, value]. */
+export function jobFacts(
+  job: Pick<JobListing, "company" | "place" | "workplace" | "employment_type" | "level" | "experience" | "salary">,
+): Array<[string, string]> {
+  const facts: Array<[string, string | null | undefined]> = [
+    ["Company", job.company],
+    ["Location", job.place],
+    ["Work mode", WORKPLACES.find((w) => w.id === job.workplace)?.label],
+    ["Job type", employmentLabel(job.employment_type)],
+    ["Level", LEVELS.find((l) => l.id === job.level)?.label],
+    ["Experience", job.experience],
+    ["Salary", job.salary],
+  ];
+  return facts.filter((f): f is [string, string] => Boolean(f[1]));
+}
+
 /** Where the job came from, in words: the company's own careers page, or the feed that must be credited. */
 export function sourceLine(job: Pick<JobListing, "direct" | "source_label" | "company" | "attribution">): string {
   if (job.direct) return `From ${job.company}'s careers page`;
@@ -144,12 +161,56 @@ export function profileSummary(prefs: JobPrefs): string {
   return [titles || "Any role", where, years].filter(Boolean).join(" · ");
 }
 
+/**
+ * A short fingerprint of what the feed is matched to (the profile and its resume), for the feed's cache key: a page
+ * opened after the profile changed asks for a fresh feed instead of showing the old one first.
+ */
+export function profileStamp(profile: Pick<JobProfile, "prefs" | "resume">): string {
+  const text = JSON.stringify([profile.prefs, profile.resume?.id ?? null]);
+  let h = 0x811c9dc5; // FNV-1a, 32-bit
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(36);
+}
+
+/**
+ * Each job's place on the tracker, newest knowledge first: what was just done on this page (`changed`, before the
+ * server's answer lands), else the tracker (reloaded after every change), else what the feed said.
+ */
+export function withTracked(
+  items: JobListing[],
+  changed: Record<string, JobListing["tracked"]>,
+  tracker: JobTrackerEntry[] | null,
+): JobListing[] {
+  const onTracker = tracker ? new Map(tracker.map((e) => [e.listing_id, { id: e.id, status: e.status }])) : null;
+  return items.map((j) => {
+    const t = j.id in changed ? (changed[j.id] ?? null) : onTracker ? (onTracker.get(j.id) ?? null) : j.tracked;
+    return t?.id === j.tracked?.id && t?.status === j.tracked?.status ? j : { ...j, tracked: t };
+  });
+}
+
+/** Whether two profiles want the same things (the profile page's "unsaved changes"). */
+export function samePrefs(a: JobPrefs, b: JobPrefs): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 /** The tracker's entries by column, each column most recently moved first. */
 export function byStatus(entries: JobTrackerEntry[]): Record<JobStatus, JobTrackerEntry[]> {
   const out = Object.fromEntries(STATUSES.map((s) => [s, [] as JobTrackerEntry[]])) as Record<JobStatus, JobTrackerEntry[]>;
   for (const e of entries) out[e.status].push(e);
   for (const s of STATUSES) out[s].sort((a, b) => b.status_at.localeCompare(a.status_at));
   return out;
+}
+
+/** The tracked job whose next interview or follow-up comes soonest, from today on (null: nothing coming up). */
+export function nextUp(entries: JobTrackerEntry[], now: number = Date.now()): JobTrackerEntry | null {
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const coming = entries.filter((e) => e.next_at && e.status !== "rejected" && new Date(e.next_at).getTime() >= today.getTime());
+  coming.sort((a, b) => a.next_at!.localeCompare(b.next_at!));
+  return coming[0] ?? null;
 }
 
 /** An ISO time as the value of an <input type="date"> in local time ("2026-10-09"), or "". */

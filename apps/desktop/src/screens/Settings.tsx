@@ -16,6 +16,7 @@ import {
   Spinner,
   Toggle,
   useDesign, confirmDialog,
+  Briefcase,
   CreditCard,
   FileText,
   ExternalLink,
@@ -189,6 +190,11 @@ function PrivacyCard({ user, onUser, onSignOut }: { user: User; onUser: (u: User
             <Button variant="secondary" size="sm" onClick={() => void openUrl(`${WEB_URL}/resume-ai`)}>
               <FileText className="h-3.5 w-3.5" />
               Resume AI
+              <ExternalLink className="h-3 w-3 opacity-60" />
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => void openUrl(`${WEB_URL}/jobs`)}>
+              <Briefcase className="h-3.5 w-3.5" />
+              Jobs AI
               <ExternalLink className="h-3 w-3 opacity-60" />
             </Button>
             <Button variant="secondary" size="sm" onClick={() => void openUrl(`${WEB_URL}/settings`)}>

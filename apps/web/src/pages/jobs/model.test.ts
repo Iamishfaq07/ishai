@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { JobPrefs, JobTrackerEntry } from "@orbit/types";
+import type { JobListing, JobPrefs, JobTrackerEntry } from "@orbit/types";
 import {
   addItem,
   byStatus,
@@ -7,12 +7,17 @@ import {
   factsLine,
   fromDateInput,
   isNew,
+  jobFacts,
   matchTone,
+  nextUp,
   postedAgo,
+  profileStamp,
   profileSummary,
   safeUrl,
+  samePrefs,
   sourceLine,
   toggleWorkplace,
+  withTracked,
 } from "./model";
 
 const NOW = Date.parse("2026-10-07T12:00:00Z");
@@ -84,6 +89,23 @@ describe("cards", () => {
     );
   });
 
+  it("lists a job's key facts, only those the post states", () => {
+    expect(
+      jobFacts({ company: "CRED", place: "Bengaluru · Hybrid", workplace: "hybrid", employment_type: "full_time", level: "mid", experience: "3-5 years", salary: null }),
+    ).toEqual([
+      ["Company", "CRED"],
+      ["Location", "Bengaluru · Hybrid"],
+      ["Work mode", "Hybrid"],
+      ["Job type", "Full-time"],
+      ["Level", "Mid-level"],
+      ["Experience", "3-5 years"],
+    ]);
+    expect(jobFacts({ company: "X", place: "", workplace: null, employment_type: null, level: null, experience: null, salary: "₹20L a year" })).toEqual([
+      ["Company", "X"],
+      ["Salary", "₹20L a year"],
+    ]);
+  });
+
   it("only opens web links", () => {
     expect(safeUrl("https://jobs.lever.co/cred/1")).toBe("https://jobs.lever.co/cred/1");
     expect(safeUrl("javascript:alert(1)")).toBeNull();
@@ -113,12 +135,56 @@ describe("the profile", () => {
   });
 });
 
+describe("the feed's cache key", () => {
+  it("changes with the profile or its resume, and only then", () => {
+    const resume = { id: "r1", title: "Backend" };
+    const base = profileStamp({ prefs: prefs(), resume });
+    expect(profileStamp({ prefs: prefs(), resume: { ...resume, title: "Renamed" } })).toBe(base);
+    expect(profileStamp({ prefs: prefs({ posted_within: 1 }), resume })).not.toBe(base);
+    expect(profileStamp({ prefs: prefs(), resume: { id: "r2", title: "Backend" } })).not.toBe(base);
+    expect(profileStamp({ prefs: prefs(), resume: null })).not.toBe(base);
+    expect(base).toMatch(/^[0-9a-z]+$/);
+  });
+
+  it("tells an edited profile from the saved one", () => {
+    expect(samePrefs(prefs(), prefs())).toBe(true);
+    expect(samePrefs(prefs(), prefs({ exclude: ["sales"] }))).toBe(false);
+  });
+});
+
 describe("the tracker", () => {
   it("groups jobs by status, most recently moved first", () => {
     const cols = byStatus([entry("a", "applied", "2026-10-01T10:00:00Z"), entry("b", "applied", "2026-10-05T10:00:00Z"), entry("c", "saved", "2026-10-02T10:00:00Z")]);
     expect(cols.applied.map((e) => e.id)).toEqual(["b", "a"]);
     expect(cols.saved.map((e) => e.id)).toEqual(["c"]);
     expect(cols.offer).toEqual([]);
+  });
+
+  it("shows each job's latest place on the tracker: just changed, else the tracker, else the feed", () => {
+    const job = (id: string, tracked: JobListing["tracked"] = null) => ({ id, tracked }) as JobListing;
+    const items = [job("l-a"), job("l-b", { id: "b", status: "saved" }), job("l-c", { id: "c", status: "saved" })];
+    const tracker = [entry("a", "applied", "2026-10-05T10:00:00Z"), entry("b", "interviewing", "2026-10-05T10:00:00Z")];
+    expect(withTracked(items, {}, tracker).map((j) => j.tracked?.status ?? null)).toEqual(["applied", "interviewing", null]);
+    expect(withTracked(items, {}, null).map((j) => j.tracked?.status ?? null)).toEqual([null, "saved", "saved"]);
+    expect(withTracked(items, { "l-a": null, "l-c": { id: "c", status: "offer" } }, tracker).map((j) => j.tracked?.status ?? null)).toEqual([
+      null,
+      "interviewing",
+      "offer",
+    ]);
+    expect(withTracked(items, {}, null)[1]).toBe(items[1]); // unchanged jobs stay the same object
+  });
+
+  it("finds what's coming up next, from today on", () => {
+    const at = (id: string, status: JobTrackerEntry["status"], next: string | null) => ({ ...entry(id, status, "2026-10-01T10:00:00Z"), next_at: next });
+    const list = [
+      at("past", "interviewing", "2026-10-01T12:00:00Z"),
+      at("later", "interviewing", "2026-10-20T12:00:00Z"),
+      at("soon", "applied", "2026-10-09T12:00:00Z"),
+      at("dropped", "rejected", "2026-10-08T12:00:00Z"),
+      at("none", "saved", null),
+    ];
+    expect(nextUp(list, NOW)?.id).toBe("soon");
+    expect(nextUp([list[0]!, list[4]!], NOW)).toBeNull();
   });
 
   it("round-trips a date through the date input without moving it a day", () => {

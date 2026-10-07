@@ -404,14 +404,15 @@ def test_someone_elses_object_looks_exactly_like_a_missing_one(world: World, met
 # ---- every non-public route needs a session ------------------------------------------------------------------------
 
 # Reachable without signing in, on purpose: health probes, sign-in/up and the emailed-link endpoints, the public price
-# lists, the desktop updater, and the phone companion's redeem (the 256-bit share code is the credential).
+# lists, Jobs AI's public numbers (counts only), the desktop updater, and the phone companion's redeem (the 256-bit
+# share code is the credential).
 PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("GET", "/health"), ("GET", "/ready"),
     ("GET", "/v1/auth/config"), ("POST", "/v1/auth/register"), ("POST", "/v1/auth/login"),
     ("POST", "/v1/auth/logout"), ("POST", "/v1/auth/verify-email/confirm"),
     ("POST", "/v1/auth/password-reset/request"), ("POST", "/v1/auth/password-reset/confirm"),
     ("POST", "/v1/auth/email-change/confirm"),
-    ("GET", "/v1/plans"), ("GET", "/v1/billing/packs"),
+    ("GET", "/v1/plans"), ("GET", "/v1/billing/packs"), ("GET", "/v1/jobs/stats"),
     ("GET", "/v1/desktop/update/{target}/{arch}/{current_version}"),
     ("GET", "/v1/desktop/download/{version}/{filename}"),
     ("POST", "/v1/companion/redeem"), ("POST", "/v1/companion/{code}"),

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { AudioLines, MessagesSquare, OrbitWordmark, PlanetHero, ShieldCheck, Sparkles, Target, cx, type LucideIcon } from "@orbit/ui";
+import { AudioLines, Briefcase, MessagesSquare, OrbitWordmark, PlanetHero, ShieldCheck, Sparkles, cx, type LucideIcon } from "@orbit/ui";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button, ErrorNote, Field, Input } from "../components/ui";
 import { api } from "../lib/api";
@@ -7,21 +7,22 @@ import { useAuth } from "../lib/auth";
 import { errorText } from "../lib/format";
 import { useWelcomeGrant } from "../lib/welcome";
 import { Captcha, useCaptchaConfig } from "../components/Captcha";
-import { AiPill } from "./resume/product";
+import { AiPill } from "../components/products";
 
 type Feature = { icon: LucideIcon; title: string; text: string; ai?: boolean };
 
 /**
  * What Orbit does, on the sign-in and sign-up screens (the side panel on wide screens, under the form on phones):
- * its two products first, then what comes with them.
+ * its three products first, then what comes with them. (Interview prep is part of Resume AI and Jobs AI now; two lines
+ * here keep it all on a 1024 x 720 screen.)
  */
 const PRODUCTS: Feature[] = [
   { icon: AudioLines, title: "Interview copilot", text: "Hears the question the moment it's asked and answers in your voice, from your resume." },
   { icon: Sparkles, title: "Resume", ai: true, text: "ATS score out of 100, AI rewrites for every job, Naukri and LinkedIn profiles, cover letters." },
+  { icon: Briefcase, title: "Jobs", ai: true, text: "The latest jobs from companies' own career pages, ranked by how well they match your resume." },
 ];
 const FEATURES: Feature[] = [
   { icon: MessagesSquare, title: "Mock interviews", text: "Practise with an AI interviewer, then get a scorecard and the questions to redo." },
-  { icon: Target, title: "Interview prep", text: "Likely questions for a job post, with answers drawn from your own experience." },
   { icon: ShieldCheck, title: "Private", text: "Your documents and transcripts stay in your account. Delete them any time." },
 ];
 
@@ -36,7 +37,7 @@ function useWelcome(): string | null {
   return `Free to start: ${parts.join(" + ")}. No card needed.`;
 }
 
-/** "Resume AI" as the nav shows it: "Resume" and the AI pill. */
+/** "Resume AI" and "Jobs AI" as the nav shows them: the word and the AI pill. */
 function FeatureTitle({ title, ai }: Pick<Feature, "title" | "ai">) {
   return ai ? (
     <>
@@ -50,12 +51,12 @@ function FeatureTitle({ title, ai }: Pick<Feature, "title" | "ai">) {
 function FeatureList({ compact = false }: { compact?: boolean }) {
   return (
     <div className={compact ? "space-y-3" : "space-y-5"}>
-      <ul className={compact ? "grid gap-3 sm:grid-cols-2" : "grid gap-3"} aria-label="Orbit's two products">
+      <ul className={compact ? "grid gap-3 sm:grid-cols-2" : "grid gap-3"} aria-label="Orbit's three products">
         {PRODUCTS.map(({ icon: Icon, title, text, ai }) => (
           <li
             key={title}
             className={cx(
-              "flex items-start gap-3 rounded-2xl p-3.5 ring-1",
+              "flex items-start gap-3 rounded-2xl p-3 ring-1 [@media(min-height:800px)]:p-3.5",
               compact ? "glass-panel ring-0" : "bg-white/[0.04] ring-white/10",
             )}
           >
@@ -106,23 +107,25 @@ function AuthShell({ title, subtitle, children, features = false }: { title: str
   const welcome = useWelcome();
   return (
     <div className="grid min-h-full lg:grid-cols-2">
-      <aside className="dark relative hidden overflow-hidden border-r border-white/5 bg-zinc-950 p-12 text-white lg:flex lg:flex-col">
+      {/* Roomier on tall screens; tighter on short ones, so the three products and what comes with them fit a laptop
+          screen (1024 or 1280 x 720). */}
+      <aside className="dark relative hidden overflow-hidden border-r border-white/5 bg-zinc-950 p-10 text-white lg:flex lg:flex-col [@media(min-height:800px)]:p-12">
         <span
           aria-hidden="true"
           className="pointer-events-none absolute -left-24 top-1/3 h-96 w-96 rounded-full bg-indigo-600/30 blur-3xl"
         />
-        {/* In the corner, so the two products and what comes with them fit a laptop screen. */}
+        {/* In the corner, so the three products and what comes with them fit a laptop screen. */}
         <PlanetHero className="pointer-events-none absolute right-6 top-6 w-28 motion-safe:animate-float xl:right-10 xl:top-8 xl:w-44" />
         <OrbitWordmark size={30} className="relative" />
-        <div className="relative my-auto pt-8">
-          <h2 className="max-w-md font-display text-4xl font-semibold leading-tight tracking-tight">
+        <div className="relative my-auto pt-6 [@media(min-height:800px)]:pt-8">
+          <h2 className="max-w-md font-display text-3xl font-semibold leading-tight tracking-tight [@media(min-height:800px)]:text-4xl">
             Get the interview, then walk in <span className="text-gradient">with backup.</span>
           </h2>
-          <div className="mt-6 max-w-md">
+          <div className="mt-5 max-w-md [@media(min-height:800px)]:mt-6">
             <FeatureList />
           </div>
           {welcome && (
-            <p className="mt-6 inline-flex items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1 text-sm font-medium text-emerald-300 ring-1 ring-emerald-400/30">
+            <p className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1 text-sm font-medium text-emerald-300 ring-1 ring-emerald-400/30">
               <Sparkles className="h-4 w-4" aria-hidden /> {welcome}
             </p>
           )}
@@ -155,7 +158,7 @@ function AuthShell({ title, subtitle, children, features = false }: { title: str
   );
 }
 
-/** Where the visitor was headed (the page that asked them to sign in, or Resume AI's "Start free"), if anywhere. */
+/** Where the visitor was headed (the page that asked them to sign in, or a product page's "Start free"), if anywhere. */
 function useCameFrom(): string | null {
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from;
@@ -227,7 +230,8 @@ export function LoginPage() {
 export function RegisterPage() {
   const { user, register } = useAuth();
   const navigate = useNavigate();
-  // From Resume AI's "Start free": back there after sign-up. Otherwise Documents, to add a resume and a job post.
+  // From Resume AI's or Jobs AI's "Start free": back there after sign-up. Otherwise Documents, to add a resume and a job
+  // post.
   const from = useCameFrom();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -267,7 +271,7 @@ export function RegisterPage() {
   };
 
   return (
-    <AuthShell title="Create your account" subtitle="Interview copilot and Resume AI, in one account" features>
+    <AuthShell title="Create your account" subtitle="Interview copilot, Resume AI and Jobs AI, in one account" features>
       <form onSubmit={(e) => void submit(e)} className="space-y-4">
         <Field label="Name" htmlFor="name">
           <Input id="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />

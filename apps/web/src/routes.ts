@@ -1,4 +1,5 @@
 import { lazy, type ComponentType } from "react";
+import { movedJobsPath } from "./pages/jobs/paths";
 
 /**
  * Pages load on demand: the first visit downloads only what that screen needs (sign-in doesn't ship the live
@@ -16,7 +17,8 @@ const loaders = {
   resumes: () => import("./pages/resume/Resumes"),
   resumeEditor: () => import("./pages/resume/ResumeEditor"),
   resumeAiPublic: () => import("./pages/resume/ResumeAiPublic"),
-  jobs: () => import("./pages/jobs/JobsPage"),
+  jobs: () => import("./pages/jobs/JobsAiPages"),
+  jobsAiPublic: () => import("./pages/jobs/JobsAiPublic"),
   mock: () => import("./pages/Mock"),
   billing: () => import("./pages/Billing"),
   settings: () => import("./pages/Settings"),
@@ -39,7 +41,13 @@ export const StoriesPage = page(loaders.stories, (m) => m.StoriesPage);
 export const ResumeAiHomePage = page(loaders.resumes, (m) => m.ResumeAiHomePage);
 export const ResumeEditorPage = page(loaders.resumeEditor, (m) => m.ResumeEditorPage);
 export const ResumeAiPublicPage = page(loaders.resumeAiPublic, (m) => m.ResumeAiPublicPage);
-export const JobsPage = page(loaders.jobs, (m) => m.JobsPage);
+export const JobsAiSection = page(loaders.jobs, (m) => m.JobsAiSection);
+export const JobsAiHomePage = page(loaders.jobs, (m) => m.JobsAiHomePage);
+export const JobMatchesPage = page(loaders.jobs, (m) => m.JobMatchesPage);
+export const JobDetailPage = page(loaders.jobs, (m) => m.JobDetailPage);
+export const JobTrackerPage = page(loaders.jobs, (m) => m.JobTrackerPage);
+export const JobProfilePage = page(loaders.jobs, (m) => m.JobProfilePage);
+export const JobsAiPublicPage = page(loaders.jobsAiPublic, (m) => m.JobsAiPublicPage);
 export const MockPage = page(loaders.mock, (m) => m.MockPage);
 export const BillingPage = page(loaders.billing, (m) => m.BillingPage);
 export const SettingsPage = page(loaders.settings, (m) => m.SettingsPage);
@@ -57,16 +65,21 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/sessions/, "sessions"],
   [/^\/documents\/stories/, "stories"],
   [/^\/documents/, "documents"],
-  [/^\/resume-ai\/jobs(\/|$)/, "jobs"], // the Jobs portal: not a resume
   [/^\/resume-ai\/[^/]+/, "resumeEditor"],
   [/^\/resume-ai/, "resumes"],
+  [/^\/jobs(\/|$)/, "jobs"],
   [/^\/mock/, "mock"],
   [/^\/billing/, "billing"],
   [/^\/settings/, "settings"],
 ];
 
-/** The page whose code an address needs, or null when there's nothing to warm (exported for the unit test). */
+/**
+ * The page whose code an address needs, or null when there's nothing to warm (exported for the unit test). Jobs' old
+ * addresses in Resume AI warm the Jobs AI page they go to, never the resume editor.
+ */
 export function pageFor(path: string): PageKey | null {
+  const moved = movedJobsPath(path);
+  if (moved) return pageFor(moved.pathname);
   return BY_PATH.find(([re]) => re.test(path))?.[1] ?? null;
 }
 
@@ -79,7 +92,7 @@ export function prefetchRoute(path: string): void {
 /** After sign-in, when the browser is idle: the pages people open next. */
 export function prefetchLikelyRoutes(): void {
   const run = () => {
-    for (const key of ["home", "setup", "sessions", "live", "mock", "documents", "resumes"] as const) {
+    for (const key of ["home", "setup", "sessions", "live", "mock", "documents", "resumes", "jobs"] as const) {
       void loaders[key]().catch(() => undefined);
     }
   };

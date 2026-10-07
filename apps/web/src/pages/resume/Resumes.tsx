@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import type { ResumeData, ResumeInput, ResumeSummary } from "@orbit/types";
 import {
   ArrowLeft,
+  ArrowRight,
+  Briefcase,
   ClipboardCheck,
   Copy,
   FileText,
@@ -25,6 +27,8 @@ import { Button, Card, EmptyState, ErrorNote, Field, Select, Spinner, Textarea }
 import { api } from "../../lib/api";
 import { errorText, formatDate } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
+import { AiPill } from "../../components/products";
+import { JOBS_AI_HOME } from "../jobs/paths";
 import { AllowanceBanner, AllowanceContext, isUpgradeError, priceText, useResumeAllowance } from "./allowance";
 import { guestResume } from "./backend";
 import { fresherResume, newResume } from "./model";
@@ -176,7 +180,7 @@ export function ResumeAiHomePage() {
           />
         )
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {list.data.map((r) => (
             <li key={r.id}>
               <Card interactive className="relative h-full">
@@ -226,7 +230,35 @@ export function ResumeAiHomePage() {
           ))}
         </ul>
       )}
+      {count > 0 && <FindJobs />}
     </AllowanceContext.Provider>
+  );
+}
+
+/** The way over to Jobs AI, Orbit's product for finding the jobs a resume fits (each editor has one for its resume). */
+function FindJobs() {
+  return (
+    <Link
+      to={JOBS_AI_HOME}
+      className={cx(
+        "glass-panel lift group mt-8 flex items-center gap-4 rounded-2xl p-4 hover:border-indigo-400/40 sm:p-5 dark:hover:border-indigo-400/30",
+        focusRing,
+      )}
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-aurora-500 text-white shadow-glow-sm">
+        <Briefcase className="h-5 w-5" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-display font-semibold">Find jobs that match your resume</span>
+        <span className="block text-sm text-zinc-500 dark:text-zinc-400">
+          <span className="font-medium text-zinc-700 dark:text-zinc-200">
+            Jobs <AiPill className="align-[1px]" />
+          </span>{" "}
+          shows the latest openings, ranked by how well they match you, with a free AI fit check.
+        </span>
+      </span>
+      <ArrowRight className="h-4 w-4 shrink-0 text-zinc-400 transition-transform group-hover:translate-x-0.5 group-hover:text-indigo-500" aria-hidden />
+    </Link>
   );
 }
 

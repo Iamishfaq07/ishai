@@ -880,3 +880,18 @@ def test_preflight_refresh_cant_be_used_to_force_unlimited_provider_pings(api: A
     codes = [api.c.get("/v1/preflight", params={"refresh": "true"}, headers=_via(_net(), h)).status_code
              for _ in range(20)]
     assert len(pings) <= 6, f"one user forced {len(pings)} provider pings in 20 calls ({codes})"
+
+
+def test_jobs_ais_public_numbers_need_no_session_hold_no_user_data_and_are_limited_per_network(
+        api: Api, limits: None) -> None:
+    """`GET /v1/jobs/stats` is the one jobs route open to anyone (the public page's numbers): it says only counts and
+    the free allowances, and one network can't hammer it."""
+    api.c.cookies.clear()
+    ip = _net()
+    first = api.c.get("/v1/jobs/stats", headers=_via(ip))
+    assert first.status_code == 200 and set(first.json()) == {
+        "jobs", "companies", "days", "feeds", "updated_at", "fit_daily", "profile_daily"}
+    codes = [api.c.get("/v1/jobs/stats", headers=_via(ip)).status_code for _ in range(32)]
+    assert 429 not in codes[:28] and 429 in codes, codes
+    assert api.c.get("/v1/jobs/stats", headers=_via(_net())).status_code == 200  # per network, not global
+

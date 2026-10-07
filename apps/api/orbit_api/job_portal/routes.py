@@ -9,6 +9,8 @@ and the tracker. See job_portal/__init__.py for how it fits together.
   `/tailor` (a copy of a resume aimed at the job, opened in the resume maker, whose AI runs on credits as usual),
   `/prepare` (the job description saved to Documents, where Practice's prep and mock interview pick it up).
 - `GET/POST /tracker`, `PATCH/DELETE /tracker/{id}`: saved → applied → interviewing → offer / rejected.
+- `GET /stats`: the one route without a session, for Jobs AI's public page: how many fresh jobs the cache holds and
+  the free daily allowances. Counts only, worked out at most every 10 minutes; it never starts a refresh.
 
 Listings are shared (anyone signed in may read them); profiles, fit checks and tracker entries are the user's own,
 and every route that takes one checks it (404 for anyone else's, the same as a missing one).
@@ -16,6 +18,7 @@ and every route that takes one checks it (404 for anyone else's, the same as a m
 
 import asyncio
 import logging
+import time
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
@@ -77,6 +80,8 @@ ai_limit = limit("jobs-ai", rate_per_s=0.2, burst=10)
 ai_user_limit = limit_user("jobs-ai-user", rate_per_s=40 / 3600, burst=10)
 # Tailor and prepare make a resume or a document, and may fetch the post's page once.
 action_limit = limit_user("jobs-action", rate_per_s=30 / 3600, burst=8)
+# The public page's numbers, per network (no session): cached, so this only guards against floods.
+stats_limit = limit("jobs-stats", rate_per_s=1, burst=30)
 
 PAGE_SIZE = 20
 MAX_TRACKED = 500
@@ -490,7 +495,7 @@ async def suggest_profile(body: SuggestIn, user: Annotated[User, Depends(require
     resume = await _resume_for(db, user, row, body.resume_id)
     if resume is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
-                            "Make a resume first (Documents → Resume maker): your job feed is matched to it.")
+                            "Make a resume in Resume AI first: your job feed is matched to it.")
     data = ResumeData.model_validate(resume.data or {})
     rhash = resume_hash(data)
     if row is None:
@@ -594,7 +599,7 @@ async def fit_check(listing_id: str, user: Annotated[User, Depends(require_verif
     _, prefs, resume = await _profile(db, user)
     if resume is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
-                            "Make a resume first (Documents → Resume maker): the fit check compares it with the job.")
+                            "Make a resume in Resume AI first: the fit check compares it with the job.")
     data = ResumeData.model_validate(resume.data or {})
     rhash = resume_hash(data)
     cap = get_settings().jobs_fit_daily
@@ -677,7 +682,7 @@ async def tailor(listing_id: str, body: TailorIn, user: Annotated[User, Depends(
     resume = await _resume_for(db, user, profile, body.resume_id)
     if resume is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
-                            "Make a resume first (Documents → Resume maker), then tailor it to this job.")
+                            "Make a resume in Resume AI first, then tailor it to this job.")
     count = await db.scalar(select(func.count()).select_from(Resume).where(Resume.user_id == user.id))
     if (count or 0) >= MAX_RESUMES:
         raise HTTPException(status.HTTP_409_CONFLICT, f"You can keep up to {MAX_RESUMES} resumes. Delete one first.")
@@ -808,3 +813,46 @@ async def delete_tracker(entry_id: str, user: Annotated[User, Depends(current_us
     await db.delete(await _owned_entry(db, entry_id, user))
     await db.commit()
 
+
+# ---- public --------------------------------------------------------------------------------------------------------
+
+STATS_DAYS = 7
+STATS_TTL_S = 600
+
+
+class StatsOut(BaseModel):
+    jobs: int  # posted in the last STATS_DAYS days, in the cache the feed ranks
+    companies: int  # how many companies those are from
+    days: int
+    feeds: list[str]  # the job boards credited by name (Himalayas, Remote OK, Jobicy)
+    updated_at: datetime | None  # the last successful fetch from any source
+    fit_daily: int  # free AI fit checks a day (ORBIT_JOBS_FIT_DAILY)
+    profile_daily: int  # free AI profile reads a day (ORBIT_JOBS_PROFILE_DAILY)
+
+
+_stats: tuple[float, StatsOut] | None = None
+
+
+def clear_stats_cache() -> None:
+    global _stats
+    _stats = None
+
+
+@router.get("/stats", response_model=StatsOut, dependencies=[Depends(stats_limit)])
+async def stats(db: Annotated[AsyncSession, Depends(get_db)]) -> StatsOut:
+    """Jobs AI's public page, signed out: counts from the shared job cache and the free daily allowances. No user
+    data, read-only; worked out at most every STATS_TTL_S seconds, and never starts a refresh."""
+    global _stats
+    if _stats is not None and time.monotonic() - _stats[0] < STATS_TTL_S:
+        return _stats[1]
+    since = datetime.now(UTC) - timedelta(days=STATS_DAYS)
+    jobs, companies = (await db.execute(
+        select(func.count(), func.count(func.distinct(JobListing.company))).where(JobListing.posted_at >= since))).one()
+    statuses = await refresh.statuses(db)
+    settings = get_settings()
+    out = StatsOut(jobs=int(jobs), companies=int(companies), days=STATS_DAYS,
+                   feeds=[s.label for s in enabled_sources() if s.kind != "board"],
+                   updated_at=max((s.last_success_at for s in statuses if s.last_success_at), default=None),
+                   fit_daily=settings.jobs_fit_daily, profile_daily=settings.jobs_profile_daily)
+    _stats = (time.monotonic(), out)
+    return out

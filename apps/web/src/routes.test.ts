@@ -7,9 +7,16 @@ describe("pageFor (what the nav warms before a click)", () => {
     expect(pageFor("/resume-ai/3f2a9c")).toBe("resumeEditor");
   });
 
-  it("warms the Jobs portal for its address, never the resume editor", () => {
+  it("warms Jobs AI for every one of its pages", () => {
+    for (const path of ["/jobs", "/jobs/", "/jobs/matches", "/jobs/listing/8c1d2e", "/jobs/tracker", "/jobs/profile"]) {
+      expect(pageFor(path)).toBe("jobs");
+    }
+    expect(pageFor("/jobsearch")).toBeNull();
+  });
+
+  it("warms Jobs AI for Jobs' old addresses in Resume AI, never the resume editor", () => {
     expect(pageFor("/resume-ai/jobs")).toBe("jobs");
-    expect(pageFor("/resume-ai/jobs/saved")).toBe("jobs");
+    expect(pageFor("/resume-ai/jobs/tracker")).toBe("jobs");
     expect(pageFor("/resume-ai/jobsearch")).toBe("resumeEditor");
   });
 
