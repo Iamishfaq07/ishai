@@ -72,6 +72,6 @@ class FeedClient:
         except httpx.HTTPError as e:
             raise SourceError(f"{type(e).__name__} calling {parts.hostname}") from e
         try:
-            return json.loads(bytes(body))
+            return json.loads(body)  # straight from the bytearray: a copy of a 10 MB board would double the peak
         except ValueError as e:
             raise SourceError(f"{parts.hostname} sent something that isn't JSON") from e

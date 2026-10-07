@@ -16,6 +16,7 @@ import asyncio
 import contextlib
 import logging
 import time
+import weakref
 from collections import defaultdict, deque
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
 from dataclasses import dataclass
@@ -38,6 +39,9 @@ from orbit_api.models import JobListing, JobSourceState
 log = logging.getLogger(__name__)
 
 POLITE_DELAY_S = 1.0  # between two boards of the same source
+# Boards fetched and parsed at once, across all sources. The biggest are ~10 MB of JSON, and the free Render
+# instance has 512 MB next to live sessions, so a first refresh of every source mustn't hold them all together.
+BOARD_SLOTS = 2
 BACKOFF = (timedelta(minutes=30), timedelta(hours=2), timedelta(hours=6))
 REFRESH_EVERY_S = 15 * 60
 ACTIVE_FOR = timedelta(hours=48)  # the loop refreshes only while the feed was used this recently
@@ -49,6 +53,7 @@ _tasks: dict[str, asyncio.Task[None]] = {}
 _pending: dict[str, dict[str, SearchQuery]] = defaultdict(dict)
 _minute_calls: dict[str, deque[float]] = defaultdict(deque)
 _last_feed_at: float | None = None
+_slots_by_loop: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Semaphore] = weakref.WeakKeyDictionary()
 # Bumped whenever listings change, so ranked feeds cached in memory (ranking.py) know to recompute.
 _version = 0
 # Tests swap in an httpx.MockTransport: no refresh ever reaches the network in the suite.
@@ -57,6 +62,15 @@ transport: httpx.AsyncBaseTransport | None = None
 
 def version() -> int:
     return _version
+
+
+def _board_slots() -> asyncio.Semaphore:
+    """BOARD_SLOTS for the running loop (tests run several loops; a semaphore belongs to the first that waits on it)."""
+    loop = asyncio.get_running_loop()
+    slots = _slots_by_loop.get(loop)
+    if slots is None:
+        slots = _slots_by_loop[loop] = asyncio.Semaphore(BOARD_SLOTS)
+    return slots
 
 
 def _now() -> datetime:
@@ -214,8 +228,10 @@ async def _refresh_board(source: Source, http: FeedClient, key: str) -> int:
         known = set((await db.scalars(select(JobListing.external_id).where(
             JobListing.source == source.id, JobListing.board == key, JobListing.description != ""))).all())
     try:
-        postings = await source.fetch(http, key, known)
-        n = await _ingest(source.id, key, postings)
+        async with _board_slots():
+            postings = await source.fetch(http, key, known)
+            n = await _ingest(source.id, key, postings)
+            del postings  # let it go before the next board takes the slot
     except RateLimited as e:
         log.warning("jobs: %s/%s rate limited, waiting %.0fs", source.id, key, e.retry_after_s)
         await _record(source.id, key, ok=False, error=str(e), retry_after_s=e.retry_after_s)

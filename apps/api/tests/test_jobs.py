@@ -343,6 +343,30 @@ def test_a_board_refresh_stores_its_posts_and_drops_the_ones_taken_down(jobs: Te
     assert [r.title for r in _stored(jobs, "greenhouse")] == ["Backend Engineer - Payments"]
 
 
+def test_boards_are_fetched_at_most_two_at_a_time_across_sources(jobs: TestClient) -> None:
+    running = peak = 0
+
+    class Slow:
+        def __init__(self, source_id: str) -> None:
+            self.id = source_id
+
+        async def fetch(self, http: Any, key: str, known: set[str]) -> list[Posting]:
+            nonlocal running, peak
+            running += 1
+            peak = max(peak, running)
+            await asyncio.sleep(0.05)
+            running -= 1
+            return []
+
+    async def first_refresh_of_everything() -> None:
+        async with FeedClient(allowed_hosts(), fx.transport()) as http:
+            await asyncio.gather(*(refresh._refresh_board(Slow(s), http, "board")  # type: ignore[arg-type]
+                                   for s in ("greenhouse", "lever", "ashby", "smartrecruiters", "remoteok")))
+
+    run(jobs, first_refresh_of_everything)
+    assert peak == refresh.BOARD_SLOTS == 2
+
+
 def test_a_failed_or_rate_limited_fetch_backs_off_and_keeps_the_cache(jobs: TestClient,
                                                                        monkeypatch: pytest.MonkeyPatch) -> None:
     src = source_named("greenhouse")
