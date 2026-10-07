@@ -219,6 +219,13 @@ def world() -> Iterator[World]:
             note = client.patch(f"/v1/jobs/tracker/{ids['job_entry']}", headers=a,
                                 json={"notes": "Alice's recruiter call notes"})
             assert note.status_code == 200, note.text
+            # A message A sent from the Contact page (only the admin may see or touch it).
+            sent = client.post("/v1/contact", headers=a, json={
+                "name": "Alice", "email": a_user["email"], "topic": "payment",
+                "message": "My UTR is 123456789012 and the credits haven't arrived."})
+            assert sent.status_code == 201, sent.text
+            ids["a_message"] = client.get("/v1/admin/inbox", headers=admin, params={
+                "q": sent.json()["reference"], "status": "all"}).json()["items"][0]["id"]
 
             # B: a few things of their own, to point at A's.
             ids["b_doc"] = _doc(client, b, "jd_sample")
@@ -404,8 +411,8 @@ def test_someone_elses_object_looks_exactly_like_a_missing_one(world: World, met
 # ---- every non-public route needs a session ------------------------------------------------------------------------
 
 # Reachable without signing in, on purpose: health probes, sign-in/up and the emailed-link endpoints, the public price
-# lists, Jobs AI's public numbers (counts only), the site-wide announcement banner, the desktop updater, and the phone
-# companion's redeem (the 256-bit share code is the credential).
+# lists, Jobs AI's public numbers (counts only), the site-wide announcement banner, the desktop updater, the phone
+# companion's redeem (the 256-bit share code is the credential), and the Contact page's form (it only adds a message).
 PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("GET", "/health"), ("GET", "/ready"),
     ("GET", "/v1/auth/config"), ("POST", "/v1/auth/register"), ("POST", "/v1/auth/login"),
@@ -416,6 +423,7 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("GET", "/v1/desktop/update/{target}/{arch}/{current_version}"),
     ("GET", "/v1/desktop/download/{version}/{filename}"),
     ("POST", "/v1/companion/redeem"), ("POST", "/v1/companion/{code}"),
+    ("POST", "/v1/contact"),
 })
 
 
@@ -439,7 +447,7 @@ ROUTES = _http_routes()
 PROTECTED = [r for r in ROUTES if r not in PUBLIC]
 PATH_PARAMS = {"doc_id": "doc_resume", "resume_id": "resume", "workspace_id": "workspace", "story_id": "story",
                "session_id": "s_ended", "answer_id": "answer", "order_id": "order", "payment_id": "order",
-               "user_id": "a_id", "listing_id": "listing", "entry_id": "job_entry"}
+               "user_id": "a_id", "listing_id": "listing", "entry_id": "job_entry", "message_id": "a_message"}
 
 
 def test_route_inventory_is_complete() -> None:
@@ -511,6 +519,12 @@ ADMIN_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("GET", "/v1/admin/payments?only=all", {}),
     ("POST", "/v1/admin/payments/{target_order}", {"json": {"action": "approve"}}),
     ("POST", "/v1/admin/payments/{target_order}", {"json": {"action": "reject", "note": "no such payment"}}),
+    ("GET", "/v1/admin/inbox", {}),
+    ("GET", "/v1/admin/inbox?status=all&topic=payment&q=idor", {}),
+    ("GET", "/v1/admin/inbox/{target_message}", {}),
+    ("PATCH", "/v1/admin/inbox/{target_message}", {"json": {"status": "done", "admin_note": "idor"}}),
+    ("POST", "/v1/admin/inbox/{target_message}/reply", {"json": {"text": "idor check"}}),
+    ("DELETE", "/v1/admin/inbox/{target_message}", {}),
 ]
 ADMIN_IDS = [f"{m} {p} {json.dumps(k.get('json', ''))[:40]}" for m, p, k in ADMIN_ROUTES]
 
@@ -518,14 +532,14 @@ ADMIN_IDS = [f"{m} {p} {json.dumps(k.get('json', ''))[:40]}" for m, p, k in ADMI
 def test_admin_route_inventory_is_complete() -> None:
     admin = {p for _, p in ROUTES if p.startswith("/v1/admin/")} - {"/v1/admin/status"}
     covered = {p.split("?", 1)[0].replace("{target}", "{user_id}").replace("{target_order}", "{payment_id}")
-               for _, p, _ in ADMIN_ROUTES}
+               .replace("{target_message}", "{message_id}") for _, p, _ in ADMIN_ROUTES}
     assert admin <= covered, f"admin routes missing from the matrix: {sorted(admin - covered)}"
 
 
 @pytest.mark.parametrize(("method", "path", "kw"), ADMIN_ROUTES, ids=ADMIN_IDS)
 def test_admin_routes_refuse_a_normal_user(world: World, method: str, path: str, kw: dict[str, Any]) -> None:
     ids = {**world.ids, "target": world.ids["a_id"], "target_email": world.ids["a_email"],
-           "target_order": world.ids["order"]}
+           "target_order": world.ids["order"], "target_message": world.ids["a_message"]}
     before = _owner_view(world)
     world.client.cookies.clear()
     r = world.client.request(method, _fill(path, ids), headers=world.b, **_fill(kw, ids))
@@ -537,7 +551,7 @@ def test_admin_routes_refuse_a_normal_user(world: World, method: str, path: str,
 @pytest.mark.parametrize(("method", "path", "kw"), ADMIN_ROUTES, ids=ADMIN_IDS)
 def test_admin_routes_refuse_anonymous_callers(world: World, method: str, path: str, kw: dict[str, Any]) -> None:
     ids = {**world.ids, "target": world.ids["a_id"], "target_email": world.ids["a_email"],
-           "target_order": world.ids["order"]}
+           "target_order": world.ids["order"], "target_message": world.ids["a_message"]}
     world.client.cookies.clear()
     assert world.client.request(method, _fill(path, ids), **_fill(kw, ids)).status_code == 401
 
@@ -550,7 +564,12 @@ def test_admin_routes_work_for_the_admin(world: World, method: str, path: str, k
     order = _created(c.post("/v1/billing/upi/orders", headers=h, json={"pack": "starter"}))
     assert c.post(f"/v1/billing/upi/orders/{order}/utr", headers=h,
                   json={"utr": f"{uuid.uuid4().int % 10**12:012d}"}).status_code == 200
-    ids = {"target": user["id"], "target_email": user["email"], "target_order": order}
+    sent = c.post("/v1/contact", headers=h, json={"name": "Target", "email": user["email"], "topic": "other",
+                                                  "message": "A message for the admin's wall."})
+    assert sent.status_code == 201, sent.text
+    message = c.get("/v1/admin/inbox", headers=world.admin, params={"q": sent.json()["reference"],
+                                                                    "status": "all"}).json()["items"][0]["id"]
+    ids = {"target": user["id"], "target_email": user["email"], "target_order": order, "target_message": message}
     c.cookies.clear()
     r = c.request(method, _fill(path, ids), headers=world.admin, **_fill(kw, ids))
     assert r.status_code in (200, 202, 204), r.text  # 202: an email on its way · 204: deleted

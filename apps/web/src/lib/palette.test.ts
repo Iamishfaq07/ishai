@@ -31,6 +31,8 @@ describe("searchCommands (the command palette)", () => {
     expect(top("logout")).toBe("do-sign-out");
     expect(top("dark mode")).toBe("do-theme");
     expect(top("whatsapp")).toBe("do-help");
+    expect(top("complaint")).toBe("do-contact");
+    expect(searchCommands("contact", all).map((c) => c.id)).toEqual(expect.arrayContaining(["do-help", "do-contact"]));
   });
 
   it("puts a title that starts with the query first", () => {

@@ -7,6 +7,7 @@ describe("metaFor (the Worker's per-page link previews)", () => {
     expect(metaFor("/resume-ai")?.title).toMatch(/^Orbit Resume AI/);
     expect(metaFor("/jobs/")?.path).toBe("/jobs");
     expect(metaFor("/warmup")?.title).toMatch(/practice question/i);
+    expect(metaFor("/contact/")?.title).toBe("Contact Orbit AI");
   });
 
   it("leaves every other address to index.html", () => {

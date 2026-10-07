@@ -44,6 +44,8 @@ import {
   AdminUsersPage,
   AdminPaymentsPage,
   AdminAuditPage,
+  AdminInboxPage,
+  ContactPage,
   prefetchLikelyRoutes,
   publicPageFor,
 } from "./routes";
@@ -130,6 +132,8 @@ export function App() {
       <Route path="/companion" element={<CompanionPage />} />
       {/* Public: one practice question with instant feedback, no account needed (Workstream C's page). */}
       <Route path="/warmup" element={<WarmupPage />} />
+      {/* Public: the Contact page's form, signed in or out (its messages wait in the admin's Inbox). */}
+      <Route path="/contact" element={<ContactPage />} />
       {/* Right after sign-up: the three welcome questions, outside the nav so nothing competes with them. */}
       <Route
         path="/welcome"
@@ -186,6 +190,7 @@ export function App() {
         <Route path="admin/users" element={<AdminUsersPage />} />
         <Route path="admin/payments" element={<AdminPaymentsPage />} />
         <Route path="admin/audit" element={<AdminAuditPage />} />
+        <Route path="admin/inbox" element={<AdminInboxPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

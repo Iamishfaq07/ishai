@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, Keyboard, Mail, MessageCircle, cx, focusRing, isMacPlatform } from "@orbit/ui";
+import { ChevronDown, Keyboard, Mail, MessageCircle, Send, cx, focusRing, isMacPlatform } from "@orbit/ui";
 import { displayAudioHelp } from "../lib/audio";
 import { CONTACT_PAGE, POLICY_LINKS, SUPPORT_EMAIL, USE_WHERE_ALLOWED, mailLink, whatsappLink } from "../lib/contact";
 import { useWelcomeGrant } from "../lib/welcome";
@@ -52,15 +52,21 @@ export default function HelpDialog({ open, onClose, onSearch }: { open: boolean;
   return (
     <Sheet open={open} onClose={onClose} title="Help" titleId="help-title">
       <div className="space-y-7 px-5 py-5">
-        {(whatsapp || mail || CONTACT_PAGE) && (
         <section aria-labelledby="help-contact">
           <h3 id="help-contact" className="font-display text-base font-semibold">
             Talk to a person
           </h3>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-            Stuck, or a payment hasn't shown up? Tell us what you were doing and we'll help.
+            Stuck, or a payment hasn't shown up? Tell us what you were doing and we'll reply by email.
           </p>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Link
+              to={CONTACT_PAGE}
+              onClick={onClose}
+              className={cx(contactButton, "bg-gradient-to-b from-indigo-500 to-indigo-600 text-white shadow-glow-sm hover:from-indigo-400 hover:to-indigo-500")}
+            >
+              <Send className="h-4 w-4" aria-hidden /> Send us a message
+            </Link>
             {whatsapp && (
               <a href={whatsapp} target="_blank" rel="noreferrer" className={cx(contactButton, "bg-emerald-600 text-white hover:bg-emerald-700")}>
                 <MessageCircle className="h-4 w-4" aria-hidden /> WhatsApp us
@@ -71,14 +77,8 @@ export default function HelpDialog({ open, onClose, onSearch }: { open: boolean;
                 <Mail className="h-4 w-4" aria-hidden /> Email {SUPPORT_EMAIL}
               </a>
             )}
-            {!whatsapp && !mail && CONTACT_PAGE && (
-              <a href={CONTACT_PAGE} className={cx(contactButton, "border border-zinc-200 hover:bg-zinc-900/5 dark:border-white/10 dark:hover:bg-white/5")}>
-                <Mail className="h-4 w-4" aria-hidden /> How to reach us
-              </a>
-            )}
           </div>
         </section>
-        )}
 
         <section aria-labelledby="help-questions">
           <h3 id="help-questions" className="font-display text-base font-semibold">
@@ -109,7 +109,11 @@ export default function HelpDialog({ open, onClose, onSearch }: { open: boolean;
                 <Link to="/billing" onClick={onClose} className="font-medium text-indigo-700 underline dark:text-indigo-300">
                   Plan &amp; credits
                 </Link>
-                . If it's been more than a day, contact us with the UTR.
+                . If it's been more than a day,{" "}
+                <Link to={CONTACT_PAGE} onClick={onClose} className="font-medium text-indigo-700 underline dark:text-indigo-300">
+                  send us a message
+                </Link>{" "}
+                with the UTR.
               </p>
             </Question>
             <Question q="Where do I find the UTR?">
@@ -168,6 +172,9 @@ export default function HelpDialog({ open, onClose, onSearch }: { open: boolean;
         </section>
 
         <nav aria-label="Policies" className="flex flex-wrap gap-x-4 gap-y-1 border-t border-zinc-200/70 pt-4 text-sm dark:border-white/5">
+          <Link to={CONTACT_PAGE} onClick={onClose} className={cx("inline-flex min-h-8 items-center rounded text-zinc-600 hover:underline dark:text-zinc-400", focusRing)}>
+            Contact
+          </Link>
           {POLICY_LINKS.map(({ href, label }) => (
             <a key={href} href={href} className={cx("inline-flex min-h-8 items-center rounded text-zinc-600 hover:underline dark:text-zinc-400", focusRing)}>
               {label}

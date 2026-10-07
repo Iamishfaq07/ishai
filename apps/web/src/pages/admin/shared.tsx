@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import type { AdminUser } from "@orbit/types";
-import { IndianRupee, ScrollText, Users, cx } from "@orbit/ui";
+import { Inbox, IndianRupee, ScrollText, Users, cx } from "@orbit/ui";
 import { ProductTabs } from "../../components/products";
+import { api } from "../../lib/api";
+import { useAsync } from "../../lib/useAsync";
 
 /** Pieces the admin pages share: their tabs, money and minutes in words, an account's badges. */
 
@@ -19,14 +21,29 @@ export function day(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
-/** Users · Payments · Audit log, under each admin page's header. */
-export function AdminTabs({ paymentsWaiting }: { paymentsWaiting?: number }) {
+/**
+ * How many Contact messages are unread, for the Inbox tab: `known` when the page has the number already (the Inbox
+ * itself), else fetched (one cheap request, cached across the admin pages).
+ */
+export function useInboxUnread(known?: number): number | undefined {
+  const fetched = useAsync(
+    () => (known !== undefined ? Promise.resolve(known) : api.adminInbox({ status: "new", limit: 1 }).then((r) => r.counts.new)),
+    [known === undefined],
+    known === undefined ? "admin-inbox-unread" : undefined,
+  );
+  return known ?? fetched.data ?? undefined;
+}
+
+/** Users · Payments · Inbox · Audit log, under each admin page's header. The Inbox tab counts unread messages. */
+export function AdminTabs({ paymentsWaiting, inboxUnread }: { paymentsWaiting?: number; inboxUnread?: number }) {
+  const unread = useInboxUnread(inboxUnread);
   return (
     <ProductTabs
       label="Admin"
       sections={[
         { to: "/admin/users", label: "Users", icon: Users },
         { to: "/admin/payments", label: "Payments", icon: IndianRupee, ...(paymentsWaiting ? { count: paymentsWaiting } : {}) },
+        { to: "/admin/inbox", label: "Inbox", icon: Inbox, ...(unread ? { count: unread } : {}) },
         { to: "/admin/audit", label: "Audit log", icon: ScrollText },
       ]}
     />

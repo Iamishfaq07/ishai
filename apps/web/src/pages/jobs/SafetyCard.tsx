@@ -1,12 +1,10 @@
 import { useState } from "react";
-import { Check, CircleAlert, Copy, ExternalLink, Mail, MessageSquare, ShieldCheck, cx, focusRing } from "@orbit/ui";
+import { Link, useLocation } from "react-router-dom";
+import { Check, CircleAlert, Copy, ExternalLink, Mail, MessageSquare, Send, ShieldCheck, cx, focusRing } from "@orbit/ui";
 import { Card } from "../../components/ui";
+import { SUPPORT_EMAIL, SUPPORT_WHATSAPP } from "../../lib/contact";
+import { contactHref } from "../../lib/contactForm";
 import { textLink } from "./links";
-
-/** Where a report about a job goes, when this build has a contact (VITE_SUPPORT_EMAIL, VITE_SUPPORT_WHATSAPP). */
-// TODO(ws-b): use the Contact details from the new trust pages (X3) once they're in, and drop these two.
-const SUPPORT_EMAIL = String(import.meta.env.VITE_SUPPORT_EMAIL ?? "").trim();
-const SUPPORT_WHATSAPP = String(import.meta.env.VITE_SUPPORT_WHATSAPP ?? "").replace(/\D/g, "");
 
 /** India's national cyber-crime portal and helpline (I4C), for a job scam that has already cost money or details. */
 export const CYBERCRIME_URL = "https://cybercrime.gov.in/";
@@ -44,9 +42,9 @@ export function reportText(job: ReportedJob, reason: string): string {
 }
 
 /**
- * Staying safe with jobs: the signs of a job scam, and "Report this job" (to Orbit when this build has a contact, and
- * always the national cyber-crime portal). Nothing is stored: a report is an email, a WhatsApp message or copied text.
- * `compact` is the one-line version for the tracker.
+ * Staying safe with jobs: the signs of a job scam, and "Report this job": to Orbit through the Contact page (the job
+ * and the reason filled in; it lands in the admin's Inbox), by email or WhatsApp when this build has them, as copied
+ * text, and always the national cyber-crime portal. `compact` is the one-line version for the tracker.
  */
 export function SafetyCard({ job, compact = false, className }: { job?: ReportedJob; compact?: boolean; className?: string }) {
   if (compact) {
@@ -103,8 +101,10 @@ function ScamHelp({ className }: { className?: string }) {
   );
 }
 
-/** "Report this job": pick what's wrong, then email or WhatsApp it to Orbit (when configured) or copy it. */
+/** "Report this job": pick what's wrong, then send it to Orbit (the Contact page, filled in), email or WhatsApp it
+ * (when configured), or copy it. */
 function ReportJob({ job, className }: { job: ReportedJob; className?: string }) {
+  const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string>(REPORT_REASONS[0]);
   const [copied, setCopied] = useState(false);
@@ -153,6 +153,12 @@ function ReportJob({ job, className }: { job: ReportedJob; className?: string })
             </div>
           </fieldset>
           <div className="flex flex-wrap gap-2">
+            <Link
+              to={contactHref({ topic: "report_job", listing: job.id, reason, from: pathname })}
+              className={cx(action, "border-rose-500/40 bg-rose-500/10 text-rose-800 hover:border-rose-500/60 dark:text-rose-200")}
+            >
+              <Send className="h-3.5 w-3.5" aria-hidden /> Send it to Orbit
+            </Link>
             {SUPPORT_EMAIL && (
               <a href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Report a job: ${job.company}`)}&body=${encodeURIComponent(text)}`} className={action}>
                 <Mail className="h-3.5 w-3.5" aria-hidden /> Email Orbit
@@ -171,9 +177,7 @@ function ReportJob({ job, className }: { job: ReportedJob; className?: string })
             </a>
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400" role="status">
-            {SUPPORT_EMAIL || SUPPORT_WHATSAPP
-              ? "Reports go to the Orbit team. Nothing is sent until you press send."
-              : "Copy the details to report it to the site it came from, or to the police if it's a scam."}
+            Reports go to the Orbit team, who check the job. Nothing is sent until you press send.
           </p>
         </div>
       )}

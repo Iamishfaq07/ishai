@@ -18,6 +18,7 @@ import {
   SettingsIcon,
   CreditCard,
   ChevronRight,
+  Inbox,
   IndianRupee,
   Users,
 } from "@orbit/ui";
@@ -89,6 +90,16 @@ function AdvancedSettingsCard() {
         <span className="flex-1">
           <span className="block font-display font-semibold">Users &amp; access</span>
           <span className="block text-sm text-zinc-500">Who signed up, who's waiting, and giving them access for a while or for good.</span>
+        </span>
+        <ChevronRight className="h-4 w-4 text-zinc-400" />
+      </Link>
+      <Link to="/admin/inbox" className={cx("glass-panel lift flex items-center gap-4 rounded-2xl p-5 hover:border-indigo-400/40", focusRing)}>
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-300">
+          <Inbox className="h-5 w-5" />
+        </span>
+        <span className="flex-1">
+          <span className="block font-display font-semibold">Inbox</span>
+          <span className="block text-sm text-zinc-500">Messages from the Contact page: read, reply and mark them done.</span>
         </span>
         <ChevronRight className="h-4 w-4 text-zinc-400" />
       </Link>

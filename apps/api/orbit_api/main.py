@@ -16,6 +16,7 @@ from starlette.types import Receive, Scope, Send
 
 from orbit_api import db, jobs
 from orbit_api.admin.accounts import router as admin_accounts_router
+from orbit_api.admin.inbox import router as admin_inbox_router
 from orbit_api.admin.overview import router as admin_overview_router
 from orbit_api.admin.routes import public_router as announcement_router
 from orbit_api.admin.routes import router as admin_router
@@ -23,6 +24,7 @@ from orbit_api.auth.routes import router as auth_router
 from orbit_api.billing.packs import packs as configured_packs
 from orbit_api.billing.routes import router as billing_router
 from orbit_api.config import get_settings
+from orbit_api.contact.routes import router as contact_router
 from orbit_api.csrf import HEADER as CSRF_HEADER
 from orbit_api.csrf import csrf_middleware
 from orbit_api.desktop_updates import router as desktop_router
@@ -241,6 +243,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_router)
     app.include_router(admin_accounts_router)
     app.include_router(admin_overview_router)
+    app.include_router(admin_inbox_router)
     app.include_router(announcement_router)
     app.include_router(workspaces_router)
     app.include_router(preflight_router)
@@ -253,6 +256,7 @@ def create_app() -> FastAPI:
     app.include_router(resumes_router)
     app.include_router(resume_kit_router)
     app.include_router(jobs_router)
+    app.include_router(contact_router)
     return app
 
 

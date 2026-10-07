@@ -53,6 +53,7 @@ from orbit_api.db import get_db
 from orbit_api.entitlements import is_admin
 from orbit_api.models import (
     AuditLog,
+    ContactMessage,
     CreditEntry,
     Document,
     JobApplication,
@@ -271,13 +272,19 @@ def _first_token(target: str | None) -> str | None:
 
 
 async def audit_items(db: AsyncSession, rows: list[AuditLog]) -> list[AuditItem]:
-    """Audit rows with the emails of who acted and who it was about, in three lookups for the lot. A payment
-    decision's target starts with the payment's id: it's about the account that paid (none once that's deleted)."""
+    """Audit rows with the emails of who acted and who it was about, in a few lookups for the lot. A payment
+    decision's target starts with the payment's id: it's about the account that paid (none once that's deleted). An
+    Inbox action's starts with the message's id: it's about the account that sent it, if any."""
     heads = {r.id: _first_token(r.target) for r in rows}
-    paid = {heads[r.id] for r in rows if r.action.startswith("admin.payment.") and heads[r.id]}
-    payer = {pid: uid for pid, uid in (await db.execute(
-        select(Payment.id, Payment.user_id).where(Payment.id.in_(paid)))).all()} if paid else {}
-    subjects = {r.id: payer.get(heads[r.id] or "") if r.action.startswith("admin.payment.") else heads[r.id]
+
+    async def owners(prefix: str, model: Any) -> dict[str, str | None]:
+        ids = {heads[r.id] for r in rows if r.action.startswith(prefix) and heads[r.id]}
+        return {oid: uid for oid, uid in (await db.execute(
+            select(model.id, model.user_id).where(model.id.in_(ids)))).all()} if ids else {}
+
+    payer, sender = await owners("admin.payment.", Payment), await owners("admin.contact.", ContactMessage)
+    subjects = {r.id: payer.get(heads[r.id] or "") if r.action.startswith("admin.payment.")
+                else sender.get(heads[r.id] or "") if r.action.startswith("admin.contact.") else heads[r.id]
                 for r in rows}
     ids = {r.user_id for r in rows if r.user_id} | {s for s in subjects.values() if s}
     emails = {uid: email for uid, email in (await db.execute(
@@ -292,7 +299,8 @@ async def audit_items(db: AsyncSession, rows: list[AuditLog]) -> list[AuditItem]
 
 
 def about_account(user_id: str, payment_ids: list[str]) -> Any:
-    """Admin actions on an account: their target starts with its id (or one of its payments' ids)."""
+    """Admin actions on an account: their target starts with its id (or one of `payment_ids`: its payments', and the
+    Inbox messages it sent)."""
     def starts(prefix: str) -> Any:
         escaped = prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         return AuditLog.target.like(f"{escaped}%", escape="\\")
@@ -324,8 +332,9 @@ async def _detail(db: AsyncSession, u: User, admin: User) -> UserDetailOut:
                             interview_minutes=p.interview_minutes, created_at=_aware(p.created_at),
                             submitted_at=_aware(p.submitted_at) if p.submitted_at else None,
                             decided_at=_aware(p.decided_at) if p.decided_at else None, note=p.note) for p in pays]
+    sent = list((await db.scalars(select(ContactMessage.id).where(ContactMessage.user_id == u.id).limit(100))).all())
     actions = list((await db.scalars(select(AuditLog).where(
-        AuditLog.action.like("admin.%"), about_account(u.id, [p.id for p in pays]))
+        AuditLog.action.like("admin.%"), about_account(u.id, [p.id for p in pays] + sent))
         .order_by(AuditLog.created_at.desc()).limit(100))).all())
     events = list((await db.scalars(select(AuditLog).where(AuditLog.user_id == u.id)
                                     .order_by(AuditLog.created_at.desc()).limit(50))).all())

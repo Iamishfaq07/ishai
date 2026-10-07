@@ -30,6 +30,7 @@ describe("routeTitle", () => {
     expect(routeTitle("/admin/users")).toBe("Users & access");
     expect(routeTitle("/admin/payments")).toBe("Payments");
     expect(routeTitle("/admin/audit")).toBe("Audit log");
+    expect(routeTitle("/admin/inbox")).toBe("Inbox");
   });
 
   it("has no title for an address it doesn't know", () => {
@@ -45,5 +46,10 @@ describe("routeTitle", () => {
   it("names the welcome questions and the free practice question", () => {
     expect(routeTitle("/welcome")).toBe("Welcome");
     expect(routeTitle("/warmup")).toBe("Interview warm-up");
+  });
+
+  it("names the Contact page, signed in or out", () => {
+    expect(routeTitle("/contact")).toBe("Contact us");
+    expect(routeTitle("/contact", true)).toBe("Contact us");
   });
 });

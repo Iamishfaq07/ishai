@@ -575,3 +575,39 @@ class JobFitCheck(TimestampMixin, Base):
     listing_id: Mapped[str] = mapped_column(String(36))
     resume_hash: Mapped[str] = mapped_column(String(64))
     result: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+# ---- Contact (orbit_api/contact, admin/inbox.py) ----------------------------------------------------------------
+
+
+class ContactMessage(TimestampMixin, Base):
+    """A message sent from the Contact page (`POST /v1/contact`), signed in or out, waiting in the admin's Inbox.
+
+    `user_id` links the account that was signed in when it was sent; SET NULL, so deleting the account keeps the
+    message (it was written to Orbit) without the link. The name, email and phone are what the sender typed, never
+    copied from the account. `network_hash` is a keyed hash of the sender's network (as the welcome grant keeps it,
+    credits.ip_hash), for rate limits and spotting a flood from one place: the address itself is never stored.
+    Messages marked done or spam are deleted ORBIT_CONTACT_RETENTION_DAYS after that (contact/routes.py)."""
+
+    __tablename__ = "contact_messages"
+    __table_args__ = (Index("ix_contact_messages_status_created", "status", "created_at"),
+                      Index("ix_contact_messages_network_created", "network_hash", "created_at"),
+                      Index("ix_contact_messages_created_at", "created_at"))
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True,
+                                                nullable=True)
+    name: Mapped[str] = mapped_column(String(120))
+    email: Mapped[str] = mapped_column(String(320))
+    phone: Mapped[str | None] = mapped_column(String(32))  # phone or WhatsApp, optional
+    topic: Mapped[str] = mapped_column(String(24))  # general | payment | technical | report_job | business | ...
+    message: Mapped[str] = mapped_column(Text)
+    # Where it came from and what it's about, bounded (contact/routes.py ContextIn): a reported job's listing id,
+    # title, company and link, the page it was sent from.
+    context: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
+    status: Mapped[str] = mapped_column(String(8), default="new")  # new (unread) | open | done | spam
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    handled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # marked done or spam
+    admin_note: Mapped[str | None] = mapped_column(Text)  # the admin's own, never sent to the sender
+    # Replies the admin sent from the Inbox: [{"at", "by", "text"}], oldest first.
+    replies: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON(none_as_null=True))
+    network_hash: Mapped[str | None] = mapped_column(String(64))

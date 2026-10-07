@@ -567,7 +567,7 @@ def test_the_migration_adds_and_removes_the_console_columns(tmp_path: Any) -> No
     alembic("upgrade", "head")
     assert {"suspended_at", "suspended_reason", "admin_note"} <= columns("users")
     assert "note" in columns("credit_entries")
-    alembic("downgrade", "-1")
+    alembic("downgrade", "e9b4c6a2d8f1")  # the revision before the console's (later ones sit on top of it)
     assert not {"suspended_at", "suspended_reason", "admin_note"} & columns("users")
     assert "note" not in columns("credit_entries") and "email_hash" in columns("credit_entries")
     alembic("upgrade", "head")

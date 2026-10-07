@@ -63,12 +63,15 @@ def test_resend_verification_is_throttled_and_invalidates_old_link(client: TestC
 
 def test_password_reset_does_not_reveal_whether_account_exists(client: TestClient) -> None:
     email, _ = _register(client)
-    sent_before = len(_outbox().sent)
+    last = _outbox().sent[-1]
     known = client.post("/v1/auth/password-reset/request", json={"email": email})
     unknown = client.post("/v1/auth/password-reset/request", json={"email": "nobody-here@example.com"})
     assert known.status_code == unknown.status_code == 202
     assert known.json() == unknown.json()
-    assert len(_outbox().sent) == sent_before + 1  # only the real account got mail
+    # Only the real account got mail. (The dev outbox keeps the last 100, so count from the end, not the length.)
+    sent = _outbox().sent
+    new = sent[len(sent) - 1 - sent[::-1].index(last) + 1:]
+    assert [m.to for m in new] == [email]
 
 
 def test_password_reset_changes_password_and_signs_out_everywhere(client: TestClient) -> None:

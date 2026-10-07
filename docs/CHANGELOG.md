@@ -1,5 +1,51 @@
 # Implementation log
 
+## Contact page and the admin's Inbox (2026-10-08)
+
+The owner asked for a contact page "as a form to enter details and those will be into my inbox of admin account".
+Messages now wait in an **Inbox in the admin console**; by the owner's choice **no email is sent** when one arrives
+(docs/DECISIONS.md D50). One migration, `b5d7e9f1a3c6` (the `contact_messages` table).
+
+- **Contact page** (`/contact`, `pages/Contact.tsx`, `lib/contactForm.ts`; public, signed in or out): name, email,
+  an optional phone or WhatsApp number, the topic (General question, Payment or credits, Technical problem, Report a
+  job, Business or partnership, Feedback, Other, each with a line on what helps us answer), the message with a
+  character count (10 to 3,000), and the bot check when the server asks for one (signed out only). Signed in, the
+  name and email start filled in. Clear success (with a reference like `C-1A2B3C4D` to quote) and errors, including
+  a friendly one for rate limits. Mobile-first, every field labelled, errors tied to their fields and focused.
+  Its own link preview from the Worker (`worker/meta.js`; `/contact` added to `run_worker_first`).
+- **Every "Contact us" link is back**, as a router link: the public footer, the signed-in footer, Help, sign-in and
+  sign-up, and the front page's "Something else? Contact us". `CONTACT_PAGE` is `/contact` and no longer waits for
+  `LEGAL_PAGES_PUBLISHED`; Terms and Refund stay hidden drafts. The draft `docs/legal-drafts/contact.html` is
+  superseded (README updated). Help's **Talk to a person** opens the form, with the WhatsApp and email buttons
+  beside it when `VITE_SUPPORT_WHATSAPP` / `VITE_SUPPORT_EMAIL` are set. The public privacy page points to it.
+- **Report this job → Send it to Orbit** (Jobs AI, `jobs/SafetyCard.tsx`): opens the form on "Report a job" with
+  the job and the chosen reason filled in (`?topic=report_job&listing=…&reason=…&from=…`). The server reads the
+  job's title, company and link from its own job cache, never from the page.
+- **API** (`contact/routes.py`): `POST /v1/contact`, 201 with the reference. Plain text only (names lose line breaks
+  and control characters; messages keep their lines), a bounded context, and no typed text in any email header.
+  Spam protection: a honeypot field (a bot gets "received" and nothing is kept), 5 an hour and 20 a day per network,
+  a daily cap for everyone (`ORBIT_CONTACT_DAILY_CAP`, 300, counted in the table), Turnstile for signed-out senders
+  when configured. The network is stored as a keyed hash, never the IP. It needs no CSRF token (signed-out visitors
+  have none; the Origin check still applies), so a cookie session links the message to the account only when the
+  request carries that session's token.
+- **Inbox** (`/admin/inbox`, `pages/AdminInbox.tsx`, `admin/MessageDrawer.tsx`, `admin/inbox.ts`; API
+  `admin/inbox.py`): tabs To answer · Unread · Done · Spam · All with counts, a topic filter, search (name, email,
+  phone, words, or the reference) and paging. A message opens in a panel (`?m=`), which marks it read: the sender
+  and a link to their account (`/admin/users?user=`) when they were signed in, the reported job (its post and its
+  page in Jobs AI), how many messages came from the same network in 30 days, the replies, a private note, and
+  Mark done / Reopen / Spam / Mark unread / Delete (confirmed). **Reply**: "Send reply" emails the sender from
+  Orbit's address with Reply-To the admin and closes the message; "Reply in your mail app" is a `mailto:` with
+  "Re: <topic> (C-…)" and the message quoted (the only way on a server without SMTP). The unread count shows on the
+  console's new **Inbox** tab, in the admin's top bar ("3 unread") and on Settings. Every change is audited and the
+  audit log shows it against the sender's account, with a link to the message.
+- **Email**: `OutgoingEmail.reply_to` (a `Reply-To` header over SMTP; the dev outbox logs it) and `send_now` (sent in
+  the request, so the admin sees a failure).
+- **Privacy** (docs/PRIVACY.md): deleting an account keeps its messages without the link (`ON DELETE SET NULL`); the
+  data export includes the account's own messages (not the admin's note or the network hash); messages marked done
+  or spam are deleted 12 months later (`ORBIT_CONTACT_RETENTION_DAYS`, 365) by the session sweeper.
+- **Tests**: `tests/test_contact.py` (33), the routes added to the IDOR route matrix, the public-route list and the
+  OWASP CSRF checks; vitest for the form (`lib/contactForm.test.ts`) and the Inbox (`admin/inbox.test.ts`).
+
 ## Interview copilot and Practice: separate items on the top bar (2026-10-08)
 
 The owner asked for the interview copilot and Practice to each have their own place in the nav: they were one

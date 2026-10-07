@@ -30,7 +30,7 @@ import { api } from "../lib/api";
 import { isWindows } from "../lib/audio";
 import { useAuth } from "../lib/auth";
 import { DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
-import { POLICY_LINKS } from "../lib/contact";
+import { CONTACT_PAGE, POLICY_LINKS } from "../lib/contact";
 import { SHELL_EVENTS, isTypingTarget } from "../lib/shell";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { RESUME_AI_HOME } from "../pages/resume/paths";
@@ -396,6 +396,9 @@ export function Layout() {
           <button type="button" onClick={openHelp} className={footerLink}>
             Help
           </button>
+          <Link to={CONTACT_PAGE} className={footerLink}>
+            Contact us
+          </Link>
           {POLICY_LINKS.map(({ href, label }) => (
             <a key={href} href={href} className={footerLink}>
               {label}
@@ -674,14 +677,17 @@ function AccountMenu({
 }
 
 /**
- * Admin only: how many new accounts are waiting for access, linking to Users & access. The in-app side of the
- * sign-up email, and the only one on a server without SMTP. Re-counted on every page change and each minute.
+ * Admin only: how many new accounts are waiting for access (linking to Users & access), UPI payments to check, and
+ * unread Contact messages (linking to the Inbox: the only notice of a new message, which sends no email). The in-app
+ * side of the sign-up email, and the only one on a server without SMTP. Re-counted on every page change and each
+ * minute.
  */
 function WaitingForAccess() {
   const { pathname } = useLocation();
   const [admin, setAdmin] = useState(false);
   const [count, setCount] = useState(0);
   const [payments, setPayments] = useState(0);
+  const [messages, setMessages] = useState(0);
   useEffect(() => {
     api.adminStatus().then((s) => setAdmin(s.is_admin)).catch(() => undefined);
   }, []);
@@ -690,12 +696,13 @@ function WaitingForAccess() {
     const load = () => {
       void api.adminUsers("pending", "", { limit: 1 }).then((r) => setCount(r.total ?? r.users.length)).catch(() => undefined);
       void api.adminPayments("submitted").then((r) => setPayments(r.waiting)).catch(() => undefined);
+      void api.adminInbox({ status: "new", limit: 1 }).then((r) => setMessages(r.counts.new)).catch(() => undefined);
     };
     load();
     const t = window.setInterval(load, 60_000);
     return () => window.clearInterval(t);
   }, [admin, pathname]);
-  if (!admin || !(count || payments)) return null;
+  if (!admin || !(count || payments || messages)) return null;
   const badge =
     "mr-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-amber-500/30 hover:bg-amber-500/25 dark:text-amber-200";
   return (
@@ -704,6 +711,12 @@ function WaitingForAccess() {
         <Link to="/admin/payments" className={badge} aria-label={`${payments} UPI ${payments === 1 ? "payment" : "payments"} to check`}>
           <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
           {payments} to check
+        </Link>
+      )}
+      {messages > 0 && (
+        <Link to="/admin/inbox?status=new" className={badge} aria-label={`${messages} unread ${messages === 1 ? "message" : "messages"} in the Inbox`}>
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
+          {messages > 99 ? "99+" : messages} unread
         </Link>
       )}
       {count > 0 && (

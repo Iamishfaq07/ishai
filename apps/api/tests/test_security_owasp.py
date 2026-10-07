@@ -510,6 +510,32 @@ def test_a_junk_bearer_header_doesnt_unlock_the_cookie_without_csrf(api: Api) ->
     c.cookies.clear()
 
 
+def test_the_contact_form_needs_no_csrf_token_but_only_a_real_session_signs_a_message(api: Api) -> None:
+    """`POST /v1/contact` is open to anyone, so it takes no CSRF token (a signed-out visitor has none; a stale tab lost
+    it). A foreign site is still refused by the Origin check, and a cookie that arrives without its token (a page
+    elsewhere making the browser post) never links the message to the visitor's account."""
+    c = api.c
+    tag = uuid.uuid4().hex[:10]
+    body = {"name": "Visitor", "email": "visitor@example.com", "topic": "general",
+            "message": f"Is there a student discount? {tag}"}
+    c.cookies.clear()
+    assert c.post("/v1/contact", headers={"Origin": WEB}, json=body).status_code == 201  # signed out
+    web = _web(c)
+    for headers, label in (({"Origin": WEB, "X-CSRF-Token": web.csrf}, "linked"), ({"Origin": WEB}, "no token"),
+                           ({"Origin": "null"}, "sandboxed"), ({"Origin": WEB, "X-CSRF-Token": "forged"}, "forged")):
+        _as(c, web.cookie)
+        r = c.post("/v1/contact", headers=headers, json={**body, "message": f"{label} {tag} message"})
+        assert r.status_code == 201, (label, r.text)
+    for headers in ({"Origin": EVIL}, {"Referer": f"{EVIL}/attack.html"}):
+        _as(c, web.cookie)
+        r = c.post("/v1/contact", headers=headers, json=body)
+        assert r.status_code == 403 and r.json()["error"]["code"] == "csrf_origin", (headers, r.text)
+    c.cookies.clear()
+    items = c.get("/v1/admin/inbox", headers=api.admin, params={"q": tag, "status": "all"}).json()["items"]
+    linked = {i["snippet"].split(" ", 1)[0]: i["user_id"] for i in items}
+    assert linked == {"Is": None, "linked": web.user["id"], "no": None, "sandboxed": None, "forged": None}
+
+
 def test_unexpected_errors_dont_leak_internals(monkeypatch: pytest.MonkeyPatch) -> None:
     from orbit_api import entitlements
     from orbit_api.main import create_app

@@ -2,6 +2,8 @@
 
 Left out on purpose: the password hash and token version (secrets), document chunks and embeddings (search data
 derived from the documents, which are included in full), provider request internals, and dead-letter/job plumbing.
+Messages sent from the Contact page while signed in are included as sent, with the replies the sender was emailed;
+the admin's note on them and the network hash are the admin's, not the account's.
 """
 
 from datetime import UTC, datetime
@@ -14,6 +16,7 @@ from orbit_api.models import (
     Answer,
     AnswerFeedback,
     AuditLog,
+    ContactMessage,
     Document,
     JobApplication,
     JobFitCheck,
@@ -29,8 +32,9 @@ from orbit_api.models import (
     Workspace,
 )
 
-# admin_note: the admin's private notes on the account (admin/accounts.py), not the account's own data.
-_NEVER = {"password_hash", "token_version", "embedding", "admin_note"}
+# admin_note: the admin's private notes on the account (admin/accounts.py) or on a contact message, not the account's
+# own data; network_hash: a contact message's keyed network hash (rate limits).
+_NEVER = {"password_hash", "token_version", "embedding", "admin_note", "network_hash"}
 
 
 def _row(obj: Any) -> dict[str, Any]:
@@ -80,6 +84,8 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
         },
         "usage": [_row(u) for u in (await db.scalars(select(UsageEvent).where(UsageEvent.user_id == user_id)
                                                       .order_by(UsageEvent.created_at))).all()],
+        "contact_messages": [_row(m) for m in (await db.scalars(select(ContactMessage).where(
+            ContactMessage.user_id == user_id).order_by(ContactMessage.created_at))).all()],
         "security_log": [{"action": a.action, "ip": a.ip, "at": a.created_at}
                          for a in (await db.scalars(select(AuditLog).where(AuditLog.user_id == user_id)
                                                     .order_by(AuditLog.created_at))).all()],

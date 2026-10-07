@@ -159,6 +159,12 @@ class Settings(BaseSettings):
     jsearch_key: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_JSEARCH_KEY"))
     jsearch_monthly_budget: int = Field(200, ge=0, validation_alias=AliasChoices("ORBIT_JSEARCH_MONTHLY_BUDGET"))
 
+    # The Contact page (contact/routes.py): at most this many messages a rolling day from everyone together (each
+    # network also has its own limits), so a flood can't bury the Inbox. Messages the admin marked done or spam are
+    # deleted this many days after that (0 = kept until deleted by hand).
+    contact_daily_cap: int = Field(300, ge=1, validation_alias=AliasChoices("ORBIT_CONTACT_DAILY_CAP"))
+    contact_retention_days: int = Field(365, ge=0, validation_alias=AliasChoices("ORBIT_CONTACT_RETENTION_DAYS"))
+
     # Admin (advanced settings). The admin can edit provider keys/models in-app; the override is
     # encrypted at rest with config_secret. Required in production (the server refuses to start without it);
     # only in development/test does the first registered user stand in for an unset admin.

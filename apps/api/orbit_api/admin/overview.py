@@ -21,7 +21,7 @@ from orbit_api import credits
 from orbit_api.admin.accounts import AuditItem, about_account, audit_items
 from orbit_api.admin.routes import activity_subquery, require_admin, search_term
 from orbit_api.db import get_db
-from orbit_api.models import AuditLog, CreditEntry, JobFitCheck, Payment, UsageEvent, User
+from orbit_api.models import AuditLog, ContactMessage, CreditEntry, JobFitCheck, Payment, UsageEvent, User
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
 
@@ -135,7 +135,9 @@ async def audit_log(_: Annotated[User, Depends(require_admin)], db: Annotated[As
         query = query.where(AuditLog.action == action)
     if user_id:
         payments = list((await db.scalars(select(Payment.id).where(Payment.user_id == user_id).limit(50))).all())
-        query = query.where(or_(AuditLog.user_id == user_id, about_account(user_id, payments)))
+        sent = list((await db.scalars(select(ContactMessage.id).where(ContactMessage.user_id == user_id)
+                                      .limit(50))).all())
+        query = query.where(or_(AuditLog.user_id == user_id, about_account(user_id, payments + sent)))
     term = search_term(q)
     if term is not None:
         like = f"%{term}%"

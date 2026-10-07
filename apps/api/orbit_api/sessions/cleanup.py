@@ -67,6 +67,8 @@ async def end_abandoned_sessions(now: datetime | None = None) -> int:
 
 
 async def sweeper(interval_s: float) -> None:
+    from orbit_api.contact.routes import purge_expired_messages
+
     while True:
         try:
             await end_abandoned_sessions()
@@ -74,6 +76,13 @@ async def sweeper(interval_s: float) -> None:
             raise
         except Exception:
             log.exception("abandoned-session sweep failed")
+        # The same pass keeps the Inbox tidy: contact messages handled long ago go (ORBIT_CONTACT_RETENTION_DAYS).
+        try:
+            await purge_expired_messages()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("contact retention sweep failed")
         await asyncio.sleep(interval_s)
 
 
