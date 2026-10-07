@@ -1,5 +1,14 @@
 # Implementation log
 
+## Mini pack: ₹499 for 15 interview minutes and 5 AI credits (2026-10-07)
+
+The cheapest pack was ₹1,999, a big first purchase next to Indian copilots at about ₹499 an hour and Naukri's paid
+plans (research/web-roadmap-2026-10-07.md). **Mini** (`billing/packs.py`) costs the same ≈ ₹33 an interview minute as
+Starter, so it lowers the first purchase without undercutting anything, and Plus (≈ ₹27) and Pro (≈ ₹22) stay the
+better value. It's now the cheapest pack with resume credits, so "out of credits" offers it first ("Packs start at
+₹499"). Plan & billing shows the four packs two by two with "Best value" still on Plus (the second-largest); the front
+page shows Free and the four packs in one row. `ORBIT_CREDIT_PACKS_JSON`, if set, still replaces the list.
+
 ## Front door, first run and navigation (2026-10-07)
 
 A first-time visitor at `/` used to read "Welcome back / Sign in". Now Orbit has a public front page, a three-question

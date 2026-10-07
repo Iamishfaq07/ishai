@@ -20,7 +20,10 @@ class CreditPack:
     interview_minutes: int
 
 
+# Mini is the first purchase that doesn't need a big decision: the same ≈ ₹33 an interview minute as Starter, so it
+# undercuts nothing, and the bigger packs stay the better value per minute.
 DEFAULT_PACKS: tuple[CreditPack, ...] = (
+    CreditPack("mini", "Mini", price_inr=499, resume_credits=5, interview_minutes=15),
     CreditPack("starter", "Starter", price_inr=1999, resume_credits=15, interview_minutes=60),
     CreditPack("plus", "Plus", price_inr=3999, resume_credits=40, interview_minutes=150),
     CreditPack("pro", "Pro", price_inr=7999, resume_credits=100, interview_minutes=360),

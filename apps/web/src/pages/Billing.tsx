@@ -204,8 +204,9 @@ export function BillingPage() {
 
   const e = ent.data;
   const list = packs.data ?? [];
-  // The middle pack is the usual pick; with one or two, none is singled out.
-  const bestId = list.length >= 3 ? [...list].sort((a, b) => a.price_inr - b.price_inr)[1]?.id : undefined;
+  // The second-largest pack (Plus) is the usual pick: more per rupee than the small ones without the largest spend.
+  // With one or two packs, none is singled out.
+  const bestId = list.length >= 3 ? [...list].sort((a, b) => a.price_inr - b.price_inr)[list.length - 2]?.id : undefined;
 
   return (
     <div>
@@ -239,7 +240,7 @@ export function BillingPage() {
             </Card>
           ) : (
             <>
-              <div className="grid gap-4 pt-2 sm:grid-cols-3">
+              <div className="grid gap-4 pt-2 sm:grid-cols-2">
                 {packs.loading ? (
                   <Spinner />
                 ) : packs.error ? (

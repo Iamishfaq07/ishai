@@ -33,6 +33,7 @@ interview minutes. Sign-up needs no approval or email check, so to stop throwawa
 ### Credit packs (UPI)
 | Pack | Price | Interview minutes | Resume AI credits |
 |---|---|---|---|
+| Mini | ₹499 | 15 | 5 |
 | Starter | ₹1,999 | 60 | 15 |
 | Plus | ₹3,999 | 150 | 40 |
 | Pro | ₹7,999 | 360 | 100 |
