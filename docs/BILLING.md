@@ -6,7 +6,8 @@ more. Credits never expire and nothing renews.
 
 - **Interview minutes:** live interviews and mock interviews both draw on one balance. They're metered by the live
   socket every heartbeat, and a session ends cleanly when the balance runs out.
-- **Resume AI credits:** one per AI action in the resume maker: an import, a rewrite, tailoring, or a cover letter.
+- **Resume AI credits:** one per AI action in Resume AI: an import, a rewrite, tailoring, a cover letter, interview
+  questions, a profile or a message.
   Typing, the ATS score, templates, PDF/Word downloads, and fixes worked out without the AI (dates, skills the resume
   already proves) are free. A failed AI call gives its credit back.
 
