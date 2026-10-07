@@ -16,6 +16,7 @@ const loaders = {
   resumes: () => import("./pages/resume/Resumes"),
   resumeEditor: () => import("./pages/resume/ResumeEditor"),
   resumeAiPublic: () => import("./pages/resume/ResumeAiPublic"),
+  jobs: () => import("./pages/jobs/JobsPage"),
   mock: () => import("./pages/Mock"),
   billing: () => import("./pages/Billing"),
   settings: () => import("./pages/Settings"),
@@ -38,6 +39,7 @@ export const StoriesPage = page(loaders.stories, (m) => m.StoriesPage);
 export const ResumeAiHomePage = page(loaders.resumes, (m) => m.ResumeAiHomePage);
 export const ResumeEditorPage = page(loaders.resumeEditor, (m) => m.ResumeEditorPage);
 export const ResumeAiPublicPage = page(loaders.resumeAiPublic, (m) => m.ResumeAiPublicPage);
+export const JobsPage = page(loaders.jobs, (m) => m.JobsPage);
 export const MockPage = page(loaders.mock, (m) => m.MockPage);
 export const BillingPage = page(loaders.billing, (m) => m.BillingPage);
 export const SettingsPage = page(loaders.settings, (m) => m.SettingsPage);
@@ -55,7 +57,7 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/sessions/, "sessions"],
   [/^\/documents\/stories/, "stories"],
   [/^\/documents/, "documents"],
-  [/^\/resume-ai\/jobs(\/|$)/, null], // the Jobs portal's address: not a resume
+  [/^\/resume-ai\/jobs(\/|$)/, "jobs"], // the Jobs portal: not a resume
   [/^\/resume-ai\/[^/]+/, "resumeEditor"],
   [/^\/resume-ai/, "resumes"],
   [/^\/mock/, "mock"],

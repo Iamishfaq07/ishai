@@ -26,6 +26,9 @@ from orbit_api.desktop_updates import router as desktop_router
 from orbit_api.documents.parsing import isolation_selftest
 from orbit_api.documents.routes import router as documents_router
 from orbit_api.entitlements import plans as configured_plans
+from orbit_api.job_portal.companies import boards as configured_boards
+from orbit_api.job_portal.refresh import running_refresher as running_job_refresher
+from orbit_api.job_portal.routes import router as jobs_router
 from orbit_api.observability import configure_logging, init_sentry, request_id_middleware
 from orbit_api.preflight import router as preflight_router
 from orbit_api.prep.routes import router as prep_router
@@ -75,7 +78,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await replay_failed_writes()  # dead-lettered live-session writes from a previous outage
     except Exception:
         logging.getLogger(__name__).exception("replaying failed writes failed; the replayer retries")
-    async with jobs.running_worker(s.job_poll_s), running_sweeper(s.session_sweep_s), running_replayer():
+    async with (jobs.running_worker(s.job_poll_s), running_sweeper(s.session_sweep_s), running_replayer(),
+                running_job_refresher()):
         yield
         await drain_teardowns()
         # A last try for writes that failed during an outage: the spool file and memory go with this process.
@@ -162,6 +166,7 @@ def create_app() -> FastAPI:
     s = get_settings()
     configured_plans()  # fail fast on a bad ORBIT_PLANS_JSON / *_MAX_SESSION_MINUTES instead of at first use
     configured_packs()  # and on a bad ORBIT_CREDIT_PACKS_JSON
+    configured_boards()  # and on a bad ORBIT_JOBS_BOARDS_JSON
     if init_sentry(s.sentry_dsn, s.env, running_commit()):
         logging.getLogger(__name__).info("sentry error reporting enabled")
     # In production neither the docs nor the schema are served: the route map (admin routes included) isn't
@@ -241,6 +246,7 @@ def create_app() -> FastAPI:
     app.include_router(feedback_router)
     app.include_router(resumes_router)
     app.include_router(resume_kit_router)
+    app.include_router(jobs_router)
     return app
 
 

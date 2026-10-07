@@ -101,6 +101,31 @@ def _created(r: Response) -> str:
     return str(r.json()["id"])
 
 
+def _insert_listing(client: TestClient) -> str:
+    """A cached job post, as a source refresh leaves it (listings are shared: nobody owns them)."""
+    from orbit_api.db import sessionmaker
+    from orbit_api.job_portal.postings import dedupe_key, listing_id
+    from orbit_api.models import JobListing
+
+    external = uuid.uuid4().hex
+    lid = listing_id("greenhouse", external)
+
+    async def go() -> None:
+        async with sessionmaker()() as db:
+            now = datetime.now(UTC)
+            db.add(JobListing(id=lid, source="greenhouse", external_id=external, board="idor", company="Acme",
+                              title="Staff Engineer", locations=["Bengaluru, India"], cities=["Bengaluru"],
+                              country="IN", workplace="hybrid", employment_type="full_time", posted_at=now,
+                              url="https://example.com/jobs/staff", apply_url="https://example.com/jobs/staff/apply",
+                              snippet="Lead the platform.", description="Lead the platform team. Go and Kafka. " * 30,
+                              keywords=["Go", "Kafka"], text_hash="x", fetched_at=now,
+                              dedupe_key=dedupe_key("Acme", f"Staff Engineer {external}", ["Bengaluru"], "hybrid")))
+            await db.commit()
+
+    client.portal.call(go)  # type: ignore[union-attr]
+    return lid
+
+
 def _insert_answer(client: TestClient, session_id: str) -> str:
     from orbit_api.db import sessionmaker
     from orbit_api.models import Answer
@@ -184,6 +209,16 @@ def world() -> Iterator[World]:
             share = client.post(f"/v1/sessions/{ids['s_open']}/companion", headers=a)
             assert share.status_code == 200, share.text
             ids["share_code"] = share.json()["code"]
+            # Jobs: a cached listing (shared by everyone), A's job profile matched to A's resume, and A's tracker entry.
+            ids["listing"] = _insert_listing(client)
+            r = client.put("/v1/jobs/profile", headers=a, json={"prefs": {"titles": ["Staff Engineer"]},
+                                                               "resume_id": ids["resume"]})
+            assert r.status_code == 200, r.text
+            ids["job_entry"] = _created(client.post("/v1/jobs/tracker", headers=a, json={
+                "listing_id": ids["listing"], "status": "applied"}))
+            note = client.patch(f"/v1/jobs/tracker/{ids['job_entry']}", headers=a,
+                                json={"notes": "Alice's recruiter call notes"})
+            assert note.status_code == 200, note.text
 
             # B: a few things of their own, to point at A's.
             ids["b_doc"] = _doc(client, b, "jd_sample")
@@ -211,6 +246,9 @@ def _owner_view(w: World) -> dict[str, Any]:
         "orders": w.get("/v1/billing/upi/orders", a),
         "entitlements": w.get("/v1/entitlements", a),
         "sharing": w.ids["share_code"] in companion._shares,
+        "job_tracker": w.get("/v1/jobs/tracker", a),
+        "job_profile": w.get("/v1/jobs/profile", a)["prefs"],
+        "job_resume": w.get("/v1/jobs/profile", a)["resume"],
     }
 
 
@@ -227,6 +265,8 @@ def test_world_is_what_the_matrix_expects(world: World) -> None:
     assert view["open"]["session"]["status"] != "ended"
     assert view["orders"][0]["status"] == "submitted" and view["orders"][0]["utr"] == world.ids["utr"]
     assert view["entitlements"]["plan"] == "free"
+    assert [(t["id"], t["status"]) for t in view["job_tracker"]] == [(world.ids["job_entry"], "applied")]
+    assert view["job_resume"]["id"] == world.ids["resume"] and view["job_profile"]["titles"] == ["Staff Engineer"]
 
 
 # ---- B against A's objects (read, update, delete, actions) ------------------------------------------------------
@@ -262,6 +302,9 @@ OBJECT_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("PUT", "/v1/sessions/{s_ended}/answers/{answer}/feedback", {"json": {"rating": "down", "reason": "inaccurate"}}),
     ("PUT", "/v1/sessions/{s_ended}/answers/{answer}/feedback", {"json": {"rating": None}}),
     ("POST", "/v1/billing/upi/orders/{order}/utr", {"json": {"utr": "999988887777"}}),
+    ("PATCH", "/v1/jobs/tracker/{job_entry}", {"json": {"status": "rejected", "notes": "pwned"}}),
+    ("PATCH", "/v1/jobs/tracker/{job_entry}", {"json": {"clear_next": True, "applied_at": "2020-01-01T00:00:00Z"}}),
+    ("DELETE", "/v1/jobs/tracker/{job_entry}", {}),
 ]
 
 
@@ -289,6 +332,9 @@ REFERENCE_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("POST", "/v1/prep", {"json": {"job_text": JOB, "resume_id": "{doc_resume}"}}),
     ("POST", "/v1/stories/draft", {"json": {"source": "resume", "resume_id": "{doc_resume}"}}),
     ("POST", "/v1/resumes/import", {"json": {"source": "document", "document_id": "{doc_resume}"}}),
+    ("PUT", "/v1/jobs/profile", {"json": {"prefs": {}, "resume_id": "{resume}"}}),
+    ("POST", "/v1/jobs/profile/suggest", {"json": {"resume_id": "{resume}"}}),
+    ("POST", "/v1/jobs/listings/{listing}/tailor", {"json": {"resume_id": "{resume}"}}),
 ]
 
 
@@ -322,11 +368,12 @@ def test_another_user_cannot_claim_owners_answer_through_their_own_session(world
 
 @pytest.mark.parametrize("path", ["/v1/documents", "/v1/resumes", "/v1/workspaces", "/v1/stories", "/v1/sessions",
                                   "/v1/billing/upi/orders", "/v1/progress", "/v1/entitlements", "/v1/usage",
-                                  "/v1/auth/me/export"])
+                                  "/v1/auth/me/export", "/v1/jobs/tracker", "/v1/jobs/profile", "/v1/jobs/feed"])
 def test_lists_and_exports_hold_only_the_callers_own_objects(world: World, path: str) -> None:
     body = json.dumps(world.get(path, world.b))
     a_ids = [v for k, v in world.ids.items() if k in ("doc_resume", "doc_jd", "resume", "workspace", "story",
-                                                      "s_ended", "s_open", "order", "answer", "question")]
+                                                      "s_ended", "s_open", "order", "answer", "question",
+                                                      "job_entry")]
     leaked = [i for i in a_ids if i in body]
     assert not leaked, f"{path} shows B ids of A's objects: {leaked}"
     assert world.ids["a_email"] not in body and world.ids["utr"] not in body
@@ -337,6 +384,7 @@ ORACLE_ROUTES = [
     ("PUT", "/v1/stories/{}", {"json": {"title": "x"}}), ("GET", "/v1/sessions/{}", {}),
     ("POST", "/v1/sessions/{}/companion", {}),
     ("POST", "/v1/billing/upi/orders/{}/utr", {"json": {"utr": "111122223333"}}),
+    ("PATCH", "/v1/jobs/tracker/{}", {"json": {"notes": "x"}}), ("DELETE", "/v1/jobs/tracker/{}", {}),
 ]
 
 
@@ -344,7 +392,7 @@ ORACLE_ROUTES = [
 def test_someone_elses_object_looks_exactly_like_a_missing_one(world: World, method: str, template: str,
                                                                kw: dict[str, Any]) -> None:
     key = {"/v1/documents": "doc_resume", "/v1/resumes": "resume", "/v1/workspaces": "workspace",
-           "/v1/stories": "story", "/v1/sessions": "s_ended", "/v1/billing": "order"}
+           "/v1/stories": "story", "/v1/sessions": "s_ended", "/v1/billing": "order", "/v1/jobs/tracker": "job_entry"}
     real = next(v for k, v in key.items() if template.startswith(k))
     if "companion" in template:
         real = "s_open"
@@ -390,7 +438,7 @@ ROUTES = _http_routes()
 PROTECTED = [r for r in ROUTES if r not in PUBLIC]
 PATH_PARAMS = {"doc_id": "doc_resume", "resume_id": "resume", "workspace_id": "workspace", "story_id": "story",
                "session_id": "s_ended", "answer_id": "answer", "order_id": "order", "payment_id": "order",
-               "user_id": "a_id"}
+               "user_id": "a_id", "listing_id": "listing", "entry_id": "job_entry"}
 
 
 def test_route_inventory_is_complete() -> None:

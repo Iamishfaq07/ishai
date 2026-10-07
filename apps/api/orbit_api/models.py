@@ -437,3 +437,123 @@ class AuditLog(TimestampMixin, Base):
     action: Mapped[str] = mapped_column(String(64))
     target: Mapped[str | None] = mapped_column(String(128))
     ip: Mapped[str | None] = mapped_column(String(64))
+
+
+# ---- Jobs (orbit_api/job_portal) ------------------------------------------------------------------------------
+
+
+class JobListing(Base):
+    """A job post from a public source (a company's own job board, a remote-jobs feed, an optional search API),
+    normalized and cached so the feed is ranked locally without calling anyone. Shared by every user; nobody owns it.
+
+    The id is derived from (source, external_id), so the same post keeps its id across refreshes and the tracker can
+    find it again. `description` is kept for matching and tailoring only: the feed shows `snippet` and links to the
+    original post."""
+
+    __tablename__ = "job_listings"
+    __table_args__ = (UniqueConstraint("source", "external_id", name="uq_job_listings_source_external"),
+                      Index("ix_job_listings_posted_at", "posted_at"),
+                      Index("ix_job_listings_source_board", "source", "board"),
+                      Index("ix_job_listings_dedupe_key", "dedupe_key"))
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    source: Mapped[str] = mapped_column(String(24))  # greenhouse | lever | ashby | smartrecruiters | himalayas | ...
+    external_id: Mapped[str] = mapped_column(String(200))
+    # What it was fetched under: the company's board token, or the search it came back from.
+    board: Mapped[str] = mapped_column(String(160))
+    company: Mapped[str] = mapped_column(String(200))
+    title: Mapped[str] = mapped_column(String(300))
+    locations: Mapped[list[str]] = mapped_column(JSON, default=list)
+    cities: Mapped[list[str]] = mapped_column(JSON, default=list)  # canonical Indian cities ("Bengaluru")
+    country: Mapped[str | None] = mapped_column(String(2))  # "IN" when it's in India
+    workplace: Mapped[str | None] = mapped_column(String(16))  # remote | hybrid | onsite (None: not stated)
+    employment_type: Mapped[str | None] = mapped_column(String(16))  # full_time | part_time | contract | internship
+    level: Mapped[str | None] = mapped_column(String(16))  # fresher | junior | mid | senior, read from the post
+    exp_min: Mapped[int | None] = mapped_column(Integer)  # years of experience asked for, when the post says
+    exp_max: Mapped[int | None] = mapped_column(Integer)
+    posted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    url: Mapped[str] = mapped_column(Text)  # the original post
+    apply_url: Mapped[str] = mapped_column(Text)
+    snippet: Mapped[str] = mapped_column(Text, default="")
+    description: Mapped[str] = mapped_column(Text, default="")
+    salary: Mapped[str | None] = mapped_column(String(120))
+    keywords: Mapped[list[str]] = mapped_column(JSON, default=list)  # the post's skills, read once at fetch time
+    text_hash: Mapped[str | None] = mapped_column(String(16))  # of title + description: keywords re-read on change
+    dedupe_key: Mapped[str] = mapped_column(String(300))  # company + title + city, normalized
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)  # last seen upstream
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class JobSourceState(Base):
+    """When each source (and each board or search of it) was last fetched, how it went, and when it may be tried
+    again. The row with key "*" holds a source's call counts, for the APIs with a quota (Adzuna, JSearch)."""
+
+    __tablename__ = "job_source_state"
+    __table_args__ = (UniqueConstraint("source", "key", name="uq_job_source_state_source_key"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    source: Mapped[str] = mapped_column(String(24))
+    key: Mapped[str] = mapped_column(String(160))
+    last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(String(300))
+    listings: Mapped[int] = mapped_column(Integer, default=0)
+    failures: Mapped[int] = mapped_column(Integer, default=0)
+    retry_after: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # searches: last asked for
+    day: Mapped[str | None] = mapped_column(String(10))  # quota counts: "2026-10-07", and calls that day
+    day_calls: Mapped[int] = mapped_column(Integer, default=0)
+    month: Mapped[str | None] = mapped_column(String(7))  # "2026-10", and calls that month
+    month_calls: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class JobSearchProfile(TimestampMixin, Base):
+    """What the user's job feed looks for: filled in from a resume by the AI (`suggested`, cached per resume content
+    hash), then theirs to edit (`prefs`, job_portal/profile.py)."""
+
+    __tablename__ = "job_search_profiles"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    resume_id: Mapped[str | None] = mapped_column(ForeignKey("resumes.id", ondelete="SET NULL"), index=True)
+    prefs: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    suggested: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    suggested_hash: Mapped[str | None] = mapped_column(String(64))  # the resume content it was read from
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class JobApplication(TimestampMixin, Base):
+    """A job in the user's tracker: saved, applied, interviewing, offer or rejected. Keeps its own copy of the job's
+    title, company and links, since cached listings are dropped after about 30 days."""
+
+    __tablename__ = "job_applications"
+    __table_args__ = (UniqueConstraint("user_id", "listing_id", name="uq_job_applications_user_listing"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    listing_id: Mapped[str] = mapped_column(String(36))  # JobListing.id (stable), not a foreign key
+    source: Mapped[str] = mapped_column(String(24))
+    company: Mapped[str] = mapped_column(String(200))
+    title: Mapped[str] = mapped_column(String(300))
+    location: Mapped[str] = mapped_column(String(300), default="")
+    url: Mapped[str] = mapped_column(Text)
+    apply_url: Mapped[str] = mapped_column(Text)
+    posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(16), default="saved")  # saved|applied|interviewing|offer|rejected
+    notes: Mapped[str] = mapped_column(Text, default="")
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    next_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # the next interview or follow-up
+    status_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)  # when it last moved
+    # The resume tailored for this job and the job description saved for interview prep, when made from here.
+    resume_id: Mapped[str | None] = mapped_column(ForeignKey("resumes.id", ondelete="SET NULL"), index=True)
+    document_id: Mapped[str | None] = mapped_column(ForeignKey("documents.id", ondelete="SET NULL"), index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class JobFitCheck(TimestampMixin, Base):
+    """An AI fit check of one resume against one job, kept so asking again (same job, same resume content) is
+    instant and free. Today's rows (created_at) are also what the daily cap counts."""
+
+    __tablename__ = "job_fit_checks"
+    __table_args__ = (UniqueConstraint("user_id", "listing_id", "resume_hash", name="uq_job_fit_checks_key"),
+                      Index("ix_job_fit_checks_user_created", "user_id", "created_at"))
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    listing_id: Mapped[str] = mapped_column(String(36))
+    resume_hash: Mapped[str] = mapped_column(String(64))
+    result: Mapped[dict[str, Any]] = mapped_column(JSON)

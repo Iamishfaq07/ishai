@@ -142,6 +142,23 @@ class Settings(BaseSettings):
     deepgram_api_key: SecretStr | None = Field(None, validation_alias=AliasChoices("DEEPGRAM_API_KEY"))
     deepgram_model: str = Field("nova-3", validation_alias=AliasChoices("DEEPGRAM_MODEL"))
 
+    # Jobs (job_portal/, docs/DECISIONS.md D43). Sources refresh in the background; unset = on, except in the test
+    # environment (no network there: tests fetch through a mock transport).
+    jobs_refresh: bool | None = Field(None, validation_alias=AliasChoices("ORBIT_JOBS_REFRESH"))
+    # Source ids to leave off, comma-separated (e.g. "remoteok,jobicy").
+    jobs_sources_off: str = Field("", validation_alias=AliasChoices("ORBIT_JOBS_SOURCES_OFF"))
+    # Company job boards added to (or taken off) the built-in list, as JSON (job_portal/companies.py).
+    jobs_boards_json: str | None = Field(None, validation_alias=AliasChoices("ORBIT_JOBS_BOARDS_JSON"))
+    # Free AI per account per day (UTC): fit checks, and search profiles read from a resume. The admin has no cap.
+    jobs_fit_daily: int = Field(15, ge=0, validation_alias=AliasChoices("ORBIT_JOBS_FIT_DAILY"))
+    jobs_profile_daily: int = Field(5, ge=0, validation_alias=AliasChoices("ORBIT_JOBS_PROFILE_DAILY"))
+    # Optional search APIs, each on only when its key is set. Adzuna's free tier: 25 calls a minute, 250 a day,
+    # 2,500 a month; JSearch (RapidAPI) bills per call, so it stops at 90% of ORBIT_JSEARCH_MONTHLY_BUDGET.
+    adzuna_app_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_ADZUNA_APP_ID"))
+    adzuna_app_key: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_ADZUNA_APP_KEY"))
+    jsearch_key: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_JSEARCH_KEY"))
+    jsearch_monthly_budget: int = Field(200, ge=0, validation_alias=AliasChoices("ORBIT_JSEARCH_MONTHLY_BUDGET"))
+
     # Admin (advanced settings). The admin can edit provider keys/models in-app; the override is
     # encrypted at rest with config_secret. Required in production (the server refuses to start without it);
     # only in development/test does the first registered user stand in for an unset admin.
@@ -258,6 +275,10 @@ class Settings(BaseSettings):
         # SMTP is optional for an admin-only deploy: email features are then disabled. It's never faked to the
         # dev outbox in production (see email.py).
         return self
+
+    @property
+    def jobs_refresh_on(self) -> bool:
+        return self.jobs_refresh if self.jobs_refresh is not None else self.env != "test"
 
     @property
     def approval_required(self) -> bool:

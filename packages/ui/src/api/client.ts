@@ -32,6 +32,17 @@ import type {
   DocumentKind,
   DocumentText,
   ImportedJobPosting,
+  JobDetail,
+  JobFeed,
+  JobFeedQuery,
+  JobFitResponse,
+  JobPrefs,
+  JobPrepareResponse,
+  JobProfile,
+  JobStatus,
+  JobTailorResponse,
+  JobTrackerEntry,
+  JobTrackerUpdate,
   LatencyReport,
   LiveTicket,
   LoginRequest,
@@ -369,6 +380,51 @@ export function createApiClient(options: ApiClientOptions) {
       json<Resume>(`/v1/resumes/${encodeURIComponent(id)}`, { method: "PUT", body: body(req) }),
     deleteResume: (id: string) => json<void>(`/v1/resumes/${encodeURIComponent(id)}`, { method: "DELETE" }),
     ...resumeTools("/v1/resumes"),
+
+    // Jobs: the latest jobs that match the resume, the profile behind the feed, the tracker
+    jobProfile: () => json<JobProfile>("/v1/jobs/profile"),
+    saveJobProfile: (prefs: JobPrefs, resumeId?: string | null) =>
+      json<JobProfile>("/v1/jobs/profile", { method: "PUT", body: body({ prefs, resume_id: resumeId ?? null }) }),
+    /** Fill the profile from a resume (AI, free, a few a day; else worked out from the resume as written). */
+    suggestJobProfile: (resumeId?: string | null) =>
+      json<JobProfile>("/v1/jobs/profile/suggest", { method: "POST", body: body({ resume_id: resumeId ?? null }) }),
+    /** Ranked from the cache; never waits for the job boards (`refreshing` says new posts are on their way). */
+    jobFeed: (query: JobFeedQuery = {}, opts: RequestOptions = {}) => {
+      const q = new URLSearchParams();
+      if (query.q?.trim()) q.set("q", query.q.trim());
+      if (query.sort) q.set("sort", query.sort);
+      if (query.page) q.set("page", String(query.page));
+      if (query.page_size) q.set("page_size", String(query.page_size));
+      const qs = q.toString();
+      return json<JobFeed>(`/v1/jobs/feed${qs ? `?${qs}` : ""}`, opts.signal ? { signal: opts.signal } : {});
+    },
+    jobListing: (id: string) => json<JobDetail>(`/v1/jobs/listings/${encodeURIComponent(id)}`),
+    /** How well the resume fits this job, by the AI: free, a daily allowance, cached per job and resume. */
+    jobFitCheck: (id: string) =>
+      json<JobFitResponse>(`/v1/jobs/listings/${encodeURIComponent(id)}/fit`, {
+        method: "POST",
+        timeoutMs: LONG_TIMEOUT_MS,
+      }),
+    /** A copy of the resume aimed at this job (may read the full post from its page first). */
+    tailorForJob: (id: string, resumeId?: string | null) =>
+      json<JobTailorResponse>(`/v1/jobs/listings/${encodeURIComponent(id)}/tailor`, {
+        method: "POST",
+        body: body({ resume_id: resumeId ?? null }),
+        timeoutMs: LONG_TIMEOUT_MS,
+      }),
+    /** The job description saved to Documents for Practice's prep and mock interview (once per job). */
+    prepareForJob: (id: string) =>
+      json<JobPrepareResponse>(`/v1/jobs/listings/${encodeURIComponent(id)}/prepare`, {
+        method: "POST",
+        timeoutMs: LONG_TIMEOUT_MS,
+      }),
+    jobTracker: () => json<JobTrackerEntry[]>("/v1/jobs/tracker"),
+    /** Save a job from the feed, or mark it applied (an entry already there moves to `status`). */
+    trackJob: (listingId: string, status: JobStatus = "saved") =>
+      json<JobTrackerEntry>("/v1/jobs/tracker", { method: "POST", body: body({ listing_id: listingId, status }) }),
+    updateTrackedJob: (id: string, patch: JobTrackerUpdate) =>
+      json<JobTrackerEntry>(`/v1/jobs/tracker/${encodeURIComponent(id)}`, { method: "PATCH", body: body(patch) }),
+    untrackJob: (id: string) => json<void>(`/v1/jobs/tracker/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
     /** Interview prep: likely questions from a job description, with answers drawn from the resume. */
     prep: (req: PrepRequest) => json<PrepResponse>("/v1/prep", { method: "POST", body: body(req) }),

@@ -1,5 +1,61 @@
 # Implementation log
 
+## Jobs in Resume AI: the latest jobs that match your resume (2026-10-07)
+
+**Resume AI → Jobs** (`/resume-ai/jobs`; `/jobs` redirects there) shows the newest openings that fit the user's
+resume, lets them shape the feed, apply on the original site, and use Orbit's AI on each job. Nothing is scraped
+(docs/DECISIONS.md D43).
+
+- **Where the jobs come from** (`orbit_api/job_portal/sources/`, one small module each, one interface):
+  - Companies' own job boards through their public applicant-tracking-system feeds, no key, each post linking
+    straight to the employer's application: Greenhouse, Lever, Ashby and SmartRecruiters, for 41 companies hiring
+    in India (Razorpay, Groww, Paytm, Meesho, CRED, Swiggy, Sarvam AI, Okta, Databricks…, `companies.py`; add or
+    remove boards without a deploy with `ORBIT_JOBS_BOARDS_JSON`). Each board is fetched at most every 6 hours.
+  - Remote-job feeds, credited the way their terms ask: Himalayas (searched by the profile's titles, open to India),
+    Remote OK and Jobicy, refreshed daily. Remote posts for somewhere else are left out.
+  - Optional search APIs, off until their keys are set: Adzuna India (free tier; shared queries, stops at 90% of its
+    per-minute, daily and monthly quota) and JSearch (paid; stops at 90% of `ORBIT_JSEARCH_MONTHLY_BUDGET`).
+  - Outbound calls only to those providers' fixed hosts, https, no redirects, timeouts, a size cap and an
+    identifiable User-Agent; a 429 backs off for as long as the provider asks. A failing source just keeps its
+    cached posts.
+- **The cache** (`refresh.py`): posts live in the database (migration `e9b4c6a2d8f1`), so a restart loses nothing. A
+  feed request starts one background refresh per stale source (single-flight) and never waits for it; the page asks
+  again while `refreshing`. An in-process loop keeps sources fresh only while someone has used the feed in the last
+  two days. Posts older than 30 days are dropped; a board's taken-down posts go on its next fetch. A real first
+  refresh: about 790 posts from the seven keyless sources in about two minutes.
+- **Matching, without the AI** (`ranking.py`): title closeness (40), skills the post asks for that the resume or
+  profile shows (35, the ATS score's keyword reading and synonyms), place and work mode (10), experience (10) and
+  recency (5) give "Match NN%", with the matched skills and the ones the resume doesn't show. Filters: posted within
+  24h / 3 / 7 / 30 days, cities or anywhere in India, remote / hybrid / in office, job types, sources, excluded words.
+  Sort by best match or newest; paginated; the same job on a company board and a feed is shown once, from the board;
+  one company's many openings are spread out. Tuned on the real refresh: skills read the same on every card ("CI/CD",
+  "Go"), hiring and legal boilerplate ("Recruiting", "AEDT") and the company's own products aren't skills, and a post
+  asking for four or more skills the resume has none of isn't a match.
+- **The AI around it** (free, no credits, cost-logged like the resume maker's):
+  - A search profile read from a resume: 4-5 titles including an honest adjacent role, the seniority, 10-15 skills
+    the resume itself shows (others are dropped), cities. Cached per resume content; `ORBIT_JOBS_PROFILE_DAILY` a
+    day (default 5); past that, or if the AI is down, it's worked out from the resume as written. Real DeepSeek:
+    1.3-1.7 s.
+  - A fit check per job: Strong / Good / Stretch, why you fit (only what the resume states: a point naming a tool or
+    number it doesn't have is dropped, resumes/claims.py), gaps, and 2-3 honest resume tweaks. Cached per job and
+    resume; `ORBIT_JOBS_FIT_DAILY` a day (default 15), the admin uncapped. Real DeepSeek: about 3 s.
+- **The page** (`apps/web/src/pages/jobs/`): job cards (title, company, place, "posted 3h ago", match %, skills,
+  where it's from with its credit) with Apply (opens the original post, then "Did you apply?"), Save, Check my fit,
+  Tailor my resume (a copy with the job's text, opened in the editor; a snippet-only post is read in full from its
+  page first, or the card says Orbit only has a summary) and Prepare (the job description and resume saved to Documents,
+  Practice opened with that job picked: `/mock?jd=`). A search box ("remote React jobs in Bangalore, 2 years") is
+  read into filters by rules, instantly and free. "Search on LinkedIn / Naukri / Indeed / Foundit / Instahyre /
+  Cutshort / Hirist / Wellfound / Internshala / Google Jobs": their own searches, prefilled from the profile and the
+  time range, the user picks which. A Customise panel edits everything the AI filled in. The tracker: saved →
+  applied → interviewing → offer / not this time, with notes and dates, a board on wide screens and a list with a
+  status menu on phones. Empty states for no resume, the first fetch, no matches and unreachable boards.
+- API: `/v1/jobs/profile` (GET, PUT), `/profile/suggest`, `/feed`, `/listings/{id}` (+ `/fit`, `/tailor`,
+  `/prepare`), `/tracker` (GET, POST) and `/tracker/{id}` (PATCH, DELETE). Every user object is checked for its owner
+  (404 otherwise); the security matrices cover the new routes. The account export includes the job search.
+- New env vars (docs/DEPLOY.md): `ORBIT_JOBS_REFRESH`, `ORBIT_JOBS_SOURCES_OFF`, `ORBIT_JOBS_BOARDS_JSON`,
+  `ORBIT_JOBS_FIT_DAILY`, `ORBIT_JOBS_PROFILE_DAILY`, `ORBIT_ADZUNA_APP_ID`, `ORBIT_ADZUNA_APP_KEY`,
+  `ORBIT_JSEARCH_KEY`, `ORBIT_JSEARCH_MONTHLY_BUDGET`.
+
 ## Orbit Resume AI: the resume maker becomes Orbit's second product (2026-10-07)
 
 The resume maker was a tab under Documents. It's now **Orbit Resume AI**, a product of its own next to the

@@ -182,6 +182,29 @@ def _mock_resume_kit(request_type: str, body: str) -> str:
                                "about it this week?"})
 
 
+def _mock_jobs(request_type: str, body: str) -> str:
+    """Jobs (job_portal/): a search profile from the resume's own titles, skills and city; a fit check that cites
+    the resume's first role and the post's first missing skill."""
+    resume = _resume_ref(body)
+    roles =[e for e in resume.get("experience", []) if isinstance(e, dict)]
+    if request_type == "job_profile":
+        years = re.search(r"about ([\d.]+) years", body)
+        n = float(years.group(1)) if years else 0.0
+        titles = [*[str(e.get("title") or "") for e in roles if e.get("title")][:3], "Software Engineer"]
+        return json.dumps({"titles": titles, "skills": [str(s) for s in resume.get("skills", [])][:12],
+                           "seniority": "fresher" if n < 1 else "junior" if n < 3 else "mid" if n < 6 else "senior",
+                           "locations": [resume.get("location") or ""]})
+    missing = re.search(r"Not found in the resume: ([^.\n]*)", body)
+    gap = (missing.group(1).split(",")[0].strip() if missing else "") or "a skill the post lists"
+    role = " at ".join(x for x in (str(roles[0].get("title") or ""), str(roles[0].get("company") or "")) if x) \
+        if roles else "your last role"
+    return json.dumps({"verdict": "Good", "summary": "(mock) You match a good part of this job.",
+                       "why": [f"(mock) Your work as {role} matches what this job asks for."],
+                       "gaps": [f"(mock) The post asks for {gap}, which your resume doesn't show."],
+                       "tweaks": [{"change": "(mock) Put your most relevant role first.",
+                                   "why": "(mock) Recruiters read the top first."}]})
+
+
 class MockLLMProvider(LLMProvider):
     name = "mock"
 
@@ -199,6 +222,8 @@ class MockLLMProvider(LLMProvider):
     def _response_for(self, request: LLMRequest) -> str:
         if self._script:
             return self._script.pop(0)
+        if request.request_type in ("job_profile", "job_fit"):
+            return _mock_jobs(request.request_type, request.messages[-1].content if request.messages else "")
         if request.request_type == "summary":
             return _mock_report(request.messages[-1].content if request.messages else "")
         if request.request_type == "prep":
