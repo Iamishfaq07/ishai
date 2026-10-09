@@ -14,9 +14,7 @@ import type { ReadAloud } from "../live/useReadAloud";
 import { AnswerRatingButtons } from "./AnswerRating";
 import { CodeBlock } from "./CodeBlock";
 import { cx, focusRing } from "./cx";
-import { PulseRings } from "./Illustrations";
 import { Orb } from "./Orb";
-import { OrbitLogo } from "./OrbitLogo";
 import { ArrowRight, Check, Circle, Feather, Maximize2, Minimize2, Pause, PenLine, Play, Square, Volume2 } from "../icons";
 
 export interface AnswerCardProps {
@@ -266,12 +264,10 @@ export const AnswerCard = memo(function AnswerCard({
   if (!answer) {
     return (
       <div className="flex flex-1 animate-fade-in flex-col items-center justify-center gap-5 px-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
-        {/* A quiet radar: Orbit is listening for the next question. */}
-        <span className="relative flex items-center justify-center text-indigo-400/60" aria-hidden="true">
-          <PulseRings />
-          <span className="relative flex items-center justify-center rounded-full bg-indigo-500/10 p-3 ring-1 ring-indigo-500/20">
-            <OrbitLogo size={compact ? 28 : 40} />
-          </span>
+        {/* Orbit listening for the next question: the dotted listening orb (a calm breath when auto answer is off). */}
+        <span className="relative flex items-center justify-center" aria-hidden="true">
+          <span className="absolute inset-0 -m-4 rounded-full bg-indigo-500/[0.07] ring-1 ring-indigo-500/15 dark:bg-indigo-400/[0.06]" />
+          <Orb state={autoAnswer ? "listening" : "breathing"} size={compact ? 20 : 64} className="relative" />
         </span>
         <span className="max-w-xs">
           {autoAnswer

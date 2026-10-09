@@ -2,6 +2,7 @@ import type { LiveViewState } from "../live/reducer";
 import type { InterviewerVoice } from "../live/useInterviewerVoice";
 import type { LiveActions } from "../live/useLiveSession";
 import { cx, focusRing } from "./cx";
+import { Orb } from "./Orb";
 
 /**
  * Mock interview view: the AI interviewer's question (spoken aloud), whose turn it is, and controls. Orbit never
@@ -54,8 +55,8 @@ export function MockPanel({ live, actions, voice, ended, onViewReport }: {
   }
   if (!q) {
     return (
-      <div className="flex flex-1 items-center justify-center px-6 text-sm text-zinc-500">
-        <span className="mr-2 h-2 w-2 animate-pulse rounded-full bg-indigo-500" aria-hidden="true" />
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-sm text-zinc-500">
+        <Orb state="connecting" size={64} />
         The interviewer is getting ready…
       </div>
     );
@@ -108,6 +109,21 @@ export function MockPanel({ live, actions, voice, ended, onViewReport }: {
       {!voice.supported && (
         <p className="text-xs text-amber-700 dark:text-amber-300">This device has no speech voice — read the question above.</p>
       )}
+      {/* Who has the floor, at a glance from across the room: the interviewer talking, or Orbit listening to you. */}
+      <div aria-hidden="true" className="flex min-h-48 flex-1 flex-col items-center justify-center gap-10">
+        <span className="relative flex items-center justify-center">
+          <span
+            className={cx(
+              "absolute inset-0 -m-6 rounded-full ring-1 transition-colors duration-panel",
+              voice.speaking ? "bg-indigo-500/[0.07] ring-indigo-500/15" : "bg-emerald-500/[0.07] ring-emerald-500/20",
+            )}
+          />
+          <Orb key={voice.speaking ? "speaking" : "listening"} state={voice.speaking ? "composing" : "listening"} size={64} className="relative" />
+        </span>
+        <span className="text-xs font-medium uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+          {voice.speaking ? (q.negotiation ? "Recruiter" : "Interviewer") : "Listening to you"}
+        </span>
+      </div>
     </section>
   );
 }

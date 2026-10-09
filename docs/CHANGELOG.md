@@ -1,5 +1,15 @@
 # Implementation log
 
+## Look and feel: orbs in live screens, a picture on Practice (2026-10-09)
+
+- **Live interview, waiting for a question:** the static Orbit mark gives way to the dotted listening orb (a slow
+  "breathing" orb when Auto answer is off), on a soft halo.
+- **Mock interview:** the empty space under the question now shows who has the floor, readable from across the room:
+  the composing orb with "Interviewer" while the interviewer speaks, the listening orb with "Listening to you" on a
+  green halo when it's your turn. "The interviewer is getting ready…" shows the connecting orb.
+- **Practice** on wide screens: the scorecard picture (the same one as the front page) sits beside the ways to start
+  a round, with what you get after each one, instead of an empty third of the screen.
+
 ## Look and feel: livelier front page, scroll animations, solid bars (2026-10-09)
 
 - **Product pictures on the front page** are bigger and layered, each on a soft stage in its product's colour with
