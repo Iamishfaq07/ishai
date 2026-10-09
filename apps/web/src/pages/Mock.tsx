@@ -23,6 +23,7 @@ import { PRESETS, SAMPLE_OFFER, SAMPLE_TARGET, isPresetId, presetSession, type P
 import { PrepSection } from "./Prep";
 import { ProgressSection } from "./Progress";
 import type { LiveLaunchState } from "./SessionSetup";
+import { PracticeMock } from "../components/productArt";
 
 const NO_JD = "none";
 /** The free, no-login warm-up (pages/Warmup.tsx; the route is App.tsx's). */
@@ -100,86 +101,97 @@ function MockSetup() {
   }, [highlighted]);
 
   return (
-    <div className="max-w-3xl space-y-8">
-      <PageHeader icon={Target} title="Practice" subtitle="Practise out loud with an AI interviewer, then read your report." />
+    <div className="xl:grid xl:grid-cols-[minmax(0,48rem)_minmax(0,1fr)] xl:gap-10">
+      <div className="max-w-3xl space-y-8">
+        <PageHeader icon={Target} title="Practice" subtitle="Practise out loud with an AI interviewer, then read your report." />
 
-      <section aria-labelledby="quick-title" className="space-y-3">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 id="quick-title" className="font-display text-lg font-semibold">
-              Start a mock in one tap
-            </h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">Uses your interview minutes. Only your microphone is used.</p>
-          </div>
-          {jds.length > 0 && (
-            <div className="w-full min-w-0 sm:w-64">
-              <Field label="Practise for" htmlFor="mock-jd">
-                <Select id="mock-jd" value={jdId ?? NO_JD} onChange={(e) => setJdChoice(e.target.value)}>
-                  {jds.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.title}
-                    </option>
-                  ))}
-                  <option value={NO_JD}>No job post: just my resume</option>
-                </Select>
-              </Field>
+        <section aria-labelledby="quick-title" className="space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 id="quick-title" className="font-display text-lg font-semibold">
+                Start a mock in one tap
+              </h2>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Uses your interview minutes. Only your microphone is used.</p>
             </div>
-          )}
-        </div>
-        <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {PRESETS.map((p) => {
-            const Icon = PRESET_ICON[p.id];
-            const busy = starting === p.id;
-            return (
-              <li key={p.id}>
-                <button
-                  ref={(el) => {
-                    presetRefs.current[p.id] = el;
-                  }}
-                  type="button"
-                  disabled={starting !== null}
-                  onClick={() => void launch(presetSession(p.id, knownRole, contextDocs()), p.id)}
-                  className={cx(
-                    "glass-panel lift flex h-full w-full flex-col items-start gap-1.5 rounded-2xl p-3.5 text-left hover:border-indigo-400/40 disabled:cursor-wait disabled:opacity-70 sm:p-4 dark:hover:border-indigo-400/30",
-                    highlighted === p.id && "ring-2 ring-indigo-500",
-                    focusRing,
-                  )}
-                >
-                  <span className="flex w-full items-center justify-between gap-2">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-aurora-400/10 text-indigo-600 ring-1 ring-indigo-500/20 dark:text-indigo-300">
-                      <Icon className="h-4 w-4" aria-hidden />
+            {jds.length > 0 && (
+              <div className="w-full min-w-0 sm:w-64">
+                <Field label="Practise for" htmlFor="mock-jd">
+                  <Select id="mock-jd" value={jdId ?? NO_JD} onChange={(e) => setJdChoice(e.target.value)}>
+                    {jds.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.title}
+                      </option>
+                    ))}
+                    <option value={NO_JD}>No job post: just my resume</option>
+                  </Select>
+                </Field>
+              </div>
+            )}
+          </div>
+          <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {PRESETS.map((p) => {
+              const Icon = PRESET_ICON[p.id];
+              const busy = starting === p.id;
+              return (
+                <li key={p.id}>
+                  <button
+                    ref={(el) => {
+                      presetRefs.current[p.id] = el;
+                    }}
+                    type="button"
+                    disabled={starting !== null}
+                    onClick={() => void launch(presetSession(p.id, knownRole, contextDocs()), p.id)}
+                    className={cx(
+                      "glass-panel lift flex h-full w-full flex-col items-start gap-1.5 rounded-2xl p-3.5 text-left hover:border-indigo-400/40 disabled:cursor-wait disabled:opacity-70 sm:p-4 dark:hover:border-indigo-400/30",
+                      highlighted === p.id && "ring-2 ring-indigo-500",
+                      focusRing,
+                    )}
+                  >
+                    <span className="flex w-full items-center justify-between gap-2">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-aurora-400/10 text-indigo-600 ring-1 ring-indigo-500/20 dark:text-indigo-300">
+                        <Icon className="h-4 w-4" aria-hidden />
+                      </span>
+                      <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-xs font-medium tabular-nums text-zinc-700 dark:text-zinc-300">{p.minutes} min</span>
                     </span>
-                    <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-xs font-medium tabular-nums text-zinc-700 dark:text-zinc-300">{p.minutes} min</span>
-                  </span>
-                  <span className="font-display text-sm font-semibold leading-snug sm:text-base">{busy ? "Starting…" : p.title}</span>
-                  <span className="text-xs text-zinc-600 dark:text-zinc-400">{p.blurb(knownRole)}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-        {error && <ErrorNote>{error}</ErrorNote>}
-        <p className="flex items-start gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-          <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-500" aria-hidden />
-          <span>
-            Out of minutes, or just warming up?{" "}
-            <Link to={WARMUP_PATH} className={cx("font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
-              Try the free warm-up
-            </Link>
-            : five questions with instant tips, typed or spoken, no minutes used.
-          </span>
-        </p>
-      </section>
+                    <span className="font-display text-sm font-semibold leading-snug sm:text-base">{busy ? "Starting…" : p.title}</span>
+                    <span className="text-xs text-zinc-600 dark:text-zinc-400">{p.blurb(knownRole)}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          {error && <ErrorNote>{error}</ErrorNote>}
+          <p className="flex items-start gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+            <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-500" aria-hidden />
+            <span>
+              Out of minutes, or just warming up?{" "}
+              <Link to={WARMUP_PATH} className={cx("font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
+                Try the free warm-up
+              </Link>
+              : five questions with instant tips, typed or spoken, no minutes used.
+            </span>
+          </p>
+        </section>
 
-      <CustomMock
-        knownRole={knownRole}
-        open={params.has("customise")}
-        busy={starting !== null}
-        onStart={(req) => void launch({ ...req, document_ids: contextDocs() }, "custom")}
-      />
+        <CustomMock
+          knownRole={knownRole}
+          open={params.has("customise")}
+          busy={starting !== null}
+          onStart={(req) => void launch({ ...req, document_ids: contextDocs() }, "custom")}
+        />
 
-      <ProgressSection />
-      <PrepSection docs={docs.data} onDocumentAdded={(d) => docs.setData((prev) => [d, ...(prev ?? [])])} />
+        <ProgressSection />
+        <PrepSection docs={docs.data} onDocumentAdded={(d) => docs.setData((prev) => [d, ...(prev ?? [])])} />
+      </div>
+      {/* Wide screens: what a round ends with, beside the ways to start one. */}
+      <aside className="hidden xl:block" aria-label="What you get after a round">
+        <div className="sticky top-24 space-y-3 pt-24">
+          <PracticeMock />
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            After each round: a score out of 10, what worked, and the answers worth redoing.
+          </p>
+        </div>
+      </aside>
     </div>
   );
 }
