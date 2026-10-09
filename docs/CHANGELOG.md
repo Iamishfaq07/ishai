@@ -1,5 +1,12 @@
 # Implementation log
 
+## Look and feel: the practice report (2026-10-09)
+
+- **The overall score** reads "4/5" instead of a bare 4, its ring takes the colour of how it went (green 4–5, accent
+  3, amber 1–2) and fills on arrival (Full motion only).
+- **What went well / To improve / Practice next** each get their own colour, icon and top edge, so the three read
+  apart at a glance instead of as three identical cards. In the web app and the desktop app (shared component).
+
 ## Look and feel: orbs in live screens, a picture on Practice (2026-10-09)
 
 - **Live interview, waiting for a question:** the static Orbit mark gives way to the dotted listening orb (a slow

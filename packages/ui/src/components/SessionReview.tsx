@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { ReviewItem, SessionReview as Review } from "@orbit/types";
+import { ArrowUpRight, CircleCheck, Target, type LucideIcon } from "../icons";
 import { cx } from "./cx";
+import { useCountUp } from "./Reveal";
 import { Button, Card, ErrorNote } from "./ui";
 
 export interface SessionReviewProps {
@@ -132,46 +134,50 @@ export function SessionReview({ review, ended, empty = false, onGenerate, onDril
   );
 }
 
+/** The overall score as a ring that fills on arrival (Full motion), coloured by how it went, with its scale shown. */
 function ScoreRing({ score }: { score: number | null }) {
   const r = 26;
   const circ = 2 * Math.PI * r;
-  const frac = score ? score / 5 : 0;
+  const shown = useCountUp(score ?? 0, true, { duration: 900 });
+  const tone = !score ? "stroke-zinc-300" : score >= 4 ? "stroke-emerald-500" : score === 3 ? "stroke-indigo-500" : "stroke-amber-500";
   return (
     <span role="img" className="relative inline-flex h-16 w-16 shrink-0 items-center justify-center" aria-label={score ? `Overall ${score} out of 5` : "No overall score"}>
       <svg viewBox="0 0 64 64" className="absolute inset-0 -rotate-90" aria-hidden="true">
         <circle cx="32" cy="32" r={r} fill="none" strokeWidth="6" className="stroke-zinc-200 dark:stroke-zinc-800" />
-        <circle
-          cx="32"
-          cy="32"
-          r={r}
-          fill="none"
-          strokeWidth="6"
-          strokeLinecap="round"
-          className="stroke-indigo-500 transition-[stroke-dashoffset] duration-700"
-          strokeDasharray={circ}
-          strokeDashoffset={circ * (1 - frac)}
-        />
+        <circle cx="32" cy="32" r={r} fill="none" strokeWidth="6" strokeLinecap="round" className={tone}
+                strokeDasharray={circ} strokeDashoffset={circ * (1 - shown / 5)} />
       </svg>
-      <span className="text-lg font-semibold tabular-nums">{score ?? "–"}</span>
+      <span className="flex items-baseline font-display tabular-nums" aria-hidden="true">
+        <span className="text-xl font-semibold">{score ?? "–"}</span>
+        {score ? <span className="text-xs text-zinc-500 dark:text-zinc-400">/5</span> : null}
+      </span>
     </span>
   );
 }
 
-const TONE: Record<"emerald" | "amber" | "indigo", string> = {
-  emerald: "bg-emerald-500",
-  amber: "bg-amber-500",
-  indigo: "bg-indigo-500",
+const TONE: Record<"emerald" | "amber" | "indigo", { dot: string; chip: string; edge: string; icon: LucideIcon }> = {
+  emerald: { dot: "bg-emerald-500", chip: "bg-emerald-500/10 text-emerald-700 ring-emerald-600/20 dark:text-emerald-300", edge: "before:bg-emerald-500", icon: CircleCheck },
+  amber: { dot: "bg-amber-500", chip: "bg-amber-500/10 text-amber-700 ring-amber-600/20 dark:text-amber-300", edge: "before:bg-amber-500", icon: ArrowUpRight },
+  indigo: { dot: "bg-indigo-500", chip: "bg-indigo-500/10 text-indigo-700 ring-indigo-500/20 dark:text-indigo-300", edge: "before:bg-indigo-500", icon: Target },
 };
 
+/** One of the three takeaways (went well / to improve / practise next): its own colour, icon and top edge. */
 function Bullets({ title, items, tone }: { title: string; items: string[]; tone: keyof typeof TONE }) {
   if (items.length === 0) return null;
+  const t = TONE[tone];
+  const Icon = t.icon;
   return (
-    <Card className="animate-fade-up">
-      <h2 className="mb-2 text-sm font-semibold">{title}</h2>
+    <Card className={cx("relative animate-fade-up overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-0.5", t.edge)}>
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+        <span className={cx("flex h-7 w-7 items-center justify-center rounded-lg ring-1", t.chip)} aria-hidden="true">
+          <Icon className="h-4 w-4" />
+        </span>
+        {title}
+      </h2>
       <ul className="space-y-1.5 text-sm text-zinc-700 dark:text-zinc-300">
         {items.map((it, i) => (
           <li key={i} className="flex gap-2">
-            <span className={cx("mt-[0.5em] h-1.5 w-1.5 shrink-0 rounded-full", TONE[tone])} aria-hidden="true" />
+            <span className={cx("mt-[0.5em] h-1.5 w-1.5 shrink-0 rounded-full", t.dot)} aria-hidden="true" />
             <span>{it}</span>
           </li>
         ))}
