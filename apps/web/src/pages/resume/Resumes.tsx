@@ -14,7 +14,6 @@ import {
   Plus,
   ScanText,
   Sparkles,
-  SpotIllustration,
   Trash2,
   UserRound,
   X,
@@ -34,6 +33,7 @@ import { guestResume } from "./backend";
 import { fresherResume, newResume } from "./model";
 import { resumePath } from "./paths";
 import { RESUME_AI_FEATURES, ResumeAiTabs, scoreTone } from "./product";
+import { ResumeMock } from "../../components/productArt";
 
 export { scoreTone };
 
@@ -98,39 +98,41 @@ export function ResumeAiHomePage() {
       <section aria-labelledby="resume-ai-title" className="glass-panel gradient-border relative mb-6 overflow-hidden rounded-3xl p-5 sm:p-8">
         <span aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-aurora-400/15 blur-3xl" />
         <span aria-hidden="true" className="pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl" />
-        <div className="absolute right-8 top-1/2 hidden -translate-y-1/2 lg:block xl:right-14">
-          <SpotIllustration icon={Sparkles} size={176} />
-        </div>
-        <div className="relative lg:pr-56">
-          <p className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-200">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden />
-            Orbit Resume AI
-          </p>
-          <h1 id="resume-ai-title" className="mt-4 max-w-2xl font-display text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-            Build a resume that <span className="text-gradient">gets interviews.</span>
-          </h1>
-          <p className="mt-3 max-w-2xl text-base text-zinc-600 dark:text-zinc-300">
-            ATS score, AI rewrites for every job, and interview prep from your own resume.
-          </p>
-          <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
-            <Button size="lg" onClick={() => setCreating("new")}>
-              <Plus className="h-4 w-4" /> Create a resume
-            </Button>
-            <Button size="lg" variant="secondary" onClick={() => setCreating("import")}>
-              <FileUp className="h-4 w-4" /> Import my resume
-            </Button>
+        <div className="relative grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_19rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <div>
+            <p className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-200">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              Orbit Resume AI
+            </p>
+            <h1 id="resume-ai-title" className="mt-4 max-w-2xl font-display text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+              Build a resume that <span className="text-gradient">gets interviews.</span>
+            </h1>
+            <p className="mt-3 max-w-2xl text-base text-zinc-600 dark:text-zinc-300">
+              ATS score, AI rewrites for every job, and interview prep from your own resume.
+            </p>
+            <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
+              <Button size="lg" onClick={() => setCreating("new")}>
+                <Plus className="h-4 w-4" /> Create a resume
+              </Button>
+              <Button size="lg" variant="secondary" onClick={() => setCreating("import")}>
+                <FileUp className="h-4 w-4" /> Import my resume
+              </Button>
+            </div>
+            <ul aria-label="What Resume AI does" className="mt-6 flex flex-wrap gap-1.5 sm:mt-7 sm:gap-2">
+              {RESUME_AI_FEATURES.map(({ icon: Icon, short }) => (
+                <li
+                  key={short}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-xs font-medium text-zinc-700 ring-1 ring-zinc-500/15 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10"
+                >
+                  <Icon className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-300" aria-hidden />
+                  {short}
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul aria-label="What Resume AI does" className="mt-6 flex flex-wrap gap-1.5 sm:mt-7 sm:gap-2">
-            {RESUME_AI_FEATURES.map(({ icon: Icon, short }) => (
-              <li
-                key={short}
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-xs font-medium text-zinc-700 ring-1 ring-zinc-500/15 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10"
-              >
-                <Icon className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-300" aria-hidden />
-                {short}
-              </li>
-            ))}
-          </ul>
+          <div className="hidden lg:block">
+            <ResumeMock />
+          </div>
         </div>
       </section>
       <AllowanceBanner />
