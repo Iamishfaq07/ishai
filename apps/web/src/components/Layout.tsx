@@ -223,7 +223,7 @@ export function Layout() {
         Skip to content
       </a>
 
-      <header className="sticky top-0 z-20 border-b border-zinc-200/70 bg-white/90 dark:border-white/5 dark:bg-zinc-950/85">
+      <header className="sticky top-0 z-20 border-b border-zinc-200/70 bg-white dark:border-white/5 dark:bg-zinc-950">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6 lg:gap-6">
           <Link to="/" className={cx("shrink-0 rounded-lg", focusRing)} aria-label="Orbit home">
             <OrbitWordmark size={26} />
@@ -400,10 +400,11 @@ export function Layout() {
         </nav>
       </footer>
 
-      {/* Phones: a thumb-reach tab bar, one tab per product and "Me" (at most six, which fit a 360 px screen). */}
+      {/* Phones: a thumb-reach tab bar, one tab per product and "Me" (at most six, which fit a 360 px screen). Solid, not
+          see-through: page text scrolling under the labels made them hard to read. */}
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200/70 bg-white/95 pb-[env(safe-area-inset-bottom)] md:hidden dark:border-white/5 dark:bg-zinc-950/90"
+        className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200/70 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.12)] md:hidden dark:border-white/5 dark:bg-zinc-950 dark:shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.6)]"
       >
         <ul className={cx("mx-auto grid max-w-lg", NAV.length + 1 >= 6 ? "grid-cols-6" : "grid-cols-5")}>
           {NAV.map(({ to, label, short, icon: Icon, product, current }) => {

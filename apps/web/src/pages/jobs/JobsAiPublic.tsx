@@ -17,6 +17,7 @@ import {
   Sparkles,
   cx,
   focusRing,
+  Reveal,
 } from "@orbit/ui";
 import { AiPill } from "../../components/products";
 import { Footer } from "../../components/Footer";
@@ -219,7 +220,7 @@ export function JobsAiPublicPage() {
           <p className="mt-2 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">
             You stay in charge: you apply on the original site, and nothing is sent to an employer for you.
           </p>
-          <ul className="stagger mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Reveal as="ul" stagger className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {JOBS_AI_FEATURES.map(({ icon: Icon, title, text }) => (
               <li key={title} className="glass-panel rounded-2xl p-5">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-aurora-400/10 text-indigo-600 ring-1 ring-indigo-500/20 dark:text-indigo-300">
@@ -229,7 +230,7 @@ export function JobsAiPublicPage() {
                 <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{text}</p>
               </li>
             ))}
-          </ul>
+          </Reveal>
         </section>
 
         <section aria-labelledby="how-title" className="mt-14 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-10">

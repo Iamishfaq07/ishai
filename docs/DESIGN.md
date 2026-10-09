@@ -58,6 +58,15 @@ amber is `text-amber-950` (white on amber is 2.1:1). Figures are tabular by defa
   children, 35 ms apart), `appear` (an item added later, `@starting-style`), `lift` (hover lift where there is hover,
   press-in on touch), `btn-sheen` (primary buttons, hover devices), `animate-float`, `animate-orbit*`,
   `animate-twinkle`, `animate-drift`, `animate-pulse-ring`, `animate-spark`.
+- **Scroll reveal:** `<Reveal>` rises content into place the first time it scrolls into view (`delay` in ms to stagger
+  neighbours); `<Reveal stagger>` brings a list's children in one after another instead (cards in a grid). Gentle
+  fades only; Off, print and no-JS show everything as is. For public pages and long marketing sections, not for
+  the app's working screens.
+- **Counting numbers:** `useCountUp(to, start, { from })` (with `useInView()`) for a score or percentage drawn on an
+  illustration, `<CountUp to={98} />` in text. At Gentle and Off the final number shows at once; screen readers only
+  ever get the final number.
+- **Bars stay solid:** the sticky header and the phone tab bar are opaque (no see-through, no backdrop blur: page
+  text under the labels made them hard to read, and blur over the animated sky costs too much on a phone).
 - `scroll-padding` keeps a focused field clear of the sticky header and the phone tab bar.
 - **Page transitions:** same-document View Transitions through `withViewTransition(update, to?)` or React Router's
   `viewTransition={useViewTransitionOk(to)}`: a 160 ms crossfade, and a morph for an element given a

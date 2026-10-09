@@ -1,5 +1,20 @@
 # Implementation log
 
+## Look and feel: livelier front page, scroll animations, solid bars (2026-10-09)
+
+- **Product pictures on the front page** are bigger and layered, each on a soft stage in its product's colour with
+  Orbit's hairline orbits: the AI interviewer's question over the round's scorecard, a resume page under its ATS
+  score card, and the best job match on top of a stack of others. Their numbers count up as they come into view
+  (the practice score to 7.5, the ATS score from 54 to 82, the match to 78%), and the checklist lines come in one
+  by one. The hero's live-interview window gets a floating "ATS score 82, +28 after 3 fixes" badge on wide screens.
+- **Scroll animations:** sections of the front page and the Resume AI and Jobs AI pages rise into place the first
+  time they scroll into view, and card grids (features, prices) come in one after another. New `Reveal`,
+  `useInView`, `useCountUp` and `CountUp` in the shared UI package; they follow the Animations setting (Full moves,
+  Gentle only fades, Off shows everything at once), and nothing is hidden when printing or without JavaScript.
+- **Fixed: text showing through the bars.** On phones, page text scrolling under the bottom tab bar showed through
+  its labels, and the same under the top bar. Both are now solid (with a soft shadow above the tab bar).
+- Resume AI's public page counts its sample ATS score up to 98.
+
 ## The story bank moves to the interview copilot (2026-10-08)
 
 The owner asked for the story bank under the interview copilot rather than Practice: it's where live answers find
