@@ -14,6 +14,9 @@
 - **Fixed: text showing through the bars.** On phones, page text scrolling under the bottom tab bar showed through
   its labels, and the same under the top bar. Both are now solid (with a soft shadow above the tab bar).
 - Resume AI's public page counts its sample ATS score up to 98.
+- **Resume AI and Jobs AI in the app** show the same product pictures in their headers (a resume under its ATS
+  score card; the best job match on a stack), instead of the generic icon in an orbit. The pictures live in
+  `components/productArt.tsx`, shared with the front page.
 
 ## The story bank moves to the interview copilot (2026-10-08)
 
