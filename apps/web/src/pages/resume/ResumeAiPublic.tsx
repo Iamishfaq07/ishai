@@ -1,7 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { CreditPack } from "@orbit/types";
-import { ArrowRight, OrbitWordmark, Palette, Send, Sparkles, Wand2, cx, focusRing } from "@orbit/ui";
+import { ArrowRight, OrbitWordmark, Palette, Send, Sparkles, Wand2, cx, focusRing,
+  Reveal,
+  CountUp,
+} from "@orbit/ui";
 import { api } from "../../lib/api";
 import { useWelcomeGrant } from "../../lib/welcome";
 import { JOBS_AI_HOME } from "../jobs/paths";
@@ -93,7 +96,7 @@ function SampleResume() {
       {score > 0 && (
         <div className={cx(floating, "-right-2 -top-4 flex items-center gap-3 p-3 sm:-right-6")}>
           <span className={cx("flex h-12 w-12 flex-col items-center justify-center rounded-xl ring-1", scoreTone(score))}>
-            <span className="font-display text-xl font-semibold leading-none tabular-nums">{score}</span>
+            <CountUp to={score} from={54} className="font-display text-xl font-semibold leading-none" />
             <span className="text-[0.625rem] leading-none opacity-80">ATS</span>
           </span>
           <span className="pr-1 text-xs leading-tight">
@@ -183,7 +186,7 @@ export function ResumeAiPublicPage() {
           <p className="mt-2 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">
             You see every change the AI makes to your resume, and any of them can be undone.
           </p>
-          <ul className="stagger mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Reveal as="ul" stagger className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {RESUME_AI_FEATURES.map(({ icon: Icon, title, text }) => (
               <li key={title} className="glass-panel rounded-2xl p-5">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-aurora-400/10 text-indigo-600 ring-1 ring-indigo-500/20 dark:text-indigo-300">
@@ -215,7 +218,7 @@ export function ResumeAiPublicPage() {
                 , for the jobs you find there.
               </p>
             </li>
-          </ul>
+          </Reveal>
         </section>
 
         <section className="glass-panel gradient-border relative mt-14 overflow-hidden rounded-3xl p-6 text-center sm:p-10">

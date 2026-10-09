@@ -221,6 +221,51 @@ button:not(:disabled) {
 .stagger > *:nth-child(n + 6) {
   animation-delay: calc(var(--stagger-step) * 5);
 }
+/* Scroll reveal (`Reveal`): content rises into place the first time it's in view. Hidden only while motion may play
+   and the element hasn't been seen; at Gentle it only fades; Off, print and no-JS show it as is. */
+.reveal {
+  transition:
+    opacity 520ms var(--ease-enter),
+    translate 640ms var(--ease-enter);
+}
+:root[data-motion="full"] .reveal:not([data-shown]) {
+  opacity: 0;
+  translate: 0 18px;
+}
+:root[data-motion="reduced"] .reveal:not([data-shown]) {
+  opacity: 0;
+}
+/* A list whose items come in one after another as it scrolls into view (`<Reveal stagger>`). An animation, not a
+   transition, with backwards fill only, so the items' own hover transitions and transforms are left alone. */
+:root[data-motion="full"] .reveal-stagger:not([data-shown]) > *,
+:root[data-motion="reduced"] .reveal-stagger:not([data-shown]) > * {
+  opacity: 0;
+}
+:root[data-motion="full"] .reveal-stagger[data-shown] > * {
+  animation: reveal-up 620ms var(--ease-enter) backwards;
+}
+:root[data-motion="reduced"] .reveal-stagger[data-shown] > * {
+  animation: orbit-fade 320ms var(--ease-enter) backwards;
+}
+.reveal-stagger[data-shown] > :nth-child(2) { animation-delay: 70ms; }
+.reveal-stagger[data-shown] > :nth-child(3) { animation-delay: 140ms; }
+.reveal-stagger[data-shown] > :nth-child(4) { animation-delay: 210ms; }
+.reveal-stagger[data-shown] > :nth-child(5) { animation-delay: 280ms; }
+.reveal-stagger[data-shown] > :nth-child(6) { animation-delay: 350ms; }
+.reveal-stagger[data-shown] > :nth-child(n + 7) { animation-delay: 420ms; }
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@media print {
+  .reveal,
+  .reveal-stagger > * {
+    opacity: 1 !important;
+    translate: none !important;
+  }
+}
 /* An item added later (a new tracker card, a new story) fades and rises in by itself, without JS. */
 .appear {
   transition:
@@ -360,7 +405,7 @@ button:not(:disabled) {
   transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow !important;
   scroll-behavior: auto !important;
 }
-:root[data-motion="reduced"] :is(.animate-fade-in, .animate-fade-up, .animate-scale-in, .animate-rise, .stagger > *, .motion-fade) {
+:root[data-motion="reduced"] :is(.animate-fade-in, .animate-fade-up, .animate-scale-in, .animate-rise, .stagger > *, .motion-fade, .reveal-stagger[data-shown] > *) {
   animation-name: orbit-fade !important;
   animation-duration: var(--dur-quick) !important;
 }
