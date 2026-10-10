@@ -14,9 +14,33 @@ import {
   Textarea,
   confirmDialog,
   useFocusTrap,
+  Briefcase,
+  FileIcon,
+  FileText,
+  NotebookPen,
+  cx,
+  type LucideIcon,
 } from "@orbit/ui";
 import { api } from "../api";
 import { TitleBar } from "../TitleBar";
+
+// Each kind of document's icon and colour in the list (the same as the web app's): a resume green, a job
+// description blue, notes amber. Decorative: the line under the title names the kind.
+const KIND_MARK: Record<DocumentKind, { icon: LucideIcon; tile: string }> = {
+  resume: { icon: FileText, tile: "bg-emerald-500/15 text-emerald-800 ring-emerald-600/25 dark:bg-emerald-400/15 dark:text-emerald-200 dark:ring-emerald-300/20" },
+  job_description: { icon: Briefcase, tile: "bg-sky-500/15 text-sky-800 ring-sky-600/25 dark:bg-sky-400/15 dark:text-sky-200 dark:ring-sky-300/20" },
+  notes: { icon: NotebookPen, tile: "bg-amber-500/15 text-amber-800 ring-amber-600/25 dark:bg-amber-400/15 dark:text-amber-200 dark:ring-amber-300/20" },
+  other: { icon: FileIcon, tile: "bg-zinc-500/10 text-zinc-600 ring-zinc-500/20 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10" },
+};
+
+function KindMark({ kind }: { kind: DocumentKind }) {
+  const { icon: Icon, tile } = KIND_MARK[kind];
+  return (
+    <span aria-hidden="true" className={cx("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1", tile)}>
+      <Icon className="h-4 w-4" />
+    </span>
+  );
+}
 
 const KIND_LABEL: Record<DocumentKind, string> = {
   resume: "Resume",
@@ -181,13 +205,16 @@ export function DocumentsScreen({ onBack }: { onBack: () => void }) {
             <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {docs.map((d) => (
                 <li key={d.id} className="flex items-center justify-between gap-4 px-5 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium" title={d.filename ?? d.title}>
-                      {d.title}
-                    </p>
-                    <p className="text-xs text-zinc-500">
-                      {KIND_LABEL[d.kind]} · <StatusText doc={d} />
-                    </p>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <KindMark kind={d.kind} />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium" title={d.filename ?? d.title}>
+                        {d.title}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {KIND_LABEL[d.kind]} · <StatusText doc={d} />
+                      </p>
+                    </div>
                   </div>
                   <div className="flex shrink-0 gap-2">
                     <Button variant="ghost" size="sm" onClick={() => setEditing(d)}>

@@ -3,19 +3,16 @@ import type { Entitlements, OrbitSession, SessionType, User } from "@orbit/types
 import {
   ArrowRight,
   Briefcase,
-  ClipboardCheck,
   Code2,
   CreditCard,
   FolderOpen,
   HistoryIcon,
   LogOut,
-  Phone,
   PlanetHero,
   SettingsIcon,
   Sparkles,
   Spinner,
   SpotIllustration,
-  Target,
   Users,
   Button,
   cx,
@@ -26,6 +23,7 @@ import { api } from "../api";
 import { openBilling, useEntitlements } from "../credits";
 import { formatDate, formatDuration, SESSION_TYPE_LABEL } from "../format";
 import { TitleBar, TitleBarButton } from "../TitleBar";
+import { SESSION_TYPE_ICON, sessionLine } from "../sessionIcons";
 import { UpdateBanner } from "../UpdateBanner";
 
 const QUICK_START: Array<{ type: SessionType; title: string; body: string; icon: LucideIcon }> = [
@@ -33,15 +31,6 @@ const QUICK_START: Array<{ type: SessionType; title: string; body: string; icon:
   { type: "coding", title: "Coding", body: "Screenshot a problem — approach, code, complexity.", icon: Code2 },
   { type: "meeting", title: "Meeting", body: "Stay sharp in professional calls.", icon: Users },
 ];
-
-const TYPE_ICON: Record<SessionType, LucideIcon> = {
-  interview: Briefcase,
-  coding: Code2,
-  meeting: Users,
-  mock: Target,
-  assessment: ClipboardCheck,
-  phone: Phone,
-};
 
 /** Desktop landing: greeting, quick-start, recent sessions, and navigation to the other screens. */
 export function HomeScreen({
@@ -173,7 +162,7 @@ export function HomeScreen({
                 <ul className="divide-y divide-zinc-100 dark:divide-white/5">
                   {recent.map((s) => {
                     const active = s.status !== "ended";
-                    const Icon = TYPE_ICON[s.type];
+                    const Icon = SESSION_TYPE_ICON[s.type];
                     return (
                       <li key={s.id} className="flex items-center gap-3 px-4 py-3">
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
@@ -189,7 +178,11 @@ export function HomeScreen({
                             )}
                           </p>
                           <p className="truncate text-xs text-zinc-500">
-                            {SESSION_TYPE_LABEL[s.type]} · {formatDate(s.started_at ?? s.created_at)} · {formatDuration(s.duration_seconds)}
+                            {sessionLine([
+                              SESSION_TYPE_LABEL[s.type],
+                              formatDate(s.started_at ?? s.created_at),
+                              s.duration_seconds ? formatDuration(s.duration_seconds) : null,
+                            ])}
                           </p>
                         </div>
                         {active ? (

@@ -18,10 +18,12 @@ import {
   DeliveryCard,
   FollowUpCard,
   Spinner,
-  useReportPolling, confirmDialog } from "@orbit/ui";
+  useReportPolling, confirmDialog, ChevronRight, Clock, MessageCircle } from "@orbit/ui";
+import type { SessionType } from "@orbit/types";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { api } from "../api";
 import { downloadText, errText, formatClock, formatDate, formatDuration, SESSION_TYPE_LABEL } from "../format";
+import { SESSION_TYPE_ICON, sessionLine } from "../sessionIcons";
 import { TitleBar } from "../TitleBar";
 
 /** How a question reached Orbit, as the History list says it. */
@@ -94,8 +96,10 @@ function SessionList({ onOpen, onResume }: { onOpen: (id: string) => void; onRes
                 <button
                   type="button"
                   onClick={() => onOpen(s.id)}
-                  className={cx("grid min-w-0 flex-1 gap-1 rounded text-left hover:opacity-80 sm:grid-cols-[1fr_auto]", focusRing)}
+                  className={cx("group flex min-w-0 flex-1 items-center gap-3.5 rounded text-left", focusRing)}
                 >
+                  <TypeMark type={s.type} />
+                  <div className="grid min-w-0 flex-1 gap-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
                   <div className="min-w-0">
                     <p className="truncate font-medium">
                       {s.title}
@@ -105,17 +109,38 @@ function SessionList({ onOpen, onResume }: { onOpen: (id: string) => void; onRes
                         </span>
                       )}
                     </p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="truncate text-xs text-zinc-500">
                       {SESSION_TYPE_LABEL[s.type]}
                       {s.role ? ` · ${s.role}` : ""}
                     </p>
                   </div>
-                  <div className="text-xs text-zinc-500 sm:pr-3 sm:text-right">
-                    <p>{formatDate(s.started_at ?? s.created_at)}</p>
-                    <p>
-                      {formatDuration(s.duration_seconds)} · {s.question_count} question{s.question_count === 1 ? "" : "s"}
-                    </p>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500 sm:justify-end">
+                    <span>{formatDate(s.started_at ?? s.created_at)}</span>
+                    {s.duration_seconds ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/10 px-2 py-0.5 tabular-nums text-zinc-600 dark:text-zinc-300">
+                        <Clock className="h-3 w-3" aria-hidden="true" />
+                        {formatDuration(s.duration_seconds)}
+                      </span>
+                    ) : null}
+                    <span
+                      className={cx(
+                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 tabular-nums",
+                        s.question_count > 0
+                          ? "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
+                          : "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",
+                      )}
+                    >
+                      <MessageCircle className="h-3 w-3" aria-hidden="true" />
+                      {s.question_count} question{s.question_count === 1 ? "" : "s"}
+                    </span>
                   </div>
+                  </div>
+                  {s.status === "ended" && (
+                    <ChevronRight
+                      aria-hidden="true"
+                      className="h-4 w-4 shrink-0 text-zinc-400 motion-ok:transition-transform motion-ok:group-hover:translate-x-0.5"
+                    />
+                  )}
                 </button>
                 {s.status !== "ended" && (
                   <Button size="sm" onClick={() => onResume(s)}>
@@ -199,7 +224,13 @@ function SessionDetailView({ id, onDeleted, onDrill }: {
     <div>
       <PageHeader
         title={session.title}
-        subtitle={`${SESSION_TYPE_LABEL[session.type]}${session.role ? ` · ${session.role}` : ""} · ${formatDate(session.started_at ?? session.created_at)} · ${formatDuration(session.duration_seconds)}`}
+        icon={SESSION_TYPE_ICON[session.type]}
+        subtitle={sessionLine([
+          SESSION_TYPE_LABEL[session.type],
+          session.role,
+          formatDate(session.started_at ?? session.created_at),
+          session.duration_seconds ? formatDuration(session.duration_seconds) : null,
+        ])}
         actions={
           <div className="flex gap-2">
             <Button variant="secondary" size="sm" onClick={() => void exportMd()}>
@@ -414,5 +445,23 @@ function QuestionsView({ detail }: { detail: SessionDetail }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+/** A session's type as a small icon tile: mock interviews in orange (Practice's colour), the rest in the accent. */
+function TypeMark({ type }: { type: SessionType }) {
+  const Icon = SESSION_TYPE_ICON[type];
+  return (
+    <span
+      aria-hidden="true"
+      className={cx(
+        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1",
+        type === "mock"
+          ? "bg-orange-500/15 text-orange-800 ring-orange-600/25 dark:bg-orange-400/15 dark:text-orange-200 dark:ring-orange-300/20"
+          : "bg-indigo-500/15 text-indigo-700 ring-indigo-500/25 dark:bg-indigo-400/15 dark:text-indigo-200 dark:ring-indigo-300/20",
+      )}
+    >
+      <Icon className="h-5 w-5" />
+    </span>
   );
 }
