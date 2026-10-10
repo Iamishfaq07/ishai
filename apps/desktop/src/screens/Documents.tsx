@@ -18,6 +18,7 @@ import {
   FileIcon,
   FileText,
   NotebookPen,
+  FileUp,
   cx,
   type LucideIcon,
 } from "@orbit/ui";
@@ -62,6 +63,7 @@ export function DocumentsScreen({ onBack }: { onBack: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [kind, setKind] = useState<DocumentKind>("resume");
   const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
   const [pasteTitle, setPasteTitle] = useState("Job description");
   const [pasteKind, setPasteKind] = useState<DocumentKind>("job_description");
@@ -84,7 +86,10 @@ export function DocumentsScreen({ onBack }: { onBack: () => void }) {
   const onFilePicked = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (fileRef.current) fileRef.current.value = "";
-    if (!file) return;
+    if (file) await upload(file);
+  };
+
+  const upload = async (file: File) => {
     setError(null);
     if (file.size > MAX_MB * 1024 * 1024) {
       setError(`That file is over ${MAX_MB} MB.`);
@@ -157,11 +162,70 @@ export function DocumentsScreen({ onBack }: { onBack: () => void }) {
                   ))}
                 </Select>
               </Field>
-              <input ref={fileRef} type="file" accept={DOCUMENT_ACCEPT} className="hidden" onChange={(e) => void onFilePicked(e)} />
-              <Button variant="secondary" disabled={uploading} onClick={() => fileRef.current?.click()}>
-                {uploading ? "Uploading…" : "Choose file"}
-              </Button>
-              <p className="text-xs text-zinc-500">PDF, DOCX, TXT or MD — up to {MAX_MB} MB.</p>
+              <input
+                id="up-file"
+                ref={fileRef}
+                type="file"
+                accept={DOCUMENT_ACCEPT}
+                disabled={uploading}
+                aria-describedby="up-file-hint"
+                className="peer sr-only"
+                onChange={(e) => void onFilePicked(e)}
+              />
+              {/* The drop zone is the input's label: a click or Enter opens the file picker, a drop uploads. Dropping
+                  needs the window's own drop handler off (dragDropEnabled: false in tauri.conf.json). */}
+              <label
+                htmlFor="up-file"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (!uploading) setDragging(true);
+                }}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragging(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file && !uploading) void upload(file);
+                }}
+                className={cx(
+                  "group flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed px-4 py-5 text-center transition-colors",
+                  "peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500 peer-focus-visible:ring-offset-2 dark:peer-focus-visible:ring-offset-zinc-950",
+                  dragging
+                    ? "border-indigo-500 bg-indigo-500/10 dark:border-indigo-400"
+                    : "border-zinc-300 bg-zinc-50/60 hover:border-indigo-400 hover:bg-indigo-500/[0.04] dark:border-white/15 dark:bg-white/[0.02] dark:hover:border-indigo-400/60",
+                  uploading && "pointer-events-none",
+                )}
+              >
+                {uploading ? (
+                  <Spinner label="Uploading" />
+                ) : (
+                  <>
+                    <span
+                      aria-hidden="true"
+                      className={cx(
+                        "flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 ring-1 ring-indigo-500/20 transition-transform dark:text-indigo-300",
+                        dragging ? "motion-ok:-translate-y-1" : "motion-ok:group-hover:-translate-y-0.5",
+                      )}
+                    >
+                      <FileUp className="h-5 w-5" />
+                    </span>
+                    <span className="text-sm">
+                      <span className="font-medium">{dragging ? "Drop it here" : "Drop a file here"}</span>
+                      {!dragging && (
+                        <>
+                          {" "}
+                          or <span className="font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300">browse</span>
+                        </>
+                      )}
+                    </span>
+                    <span id="up-file-hint" className="text-xs text-zinc-500">
+                      PDF, DOCX, TXT or MD, up to {MAX_MB} MB
+                    </span>
+                  </>
+                )}
+              </label>
             </div>
           </Card>
 

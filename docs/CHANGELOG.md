@@ -1,5 +1,13 @@
 # Implementation log
 
+## Desktop: drop a file to upload (2026-10-10)
+
+- **Desktop → Documents → Upload a file:** the "Choose file" button becomes the same drop zone as the web app: drag a
+  file from Explorer onto it (it lights up and says "Drop it here") or click / press Enter to browse. Same types and
+  size limit.
+- The main window's own file-drop handler is now off (`dragDropEnabled: false` in tauri.conf.json): on Windows it
+  takes dropped files before the page sees them, and nothing in the app used it.
+
 ## Look and feel: the desktop app's New session screen (2026-10-10)
 
 - **Desktop → New session** opens with a "New session" title (and who you're signed in as under it) instead of a
