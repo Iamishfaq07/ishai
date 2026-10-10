@@ -1,5 +1,15 @@
 # Implementation log
 
+## Look and feel: Home's tools, Settings sections (2026-10-10)
+
+- **Home, Your tools:** the four products are cards in a two-column grid (one column on phones, mark beside the
+  name) instead of a plain list. Each has its colour as a soft glow in the corner with a hairline orbit and planet,
+  like the front page's product pictures; the planet moves a little along its orbit on hover (Full motion only), and
+  the cards rise in one after another as they scroll into view.
+- **Settings:** each section heading has its icon (Appearance, Keyboard shortcuts, Account, Privacy, Advanced), and
+  wide screens get an "On this page" list beside the cards that marks the section you're reading and jumps to the
+  others. Still one page, so find-in-page keeps working.
+
 ## Look and feel: the practice report (2026-10-09)
 
 - **The overall score** reads "4/5" instead of a bare 4, its ring takes the colour of how it went (green 4–5, accent

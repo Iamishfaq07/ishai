@@ -20,7 +20,13 @@ import {
   ChevronRight,
   Inbox,
   IndianRupee,
+  Keyboard,
+  Palette,
+  ShieldCheck,
+  SlidersHorizontal,
+  UserRound,
   Users,
+  type LucideIcon,
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Spinner, Toggle } from "../components/ui";
 import { api } from "../lib/api";
@@ -33,47 +39,123 @@ export function SettingsPage() {
   const [theme, setTheme] = useTheme();
   const [design, setDesign] = useDesign();
   return (
-    <div className="max-w-3xl space-y-6">
-      <PageHeader icon={SettingsIcon} title="Settings" />
-      <Link
-        to="/billing"
-        className={cx(
-          "glass-panel lift flex items-center gap-4 rounded-2xl p-5 hover:border-indigo-400/40",
-          focusRing,
-        )}
-      >
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
-          <CreditCard className="h-5 w-5" />
-        </span>
-        <span className="flex-1">
-          <span className="block font-display font-semibold">Plan &amp; usage</span>
-          <span className="block text-sm text-zinc-500">Your plan, this month’s minutes, screenshots and documents.</span>
-        </span>
-        <ChevronRight className="h-4 w-4 text-zinc-400" />
-      </Link>
-      <Card>
-        <h2 className="mb-4 font-semibold">Appearance</h2>
-        <div className="flex items-center justify-between gap-4">
-          <label htmlFor="theme" className="text-sm font-medium">
-            Theme
-          </label>
-          <div className="w-40">
-            <Select id="theme" value={theme} onChange={(e) => setTheme(e.target.value as ThemePref)}>
-              <option value="dark">Dark</option>
-              <option value="light">Light</option>
-              <option value="system">System</option>
-            </Select>
+    <div className="lg:grid lg:grid-cols-[minmax(0,48rem)_11rem] lg:gap-10">
+      <div className="max-w-3xl space-y-6">
+        <PageHeader icon={SettingsIcon} title="Settings" />
+        <Link
+          to="/billing"
+          className={cx(
+            "glass-panel lift flex items-center gap-4 rounded-2xl p-5 hover:border-indigo-400/40",
+            focusRing,
+          )}
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+            <CreditCard className="h-5 w-5" />
+          </span>
+          <span className="flex-1">
+            <span className="block font-display font-semibold">Plan &amp; usage</span>
+            <span className="block text-sm text-zinc-500">Your plan, this month’s minutes, screenshots and documents.</span>
+          </span>
+          <ChevronRight className="h-4 w-4 text-zinc-400" />
+        </Link>
+        <Card id="appearance" className="scroll-mt-24">
+          <SectionTitle icon={Palette} className="mb-4">
+            Appearance
+          </SectionTitle>
+          <div className="flex items-center justify-between gap-4">
+            <label htmlFor="theme" className="text-sm font-medium">
+              Theme
+            </label>
+            <div className="w-40">
+              <Select id="theme" value={theme} onChange={(e) => setTheme(e.target.value as ThemePref)}>
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+                <option value="system">System</option>
+              </Select>
+            </div>
           </div>
-        </div>
-        <div className="mt-5">
-          <AppearanceControls prefs={design} onChange={setDesign} />
-        </div>
-      </Card>
-      <HotkeysCard />
-      <AccountCard />
-      <PrivacyCard />
-      <AdvancedSettingsCard />
+          <div className="mt-5">
+            <AppearanceControls prefs={design} onChange={setDesign} />
+          </div>
+        </Card>
+        <HotkeysCard />
+        <AccountCard />
+        <PrivacyCard />
+        <AdvancedSettingsCard />
+      </div>
+      <SectionNav />
     </div>
+  );
+}
+
+/** A settings card's heading: its icon in a small accent chip, then the name. */
+function SectionTitle({ icon: Icon, className, children }: { icon: LucideIcon; className?: string; children: string }) {
+  return (
+    <h2 className={cx("flex items-center gap-2.5 font-semibold", className)}>
+      <span
+        aria-hidden="true"
+        className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-300"
+      >
+        <Icon className="h-4 w-4" />
+      </span>
+      {children}
+    </h2>
+  );
+}
+
+const SECTIONS = [
+  { id: "appearance", label: "Appearance" },
+  { id: "shortcuts", label: "Keyboard shortcuts" },
+  { id: "account", label: "Account" },
+  { id: "privacy", label: "Privacy" },
+] as const;
+
+/**
+ * Wide screens only: the sections as links in the empty column beside them, the one you're reading marked. The
+ * cards stay one long page (no tabs) so find-in-page and scrolling keep working.
+ */
+function SectionNav() {
+  const [active, setActive] = useState<string>(SECTIONS[0].id);
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const seen = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (seen) setActive(seen.target.id);
+      },
+      { rootMargin: "-20% 0px -60% 0px" },
+    );
+    for (const { id } of SECTIONS) {
+      const el = document.getElementById(id);
+      if (el) io.observe(el);
+    }
+    return () => io.disconnect();
+  }, []);
+  return (
+    <nav aria-label="Settings sections" className="hidden lg:block">
+      <div className="sticky top-24 pt-[4.75rem]">
+        <p className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-zinc-500">On this page</p>
+        <ul className="space-y-0.5 border-l border-zinc-200 dark:border-white/10">
+          {SECTIONS.map(({ id, label }) => (
+            <li key={id}>
+              <a
+                href={`#${id}`}
+                aria-current={active === id ? "location" : undefined}
+                className={cx(
+                  "-ml-px block border-l-2 px-3 py-1.5 text-sm transition-colors",
+                  active === id
+                    ? "border-indigo-500 font-medium text-zinc-900 dark:border-indigo-400 dark:text-white"
+                    : "border-transparent text-zinc-500 hover:border-zinc-300 hover:text-zinc-800 dark:hover:border-white/20 dark:hover:text-zinc-200",
+                  focusRing,
+                )}
+              >
+                {label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </nav>
   );
 }
 
@@ -188,7 +270,7 @@ function AdvancedConfig() {
   return (
     <Card>
       <div className="mb-1 flex items-center justify-between">
-        <h2 className="font-semibold">Advanced (admin)</h2>
+        <SectionTitle icon={SlidersHorizontal}>Advanced (admin)</SectionTitle>
         {saved && <span className="text-xs text-emerald-600 dark:text-emerald-400">Saved</span>}
       </div>
       <p className="mb-4 text-sm text-zinc-500">
@@ -338,9 +420,9 @@ function HotkeysCard() {
   };
 
   return (
-    <Card>
+    <Card id="shortcuts" className="scroll-mt-24">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-semibold">Keyboard shortcuts</h2>
+        <SectionTitle icon={Keyboard}>Keyboard shortcuts</SectionTitle>
         <Button variant="ghost" size="sm" onClick={() => update(DEFAULT_HOTKEYS)}>
           Reset to defaults
         </Button>
@@ -418,9 +500,11 @@ function AccountCard() {
   };
 
   return (
-    <Card>
-      <h2 className="mb-1 font-semibold">Account</h2>
-      <p className="mb-4 text-sm text-zinc-500">Signed in as {user.email}</p>
+    <Card id="account" className="scroll-mt-24">
+      <SectionTitle icon={UserRound} className="mb-1">
+        Account
+      </SectionTitle>
+      <p className="mb-4 pl-[2.375rem] text-sm text-zinc-500">Signed in as {user.email}</p>
       {sent ? (
         <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
           Check <strong>{sent}</strong> for a confirmation link. Your email changes when you open it; until then you
@@ -553,8 +637,10 @@ function PrivacyCard() {
   };
 
   return (
-    <Card>
-      <h2 className="mb-4 font-semibold">Privacy</h2>
+    <Card id="privacy" className="scroll-mt-24">
+      <SectionTitle icon={ShieldCheck} className="mb-4">
+        Privacy
+      </SectionTitle>
       <div className="space-y-4">
         <Toggle
           checked={user.store_transcripts}
