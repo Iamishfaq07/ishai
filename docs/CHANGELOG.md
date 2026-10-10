@@ -1,5 +1,12 @@
 # Implementation log
 
+## Look and feel: Jobs AI profile sections, a welcoming orb (2026-10-10)
+
+- **Jobs AI → Profile** on wide screens: under the "Looking for" summary, an "On this page" list of its five sections
+  marks the one you're reading and jumps to the others (the same list Settings has; both now share it).
+- **Welcome:** the first question opens with Orbit's breathing orb, and each choice's arrow slides toward you on hover
+  (Full motion only).
+
 ## Look and feel: the applications tracker (2026-10-10)
 
 - **Jobs AI → Tracker:** each card carries its status as a colour edge (grey saved, indigo applied, sky interviewing,

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Globe, MapPin, OrbitWordmark, cx, focusRing } from "@orbit/ui";
+import { ArrowLeft, ArrowRight, Globe, MapPin, Orb, OrbitWordmark, cx, focusRing } from "@orbit/ui";
 import { ProductMark } from "../components/products";
 import { Input } from "../components/ui";
 import { api } from "../lib/api";
@@ -55,7 +55,7 @@ function Choice({
       aria-pressed={pressed}
       onClick={onClick}
       className={cx(
-        "flex w-full items-center gap-4 rounded-2xl p-4 text-left ring-1 transition-[background-color,box-shadow,transform] duration-150 active:scale-[0.99] motion-reduce:transform-none",
+        "group flex w-full items-center gap-4 rounded-2xl p-4 text-left ring-1 transition-[background-color,box-shadow,transform] duration-150 active:scale-[0.99] motion-reduce:transform-none",
         pressed
           ? "bg-indigo-500/10 ring-2 ring-indigo-500 dark:bg-indigo-400/10 dark:ring-indigo-300"
           : "bg-white/80 ring-zinc-200 hover:bg-white hover:ring-indigo-400/50 dark:bg-white/[0.04] dark:ring-white/10 dark:hover:bg-white/[0.07]",
@@ -195,7 +195,8 @@ export function WelcomePage() {
         )}
 
         <div key={step} className="animate-fade-up">
-          <h1 ref={heading} tabIndex={-1} className="mt-8 text-balance font-display text-3xl font-semibold leading-tight tracking-tight outline-none sm:text-4xl">
+          {step === 0 && <Orb state="breathing" size={64} className="mt-8" />}
+          <h1 ref={heading} tabIndex={-1} className="mt-6 text-balance font-display text-3xl font-semibold leading-tight tracking-tight outline-none sm:text-4xl">
             {titles[step]}
           </h1>
           <p className="mt-2 text-base text-zinc-600 dark:text-zinc-300">{subtitles[step]}</p>
@@ -210,7 +211,7 @@ export function WelcomePage() {
                       <span className="block font-display text-lg font-semibold">{g.title}</span>
                       <span className="mt-0.5 block text-sm text-zinc-600 dark:text-zinc-300">{g.body}</span>
                     </span>
-                    <ArrowRight className="h-5 w-5 shrink-0 text-zinc-400" aria-hidden />
+                    <ArrowRight className="h-5 w-5 shrink-0 text-zinc-400 motion-ok:transition-transform group-hover:text-indigo-500 motion-ok:group-hover:translate-x-1" aria-hidden />
                   </Choice>
                 </li>
               ))}
