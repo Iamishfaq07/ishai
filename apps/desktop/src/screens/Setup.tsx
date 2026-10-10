@@ -523,8 +523,12 @@ export function SetupScreen({
       {notice}
       <UpdateBanner />
       <form ref={formRef} onSubmit={(e) => void start(e)} className="flex min-h-0 flex-1 flex-col">
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 text-sm">
-          <p className="text-xs text-zinc-500">{user ? `Signed in as ${user.email}` : "Offline — some data may be unavailable."}</p>
+        {/* A wide window keeps the form at a readable width, centred; a narrow one (the usual) fills it. */}
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 text-sm [&>*]:mx-auto [&>*]:max-w-3xl">
+          <div className="animate-fade-up">
+            <h1 className="font-display text-2xl font-semibold tracking-tight">New session</h1>
+            <p className="mt-0.5 text-xs text-zinc-500">{user ? `Signed in as ${user.email}` : "Offline — some data may be unavailable."}</p>
+          </div>
 
           <WorkspaceBar
             selectedId={workspaceId}
@@ -931,7 +935,8 @@ export function SetupScreen({
           {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
         </div>
 
-        <div className="space-y-2 border-t border-zinc-200 p-3 dark:border-zinc-800">
+        <div className="border-t border-zinc-200 p-3 dark:border-zinc-800">
+          <div className="mx-auto max-w-3xl space-y-2">
           <PreflightPanel local={localState} onStatus={onPreflight} />
           {plan?.credits && <MinutesLeft left={plan.credits.interview_minutes_left} />}
           {signInEndsSoon && signInLeft !== null && (
@@ -1057,6 +1062,7 @@ export function SetupScreen({
               Buy more interview minutes ↗
             </button>
           )}
+          </div>
         </div>
       </form>
     </div>

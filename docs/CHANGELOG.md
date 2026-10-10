@@ -1,5 +1,11 @@
 # Implementation log
 
+## Look and feel: the desktop app's New session screen (2026-10-10)
+
+- **Desktop → New session** opens with a "New session" title (and who you're signed in as under it) instead of a
+  stray line, and on a wide window the form, the ready check and Start Session sit in one centred column at a
+  readable width rather than stretching edge to edge. A narrow window still fills it.
+
 ## Look and feel: the desktop app's lists (2026-10-10)
 
 - **Desktop → History:** the same rows as the web app's Sessions: each type's icon (mock interviews in orange), the
