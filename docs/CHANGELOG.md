@@ -1,5 +1,14 @@
 # Implementation log
 
+## Look and feel: the desktop app's lists (2026-10-10)
+
+- **Desktop → History:** the same rows as the web app's Sessions: each type's icon (mock interviews in orange), the
+  question count as a chip, the length only once there is one, and a chevron on the ones that open. A session's own
+  page carries its type's icon and no stray "· —".
+- **Desktop → Home, recent sessions:** no more "· —" for sessions without a length.
+- **Desktop → Documents:** each document's kind as an icon in its colour (resume green, job description blue, notes
+  amber), like the web app.
+
 ## Look and feel: fold the resume form (2026-10-10)
 
 - **Resume editor → Content:** each section's title folds it away (a chevron shows which way), so the form fits on a
