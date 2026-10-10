@@ -118,3 +118,6 @@ export { Inbox, MailOpen, Reply } from "lucide-react";
 
 // Documents: an icon per kind of document in the list.
 export { File as FileIcon, NotebookPen } from "lucide-react";
+
+// A session that heard nothing.
+export { MicOff } from "lucide-react";

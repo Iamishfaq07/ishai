@@ -308,7 +308,8 @@ function Matches({ profile }: { profile: JobProfile }) {
 
       <aside className="hidden space-y-4 lg:sticky lg:top-20 lg:block lg:self-start" aria-label="Your job profile">
         <ProfileCard profile={profile} suggesting={suggesting} />
-        <PortalCard portals={data?.portals ?? null} days={days.short} />
+        {/* With no matches the list already shows these links up front; don't repeat them here. */}
+        {data && data.total > 0 && <PortalCard portals={data.portals} days={days.short} />}
       </aside>
     </div>
   );

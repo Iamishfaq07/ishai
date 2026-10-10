@@ -17,6 +17,7 @@ import {
 import { Button, Card, ErrorNote, Input, PageHeader, Spinner } from "../components/ui";
 import { api } from "../lib/api";
 import { SESSION_TYPE_LABEL, downloadText, errorText, formatClock, formatDate, formatDuration } from "../lib/format";
+import { SESSION_TYPE_ICON } from "../lib/sessionIcons";
 import { useAsync } from "../lib/useAsync";
 import type { LiveLaunchState } from "./SessionSetup";
 
@@ -89,7 +90,15 @@ export function SessionDetailPage() {
     <div>
       <PageHeader
         title={session.title}
-        subtitle={`${SESSION_TYPE_LABEL[session.type]}${session.role ? ` · ${session.role}` : ""} · ${formatDate(session.started_at ?? session.created_at)} · ${formatDuration(session.duration_seconds)}`}
+        icon={SESSION_TYPE_ICON[session.type]}
+        subtitle={[
+          SESSION_TYPE_LABEL[session.type],
+          session.role,
+          formatDate(session.started_at ?? session.created_at),
+          session.duration_seconds ? formatDuration(session.duration_seconds) : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
         actions={
           <div className="flex gap-2">
             <Button variant="secondary" size="sm" onClick={() => void exportMd()}>
