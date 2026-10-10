@@ -1,5 +1,13 @@
 # Implementation log
 
+## Look and feel: resume preview on phones, credit tiles that fit (2026-10-10)
+
+- **Resume editor on phones and tablets:** the preview sits under the whole form, a long scroll away, so a floating
+  "Preview" button (above the tab bar) jumps straight to it and hides while the preview is on screen. On the Letter
+  tab it says "Preview letter". Wide screens keep the side-by-side layout and never show it.
+- **Credits:** the interview-minutes and Resume AI tiles sit side by side only when the card has room for both and
+  stack otherwise, so Home's Usage card beside Recent sessions no longer squeezes them.
+
 ## Look and feel: a session's page, job matches (2026-10-10)
 
 - **A session's page:** the title carries its type's icon, and the line under it drops the stray "· —" when the session
