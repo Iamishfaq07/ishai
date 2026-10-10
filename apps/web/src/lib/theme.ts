@@ -6,6 +6,8 @@ const KEY = "orbit.theme";
 export function applyTheme(pref: ThemePref): void {
   const dark = pref === "dark" || (pref === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.classList.toggle("dark", dark);
+  // The phone's status bar matches the top bar: white in light mode, the night sky in dark (as public/theme-init.js).
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#080918" : "#ffffff");
 }
 
 export function useTheme(): [ThemePref, (pref: ThemePref) => void] {

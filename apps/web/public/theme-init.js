@@ -6,7 +6,11 @@
     var mq = matchMedia("(prefers-color-scheme: dark)");
     var apply = function () {
       var pref = localStorage.getItem("orbit.theme") || "system";
-      document.documentElement.classList.toggle("dark", pref === "dark" || (pref === "system" && mq.matches));
+      var dark = pref === "dark" || (pref === "system" && mq.matches);
+      document.documentElement.classList.toggle("dark", dark);
+      // The phone's status bar (and an installed app's title bar) takes the colour of the top bar under it.
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute("content", dark ? "#080918" : "#ffffff");
     };
     apply();
     mq.addEventListener("change", apply);
