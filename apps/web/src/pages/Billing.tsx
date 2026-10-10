@@ -54,7 +54,9 @@ function CreditRows({ e, wide = false }: { e: Entitlements; wide?: boolean }) {
   const empty = Math.round(c.interview_minutes_left) <= 0 && c.resume === 0;
   return (
     <div className="space-y-4">
-      <div className={cx("grid gap-3", wide ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-1")}>
+      {/* Side by side when the card has room for both (13rem each), stacked when it doesn't: Home puts this card in
+          a full row or beside Recent sessions, Plan & billing in a narrow column. */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-3">
         <Balance icon={Mic} tone="interview" value={Math.round(c.interview_minutes_left)} unit="min left" label="Interview minutes">
           Live interviews and mock interviews both use these.
         </Balance>

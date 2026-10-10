@@ -11,6 +11,7 @@ import {
   CircleCheck,
   Copy,
   Download,
+  Eye,
   FileText,
   Gauge,
   Link2,
@@ -644,8 +645,13 @@ function ResumeEditor() {
           {tab === "prep" && <InterviewPrep resume={resume} prep={prep} onShowJob={() => setTab("score")} />}
         </div>
 
+        <PreviewJump letter={tab === "letter"} />
         <div className="min-w-0">
-          <div data-preview-scroll="" className="sticky top-20 space-y-3 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pb-4">
+          <div
+            id="resume-preview"
+            data-preview-scroll=""
+            className="sticky top-20 scroll-mt-20 space-y-3 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pb-4"
+          >
             {placeholders && tab !== "letter" && (
               <div role="status" className="flex items-start gap-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">
                 <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
@@ -1659,5 +1665,36 @@ function DesignPanel({ design, setDesign }: { design: ResumeDesign; setDesign: (
         </p>
       </Panel>
     </div>
+  );
+}
+
+/**
+ * Below 1024 px the preview sits under the whole form, a long scroll away: a floating "Preview" button jumps there,
+ * and hides while the preview is on screen. Wide screens show the two side by side, so it never appears there.
+ */
+function PreviewJump({ letter }: { letter: boolean }) {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const el = document.getElementById("resume-preview");
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([entry]) => setShown(Boolean(entry?.isIntersecting)), { threshold: 0.05 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  if (shown) return null;
+  // Portalled: the page's entrance animation leaves a transform on an ancestor, which would pin a fixed element to
+  // that ancestor instead of the screen.
+  return createPortal(
+    <button
+      type="button"
+      onClick={() => document.getElementById("resume-preview")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+      className={cx(
+        "fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-20 inline-flex items-center gap-2 rounded-full bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-lg ring-1 ring-black/10 motion-ok:animate-fade-up md:bottom-6 lg:hidden dark:bg-white dark:text-zinc-900",
+        focusRing,
+      )}
+    >
+      <Eye className="h-4 w-4" aria-hidden="true" /> {letter ? "Preview letter" : "Preview"}
+    </button>,
+    document.body,
   );
 }
