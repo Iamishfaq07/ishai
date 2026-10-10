@@ -466,3 +466,102 @@ export function activeFilterCount(
     (hasQueryWord(query, "internship") ? 1 : 0)
   );
 }
+
+// --- Taking the tracker elsewhere: a spreadsheet of every job, a calendar entry for one job's next date. ---
+
+/** One CSV cell: quoted when it needs to be, and never read as a formula by Excel or Sheets. */
+function csvCell(value: string): string {
+  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+}
+
+/**
+ * Every tracked job as a CSV file (opens in Excel or Google Sheets): company, role, where, status, the dates, the
+ * link and your notes. Starts with a byte-order mark so Excel reads it as UTF-8 (₹, names in Hindi or Tamil).
+ */
+export function trackerCsv(entries: JobTrackerEntry[]): string {
+  const header = ["Company", "Role", "Location", "Status", "Applied", "Next", "Link", "Notes", "Added"];
+  const rows = entries.map((e) => [
+    e.company,
+    e.title,
+    e.location,
+    STATUS_LABEL[e.status],
+    dateInput(e.applied_at),
+    dateInput(e.next_at),
+    e.apply_url || e.url,
+    e.notes,
+    dateInput(e.created_at),
+  ]);
+  return "\uFEFF" + [header, ...rows].map((r) => r.map((c) => csvCell(c ?? "")).join(",")).join("\r\n") + "\r\n";
+}
+
+/** Text for an iCalendar property: backslash, semicolon, comma and line breaks escaped (RFC 5545). */
+function icsText(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+}
+
+/** RFC 5545 lines are at most 75 octets: longer ones continue on the next line after a space. */
+function icsFold(line: string): string {
+  const out: string[] = [];
+  let rest = line;
+  while (new TextEncoder().encode(rest).length > 75) {
+    let cut = 74;
+    while (new TextEncoder().encode(rest.slice(0, cut)).length > 74) cut--;
+    out.push(rest.slice(0, cut));
+    rest = " " + rest.slice(cut);
+  }
+  out.push(rest);
+  return out.join("\r\n");
+}
+
+/** What the calendar entry is called: the interview while interviewing, otherwise the follow-up. */
+export function nextDateTitle(e: Pick<JobTrackerEntry, "status" | "title" | "company">): string {
+  const what = e.status === "interviewing" ? "Interview" : e.status === "offer" ? "Offer" : "Follow up";
+  return `${what}: ${e.title}, ${e.company}`;
+}
+
+/**
+ * A job's next date as an all-day calendar event (.ics): Google Calendar, Outlook and phones import it. Null when the
+ * job has no next date. `now` stamps the file (DTSTAMP).
+ */
+export function nextDateIcs(e: JobTrackerEntry, now: Date = new Date()): string | null {
+  const day = dateInput(e.next_at);
+  if (!day) return null;
+  const start = day.replace(/-/g, "");
+  const [y, m, d] = day.split("-").map(Number);
+  const after = new Date(Date.UTC(y!, m! - 1, d! + 1));
+  const end = after.toISOString().slice(0, 10).replace(/-/g, "");
+  const stamp = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const link = e.apply_url || e.url;
+  const description = [link, e.notes].filter(Boolean).join("\n\n");
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Orbit//Jobs AI//EN",
+    "CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT",
+    `UID:${e.id}-next@orbit`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART;VALUE=DATE:${start}`,
+    `DTEND;VALUE=DATE:${end}`,
+    `SUMMARY:${icsText(nextDateTitle(e))}`,
+    ...(e.location ? [`LOCATION:${icsText(e.location)}`] : []),
+    ...(description ? [`DESCRIPTION:${icsText(description)}`] : []),
+    ...(link ? [`URL:${link}`] : []),
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ];
+  return lines.map(icsFold).join("\r\n") + "\r\n";
+}
+
+/** A file name from a job: "swiggy-sde-ii". */
+export function fileSlug(...parts: string[]): string {
+  return (
+    parts
+      .join(" ")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "job"
+  );
+}

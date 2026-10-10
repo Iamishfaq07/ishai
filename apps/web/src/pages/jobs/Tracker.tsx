@@ -5,11 +5,13 @@ import {
   ArrowUpRight,
   BookmarkCheck,
   CalendarIcon,
+  CalendarPlus,
   FileText,
   MapPin,
   PenLine,
   Plus,
   Send,
+  Sheet,
   Sparkles,
   Target,
   Trash2,
@@ -19,7 +21,7 @@ import {
 } from "@orbit/ui";
 import { Button, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
-import { errorText } from "../../lib/format";
+import { downloadText, errorText } from "../../lib/format";
 import type { AsyncState } from "../../lib/useAsync";
 import { resumePath } from "../resume/paths";
 import { AddJob } from "./AddJob";
@@ -31,14 +33,18 @@ import {
   STATUS_TONE,
   byStatus,
   dateInput,
+  fileSlug,
   fromDateInput,
   isManual,
   linkHost,
+  nextDateIcs,
+  nextDateTitle,
   postedAgo,
   practiceLink,
   safeUrl,
   shortDate,
   stillOpenAt,
+  trackerCsv,
 } from "./model";
 import { JOBS_MATCHES, jobPath, outreachPath } from "./paths";
 import { SafetyCard } from "./SafetyCard";
@@ -73,6 +79,15 @@ export function JobTrackerPage() {
               <Link to={JOBS_MATCHES} className={linkButton("secondary")}>
                 <Sparkles className="h-4 w-4" aria-hidden /> Find more jobs
               </Link>
+            )}
+            {has && (
+              <Button
+                variant="secondary"
+                title="Every job, its status, dates and notes, as a spreadsheet (Excel or Google Sheets)"
+                onClick={() => downloadText(`orbit-applications-${dateInput(new Date().toISOString())}.csv`, trackerCsv(tracker.data ?? []), "text/csv;charset=utf-8")}
+              >
+                <Sheet className="h-4 w-4" aria-hidden /> Export CSV
+              </Button>
             )}
           </div>
         }
@@ -346,6 +361,20 @@ function TrackerCard({
         >
           <Send className="h-3 w-3" aria-hidden /> Write outreach
         </Link>
+        {entry.next_at && entry.status !== "rejected" && (
+          <button
+            type="button"
+            onClick={() => {
+              const ics = nextDateIcs(entry);
+              if (ics) downloadText(`${fileSlug(entry.company, entry.title)}.ics`, ics, "text/calendar;charset=utf-8");
+            }}
+            aria-label={`Add to calendar: ${nextDateTitle(entry)}, ${shortDate(entry.next_at)}`}
+            title="A calendar file for this date: opens in Google Calendar, Outlook or your phone's calendar"
+            className={cx("inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}
+          >
+            <CalendarPlus className="h-3 w-3" aria-hidden /> Add to calendar
+          </button>
+        )}
       </div>
 
       {editing ? (

@@ -1,5 +1,15 @@
 # Implementation log
 
+## Jobs AI: export the tracker, add dates to your calendar (2026-10-11)
+
+- **Export CSV** (Jobs AI → Tracker): every tracked job as a spreadsheet, with company, role, location, status, the
+  applied and next dates, the link, your notes and when you added it. Opens in Excel or Google Sheets (UTF-8 with a
+  byte-order mark, so ₹ and Indian-language names come through); a cell that starts with = + - or @ is kept as text,
+  never run as a formula.
+- **Add to calendar** on any job with a next date (not on "Not this time"): a calendar file for that day, "Interview:
+  SDE II, Swiggy" while interviewing, otherwise "Follow up: …", with the job's link and your notes. Google Calendar,
+  Outlook and phone calendars import it. Made in the browser; nothing is sent anywhere.
+
 ## Look and feel: the live answer on phones, a quieter transcript (2026-10-11)
 
 - **Live session, phones:** the answer's tools (Read aloud, Shorter, Longer, Simpler) show as icons, so the toolbar
