@@ -115,3 +115,6 @@ export { CircleQuestionMark, Globe, Keyboard, ListChecks, MessageCircle } from "
 
 // The Contact page and the admin's Inbox.
 export { Inbox, MailOpen, Reply } from "lucide-react";
+
+// Documents: an icon per kind of document in the list.
+export { File as FileIcon, NotebookPen } from "lucide-react";

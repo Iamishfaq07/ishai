@@ -1,5 +1,13 @@
 # Implementation log
 
+## Look and feel: session and document lists (2026-10-10)
+
+- **Sessions:** each row starts with its type's icon (interview, coding, phone, meeting, assessment; mock interviews
+  in Practice's orange), the question count is a chip, the length shows only once there is one (no more "— · 0
+  questions"), and a chevron marks the rows that open.
+- **Documents:** each document starts with an icon for its kind in a matching colour: a resume in Resume AI's green, a
+  job description in Jobs AI's blue, notes in amber.
+
 ## Look and feel: drop a file, story coverage bar (2026-10-10)
 
 - **Documents → Upload a file:** the browser's bare "Choose File / No file chosen" control gives way to a drop zone:

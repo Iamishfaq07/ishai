@@ -1,28 +1,22 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import type { OrbitSession, SessionType } from "@orbit/types";
+import type { OrbitSession } from "@orbit/types";
 import {
   ArrowRight,
   AudioLines,
-  Briefcase,
   Check,
   ChevronDown,
   ChevronRight,
-  ClipboardCheck,
   Clock,
-  Code2,
   Download,
   HistoryIcon,
   MOCK_INTERVIEW_ENABLED,
   Monitor,
   Reveal,
-  Phone,
   Target,
-  Users,
   X,
   cx,
   focusRing,
-  type LucideIcon,
 } from "@orbit/ui";
 import { Card, ErrorNote, Spinner } from "../components/ui";
 import { PRODUCTS, ProductMark, type ProductId } from "../components/products";
@@ -33,6 +27,7 @@ import { DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
 import { SESSION_TYPE_LABEL, errorText, formatDate } from "../lib/format";
 import { checklist, loadAnswers, nextSteps, type ChecklistItem, type HomeFacts, type Step } from "../lib/onboarding";
 import { openHelp } from "../lib/shell";
+import { SESSION_TYPE_ICON } from "../lib/sessionIcons";
 import { useAsync, type AsyncState } from "../lib/useAsync";
 import { UsageSummary } from "./Billing";
 import { FollowUps } from "./jobs/FollowUps";
@@ -40,15 +35,6 @@ import { STATUS_LABEL, byStatus } from "./jobs/model";
 import { JOBS_AI_HOME, JOBS_MATCHES, JOBS_TRACKER } from "./jobs/paths";
 import { RESUME_AI_HOME, resumePath } from "./resume/paths";
 import { scoreTone } from "./resume/product";
-
-const TYPE_ICON: Record<SessionType, LucideIcon> = {
-  interview: Briefcase,
-  coding: Code2,
-  meeting: Users,
-  mock: Target,
-  assessment: ClipboardCheck,
-  phone: Phone,
-};
 
 // TODO(ws-a): buttonClass("primary") / buttonClass("secondary") once the design layer exports it.
 const primaryLink = cx(
@@ -521,7 +507,7 @@ function RecentSessions({ sessions }: { sessions: AsyncState<OrbitSession[]> }) 
       ) : (
         <ul className="space-y-1">
           {recent.map((s) => {
-            const Icon = TYPE_ICON[s.type];
+            const Icon = SESSION_TYPE_ICON[s.type];
             return (
               <li key={s.id}>
                 <Link
