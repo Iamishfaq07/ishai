@@ -10,6 +10,7 @@ import { useJobsAi } from "./JobsAi";
 import { textLink, linkButton } from "./links";
 import { JOB_TYPES, LEVELS, POSTED_WITHIN, WORKPLACES, addItem, profileSummary, samePrefs, toggle, toggleWorkplace } from "./model";
 import { JOBS_MATCHES } from "./paths";
+import { OnThisPage, type PageSection } from "../../components/OnThisPage";
 
 /** Jobs AI → Profile: what the feed looks for, filled in by the AI from the resume, every part of it the user's. */
 export function JobProfilePage() {
@@ -115,7 +116,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
           </p>
         )}
 
-        <Section icon={FileText} title="Your resume" hint="Jobs are matched to it: its titles, skills and experience.">
+        <Section id="resume" icon={FileText} title="Your resume" hint="Jobs are matched to it: its titles, skills and experience.">
           {profile.resumes.length ? (
             <div className="space-y-3">
               <Field label="Match jobs to this resume" htmlFor="jp-resume">
@@ -153,7 +154,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
           )}
         </Section>
 
-        <Section icon={Search} title="What you're looking for" hint="The roles and skills each job is scored against.">
+        <Section id="looking-for" icon={Search} title="What you're looking for" hint="The roles and skills each job is scored against.">
           <div className="space-y-5">
             <ChipsField
               label="Job titles"
@@ -198,7 +199,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
           </div>
         </Section>
 
-        <Section icon={MapPin} title="Where" hint="Cities, and how you'd like to work.">
+        <Section id="where" icon={MapPin} title="Where" hint="Cities, and how you'd like to work.">
           <div className="space-y-5">
             <ChipsField
               label="Cities"
@@ -222,7 +223,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
           </div>
         </Section>
 
-        <Section icon={Briefcase} title="Which jobs" hint="The kind of job, how recent, and what to leave out.">
+        <Section id="which-jobs" icon={Briefcase} title="Which jobs" hint="The kind of job, how recent, and what to leave out.">
           <div className="space-y-5">
             <fieldset>
               <legend className="mb-2 text-sm font-medium text-zinc-800 dark:text-zinc-200">Job types</legend>
@@ -268,7 +269,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
           </div>
         </Section>
 
-        <Section icon={Building2} title="Where Orbit looks" hint="The job sources, and the big sites to search for you.">
+        <Section id="sources" icon={Building2} title="Where Orbit looks" hint="The job sources, and the big sites to search for you.">
           <div className="space-y-5">
             <fieldset>
               <legend className="mb-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">Job sources</legend>
@@ -317,6 +318,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
           )}
           <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-white/10">{actions}</div>
         </Card>
+        <OnThisPage sections={PROFILE_SECTIONS} label="Profile sections" className="mt-6" />
       </aside>
     </div>
   );
@@ -369,9 +371,17 @@ function SaveBar({
   );
 }
 
-function Section({ title, hint, icon: Icon, children }: { title: string; hint: string; icon: LucideIcon; children: ReactNode }) {
+const PROFILE_SECTIONS: PageSection[] = [
+  { id: "resume", label: "Your resume" },
+  { id: "looking-for", label: "What you're looking for" },
+  { id: "where", label: "Where" },
+  { id: "which-jobs", label: "Which jobs" },
+  { id: "sources", label: "Where Orbit looks" },
+];
+
+function Section({ id, title, hint, icon: Icon, children }: { id: string; title: string; hint: string; icon: LucideIcon; children: ReactNode }) {
   return (
-    <Card>
+    <Card id={id} className="scroll-mt-24">
       <div className="mb-4 flex items-start gap-2.5">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
           <Icon className="h-4 w-4" aria-hidden />

@@ -34,6 +34,7 @@ import { useAuth } from "../lib/auth";
 import { errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { useTheme, type ThemePref } from "../lib/theme";
+import { OnThisPage, type PageSection } from "../components/OnThisPage";
 
 export function SettingsPage() {
   const [theme, setTheme] = useTheme();
@@ -103,59 +104,19 @@ function SectionTitle({ icon: Icon, className, children }: { icon: LucideIcon; c
   );
 }
 
-const SECTIONS = [
+const SECTIONS: PageSection[] = [
   { id: "appearance", label: "Appearance" },
   { id: "shortcuts", label: "Keyboard shortcuts" },
   { id: "account", label: "Account" },
   { id: "privacy", label: "Privacy" },
-] as const;
+];
 
-/**
- * Wide screens only: the sections as links in the empty column beside them, the one you're reading marked. The
- * cards stay one long page (no tabs) so find-in-page and scrolling keep working.
- */
+/** Wide screens only: the sections as links in the empty column beside the cards. */
 function SectionNav() {
-  const [active, setActive] = useState<string>(SECTIONS[0].id);
-  useEffect(() => {
-    if (typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        const seen = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (seen) setActive(seen.target.id);
-      },
-      { rootMargin: "-20% 0px -60% 0px" },
-    );
-    for (const { id } of SECTIONS) {
-      const el = document.getElementById(id);
-      if (el) io.observe(el);
-    }
-    return () => io.disconnect();
-  }, []);
   return (
-    <nav aria-label="Settings sections" className="hidden lg:block">
-      <div className="sticky top-24 pt-[4.75rem]">
-        <p className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-zinc-500">On this page</p>
-        <ul className="space-y-0.5 border-l border-zinc-200 dark:border-white/10">
-          {SECTIONS.map(({ id, label }) => (
-            <li key={id}>
-              <a
-                href={`#${id}`}
-                aria-current={active === id ? "location" : undefined}
-                className={cx(
-                  "-ml-px block border-l-2 px-3 py-1.5 text-sm transition-colors",
-                  active === id
-                    ? "border-indigo-500 font-medium text-zinc-900 dark:border-indigo-400 dark:text-white"
-                    : "border-transparent text-zinc-500 hover:border-zinc-300 hover:text-zinc-800 dark:hover:border-white/20 dark:hover:text-zinc-200",
-                  focusRing,
-                )}
-              >
-                {label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </nav>
+    <div className="hidden lg:block">
+      <OnThisPage sections={SECTIONS} label="Settings sections" className="sticky top-24 pt-[4.75rem]" />
+    </div>
   );
 }
 
