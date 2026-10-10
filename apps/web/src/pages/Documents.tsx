@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { DOCUMENT_ACCEPT, type DocumentKind, type OrbitDocument } from "@orbit/types";
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../components/ui";
-import { confirmDialog, cx, FileUp, FolderOpen, useFocusTrap } from "@orbit/ui";
+import { Briefcase, confirmDialog, cx, FileIcon, FileText, FileUp, FolderOpen, NotebookPen, useFocusTrap, type LucideIcon } from "@orbit/ui";
+import { PRODUCTS } from "../components/products";
 import { api } from "../lib/api";
 import { errorText, formatBytes, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -14,6 +15,25 @@ const KIND_LABEL: Record<DocumentKind, string> = {
   notes: "Notes",
   other: "Other",
 };
+
+// Each kind of document gets its own icon and colour in the list: a resume in Resume AI's green, a job description
+// in Jobs AI's blue, notes in amber, anything else neutral. Decorative: the Type column (or the line under the title
+// on phones) names it.
+const KIND_MARK: Record<DocumentKind, { icon: LucideIcon; tile: string }> = {
+  resume: { icon: FileText, tile: PRODUCTS.resume.tile },
+  job_description: { icon: Briefcase, tile: PRODUCTS.jobs.tile },
+  notes: { icon: NotebookPen, tile: "bg-amber-500/15 text-amber-800 ring-amber-600/25 dark:bg-amber-400/15 dark:text-amber-200 dark:ring-amber-300/20" },
+  other: { icon: FileIcon, tile: "bg-zinc-500/10 text-zinc-600 ring-zinc-500/20 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10" },
+};
+
+function KindMark({ kind }: { kind: DocumentKind }) {
+  const { icon: Icon, tile } = KIND_MARK[kind];
+  return (
+    <span aria-hidden="true" className={cx("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1", tile)}>
+      <Icon className="h-4 w-4" />
+    </span>
+  );
+}
 
 const MAX_MB = 10;
 
@@ -242,11 +262,16 @@ export function DocumentsPage() {
               {(docs.data ?? []).map((d) => (
                 <tr key={d.id}>
                   <td className="px-5 py-3" title={d.filename ?? d.title}>
-                    <div className="max-w-[11rem] truncate font-medium sm:max-w-[16rem]">{d.title}</div>
-                    {/* Phones: type and status fold under the title instead of their own columns. */}
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-zinc-500 sm:hidden">
-                      <span>{KIND_LABEL[d.kind]}</span>
-                      <StatusBadge doc={d} />
+                    <div className="flex items-center gap-3">
+                      <KindMark kind={d.kind} />
+                      <div className="min-w-0">
+                        <div className="max-w-[11rem] truncate font-medium sm:max-w-[16rem]">{d.title}</div>
+                        {/* Phones: type and status fold under the title instead of their own columns. */}
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-zinc-500 sm:hidden">
+                          <span>{KIND_LABEL[d.kind]}</span>
+                          <StatusBadge doc={d} />
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td className="hidden px-5 py-3 text-zinc-500 sm:table-cell">{KIND_LABEL[d.kind]}</td>
