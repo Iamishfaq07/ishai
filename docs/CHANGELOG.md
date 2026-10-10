@@ -1,5 +1,12 @@
 # Implementation log
 
+## Look and feel: a session's page, job matches (2026-10-10)
+
+- **A session's page:** the title carries its type's icon, and the line under it drops the stray "· —" when the session
+  has no length. "Nothing was captured" uses the same illustrated empty state as the rest of the app (web and desktop).
+- **Jobs AI → Matches:** with no matches to show, "Search on other sites" appeared twice on wide screens (in the list
+  and in the sidebar); now only the list shows it.
+
 ## Look and feel: session and document lists (2026-10-10)
 
 - **Sessions:** each row starts with its type's icon (interview, coding, phone, meeting, assessment; mock interviews

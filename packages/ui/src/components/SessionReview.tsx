@@ -1,9 +1,9 @@
 import { useState } from "react";
 import type { ReviewItem, SessionReview as Review } from "@orbit/types";
-import { ArrowUpRight, CircleCheck, Target, type LucideIcon } from "../icons";
+import { ArrowUpRight, CircleCheck, MicOff, Target, type LucideIcon } from "../icons";
 import { cx } from "./cx";
 import { useCountUp } from "./Reveal";
-import { Button, Card, ErrorNote } from "./ui";
+import { Button, Card, EmptyState, ErrorNote } from "./ui";
 
 export interface SessionReviewProps {
   review: Review | null | undefined;
@@ -43,13 +43,12 @@ export function SessionReview({ review, ended, empty = false, onGenerate, onDril
 
   if (!review && ended && empty) {
     return (
-      <Card className="animate-fade-up text-center">
-        <p className="font-semibold">Nothing was captured</p>
-        <p className="mx-auto mt-1 max-w-md text-sm text-zinc-500 dark:text-zinc-400">
-          No speech was heard and no questions were asked in this session, so there's nothing to review. If audio was on,
-          check your microphone and interviewer audio with the tests on the start screen next time.
-        </p>
-      </Card>
+      <EmptyState
+        className="animate-fade-up"
+        icon={MicOff}
+        title="Nothing was captured"
+        body="No speech was heard and no questions were asked in this session, so there's nothing to review. If audio was on, check your microphone and interviewer audio with the tests on the start screen next time."
+      />
     );
   }
 
