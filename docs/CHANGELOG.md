@@ -1,5 +1,13 @@
 # Implementation log
 
+## Look and feel: the live answer on phones, a quieter transcript (2026-10-11)
+
+- **Live session, phones:** the answer's tools (Read aloud, Shorter, Longer, Simpler) show as icons, so the toolbar
+  fits on one row instead of two and the answer starts higher up. Each keeps its name for screen readers and as a
+  tooltip; from 640 px up the words come back.
+- **Live session, transcript:** "swap" (fix a line given to the wrong speaker) shows on the line under the pointer or
+  when tabbed to, not on every line. On touch screens it stays visible. Web and desktop app (shared components).
+
 ## Desktop: drop a file to upload (2026-10-10)
 
 - **Desktop → Documents → Upload a file:** the "Choose file" button becomes the same drop zone as the web app: drag a
