@@ -78,14 +78,54 @@ function ItemTools({ i, n, label, onMove, onRemove, onDuplicate }: {
   );
 }
 
+/**
+ * One part of the form. Its title folds it away (the form is long, above all on a phone), but folded fields stay in the
+ * page, just hidden: a fix or "Show me" that points into a folded section opens it first (`data-collapse-toggle`,
+ * ResumeEditor), and the preview and score keep reading every field.
+ */
+// The sections folded away, kept while the app is open so switching to Score and back (which rebuilds this form)
+// doesn't unfold them.
+const folded = new Set<string>();
+
 function Section({ id, title, children, action }: { id: string; title: string; children: ReactNode; action?: ReactNode }) {
+  const [open, setOpenState] = useState(() => !folded.has(id));
+  const setOpen = (next: (o: boolean) => boolean) =>
+    setOpenState((o) => {
+      const v = next(o);
+      if (v) folded.delete(id);
+      else folded.add(id);
+      return v;
+    });
+  const body = `section-body-${id}`;
   return (
-    <section data-path={id} tabIndex={-1} className="scroll-mt-24 rounded-2xl border border-zinc-200 bg-white/70 p-4 outline-none dark:border-white/10 dark:bg-white/[0.03]">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="font-display text-base font-semibold">{title}</h3>
+    <section
+      data-path={id}
+      data-collapsed={open ? undefined : ""}
+      tabIndex={-1}
+      className="scroll-mt-24 rounded-2xl border border-zinc-200 bg-white/70 p-4 outline-none dark:border-white/10 dark:bg-white/[0.03]"
+    >
+      <div className={cx("flex items-center justify-between gap-2", open && "mb-3")}>
+        <h3 className="min-w-0 font-display text-base font-semibold">
+          <button
+            type="button"
+            data-collapse-toggle=""
+            aria-expanded={open}
+            aria-controls={body}
+            onClick={() => setOpen((o) => !o)}
+            className={cx("-ml-1 inline-flex items-center gap-1.5 rounded-md px-1 text-left hover:text-indigo-700 dark:hover:text-indigo-300", focusRing)}
+          >
+            <ChevronDown
+              aria-hidden="true"
+              className={cx("h-4 w-4 shrink-0 text-zinc-400 motion-ok:transition-transform", !open && "-rotate-90")}
+            />
+            {title}
+          </button>
+        </h3>
         {action}
       </div>
-      <div className="space-y-3">{children}</div>
+      <div id={body} hidden={!open} className="space-y-3">
+        {children}
+      </div>
     </section>
   );
 }
