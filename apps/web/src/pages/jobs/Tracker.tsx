@@ -4,7 +4,6 @@ import type { JobStatus, JobTrackerEntry, JobTrackerUpdate } from "@orbit/types"
 import {
   ArrowUpRight,
   BookmarkCheck,
-  Building2,
   CalendarIcon,
   FileText,
   MapPin,
@@ -195,7 +194,8 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
       {/* Wide screens: a board, one column per status. */}
       <div className="hidden gap-3 lg:grid lg:grid-cols-5">
         {STATUSES.map((s) => (
-          <section key={s} aria-label={STATUS_LABEL[s]} className="min-w-0 rounded-2xl bg-zinc-500/[0.06] p-2.5 dark:bg-white/[0.02]">
+          <section key={s} aria-label={STATUS_LABEL[s]} className="relative min-w-0 rounded-2xl bg-zinc-500/[0.06] p-2.5 dark:bg-white/[0.02]">
+            <span aria-hidden="true" className={cx("absolute inset-x-4 top-0 h-0.5 rounded-full", STATUS_EDGE[s])} />
             <h3 className="mb-2 flex items-center gap-2 px-1 text-sm font-semibold">
               <span className={cx("rounded-full px-2 py-0.5 text-xs ring-1", STATUS_TONE[s])}>{STATUS_LABEL[s]}</span>
               <span className="text-xs font-normal text-zinc-500 tabular-nums dark:text-zinc-400">{columns[s].length}</span>
@@ -211,6 +211,46 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
         ))}
       </div>
     </div>
+  );
+}
+
+// Each status's colour as a solid edge: the card's left side, the top of its column on the board.
+const STATUS_EDGE: Record<JobStatus, string> = {
+  saved: "bg-zinc-400 dark:bg-zinc-500",
+  applied: "bg-indigo-500 dark:bg-indigo-400",
+  interviewing: "bg-sky-500 dark:bg-sky-400",
+  offer: "bg-emerald-500 dark:bg-emerald-400",
+  rejected: "bg-rose-400 dark:bg-rose-400/80",
+};
+
+// A company's initial on a tile whose colour comes from its name, so the same company looks the same everywhere and
+// neighbouring cards differ. Decorative: the name is written beside it.
+const MONOGRAM_TONES = [
+  "bg-indigo-500/15 text-indigo-700 dark:text-indigo-200",
+  "bg-sky-500/15 text-sky-700 dark:text-sky-200",
+  "bg-emerald-500/15 text-emerald-700 dark:text-emerald-200",
+  "bg-amber-500/15 text-amber-800 dark:text-amber-200",
+  "bg-rose-500/15 text-rose-700 dark:text-rose-200",
+  "bg-violet-500/15 text-violet-700 dark:text-violet-200",
+  "bg-teal-500/15 text-teal-700 dark:text-teal-200",
+  "bg-orange-500/15 text-orange-800 dark:text-orange-200",
+];
+
+function Monogram({ name, compact }: { name: string; compact: boolean }) {
+  const letter = name.trim().match(/[\p{L}\p{N}]/u)?.[0]?.toUpperCase() ?? "?";
+  let hash = 0;
+  for (const ch of name.trim().toLowerCase()) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return (
+    <span
+      aria-hidden="true"
+      className={cx(
+        "flex shrink-0 items-center justify-center rounded-lg font-display font-semibold",
+        compact ? "h-8 w-8 text-sm" : "h-10 w-10 text-base",
+        MONOGRAM_TONES[hash % MONOGRAM_TONES.length],
+      )}
+    >
+      {letter}
+    </span>
   );
 }
 
@@ -236,7 +276,12 @@ function TrackerCard({
   ].filter(Boolean);
 
   return (
-    <article className={cx("glass-panel rounded-xl", compact ? "p-3" : "p-4")}>
+    <article className={cx("glass-panel relative overflow-hidden rounded-xl", compact ? "p-3 pl-3.5" : "p-4 pl-5")}>
+      {/* The status as a colour edge, so a long phone list (one column) still reads at a glance. */}
+      <span aria-hidden="true" className={cx("absolute inset-y-0 left-0 w-1", STATUS_EDGE[entry.status])} />
+      <div className="flex items-start gap-2.5">
+      <Monogram name={entry.company} compact={compact} />
+      <div className="min-w-0 flex-1">
       <h4 className={cx("font-medium leading-snug", compact ? "text-sm" : "text-base")}>
         {/* The job's own page while it's in the feed; after that, the original post. */}
         {entry.live ? (
@@ -251,17 +296,16 @@ function TrackerCard({
           entry.title
         )}
       </h4>
-      <div className="mt-1 space-y-0.5 text-xs text-zinc-600 dark:text-zinc-300">
-        <span className="flex items-center gap-1">
-          <Building2 className="h-3 w-3 shrink-0 text-zinc-400" aria-hidden />
-          <span className="truncate">{entry.company}</span>
-        </span>
+      <div className="mt-0.5 space-y-0.5 text-xs text-zinc-600 dark:text-zinc-300">
+        <span className="block truncate font-medium">{entry.company}</span>
         {entry.location && (
           <span className="flex items-center gap-1">
             <MapPin className="h-3 w-3 shrink-0 text-zinc-400" aria-hidden />
             <span className="truncate">{entry.location}</span>
           </span>
         )}
+      </div>
+      </div>
       </div>
       <p className="mt-1.5 flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
         <CalendarIcon className="h-3 w-3 shrink-0" aria-hidden />
