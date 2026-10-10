@@ -1,5 +1,12 @@
 # Implementation log
 
+## Look and feel: the applications tracker (2026-10-10)
+
+- **Jobs AI → Tracker:** each card carries its status as a colour edge (grey saved, indigo applied, sky interviewing,
+  green offer, rose not this time), so the one-column phone list reads at a glance, and the board's columns get the
+  same colour along their top. Each company gets an initial on a tile whose colour comes from its name, so the same
+  company looks the same everywhere and neighbouring cards differ.
+
 ## Look and feel: resume preview on phones, credit tiles that fit (2026-10-10)
 
 - **Resume editor on phones and tablets:** the preview sits under the whole form, a long scroll away, so a floating
