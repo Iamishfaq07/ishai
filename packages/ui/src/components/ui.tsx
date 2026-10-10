@@ -71,9 +71,10 @@ export function Button({
 }
 
 /** Frosted-glass surface. `interactive` adds a hover lift for cards that are links or buttons. */
-export function Card({ children, className, interactive }: { children: ReactNode; className?: string; interactive?: boolean }) {
+export function Card({ children, className, interactive, id }: { children: ReactNode; className?: string; interactive?: boolean; id?: string }) {
   return (
     <div
+      id={id}
       className={cx(
         "glass-panel rounded-2xl p-5",
         interactive && "lift hover:border-indigo-400/40 dark:hover:border-indigo-400/30",
