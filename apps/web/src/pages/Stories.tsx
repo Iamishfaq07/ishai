@@ -109,9 +109,17 @@ function Coverage({ stories, onPick }: { stories: Story[]; onPick: (c: StoryComp
             What interviewers usually ask about. Tap a gap to write a story for it.
           </p>
         </div>
-        <p className="text-sm tabular-nums text-zinc-600 dark:text-zinc-300">
-          <span className="font-semibold">{covered.size}</span> of {STORY_COMPETENCIES.length} covered
-        </p>
+        <div className="w-full sm:w-44">
+          <p className="text-sm tabular-nums text-zinc-600 sm:text-right dark:text-zinc-300">
+            <span className="font-semibold">{covered.size}</span> of {STORY_COMPETENCIES.length} covered
+          </p>
+          <div aria-hidden="true" className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-white/10">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-emerald-500 motion-ok:transition-[width] motion-ok:duration-700 motion-ok:ease-out"
+              style={{ width: `${(covered.size / STORY_COMPETENCIES.length) * 100}%` }}
+            />
+          </div>
+        </div>
       </div>
       <ul className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         {STORY_COMPETENCIES.map((c) => {

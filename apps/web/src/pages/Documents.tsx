@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { DOCUMENT_ACCEPT, type DocumentKind, type OrbitDocument } from "@orbit/types";
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../components/ui";
-import { confirmDialog, FileUp, FolderOpen, useFocusTrap } from "@orbit/ui";
+import { confirmDialog, cx, FileUp, FolderOpen, useFocusTrap } from "@orbit/ui";
 import { api } from "../lib/api";
 import { errorText, formatBytes, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -24,6 +24,7 @@ export function DocumentsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [kind, setKind] = useState<DocumentKind>("resume");
   const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [pasteTitle, setPasteTitle] = useState("Job description");
@@ -110,21 +111,76 @@ export function DocumentsPage() {
                 ))}
               </Select>
             </Field>
-            <Field label="File" htmlFor="upload-file" hint={`PDF, DOCX, TXT or MD — up to ${MAX_MB} MB.`}>
+            <div>
+              <span className="mb-1.5 block text-sm font-medium">File</span>
               <input
                 id="upload-file"
                 ref={fileRef}
                 type="file"
                 accept={DOCUMENT_ACCEPT}
                 disabled={uploading}
+                aria-describedby="upload-file-hint"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) void upload(file);
                 }}
-                className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-indigo-500"
+                className="peer sr-only"
               />
-            </Field>
-            {uploading && <Spinner label="Uploading" state="weaving" />}
+              {/* The drop zone is the input's label: a click or Enter opens the file picker, a drop uploads. */}
+              <label
+                htmlFor="upload-file"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (!uploading) setDragging(true);
+                }}
+                onDragLeave={(e) => {
+                  // Moving onto the zone's own icon or text fires a leave too; only leaving the zone counts.
+                  if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragging(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file && !uploading) void upload(file);
+                }}
+                className={cx(
+                  "group flex min-h-44 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-4 py-6 text-center transition-colors",
+                  "peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500 peer-focus-visible:ring-offset-2 dark:peer-focus-visible:ring-offset-zinc-950",
+                  dragging
+                    ? "border-indigo-500 bg-indigo-500/10 dark:border-indigo-400"
+                    : "border-zinc-300 bg-zinc-50/60 hover:border-indigo-400 hover:bg-indigo-500/[0.04] dark:border-white/15 dark:bg-white/[0.02] dark:hover:border-indigo-400/60",
+                  uploading && "pointer-events-none",
+                )}
+              >
+                {uploading ? (
+                  <Spinner label="Uploading" state="weaving" />
+                ) : (
+                  <>
+                    <span
+                      aria-hidden="true"
+                      className={cx(
+                        "flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 ring-1 ring-indigo-500/20 transition-transform dark:text-indigo-300",
+                        dragging ? "motion-ok:-translate-y-1" : "motion-ok:group-hover:-translate-y-0.5",
+                      )}
+                    >
+                      <FileUp className="h-6 w-6" />
+                    </span>
+                    <span className="text-sm">
+                      <span className="font-medium">{dragging ? "Drop it here" : "Drop a file here"}</span>
+                      {!dragging && (
+                        <>
+                          {" "}
+                          or <span className="font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300">browse</span>
+                        </>
+                      )}
+                    </span>
+                    <span id="upload-file-hint" className="text-xs text-zinc-500">
+                      PDF, DOCX, TXT or MD, up to {MAX_MB} MB
+                    </span>
+                  </>
+                )}
+              </label>
+            </div>
           </div>
         </Card>
 

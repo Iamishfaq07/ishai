@@ -1,5 +1,12 @@
 # Implementation log
 
+## Look and feel: drop a file, story coverage bar (2026-10-10)
+
+- **Documents → Upload a file:** the browser's bare "Choose File / No file chosen" control gives way to a drop zone:
+  drag a file onto it (it lights up and says "Drop it here") or click / press Enter to browse. Same types and size
+  limit, still a real file input underneath for keyboards and screen readers.
+- **Story bank → Coverage:** "3 of 12 covered" gets a progress bar that fills as you add stories.
+
 ## Look and feel: credits and packs (2026-10-10)
 
 - **Your credits** (Plan & billing, and Usage on Home): interview minutes and Resume AI credits are two tiles in their
