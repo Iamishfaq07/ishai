@@ -28,7 +28,8 @@
         "visible": true,
         "center": true,
         "contentProtected": true,
-        "skipTaskbar": true
+        "skipTaskbar": true,
+        "dragDropEnabled": false
       }
     ],
     "security": {
