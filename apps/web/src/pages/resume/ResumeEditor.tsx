@@ -288,6 +288,8 @@ function ResumeEditor() {
     if (!focusTarget) return;
     const el = document.querySelector<HTMLElement>(`[data-path="${CSS.escape(focusTarget)}"]`);
     if (el) {
+      // A folded form section keeps its fields hidden: open it so there's something to scroll to.
+      el.closest<HTMLElement>("[data-collapsed]")?.querySelector<HTMLElement>("[data-collapse-toggle]")?.click();
       el.scrollIntoView({ behavior: "smooth", block: "center" });
       el.focus({ preventScroll: true });
       el.classList.add("ring-2", "ring-amber-400");

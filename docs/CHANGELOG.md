@@ -1,5 +1,13 @@
 # Implementation log
 
+## Look and feel: fold the resume form (2026-10-10)
+
+- **Resume editor → Content:** each section's title folds it away (a chevron shows which way), so the form fits on a
+  phone screen and you open only what you're working on. Folded sections stay folded when you switch to Score and
+  back. The section's own button (Add role, Write with AI…) stays in reach while folded.
+- A fix or "Show me" that points into a folded section opens it before jumping there, and the preview and ATS score
+  still read every field.
+
 ## Look and feel: Jobs AI profile sections, a welcoming orb (2026-10-10)
 
 - **Jobs AI → Profile** on wide screens: under the "Looking for" summary, an "On this page" list of its five sections
