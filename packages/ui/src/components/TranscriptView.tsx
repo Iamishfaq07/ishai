@@ -40,7 +40,7 @@ export const TranscriptView = memo(function TranscriptView({ turns, onCorrectSpe
       >
         <ol className="space-y-2.5">
           {turns.map((t) => (
-            <li key={t.turn_id} className="text-sm">
+            <li key={t.turn_id} className="group text-sm">
               <div className="flex items-center gap-2">
                 <span
                   className={cx(
@@ -54,7 +54,12 @@ export const TranscriptView = memo(function TranscriptView({ turns, onCorrectSpe
                   <button
                     type="button"
                     onClick={() => onCorrectSpeaker(t.turn_id, t.speaker === "candidate" ? "interviewer" : "candidate")}
-                    className={cx("text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200", focusRing)}
+                    // Where there's hover, only on the line under the pointer (or when tabbed to), so a long transcript
+                    // doesn't repeat "swap" on every line; on touch screens it stays visible.
+                    className={cx(
+                      "text-xs text-zinc-400 hover:text-zinc-700 group-hover:opacity-100 focus-visible:opacity-100 dark:hover:text-zinc-200 [@media(hover:hover)]:opacity-0",
+                      focusRing,
+                    )}
                     title="Wrong speaker? Swap it"
                   >
                     swap

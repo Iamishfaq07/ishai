@@ -234,8 +234,10 @@ function ReadAloudControls({ reader }: { reader: ReadAloud }) {
 }
 
 /** A toolbar button's text: icon-only in the compact overlay (the words stay for screen readers). */
+/** A toolbar button's word: always in the compact overlay and on phones just the icon (the word stays for screen
+ * readers, and the button's title shows it), the word beside the icon from 640 px up. */
 function Label({ compact, children }: { compact: boolean; children: string }) {
-  return <span className={compact ? "sr-only" : undefined}>{children}</span>;
+  return <span className={compact ? "sr-only" : "sr-only sm:not-sr-only"}>{children}</span>;
 }
 
 function SectionLabel({ children, block = false }: { children: string; block?: boolean }) {

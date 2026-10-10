@@ -121,3 +121,6 @@ export { File as FileIcon, NotebookPen } from "lucide-react";
 
 // A session that heard nothing.
 export { MicOff } from "lucide-react";
+
+// The applications tracker: a job's next date to the calendar, the list to a spreadsheet.
+export { CalendarPlus, Sheet } from "lucide-react";
