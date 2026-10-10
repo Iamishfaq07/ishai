@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { CreditCard, Crown, Mic, Sparkles, cx, focusRing } from "@orbit/ui";
+import { CircleCheck, CountUp, CreditCard, Crown, Mic, Sparkles, cx, focusRing, type LucideIcon } from "@orbit/ui";
 import type { CreditPack, Entitlements, UpiOrder } from "@orbit/types";
 import { Button, Card, ErrorNote, PageHeader, Spinner } from "../components/ui";
 import { api } from "../lib/api";
@@ -21,46 +21,56 @@ function Bar({ used, limit }: { used: number; limit: number | null }) {
   );
 }
 
-function minutes(n: number): string {
-  return `${Math.round(n)} min`;
+// The two balances wear their product's colour: interview minutes the copilot's, Resume AI credits Resume AI's.
+const BALANCE_TONE = {
+  interview: { tile: "bg-indigo-500/[0.06] ring-indigo-500/15 dark:bg-indigo-400/[0.07] dark:ring-indigo-300/15", chip: "bg-indigo-500/15 text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-200" },
+  resume: { tile: "bg-emerald-500/[0.06] ring-emerald-600/15 dark:bg-emerald-400/[0.07] dark:ring-emerald-300/15", chip: "bg-emerald-500/15 text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-200" },
+};
+
+/** One balance as a big number (counting up the first time it shows), what it's for underneath. */
+function Balance({ icon: Icon, tone, value, unit, label, children }: { icon: LucideIcon; tone: keyof typeof BALANCE_TONE; value: number | null; unit: string; label: string; children: ReactNode }) {
+  const t = BALANCE_TONE[tone];
+  return (
+    <div className={cx("rounded-xl p-4 ring-1", t.tile)}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium">{label}</span>
+        <span aria-hidden="true" className={cx("flex h-8 w-8 items-center justify-center rounded-lg", t.chip)}>
+          <Icon className="h-4 w-4" />
+        </span>
+      </div>
+      <p className="mt-1 font-display text-3xl font-semibold tracking-tight">
+        {value === null ? "Unlimited" : <CountUp to={value} />}
+        {value !== null && <span className="ml-1 text-sm font-medium text-zinc-500">{unit}</span>}
+      </p>
+      <p className="mt-1 text-xs text-zinc-500">{children}</p>
+    </div>
+  );
 }
 
 /** The credits left on a Free account: resume AI and interview minutes (live and mock share them). */
-function CreditRows({ e }: { e: Entitlements }) {
+function CreditRows({ e, wide = false }: { e: Entitlements; wide?: boolean }) {
   const c = e.credits;
   if (!c) return null;
+  const empty = Math.round(c.interview_minutes_left) <= 0 && c.resume === 0;
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
-          <Mic className="h-4 w-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex justify-between text-sm">
-            <span>Interview minutes</span>
-            <span className="tabular-nums font-medium">{minutes(c.interview_minutes_left)} left</span>
-          </div>
-          <p className="text-xs text-zinc-500">Live interviews and mock interviews both use these.</p>
-        </div>
+      <div className={cx("grid gap-3", wide ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-1")}>
+        <Balance icon={Mic} tone="interview" value={Math.round(c.interview_minutes_left)} unit="min left" label="Interview minutes">
+          Live interviews and mock interviews both use these.
+        </Balance>
+        <Balance icon={Sparkles} tone="resume" value={c.resume} unit="left" label="Resume AI credits">
+          One per AI action in{" "}
+          <Link to={RESUME_AI_HOME} className={cx("font-medium text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}>
+            Resume AI
+          </Link>
+          : an import, rewrite, tailoring, cover letter, profile or message.
+        </Balance>
       </div>
-      <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
-          <Sparkles className="h-4 w-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex justify-between text-sm">
-            <span>Resume AI credits</span>
-            <span className="tabular-nums font-medium">{c.resume === null ? "unlimited" : `${c.resume} left`}</span>
-          </div>
-          <p className="text-xs text-zinc-500">
-            One per AI action in{" "}
-            <Link to={RESUME_AI_HOME} className={cx("font-medium text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}>
-              Resume AI
-            </Link>
-            : an import, rewrite, tailoring, cover letter, profile or message.
-          </p>
-        </div>
-      </div>
+      {empty && wide && (
+        <Link to="/billing" className={cx("inline-flex items-center gap-1.5 text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
+          <Crown className="h-4 w-4 text-amber-500" aria-hidden="true" /> Top up with a pack, paid once over UPI
+        </Link>
+      )}
       <p className="text-xs text-zinc-500">
         Credits never expire. Screenshots: {e.usage.screenshots} / {e.limits.screenshots ?? "∞"} this month · Documents:{" "}
         {e.usage.documents} / {e.limits.documents ?? "∞"} · Sessions up to {e.limits.max_session_minutes} min.
@@ -99,7 +109,7 @@ function UsageRows({ e }: { e: Entitlements }) {
 function PackCard({ p, best, busy, onBuy }: { p: CreditPack; best: boolean; busy: boolean; onBuy: (p: CreditPack) => void }) {
   const perMinute = p.interview_minutes ? p.price_inr / p.interview_minutes : null;
   return (
-    <Card className={cx("relative flex flex-col", best ? "ring-2 ring-amber-500/70" : "ring-1 ring-zinc-500/10")}>
+    <Card className={cx("lift relative flex flex-col", best ? "!ring-2 ring-amber-500/70 dark:ring-amber-400/60" : "ring-1 ring-zinc-500/10")}>
       {best && (
         <span className="absolute -top-3 left-4 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-semibold text-amber-950">
           Best value
@@ -109,16 +119,33 @@ function PackCard({ p, best, busy, onBuy }: { p: CreditPack; best: boolean; busy
         <Crown className="h-4 w-4 text-amber-500" /> {p.label}
       </h3>
       <p className="mt-1 font-display text-2xl font-semibold tabular-nums">₹{p.price_inr.toLocaleString("en-IN")}</p>
-      <ul className="mt-3 flex-1 space-y-1.5 text-sm text-zinc-600 dark:text-zinc-400">
-        {p.interview_minutes > 0 && <li>· {p.interview_minutes} interview minutes (live or mock)</li>}
-        {p.resume_credits > 0 && <li>· {p.resume_credits} Resume AI credits</li>}
-        <li>· Never expire, no subscription</li>
-        {perMinute && <li className="text-xs text-zinc-500">≈ ₹{perMinute.toFixed(perMinute < 10 ? 1 : 0)} per interview minute</li>}
+      {perMinute && <p className="text-xs text-zinc-500">≈ ₹{perMinute.toFixed(perMinute < 10 ? 1 : 0)} per interview minute, paid once</p>}
+      <ul className="mt-4 flex-1 space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
+        {p.interview_minutes > 0 && (
+          <PackLine>
+            <strong className="font-semibold tabular-nums">{p.interview_minutes}</strong> interview minutes (live or mock)
+          </PackLine>
+        )}
+        {p.resume_credits > 0 && (
+          <PackLine>
+            <strong className="font-semibold tabular-nums">{p.resume_credits}</strong> Resume AI credits
+          </PackLine>
+        )}
+        <PackLine>Never expire, no subscription</PackLine>
       </ul>
-      <Button className="mt-4 w-full" disabled={busy || !p.buyable} onClick={() => onBuy(p)} title={p.buyable ? undefined : "UPI payments aren't set up yet"}>
+      <Button className="mt-5 w-full" variant={best ? "primary" : "secondary"} disabled={busy || !p.buyable} onClick={() => onBuy(p)} title={p.buyable ? undefined : "UPI payments aren't set up yet"}>
         Buy · ₹{p.price_inr.toLocaleString("en-IN")}
       </Button>
     </Card>
+  );
+}
+
+function PackLine({ children }: { children: ReactNode }) {
+  return (
+    <li className="flex items-start gap-2">
+      <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+      <span>{children}</span>
+    </li>
   );
 }
 
@@ -164,7 +191,7 @@ export function UsageSummary() {
   if (ent.loading) return <Spinner />;
   if (ent.error) return <ErrorNote onRetry={ent.reload}>{errorText(ent.error)}</ErrorNote>;
   if (!ent.data) return null;
-  return ent.data.credits ? <CreditRows e={ent.data} /> : <UsageRows e={ent.data} />;
+  return ent.data.credits ? <CreditRows e={ent.data} wide /> : <UsageRows e={ent.data} />;
 }
 
 export function BillingPage() {
@@ -212,7 +239,7 @@ export function BillingPage() {
     <div>
       <PageHeader icon={CreditCard} title="Plan & billing" subtitle="Your credits, and packs to top up. Credits never expire." />
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
+        <Card className="self-start lg:col-span-1">
           <h2 className="mb-1 font-semibold">{e?.credits ? "Your credits" : "This month"}</h2>
           <p className="mb-4 text-sm text-zinc-500">
             Plan: <span className="font-medium text-zinc-800 dark:text-zinc-200">{e?.label ?? "—"}</span>

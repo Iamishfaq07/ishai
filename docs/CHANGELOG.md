@@ -1,5 +1,14 @@
 # Implementation log
 
+## Look and feel: credits and packs (2026-10-10)
+
+- **Your credits** (Plan & billing, and Usage on Home): interview minutes and Resume AI credits are two tiles in their
+  products' colours with the balance as a big number that counts up, instead of small text rows. With nothing left,
+  Home's card links straight to a top-up. The Plan & billing card no longer stretches to the packs' height.
+- **Packs:** what each includes is a list of green checks with the numbers in bold, the price per interview minute sits
+  under the price, and only the best-value pack's button is filled (the rest are outlined), so the eye lands on one.
+- Fixed: the best-value pack's amber ring didn't show in dark mode (the card's own shadow covered it).
+
 ## Look and feel: Home's tools, Settings sections (2026-10-10)
 
 - **Home, Your tools:** the four products are cards in a two-column grid (one column on phones, mark beside the
