@@ -85,7 +85,7 @@ export function AdminInboxPage() {
       <AdminTabs inboxUnread={counts?.new} />
 
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <div className="-mx-4 max-w-full overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <div className="edge-fade-x -mx-4 max-w-[calc(100%+2rem)] overflow-x-auto px-4 sm:mx-0 sm:max-w-full sm:px-0">
           <div role="tablist" aria-label="Which messages" className="inline-flex gap-1 rounded-xl bg-zinc-500/10 p-1">
             {INBOX_FILTERS.map(({ id, label }) => {
               const n = filterCount(counts, id);

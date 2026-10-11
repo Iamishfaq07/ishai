@@ -377,6 +377,38 @@ button:not(:disabled) {
   background: rgb(var(--accent-500) / 0.12);
 }
 
+/* A row that scrolls sideways (tabs, filter chips): its edge fades where there is more to scroll to, so a cut-off
+   word reads as "more this way". Driven by the row's own scroll position; a row that fits (or a browser without
+   scroll timelines) shows no fade. */
+@property --edge-l {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --edge-r {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes edge-fade-l {
+  from { --edge-l: 0px; }
+  to { --edge-l: 2rem; }
+}
+@keyframes edge-fade-r {
+  from { --edge-r: 2rem; }
+  to { --edge-r: 0px; }
+}
+@supports (animation-timeline: scroll()) {
+  /* Each fade grows over the first (or last) 2rem of scrolling, so a row a pixel too wide fades a pixel. */
+  .edge-fade-x {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--edge-l), #000 calc(100% - var(--edge-r)), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 var(--edge-l), #000 calc(100% - var(--edge-r)), transparent);
+    animation: edge-fade-l linear both, edge-fade-r linear both;
+    animation-timeline: scroll(self inline), scroll(self inline);
+    animation-range: 0 2rem, calc(100% - 2rem) 100%;
+  }
+}
+
 /* Slim, themed scrollbars. */
 * {
   scrollbar-width: thin;

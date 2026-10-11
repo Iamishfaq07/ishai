@@ -204,7 +204,7 @@ function Matches({ profile }: { profile: JobProfile }) {
         <div className="hidden sm:block">
           <QuickFilters profile={profile} disabled={suggesting} onSaved={setProfile} words={<WordChips query={query} onToggle={toggleWord} />} />
         </div>
-        <WordChips query={query} onToggle={toggleWord} className="-mx-4 overflow-x-auto px-4 sm:hidden" />
+        <WordChips query={query} onToggle={toggleWord} className="edge-fade-x -mx-4 overflow-x-auto px-4 sm:hidden" />
         <Sheet
           open={filtersOpen}
           title="Filters"
@@ -559,7 +559,7 @@ export function PortalCard({ portals, days, prominent = false }: { portals: JobP
     <Card className={cx("!p-4", prominent && "gradient-border")}>
       <h2 className="font-display text-sm font-semibold">Search on other sites</h2>
       <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Their own search, filled in from your profile · last {days}.</p>
-      <ul className="-mx-4 mt-3 flex gap-1.5 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0">
+      <ul className="edge-fade-x -mx-4 mt-3 flex gap-1.5 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0">
         {portals.map((p) => {
           const url = safeUrl(p.url);
           return url ? (
