@@ -20,6 +20,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from orbit_api.live import company_styles
 from orbit_api.live.carryover import MockProgress
 from orbit_api.live.context_builder import fence
 from orbit_api.live.question_detector import classify_type, normalize
@@ -94,6 +95,9 @@ class MockConfig(BaseModel):
     # whoever asked the topic. Not for drills or negotiations (one voice each).
     panel: list[Persona] | None = Field(None, min_length=2, max_length=3)
     one_way: OneWaySetup | None = None
+    # The company the candidate is practising for: a known one is interviewed in its style (live/company_styles.py).
+    # A negotiation names its company in `negotiation` instead.
+    company: str | None = Field(None, max_length=120)
 
     @model_validator(mode="after")
     def _negotiation_needs_an_offer(self) -> "MockConfig":
@@ -299,6 +303,8 @@ class _Asked:
     drill: DrillItem | None = None
     speaker: str | None = None  # a panel interview: the panelist (persona) who asked it
 
+
+_OUR_COMPANY = re.compile(r"\bour company\b", re.IGNORECASE)
 
 _DRILL_LEAD = {
     "first": "Let's work on a few questions from your last session. ",
@@ -577,7 +583,17 @@ class MockInterviewer:
                                     "answer": "first_answer"}.get(item.kind, "first")]
             else:
                 lead = _DRILL_LEAD[item.kind]
+            item = self._named(item)
             await self._put(lead + item.question, False, drill=item)
+
+    def _named(self, item: DrillItem) -> DrillItem:
+        """A fixed question that says "our company" (the HR round's "Why do you want to join our company?") names the
+        company being practised for, when there is one."""
+        company = self._company.strip() if self._company else ""
+        if not company or not _OUR_COMPANY.search(item.question):
+            return item
+        style = company_styles.match(company)
+        return item.model_copy(update={"question": _OUR_COMPANY.sub(style.name if style else company, item.question)})
 
     def _follow_ups_in_topic(self) -> int:
         n = 0
@@ -663,6 +679,9 @@ class MockInterviewer:
                    else _PERSONAS[cfg.persona])
         system = _SYSTEM.format(persona=persona, role=role, difficulty=_DIFFICULTY[cfg.difficulty],
                                 focus=_TYPES[cfg.interview_type])
+        style = company_styles.match(self._company)
+        if style is not None and not cfg.drill:
+            system += "\n" + company_styles.interviewer_brief(style)
         follow_ups = self._follow_ups_in_topic()
         if follow_up_on is not None and follow_up_on.kind in ("prep", "answer"):
             # A question from their prep, or one they've prepared an answer to: probe the claim behind it, the way the
@@ -742,5 +761,6 @@ class MockInterviewer:
         if follow_up_on is not None:
             return "Can you make that more concrete? What exactly did you do, and what was the result?", True
         asked = {a.text for a in self.asked}
-        fallback = next((q for q in _FALLBACK if q not in asked), _FALLBACK[-1])
+        own = list(style.questions) if style is not None and not cfg.drill else []
+        fallback = next((q for q in [*own, *_FALLBACK] if q not in asked), _FALLBACK[-1])
         return fallback, False

@@ -20,7 +20,9 @@ import {
 } from "@orbit/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
+import { matchStyle, withCompany } from "../lib/companyStyle";
 import { useAsync } from "../lib/useAsync";
+import { CompanyGuide } from "./CompanyGuide";
 import { PRESETS, SAMPLE_OFFER, SAMPLE_TARGET, isPresetId, presetSession, type PresetId } from "./mockPresets";
 import { PrepSection } from "./Prep";
 import { PracticeQueueCard } from "./PracticeQueue";
@@ -74,6 +76,10 @@ function MockSetup() {
   const [params] = useSearchParams();
   const knownRole = params.get("role")?.trim().slice(0, 120) || profile.data?.prefs.titles[0] || "";
   const highlighted = params.get("preset");
+  // The company being practised for (`?company=`, or typed): a known one is asked in its style, with its guide shown.
+  const styles = useAsync(() => api.interviewStyles(), [], "interview-styles");
+  const [company, setCompany] = useState(() => params.get("company")?.trim().slice(0, 120) ?? "");
+  const guide = matchStyle(styles.data ?? [], company);
 
   // Which job description the interviewer asks about: the one a link asked for (Jobs → Prepare: `?jd=`), else the
   // newest (like Prep), or none.
@@ -87,7 +93,7 @@ function MockSetup() {
     setStarting(which);
     setError(null);
     try {
-      const session = await api.createSession(req);
+      const session = await api.createSession(withCompany(req, company));
       const launchState: LiveLaunchState = { systemAudio: false };
       navigate(`/live/${session.id}`, { state: launchState });
     } catch (err) {
@@ -117,19 +123,28 @@ function MockSetup() {
               </h2>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">Uses your interview minutes. Only your microphone is used.</p>
             </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Company (optional)" htmlFor="mock-company" hint={guide ? `Asked the way ${guide.name} interviews.` : "Name a company to practise in its interview style."}>
+              <Input id="mock-company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="e.g. Amazon, TCS, Flipkart"
+                     maxLength={120} list="mock-company-styles" autoComplete="off" />
+              <datalist id="mock-company-styles">
+                {(styles.data ?? []).map((s) => (
+                  <option key={s.slug} value={s.name} />
+                ))}
+              </datalist>
+            </Field>
             {jds.length > 0 && (
-              <div className="w-full min-w-0 sm:w-64">
-                <Field label="Practise for" htmlFor="mock-jd">
-                  <Select id="mock-jd" value={jdId ?? NO_JD} onChange={(e) => setJdChoice(e.target.value)}>
-                    {jds.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.title}
-                      </option>
-                    ))}
-                    <option value={NO_JD}>No job post: just my resume</option>
-                  </Select>
-                </Field>
-              </div>
+              <Field label="Practise for" htmlFor="mock-jd">
+                <Select id="mock-jd" value={jdId ?? NO_JD} onChange={(e) => setJdChoice(e.target.value)}>
+                  {jds.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.title}
+                    </option>
+                  ))}
+                  <option value={NO_JD}>No job post: just my resume</option>
+                </Select>
+              </Field>
             )}
           </div>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -165,6 +180,7 @@ function MockSetup() {
             })}
           </ul>
           {error && <ErrorNote>{error}</ErrorNote>}
+          {guide && <CompanyGuide style={guide} />}
           <p className="flex items-start gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
             <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-500" aria-hidden />
             <span>
@@ -179,6 +195,7 @@ function MockSetup() {
 
         <CustomMock
           knownRole={knownRole}
+          company={company}
           open={params.has("customise")}
           busy={starting !== null}
           onStart={(req) => void launch({ ...req, document_ids: contextDocs() }, "custom")}
@@ -203,11 +220,14 @@ function MockSetup() {
 /** "Customise": every setting of a mock interview, for when a preset isn't it. The job post is the one picked above. */
 function CustomMock({
   knownRole,
+  company,
   open,
   busy,
   onStart,
 }: {
   knownRole: string;
+  /** From the Company field above: the negotiation's recruiter works there; any other round asks in its style. */
+  company: string;
   open: boolean;
   busy: boolean;
   onStart: (req: CreateSessionRequest) => void;
@@ -218,7 +238,6 @@ function CustomMock({
   const [duration, setDuration] = useState(20);
   const [persona, setPersona] = useState<MockPersona>("hiring_manager");
   const [offer, setOffer] = useState("");
-  const [company, setCompany] = useState("");
   const [target, setTarget] = useState("");
   const negotiation = interviewType === "negotiation";
 
@@ -245,7 +264,6 @@ function CustomMock({
           ? {
               negotiation: {
                 offer: offer.trim(),
-                ...(company.trim() ? { company: company.trim() } : {}),
                 ...(target.trim() ? { target: target.trim() } : {}),
               },
             }
@@ -282,11 +300,7 @@ function CustomMock({
                 ))}
               </Select>
             </Field>
-            {negotiation ? (
-              <Field label="Company" htmlFor="mock-company">
-                <Input id="mock-company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="e.g. Infosys" maxLength={120} />
-              </Field>
-            ) : (
+            {!negotiation && (
               <Field label="Interviewer" htmlFor="mock-persona">
                 <Select id="mock-persona" value={persona} onChange={(e) => setPersona(e.target.value as MockPersona)}>
                   <option value="recruiter">Recruiter (HR)</option>

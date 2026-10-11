@@ -12,6 +12,7 @@ from pathlib import Path
 
 from orbit_api.answers.match import DOC_KIND as ANSWER_KIND
 from orbit_api.answers.match import chunk_question, same_question
+from orbit_api.live import company_styles
 from orbit_api.live.events import (
     AnswerLength,
     AnswerSize,
@@ -385,6 +386,7 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
             f"Target role: {inputs.role}" if inputs.role else "",
             _LEVEL_RULES.get(inputs.level or "", ""),
             f"Company: {inputs.company}" if inputs.company else "",
+            company_styles.copilot_hint(style) if (style := company_styles.match(inputs.company)) else "",
             _SIZE_RULES[inputs.size] if inputs.size else _LENGTH_RULES.get(inputs.length, _LENGTH_RULES["standard"]),
             _STYLE_RULES[inputs.style] if inputs.qtype != QuestionType.coding else "",
             f"Answer language: {(inputs.answer_language or '').strip() or 'English'}",

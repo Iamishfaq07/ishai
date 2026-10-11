@@ -94,6 +94,7 @@ import type {
   RemoveCreditsRequest,
   RemoveCreditsResult,
   ScreenshotAccepted,
+  CompanyStyle,
   SavedAnswer,
   SavedAnswerInput,
   Story,
@@ -407,6 +408,8 @@ export function createApiClient(options: ApiClientOptions) {
       json<FollowUp>(`/v1/sessions/${encodeURIComponent(id)}/follow-up${refresh ? "?refresh=true" : ""}`, {
         method: "POST",
       }),
+    /** How well-known companies interview (the Practice page's "What to expect at …"). */
+    interviewStyles: () => json<CompanyStyle[]>("/v1/interview-styles"),
     // Answer bank
     savedAnswers: () => json<SavedAnswer[]>("/v1/answers"),
     saveAnswer: (req: SavedAnswerInput) => json<SavedAnswer>("/v1/answers", { method: "POST", body: body(req) }),
