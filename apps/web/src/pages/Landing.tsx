@@ -12,11 +12,14 @@ import {
   ShieldCheck,
   cx,
   focusRing,
+  formatNumber,
+  isIndia,
 } from "@orbit/ui";
 import { Footer } from "../components/Footer";
 import { JobMock, PracticeMock, ResumeMock } from "../components/productArt";
 import { PRODUCTS, ProductMark, type ProductId } from "../components/products";
 import { api } from "../lib/api";
+import { useCountry, useIndia } from "../lib/country";
 import { CONTACT_PAGE, REFUND_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
 import { useWelcomeGrant, type WelcomeGrant } from "../lib/welcome";
 
@@ -62,6 +65,7 @@ function usePublic<T>(load: () => Promise<T>): T | null {
   return value;
 }
 
+// Packs are priced in rupees and paid with UPI (billing/packs.py) for now, wherever the visitor is.
 const rupees = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
 // ─── The copilot mock (the hero's picture) ─────────────────────────────────────────────────────────────────────────
@@ -264,6 +268,7 @@ function ProductBand({
 // ─── Pricing ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
 function Pricing({ packs, welcome, stats }: { packs: CreditPack[] | null; welcome: WelcomeGrant | null; stats: JobStats | null }) {
+  const india = useIndia();
   const sorted = packs ? [...packs].sort((a, b) => a.price_inr - b.price_inr) : null;
   const card = "flex flex-col rounded-2xl p-5 ring-1";
   return (
@@ -272,8 +277,9 @@ function Pricing({ packs, welcome, stats }: { packs: CreditPack[] | null; welcom
         Start free. Pay only when you need more.
       </h2>
       <p className="mt-3 max-w-2xl text-base text-zinc-600 dark:text-zinc-300">
-        No subscription and nothing that renews by itself. Buy a pack with any UPI app when you need one; what's in it
-        never expires.
+        {india
+          ? "No subscription and nothing that renews by itself. Buy a pack with any UPI app when you need one; what's in it never expires."
+          : "No subscription and nothing that renews by itself, and what you buy never expires. Packs are priced in Indian rupees and paid with UPI for now; card payments for other countries are coming soon."}
       </p>
 
       <Reveal as="ul" stagger className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -362,6 +368,8 @@ function Pricing({ packs, welcome, stats }: { packs: CreditPack[] | null; welcom
 // ─── Questions ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 function Faq({ welcome, stats }: { welcome: WelcomeGrant | null; stats: JobStats | null }) {
+  const country = useCountry();
+  const india = isIndia(country);
   const items: Array<[string, ReactNode]> = [
     [
       "Is it allowed to use Orbit in an interview?",
@@ -394,11 +402,19 @@ function Faq({ welcome, stats }: { welcome: WelcomeGrant | null; stats: JobStats
     ],
     [
       "How do I pay? Is there a subscription?",
-      <p>
-        There's no subscription. When you want more interview minutes or AI credits, you buy a pack with any UPI app
-        (Google Pay, PhonePe, Paytm or your bank's app). Each payment is checked against its UTR, the 12-digit number
-        your UPI app shows, and then the credits are added. Nothing renews, and what you buy never expires.
-      </p>,
+      india ? (
+        <p>
+          There's no subscription. When you want more interview minutes or AI credits, you buy a pack with any UPI app
+          (Google Pay, PhonePe, Paytm or your bank's app). Each payment is checked against its UTR, the 12-digit number
+          your UPI app shows, and then the credits are added. Nothing renews, and what you buy never expires.
+        </p>
+      ) : (
+        <p>
+          There's no subscription, nothing renews, and what you buy never expires. Today packs are priced in Indian
+          rupees and paid with UPI; card payments for other countries are coming soon. Everything free works the same
+          wherever you are.
+        </p>
+      ),
     ],
     // The refund answer waits for the owner's refund rules, with the refund page (lib/contact.ts).
     ...(REFUND_PAGE
@@ -425,9 +441,9 @@ function Faq({ welcome, stats }: { welcome: WelcomeGrant | null; stats: JobStats
     [
       "Where do the jobs come from?",
       <p>
-        Companies' own careers pages and job boards that allow it{stats && stats.jobs >= SHOW_COUNTS_FROM ? `: ${stats.jobs.toLocaleString("en-IN")} new posts in the last ${stats.days} days` : ""}. Apply always
-        opens the original post. LinkedIn and Naukri get search links filled in for you; Orbit doesn't copy their
-        listings.
+        Companies' own careers pages and job boards that allow it{stats && stats.jobs >= SHOW_COUNTS_FROM ? `: ${formatNumber(stats.jobs, country)} new posts in the last ${stats.days} days` : ""}. Apply always
+        opens the original post. {india ? "LinkedIn and Naukri" : "LinkedIn and Indeed"} get search links filled in for
+        you; Orbit doesn't copy their listings.
       </p>,
     ],
     [
@@ -476,6 +492,7 @@ function Faq({ welcome, stats }: { welcome: WelcomeGrant | null; stats: JobStats
 // ─── The page ──────────────────────────────────────────────────────────────────────────────────────────────────────
 
 export function LandingPage() {
+  const country = useCountry();
   const welcome = useWelcomeGrant();
   const packs = usePublic(() => api.listPacks());
   const stats = usePublic(() => api.jobStats());
@@ -599,10 +616,10 @@ export function LandingPage() {
               title="New jobs that fit you, straight from the company"
               line={
                 counts
-                  ? `${counts.jobs.toLocaleString("en-IN")} new jobs from ${counts.companies.toLocaleString("en-IN")} companies in the last ${counts.days} days, from their own careers pages and job boards that allow it. Each one shows how well it matches your resume.`
+                  ? `${formatNumber(counts.jobs, country)} new jobs from ${formatNumber(counts.companies, country)} companies in the last ${counts.days} days, from their own careers pages and job boards that allow it. Each one shows how well it matches your resume.`
                   : "The latest openings from companies' own careers pages and job boards that allow it. Each one shows how well it matches your resume."
               }
-              points={["Freshers' and internship filters, your city or remote", "A tracker from saved to offer, with follow-ups", "Messages to ask for a referral"]}
+              points={[isIndia(country) ? "Freshers' and internship filters, your city or remote" : "Entry-level and internship filters, your city or remote", "A tracker from saved to offer, with follow-ups", "Messages to ask for a referral"]}
               free="Matches and the tracker are free, and so are a few AI fit checks a day."
               link={
                 <Link to="/jobs" className={cx("inline-flex min-h-10 items-center gap-1.5 rounded-lg font-medium text-sky-700 hover:underline dark:text-sky-300", focusRing)}>

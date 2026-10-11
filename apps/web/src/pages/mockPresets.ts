@@ -1,25 +1,29 @@
-// One-tap mock interviews (Practice): each preset is the same session the Customise form would make, with India's
-// usual first rounds as fixed questions where that helps (the campus HR round, "Tell me about yourself") and a ₹ offer
-// for salary practice. Plain data, unit-tested (mockPresets.test.ts).
+// One-tap mock interviews (Practice): each preset is the same session the Customise form would make, with the usual
+// first rounds as fixed questions where that helps (the HR screen, "Tell me about yourself") and an offer for salary
+// practice in the terms of the country the user applies in (India's ₹ LPA first). Plain data, unit-tested
+// (mockPresets.test.ts).
 import type { CreateSessionRequest, MockConfig } from "@orbit/types";
+import { INDIA, isIndia, sampleOffer } from "@orbit/ui";
 
 export type PresetId = "hr5" | "tmay10" | "tech15" | "panel15" | "oneway10" | "salary";
 
 export interface MockPreset {
   id: PresetId;
-  /** "5-min HR round". */
+  /** "5-min HR round" (the salary preset's is presetTitle's: "(₹)" in India). */
   title: string;
-  /** One line on the card. `{role}` is the role when it's known. */
-  blurb: (role: string) => string;
+  /** One line on the card, with the role when it's known, for the country the user applies in. */
+  blurb: (role: string, country?: string) => string;
   minutes: number;
 }
 
-/** A sample offer for salary practice, in the way Indian offers are written. */
-export const SAMPLE_OFFER = "₹12 LPA fixed + ₹2 L variable";
-export const SAMPLE_TARGET = "₹15 LPA fixed";
-
 export const PRESETS: MockPreset[] = [
-  { id: "hr5", title: "5-min HR round", minutes: 5, blurb: () => "Tell me about yourself, why us, strengths, relocation: the campus HR round." },
+  {
+    id: "hr5",
+    title: "5-min HR round",
+    minutes: 5,
+    blurb: (_role, country = INDIA) =>
+      `Tell me about yourself, why us, strengths, relocation: the ${isIndia(country) ? "campus HR round" : "first HR screen"}.`,
+  },
   { id: "tmay10", title: "Tell me about yourself", minutes: 10, blurb: () => "The full answer, a project from your resume, then the 30-second version." },
   {
     id: "tech15",
@@ -39,10 +43,20 @@ export const PRESETS: MockPreset[] = [
     minutes: 10,
     blurb: () => "One-way, HireVue-style: 30 s to think, 90 s to answer each prompt, on camera.",
   },
-  { id: "salary", title: "Salary talk (₹)", minutes: 10, blurb: () => `A recruiter offers ${SAMPLE_OFFER}. Practise asking for more.` },
+  {
+    id: "salary",
+    title: "Salary talk",
+    minutes: 10,
+    blurb: (_role, country = INDIA) => `A recruiter offers ${sampleOffer(country).offer}. Practise asking for more.`,
+  },
 ];
 
-/** The campus HR round's usual questions (TCS, Infosys, Wipro and most service companies ask these first). */
+/** The card's title: the salary preset names the rupee in India, where it started. */
+export function presetTitle(p: MockPreset, country: string = INDIA): string {
+  return p.id === "salary" && isIndia(country) ? "Salary talk (₹)" : p.title;
+}
+
+/** The HR screen's usual questions (in India, the campus round at TCS, Infosys, Wipro and most service companies). */
 export const HR_QUESTIONS = [
   "Tell me about yourself.",
   "Why do you want to join our company?",
@@ -50,7 +64,7 @@ export const HR_QUESTIONS = [
   "Are you open to relocating, or to working in shifts if the role needs it?",
 ];
 
-function mockFor(id: PresetId): MockConfig {
+function mockFor(id: PresetId, country: string): MockConfig {
   switch (id) {
     case "hr5":
       return {
@@ -101,13 +115,13 @@ function mockFor(id: PresetId): MockConfig {
         persona: "recruiter",
         difficulty: "medium",
         duration_minutes: 10,
-        negotiation: { offer: SAMPLE_OFFER, target: SAMPLE_TARGET },
+        negotiation: { offer: sampleOffer(country).offer, target: sampleOffer(country).target },
       };
   }
 }
 
 /** The session a preset starts: `role` from the profile (or a link), the documents Practice uses for context. */
-export function presetSession(id: PresetId, role: string, documentIds: string[]): CreateSessionRequest {
+export function presetSession(id: PresetId, role: string, documentIds: string[], country: string = INDIA): CreateSessionRequest {
   const preset = PRESETS.find((p) => p.id === id)!;
   const r = role.trim();
   return {
@@ -126,7 +140,7 @@ export function presetSession(id: PresetId, role: string, documentIds: string[])
     style: "natural",
     auto_answer: false,
     document_ids: documentIds,
-    mock: mockFor(id),
+    mock: mockFor(id, country),
   };
 }
 

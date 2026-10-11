@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { HR_QUESTIONS, PRESETS, SAMPLE_OFFER, isPresetId, presetSession } from "./mockPresets";
+import { sampleOffer } from "@orbit/ui";
+import { HR_QUESTIONS, PRESETS, isPresetId, presetSession, presetTitle } from "./mockPresets";
 
 describe("one-tap mock presets", () => {
   it("start a 5-minute HR round on the campus questions, as a recruiter", () => {
@@ -42,11 +43,23 @@ describe("one-tap mock presets", () => {
     expect(s.mock).toMatchObject({ duration_minutes: 10, one_way: { think_seconds: 30, answer_seconds: 90 } });
   });
 
-  it("negotiate a ₹ offer, never dollars", () => {
+  it("negotiate a ₹ offer in India, never dollars", () => {
     const s = presetSession("salary", "", []);
-    expect(s.mock).toMatchObject({ interview_type: "negotiation", persona: "recruiter", negotiation: { offer: SAMPLE_OFFER } });
+    expect(s.mock).toMatchObject({ interview_type: "negotiation", persona: "recruiter", negotiation: { offer: sampleOffer("IN").offer } });
     expect(JSON.stringify(PRESETS.map((p) => p.blurb("")))).not.toContain("$");
-    expect(SAMPLE_OFFER).toContain("LPA");
+    expect(s.mock?.negotiation?.offer).toContain("LPA");
+    expect(presetTitle(PRESETS.find((p) => p.id === "salary")!)).toBe("Salary talk (₹)");
+  });
+
+  it("use the terms of the country the user applies in", () => {
+    const us = presetSession("salary", "", [], "US");
+    expect(us.mock?.negotiation?.offer).toBe(sampleOffer("US").offer);
+    expect(us.mock?.negotiation?.offer).toContain("$");
+    const blurbs = JSON.stringify(PRESETS.map((p) => p.blurb("", "GB")));
+    expect(blurbs).not.toContain("₹");
+    expect(blurbs).not.toContain("campus");
+    expect(presetTitle(PRESETS.find((p) => p.id === "salary")!, "US")).toBe("Salary talk");
+    expect(PRESETS.find((p) => p.id === "hr5")!.blurb("", "IN")).toContain("campus HR round");
   });
 
   it("stay within the server's limits and know their own ids", () => {

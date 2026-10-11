@@ -102,18 +102,18 @@ export function fieldErrors(f: ContactFields): FieldErrors {
   else if (!EMAIL.test(email) || email.length > 320) errors.email = "That email doesn't look right.";
   const phone = f.phone.trim();
   const digits = phone.replace(/\D/g, "").length;
-  if (phone && (!PHONE.test(phone) || digits < 7 || digits > 15)) errors.phone = "Use digits (with +91 if you like), or leave it empty.";
+  if (phone && (!PHONE.test(phone) || digits < 7 || digits > 15)) errors.phone = "Use digits (with your country code if you like), or leave it empty.";
   if (!f.topic) errors.topic = "Pick what it's about.";
   const message = f.message.trim();
   if (message.length < MESSAGE_MIN) errors.message = `Write a little more: at least ${MESSAGE_MIN} characters.`;
-  else if (f.message.length > MESSAGE_MAX) errors.message = `That's over ${MESSAGE_MAX.toLocaleString("en-IN")} characters. Shorten it a little.`;
+  else if (f.message.length > MESSAGE_MAX) errors.message = `That's over ${MESSAGE_MAX.toLocaleString()} characters. Shorten it a little.`;
   return errors;
 }
 
 /** The counter under the message box: "120 / 3,000", and whether it's past the limit. */
 export function messageCounter(message: string): { text: string; over: boolean; near: boolean } {
   const n = message.length;
-  return { text: `${n.toLocaleString("en-IN")} / ${MESSAGE_MAX.toLocaleString("en-IN")}`, over: n > MESSAGE_MAX, near: n > MESSAGE_MAX * 0.9 };
+  return { text: `${n.toLocaleString()} / ${MESSAGE_MAX.toLocaleString()}`, over: n > MESSAGE_MAX, near: n > MESSAGE_MAX * 0.9 };
 }
 
 /** The request, trimmed, with only what's set. `website` is the honeypot's value (empty from a person). */

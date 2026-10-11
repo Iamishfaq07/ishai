@@ -21,10 +21,12 @@ import {
   type LucideIcon,
   cx,
   focusRing,
+  speechLang,
 } from "@orbit/ui";
 import { Button, Card, Textarea } from "../components/ui";
 import { useAuth } from "../lib/auth";
-import { TRACKS, pickRound, trackById, type Track, type TrackId, type WarmupQuestion } from "../lib/warmup/bank";
+import { pickRound, trackById, tracksFor, type Track, type TrackId, type WarmupQuestion } from "../lib/warmup/bank";
+import { useCountry } from "../lib/country";
 import { MIN_WORDS, checkAnswer, spokenTime, summarise, words, type Check, type Verdict } from "../lib/warmup/checks";
 import { logWarmupAnswer } from "../lib/weeklyGoal";
 
@@ -43,7 +45,8 @@ export function WarmupPage() {
   const start = (track: Track, recent: string[] = []) =>
     setState({ track: track.id, ids: pickRound(track, recent).map((q) => q.id), index: 0, answers: {}, spoken: {}, checked: {}, done: false });
 
-  const track = state ? trackById(state.track) : undefined;
+  const country = useCountry();
+  const track = state ? trackById(state.track, country) : undefined;
   const questions = track && state ? state.ids.map((id) => track.questions.find((q) => q.id === id)).filter((q): q is WarmupQuestion => Boolean(q)) : [];
 
   return (
@@ -167,6 +170,7 @@ const TRACK_ICON: Record<TrackId, LucideIcon> = {
 };
 
 function PickTrack({ onPick }: { onPick: (track: Track) => void }) {
+  const country = useCountry();
   return (
     <>
       <section aria-labelledby="warmup-title" className="pb-8 pt-4 sm:pt-8">
@@ -197,7 +201,7 @@ function PickTrack({ onPick }: { onPick: (track: Track) => void }) {
           Pick your interview
         </h2>
         <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-          {TRACKS.map((t) => {
+          {tracksFor(country).map((t) => {
             const Icon = TRACK_ICON[t.id];
             return (
               <li key={t.id}>
@@ -545,12 +549,13 @@ const VOICE_ERRORS: Record<string, string> = {
   "no-speech": "Didn't hear anything. Press Speak and try again a little closer to the mic, or type.",
   "audio-capture": "No microphone found. Type your answer instead.",
   network: "Voice needs the internet here: your browser does the speech-to-text online. Type instead.",
-  "language-not-supported": "This browser can't do speech-to-text in English (India). Type your answer instead.",
+  "language-not-supported": "This browser can't do speech-to-text in your English here. Type your answer instead.",
 };
 
 /**
  * Speech-to-text into the answer box, with the browser's own SpeechRecognition (Chrome, Edge, Safari; not Firefox or
- * most in-app browsers, which get typing only). Indian English. Android's continuous mode repeats itself, so there it
+ * most in-app browsers, which get typing only), in the English of the country the user applies in (speechLang).
+ * Android's continuous mode repeats itself, so there it
  * listens a phrase at a time and starts again until Stop.
  */
 function useDictation(text: string, onText: (text: string) => void) {
@@ -560,8 +565,9 @@ function useDictation(text: string, onText: (text: string) => void) {
   const rec = useRef<Recognition | null>(null);
   const wanted = useRef(false);
   const base = useRef("");
-  const latest = useRef({ text, onText });
-  latest.current = { text, onText };
+  const lang = speechLang(useCountry());
+  const latest = useRef({ text, onText, lang });
+  latest.current = { text, onText, lang };
 
   const stop = useCallback(() => {
     wanted.current = false;
@@ -576,7 +582,7 @@ function useDictation(text: string, onText: (text: string) => void) {
     wanted.current = true;
     const listen = () => {
       const r = new Ctor();
-      r.lang = "en-IN";
+      r.lang = latest.current.lang;
       r.continuous = !android;
       r.interimResults = true;
       let heard = "";

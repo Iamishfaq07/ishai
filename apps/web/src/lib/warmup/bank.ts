@@ -1,5 +1,5 @@
 // The Interview Warm-up's questions (pages/Warmup.tsx): a fixed bank by track, written for Indian campus and early-
-// career interviews. No AI: each question's `kind` picks the checks its answer gets (checks.ts), and `tip` is what an
+// career interviews first, with `tracksFor` rewording the few that only make sense in India for everyone else. No AI: each question's `kind` picks the checks its answer gets (checks.ts), and `tip` is what an
 // interviewer is listening for. Bundled with the page only (a lazy chunk).
 
 /** What kind of answer a question wants, which decides how it's checked. */
@@ -238,8 +238,42 @@ export const TRACKS: Track[] = [
 /** How many questions a warm-up round asks. */
 export const ROUND = 5;
 
-export function trackById(id: string): Track | undefined {
-  return TRACKS.find((t) => t.id === id);
+// Outside India: the tracks and questions that name India's own practices (campus placement rounds, service bonds,
+// "any city in India", backlogs), reworded for anywhere; null drops a question that has no equivalent.
+const TRACK_WORLDWIDE: Partial<Record<TrackId, Pick<Track, "name" | "blurb">>> = {
+  campus_hr: { name: "Graduate HR round", blurb: "The first HR screen for graduate and entry-level roles at most large employers." },
+  support: { name: "Customer support", blurb: "Voice and chat support, contact-centre and customer success roles." },
+  mba: { name: "MBA / management", blurb: "Graduate schemes, consulting, product and MBA recruiting interviews." },
+};
+const QUESTION_WORLDWIDE: Record<string, Partial<Pick<WarmupQuestion, "text" | "tip">> | null> = {
+  "hr-relocate": { text: "Are you willing to relocate for this role?" },
+  "hr-5yrs": { tip: "Growth in this kind of work and the skills you'll build here." },
+  "hr-lead": { text: "Tell me about a time you led something: an event, a club or a project." },
+  "hr-gap": { text: "Is there a gap in your education or work history? How do you explain it?" },
+  "hr-bond": null,
+  "hr-salary": { tip: "For graduate roles the salary is often set: say you're happy with the standard offer, or give a researched range." },
+  "hr-project": { text: "Tell me about a challenge in your final-year or capstone project." },
+  "mba-two-wheelers": { text: "Estimate how many bicycles are sold in your city in a year." },
+  "mba-ott": { text: "How would you price a new video-streaming subscription in a new country?" },
+  "mba-tier2": { text: "Should a quick-commerce company expand into smaller cities?" },
+};
+
+/** The tracks for the country the user applies in: India's as written, everywhere else's reworded. */
+export function tracksFor(country: string = "IN"): Track[] {
+  if (country.toUpperCase() === "IN") return TRACKS;
+  return TRACKS.map((t) => ({
+    ...t,
+    ...TRACK_WORLDWIDE[t.id],
+    questions: t.questions.flatMap((x) => {
+      const change = QUESTION_WORLDWIDE[x.id];
+      if (change === null) return [];
+      return [change ? { ...x, ...change } : x];
+    }),
+  }));
+}
+
+export function trackById(id: string, country: string = "IN"): Track | undefined {
+  return tracksFor(country).find((t) => t.id === id);
 }
 
 /**

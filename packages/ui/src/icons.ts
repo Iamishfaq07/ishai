@@ -133,3 +133,6 @@ export { UsersRound, Video } from "lucide-react";
 
 // The answer bank (Story bank → My answers).
 export { MessageSquareQuote } from "lucide-react";
+
+// Salary practice outside India (inside it, the rupee).
+export { Banknote } from "lucide-react";
