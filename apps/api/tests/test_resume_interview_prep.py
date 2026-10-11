@@ -306,6 +306,24 @@ async def test_the_mock_interviewer_asks_the_resume_questions_and_probes_what_to
     await eng.end()
 
 
+async def test_a_story_from_the_story_bank_is_asked_then_tested_like_a_star_story() -> None:
+    plan = [DrillItem(question="Tell me about a time you met a tight deadline.", kind="story", follow_up=True,
+                      feedback='Their story: "Payments cutover". The result they claim: shipped two days early.')]
+    eng, sink, now, llm = await _drill_engine(plan)
+    await sink.wait_for("mock.question")
+    first = sink.of("mock.question")[0]
+    assert first["text"] == "Let's practise telling one of your stories. " + plan[0].question
+    assert first["drill_kind"] == "story" and not llm.prompts
+
+    await _say(eng, now, "We had a hard cutover date for the payments migration and we shipped it early")
+    await sink.wait_for("mock.question", 2)
+    assert sink.of("mock.question")[1]["is_follow_up"]
+    prompt = llm.prompts[0]
+    assert 'source="their_story"' in prompt and "Payments cutover" in prompt and "not the team" in prompt
+    assert "what_to_probe" not in prompt and "previous_feedback" not in prompt
+    await eng.end()
+
+
 def test_a_practice_session_keeps_the_questions_and_what_to_probe(client: TestClient) -> None:
     from orbit_api.db import sessionmaker
     from orbit_api.models import LiveSessionRow

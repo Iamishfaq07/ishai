@@ -87,6 +87,11 @@ export function MockPanel({ live, actions, voice, ended, onViewReport }: {
             From your prep
           </span>
         )}
+        {q.drillKind === "story" && (
+          <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-violet-800 dark:text-violet-300" title="A question one of your saved stories answers">
+            Story practice
+          </span>
+        )}
         {q.drillKind === "concise" && (
           <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-800 dark:text-emerald-300">Short version · ~30 s</span>
         )}
