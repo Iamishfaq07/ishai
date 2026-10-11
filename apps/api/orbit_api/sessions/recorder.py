@@ -332,10 +332,14 @@ class DbRecorder:
     def _put(self, obj: Any) -> None:
         self._queue.put_nowait(obj)
 
-    async def turn(self, turn_id: str, speaker: Speaker, text: str, start_ms: int, end_ms: int) -> None:
+    async def turn(self, turn_id: str, speaker: Speaker, text: str, start_ms: int, end_ms: int,
+                   held_s: float = 0) -> None:
+        """`held_s`: how long the engine held this line back before committing it (an echo check); its time is
+        back-dated by that much, since the transcript is ordered by it."""
         if self.store_transcripts:
+            at = datetime.now(UTC) - timedelta(seconds=held_s)
             self._put(SessionTurn(id=turn_id, session_id=self.session_id, speaker=speaker, text=text,
-                                  start_ms=start_ms, end_ms=end_ms, created_at=datetime.now(UTC)))
+                                  start_ms=start_ms, end_ms=end_ms, created_at=at))
 
     async def question(self, qid: str, turn_id: str | None, text: str, qtype: str, confidence: float,
                        is_follow_up: bool, source: str) -> None:

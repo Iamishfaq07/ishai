@@ -1,5 +1,13 @@
 # Implementation log
 
+## Saved transcripts keep held-back lines in place (2026-10-11)
+
+- A microphone line that sounds like the interviewer (no headphones: the mic may be hearing them) is held back 1.5 s
+  to check before it's shown. It was stored with the time it was released, and stored transcripts are ordered by that
+  time, so "Thanks for having me" could land after the interviewer's next line in a session's transcript, and the
+  report could pair an answer with the wrong question. It's now stored as of when it was heard.
+- A session's summary says "1 question · 1 follow-up", not "1 follow-ups" (web and desktop).
+
 ## A session's page on phones; no more "0 min" (2026-10-11)
 
 - **Follow up** (a session's page, web and desktop): on phones its explanation was squeezed into a column a word wide

@@ -330,7 +330,8 @@ function SummaryView({ summary }: { summary: SessionSummary | null }) {
         <h2 className="mb-2 text-sm font-semibold">Session summary</h2>
         <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">{summary.summary}</p>
         <p className="mt-3 text-xs text-zinc-500">
-          {summary.questions_asked.length} questions · {summary.follow_up_count} follow-ups
+          {summary.questions_asked.length} question{summary.questions_asked.length === 1 ? "" : "s"} ·{" "}
+          {summary.follow_up_count} follow-up{summary.follow_up_count === 1 ? "" : "s"}
         </p>
       </Card>
       <div className="grid gap-4 md:grid-cols-2">

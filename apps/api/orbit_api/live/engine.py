@@ -179,7 +179,8 @@ _USER_ERROR_DEFAULT = "The answer couldn't be generated. Try again."
 
 
 class Recorder(Protocol):
-    async def turn(self, turn_id: str, speaker: Speaker, text: str, start_ms: int, end_ms: int) -> None: ...
+    async def turn(self, turn_id: str, speaker: Speaker, text: str, start_ms: int, end_ms: int,
+                   held_s: float = 0) -> None: ...
     async def question(self, qid: str, turn_id: str | None, text: str, qtype: str, confidence: float,
                        is_follow_up: bool, source: str) -> None: ...
     async def question_text(self, qid: str, text: str) -> None: ...
@@ -941,7 +942,10 @@ class LiveEngine:
         await self.send("transcript.final", {"turn_id": turn.turn_id, "speaker": spk, "text": turn.text,
                                              "start_ms": turn.start_ms, "end_ms": turn.end_ms})
         self.memory.add_turn(spk, turn.text)
-        await self._rec.turn(turn.turn_id, spk, turn.text, turn.start_ms, turn.end_ms)
+        # A mic line held back to rule out an echo is saved as of when it was heard, so the stored transcript (and the
+        # report's pairing of answers with questions, both ordered by that time) keeps it in place.
+        await self._rec.turn(turn.turn_id, spk, turn.text, turn.start_ms, turn.end_ms,
+                             held_s=ECHO_CONFIRM_S if echo_checked else 0)
         if spk == "interviewer" and self.state == LiveState.speech_detected:
             await self._set_state(LiveState.listening)
         self._turns_since_summary += 1
