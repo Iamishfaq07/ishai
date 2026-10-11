@@ -21,6 +21,7 @@ import { errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { PRESETS, SAMPLE_OFFER, SAMPLE_TARGET, isPresetId, presetSession, type PresetId } from "./mockPresets";
 import { PrepSection } from "./Prep";
+import { PracticeQueueCard } from "./PracticeQueue";
 import { ProgressSection } from "./Progress";
 import type { LiveLaunchState } from "./SessionSetup";
 import { PracticeMock } from "../components/productArt";
@@ -104,6 +105,7 @@ function MockSetup() {
     <div className="xl:grid xl:grid-cols-[minmax(0,48rem)_minmax(0,1fr)] xl:gap-10">
       <div className="max-w-3xl space-y-8">
         <PageHeader icon={Target} title="Practice" subtitle="Practise out loud with an AI interviewer, then read your report." />
+        <PracticeQueueCard />
 
         <section aria-labelledby="quick-title" className="space-y-3">
           <div className="flex flex-wrap items-end justify-between gap-3">

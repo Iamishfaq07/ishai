@@ -66,6 +66,7 @@ import type {
   LoginRequest,
   OrbitDocument,
   OrbitSession,
+  PracticeQueue,
   PreflightReport,
   PrepRequest,
   Progress,
@@ -479,6 +480,9 @@ export function createApiClient(options: ApiClientOptions) {
     importJobLink: (url: string) =>
       json<ImportedJobPosting>("/v1/prep/import-link", { method: "POST", body: body({ url }) }),
     /** Re-drill: a new mock session asking this session's weak questions again (from its review). */
+    practiceQueue: () => json<PracticeQueue>("/v1/practice/queue"),
+    /** A mock round on what's due in the practice queue (409 "nothing_due" when nothing is). */
+    practiceQueueDrill: () => json<OrbitSession>("/v1/practice/queue/drill", { method: "POST" }),
     /** A mock round on the review's weak questions, or on one question of it (`question`, 1-based) again. */
     drillSession: (id: string, question?: number) =>
       json<OrbitSession>(`/v1/sessions/${encodeURIComponent(id)}/drill`,
