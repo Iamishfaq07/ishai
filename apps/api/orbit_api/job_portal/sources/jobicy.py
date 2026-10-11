@@ -1,8 +1,8 @@
-"""Jobicy: remote jobs for Asia-Pacific and anywhere (`GET jobicy.com/api/v2/remote-jobs?count=100&geo=…`),
-refreshed daily (its terms allow at most hourly).
+"""Jobicy: remote jobs by region (`GET jobicy.com/api/v2/remote-jobs?count=100&geo=…`), refreshed daily (its terms
+allow at most hourly). Each post's own region ("USA", "Europe", "APAC", "Anywhere") says who it's open to.
 
-Terms: credit Jobicy with a link, and every Apply goes to the job's canonical Jobicy URL. Posts for one country
-other than India (Australia only, Philippines only) are left out. https://jobicy.com/jobs-rss-feed
+Terms: credit Jobicy with a link, and every Apply goes to the job's canonical Jobicy URL.
+https://jobicy.com/jobs-rss-feed
 """
 
 import asyncio
@@ -13,7 +13,7 @@ from orbit_api.job_portal.http import FeedClient, SourceError
 from orbit_api.job_portal.postings import Level, Posting, employment_type_of, parse_time, salary_text, text_of
 from orbit_api.job_portal.sources.base import Attribution, Source
 
-REGIONS = ("apac", "anywhere")
+REGIONS = ("apac", "anywhere", "usa", "canada", "uk", "europe", "emea", "latam")
 _LEVEL: dict[str, Level] = {"entry": "junior", "junior": "junior", "midweight": "mid", "mid": "mid",
                             "senior": "senior", "lead": "senior", "manager": "senior"}
 

@@ -4,6 +4,7 @@ import { ApiError, CircleAlert, Link2, cx, focusRing } from "@orbit/ui";
 import { Button, ErrorNote, Field, Input, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
+import { useIndia } from "../../lib/country";
 import { STATUS_LABEL, dateInput, fromDateInput } from "./model";
 import { Sheet } from "./Sheet";
 
@@ -23,6 +24,7 @@ const EMPTY: Fields = { company: "", title: "", location: "" };
  * also be read for its text (POST /v1/prep/import-link), which can be saved to Documents for interview practice.
  */
 export function AddJob({ open, onClose, onAdded }: { open: boolean; onClose: () => void; onAdded: (entry: JobTrackerEntry) => void }) {
+  const india = useIndia();
   const formId = useId();
   const [url, setUrl] = useState("");
   const [info, setInfo] = useState<JobLinkInfo | null>(null);
@@ -172,14 +174,14 @@ export function AddJob({ open, onClose, onAdded }: { open: boolean; onClose: () 
         <Field
           label="Link to the job (optional)"
           htmlFor="add-url"
-          hint="From Naukri, LinkedIn, Indeed, a campus portal or a company's careers page. Orbit reads the job's name from the link itself."
+          hint={`From ${india ? "Naukri, LinkedIn, Indeed, a campus portal" : "LinkedIn, Indeed"} or a company's careers page. Orbit reads the job's name from the link itself.`}
         >
           <Input
             id="add-url"
             type="url"
             inputMode="url"
             autoComplete="off"
-            placeholder="Paste the link: https://www.naukri.com/job-listings-…"
+            placeholder={india ? "Paste the link: https://www.naukri.com/job-listings-…" : "Paste the link: https://www.linkedin.com/jobs/view/…"}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />

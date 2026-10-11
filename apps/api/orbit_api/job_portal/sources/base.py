@@ -4,7 +4,8 @@ Three kinds:
 - "board": a company's own job board, one fetch per company (`keys()` are the boards' tokens);
 - "feed": a public feed of jobs, the same for everyone (`keys()` are its few variants, e.g. Jobicy's regions);
 - "search": an API asked one query at a time (a job title and a place), so its results depend on who's searching.
-  Queries are shared: everyone looking for "backend engineer" in Bengaluru shares one cached answer.
+  Queries are shared: everyone looking for "backend engineer" in Bengaluru shares one cached answer. A query is for
+  one country (where the searcher applies; India's keys are written as they always were).
 
 A source raises `SourceError` (or `RateLimited`) when a fetch fails; the refresh records it and backs off, and the
 feed keeps serving what's cached. A source that can't be used (an optional API without its key) says so with
@@ -45,16 +46,23 @@ class Budget:
 @dataclass(frozen=True)
 class SearchQuery:
     what: str  # a job title or keywords, lowercased
-    where: str  # a city, or "India"
+    where: str  # a city, or ANYWHERE ("India" in India) for the whole country
     days: int  # posted within this many days
+    country: str = "IN"  # ISO 3166-1 alpha-2: the country the searcher applies in
+
+    def anywhere(self) -> bool:
+        return self.where.lower() in ("india", "anywhere", "")
 
     def key(self) -> str:
-        return f"{self.what}|{self.where}|{self.days}"[:160]
+        tail = "" if self.country == "IN" else f"|{self.country}"
+        return f"{self.what}|{self.where}|{self.days}"[:157] + tail
 
     @classmethod
     def from_key(cls, key: str) -> "SearchQuery":
-        what, where, days = [*key.split("|"), "", "India", "7"][:3]
-        return cls(what, where or "India", int(days) if days.isdigit() else 7)
+        what, where, days, country = [*key.split("|"), "", "India", "7", "IN"][:4]
+        country = country.upper() if len(country) == 2 and country.isalpha() else "IN"
+        return cls(what, where or ("India" if country == "IN" else "Anywhere"), int(days) if days.isdigit() else 7,
+                   country)
 
 
 class Source(ABC):

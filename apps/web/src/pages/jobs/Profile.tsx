@@ -8,7 +8,9 @@ import { errorText } from "../../lib/format";
 import { RESUME_AI_HOME, resumePath } from "../resume/paths";
 import { useJobsAi } from "./JobsAi";
 import { textLink, linkButton } from "./links";
-import { JOB_TYPES, LEVELS, POSTED_WITHIN, WORKPLACES, addItem, profileSummary, samePrefs, toggle, toggleWorkplace } from "./model";
+import { ANYWHERE_TOKENS, JOB_TYPES, LEVELS, POSTED_WITHIN, WORKPLACES, addItem, anywhereLabel, profileSummary, samePrefs, toggle, toggleWorkplace } from "./model";
+import { CountryField } from "../../components/CountryField";
+import { useCountry } from "../../lib/country";
 import { JOBS_MATCHES } from "./paths";
 import { OnThisPage, type PageSection } from "../../components/OnThisPage";
 
@@ -34,6 +36,9 @@ export function JobProfilePage() {
 }
 
 function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; suggesting: boolean; onSaved: (profile: JobProfile) => void }) {
+  const country = useCountry();
+  const { profile: loaded } = useJobsAi();
+  const sampleCity = profile.cities.find((c) => !ANYWHERE_TOKENS.includes(c));
   const savedResume = profile.resume?.id ?? null;
   const [draft, setDraft] = useState<JobPrefs>(profile.prefs);
   const [resumeId, setResumeId] = useState<string | null>(savedResume);
@@ -199,15 +204,19 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
           </div>
         </Section>
 
-        <Section id="where" icon={MapPin} title="Where" hint="Cities, and how you'd like to work.">
+        <Section id="where" icon={MapPin} title="Where" hint="The country you're applying in, cities, and how you'd like to work.">
           <div className="space-y-5">
+            <div className="max-w-sm">
+              <CountryField id="jobs-country" hint="Your matches, cities and job-site links follow it." onChanged={() => loaded.reload()} />
+            </div>
             <ChipsField
               label="Cities"
-              hint="Empty means anywhere in India."
+              hint={`Empty means ${anywhereLabel(country).replace(/^Anywhere/, "anywhere")}.`}
               items={draft.locations}
               max={8}
-              placeholder="e.g. Bengaluru"
+              placeholder={sampleCity ? `e.g. ${sampleCity}` : "e.g. your city"}
               suggestions={profile.cities}
+              labelFor={(s) => (ANYWHERE_TOKENS.includes(s) ? anywhereLabel(country) : s)}
               onChange={(v) => set("locations", v)}
             />
             <fieldset>
@@ -312,7 +321,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
       <aside className="hidden lg:sticky lg:top-20 lg:block lg:self-start" aria-label="Your profile in a line">
         <Card className="!p-4">
           <h2 className="font-display text-sm font-semibold">Looking for</h2>
-          <p className="mt-0.5 text-sm text-zinc-700 dark:text-zinc-200">{profileSummary(draft)}</p>
+          <p className="mt-0.5 text-sm text-zinc-700 dark:text-zinc-200">{profileSummary(draft, country)}</p>
           {draft.exclude.length > 0 && (
             <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Leaving out: {draft.exclude.join(", ")}</p>
           )}
@@ -423,6 +432,7 @@ function ChipsField({
   max,
   placeholder,
   suggestions,
+  labelFor = (s) => s,
   onChange,
 }: {
   label: string;
@@ -431,6 +441,8 @@ function ChipsField({
   max: number;
   placeholder?: string;
   suggestions?: string[];
+  /** How a suggestion reads ("India" → "Anywhere in India"). */
+  labelFor?: (s: string) => string;
   onChange: (items: string[]) => void;
 }) {
   const id = useId();
@@ -478,8 +490,8 @@ function ChipsField({
         {suggestions && (
           <datalist id={`${id}-list`}>
             {suggestions.map((s) => (
-              <option key={s} value={s === "India" ? "India" : s}>
-                {s === "India" ? "Anywhere in India" : s}
+              <option key={s} value={s}>
+                {labelFor(s)}
               </option>
             ))}
           </datalist>

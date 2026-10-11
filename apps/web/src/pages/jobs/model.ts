@@ -1,5 +1,6 @@
 // Jobs AI's plain logic (no React): labels, "posted 3h ago", the match colours, the tracker's columns, the small
 // list edits the profile page makes, and which message Outreach starts on. Kept here so it's unit-tested (model.test.ts).
+import { INDIA, countryInSentence, isIndia } from "@orbit/ui";
 import type {
   JobEmploymentType,
   JobLevel,
@@ -151,17 +152,25 @@ export function toggleWorkplace(list: JobWorkplace[], mode: JobWorkplace): JobWo
   return next.length ? next : list;
 }
 
+/** The profile's "anywhere in the country" (job_portal/profile.py): India's profiles say "India", others "Anywhere". */
+export const ANYWHERE_TOKENS: readonly string[] = ["India", "Anywhere"];
+
+/** "Anywhere in India", "Anywhere in Germany": how the anywhere choice reads for the country the user applies in. */
+export function anywhereLabel(country: string = INDIA): string {
+  return isIndia(country) ? "Anywhere in India" : `Anywhere in ${countryInSentence(country)}`;
+}
+
 /** What the profile looks for, in a sentence ("Backend Engineer, Platform Engineer · Bengaluru or remote · 3 years"). */
-export function profileSummary(prefs: JobPrefs): string {
+export function profileSummary(prefs: JobPrefs, country: string = INDIA): string {
   const titles = prefs.titles.slice(0, 2).join(", ") + (prefs.titles.length > 2 ? ` +${prefs.titles.length - 2}` : "");
-  const cities = prefs.locations.filter((c) => c !== "India");
+  const cities = prefs.locations.filter((c) => !ANYWHERE_TOKENS.includes(c));
   const remoteToo = prefs.workplace.includes("remote");
   const onlyRemote = prefs.workplace.length === 1 && remoteToo;
   const where = onlyRemote
     ? "Remote"
     : cities.length
       ? `${cities.slice(0, 2).join(", ")}${remoteToo ? " or remote" : ""}`
-      : `Anywhere in India${remoteToo ? " or remote" : ""}`;
+      : `${anywhereLabel(country)}${remoteToo ? " or remote" : ""}`;
   const years = prefs.years !== null ? `${Math.round(prefs.years * 10) / 10} years` : (LEVELS.find((l) => l.id === prefs.level)?.label ?? null);
   return [titles || "Any role", where, years].filter(Boolean).join(" · ");
 }

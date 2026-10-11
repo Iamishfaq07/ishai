@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Check, CircleAlert, Copy, ExternalLink, Mail, MessageSquare, Send, ShieldCheck, cx, focusRing } from "@orbit/ui";
+import { Check, CircleAlert, Copy, ExternalLink, Mail, MessageSquare, Send, ShieldCheck, cx, focusRing, isIndia } from "@orbit/ui";
 import { Card } from "../../components/ui";
 import { SUPPORT_EMAIL, SUPPORT_WHATSAPP } from "../../lib/contact";
 import { contactHref } from "../../lib/contactForm";
+import { useCountry } from "../../lib/country";
 import { textLink } from "./links";
 
 /** India's national cyber-crime portal and helpline (I4C), for a job scam that has already cost money or details. */
 export const CYBERCRIME_URL = "https://cybercrime.gov.in/";
 export const CYBERCRIME_HELPLINE = "1930";
 
-/** The warning signs, in the order they're most often seen in Indian job scams. */
+/** The warning signs, in the order they're most often seen in job scams (written for India; SafetyList words the
+ * payment one for everywhere else). */
 export const SCAM_SIGNS = [
   "Real employers never ask for a fee: not for registration, training, a laptop or a “security deposit”.",
   "Never share an OTP, your UPI PIN or bank details to “confirm” a job.",
@@ -73,9 +75,11 @@ export function SafetyCard({ job, compact = false, className }: { job?: Reported
 }
 
 function SafetyList({ className }: { className?: string }) {
+  const india = isIndia(useCountry());
+  const signs = india ? SCAM_SIGNS : SCAM_SIGNS.map((s) => s.replace("your UPI PIN or bank details", "your bank PIN or card details"));
   return (
     <ul className={cx("space-y-2 text-sm text-zinc-700 dark:text-zinc-300", className)}>
-      {SCAM_SIGNS.map((s) => (
+      {signs.map((s) => (
         <li key={s} className="flex gap-2">
           <CircleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
           <span>{s}</span>
@@ -86,6 +90,14 @@ function SafetyList({ className }: { className?: string }) {
 }
 
 function ScamHelp({ className }: { className?: string }) {
+  if (!isIndia(useCountry())) {
+    return (
+      <p className={cx("text-xs text-zinc-600 dark:text-zinc-400", className)}>
+        Paid money or shared details already? Tell your bank straight away, then report it to the police or your
+        country's fraud-reporting service.
+      </p>
+    );
+  }
   return (
     <p className={cx("text-xs text-zinc-600 dark:text-zinc-400", className)}>
       Paid money or shared details already? Report it at{" "}
@@ -104,6 +116,7 @@ function ScamHelp({ className }: { className?: string }) {
 /** "Report this job": pick what's wrong, then send it to Orbit (the Contact page, filled in), email or WhatsApp it
  * (when configured), or copy it. */
 function ReportJob({ job, className }: { job: ReportedJob; className?: string }) {
+  const india = isIndia(useCountry());
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string>(REPORT_REASONS[0]);
@@ -172,9 +185,11 @@ function ReportJob({ job, className }: { job: ReportedJob; className?: string })
             <button type="button" onClick={() => void copy()} className={action}>
               {copied ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />} {copied ? "Copied" : "Copy the details"}
             </button>
-            <a href={CYBERCRIME_URL} target="_blank" rel="noopener noreferrer" className={action}>
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden /> Report at cybercrime.gov.in
-            </a>
+            {india && (
+              <a href={CYBERCRIME_URL} target="_blank" rel="noopener noreferrer" className={action}>
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden /> Report at cybercrime.gov.in
+              </a>
+            )}
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400" role="status">
             Reports go to the Orbit team, who check the job. Nothing is sent until you press send.

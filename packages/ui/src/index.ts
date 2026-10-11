@@ -220,6 +220,7 @@ export { useViewTransitionOk, viewTransitionOk, withViewTransition } from "./hoo
 export {
   COUNTRIES,
   INDIA,
+  countryInSentence,
   countryName,
   currencyFor,
   detectCountry,

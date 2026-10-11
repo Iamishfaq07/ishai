@@ -6,7 +6,8 @@ score out of 100:
     40  title: how close its title is to one of the target titles (words weighted: "backend" says more than
         "engineer"; a manager, intern or sales title for someone who isn't looking for one is halved)
     35  skills: how many of the skills the post asks for (read when it was fetched) the resume or profile shows
-    10  place: in one of the chosen cities, or remote when remote is wanted
+    10  place: in one of the chosen cities, or remote when remote is wanted (only posts in the country the candidate
+        applies in, or remote and open to it, are considered at all)
     10  experience: the post's years or seniority against the candidate's
      5  recency: posted today counts most, 30 days ago not at all
 
@@ -26,6 +27,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from orbit_api.job_portal.geo import city_country, open_to
 from orbit_api.job_portal.postings import CITIES, LEVELS, EmploymentType, Level, Workplace
 from orbit_api.job_portal.skills import WEAK, SkillMatcher, display, same_skill
 from orbit_api.job_portal.sources import PRIORITY
@@ -105,6 +107,8 @@ def title_score(listing: frozenset[str], targets: list[frozenset[str]], skill_wo
 # ---- the search ----------------------------------------------------------------------------------------------------
 
 _NCR = frozenset({"Delhi", "Gurugram", "Noida"})
+# "Anywhere in the country": India's profiles say "India" (as they always have), everyone else's "Anywhere".
+ANYWHERE = frozenset({"India", "Anywhere"})
 
 
 @dataclass
@@ -122,18 +126,24 @@ class Search:
     sources_off: list[str] = field(default_factory=list)
     exclude: list[str] = field(default_factory=list)
     keywords: str = ""
+    country: str = "IN"  # where the candidate applies: posts there, or remote and open to it
+    any_country: bool = False  # one job's own score (opened from the tracker): wherever it is
 
     def cities(self) -> frozenset[str]:
-        wanted = {c for c in self.locations if c in CITIES}
+        """The chosen cities in the country the candidate applies in (one elsewhere, say from the resume, doesn't
+        narrow the feed)."""
+        india = self.country == "IN"
+        wanted = {c for c in self.locations if (c in CITIES if india else city_country(c) == self.country)}
         return frozenset(wanted | (_NCR if wanted & _NCR else set()))
 
     def anywhere_in_india(self) -> bool:
-        return not self.cities() or "India" in self.locations
+        """Anywhere in the country (the name is from when that was always India)."""
+        return not self.cities() or bool(ANYWHERE & set(self.locations))
 
     def key(self) -> str:
         return repr((self.titles, sorted(s.lower() for s in self.skills), self.locations, sorted(self.workplace),
                      self.level, self.years, sorted(self.job_types), self.days, sorted(self.sources_off),
-                     sorted(self.exclude), self.keywords.lower()))
+                     sorted(self.exclude), self.keywords.lower(), self.country))
 
 
 @dataclass(frozen=True)
@@ -146,6 +156,7 @@ class Row:
     title: str
     cities: tuple[str, ...]
     country: str | None
+    remote_scope: tuple[str, ...]
     workplace: str | None
     employment_type: str | None
     level: str | None
@@ -164,6 +175,9 @@ def row_of(obj: Any) -> Row:
     values = {name: getattr(obj, name) for name in ROW_FIELDS}
     values["cities"] = tuple(values["cities"] or ())
     values["keywords"] = tuple(values["keywords"] or ())
+    # Cached before posts were read worldwide: a remote one was kept because it was open to India.
+    scope = tuple(values["remote_scope"] or ())
+    values["remote_scope"] = scope or (("IN",) if values["workplace"] == "remote" else ())
     return Row(**values)
 
 
@@ -195,8 +209,12 @@ def _experience_fit(row: Row, level: Level | None, years: float | None) -> float
 def _place(row: Row, search: Search) -> float | None:
     """None: filtered out. Else how well it fits where the candidate wants to work."""
     modes = set(search.workplace) or {"remote", "hybrid", "onsite"}
-    if row.workplace == "remote":  # remote from India counts a little more than open to anywhere
-        return (1.0 if row.country == "IN" else 0.9) if "remote" in modes else None
+    if row.workplace == "remote":  # remote from the candidate's own country counts a little more than open to it
+        if "remote" not in modes or not (search.any_country or open_to(row.remote_scope, search.country)):
+            return None
+        return 1.0 if row.country == search.country else 0.9
+    if row.country != search.country and not search.any_country:
+        return None
     if not modes & {"hybrid", "onsite"} or (row.workplace in ("hybrid", "onsite") and row.workplace not in modes):
         return None
     wanted = search.cities()

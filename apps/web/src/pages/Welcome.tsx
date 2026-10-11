@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Globe, MapPin, Orb, OrbitWordmark, cx, focusRing } from "@orbit/ui";
+import { ArrowLeft, ArrowRight, Globe, MapPin, Orb, OrbitWordmark, cx, focusRing, isIndia } from "@orbit/ui";
 import { ProductMark } from "../components/products";
 import { Input } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import {
+  ANYWHERE,
   ANYWHERE_IN_INDIA,
   EXPERIENCE,
   GOALS,
@@ -21,6 +22,9 @@ import {
   type WelcomeAnswers,
 } from "../lib/onboarding";
 import { useAsync } from "../lib/useAsync";
+import { CountryField } from "../components/CountryField";
+import { useCountry } from "../lib/country";
+import { anywhereLabel } from "./jobs/model";
 
 /**
  * Right after sign-up: three questions, one tap each where possible (what you're here for; your experience and the
@@ -99,7 +103,10 @@ export function WelcomePage() {
   const [saving, setSaving] = useState(false);
   // The search profile as it is now (worked out from a resume, or empty), to add the answers to.
   const profile = useAsync(() => api.jobProfile(), [], "job-profile");
-  const cities = (profile.data?.cities ?? PLACE_IDEAS).filter((c) => c !== ANYWHERE_IN_INDIA).slice(0, 9);
+  const country = useCountry();
+  const india = isIndia(country);
+  const anywhere = india ? ANYWHERE_IN_INDIA : ANYWHERE;
+  const cities = (profile.data?.cities ?? (india ? PLACE_IDEAS : [])).filter((c) => c !== ANYWHERE_IN_INDIA && c !== ANYWHERE).slice(0, 9);
 
   // Each question's heading takes focus, so a screen reader hears the new question and Tab starts from it.
   const heading = useRef<HTMLHeadingElement>(null);
@@ -152,7 +159,7 @@ export function WelcomePage() {
   const subtitles = [
     "Pick one. You can use all three later; this decides what Home shows you first.",
     "So practice questions and job matches fit where you are.",
-    "For your job matches. Pick a city, anywhere in India, or remote.",
+    `For your job matches. Pick a city, ${anywhereLabel(country).replace(/^Anywhere/, "anywhere")}, or remote.`,
   ];
 
   return (
@@ -279,6 +286,9 @@ export function WelcomePage() {
 
           {step === 2 && (
             <div className="mt-7 space-y-6">
+              <div className="max-w-sm">
+                <CountryField id="welcome-country" hint="Jobs, cities, salaries and practice follow it." onChanged={() => profile.reload()} />
+              </div>
               <div className="flex flex-wrap gap-2" role="group" aria-label="Cities">
                 {cities.map((c) => (
                   <Chip key={c} onClick={() => void finish("done", c)}>
@@ -287,7 +297,7 @@ export function WelcomePage() {
                 ))}
               </div>
               <div className="flex flex-wrap gap-2" role="group" aria-label="Anywhere">
-                <Chip onClick={() => void finish("done", ANYWHERE_IN_INDIA)}>Anywhere in India</Chip>
+                <Chip onClick={() => void finish("done", anywhere)}>{anywhereLabel(country)}</Chip>
                 <Chip onClick={() => void finish("done", REMOTE)}>
                   <Globe className="h-4 w-4 opacity-70" aria-hidden /> Remote
                 </Chip>

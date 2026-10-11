@@ -14,9 +14,11 @@ import {
   saveKit,
   withMessageKit,
   type SavedKit,
+  isIndia,
 } from "@orbit/ui";
 import { Card, EmptyState, ErrorNote, Field, PageHeader, Select, Spinner } from "../../components/ui";
 import { api } from "../../lib/api";
+import { useCountry } from "../../lib/country";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
 import { AllowanceContext, useResumeAllowance } from "../resume/allowance";
@@ -45,6 +47,7 @@ const PARTS: Array<{ id: Part; label: string; more?: string }> = [
  * keeps what was written, per resume (and messages per job), as last edited.
  */
 export function JobOutreachPage() {
+  const india = isIndia(useCountry());
   const [params, setParams] = useSearchParams();
   const resumes = useAsync(() => api.listResumes(), [], "resumes");
   const allowance = useResumeAllowance();
@@ -64,7 +67,7 @@ export function JobOutreachPage() {
       <PageHeader
         icon={Send}
         title="Outreach"
-        subtitle="Referral requests, emails to HR, follow-ups and thank-you notes, and your Naukri and LinkedIn profiles."
+        subtitle={`Referral requests, emails to HR, follow-ups and thank-you notes, and your ${india ? "Naukri and LinkedIn profiles" : "LinkedIn profile"}.`}
       />
       {resumes.loading && !list ? (
         <Spinner big label="Getting your resumes" state="searching" />
@@ -142,6 +145,7 @@ function ResumeOutreach({
 }) {
   const resume = useAsync(() => api.getResume(picked.id), [picked.id], `resume|${picked.id}`);
   const job = useOutreachJob(jobId);
+  const india = isIndia(useCountry()); // Naukri is India's job site: its profile is offered there only
   const [part, setPart] = useState<Part>("messages");
   const [kit, setKit] = useState<SavedKit>(() => loadKit(picked.id));
   useEffect(() => saveKit(picked.id, kit), [picked.id, kit]);
@@ -164,7 +168,7 @@ function ResumeOutreach({
 
       <div className="min-w-0 space-y-4 lg:col-start-1 lg:row-start-1">
         <div role="group" aria-label="What to write" className="inline-flex gap-1 rounded-xl bg-zinc-500/10 p-1">
-          {PARTS.map((p) => (
+          {PARTS.filter((p) => p.id !== "naukri" || india).map((p) => (
             <button
               key={p.id}
               type="button"
@@ -187,7 +191,7 @@ function ResumeOutreach({
           <ErrorNote onRetry={resume.reload}>{errorText(resume.error)}</ErrorNote>
         ) : r ? (
           <>
-            {part === "naukri" && <NaukriPart resume={r} value={kit.naukri} onChange={(naukri) => setKit((k) => ({ ...k, naukri }))} />}
+            {part === "naukri" && india && <NaukriPart resume={r} value={kit.naukri} onChange={(naukri) => setKit((k) => ({ ...k, naukri }))} />}
             {part === "linkedin" && <LinkedInPart resume={r} value={kit.linkedin} onChange={(linkedin) => setKit((k) => ({ ...k, linkedin }))} />}
             {part === "messages" && (
               <MessagesPart

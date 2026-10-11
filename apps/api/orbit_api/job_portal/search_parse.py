@@ -6,6 +6,7 @@
 import re
 from dataclasses import dataclass, field
 
+from orbit_api.job_portal.geo import WORLD_CITIES, city_country, world_cities
 from orbit_api.job_portal.postings import _CITY_RE, EmploymentType, Level, Workplace, find_cities
 
 _STOP = frozenset("""
@@ -42,6 +43,7 @@ _RULES: list[tuple[str, str]] = [
     (r"\b(?:this|last|past) week\b|\b7 days\b", "days:7"),
     (r"\b(?:this|last|past) month\b|\b30 days\b", "days:30"),
     (r"\banywhere in india\b|\ball india\b|\bpan india\b", "india"),
+    (r"\banywhere\b|\bnationwide\b", "anywhere"),
     (r"\b(?:senior|sr\.?)\b", "level:senior"),
     (r"\b(?:junior|jr\.?)\b", "level:junior"),
     (r"\bmid(?:[- ]level)?\b", "level:mid"),
@@ -50,10 +52,11 @@ _YEARS = re.compile(r"\b(\d{1,2}(?:\.\d)?)\s*\+?\s*(?:-\s*\d{1,2}\s*)?(?:years?|
                     r"(?:\s+(?:of\s+)?(?:exp|experience))?\b")
 _LABEL = {"remote": "Remote", "hybrid": "Hybrid", "onsite": "In office", "internship": "Internships",
           "fresher": "Fresher", "part_time": "Part-time", "full_time": "Full-time", "contract": "Contract",
-          "india": "Anywhere in India"}
+          "india": "Anywhere in India", "anywhere": "Anywhere"}
 
 
-def parse_search(text: str) -> ParsedSearch:
+def parse_search(text: str, country: str | None = None) -> ParsedSearch:
+    """`country`: where the user applies. A city elsewhere in the world stays a keyword ("Phoenix framework")."""
     out = ParsedSearch()
     q = " " + re.sub(r"\s+", " ", text.lower()).strip()[:200] + " "
     for pattern, meaning in _RULES:
@@ -79,6 +82,8 @@ def parse_search(text: str) -> ParsedSearch:
             continue
         elif meaning == "india":
             out.locations.append("India")
+        elif meaning == "anywhere":
+            out.locations.append("Anywhere")
         out.understood.append(_LABEL[meaning])
     m = _YEARS.search(q)
     if m:
@@ -90,6 +95,13 @@ def parse_search(text: str) -> ParsedSearch:
         out.locations += cities
         out.understood += cities
         q = _CITY_RE.sub(" ", q)
+    here = [c for c in world_cities(q) if country and city_country(c) == country.upper()]
+    if here:
+        out.locations += here
+        out.understood += here
+        for c in here:
+            for alias in (c.lower(), *WORLD_CITIES[c][1]):
+                q = re.sub(r"(?<![a-z0-9])" + re.escape(alias) + r"(?![a-z0-9])", " ", q)
     words = [w for w in re.findall(r"[a-z0-9+#.]+(?:[-/][a-z0-9+#.]+)*", q) if w not in _STOP and not w.isdigit()]
     out.keywords = " ".join(words).strip(" .,")
     return out

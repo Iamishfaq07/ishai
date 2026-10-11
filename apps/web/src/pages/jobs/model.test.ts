@@ -224,3 +224,14 @@ describe("followUpState", () => {
     expect(followUpState(new Date(2026, 9, 12, 12).toISOString(), now)).toBe("later");
   });
 });
+
+describe("the profile outside India", () => {
+  it("says anywhere in the country the user applies in", async () => {
+    const { anywhereLabel, profileSummary } = await import("./model");
+    expect(anywhereLabel("IN")).toBe("Anywhere in India");
+    expect(anywhereLabel("DE")).toBe("Anywhere in Germany");
+    expect(profileSummary(prefs({ titles: [], locations: ["Anywhere"], workplace: ["onsite"], years: null, level: null }), "GB")).toBe(
+      "Any role · Anywhere in the United Kingdom",
+    );
+  });
+});
