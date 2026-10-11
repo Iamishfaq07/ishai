@@ -198,13 +198,15 @@ export function FollowUpCard({
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
             <Mail className="h-5 w-5" />
           </span>
-          <div className="min-w-0 flex-1">
+          {/* basis-56: the text keeps a readable width and the button wraps under it on a phone, rather than the
+              text squeezing into a column a word wide beside the button. */}
+          <div className="min-w-0 flex-1 basis-56">
             <h2 className="font-display text-lg font-semibold">Follow up</h2>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               A quick debrief of this conversation and a thank-you email you can send today.
             </p>
           </div>
-          <Button onClick={() => void run(false)} disabled={busy}>
+          <Button className="w-full sm:w-auto" onClick={() => void run(false)} disabled={busy}>
             {busy ? "Writing…" : "Write my follow-up"}
           </Button>
         </div>
