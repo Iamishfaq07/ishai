@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { STORY_COMPETENCIES, type Story, type StoryCompetency, type StoryInput } from "@orbit/types";
 import {
   ArrowRight,
@@ -8,6 +8,7 @@ import {
   PenLine,
   Plus,
   Sparkles,
+  Target,
   Trash2,
   confirmDialog,
   cx,
@@ -17,8 +18,10 @@ import {
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Spinner, Textarea } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
+import { storyPracticeSession } from "../lib/storyPractice";
 import { useAsync } from "../lib/useAsync";
 import { RESUME_AI_HOME } from "./resume/paths";
+import type { LiveLaunchState } from "./SessionSetup";
 
 /**
  * Documents and Story bank are one "your materials" area: both feed every session. The tabs between them are the
@@ -267,7 +270,14 @@ function StoryEditor({
   );
 }
 
-function StoryCard({ story, onEdit, onDelete }: { story: StoryInput; onEdit: () => void; onDelete?: () => void }) {
+function StoryCard({ story, onEdit, onDelete, onPractise, practising = false }: {
+  story: StoryInput;
+  onEdit: () => void;
+  onDelete?: () => void;
+  /** Saved stories: a short mock round asking the questions this story answers (lib/storyPractice.ts). */
+  onPractise?: () => void;
+  practising?: boolean;
+}) {
   const parts = STAR.filter(({ key }) => story[key].trim());
   return (
     <Card className="flex flex-col">
@@ -310,6 +320,13 @@ function StoryCard({ story, onEdit, onDelete }: { story: StoryInput; onEdit: () 
           </dl>
         </details>
       )}
+      {onPractise && (
+        <div className="mt-auto pt-4">
+          <Button variant="secondary" size="sm" onClick={onPractise} disabled={practising} aria-label={`Practise telling “${story.title}” out loud`}>
+            <Target className="h-3.5 w-3.5" /> {practising ? "Starting…" : "Practise telling it"}
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }
@@ -329,8 +346,24 @@ export function StoriesPage() {
   const [notes, setNotes] = useState("");
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [practisingId, setPractisingId] = useState<string | null>(null);
+  const [practiseError, setPractiseError] = useState<string | null>(null);
 
   const list = stories.data ?? [];
+
+  const practise = async (story: Story) => {
+    setPractisingId(story.id);
+    setPractiseError(null);
+    try {
+      const session = await api.createSession(storyPracticeSession(story));
+      const launch: LiveLaunchState = { systemAudio: false };
+      navigate(`/live/${session.id}`, { state: launch });
+    } catch (err) {
+      setPractiseError(errorText(err));
+      setPractisingId(null);
+    }
+  };
 
   const startNew = (c?: StoryCompetency) => {
     setEditing({
@@ -526,6 +559,11 @@ export function StoriesPage() {
                 <h2 id="saved-title" className="mb-3 font-display text-lg font-semibold">
                   Your stories <span className="font-sans text-sm font-normal text-zinc-500">({list.length})</span>
                 </h2>
+                {practiseError && (
+                  <div className="mb-3">
+                    <ErrorNote>{practiseError}</ErrorNote>
+                  </div>
+                )}
                 <div className="grid gap-4 md:grid-cols-2">
                   {list.map((s) =>
                     editing?.id === s.id ? null : (
@@ -537,6 +575,8 @@ export function StoriesPage() {
                           window.scrollTo({ top: 0, behavior: "smooth" });
                         }}
                         onDelete={() => void remove(s)}
+                        onPractise={() => void practise(s)}
+                        practising={practisingId === s.id}
                       />
                     ),
                   )}

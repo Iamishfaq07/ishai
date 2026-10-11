@@ -45,7 +45,8 @@ QUESTION_TIMEOUT_S = 10
 PREFETCH_SILENCE_MS = 900
 
 
-DrillKind = Literal["retry", "concise", "prep"]
+# "story": from the story bank's "Practise telling it": a question the story answers, then a follow-up testing it.
+DrillKind = Literal["retry", "concise", "prep", "story"]
 
 
 class DrillItem(BaseModel):
@@ -243,9 +244,11 @@ class _Asked:
 _DRILL_LEAD = {
     "first": "Let's work on a few questions from your last session. ",
     "first_prep": "Let's practise the questions from your prep. ",
+    "first_story": "Let's practise telling one of your stories. ",
     "retry": "Let's try this one again. ",
     "concise": "Now the short version, in about thirty seconds. ",
     "prep": "",
+    "story": "",
 }
 
 
@@ -466,8 +469,8 @@ class MockInterviewer:
                 return
             item = plan[self._drill_next]
             self._drill_next += 1
-            if not self.asked and item.kind in ("retry", "prep"):
-                lead = _DRILL_LEAD["first_prep" if item.kind == "prep" else "first"]
+            if not self.asked and item.kind in ("retry", "prep", "story"):
+                lead = _DRILL_LEAD[{"prep": "first_prep", "story": "first_story"}.get(item.kind, "first")]
             else:
                 lead = _DRILL_LEAD[item.kind]
             await self._put(lead + item.question, False, drill=item)
@@ -560,6 +563,14 @@ class MockInterviewer:
                      "interviewer checks a resume claim: ask for the specifics behind what they just said.")
             if follow_up_on.feedback:
                 steer += (f"\n<reference_data source=\"what_to_probe\">\n{fence(follow_up_on.feedback)}\n"
+                          "</reference_data>")
+        elif follow_up_on is not None and follow_up_on.kind == "story":
+            # A story from their story bank: test it the way an interviewer tests a STAR story.
+            steer = ("Ask ONE probing follow-up on the candidate's last answer (is_follow_up true), the way an "
+                     "interviewer tests a behavioral story: what THEY did (not the team), the decision they made and "
+                     "why, or the measurable result. Pick whichever the answer left thinnest.")
+            if follow_up_on.feedback:
+                steer += (f"\n<reference_data source=\"their_story\">\n{fence(follow_up_on.feedback)}\n"
                           "</reference_data>")
         elif follow_up_on is not None:
             steer = ("Ask ONE probing follow-up on the candidate's last answer (is_follow_up true). Push on what was "
