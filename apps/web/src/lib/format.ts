@@ -62,3 +62,14 @@ export function downloadText(filename: string, content: BlobPart, type = "text/m
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/** "Tomorrow", "in 3 days", "on Oct 20": when something (the practice queue's next question) comes back. */
+export function whenDue(iso: string, now = new Date()): string {
+  const day = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const due = new Date(iso);
+  const days = Math.round((day(due) - day(now)) / 86_400_000);
+  if (days <= 0) return "later today";
+  if (days === 1) return "tomorrow";
+  if (days < 7) return `in ${days} days`;
+  return `on ${due.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+}

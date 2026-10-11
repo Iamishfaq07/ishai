@@ -331,6 +331,26 @@ export interface ReviewItem {
   words?: number;
 }
 
+/** GET /v1/practice/queue — spaced repetition: questions answered weakly in a review, due again until answered well. */
+export interface PracticeQueueItem {
+  question: string;
+  /** The latest review's score (1–5), or null when it wasn't answered. */
+  last_score: number | null;
+  attempts: number;
+  last_practised_at: string;
+  due_at: string;
+  /** The session whose review graded it last. */
+  session_id: string;
+}
+
+export interface PracticeQueue {
+  due: PracticeQueueItem[];
+  upcoming: number;
+  next_due_at: string | null;
+  /** Questions answered well enough, often enough, to leave the queue. */
+  learnt: number;
+}
+
 export interface SessionReview {
   overall_score: number | null;
   strengths: string[];

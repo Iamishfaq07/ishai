@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDuration, sessionKindLine } from "./format";
+import { formatDuration, sessionKindLine, whenDue } from "./format";
 
 describe("sessionKindLine", () => {
   it("skips the type when the title is the type (a session started without a name)", () => {
@@ -20,5 +20,15 @@ describe("formatDuration", () => {
     expect(formatDuration(90)).toBe("2 min");
     expect(formatDuration(3720)).toBe("1 h 2 min");
     expect(formatDuration(null)).toBe("—");
+  });
+});
+
+describe("whenDue", () => {
+  it("says when the next question comes back", () => {
+    const now = new Date(2026, 9, 11, 15, 0);
+    expect(whenDue(new Date(2026, 9, 11, 20, 0).toISOString(), now)).toBe("later today");
+    expect(whenDue(new Date(2026, 9, 12, 9, 0).toISOString(), now)).toBe("tomorrow");
+    expect(whenDue(new Date(2026, 9, 14, 9, 0).toISOString(), now)).toBe("in 3 days");
+    expect(whenDue(new Date(2026, 9, 25, 9, 0).toISOString(), now)).toMatch(/^on /);
   });
 });

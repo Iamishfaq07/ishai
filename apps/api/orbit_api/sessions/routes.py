@@ -72,7 +72,7 @@ from orbit_api.providers.stt import create_stt_provider
 from orbit_api.ratelimit import limit, limit_user
 from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.retrieval.index import IndexedChunk, SessionIndex, chunk_body
-from orbit_api.sessions import companion
+from orbit_api.sessions import companion, practice_queue
 from orbit_api.sessions.feedback import learned_preferences, session_feedback
 from orbit_api.sessions.recorder import DbRecorder, InterviewTime, upsert_usage
 from orbit_api.sessions.report import generate_report
@@ -439,6 +439,77 @@ async def drill_session(session_id: str, user: Annotated[User, Depends(require_v
     new = SessionIn(title=f"Drill: {title}"[:300], type="mock", role=row.role, language=row.language,
                     answer_language=row.answer_language, document_ids=doc_ids, mock=mock)
     return await create_session(new, user, db)
+
+
+# ---- the practice queue (spaced repetition over every review: sessions/practice_queue.py) ---------------------
+
+MAX_QUEUE_SESSIONS = 300  # the newest reviewed sessions a queue is built from
+
+
+class QueueItemOut(BaseModel):
+    question: str
+    last_score: int | None
+    attempts: int
+    last_practised_at: datetime
+    due_at: datetime
+    session_id: str
+
+
+class PracticeQueueOut(BaseModel):
+    due: list[QueueItemOut]
+    # Coming back later: how many, and when the next one is due.
+    upcoming: int
+    next_due_at: datetime | None
+    learnt: int
+
+
+async def _cards(db: AsyncSession, user: User) -> list[practice_queue.Card]:
+    rows = (await db.execute(
+        select(LiveSessionRow.id, LiveSessionRow.ended_at, LiveSessionRow.created_at, LiveSessionRow.mock_config,
+               SessionSummary.content)
+        .join(SessionSummary, SessionSummary.session_id == LiveSessionRow.id)
+        .where(LiveSessionRow.user_id == user.id)
+        .order_by(LiveSessionRow.created_at.desc()).limit(MAX_QUEUE_SESSIONS))).all()
+    reviews = []
+    for sid, ended_at, created_at, mock_config, content in rows:
+        if isinstance(mock_config, dict) and mock_config.get("negotiation"):
+            continue  # a recruiter's lines aren't questions to rehearse
+        review = (content or {}).get("review")
+        items = review.get("items") if isinstance(review, dict) else None
+        if isinstance(items, list) and items:
+            reviews.append((sid, ended_at or created_at, items))
+    return practice_queue.build_cards(reviews)
+
+
+def _queue_item(card: practice_queue.Card) -> QueueItemOut:
+    due = card.due_at()
+    assert due is not None
+    return QueueItemOut(question=card.question, last_score=card.last.score, attempts=len(card.attempts),
+                        last_practised_at=card.last.at, due_at=due, session_id=card.last.session_id)
+
+
+@router.get("/practice/queue", response_model=PracticeQueueOut)
+async def practice_queue_get(user: Annotated[User, Depends(current_user)],
+                             db: Annotated[AsyncSession, Depends(get_db)]) -> PracticeQueueOut:
+    """Questions answered weakly in any review, due again on a spaced schedule until answered well."""
+    due, later, learnt = practice_queue.queue(await _cards(db, user), datetime.now(UTC))
+    return PracticeQueueOut(due=[_queue_item(c) for c in due], upcoming=len(later),
+                            next_due_at=later[0].due_at() if later else None, learnt=learnt)
+
+
+@router.post("/practice/queue/drill", response_model=SessionOut, status_code=201,
+             dependencies=[Depends(session_limit), Depends(session_user_limit)])
+async def practice_queue_drill(user: Annotated[User, Depends(require_verified_user)],
+                               db: Annotated[AsyncSession, Depends(get_db)]) -> SessionOut:
+    """A mock round on what's due now (the most overdue and weakest first, up to five)."""
+    due, _, _ = practice_queue.queue(await _cards(db, user), datetime.now(UTC))
+    plan = practice_queue.drill(due)
+    if not plan:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail={
+            "code": "nothing_due", "message": "Nothing is due for practice right now."})
+    mock = MockConfig(drill=plan, duration_minutes=min(60, max(5, 4 * len(plan))))
+    body = SessionIn(title="Practice queue", type="mock", mock=mock)
+    return await create_session(body, user, db)
 
 
 def _strip_nul(v: Any) -> Any:
