@@ -245,7 +245,10 @@ class MockLLMProvider(LLMProvider):
                  "why": "[mock] The job description asks for this.",
                  "talking_points": ["[mock] point A", "[mock] point B"],
                  "suggested_answer": f"[mock] In my last role I [name the project] — answer {i + 1}."}
-                for i in range(n)]})
+                for i in range(n)], "ask_them": [
+                {"question": f"[mock] What would success look like in the first 90 days? ({i + 1})",
+                 "why": "[mock] Shows you're thinking about delivering, not just landing the job."}
+                for i in range(4)]})
         if request.request_type == "story_draft":
             body = request.messages[-1].content if request.messages else ""
             m = re.search(r"Number of stories: (\d+)", body)
