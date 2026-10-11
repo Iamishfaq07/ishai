@@ -24,7 +24,7 @@ import { api } from "../lib/api";
 import { displayAudioHelp, isWindows } from "../lib/audio";
 import { useAuth } from "../lib/auth";
 import { DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
-import { SESSION_TYPE_LABEL, errorText, formatDate } from "../lib/format";
+import { errorText, formatDate, sessionKindLine } from "../lib/format";
 import { checklist, loadAnswers, nextSteps, type ChecklistItem, type HomeFacts, type Step } from "../lib/onboarding";
 import { openHelp } from "../lib/shell";
 import { SESSION_TYPE_ICON } from "../lib/sessionIcons";
@@ -520,7 +520,7 @@ function RecentSessions({ sessions }: { sessions: AsyncState<OrbitSession[]> }) 
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">{s.title}</span>
                     <span className="block truncate text-xs text-zinc-600 dark:text-zinc-400">
-                      {SESSION_TYPE_LABEL[s.type]} · {formatDate(s.started_at ?? s.created_at)}
+                      {[sessionKindLine(s), formatDate(s.started_at ?? s.created_at)].filter(Boolean).join(" · ")}
                     </span>
                   </span>
                   {s.status !== "ended" && (

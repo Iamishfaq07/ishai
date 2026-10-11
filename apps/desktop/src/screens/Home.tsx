@@ -21,7 +21,7 @@ import {
 } from "@orbit/ui";
 import { api } from "../api";
 import { openBilling, useEntitlements } from "../credits";
-import { formatDate, formatDuration, SESSION_TYPE_LABEL } from "../format";
+import { formatDate, formatDuration, sessionKindLine } from "../format";
 import { TitleBar, TitleBarButton } from "../TitleBar";
 import { SESSION_TYPE_ICON, sessionLine } from "../sessionIcons";
 import { UpdateBanner } from "../UpdateBanner";
@@ -179,7 +179,7 @@ export function HomeScreen({
                           </p>
                           <p className="truncate text-xs text-zinc-500">
                             {sessionLine([
-                              SESSION_TYPE_LABEL[s.type],
+                              sessionKindLine(s),
                               formatDate(s.started_at ?? s.created_at),
                               s.duration_seconds ? formatDuration(s.duration_seconds) : null,
                             ])}

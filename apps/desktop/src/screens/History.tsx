@@ -22,7 +22,7 @@ import {
 import type { SessionType } from "@orbit/types";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { api } from "../api";
-import { downloadText, errText, formatClock, formatDate, formatDuration, SESSION_TYPE_LABEL } from "../format";
+import { downloadText, errText, formatClock, formatDate, formatDuration, SESSION_TYPE_LABEL, sessionKindLine } from "../format";
 import { SESSION_TYPE_ICON, sessionLine } from "../sessionIcons";
 import { TitleBar } from "../TitleBar";
 
@@ -110,8 +110,7 @@ function SessionList({ onOpen, onResume }: { onOpen: (id: string) => void; onRes
                       )}
                     </p>
                     <p className="truncate text-xs text-zinc-500">
-                      {SESSION_TYPE_LABEL[s.type]}
-                      {s.role ? ` · ${s.role}` : ""}
+                      {sessionKindLine(s)}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500 sm:justify-end">

@@ -5,7 +5,7 @@ import { AudioLines, ChevronRight, Clock, confirmDialog, cx, focusRing, HistoryI
 import { Button, Card, EmptyState, ErrorNote, PageHeader, Spinner } from "../components/ui";
 import { PRODUCTS } from "../components/products";
 import { api } from "../lib/api";
-import { SESSION_TYPE_LABEL, errorText, formatDate, formatDuration } from "../lib/format";
+import { errorText, formatDate, formatDuration, sessionKindLine } from "../lib/format";
 import { SESSION_TYPE_ICON } from "../lib/sessionIcons";
 import { useAsync } from "../lib/useAsync";
 
@@ -86,8 +86,7 @@ export function SessionsPage() {
                           )}
                         </p>
                         <p className="truncate text-xs text-zinc-500">
-                          {SESSION_TYPE_LABEL[s.type]}
-                          {s.role ? ` · ${s.role}` : ""}
+                          {sessionKindLine(s)}
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500 sm:justify-end">
