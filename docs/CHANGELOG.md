@@ -1,5 +1,12 @@
 # Implementation log
 
+## Resume AI: a quieter credits line on phones (2026-10-11)
+
+- While you have resume credits, the note above your resumes and in the editor is one short line on phones ("12
+  resume credits left. AI actions use one; the rest is free.") with a small Get credits button, instead of a paragraph
+  that took a third of the first screen. From 640 px up it reads as before. Out of credits, it stays the full amber
+  note.
+
 ## Resume AI for returning users; the phone status bar follows the theme (2026-10-11)
 
 - **Resume AI:** once you have resumes, the page opens with a compact "Resume AI" header (Create a resume, Import)
