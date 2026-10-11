@@ -136,6 +136,8 @@ export interface LiveViewState {
     drillKind: "retry" | "follow_up" | "concise" | "prep" | "story" | null;
     /** Salary-negotiation practice: a recruiter on a call, counted in turns. */
     negotiation: boolean;
+    /** The server's reading of the question's kind, for "Stuck? Show a structure" (answerHints.ts). */
+    questionType?: string;
   } | null;
   mockCompleted: boolean;
   mockSummary: MockRoundSummary | null;
@@ -458,6 +460,7 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
         ...s,
         mock: { questionId: action.data.question_id, text: action.data.text, isFollowUp: action.data.is_follow_up,
           drillKind: action.data.drill_kind ?? null, negotiation: Boolean(action.data.negotiation),
+          ...(action.data.question_type ? { questionType: action.data.question_type } : {}),
                 index: action.data.index, total: action.data.total },
       };
     case "mock.completed":

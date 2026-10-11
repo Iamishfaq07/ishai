@@ -262,6 +262,8 @@ export interface ServerEventMap {
     drill_kind?: "retry" | "follow_up" | "concise" | "prep" | "story";
     /** Salary-negotiation practice: the AI is a recruiter, and `index`/`total` count turns of the call. */
     negotiation?: boolean;
+    /** What kind of question it is ("behavioral", "system_design", "follow_up"…), for the structure hint. */
+    question_type?: string;
   };
   /** Mock interview finished (planned questions or time used up); session.ended follows. */
   "mock.completed": MockRoundSummary;

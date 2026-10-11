@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from orbit_api.live.carryover import MockProgress
 from orbit_api.live.context_builder import fence
+from orbit_api.live.question_detector import classify_type, normalize
 from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMProvider, LLMRequest, LLMResponse
 from orbit_api.retrieval.index import SessionIndex
 
@@ -444,6 +445,10 @@ class MockInterviewer:
                                    "is_follow_up": asked.is_follow_up and not negotiation,
                                    "index": len(self.asked) if negotiation else self._topics(),
                                    "total": self.config.planned_questions}
+        if not negotiation:
+            # What kind of question it is, for the panel's "Stuck? Show a structure" hint (never an answer).
+            asked_q = asked.drill.question if asked.drill and not asked.is_follow_up else asked.text
+            payload["question_type"] = "follow_up" if asked.is_follow_up else classify_type(normalize(asked_q)).value
         if self.config.drill:
             payload["drill_kind"] = "follow_up" if asked.is_follow_up else (asked.drill.kind if asked.drill
                                                                             else "retry")
