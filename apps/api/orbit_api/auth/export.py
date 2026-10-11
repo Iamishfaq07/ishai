@@ -19,11 +19,13 @@ from orbit_api.models import (
     ContactMessage,
     Document,
     JobApplication,
+    JobContact,
     JobFitCheck,
     JobSearchProfile,
     LiveSessionRow,
     Question,
     Resume,
+    SavedAnswer,
     SessionSummary,
     SessionTurn,
     Story,
@@ -68,6 +70,8 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
                                                            .order_by(Workspace.created_at))).all()],
         "stories": [_row(st) for st in (await db.scalars(select(Story).where(Story.user_id == user_id)
                                                           .order_by(Story.created_at))).all()],
+        "saved_answers": [_row(a) for a in (await db.scalars(select(SavedAnswer).where(SavedAnswer.user_id == user_id)
+                                                              .order_by(SavedAnswer.created_at))).all()],
         "resumes": [_row(r) for r in (await db.scalars(select(Resume).where(Resume.user_id == user_id)
                                                        .order_by(Resume.created_at))).all()],
         "answer_ratings": [_row(f) for f in (await db.scalars(
@@ -81,6 +85,8 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
                 JobApplication.user_id == user_id).order_by(JobApplication.created_at))).all()],
             "fit_checks": [_row(f) for f in (await db.scalars(select(JobFitCheck).where(
                 JobFitCheck.user_id == user_id).order_by(JobFitCheck.created_at))).all()],
+            "contacts": [_row(c) for c in (await db.scalars(select(JobContact).where(
+                JobContact.user_id == user_id).order_by(JobContact.created_at))).all()],
         },
         "usage": [_row(u) for u in (await db.scalars(select(UsageEvent).where(UsageEvent.user_id == user_id)
                                                       .order_by(UsageEvent.created_at))).all()],

@@ -197,6 +197,8 @@ def world() -> Iterator[World]:
             ids["story"] = _created(client.post("/v1/stories", headers=a, json={
                 "title": "Settled a rollout dispute with data", "situation": "Two teams disagreed.",
                 "action": "I ran a design review.", "result": "We shipped on time.", "competencies": ["conflict"]}))
+            ids["saved_answer"] = _created(client.post("/v1/answers", headers=a, json={
+                "question": "Tell me about yourself.", "answer": "I'm a backend engineer at Acme."}))
             ids["s_ended"] = _created(client.post("/v1/sessions", headers=a, json={
                 "title": "Acme onsite", "workspace_id": ids["workspace"]}))
             ids.update(_seed_ended_session(client, ids["s_ended"]))
@@ -248,6 +250,7 @@ def _owner_view(w: World) -> dict[str, Any]:
         "resume": w.get("/v1/resumes/{resume}", a),
         "workspace": w.get("/v1/workspaces/{workspace}", a),
         "stories": w.get("/v1/stories", a),
+        "saved_answers": w.get("/v1/answers", a),
         "ended": w.get("/v1/sessions/{s_ended}", a),
         "open": w.get("/v1/sessions/{s_open}", a),
         "orders": w.get("/v1/billing/upi/orders", a),
@@ -291,6 +294,8 @@ OBJECT_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("DELETE", "/v1/workspaces/{workspace}", {}),
     ("PUT", "/v1/stories/{story}", {"json": {"title": "pwned"}}),
     ("DELETE", "/v1/stories/{story}", {}),
+    ("PUT", "/v1/answers/{saved_answer}", {"json": {"question": "pwned", "answer": "pwned"}}),
+    ("DELETE", "/v1/answers/{saved_answer}", {}),
     ("GET", "/v1/sessions/{s_ended}", {}),
     ("GET", "/v1/sessions/{s_ended}/export.md", {}),
     ("POST", "/v1/sessions/{s_open}/end", {}),
@@ -373,14 +378,15 @@ def test_another_user_cannot_claim_owners_answer_through_their_own_session(world
     assert r.status_code == 404, f"B rated A's answer through B's own session: {r.status_code} {r.text}"
 
 
-@pytest.mark.parametrize("path", ["/v1/documents", "/v1/resumes", "/v1/workspaces", "/v1/stories", "/v1/sessions",
+@pytest.mark.parametrize("path", ["/v1/documents", "/v1/resumes", "/v1/workspaces", "/v1/stories", "/v1/answers",
+                                  "/v1/sessions",
                                   "/v1/billing/upi/orders", "/v1/progress", "/v1/entitlements", "/v1/usage",
                                   "/v1/auth/me/export", "/v1/jobs/tracker", "/v1/jobs/profile", "/v1/jobs/feed"])
 def test_lists_and_exports_hold_only_the_callers_own_objects(world: World, path: str) -> None:
     body = json.dumps(world.get(path, world.b))
     a_ids = [v for k, v in world.ids.items() if k in ("doc_resume", "doc_jd", "resume", "workspace", "story",
                                                       "s_ended", "s_open", "order", "answer", "question",
-                                                      "job_entry")]
+                                                      "job_entry", "saved_answer")]
     leaked = [i for i in a_ids if i in body]
     assert not leaked, f"{path} shows B ids of A's objects: {leaked}"
     assert world.ids["a_email"] not in body and world.ids["utr"] not in body

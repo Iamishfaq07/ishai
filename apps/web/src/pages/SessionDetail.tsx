@@ -170,6 +170,9 @@ export function SessionDetailPage() {
             const launch: LiveLaunchState = { systemAudio: false };
             navigate(`/live/${drill.id}`, { state: launch });
           }}
+          onSaveAnswer={async (question, answer) => {
+            await api.saveAnswer({ question, answer, session_id: session.id });
+          }}
         />
         <DeliveryCard delivery={detail.data.summary?.delivery} />
         {session.status === "ended" && session.type !== "mock" && (detail.data.turns.length > 0 || detail.data.questions.length > 0) && (

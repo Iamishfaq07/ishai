@@ -50,7 +50,8 @@ ONE_WAY_GRACE_MS = 3000
 
 
 # "story": from the story bank's "Practise telling it": a question the story answers, then a follow-up testing it.
-DrillKind = Literal["retry", "concise", "prep", "story"]
+# "answer": from the answer bank's "Practise it": the saved question, then a follow-up on the prepared answer's claims.
+DrillKind = Literal["retry", "concise", "prep", "story", "answer"]
 
 
 class DrillItem(BaseModel):
@@ -303,10 +304,12 @@ _DRILL_LEAD = {
     "first": "Let's work on a few questions from your last session. ",
     "first_prep": "Let's practise the questions from your prep. ",
     "first_story": "Let's practise telling one of your stories. ",
+    "first_answer": "Let's practise one of your prepared answers. ",
     "retry": "Let's try this one again. ",
     "concise": "Now the short version, in about thirty seconds. ",
     "prep": "",
     "story": "",
+    "answer": "",
 }
 
 
@@ -569,8 +572,9 @@ class MockInterviewer:
             self._drill_next += 1
             if not self.asked and len(plan) == 1 and item.kind == "retry":
                 lead = _DRILL_LEAD["retry"]  # one question again: not "a few questions"
-            elif not self.asked and item.kind in ("retry", "prep", "story"):
-                lead = _DRILL_LEAD[{"prep": "first_prep", "story": "first_story"}.get(item.kind, "first")]
+            elif not self.asked and item.kind in ("retry", "prep", "story", "answer"):
+                lead = _DRILL_LEAD[{"prep": "first_prep", "story": "first_story",
+                                    "answer": "first_answer"}.get(item.kind, "first")]
             else:
                 lead = _DRILL_LEAD[item.kind]
             await self._put(lead + item.question, False, drill=item)
@@ -660,8 +664,9 @@ class MockInterviewer:
         system = _SYSTEM.format(persona=persona, role=role, difficulty=_DIFFICULTY[cfg.difficulty],
                                 focus=_TYPES[cfg.interview_type])
         follow_ups = self._follow_ups_in_topic()
-        if follow_up_on is not None and follow_up_on.kind == "prep":
-            # A question from their prep: probe the resume claim behind it, the way the prep said you would.
+        if follow_up_on is not None and follow_up_on.kind in ("prep", "answer"):
+            # A question from their prep, or one they've prepared an answer to: probe the claim behind it, the way the
+            # prep said you would (or behind what the prepared answer says).
             steer = ("Ask ONE probing follow-up on the candidate's last answer (is_follow_up true), the way an "
                      "interviewer checks a resume claim: ask for the specifics behind what they just said.")
             if follow_up_on.feedback:

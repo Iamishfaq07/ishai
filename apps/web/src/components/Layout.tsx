@@ -12,6 +12,7 @@ import {
   HistoryIcon,
   House,
   LogOut,
+  MessageSquareQuote,
   MOCK_INTERVIEW_ENABLED,
   OrbitWordmark,
   Search,
@@ -109,6 +110,7 @@ const COPILOT_SECTIONS: ProductSection[] = [
   { to: "/sessions", label: "Sessions", icon: HistoryIcon },
   { to: "/documents", label: "Documents", icon: FolderOpen, end: true },
   { to: "/documents/stories", label: "Story bank", icon: BookOpen },
+  { to: "/documents/answers", label: "My answers", icon: MessageSquareQuote },
 ];
 
 const ME_PATH = /^\/(billing|settings)(\/|$)/;

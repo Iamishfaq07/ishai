@@ -169,6 +169,7 @@ export function baseCommands({ mockEnabled }: { mockEnabled: boolean }): Command
       : []),
     { id: "go-sessions", title: "Sessions", group: "Go to", product: "interview", to: "/sessions", keywords: ["history", "transcripts", "reports", "interview", "copilot", "live"] },
     { id: "go-stories", title: "Story bank", group: "Go to", product: "interview", to: "/documents/stories", keywords: ["stories", "star", "behavioural"] },
+    { id: "go-answers", title: "My answers", group: "Go to", product: "interview", to: "/documents/answers", keywords: ["answer bank", "saved answers", "prepared", "questions"] },
     {
       id: "go-documents",
       title: "Documents",

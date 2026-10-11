@@ -130,3 +130,6 @@ export { RotateCcw } from "lucide-react";
 
 // The Panel round and Video interview presets.
 export { UsersRound, Video } from "lucide-react";
+
+// The answer bank (Story bank → My answers).
+export { MessageSquareQuote } from "lucide-react";

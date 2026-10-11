@@ -1,10 +1,10 @@
 import { useState } from "react";
 import type { ReviewItem, SessionReview as Review } from "@orbit/types";
-import { ArrowUpRight, CircleCheck, MicOff, RotateCcw, Target, type LucideIcon } from "../icons";
+import { ArrowUpRight, Bookmark, BookmarkCheck, CircleCheck, MicOff, RotateCcw, Target, type LucideIcon } from "../icons";
 import { clock, reviewLength } from "../live/answerPace";
 import { cx } from "./cx";
 import { useCountUp } from "./Reveal";
-import { Button, Card, EmptyState, ErrorNote } from "./ui";
+import { Button, Card, EmptyState, ErrorNote, Textarea } from "./ui";
 
 export interface SessionReviewProps {
   review: Review | null | undefined;
@@ -18,6 +18,8 @@ export interface SessionReviewProps {
   onDrill?: () => Promise<void>;
   /** "Try this one again": a practice round on one question of the review (1-based), opened by the caller. */
   onRetry?: (question: number) => Promise<void>;
+  /** "Save as my answer": keeps an answer to the question in the answer bank, which live sessions draw on. */
+  onSaveAnswer?: (question: string, answer: string) => Promise<void>;
 }
 
 /** Scores of 3/5 or lower, or unanswered, are what a drill practises (matches the server's drill_plan). */
@@ -29,7 +31,7 @@ const SCORE_WORD: Record<number, string> = { 1: "Needs work", 2: "Developing", 3
 
 /** Post-call scorecard: overall score, strengths/improvements/practice, and each question graded on what
  * the candidate actually said. Shared by the web session page and the desktop History screen. */
-export function SessionReview({ review, ended, empty = false, onGenerate, onDrill, onRetry }: SessionReviewProps) {
+export function SessionReview({ review, ended, empty = false, onGenerate, onDrill, onRetry, onSaveAnswer }: SessionReviewProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const generate = async () => {
@@ -140,7 +142,8 @@ export function SessionReview({ review, ended, empty = false, onGenerate, onDril
 
       <div className="space-y-3">
         {review.items.map((item, i) => (
-          <QuestionReview key={i} index={i + 1} item={item} busy={busy} onRetry={onRetry ? () => void retry(i + 1) : undefined} />
+          <QuestionReview key={i} index={i + 1} item={item} busy={busy} onRetry={onRetry ? () => void retry(i + 1) : undefined}
+                          onSaveAnswer={onSaveAnswer} />
         ))}
       </div>
     </div>
@@ -213,12 +216,14 @@ function Pips({ score }: { score: number | null }) {
   );
 }
 
-function QuestionReview({ index, item, busy = false, onRetry }: {
+function QuestionReview({ index, item, busy = false, onRetry, onSaveAnswer }: {
   index: number;
   item: ReviewItem;
   busy?: boolean;
   onRetry?: () => void;
+  onSaveAnswer?: (question: string, answer: string) => Promise<void>;
 }) {
+  const [saving, setSaving] = useState<"closed" | "open" | "saved">("closed");
   return (
     <Card className="animate-fade-up">
       <div className="flex items-start justify-between gap-3">
@@ -248,16 +253,82 @@ function QuestionReview({ index, item, busy = false, onRetry }: {
           <p className="mt-0.5 text-sm text-zinc-800 dark:text-zinc-200">{item.better}</p>
         </div>
       )}
-      {onRetry && (
-        <div className="mt-3">
-          <Button variant="secondary" size="sm" onClick={onRetry} disabled={busy}
-                  title="A short mock round: this question again, out loud, with a follow-up on what was missing"
-                  aria-label={`Try question ${index} again`}>
-            <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Try this one again
-          </Button>
+      {(onRetry || onSaveAnswer) && saving !== "open" && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {onRetry && (
+            <Button variant="secondary" size="sm" onClick={onRetry} disabled={busy}
+                    title="A short mock round: this question again, out loud, with a follow-up on what was missing"
+                    aria-label={`Try question ${index} again`}>
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Try this one again
+            </Button>
+          )}
+          {onSaveAnswer && saving === "closed" && (
+            <Button variant="ghost" size="sm" onClick={() => setSaving("open")}
+                    title="Keep your answer to this question: the copilot starts from it when it comes up in an interview"
+                    aria-label={`Save an answer to question ${index}`}>
+              <Bookmark className="h-3.5 w-3.5" aria-hidden /> Save as my answer
+            </Button>
+          )}
+          {saving === "saved" && (
+            <span role="status" className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+              <BookmarkCheck className="h-3.5 w-3.5" aria-hidden /> Saved to your answers
+            </span>
+          )}
         </div>
       )}
+      {onSaveAnswer && saving === "open" && (
+        <SaveAnswer index={index} question={item.question} draft={item.better || item.you_said}
+                    onSave={async (answer) => {
+                      await onSaveAnswer(item.question, answer);
+                      setSaving("saved");
+                    }}
+                    onCancel={() => setSaving("closed")} />
+      )}
     </Card>
+  );
+}
+
+/** The answer to keep, starting from the review's "Try saying" (or what was said), edited into the user's words. */
+function SaveAnswer({ index, question, draft, onSave, onCancel }: {
+  index: number;
+  question: string;
+  draft: string;
+  onSave: (answer: string) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [answer, setAnswer] = useState(draft.replace(/^…|…$/g, "").trim());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const id = `save-answer-${index}`;
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await onSave(answer.trim());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't save the answer.");
+      setBusy(false);
+    }
+  };
+  return (
+    <form className="mt-3 space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+          onSubmit={(e) => { e.preventDefault(); void save(); }}>
+      <label htmlFor={id} className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+        Your answer to “{question}”
+      </label>
+      <Textarea id={id} rows={5} value={answer} maxLength={3000} autoFocus
+                onChange={(e) => setAnswer(e.target.value)} />
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+        Make it sound like you. When this question comes up in an interview, the copilot starts from this answer.
+      </p>
+      {error && <ErrorNote>{error}</ErrorNote>}
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" size="sm" disabled={busy || !answer.trim()}>
+          {busy ? "Saving…" : "Save answer"}
+        </Button>
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={busy}>Cancel</Button>
+      </div>
+    </form>
   );
 }
 

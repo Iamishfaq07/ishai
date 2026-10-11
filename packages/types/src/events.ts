@@ -259,7 +259,7 @@ export interface ServerEventMap {
     index: number;
     total: number;
     /** Re-drill sessions only: a weak question again, its live follow-up, or the short version. */
-    drill_kind?: "retry" | "follow_up" | "concise" | "prep" | "story";
+    drill_kind?: "retry" | "follow_up" | "concise" | "prep" | "story" | "answer";
     /** Salary-negotiation practice: the AI is a recruiter, and `index`/`total` count turns of the call. */
     negotiation?: boolean;
     /** What kind of question it is ("behavioral", "system_design", "follow_up"…), for the structure hint. */

@@ -139,7 +139,7 @@ export interface MockConfig {
   drill?: Array<{
     question: string;
     /** "story": a question a story-bank story answers ("Practise telling it"), tested by its follow-up. */
-    kind?: "retry" | "concise" | "prep" | "story";
+    kind?: "retry" | "concise" | "prep" | "story" | "answer";
     follow_up?: boolean;
     /** Steers the follow-up, never read out: what was weak last time, or (prep) where to push on the claim. */
     feedback?: string;
@@ -470,6 +470,24 @@ export interface StoryInput {
 
 export interface Story extends StoryInput {
   id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** POST /v1/answers (a question already saved, in near enough the same words, gets this answer instead) and PUT
+ *  /v1/answers/{id}: the answer bank, which every live session draws on. */
+export interface SavedAnswerInput {
+  question: string;
+  answer: string;
+  /** The session whose review it's saved from. */
+  session_id?: string | null;
+}
+
+export interface SavedAnswer {
+  id: string;
+  question: string;
+  answer: string;
+  session_id: string | null;
   created_at: string;
   updated_at: string;
 }
