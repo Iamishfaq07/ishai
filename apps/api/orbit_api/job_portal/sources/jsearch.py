@@ -1,7 +1,8 @@
 """JSearch on RapidAPI (optional, paid): Google for Jobs data, including posts whose apply links are on LinkedIn,
 Indeed or Naukri. On only when ORBIT_JSEARCH_KEY is set; stops at 90% of ORBIT_JSEARCH_MONTHLY_BUDGET calls.
 
-`GET jsearch.p.rapidapi.com/search?query=<title> jobs in <place>&country=in&date_posted=…`. The apply link is the
+`GET jsearch.p.rapidapi.com/search?query=<title> jobs in <place>&country=<cc>&date_posted=…`, for the country the
+searcher applies in. The apply link is the
 employer's own when JSearch has one (`apply_options` with `is_direct`), else the publisher's.
 https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch
 """
@@ -14,6 +15,7 @@ from orbit_api.config import get_settings
 from orbit_api.job_portal.http import FeedClient, SourceError
 from orbit_api.job_portal.postings import Posting, employment_type_of, parse_time, salary_text, text_of
 from orbit_api.job_portal.sources.base import Attribution, Budget, SearchQuery, Source
+from orbit_api.region import country_name
 
 HOST = "jsearch.p.rapidapi.com"
 _POSTED = {1: "today", 3: "3days", 7: "week", 30: "month"}
@@ -45,7 +47,7 @@ def parse_job(j: Any, query_key: str) -> Posting | None:
                                            .replace("PARTTIME", "part time")),
         salary=salary_text(j.get("job_min_salary"), j.get("job_max_salary"), j.get("job_salary_currency"),
                            j.get("job_salary_period")),
-        country=country or None, open_to_india=country == "IN")
+        country=country or None, open_to=[country] if country else [])
 
 
 class JSearch(Source):
@@ -66,9 +68,10 @@ class JSearch(Source):
         key = get_settings().jsearch_key
         if not key:
             raise SourceError("JSearch isn't configured")
-        where = "India" if query.where.lower() == "india" else f"{query.where}, India"
+        name = (country_name(query.country) or query.country).removeprefix("the ")
+        where = name if query.anywhere() else f"{query.where}, {name}"
         data = await http.get_json(f"https://{HOST}/search", params={
-            "query": f"{query.what} jobs in {where}", "country": "in", "page": 1, "num_pages": 1,
+            "query": f"{query.what} jobs in {where}", "country": query.country.lower(), "page": 1, "num_pages": 1,
             "date_posted": next((v for d, v in sorted(_POSTED.items()) if query.days <= d), "month")},
             headers={"X-RapidAPI-Key": key.get_secret_value(), "X-RapidAPI-Host": HOST})
         jobs = data.get("data") if isinstance(data, dict) else None

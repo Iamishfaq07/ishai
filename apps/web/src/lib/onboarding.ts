@@ -20,7 +20,7 @@ export interface WelcomeAnswers {
   experience: Experience | null;
   /** The job they want, as typed or picked ("Data analyst"); "" when not given. */
   role: string;
-  /** A city ("Pune"), "India" (anywhere in India) or "Remote"; null when not given. */
+  /** A city ("Pune"), "India" or "Anywhere" (anywhere in the country they apply in) or "Remote"; null when not given. */
   place: string | null;
   /** "done" after the last question; "skipped" when they skipped the rest. */
   status: "done" | "skipped";
@@ -30,6 +30,8 @@ export interface WelcomeAnswers {
 export const REMOTE = "Remote";
 /** The Jobs AI profile's "anywhere in India" (job_portal/profile.py ANYWHERE_IN_INDIA). */
 export const ANYWHERE_IN_INDIA = "India";
+/** Its "anywhere in the country" everywhere else (job_portal/profile.py ANYWHERE). */
+export const ANYWHERE = "Anywhere";
 
 export const GOALS: Array<{ id: Goal; title: string; body: string }> = [
   { id: "interview", title: "Prepare for an interview", body: "Practise out loud and get a score, or get help during a call." },
@@ -187,7 +189,7 @@ function catalogue(answers: WelcomeAnswers | null, facts: HomeFacts, now: Date):
   const role = answers?.role.trim();
   const place = answers?.place;
   const where = place === REMOTE ? "remote " : "";
-  const inPlace = place && place !== REMOTE && place !== ANYWHERE_IN_INDIA ? ` in ${place}` : "";
+  const inPlace = place && place !== REMOTE && place !== ANYWHERE_IN_INDIA && place !== ANYWHERE ? ` in ${place}` : "";
   const steps: Array<Step & { done: boolean }> = [];
 
   const soon = interviewSoon(facts.tracker, now);

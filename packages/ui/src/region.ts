@@ -38,6 +38,15 @@ export function countryName(code: string | null | undefined): string {
   return NAME.get(c) ?? c;
 }
 
+// Names that read with "the" in a sentence ("in the United States").
+const WITH_THE = new Set(["US", "GB", "AE", "NL", "PH"]);
+
+/** The country as it reads after "in": "India", "the United States". */
+export function countryInSentence(code: string | null | undefined): string {
+  const c = (code ?? "").toUpperCase();
+  return (WITH_THE.has(c) ? "the " : "") + countryName(c);
+}
+
 export function isIndia(code: string | null | undefined): boolean {
   return (code ?? "").toUpperCase() === INDIA;
 }

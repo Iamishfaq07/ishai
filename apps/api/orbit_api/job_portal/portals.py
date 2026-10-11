@@ -3,6 +3,9 @@
 No data is fetched from these sites (their terms forbid it, docs/DECISIONS.md D43): these are plain links that open
 the portal's search for the same title, city, recency, work mode and experience, in a new tab. Each portal writes
 cities its own way, so `_city` keeps a small table per portal and falls back to the plain name.
+
+The portals follow the country the user applies in: LinkedIn, Indeed (its site for that country), Wellfound and
+Google Jobs everywhere; Naukri, Foundit, Instahyre, Cutshort, Hirist and Internshala in India only.
 """
 
 import re
@@ -10,6 +13,7 @@ from dataclasses import dataclass
 from urllib.parse import quote_plus, urlencode
 
 from orbit_api.job_portal.postings import Level
+from orbit_api.region import country_name
 
 # Display order, and the ones shown until the user picks.
 PORTALS: dict[str, str] = {
@@ -18,7 +22,23 @@ PORTALS: dict[str, str] = {
     "google": "Google Jobs",
 }
 DEFAULT_PORTALS: tuple[str, ...] = ("linkedin", "naukri", "indeed", "foundit", "instahyre", "google")
+INDIA_ONLY = frozenset({"naukri", "foundit", "instahyre", "cutshort", "hirist", "internshala"})
+# Indeed's site per country (others search indeed.com with the country as the place).
+_INDEED_HOST = {
+    "IN": "in.indeed.com", "US": "www.indeed.com", "GB": "uk.indeed.com", "CA": "ca.indeed.com",
+    "AU": "au.indeed.com", "NZ": "nz.indeed.com", "IE": "ie.indeed.com", "DE": "de.indeed.com",
+    "FR": "fr.indeed.com", "NL": "nl.indeed.com", "ES": "es.indeed.com", "IT": "it.indeed.com",
+    "BE": "be.indeed.com", "CH": "ch.indeed.com", "AT": "at.indeed.com", "PL": "pl.indeed.com",
+    "SG": "sg.indeed.com", "MY": "malaysia.indeed.com", "PH": "ph.indeed.com", "AE": "ae.indeed.com",
+    "SA": "sa.indeed.com", "ZA": "za.indeed.com", "PK": "pk.indeed.com", "JP": "jp.indeed.com",
+    "BR": "br.indeed.com", "MX": "mx.indeed.com", "AR": "ar.indeed.com",
+}
 
+
+def portals_for(country: str | None) -> dict[str, str]:
+    """The portals there are links to in this country, in display order."""
+    india = (country or "IN").upper() == "IN"
+    return {k: v for k, v in PORTALS.items() if india or k not in INDIA_ONLY}
 LINKEDIN_INDIA_GEO = "102713980"
 _LINKEDIN_TPR = {1: "r86400", 3: "r259200", 7: "r604800", 30: "r2592000"}
 _LINKEDIN_WT = {"onsite": "1", "remote": "2", "hybrid": "3"}
@@ -75,9 +95,14 @@ def _years_range(level: Level | None, years: float | None) -> tuple[int, int] | 
 
 
 def portal_links(*, keywords: str, city: str | None, posted_within: int, workplace: list[str],
-                 level: Level | None, years: float | None, portals: list[str] | None = None) -> list[PortalLink]:
-    """The search links for these filters, for the chosen portals (in display order). `city` is a canonical city or
-    None for all of India; `workplace` the modes the user wants (all three = no filter)."""
+                 level: Level | None, years: float | None, portals: list[str] | None = None,
+                 country: str = "IN") -> list[PortalLink]:
+    """The search links for these filters, for the chosen portals (in display order) that there are in `country`.
+    `city` is a canonical city or None for the whole country; `workplace` the modes the user wants (all three = no
+    filter)."""
+    if country.upper() != "IN":
+        return _world_links(keywords=keywords, city=city, posted_within=posted_within, workplace=workplace,
+                            level=level, portals=portals, country=country.upper())
     kw = re.sub(r"\s+", " ", keywords).strip()[:100] or "jobs"
     modes = [m for m in ("onsite", "remote", "hybrid") if m in workplace]
     only_some = 0 < len(modes) < 3
@@ -142,3 +167,39 @@ def portal_links(*, keywords: str, city: str | None, posted_within: int, workpla
     wanted = [p for p in PORTALS if portals is None or p in portals]
     return [PortalLink(p, PORTALS[p], out[p]) for p in wanted]
 
+
+
+def _world_links(*, keywords: str, city: str | None, posted_within: int, workplace: list[str], level: Level | None,
+                 portals: list[str] | None, country: str) -> list[PortalLink]:
+    """Outside India: LinkedIn, Indeed (its site for the country), Wellfound and Google Jobs."""
+    kw = re.sub(r"\s+", " ", keywords).strip()[:100] or "jobs"
+    name = (country_name(country) or country).removeprefix("the ")
+    modes = [m for m in ("onsite", "remote", "hybrid") if m in workplace]
+    only_some = 0 < len(modes) < 3
+    remote_only = modes == ["remote"]
+    out: dict[str, str] = {}
+
+    li: dict[str, str] = {"keywords": kw, "sortBy": "DD", "f_TPR": _LINKEDIN_TPR.get(posted_within, "r604800"),
+                          "location": f"{city}, {name}" if city else name}
+    if only_some:
+        li["f_WT"] = ",".join(_LINKEDIN_WT[m] for m in modes)
+    if level:
+        li["f_E"] = _LINKEDIN_E[level]
+    out["linkedin"] = "https://www.linkedin.com/jobs/search/?" + urlencode(li)
+
+    host = _INDEED_HOST.get(country)
+    place = "Remote" if remote_only else (city or (name if host is None else ""))
+    ind = {"q": kw, "sort": "date"} | ({"l": place} if place else {})
+    if posted_within in _INDEED_AGE:
+        ind["fromage"] = str(_INDEED_AGE[posted_within])
+    out["indeed"] = f"https://{host or 'www.indeed.com'}/jobs?" + urlencode(ind)
+
+    where = _slug(city or name)
+    role = _slug(kw)
+    out["wellfound"] = (f"https://wellfound.com/role/l/{role}/{where}" if len(kw.split()) <= 3
+                        else f"https://wellfound.com/location/{where}")
+    remote = " remote" if remote_only else ""
+    out["google"] = "https://www.google.com/search?" + urlencode(
+        {"q": f"{kw}{remote} jobs in {city or name}", "udm": "8"}, quote_via=quote_plus)
+    wanted = [p for p in out if portals is None or p in portals] or ["linkedin", "indeed", "google"]
+    return [PortalLink(p, PORTALS[p], out[p]) for p in PORTALS if p in wanted]

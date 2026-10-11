@@ -16,12 +16,15 @@ import {
   Search,
   Sparkles,
   cx,
+  formatNumber,
+  isIndia,
   focusRing,
   Reveal,
 } from "@orbit/ui";
 import { AiPill } from "../../components/products";
 import { Footer } from "../../components/Footer";
 import { api } from "../../lib/api";
+import { useCountry } from "../../lib/country";
 import { RESUME_AI_HOME } from "../resume/paths";
 import { linkButton, textLink } from "./links";
 import { postedAgo } from "./model";
@@ -33,6 +36,8 @@ const BACK_HERE = { from: JOBS_AI_HOME };
 
 /** The big job sites Orbit links to (their own search, filled in), never reads. */
 const PORTALS = ["LinkedIn", "Naukri", "Indeed", "Foundit", "Instahyre", "Cutshort", "Hirist", "Wellfound", "Internshala", "Google Jobs"];
+// Outside India: the ones there are links to there (job_portal/portals.py).
+const WORLD_PORTALS = ["LinkedIn", "Indeed", "Wellfound", "Google Jobs"];
 
 /** Below this, the live count isn't worth a headline (a new server still fetching its first jobs). */
 const SHOW_COUNTS_FROM = 50;
@@ -147,6 +152,8 @@ function SampleMatch() {
  * numbers (GET /v1/jobs/stats): nothing here needs a session or calls the AI.
  */
 export function JobsAiPublicPage() {
+  const country = useCountry();
+  const india = isIndia(country);
   const stats = useJobStats();
   const counts = stats && stats.jobs >= SHOW_COUNTS_FROM ? stats : null;
   const feeds = stats?.feeds.length ? stats.feeds : ["Himalayas", "Remote OK", "Jobicy"];
@@ -203,8 +210,8 @@ export function JobsAiPublicPage() {
 
         {counts && (
           <section aria-label="Jobs AI today" className="mb-12 grid grid-cols-3 gap-2 sm:gap-3">
-            <Stat value={counts.jobs.toLocaleString("en-IN")} label={`jobs posted in the last ${counts.days} days`} />
-            <Stat value={counts.companies.toLocaleString("en-IN")} label="companies hiring in India or remotely" />
+            <Stat value={formatNumber(counts.jobs, country)} label={`jobs posted in the last ${counts.days} days`} />
+            <Stat value={formatNumber(counts.companies, country)} label={india ? "companies hiring in India or remotely" : "companies hiring"} />
             <Stat
               value={String(counts.fit_daily)}
               label="free AI fit checks a day"
@@ -271,11 +278,11 @@ export function JobsAiPublicPage() {
               <Search className="h-4 w-4 text-indigo-500" aria-hidden /> And the big sites
             </h3>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-              LinkedIn, Naukri and the other large sites don't allow their listings to be copied, so Orbit doesn't. It opens their own search
+              {india ? "LinkedIn, Naukri" : "LinkedIn, Indeed"} and the other large sites don't allow their listings to be copied, so Orbit doesn't. It opens their own search
               instead, filled in from your profile:
             </p>
             <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Sites Jobs AI searches for you">
-              {PORTALS.map((p) => (
+              {(india ? PORTALS : WORLD_PORTALS).map((p) => (
                 <li key={p} className="rounded-full border border-zinc-200 bg-white/70 px-2.5 py-0.5 text-xs font-medium text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300">
                   {p}
                 </li>

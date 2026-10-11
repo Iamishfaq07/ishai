@@ -6,6 +6,7 @@ import { Card, ErrorNote } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useAsync, type AsyncState } from "../../lib/useAsync";
+import { useIndia } from "../../lib/country";
 import { textLink } from "./links";
 import { STATUS_LABEL, followUps, inAWeek, nextUp, practiceLink, shortDate, type FollowUp } from "./model";
 import { JOBS_TRACKER, jobPath, outreachPath } from "./paths";
@@ -41,6 +42,7 @@ function OwnTracker(props: Omit<FollowUpsProps, "tracker">) {
 }
 
 function FollowUpsCard({ tracker, limit = 3, hideWhenEmpty = false, className }: FollowUpsProps & { tracker: AsyncState<JobTrackerEntry[]> }) {
+  const india = useIndia();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const entries = tracker.data;
@@ -88,7 +90,7 @@ function FollowUpsCard({ tracker, limit = 3, hideWhenEmpty = false, className }:
         ) : (
           <>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
-              Track the jobs you apply to, even on Naukri or LinkedIn, and Orbit tells you when to follow up.
+              Track the jobs you apply to, even on {india ? "Naukri or LinkedIn" : "LinkedIn or Indeed"}, and Orbit tells you when to follow up.
             </p>
             <Link to={ADD_JOB_PATH} className={cx(textLink, "mt-2 inline-flex items-center gap-1 text-sm")}>
               <Plus className="h-4 w-4" aria-hidden /> Add a job you applied to

@@ -11,11 +11,13 @@ import {
   Sparkles,
   X,
   cx,
+  isIndia,
   focusRing,
 } from "@orbit/ui";
 import { Button, Card, EmptyState, ErrorNote, PageHeader, Select, Spinner } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
+import { useCountry } from "../../lib/country";
 import { RESUME_AI_HOME, resumePath } from "../resume/paths";
 import { JobCard } from "./JobCard";
 import { PAGE_SIZE, useJobFeed, useJobsAi } from "./JobsAi";
@@ -32,6 +34,7 @@ import {
   toggleQueryWord,
   toggleWorkplace,
   withTracked,
+  ANYWHERE_TOKENS,
 } from "./model";
 import { JOBS_PROFILE } from "./paths";
 import { Sheet } from "./Sheet";
@@ -73,6 +76,7 @@ export function JobMatchesPage() {
 }
 
 function Matches({ profile }: { profile: JobProfile }) {
+  const country = useCountry();
   const { tracker, suggesting, setProfile } = useJobsAi();
   const [params, setParams] = useSearchParams();
   const query = params.get("q")?.trim() ?? "";
@@ -164,7 +168,7 @@ function Matches({ profile }: { profile: JobProfile }) {
               onChange={(e) => setText(e.target.value)}
               maxLength={200}
               enterKeyHint="search"
-              placeholder="Try: remote React jobs in Bangalore, 2 years"
+              placeholder={`Try: remote React jobs in ${profile.cities.find((c) => !ANYWHERE_TOKENS.includes(c)) ?? "Bangalore"}, 2 years`}
               className={cx(
                 "block w-full rounded-xl border border-zinc-200 bg-white/90 py-2.5 pl-9 pr-9 text-sm placeholder:text-zinc-400 hover:border-zinc-300 focus:border-indigo-500 dark:border-white/10 dark:bg-zinc-950/60 dark:placeholder:text-zinc-500",
                 focusRing,
@@ -232,7 +236,7 @@ function Matches({ profile }: { profile: JobProfile }) {
 
         {/* Phones: the profile in a line (the full card and the portal links sit beside the feed on wide screens). */}
         <p className="text-xs text-zinc-500 dark:text-zinc-400 lg:hidden">
-          <span className="font-medium text-zinc-700 dark:text-zinc-200">Looking for:</span> {profileSummary(profile.prefs)}
+          <span className="font-medium text-zinc-700 dark:text-zinc-200">Looking for:</span> {profileSummary(profile.prefs, country)}
           {suggesting && " · the AI is reading your resume…"}
         </p>
 
@@ -507,13 +511,14 @@ export function NoResume({ blank = false }: { blank?: boolean }) {
 
 /** What the feed looks for, the skills it matches on, and the resume it reads, with the way to change them. */
 export function ProfileCard({ profile, suggesting, className }: { profile: JobProfile; suggesting: boolean; className?: string }) {
+  const country = useCountry();
   const p = profile.prefs;
   return (
     <Card className={cx("!p-4", className)}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-sm font-semibold">Looking for</h2>
-          <p className="mt-0.5 text-sm text-zinc-700 dark:text-zinc-200">{profileSummary(p)}</p>
+          <p className="mt-0.5 text-sm text-zinc-700 dark:text-zinc-200">{profileSummary(p, country)}</p>
         </div>
         <Link to={JOBS_PROFILE} className={linkButton("ghost", "sm")} aria-label="Edit your search profile" title="Edit your search profile">
           <SlidersHorizontal className="h-4 w-4" aria-hidden />
@@ -550,9 +555,12 @@ export function ProfileCard({ profile, suggesting, className }: { profile: JobPr
 
 /** "Search on LinkedIn / Naukri / …": their own searches, filled in from the profile. No data is read from them. */
 export function PortalCard({ portals, days, prominent = false }: { portals: JobPortalLink[] | null; days: string; prominent?: boolean }) {
+  const india = isIndia(useCountry());
   if (!portals?.length) {
     return prominent ? (
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">You can still search LinkedIn, Naukri and Indeed directly while Orbit can't reach the job boards.</p>
+      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        You can still search {india ? "LinkedIn, Naukri and Indeed" : "LinkedIn and Indeed"} directly while Orbit can't reach the job boards.
+      </p>
     ) : null;
   }
   return (

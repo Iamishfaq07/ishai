@@ -10,7 +10,12 @@ import { ErrorNote, Field, Select } from "./ui";
  * "Country you're applying in": the account's job market. Saved as soon as it's picked; the currency, sample
  * salaries, practice wording and job search follow it everywhere. India is listed first.
  */
-export function CountryField({ id = "country", hint }: { id?: string; hint?: string }) {
+export function CountryField({ id = "country", hint, onChanged }: {
+  id?: string;
+  hint?: string;
+  /** After the new country is saved (a page whose data depends on it reloads it). */
+  onChanged?: (code: string) => void;
+}) {
   const { user, setUser } = useAuth();
   const country = useCountry();
   const [saving, setSaving] = useState(false);
@@ -24,6 +29,7 @@ export function CountryField({ id = "country", hint }: { id?: string; hint?: str
     try {
       const u = await api.updateRegion(code);
       setUser((prev) => (prev ? { ...prev, country: u.country } : prev));
+      onChanged?.(code);
     } catch (err) {
       setError(errorText(err));
     } finally {

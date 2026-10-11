@@ -138,16 +138,18 @@ def make_resume(client: TestClient, h: dict[str, str], data: ResumeData | None =
 # ---- parsing each source ---------------------------------------------------------------------------------------------
 
 
-def test_greenhouse_posts_are_decoded_and_only_india_and_recent_ones_kept() -> None:
+def test_greenhouse_posts_are_decoded_placed_by_country_and_only_recent_ones_kept() -> None:
     posts = [p for j in fx.greenhouse()["jobs"] if (p := gh_src.parse_job(j, GROWW))]
     assert [p.title for p in posts] == ["Backend Engineer - Payments", "Assistant Manager - Internal Audit",
-                                        "Data Engineer"]  # San Francisco isn't read at all
+                                        "Senior Backend Engineer", "Data Engineer"]
     backend = posts[0]
     assert backend.company == "Groww" and "<" not in backend.description and "What you'll do" in backend.description
     assert "&lt;" not in backend.description and "Kubernetes" in backend.description
     rows = [r for p in posts if (r := normalize(p))]
-    # Data Engineer was posted 45 days ago: too old to list.
-    assert [r["title"] for r in rows] == ["Backend Engineer - Payments", "Assistant Manager - Internal Audit"]
+    # Data Engineer was posted 45 days ago: too old to list. San Francisco's is kept, for people applying in the US.
+    assert [r["title"] for r in rows] == ["Backend Engineer - Payments", "Assistant Manager - Internal Audit",
+                                          "Senior Backend Engineer"]
+    assert rows[2]["country"] == "US" and rows[2]["cities"] == ["San Francisco"] and rows[2]["remote_scope"] is None
     row = rows[0]
     assert row["cities"] == ["Bengaluru"] and row["country"] == "IN" and (row["exp_min"], row["exp_max"]) == (3, 5)
     assert row["snippet"].startswith("Design and build backend services")  # the role, not the company blurb
@@ -156,7 +158,9 @@ def test_greenhouse_posts_are_decoded_and_only_india_and_recent_ones_kept() -> N
 
 def test_lever_posts_join_their_lists_and_keep_workplace_salary_and_country() -> None:
     posts = [p for j in fx.lever() if (p := lever_src.parse_job(j, FAMPAY))]
-    assert len(posts) == 2  # London isn't read
+    assert len(posts) == 3
+    london = next(p for p in posts if p.title == "Account Executive")
+    assert normalize(london)["country"] == "GB"  # type: ignore[index]
     sde = posts[0]
     assert sde.workplace == "hybrid" and sde.country == "IN" and sde.employment_type == "full_time"
     assert "Run Kubernetes clusters" in sde.description and "2-4 years" in sde.description
@@ -204,14 +208,17 @@ def test_smartrecruiters_reads_text_for_new_posts_and_keeps_cached_text_for_know
     assert posts[1].level is None  # "executive" in India is a junior title: not read as a level
 
 
-def test_remote_feeds_credit_their_source_and_leave_out_jobs_for_elsewhere() -> None:
+def test_remote_feeds_credit_their_source_and_say_who_each_job_is_open_to() -> None:
     rok = [p for j in fx.remoteok()[1:] if (p := rok_src.parse_job(j))]
-    assert [p.title for p in rok] == ["Platform Engineer"]  # Boston is left out
+    assert [p.title for p in rok] == ["Platform Engineer", "Backend Engineer"]
+    assert normalize(rok[0])["remote_scope"] == ["*"]  # type: ignore[index]
+    assert normalize(rok[1])["remote_scope"] == ["US"]  # type: ignore[index]  # Boston: for people in the US
     assert rok[0].url.startswith("https://remoteok.com/remote-jobs/") and "–" in rok[0].description
     assert "Please mention" not in rok[0].description and "RMjQ" not in rok[0].description
     assert normalize(rok[0]) is not None
     jobicy = [r for j in fx.jobicy("apac")["jobs"] if (p := jobicy_src.parse_job(j, "apac")) and (r := normalize(p))]
-    assert [r["title"] for r in jobicy] == ["Platform Engineer"]  # Australia-only is left out
+    assert [r["title"] for r in jobicy][:1] == ["Platform Engineer"]
+    assert [r["remote_scope"] for r in jobicy][1:] == [["AU"]]  # Australia only
     assert jobicy[0]["url"] == "https://jobicy.com/jobs/1546-apac-platform" == jobicy[0]["apply_url"]
     for sid in ("himalayas", "remoteok", "jobicy"):
         src = source_named(sid)
@@ -228,7 +235,7 @@ def test_himalayas_searches_by_title_for_jobs_open_to_india() -> None:
             return await src.search(http, SearchQuery("backend engineer", "India", 7))
 
     posts = asyncio.run(go())
-    assert len(posts) == 2 and all(p.open_to_india and p.workplace == "remote" for p in posts)
+    assert len(posts) == 2 and all(p.open_to == ["IN"] and p.workplace == "remote" for p in posts)
     assert parse_qs(urlsplit(str(seen[0].url)).query) == {"q": ["backend engineer"], "country": ["IN"],
                                                           "sort": ["recent"], "page": ["1"]}
     assert posts[1].locations == ["Remote (India)"] and normalize(posts[1])["country"] == "IN"  # type: ignore[index]
@@ -332,9 +339,10 @@ def test_a_board_refresh_stores_its_posts_and_drops_the_ones_taken_down(jobs: Te
     assert src is not None
     monkeypatch.setattr(gh_src, "boards", lambda ats=None: [GROWW])
     n = run(jobs, refresh.refresh_source, src, keys=["groww"], delay_s=0, client_transport=fx.transport())
-    assert n == 2
+    assert n == 3
     stored = {r.title: r for r in _stored(jobs, "greenhouse")}
-    assert set(stored) == {"Backend Engineer - Payments", "Assistant Manager - Internal Audit"}
+    assert set(stored) == {"Backend Engineer - Payments", "Assistant Manager - Internal Audit",
+                           "Senior Backend Engineer"}
     assert {"Go", "Python", "Kubernetes", "Kafka"} <= set(stored["Backend Engineer - Payments"].keywords)
     assert _states(jobs)[("greenhouse", "groww")].last_success_at is not None
     # The audit job is taken down: the next fetch removes it.
@@ -379,7 +387,7 @@ def test_a_failed_or_rate_limited_fetch_backs_off_and_keeps_the_cache(jobs: Test
         client_transport=fx.transport(fail={"boards-api.greenhouse.io": 500}))
     state = _states(jobs)[("greenhouse", "groww")]
     assert state.failures == 1 and "HTTP 500" in (state.last_error or "") and state.retry_after is not None
-    assert len(_stored(jobs, "greenhouse")) == 2  # what was cached is still served
+    assert len(_stored(jobs, "greenhouse")) == 3  # what was cached is still served
     assert not refresh.due(state, src.ttl, datetime.now(UTC))  # backing off
     run(jobs, refresh.refresh_source, src, keys=["groww"], delay_s=0,
         client_transport=fx.transport(fail={"boards-api.greenhouse.io": 429}))

@@ -23,6 +23,7 @@ import { Button, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Spinne
 import { api } from "../../lib/api";
 import { downloadText, errorText } from "../../lib/format";
 import type { AsyncState } from "../../lib/useAsync";
+import { useIndia } from "../../lib/country";
 import { resumePath } from "../resume/paths";
 import { AddJob } from "./AddJob";
 import { useJobsAi } from "./JobsAi";
@@ -111,6 +112,7 @@ export function JobTrackerPage() {
  * on wide screens; on phones one list, filtered by status, each job with its own status menu.
  */
 export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerEntry[]>; onAdd?: () => void }) {
+  const india = useIndia();
   const [filter, setFilter] = useState<JobStatus | "all">("all");
   const [error, setError] = useState<string | null>(null);
   const entries = tracker.data ?? [];
@@ -156,7 +158,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
       <EmptyState
         icon={BookmarkCheck}
         title="Nothing tracked yet"
-        body="Save jobs from your matches, or add one you applied to on Naukri, LinkedIn or a campus portal. Then move each one along: applied, interviewing, offer."
+        body={`Save jobs from your matches, or add one you applied to on ${india ? "Naukri, LinkedIn or a campus portal" : "LinkedIn, Indeed or a company's site"}. Then move each one along: applied, interviewing, offer.`}
         action={
           <div className="flex flex-wrap justify-center gap-2">
             {onAdd && (

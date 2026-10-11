@@ -1,9 +1,10 @@
-"""What every source's job post is normalized to, and the reading of its free text: where it is (Indian cities,
-remote, open to India or not), how senior it is, what kind of job, a short snippet, and the key that spots the same
-job posted twice.
+"""What every source's job post is normalized to, and the reading of its free text: where it is (its country and
+cities, India's with all their spellings and the main ones worldwide from geo.py; for a remote post, who it's open
+to), how senior it is, what kind of job, a short snippet, and the key that spots the same job posted twice.
 
 Sources fill in a `Posting` from their own fields; `normalize` turns it into a listing row, or None when the post
-isn't one to show (too old, not in India and not remote-open to India, no title or link).
+isn't one to show (too old, no place we can tell, a remote post that doesn't say who it's open to, no title or
+link). Each user's feed then keeps the posts in the country they apply in, or remote and open to it.
 """
 
 import hashlib
@@ -13,6 +14,7 @@ from datetime import UTC, datetime, timedelta
 from html import unescape
 from typing import Any, Literal
 
+from orbit_api.job_portal.geo import countries_in, remote_scope, world_cities
 from orbit_api.job_portal.skills import KEYWORDS_VERSION
 from orbit_api.prep.job_link import html_to_text
 
@@ -44,6 +46,9 @@ class Posting:
     employment_type: EmploymentType | None = None
     salary: str | None = None
     country: str | None = None  # an explicit ISO country code from the source ("IN")
+    # For a remote post: who the source says it's open to (Himalayas' country filter: ["US"]), used when the post's
+    # own text doesn't say. Country codes, geo.REGIONS names, or "*".
+    open_to: list[str] = field(default_factory=list)
     # The source already limited its results to jobs open to people in India (e.g. Himalayas' country=IN).
     open_to_india: bool = False
     # A remote post that names no region counts as open to India (an India-first company's own board).
@@ -104,6 +109,11 @@ _ELSEWHERE_RE = re.compile(
     r"bangladesh|sri lanka|est|pst|cst|cet|[a-z ]+, [a-z]{2} \d{5})(?![a-z])")
 
 
+def all_cities(text: str) -> list[str]:
+    """India's cities and the world's that a location text names, canonical and in order."""
+    return [*find_cities(text), *world_cities(text)]
+
+
 def find_cities(text: str) -> list[str]:
     """The Indian cities a location text names, canonical and in order ("Bangalore / Gurgaon" -> Bengaluru,
     Gurugram)."""
@@ -116,7 +126,8 @@ def find_cities(text: str) -> list[str]:
 
 
 def canonical_city(name: str) -> str | None:
-    found = find_cities(name)
+    """"Bangalore" -> "Bengaluru", "NYC" -> "New York": a city as Orbit names it, India's or the world's."""
+    found = all_cities(name)
     return found[0] if found else None
 
 
@@ -126,9 +137,9 @@ def mentions_india(text: str) -> bool:
 
 
 def worth_reading(where: str, *, remote: bool = False, country: str | None = None) -> bool:
-    """Before reading a post's text (the slow part): could it be listed at all? In India, or remote. Global boards
-    have hundreds of posts elsewhere."""
-    return remote or (country or "").upper() == "IN" or mentions_india(where) or workplace_of(where) == "remote"
+    """Before reading a post's text (the slow part): could it be listed at all? Remote, or somewhere we can tell."""
+    return (remote or bool(country) or mentions_india(where) or workplace_of(where) == "remote"
+            or bool(countries_in(where)))
 
 
 def remote_region(text: str) -> Literal["india", "open", "elsewhere"] | None:
@@ -370,14 +381,26 @@ def normalize(p: Posting, now: datetime | None = None) -> dict[str, Any] | None:
     locations = [clean_line(x, 120) for x in p.locations if clean_line(x, 120)][:8]
     where = " / ".join(locations)
     workplace = p.workplace or workplace_of(where, title)
-    cities = find_cities(where + " " + title)
-    in_india = (p.country or "").upper() == "IN" or bool(cities) or mentions_india(where)
-    if not in_india:
-        if workplace != "remote" or _FOREIGN_TITLE.search(title.lower()):
+    india_cities = find_cities(where + " " + title)
+    cities = [*india_cities, *world_cities(where)]
+    in_india = (p.country or "").upper() == "IN" or bool(india_cities) or mentions_india(where)
+    named = countries_in(where)
+    country = "IN" if in_india else ((p.country or "").upper()[:2] or None) or (named[0] if named else None)
+    scope: list[str] = []
+    if workplace == "remote":
+        scope = remote_scope(where)
+        if in_india and "IN" not in scope and "*" not in scope:
+            scope.append("IN")
+        if not scope:
+            scope = list(p.open_to) or (["IN"] if p.open_to_india or p.remote_unstated_ok else [])
+        if scope == ["*"] and _FOREIGN_TITLE.search(title.lower()):
+            scope = []  # titled in Spanish, German…: for people there, wherever the post says
+        if not scope and country:
+            scope = [country]
+        if not scope:
             return None
-        region = remote_region(where)
-        if region == "elsewhere" or (region is None and not (p.open_to_india or p.remote_unstated_ok)):
-            return None
+    elif country is None:
+        return None
     description = p.description[:MAX_DESCRIPTION]
     level, exp_min, exp_max = experience_of(title, description)
     if title_level(title) is None and p.level is not None:
@@ -385,7 +408,8 @@ def normalize(p: Posting, now: datetime | None = None) -> dict[str, Any] | None:
     return {
         "id": listing_id(p.source, p.external_id), "source": p.source, "external_id": p.external_id[:200],
         "board": p.board[:160], "company": clean_line(p.company, 200) or "Unknown company", "title": title,
-        "locations": locations, "cities": cities, "country": "IN" if in_india else None, "workplace": workplace,
+        "locations": locations, "cities": cities, "country": country, "remote_scope": scope or None,
+        "workplace": workplace,
         "employment_type": p.employment_type or employment_type_of(title), "level": level,
         "exp_min": exp_min, "exp_max": exp_max, "posted_at": posted, "url": p.url,
         "apply_url": p.apply_url if p.apply_url.startswith("https://") else p.url,

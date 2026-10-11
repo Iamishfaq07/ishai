@@ -494,7 +494,8 @@ class JobListing(Base):
     __table_args__ = (UniqueConstraint("source", "external_id", name="uq_job_listings_source_external"),
                       Index("ix_job_listings_posted_at", "posted_at"),
                       Index("ix_job_listings_source_board", "source", "board"),
-                      Index("ix_job_listings_dedupe_key", "dedupe_key"))
+                      Index("ix_job_listings_dedupe_key", "dedupe_key"),
+                      Index("ix_job_listings_country", "country"))
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     source: Mapped[str] = mapped_column(String(24))  # greenhouse | lever | ashby | smartrecruiters | himalayas | ...
     external_id: Mapped[str] = mapped_column(String(200))
@@ -503,8 +504,10 @@ class JobListing(Base):
     company: Mapped[str] = mapped_column(String(200))
     title: Mapped[str] = mapped_column(String(300))
     locations: Mapped[list[str]] = mapped_column(JSON, default=list)
-    cities: Mapped[list[str]] = mapped_column(JSON, default=list)  # canonical Indian cities ("Bengaluru")
-    country: Mapped[str | None] = mapped_column(String(2))  # "IN" when it's in India
+    cities: Mapped[list[str]] = mapped_column(JSON, default=list)  # canonical cities ("Bengaluru", "New York")
+    country: Mapped[str | None] = mapped_column(String(2))  # where the job is (ISO code), when the post says
+    # A remote post: who it's open to (country codes, geo.REGIONS names like "EMEA", or "*" for anywhere).
+    remote_scope: Mapped[list[str] | None] = mapped_column(JSON)
     workplace: Mapped[str | None] = mapped_column(String(16))  # remote | hybrid | onsite (None: not stated)
     employment_type: Mapped[str | None] = mapped_column(String(16))  # full_time | part_time | contract | internship
     level: Mapped[str | None] = mapped_column(String(16))  # fresher | junior | mid | senior, read from the post

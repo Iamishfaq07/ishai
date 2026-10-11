@@ -39,13 +39,15 @@ from orbit_api.db import get_db
 from orbit_api.entitlements import is_admin
 from orbit_api.job_portal import fit as fitcheck
 from orbit_api.job_portal import manual, ranking, refresh
-from orbit_api.job_portal.portals import PORTALS, portal_links
+from orbit_api.job_portal.geo import WORLD_CITIES
+from orbit_api.job_portal.portals import portal_links, portals_for
 from orbit_api.job_portal.postings import CITIES, EmploymentType, Level, Workplace
 from orbit_api.job_portal.profile import (
-    ANYWHERE_IN_INDIA,
     JobPrefs,
     Suggested,
+    anywhere_for,
     apply_suggestion,
+    cities_for,
     from_resume,
     parse_profile,
     profile_request,
@@ -414,8 +416,13 @@ async def _track(db: AsyncSession, user: User, row: JobListing, status_: Status 
     return entry
 
 
-def _search(prefs: JobPrefs, q: str) -> tuple[ranking.Search, Any]:
-    parsed = parse_search(q) if q.strip() else parse_search("")
+def _country(user: User) -> str:
+    """The country the user applies in (India until they've said, as the app always was)."""
+    return (user.country or "IN").upper()
+
+
+def _search(prefs: JobPrefs, q: str, country: str = "IN") -> tuple[ranking.Search, Any]:
+    parsed = parse_search(q, country)
     return ranking.Search(
         titles=prefs.titles, skills=prefs.skills,
         locations=parsed.locations or prefs.locations,
@@ -424,15 +431,18 @@ def _search(prefs: JobPrefs, q: str) -> tuple[ranking.Search, Any]:
         years=parsed.years if parsed.years is not None else prefs.years,
         job_types=parsed.job_types or prefs.job_types,
         days=parsed.posted_within or prefs.posted_within, sources_off=prefs.sources_off, exclude=prefs.exclude,
-        keywords=parsed.keywords), parsed
+        keywords=parsed.keywords, country=country), parsed
 
 
 _ROW_COLUMNS = tuple(getattr(JobListing, name) for name in ranking.ROW_FIELDS)
 
 
-async def _rows(db: AsyncSession, days: int) -> list[ranking.Row]:
+async def _rows(db: AsyncSession, days: int, country: str) -> list[ranking.Row]:
+    """The recent posts that could be shown to someone applying in `country`: there, or remote (ranking checks who
+    a remote one is open to)."""
     since = datetime.now(UTC) - timedelta(days=days)
-    result = await db.execute(select(*_ROW_COLUMNS).where(JobListing.posted_at >= since))
+    result = await db.execute(select(*_ROW_COLUMNS).where(
+        JobListing.posted_at >= since, or_(JobListing.country == country, JobListing.workplace == "remote")))
     return [ranking.row_of(r) for r in result.all()]
 
 
@@ -443,7 +453,7 @@ async def _matches(db: AsyncSession, user: User, search: ranking.Search, data: R
     hit = ranking.cached(key)
     if hit is not None:
         return hit
-    rows = await _rows(db, search.days)
+    rows = await _rows(db, search.days, search.country)
     matcher = SkillMatcher(resume_text(data.visible()) if data is not None else "", search.skills)
     # Scoring a few thousand cached posts is CPU work: off the event loop.
     out = await asyncio.to_thread(ranking.rank, rows, search, matcher, sort=sort)
@@ -452,11 +462,11 @@ async def _matches(db: AsyncSession, user: User, search: ranking.Search, data: R
 
 
 def _portals(prefs: JobPrefs, search: ranking.Search) -> list[PortalOut]:
-    city = next((c for c in search.locations if c in CITIES), None)
+    city = next((c for c in search.locations if c in CITIES or c in WORLD_CITIES), None)
     keywords = search.keywords or (prefs.titles[0] if prefs.titles else "")
     return [PortalOut(id=p.id, name=p.name, url=p.url) for p in portal_links(
         keywords=keywords, city=city, posted_within=search.days, workplace=list(search.workplace),
-        level=search.level, years=search.years, portals=prefs.portals)]
+        level=search.level, years=search.years, portals=prefs.portals, country=search.country)]
 
 
 def _sources_out(statuses: list[refresh.SourceStatus]) -> list[SourceOut]:
@@ -475,8 +485,8 @@ async def _profile_out(db: AsyncSession, user: User, row: JobSearchProfile | Non
         resume=ResumeRef(id=resume.id, title=resume.title) if resume else None,
         resumes=[ResumeRef(id=r.id, title=r.title) for r in resumes],
         ai_left=await _ai_left(db, user, "job_profile", get_settings().jobs_profile_daily), saved=row is not None,
-        portals=dict(PORTALS), sources=[{"id": s.id, "label": s.label} for s in enabled_sources()],
-        cities=[ANYWHERE_IN_INDIA, *CITIES], note=note)
+        portals=portals_for(_country(user)), sources=[{"id": s.id, "label": s.label} for s in enabled_sources()],
+        cities=[anywhere_for(_country(user)), *cities_for(_country(user))], note=note)
 
 
 @router.get("/profile", response_model=ProfileOut, dependencies=[Depends(read_limit)])
@@ -538,7 +548,7 @@ async def suggest_profile(body: SuggestIn, user: Annotated[User, Depends(require
             else:
                 try:
                     resp = await _generate(db, user, profile_request(data.visible(), suggestion.years,
-                                                                     get_llm_provider()))
+                                                                     get_llm_provider(), user.country))
                     suggestion = parse_profile(resp.text, data)
                 except (LLMError, ValueError) as e:
                     log.warning("job profile: AI unusable (%s); worked out from the resume", type(e).__name__)
@@ -559,8 +569,8 @@ async def feed(user: Annotated[User, Depends(current_user)], db: Annotated[Async
                page: Annotated[int, Query(ge=1, le=200)] = 1,
                page_size: Annotated[int, Query(ge=1, le=50)] = PAGE_SIZE) -> FeedOut:
     row, prefs, resume = await _profile(db, user)
-    search, parsed = _search(prefs, q)
-    await refresh.ensure_fresh(db, search_queries(prefs, parsed.keywords))
+    search, parsed = _search(prefs, q, _country(user))
+    await refresh.ensure_fresh(db, search_queries(prefs, parsed.keywords, _country(user)))
     data = _data(resume)
     matches = await _matches(db, user, search, data, sort)
     window = matches[(page - 1) * page_size: page * page_size]
@@ -582,7 +592,7 @@ async def feed(user: Annotated[User, Depends(current_user)], db: Annotated[Async
 
 def _match_for(row: JobListing, prefs: JobPrefs, data: ResumeData | None) -> ranking.Match:
     """This job's score for the profile, without its filters (a job opened from the tracker still gets one)."""
-    search = replace(_search(prefs, "")[0], days=3650, sources_off=[], exclude=[], locations=[],
+    search = replace(_search(prefs, "")[0], days=3650, sources_off=[], exclude=[], locations=[], any_country=True,
                      workplace=["remote", "hybrid", "onsite"],
                      job_types=["full_time", "part_time", "contract", "internship"])
     matcher = SkillMatcher(resume_text(data.visible()) if data is not None else "", prefs.skills)
@@ -639,8 +649,9 @@ async def fit_check(listing_id: str, user: Annotated[User, Depends(require_verif
         if left == 0:
             raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, detail={
                 "code": "fit_check_limit",
-                "message": f"You've used today's {cap} free fit checks. They're back tomorrow (at 5:30 am India "
-                           "time). Checks you've already run stay open."})
+                "message": f"You've used today's {cap} free fit checks. They're back tomorrow ("
+                           + ("at 5:30 am India time" if _country(user) == "IN" else "at midnight UTC")
+                           + "). Checks you've already run stay open."})
         match = _match_for(row, prefs, data)
         job = {"title": row.title, "company": row.company, "location": _location_line(row),
                "text": row.description or row.snippet}
