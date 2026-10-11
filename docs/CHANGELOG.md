@@ -1,5 +1,14 @@
 # Implementation log
 
+## Practice: progress figures that explain themselves (2026-10-11)
+
+- **Practice → Your progress:** "Sessions this week" (every session, live and mock, over the last 7 days) sat right
+  under the weekly goal (practice rounds this calendar week) and read as if the two disagreed. It's now "Sessions,
+  last 7 days" with "Live and mock" under it.
+- A figure with nothing to show yet says "Not yet" and when it will (pace: "After a round where you answer out
+  loud"; average score: "After your first review") instead of a bare dash. The pace says what's easy to follow:
+  120–160 words a minute, the range the session report uses.
+
 ## Session lists say each thing once (2026-10-11)
 
 - A session started without a name is titled after its type ("Phone / room audio", "Interview — SDE II"), and the
