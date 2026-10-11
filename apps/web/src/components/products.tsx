@@ -111,7 +111,7 @@ export function ProductTabs({ label, sections, action }: { label: string; sectio
   if (sections.length < 2) return null;
   const tabs = (
     // Scrolls sideways rather than wrapping if a phone is ever too narrow for every tab.
-    <nav aria-label={label} className={cx("-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0", action ? "min-w-0" : "mb-6")}>
+    <nav aria-label={label} className={cx("edge-fade-x -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0", action ? "min-w-0" : "mb-6")}>
       <div className="inline-flex gap-0.5 rounded-xl bg-zinc-500/10 p-1 sm:gap-1">
         {sections.map(({ to, label: name, icon: Icon, end, also, count }) => {
           const current = isCurrent(pathname, to, end) || Boolean(also?.test(pathname));

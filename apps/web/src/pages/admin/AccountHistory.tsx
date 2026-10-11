@@ -28,7 +28,7 @@ export function AccountHistory({ detail }: { detail: AdminUserDetail }) {
   const [tab, setTab] = useState<Tab>("ledger");
   return (
     <div>
-      <div role="tablist" aria-label="Account history" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
+      <div role="tablist" aria-label="Account history" className="edge-fade-x -mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
         {TABS.map(({ id, label }) => (
           <button
             key={id}

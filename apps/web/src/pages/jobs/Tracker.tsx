@@ -180,7 +180,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
 
       {/* Phones and tablets: one list, with a filter. */}
       <div className="lg:hidden">
-        <div className="-mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 pb-1" role="group" aria-label="Show">
+        <div className="edge-fade-x -mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 pb-1" role="group" aria-label="Show">
           {(["all", ...STATUSES] as const).map((s) => (
             <button
               key={s}
