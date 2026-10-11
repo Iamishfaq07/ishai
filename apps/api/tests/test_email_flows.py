@@ -42,6 +42,16 @@ def test_register_sends_verification_and_link_verifies_once(client: TestClient) 
     assert client.post("/v1/auth/verify-email/request", headers=h).json()["status"] == "already_verified"
 
 
+def test_a_link_cut_short_reads_as_an_invalid_link(client: TestClient) -> None:
+    """A truncated token gets the same plain answer as any bad link, never a validation message about lengths."""
+    for path, body in (("/v1/auth/verify-email/confirm", {"token": "abc"}),
+                       ("/v1/auth/password-reset/confirm", {"token": "abc", "password": "brand new password 2"}),
+                       ("/v1/auth/email-change/confirm", {"token": ""})):
+        r = client.post(path, json=body)
+        assert r.status_code == 400, (path, r.text)
+        assert "invalid or has expired" in r.json()["detail"]
+
+
 def test_resend_verification_is_throttled_and_invalidates_old_link(client: TestClient) -> None:
     email, h = _register(client)
     first = _last_token(email, "/verify-email")
