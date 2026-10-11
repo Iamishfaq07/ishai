@@ -73,6 +73,8 @@ _NEGOTIATION_RUBRIC = (
 class QAPair:
     question: str
     answer: str  # candidate's words after the question, "" if none
+    # From the first word of the answer to the last (pauses included, like the mock's answer timer); 0 if unknown.
+    answer_ms: int = 0
 
 
 def pair_questions_with_answers(questions: Sequence[Question], turns: Sequence[SessionTurn]) -> list[QAPair]:
@@ -82,9 +84,10 @@ def pair_questions_with_answers(questions: Sequence[Question], turns: Sequence[S
     pairs: list[QAPair] = []
     for i, q in enumerate(qs):
         nxt = qs[i + 1].created_at if i + 1 < len(qs) else None
-        said = [t.text.strip() for t in cands
-                if t.created_at >= q.created_at and (nxt is None or t.created_at < nxt)]
-        pairs.append(QAPair(q.text, " ".join(s for s in said if s)))
+        mine = [t for t in cands if t.created_at >= q.created_at and (nxt is None or t.created_at < nxt)]
+        said = [t.text.strip() for t in mine]
+        span = max(t.end_ms for t in mine) - min(t.start_ms for t in mine) if mine else 0
+        pairs.append(QAPair(q.text, " ".join(s for s in said if s), max(span, 0)))
     return pairs
 
 
@@ -142,6 +145,9 @@ def build_review(data: Any, pairs: Sequence[QAPair]) -> dict[str, Any] | None:
             "score": score,
             "feedback": str(m.get("feedback") or fallback).strip(),
             "better": str(m.get("better") or "").strip(),
+            # How long the answer ran and how many words it had, for the review's length check.
+            "answer_s": round(p.answer_ms / 1000) if answered and p.answer_ms > 0 else None,
+            "words": len(p.answer.split()),
         })
     overall = _score(data.get("overall_score"))
     if overall is None and scored:

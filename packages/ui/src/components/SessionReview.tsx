@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ReviewItem, SessionReview as Review } from "@orbit/types";
 import { ArrowUpRight, CircleCheck, MicOff, Target, type LucideIcon } from "../icons";
+import { clock, reviewLength } from "../live/answerPace";
 import { cx } from "./cx";
 import { useCountUp } from "./Reveal";
 import { Button, Card, EmptyState, ErrorNote } from "./ui";
@@ -213,6 +214,7 @@ function QuestionReview({ index, item }: { index: number; item: ReviewItem }) {
         <details className="group mt-2">
           <summary className="cursor-pointer select-none text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200">
             You said
+            <AnswerLength item={item} />
           </summary>
           <p className="mt-1 rounded-lg bg-zinc-50 p-2.5 text-sm italic leading-relaxed text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
             “{item.you_said}”
@@ -229,5 +231,25 @@ function QuestionReview({ index, item }: { index: number; item: ReviewItem }) {
         </div>
       )}
     </Card>
+  );
+}
+
+/** "· 1:04 · 160 words", flagged when it ran long or was very short (live/answerPace.ts, as the mock's timer). */
+function AnswerLength({ item }: { item: ReviewItem }) {
+  if (item.answer_s == null) return null;
+  const flag = reviewLength(item.answer_s);
+  return (
+    <span className="font-normal tabular-nums">
+      {" "}· {clock(item.answer_s)}
+      {item.words ? ` · ${item.words} word${item.words === 1 ? "" : "s"}` : ""}
+      {flag && (
+        <span
+          className="ml-1.5 rounded-full bg-amber-500/10 px-1.5 py-px font-medium text-amber-800 dark:text-amber-300"
+          title={flag === "long" ? "Over 2 minutes: land the result sooner" : "Under 20 seconds: say more, with an example"}
+        >
+          {flag === "long" ? "Long" : "Short"}
+        </span>
+      )}
+    </span>
   );
 }

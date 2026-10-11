@@ -24,17 +24,23 @@ def test_each_question_gets_only_the_candidate_turns_that_followed_it() -> None:
     qs = [SimpleNamespace(text="Tell me about yourself.", created_at=_at(10)),
           SimpleNamespace(text="Why this role?", created_at=_at(60)),
           SimpleNamespace(text="Any questions for us?", created_at=_at(120))]
-    turns = [SimpleNamespace(speaker="candidate", text="Hi there.", created_at=_at(5), start_ms=0),  # before Q1
-             SimpleNamespace(speaker="interviewer", text="Tell me about yourself.", created_at=_at(9), start_ms=1),
-             SimpleNamespace(speaker="candidate", text="I build secure systems.", created_at=_at(20), start_ms=2),
-             SimpleNamespace(speaker="candidate", text="Six years in AppSec.", created_at=_at(30), start_ms=3),
-             SimpleNamespace(speaker="candidate", text="The mission.", created_at=_at(70), start_ms=4)]
+    turns = [SimpleNamespace(speaker="candidate", text="Hi there.", created_at=_at(5), start_ms=0, end_ms=900),
+             SimpleNamespace(speaker="interviewer", text="Tell me about yourself.", created_at=_at(9), start_ms=1000,
+                             end_ms=2500),
+             SimpleNamespace(speaker="candidate", text="I build secure systems.", created_at=_at(20), start_ms=12_000,
+                             end_ms=16_000),
+             SimpleNamespace(speaker="candidate", text="Six years in AppSec.", created_at=_at(30), start_ms=22_000,
+                             end_ms=26_500),
+             SimpleNamespace(speaker="candidate", text="The mission.", created_at=_at(70), start_ms=64_000,
+                             end_ms=65_000)]
     pairs = pair_questions_with_answers(qs, turns)  # type: ignore[arg-type]
     assert [p.answer for p in pairs] == ["I build secure systems. Six years in AppSec.", "The mission.", ""]
+    # Each answer's length runs from its first word to its last, pauses between turns included.
+    assert [p.answer_ms for p in pairs] == [14_500, 1000, 0]
 
 
 def test_review_uses_transcript_text_and_never_scores_unanswered_questions() -> None:
-    pairs = [QAPair("Q one?", "my answer"), QAPair("Q two?", "")]
+    pairs = [QAPair("Q one?", "my answer", 64_400), QAPair("Q two?", "")]
     model = {"overall_score": 9, "strengths": ["a", "", "b"], "improvements": "not a list",
              "items": [{"q": 1, "score": 7, "feedback": "good", "better": "say more", "question": "INJECTED"},
                        {"q": 2, "score": 5, "feedback": "", "better": ""}]}
@@ -43,7 +49,8 @@ def test_review_uses_transcript_text_and_never_scores_unanswered_questions() -> 
     assert r["overall_score"] == 5 and r["strengths"] == ["a", "b"] and r["improvements"] == []
     first, second = r["items"]
     assert first == {"question": "Q one?", "you_said": "my answer", "score": 5, "feedback": "good",
-                     "better": "say more"}
+                     "better": "say more", "answer_s": 64, "words": 2}
+    assert second["answer_s"] is None and second["words"] == 0
     assert second["score"] is None and second["feedback"] == "Not answered in the recording."
     # nothing answered at all → no overall score
     assert build_review({"overall_score": 4}, [QAPair("Q?", "")])["overall_score"] is None  # type: ignore[index]
