@@ -217,3 +217,16 @@ export { NoResultsScene } from "./components/scenes/NoResultsScene";
 export { OfflineScene } from "./components/scenes/OfflineScene";
 export { CelebrationScene } from "./components/scenes/CelebrationScene";
 export { useViewTransitionOk, viewTransitionOk, withViewTransition } from "./hooks/useMotion";
+export {
+  COUNTRIES,
+  INDIA,
+  countryName,
+  currencyFor,
+  detectCountry,
+  formatNumber,
+  isIndia,
+  localeFor,
+  sampleOffer,
+  speechLang,
+  type Country,
+} from "./region";

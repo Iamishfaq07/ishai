@@ -39,3 +39,20 @@ describe("the warm-up's question bank", () => {
     expect(repeats).toEqual([]);
   });
 });
+
+describe("the bank outside India", () => {
+  it("rewords India's own practices and keeps India's as written", async () => {
+    const { TRACKS, tracksFor, trackById } = await import("./bank");
+    expect(tracksFor("IN")).toBe(TRACKS);
+    const gb = tracksFor("GB");
+    const hr = gb.find((t) => t.id === "campus_hr")!;
+    expect(hr.name).toBe("Graduate HR round");
+    const text = JSON.stringify(gb);
+    for (const word of ["India", "Bengaluru", "backlog", "bond", "TCS", "fest"]) expect(text).not.toContain(word);
+    expect(hr.questions.find((q) => q.id === "hr-bond")).toBeUndefined();
+    expect(hr.questions.find((q) => q.id === "hr-relocate")?.text).toBe("Are you willing to relocate for this role?");
+    expect(trackById("campus_hr", "US")?.name).toBe("Graduate HR round");
+    expect(trackById("campus_hr")?.name).toBe("Campus HR round");
+    for (const t of gb) expect(t.questions.length).toBeGreaterThanOrEqual(5);
+  });
+});

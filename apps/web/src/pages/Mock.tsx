@@ -5,6 +5,7 @@ import { Button, Card, ErrorNote, Field, Input, PageHeader, Select } from "../co
 import {
   ChevronDown,
   Code2,
+  Banknote,
   IndianRupee,
   MOCK_INTERVIEW_ENABLED,
   Sparkles,
@@ -15,7 +16,9 @@ import {
   Video,
   cx,
   focusRing,
+  isIndia,
   practiceDocumentIds,
+  sampleOffer,
   type LucideIcon,
 } from "@orbit/ui";
 import { api } from "../lib/api";
@@ -23,7 +26,9 @@ import { errorText } from "../lib/format";
 import { matchStyle, withCompany } from "../lib/companyStyle";
 import { useAsync } from "../lib/useAsync";
 import { CompanyGuide } from "./CompanyGuide";
-import { PRESETS, SAMPLE_OFFER, SAMPLE_TARGET, isPresetId, presetSession, type PresetId } from "./mockPresets";
+import { PRESETS, isPresetId, presetSession, presetTitle, type PresetId } from "./mockPresets";
+import { useCountry } from "../lib/country";
+import { CountryField } from "../components/CountryField";
 import { PrepSection } from "./Prep";
 import { PracticeQueueCard } from "./PracticeQueue";
 import { ProgressSection } from "./Progress";
@@ -76,6 +81,7 @@ function MockSetup() {
   const [params] = useSearchParams();
   const knownRole = params.get("role")?.trim().slice(0, 120) || profile.data?.prefs.titles[0] || "";
   const highlighted = params.get("preset");
+  const country = useCountry();
   // The company being practised for (`?company=`, or typed): a known one is asked in its style, with its guide shown.
   const styles = useAsync(() => api.interviewStyles(), [], "interview-styles");
   const [company, setCompany] = useState(() => params.get("company")?.trim().slice(0, 120) ?? "");
@@ -126,7 +132,7 @@ function MockSetup() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Company (optional)" htmlFor="mock-company" hint={guide ? `Asked the way ${guide.name} interviews.` : "Name a company to practise in its interview style."}>
-              <Input id="mock-company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="e.g. Amazon, TCS, Flipkart"
+              <Input id="mock-company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder={isIndia(country) ? "e.g. Amazon, TCS, Flipkart" : "e.g. Amazon, Google, Deloitte"}
                      maxLength={120} list="mock-company-styles" autoComplete="off" />
               <datalist id="mock-company-styles">
                 {(styles.data ?? []).map((s) => (
@@ -134,6 +140,7 @@ function MockSetup() {
                 ))}
               </datalist>
             </Field>
+            <CountryField id="mock-country" hint="Sets the salary currency and the wording of the HR round." />
             {jds.length > 0 && (
               <Field label="Practise for" htmlFor="mock-jd">
                 <Select id="mock-jd" value={jdId ?? NO_JD} onChange={(e) => setJdChoice(e.target.value)}>
@@ -149,7 +156,7 @@ function MockSetup() {
           </div>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {PRESETS.map((p) => {
-              const Icon = PRESET_ICON[p.id];
+              const Icon = p.id === "salary" && !isIndia(country) ? Banknote : PRESET_ICON[p.id];
               const busy = starting === p.id;
               return (
                 <li key={p.id}>
@@ -159,7 +166,7 @@ function MockSetup() {
                     }}
                     type="button"
                     disabled={starting !== null}
-                    onClick={() => void launch(presetSession(p.id, knownRole, contextDocs()), p.id)}
+                    onClick={() => void launch(presetSession(p.id, knownRole, contextDocs(), country), p.id)}
                     className={cx(
                       "glass-panel lift flex h-full w-full flex-col items-start gap-1.5 rounded-2xl p-3.5 text-left hover:border-indigo-400/40 disabled:cursor-wait disabled:opacity-70 sm:p-4 dark:hover:border-indigo-400/30",
                       highlighted === p.id && "ring-2 ring-indigo-500",
@@ -172,8 +179,8 @@ function MockSetup() {
                       </span>
                       <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-xs font-medium tabular-nums text-zinc-700 dark:text-zinc-300">{p.minutes} min</span>
                     </span>
-                    <span className="font-display text-sm font-semibold leading-snug sm:text-base">{busy ? "Starting…" : p.title}</span>
-                    <span className="text-xs text-zinc-600 dark:text-zinc-400">{p.blurb(knownRole)}</span>
+                    <span className="font-display text-sm font-semibold leading-snug sm:text-base">{busy ? "Starting…" : presetTitle(p, country)}</span>
+                    <span className="text-xs text-zinc-600 dark:text-zinc-400">{p.blurb(knownRole, country)}</span>
                   </button>
                 </li>
               );
@@ -240,6 +247,7 @@ function CustomMock({
   const [offer, setOffer] = useState("");
   const [target, setTarget] = useState("");
   const negotiation = interviewType === "negotiation";
+  const sample = sampleOffer(useCountry());
 
   const start = (e: FormEvent) => {
     e.preventDefault();
@@ -320,11 +328,11 @@ function CustomMock({
             </Field>
             {negotiation && (
               <>
-                <Field label="The offer" htmlFor="mock-offer" hint={`What the recruiter presents, e.g. “${SAMPLE_OFFER}”.`}>
-                  <Input id="mock-offer" required value={offer} onChange={(e) => setOffer(e.target.value)} maxLength={300} placeholder={SAMPLE_OFFER} />
+                <Field label="The offer" htmlFor="mock-offer" hint={`What the recruiter presents, e.g. “${sample.offer}”.`}>
+                  <Input id="mock-offer" required value={offer} onChange={(e) => setOffer(e.target.value)} maxLength={300} placeholder={sample.offer} />
                 </Field>
                 <Field label="Your target (optional)" htmlFor="mock-target" hint="The recruiter doesn’t know it — your review uses it to judge how close you got.">
-                  <Input id="mock-target" value={target} onChange={(e) => setTarget(e.target.value)} maxLength={300} placeholder={SAMPLE_TARGET} />
+                  <Input id="mock-target" value={target} onChange={(e) => setTarget(e.target.value)} maxLength={300} placeholder={sample.target} />
                 </Field>
               </>
             )}

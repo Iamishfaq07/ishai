@@ -28,6 +28,7 @@ import {
   Users,
   type LucideIcon,
 } from "@orbit/ui";
+import { CountryField } from "../components/CountryField";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Spinner, Toggle } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -466,6 +467,9 @@ function AccountCard() {
         Account
       </SectionTitle>
       <p className="mb-4 pl-[2.375rem] text-sm text-zinc-500">Signed in as {user.email}</p>
+      <div className="mb-5 max-w-sm">
+        <CountryField id="settings-country" />
+      </div>
       {sent ? (
         <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
           Check <strong>{sent}</strong> for a confirmation link. Your email changes when you open it; until then you

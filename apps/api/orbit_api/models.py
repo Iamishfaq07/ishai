@@ -72,6 +72,10 @@ class User(TimestampMixin, Base):
     suspended_reason: Mapped[str | None] = mapped_column(String(300))
     # The admin's private notes on the account. Never shown to the account's owner (or in their data export).
     admin_note: Mapped[str | None] = mapped_column(Text)
+    # The country the user is applying for jobs in (ISO 3166-1 alpha-2, "IN", "US"): sets the currency, sample
+    # salaries, job search and wording they see. Guessed from the browser at first and changed by them any time;
+    # None until then.
+    country: Mapped[str | None] = mapped_column(String(2))
 
 
 class AppConfig(Base):

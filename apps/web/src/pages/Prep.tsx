@@ -19,6 +19,7 @@ import {
 import { Button, Card, ErrorNote, Field, Input, Select, Spinner, Textarea } from "../components/ui";
 import { api } from "../lib/api";
 import { LAST_PREP_KEY as LAST_KEY } from "../lib/auth";
+import { useIndia } from "../lib/country";
 import { errorText } from "../lib/format";
 import type { LiveLaunchState } from "./SessionSetup";
 
@@ -92,6 +93,7 @@ export function PrepSection({
   /** A job description saved from an imported link (the parent adds it to its document list). */
   onDocumentAdded?: (doc: OrbitDocument) => void;
 }) {
+  const india = useIndia();
   const navigate = useNavigate();
   const jds = (docs ?? []).filter((d) => d.kind === "job_description" && d.status === "ready");
   const hasResume = (docs ?? []).some((d) => d.kind === "resume" && d.status === "ready");
@@ -280,7 +282,7 @@ export function PrepSection({
             <Field
               label="Link to the job posting"
               htmlFor="prep-link"
-              hint="Company career pages and job boards like Greenhouse, Lever or Workday work best. Naukri and LinkedIn pages need a sign-in or an app to show the post, so they can't be read: copy the text and paste it instead."
+              hint={`Company career pages and job boards like Greenhouse, Lever or Workday work best. ${india ? "Naukri and LinkedIn pages" : "LinkedIn and Indeed pages"} need a sign-in or an app to show the post, so they can't be read: copy the text and paste it instead.`}
             >
               <div className="flex gap-2">
                 <Input
@@ -329,7 +331,9 @@ export function PrepSection({
                 value={pasted}
                 onChange={(e) => setPasted(e.target.value)}
                 maxLength={20_000}
-                placeholder="Paste the role, responsibilities and requirements… (from Naukri, LinkedIn, a campus portal or an email from HR)"
+                placeholder={india
+                  ? "Paste the role, responsibilities and requirements… (from Naukri, LinkedIn, a campus portal or an email from HR)"
+                  : "Paste the role, responsibilities and requirements… (from LinkedIn, Indeed, a company site or an email from a recruiter)"}
               />
             </Field>
           )}

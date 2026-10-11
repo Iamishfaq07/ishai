@@ -646,7 +646,7 @@ async def fit_check(listing_id: str, user: Annotated[User, Depends(require_verif
                "text": row.description or row.snippet}
         try:
             resp = await _generate(db, user, fitcheck.fit_request(data.visible(), job, {
-                "matched": match.matched, "missing": match.missing}, get_llm_provider()))
+                "matched": match.matched, "missing": match.missing}, get_llm_provider(), user.country))
             check = fitcheck.parse_fit(resp.text, data, job, match.score, match.matched)
         except LLMError as e:
             log.warning("fit check failed: %s", e)

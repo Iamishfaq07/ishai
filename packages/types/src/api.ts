@@ -20,6 +20,9 @@ export interface User {
   approval_pending?: boolean;
   /** Privacy controls (spec §65), account-wide. */
   store_transcripts: boolean;
+  /** The country they're applying for jobs in (ISO 3166-1 alpha-2): currency, sample salaries, job search and
+   *  wording follow it. Null until set (the app fills it in from the browser's guess). */
+  country?: string | null;
   /** Always false: screenshots are analyzed and discarded, never stored. */
   store_screenshots: boolean;
   /** Auth responses only: browser clients echo it as X-CSRF-Token on state-changing requests. */
@@ -43,6 +46,8 @@ export interface RegisterRequest {
   name?: string;
   /** The CAPTCHA widget's response token, when GET /v1/auth/config asks for one. */
   captcha_token?: string;
+  /** The browser's guess at the country they're applying in (ISO 3166-1 alpha-2). */
+  country?: string;
 }
 
 /**

@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +33,7 @@ from orbit_api.entitlements import awaiting_approval
 from orbit_api.models import AuditLog, User
 from orbit_api.providers.email import OutgoingEmail, can_deliver, send_safely
 from orbit_api.ratelimit import TokenBucket, blocked, check, client_ip, client_network, failed, limit
+from orbit_api.region import country_code
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 auth_limit = limit("auth", rate_per_s=0.2, burst=10)
@@ -94,6 +95,8 @@ class RegisterIn(BaseModel):
     password: str = Field(min_length=10, max_length=256)
     name: str | None = Field(None, max_length=200)
     captcha_token: str | None = Field(None, max_length=4096)
+    # The country they're applying in, as the browser guesses it (ISO 3166-1 alpha-2); a bad one is ignored.
+    country: str | None = Field(None, max_length=8)
 
 
 class LoginIn(BaseModel):
@@ -109,6 +112,8 @@ class UserOut(BaseModel):
     # Signed up while sign-up approval was on and not approved (or granted a plan) yet: the app shows a banner.
     approval_pending: bool = False
     store_transcripts: bool
+    # The country they're applying in (ISO 3166-1 alpha-2), or None when not known yet.
+    country: str | None = None
     # Always false: screenshots are analysed and discarded, never stored (the old toggle did nothing). Kept in
     # the response so older clients still parse it.
     store_screenshots: bool = False
@@ -126,7 +131,7 @@ class AuthOut(BaseModel):
 
 def _user_out(u: User, *, with_csrf: bool = False) -> UserOut:
     return UserOut(id=u.id, email=u.email, name=u.name, email_verified=u.email_verified,
-                   approval_pending=awaiting_approval(u), store_transcripts=u.store_transcripts,
+                   approval_pending=awaiting_approval(u), store_transcripts=u.store_transcripts, country=u.country,
                    csrf_token=csrf_token_for(u.id, u.token_version) if with_csrf else None)
 
 
@@ -227,7 +232,8 @@ async def _create_user(db: AsyncSession, request: Request, email: str, body: Reg
     first_dev_user = (not s.admin_email and s.env != "production"
                       and not await db.scalar(select(func.count()).select_from(User)))
     approved = not s.approval_required or s.is_admin_email(email) or bool(first_dev_user)
-    user = User(email=email, name=body.name, password_hash=await hash_password(body.password), approved=approved)
+    user = User(email=email, name=body.name, password_hash=await hash_password(body.password), approved=approved,
+                country=country_code(body.country))
     db.add(user)
     await db.flush()
     db.add(AuditLog(user_id=user.id, action="auth.register", ip=_ip(request)))
@@ -295,6 +301,30 @@ async def update_privacy(body: PrivacyIn, user: Annotated[User, Depends(current_
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not signed in.")
     if body.store_transcripts is not None:
         u.store_transcripts = body.store_transcripts
+    await db.commit()
+    return _user_out(u)
+
+
+class RegionIn(BaseModel):
+    country: str = Field(min_length=2, max_length=2)
+
+    @field_validator("country")
+    @classmethod
+    def _known(cls, v: str) -> str:
+        code = country_code(v)
+        if code is None:
+            raise ValueError("Use a two-letter country code, like US, GB or IN.")
+        return code
+
+
+@router.patch("/me/region", response_model=UserOut)
+async def update_region(body: RegionIn, user: Annotated[User, Depends(current_user)],
+                        db: Annotated[AsyncSession, Depends(get_db)]) -> UserOut:
+    """The country they're applying in: currency, sample salaries, job search and wording follow it."""
+    u = await db.get(User, user.id)
+    if u is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not signed in.")
+    u.country = body.country
     await db.commit()
     return _user_out(u)
 

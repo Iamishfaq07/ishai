@@ -21,6 +21,7 @@ import { Footer } from "../components/Footer";
 import { Button, Card, ErrorNote, Input, Textarea } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { useIndia } from "../lib/country";
 import { SUPPORT_EMAIL, mailLink, whatsappLink } from "../lib/contact";
 import {
   CONTACT_TOPICS,
@@ -51,6 +52,7 @@ interface ReportedJob {
  * limits and says when someone has sent too many.
  */
 export function ContactPage() {
+  const india = useIndia();
   const { user } = useAuth();
   const { search } = useLocation();
   const prefill = useMemo(() => readPrefill(search), [search]);
@@ -304,7 +306,7 @@ export function ContactPage() {
                     type="tel"
                     inputMode="tel"
                     autoComplete="tel"
-                    placeholder="+91 98765 43210"
+                    placeholder={india ? "+91 98765 43210" : "+1 415 555 0132"}
                     value={fields.phone}
                     maxLength={PHONE_MAX}
                     onChange={(e) => set("phone", e.target.value)}

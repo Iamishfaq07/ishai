@@ -345,6 +345,8 @@ export function createApiClient(options: ApiClientOptions) {
       csrfToken = null;
     },
     updatePrivacy: (req: PrivacyUpdate) => json<User>("/v1/auth/me/privacy", { method: "PATCH", body: body(req) }),
+    /** The country they're applying for jobs in (ISO 3166-1 alpha-2). */
+    updateRegion: (country: string) => json<User>("/v1/auth/me/region", { method: "PATCH", body: body({ country }) }),
     /** Asks for the password again: a session left open somewhere can't delete the account. */
     deleteAccount: (password: string) => json<void>("/v1/auth/me", { method: "DELETE", body: body({ password }) }),
     /** A new password; every other device (and any live session) is signed out, this one stays signed in. */

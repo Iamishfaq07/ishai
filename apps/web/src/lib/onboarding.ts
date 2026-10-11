@@ -156,7 +156,7 @@ function whenLabel(iso: string, now: Date): string {
   const days = Math.round((startOf(d) - startOf(now)) / DAY_MS);
   if (days <= 0) return "today";
   if (days === 1) return "tomorrow";
-  return `on ${d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}`;
+  return `on ${d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}`;
 }
 
 /** An interview on the tracker in the next 3 days (or earlier today). */

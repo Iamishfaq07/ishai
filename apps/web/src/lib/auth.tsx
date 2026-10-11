@@ -10,7 +10,7 @@ import {
   type SetStateAction,
 } from "react";
 import type { LoginRequest, RegisterRequest, User } from "@orbit/types";
-import { ApiError } from "@orbit/ui";
+import { ApiError, detectCountry } from "@orbit/ui";
 import { api, setUnauthorizedHandler } from "./api";
 import { clearAsyncCache } from "./useAsync";
 
@@ -92,12 +92,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /** "signed_in", or "verify_email" when the server wants the inbox proven first (nobody is signed in then). */
   const register = useCallback(async (req: RegisterRequest): Promise<RegisterOutcome> => {
-    const res = await api.register(req);
+    const res = await api.register({ country: detectCountry(), ...req });
     if ("status" in res && res.status === "verify_email") return "verify_email";
     forgetAccount();
     setUser(await confirmSession());
     return "signed_in";
   }, []);
+
+  // An account without a country (from before there was one) gets the browser's guess, once; Settings changes it.
+  const needsCountry = Boolean(user && !user.country);
+  useEffect(() => {
+    if (!needsCountry) return;
+    let cancelled = false;
+    api
+      .updateRegion(detectCountry())
+      .then((u) => !cancelled && setUser((prev) => (prev && prev.id === u.id ? { ...prev, country: u.country } : prev)))
+      .catch(() => undefined); // the guess is still used on screen; it's tried again next visit
+    return () => {
+      cancelled = true;
+    };
+  }, [needsCountry]);
 
   const logout = useCallback(async () => {
     try {
