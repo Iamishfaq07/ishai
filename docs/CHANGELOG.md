@@ -1,5 +1,13 @@
 # Implementation log
 
+## Resume AI for returning users; the phone status bar follows the theme (2026-10-11)
+
+- **Resume AI:** once you have resumes, the page opens with a compact "Resume AI" header (Create a resume, Import)
+  and your resumes right under it, instead of the full introduction every time. Someone with no resumes yet still
+  gets the introduction, with the picture and what Resume AI does.
+- **Phones:** the status bar (and an installed app's title bar) is white in light mode and the night-sky colour in
+  dark, matching the top bar, instead of always dark. It changes with the theme setting too.
+
 ## Jobs AI: export the tracker, add dates to your calendar (2026-10-11)
 
 - **Export CSV** (Jobs AI → Tracker): every tracked job as a spreadsheet, with company, role, location, status, the
