@@ -76,10 +76,12 @@ def enforce(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> Iterator[Non
 def test_a_new_account_gets_the_welcome_credits_once_per_network(client: TestClient, enforce: None) -> None:
     ip = _new_ip()
     first = _signup(client, ip)
-    assert _wallet(client, first) == {"resume": 1, "interview_minutes_left": 20.0, "interview_minutes_total": 20.0}
-    # Another account from the same network starts at zero (it can still buy a pack).
+    assert _wallet(client, first) == {"resume": 1, "interview_minutes_left": 20.0, "interview_minutes_total": 20.0,
+                                      "welcome_missed": False}
+    # Another account from the same network starts at zero (it can still buy a pack), and the app is told why.
     second = _signup(client, ip)
-    assert _wallet(client, second) == {"resume": 0, "interview_minutes_left": 0.0, "interview_minutes_total": 0.0}
+    assert _wallet(client, second) == {"resume": 0, "interview_minutes_left": 0.0, "interview_minutes_total": 0.0,
+                                       "welcome_missed": True}
     assert client.post("/v1/sessions", headers=second, json={"title": "x"}).status_code == 402
     # Another network: its own welcome.
     assert _wallet(client, _signup(client, _new_ip()))["resume"] == 1
@@ -365,7 +367,8 @@ def test_time_on_a_grant_never_comes_out_of_the_credits(monkeypatch: pytest.Monk
         assert _pools(client, sid) == {"pro": 45 * 60}
 
         _set_grant_until(client, user["id"], datetime.now(UTC) - timedelta(minutes=1))
-        assert _wallet(client, h) == {"resume": 1, "interview_minutes_left": 20.0, "interview_minutes_total": 20.0}
+        assert _wallet(client, h) == {"resume": 1, "interview_minutes_left": 20.0, "interview_minutes_total": 20.0,
+                                      "welcome_missed": False}
         assert client.post("/v1/sessions", headers=h, json={"title": "after the grant"}).status_code == 201
     finally:
         gen.close()

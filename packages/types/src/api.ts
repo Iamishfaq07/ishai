@@ -580,7 +580,14 @@ export interface Entitlements {
   usage: { live_minutes: number; mock_minutes: number; screenshots: number; documents: number };
   features: Record<string, boolean>;
   /** Credit plans (Free): what's left to spend; it never expires. Null on plans with their own allowance. */
-  credits?: { resume: number | null; interview_minutes_left: number; interview_minutes_total: number } | null;
+  credits?: {
+    resume: number | null;
+    interview_minutes_left: number;
+    interview_minutes_total: number;
+    /** No credit was ever added: the free starter credits went to another account on this network (one a month)
+     * or this inbox, and nothing was bought or granted. The app says why the balance is zero. */
+    welcome_missed?: boolean;
+  } | null;
 }
 
 export interface Usage {
