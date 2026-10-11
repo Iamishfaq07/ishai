@@ -130,11 +130,16 @@ function ScoreChart({ points }: { points: ProgressPoint[] }) {
   );
 }
 
-function Tile({ label, value, detail }: { label: string; value: string; detail?: React.ReactNode }) {
+/** One figure. `value` null: nothing to show yet, said in words (with `detail` saying when it will), not a dash. */
+function Tile({ label, value, detail }: { label: string; value: string | null; detail?: React.ReactNode }) {
   return (
     <div className="rounded-xl bg-zinc-500/5 p-3 ring-1 ring-zinc-200 dark:ring-white/[0.06]">
       <p className="text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+      {value === null ? (
+        <p className="mt-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">Not yet</p>
+      ) : (
+        <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+      )}
       {detail && <p className="mt-0.5 text-xs">{detail}</p>}
     </div>
   );
@@ -291,14 +296,31 @@ export function ProgressSection() {
           </Link>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Tile label="Sessions this week" value={String(s.this_week)} />
+          {/* Every session, live and mock, over the last 7 days: the weekly goal above counts practice only. */}
+          <Tile label="Sessions, last 7 days" value={String(s.this_week)} detail={<span className="text-zinc-500 dark:text-zinc-400">Live and mock</span>} />
           <Tile label="Streak" value={`${s.streak_days} day${s.streak_days === 1 ? "" : "s"}`} />
           <Tile
             label="Average score (last 5)"
-            value={s.average_score_recent !== null ? `${s.average_score_recent}/5` : "–"}
-            detail={<ScoreDelta recent={s.average_score_recent} before={s.average_score_before} />}
+            value={s.average_score_recent !== null ? `${s.average_score_recent}/5` : null}
+            detail={
+              s.average_score_recent !== null ? (
+                <ScoreDelta recent={s.average_score_recent} before={s.average_score_before} />
+              ) : (
+                <span className="text-zinc-500 dark:text-zinc-400">After your first review</span>
+              )
+            }
           />
-          <Tile label="Latest pace" value={latestPace !== null ? `${latestPace} wpm` : "–"} />
+          <Tile
+            label="Latest pace"
+            value={latestPace !== null ? `${latestPace} wpm` : null}
+            detail={
+              latestPace !== null ? (
+                <span className="text-zinc-500 dark:text-zinc-400">Words a minute; 120–160 is easy to follow</span>
+              ) : (
+                <span className="text-zinc-500 dark:text-zinc-400">After a round where you answer out loud</span>
+              )
+            }
+          />
         </div>
 
         <div className="mt-5">
