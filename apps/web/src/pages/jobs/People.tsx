@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import type { JobContact, JobContactInput, JobContactRelation, JobTrackerEntry } from "@orbit/types";
 import {
   ArrowUpRight,
@@ -45,6 +45,13 @@ export function PeopleSection() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const list = contacts.data ?? [];
+  // Home's "Follow up with…" links here as /jobs/outreach#people: bring the section into view once it's loaded.
+  const loaded = Boolean(contacts.data);
+  useEffect(() => {
+    if (loaded && window.location.hash === "#people") {
+      document.getElementById("people")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [loaded]);
 
   const save = async (input: JobContactInput) => {
     setError(null);
@@ -84,7 +91,7 @@ export function PeopleSection() {
   }).length;
 
   return (
-    <section aria-labelledby="people-title" className="mt-10 space-y-4">
+    <section id="people" aria-labelledby="people-title" className="mt-10 scroll-mt-24 space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="people-title" className="flex items-center gap-2 font-display text-lg font-semibold">
