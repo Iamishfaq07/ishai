@@ -1647,6 +1647,42 @@ export interface JobFitResponse {
   left: number | null;
 }
 
+/** How the user knows a contact (Jobs AI → Outreach → People). */
+export type JobContactRelation = "referral" | "recruiter" | "alum" | "hiring_manager" | "interviewer" | "mentor" | "other";
+
+/** A person in the job search: who they are, how to reach them, and when to follow up. */
+export interface JobContact {
+  id: string;
+  name: string;
+  company: string;
+  title: string;
+  relation: JobContactRelation;
+  linkedin_url: string | null;
+  email: string | null;
+  phone: string | null;
+  notes: string;
+  /** The tracked job they're about, and how the list shows it ("Android Engineer at PhonePe"). */
+  application_id: string | null;
+  application_label: string | null;
+  last_contacted_at: string | null;
+  follow_up_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JobContactInput {
+  name: string;
+  company?: string;
+  title?: string;
+  relation?: JobContactRelation;
+  linkedin_url?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  notes?: string;
+  application_id?: string | null;
+  follow_up_at?: string | null;
+}
+
 export interface JobTrackerEntry {
   id: string;
   listing_id: string;

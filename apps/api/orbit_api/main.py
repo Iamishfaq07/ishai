@@ -32,6 +32,7 @@ from orbit_api.documents.parsing import isolation_selftest
 from orbit_api.documents.routes import router as documents_router
 from orbit_api.entitlements import plans as configured_plans
 from orbit_api.job_portal.companies import boards as configured_boards
+from orbit_api.job_portal.contacts import router as job_contacts_router
 from orbit_api.job_portal.refresh import running_refresher as running_job_refresher
 from orbit_api.job_portal.routes import router as jobs_router
 from orbit_api.observability import configure_logging, init_sentry, request_id_middleware
@@ -256,6 +257,7 @@ def create_app() -> FastAPI:
     app.include_router(resumes_router)
     app.include_router(resume_kit_router)
     app.include_router(jobs_router)
+    app.include_router(job_contacts_router)
     app.include_router(contact_router)
     return app
 

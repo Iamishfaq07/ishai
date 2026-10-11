@@ -26,6 +26,7 @@ import { linkButton, textLink } from "./links";
 import { STATUS_LABEL, STATUS_TONE, jobAsks, shortDate } from "./model";
 import { LinkedInPart, MessagesPart, NaukriPart, jobTitle, type OutreachJob } from "./OutreachKit";
 import { jobPath } from "./paths";
+import { PeopleSection } from "./People";
 
 type Part = "messages" | "naukri" | "linkedin";
 
@@ -74,6 +75,7 @@ export function JobOutreachPage() {
       ) : picked && list ? (
         <ResumeOutreach key={picked.id} picked={picked} resumes={list} jobId={params.get("job")} onPick={pick} />
       ) : null}
+      <PeopleSection />
     </AllowanceContext.Provider>
   );
 }
