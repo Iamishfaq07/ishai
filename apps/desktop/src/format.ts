@@ -33,6 +33,7 @@ export function formatDate(iso: string | null): string {
 
 export function formatDuration(seconds: number | null): string {
   if (seconds === null || seconds <= 0) return "—";
+  if (seconds < 60) return "under a minute";
   const m = Math.round(seconds / 60);
   if (m < 60) return `${m} min`;
   return `${Math.floor(m / 60)} h ${m % 60} min`;

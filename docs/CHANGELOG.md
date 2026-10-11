@@ -1,5 +1,11 @@
 # Implementation log
 
+## A session's page on phones; no more "0 min" (2026-10-11)
+
+- **Follow up** (a session's page, web and desktop): on phones its explanation was squeezed into a column a word wide
+  beside the button. The text now keeps a readable width and the button goes full width under it.
+- A session shorter than a minute said "0 min"; it now says "under a minute" (web and desktop).
+
 ## Practice: progress figures that explain themselves (2026-10-11)
 
 - **Practice → Your progress:** "Sessions this week" (every session, live and mock, over the last 7 days) sat right
