@@ -30,6 +30,7 @@ import { openHelp } from "../lib/shell";
 import { SESSION_TYPE_ICON } from "../lib/sessionIcons";
 import { useAsync, type AsyncState } from "../lib/useAsync";
 import { UsageSummary } from "./Billing";
+import { DueToday } from "./DueToday";
 import { FollowUps } from "./jobs/FollowUps";
 import { STATUS_LABEL, byStatus } from "./jobs/model";
 import { JOBS_AI_HOME, JOBS_MATCHES, JOBS_TRACKER } from "./jobs/paths";
@@ -103,6 +104,8 @@ export function HomePage() {
       </div>
 
       <NextStep steps={steps} welcomed={welcomed} askWelcome={!answers && isNew} />
+
+      <DueToday />
 
       <FollowUps hideWhenEmpty />
 
