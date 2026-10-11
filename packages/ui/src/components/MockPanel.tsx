@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { answerBand, answerWords, bandLabel, clock, paceState } from "../live/answerPace";
 import type { LiveViewState } from "../live/reducer";
 import type { InterviewerVoice } from "../live/useInterviewerVoice";
 import type { LiveActions } from "../live/useLiveSession";
@@ -109,6 +111,7 @@ export function MockPanel({ live, actions, voice, ended, onViewReport }: {
       {!voice.supported && (
         <p className="text-xs text-amber-700 dark:text-amber-300">This device has no speech voice — read the question above.</p>
       )}
+      {!q.negotiation && <AnswerTimer key={`timer-${q.questionId}`} live={live} q={q} />}
       {/* Who has the floor, at a glance from across the room: the interviewer talking, or Orbit listening to you. */}
       <div aria-hidden="true" className="flex min-h-48 flex-1 flex-col items-center justify-center gap-10">
         <span className="relative flex items-center justify-center">
@@ -125,5 +128,71 @@ export function MockPanel({ live, actions, voice, ended, onViewReport }: {
         </span>
       </div>
     </section>
+  );
+}
+
+/**
+ * How long this answer has run, against how long one like it usually runs (live/answerPace.ts). It starts with the
+ * first words, so thinking time before answering doesn't count; a new question (its key) starts it again.
+ */
+function AnswerTimer({ live, q }: { live: LiveViewState; q: NonNullable<LiveViewState["mock"]> }) {
+  // The turns already there when the question came: the answer is what's said after them.
+  const [from] = useState(live.turnOrder.length);
+  const words = answerWords(live, from);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (words > 0 && startedAt === null) {
+      const t = Date.now();
+      setStartedAt(t);
+      setNow(t);
+    }
+  }, [words, startedAt]);
+  useEffect(() => {
+    if (startedAt === null) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [startedAt]);
+
+  const band = answerBand(q);
+  if (startedAt === null) {
+    return (
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+        Take a moment to think first. A good answer here runs {bandLabel(band)}.
+      </p>
+    );
+  }
+  const elapsed = Math.max(0, (now - startedAt) / 1000);
+  const state = paceState(elapsed, band);
+  // The track runs a quarter past the band's end, so "too long" has somewhere to go.
+  const scale = band.max * 1.25;
+  const pct = (n: number) => `${Math.min(n / scale, 1) * 100}%`;
+  const note = state === "warming" ? `Keep going: aim for ${bandLabel(band)}` : state === "good" ? "Good length" : `Past ${clock(band.max)}: land the result and stop`;
+  return (
+    <div role="group" aria-label="Answer timer" className="max-w-md space-y-1.5">
+      <div className="flex items-baseline gap-2 text-sm">
+        <span className="font-display text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">{clock(elapsed)}</span>
+        <span className="tabular-nums text-zinc-500 dark:text-zinc-400">· {words} word{words === 1 ? "" : "s"}</span>
+        <span
+          aria-live="polite"
+          className={cx(
+            "ml-auto text-xs font-medium",
+            state === "good" ? "text-emerald-700 dark:text-emerald-300" : state === "long" ? "text-amber-700 dark:text-amber-300" : "text-zinc-500 dark:text-zinc-400",
+          )}
+        >
+          {note}
+        </span>
+      </div>
+      <div className="relative h-1.5 overflow-hidden rounded-full bg-zinc-500/15" aria-hidden="true">
+        <span className="absolute inset-y-0 bg-emerald-500/25" style={{ left: pct(band.min), width: `calc(${pct(band.max)} - ${pct(band.min)})` }} />
+        <span
+          className={cx(
+            "absolute inset-y-0 left-0 rounded-full transition-[width] duration-1000 ease-linear motion-reduce:transition-none",
+            state === "good" ? "bg-emerald-500" : state === "long" ? "bg-amber-500" : "bg-indigo-500",
+          )}
+          style={{ width: pct(elapsed) }}
+        />
+      </div>
+    </div>
   );
 }
