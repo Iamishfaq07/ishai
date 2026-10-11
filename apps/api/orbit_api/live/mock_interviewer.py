@@ -44,6 +44,9 @@ QUESTION_TIMEOUT_S = 10
 # A pause this long in the candidate's answer starts writing the next question in the background, so the interviewer
 # speaks the moment the answer is judged complete instead of a model call later. Discarded if they keep talking.
 PREFETCH_SILENCE_MS = 900
+# A one-way interview moves on by itself this long after the answer time is up (the app moves on at the moment
+# itself; this is for a tab in the background or a lost "next").
+ONE_WAY_GRACE_MS = 3000
 
 
 # "story": from the story bank's "Practise telling it": a question the story answers, then a follow-up testing it.
@@ -69,6 +72,14 @@ class NegotiationSetup(BaseModel):
     target: str | None = Field(None, max_length=300)
 
 
+class OneWaySetup(BaseModel):
+    """A one-way (recorded, HireVue-style) video interview: each prompt gets thinking time, then a fixed time to
+    answer, no follow-ups, and the next prompt comes when the time is up (or the candidate says they're done)."""
+
+    think_seconds: int = Field(30, ge=0, le=120)
+    answer_seconds: int = Field(120, ge=30, le=300)
+
+
 class MockConfig(BaseModel):
     interview_type: MockInterviewType = "mixed"
     difficulty: MockDifficulty = "medium"
@@ -81,6 +92,7 @@ class MockConfig(BaseModel):
     # A panel interview: two or three interviewers taking turns, each new topic from the next one, a follow-up from
     # whoever asked the topic. Not for drills or negotiations (one voice each).
     panel: list[Persona] | None = Field(None, min_length=2, max_length=3)
+    one_way: OneWaySetup | None = None
 
     @model_validator(mode="after")
     def _negotiation_needs_an_offer(self) -> "MockConfig":
@@ -91,8 +103,12 @@ class MockConfig(BaseModel):
         return self
 
     @property
+    def is_one_way(self) -> bool:
+        return self.one_way is not None and not self.drill and not self.is_negotiation
+
+    @property
     def is_panel(self) -> bool:
-        return bool(self.panel) and not self.drill and not self.is_negotiation
+        return bool(self.panel) and not self.drill and not self.is_negotiation and not self.is_one_way
 
     @property
     def is_negotiation(self) -> bool:
@@ -106,6 +122,9 @@ class MockConfig(BaseModel):
             return len(self.drill)
         if self.is_negotiation:
             return max(4, min(12, self.duration_minutes // 2))
+        if self.one_way is not None and self.is_one_way:
+            per = self.one_way.think_seconds + self.one_way.answer_seconds
+            return max(3, min(10, self.duration_minutes * 60 // per))
         return max(3, min(10, self.duration_minutes // 3))
 
 
@@ -315,6 +334,7 @@ class MockInterviewer:
         self._awaiting = False  # a question is out and we're listening for the answer
         self._busy = False  # generating the next question
         self._last_speech_ms: int | None = None
+        self._asked_ms: int | None = None  # one-way: when the current prompt was first seen out (at a tick)
         self._started_ms: int | None = None
         self._drill_next = 0  # index of the next drill item to ask
         self._closing = False  # negotiation: the recruiter has closed the call; the candidate's reply ends it
@@ -364,6 +384,17 @@ class MockInterviewer:
             self.asked[-1].answer.append(text.strip())
 
     async def tick(self, now_ms: int) -> None:
+        if self.config.is_one_way and self.config.one_way is not None:
+            # Timed, not by silence: the prompt's thinking and answer time, then the next one.
+            if not self._awaiting or self._busy or not self.asked:
+                return
+            if self._asked_ms is None:
+                self._asked_ms = now_ms
+                return
+            limit = (self.config.one_way.think_seconds + self.config.one_way.answer_seconds) * 1000
+            if now_ms - self._asked_ms >= limit + ONE_WAY_GRACE_MS:
+                await self._ask_next(now_ms)
+            return
         if not self._awaiting or self._busy or self._last_speech_ms is None:
             return
         answer = " ".join(self.asked[-1].answer)
@@ -381,7 +412,8 @@ class MockInterviewer:
     def _can_prefetch(self, now_ms: int) -> bool:
         """Only the free-flowing interview (drills and negotiations write their turns differently), and only when
         another question will actually be asked."""
-        return (not self.config.drill and not self.config.is_negotiation and not self._time_up(now_ms)
+        return (not self.config.drill and not self.config.is_negotiation and not self.config.is_one_way
+                and not self._time_up(now_ms)
                 and not (self._topics() >= self.config.planned_questions and self._follow_ups_in_topic() >= 1))
 
     def _drop_prefetch(self) -> None:
@@ -463,6 +495,7 @@ class MockInterviewer:
         asked = _Asked(qid, text, follow_up, drill=drill, speaker=speaker)
         self.asked.append(asked)
         self._last_speech_ms = None
+        self._asked_ms = None
         self._awaiting = True
         # The transcript keeps what was said; the question (the review's, a drill's) is the question itself, so a
         # "Try this one again" of it doesn't open with "Let's work on a few questions…" twice.
@@ -485,6 +518,9 @@ class MockInterviewer:
                                                                             else "retry")
         if negotiation:
             payload["negotiation"] = True
+        if self.config.is_one_way and self.config.one_way is not None:
+            payload["one_way"] = {"think_seconds": self.config.one_way.think_seconds,
+                                  "answer_seconds": self.config.one_way.answer_seconds}
         if asked.speaker in PANELISTS:
             name, title = PANELISTS[asked.speaker]
             payload["speaker"] = {"persona": asked.speaker, "name": name, "title": title}
@@ -645,6 +681,12 @@ class MockInterviewer:
             if follow_up_on.feedback:
                 steer += (f"\n<reference_data source=\"previous_feedback\">\n{fence(follow_up_on.feedback)}\n"
                           "</reference_data>")
+        elif cfg.is_one_way:
+            steer = ("This is a ONE-WAY recorded video interview: the candidate answers each prompt on camera within "
+                     "a time limit and can't ask anything back. Write the next prompt as a recorded screening question "
+                     "is written: complete and self-contained, one or two sentences, no follow-ups (is_follow_up "
+                     "false), a NEW topic each time" + (", opening with a one-line welcome." if not self.asked
+                                                         else "."))
         elif not self.asked and panel:
             first = PANELISTS[panel[0]][0]
             steer = (f"This is the first question: {first} opens the interview with one short greeting, introduces "
@@ -689,7 +731,7 @@ class MockInterviewer:
             data = json.loads(resp.text[resp.text.find("{"): resp.text.rfind("}") + 1])
             question = str(data.get("question") or "").strip()
             if question:
-                return question[:400], bool(data.get("is_follow_up")) and bool(self.asked)
+                return question[:400], bool(data.get("is_follow_up")) and bool(self.asked) and not cfg.is_one_way
         except (TimeoutError, LLMError, json.JSONDecodeError, ValueError) as e:
             log.warning("mock interviewer question failed (%s); using a fallback", type(e).__name__)
         if follow_up_on is not None:

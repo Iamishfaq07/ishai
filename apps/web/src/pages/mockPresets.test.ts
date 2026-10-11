@@ -36,6 +36,12 @@ describe("one-tap mock presets", () => {
     expect(presetSession("panel15", "", []).title).toBe("Mock — Panel round");
   });
 
+  it("time a one-way video interview like the recorded platforms", () => {
+    const s = presetSession("oneway10", "", []);
+    expect(s.title).toBe("Mock — Video interview");
+    expect(s.mock).toMatchObject({ duration_minutes: 10, one_way: { think_seconds: 30, answer_seconds: 90 } });
+  });
+
   it("negotiate a ₹ offer, never dollars", () => {
     const s = presetSession("salary", "", []);
     expect(s.mock).toMatchObject({ interview_type: "negotiation", persona: "recruiter", negotiation: { offer: SAMPLE_OFFER } });

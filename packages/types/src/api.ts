@@ -133,6 +133,8 @@ export interface MockConfig {
   persona?: MockPersona;
   /** A panel interview: two or three different interviewers taking turns (not for drills or negotiations). */
   panel?: MockPersona[];
+  /** A one-way (recorded, HireVue-style) video interview: thinking time, then a fixed time to answer each prompt. */
+  one_way?: { think_seconds: number; answer_seconds: number };
   /** A fixed list of questions, asked in order (re-drills, or questions from interview prep: kind "prep"). */
   drill?: Array<{
     question: string;

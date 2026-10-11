@@ -266,6 +266,8 @@ export interface ServerEventMap {
     question_type?: string;
     /** A panel interview: which panelist asks it. */
     speaker?: { persona: string; name: string; title: string };
+    /** A one-way (recorded, HireVue-style) interview: thinking time, then a fixed time to answer. */
+    one_way?: { think_seconds: number; answer_seconds: number };
   };
   /** Mock interview finished (planned questions or time used up); session.ended follows. */
   "mock.completed": MockRoundSummary;

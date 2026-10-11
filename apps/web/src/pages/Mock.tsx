@@ -12,6 +12,7 @@ import {
   UserRound,
   Users,
   UsersRound,
+  Video,
   cx,
   focusRing,
   practiceDocumentIds,
@@ -40,7 +41,7 @@ const TYPES: Array<{ value: MockInterviewType; label: string }> = [
   { value: "negotiation", label: "Salary negotiation" },
 ];
 
-const PRESET_ICON: Record<PresetId, LucideIcon> = { hr5: Users, tmay10: UserRound, tech15: Code2, panel15: UsersRound, salary: IndianRupee };
+const PRESET_ICON: Record<PresetId, LucideIcon> = { hr5: Users, tmay10: UserRound, tech15: Code2, panel15: UsersRound, oneway10: Video, salary: IndianRupee };
 
 /**
  * Practice: the AI plays interviewer (spoken with the browser's voice), you answer by voice. A mock starts in one tap
