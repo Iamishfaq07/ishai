@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { answerHint } from "../live/answerHints";
 import { answerBand, answerWords, bandLabel, clock, paceState } from "../live/answerPace";
 import type { LiveViewState } from "../live/reducer";
 import type { InterviewerVoice } from "../live/useInterviewerVoice";
@@ -117,6 +118,7 @@ export function MockPanel({ live, actions, voice, ended, onViewReport }: {
         <p className="text-xs text-amber-700 dark:text-amber-300">This device has no speech voice — read the question above.</p>
       )}
       {!q.negotiation && <AnswerTimer key={`timer-${q.questionId}`} live={live} q={q} />}
+      {!q.negotiation && <StructureHint key={`hint-${q.questionId}`} q={q} />}
       {/* Who has the floor, at a glance from across the room: the interviewer talking, or Orbit listening to you. */}
       <div aria-hidden="true" className="flex min-h-48 flex-1 flex-col items-center justify-center gap-10">
         <span className="relative flex items-center justify-center">
@@ -199,5 +201,33 @@ function AnswerTimer({ live, q }: { live: LiveViewState; q: NonNullable<LiveView
         />
       </div>
     </div>
+  );
+}
+
+/** "Stuck? Show a structure": a shape for this kind of answer (live/answerHints.ts), closed until asked for. */
+function StructureHint({ q }: { q: NonNullable<LiveViewState["mock"]> }) {
+  const hint = answerHint(q.text, q.questionType);
+  return (
+    <details className="group max-w-md text-sm">
+      <summary className={cx("cursor-pointer select-none text-xs font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
+        Stuck? Show a structure
+      </summary>
+      <div className="mt-2 rounded-xl border border-indigo-500/20 bg-indigo-500/[0.04] p-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.1em] text-indigo-700 dark:text-indigo-300">{hint.name}</p>
+        <ol className="mt-2 space-y-1.5">
+          {hint.steps.map((step, i) => (
+            <li key={step.label} className="flex gap-2">
+              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-[0.65rem] font-semibold text-indigo-700 dark:text-indigo-300">
+                {i + 1}
+              </span>
+              <span>
+                <span className="font-medium text-zinc-900 dark:text-zinc-100">{step.label}</span>
+                <span className="text-zinc-600 dark:text-zinc-400"> · {step.detail}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </details>
   );
 }

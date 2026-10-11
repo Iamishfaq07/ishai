@@ -151,6 +151,7 @@ async def test_one_question_again_opens_without_a_few_questions() -> None:
     first = sink.of("mock.question")[0]
     assert first["text"] == "Let's try this one again. Describe a conflict with a teammate."
     assert first["total"] == 1 and first["drill_kind"] == "retry"
+    assert first["question_type"] == "behavioral"  # of the question itself, for the "show a structure" hint
     await eng.end()
 
 
