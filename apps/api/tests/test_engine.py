@@ -316,6 +316,30 @@ def test_recorder_updates_the_stored_question_text(client: Any) -> None:
     assert stored["text"].endswith("What is dependency injection?")
 
 
+def test_a_line_held_for_an_echo_check_keeps_its_place_in_the_stored_transcript(client: Any) -> None:
+    from orbit_api.sessions.recorder import DbRecorder
+    from tests.test_api import _register
+
+    h = _register(client)
+    sid = client.post("/v1/sessions", headers=h, json={"title": "t"}).json()["id"]
+    user_id = client.get("/v1/auth/me", headers=h).json()["id"]
+
+    async def record() -> None:
+        rec = DbRecorder(sid, user_id, store_transcripts=True)
+        # Scaled down: t2 is heard at ~0.03 s but held back (to rule out the mic hearing the interviewer) until
+        # 0.15 s, after t3 (0.1 s) was committed.
+        await rec.turn("t1", "interviewer", "Thanks for joining today.", 200, 440)
+        await asyncio.sleep(0.1)
+        await rec.turn("t3", "interviewer", "Okay.", 1280, 1340)
+        await asyncio.sleep(0.05)
+        await rec.turn("t2", "candidate", "Thanks for having me.", 740, 980, held_s=0.12)
+        await rec.close()
+
+    client.portal.call(record)
+    turns = client.get(f"/v1/sessions/{sid}", headers=h).json()["turns"]
+    assert [t["id"] for t in turns] == ["t1", "t2", "t3"]
+
+
 async def test_each_answer_is_noted_and_a_rewrite_replaces_its_note() -> None:
     eng, sink = await _engine(MockLLMProvider())
     await _ask(eng, "Tell me about a time you handled a conflict.")

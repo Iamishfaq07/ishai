@@ -23,7 +23,7 @@ class Spy:
         self.turns: list[tuple[str, str]] = []
         self.questions: list[tuple[str, str]] = []
 
-    async def turn(self, turn_id: str, speaker: str, text: str, *_: Any) -> None:
+    async def turn(self, turn_id: str, speaker: str, text: str, *_: Any, **__: Any) -> None:
         self.turns.append((speaker, text))
 
     async def question(self, qid: str, turn_id: str | None, text: str, qtype: str, *_: Any) -> None:
