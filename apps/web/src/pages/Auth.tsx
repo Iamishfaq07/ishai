@@ -622,7 +622,7 @@ export function VerifyEmailPage() {
         {state === "failed" && error && <ErrorNote>{error}</ErrorNote>}
         {state === "failed" && user && !user.email_verified && <p>Request a fresh link from the banner at the top of any page.</p>}
         {state !== "working" && (
-          <Link to={user ? "/" : "/login"} className={linkClass}>
+          <Link to={user ? "/" : "/login"} className={cx(linkClass, "inline-block")}>
             {user ? "Go to Orbit" : "Sign in"}
           </Link>
         )}
@@ -674,7 +674,7 @@ export function ConfirmEmailChangePage() {
           </Button>
         )}
         {(state === "done" || state === "failed") && (
-          <Link to={state === "done" ? "/login" : "/settings"} className={linkClass}>
+          <Link to={state === "done" ? "/login" : "/settings"} className={cx(linkClass, "inline-block")}>
             {state === "done" ? "Sign in" : "Back to settings"}
           </Link>
         )}

@@ -391,8 +391,10 @@ def reset_email(to: str, token: str) -> OutgoingEmail:
     )
 
 
+# No minimum length: a link cut short (a mail app wrapping it, a partial copy) is answered like any other bad link,
+# "invalid or has expired", not with a validation message about string lengths.
 class TokenIn(BaseModel):
-    token: str = Field(min_length=10, max_length=200)
+    token: str = Field(max_length=200)
 
 
 class ResetRequestIn(BaseModel):
@@ -401,7 +403,7 @@ class ResetRequestIn(BaseModel):
 
 
 class ResetConfirmIn(BaseModel):
-    token: str = Field(min_length=10, max_length=200)
+    token: str = Field(max_length=200)
     password: str = Field(min_length=10, max_length=256)
 
 
