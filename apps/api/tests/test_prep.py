@@ -59,6 +59,19 @@ def test_parse_prep_keeps_only_well_formed_questions() -> None:
     assert out["questions"][1]["category"] == "role"  # unknown category falls back
     with pytest.raises(ValueError):
         parse_prep(json.dumps({"questions": []}), count=8)
+    assert out["ask_them"] == []  # an older answer without questions to ask them
+
+
+def test_prep_also_gives_questions_to_ask_them_at_the_end() -> None:
+    q = {"question": "Why us?", "category": "motivation", "why": "w", "talking_points": [], "suggested_answer": "x"}
+    raw = json.dumps({"questions": [q], "ask_them": [
+        {"question": "What does success look like in the first 90 days?", "why": "Shows you plan to deliver."},
+        {"question": "   ", "why": "dropped: empty"}, "not an object",
+        *({"question": f"Q{i}?", "why": ""} for i in range(6))]})
+    ask = parse_prep(raw, count=8)["ask_them"]
+    assert ask[0] == {"question": "What does success look like in the first 90 days?",
+                      "why": "Shows you plan to deliver."}
+    assert len(ask) == 4  # four at most
 
 
 def test_prep_questions_can_be_practised_in_a_mock_session(client: TestClient) -> None:

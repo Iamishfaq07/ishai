@@ -5,6 +5,7 @@ import {
   Check,
   ChevronDown,
   Copy,
+  MessageCircle,
   Link2,
   Save,
   Sparkles,
@@ -51,7 +52,10 @@ function asMarkdown(p: PrepResponse): string {
           q.talking_points.map((t) => `- ${t}`).join("\n") +
           `\n\n> ${q.suggested_answer}\n`,
       )
-      .join("")
+      .join("") +
+    (p.ask_them?.length
+      ? `\n## Questions to ask them\n\n${p.ask_them.map((a) => `- ${a.question}${a.why ? ` _(${a.why})_` : ""}`).join("\n")}\n`
+      : "")
   );
 }
 
@@ -451,6 +455,25 @@ export function PrepSection({
               );
             })}
           </ol>
+          {result.ask_them && result.ask_them.length > 0 && (
+            <div className="glass-panel rounded-2xl p-4">
+              <h4 className="flex items-center gap-2 font-display text-base font-semibold">
+                <MessageCircle className="h-4 w-4 text-indigo-500" aria-hidden />
+                Questions to ask them
+              </h4>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                For the end, when they ask "Do you have any questions for us?". Pick two that fit how the interview went.
+              </p>
+              <ul className="mt-3 space-y-2.5">
+                {result.ask_them.map((a) => (
+                  <li key={a.question} className="text-sm">
+                    <span className="font-medium text-zinc-900 dark:text-zinc-100">{a.question}</span>
+                    {a.why && <span className="block text-xs text-zinc-500 dark:text-zinc-400">{a.why}</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </section>

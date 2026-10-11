@@ -185,6 +185,8 @@ export interface PrepResponse {
   questions: PrepQuestion[];
   /** False when no resume was available (answers lean on "[fill in]" prompts). */
   grounded_in_resume: boolean;
+  /** Questions to ask them at the end ("Do you have any questions for us?"); absent from older servers. */
+  ask_them?: Array<{ question: string; why: string }>;
 }
 
 export interface CreateSessionRequest {
