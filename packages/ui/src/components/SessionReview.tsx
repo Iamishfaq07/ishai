@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ReviewItem, SessionReview as Review } from "@orbit/types";
-import { ArrowUpRight, CircleCheck, MicOff, Target, type LucideIcon } from "../icons";
+import { ArrowUpRight, CircleCheck, MicOff, RotateCcw, Target, type LucideIcon } from "../icons";
 import { clock, reviewLength } from "../live/answerPace";
 import { cx } from "./cx";
 import { useCountUp } from "./Reveal";
@@ -16,6 +16,8 @@ export interface SessionReviewProps {
   onGenerate: () => Promise<void>;
   /** Re-drill: start a practice round on the weak questions (the caller creates the session and opens it). */
   onDrill?: () => Promise<void>;
+  /** "Try this one again": a practice round on one question of the review (1-based), opened by the caller. */
+  onRetry?: (question: number) => Promise<void>;
 }
 
 /** Scores of 3/5 or lower, or unanswered, are what a drill practises (matches the server's drill_plan). */
@@ -27,7 +29,7 @@ const SCORE_WORD: Record<number, string> = { 1: "Needs work", 2: "Developing", 3
 
 /** Post-call scorecard: overall score, strengths/improvements/practice, and each question graded on what
  * the candidate actually said. Shared by the web session page and the desktop History screen. */
-export function SessionReview({ review, ended, empty = false, onGenerate, onDrill }: SessionReviewProps) {
+export function SessionReview({ review, ended, empty = false, onGenerate, onDrill, onRetry }: SessionReviewProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const generate = async () => {
@@ -89,6 +91,17 @@ export function SessionReview({ review, ended, empty = false, onGenerate, onDril
       setBusy(false);
     }
   };
+  const retry = async (question: number) => {
+    if (!onRetry) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await onRetry(question);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't start the practice round.");
+      setBusy(false);
+    }
+  };
   return (
     <div className="space-y-4">
       <Card className="animate-fade-up">
@@ -127,7 +140,7 @@ export function SessionReview({ review, ended, empty = false, onGenerate, onDril
 
       <div className="space-y-3">
         {review.items.map((item, i) => (
-          <QuestionReview key={i} index={i + 1} item={item} />
+          <QuestionReview key={i} index={i + 1} item={item} busy={busy} onRetry={onRetry ? () => void retry(i + 1) : undefined} />
         ))}
       </div>
     </div>
@@ -200,7 +213,12 @@ function Pips({ score }: { score: number | null }) {
   );
 }
 
-function QuestionReview({ index, item }: { index: number; item: ReviewItem }) {
+function QuestionReview({ index, item, busy = false, onRetry }: {
+  index: number;
+  item: ReviewItem;
+  busy?: boolean;
+  onRetry?: () => void;
+}) {
   return (
     <Card className="animate-fade-up">
       <div className="flex items-start justify-between gap-3">
@@ -228,6 +246,15 @@ function QuestionReview({ index, item }: { index: number; item: ReviewItem }) {
         <div className="mt-3 rounded-lg border-l-2 border-indigo-500 bg-indigo-500/5 px-3 py-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Try saying</p>
           <p className="mt-0.5 text-sm text-zinc-800 dark:text-zinc-200">{item.better}</p>
+        </div>
+      )}
+      {onRetry && (
+        <div className="mt-3">
+          <Button variant="secondary" size="sm" onClick={onRetry} disabled={busy}
+                  title="A short mock round: this question again, out loud, with a follow-up on what was missing"
+                  aria-label={`Try question ${index} again`}>
+            <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Try this one again
+          </Button>
         </div>
       )}
     </Card>

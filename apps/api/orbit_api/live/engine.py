@@ -1003,17 +1003,18 @@ class LiveEngine:
 
     # ---- mock interview ---------------------------------------------------------------------------------------
 
-    async def _on_mock_question(self, qid: str, text: str, is_follow_up: bool) -> None:
-        """Record the AI interviewer's question like a real interviewer turn (transcript, questions, report)."""
+    async def _on_mock_question(self, qid: str, text: str, is_follow_up: bool, question: str) -> None:
+        """Record the AI interviewer's question like a real interviewer turn (transcript, questions, report). `text`
+        is what was said; `question` the question alone (a drill's without its lead line), for the questions list."""
         turn_id = self._new_turn_id()
         now = self.now_ms()
         await self.send("transcript.final", {"turn_id": turn_id, "speaker": "interviewer", "text": text,
                                              "start_ms": now, "end_ms": now})
         self.memory.add_turn("interviewer", text)
         self.memory.questions.append(text)
-        qtype = QuestionType.follow_up if is_follow_up else classify_type(normalize(text))
+        qtype = QuestionType.follow_up if is_follow_up else classify_type(normalize(question))
         await self._rec.turn(turn_id, "interviewer", text, now, now)
-        await self._rec.question(qid, turn_id, text, qtype.value, 1.0, is_follow_up, "mock")
+        await self._rec.question(qid, turn_id, question, qtype.value, 1.0, is_follow_up, "mock")
 
     async def _on_mock_finish(self) -> None:
         # Not self._spawn: end() cancels the engine's own tasks, and this may be running inside the ticker.

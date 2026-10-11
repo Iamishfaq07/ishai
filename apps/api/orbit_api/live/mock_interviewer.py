@@ -138,18 +138,38 @@ def drill_plan(items: list[dict[str, Any]]) -> list[DrillItem]:
 
     usable = [i for i in items if isinstance(i, dict) and str(i.get("question") or "").strip()]
     weakest = sorted((i for i in usable if weak(i)), key=rank)[:MAX_RETRIES]
-    plan = [DrillItem(question=str(i["question"]).strip()[:400], kind="retry", follow_up=n < MAX_DRILL_FOLLOW_UPS,
-                      feedback=(str(i.get("feedback") or "").strip()[:400] or None))
+    plan = [DrillItem(question=bare_question(str(i["question"]))[:400], kind="retry",
+                      follow_up=n < MAX_DRILL_FOLLOW_UPS, feedback=(str(i.get("feedback") or "").strip()[:400] or None))
             for n, i in enumerate(weakest)]
     if not plan:
         return []
     # The short-version drill: prefer a question not already retried (answered, so it has something to condense).
     retried = {d.question for d in plan}
-    others = sorted((i for i in usable if str(i["question"]).strip()[:400] not in retried
+    others = sorted((i for i in usable if bare_question(str(i["question"]))[:400] not in retried
                      and str(i.get("you_said") or "").strip() and rank(i) <= 4), key=rank)
-    concise_q = str(others[0]["question"]).strip()[:400] if others else plan[0].question
+    concise_q = bare_question(str(others[0]["question"]))[:400] if others else plan[0].question
     plan.append(DrillItem(question=concise_q, kind="concise"))
     return plan
+
+
+def bare_question(text: str) -> str:
+    """A review's question without a drill's lead line ("Let's try this one again. …"): reports from before drill
+    questions were recorded bare have it, and a drill of one would open with it twice."""
+    q = text.strip()
+    while True:
+        lead = next((lead for lead in _DRILL_LEAD.values() if lead and q.startswith(lead)), None)
+        if lead is None or len(q) == len(lead):
+            return q
+        q = q[len(lead):].strip()
+
+
+def retry_plan(item: dict[str, Any]) -> list[DrillItem]:
+    """One question from a review again ("Try this one again"), with a follow-up on what the review said was weak."""
+    question = bare_question(str(item.get("question") or ""))[:400]
+    if not question:
+        return []
+    return [DrillItem(question=question, kind="retry", follow_up=True,
+                      feedback=(str(item.get("feedback") or "").strip()[:400] or None))]
 
 
 _PERSONAS: dict[str, str] = {
@@ -253,7 +273,8 @@ _DRILL_LEAD = {
 
 
 Send = Callable[[str, dict[str, Any]], Awaitable[None]]
-OnQuestion = Callable[[str, str, bool], Awaitable[None]]  # (question_id, text, is_follow_up) → record it
+# (question_id, text as spoken, is_follow_up, the question alone: a drill's without its lead line) → record it
+OnQuestion = Callable[[str, str, bool, str], Awaitable[None]]
 OnFinish = Callable[[], Awaitable[None]]
 
 
@@ -411,7 +432,9 @@ class MockInterviewer:
         self.asked.append(asked)
         self._last_speech_ms = None
         self._awaiting = True
-        await self._on_question(qid, text, follow_up)
+        # The transcript keeps what was said; the question (the review's, a drill's) is the question itself, so a
+        # "Try this one again" of it doesn't open with "Let's work on a few questions…" twice.
+        await self._on_question(qid, text, follow_up, drill.question if drill and not follow_up else text)
         await self._send("mock.question", self._question_payload(asked))
 
     def _question_payload(self, asked: _Asked) -> dict[str, Any]:
@@ -469,7 +492,9 @@ class MockInterviewer:
                 return
             item = plan[self._drill_next]
             self._drill_next += 1
-            if not self.asked and item.kind in ("retry", "prep", "story"):
+            if not self.asked and len(plan) == 1 and item.kind == "retry":
+                lead = _DRILL_LEAD["retry"]  # one question again: not "a few questions"
+            elif not self.asked and item.kind in ("retry", "prep", "story"):
                 lead = _DRILL_LEAD[{"prep": "first_prep", "story": "first_story"}.get(item.kind, "first")]
             else:
                 lead = _DRILL_LEAD[item.kind]

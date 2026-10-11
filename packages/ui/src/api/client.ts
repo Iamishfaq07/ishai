@@ -479,8 +479,10 @@ export function createApiClient(options: ApiClientOptions) {
     importJobLink: (url: string) =>
       json<ImportedJobPosting>("/v1/prep/import-link", { method: "POST", body: body({ url }) }),
     /** Re-drill: a new mock session asking this session's weak questions again (from its review). */
-    drillSession: (id: string) =>
-      json<OrbitSession>(`/v1/sessions/${encodeURIComponent(id)}/drill`, { method: "POST" }),
+    /** A mock round on the review's weak questions, or on one question of it (`question`, 1-based) again. */
+    drillSession: (id: string, question?: number) =>
+      json<OrbitSession>(`/v1/sessions/${encodeURIComponent(id)}/drill`,
+        question === undefined ? { method: "POST" } : { method: "POST", body: body({ question }) }),
     retryReport: (id: string) =>
       json<OrbitSession>(`/v1/sessions/${encodeURIComponent(id)}/report/retry`, { method: "POST" }),
     exportSessionMarkdown: async (id: string): Promise<string> =>

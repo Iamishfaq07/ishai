@@ -124,3 +124,6 @@ export { MicOff } from "lucide-react";
 
 // The applications tracker: a job's next date to the calendar, the list to a spreadsheet.
 export { CalendarPlus, Sheet } from "lucide-react";
+
+// "Try this one again" on a reviewed question.
+export { RotateCcw } from "lucide-react";

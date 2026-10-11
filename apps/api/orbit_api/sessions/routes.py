@@ -49,7 +49,7 @@ from orbit_api.live.events import (
     SessionType,
 )
 from orbit_api.live.keyterms import extract_keyterms
-from orbit_api.live.mock_interviewer import MockConfig, drill_plan
+from orbit_api.live.mock_interviewer import MockConfig, drill_plan, retry_plan
 from orbit_api.models import (
     Answer,
     AuditLog,
@@ -401,12 +401,17 @@ async def review_session(session_id: str, user: Annotated[User, Depends(require_
     return report
 
 
+class DrillIn(BaseModel):
+    # One question of the review (1-based), asked again on its own ("Try this one again"); none: the weak ones.
+    question: int | None = Field(None, ge=1, le=100)
+
+
 @router.post("/sessions/{session_id}/drill", response_model=SessionOut, status_code=201,
              dependencies=[Depends(session_limit), Depends(session_user_limit)])
 async def drill_session(session_id: str, user: Annotated[User, Depends(require_verified_user)],
-                        db: Annotated[AsyncSession, Depends(get_db)]) -> SessionOut:
+                        db: Annotated[AsyncSession, Depends(get_db)], body: DrillIn | None = None) -> SessionOut:
     """Re-drill (spec §33): a new mock session that asks this session's weak questions again (from its review),
-    with the same documents, role and interviewer settings."""
+    or one question of it (`question`), with the same documents, role and interviewer settings."""
     row = await _owned(db, session_id, user)
     summary = await db.scalar(select(SessionSummary).where(SessionSummary.session_id == row.id))
     review = (summary.content or {}).get("review") if summary else None
@@ -414,7 +419,14 @@ async def drill_session(session_id: str, user: Annotated[User, Depends(require_v
     if not isinstance(items, list) or not items:
         raise HTTPException(status.HTTP_409_CONFLICT, detail={
             "code": "no_review", "message": "Generate the review first; the drill is built from it."})
-    plan = drill_plan(items)
+    if body is not None and body.question is not None:
+        if body.question > len(items) or not isinstance(items[body.question - 1], dict):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "That question isn't in this session's review.")
+        plan = retry_plan(items[body.question - 1])
+        if not plan:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "That question isn't in this session's review.")
+    else:
+        plan = drill_plan(items)
     if not plan:
         raise HTTPException(status.HTTP_409_CONFLICT, detail={
             "code": "nothing_to_drill", "message": "Nothing to drill: every question scored 4 or higher."})
@@ -424,9 +436,9 @@ async def drill_session(session_id: str, user: Annotated[User, Depends(require_v
     doc_ids = list((await db.scalars(select(SessionDocument.document_id)
                                      .where(SessionDocument.session_id == row.id))).all())
     title = row.title.removeprefix("Drill: ")
-    body = SessionIn(title=f"Drill: {title}"[:300], type="mock", role=row.role, language=row.language,
-                     answer_language=row.answer_language, document_ids=doc_ids, mock=mock)
-    return await create_session(body, user, db)
+    new = SessionIn(title=f"Drill: {title}"[:300], type="mock", role=row.role, language=row.language,
+                    answer_language=row.answer_language, document_ids=doc_ids, mock=mock)
+    return await create_session(new, user, db)
 
 
 def _strip_nul(v: Any) -> Any:
