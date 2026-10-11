@@ -20,6 +20,7 @@ from orbit_api.admin.inbox import router as admin_inbox_router
 from orbit_api.admin.overview import router as admin_overview_router
 from orbit_api.admin.routes import public_router as announcement_router
 from orbit_api.admin.routes import router as admin_router
+from orbit_api.answers.routes import router as answers_router
 from orbit_api.auth.routes import router as auth_router
 from orbit_api.billing.packs import packs as configured_packs
 from orbit_api.billing.routes import router as billing_router
@@ -253,6 +254,7 @@ def create_app() -> FastAPI:
     app.include_router(insights_router)
     app.include_router(companion_router)
     app.include_router(stories_router)
+    app.include_router(answers_router)
     app.include_router(feedback_router)
     app.include_router(resumes_router)
     app.include_router(resume_kit_router)

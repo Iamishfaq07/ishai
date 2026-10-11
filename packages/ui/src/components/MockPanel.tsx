@@ -101,6 +101,11 @@ export function MockPanel({ live, actions, voice, ended, onViewReport }: {
             From your prep
           </span>
         )}
+        {q.drillKind === "answer" && (
+          <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-indigo-800 dark:text-indigo-300" title="A question you've saved an answer to">
+            Your prepared answer
+          </span>
+        )}
         {q.drillKind === "story" && (
           <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-violet-800 dark:text-violet-300" title="A question one of your saved stories answers">
             Story practice

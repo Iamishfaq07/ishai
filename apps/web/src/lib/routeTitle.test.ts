@@ -18,6 +18,7 @@ describe("routeTitle", () => {
   it("keeps Documents and the Story bank apart from Resume AI", () => {
     expect(routeTitle("/documents")).toBe("Documents");
     expect(routeTitle("/documents/stories")).toBe("Story bank");
+    expect(routeTitle("/documents/answers")).toBe("My answers");
   });
 
   it("picks the deeper page first", () => {

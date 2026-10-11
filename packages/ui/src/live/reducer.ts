@@ -133,7 +133,7 @@ export interface LiveViewState {
     isFollowUp: boolean;
     index: number;
     total: number;
-    drillKind: "retry" | "follow_up" | "concise" | "prep" | "story" | null;
+    drillKind: "retry" | "follow_up" | "concise" | "prep" | "story" | "answer" | null;
     /** Salary-negotiation practice: a recruiter on a call, counted in turns. */
     negotiation: boolean;
     /** The server's reading of the question's kind, for "Stuck? Show a structure" (answerHints.ts). */

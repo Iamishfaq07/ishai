@@ -324,6 +324,23 @@ async def test_a_story_from_the_story_bank_is_asked_then_tested_like_a_star_stor
     await eng.end()
 
 
+async def test_a_saved_answer_is_asked_then_its_claims_probed() -> None:
+    plan = [DrillItem(question="Tell me about yourself.", kind="answer", follow_up=True,
+                      feedback="Their prepared answer: I cut checkout p99 latency by 40% at Acme.")]
+    eng, sink, now, llm = await _drill_engine(plan)
+    await sink.wait_for("mock.question")
+    first = sink.of("mock.question")[0]
+    assert first["text"] == "Let's practise one of your prepared answers. Tell me about yourself."
+    assert first["drill_kind"] == "answer" and not llm.prompts
+
+    await _say(eng, now, "I'm a backend engineer at Acme and I cut checkout latency by forty percent")
+    await sink.wait_for("mock.question", 2)
+    assert sink.of("mock.question")[1]["is_follow_up"]
+    prompt = llm.prompts[0]
+    assert 'source="what_to_probe"' in prompt and "p99 latency by 40%" in prompt
+    await eng.end()
+
+
 def test_a_practice_session_keeps_the_questions_and_what_to_probe(client: TestClient) -> None:
     from orbit_api.db import sessionmaker
     from orbit_api.models import LiveSessionRow

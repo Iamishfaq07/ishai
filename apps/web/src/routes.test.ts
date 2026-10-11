@@ -23,6 +23,7 @@ describe("pageFor (what the nav warms before a click)", () => {
   it("keeps Documents its own page", () => {
     expect(pageFor("/documents")).toBe("documents");
     expect(pageFor("/documents/stories")).toBe("stories");
+    expect(pageFor("/documents/answers")).toBe("answers");
   });
 
   it("warms Home at the root (the front page is for signed-out visitors, who don't prefetch)", () => {

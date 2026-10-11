@@ -94,6 +94,8 @@ import type {
   RemoveCreditsRequest,
   RemoveCreditsResult,
   ScreenshotAccepted,
+  SavedAnswer,
+  SavedAnswerInput,
   Story,
   StoryDraftRequest,
   StoryDraftResponse,
@@ -405,6 +407,12 @@ export function createApiClient(options: ApiClientOptions) {
       json<FollowUp>(`/v1/sessions/${encodeURIComponent(id)}/follow-up${refresh ? "?refresh=true" : ""}`, {
         method: "POST",
       }),
+    // Answer bank
+    savedAnswers: () => json<SavedAnswer[]>("/v1/answers"),
+    saveAnswer: (req: SavedAnswerInput) => json<SavedAnswer>("/v1/answers", { method: "POST", body: body(req) }),
+    updateSavedAnswer: (id: string, req: SavedAnswerInput) =>
+      json<SavedAnswer>(`/v1/answers/${encodeURIComponent(id)}`, { method: "PUT", body: body(req) }),
+    deleteSavedAnswer: (id: string) => json<void>(`/v1/answers/${encodeURIComponent(id)}`, { method: "DELETE" }),
     // Story bank
     listStories: () => json<Story[]>("/v1/stories"),
     createStory: (req: StoryInput) => json<Story>("/v1/stories", { method: "POST", body: body(req) }),

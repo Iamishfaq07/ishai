@@ -285,6 +285,24 @@ class Story(TimestampMixin, Base):
     embedding_model: Mapped[str | None] = mapped_column(String(64))
 
 
+class SavedAnswer(TimestampMixin, Base):
+    """An answer bank entry: a question the user has worked out how to answer, in their own words (often a review's
+    "Try saying", edited). Every live session can draw on it, as the stories are, so the copilot's answer to that
+    question starts from the user's prepared one."""
+
+    __tablename__ = "saved_answers"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    question: Mapped[str] = mapped_column(Text)
+    answer: Mapped[str] = mapped_column(Text)
+    # The session whose review it was saved from; SET NULL, so deleting the session keeps the answer.
+    session_id: Mapped[str | None] = mapped_column(ForeignKey("sessions.id", ondelete="SET NULL"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    # Retrieval vector, computed lazily when a session loads the answer (see sessions.routes._load_index).
+    embedding: Mapped[list[float] | None] = mapped_column(EmbeddingType())
+    embedding_model: Mapped[str | None] = mapped_column(String(64))
+
+
 class Resume(TimestampMixin, Base):
     """A resume built in the resume maker: its content and design as JSON (resumes/schema.py), plus the job post it's
     being tailored to. Scored on demand (resumes/ats.py); nothing here is shared with live sessions unless the user

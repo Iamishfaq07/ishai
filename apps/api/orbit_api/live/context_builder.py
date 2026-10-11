@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from functools import cache
 from pathlib import Path
 
+from orbit_api.answers.match import DOC_KIND as ANSWER_KIND
+from orbit_api.answers.match import chunk_question, same_question
 from orbit_api.live.events import (
     AnswerLength,
     AnswerSize,
@@ -310,6 +312,13 @@ def _anchor_hits(index: SessionIndex) -> list[Hit]:
     return [Hit(c, 1.0) for c in anchors]
 
 
+def _prepared_rule(ref: str) -> str:
+    return (f"{ref} is the user's own prepared answer to this question, saved before the interview. Build the answer "
+            "from it: keep its points, examples and numbers, and its wording where it reads naturally aloud; fit it "
+            "to the length target and the exact question asked. Don't swap in a different example or add claims it "
+            "doesn't make.")
+
+
 def retrieve(index: SessionIndex, inputs: PromptInputs, memory: SessionMemory) -> list[Hit]:
     query = inputs.question
     if inputs.is_follow_up and memory.questions:
@@ -337,6 +346,12 @@ def retrieve(index: SessionIndex, inputs: PromptInputs, memory: SessionMemory) -
         hits += [Hit(c, 1.0) for c in about if c.id not in seen]
     if not any(h.chunk.doc_kind == "job_description" for h in hits):
         hits += index.search(query, inputs.qtype, k=2, doc_kind="job_description")
+    # The user's own prepared answer to this very question (the answer bank) leads; one that merely shares words
+    # with it is just another fact, where the search ranked it.
+    prepared = next((h for h in index.search(inputs.question, inputs.qtype, k=3, doc_kind=ANSWER_KIND)
+                     if same_question(chunk_question(h.chunk), inputs.question)), None)
+    if prepared is not None:
+        hits = [prepared] + [h for h in hits if h.chunk.id != prepared.chunk.id]
     return hits
 
 
@@ -348,7 +363,8 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
     facts: dict[str, Hit] = {}
     budget = MAX_CONTEXT_CHARS
     for h in hits:
-        tag = "VERIFIED CANDIDATE FACT" if h.chunk.verified else h.chunk.doc_kind.upper()
+        tag = ("THE USER'S PREPARED ANSWER" if h.chunk.doc_kind == ANSWER_KIND else
+               "VERIFIED CANDIDATE FACT" if h.chunk.verified else h.chunk.doc_kind.upper())
         ref = f"F{len(facts) + 1}"
         prefix = f"{ref} [{tag}] ({h.chunk.label}) "
         # Hits are ranked, so once we can't fit a fact, truncate it rather than skipping to a
@@ -423,6 +439,10 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
         parts.append(f"This question has {len(inputs.parts)} parts. Answer every one, in this order, giving each its "
                      "share (a multi-part answer may run up to a third over the length target), with at least one "
                      f"POINTS label per part:\n{asks}")
+    prepared = next((ref for ref, h in facts.items() if h.chunk.doc_kind == ANSWER_KIND
+                     and same_question(chunk_question(h.chunk), inputs.question)), None)
+    if prepared:
+        parts.append(_prepared_rule(prepared))
     if inputs.unshown:
         parts.append(_unshown_rule(inputs.unshown))
     if inputs.simpler:

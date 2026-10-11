@@ -25,6 +25,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits, jobs
+from orbit_api.answers.routes import MAX_ANSWERS, answer_text
+from orbit_api.answers.routes import index_chunk as answer_chunk
 from orbit_api.auth.guards import require_verified_user
 from orbit_api.auth.security import TICKET_TTL_S, current_user, issue_ticket, redeem_ticket
 from orbit_api.config import get_settings
@@ -57,6 +59,7 @@ from orbit_api.models import (
     DocumentChunk,
     LiveSessionRow,
     Question,
+    SavedAnswer,
     SessionDocument,
     SessionSummary,
     SessionTurn,
@@ -687,6 +690,18 @@ async def _load_index(db: AsyncSession, session_id: str,
         await db.commit()
     chunks += [index_chunk(st, (st.embedding or []) if current and st.embedding_model == embedder.model_id else [])
                for st in stories]
+    # So does the answer bank: the user's own prepared answers, which the copilot starts from when a question
+    # comes up again (live/context_builder.retrieve).
+    saved = (await db.scalars(select(SavedAnswer).where(SavedAnswer.user_id == user_id)
+                              .order_by(SavedAnswer.updated_at.desc()).limit(MAX_ANSWERS))).all()
+    unembedded_answers = [a for a in saved if a.embedding_model != embedder.model_id] if current else []
+    if unembedded_answers:
+        vectors = await asyncio.to_thread(lambda: [embedder.embed(answer_text(a)) for a in unembedded_answers])
+        for a, v in zip(unembedded_answers, vectors, strict=True):
+            a.embedding, a.embedding_model = v, embedder.model_id
+        await db.commit()
+    chunks += [answer_chunk(a, (a.embedding or []) if current and a.embedding_model == embedder.model_id else [])
+               for a in saved]
     return SessionIndex(chunks), chunks
 
 
