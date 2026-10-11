@@ -65,6 +65,8 @@ import type {
   LiveTicket,
   LoginRequest,
   OrbitDocument,
+  JobContact,
+  JobContactInput,
   OrbitSession,
   PracticeQueue,
   PreflightReport,
@@ -473,13 +475,26 @@ export function createApiClient(options: ApiClientOptions) {
     /** Track a job found elsewhere. A 409 "already_tracked" error carries the entry's `id` in `details`. */
     trackManualJob: (req: JobManualTrack) =>
       json<JobTrackerEntry>("/v1/jobs/tracker/manual", { method: "POST", body: body(req) }),
+    /** The people in the job search, follow-ups due first (optionally only those linked to one tracked job). */
+    jobContacts: (applicationId?: string) =>
+      json<JobContact[]>(`/v1/jobs/contacts${applicationId ? `?application_id=${encodeURIComponent(applicationId)}` : ""}`),
+    addJobContact: (input: JobContactInput) => json<JobContact>("/v1/jobs/contacts", { method: "POST", body: body(input) }),
+    updateJobContact: (id: string, patch: Partial<JobContactInput>) =>
+      json<JobContact>(`/v1/jobs/contacts/${encodeURIComponent(id)}`, { method: "PATCH", body: body(patch) }),
+    /** "I got in touch": last contacted now, next follow-up a week out (or none). */
+    jobContactTouched: (id: string, opts: { noFollowUp?: boolean } = {}) =>
+      json<JobContact>(`/v1/jobs/contacts/${encodeURIComponent(id)}/contacted`, {
+        method: "POST",
+        body: body({ no_follow_up: Boolean(opts.noFollowUp) }),
+      }),
+    deleteJobContact: (id: string) => json<void>(`/v1/jobs/contacts/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
     /** Interview prep: likely questions from a job description, with answers drawn from the resume. */
     prep: (req: PrepRequest) => json<PrepResponse>("/v1/prep", { method: "POST", body: body(req) }),
     /** Read a job posting from a link (server-side, SSRF-safe); returns the text to check and edit. */
     importJobLink: (url: string) =>
       json<ImportedJobPosting>("/v1/prep/import-link", { method: "POST", body: body({ url }) }),
-    /** Re-drill: a new mock session asking this session's weak questions again (from its review). */
+    /** The practice queue: questions answered weakly in a review, due again on a spaced schedule. */
     practiceQueue: () => json<PracticeQueue>("/v1/practice/queue"),
     /** A mock round on what's due in the practice queue (409 "nothing_due" when nothing is). */
     practiceQueueDrill: () => json<OrbitSession>("/v1/practice/queue/drill", { method: "POST" }),

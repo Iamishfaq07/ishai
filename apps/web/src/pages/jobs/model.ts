@@ -565,3 +565,12 @@ export function fileSlug(...parts: string[]): string {
       .slice(0, 60) || "job"
   );
 }
+
+/** A contact's follow-up date against today: overdue, today, later, or none. */
+export function followUpState(iso: string | null, now = new Date()): "overdue" | "today" | "later" | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const day = (x: Date) => Date.UTC(x.getFullYear(), x.getMonth(), x.getDate());
+  const diff = day(d) - day(now);
+  return diff < 0 ? "overdue" : diff === 0 ? "today" : "later";
+}

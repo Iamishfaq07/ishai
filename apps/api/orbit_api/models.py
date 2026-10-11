@@ -580,6 +580,30 @@ class JobFitCheck(TimestampMixin, Base):
 # ---- Contact (orbit_api/contact, admin/inbox.py) ----------------------------------------------------------------
 
 
+class JobContact(TimestampMixin, Base):
+    """A person in the user's job search: a referrer, a recruiter, an alum, the hiring manager. Who they are, how to
+    reach them, notes, when the user last got in touch and when to follow up; optionally linked to a tracked job
+    (SET NULL, so removing the job keeps the person)."""
+
+    __tablename__ = "job_contacts"
+    __table_args__ = (Index("ix_job_contacts_user_follow_up", "user_id", "follow_up_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    company: Mapped[str] = mapped_column(String(200), default="")
+    title: Mapped[str] = mapped_column(String(200), default="")
+    relation: Mapped[str] = mapped_column(String(24), default="other")  # referral|recruiter|alum|hiring_manager|...
+    linkedin_url: Mapped[str | None] = mapped_column(Text)
+    email: Mapped[str | None] = mapped_column(String(320))
+    phone: Mapped[str | None] = mapped_column(String(32))
+    notes: Mapped[str] = mapped_column(Text, default="")
+    application_id: Mapped[str | None] = mapped_column(ForeignKey("job_applications.id", ondelete="SET NULL"),
+                                                       index=True)
+    last_contacted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    follow_up_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class ContactMessage(TimestampMixin, Base):
     """A message sent from the Contact page (`POST /v1/contact`), signed in or out, waiting in the admin's Inbox.
 

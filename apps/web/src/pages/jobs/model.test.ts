@@ -3,6 +3,7 @@ import type { JobListing, JobPrefs, JobTrackerEntry } from "@orbit/types";
 import {
   addItem,
   byStatus,
+  followUpState,
   dateInput,
   factsLine,
   fromDateInput,
@@ -211,5 +212,15 @@ describe("Outreach for a job", () => {
     expect(jobAsks({ matched: ["Go", "Kafka"], missing: ["Java", "go", "AWS"] })).toEqual(["Go", "Kafka", "Java", "AWS"]);
     expect(jobAsks({ matched: ["A", "B", "C"], missing: ["D", "E"] }, 4)).toEqual(["A", "B", "C", "D"]);
     expect(jobAsks(null)).toEqual([]);
+  });
+});
+
+describe("followUpState", () => {
+  it("reads a contact's follow-up date against today", () => {
+    const now = new Date(2026, 9, 11, 15, 0);
+    expect(followUpState(null, now)).toBeNull();
+    expect(followUpState(new Date(2026, 9, 9, 12).toISOString(), now)).toBe("overdue");
+    expect(followUpState(new Date(2026, 9, 11, 9).toISOString(), now)).toBe("today");
+    expect(followUpState(new Date(2026, 9, 12, 12).toISOString(), now)).toBe("later");
   });
 });
