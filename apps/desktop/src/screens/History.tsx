@@ -290,6 +290,7 @@ function SessionDetailView({ id, onDeleted, onDrill }: {
             setDetail(await api.getSession(session.id));
           }}
           onDrill={async () => onDrill(await api.drillSession(session.id))}
+          onRetry={async (question) => onDrill(await api.drillSession(session.id, question))}
         />
         <DeliveryCard delivery={detail.summary?.delivery} />
         {session.status === "ended" && session.type !== "mock" && (detail.turns.length > 0 || detail.questions.length > 0) && (

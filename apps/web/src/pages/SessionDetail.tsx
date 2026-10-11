@@ -165,6 +165,11 @@ export function SessionDetailPage() {
             const launch: LiveLaunchState = { systemAudio: false };
             navigate(`/live/${drill.id}`, { state: launch });
           }}
+          onRetry={async (question) => {
+            const drill = await api.drillSession(session.id, question);
+            const launch: LiveLaunchState = { systemAudio: false };
+            navigate(`/live/${drill.id}`, { state: launch });
+          }}
         />
         <DeliveryCard delivery={detail.data.summary?.delivery} />
         {session.status === "ended" && session.type !== "mock" && (detail.data.turns.length > 0 || detail.data.questions.length > 0) && (

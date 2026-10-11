@@ -16,6 +16,7 @@ from orbit_api.live.mock_interviewer import (
     MockConfig,
     answer_silence_ms,
     drill_plan,
+    retry_plan,
 )
 from orbit_api.providers.llm.base import LLMRequest, LLMResponse, Usage
 from orbit_api.providers.llm.mock import MockLLMProvider
@@ -132,6 +133,43 @@ async def test_drill_asks_the_plan_in_order_with_live_follow_ups_then_summarises
     await eng.end()
 
 
+def test_one_question_again_comes_with_a_follow_up_on_what_was_weak() -> None:
+    assert retry_plan(REVIEW_ITEMS[1]) == [DrillItem(question="Describe a conflict with a teammate.", kind="retry",
+                                                     follow_up=True, feedback="No resolution or outcome.")]
+    assert retry_plan(REVIEW_ITEMS[2])[0].feedback is None  # unanswered: nothing said to steer by
+    assert retry_plan({"question": "  ", "feedback": "x"}) == []
+    # A report from before drill questions were recorded bare: the lead line isn't asked twice.
+    old = {"question": "Let's practise the questions from your prep. Tell me about yourself.", "score": 2}
+    assert retry_plan(old)[0].question == "Tell me about yourself."
+    assert drill_plan([old])[0].question == "Tell me about yourself."
+    assert retry_plan({"question": "Let's try this one again. "})[0].question == "Let's try this one again."
+
+
+async def test_one_question_again_opens_without_a_few_questions() -> None:
+    eng, sink, _, _ = await _drill_engine(retry_plan(REVIEW_ITEMS[1]))
+    await sink.wait_for("mock.question")
+    first = sink.of("mock.question")[0]
+    assert first["text"] == "Let's try this one again. Describe a conflict with a teammate."
+    assert first["total"] == 1 and first["drill_kind"] == "retry"
+    await eng.end()
+
+
+async def test_a_drill_question_is_recorded_without_its_lead_line() -> None:
+    """The transcript keeps what the interviewer said; the questions list (the review's) keeps the question itself."""
+    now = {"t": 0.0}
+    sink, spy = Sink(), Spy()
+    plan = [DrillItem(question="Describe a conflict with a teammate.")]
+    eng = LiveEngine(SessionProfile("s1", "mock", "Backend Engineer", "en", "en", dev_mode=True,
+                                    mock=MockConfig(drill=plan, duration_minutes=20)),
+                     LiveSettings(auto_answer=False), send=sink, llm=FollowUpLLM(), stt=MockSTTProvider(),
+                     index=SessionIndex([]), recorder=spy, clock=lambda: now["t"])  # type: ignore[arg-type]
+    await eng.start()
+    await sink.wait_for("mock.question")
+    assert spy.turns[0] == ("interviewer", "Let's try this one again. Describe a conflict with a teammate.")
+    assert spy.questions[0][0] == "Describe a conflict with a teammate."
+    await eng.end()
+
+
 async def test_a_skipped_drill_question_gets_no_follow_up() -> None:
     plan = [DrillItem(question="Q one?", follow_up=True), DrillItem(question="Q two?")]
     eng, sink, _, llm = await _drill_engine(plan)
@@ -183,3 +221,27 @@ def test_drill_endpoint_builds_a_mock_session_from_the_review(client: TestClient
     _seed_review(client, strong, [{"question": "Q", "you_said": "A", "score": 5}])
     r = client.post(f"/v1/sessions/{strong}/drill", headers=h)
     assert r.status_code == 409 and r.json()["detail"]["code"] == "nothing_to_drill"
+
+    # "Try this one again": any one question of the review, even a strong one, on its own.
+    r = client.post(f"/v1/sessions/{strong}/drill", headers=h, json={"question": 1})
+    assert r.status_code == 201, r.text
+    config = _mock_config(client, r.json()["id"])
+    assert config["drill"] == [{"question": "Q", "kind": "retry", "follow_up": True, "feedback": None}]
+    assert config["source_session_id"] == strong and config["duration_minutes"] == 5
+    assert client.post(f"/v1/sessions/{strong}/drill", headers=h, json={"question": 2}).status_code == 404
+    assert client.post(f"/v1/sessions/{strong}/drill", headers=h, json={"question": 0}).status_code == 422
+    assert client.post(f"/v1/sessions/{strong}/drill", headers=other, json={"question": 1}).status_code == 404
+
+
+def _mock_config(client: TestClient, sid: str) -> dict[str, Any]:
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import LiveSessionRow
+
+    async def go() -> dict[str, Any]:
+        async with sessionmaker()() as db:
+            row = await db.get(LiveSessionRow, sid)
+            assert row is not None and row.mock_config is not None
+            return dict(row.mock_config)
+
+    assert client.portal is not None
+    return client.portal.call(go)
