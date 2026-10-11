@@ -264,6 +264,8 @@ export interface ServerEventMap {
     negotiation?: boolean;
     /** What kind of question it is ("behavioral", "system_design", "follow_up"…), for the structure hint. */
     question_type?: string;
+    /** A panel interview: which panelist asks it. */
+    speaker?: { persona: string; name: string; title: string };
   };
   /** Mock interview finished (planned questions or time used up); session.ended follows. */
   "mock.completed": MockRoundSummary;

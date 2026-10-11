@@ -3,7 +3,7 @@
 // for salary practice. Plain data, unit-tested (mockPresets.test.ts).
 import type { CreateSessionRequest, MockConfig } from "@orbit/types";
 
-export type PresetId = "hr5" | "tmay10" | "tech15" | "salary";
+export type PresetId = "hr5" | "tmay10" | "tech15" | "panel15" | "salary";
 
 export interface MockPreset {
   id: PresetId;
@@ -26,6 +26,12 @@ export const PRESETS: MockPreset[] = [
     title: "15-min technical",
     minutes: 15,
     blurb: (role) => (role ? `For ${role}: questions from your resume and the job post.` : "Questions from your resume and the job post you pick."),
+  },
+  {
+    id: "panel15",
+    title: "Panel round",
+    minutes: 15,
+    blurb: () => "Three interviewers take turns: the hiring manager, a senior engineer and HR.",
   },
   { id: "salary", title: "Salary talk (₹)", minutes: 10, blurb: () => `A recruiter offers ${SAMPLE_OFFER}. Practise asking for more.` },
 ];
@@ -67,6 +73,14 @@ function mockFor(id: PresetId): MockConfig {
       };
     case "tech15":
       return { interview_type: "technical", persona: "engineer", difficulty: "medium", duration_minutes: 15 };
+    case "panel15":
+      return {
+        interview_type: "mixed",
+        persona: "hiring_manager",
+        difficulty: "medium",
+        duration_minutes: 15,
+        panel: ["hiring_manager", "engineer", "recruiter"],
+      };
     case "salary":
       return {
         interview_type: "negotiation",
@@ -83,7 +97,14 @@ export function presetSession(id: PresetId, role: string, documentIds: string[])
   const preset = PRESETS.find((p) => p.id === id)!;
   const r = role.trim();
   return {
-    title: id === "salary" ? "Negotiation — sample offer" : id === "tech15" && r ? `Mock — ${r} (technical)` : `Mock — ${preset.title}`,
+    title:
+      id === "salary"
+        ? "Negotiation — sample offer"
+        : id === "tech15" && r
+          ? `Mock — ${r} (technical)`
+          : id === "panel15" && r
+            ? `Panel — ${r}`
+            : `Mock — ${preset.title}`,
     type: "mock",
     ...(r ? { role: r } : {}),
     language: "en",

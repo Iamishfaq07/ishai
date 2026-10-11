@@ -11,6 +11,7 @@ import {
   Target,
   UserRound,
   Users,
+  UsersRound,
   cx,
   focusRing,
   practiceDocumentIds,
@@ -39,7 +40,7 @@ const TYPES: Array<{ value: MockInterviewType; label: string }> = [
   { value: "negotiation", label: "Salary negotiation" },
 ];
 
-const PRESET_ICON: Record<PresetId, LucideIcon> = { hr5: Users, tmay10: UserRound, tech15: Code2, salary: IndianRupee };
+const PRESET_ICON: Record<PresetId, LucideIcon> = { hr5: Users, tmay10: UserRound, tech15: Code2, panel15: UsersRound, salary: IndianRupee };
 
 /**
  * Practice: the AI plays interviewer (spoken with the browser's voice), you answer by voice. A mock starts in one tap
@@ -130,7 +131,7 @@ function MockSetup() {
               </div>
             )}
           </div>
-          <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {PRESETS.map((p) => {
               const Icon = PRESET_ICON[p.id];
               const busy = starting === p.id;

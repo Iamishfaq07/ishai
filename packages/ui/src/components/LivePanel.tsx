@@ -158,7 +158,9 @@ export function LivePanel(props: LivePanelProps) {
   const answer = selectDisplayedAnswer(live);
   const question = selectDisplayedQuestion(live);
   const mockQuestion = useMemo(
-    () => (live.mock && !live.mockCompleted ? { id: live.mock.questionId, text: live.mock.text } : null),
+    () => (live.mock && !live.mockCompleted
+      ? { id: live.mock.questionId, text: live.mock.text, ...(live.mock.speaker ? { speaker: live.mock.speaker.persona } : {}) }
+      : null),
     [live.mock, live.mockCompleted],
   );
   const voice = useInterviewerVoice(mockQuestion, { enabled: Boolean(props.mockInterview) });

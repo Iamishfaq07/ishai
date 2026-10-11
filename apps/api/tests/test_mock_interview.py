@@ -216,3 +216,49 @@ async def test_an_early_question_is_dropped_when_the_candidate_keeps_talking() -
     now["t"] += ANSWER_SILENCE_MS / 1000 + 0.2
     await sink.wait_for("mock.question", 2, timeout=5)
     await eng.handle_client({"type": "session.end", "data": {}})
+
+
+async def test_a_panel_takes_turns_and_a_follow_up_stays_with_who_asked() -> None:
+    import json as _json
+
+    script = [_json.dumps({"question": q, "is_follow_up": f}) for q, f in [
+        ("Hi, I'm Rahul; with me are Meera and Anita. Tell me about yourself.", False),
+        ("What was the hardest part of that?", True),
+        ("I'm Meera. How would you design a rate limiter?", False),
+        ("I'm Anita. Why are you looking to move?", False),
+        ("Tell me about a conflict on your team.", False),
+    ]]
+    llm = MockLLMProvider(script=script)
+    now = {"t": 0.0}
+    sink, spy = Sink(), Spy()
+    eng = LiveEngine(SessionProfile("s1", "mock", "Backend Engineer", "en", "en", dev_mode=True,
+                                    mock=MockConfig(duration_minutes=15,
+                                                    panel=["hiring_manager", "engineer", "recruiter"])),
+                     LiveSettings(auto_answer=False), send=sink, llm=llm, stt=MockSTTProvider(),
+                     index=SessionIndex([]), recorder=spy, clock=lambda: now["t"])  # type: ignore[arg-type]
+    await eng.start()
+    for n, said in enumerate(["I build payment systems at a fintech in Bengaluru and lead the ledger team",
+                              "The backfill of five years of transactions without downtime was the hardest part",
+                              "A token bucket per user in Redis with a sliding window for bursts and a fallback",
+                              "I want to work on a bigger platform with more ownership of the architecture"], start=1):
+        await sink.wait_for("mock.question", n)
+        await _answer(eng, now, said)
+    await sink.wait_for("mock.question", 5)
+    speakers = [q["speaker"]["name"] for q in sink.of("mock.question")]
+    assert speakers == ["Rahul", "Rahul", "Meera", "Anita", "Rahul"]  # the follow-up stays with Rahul
+    assert sink.of("mock.question")[2]["speaker"] == {"persona": "engineer", "name": "Meera",
+                                                       "title": "Senior engineer"}
+    first_prompt = llm.requests[0].messages[-1].content
+    assert "PANEL interview" in first_prompt and "introduces the panel" in first_prompt
+    assert "Meera (speaking for the first time" in llm.requests[1].messages[-1].content
+    await eng.end()
+
+
+def test_a_panel_needs_different_interviewers_and_skips_drills() -> None:
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        MockConfig(panel=["engineer", "engineer"])
+    assert MockConfig(panel=["engineer", "recruiter"]).is_panel
+    assert not MockConfig(panel=["engineer", "recruiter"], drill=[{"question": "Q?"}]).is_panel  # type: ignore[list-item]

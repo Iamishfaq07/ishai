@@ -27,6 +27,15 @@ describe("one-tap mock presets", () => {
     expect(PRESETS.find((p) => p.id === "tech15")!.blurb("SDE")).toContain("For SDE");
   });
 
+  it("seat a panel of three different interviewers", () => {
+    const s = presetSession("panel15", "SDE", []);
+    expect(s.title).toBe("Panel — SDE");
+    expect(s.mock).toMatchObject({ duration_minutes: 15, panel: ["hiring_manager", "engineer", "recruiter"] });
+    expect(new Set(s.mock?.panel).size).toBe(3);
+    expect(s.mock?.drill).toBeUndefined(); // a panel isn't a drill (the server ignores one there)
+    expect(presetSession("panel15", "", []).title).toBe("Mock — Panel round");
+  });
+
   it("negotiate a ₹ offer, never dollars", () => {
     const s = presetSession("salary", "", []);
     expect(s.mock).toMatchObject({ interview_type: "negotiation", persona: "recruiter", negotiation: { offer: SAMPLE_OFFER } });

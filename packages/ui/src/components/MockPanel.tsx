@@ -7,6 +7,15 @@ import type { LiveActions } from "../live/useLiveSession";
 import { cx, focusRing } from "./cx";
 import { Orb } from "./Orb";
 
+/** A panel interview: each panelist's colour, so who's asking reads at a glance. */
+const PANEL_TONE: Record<string, string> = {
+  recruiter: "bg-rose-500",
+  hiring_manager: "bg-indigo-500",
+  engineer: "bg-emerald-600",
+  staff_engineer: "bg-sky-600",
+  executive: "bg-amber-600",
+};
+
 /**
  * Mock interview view: the AI interviewer's question (spoken aloud), whose turn it is, and controls. Orbit never
  * suggests answers here — it's practice; the report afterwards grades what was said.
@@ -64,12 +73,13 @@ export function MockPanel({ live, actions, voice, ended, onViewReport }: {
       </div>
     );
   }
+  const who = q.speaker?.name ?? (q.negotiation ? "Recruiter" : "Interviewer");
   const status = q.negotiation
     ? voice.speaking
       ? "Recruiter speaking…"
       : "Your move — respond out loud. Pause when you're done."
     : voice.speaking
-      ? "Interviewer speaking…"
+      ? `${who} speaking…`
       : "Your turn — answer out loud. Pause when you're done.";
   return (
     <section aria-label="Mock interview" className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
@@ -97,6 +107,15 @@ export function MockPanel({ live, actions, voice, ended, onViewReport }: {
           <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-800 dark:text-emerald-300">Short version · ~30 s</span>
         )}
       </div>
+      {q.speaker && (
+        <p className="-mb-2 flex items-center gap-2 text-sm" aria-label={`Asked by ${q.speaker.name}, ${q.speaker.title}`}>
+          <span aria-hidden="true" className={cx("flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold text-white", PANEL_TONE[q.speaker.persona] ?? "bg-indigo-500")}>
+            {q.speaker.name.slice(0, 1)}
+          </span>
+          <span className="font-medium text-zinc-900 dark:text-zinc-100">{q.speaker.name}</span>
+          <span className="text-zinc-500 dark:text-zinc-400">{q.speaker.title}</span>
+        </p>
+      )}
       <p key={q.questionId} className="animate-fade-up text-xl font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
         {q.text}
       </p>
@@ -131,7 +150,7 @@ export function MockPanel({ live, actions, voice, ended, onViewReport }: {
           <Orb key={voice.speaking ? "speaking" : "listening"} state={voice.speaking ? "composing" : "listening"} size={64} className="relative" />
         </span>
         <span className="text-xs font-medium uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
-          {voice.speaking ? (q.negotiation ? "Recruiter" : "Interviewer") : "Listening to you"}
+          {voice.speaking ? who : "Listening to you"}
         </span>
       </div>
     </section>
