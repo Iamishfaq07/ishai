@@ -9,6 +9,19 @@ export const SESSION_TYPE_LABEL: Record<SessionType, string> = {
   mock: "Mock interview",
 };
 
+/**
+ * The line under a session's title: its type and role, minus what the title already says. A session started without
+ * a name is titled after them ("Phone / room audio", "Interview — SDE II"), and the list shouldn't repeat it.
+ */
+export function sessionKindLine(s: { title: string; type: SessionType; role?: string | null }): string {
+  const title = s.title.trim().toLowerCase();
+  const label = SESSION_TYPE_LABEL[s.type];
+  const role = s.role?.trim();
+  return [title.startsWith(label.toLowerCase()) ? null : label, role && !title.includes(role.toLowerCase()) ? role : null]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export function errText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }

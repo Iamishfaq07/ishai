@@ -1,5 +1,12 @@
 # Implementation log
 
+## Session lists say each thing once (2026-10-11)
+
+- A session started without a name is titled after its type ("Phone / room audio", "Interview — SDE II"), and the
+  line under it repeated that: "Phone / room audio · Phone / room audio · 9:07 PM". Home's recent sessions, Sessions,
+  and the desktop app's Home and History now leave out the type and role when the title already says them; a session
+  you named still shows them ("HackerRank round · Coding interview").
+
 ## Resume AI: a quieter credits line on phones (2026-10-11)
 
 - While you have resume credits, the note above your resumes and in the editor is one short line on phones ("12
