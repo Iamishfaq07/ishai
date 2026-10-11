@@ -77,6 +77,28 @@ export function AllowanceBanner() {
   if (!allowance || allowance.unlimited) return null;
   const left = allowance.credits_left;
   const offer = allowance.upgrade;
+  if (left > 0) {
+    // Credits left: a quiet line, short on phones (where the full sentence took a third of the first screen), the
+    // whole explanation from 640 px up. Out of credits, the full amber note below.
+    return (
+      <div role="note" className="mb-4 flex items-center gap-3 rounded-xl bg-zinc-500/5 px-3 py-2 text-sm text-zinc-700 ring-1 ring-zinc-500/15 dark:text-zinc-300">
+        <Sparkles className="h-4 w-4 shrink-0 text-indigo-500 dark:text-indigo-300" aria-hidden />
+        <span className="min-w-0 flex-1">
+          <strong>{`${left} resume credit${left === 1 ? "" : "s"} left.`}</strong>
+          <span className="sm:hidden"> AI actions use one; the rest is free.</span>
+          <span className="hidden sm:inline">
+            {" "}
+            Each AI import, rewrite, tailoring, cover letter, profile or message uses one; typing, the ATS score and downloads are free.
+            {offer && ` The ${offer.label} pack adds ${offer.resume_credits} credits${offer.interview_minutes ? ` and ${offer.interview_minutes} interview minutes` : ""} for ${priceText(offer.price_inr)}, and they never expire.`}
+          </span>
+        </span>
+        <UpgradeLink className="shrink-0 !px-2.5 !py-1 !text-xs sm:!px-3 sm:!py-1.5 sm:!text-sm">
+          <span className="sm:hidden">Get credits</span>
+          <span className="hidden sm:inline">{offer ? `Get credits · from ${priceText(offer.price_inr)}` : "Get credits"}</span>
+        </UpgradeLink>
+      </div>
+    );
+  }
   return (
     <div
       role="note"
