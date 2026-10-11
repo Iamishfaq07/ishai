@@ -108,6 +108,12 @@ async def grant_welcome(db: AsyncSession, user: User, ip: str) -> bool:
     return True
 
 
+async def never_credited(db: AsyncSession, user_id: str) -> bool:
+    """No credit was ever added to this account: no welcome (its network or inbox had it, or the day's cap was
+    reached), no pack, no admin top-up."""
+    return not await db.scalar(select(exists().where(CreditEntry.user_id == user_id)))
+
+
 async def resume_balance(db: AsyncSession, user_id: str) -> int:
     total = await db.scalar(select(func.coalesce(func.sum(CreditEntry.amount), 0)).where(
         CreditEntry.user_id == user_id, CreditEntry.kind == "resume"))

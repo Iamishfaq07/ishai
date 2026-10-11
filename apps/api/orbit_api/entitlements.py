@@ -218,6 +218,7 @@ async def live_minutes_remaining(db: AsyncSession, user_id: str) -> float | None
 
 async def for_user(db: AsyncSession, user: User) -> dict[str, Any]:
     """Everything a client may show about the user's plan: limits, this month's usage, features."""
+    s = get_settings()
     plan = await plan_for(db, user.id)
     docs = await db.scalar(select(func.count()).select_from(Document).where(Document.user_id == user.id))
     grant_until = user.grant_until if active_grant(user) else None
@@ -231,6 +232,10 @@ async def for_user(db: AsyncSession, user: User) -> dict[str, Any]:
             "resume": None if plan.has("resume_ai") else await credits.resume_balance(db, user.id),
             "interview_minutes_left": round(max(granted_s - used_s, 0) / 60, 1),
             "interview_minutes_total": round(granted_s / 60, 1),
+            # Signed up while the free starter credits were on offer but never got any (they go to one account per
+            # network a month, and one per inbox): the app says why its balance is zero rather than leave a bare 0.
+            "welcome_missed": bool(s.welcome_resume_credits or s.welcome_interview_minutes)
+            and await credits.never_credited(db, user.id),
         }
         # Older clients read limits/usage: show the one interview balance there (live and mock share it).
         limits["live_minutes"] = limits["mock_minutes"] = round(granted_s / 60)

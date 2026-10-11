@@ -213,8 +213,15 @@ function CreditsLine({ credits }: { credits: NonNullable<Entitlements["credits"]
   const low = left < 10;
   return (
     <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-600 dark:text-zinc-300">
-      <span className={cx("font-medium tabular-nums", low && "text-amber-700 dark:text-amber-300")}>
-        {left > 0 ? `${left} interview min left` : "No interview minutes left"}
+      <span
+        className={cx("font-medium tabular-nums", low && "text-amber-700 dark:text-amber-300")}
+        title={
+          left <= 0 && credits.welcome_missed
+            ? "The free starter credits go to one new account per network each month and one per inbox, so this one didn't get them."
+            : undefined
+        }
+      >
+        {left > 0 ? `${left} interview min left` : credits.welcome_missed ? "No free credits on this account" : "No interview minutes left"}
       </span>
       {credits.resume !== null && (
         <span className="tabular-nums">

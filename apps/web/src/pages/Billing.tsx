@@ -4,6 +4,7 @@ import { CircleCheck, CountUp, CreditCard, Crown, Mic, Sparkles, cx, focusRing, 
 import type { CreditPack, Entitlements, UpiOrder } from "@orbit/types";
 import { Button, Card, ErrorNote, PageHeader, Spinner } from "../components/ui";
 import { api } from "../lib/api";
+import { contactHref } from "../lib/contactForm";
 import { errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { RESUME_AI_HOME } from "./resume/paths";
@@ -68,6 +69,19 @@ function CreditRows({ e, wide = false }: { e: Entitlements; wide?: boolean }) {
           : an import, rewrite, tailoring, cover letter, profile or message.
         </Balance>
       </div>
+      {empty && c.welcome_missed && (
+        <p className="rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-3.5 py-2.5 text-sm text-amber-900 dark:text-amber-100">
+          <span className="font-medium">No free credits on this account.</span> The free starter credits go to one new
+          account per network each month (Wi-Fi and mobile data are often shared) and one per inbox, so this one didn't
+          get them. A pack adds credits right away.{" "}
+          <Link
+            to={contactHref({ topic: "payment", from: "/billing" })}
+            className={cx("font-medium text-indigo-700 underline-offset-2 hover:underline dark:text-indigo-300", focusRing)}
+          >
+            Think that's wrong? Tell us
+          </Link>
+        </p>
+      )}
       {empty && wide && (
         <Link to="/billing" className={cx("inline-flex items-center gap-1.5 text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
           <Crown className="h-4 w-4 text-amber-500" aria-hidden="true" /> Top up with a pack, paid once over UPI

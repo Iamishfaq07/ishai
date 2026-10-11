@@ -96,7 +96,8 @@ def test_entitlements_report_limits_usage_and_features(monkeypatch: pytest.Monke
         # Free: one interview balance (the 20 welcome minutes) that live and mock both draw on.
         assert e["plan"] == "free" and e["limits"]["live_minutes"] == 20 and e["limits"]["max_session_minutes"] == 60
         assert e["usage"] == {"live_minutes": 12.0, "mock_minutes": 12.0, "screenshots": 0, "documents": 1}
-        assert e["credits"] == {"resume": 1, "interview_minutes_left": 8.0, "interview_minutes_total": 20.0}
+        assert e["credits"] == {"resume": 1, "interview_minutes_left": 8.0, "interview_minutes_total": 20.0,
+                                "welcome_missed": False}
         assert e["features"]["vision"] is True and e["features"]["system_design"] is False
 
 
