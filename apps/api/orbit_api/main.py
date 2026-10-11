@@ -38,6 +38,7 @@ from orbit_api.job_portal.refresh import running_refresher as running_job_refres
 from orbit_api.job_portal.routes import router as jobs_router
 from orbit_api.observability import configure_logging, init_sentry, request_id_middleware
 from orbit_api.preflight import router as preflight_router
+from orbit_api.prep.company_guides import router as company_guides_router
 from orbit_api.prep.routes import router as prep_router
 from orbit_api.providers import health as dependency_health
 from orbit_api.providers.llm import get_llm_provider
@@ -251,6 +252,7 @@ def create_app() -> FastAPI:
     app.include_router(preflight_router)
     app.include_router(billing_router)
     app.include_router(prep_router)
+    app.include_router(company_guides_router)
     app.include_router(insights_router)
     app.include_router(companion_router)
     app.include_router(stories_router)

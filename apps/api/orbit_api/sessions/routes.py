@@ -651,8 +651,9 @@ async def _session_company(db: AsyncSession, row: LiveSessionRow) -> str | None:
         ws = await db.get(Workspace, row.workspace_id)
         if ws is not None and ws.user_id == row.user_id and (ws.company or "").strip():
             return (ws.company or "").strip()[:120]
-    negotiation = (row.mock_config or {}).get("negotiation")
-    company = negotiation.get("company") if isinstance(negotiation, dict) else None
+    mock = row.mock_config or {}
+    negotiation = mock.get("negotiation")
+    company = negotiation.get("company") if isinstance(negotiation, dict) else mock.get("company")
     return company.strip()[:120] if isinstance(company, str) and company.strip() else None
 
 

@@ -146,6 +146,20 @@ export interface MockConfig {
   }>;
   /** Required when interview_type is "negotiation". */
   negotiation?: NegotiationSetup;
+  /** The company being practised for: a known one is interviewed in its style (GET /v1/interview-styles). A
+   *  negotiation names its company in `negotiation` instead. */
+  company?: string;
+}
+
+/** GET /v1/interview-styles: how a well-known company interviews, as candidates commonly report it. */
+export interface CompanyStyle {
+  slug: string;
+  name: string;
+  aliases: string[];
+  rounds: string[];
+  looks_for: string[];
+  questions: string[];
+  tips: string[];
 }
 
 /** POST /v1/prep — likely interview questions from a job description, answered from the resume. */
