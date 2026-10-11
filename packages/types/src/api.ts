@@ -131,6 +131,8 @@ export interface MockConfig {
   difficulty?: MockDifficulty;
   duration_minutes: number;
   persona?: MockPersona;
+  /** A panel interview: two or three different interviewers taking turns (not for drills or negotiations). */
+  panel?: MockPersona[];
   /** A fixed list of questions, asked in order (re-drills, or questions from interview prep: kind "prep"). */
   drill?: Array<{
     question: string;

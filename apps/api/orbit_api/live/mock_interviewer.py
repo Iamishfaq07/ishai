@@ -78,12 +78,21 @@ class MockConfig(BaseModel):
     drill: list[DrillItem] | None = Field(None, max_length=8)
     source_session_id: str | None = Field(None, max_length=36)
     negotiation: NegotiationSetup | None = None
+    # A panel interview: two or three interviewers taking turns, each new topic from the next one, a follow-up from
+    # whoever asked the topic. Not for drills or negotiations (one voice each).
+    panel: list[Persona] | None = Field(None, min_length=2, max_length=3)
 
     @model_validator(mode="after")
     def _negotiation_needs_an_offer(self) -> "MockConfig":
         if self.interview_type == "negotiation" and self.negotiation is None:
             raise ValueError("a salary negotiation needs the offer to negotiate")
+        if self.panel and len(set(self.panel)) != len(self.panel):
+            raise ValueError("each panelist is a different interviewer")
         return self
+
+    @property
+    def is_panel(self) -> bool:
+        return bool(self.panel) and not self.drill and not self.is_negotiation
 
     @property
     def is_negotiation(self) -> bool:
@@ -181,6 +190,14 @@ _PERSONAS: dict[str, str] = {
     "staff_engineer": "a staff engineer, probing architecture, scale, ambiguity and long-term technical judgement",
     "executive": "an executive, probing strategy, business impact, leadership and clarity at a high level",
 }
+# Who sits on a panel: a name to introduce themselves with and the title the panel shows.
+PANELISTS: dict[str, tuple[str, str]] = {
+    "recruiter": ("Anita", "Recruiter"),
+    "hiring_manager": ("Rahul", "Hiring manager"),
+    "engineer": ("Meera", "Senior engineer"),
+    "staff_engineer": ("Arjun", "Staff engineer"),
+    "executive": ("Vikram", "Director"),
+}
 _TYPES: dict[str, str] = {
     "behavioral": "behavioral questions (past situations, conflict, failure, leadership)",
     "technical": "technical/conceptual questions for the role",
@@ -260,6 +277,7 @@ class _Asked:
     is_follow_up: bool
     answer: list[str] = field(default_factory=list)
     drill: DrillItem | None = None
+    speaker: str | None = None  # a panel interview: the panelist (persona) who asked it
 
 
 _DRILL_LEAD = {
@@ -425,11 +443,24 @@ class MockInterviewer:
             if self._topics() >= self.config.planned_questions and not follow_up:
                 await self._finish()  # the model wanted a new topic but the plan is complete
                 return
-            await self._put(text, follow_up)
+            await self._put(text, follow_up, speaker=self._panelist(follow_up))
 
-    async def _put(self, text: str, follow_up: bool, drill: DrillItem | None = None) -> None:
+    def _panelist(self, follow_up: bool) -> str | None:
+        """A panel interview: who asks next. A follow-up stays with whoever asked the topic; a new topic goes to the
+        next panelist in turn."""
+        panel = self.config.panel if self.config.is_panel else None
+        if not panel:
+            return None
+        if follow_up:
+            topic_by = next((a.speaker for a in reversed(self.asked) if not a.is_follow_up), None)
+            if topic_by:
+                return topic_by
+        return panel[self._topics() % len(panel)]
+
+    async def _put(self, text: str, follow_up: bool, drill: DrillItem | None = None,
+                   speaker: str | None = None) -> None:
         qid = str(uuid.uuid4())
-        asked = _Asked(qid, text, follow_up, drill=drill)
+        asked = _Asked(qid, text, follow_up, drill=drill, speaker=speaker)
         self.asked.append(asked)
         self._last_speech_ms = None
         self._awaiting = True
@@ -454,6 +485,9 @@ class MockInterviewer:
                                                                             else "retry")
         if negotiation:
             payload["negotiation"] = True
+        if asked.speaker in PANELISTS:
+            name, title = PANELISTS[asked.speaker]
+            payload["speaker"] = {"persona": asked.speaker, "name": name, "title": title}
         return payload
 
     async def _ask_next_negotiation(self, now_ms: int) -> None:
@@ -584,7 +618,10 @@ class MockInterviewer:
         role = f" for {self._role}" if self._role else ""
         if self._company:
             role += f" at {self._company}"
-        system = _SYSTEM.format(persona=_PERSONAS[cfg.persona], role=role, difficulty=_DIFFICULTY[cfg.difficulty],
+        panel = cfg.panel if cfg.is_panel else None
+        persona = (f"a panel of {len(panel)} interviewers ({', '.join(PANELISTS[p][0] for p in panel)})" if panel
+                   else _PERSONAS[cfg.persona])
+        system = _SYSTEM.format(persona=persona, role=role, difficulty=_DIFFICULTY[cfg.difficulty],
                                 focus=_TYPES[cfg.interview_type])
         follow_ups = self._follow_ups_in_topic()
         if follow_up_on is not None and follow_up_on.kind == "prep":
@@ -608,6 +645,10 @@ class MockInterviewer:
             if follow_up_on.feedback:
                 steer += (f"\n<reference_data source=\"previous_feedback\">\n{fence(follow_up_on.feedback)}\n"
                           "</reference_data>")
+        elif not self.asked and panel:
+            first = PANELISTS[panel[0]][0]
+            steer = (f"This is the first question: {first} opens the interview with one short greeting, introduces "
+                     "the panel in one sentence (names and roles), then asks it (is_follow_up false).")
         elif not self.asked:
             steer = "This is the first question: open the interview naturally (one short greeting, then the question)."
         elif follow_ups >= MAX_FOLLOW_UPS_PER_TOPIC:
@@ -615,6 +656,22 @@ class MockInterviewer:
         else:
             steer = (f"Topics so far: {self._topics()} of about {cfg.planned_questions}. Decide: a follow-up on the "
                      "last answer if it was vague or incomplete, otherwise a new topic.")
+        if panel:
+            # Who speaks depends on the choice the model makes: a follow-up from the topic's asker, a new topic from
+            # the next panelist (the server holds them to it: _panelist).
+            spoke = {a.speaker for a in self.asked}
+            now_by, next_by = self._panelist(True), self._panelist(False)
+            people = "; ".join(f"{PANELISTS[p][0]}, {_PERSONAS[p]}" for p in panel)
+
+            def says(p: str | None) -> str:
+                if p is None:
+                    return "the panel"
+                name = PANELISTS[p][0]
+                return name if p in spoke else f"{name} (speaking for the first time: they give their name and role " \
+                                                 "in a few words first)"
+            steer += (f"\nThis is a PANEL interview: {people}. A follow-up is asked by {says(now_by)}, in their "
+                      f"style; a new topic is asked by {says(next_by)}, in their style. Write only what that person "
+                      "says, without a name label.")
         # The transcript window is the last few exchanges; the topics list keeps a long round from circling back.
         covered = [a.text[:160] for a in self.asked if not a.is_follow_up]
         topics = ("<reference_data source=\"topics_already_covered\">\n" + fence("\n".join(covered))

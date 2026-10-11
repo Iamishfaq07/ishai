@@ -127,3 +127,6 @@ export { CalendarPlus, Sheet } from "lucide-react";
 
 // "Try this one again" on a reviewed question.
 export { RotateCcw } from "lucide-react";
+
+// The Panel round preset (several interviewers).
+export { UsersRound } from "lucide-react";

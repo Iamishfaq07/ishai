@@ -138,6 +138,8 @@ export interface LiveViewState {
     negotiation: boolean;
     /** The server's reading of the question's kind, for "Stuck? Show a structure" (answerHints.ts). */
     questionType?: string;
+    /** A panel interview: who's asking. */
+    speaker?: { persona: string; name: string; title: string };
   } | null;
   mockCompleted: boolean;
   mockSummary: MockRoundSummary | null;
@@ -461,6 +463,7 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
         mock: { questionId: action.data.question_id, text: action.data.text, isFollowUp: action.data.is_follow_up,
           drillKind: action.data.drill_kind ?? null, negotiation: Boolean(action.data.negotiation),
           ...(action.data.question_type ? { questionType: action.data.question_type } : {}),
+          ...(action.data.speaker ? { speaker: action.data.speaker } : {}),
                 index: action.data.index, total: action.data.total },
       };
     case "mock.completed":
