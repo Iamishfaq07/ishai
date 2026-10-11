@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { answerHint } from "../live/answerHints";
+import { oneWayPhase } from "../live/oneWay";
 import { answerBand, answerWords, bandLabel, clock, paceState } from "../live/answerPace";
 import type { LiveViewState } from "../live/reducer";
 import type { InterviewerVoice } from "../live/useInterviewerVoice";
@@ -80,7 +81,9 @@ export function MockPanel({ live, actions, voice, ended, onViewReport }: {
       : "Your move — respond out loud. Pause when you're done."
     : voice.speaking
       ? `${who} speaking…`
-      : "Your turn — answer out loud. Pause when you're done.";
+      : q.oneWay
+        ? "Your turn — answer to the camera. It moves on when the time is up."
+        : "Your turn — answer out loud. Pause when you're done.";
   return (
     <section aria-label="Mock interview" className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
       <div className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
@@ -136,7 +139,12 @@ export function MockPanel({ live, actions, voice, ended, onViewReport }: {
       {!voice.supported && (
         <p className="text-xs text-amber-700 dark:text-amber-300">This device has no speech voice — read the question above.</p>
       )}
-      {!q.negotiation && <AnswerTimer key={`timer-${q.questionId}`} live={live} q={q} />}
+      {q.oneWay ? (
+        <OneWayClock key={`oneway-${q.questionId}`} think={q.oneWay.think_seconds} answer={q.oneWay.answer_seconds} onTimeUp={actions.mockNext} />
+      ) : (
+        !q.negotiation && <AnswerTimer key={`timer-${q.questionId}`} live={live} q={q} />
+      )}
+      {q.oneWay && <SelfView />}
       {!q.negotiation && <StructureHint key={`hint-${q.questionId}`} q={q} />}
       {/* Who has the floor, at a glance from across the room: the interviewer talking, or Orbit listening to you. */}
       <div aria-hidden="true" className="flex min-h-48 flex-1 flex-col items-center justify-center gap-10">
@@ -248,5 +256,108 @@ function StructureHint({ q }: { q: NonNullable<LiveViewState["mock"]> }) {
         </ol>
       </div>
     </details>
+  );
+}
+
+/**
+ * A one-way (HireVue-style) prompt's clock (live/oneWay.ts): thinking time, then the answer time running down, and
+ * the next prompt when it's up, as on those platforms. The server moves on a moment later by itself if this can't.
+ */
+function OneWayClock({ think, answer, onTimeUp }: { think: number; answer: number; onTimeUp: () => void }) {
+  const [start] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  const fired = useRef(false);
+  const p = oneWayPhase((now - start) / 1000, think, answer);
+  useEffect(() => {
+    if (p.phase === "over") return;
+    const id = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(id);
+  }, [p.phase]);
+  useEffect(() => {
+    if (p.phase === "over" && !fired.current) {
+      fired.current = true;
+      onTimeUp();
+    }
+  }, [p.phase, onTimeUp]);
+  const thinking = p.phase === "think";
+  return (
+    <div role="group" aria-label="Time for this prompt" className="max-w-md space-y-1.5">
+      <div className="flex items-baseline justify-between gap-2 text-sm">
+        <span className={cx("text-xs font-semibold uppercase tracking-[0.12em]", thinking ? "text-sky-700 dark:text-sky-300" : "text-rose-700 dark:text-rose-300")}>
+          {thinking ? "Thinking time" : p.phase === "answer" ? "Answer time" : "Time's up"}
+        </span>
+        <span className="font-display text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-50" aria-live="off">
+          {clock(p.left)}
+        </span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-zinc-500/15" aria-hidden="true">
+        <span
+          className={cx("block h-full rounded-full transition-[width] duration-300 ease-linear motion-reduce:transition-none", thinking ? "bg-sky-500" : "bg-rose-500")}
+          style={{ width: `${(1 - p.progress) * 100}%` }}
+        />
+      </div>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+        {thinking
+          ? `Plan your answer. Recording-style: you'll have ${clock(answer)} to answer, and it moves on when time's up.`
+          : "Look at the camera, not the screen. Finish your point before the time runs out."}
+      </p>
+    </div>
+  );
+}
+
+/** Your own camera, mirrored, as a one-way interview shows it: on this device only, never recorded or sent. */
+function SelfView() {
+  const [on, setOn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const video = useRef<HTMLVideoElement | null>(null);
+  useEffect(() => {
+    if (!on) return;
+    let stream: MediaStream | null = null;
+    let cancelled = false;
+    navigator.mediaDevices
+      ?.getUserMedia({ video: { width: 320, height: 240, facingMode: "user" }, audio: false })
+      .then((s) => {
+        if (cancelled) {
+          s.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        stream = s;
+        if (video.current) video.current.srcObject = s;
+      })
+      .catch(() => {
+        setError("The camera isn't available. Check the browser's permission for it.");
+        setOn(false);
+      });
+    return () => {
+      cancelled = true;
+      stream?.getTracks().forEach((t) => t.stop());
+    };
+  }, [on]);
+  if (typeof navigator === "undefined" || !navigator.mediaDevices) return null;
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => {
+          setError(null);
+          setOn(!on);
+        }}
+        aria-pressed={on}
+        className={cx("text-xs font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}
+      >
+        {on ? "Hide my camera" : "Show my camera, to practise looking at it"}
+      </button>
+      {on && (
+        <video
+          ref={video}
+          autoPlay
+          muted
+          playsInline
+          aria-label="Your camera (only on this device, not recorded)"
+          className="w-48 -scale-x-100 rounded-xl bg-zinc-900 ring-1 ring-zinc-200 dark:ring-white/10"
+        />
+      )}
+      {error && <p className="text-xs text-amber-700 dark:text-amber-300">{error}</p>}
+    </div>
   );
 }

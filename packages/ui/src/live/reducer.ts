@@ -140,6 +140,8 @@ export interface LiveViewState {
     questionType?: string;
     /** A panel interview: who's asking. */
     speaker?: { persona: string; name: string; title: string };
+    /** A one-way interview: the prompt's thinking and answer time. */
+    oneWay?: { think_seconds: number; answer_seconds: number };
   } | null;
   mockCompleted: boolean;
   mockSummary: MockRoundSummary | null;
@@ -464,6 +466,7 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
           drillKind: action.data.drill_kind ?? null, negotiation: Boolean(action.data.negotiation),
           ...(action.data.question_type ? { questionType: action.data.question_type } : {}),
           ...(action.data.speaker ? { speaker: action.data.speaker } : {}),
+          ...(action.data.one_way ? { oneWay: action.data.one_way } : {}),
                 index: action.data.index, total: action.data.total },
       };
     case "mock.completed":

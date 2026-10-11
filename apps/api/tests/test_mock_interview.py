@@ -262,3 +262,38 @@ def test_a_panel_needs_different_interviewers_and_skips_drills() -> None:
         MockConfig(panel=["engineer", "engineer"])
     assert MockConfig(panel=["engineer", "recruiter"]).is_panel
     assert not MockConfig(panel=["engineer", "recruiter"], drill=[{"question": "Q?"}]).is_panel  # type: ignore[list-item]
+
+
+async def test_a_one_way_interview_waits_out_the_answer_time_not_a_pause() -> None:
+    import json as _json
+
+    from orbit_api.live.mock_interviewer import OneWaySetup
+
+    script = [_json.dumps({"question": q, "is_follow_up": True}) for q in
+              ["Welcome. Tell us about a project you're proud of.", "Describe a time you missed a deadline."]]
+    llm = MockLLMProvider(script=script)
+    now = {"t": 0.0}
+    sink, spy = Sink(), Spy()
+    config = MockConfig(duration_minutes=15, one_way=OneWaySetup(think_seconds=10, answer_seconds=30),
+                        panel=["engineer", "recruiter"])  # one-way has one voice: the panel is ignored
+    eng = LiveEngine(SessionProfile("s1", "mock", "Backend Engineer", "en", "en", dev_mode=True, mock=config),
+                     LiveSettings(auto_answer=False), send=sink, llm=llm, stt=MockSTTProvider(),
+                     index=SessionIndex([]), recorder=spy, clock=lambda: now["t"])  # type: ignore[arg-type]
+    await eng.start()
+    await sink.wait_for("mock.question")
+    first = sink.of("mock.question")[0]
+    assert first["one_way"] == {"think_seconds": 10, "answer_seconds": 30} and "speaker" not in first
+    assert first["is_follow_up"] is False and first["total"] == 10  # 15 min of 40 s prompts, capped at 10
+    assert "ONE-WAY recorded video interview" in llm.requests[0].messages[-1].content
+
+    await asyncio.sleep(0.3)  # a tick sees the prompt out
+    await _answer(eng, now, "I led the payments ledger migration to event sourcing with zero downtime")
+    now["t"] += 5  # a long pause: in a one-way interview that's not the end of the answer
+    await asyncio.sleep(0.5)
+    assert len(sink.of("mock.question")) == 1
+
+    now["t"] += 45  # past thinking + answer time and the grace
+    await sink.wait_for("mock.question", 2)
+    second = sink.of("mock.question")[1]
+    assert second["is_follow_up"] is False and second["index"] == 2  # never a follow-up, even if the model says so
+    await eng.end()

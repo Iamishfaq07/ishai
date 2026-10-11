@@ -3,7 +3,7 @@
 // for salary practice. Plain data, unit-tested (mockPresets.test.ts).
 import type { CreateSessionRequest, MockConfig } from "@orbit/types";
 
-export type PresetId = "hr5" | "tmay10" | "tech15" | "panel15" | "salary";
+export type PresetId = "hr5" | "tmay10" | "tech15" | "panel15" | "oneway10" | "salary";
 
 export interface MockPreset {
   id: PresetId;
@@ -32,6 +32,12 @@ export const PRESETS: MockPreset[] = [
     title: "Panel round",
     minutes: 15,
     blurb: () => "Three interviewers take turns: the hiring manager, a senior engineer and HR.",
+  },
+  {
+    id: "oneway10",
+    title: "Video interview",
+    minutes: 10,
+    blurb: () => "One-way, HireVue-style: 30 s to think, 90 s to answer each prompt, on camera.",
   },
   { id: "salary", title: "Salary talk (₹)", minutes: 10, blurb: () => `A recruiter offers ${SAMPLE_OFFER}. Practise asking for more.` },
 ];
@@ -80,6 +86,14 @@ function mockFor(id: PresetId): MockConfig {
         difficulty: "medium",
         duration_minutes: 15,
         panel: ["hiring_manager", "engineer", "recruiter"],
+      };
+    case "oneway10":
+      return {
+        interview_type: "behavioral",
+        persona: "recruiter",
+        difficulty: "medium",
+        duration_minutes: 10,
+        one_way: { think_seconds: 30, answer_seconds: 90 },
       };
     case "salary":
       return {
