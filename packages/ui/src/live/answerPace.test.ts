@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { answerBand, answerWords, bandLabel, clock, paceState } from "./answerPace";
+import { answerBand, answerWords, bandLabel, clock, paceState, reviewLength } from "./answerPace";
 import type { TurnView } from "./reducer";
 
 const turn = (turn_id: string, speaker: TurnView["speaker"], text: string, echo = false): TurnView => ({
@@ -39,5 +39,12 @@ describe("answer pace", () => {
     };
     expect(answerWords({ turnOrder: ["a", "q", "b", "e", "c"], turns }, 1)).toBe(7);
     expect(answerWords({ turnOrder: ["a"], turns }, 1)).toBe(0);
+  });
+
+  it("flags a reviewed answer that was very short or ran long", () => {
+    expect(reviewLength(12)).toBe("short");
+    expect(reviewLength(20)).toBeNull();
+    expect(reviewLength(120)).toBeNull();
+    expect(reviewLength(150)).toBe("long");
   });
 });

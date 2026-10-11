@@ -48,3 +48,9 @@ export function answerWords(live: Pick<LiveViewState, "turnOrder" | "turns">, fr
   }
   return words;
 }
+
+/** An answered question's length in the review: under 20 s is thin, over 2 min runs long (the full answer's band). */
+export function reviewLength(seconds: number): "short" | "long" | null {
+  if (seconds < 20) return "short";
+  return seconds > answerBand({ isFollowUp: false, drillKind: null }).max ? "long" : null;
+}

@@ -324,6 +324,10 @@ export interface ReviewItem {
   feedback: string;
   /** A stronger way to say it (first person). */
   better: string;
+  /** How long the answer ran, first word to last (null when unanswered or unknown; absent on older reports). */
+  answer_s?: number | null;
+  /** Words in the answer (absent on older reports). */
+  words?: number;
 }
 
 export interface SessionReview {
