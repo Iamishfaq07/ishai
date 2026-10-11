@@ -200,7 +200,7 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                 The skills this job asks for, read the way screening software reads them. The match also weighs the title, place, experience and how recent it is.
               </p>
-              <SkillsMatch match={job.match} missing={6} className="mt-3 text-sm" />
+              <SkillsMatch match={job.match} missing={8} chips className="mt-3 text-sm" />
             </Card>
           )}
 
@@ -211,13 +211,13 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-aurora-400/10 text-indigo-600 ring-1 ring-indigo-500/20 dark:text-indigo-300">
                 <Sparkles className="h-5 w-5" aria-hidden />
               </span>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 basis-56">
                 <h2 className="font-display text-base font-semibold">Check my fit</h2>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">
                   The AI compares your resume with this job: why you fit, the gaps, and honest tweaks. Free, a few a day.
                 </p>
               </div>
-              <Button onClick={actions.checkFit}>
+              <Button onClick={actions.checkFit} className="w-full sm:w-auto">
                 <Sparkles className="h-4 w-4" aria-hidden /> Check my fit
               </Button>
             </Card>

@@ -11,6 +11,7 @@ import {
   Clock,
   FileText,
   MapPin,
+  Plus,
   Sparkles,
   Target,
   Wand2,
@@ -211,10 +212,17 @@ export function MatchBadge({ match, big = false }: { match: JobMatch; big?: bool
 }
 
 /** The skills the job asks for that the resume shows (ticked), and up to `missing` of those it doesn't. */
-export function SkillsMatch({ match, missing = 4, className }: { match: JobMatch; missing?: number; className?: string }) {
+export function SkillsMatch({ match, missing = 4, chips = false, className }: {
+  match: JobMatch;
+  missing?: number;
+  /** The missing skills as outlined chips (the job page), not a line of text (a card). */
+  chips?: boolean;
+  className?: string;
+}) {
   if (!match.matched.length && !match.missing.length) return null;
   return (
     <div className={cx("space-y-1.5 text-xs", className)}>
+      {match.matched.length > 0 && chips && <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">On your resume</p>}
       {match.matched.length > 0 && (
         <ul className="flex flex-wrap gap-1.5" aria-label="Skills you have that this job asks for">
           {match.matched.map((s) => (
@@ -224,7 +232,22 @@ export function SkillsMatch({ match, missing = 4, className }: { match: JobMatch
           ))}
         </ul>
       )}
-      {match.missing.length > 0 && (
+      {match.missing.length > 0 && chips && (
+        <p className={cx("text-xs font-medium text-zinc-500 dark:text-zinc-400", match.matched.length > 0 && "pt-1")}>Not on your resume</p>
+      )}
+      {match.missing.length > 0 && chips && (
+        <ul className="flex flex-wrap gap-1.5" aria-label="Skills this job asks for that are not on your resume">
+          {match.missing.slice(0, missing).map((s) => (
+            <li key={s} className="inline-flex items-center gap-1 rounded-full border border-dashed border-zinc-300 px-2 py-0.5 text-zinc-600 dark:border-white/15 dark:text-zinc-300">
+              <Plus className="h-3 w-3 text-zinc-400" aria-hidden /> {s}
+            </li>
+          ))}
+          {match.missing.length > missing && (
+            <li className="px-1 py-0.5 text-zinc-500 dark:text-zinc-400">+{match.missing.length - missing} more</li>
+          )}
+        </ul>
+      )}
+      {match.missing.length > 0 && !chips && (
         <p className="text-zinc-500 dark:text-zinc-400">
           <span className="font-medium">Not on your resume:</span> {match.missing.slice(0, missing).join(", ")}
         </p>
