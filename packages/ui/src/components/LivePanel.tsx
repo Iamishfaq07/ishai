@@ -11,6 +11,7 @@ import { formatElapsed, useElapsed } from "../hooks/useElapsed";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useStickyScroll } from "../hooks/useStickyScroll";
 import { resizeTarget } from "../live/answerSize";
+import { currentRun, nudgeFor } from "../live/deliveryNudge";
 import { DEFAULT_HOTKEYS, useHotkeys, type HotkeyMap } from "../live/hotkeys";
 import { CODING_LANGUAGES } from "../live/preferences";
 import { historyLabel, useAnswerHistory, type AnswerHistory } from "../live/useAnswerHistory";
@@ -42,6 +43,7 @@ import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
+  Gauge,
   Maximize2,
   MessageSquare,
   Minimize2,
@@ -428,6 +430,7 @@ export function LivePanel(props: LivePanelProps) {
             {...(canResize ? { onShorter, onLonger, onSimpler } : {})}
             {...(offerLanguage ? { onCodeLanguage: codeLanguage } : {})}
           />
+          <DeliveryNudge live={live} active={!ended && !paused} />
           </>
           )}
         </main>
@@ -547,6 +550,46 @@ export function LivePanel(props: LivePanelProps) {
       />}
 
       {props.overlay}
+    </div>
+  );
+}
+
+/**
+ * A quiet coaching line while you answer (live/deliveryNudge.ts): running long, speaking fast, or a lot of "um"s.
+ * It goes once you've stopped talking for a while, and "Hide" turns it off for the rest of the session.
+ */
+function DeliveryNudge({ live, active }: { live: LiveViewState; active: boolean }) {
+  const run = currentRun(live);
+  const nudge = nudgeFor(run);
+  const signature = run ? `${run.turnIds.join(",")}:${run.words}` : "";
+  const [changedAt, setChangedAt] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    setChangedAt(Date.now());
+  }, [signature]);
+  useEffect(() => {
+    if (!nudge || hidden) return;
+    const id = window.setInterval(() => setNow(Date.now()), 3000);
+    return () => window.clearInterval(id);
+  }, [nudge, hidden]);
+  if (!active || hidden || !nudge || now - changedAt > 12_000) return null;
+  return (
+    <div
+      role="status"
+      className="mx-4 mb-3 flex animate-fade-in items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-900 dark:text-amber-200"
+    >
+      <Gauge className="h-3.5 w-3.5 flex-none" aria-hidden="true" />
+      <span className="min-w-0 flex-1">{nudge.text}</span>
+      <button
+        type="button"
+        onClick={() => setHidden(true)}
+        title="Hide delivery tips for this session"
+        aria-label="Hide delivery tips for this session"
+        className={cx("rounded p-0.5 hover:bg-amber-500/15", focusRing)}
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }
