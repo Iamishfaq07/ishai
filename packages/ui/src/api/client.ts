@@ -29,6 +29,8 @@ import type {
   CoverLetterLength,
   CoverLetterTone,
   CreditPack,
+  RazorpayCheckout,
+  RazorpayPaid,
   LinkedInProfile,
   NaukriProfile,
   OutreachInputs,
@@ -575,6 +577,11 @@ export function createApiClient(options: ApiClientOptions) {
     createUpiOrder: (pack: string) =>
       json<UpiOrder>("/v1/billing/upi/orders", { method: "POST", body: body({ pack }) }),
     listUpiOrders: () => json<UpiOrder[]>("/v1/billing/upi/orders"),
+    /** Razorpay: an order for the pack, to open the checkout with; then the checkout's answer, checked. */
+    createRazorpayOrder: (pack: string) =>
+      json<RazorpayCheckout>("/v1/billing/razorpay/orders", { method: "POST", body: body({ pack }) }),
+    verifyRazorpay: (paid: RazorpayPaid) =>
+      json<UpiOrder>("/v1/billing/razorpay/verify", { method: "POST", body: body(paid) }),
     /** "I've paid": the 12-digit UTR from the UPI app, for the admin to check. */
     submitUtr: (orderId: string, utr: string) =>
       json<UpiOrder>(`/v1/billing/upi/orders/${encodeURIComponent(orderId)}/utr`, {

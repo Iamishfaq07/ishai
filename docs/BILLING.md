@@ -1,8 +1,8 @@
 # Plans, credits and billing
 
 ## Free accounts run on credits
-A new account gets **welcome credits** (`apps/api/orbit_api/credits.py`), and buys **credit packs** over UPI for
-more. Credits never expire and nothing renews.
+A new account gets **welcome credits** (`apps/api/orbit_api/credits.py`), and buys **credit packs** (through Razorpay,
+or over UPI) for more. Credits never expire and nothing renews.
 
 - **Interview minutes:** live interviews and mock interviews both draw on one balance. They're metered by the live
   socket every heartbeat, and a session ends cleanly when the balance runs out.
@@ -30,7 +30,7 @@ interview minutes. Sign-up needs no approval or email check, so to stop throwawa
 - **a daily cap:** at most `ORBIT_WELCOME_DAILY` (100) accounts get the welcome a rolling day. With public sign-up and
   no verification or approval, the API refuses to start if this is above 1000.
 
-### Credit packs (UPI)
+### Credit packs
 | Pack | Price | Interview minutes | Resume AI credits |
 |---|---|---|---|
 | Mini | ₹499 | 15 | 5 |
@@ -79,7 +79,26 @@ FREE_MAX_SESSION_MINUTES=60   PRO_MAX_SESSION_MINUTES=180   UNLIMITED_MAX_SESSIO
   fixes, with `upgrade_required: true`.
 - **One live session per account** bounds any overshoot to about one heartbeat.
 
-## Payments: UPI, checked by the admin
+## Payments: Razorpay (cards worldwide, UPI, netbanking)
+With `ORBIT_RAZORPAY_KEY_ID` and `ORBIT_RAZORPAY_KEY_SECRET` set, **Buy** opens Razorpay's checkout and the credits
+land the moment the payment goes through (`apps/api/orbit_api/billing/razorpay.py`); the manual UPI flow below isn't
+used.
+1. **Buy** makes an order at Razorpay for the pack's price in rupees, kept as a payment (`method: razorpay`).
+2. **The checkout takes the payment** (cards, UPI, netbanking, wallets) and hands back a signature,
+   HMAC-SHA256(`order_id|payment_id`) with the key secret, which the API checks before adding the pack's credits.
+3. **The webhook** (`POST /v1/billing/webhook`, signed with `ORBIT_RAZORPAY_WEBHOOK_SECRET`) does the same for a
+   payment whose page was closed first. Whichever arrives first credits it; a payment is credited once.
+
+Set-up, in the Razorpay dashboard:
+- **API keys** (Account & Settings → API Keys): the key id and secret go in Render as the two variables above.
+- **Webhook** (Account & Settings → Webhooks): URL `https://<api host>/v1/billing/webhook`, events `payment.captured`
+  and `order.paid`, a secret of your choice in `ORBIT_RAZORPAY_WEBHOOK_SECRET`.
+- **International cards:** ask Razorpay to enable international payments for the account. Buyers abroad are charged
+  in rupees and their bank converts it; prices stay the ones above.
+
+Razorpay payments show in Settings → Payments as approved, with nothing to check.
+
+## Payments: UPI, checked by the admin (when Razorpay isn't set up)
 No payment gateway: people pay `ORBIT_UPI_ID` (shown as `ORBIT_UPI_NAME`) from any UPI app, and the admin confirms
 each payment before its credits land (`apps/api/orbit_api/billing/upi.py`).
 1. **Plan & billing → Buy** makes an order: the amount, a reference (`ORB…`, in the UPI note), a QR and a
@@ -92,7 +111,7 @@ each payment before its credits land (`apps/api/orbit_api/billing/upi.py`).
 4. **Approving adds the pack's credits.** It also approves the account, if sign-up approval was holding it.
 
 The admin can also add credits by hand (Users & access → Give credits). Unset `ORBIT_UPI_ID` = nothing can be bought
-(`buyable: false`).
+(`buyable: false`), unless Razorpay is set up.
 
 ### Opening sign-up to everyone
 `ORBIT_ALLOWED_EMAILS=*`, `ORBIT_EMAIL_VERIFICATION=off` and `ORBIT_SIGNUP_APPROVAL=false`: anyone signs up and starts

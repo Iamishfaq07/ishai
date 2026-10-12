@@ -430,6 +430,8 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("GET", "/v1/desktop/download/{version}/{filename}"),
     ("POST", "/v1/companion/redeem"), ("POST", "/v1/companion/{code}"),
     ("POST", "/v1/contact"),
+    # Razorpay's webhook: no session, it's authenticated by Razorpay's signature (tests/test_razorpay.py).
+    ("POST", "/v1/billing/webhook"),
 })
 
 

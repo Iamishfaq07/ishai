@@ -117,9 +117,10 @@ class Subscription(TimestampMixin, Base):
 
 
 class Payment(TimestampMixin, Base):
-    """A UPI payment for a plan (billing/upi.py). Made as an order with a reference for the UPI note; the payer then
-    gives the UTR (the bank's 12-digit transaction number) and the admin approves it against the bank statement,
-    which grants the plan for `days`."""
+    """A payment for a credit pack. `method` "upi" (billing/upi.py): an order with a reference for the UPI note; the
+    payer gives the UTR (the bank's 12-digit transaction number) and the admin approves it against the bank
+    statement. "razorpay" (billing/razorpay.py): an order made at Razorpay, approved automatically when Razorpay's
+    signed answer (the checkout's, or its webhook's) says it was paid."""
 
     __tablename__ = "payments"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
@@ -140,6 +141,10 @@ class Payment(TimestampMixin, Base):
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     note: Mapped[str | None] = mapped_column(String(300))  # the admin's reason, shown to the payer
+    method: Mapped[str] = mapped_column(String(16), default="upi", server_default="upi")
+    # Razorpay's order and payment ids ("order_…", "pay_…"): unique, so one payment is credited once.
+    gateway_order_id: Mapped[str | None] = mapped_column(String(40), unique=True)
+    gateway_payment_id: Mapped[str | None] = mapped_column(String(40), unique=True)
 
 
 class CreditEntry(TimestampMixin, Base):

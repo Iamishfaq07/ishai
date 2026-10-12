@@ -4,7 +4,7 @@
 # bootstrap is /theme-init.js) and Cloudflare Turnstile; the API is same-origin (/api), live sessions use the API's
 # WebSocket directly. Nobody can frame the app (clickjacking), and a leaked link carries no referrer.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://orbit-api-sg.onrender.com wss://orbit-api-sg.onrender.com https://challenges.cloudflare.com; media-src 'self' blob: data:; worker-src 'self' blob:; frame-src https://challenges.cloudflare.com; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; manifest-src 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://cdn.razorpay.com; font-src 'self' data:; connect-src 'self' https://orbit-api-sg.onrender.com wss://orbit-api-sg.onrender.com https://challenges.cloudflare.com https://api.razorpay.com https://lumberjack.razorpay.com; media-src 'self' blob: data:; worker-src 'self' blob:; frame-src https://challenges.cloudflare.com https://api.razorpay.com https://checkout.razorpay.com; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; manifest-src 'self'
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: no-referrer

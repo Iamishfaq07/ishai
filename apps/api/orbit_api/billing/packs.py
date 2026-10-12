@@ -54,6 +54,15 @@ def packs() -> dict[str, CreditPack]:
     return out
 
 
+def checkout() -> str | None:
+    """How packs are bought right now: Razorpay's checkout when it's set up, else UPI with a UTR, else not at all."""
+    from orbit_api.billing import razorpay
+
+    if razorpay.configured():
+        return "razorpay"
+    return "upi" if get_settings().upi_id else None
+
+
 def public_packs() -> list[dict[str, Any]]:
-    buyable = bool(get_settings().upi_id)
-    return [{**asdict(p), "buyable": buyable} for p in packs().values()]
+    how = checkout()
+    return [{**asdict(p), "buyable": how is not None, "checkout": how} for p in packs().values()]
