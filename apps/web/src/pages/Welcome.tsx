@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Globe, MapPin, Orb, OrbitWordmark, cx, focusRing, isIndia } from "@orbit/ui";
+import { ArrowLeft, ArrowRight, Globe, MapPin, Orb, OrbitWordmark, buttonClass, cx, focusRing, isIndia } from "@orbit/ui";
 import { ProductMark } from "../components/products";
 import { Input } from "../components/ui";
 import { api } from "../lib/api";
@@ -270,11 +270,7 @@ export function WelcomePage() {
                     />
                     <button
                       type="submit"
-                      className={cx(
-                        // TODO(ws-a): buttonClass("primary") once the design layer exports it.
-                        "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-5 text-sm font-semibold text-white shadow-glow-sm hover:from-indigo-400 hover:to-indigo-500",
-                        focusRing,
-                      )}
+                      className={buttonClass("primary", "md", "min-h-11 shrink-0")}
                     >
                       Next <ArrowRight className="h-4 w-4" aria-hidden />
                     </button>

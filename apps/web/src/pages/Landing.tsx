@@ -10,10 +10,12 @@ import {
   RefreshCw,
   Reveal,
   ShieldCheck,
+  buttonClass,
   cx,
   focusRing,
   formatNumber,
   isIndia,
+  useMotion,
 } from "@orbit/ui";
 import { Footer } from "../components/Footer";
 import { SiteMenu } from "../components/SiteMenu";
@@ -31,31 +33,8 @@ import { useWelcomeGrant, type WelcomeGrant } from "../lib/welcome";
  * account; the warm-up question is the free try.
  */
 
-// TODO(ws-a): buttonClass("primary" | "secondary") once the design layer exports it.
-const primary = cx(
-  "btn-sheen inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 font-semibold text-white shadow-glow-sm hover:from-indigo-400 hover:to-indigo-500 hover:shadow-glow",
-  focusRing,
-);
-const secondary = cx(
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white/90 font-medium text-zinc-900 hover:border-zinc-300 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:hover:border-white/20 dark:hover:bg-white/10",
-  focusRing,
-);
-
 /** Below this the live count isn't worth saying (a new server still fetching its first jobs). Same as Jobs AI's page. */
 const SHOW_COUNTS_FROM = 50;
-
-/**
- * Whether decorative motion may play: not when the OS asks for less, the in-app Animations switch is off, or the
- * browser is saving data.
- */
-function motionAllowed(): boolean {
-  if (typeof window === "undefined") return false;
-  const root = document.documentElement;
-  // TODO(ws-a): useMotion() !== "full" once the design layer's 3-level motion setting lands.
-  if (root.classList.contains("reduce-motion") || root.dataset.motion === "off" || root.dataset.motion === "reduced") return false;
-  if ((navigator as { connection?: { saveData?: boolean } }).connection?.saveData) return false;
-  return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
 
 function usePublic<T>(load: () => Promise<T>): T | null {
   const [value, setValue] = useState<T | null>(null);
@@ -88,7 +67,9 @@ const END = Q_WORDS.length + PAUSE + A_WORDS.length + 2;
  */
 function CopilotMock() {
   const box = useRef<HTMLDivElement>(null);
-  const [tick, setTick] = useState(() => (motionAllowed() ? 0 : END));
+  const saveData = typeof navigator !== "undefined" && Boolean((navigator as { connection?: { saveData?: boolean } }).connection?.saveData);
+  const play = useMotion() === "full" && !saveData;
+  const [tick, setTick] = useState(() => (play ? 0 : END));
   const [run, setRun] = useState(0);
   useEffect(() => {
     if (tick >= END) return;
@@ -200,7 +181,7 @@ function CopilotMock() {
           </span>
           <span aria-hidden="true">An example of a live answer.</span>
         </span>
-        {done && motionAllowed() && (
+        {done && play && (
           <button
             type="button"
             onClick={() => {
@@ -548,10 +529,10 @@ export function LandingPage() {
           </nav>
           <nav aria-label="Account" className="ml-auto flex items-center gap-2">
             <SiteMenu />
-            <Link to="/login" className={cx(secondary, "hidden px-3.5 text-sm sm:inline-flex")}>
+            <Link to="/login" className={buttonClass("secondary", "md", "hidden min-h-11 sm:inline-flex")}>
               Sign in
             </Link>
-            <Link to="/register" className={cx(primary, "px-3.5 text-sm")}>
+            <Link to="/register" className={buttonClass("primary", "md", "min-h-11")}>
               Start free
             </Link>
           </nav>
@@ -569,10 +550,10 @@ export function LandingPage() {
               what screening software sees, and new jobs that fit you.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <Link to="/register" className={cx(primary, "px-6 py-3 text-base")}>
+              <Link to="/register" className={buttonClass("primary", "lg", "min-h-11")}>
                 Create a free account <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
-              <Link to="/warmup" className={cx(secondary, "px-6 py-3 text-base")}>
+              <Link to="/warmup" className={buttonClass("secondary", "lg", "min-h-11")}>
                 Try a practice question first
               </Link>
             </div>
@@ -681,10 +662,10 @@ export function LandingPage() {
             Answer a common interview question and see what to improve, before you sign up for anything.
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link to="/warmup" className={cx(primary, "px-6 py-3 text-base")}>
+            <Link to="/warmup" className={buttonClass("primary", "lg", "min-h-11")}>
               Try a practice question <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
-            <Link to="/register" className={cx(secondary, "px-6 py-3 text-base")}>
+            <Link to="/register" className={buttonClass("secondary", "lg", "min-h-11")}>
               Create a free account
             </Link>
           </div>
