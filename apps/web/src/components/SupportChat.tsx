@@ -6,6 +6,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
 const STORE = "orbit.support.v1";
+const SEEN = "orbit.support.seen";
 
 interface Saved {
   id: string;
@@ -30,6 +31,27 @@ function save(thread: SupportThread): Saved | null {
   return saved;
 }
 
+function loadSeen(): string {
+  try {
+    return localStorage.getItem(SEEN) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function markSeen(id: string): void {
+  if (!id) return;
+  localStorage.setItem(SEEN, id);
+}
+
+/** A person replied after the visitor last had this chat open. */
+function hasUnseenReply(thread: SupportThread | null, seen: string): boolean {
+  if (!thread) return false;
+  const at = thread.messages.findIndex((m) => m.id === seen);
+  const rest = at === -1 ? thread.messages : thread.messages.slice(at + 1);
+  return rest.some((m) => m.role === "human");
+}
+
 /**
  * Support on every page except a live interview: the bot answers from Orbit's help notes, and Talk to a person
  * hands the same chat to the team (they reply in Admin → Support, and it shows up here).
@@ -46,6 +68,7 @@ export function SupportChat() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
+  const [seenId, setSeenId] = useState(loadSeen);
   const hidden = pathname.startsWith("/live");
 
   useEffect(() => {
@@ -75,6 +98,36 @@ export function SupportChat() {
     }, 4000);
     return () => window.clearInterval(timer);
   }, [open, saved, thread?.status]);
+
+  // Closed, and a person has the chat: look for their reply so the icon can show a dot.
+  useEffect(() => {
+    if (hidden || open) return;
+    const existing = load();
+    if (!existing) return;
+    if (thread && thread.status !== "waiting") return;
+    let cancel = false;
+    const tick = () => {
+      void api.supportRead(existing.id, existing.token).then((next) => {
+        if (cancel) return;
+        setThread(next);
+        setSaved(existing);
+      }).catch(() => undefined);
+    };
+    tick();
+    const timer = window.setInterval(tick, 12000);
+    return () => {
+      cancel = true;
+      window.clearInterval(timer);
+    };
+  }, [hidden, open, thread?.status]);
+
+  useEffect(() => {
+    if (!open || !thread?.messages.length) return;
+    const last = thread.messages[thread.messages.length - 1]?.id;
+    if (!last || last === seenId) return;
+    setSeenId(last);
+    markSeen(last);
+  }, [open, thread?.messages, seenId]);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight });
@@ -124,6 +177,8 @@ export function SupportChat() {
 
   async function restart() {
     localStorage.removeItem(STORE);
+    localStorage.removeItem(SEEN);
+    setSeenId("");
     setSaved(null);
     setThread(null);
     setBusy(true);
@@ -141,6 +196,7 @@ export function SupportChat() {
   }
 
   const signedIn = Boolean(user);
+  const unread = !open && hasUnseenReply(thread, seenId);
 
   return (
     <div
@@ -259,12 +315,13 @@ export function SupportChat() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        aria-label={open ? "Close support chat" : "Chat with support"}
+        aria-label={unread ? "Support chat, new reply" : open ? "Close support chat" : "Chat with support"}
         className={cx(
-          "pointer-events-auto grid h-12 w-12 place-items-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-950/30 hover:bg-indigo-500",
+          "pointer-events-auto relative grid h-12 w-12 place-items-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-950/30 hover:bg-indigo-500",
           focusRing,
         )}
       >
+        {unread && <span className="absolute right-0 top-0 h-3 w-3 rounded-full bg-rose-500 ring-2 ring-white dark:ring-zinc-950" />}
         {open ? <X className="h-5 w-5" aria-hidden /> : <MessageCircle className="h-5 w-5" aria-hidden />}
       </button>
     </div>

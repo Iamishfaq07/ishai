@@ -195,6 +195,7 @@ _MATCH_ORDER: tuple[str, ...] = (
 
 _HUMAN = ("human", "Talk to a person")
 _MENU = ("menu", "All topics")
+_ACCOUNT = (("balance", "My balance"), ("payment", "My last payment"))
 _GREETING = re.compile(r"(hi|hello|hey|help|thanks|thank you|menu)[.!? ]*")
 
 
@@ -245,8 +246,33 @@ def options_for(topic_id: str | None) -> list[tuple[str, str]]:
 def option_label(choice: str) -> str | None:
     if choice == "menu":
         return "All topics"
+    for topic_id, label in _ACCOUNT:
+        if choice == topic_id:
+            return label
     topic = TOPICS.get(choice)
     return topic.label if topic else None
+
+
+def account_choice(text: str, choice: str = "") -> str | None:
+    """A question about this person's own account, or None. Not the general price or 'payment didn't land' notes."""
+    if choice in {"balance", "payment"}:
+        return choice
+    q = _norm(text)
+    if any(phrase in q for phrase in ("my balance", "credits left", "minutes left", "how many credits", "how many minutes")):
+        return "balance"
+    if any(phrase in q for phrase in ("my last payment", "last payment", "payment status")):
+        return "payment"
+    return None
+
+
+def _with_account(rows: list[tuple[str, str]], signed_in: bool) -> list[tuple[str, str]]:
+    if not signed_in:
+        return rows
+    have = {topic_id for topic_id, _label in rows}
+    extra = [pair for pair in _ACCOUNT if pair[0] not in have]
+    if rows and rows[-1][0] == "human":
+        return extra + rows[:-1] + [rows[-1]]
+    return extra + rows
 
 
 def respond(text: str = "", choice: str = "") -> tuple[str, list[tuple[str, str]]]:
@@ -267,14 +293,17 @@ def respond(text: str = "", choice: str = "") -> tuple[str, list[tuple[str, str]
     return found.answer, options_for(found.id)
 
 
-def suggestions_for(messages: list, status: str) -> list[tuple[str, str]]:
-    """Chips to show again when the chat is reopened. Waiting on a person: none."""
+def suggestions_for(messages: list, status: str, signed_in: bool = False) -> list[tuple[str, str]]:
+    """Chips to show again when the chat is reopened. Waiting on a person: none.
+
+    My balance and My last payment are only offered when this browser is signed in as the chat's account.
+    """
     if status != "bot":
         return []
     last_user = next((m.text for m in reversed(messages) if getattr(m, "role", None) == "user"), "")
-    if not last_user:
-        return options_for(None)
-    if _norm(last_user) == "all topics":
-        return options_for("menu")
+    if not last_user or _norm(last_user) == "all topics":
+        return _with_account(options_for("menu" if last_user else None), signed_in)
     found = match(last_user)
-    return options_for(found.id if found else None)
+    if found is None:
+        return _with_account(options_for(None), signed_in)
+    return options_for(found.id)
