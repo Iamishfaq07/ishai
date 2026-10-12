@@ -301,7 +301,7 @@ export function ContactPage() {
                   </FormField>
                 </div>
 
-                <FormField id={`${ids}-phone`} label="Phone or WhatsApp (optional)" error={errors.phone} hint="Only if you'd like a call or a WhatsApp reply.">
+                <FormField id={`${ids}-phone`} label="Phone or WhatsApp (optional)" error={errors.phone} hint="Leave this blank unless you want a call. We reply by email without it.">
                   <Input
                     id={`${ids}-phone`}
                     data-field="phone"
@@ -402,6 +402,14 @@ export function ContactPage() {
                 </div>
               </Card>
             )}
+            <Card>
+              <h2 className="font-display text-base font-semibold">Who runs Orbit</h2>
+              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+                Orbit is an individual service. The price on the site is the full amount in rupees. No fee is added at
+                the last step, and these pages don't list a GSTIN. Refunds, complaints and requests to delete your
+                data come through this form. If you can sign in, Settings also downloads your data or deletes the account.
+              </p>
+            </Card>
             <Card>
               <h2 className="flex items-center gap-2 font-display text-base font-semibold">
                 <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden /> Job scams

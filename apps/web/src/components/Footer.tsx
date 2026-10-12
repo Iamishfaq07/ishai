@@ -83,7 +83,7 @@ export function Footer({ className }: { className?: string }) {
             {POLICY_LINKS.map(({ href, label }) => (
               <li key={href}>
                 <a href={href} className={link}>
-                  {label === "Refunds" ? "Refund policy" : label === "Privacy" ? "Privacy policy" : "Terms of use"}
+                  {label === "Refunds" ? "Refund policy" : label === "Privacy" ? "Privacy policy" : label === "Cookies" ? "Cookie policy" : "Terms of use"}
                 </a>
               </li>
             ))}

@@ -76,7 +76,13 @@ class SmtpSender(EmailSender):
         msg["From"], msg["To"], msg["Subject"] = self._from, email.to, email.subject
         if email.reply_to:
             msg["Reply-To"] = email.reply_to
-        msg.set_content(email.text)
+        # Account mail only. There is no newsletter, so this is how to reach us, not a marketing opt-out.
+        msg["List-Unsubscribe"] = "<https://orbitanswer.com/contact>"
+        msg.set_content(
+            email.text.rstrip()
+            + "\n\n--\nThis email is about your Orbit account. Orbit does not send a newsletter. "
+            + "To download or delete your data, use Settings, or the contact page on the site.\n"
+        )
         ctx = ssl.create_default_context()
         if self._port == 465:
             with smtplib.SMTP_SSL(self._host, self._port, context=ctx, timeout=15) as smtp:

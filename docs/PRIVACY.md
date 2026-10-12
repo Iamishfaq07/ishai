@@ -39,6 +39,17 @@ discarded when the session ends.
 | Sign out of every device | Settings → Privacy | `POST /v1/auth/logout-all` |
 | Delete your account and everything in it | Settings → Privacy | `DELETE /v1/auth/me` |
 
+## Cookies and other services
+The web app sets one httpOnly sign-in cookie. It does not set an advertising or analytics cookie. Settings on the
+device (theme, this notice, a support-chat token) stay in the browser's own storage. Razorpay loads only when
+someone buys a pack. Deepgram transcribes audio. DeepSeek (and a backup model, only if DeepSeek is down) writes
+answers. Cloudflare serves the site. Sentry stays off unless `ORBIT_SENTRY_DSN` is set, and then it sends no
+bodies or PII (`observability.py`). Account email is transactional only. There is no newsletter.
+
+## Age
+Sign-up asks the person to confirm they are 18, or have a parent or guardian's permission. Orbit is not aimed at
+children.
+
 Deleting an account cascades to every row above (`ON DELETE CASCADE`), except Contact messages (below). The export
 includes everything above except secrets (the password hash) and derived search data (chunk embeddings). The
 documents' full text is included instead.
