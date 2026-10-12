@@ -144,9 +144,11 @@ The API refuses to boot in production with:
 
 ## Web app headers (`apps/web/vite.config.ts` → `dist/_headers`)
 Generated at build time so they can't go stale:
-- **CSP:** `default-src 'self'`; scripts from self, the inline theme script by SHA-256 hash (computed from the built
-  `index.html`) and Cloudflare Turnstile; `connect-src` limited to self plus the API/live origins this build uses;
-  `object-src 'none'`, `base-uri 'none'`, `form-action 'self'`, `frame-ancestors 'none'`, `upgrade-insecure-requests`.
+- **CSP:** one policy, generated here and not repeated in `public/_headers` (two policies are both enforced, and the
+  stricter one was blocking Razorpay). Scripts from self, the inline theme script by SHA-256 hash, Cloudflare
+  Turnstile and Razorpay Checkout. `connect-src` is self, Turnstile, Razorpay and the API/live origins this build
+  uses. Frames are Turnstile and Razorpay only. `object-src 'none'`, `base-uri 'none'`, `form-action 'self'`,
+  `frame-ancestors 'none'`, `upgrade-insecure-requests`.
 - **Also:** HSTS (2 years), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, COOP `same-origin`,
   and a `Permissions-Policy` that allows only the microphone and screen capture, only for the app itself.
 
@@ -162,6 +164,11 @@ the request's `Host` header.
 - The API image's base images are pinned by digest, and Dependabot covers pip, npm, cargo, actions and docker.
 - **CI `security` job:** `pip-audit` (the locked API dependencies), `bandit` (medium severity and up) and
   `pnpm audit --audit-level high`. The `secrets` job runs gitleaks over the full history.
+- **Checked again on 12 October 2026 and left in place.** `postcss-selector-parser` stays on 6.1.4. The patched
+  release is 7.1.6, and forcing that under Tailwind 3 dropped variant classes (`md:`, `hover:`, `dark:`). The
+  advisory applies when a server parses untrusted CSS. Orbit only parses its own CSS at build time. `cargo audit`
+  found no vulnerabilities. The remaining Rust warnings (`proc-macro-error` unmaintained, a yanked `yoke-derive`,
+  an unsound `glib` iterator) come through Tauri and GTK, and the Windows build does not compile `glib`.
 
 The full review, its method and its accepted risks are in [SECURITY_REVIEW.md](SECURITY_REVIEW.md).
 

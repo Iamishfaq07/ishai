@@ -3,7 +3,7 @@ import type { RazorpayCheckout, RazorpayPaid } from "@orbit/types";
 /**
  * Razorpay's Standard Checkout (https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/): its
  * script opens a payment sheet for an order the server made (cards, UPI, netbanking, wallets). It's loaded only when
- * someone buys, from checkout.razorpay.com (allowed in public/_headers' Content-Security-Policy).
+ * someone buys, from checkout.razorpay.com (allowed in the Content-Security-Policy from vite.config.ts).
  */
 const SCRIPT = "https://checkout.razorpay.com/v1/checkout.js";
 

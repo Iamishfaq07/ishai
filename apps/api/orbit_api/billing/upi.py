@@ -40,7 +40,8 @@ def normalize_utr(raw: str) -> str | None:
 def upi_uri(payment: Payment, plan_label: str) -> str:
     """A `upi://pay` link every UPI app understands: payee, amount in rupees, and the reference in the note."""
     s = get_settings()
-    assert s.upi_id
+    if not s.upi_id:
+        raise RuntimeError("UPI is not configured")
     params = {"pa": s.upi_id, "pn": s.upi_name, "am": f"{payment.amount_inr}.00", "cu": "INR",
               "tn": f"Orbit {plan_label} {payment.reference}"}
     return "upi://pay?" + urlencode(params, quote_via=quote)

@@ -45,7 +45,8 @@ def _row(obj: Any) -> dict[str, Any]:
 
 async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
     user = await db.get(User, user_id)
-    assert user is not None
+    if user is None:
+        raise RuntimeError("account disappeared during export")
     sessions = (await db.scalars(select(LiveSessionRow).where(LiveSessionRow.user_id == user_id)
                                  .order_by(LiveSessionRow.created_at))).all()
     ids = [s.id for s in sessions]

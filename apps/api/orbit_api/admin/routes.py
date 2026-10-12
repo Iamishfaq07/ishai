@@ -606,7 +606,8 @@ async def set_access(user_id: str, body: AccessIn, background: BackgroundTasks,
     web = get_settings().web_url.rstrip("/")
     mail: OutgoingEmail | None = None
     if body.action == "grant":
-        assert body.plan in GRANT_PLANS
+        if body.plan not in GRANT_PLANS:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Unknown plan")
         running = active_grant(u, now) == body.plan and u.grant_until is not None
         start = _aware(u.grant_until) if running and u.grant_until else now  # "2 more hours" extends
         u.grant_plan, u.grant_until = body.plan, start + timedelta(hours=body.hours)
