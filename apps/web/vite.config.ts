@@ -5,6 +5,9 @@ import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 
 const TURNSTILE = "https://challenges.cloudflare.com";
+const RAZORPAY_SCRIPTS = "https://checkout.razorpay.com";
+const RAZORPAY_FRAMES = "https://api.razorpay.com https://checkout.razorpay.com";
+const RAZORPAY_CONNECT = "https://api.razorpay.com https://lumberjack.razorpay.com";
 
 /** `https://api.example.com` → [`https://api.example.com`, `wss://api.example.com`]; relative URLs are 'self'. */
 function origins(url: string | undefined): string[] {
@@ -13,32 +16,39 @@ function origins(url: string | undefined): string[] {
   return [`${protocol}//${host}`, `${protocol === "https:" ? "wss:" : "ws:"}//${host}`];
 }
 
-/** The Content-Security-Policy for the built app (exported for the unit test). */
+/** The Content-Security-Policy for the built app. One policy: public/_headers must not add a second. */
 export function contentSecurityPolicy(inlineScripts: string[], env: Record<string, string | undefined>): string {
   const hashes = inlineScripts.map((s) => `'sha256-${createHash("sha256").update(s).digest("base64")}'`);
-  const connect = new Set(["'self'", ...origins(env.VITE_API_URL), ...origins(env.VITE_LIVE_URL)]);
+  const connect = [
+    "'self'",
+    TURNSTILE,
+    ...RAZORPAY_CONNECT.split(" "),
+    ...origins(env.VITE_API_URL),
+    ...origins(env.VITE_LIVE_URL),
+  ];
   return [
     "default-src 'self'",
-    `script-src 'self' ${hashes.join(" ")} ${TURNSTILE}`.replace(/\s+/g, " "),
+    `script-src 'self' ${hashes.join(" ")} ${TURNSTILE} ${RAZORPAY_SCRIPTS}`.replace(/\s+/g, " "),
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
-    "font-src 'self'",
-    "media-src 'self' blob:",
+    "img-src 'self' data: blob: https://cdn.razorpay.com",
+    "font-src 'self' data:",
+    "media-src 'self' blob: data:",
     "worker-src 'self' blob:",
-    `connect-src ${[...connect].join(" ")}`,
-    `frame-src ${TURNSTILE}`,
+    `connect-src ${[...new Set(connect)].join(" ")}`,
+    `frame-src ${TURNSTILE} ${RAZORPAY_FRAMES}`,
     "object-src 'none'",
     "base-uri 'none'",
     "form-action 'self'",
     "frame-ancestors 'none'",
+    "manifest-src 'self'",
     "upgrade-insecure-requests",
   ].join("; ");
 }
 
 /**
  * Appends the security headers to the build's `_headers` (Cloudflare reads it; `public/_headers` holds the cache
- * rules). The CSP is computed from the finished index.html, so the inline theme script's hash can't go stale, and
- * from the API/live URLs this build talks to.
+ * rules only). The CSP is computed from the finished index.html, so the inline theme script's hash can't go stale,
+ * and from the API/live URLs this build talks to. Do not also put a CSP in public/_headers: both would apply.
  */
 function securityHeaders(mode: string): Plugin {
   let outDir = "dist";

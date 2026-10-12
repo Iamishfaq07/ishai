@@ -21,5 +21,11 @@
     "globals": "^17.13.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.71.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "source-map-js": "1.2.2",
+      "braces": "npm:@franciscosolis/braces@3.1.1"
+    }
   }
 }

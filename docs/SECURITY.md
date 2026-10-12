@@ -144,9 +144,11 @@ The API refuses to boot in production with:
 
 ## Web app headers (`apps/web/vite.config.ts` → `dist/_headers`)
 Generated at build time so they can't go stale:
-- **CSP:** `default-src 'self'`; scripts from self, the inline theme script by SHA-256 hash (computed from the built
-  `index.html`) and Cloudflare Turnstile; `connect-src` limited to self plus the API/live origins this build uses;
-  `object-src 'none'`, `base-uri 'none'`, `form-action 'self'`, `frame-ancestors 'none'`, `upgrade-insecure-requests`.
+- **CSP:** one policy, generated here and not repeated in `public/_headers` (two policies are both enforced, and the
+  stricter one was blocking Razorpay). Scripts from self, the inline theme script by SHA-256 hash, Cloudflare
+  Turnstile and Razorpay Checkout. `connect-src` is self, Turnstile, Razorpay and the API/live origins this build
+  uses. Frames are Turnstile and Razorpay only. `object-src 'none'`, `base-uri 'none'`, `form-action 'self'`,
+  `frame-ancestors 'none'`, `upgrade-insecure-requests`.
 - **Also:** HSTS (2 years), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, COOP `same-origin`,
   and a `Permissions-Policy` that allows only the microphone and screen capture, only for the app itself.
 
