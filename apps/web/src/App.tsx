@@ -1,6 +1,7 @@
 import { Suspense, useEffect, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "./components/Layout";
+import { SupportChat } from "./components/SupportChat";
 import { Spinner } from "./components/ui";
 import { useAuth } from "./lib/auth";
 import { routeTitle } from "./lib/routeTitle";
@@ -46,6 +47,7 @@ import {
   AdminPaymentsPage,
   AdminAuditPage,
   AdminInboxPage,
+  AdminSupportPage,
   ContactPage,
   prefetchLikelyRoutes,
   publicPageFor,
@@ -122,6 +124,7 @@ export function App() {
   useRouteTitle();
   return (
     <Suspense fallback={<PageLoading />}>
+    <SupportChat />
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -193,6 +196,7 @@ export function App() {
         <Route path="admin/payments" element={<AdminPaymentsPage />} />
         <Route path="admin/audit" element={<AdminAuditPage />} />
         <Route path="admin/inbox" element={<AdminInboxPage />} />
+        <Route path="admin/support" element={<AdminSupportPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -132,6 +132,29 @@ export class ApiError extends Error {
   }
 }
 
+export interface SupportChatMessage {
+  id: string;
+  role: "user" | "bot" | "human";
+  text: string;
+  created_at: string;
+}
+
+export interface SupportThread {
+  id: string;
+  status: "bot" | "waiting" | "closed";
+  token?: string | null;
+  messages: SupportChatMessage[];
+}
+
+export interface SupportAdminItem {
+  id: string;
+  status: string;
+  name: string;
+  email: string;
+  updated_at: string;
+  preview: string;
+}
+
 export type ApiAuth =
   /** Browser: httpOnly session cookie set by the API. */
   | { mode: "cookie" }
@@ -646,6 +669,33 @@ export function createApiClient(options: ApiClientOptions) {
     announcement: () => json<Announcement>("/v1/announcement"),
     /** Public (signed in or out): leave a message for the team; it waits in the admin's Inbox. */
     sendContact: (req: ContactRequest) => json<ContactReceipt>("/v1/contact", { method: "POST", body: body(req) }),
+    /** Public: open a support chat. The token is the only way back into it. */
+    supportOpen: () =>
+      json<SupportThread>("/v1/support/threads", { method: "POST", body: body({}) }),
+    supportRead: (threadId: string, token: string) =>
+      json<SupportThread>(`/v1/support/threads/${encodeURIComponent(threadId)}?token=${encodeURIComponent(token)}`),
+    supportSend: (threadId: string, token: string, text: string) =>
+      json<SupportThread>(`/v1/support/threads/${encodeURIComponent(threadId)}/messages`, {
+        method: "POST",
+        body: body({ token, text }),
+      }),
+    supportHandoff: (threadId: string, token: string, name: string, email: string) =>
+      json<SupportThread>(`/v1/support/threads/${encodeURIComponent(threadId)}/handoff`, {
+        method: "POST",
+        body: body({ token, name, email }),
+      }),
+    /** Admin: chats waiting for a person, or every recent chat. */
+    adminSupport: (only: "waiting" | "all" = "waiting") =>
+      json<SupportAdminItem[]>(`/v1/admin/support?only=${only}`),
+    adminSupportThread: (threadId: string) =>
+      json<SupportThread>(`/v1/admin/support/${encodeURIComponent(threadId)}`),
+    adminSupportReply: (threadId: string, text: string) =>
+      json<SupportThread>(`/v1/admin/support/${encodeURIComponent(threadId)}/reply`, {
+        method: "POST",
+        body: body({ text }),
+      }),
+    adminSupportClose: (threadId: string) =>
+      json<SupportThread>(`/v1/admin/support/${encodeURIComponent(threadId)}/close`, { method: "POST" }),
     /** Admin: the Contact page's messages, newest first ("todo" = new and open), with the counts per status. */
     adminInbox: (query: InboxQuery = {}) =>
       json<InboxPage>(`/v1/admin/inbox${queryString({ ...query, q: query.q?.trim() })}`),

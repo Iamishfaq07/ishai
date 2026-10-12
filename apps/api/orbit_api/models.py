@@ -665,3 +665,36 @@ class ContactMessage(TimestampMixin, Base):
     # Replies the admin sent from the Inbox: [{"at", "by", "text"}], oldest first.
     replies: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON(none_as_null=True))
     network_hash: Mapped[str | None] = mapped_column(String(64))
+
+
+class SupportThread(TimestampMixin, Base):
+    """A support chat. The bot answers until the visitor asks for a person (`status` becomes `waiting`).
+
+    `token_hash` is the only proof a browser may read or write the thread (the raw token is never stored).
+    `user_id` is set when the visitor was signed in; deleting the account keeps the chat."""
+
+    __tablename__ = "support_threads"
+    __table_args__ = (Index("ix_support_threads_status_updated", "status", "updated_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True,
+                                                nullable=True)
+    token_hash: Mapped[str] = mapped_column(String(64))
+    name: Mapped[str] = mapped_column(String(120), default="")
+    email: Mapped[str] = mapped_column(String(320), default="")
+    status: Mapped[str] = mapped_column(String(16), default="bot")  # bot | waiting | closed
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    messages: Mapped[list["SupportMessage"]] = relationship(back_populates="thread", cascade="all, delete-orphan",
+                                                            order_by="SupportMessage.created_at", lazy="raise")
+
+
+class SupportMessage(TimestampMixin, Base):
+    """One line in a support chat: the visitor, the bot, or a person on the Orbit team."""
+
+    __tablename__ = "support_messages"
+    __table_args__ = (Index("ix_support_messages_thread_created", "thread_id", "created_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    thread_id: Mapped[str] = mapped_column(ForeignKey("support_threads.id", ondelete="CASCADE"), index=True)
+    role: Mapped[str] = mapped_column(String(8))  # user | bot | human
+    text: Mapped[str] = mapped_column(Text)
+    thread: Mapped[SupportThread] = relationship(back_populates="messages")
+
