@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { Link } from "react-router-dom";
 import type { JobTrackerEntry } from "@orbit/types";
-import { BookmarkCheck, CalendarIcon, Check, Plus, Send, Target, cx, focusRing } from "@orbit/ui";
+import { BookmarkCheck, CalendarIcon, Check, Plus, Send, Skeleton, Target, cx, focusRing, toast, useLoadPhase } from "@orbit/ui";
 import { Card, ErrorNote } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
@@ -48,17 +48,13 @@ function FollowUpsCard({ tracker, limit = 3, hideWhenEmpty = false, className }:
   const entries = tracker.data;
   const due = entries ? followUps(entries) : [];
   const later = entries && !due.length ? nextUp(entries) : null;
+  const phase = useLoadPhase(!entries && tracker.loading);
 
   if (!entries && tracker.loading) {
-    if (hideWhenEmpty) return null;
+    if (hideWhenEmpty || phase !== "skeleton") return null;
     return (
       <Shell className={className}>
-        {/* TODO(ws-a): the design layer's Skeleton (delayed show, minimum time) once it lands. */}
-        <div className="mt-3 space-y-2" aria-hidden="true">
-          {[72, 56].map((w) => (
-            <div key={w} className="skeleton-line h-3 motion-safe:animate-shimmer" style={{ width: `${w}%` }} />
-          ))}
-        </div>
+        <Skeleton variant="line" count={2} label="Loading follow-ups" className="mt-3" />
       </Shell>
     );
   }
@@ -105,9 +101,21 @@ function FollowUpsCard({ tracker, limit = 3, hideWhenEmpty = false, className }:
     setBusy(item.entry.id);
     setError(null);
     try {
+      const previous = item.entry.next_at;
       const saved = await api.updateTrackedJob(item.entry.id, { next_at: inAWeek() });
       tracker.setData((prev) => prev?.map((e) => (e.id === saved.id ? saved : e)) ?? null);
-      // TODO(ws-a): a toast with Undo ("Next follow-up in a week").
+      toast({
+        message: "Next follow-up in a week",
+        action: {
+          label: "Undo",
+          onClick: () => {
+            void api
+              .updateTrackedJob(item.entry.id, previous ? { next_at: previous } : { clear_next: true })
+              .then((restored) => tracker.setData((prev) => prev?.map((e) => (e.id === restored.id ? restored : e)) ?? null))
+              .catch((undoErr) => setError(errorText(undoErr)));
+          },
+        },
+      });
     } catch (err) {
       setError(errorText(err));
     } finally {

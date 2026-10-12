@@ -13,8 +13,10 @@ import {
   MOCK_INTERVIEW_ENABLED,
   Monitor,
   Reveal,
+  Skeleton,
   Target,
   X,
+  buttonClass,
   cx,
   focusRing,
 } from "@orbit/ui";
@@ -37,15 +39,8 @@ import { JOBS_AI_HOME, JOBS_MATCHES, JOBS_TRACKER } from "./jobs/paths";
 import { RESUME_AI_HOME, resumePath } from "./resume/paths";
 import { scoreTone } from "./resume/product";
 
-// TODO(ws-a): buttonClass("primary") / buttonClass("secondary") once the design layer exports it.
-const primaryLink = cx(
-  "btn-sheen inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-glow-sm hover:from-indigo-400 hover:to-indigo-500 hover:shadow-glow",
-  focusRing,
-);
-const secondaryLink = cx(
-  "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white/90 px-3.5 py-2 text-sm font-medium text-zinc-900 hover:border-zinc-300 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:hover:border-white/20 dark:hover:bg-white/10",
-  focusRing,
-);
+const primaryLink = buttonClass("primary", "md", "min-h-11");
+const secondaryLink = buttonClass("secondary", "md", "min-h-10");
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -147,8 +142,7 @@ export function HomePage() {
 /** The one thing to do now, big, with the two after it as quiet links. */
 function NextStep({ steps, welcomed, askWelcome }: { steps: Step[] | null; welcomed: boolean; askWelcome: boolean }) {
   if (steps === null) {
-    // TODO(ws-a): the Skeleton primitive (delayed, minimum time) instead of this placeholder block.
-    return <div aria-hidden="true" className="glass-panel h-56 animate-pulse rounded-3xl motion-reduce:animate-none" />;
+    return <Skeleton variant="card" label="Loading your next step" className="min-h-56" />;
   }
   const [step, ...rest] = steps;
   if (!step) return <AllSet />;

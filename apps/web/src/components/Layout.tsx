@@ -20,6 +20,7 @@ import {
   UserRound,
   VerifyEmailBanner,
   ApprovalBanner,
+  buttonClass,
   cx,
   focusRing,
   isDialogOpen,
@@ -350,14 +351,14 @@ export function Layout() {
                 aria-current={pathname === "/start" ? "page" : undefined}
                 onMouseEnter={() => prefetchRoute("/start")}
                 onFocus={() => prefetchRoute("/start")}
-                className={cx(
-                  // TODO(ws-a): buttonClass("secondary") once the design layer exports it.
-                  "inline-flex min-h-10 items-center gap-2 rounded-xl border px-3.5 text-sm font-medium transition-colors",
+                className={
                   pathname === "/start"
-                    ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-700 dark:text-indigo-200"
-                    : "border-zinc-200 bg-white/90 text-zinc-900 hover:border-zinc-300 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:hover:bg-white/10",
-                  focusRing,
-                )}
+                    ? cx(
+                        "inline-flex min-h-10 items-center gap-2 rounded-xl border border-indigo-500/40 bg-indigo-500/10 px-3.5 text-sm font-medium text-indigo-700 dark:text-indigo-200",
+                        focusRing,
+                      )
+                    : buttonClass("secondary", "md", "min-h-10")
+                }
               >
                 <AudioLines className="h-4 w-4 text-indigo-600 dark:text-indigo-300" aria-hidden />
                 Start live session

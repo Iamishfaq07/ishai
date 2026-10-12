@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import type { JobLinkInfo, JobStatus, JobTrackerEntry } from "@orbit/types";
-import { ApiError, CircleAlert, Link2, cx, focusRing } from "@orbit/ui";
+import { ApiError, CircleAlert, Link2, cx, focusRing, toast } from "@orbit/ui";
 import { Button, ErrorNote, Field, Input, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
@@ -141,7 +141,7 @@ export function AddJob({ open, onClose, onAdded }: { open: boolean; onClose: () 
         ...(documentId ? { document_id: documentId } : {}),
       });
       onAdded(entry);
-      // TODO(ws-a): a toast ("Added to your tracker") once the design layer's ToastHost is in.
+      toast({ message: "Added to your tracker", tone: "success" });
       reset();
       onClose();
     } catch (err) {

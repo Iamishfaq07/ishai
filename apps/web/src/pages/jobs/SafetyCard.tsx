@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Check, CircleAlert, Copy, ExternalLink, Mail, MessageSquare, Send, ShieldCheck, cx, focusRing, isIndia } from "@orbit/ui";
+import { CircleAlert, Copy, ExternalLink, Mail, MessageSquare, Send, ShieldCheck, cx, focusRing, isIndia, toast } from "@orbit/ui";
 import { Card } from "../../components/ui";
 import { SUPPORT_EMAIL, SUPPORT_WHATSAPP } from "../../lib/contact";
 import { contactHref } from "../../lib/contactForm";
@@ -120,16 +120,13 @@ function ReportJob({ job, className }: { job: ReportedJob; className?: string })
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string>(REPORT_REASONS[0]);
-  const [copied, setCopied] = useState(false);
   const text = reportText(job, reason);
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-      // TODO(ws-a): a toast ("Copied") instead of the button's own label.
+      toast("Copied");
     } catch {
-      setCopied(false);
+      toast({ message: "Couldn't copy", tone: "error" });
     }
   };
   const action = cx(
@@ -183,7 +180,7 @@ function ReportJob({ job, className }: { job: ReportedJob; className?: string })
               </a>
             )}
             <button type="button" onClick={() => void copy()} className={action}>
-              {copied ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />} {copied ? "Copied" : "Copy the details"}
+              <Copy className="h-3.5 w-3.5" aria-hidden /> Copy the details
             </button>
             {india && (
               <a href={CYBERCRIME_URL} target="_blank" rel="noopener noreferrer" className={action}>
