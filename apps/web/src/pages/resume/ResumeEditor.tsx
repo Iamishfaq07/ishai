@@ -33,6 +33,7 @@ import {
   focusRing,
   linesOver,
   splitPlaceholders,
+  toast,
 } from "@orbit/ui";
 import { Button, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -973,7 +974,6 @@ function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; o
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [upgrade, setUpgrade] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [word, setWord] = useState<"idle" | "busy" | "error">("idle");
   const [tone, setTone] = useState<CoverLetterTone>("professional");
   const [length, setLength] = useState<CoverLetterLength>("standard");
@@ -1039,16 +1039,13 @@ function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; o
               variant="secondary"
               disabled={!text.trim()}
               onClick={() =>
-                void navigator.clipboard
-                  .writeText(text)
-                  .then(() => {
-                    setCopied(true);
-                    window.setTimeout(() => setCopied(false), 1500);
-                  })
-                  .catch(() => undefined)
+                void navigator.clipboard.writeText(text).then(
+                  () => toast("Copied"),
+                  () => toast({ message: "Couldn't copy", tone: "error" }),
+                )
               }
             >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? "Copied" : "Copy"}
+              <Copy className="h-4 w-4" /> Copy
             </Button>
             <Button
               variant="secondary"

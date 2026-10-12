@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { JobStatus, LinkedInProfile, NaukriProfile, OutreachInputs, OutreachKind, OutreachMessage, Resume } from "@orbit/types";
 import {
-  Check,
   Copy,
   Sparkles,
   KIT_LIMITS,
@@ -13,6 +12,7 @@ import {
   focusRing,
   shownFirst,
   skillList,
+  toast,
   type MessageKit,
 } from "@orbit/ui";
 import { Button, Field, Input, Spinner, Textarea } from "../../components/ui";
@@ -271,26 +271,19 @@ function Box({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
-  const [copied, setCopied] = useState(false);
-  const timer = useRef<number | undefined>(undefined);
-  useEffect(() => () => window.clearTimeout(timer.current), []);
   return (
     <Button
       size="sm"
       variant="secondary"
       disabled={!text.trim()}
       onClick={() =>
-        void navigator.clipboard
-          .writeText(text)
-          .then(() => {
-            setCopied(true);
-            window.clearTimeout(timer.current);
-            timer.current = window.setTimeout(() => setCopied(false), 1500);
-          })
-          .catch(() => undefined)
+        void navigator.clipboard.writeText(text).then(
+          () => toast("Copied"),
+          () => toast({ message: "Couldn't copy", tone: "error" }),
+        )
       }
     >
-      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {copied ? "Copied" : label}
+      <Copy className="h-3.5 w-3.5" /> {label}
     </Button>
   );
 }

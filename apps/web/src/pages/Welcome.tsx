@@ -311,14 +311,7 @@ export function WelcomePage() {
                   maxLength={60}
                   className="min-h-11 text-base"
                 />
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className={cx(
-                    "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-5 text-sm font-semibold text-white shadow-glow-sm hover:from-indigo-400 hover:to-indigo-500 disabled:opacity-60",
-                    focusRing,
-                  )}
-                >
+                <button type="submit" disabled={saving} className={buttonClass("primary", "md", "min-h-11 shrink-0")}>
                   {saving ? "Saving…" : "Done"}
                 </button>
               </form>

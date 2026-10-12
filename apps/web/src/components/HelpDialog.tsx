@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, Keyboard, Mail, MessageCircle, Send, cx, focusRing, isMacPlatform } from "@orbit/ui";
+import { ChevronDown, Keyboard, Mail, MessageCircle, Send, buttonClass, cx, focusRing, isMacPlatform } from "@orbit/ui";
 import { displayAudioHelp } from "../lib/audio";
 import { CONTACT_PAGE, POLICY_LINKS, SUPPORT_EMAIL, USE_WHERE_ALLOWED, mailLink, whatsappLink } from "../lib/contact";
 import { useWelcomeGrant } from "../lib/welcome";
@@ -60,11 +60,7 @@ export default function HelpDialog({ open, onClose, onSearch }: { open: boolean;
             Stuck, or a payment hasn't shown up? Tell us what you were doing and we'll reply by email.
           </p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <Link
-              to={CONTACT_PAGE}
-              onClick={onClose}
-              className={cx(contactButton, "bg-gradient-to-b from-indigo-500 to-indigo-600 text-white shadow-glow-sm hover:from-indigo-400 hover:to-indigo-500")}
-            >
+            <Link to={CONTACT_PAGE} onClick={onClose} className={buttonClass("primary", "md", "min-h-12 flex-1")}>
               <Send className="h-4 w-4" aria-hidden /> Send us a message
             </Link>
             {whatsapp && (
@@ -73,7 +69,7 @@ export default function HelpDialog({ open, onClose, onSearch }: { open: boolean;
               </a>
             )}
             {mail && (
-              <a href={mail} className={cx(contactButton, "border border-zinc-200 hover:bg-zinc-900/5 dark:border-white/10 dark:hover:bg-white/5")}>
+              <a href={mail} className={buttonClass("secondary", "md", "min-h-12 flex-1")}>
                 <Mail className="h-4 w-4" aria-hidden /> Email {SUPPORT_EMAIL}
               </a>
             )}

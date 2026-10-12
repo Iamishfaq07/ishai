@@ -18,6 +18,7 @@ import {
   focusRing,
   practiceDocuments,
   practiceDrill,
+  toast,
   practiceMinutes,
   prepText,
   questionText,
@@ -468,7 +469,6 @@ function GapPanel({ resume, state, setState, hasJob, onShowJob }: {
 }
 
 function CopyButton({ text, label, small }: { text: string; label: string; small?: boolean }) {
-  const [copied, setCopied] = useState(false);
   return (
     <Button
       size="sm"
@@ -476,16 +476,13 @@ function CopyButton({ text, label, small }: { text: string; label: string; small
       className="whitespace-nowrap"
       disabled={!text.trim()}
       onClick={() =>
-        void navigator.clipboard
-          .writeText(text)
-          .then(() => {
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 1500);
-          })
-          .catch(() => undefined)
+        void navigator.clipboard.writeText(text).then(
+          () => toast("Copied"),
+          () => toast({ message: "Couldn't copy", tone: "error" }),
+        )
       }
     >
-      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {copied ? "Copied" : label}
+      <Copy className="h-3.5 w-3.5" /> {label}
     </Button>
   );
 }
