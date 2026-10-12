@@ -47,8 +47,8 @@ answers. Cloudflare serves the site. Sentry stays off unless `ORBIT_SENTRY_DSN` 
 bodies or PII (`observability.py`). Account email is transactional only. There is no newsletter.
 
 ## Age
-Sign-up asks the person to confirm they are 18, or have a parent or guardian's permission. Orbit is not aimed at
-children.
+Orbit is for students and job seekers, including people under 18. Sign-up does not ask for an age or a date of
+birth. A parent can ask for an account to be deleted from the contact page.
 
 Deleting an account cascades to every row above (`ON DELETE CASCADE`), except Contact messages (below). The export
 includes everything above except secrets (the password hash) and derived search data (chunk embeddings). The
