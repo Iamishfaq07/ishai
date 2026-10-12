@@ -111,7 +111,13 @@ function PaymentRow({ payment: p, onChange }: { payment: AdminPayment; onChange:
             ₹{p.amount_inr} · {p.label} · {p.name ? `${p.name} · ${p.email}` : p.email}
           </p>
           <p className="mt-0.5 text-sm tabular-nums">
-            UTR <strong>{p.utr}</strong> · reference <strong>{p.reference}</strong>
+            {p.method === "razorpay" ? (
+              <>Paid through Razorpay, confirmed automatically · reference <strong>{p.reference}</strong></>
+            ) : (
+              <>
+                UTR <strong>{p.utr}</strong> · reference <strong>{p.reference}</strong>
+              </>
+            )}
           </p>
           <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
             Sent {formatDate(p.submitted_at)}

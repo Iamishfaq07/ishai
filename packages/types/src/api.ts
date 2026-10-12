@@ -578,8 +578,29 @@ export interface CreditPack {
   price_inr: number;
   resume_credits: number;
   interview_minutes: number;
-  /** Can be bought right now (the server has a UPI ID). */
+  /** Can be bought right now (Razorpay or a UPI ID is set up). */
   buyable: boolean;
+  /** How: Razorpay's checkout (cards from any country, UPI, netbanking), UPI with a UTR, or not at all. */
+  checkout?: "razorpay" | "upi" | null;
+}
+
+/** POST /v1/billing/razorpay/orders: what the page opens Razorpay's checkout with. */
+export interface RazorpayCheckout {
+  payment_id: string;
+  order_id: string;
+  key_id: string;
+  amount_paise: number;
+  currency: string;
+  label: string;
+  email: string;
+  name: string | null;
+}
+
+/** What Razorpay's checkout hands back when the payment goes through (checked on the server). */
+export interface RazorpayPaid {
+  order_id: string;
+  payment_id: string;
+  signature: string;
 }
 
 export type UpiOrderStatus = "awaiting_payment" | "submitted" | "approved" | "rejected";
@@ -601,6 +622,8 @@ export interface UpiOrder {
   created_at: string;
   submitted_at: string | null;
   decided_at: string | null;
+  /** "upi" (a UTR the admin checks) or "razorpay" (confirmed by Razorpay). */
+  method?: "upi" | "razorpay";
   /** How to pay, while there's still something to pay. `upi_uri` is shown as a QR and, on phones, a tap-through link. */
   upi_id: string | null;
   payee_name: string | null;

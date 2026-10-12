@@ -9,6 +9,7 @@ import { errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { RESUME_AI_HOME } from "./resume/paths";
 import { UpiCheckout } from "./UpiCheckout";
+import { payWithRazorpay } from "../lib/razorpay";
 
 function Bar({ used, limit }: { used: number; limit: number | null }) {
   const pct = limit ? Math.min(100, Math.round((used / limit) * 100)) : 0;
@@ -149,7 +150,7 @@ function PackCard({ p, best, busy, onBuy }: { p: CreditPack; best: boolean; busy
         )}
         <PackLine>Never expire, no subscription</PackLine>
       </ul>
-      <Button className="mt-5 w-full" variant={best ? "primary" : "secondary"} disabled={busy || !p.buyable} onClick={() => onBuy(p)} title={p.buyable ? undefined : "UPI payments aren't set up yet"}>
+      <Button className="mt-5 w-full" variant={best ? "primary" : "secondary"} disabled={busy || !p.buyable} onClick={() => onBuy(p)} title={p.buyable ? undefined : "Payments aren't set up yet"}>
         Buy · ₹{p.price_inr.toLocaleString("en-IN")}
       </Button>
     </Card>
@@ -218,13 +219,27 @@ export function BillingPage() {
   const [order, setOrder] = useState<UpiOrder | null>(null);
   const [starting, setStarting] = useState(false);
   const [buyError, setBuyError] = useState<string | null>(null);
+  const [bought, setBought] = useState<string | null>(null);
   const checkoutRef = useRef<HTMLDivElement>(null);
 
   const buy = async (p: CreditPack) => {
     setStarting(true);
     setBuyError(null);
+    setBought(null);
     try {
-      setOrder(await api.createUpiOrder(p.id));
+      if (p.checkout === "razorpay") {
+        // Razorpay: its window takes the payment; its signed answer is checked on the server, which adds the pack.
+        const checkout = await api.createRazorpayOrder(p.id);
+        const paid = await payWithRazorpay(checkout);
+        if (paid) {
+          const done = await api.verifyRazorpay(paid);
+          setBought(done.status === "approved" ? `${done.label} added. Thanks!` : "Payment received. Your credits will appear in a moment.");
+          orders.reload();
+          ent.reload();
+        }
+      } else {
+        setOrder(await api.createUpiOrder(p.id));
+      }
     } catch (err) {
       setBuyError(errorText(err));
     } finally {
@@ -293,9 +308,15 @@ export function BillingPage() {
                 )}
               </div>
               {buyError && <ErrorNote>{buyError}</ErrorNote>}
+              {bought && (
+                <p role="status" className="rounded-xl bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                  {bought}
+                </p>
+              )}
               <p className="text-xs text-zinc-500">
-                Pay once over UPI (Google Pay, PhonePe, Paytm or any bank app). Nothing renews or is charged automatically,
-                and the credits are added as soon as your payment is checked.
+                {list[0]?.checkout === "razorpay"
+                  ? "Pay once by card, UPI, netbanking or wallet, through Razorpay. Cards from outside India work too: you're charged in rupees and your bank converts it. Nothing renews, and the credits are added the moment the payment goes through."
+                  : "Pay once over UPI (Google Pay, PhonePe, Paytm or any bank app). Nothing renews or is charged automatically, and the credits are added as soon as your payment is checked."}
               </p>
             </>
           )}

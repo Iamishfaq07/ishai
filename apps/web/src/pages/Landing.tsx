@@ -269,6 +269,7 @@ function ProductBand({
 
 function Pricing({ packs, welcome, stats }: { packs: CreditPack[] | null; welcome: WelcomeGrant | null; stats: JobStats | null }) {
   const india = useIndia();
+  const cards = packs?.[0]?.checkout === "razorpay";
   const sorted = packs ? [...packs].sort((a, b) => a.price_inr - b.price_inr) : null;
   const card = "flex flex-col rounded-2xl p-5 ring-1";
   return (
@@ -277,9 +278,11 @@ function Pricing({ packs, welcome, stats }: { packs: CreditPack[] | null; welcom
         Start free. Pay only when you need more.
       </h2>
       <p className="mt-3 max-w-2xl text-base text-zinc-600 dark:text-zinc-300">
-        {india
-          ? "No subscription and nothing that renews by itself. Buy a pack with any UPI app when you need one; what's in it never expires."
-          : "No subscription and nothing that renews by itself, and what you buy never expires. Packs are priced in Indian rupees and paid with UPI for now; card payments for other countries are coming soon."}
+        {cards
+          ? `No subscription and nothing that renews by itself. Buy a pack when you need one, by ${india ? "UPI, card or netbanking" : "card from any country (charged in rupees; your bank converts it)"}; what's in it never expires.`
+          : india
+            ? "No subscription and nothing that renews by itself. Buy a pack with any UPI app when you need one; what's in it never expires."
+            : "No subscription and nothing that renews by itself, and what you buy never expires. Packs are priced in Indian rupees and paid with UPI for now; card payments for other countries are coming soon."}
       </p>
 
       <Reveal as="ul" stagger className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -367,7 +370,7 @@ function Pricing({ packs, welcome, stats }: { packs: CreditPack[] | null; welcom
 
 // ─── Questions ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-function Faq({ welcome, stats }: { welcome: WelcomeGrant | null; stats: JobStats | null }) {
+function Faq({ welcome, stats, cards = false }: { welcome: WelcomeGrant | null; stats: JobStats | null; cards?: boolean }) {
   const country = useCountry();
   const india = isIndia(country);
   const items: Array<[string, ReactNode]> = [
@@ -402,7 +405,13 @@ function Faq({ welcome, stats }: { welcome: WelcomeGrant | null; stats: JobStats
     ],
     [
       "How do I pay? Is there a subscription?",
-      india ? (
+      cards ? (
+        <p>
+          There's no subscription. When you want more interview minutes or AI credits, you buy a pack through Razorpay:
+          {india ? " UPI, a debit or credit card, netbanking or a wallet." : " a debit or credit card from any country (charged in Indian rupees; your bank converts it)."}{" "}
+          The credits are added the moment the payment goes through. Nothing renews, and what you buy never expires.
+        </p>
+      ) : india ? (
         <p>
           There's no subscription. When you want more interview minutes or AI credits, you buy a pack with any UPI app
           (Google Pay, PhonePe, Paytm or your bank's app). Each payment is checked against its UTR, the 12-digit number
@@ -660,7 +669,7 @@ export function LandingPage() {
         </section>
 
         <Pricing packs={packs} welcome={welcome} stats={stats} />
-        <Faq welcome={welcome} stats={stats} />
+        <Faq welcome={welcome} stats={stats} cards={packs?.[0]?.checkout === "razorpay"} />
 
         <Reveal as="section" aria-labelledby="start-title" className="mb-16 rounded-3xl bg-zinc-500/[0.06] p-6 text-center ring-1 ring-zinc-500/15 sm:p-10">
           <h2 id="start-title" className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">

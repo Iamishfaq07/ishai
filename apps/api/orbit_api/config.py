@@ -54,6 +54,13 @@ class Settings(BaseSettings):
     # be bought. Each payment is checked by the admin against the bank statement (UTR) before its credits land.
     upi_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_UPI_ID"))
     upi_name: str = Field("Orbit", validation_alias=AliasChoices("ORBIT_UPI_NAME"))
+    # Razorpay (billing/razorpay.py): cards (international ones once Razorpay enables them), UPI, netbanking and
+    # wallets, confirmed automatically. With the key id and secret set, packs are bought through Razorpay's checkout
+    # instead of the manual UPI flow. The webhook secret confirms payments whose page was closed before it returned.
+    razorpay_key_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_RAZORPAY_KEY_ID"))
+    razorpay_key_secret: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_RAZORPAY_KEY_SECRET"))
+    razorpay_webhook_secret: SecretStr | None = Field(
+        None, validation_alias=AliasChoices("ORBIT_RAZORPAY_WEBHOOK_SECRET"))
 
     llm_provider: Literal["auto", "deepseek", "mock"] = Field(
         "auto", validation_alias=AliasChoices("ORBIT_LLM_PROVIDER")
