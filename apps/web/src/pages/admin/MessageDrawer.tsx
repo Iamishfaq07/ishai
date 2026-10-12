@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import type { InboxMessage, InboxMessagePatch } from "@orbit/types";
 import {
@@ -13,16 +12,15 @@ import {
   Reply,
   Save,
   Send,
+  Sheet,
   Trash2,
   Undo2,
   UserRound,
-  X,
   buttonClass,
   confirmDialog,
   cx,
   focusRing,
   toast,
-  useFocusTrap,
 } from "@orbit/ui";
 import { Button, Spinner, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -70,7 +68,6 @@ export function MessageDrawer({
   const [busy, setBusy] = useState<string | null>(null);
   const [reply, setReply] = useState("");
   const [note, setNote] = useState("");
-  const ref = useFocusTrap<HTMLDivElement>(true, { onEscape: onClose });
   const changedRef = useRef(onChange);
   changedRef.current = onChange;
 
@@ -141,42 +138,31 @@ export function MessageDrawer({
   const replyReady = Boolean(m) && reply.trim().length >= 2 && reply.trim() !== greeting(m?.name ?? "").trim();
   const handled = m?.status === "done" || m?.status === "spam";
 
-  // On <body>, like the account panel: above the header (z-20), under the confirm dialogs (z-50).
-  return createPortal(
-    <div className="fixed inset-0 z-40 flex justify-end bg-black/40" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div
-        ref={ref}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="message-drawer-title"
-        className="flex h-full w-full max-w-2xl animate-fade-in flex-col overflow-hidden border-l border-zinc-200 bg-zinc-50 shadow-2xl dark:border-white/10 dark:bg-zinc-950"
-      >
-        <header className="flex items-start gap-3 border-b border-zinc-200 bg-white/80 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-zinc-900/80 sm:px-5">
-          <div className="min-w-0 flex-1">
-            <h2 id="message-drawer-title" className="truncate font-display text-lg font-semibold">
-              {m ? m.name : "Message"}
-            </h2>
-            {m && (
-              <>
-                <p className="truncate text-sm text-zinc-600 dark:text-zinc-300">{m.email}</p>
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  <StatusBadge status={m.status} />
-                  <Tag>{m.topic_label}</Tag>
-                  <span className="font-mono text-xs text-zinc-500 tabular-nums dark:text-zinc-400">{m.reference}</span>
-                </div>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                  Sent {when(m.created_at)}
-                  {m.handled_at && ` · ${m.status === "spam" ? "marked spam" : "done"} ${when(m.handled_at)}`}
-                </p>
-              </>
-            )}
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close" className={cx("rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-500/10", focusRing)}>
-            <X className="h-5 w-5" />
-          </button>
-        </header>
-
-        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-5">
+  return (
+    <Sheet
+      open
+      placement="end"
+      onClose={onClose}
+      titleId="message-drawer-title"
+      title={m ? m.name : "Message"}
+      detail={
+        m ? (
+          <>
+            <p className="truncate text-sm text-zinc-600 dark:text-zinc-300">{m.email}</p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <StatusBadge status={m.status} />
+              <Tag>{m.topic_label}</Tag>
+              <span className="font-mono text-xs text-zinc-500 tabular-nums dark:text-zinc-400">{m.reference}</span>
+            </div>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Sent {when(m.created_at)}
+              {m.handled_at && ` · ${m.status === "spam" ? "marked spam" : "done"} ${when(m.handled_at)}`}
+            </p>
+          </>
+        ) : undefined
+      }
+    >
+      <div className="space-y-3 px-4 py-4 sm:px-5">
           {error && (
             <p role="alert" className="rounded-xl bg-rose-500/10 p-2.5 text-sm text-rose-800 ring-1 ring-rose-500/25 dark:text-rose-200">
               {error}{" "}
@@ -347,8 +333,6 @@ export function MessageDrawer({
             </>
           )}
         </div>
-      </div>
-    </div>,
-    document.body,
+    </Sheet>
   );
 }
