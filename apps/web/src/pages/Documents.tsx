@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { DOCUMENT_ACCEPT, type DocumentKind, type OrbitDocument } from "@orbit/types";
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../components/ui";
-import { Briefcase, Skeleton, confirmDialog, cx, FileIcon, FileText, FileUp, FolderOpen, NotebookPen, type LucideIcon } from "@orbit/ui";
+import { Briefcase, LoadGate, Skeleton, confirmDialog, cx, FileIcon, FileText, FileUp, FolderOpen, NotebookPen, type LucideIcon } from "@orbit/ui";
 import { PRODUCTS } from "../components/products";
 import { Sheet } from "../components/Sheet";
 import { api } from "../lib/api";
@@ -382,7 +382,7 @@ function EditModal({
     >
       <div className="px-5 py-4">
         {loaded.loading ? (
-          <Spinner />
+          <LoadGate loading variant="line" count={6} label="Opening the document">{null}</LoadGate>
         ) : loaded.error ? (
           <ErrorNote onRetry={loaded.reload}>{errorText(loaded.error)}</ErrorNote>
         ) : (

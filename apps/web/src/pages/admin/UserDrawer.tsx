@@ -11,9 +11,10 @@ import {
   Save,
   Sheet,
   Trash2,
+  LoadGate,
   confirmDialog,
 } from "@orbit/ui";
-import { Button, Input, Select, Spinner, Textarea } from "../../components/ui";
+import { Button, Input, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText, formatDate } from "../../lib/format";
 import { AccountHistory } from "./AccountHistory";
@@ -106,7 +107,7 @@ export function UserDrawer({
             </p>
           )}
           {!detail ? (
-            !error && <Spinner label="Loading the account" />
+            !error && <LoadGate loading variant="card" count={3} label="Loading the account">{null}</LoadGate>
           ) : (
             <>
               {flash && (

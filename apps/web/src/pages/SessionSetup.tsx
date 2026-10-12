@@ -33,10 +33,11 @@ import {
   type Verdict,
   WorkspaceBar,
   confirmDialog,
+  LoadGate,
   cx,
   focusRing,
 } from "@orbit/ui";
-import { Button, Card, ErrorNote, Field, Input, Meter, PageHeader, Select, Spinner, Textarea, Toggle } from "../components/ui";
+import { Button, Card, ErrorNote, Field, Input, Meter, PageHeader, Select, Textarea, Toggle } from "../components/ui";
 import { API_URL, api } from "../lib/api";
 import {
   captureStream,
@@ -451,9 +452,8 @@ export function SessionSetupPage() {
           <Card>
             <h2 className="mb-1 font-semibold">Context documents</h2>
             <p className="mb-4 text-sm text-zinc-500">Only checked documents are searched during this session.</p>
-            {docs.loading ? (
-              <Spinner />
-            ) : docs.error ? (
+            <LoadGate loading={docs.loading && !docs.data} variant="line" count={4} label="Loading documents">
+            {docs.error ? (
               <ErrorNote onRetry={docs.reload}>{errorText(docs.error)}</ErrorNote>
             ) : sortedDocs.length === 0 ? (
               <p className="text-sm text-zinc-500">
@@ -482,6 +482,7 @@ export function SessionSetupPage() {
                 ))}
               </ul>
             )}
+            </LoadGate>
             <StoryBankNote api={api} onManage={() => navigate("/documents/stories")} className="mt-4" />
           </Card>
         </div>

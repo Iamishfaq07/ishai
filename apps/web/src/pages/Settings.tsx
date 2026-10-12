@@ -15,6 +15,7 @@ import {
   AppearanceControls,
   useDesign,
   confirmDialog,
+  LoadGate,
   SettingsIcon,
   CreditCard,
   ChevronRight,
@@ -29,7 +30,7 @@ import {
   type LucideIcon,
 } from "@orbit/ui";
 import { CountryField } from "../components/CountryField";
-import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Spinner, Toggle } from "../components/ui";
+import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Toggle } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { errorText } from "../lib/format";
@@ -241,9 +242,9 @@ function AdvancedConfig() {
       {/* The error first: a failed load leaves no form, and checking `!form` first would spin for ever. */}
       {cfg.error ? (
         <ErrorNote onRetry={cfg.reload}>{errorText(cfg.error)}</ErrorNote>
-      ) : cfg.loading || !form ? (
-        <Spinner />
       ) : (
+        <LoadGate loading={cfg.loading || !form} variant="line" count={6} label="Loading settings">
+        {form && (
         <form onSubmit={(e) => void save(e)} className="space-y-5">
           {error && <ErrorNote>{error}</ErrorNote>}
           {!form.secrets_editable && (
@@ -311,6 +312,8 @@ function AdvancedConfig() {
             </Button>
           </div>
         </form>
+        )}
+        </LoadGate>
       )}
     </Card>
   );
