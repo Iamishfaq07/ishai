@@ -34,6 +34,7 @@ export {
   type ApiClientOptions,
   type SupportAdminItem,
   type SupportChatMessage,
+  type SupportSuggestion,
   type SupportThread,
 } from "./api/client";
 export {
