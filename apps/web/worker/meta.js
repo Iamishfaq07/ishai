@@ -11,7 +11,7 @@ export const PAGE_META = {
   "/": {
     title: "Orbit AI: practise interviews, fix your resume, find jobs",
     description:
-      "Interview practice and live help, a resume checker with an ATS score, and new jobs that fit you. One free account; pay with UPI, no subscription.",
+      "Interview practice and live help, a resume checker with an ATS score, and new jobs that fit you. One free account. No subscription.",
   },
   "/resume-ai": {
     title: "Orbit Resume AI: see your resume the way screening software does",
