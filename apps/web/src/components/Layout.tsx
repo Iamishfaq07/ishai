@@ -399,6 +399,7 @@ export function Layout() {
               {label}
             </a>
           ))}
+          <span className="text-zinc-400">© {new Date().getFullYear()} Orbit</span>
         </nav>
       </footer>
 

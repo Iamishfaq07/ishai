@@ -18,6 +18,7 @@ import {
 } from "@orbit/ui";
 import { Captcha, useCaptchaConfig } from "../components/Captcha";
 import { Footer } from "../components/Footer";
+import { SiteMenu } from "../components/SiteMenu";
 import { Button, Card, ErrorNote, Input, Textarea } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -151,20 +152,21 @@ export function ContactPage() {
 
   return (
     <div className="flex min-h-full flex-col overflow-x-clip">
-      <header className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-4 sm:px-6">
+      <header className="relative mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-4 sm:px-6">
         <Link to="/" className={cx("rounded-lg", focusRing)} aria-label="Orbit home">
           <OrbitWordmark size={26} />
         </Link>
         <span className="hidden h-5 w-px bg-zinc-300 sm:block dark:bg-white/15" aria-hidden="true" />
         <span className="hidden font-display text-sm font-semibold sm:inline">Contact</span>
         <nav aria-label="Account" className="ml-auto flex items-center gap-2">
+          <SiteMenu />
           {user ? (
             <Link to={prefill.from ?? "/"} className={buttonClass("secondary", "md", "min-h-10")}>
               <ArrowLeft className="h-4 w-4" aria-hidden /> Back to Orbit
             </Link>
           ) : (
             <>
-              <Link to="/login" className={buttonClass("secondary", "md", "min-h-10")}>
+              <Link to="/login" className={buttonClass("secondary", "md", "hidden min-h-10 sm:inline-flex")}>
                 Sign in
               </Link>
               <Link to="/register" className={buttonClass("primary", "md", "hidden min-h-10 min-[400px]:inline-flex")}>
@@ -409,7 +411,11 @@ export function ContactPage() {
                 <a href="https://cybercrime.gov.in/" target="_blank" rel="noopener noreferrer" className={cx("font-medium text-indigo-700 underline dark:text-indigo-300", focusRing)}>
                   cybercrime.gov.in
                 </a>{" "}
-                or call 1930.
+                or call{" "}
+                <a href="tel:1930" className={cx("font-medium text-indigo-700 underline dark:text-indigo-300", focusRing)}>
+                  1930
+                </a>
+                .
               </p>
             </Card>
           </aside>

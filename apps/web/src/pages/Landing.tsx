@@ -16,6 +16,7 @@ import {
   isIndia,
 } from "@orbit/ui";
 import { Footer } from "../components/Footer";
+import { SiteMenu } from "../components/SiteMenu";
 import { JobMock, PracticeMock, ResumeMock } from "../components/productArt";
 import { PRODUCTS, ProductMark, type ProductId } from "../components/products";
 import { api } from "../lib/api";
@@ -530,7 +531,7 @@ export function LandingPage() {
         Skip to content
       </a>
       <header className="sticky top-0 z-20 border-b border-zinc-200/70 bg-white dark:border-white/5 dark:bg-zinc-950">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
+        <div className="relative mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
           <Link to="/" className={cx("shrink-0 rounded-lg", focusRing)} aria-label="Orbit home">
             <OrbitWordmark size={26} />
           </Link>
@@ -546,7 +547,8 @@ export function LandingPage() {
             ))}
           </nav>
           <nav aria-label="Account" className="ml-auto flex items-center gap-2">
-            <Link to="/login" className={cx(secondary, "px-3.5 text-sm")}>
+            <SiteMenu />
+            <Link to="/login" className={cx(secondary, "hidden px-3.5 text-sm sm:inline-flex")}>
               Sign in
             </Link>
             <Link to="/register" className={cx(primary, "px-3.5 text-sm")}>

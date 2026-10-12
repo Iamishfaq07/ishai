@@ -12,6 +12,7 @@ import { TEMPLATES } from "./model";
 import { RESUME_AI_HOME } from "./paths";
 import { AiPill } from "../../components/products";
 import { Footer } from "../../components/Footer";
+import { SiteMenu } from "../../components/SiteMenu";
 import { RESUME_AI_FEATURES, scoreTone } from "./product";
 import { MM_TO_PX, PAGE_MM, ResumePreview } from "./ResumePreview";
 import { SAMPLE_RESUME } from "./sample";
@@ -131,7 +132,7 @@ function SampleResume() {
 export function ResumeAiPublicPage() {
   return (
     <div className="min-h-full overflow-x-clip">
-      <header className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-4 sm:px-6">
+      <header className="relative mx-auto flex max-w-6xl items-center gap-3 px-4 py-4 sm:px-6">
         <Link to="/" className={cx("rounded-lg", focusRing)} aria-label="Orbit home">
           <OrbitWordmark size={26} />
         </Link>
@@ -140,7 +141,8 @@ export function ResumeAiPublicPage() {
           Resume <AiPill />
         </span>
         <nav aria-label="Account" className="ml-auto flex items-center gap-2">
-          <Link to="/login" state={BACK_HERE} className={cx(secondary, "px-3.5 py-2 text-sm")}>
+          <SiteMenu />
+          <Link to="/login" state={BACK_HERE} className={cx(secondary, "hidden px-3.5 py-2 text-sm sm:inline-flex")}>
             Sign in
           </Link>
           <Link to="/register" state={BACK_HERE} className={cx(primary, "px-3.5 py-2 text-sm")}>

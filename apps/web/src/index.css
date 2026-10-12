@@ -10,6 +10,11 @@
   #root {
     height: 100%;
   }
+  /* A wide child must not drag the whole page sideways on a phone. */
+  html,
+  body {
+    overflow-x: clip;
+  }
   /* Figures line up by default (scores, prices, minutes, counts change without the text around them shifting). */
   body {
     font-feature-settings: "cv11", "ss01", "tnum";

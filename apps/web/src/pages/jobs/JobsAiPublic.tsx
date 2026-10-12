@@ -23,6 +23,7 @@ import {
 } from "@orbit/ui";
 import { AiPill } from "../../components/products";
 import { Footer } from "../../components/Footer";
+import { SiteMenu } from "../../components/SiteMenu";
 import { api } from "../../lib/api";
 import { useCountry } from "../../lib/country";
 import { RESUME_AI_HOME } from "../resume/paths";
@@ -159,7 +160,7 @@ export function JobsAiPublicPage() {
   const feeds = stats?.feeds.length ? stats.feeds : ["Himalayas", "Remote OK", "Jobicy"];
   return (
     <div className="min-h-full overflow-x-clip">
-      <header className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-4 sm:px-6">
+      <header className="relative mx-auto flex max-w-6xl items-center gap-3 px-4 py-4 sm:px-6">
         <Link to="/" className={cx("rounded-lg", focusRing)} aria-label="Orbit home">
           <OrbitWordmark size={26} />
         </Link>
@@ -168,7 +169,8 @@ export function JobsAiPublicPage() {
           Jobs <AiPill />
         </span>
         <nav aria-label="Account" className="ml-auto flex items-center gap-2">
-          <Link to="/login" state={BACK_HERE} className={cx(linkButton("secondary"), "px-3.5")}>
+          <SiteMenu />
+          <Link to="/login" state={BACK_HERE} className={cx(linkButton("secondary"), "hidden sm:inline-flex")}>
             Sign in
           </Link>
           <Link to="/register" state={BACK_HERE} className={cx(linkButton("primary"), "px-3.5")}>
