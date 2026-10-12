@@ -357,7 +357,7 @@ export function RegisterPage() {
       return;
     }
     if (!agreed) {
-      setError("Tick the box to confirm your age and that you agree to the terms.");
+      setError("Tick the box to agree to the terms.");
       return;
     }
     setBusy(true);
@@ -414,7 +414,7 @@ export function RegisterPage() {
             className="mt-0.5 h-4 w-4 shrink-0 accent-indigo-600"
           />
           <span>
-            I am 18 or older, or I have a parent or guardian's permission. I agree to the{" "}
+            I agree to the{" "}
             {TERMS_PAGE && (
               <>
                 <a href={TERMS_PAGE} className="underline underline-offset-2">terms</a>, the{" "}
