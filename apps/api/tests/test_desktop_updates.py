@@ -84,7 +84,8 @@ def test_stage_release_copies_signed_installer_once(tmp_path: Path) -> None:
 
 # ---- GitHub Releases source (hosts without a disk, e.g. Render free) ----------------------------------
 
-def _github(monkeypatch: pytest.MonkeyPatch, releases_latest: dict | None, *, status: int = 200) -> list[str]:
+def _github(monkeypatch: pytest.MonkeyPatch, releases_latest: dict | None, *, status: int = 200,
+            location: str = "https://objects.githubusercontent.com/orbit.exe?sig=abc") -> list[str]:
     import httpx
 
     from orbit_api import desktop_updates
@@ -99,12 +100,13 @@ def _github(monkeypatch: pytest.MonkeyPatch, releases_latest: dict | None, *, st
         if req.url.path.endswith("/assets/2"):  # the .sig
             return httpx.Response(200, text="sig-from-github\n")
         if req.url.path.endswith("/assets/1"):  # the installer → signed CDN URL
-            return httpx.Response(302, headers={"location": "https://objects.example/orbit.exe?sig=abc"})
+            return httpx.Response(302, headers={"location": location})
         return httpx.Response(404)
 
     monkeypatch.setattr(desktop_updates, "_http",
                         lambda **kw: httpx.AsyncClient(transport=httpx.MockTransport(handler), **kw))
     monkeypatch.setattr(desktop_updates, "_gh_cache", None)
+    desktop_updates._download_cache.clear()
     s = get_settings()
     monkeypatch.setattr(s, "desktop_updates_dir", None)
     monkeypatch.setattr(s, "updates_github_repo", "me/orbit")
@@ -136,9 +138,18 @@ def test_github_release_is_offered_and_download_redirects(client: TestClient, mo
     assert sum("releases/latest" in c for c in calls) == 1  # cached, not one GitHub call per check
 
     d = client.get("/v1/desktop/download/0.1.4/Orbit_0.1.4_x64-setup.exe", follow_redirects=False)
-    assert d.status_code == 302 and d.headers["location"] == "https://objects.example/orbit.exe?sig=abc"
+    assert d.status_code == 302 and d.headers["location"] == "https://objects.githubusercontent.com/orbit.exe?sig=abc"
     assert client.get("/v1/desktop/download/0.1.3/Orbit_0.1.3_x64-setup.exe", follow_redirects=False).status_code == 404
     assert client.get("/v1/desktop/download/0.1.4/other-setup.exe", follow_redirects=False).status_code == 404
+
+
+def test_a_download_link_off_githubs_cdn_is_refused(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    _github(monkeypatch, _REL, location="https://evil.example/orbit.exe")
+    refused = client.get("/v1/desktop/download/0.1.4/Orbit_0.1.4_x64-setup.exe", follow_redirects=False)
+    assert refused.status_code == 502
+    _github(monkeypatch, _REL, location="http://objects.githubusercontent.com/orbit.exe")
+    plain = client.get("/v1/desktop/download/0.1.4/Orbit_0.1.4_x64-setup.exe", follow_redirects=False)
+    assert plain.status_code == 502
 
 
 def test_github_unsigned_draft_or_failing_release_is_never_offered(client: TestClient,

@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -168,6 +169,23 @@ async def _parse_github_release(c: httpx.AsyncClient, rel: dict[str, Any], token
 # GitHub on every request would let anyone burn the token's hourly quota and break updates for everyone.
 _download_cache: dict[str, tuple[float, str]] = {}
 DOWNLOAD_URL_TTL_S = 60.0
+# The asset API answers with a redirect. Only GitHub's own CDNs are followed, so a surprising Location
+# (another site, or http) is never handed to the person downloading the installer.
+_DOWNLOAD_HOSTS = frozenset({
+    "objects.githubusercontent.com",
+    "release-assets.githubusercontent.com",
+    "github-releases.githubusercontent.com",
+})
+
+
+def _safe_github_location(location: str | None) -> str | None:
+    if not location:
+        return None
+    parsed = urlsplit(location)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme != "https" or host not in _DOWNLOAD_HOSTS or parsed.username or parsed.password:
+        return None
+    return location
 
 
 async def _github_download_url(release: GitHubRelease) -> str | None:
@@ -179,7 +197,7 @@ async def _github_download_url(release: GitHubRelease) -> str | None:
         return hit[1]
     async with _http(timeout=10) as c:
         r = await c.get(release.installer_asset_url, headers=_github_headers(cfg[1], raw=True), follow_redirects=False)
-    location = r.headers.get("location") if r.status_code in (301, 302, 307) else None
+    location = _safe_github_location(r.headers.get("location") if r.status_code in (301, 302, 307) else None)
     if location:
         _download_cache.clear()  # only the latest release's link is ever needed
         _download_cache[release.installer_asset_url] = (time.monotonic() + DOWNLOAD_URL_TTL_S, location)
