@@ -26,7 +26,7 @@ const EMPTY: Record<AdminUserFilter, { title: string; body: string }> = {
   all: { title: "No accounts yet", body: "Accounts appear here as people sign up." },
   pending: { title: "Nobody is waiting", body: "You'll get an email when someone new signs up." },
   granted: { title: "Nobody is on a grant", body: "Accounts you give a plan for a while show here until it runs out." },
-  paid: { title: "No paying accounts yet", body: "Accounts with an approved UPI payment show here." },
+  paid: { title: "No paying accounts yet", body: "Accounts with an approved payment show here." },
   active: { title: "Nobody used Orbit this week", body: "Sessions, resume AI and Jobs AI all count." },
   never_used: { title: "Everyone has used Orbit", body: "Accounts that signed up and never started anything show here." },
   suspended: { title: "No suspended accounts", body: "Suspend an account from its panel." },

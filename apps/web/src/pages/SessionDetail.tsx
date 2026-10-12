@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import type { SessionAnswer, SessionDetail, SessionSummary } from "@orbit/types";
 import {
   AnswerRatingButtons,
@@ -20,8 +20,15 @@ import { SESSION_TYPE_LABEL, downloadText, errorText, formatClock, formatDate, f
 import { SESSION_TYPE_ICON } from "../lib/sessionIcons";
 import { useAsync } from "../lib/useAsync";
 import type { LiveLaunchState } from "./SessionSetup";
+import { JOBS_MATCHES } from "./jobs/paths";
+import { RESUME_AI_HOME } from "./resume/paths";
 
 type Tab = "review" | "summary" | "transcript" | "questions";
+
+const nextLink = cx(
+  "inline-flex min-h-10 items-center rounded-xl border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-900 hover:border-zinc-300 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:hover:bg-white/10",
+  focusRing,
+);
 
 export function SessionDetailPage() {
   const { sessionId = "" } = useParams();
@@ -122,6 +129,18 @@ export function SessionDetailPage() {
       )}
 
       <ReportStatusNote status={session.report_status} onRetry={() => void retryReport()} />
+      {session.status === "ended" && (
+        <nav aria-label="What to do next" className="mb-6 flex flex-col gap-3 rounded-2xl border border-zinc-200/80 bg-zinc-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-white/10 dark:bg-white/[0.03]">
+          <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">Keep going</p>
+          <div className="flex flex-wrap gap-2">
+            <Link to={session.type === "mock" ? "/mock" : "/start"} className={nextLink}>
+              {session.type === "mock" ? "Practise another round" : "Start another session"}
+            </Link>
+            <Link to={RESUME_AI_HOME} className={nextLink}>Work on your resume</Link>
+            <Link to={JOBS_MATCHES} className={nextLink}>See jobs that fit</Link>
+          </div>
+        </nav>
+      )}
       <div role="tablist" className="mb-6 flex gap-0 border-b sm:gap-1 border-zinc-200 dark:border-zinc-800">
         {(
           [

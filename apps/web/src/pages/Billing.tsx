@@ -85,7 +85,7 @@ function CreditRows({ e, wide = false }: { e: Entitlements; wide?: boolean }) {
       )}
       {empty && wide && (
         <Link to="/billing" className={cx("inline-flex items-center gap-1.5 text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
-          <Crown className="h-4 w-4 text-amber-500" aria-hidden="true" /> Top up with a pack, paid once over UPI
+          <Crown className="h-4 w-4 text-amber-500" aria-hidden="true" /> Top up with a pack. Pay once, nothing renews.
         </Link>
       )}
       <p className="text-xs text-zinc-500">
