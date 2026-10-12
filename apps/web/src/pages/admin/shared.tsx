@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { AdminUser } from "@orbit/types";
-import { Inbox, IndianRupee, ScrollText, Users, cx } from "@orbit/ui";
+import { Headphones, Inbox, IndianRupee, ScrollText, Users, cx } from "@orbit/ui";
 import { ProductTabs } from "../../components/products";
 import { api } from "../../lib/api";
 import { useAsync } from "../../lib/useAsync";
@@ -44,6 +44,7 @@ export function AdminTabs({ paymentsWaiting, inboxUnread }: { paymentsWaiting?: 
         { to: "/admin/users", label: "Users", icon: Users },
         { to: "/admin/payments", label: "Payments", icon: IndianRupee, ...(paymentsWaiting ? { count: paymentsWaiting } : {}) },
         { to: "/admin/inbox", label: "Inbox", icon: Inbox, ...(unread ? { count: unread } : {}) },
+        { to: "/admin/support", label: "Support", icon: Headphones },
         { to: "/admin/audit", label: "Audit log", icon: ScrollText },
       ]}
     />

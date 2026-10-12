@@ -39,6 +39,13 @@ TOKEN_EXEMPT = frozenset({
     # someone's name changes nothing of theirs, and the Origin check still applies.
     "/v1/contact",
 })
+
+
+def _token_exempt(path: str) -> bool:
+    """Support chat is opened by signed-out visitors. The thread token is the credential, not the session cookie."""
+    return path in TOKEN_EXEMPT or path.startswith("/v1/support/")
+
+
 # Server-to-server callbacks authenticated by their own signatures (e.g. a payment webhook).
 FULLY_EXEMPT: frozenset[str] = frozenset({"/v1/billing/webhook"})
 
@@ -86,7 +93,7 @@ async def csrf_middleware(request: Request, call_next: Callable[[Request], Await
     cookie = request.cookies.get(COOKIE_NAME)
     if origin is not None and origin not in allowed_origins():
         return _reject("csrf_origin", "This request came from a site that isn't allowed to use Orbit.")
-    if cookie and request.url.path not in TOKEN_EXEMPT:
+    if cookie and not _token_exempt(request.url.path):
         if origin is None:
             return _reject("csrf_origin", "Missing request origin.")
         claims = decode_access_token(cookie)

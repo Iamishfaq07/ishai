@@ -32,6 +32,9 @@ export {
   type ApiAuth,
   type ApiClient,
   type ApiClientOptions,
+  type SupportAdminItem,
+  type SupportChatMessage,
+  type SupportThread,
 } from "./api/client";
 export {
   LiveClient,
