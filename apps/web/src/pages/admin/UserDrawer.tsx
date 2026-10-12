@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import type { AccessChange, AdminUser, AdminUserDetail } from "@orbit/types";
 import {
   Ban,
@@ -10,12 +9,9 @@ import {
   LogOut,
   Mic,
   Save,
+  Sheet,
   Trash2,
-  X,
   confirmDialog,
-  cx,
-  focusRing,
-  useFocusTrap,
 } from "@orbit/ui";
 import { Button, Input, Select, Spinner, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -54,7 +50,6 @@ export function UserDrawer({
   const [detail, setDetail] = useState<AdminUserDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
-  const ref = useFocusTrap<HTMLDivElement>(true, { onEscape: onClose });
 
   const load = useCallback(() => {
     setError(null);
@@ -76,43 +71,32 @@ export function UserDrawer({
   };
 
   const u = detail?.user;
-  // On <body>: the page's fade-in leaves a transform on its wrapper, which would pin a fixed panel to the page instead
-  // of the window. Above the header (z-20), under the confirm dialogs (z-50).
-  return createPortal(
-    <div className="fixed inset-0 z-40 flex justify-end bg-black/40" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div
-        ref={ref}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="account-drawer-title"
-        className="flex h-full w-full max-w-2xl animate-fade-in flex-col overflow-hidden border-l border-zinc-200 bg-zinc-50 shadow-2xl dark:border-white/10 dark:bg-zinc-950"
-      >
-        <header className="flex items-start gap-3 border-b border-zinc-200 bg-white/80 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-zinc-900/80 sm:px-5">
-          <div className="min-w-0 flex-1">
-            <h2 id="account-drawer-title" className="truncate font-display text-lg font-semibold">
-              {u ? u.name || u.email : "Account"}
-            </h2>
-            {u && (
-              <>
-                {u.name && <p className="truncate text-sm text-zinc-600 dark:text-zinc-300">{u.email}</p>}
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  <AccessBadge user={u} />
-                  {u.suspended_at && <SuspendedBadge />}
-                  {detail.is_you && <Tag>You</Tag>}
-                  {u.has_note && <Tag title="You wrote private notes on this account">Note</Tag>}
-                </div>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                  Joined {formatDate(u.created_at)} · {u.email_verified ? "email verified" : "email not verified"} · last active{" "}
-                  {sinceText(u.usage?.last_active ?? null).toLowerCase()}
-                </p>
-              </>
-            )}
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close" className={cx("rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-500/10", focusRing)}>
-            <X className="h-5 w-5" />
-          </button>
-        </header>
-        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-5">
+  return (
+    <Sheet
+      open
+      placement="end"
+      onClose={onClose}
+      titleId="account-drawer-title"
+      title={u ? u.name || u.email : "Account"}
+      detail={
+        u ? (
+          <>
+            {u.name && <p className="truncate text-sm text-zinc-600 dark:text-zinc-300">{u.email}</p>}
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <AccessBadge user={u} />
+              {u.suspended_at && <SuspendedBadge />}
+              {detail?.is_you && <Tag>You</Tag>}
+              {u.has_note && <Tag title="You wrote private notes on this account">Note</Tag>}
+            </div>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Joined {formatDate(u.created_at)} · {u.email_verified ? "email verified" : "email not verified"} · last active{" "}
+              {sinceText(u.usage?.last_active ?? null).toLowerCase()}
+            </p>
+          </>
+        ) : undefined
+      }
+    >
+      <div className="space-y-3 px-4 py-4 sm:px-5">
           {error && (
             <p className="text-sm text-rose-600">
               {error}{" "}
@@ -163,9 +147,7 @@ export function UserDrawer({
             </>
           )}
         </div>
-      </div>
-    </div>,
-    document.body,
+    </Sheet>
   );
 }
 

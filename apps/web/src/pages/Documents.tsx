@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { DOCUMENT_ACCEPT, type DocumentKind, type OrbitDocument } from "@orbit/types";
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../components/ui";
-import { Briefcase, confirmDialog, cx, FileIcon, FileText, FileUp, FolderOpen, NotebookPen, type LucideIcon } from "@orbit/ui";
+import { Briefcase, Skeleton, confirmDialog, cx, FileIcon, FileText, FileUp, FolderOpen, NotebookPen, type LucideIcon } from "@orbit/ui";
 import { PRODUCTS } from "../components/products";
 import { Sheet } from "../components/Sheet";
 import { api } from "../lib/api";
@@ -239,7 +239,7 @@ export function DocumentsPage() {
       </div>
 
       {docs.loading ? (
-        <Spinner />
+        <Skeleton variant="session-row" count={4} label="Loading documents" />
       ) : docs.error ? (
         <ErrorNote onRetry={docs.reload}>{errorText(docs.error)}</ErrorNote>
       ) : (docs.data ?? []).length === 0 ? (

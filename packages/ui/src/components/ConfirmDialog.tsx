@@ -57,7 +57,7 @@ export function ConfirmHost() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-[60] flex animate-fade-in items-center justify-center bg-black/50 p-4"
       onMouseDown={(e) => e.target === e.currentTarget && close(false)}
     >
       <div
