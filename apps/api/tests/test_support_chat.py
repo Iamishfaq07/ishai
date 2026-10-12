@@ -139,3 +139,22 @@ def test_signed_in_sees_their_balance_and_last_payment(client: TestClient) -> No
     assert paid.status_code == 200, paid.text
     last = paid.json()["messages"][-1]["text"]
     assert "landed" in last and "₹499" in last and "Mini" in last
+
+
+def test_the_page_leads_the_menu_but_not_a_follow_up(client: TestClient) -> None:
+    billing = client.post("/v1/support/threads?page=/billing")
+    assert billing.status_code == 201, billing.text
+    assert [item["id"] for item in billing.json()["suggestions"][:3]] == ["buy", "missing", "refund"]
+
+    resume = client.post("/v1/support/threads?page=/resume-ai/editor")
+    assert [item["id"] for item in resume.json()["suggestions"][:3]] == ["resume", "what_spends", "prices"]
+
+    token = billing.json()["token"]
+    followed = client.post(
+        f"/v1/support/threads/{billing.json()['id']}/messages",
+        json={"token": token, "choice": "prices", "page": "/billing"},
+    )
+    assert followed.status_code == 200, followed.text
+    ids = [item["id"] for item in followed.json()["suggestions"]]
+    assert ids[0] == "welcome"
+    assert "menu" in ids

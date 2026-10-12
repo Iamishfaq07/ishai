@@ -76,8 +76,8 @@ export function SupportChat() {
     let cancel = false;
     const existing = load();
     const start = existing
-      ? api.supportRead(existing.id, existing.token).catch(() => api.supportOpen())
-      : api.supportOpen();
+      ? api.supportRead(existing.id, existing.token, pathname).catch(() => api.supportOpen(pathname))
+      : api.supportOpen(pathname);
     void start.then((next) => {
       if (cancel) return;
       setThread(next);
@@ -89,7 +89,7 @@ export function SupportChat() {
     return () => {
       cancel = true;
     };
-  }, [open, hidden]);
+  }, [open, hidden, pathname]);
 
   useEffect(() => {
     if (!open || !saved || thread?.status !== "waiting") return;
@@ -146,7 +146,7 @@ export function SupportChat() {
     setBusy(true);
     setError("");
     try {
-      setThread(await api.supportSend(saved.id, saved.token, choice?.label ?? typed, choice?.id));
+      setThread(await api.supportSend(saved.id, saved.token, choice?.label ?? typed, choice?.id, pathname));
       setText("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't send that.");

@@ -676,15 +676,15 @@ export function createApiClient(options: ApiClientOptions) {
     announcement: () => json<Announcement>("/v1/announcement"),
     /** Public (signed in or out): leave a message for the team; it waits in the admin's Inbox. */
     sendContact: (req: ContactRequest) => json<ContactReceipt>("/v1/contact", { method: "POST", body: body(req) }),
-    /** Public: open a support chat. The token is the only way back into it. */
-    supportOpen: () =>
-      json<SupportThread>("/v1/support/threads", { method: "POST", body: body({}) }),
-    supportRead: (threadId: string, token: string) =>
-      json<SupportThread>(`/v1/support/threads/${encodeURIComponent(threadId)}?token=${encodeURIComponent(token)}`),
-    supportSend: (threadId: string, token: string, text: string, choice?: string) =>
+    /** Public: open a support chat. The token is the only way back into it. `page` puts that screen's topics first. */
+    supportOpen: (page?: string) =>
+      json<SupportThread>(`/v1/support/threads${queryString({ page })}`, { method: "POST", body: body({}) }),
+    supportRead: (threadId: string, token: string, page?: string) =>
+      json<SupportThread>(`/v1/support/threads/${encodeURIComponent(threadId)}${queryString({ token, page })}`),
+    supportSend: (threadId: string, token: string, text: string, choice?: string, page?: string) =>
       json<SupportThread>(`/v1/support/threads/${encodeURIComponent(threadId)}/messages`, {
         method: "POST",
-        body: body({ token, text, ...(choice ? { choice } : {}) }),
+        body: body({ token, text, ...(choice ? { choice } : {}), ...(page ? { page } : {}) }),
       }),
     supportHandoff: (threadId: string, token: string, name: string, email: string) =>
       json<SupportThread>(`/v1/support/threads/${encodeURIComponent(threadId)}/handoff`, {
