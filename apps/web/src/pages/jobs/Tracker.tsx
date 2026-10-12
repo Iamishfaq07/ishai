@@ -11,7 +11,7 @@ import {
   PenLine,
   Plus,
   Send,
-  Sheet,
+  SheetIcon,
   Sparkles,
   Target,
   Trash2,
@@ -87,7 +87,7 @@ export function JobTrackerPage() {
                 title="Every job, its status, dates and notes, as a spreadsheet (Excel or Google Sheets)"
                 onClick={() => downloadText(`orbit-applications-${dateInput(new Date().toISOString())}.csv`, trackerCsv(tracker.data ?? []), "text/csv;charset=utf-8")}
               >
-                <Sheet className="h-4 w-4" aria-hidden /> Export CSV
+                <SheetIcon className="h-4 w-4" aria-hidden /> Export CSV
               </Button>
             )}
           </div>

@@ -3,6 +3,7 @@ import type { SupportAdminItem, SupportThread } from "@orbit/ui";
 import { api } from "../lib/api";
 import { useAsync } from "../lib/useAsync";
 import { AdminTabs, when } from "./admin/shared";
+import { Button, Input } from "../components/ui";
 
 /** One tap for the replies that come up on almost every chat. */
 const QUICK_REPLIES: { label: string; text: string }[] = [
@@ -113,10 +114,23 @@ export function AdminSupportPage() {
                   </button>
                 ))}
               </div>
-              <div className="flex gap-2">
-                <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Reply as Orbit" className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10" />
-                <button type="submit" disabled={busy || !text.trim()} className="rounded-xl bg-indigo-600 px-3 text-sm font-medium text-white disabled:opacity-40">Send</button>
-                <button type="button" onClick={() => void close()} disabled={busy} className="rounded-xl px-3 text-sm text-zinc-500">Close</button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="Reply as Orbit"
+                  aria-label="Reply"
+                  maxLength={2000}
+                  className="min-w-0 flex-1"
+                />
+                <div className="flex gap-2">
+                  <Button type="submit" disabled={busy || !text.trim()}>
+                    Send
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={() => void close()} disabled={busy}>
+                    Close
+                  </Button>
+                </div>
               </div>
             </form>
           </div>

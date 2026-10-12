@@ -195,6 +195,7 @@ export {
 } from "./design/design";
 export { currentMotion, useMotion } from "./hooks/useMotion";
 export { buttonClass, type ButtonSize, type ButtonVariant } from "./components/ui";
+export { Sheet, type SheetSize } from "./components/Sheet";
 export { ToastHost, dismissToast, toast, type ToastOptions, type ToastTone } from "./components/Toast";
 export {
   GhostPreview,

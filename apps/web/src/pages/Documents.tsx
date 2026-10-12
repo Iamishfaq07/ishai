@@ -2,8 +2,9 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { DOCUMENT_ACCEPT, type DocumentKind, type OrbitDocument } from "@orbit/types";
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../components/ui";
-import { Briefcase, confirmDialog, cx, FileIcon, FileText, FileUp, FolderOpen, NotebookPen, useFocusTrap, type LucideIcon } from "@orbit/ui";
+import { Briefcase, confirmDialog, cx, FileIcon, FileText, FileUp, FolderOpen, NotebookPen, type LucideIcon } from "@orbit/ui";
 import { PRODUCTS } from "../components/products";
+import { Sheet } from "../components/Sheet";
 import { api } from "../lib/api";
 import { errorText, formatBytes, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -340,9 +341,6 @@ function EditModal({
     }
   }, [loaded.data]);
 
-  // Focus moves into the dialog and stays there; Escape closes it and focus returns to its Edit button.
-  const dialogRef = useFocusTrap<HTMLDivElement>(true, { onEscape: onClose });
-
   const editable = loaded.data?.editable ?? false;
 
   const save = async (e: FormEvent) => {
@@ -364,25 +362,31 @@ function EditModal({
   };
 
   return (
-    <div
-      ref={dialogRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Edit ${doc.title}`}
-      onClick={onClose}
+    <Sheet
+      open
+      onClose={onClose}
+      title="Edit document"
+      size="2xl"
+      footer={
+        !loaded.loading && !loaded.error ? (
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" form="edit-document" disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </div>
+        ) : undefined
+      }
     >
-      <div
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-900"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="mb-4 text-lg font-semibold">Edit document</h2>
+      <div className="px-5 py-4">
         {loaded.loading ? (
           <Spinner />
         ) : loaded.error ? (
           <ErrorNote onRetry={loaded.reload}>{errorText(loaded.error)}</ErrorNote>
         ) : (
-          <form onSubmit={(e) => void save(e)} className="space-y-4">
+          <form id="edit-document" onSubmit={(e) => void save(e)} className="space-y-4">
             {error && <ErrorNote>{error}</ErrorNote>}
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Title" htmlFor="edit-title">
@@ -408,18 +412,10 @@ function EditModal({
                 changed here. Re-upload the file to change its content.
               </p>
             )}
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Save changes"}
-              </Button>
-            </div>
           </form>
         )}
       </div>
-    </div>
+    </Sheet>
   );
 }
 
