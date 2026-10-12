@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { OrbitWordmark, cx, focusRing } from "@orbit/ui";
-import { CONTACT_PAGE, POLICY_LINKS, USE_WHERE_ALLOWED } from "../lib/contact";
+import { CONTACT_PAGE, POLICY_LINKS, SUPPORT_EMAIL, SUPPORT_WHATSAPP, USE_WHERE_ALLOWED } from "../lib/contact";
 
 const link = cx(
   "inline-flex min-h-6 items-center rounded py-1 text-zinc-600 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-white",
@@ -21,6 +21,16 @@ export function Footer({ className }: { className?: string }) {
           </Link>
           <p className="mt-3 text-zinc-600 dark:text-zinc-400">Practise interviews, fix your resume and find jobs, with one account.</p>
           <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">{USE_WHERE_ALLOWED}</p>
+          {SUPPORT_EMAIL && (
+            <a href={`mailto:${SUPPORT_EMAIL}`} className={cx(link, "mt-2 text-xs")}>
+              {SUPPORT_EMAIL}
+            </a>
+          )}
+          {SUPPORT_WHATSAPP && (
+            <a href={`https://wa.me/${SUPPORT_WHATSAPP}`} className={cx(link, "text-xs")}>
+              WhatsApp
+            </a>
+          )}
         </div>
         <nav aria-label="Products">
           <h2 className="font-display text-sm font-semibold">Products</h2>
@@ -80,6 +90,9 @@ export function Footer({ className }: { className?: string }) {
           </ul>
         </nav>
       </div>
+      <p className="border-t border-zinc-200/70 px-4 py-4 text-center text-xs text-zinc-500 dark:border-white/5 dark:text-zinc-400">
+        © {new Date().getFullYear()} Orbit
+      </p>
     </footer>
   );
 }

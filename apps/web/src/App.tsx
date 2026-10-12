@@ -1,10 +1,11 @@
 import { Suspense, useEffect, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { NotFoundPage } from "./pages/NotFound";
 import { Layout } from "./components/Layout";
 import { SupportChat } from "./components/SupportChat";
 import { Spinner } from "./components/ui";
 import { useAuth } from "./lib/auth";
-import { routeTitle } from "./lib/routeTitle";
+import { routeDescription, routeTitle } from "./lib/routeTitle";
 import { useDocumentTitle } from "./lib/useDocumentTitle";
 import { JOBS_AI_HOME, movedJobsPath } from "./pages/jobs/paths";
 import { RESUME_AI_HOME, movedResumePath } from "./pages/resume/paths";
@@ -117,7 +118,7 @@ function MovedJobs() {
 function useRouteTitle(): void {
   const { pathname } = useLocation();
   const { user, loading } = useAuth();
-  useDocumentTitle(routeTitle(pathname, !loading && !user));
+  useDocumentTitle(routeTitle(pathname, !loading && !user), routeDescription(pathname));
 }
 
 export function App() {
@@ -198,7 +199,7 @@ export function App() {
         <Route path="admin/inbox" element={<AdminInboxPage />} />
         <Route path="admin/support" element={<AdminSupportPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
     </Suspense>
   );

@@ -32,6 +32,7 @@ describe("routeTitle", () => {
     expect(routeTitle("/admin/payments")).toBe("Payments");
     expect(routeTitle("/admin/audit")).toBe("Audit log");
     expect(routeTitle("/admin/inbox")).toBe("Inbox");
+    expect(routeTitle("/admin/support")).toBe("Support");
   });
 
   it("has no title for an address it doesn't know", () => {

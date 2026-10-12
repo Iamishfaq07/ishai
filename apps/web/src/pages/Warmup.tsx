@@ -24,6 +24,7 @@ import {
   speechLang,
 } from "@orbit/ui";
 import { Button, Card, Textarea } from "../components/ui";
+import { SiteMenu } from "../components/SiteMenu";
 import { useAuth } from "../lib/auth";
 import { pickRound, trackById, tracksFor, type Track, type TrackId, type WarmupQuestion } from "../lib/warmup/bank";
 import { useCountry } from "../lib/country";
@@ -51,20 +52,21 @@ export function WarmupPage() {
 
   return (
     <div className="min-h-full overflow-x-clip">
-      <header className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-4 sm:px-6">
+      <header className="relative mx-auto flex max-w-3xl items-center gap-3 px-4 py-4 sm:px-6">
         <Link to="/" className={cx("rounded-lg", focusRing)} aria-label="Orbit">
           <OrbitWordmark size={26} />
         </Link>
         <span className="hidden h-5 w-px bg-zinc-300 sm:block dark:bg-white/15" aria-hidden="true" />
         <span className="hidden font-display text-sm font-semibold sm:inline">Interview warm-up</span>
         <nav aria-label="Account" className="ml-auto flex items-center gap-2">
+          <SiteMenu />
           {user ? (
             <Link to="/mock" className={cx(navButton("secondary"))}>
               Back to Practice
             </Link>
           ) : (
             <>
-              <Link to="/login" state={{ from: "/mock" }} className={navButton("secondary")}>
+              <Link to="/login" state={{ from: "/mock" }} className={cx(navButton("secondary"), "hidden sm:inline-flex")}>
                 Sign in
               </Link>
               <Link to="/register" state={{ from: "/mock" }} className={navButton("primary")}>
