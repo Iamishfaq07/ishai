@@ -134,8 +134,18 @@ export function SupportChat() {
     }
   }
 
+  const signedIn = Boolean(user);
+
   return (
-    <div className="pointer-events-none fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-3 z-40 flex w-[min(24rem,calc(100vw-1.5rem))] flex-col items-stretch gap-2 lg:bottom-5 lg:left-auto lg:right-5 lg:items-end">
+    <div
+      className={cx(
+        "pointer-events-none fixed right-3 z-40 flex w-[min(22rem,calc(100vw-1.5rem))] flex-col items-end gap-3",
+        // Signed-in phones have a tab bar. Sit just above it. Everywhere else, the corner itself.
+        signedIn
+          ? "bottom-[calc(4.25rem+env(safe-area-inset-bottom))] md:bottom-5 md:right-5"
+          : "bottom-[max(0.75rem,env(safe-area-inset-bottom))] md:bottom-5 md:right-5",
+      )}
+    >
       {open && (
         <section
           aria-label="Support chat"
@@ -220,10 +230,14 @@ export function SupportChat() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={cx("pointer-events-auto flex w-fit items-center gap-2 self-start rounded-full bg-indigo-600 px-4 py-3 text-sm font-medium text-white shadow-lg hover:bg-indigo-500 lg:self-end", focusRing)}
+        aria-expanded={open}
+        aria-label={open ? "Close support chat" : "Chat with support"}
+        className={cx(
+          "pointer-events-auto grid h-12 w-12 place-items-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-950/30 hover:bg-indigo-500",
+          focusRing,
+        )}
       >
-        <MessageCircle className="h-4 w-4" aria-hidden />
-        Support
+        {open ? <X className="h-5 w-5" aria-hidden /> : <MessageCircle className="h-5 w-5" aria-hidden />}
       </button>
     </div>
   );
