@@ -4,6 +4,14 @@ import { api } from "../lib/api";
 import { useAsync } from "../lib/useAsync";
 import { AdminTabs, when } from "./admin/shared";
 
+/** One tap for the replies that come up on almost every chat. */
+const QUICK_REPLIES: { label: string; text: string }[] = [
+  { label: "Ask for the UTR", text: "Please send the 12-digit UTR from your UPI app." },
+  { label: "Credits added", text: "Your credits are on the account now. Refresh Plan & billing." },
+  { label: "Not approved", text: "That payment was not approved. Send the right 12-digit UTR from Plan & billing." },
+  { label: "Windows app", text: "The live copilot is the Windows app. While signed in, open Me, then Windows app." },
+];
+
 /** Chats a visitor handed to a person. A reply shows in their support window. */
 export function AdminSupportPage() {
   const list = useAsync(() => api.adminSupport("waiting"), [], "admin-support");
@@ -17,13 +25,14 @@ export function AdminSupportPage() {
     setOpen(await api.adminSupportThread(item.id));
   }
 
-  async function reply() {
-    if (!open || !text.trim()) return;
+  async function reply(preset?: string) {
+    const line = (preset ?? text).trim();
+    if (!open || !line) return;
     setBusy(true);
     setError("");
     try {
-      setOpen(await api.adminSupportReply(open.id, text.trim()));
-      setText("");
+      setOpen(await api.adminSupportReply(open.id, line));
+      if (!preset) setText("");
       list.reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't send the reply.");
@@ -80,15 +89,30 @@ export function AdminSupportPage() {
               ))}
             </div>
             <form
-              className="flex gap-2 border-t border-zinc-200 p-3 dark:border-white/10"
+              className="border-t border-zinc-200 p-3 dark:border-white/10"
               onSubmit={(e) => {
                 e.preventDefault();
                 void reply();
               }}
             >
-              <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Reply as Orbit" className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10" />
-              <button type="submit" disabled={busy || !text.trim()} className="rounded-xl bg-indigo-600 px-3 text-sm font-medium text-white disabled:opacity-40">Send</button>
-              <button type="button" onClick={() => void close()} disabled={busy} className="rounded-xl px-3 text-sm text-zinc-500">Close</button>
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {QUICK_REPLIES.map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void reply(item.text)}
+                    className="rounded-full border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:border-indigo-300 hover:bg-indigo-50 disabled:opacity-40 dark:border-white/10 dark:text-zinc-200 dark:hover:border-indigo-400/40 dark:hover:bg-indigo-500/10"
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Reply as Orbit" className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10" />
+                <button type="submit" disabled={busy || !text.trim()} className="rounded-xl bg-indigo-600 px-3 text-sm font-medium text-white disabled:opacity-40">Send</button>
+                <button type="button" onClick={() => void close()} disabled={busy} className="rounded-xl px-3 text-sm text-zinc-500">Close</button>
+              </div>
             </form>
           </div>
         )}

@@ -293,17 +293,67 @@ def respond(text: str = "", choice: str = "") -> tuple[str, list[tuple[str, str]
     return found.answer, options_for(found.id)
 
 
-def suggestions_for(messages: list, status: str, signed_in: bool = False) -> list[tuple[str, str]]:
+def suggestions_for(messages: list, status: str, signed_in: bool = False, page: str = "") -> list[tuple[str, str]]:
     """Chips to show again when the chat is reopened. Waiting on a person: none.
 
     My balance and My last payment are only offered when this browser is signed in as the chat's account.
+    On the home menu, chips for the page they are looking at come first.
     """
     if status != "bot":
         return []
     last_user = next((m.text for m in reversed(messages) if getattr(m, "role", None) == "user"), "")
     if not last_user or _norm(last_user) == "all topics":
-        return _with_account(options_for("menu" if last_user else None), signed_in)
-    found = match(last_user)
-    if found is None:
-        return _with_account(options_for(None), signed_in)
-    return options_for(found.id)
+        rows = _with_account(options_for("menu" if last_user else None), signed_in)
+    else:
+        found = match(last_user)
+        rows = _with_account(options_for(None), signed_in) if found is None else options_for(found.id)
+    return focus_page(rows, page)
+
+
+# Home-menu chips to put first on a page. Follow-up menus (they include "All topics") are left as they are.
+_PAGE_FIRST: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("/billing", ("buy", "missing", "refund", "balance", "payment")),
+    ("/resume-ai", ("resume", "what_spends", "prices")),
+    ("/jobs", ("jobs", "resume")),
+    ("/mock", ("practice", "what_spends")),
+    ("/start", ("practice", "windows")),
+    ("/sessions", ("practice", "windows")),
+)
+
+
+def _clean_page(page: str) -> str:
+    path = page.strip().split("?", 1)[0].split("#", 1)[0][:80]
+    if not path.startswith("/") or path.startswith("//"):
+        return ""
+    if len(path) > 1:
+        path = path.rstrip("/")
+    return path
+
+
+def focus_page(rows: list[tuple[str, str]], page: str) -> list[tuple[str, str]]:
+    """On the home menu only, lead with the topics for this page. A follow-up menu is unchanged."""
+    if not rows or any(topic_id == "menu" for topic_id, _label in rows):
+        return rows
+    path = _clean_page(page)
+    first: tuple[str, ...] = ()
+    for prefix, ids in _PAGE_FIRST:
+        if path == prefix or path.startswith(prefix + "/"):
+            first = ids
+            break
+    if not first:
+        return rows
+    by_id = {topic_id: label for topic_id, label in rows}
+    for topic_id in first:
+        if topic_id not in by_id and topic_id in TOPICS:
+            by_id[topic_id] = TOPICS[topic_id].label
+    ordered: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for topic_id in first:
+        if topic_id in by_id and topic_id not in seen:
+            ordered.append((topic_id, by_id[topic_id]))
+            seen.add(topic_id)
+    for topic_id, label in rows:
+        if topic_id not in seen:
+            ordered.append((topic_id, label))
+            seen.add(topic_id)
+    return ordered

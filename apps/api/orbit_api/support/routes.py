@@ -66,6 +66,7 @@ class ThreadIn(BaseModel):
     token: str = Field(min_length=20, max_length=80)
     text: str = Field(default="", max_length=TEXT_MAX)
     choice: str = Field(default="", max_length=40)
+    page: str = Field(default="", max_length=80)
 
 
 class HandoffIn(BaseModel):
@@ -101,7 +102,7 @@ def _owns(thread: SupportThread, user: User | None) -> bool:
     return user is not None and (thread.user_id is None or thread.user_id == user.id)
 
 
-def _out(thread: SupportThread, token: str | None = None, user: User | None = None) -> ThreadOut:
+def _out(thread: SupportThread, token: str | None = None, user: User | None = None, page: str = "") -> ThreadOut:
     return ThreadOut(
         id=thread.id,
         status=thread.status,  # type: ignore[arg-type]
@@ -112,7 +113,7 @@ def _out(thread: SupportThread, token: str | None = None, user: User | None = No
         ],
         suggestions=[
             SuggestionOut(id=i, label=label)
-            for i, label in suggestions_for(thread.messages, thread.status, _owns(thread, user))
+            for i, label in suggestions_for(thread.messages, thread.status, _owns(thread, user), page)
         ],
     )
 
@@ -248,6 +249,7 @@ async def open_thread(
     request: Request,
     user: Annotated[User | None, Depends(optional_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    page: Annotated[str, Query(max_length=80)] = "",
 ) -> ThreadOut:
     _limit(request)
     token = secrets.token_urlsafe(32)
@@ -261,7 +263,7 @@ async def open_thread(
     db.add(thread)
     await db.flush()
     _add(db, thread, "bot", GREETING)
-    return _out(await _commit(db, thread), token, user)
+    return _out(await _commit(db, thread), token, user, page)
 
 
 @router.get("/v1/support/threads/{thread_id}", response_model=ThreadOut)
@@ -270,8 +272,9 @@ async def read_thread(
     token: Annotated[str, Query(min_length=20, max_length=80)],
     user: Annotated[User | None, Depends(optional_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    page: Annotated[str, Query(max_length=80)] = "",
 ) -> ThreadOut:
-    return _out(await _thread(db, thread_id, token), user=user)
+    return _out(await _thread(db, thread_id, token), user=user, page=page)
 
 
 @router.post("/v1/support/threads/{thread_id}/messages", response_model=ThreadOut)
@@ -299,7 +302,7 @@ async def post_message(
         if not text:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Type a message.")
         _add(db, thread, "user", text[:TEXT_MAX])
-    return _out(await _commit(db, thread), user=user)
+    return _out(await _commit(db, thread), user=user, page=body.page)
 
 
 @router.post("/v1/support/threads/{thread_id}/handoff", response_model=ThreadOut)
