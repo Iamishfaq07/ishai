@@ -164,6 +164,11 @@ the request's `Host` header.
 - The API image's base images are pinned by digest, and Dependabot covers pip, npm, cargo, actions and docker.
 - **CI `security` job:** `pip-audit` (the locked API dependencies), `bandit` (medium severity and up) and
   `pnpm audit --audit-level high`. The `secrets` job runs gitleaks over the full history.
+- **Checked again on 12 October 2026 and left in place.** `postcss-selector-parser` stays on 6.1.4. The patched
+  release is 7.1.6, and forcing that under Tailwind 3 dropped variant classes (`md:`, `hover:`, `dark:`). The
+  advisory applies when a server parses untrusted CSS. Orbit only parses its own CSS at build time. `cargo audit`
+  found no vulnerabilities. The remaining Rust warnings (`proc-macro-error` unmaintained, a yanked `yoke-derive`,
+  an unsound `glib` iterator) come through Tauri and GTK, and the Windows build does not compile `glib`.
 
 The full review, its method and its accepted risks are in [SECURITY_REVIEW.md](SECURITY_REVIEW.md).
 
