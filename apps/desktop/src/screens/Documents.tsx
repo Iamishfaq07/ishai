@@ -8,12 +8,13 @@ import {
   ErrorNote,
   Field,
   Input,
+  LoadGate,
   PageHeader,
   Select,
+  Sheet,
   Spinner,
   Textarea,
   confirmDialog,
-  useFocusTrap,
   Briefcase,
   FileIcon,
   FileText,
@@ -323,7 +324,6 @@ function EditModal({ doc, onClose, onSaved }: { doc: OrbitDocument; onClose: () 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const dialogRef = useFocusTrap<HTMLDivElement>(true, { onEscape: onClose });
 
   useEffect(() => {
     api
@@ -337,12 +337,6 @@ function EditModal({ doc, onClose, onSaved }: { doc: OrbitDocument; onClose: () 
       .catch((e) => setError(errText(e)))
       .finally(() => setLoading(false));
   }, [doc.id]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
@@ -363,20 +357,30 @@ function EditModal({ doc, onClose, onSaved }: { doc: OrbitDocument; onClose: () 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="edit-doc-title"
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-900"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 id="edit-doc-title" className="mb-4 text-lg font-semibold">Edit document</h2>
+    <Sheet
+      open
+      onClose={onClose}
+      title="Edit document"
+      titleId="edit-doc-title"
+      size="2xl"
+      footer={
+        !loading ? (
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" form="edit-document" disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </div>
+        ) : undefined
+      }
+    >
+      <div className="px-5 py-4">
         {loading ? (
-          <Spinner />
+          <LoadGate loading variant="line" count={6} label="Opening the document">{null}</LoadGate>
         ) : (
-          <form onSubmit={(e) => void save(e)} className="space-y-4">
+          <form id="edit-document" onSubmit={(e) => void save(e)} className="space-y-4">
             {error && <ErrorNote>{error}</ErrorNote>}
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Title" htmlFor="e-title">
@@ -399,17 +403,9 @@ function EditModal({ doc, onClose, onSaved }: { doc: OrbitDocument; onClose: () 
             ) : (
               <p className="text-sm text-zinc-500">This file’s text isn’t stored, so only the title and type can be changed. Re-upload it to change its content.</p>
             )}
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Save changes"}
-              </Button>
-            </div>
           </form>
         )}
       </div>
-    </div>
+    </Sheet>
   );
 }

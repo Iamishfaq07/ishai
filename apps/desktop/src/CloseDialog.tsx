@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { ArrowDownToLine, Power, OrbitLogo, cx, focusRing } from "@orbit/ui";
+import { ArrowDownToLine, Power, OrbitLogo, cx, focusRing, useFocusTrap } from "@orbit/ui";
 
 /** What the × / Alt+F4 does. "ask" shows the dialog; the others are a remembered choice. */
 export type CloseAction = "ask" | "tray" | "quit";
@@ -39,6 +39,16 @@ export function CloseDialog({ liveActive }: { liveActive: boolean }) {
   const liveRef = useRef(liveActive);
   liveRef.current = liveActive;
   const hideBtn = useRef<HTMLButtonElement>(null);
+  const panelRef = useFocusTrap<HTMLDivElement>(open, { onEscape: () => setOpen(false), initialFocus: () => hideBtn.current });
+
+  useEffect(() => {
+    if (!open) return;
+    const before = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = before;
+    };
+  }, [open]);
 
   const onRequest = useCallback(() => {
     const action = loadCloseAction();
@@ -73,14 +83,6 @@ export function CloseDialog({ liveActive }: { liveActive: boolean }) {
     };
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-    hideBtn.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
-
   if (!open) return null;
 
   const choose = (action: Exclude<CloseAction, "ask">) => {
@@ -96,6 +98,7 @@ export function CloseDialog({ liveActive }: { liveActive: boolean }) {
       onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}
     >
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="close-title"
