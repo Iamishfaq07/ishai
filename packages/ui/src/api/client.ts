@@ -151,6 +151,8 @@ export interface SupportThread {
   messages: SupportChatMessage[];
   /** What to tap next. Empty once a person has the chat. `human` means talk to a person. */
   suggestions?: SupportSuggestion[];
+  /** Admin only: who this is, their balance, and the last payment. */
+  account?: string;
 }
 
 export interface SupportAdminItem {

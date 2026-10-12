@@ -80,6 +80,11 @@ export function AdminSupportPage() {
         </ul>
         {open && (
           <div className="flex min-h-80 flex-col rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
+            {open.account && (
+              <p className="border-b border-zinc-200 px-4 py-2 text-xs leading-relaxed text-zinc-600 dark:border-white/10 dark:text-zinc-300">
+                {open.account}
+              </p>
+            )}
             <div className="flex-1 space-y-2 overflow-y-auto p-4">
               {open.messages.map((m) => (
                 <p key={m.id} className="whitespace-pre-wrap text-sm">
