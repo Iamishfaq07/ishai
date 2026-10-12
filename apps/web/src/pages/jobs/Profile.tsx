@@ -1,8 +1,8 @@
 import { useEffect, useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { JobPrefs, JobProfile } from "@orbit/types";
-import { ArrowRight, Briefcase, Building2, Check, FileText, MapPin, Search, SlidersHorizontal, Sparkles, X, cx, focusRing, type LucideIcon } from "@orbit/ui";
-import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Spinner } from "../../components/ui";
+import { ArrowRight, Briefcase, Building2, Check, FileText, LoadGate, MapPin, Search, SlidersHorizontal, Sparkles, X, cx, focusRing, type LucideIcon } from "@orbit/ui";
+import { Button, Card, ErrorNote, Field, Input, PageHeader, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { RESUME_AI_HOME, resumePath } from "../resume/paths";
@@ -24,13 +24,13 @@ export function JobProfilePage() {
         title="Your search profile"
         subtitle="What Jobs AI looks for. The AI fills it in from your resume; change anything, and your matches follow."
       />
-      {profile.loading && !profile.data ? (
-        <Spinner big label="Getting your job profile" state="searching" />
-      ) : profile.error && !profile.data ? (
+      <LoadGate loading={profile.loading && !profile.data} variant="card" count={3} label="Getting your job profile">
+      {profile.error && !profile.data ? (
         <ErrorNote onRetry={profile.reload}>{errorText(profile.error)}</ErrorNote>
       ) : profile.data ? (
         <ProfileForm profile={profile.data} suggesting={suggesting} onSaved={setProfile} />
       ) : null}
+      </LoadGate>
     </>
   );
 }

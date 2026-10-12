@@ -1,7 +1,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useOutletContext, useSearchParams } from "react-router-dom";
 import type { JobProfile, JobSort, JobTrackerEntry } from "@orbit/types";
-import { Spinner } from "../../components/ui";
+import { Skeleton } from "@orbit/ui";
 import { api } from "../../lib/api";
 import { useAsync, type AsyncState } from "../../lib/useAsync";
 import { profileStamp } from "./model";
@@ -68,7 +68,7 @@ export function JobsAiSection() {
     <>
       <JobsAiTabs tracked={tracker.data?.length ?? 0} />
       {/* Here, not the layout's: the tabs stay put while a page's code arrives. */}
-      <Suspense fallback={<Spinner big label="Opening Jobs AI" state="searching" />}>
+      <Suspense fallback={<Skeleton variant="job-card" count={2} label="Opening Jobs AI" />}>
         <Outlet context={value} />
       </Suspense>
     </>

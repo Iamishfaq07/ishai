@@ -1,8 +1,8 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { SavedAnswer, SavedAnswerInput } from "@orbit/types";
-import { MessageSquareQuote, PenLine, Plus, Search, Target, Trash2, confirmDialog } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Spinner, Textarea } from "../components/ui";
+import { LoadGate, MessageSquareQuote, PenLine, Plus, Search, Target, Trash2, confirmDialog } from "@orbit/ui";
+import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Textarea } from "../components/ui";
 import { answerPracticeSession } from "../lib/answerPractice";
 import { api } from "../lib/api";
 import { errorText, formatDate } from "../lib/format";
@@ -181,9 +181,8 @@ export function AnswersPage() {
                       onCancel={() => setEditing(null)} />
       )}
 
-      {answers.loading ? (
-        <Spinner />
-      ) : answers.error ? (
+      <LoadGate loading={answers.loading && !answers.data} variant="card" count={3} label="Loading your answers">
+      {answers.error ? (
         <ErrorNote onRetry={answers.reload}>{errorText(answers.error)}</ErrorNote>
       ) : list.length === 0 ? (
         !editing && (
@@ -236,6 +235,7 @@ export function AnswersPage() {
           )}
         </section>
       )}
+      </LoadGate>
     </div>
   );
 }

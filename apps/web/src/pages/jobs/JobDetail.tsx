@@ -15,11 +15,12 @@ import {
   Sparkles,
   Target,
   Trash2,
+  LoadGate,
   confirmDialog,
   cx,
   focusRing,
 } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote, Select, Spinner } from "../../components/ui";
+import { Button, Card, EmptyState, ErrorNote, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
@@ -58,9 +59,8 @@ export function JobDetailPage() {
   return (
     <>
       <BackLink />
-      {detail.loading && !detail.data ? (
-        <Spinner big label="Opening the job" state="searching" />
-      ) : missing ? (
+      <LoadGate loading={detail.loading && !detail.data} variant="job-card" count={1} label="Opening the job">
+      {missing ? (
         <EmptyState
           icon={Search}
           title="This job isn't listed any more"
@@ -76,6 +76,7 @@ export function JobDetailPage() {
       ) : detail.data ? (
         <Job key={detail.data.job.id} detail={detail.data} onChanged={detail.reload} />
       ) : null}
+      </LoadGate>
     </>
   );
 }

@@ -9,6 +9,7 @@ import {
   CalendarIcon,
   SlidersHorizontal,
   Sparkles,
+  LoadGate,
   cx,
   focusRing,
 } from "@orbit/ui";
@@ -75,13 +76,13 @@ export function JobsAiHomePage() {
         </div>
       </section>
 
-      {profile.loading && !profile.data ? (
-        <Spinner big label="Getting your job profile" state="searching" />
-      ) : profile.error && !profile.data ? (
+      <LoadGate loading={profile.loading && !profile.data} variant="job-card" count={2} label="Getting your job profile">
+      {profile.error && !profile.data ? (
         <ErrorNote onRetry={profile.reload}>{errorText(profile.error)}</ErrorNote>
       ) : profile.data ? (
         <Overview profile={profile.data} />
       ) : null}
+      </LoadGate>
     </>
   );
 }
@@ -212,11 +213,8 @@ function TrackerSummary({ entries, loading }: { entries: JobTrackerEntry[] | nul
           </Link>
         )}
       </div>
-      {loading && !entries ? (
-        <div className="mt-3">
-          <Spinner label="Loading your tracker" />
-        </div>
-      ) : !entries?.length ? (
+      <LoadGate loading={loading && !entries} variant="line" count={3} label="Loading your tracker">
+      {!entries?.length ? (
         <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
           Nothing tracked yet. Save jobs from your matches, say "Yes, I applied" after you apply, or{" "}
           <Link to={ADD_JOB_PATH} className={textLink}>
@@ -246,6 +244,7 @@ function TrackerSummary({ entries, loading }: { entries: JobTrackerEntry[] | nul
           )}
         </>
       )}
+      </LoadGate>
     </Card>
   );
 }
