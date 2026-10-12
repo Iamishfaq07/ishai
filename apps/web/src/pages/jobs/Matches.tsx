@@ -10,6 +10,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   X,
+  LoadGate,
   cx,
   isIndia,
   focusRing,
@@ -64,13 +65,13 @@ export function JobMatchesPage() {
           )
         }
       />
-      {profile.loading && !profile.data ? (
-        <Spinner big label="Getting your job profile" state="searching" />
-      ) : profile.error && !profile.data ? (
+      <LoadGate loading={profile.loading && !profile.data} variant="job-card" count={3} label="Getting your job profile">
+      {profile.error && !profile.data ? (
         <ErrorNote onRetry={profile.reload}>{errorText(profile.error)}</ErrorNote>
       ) : profile.data ? (
         <Matches profile={profile.data} />
       ) : null}
+      </LoadGate>
     </>
   );
 }

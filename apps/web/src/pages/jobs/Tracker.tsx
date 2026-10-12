@@ -15,11 +15,12 @@ import {
   Sparkles,
   Target,
   Trash2,
+  LoadGate,
   confirmDialog,
   cx,
   focusRing,
 } from "@orbit/ui";
-import { Button, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../../components/ui";
+import { Button, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { downloadText, errorText } from "../../lib/format";
 import type { AsyncState } from "../../lib/useAsync";
@@ -151,7 +152,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
     });
   };
 
-  if (tracker.loading && !tracker.data) return <Spinner label="Loading your tracker" state="searching" />;
+  if (tracker.loading && !tracker.data) return <LoadGate loading variant="job-card" count={3} label="Loading your tracker">{null}</LoadGate>;
   if (tracker.error && !tracker.data) return <ErrorNote onRetry={tracker.reload}>{errorText(tracker.error)}</ErrorNote>;
   if (!entries.length) {
     return (

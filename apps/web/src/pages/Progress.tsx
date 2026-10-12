@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Progress, ProgressPoint } from "@orbit/types";
-import { ArrowRight, Check, Target, cx, focusRing } from "@orbit/ui";
-import { Card, ErrorNote, Spinner } from "../components/ui";
+import { ArrowRight, Check, LoadGate, Target, cx, focusRing } from "@orbit/ui";
+import { Card, ErrorNote } from "../components/ui";
 import { api } from "../lib/api";
 import { SESSION_TYPE_LABEL, errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -270,7 +270,7 @@ function GoalCard({ progress, first, className }: { progress: Progress | null; f
 /** "Your progress": the weekly goal, practice cadence, review scores over time and the latest speaking tips. */
 export function ProgressSection() {
   const progress = useAsync<Progress>(() => api.progress(), [], "progress");
-  if (progress.loading && !progress.data) return <Spinner />;
+  if (progress.loading && !progress.data) return <LoadGate loading variant="card" count={2} label="Loading your progress">{null}</LoadGate>;
   if (progress.error && !progress.data) return <ErrorNote onRetry={progress.reload}>{errorText(progress.error)}</ErrorNote>;
   const data = progress.data;
   // Nothing scored yet: the goal and how to get a first score, instead of a grid of zeros and "–".

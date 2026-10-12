@@ -14,6 +14,7 @@ import {
   saveKit,
   withMessageKit,
   type SavedKit,
+  LoadGate,
   isIndia,
 } from "@orbit/ui";
 import { Card, EmptyState, ErrorNote, Field, PageHeader, Select, Spinner } from "../../components/ui";
@@ -69,15 +70,15 @@ export function JobOutreachPage() {
         title="Outreach"
         subtitle={`Referral requests, emails to HR, follow-ups and thank-you notes, and your ${india ? "Naukri and LinkedIn profiles" : "LinkedIn profile"}.`}
       />
-      {resumes.loading && !list ? (
-        <Spinner big label="Getting your resumes" state="searching" />
-      ) : resumes.error && !list ? (
+      <LoadGate loading={resumes.loading && !list} variant="card" count={2} label="Getting your resumes">
+      {resumes.error && !list ? (
         <ErrorNote onRetry={resumes.reload}>{errorText(resumes.error)}</ErrorNote>
       ) : list && !list.length ? (
         <NoResumeYet />
       ) : picked && list ? (
         <ResumeOutreach key={picked.id} picked={picked} resumes={list} jobId={params.get("job")} onPick={pick} />
       ) : null}
+      </LoadGate>
       <PeopleSection />
     </AllowanceContext.Provider>
   );
@@ -185,9 +186,8 @@ function ResumeOutreach({
           Only what your resume says goes in: no made-up numbers, skills or names. Edit anything, then copy it into the site.
         </p>
 
-        {resume.loading && !r ? (
-          <Spinner label="Opening your resume" state="searching" />
-        ) : resume.error && !r ? (
+        <LoadGate loading={resume.loading && !r} variant="card" count={2} label="Opening your resume">
+        {resume.error && !r ? (
           <ErrorNote onRetry={resume.reload}>{errorText(resume.error)}</ErrorNote>
         ) : r ? (
           <>
@@ -205,6 +205,7 @@ function ResumeOutreach({
             )}
           </>
         ) : null}
+        </LoadGate>
       </div>
     </div>
   );

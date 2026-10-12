@@ -14,8 +14,9 @@ import {
   useReportPolling,
   confirmDialog,
   toast,
+  LoadGate,
 } from "@orbit/ui";
-import { Button, Card, ErrorNote, Input, PageHeader, Spinner } from "../components/ui";
+import { Button, Card, ErrorNote, Input, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
 import { SESSION_TYPE_LABEL, downloadText, errorText, formatClock, formatDate, formatDuration } from "../lib/format";
 import { SESSION_TYPE_ICON } from "../lib/sessionIcons";
@@ -43,7 +44,7 @@ export function SessionDetailPage() {
     setData(() => fresh);
   });
 
-  if (detail.loading && !detail.data) return <Spinner />;
+  if (detail.loading && !detail.data) return <LoadGate loading variant="card" count={2} label="Opening the session">{null}</LoadGate>;
   if (detail.error || !detail.data) {
     return <ErrorNote onRetry={detail.reload}>{errorText(detail.error ?? new Error("Session not found."))}</ErrorNote>;
   }
