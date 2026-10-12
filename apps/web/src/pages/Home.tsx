@@ -14,13 +14,14 @@ import {
   Monitor,
   Reveal,
   Skeleton,
+  LoadGate,
   Target,
   X,
   buttonClass,
   cx,
   focusRing,
 } from "@orbit/ui";
-import { Card, ErrorNote, Spinner } from "../components/ui";
+import { Card, ErrorNote } from "../components/ui";
 import { PRODUCTS, ProductMark, type ProductId } from "../components/products";
 import { api } from "../lib/api";
 import { displayAudioHelp, isWindows } from "../lib/audio";
@@ -497,9 +498,8 @@ function RecentSessions({ sessions }: { sessions: AsyncState<OrbitSession[]> }) 
           View all
         </Link>
       </div>
-      {sessions.loading ? (
-        <Spinner />
-      ) : sessions.error ? (
+      <LoadGate loading={sessions.loading && !sessions.data} variant="line" count={4} label="Loading sessions">
+      {sessions.error ? (
         <ErrorNote onRetry={sessions.reload}>{errorText(sessions.error)}</ErrorNote>
       ) : (
         <ul className="space-y-1">
@@ -531,6 +531,7 @@ function RecentSessions({ sessions }: { sessions: AsyncState<OrbitSession[]> }) 
           })}
         </ul>
       )}
+      </LoadGate>
     </Card>
   );
 }

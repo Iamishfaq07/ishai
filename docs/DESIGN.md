@@ -82,7 +82,8 @@ amber is `text-amber-950` (white on amber is 2.1:1). Figures are tabular by defa
 - **Toasts:** `toast("Copied")`, or `toast({ message, detail, tone, action: { label: "Undo", onClick } })`; one
   polite live region (`ToastHost`, mounted once in `main.tsx`). Name the action as the button did ("Saved to
   tracker"). Not for errors that need action (`ErrorNote`) or questions (`confirmDialog`).
-- **Loading:** `Skeleton` (`line`, `card`, `job-card`, `resume-card`, `session-row`) with `useLoadPhase(loading)`
+- **Loading:** `Skeleton` (`line`, `card`, `job-card`, `resume-card`, `session-row`) with `useLoadPhase(loading)`.
+  `LoadGate` is that timing around a list: nothing, then the skeleton, then the list.
   (shown after 150 ms, kept at least 300 ms). Buttons keep their label with `loading`. Spinners (`Spinner`, the
   orb) are for small or unknown-shaped waits.
 - **Empty states:** `EmptyState` with `kind` `first-use` (with a `GhostPreview` of the filled screen), `no-results`,

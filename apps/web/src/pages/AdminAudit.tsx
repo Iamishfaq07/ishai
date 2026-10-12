@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { AdminAuditItem } from "@orbit/types";
-import { ChevronDown, ScrollText, Search, X, cx, focusRing } from "@orbit/ui";
-import { Button, EmptyState, ErrorNote, Input, PageHeader, Select, Spinner } from "../components/ui";
+import { ChevronDown, LoadGate, ScrollText, Search, X, cx, focusRing } from "@orbit/ui";
+import { Button, EmptyState, ErrorNote, Input, PageHeader, Select } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -96,9 +96,8 @@ export function AdminAuditPage() {
           </span>
         )}
       </div>
-      {!data ? (
-        <Spinner label="Loading the audit log" />
-      ) : !items.length ? (
+      <LoadGate loading={!data} variant="session-row" count={6} label="Loading the audit log">
+      {!items.length ? (
         <EmptyState icon={ScrollText} title="Nothing here" body={action || userId || q ? "No entries match these filters." : "Admin actions appear here as you take them."} />
       ) : (
         <>
@@ -143,6 +142,7 @@ export function AdminAuditPage() {
           )}
         </>
       )}
+      </LoadGate>
     </>
   );
 }

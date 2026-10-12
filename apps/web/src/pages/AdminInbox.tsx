@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { ContactTopic, InboxFilter, InboxItem, InboxMessage } from "@orbit/types";
-import { Briefcase, ChevronDown, Inbox, Reply, Search, UserRound, cx, focusRing } from "@orbit/ui";
-import { Button, EmptyState, ErrorNote, Input, PageHeader, Select, Spinner } from "../components/ui";
+import { Briefcase, ChevronDown, Inbox, LoadGate, Reply, Search, UserRound, cx, focusRing } from "@orbit/ui";
+import { Button, EmptyState, ErrorNote, Input, PageHeader, Select } from "../components/ui";
 import { api } from "../lib/api";
 import { CONTACT_TOPICS } from "../lib/contactForm";
 import { errorText } from "../lib/format";
@@ -133,9 +133,8 @@ export function AdminInboxPage() {
         </label>
       </div>
 
-      {!data ? (
-        <Spinner label="Loading the inbox" />
-      ) : !items.length ? (
+      <LoadGate loading={!data} variant="session-row" count={6} label="Loading the inbox">
+      {!items.length ? (
         <EmptyState
           icon={Inbox}
           kind={q || topic ? "no-results" : status === "todo" ? "cleared" : "first-use"}
@@ -174,6 +173,7 @@ export function AdminInboxPage() {
           )}
         </>
       )}
+      </LoadGate>
       {openId && <MessageDrawer messageId={openId} onClose={() => update({ m: null }, true)} onChange={changed} onDeleted={removed} />}
     </>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cx } from "./cx";
 
 /**
@@ -239,4 +239,29 @@ export function GhostPreview({ kind = "cards" }: { kind?: GhostKind }) {
       <div className="hidden sm:block">{card(["w-2/3", "w-5/6", "w-2/3", "w-1/4"])}</div>
     </div>
   );
+}
+
+/**
+ * A list of known shape: nothing for the first 150 ms (a fast load never flashes), the skeleton after that, then
+ * `children` once loading has settled for at least 300 ms.
+ */
+export function LoadGate({
+  loading,
+  variant = "card",
+  count = 3,
+  label = "Loading",
+  className,
+  children,
+}: {
+  loading: boolean;
+  variant?: SkeletonVariant;
+  count?: number;
+  label?: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  const phase = useLoadPhase(loading);
+  if (phase === "pending") return null;
+  if (phase === "skeleton") return <Skeleton variant={variant} count={count} label={label} className={className} />;
+  return children;
 }

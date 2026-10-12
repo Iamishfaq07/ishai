@@ -17,12 +17,13 @@ import {
   Trash2,
   UserRound,
   X,
+  LoadGate,
   Orb,
   confirmDialog,
   cx,
   focusRing,
 } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote, Field, Select, Spinner, Textarea } from "../../components/ui";
+import { Button, Card, EmptyState, ErrorNote, Field, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText, formatDate } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
@@ -191,9 +192,14 @@ export function ResumeAiHomePage() {
         </h2>
         {count > 0 && <p className="hidden text-xs text-zinc-500 sm:block dark:text-zinc-400">Make a copy to tailor one for another job.</p>}
       </div>
-      {list.loading && !list.data ? (
-        <Spinner label="Loading your resumes" state="searching" />
-      ) : list.error ? (
+      <LoadGate
+        loading={list.loading && !list.data}
+        variant="resume-card"
+        count={3}
+        label="Loading your resumes"
+        className="sm:grid sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 sm:space-y-0"
+      >
+      {list.error ? (
         <ErrorNote onRetry={list.reload}>{errorText(list.error)}</ErrorNote>
       ) : !list.data?.length ? (
         !creating && (
@@ -259,6 +265,7 @@ export function ResumeAiHomePage() {
           ))}
         </ul>
       )}
+      </LoadGate>
       {count > 0 && <FindJobs />}
     </AllowanceContext.Provider>
   );
@@ -440,9 +447,9 @@ export function NewResume({ onClose, initial = null }: { onClose?: () => void; i
     );
   }
   if (source === "document") {
-    body = docs.loading && !docs.data ? (
-      <Spinner label="Loading documents" />
-    ) : !resumeDocs.length ? (
+    body = (
+      <LoadGate loading={docs.loading && !docs.data} variant="line" count={3} label="Loading documents">
+        {!resumeDocs.length ? (
       <p className="text-sm text-zinc-500 dark:text-zinc-400">
         You haven't added a resume to <Link to="/documents" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">Documents</Link> yet.
       </p>
@@ -469,6 +476,8 @@ export function NewResume({ onClose, initial = null }: { onClose?: () => void; i
           <ScanText className="h-4 w-4" /> {busy ? "Reading…" : "Import"}
         </Button>
       </div>
+        )}
+      </LoadGate>
     );
   }
 

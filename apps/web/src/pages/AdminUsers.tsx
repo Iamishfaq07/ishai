@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { AdminUser, AdminUserFilter, AdminUserSort } from "@orbit/types";
-import { ArrowUpDown, Check, ChevronDown, Download, Plus, Search, Users, X, cx, focusRing } from "@orbit/ui";
-import { Button, EmptyState, ErrorNote, Input, PageHeader, Spinner } from "../components/ui";
+import { ArrowUpDown, Check, ChevronDown, Download, LoadGate, Plus, Search, Users, X, cx, focusRing } from "@orbit/ui";
+import { Button, EmptyState, ErrorNote, Input, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
 import { downloadText, errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -196,9 +196,8 @@ export function AdminUsersPage() {
         </p>
       )}
 
-      {!data ? (
-        <Spinner label="Loading accounts" />
-      ) : !rows.length ? (
+      <LoadGate loading={!data} variant="session-row" count={6} label="Loading accounts">
+      {!rows.length ? (
         <EmptyState icon={Check} title={q ? "No account matches" : EMPTY[only].title} body={q ? `Nothing for "${q}" here.` : EMPTY[only].body} />
       ) : (
         <>
@@ -244,6 +243,7 @@ export function AdminUsersPage() {
           )}
         </>
       )}
+      </LoadGate>
       {openId && <UserDrawer userId={openId} onClose={() => update({ user: null }, true)} onChange={replace} onDeleted={removeRow} />}
     </>
   );
