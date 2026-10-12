@@ -21,7 +21,7 @@ import { errorText } from "../lib/format";
 import { useWelcomeGrant } from "../lib/welcome";
 import { Captcha, useCaptchaConfig } from "../components/Captcha";
 import { AiPill } from "../components/products";
-import { CONTACT_PAGE, PRIVACY_PAGE, TERMS_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
+import { CONTACT_PAGE, PRIVACY_PAGE, REFUND_PAGE, TERMS_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
 
 type Feature = { icon: LucideIcon; title: string; text: string; ai?: boolean };
 
@@ -338,6 +338,7 @@ export function RegisterPage() {
   const [busy, setBusy] = useState(false);
   const captcha = useCaptchaConfig();
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
   if (user) {
@@ -353,6 +354,10 @@ export function RegisterPage() {
     e.preventDefault();
     if (password.length < 10) {
       setError("Use at least 10 characters for your password.");
+      return;
+    }
+    if (!agreed) {
+      setError("Tick the box to confirm your age and that you agree to the terms.");
       return;
     }
     setBusy(true);
@@ -398,26 +403,32 @@ export function RegisterPage() {
         </Field>
         {captcha && <Captcha config={captcha} onToken={setCaptchaToken} />}
         {error && <ErrorNote>{error}</ErrorNote>}
-        <Button type="submit" disabled={busy || captcha === undefined || (!!captcha && !captchaToken)} className="w-full">
+        <Button type="submit" disabled={busy || !agreed || captcha === undefined || (!!captcha && !captchaToken)} className="w-full">
           {busy ? "Creating account…" : "Create account"}
         </Button>
-        <p className="text-center text-xs text-zinc-600 dark:text-zinc-400">
-          {TERMS_PAGE ? (
-            <>
-              By creating an account you agree to the{" "}
-              <a href={TERMS_PAGE} className="underline underline-offset-2">
-                terms
-              </a>{" "}
-              and the{" "}
-            </>
-          ) : (
-            <>How Orbit handles your data: the </>
-          )}
-          <a href={PRIVACY_PAGE} className="underline underline-offset-2">
-            privacy policy
-          </a>
-          .
-        </p>
+        <label className="flex items-start gap-2 text-xs text-zinc-700 dark:text-zinc-300">
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-indigo-600"
+          />
+          <span>
+            I am 18 or older, or I have a parent or guardian's permission. I agree to the{" "}
+            {TERMS_PAGE && (
+              <>
+                <a href={TERMS_PAGE} className="underline underline-offset-2">terms</a>, the{" "}
+              </>
+            )}
+            <a href={PRIVACY_PAGE} className="underline underline-offset-2">privacy policy</a>
+            {REFUND_PAGE && (
+              <>
+                {" "}and the <a href={REFUND_PAGE} className="underline underline-offset-2">refund policy</a>
+              </>
+            )}
+            .
+          </span>
+        </label>
       </form>
       <p className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
         Already have an account?{" "}

@@ -2,6 +2,7 @@ import { Suspense, useEffect, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { NotFoundPage } from "./pages/NotFound";
 import { Layout } from "./components/Layout";
+import { CookieNotice } from "./components/CookieNotice";
 import { SupportChat } from "./components/SupportChat";
 import { Spinner } from "./components/ui";
 import { useAuth } from "./lib/auth";
@@ -125,6 +126,7 @@ export function App() {
   useRouteTitle();
   return (
     <Suspense fallback={<PageLoading />}>
+    <CookieNotice />
     <SupportChat />
     <Routes>
       <Route path="/login" element={<LoginPage />} />

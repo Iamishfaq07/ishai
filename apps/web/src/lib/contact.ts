@@ -29,14 +29,14 @@ export const USE_WHERE_ALLOWED =
 export const CONTACT_PAGE = "/contact";
 
 /**
- * The Terms and Refund pages wait for the owner's details (legal name, address, grievance officer, GST) and refund
- * rules: their drafts are in docs/legal-drafts/. To publish them, fill them in, move them to apps/web/public/ and set
- * this to true; every link to them (footer, Help, sign-up, the front page's FAQ) appears with it.
+ * Terms, refunds and cookies are published (apps/web/public/). They name no company, street address or GSTIN:
+ * those stay off the site until the owner writes them in. Set this to false only to hide the terms and refund links.
  */
-export const LEGAL_PAGES_PUBLISHED = false;
+export const LEGAL_PAGES_PUBLISHED = true;
 
 /** Static pages, outside the app (full page loads, not router links). */
 export const PRIVACY_PAGE = "/privacy.html";
+export const COOKIE_PAGE = "/cookies.html";
 export const TERMS_PAGE: string | null = LEGAL_PAGES_PUBLISHED ? "/terms.html" : null;
 export const REFUND_PAGE: string | null = LEGAL_PAGES_PUBLISHED ? "/refund.html" : null;
 /** The static policy pages, for `<a href>`. Contact isn't one: it's a router link to CONTACT_PAGE. */
@@ -44,4 +44,5 @@ export const POLICY_LINKS: Array<{ href: string; label: string }> = [
   ...(TERMS_PAGE ? [{ href: TERMS_PAGE, label: "Terms" }] : []),
   ...(REFUND_PAGE ? [{ href: REFUND_PAGE, label: "Refunds" }] : []),
   { href: PRIVACY_PAGE, label: "Privacy" },
+  { href: COOKIE_PAGE, label: "Cookies" },
 ];
