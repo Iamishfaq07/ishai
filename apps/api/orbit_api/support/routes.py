@@ -22,11 +22,13 @@ from sqlalchemy.orm import selectinload
 from orbit_api.admin.routes import require_admin
 from orbit_api.auth.security import optional_user
 from orbit_api.config import get_settings
+from orbit_api.billing.packs import packs
 from orbit_api.contact.routes import clean_message, network_hash, one_line
+from orbit_api.credits import interview_minutes_left, resume_balance
 from orbit_api.db import get_db
-from orbit_api.models import ContactMessage, SupportMessage, SupportThread, User
+from orbit_api.models import ContactMessage, Payment, SupportMessage, SupportThread, User
 from orbit_api.ratelimit import TokenBucket, check, client_ip
-from orbit_api.support.knowledge import GREETING, HANDOFF, option_label, respond, suggestions_for
+from orbit_api.support.knowledge import GREETING, HANDOFF, account_choice, option_label, respond, suggestions_for
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +38,8 @@ admin_router = APIRouter(prefix="/v1/admin/support", tags=["admin"])
 TEXT_MAX = 2000
 _per_hour = TokenBucket(rate_per_s=30 / 3600, burst=30)
 SLOW = "You've sent a lot of messages in a short time. Please wait a few minutes."
+SIGN_IN = "Sign in to see your balance or your last payment. I can only read the account you are signed in as."
+OTHER_ACCOUNT = "This chat was opened on a different account. Start a new chat while signed in to see yours."
 
 
 class MessageOut(BaseModel):
@@ -92,7 +96,12 @@ def _limit(request: Request) -> None:
     check(_per_hour, f"support:{network_hash(client_ip(request))}", SLOW)
 
 
-def _out(thread: SupportThread, token: str | None = None) -> ThreadOut:
+def _owns(thread: SupportThread, user: User | None) -> bool:
+    """True when this signed-in person may see the account behind the chat."""
+    return user is not None and (thread.user_id is None or thread.user_id == user.id)
+
+
+def _out(thread: SupportThread, token: str | None = None, user: User | None = None) -> ThreadOut:
     return ThreadOut(
         id=thread.id,
         status=thread.status,  # type: ignore[arg-type]
@@ -101,7 +110,10 @@ def _out(thread: SupportThread, token: str | None = None) -> ThreadOut:
             MessageOut(id=m.id, role=m.role, text=m.text, created_at=m.created_at)  # type: ignore[arg-type]
             for m in thread.messages
         ],
-        suggestions=[SuggestionOut(id=i, label=label) for i, label in suggestions_for(thread.messages, thread.status)],
+        suggestions=[
+            SuggestionOut(id=i, label=label)
+            for i, label in suggestions_for(thread.messages, thread.status, _owns(thread, user))
+        ],
     )
 
 
@@ -150,8 +162,77 @@ async def _commit(db: AsyncSession, thread: SupportThread) -> SupportThread:
     return loaded
 
 
-async def _bot_answer(text: str, choice: str) -> tuple[str, str]:
+def _claim(thread: SupportThread, user: User | None) -> None:
+    """A signed-in person sending into a chat that has no account yet: it becomes theirs."""
+    if user is None or thread.user_id not in (None, user.id):
+        return
+    thread.user_id = user.id
+    thread.email = thread.email or user.email
+    thread.name = thread.name or (user.name or "")
+
+
+def _inr(amount: int) -> str:
+    return f"₹{amount:,}"
+
+
+def _minutes(value: float) -> str:
+    if abs(value - round(value)) < 0.05:
+        n = int(round(value))
+        return f"{n} interview minute" if n == 1 else f"{n} interview minutes"
+    return f"{value:.1f} interview minutes"
+
+
+def _credit_word(n: int) -> str:
+    return f"{n} Resume AI credit" if n == 1 else f"{n} Resume AI credits"
+
+
+async def _account_answer(db: AsyncSession, user: User, kind: str) -> str:
+    if kind == "balance":
+        resume = await resume_balance(db, user.id)
+        minutes = await interview_minutes_left(db, user.id)
+        return f"You have {_minutes(minutes)} and {_credit_word(resume)} left. They don't expire."
+    payment = (await db.execute(
+        select(Payment).where(Payment.user_id == user.id).order_by(Payment.created_at.desc()).limit(1)
+    )).scalar_one_or_none()
+    if payment is None:
+        return "This account has no payment yet. Buy a pack on Plan & billing. Packs start at Mini ₹499."
+    pack = packs().get(payment.plan)
+    name = pack.label if pack else payment.plan
+    money = _inr(payment.amount_inr)
+    got = f"{payment.interview_minutes} interview minutes and {payment.resume_credits} Resume AI credits"
+    if payment.status == "approved":
+        how = "Razorpay" if payment.method == "razorpay" else "UPI"
+        return f"Your last payment landed. {name} for {money} via {how} added {got}."
+    if payment.status == "submitted":
+        utr = f" UTR {payment.utr}." if payment.utr else ""
+        return (
+            f"Your last payment is waiting to be checked. {name} for {money}.{utr} "
+            "A person matches it, then the credits land."
+        )
+    if payment.status == "rejected":
+        why = f" Reason: {payment.note}." if payment.note else ""
+        return (
+            f"Your last payment was not approved. {name} for {money}.{why} "
+            "You can send the right UTR from Plan & billing, or tap Talk to a person."
+        )
+    if payment.status == "awaiting_payment":
+        return (
+            f"Your last order has not been paid yet. {name} for {money}, reference {payment.reference}. "
+            "Finish it on Plan & billing."
+        )
+    return f"Your last payment is {name} for {money}. Status: {payment.status}."
+
+
+async def _bot_answer(db: AsyncSession, thread: SupportThread, user: User | None, text: str, choice: str) -> tuple[str, str]:
     """The line saved for the visitor, and the bot's exact reply. No model."""
+    account = account_choice(text, choice)
+    if account:
+        shown = option_label(account) if choice else text[:TEXT_MAX]
+        if user is None:
+            return shown or "My balance", SIGN_IN
+        if thread.user_id not in (None, user.id):
+            return shown or "My balance", OTHER_ACCOUNT
+        return shown or option_label(account) or account, await _account_answer(db, user, account)
     if choice:
         label = option_label(choice)
         if label is None:
@@ -180,16 +261,17 @@ async def open_thread(
     db.add(thread)
     await db.flush()
     _add(db, thread, "bot", GREETING)
-    return _out(await _commit(db, thread), token)
+    return _out(await _commit(db, thread), token, user)
 
 
 @router.get("/v1/support/threads/{thread_id}", response_model=ThreadOut)
 async def read_thread(
     thread_id: str,
     token: Annotated[str, Query(min_length=20, max_length=80)],
+    user: Annotated[User | None, Depends(optional_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ThreadOut:
-    return _out(await _thread(db, thread_id, token))
+    return _out(await _thread(db, thread_id, token), user=user)
 
 
 @router.post("/v1/support/threads/{thread_id}/messages", response_model=ThreadOut)
@@ -197,6 +279,7 @@ async def post_message(
     thread_id: str,
     body: ThreadIn,
     request: Request,
+    user: Annotated[User | None, Depends(optional_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ThreadOut:
     _limit(request)
@@ -207,15 +290,16 @@ async def post_message(
     choice = body.choice.strip()
     if not text and not choice:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Type a message.")
+    _claim(thread, user)
     if thread.status == "bot":
-        shown, reply = await _bot_answer(text, choice)
+        shown, reply = await _bot_answer(db, thread, user, text, choice)
         _add(db, thread, "user", shown)
         _add(db, thread, "bot", reply)
     else:
         if not text:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Type a message.")
         _add(db, thread, "user", text[:TEXT_MAX])
-    return _out(await _commit(db, thread))
+    return _out(await _commit(db, thread), user=user)
 
 
 @router.post("/v1/support/threads/{thread_id}/handoff", response_model=ThreadOut)

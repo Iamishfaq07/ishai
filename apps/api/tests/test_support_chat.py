@@ -81,3 +81,61 @@ def test_bot_then_a_person(client: TestClient) -> None:
     seen = client.get(f"/v1/support/threads/{thread['id']}", params={"token": token})
     assert seen.status_code == 200
     assert seen.json()["messages"][-1]["text"].startswith("I can see the payment")
+
+
+def test_signed_in_sees_their_balance_and_last_payment(client: TestClient) -> None:
+    headers, user = _register(client, f"buyer-{uuid.uuid4().hex[:8]}@example.com")
+    opened = client.post("/v1/support/threads", headers=headers)
+    assert opened.status_code == 201, opened.text
+    thread = opened.json()
+    assert any(item["id"] == "balance" for item in thread["suggestions"])
+    token = thread["token"]
+
+    asked = client.post(
+        f"/v1/support/threads/{thread['id']}/messages",
+        headers=headers,
+        json={"token": token, "choice": "balance"},
+    )
+    assert asked.status_code == 200, asked.text
+    text = asked.json()["messages"][-1]["text"]
+    assert "20 interview minutes" in text
+    assert "1 Resume AI credit" in text
+
+    anon = client.post("/v1/support/threads")
+    assert anon.status_code == 201, anon.text
+    anon_thread = anon.json()
+    assert not any(item["id"] == "balance" for item in anon_thread["suggestions"])
+    denied = client.post(
+        f"/v1/support/threads/{anon_thread['id']}/messages",
+        json={"token": anon_thread["token"], "choice": "balance"},
+    )
+    assert denied.status_code == 200, denied.text
+    assert "Sign in" in denied.json()["messages"][-1]["text"]
+
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import Payment
+
+    async def add() -> None:
+        async with sessionmaker()() as db:
+            db.add(Payment(
+                user_id=user["id"],
+                plan="mini",
+                amount_inr=499,
+                days=0,
+                resume_credits=5,
+                interview_minutes=15,
+                reference=f"ORB{uuid.uuid4().hex[:8]}",
+                status="approved",
+                method="razorpay",
+            ))
+            await db.commit()
+
+    client.portal.call(add)  # type: ignore[union-attr]
+    paid = client.post(
+        f"/v1/support/threads/{thread['id']}/messages",
+        headers=headers,
+        json={"token": token, "text": "what is my last payment status"},
+    )
+    assert paid.status_code == 200, paid.text
+    last = paid.json()["messages"][-1]["text"]
+    assert "landed" in last and "₹499" in last and "Mini" in last
