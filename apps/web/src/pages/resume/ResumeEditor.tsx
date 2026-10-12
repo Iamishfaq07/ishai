@@ -27,6 +27,8 @@ import {
   Upload,
   Wand2,
   X,
+  LoadGate,
+  Skeleton,
   ApiError,
   confirmDialog,
   cx,
@@ -464,7 +466,16 @@ function ResumeEditor() {
   };
 
   if (loadError) return <ErrorNote>{loadError}</ErrorNote>;
-  if (!resume) return <Spinner label="Opening your resume" state="searching" big />;
+  if (!resume) {
+    return (
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+        <LoadGate loading variant="card" count={2} label="Opening your resume">{null}</LoadGate>
+        <div className="hidden lg:block">
+          <Skeleton variant="resume-card" count={1} ghost />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AllowanceContext.Provider value={allowance}>

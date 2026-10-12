@@ -5,6 +5,7 @@ import { Layout } from "./components/Layout";
 import { CookieNotice } from "./components/CookieNotice";
 import { SupportChat } from "./components/SupportChat";
 import { Spinner } from "./components/ui";
+import { Skeleton } from "@orbit/ui";
 import { useAuth } from "./lib/auth";
 import { routeDescription, routeTitle } from "./lib/routeTitle";
 import { useDocumentTitle } from "./lib/useDocumentTitle";
@@ -58,8 +59,9 @@ import {
 /** While a page's code downloads (first visit only; later visits are instant). */
 export function PageLoading() {
   return (
-    <div className="flex min-h-[40vh] items-center justify-center">
-      <Spinner big />
+    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-10 sm:px-6">
+      <Skeleton variant="line" count={2} label="Loading" className="max-w-sm" />
+      <Skeleton variant="card" count={2} ghost />
     </div>
   );
 }

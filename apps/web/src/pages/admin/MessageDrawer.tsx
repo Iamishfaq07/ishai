@@ -15,6 +15,7 @@ import {
   Sheet,
   Trash2,
   Undo2,
+  LoadGate,
   UserRound,
   buttonClass,
   confirmDialog,
@@ -22,7 +23,7 @@ import {
   focusRing,
   toast,
 } from "@orbit/ui";
-import { Button, Spinner, Textarea } from "../../components/ui";
+import { Button, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { STATUS_LABEL, contextRows, greeting, mailtoReply, whatsappNumber } from "./inbox";
@@ -174,7 +175,7 @@ export function MessageDrawer({
             </p>
           )}
           {!m ? (
-            !error && <Spinner label="Opening the message" />
+            !error && <LoadGate loading variant="card" count={3} label="Opening the message">{null}</LoadGate>
           ) : (
             <>
               <div className="flex flex-wrap gap-2">
