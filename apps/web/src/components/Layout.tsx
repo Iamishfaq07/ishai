@@ -25,6 +25,7 @@ import {
   focusRing,
   isDialogOpen,
   isMacPlatform,
+  Skeleton,
   type LucideIcon,
 } from "@orbit/ui";
 import { api } from "../lib/api";
@@ -39,7 +40,6 @@ import { prefetchRoute } from "../routes";
 import { AnnouncementBanner } from "./AnnouncementBanner";
 import { PRODUCTS, ProductTabs, type ProductId, type ProductSection } from "./products";
 import { Sheet } from "./Sheet";
-import { Spinner } from "./ui";
 
 // Their own chunks, downloaded the first time they open (or when the search button is hovered).
 const loadPalette = () => import("./CommandPalette");
@@ -155,6 +155,19 @@ function initials(name: string | null | undefined, email: string | undefined): s
   const source = name?.trim() || email?.split("@")[0] || "?";
   const parts = source.split(/[\s._-]+/).filter(Boolean);
   return ((parts[0]?.[0] ?? "?") + (parts[1]?.[0] ?? "")).toUpperCase();
+}
+
+/** Shown while a page's code is still arriving. A header and two cards, not a spinner in an empty main. */
+function RouteFallback() {
+  return (
+    <div role="status" aria-live="polite" className="space-y-6">
+      <span className="sr-only">Loading</span>
+      <div className="max-w-sm">
+        <Skeleton variant="line" count={2} />
+      </div>
+      <Skeleton variant="card" count={2} />
+    </div>
+  );
 }
 
 export function Layout() {
@@ -372,14 +385,7 @@ export function Layout() {
               after a deploy) or to render shows an error with Reload while the nav stays usable. */}
           <ErrorBoundary>
             {/* Inside the layout: the nav stays put while a page's code arrives. */}
-            <Suspense
-              fallback={
-                // TODO(ws-a): a page Skeleton here instead of the spinner.
-                <div className="flex min-h-[40vh] items-center justify-center">
-                  <Spinner />
-                </div>
-              }
-            >
+            <Suspense fallback={<RouteFallback />}>
               <Outlet />
             </Suspense>
           </ErrorBoundary>

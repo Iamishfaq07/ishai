@@ -27,6 +27,9 @@ amber is `text-amber-950` (white on amber is 2.1:1). Figures are tabular by defa
 
 - `glass-panel` — frosted card (the `Card` primitive). In see-through desktop windows it drops its blur and follows
   the window's transparency.
+- `Sheet` — the one modal. A sheet from the bottom on a phone, a centred dialog from `sm` up, portaled to `body` so
+  the tab bar cannot cover it. Focus is trapped, Escape and the backdrop close it, and the page behind does not
+  scroll. A `footer` stays pinned while the body scrolls.
 - `gradient-border` — 1 px accent → aurora hairline around hero cards.
 - `text-gradient` — accent → aurora headline text.
 - `SpaceBackdrop` — the animated sky, mounted once per app.
