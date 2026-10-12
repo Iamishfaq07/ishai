@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { CircleCheck, CountUp, CreditCard, Crown, Mic, Sparkles, cx, focusRing, type LucideIcon } from "@orbit/ui";
+import { CircleCheck, CountUp, CreditCard, Crown, LoadGate, Mic, Sparkles, cx, focusRing, type LucideIcon } from "@orbit/ui";
 import type { CreditPack, Entitlements, UpiOrder } from "@orbit/types";
-import { Button, Card, ErrorNote, PageHeader, Spinner } from "../components/ui";
+import { Button, Card, ErrorNote, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
 import { contactHref } from "../lib/contactForm";
 import { errorText, formatDate } from "../lib/format";
@@ -205,10 +205,15 @@ function Payments({ orders, onOpen }: { orders: UpiOrder[]; onOpen: (o: UpiOrder
 /** Home's summary card: credits on Free, the monthly allowance otherwise. */
 export function UsageSummary() {
   const ent = useAsync(() => api.entitlements(), [], "entitlements");
-  if (ent.loading) return <Spinner />;
-  if (ent.error) return <ErrorNote onRetry={ent.reload}>{errorText(ent.error)}</ErrorNote>;
-  if (!ent.data) return null;
-  return ent.data.credits ? <CreditRows e={ent.data} wide /> : <UsageRows e={ent.data} />;
+  return (
+    <LoadGate loading={ent.loading && !ent.data} variant="line" count={4} label="Loading your plan">
+      {ent.error ? (
+        <ErrorNote onRetry={ent.reload}>{errorText(ent.error)}</ErrorNote>
+      ) : ent.data ? (
+        ent.data.credits ? <CreditRows e={ent.data} wide /> : <UsageRows e={ent.data} />
+      ) : null}
+    </LoadGate>
+  );
 }
 
 export function BillingPage() {
@@ -280,13 +285,13 @@ export function BillingPage() {
               </span>
             )}
           </p>
-          {ent.loading ? (
-            <Spinner />
-          ) : ent.error ? (
+          <LoadGate loading={ent.loading && !e} variant="line" count={4} label="Loading your plan">
+          {ent.error ? (
             <ErrorNote onRetry={ent.reload}>{errorText(ent.error)}</ErrorNote>
           ) : e ? (
             e.credits ? <CreditRows e={e} /> : <UsageRows e={e} />
           ) : null}
+          </LoadGate>
         </Card>
 
         <div className="space-y-4 lg:col-span-2">
@@ -299,13 +304,13 @@ export function BillingPage() {
           ) : (
             <>
               <div className="grid gap-4 pt-2 sm:grid-cols-2">
-                {packs.loading ? (
-                  <Spinner />
-                ) : packs.error ? (
+                <LoadGate loading={packs.loading && !packs.data} variant="card" count={2} label="Loading packs" className="sm:col-span-2">
+                {packs.error ? (
                   <ErrorNote onRetry={packs.reload}>{errorText(packs.error)}</ErrorNote>
                 ) : (
                   list.map((p) => <PackCard key={p.id} p={p} best={p.id === bestId} busy={starting} onBuy={(x) => void buy(x)} />)
                 )}
+                </LoadGate>
               </div>
               {buyError && <ErrorNote>{buyError}</ErrorNote>}
               {bought && (

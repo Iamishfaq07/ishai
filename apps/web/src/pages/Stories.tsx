@@ -10,12 +10,13 @@ import {
   Sparkles,
   Target,
   Trash2,
+  LoadGate,
   confirmDialog,
   cx,
   focusRing,
   splitPlaceholders,
 } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Spinner, Textarea } from "../components/ui";
+import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Textarea } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import { storyPracticeSession } from "../lib/storyPractice";
@@ -535,9 +536,8 @@ export function StoriesPage() {
         </section>
       )}
 
-      {stories.loading ? (
-        <Spinner />
-      ) : stories.error ? (
+      <LoadGate loading={stories.loading && !stories.data} variant="card" count={3} label="Loading your stories">
+      {stories.error ? (
         <ErrorNote onRetry={stories.reload}>{errorText(stories.error)}</ErrorNote>
       ) : (
         <>
@@ -586,6 +586,7 @@ export function StoriesPage() {
           )}
         </>
       )}
+      </LoadGate>
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { SessionType } from "@orbit/types";
-import { AudioLines, ChevronRight, Clock, confirmDialog, cx, focusRing, HistoryIcon, MessageCircle } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote, PageHeader, Spinner } from "../components/ui";
+import { AudioLines, ChevronRight, Clock, LoadGate, confirmDialog, cx, focusRing, HistoryIcon, MessageCircle } from "@orbit/ui";
+import { Button, Card, EmptyState, ErrorNote, PageHeader } from "../components/ui";
 import { PRODUCTS } from "../components/products";
 import { api } from "../lib/api";
 import { errorText, formatDate, formatDuration, sessionKindLine } from "../lib/format";
@@ -48,9 +48,8 @@ export function SessionsPage() {
         subtitle="Transcripts, detected questions, answers, and summaries from past sessions."
         actions={<Button onClick={() => navigate("/start")}>New session</Button>}
       />
-      {sessions.loading ? (
-        <Spinner />
-      ) : sessions.error ? (
+      <LoadGate loading={sessions.loading && !sessions.data} variant="session-row" count={4} label="Loading sessions">
+      {sessions.error ? (
         <ErrorNote onRetry={sessions.reload}>{errorText(sessions.error)}</ErrorNote>
       ) : (sessions.data ?? []).length === 0 ? (
         <EmptyState icon={AudioLines} title="No sessions yet" body="When a session ends, its transcript and summary are saved here. Sessions left open end on their own after an hour." />
@@ -134,6 +133,7 @@ export function SessionsPage() {
           </Card>
         </>
       )}
+      </LoadGate>
     </div>
   );
 }

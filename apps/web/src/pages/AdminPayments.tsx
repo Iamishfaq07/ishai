@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { AdminPayment } from "@orbit/types";
-import { Check, IndianRupee, X, confirmDialog, cx } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote, Input, PageHeader, Spinner } from "../components/ui";
+import { Check, IndianRupee, LoadGate, X, confirmDialog, cx } from "@orbit/ui";
+import { Button, Card, EmptyState, ErrorNote, Input, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -56,9 +56,8 @@ export function AdminPaymentsPage() {
           </button>
         ))}
       </div>
-      {!data ? (
-        <Spinner label="Loading payments" />
-      ) : !data.payments.length ? (
+      <LoadGate loading={!data} variant="card" count={3} label="Loading payments">
+      {!data || !data.payments.length ? (
         <EmptyState
           icon={Check}
           title={only === "submitted" ? "Nothing to check" : "No payments yet"}
@@ -73,6 +72,7 @@ export function AdminPaymentsPage() {
           ))}
         </ul>
       )}
+      </LoadGate>
     </>
   );
 }

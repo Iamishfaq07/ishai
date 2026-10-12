@@ -201,6 +201,7 @@ export {
   GhostPreview,
   Skeleton,
   SkeletonLine,
+  LoadGate,
   useLoadPhase,
   type GhostKind,
   type LoadPhase,
