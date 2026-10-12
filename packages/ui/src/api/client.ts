@@ -139,11 +139,18 @@ export interface SupportChatMessage {
   created_at: string;
 }
 
+export interface SupportSuggestion {
+  id: string;
+  label: string;
+}
+
 export interface SupportThread {
   id: string;
   status: "bot" | "waiting" | "closed";
   token?: string | null;
   messages: SupportChatMessage[];
+  /** What to tap next. Empty once a person has the chat. `human` means talk to a person. */
+  suggestions?: SupportSuggestion[];
 }
 
 export interface SupportAdminItem {
@@ -674,10 +681,10 @@ export function createApiClient(options: ApiClientOptions) {
       json<SupportThread>("/v1/support/threads", { method: "POST", body: body({}) }),
     supportRead: (threadId: string, token: string) =>
       json<SupportThread>(`/v1/support/threads/${encodeURIComponent(threadId)}?token=${encodeURIComponent(token)}`),
-    supportSend: (threadId: string, token: string, text: string) =>
+    supportSend: (threadId: string, token: string, text: string, choice?: string) =>
       json<SupportThread>(`/v1/support/threads/${encodeURIComponent(threadId)}/messages`, {
         method: "POST",
-        body: body({ token, text }),
+        body: body({ token, text, ...(choice ? { choice } : {}) }),
       }),
     supportHandoff: (threadId: string, token: string, name: string, email: string) =>
       json<SupportThread>(`/v1/support/threads/${encodeURIComponent(threadId)}/handoff`, {

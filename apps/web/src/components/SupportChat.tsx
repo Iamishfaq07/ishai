@@ -78,16 +78,22 @@ export function SupportChat() {
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight });
-  }, [thread?.messages.length, open]);
+  }, [thread?.messages.length, thread?.suggestions?.length, open]);
 
   if (hidden) return null;
 
-  async function send() {
-    if (!saved || !text.trim() || busy) return;
+  async function send(choice?: { id: string; label: string }) {
+    if (!saved || busy) return;
+    if (choice?.id === "human") {
+      await handoff();
+      return;
+    }
+    const typed = text.trim();
+    if (!choice && !typed) return;
     setBusy(true);
     setError("");
     try {
-      setThread(await api.supportSend(saved.id, saved.token, text.trim()));
+      setThread(await api.supportSend(saved.id, saved.token, choice?.label ?? typed, choice?.id));
       setText("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't send that.");
@@ -201,9 +207,31 @@ export function SupportChat() {
                   className="mb-2 w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
                 />
               )}
-              <button type="button" onClick={() => void handoff()} disabled={busy || !saved} className="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-300">
-                Talk to a person
-              </button>
+              {thread?.status === "bot" && (thread.suggestions?.length ?? 0) > 0 ? (
+                <div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto pb-1">
+                  {thread.suggestions?.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      disabled={busy || !saved}
+                      onClick={() => void send(s)}
+                      className={cx(
+                        "rounded-full border px-3 py-1.5 text-left text-xs font-medium disabled:opacity-40",
+                        s.id === "human"
+                          ? "border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-400/40 dark:bg-indigo-500/10 dark:text-indigo-200"
+                          : "border-zinc-200 text-zinc-700 hover:border-indigo-300 hover:bg-indigo-50 dark:border-white/10 dark:text-zinc-200 dark:hover:border-indigo-400/40 dark:hover:bg-indigo-500/10",
+                        focusRing,
+                      )}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <button type="button" onClick={() => void handoff()} disabled={busy || !saved} className="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-300">
+                  Talk to a person
+                </button>
+              )}
             </div>
           )}
           <form
@@ -216,7 +244,7 @@ export function SupportChat() {
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder={thread?.status === "waiting" ? "Message the person who has this chat…" : "Ask about credits, the app, a payment…"}
+              placeholder={thread?.status === "waiting" ? "Message the person who has this chat…" : "Or type a question…"}
               className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
             />
             <button type="submit" disabled={busy || !text.trim()} aria-label="Send" className={cx("rounded-xl bg-indigo-600 px-3 text-white disabled:opacity-40", focusRing)}>

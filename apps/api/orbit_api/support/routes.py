@@ -1,8 +1,7 @@
 """Support chat.
 
 `POST /v1/support/threads` opens a chat (signed in or out). The browser keeps a token that is the only way back in.
-`POST .../messages` adds what the visitor typed. While the thread is `bot`, Orbit answers from the help notes and,
-if those don't cover it, from the model, which is not allowed to invent prices. `POST .../handoff` asks for a person:
+`POST .../messages` adds what the visitor typed, or a topic they tapped. While the thread is `bot`, Orbit answers from the help notes only. It does not call a model. `POST .../handoff` asks for a person:
 the thread waits, and a copy lands in the admin Inbox so the existing unread badge lights up.
 A person replies at `POST /v1/admin/support/{id}/reply`. That line shows in the visitor's chat.
 """
@@ -26,10 +25,8 @@ from orbit_api.config import get_settings
 from orbit_api.contact.routes import clean_message, network_hash, one_line
 from orbit_api.db import get_db
 from orbit_api.models import ContactMessage, SupportMessage, SupportThread, User
-from orbit_api.providers.llm import get_llm_provider
-from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMRequest
 from orbit_api.ratelimit import TokenBucket, check, client_ip
-from orbit_api.support.knowledge import GREETING, HANDOFF, UNKNOWN, facts, lookup
+from orbit_api.support.knowledge import GREETING, HANDOFF, option_label, respond, suggestions_for
 
 log = logging.getLogger(__name__)
 
@@ -40,13 +37,6 @@ TEXT_MAX = 2000
 _per_hour = TokenBucket(rate_per_s=30 / 3600, burst=30)
 SLOW = "You've sent a lot of messages in a short time. Please wait a few minutes."
 
-_SYSTEM = (
-    "You are Orbit's support bot. Answer in plain sentences, under 120 words. "
-    "Use only the notes below. If the notes don't cover the question, say you don't know and tell them to tap "
-    "Talk to a person. Never invent a price, a refund, or a feature. Never ask for a password or a UPI PIN.\n\n"
-    "Notes:\n" + facts()
-)
-
 
 class MessageOut(BaseModel):
     id: str
@@ -55,16 +45,23 @@ class MessageOut(BaseModel):
     created_at: datetime
 
 
+class SuggestionOut(BaseModel):
+    id: str
+    label: str
+
+
 class ThreadOut(BaseModel):
     id: str
     status: Literal["bot", "waiting", "closed"]
     token: str | None = None  # only when the thread is opened
     messages: list[MessageOut]
+    suggestions: list[SuggestionOut] = []
 
 
 class ThreadIn(BaseModel):
     token: str = Field(min_length=20, max_length=80)
-    text: str = Field(min_length=1, max_length=TEXT_MAX)
+    text: str = Field(default="", max_length=TEXT_MAX)
+    choice: str = Field(default="", max_length=40)
 
 
 class HandoffIn(BaseModel):
@@ -104,6 +101,7 @@ def _out(thread: SupportThread, token: str | None = None) -> ThreadOut:
             MessageOut(id=m.id, role=m.role, text=m.text, created_at=m.created_at)  # type: ignore[arg-type]
             for m in thread.messages
         ],
+        suggestions=[SuggestionOut(id=i, label=label) for i, label in suggestions_for(thread.messages, thread.status)],
     )
 
 
@@ -152,25 +150,16 @@ async def _commit(db: AsyncSession, thread: SupportThread) -> SupportThread:
     return loaded
 
 
-async def _bot_answer(text: str) -> str:
-    known = lookup(text)
-    if known:
-        return known
-    try:
-        reply = await get_llm_provider().generate(LLMRequest(
-            messages=[LLMMessage("system", _SYSTEM), LLMMessage("user", text)],
-            reasoning="light",
-            thinking="off",
-            max_tokens=220,
-            temperature=0.2,
-            request_type="chat",
-            allow_fallback=True,
-        ))
-    except (LLMError, TimeoutError, OSError) as exc:
-        log.info("support bot fell back: %s", exc)
-        return UNKNOWN
-    cleaned = clean_message(reply.text)
-    return cleaned or UNKNOWN
+async def _bot_answer(text: str, choice: str) -> tuple[str, str]:
+    """The line saved for the visitor, and the bot's exact reply. No model."""
+    if choice:
+        label = option_label(choice)
+        if label is None:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That option isn't available.")
+        answer, _options = respond("", choice)
+        return label, answer
+    answer, _options = respond(text)
+    return text[:TEXT_MAX], answer
 
 
 @router.post("/v1/support/threads", response_model=ThreadOut, status_code=201)
@@ -215,11 +204,17 @@ async def post_message(
     if thread.status == "closed":
         raise HTTPException(status.HTTP_409_CONFLICT, "This chat is closed. Start a new one.")
     text = clean_message(body.text)
-    if not text:
+    choice = body.choice.strip()
+    if not text and not choice:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Type a message.")
-    _add(db, thread, "user", text[:TEXT_MAX])
     if thread.status == "bot":
-        _add(db, thread, "bot", await _bot_answer(text))
+        shown, reply = await _bot_answer(text, choice)
+        _add(db, thread, "user", shown)
+        _add(db, thread, "bot", reply)
+    else:
+        if not text:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Type a message.")
+        _add(db, thread, "user", text[:TEXT_MAX])
     return _out(await _commit(db, thread))
 
 
