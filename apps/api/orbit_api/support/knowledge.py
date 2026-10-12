@@ -11,7 +11,10 @@ GREETING = (
     "I only answer what I'm sure about. Tap Talk to a person if you need the team."
 )
 
-HANDOFF = "A person on the Orbit team has this chat now. Reply here and they'll see it. You don't need to start again."
+HANDOFF = (
+    "A person on the Orbit team has this chat now. Reply here and they'll see it. "
+    "If you close this, a red dot on the chat icon means they replied."
+)
 
 UNKNOWN = "I don't have a sure answer for that. Pick a topic below, or tap Talk to a person."
 
@@ -195,6 +198,7 @@ _MATCH_ORDER: tuple[str, ...] = (
 
 _HUMAN = ("human", "Talk to a person")
 _MENU = ("menu", "All topics")
+_HELPED = ("helped", "That helped")
 _ACCOUNT = (("balance", "My balance"), ("payment", "My last payment"))
 _GREETING = re.compile(r"(hi|hello|hey|help|thanks|thank you|menu)[.!? ]*")
 
@@ -239,6 +243,7 @@ def options_for(topic_id: str | None) -> list[tuple[str, str]]:
     topic = TOPICS[topic_id]
     rows = [(TOPICS[i].id, TOPICS[i].label) for i in topic.next_ids]
     rows.append(_MENU)
+    rows.append(_HELPED)
     rows.append(_HUMAN)
     return rows
 
@@ -246,6 +251,8 @@ def options_for(topic_id: str | None) -> list[tuple[str, str]]:
 def option_label(choice: str) -> str | None:
     if choice == "menu":
         return "All topics"
+    if choice == "helped":
+        return "That helped"
     for topic_id, label in _ACCOUNT:
         if choice == topic_id:
             return label
@@ -277,6 +284,8 @@ def _with_account(rows: list[tuple[str, str]], signed_in: bool) -> list[tuple[st
 
 def respond(text: str = "", choice: str = "") -> tuple[str, list[tuple[str, str]]]:
     """The bot line and the chips under it. `choice` is a tapped topic id."""
+    if choice == "helped":
+        return "Good. Pick another topic if you still need something.", options_for(None)
     if choice == "menu":
         return MENU_LINE, options_for("menu")
     if choice:

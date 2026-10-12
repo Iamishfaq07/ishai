@@ -158,3 +158,42 @@ def test_the_page_leads_the_menu_but_not_a_follow_up(client: TestClient) -> None
     ids = [item["id"] for item in followed.json()["suggestions"]]
     assert ids[0] == "welcome"
     assert "menu" in ids
+
+
+def test_that_helped_returns_to_the_menu(client: TestClient) -> None:
+    opened = client.post("/v1/support/threads")
+    token = opened.json()["token"]
+    asked = client.post(
+        f"/v1/support/threads/{opened.json()['id']}/messages",
+        json={"token": token, "choice": "prices"},
+    )
+    assert any(item["id"] == "helped" for item in asked.json()["suggestions"])
+    helped = client.post(
+        f"/v1/support/threads/{opened.json()['id']}/messages",
+        json={"token": token, "choice": "helped"},
+    )
+    assert helped.status_code == 200, helped.text
+    assert helped.json()["messages"][-1]["text"].startswith("Good.")
+    assert any(item["id"] == "prices" for item in helped.json()["suggestions"])
+
+
+def test_admin_sees_the_account_behind_the_chat(client: TestClient) -> None:
+    headers, user = _register(client, f"buyer-{uuid.uuid4().hex[:8]}@example.com")
+    opened = client.post("/v1/support/threads", headers=headers)
+    assert opened.status_code == 201, opened.text
+    token = opened.json()["token"]
+    handed = client.post(
+        f"/v1/support/threads/{opened.json()['id']}/handoff",
+        headers=headers,
+        json={"token": token, "email": user["email"]},
+    )
+    assert handed.status_code == 200, handed.text
+    assert "red dot" in handed.json()["messages"][-1]["text"]
+
+    admin, _user = _register(client, client.admin_email)  # type: ignore[attr-defined]
+    detail = client.get(f"/v1/admin/support/{opened.json()['id']}", headers=admin)
+    assert detail.status_code == 200, detail.text
+    account = detail.json()["account"]
+    assert user["email"] in account
+    assert "20 interview minutes" in account
+    assert "no payment yet" in account.lower() or "No payment" in account or "no payment" in account

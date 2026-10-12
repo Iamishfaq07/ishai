@@ -62,6 +62,12 @@ class ThreadOut(BaseModel):
     suggestions: list[SuggestionOut] = []
 
 
+class AdminDetail(ThreadOut):
+    """The same chat, plus the account behind it. Only the admin route returns this."""
+
+    account: str = ""
+
+
 class ThreadIn(BaseModel):
     token: str = Field(min_length=20, max_length=80)
     text: str = Field(default="", max_length=TEXT_MAX)
@@ -224,6 +230,23 @@ async def _account_answer(db: AsyncSession, user: User, kind: str) -> str:
     return f"Your last payment is {name} for {money}. Status: {payment.status}."
 
 
+async def _account_blurb(db: AsyncSession, thread: SupportThread) -> str:
+    """One line for the admin: who this is, what they have left, and the last payment."""
+    if thread.user_id is None:
+        who = thread.email or "no email given"
+        return f"Not signed in ({who}). No balance is linked to this chat."
+    user = await db.get(User, thread.user_id)
+    if user is None:
+        return f"The account on this chat is gone. Email they typed: {thread.email or 'none'}."
+    balance = await _account_answer(db, user, "balance")
+    payment = await _account_answer(db, user, "payment")
+    return f"{user.email}. {balance} {payment}"
+
+
+async def _admin_out(db: AsyncSession, thread: SupportThread) -> AdminDetail:
+    return AdminDetail(**_out(thread).model_dump(), account=await _account_blurb(db, thread))
+
+
 async def _bot_answer(db: AsyncSession, thread: SupportThread, user: User | None, text: str, choice: str) -> tuple[str, str]:
     """The line saved for the visitor, and the bot's exact reply. No model."""
     account = account_choice(text, choice)
@@ -357,27 +380,27 @@ async def list_threads(
     return out
 
 
-@admin_router.get("/{thread_id}", response_model=ThreadOut)
+@admin_router.get("/{thread_id}", response_model=AdminDetail)
 async def admin_thread(
     thread_id: str,
     _admin: Annotated[User, Depends(require_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> ThreadOut:
+) -> AdminDetail:
     thread = (await db.execute(
         select(SupportThread).where(SupportThread.id == thread_id).options(selectinload(SupportThread.messages))
     )).scalar_one_or_none()
     if thread is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No chat with that id.")
-    return _out(thread)
+    return await _admin_out(db, thread)
 
 
-@admin_router.post("/{thread_id}/reply", response_model=ThreadOut)
+@admin_router.post("/{thread_id}/reply", response_model=AdminDetail)
 async def admin_reply(
     thread_id: str,
     body: ReplyIn,
     admin: Annotated[User, Depends(require_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> ThreadOut:
+) -> AdminDetail:
     thread = (await db.execute(
         select(SupportThread).where(SupportThread.id == thread_id).options(selectinload(SupportThread.messages))
     )).scalar_one_or_none()
@@ -389,15 +412,15 @@ async def admin_reply(
     thread.status = "waiting"
     _add(db, thread, "human", text[:TEXT_MAX])
     log.info("support reply by %s on %s", admin.email, thread.id)
-    return _out(await _commit(db, thread))
+    return await _admin_out(db, await _commit(db, thread))
 
 
-@admin_router.post("/{thread_id}/close", response_model=ThreadOut)
+@admin_router.post("/{thread_id}/close", response_model=AdminDetail)
 async def admin_close(
     thread_id: str,
     _admin: Annotated[User, Depends(require_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> ThreadOut:
+) -> AdminDetail:
     thread = (await db.execute(
         select(SupportThread).where(SupportThread.id == thread_id).options(selectinload(SupportThread.messages))
     )).scalar_one_or_none()
@@ -405,4 +428,4 @@ async def admin_close(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No chat with that id.")
     thread.status = "closed"
     _add(db, thread, "bot", "This chat is closed. Start a new one if you need something else.")
-    return _out(await _commit(db, thread))
+    return await _admin_out(db, await _commit(db, thread))
