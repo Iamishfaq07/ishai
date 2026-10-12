@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { OrbitDocument, PrepCategory, PrepQuestion, PrepResponse } from "@orbit/types";
 import {
-  Check,
   ChevronDown,
   Copy,
   MessageCircle,
@@ -15,6 +14,7 @@ import {
   focusRing,
   practiceDocumentIds,
   splitPlaceholders,
+  toast,
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, Select, Spinner, Textarea } from "../components/ui";
 import { api } from "../lib/api";
@@ -109,7 +109,6 @@ export function PrepSection({
   const [result, setResult] = useState<PrepResponse | null>(loadLast);
   const [picked, setPicked] = useState<Set<number>>(() => new Set());
   const [open, setOpen] = useState<number | null>(0);
-  const [copied, setCopied] = useState(false);
   const [starting, setStarting] = useState(false);
 
   // Default source: the job description a link asked for (Jobs → Prepare: `?jd=`), else the newest, else paste.
@@ -232,8 +231,7 @@ export function PrepSection({
     if (!result) return;
     try {
       await navigator.clipboard.writeText(asMarkdown(result));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      toast("Copied");
     } catch {
       setError("Couldn't copy — your browser blocked the clipboard.");
     }
@@ -388,8 +386,8 @@ export function PrepSection({
             </div>
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" onClick={() => void copyAll()}>
-                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                {copied ? "Copied" : "Copy all"}
+                <Copy className="h-3.5 w-3.5" />
+                Copy all
               </Button>
               <Button size="sm" disabled={picked.size === 0 || starting} onClick={() => void practise()}>
                 <Target className="h-3.5 w-3.5" />

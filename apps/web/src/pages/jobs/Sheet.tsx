@@ -40,7 +40,7 @@ export function Sheet({
         aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
         className={cx(
-          "flex max-h-[88vh] w-full flex-col rounded-t-3xl bg-white shadow-xl motion-safe:animate-fade-up sm:rounded-3xl dark:bg-zinc-900",
+          "flex max-h-[88vh] w-full flex-col rounded-t-3xl bg-white shadow-xl animate-rise sm:rounded-3xl dark:bg-zinc-900",
           wide ? "sm:max-w-xl" : "sm:max-w-md",
         )}
       >

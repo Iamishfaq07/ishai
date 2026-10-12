@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { CreditPack } from "@orbit/types";
-import { ArrowRight, OrbitWordmark, Palette, Send, Sparkles, Wand2, cx, focusRing,
+import { ArrowRight, OrbitWordmark, Palette, Send, Sparkles, Wand2, buttonClass, cx, focusRing,
   Reveal,
   CountUp,
 } from "@orbit/ui";
@@ -19,15 +19,6 @@ import { SAMPLE_RESUME } from "./sample";
 
 /** Sign-up and sign-in from here come back to Resume AI. */
 const BACK_HERE = { from: RESUME_AI_HOME };
-
-const primary = cx(
-  "btn-sheen inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 font-medium text-white shadow-glow-sm hover:from-indigo-400 hover:to-indigo-500 hover:shadow-glow",
-  focusRing,
-);
-const secondary = cx(
-  "inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white/90 font-medium text-zinc-900 hover:border-zinc-300 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:hover:border-white/20 dark:hover:bg-white/10",
-  focusRing,
-);
 
 /** The cheapest pack with resume credits, for the honest "more credits cost this" line. */
 function useCheapestResumePack(): CreditPack | null {
@@ -142,10 +133,10 @@ export function ResumeAiPublicPage() {
         </span>
         <nav aria-label="Account" className="ml-auto flex items-center gap-2">
           <SiteMenu />
-          <Link to="/login" state={BACK_HERE} className={cx(secondary, "hidden px-3.5 py-2 text-sm sm:inline-flex")}>
+          <Link to="/login" state={BACK_HERE} className={buttonClass("secondary", "md", "hidden min-h-11 sm:inline-flex")}>
             Sign in
           </Link>
-          <Link to="/register" state={BACK_HERE} className={cx(primary, "px-3.5 py-2 text-sm")}>
+          <Link to="/register" state={BACK_HERE} className={buttonClass("primary", "md", "min-h-11")}>
             Start free
           </Link>
         </nav>
@@ -169,10 +160,10 @@ export function ResumeAiPublicPage() {
               that software reads it, then helps you fix it for each job you apply to.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/register" state={BACK_HERE} className={cx(primary, "px-6 py-3 text-base")}>
+              <Link to="/register" state={BACK_HERE} className={buttonClass("primary", "lg", "min-h-11")}>
                 Start free <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
-              <Link to="/login" state={BACK_HERE} className={cx(secondary, "px-6 py-3 text-base")}>
+              <Link to="/login" state={BACK_HERE} className={buttonClass("secondary", "lg", "min-h-11")}>
                 I have an account
               </Link>
             </div>
@@ -230,7 +221,7 @@ export function ResumeAiPublicPage() {
             Create a free Orbit account, import the resume you have, and get its ATS score in a minute. The same
             account has Orbit's interview copilot for when the interviews come.
           </p>
-          <Link to="/register" state={BACK_HERE} className={cx(primary, "relative mt-6 px-6 py-3 text-base")}>
+          <Link to="/register" state={BACK_HERE} className={buttonClass("primary", "lg", "relative mt-6 min-h-11")}>
             Start free <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>
           <p className="relative mt-5 text-xs text-zinc-500 dark:text-zinc-400">

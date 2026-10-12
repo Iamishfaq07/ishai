@@ -114,7 +114,7 @@ function SampleMatch() {
           </p>
           <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">From Kestrel Pay's careers page</p>
           <div className="mt-4 flex flex-wrap gap-2 text-sm font-medium">
-            <span className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 py-1.5 text-white shadow-glow-sm">
+            <span className={linkButton("primary", "sm")}>
               Apply <ArrowUpRight className="h-4 w-4" />
             </span>
             <span className="rounded-xl border border-zinc-200 px-3 py-1.5 text-xs leading-5 dark:border-white/10">Save</span>
@@ -173,7 +173,7 @@ export function JobsAiPublicPage() {
           <Link to="/login" state={BACK_HERE} className={cx(linkButton("secondary"), "hidden sm:inline-flex")}>
             Sign in
           </Link>
-          <Link to="/register" state={BACK_HERE} className={cx(linkButton("primary"), "px-3.5")}>
+          <Link to="/register" state={BACK_HERE} className={linkButton("primary")}>
             Start free
           </Link>
         </nav>

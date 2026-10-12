@@ -13,6 +13,7 @@ import {
   useAnswerRatings,
   useReportPolling,
   confirmDialog,
+  toast,
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Input, PageHeader, Spinner } from "../components/ui";
 import { api } from "../lib/api";
@@ -247,7 +248,6 @@ function SummaryView({ summary }: { summary: SessionSummary | null }) {
 
 function TranscriptTimeline({ detail }: { detail: SessionDetail }) {
   const [query, setQuery] = useState("");
-  const [copied, setCopied] = useState<"copied" | "failed" | null>(null);
   const turns = useMemo(() => {
     const q = query.trim().toLowerCase();
     return q ? detail.turns.filter((t) => t.text.toLowerCase().includes(q)) : detail.turns;
@@ -260,11 +260,10 @@ function TranscriptTimeline({ detail }: { detail: SessionDetail }) {
     // Refused (no permission) or missing (insecure page): say so rather than fail silently.
     try {
       await navigator.clipboard.writeText(text);
-      setCopied("copied");
+      toast("Copied");
     } catch {
-      setCopied("failed");
+      toast({ message: "Couldn't copy", tone: "error" });
     }
-    setTimeout(() => setCopied(null), 1500);
   };
 
   if (detail.turns.length === 0) {
@@ -275,7 +274,7 @@ function TranscriptTimeline({ detail }: { detail: SessionDetail }) {
       <div className="mb-4 flex gap-2">
         <Input type="search" placeholder="Search transcript…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search transcript" />
         <Button variant="secondary" onClick={() => void copy()}>
-          {copied === "copied" ? "Copied" : copied === "failed" ? "Couldn’t copy" : "Copy"}
+          Copy
         </Button>
       </div>
       <ol className="space-y-4">

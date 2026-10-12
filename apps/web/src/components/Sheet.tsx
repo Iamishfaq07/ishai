@@ -42,8 +42,7 @@ export function Sheet({
         aria-modal="true"
         aria-labelledby={titleId}
         className={cx(
-          // TODO(ws-a): the panel motion token (--dur-panel / ease-enter) once the motion layer lands.
-          "max-h-[88vh] w-full animate-fade-up overflow-y-auto overscroll-contain rounded-t-3xl border border-zinc-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl sm:max-w-lg sm:rounded-3xl dark:border-white/10 dark:bg-zinc-950",
+          "max-h-[88vh] w-full animate-rise overflow-y-auto overscroll-contain rounded-t-3xl border border-zinc-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl sm:max-w-lg sm:rounded-3xl dark:border-white/10 dark:bg-zinc-950",
           className,
         )}
       >

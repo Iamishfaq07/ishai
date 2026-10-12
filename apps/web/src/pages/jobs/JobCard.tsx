@@ -266,11 +266,7 @@ export function ApplyLink({ job, actions, big = false }: { job: JobListing; acti
       target="_blank"
       rel="noopener"
       onClick={actions.applied}
-      className={cx(
-        "btn-sheen inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 text-sm font-medium text-white shadow-glow-sm hover:from-indigo-400 hover:to-indigo-500",
-        big ? "px-5 py-2.5" : "px-3.5 py-1.5",
-        focusRing,
-      )}
+      className={linkButton("primary", big ? "md" : "sm")}
     >
       Apply <ArrowUpRight className="h-4 w-4" aria-hidden />
       <span className="sr-only">(opens {job.direct ? `${job.company}'s site` : "the original post"} in a new tab)</span>

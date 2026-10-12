@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { UpiOrder } from "@orbit/types";
-import { Check, CircleCheck, Copy, IndianRupee, QrCode, Smartphone, X, cx, focusRing } from "@orbit/ui";
+import { Check, CircleCheck, Copy, IndianRupee, QrCode, Smartphone, X, cx, focusRing, toast } from "@orbit/ui";
 import { Button, Card, Field, Input } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
@@ -9,7 +9,6 @@ import { errorText } from "../lib/format";
 const onPhone = (): boolean => typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
 
 function CopyValue({ label, value }: { label: string; value: string }) {
-  const [copied, setCopied] = useState(false);
   return (
     <div className="flex items-center justify-between gap-3 py-1.5 text-sm">
       <span className="text-zinc-500 dark:text-zinc-400">{label}</span>
@@ -21,15 +20,12 @@ function CopyValue({ label, value }: { label: string; value: string }) {
           onClick={() =>
             void navigator.clipboard
               .writeText(value)
-              .then(() => {
-                setCopied(true);
-                window.setTimeout(() => setCopied(false), 1500);
-              })
-              .catch(() => undefined)
+              .then(() => toast("Copied"))
+              .catch(() => toast({ message: "Couldn't copy", tone: "error" }))
           }
           className={cx("rounded-md p-1 text-zinc-500 hover:text-zinc-900 dark:hover:text-white", focusRing)}
         >
-          {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+          <Copy className="h-3.5 w-3.5" />
         </button>
       </span>
     </div>

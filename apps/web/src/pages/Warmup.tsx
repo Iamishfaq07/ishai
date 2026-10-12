@@ -20,6 +20,7 @@ import {
   UserRound,
   type LucideIcon,
   cx,
+  buttonClass,
   focusRing,
   speechLang,
 } from "@orbit/ui";
@@ -150,13 +151,7 @@ function saveRound(s: RoundState | null): void {
 }
 
 function navButton(variant: "primary" | "secondary"): string {
-  return cx(
-    "inline-flex min-h-10 items-center justify-center rounded-xl px-3.5 text-sm font-medium",
-    variant === "primary"
-      ? "btn-sheen bg-gradient-to-b from-indigo-500 to-indigo-600 text-white shadow-glow-sm hover:from-indigo-400 hover:to-indigo-500"
-      : "border border-zinc-200 bg-white/90 text-zinc-900 hover:border-zinc-300 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100",
-    focusRing,
-  );
+  return buttonClass(variant, "md", "min-h-10");
 }
 
 // ---- picking a track ---------------------------------------------------------------------------------------------
