@@ -4,7 +4,6 @@ import {
   AudioLines,
   BookOpen,
   ChevronDown,
-  CircleQuestionMark,
   CreditCard,
   Download,
   ErrorBoundary,
@@ -12,6 +11,7 @@ import {
   HistoryIcon,
   House,
   LogOut,
+  MessageCircle,
   MessageSquareQuote,
   MOCK_INTERVIEW_ENABLED,
   OrbitWordmark,
@@ -33,7 +33,7 @@ import { isWindows } from "../lib/audio";
 import { useAuth } from "../lib/auth";
 import { DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
 import { CONTACT_PAGE, POLICY_LINKS } from "../lib/contact";
-import { SHELL_EVENTS, isTypingTarget } from "../lib/shell";
+import { SHELL_EVENTS, isTypingTarget, openSupport } from "../lib/shell";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { prefetchRoute } from "../routes";
@@ -44,7 +44,6 @@ import { Sheet } from "./Sheet";
 // Their own chunks, downloaded the first time they open (or when the search button is hovered).
 const loadPalette = () => import("./CommandPalette");
 const CommandPalette = lazy(loadPalette);
-const HelpDialog = lazy(() => import("./HelpDialog"));
 
 /** Practice's page: mock interviews, with prep and progress. */
 const PRACTICE_PATH = /^\/mock(\/|$)/;
@@ -71,7 +70,7 @@ interface NavItem {
 
 // One item per product, the same on the top bar and the phone tab bar (where "Me" is the last): the interview copilot
 // (live help, with its sessions, documents and story bank) and Practice (mock interviews) are separate products.
-// Plan & credits, Settings and Help are in the account menu ("Me" on phones). The addresses are the same as before, so
+// Plan & credits, Settings and Support are in the account menu ("Me" on phones). The addresses are the same as before, so
 // nothing redirects.
 const NAV: NavItem[] = [
   { to: "/", label: "Home", short: "Home", icon: House, current: (p) => p === "/" },
@@ -188,12 +187,11 @@ export function Layout() {
   const signOut = useCallback(() => void logout().then(() => navigate("/login")), [logout, navigate]);
 
   const [searchOpen, setSearchOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
   const [meOpen, setMeOpen] = useState(false);
   const openSearch = useCallback(() => setSearchOpen(true), []);
-  const openHelp = useCallback(() => {
+  const openSupportChat = useCallback(() => {
     setMeOpen(false);
-    setHelpOpen(true);
+    openSupport();
   }, []);
 
   // Ctrl+K (⌘K on a Mac) anywhere, "/" when not typing: search. Not over another dialog. The live page has its own
@@ -210,14 +208,11 @@ export function Layout() {
         setSearchOpen(true);
       }
     };
-    const onHelp = () => setHelpOpen(true);
     const onSearch = () => setSearchOpen(true);
     document.addEventListener("keydown", onKey);
-    window.addEventListener(SHELL_EVENTS.help, onHelp);
     window.addEventListener(SHELL_EVENTS.search, onSearch);
     return () => {
       document.removeEventListener("keydown", onKey);
-      window.removeEventListener(SHELL_EVENTS.help, onHelp);
       window.removeEventListener(SHELL_EVENTS.search, onSearch);
     };
   }, []);
@@ -318,7 +313,7 @@ export function Layout() {
                 email={user?.email ?? ""}
                 onSettings={() => navigate("/settings")}
                 onBilling={() => navigate("/billing")}
-                onHelp={openHelp}
+                onHelp={openSupportChat}
                 onSignOut={signOut}
               />
             </div>
@@ -392,11 +387,11 @@ export function Layout() {
         </div>
       </main>
 
-      {/* One quiet line under every page: Help in the same place each time, and the policies. */}
+      {/* One quiet line under every page: Support in the same place each time, and the policies. */}
       <footer className="mx-auto w-full max-w-6xl px-4 pb-6 pt-2 text-xs sm:px-6">
-        <nav aria-label="Help and policies" className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-zinc-200/70 pt-4 dark:border-white/5">
-          <button type="button" onClick={openHelp} className={footerLink}>
-            Help
+        <nav aria-label="Support and policies" className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-zinc-200/70 pt-4 dark:border-white/5">
+          <button type="button" onClick={openSupportChat} className={footerLink}>
+            Support
           </button>
           <Link to={CONTACT_PAGE} className={footerLink}>
             Contact us
@@ -440,7 +435,7 @@ export function Layout() {
               onClick={() => setMeOpen(true)}
               aria-haspopup="dialog"
               aria-expanded={meOpen}
-              aria-label="Me: plan, settings, help and sign out"
+              aria-label="Me: plan, settings, support and sign out"
               className={cx(tabClass(meActive || meOpen), "w-full")}
             >
               <TabIcon icon={UserRound} active={meActive || meOpen} />
@@ -457,26 +452,14 @@ export function Layout() {
             setMeOpen(false);
             navigate(to);
           }}
-          onHelp={openHelp}
+          onHelp={openSupportChat}
           onSignOut={signOut}
         />
       </Sheet>
 
       {searchOpen && (
         <Suspense fallback={null}>
-          <CommandPalette onClose={() => setSearchOpen(false)} onHelp={openHelp} onSignOut={signOut} />
-        </Suspense>
-      )}
-      {helpOpen && (
-        <Suspense fallback={null}>
-          <HelpDialog
-            open
-            onClose={() => setHelpOpen(false)}
-            onSearch={() => {
-              setHelpOpen(false);
-              setSearchOpen(true);
-            }}
-          />
+          <CommandPalette onClose={() => setSearchOpen(false)} onHelp={openSupportChat} onSignOut={signOut} />
         </Suspense>
       )}
     </div>
@@ -541,7 +524,7 @@ function MeMenu({
         </li>
         <li>
           <button type="button" className={row} onClick={onHelp}>
-            <CircleQuestionMark className={icon} aria-hidden /> Help
+            <MessageCircle className={icon} aria-hidden /> Support
           </button>
         </li>
         {isWindows() && (
@@ -561,7 +544,7 @@ function MeMenu({
   );
 }
 
-/** Avatar button → account menu: who's signed in, plan & credits, settings, help, the Windows app, sign out. */
+/** Avatar button → account menu: who's signed in, plan & credits, settings, support, the Windows app, sign out. */
 function AccountMenu({
   name,
   email,
@@ -660,8 +643,8 @@ function AccountMenu({
             Settings
           </button>
           <button type="button" role="menuitem" className={item} onClick={choose(onHelp)}>
-            <CircleQuestionMark className="h-4 w-4 text-zinc-500" aria-hidden />
-            Help
+            <MessageCircle className="h-4 w-4 text-zinc-500" aria-hidden />
+            Support
           </button>
           {isWindows() && (
             <a role="menuitem" href={DESKTOP_DOWNLOAD_URL} className={item} onClick={() => setOpen(false)}>

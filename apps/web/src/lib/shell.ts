@@ -1,19 +1,24 @@
 /**
- * Open the app shell's Help or search from any page (Home's "Need help?", Welcome). The layout listens; outside it
- * (sign-in, the public pages) nothing happens, so callers there link to the contact page instead.
+ * Open support or search from any page (Home's "Support", the account menu, the footer). The support chat listens.
+ * Search is handled by the signed-in layout; outside it (sign-in, the public pages) nothing happens.
  */
-const HELP = "orbit:open-help";
+const SUPPORT = "orbit:open-support";
 const SEARCH = "orbit:open-search";
 
+export function openSupport(): void {
+  window.dispatchEvent(new Event(SUPPORT));
+}
+
+/** The old name. Opens the support chat. */
 export function openHelp(): void {
-  window.dispatchEvent(new Event(HELP));
+  openSupport();
 }
 
 export function openSearch(): void {
   window.dispatchEvent(new Event(SEARCH));
 }
 
-export const SHELL_EVENTS = { help: HELP, search: SEARCH } as const;
+export const SHELL_EVENTS = { help: SUPPORT, support: SUPPORT, search: SEARCH } as const;
 
 /** True for a keypress in a text field, where "/" is typing, not "open search". */
 export function isTypingTarget(target: EventTarget | null): boolean {

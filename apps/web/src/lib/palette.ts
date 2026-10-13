@@ -160,7 +160,7 @@ export function baseCommands({ mockEnabled }: { mockEnabled: boolean }): Command
       to: "/billing",
       keywords: ["upi", "pay", "payment", "pack", "price", "minutes", "plan", "billing", "₹", "rupees", "utr"],
     },
-    { id: "do-help", title: "Get help", group: "Actions", run: "help", keywords: ["support", "contact", "whatsapp", "email", "faq", "question", "glossary"] },
+    { id: "do-help", title: "Support", group: "Actions", run: "help", keywords: ["help", "support", "contact", "whatsapp", "email", "faq", "question", "glossary"] },
     { id: "do-contact", title: "Send us a message", hint: "Contact the Orbit team", group: "Actions", to: "/contact", keywords: ["contact us", "support", "complaint", "feedback", "report a job", "refund", "problem"] },
     { id: "do-theme", title: "Switch light or dark theme", group: "Actions", run: "theme", keywords: ["dark mode", "light mode", "appearance", "colour", "color"] },
     { id: "go-home", title: "Home", group: "Go to", to: "/", keywords: ["next step", "dashboard", "start", "checklist"] },
