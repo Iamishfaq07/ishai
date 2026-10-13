@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Annotated, Literal
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
+from sqlalchemy.orm import defer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.guards import require_verified_user
@@ -113,6 +114,7 @@ async def _ingest(db: AsyncSession, doc: Document, text: str) -> None:
 async def list_documents(user: Annotated[User, Depends(current_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> list[DocumentOut]:
     docs = (await db.scalars(select(Document).where(Document.user_id == user.id)
+                             .options(defer(Document.source_text), defer(Document.extracted))
                              .order_by(Document.created_at.desc()))).all()
     # One grouped count for the whole list instead of one per document.
     counts: dict[str, int] = {

@@ -31,6 +31,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
+from sqlalchemy.orm import defer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.guards import require_verified_email
@@ -112,6 +113,7 @@ async def _owned(db: AsyncSession, resume_id: str, user: User) -> Resume:
 async def list_resumes(user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> list[ResumeSummary]:
     rows = (await db.scalars(select(Resume).where(Resume.user_id == user.id)
+                             .options(defer(Resume.cover_letter))
                              .order_by(Resume.updated_at.desc(), Resume.created_at.desc()))).all()
     loaded = [(r, *_load(r), r.job_text or "") for r in rows]
     # Scoring is CPU work (keyword matching, every check), once per resume: off the event loop, so a long list

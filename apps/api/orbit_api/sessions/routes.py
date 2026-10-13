@@ -21,6 +21,7 @@ from fastapi import (
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.orm import defer
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -261,6 +262,8 @@ async def create_session(body: SessionIn, user: Annotated[User, Depends(require_
 async def list_sessions(user: Annotated[User, Depends(current_user)],
                         db: Annotated[AsyncSession, Depends(get_db)]) -> list[SessionOut]:
     rows = (await db.scalars(select(LiveSessionRow).where(LiveSessionRow.user_id == user.id)
+                             .options(defer(LiveSessionRow.rolling_summary), defer(LiveSessionRow.metrics),
+                                      defer(LiveSessionRow.mock_config), defer(LiveSessionRow.carryover))
                              .order_by(LiveSessionRow.created_at.desc()).limit(200))).all()
     ids = [r.id for r in rows]
     if not ids:

@@ -10,9 +10,27 @@ export interface AsyncState<T> {
 
 // Last result per cache key, for this signed-in user only (cleared on sign-in and sign-out).
 const cache = new Map<string, unknown>();
+// A request already running for that key. Home mounts the same list in two places; without this both hit the API.
+const inflight = new Map<string, Promise<unknown>>();
+// Bumped when the account changes, so a request started for the previous account can't be reused.
+let generation = 0;
 
 export function clearAsyncCache(): void {
+  generation += 1;
   cache.clear();
+  inflight.clear();
+}
+
+/** One network call while several callers ask for the same key. A new call after it finishes starts another. */
+export function shareInflight<T>(key: string, run: () => Promise<T>): Promise<T> {
+  const existing = inflight.get(key) as Promise<T> | undefined;
+  if (existing) return existing;
+  const gen = generation;
+  const promise = run().finally(() => {
+    if (generation === gen && inflight.get(key) === promise) inflight.delete(key);
+  });
+  inflight.set(key, promise);
+  return promise;
 }
 
 /**
@@ -43,18 +61,20 @@ export function useAsync<T>(fn: () => Promise<T>, deps: readonly unknown[], key?
 
   useEffect(() => {
     let cancelled = false;
+    const gen = generation;
     const cached = key !== undefined && cache.has(key);
     if (!cached) setLoading(true);
     setError(null);
-    fnRef
-      .current()
+    const run = () => fnRef.current();
+    const request = key ? shareInflight(key, run) : run();
+    request
       .then((value) => {
-        if (cancelled) return;
+        if (cancelled || generation !== gen) return;
         if (key) cache.set(key, value);
         setDataState(value);
       })
       .catch((err: unknown) => {
-        if (cancelled || (cached && key && cache.has(key))) return; // keep showing what we had
+        if (cancelled || generation !== gen || (cached && key && cache.has(key))) return; // keep showing what we had
         setError(err instanceof Error ? err : new Error(String(err)));
       })
       .finally(() => !cancelled && setLoading(false));
