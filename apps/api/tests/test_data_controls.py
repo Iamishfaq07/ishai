@@ -138,7 +138,8 @@ def test_email_change_confirms_by_link_and_signs_out_old_sessions(client: TestCl
 
     r = client.post("/v1/auth/email-change/confirm", json={"token": token})
     # It changes the email but signs nobody in (whoever opens a passed-on link isn't necessarily the owner).
-    assert r.status_code == 200 and r.json() == {"email": new} and "access_token" not in r.json()
+    assert r.status_code == 200 and "access_token" not in r.json()
+    assert r.json() == {"email": new, "google_disconnected": False}
     client.cookies.clear()
     assert client.get("/v1/auth/me", headers=h).status_code == 401  # old sessions are signed out
     signed_in = client.post("/v1/auth/login", json={"email": new, "password": PW}).json()

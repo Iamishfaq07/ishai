@@ -192,7 +192,8 @@ def test_changing_the_email_disconnects_google(google_client: TestClient, monkey
     asked = google_client.post("/v1/auth/me/email", json={"new_email": new, "password": "a real password 1"})
     assert asked.status_code == 202
     changed = google_client.post("/v1/auth/email-change/confirm", json={"token": _token(new, "/confirm-email-change")})
-    assert changed.status_code == 200 and changed.json()["email"] == new
+    assert changed.status_code == 200
+    assert changed.json() == {"email": new, "google_disconnected": True}
 
     async def linked() -> str | None:
         from sqlalchemy import select

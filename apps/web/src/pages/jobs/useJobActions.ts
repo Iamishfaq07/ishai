@@ -4,6 +4,7 @@ import type { JobFitCheck, JobFitResponse, JobListing, JobStatus } from "@orbit/
 import { ApiError, practiceDocuments } from "@orbit/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
+import { practiceHref } from "../../lib/onboarding";
 import { resumeToText } from "../resume/model";
 import { resumePath } from "../resume/paths";
 
@@ -107,7 +108,7 @@ export function useJobActions(
     setError(null);
     try {
       const r = await api.prepareForJob(job.id);
-      const to = `/mock?jd=${encodeURIComponent(r.document_id)}`;
+      const to = practiceHref({ jd: r.document_id, role: job.title, company: job.company });
       if (!tracked) onTracked(job.id, { id: r.tracker_id, status: "saved" });
       // Practice reads the resume from Documents: save the matched one there too, the way "Use in Orbit" does (kept
       // up to date, not copied). Without it the questions still come; the answers just can't use the resume.

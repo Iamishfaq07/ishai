@@ -24,6 +24,7 @@ import { Button, Card, EmptyState, ErrorNote, Select } from "../../components/ui
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
+import { practiceHref } from "../../lib/onboarding";
 import { resumePath } from "../resume/paths";
 import {
   ActionNotes,
@@ -360,7 +361,7 @@ function TrackerPanel({
             </Link>
           )}
           {shown.document_id && (
-            <Link to={`/mock?jd=${encodeURIComponent(shown.document_id)}`} className={cx(textLink, "inline-flex items-center gap-1")}>
+            <Link to={practiceHref({ jd: shown.document_id ?? undefined, role: shown.title, company: shown.company })} className={cx(textLink, "inline-flex items-center gap-1")}>
               <Target className="h-3 w-3" aria-hidden /> Practise
             </Link>
           )}
