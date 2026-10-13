@@ -18,6 +18,7 @@ import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react
 import { Button, ErrorNote, Field, Input } from "../components/ui";
 import { api, API_URL } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { clearAsyncCache } from "../lib/useAsync";
 import { errorText } from "../lib/format";
 import { useWelcomeGrant } from "../lib/welcome";
 import { Captcha, useCaptchaConfig } from "../components/Captcha";
@@ -713,6 +714,7 @@ export function ConfirmEmailChangePage() {
     api
       .confirmEmailChange(token)
       .then((res) => {
+        clearAsyncCache(); // the old account's lists must not show after the address changes
         setUser(null); // every session was signed out: sign in again with the new address
         setEmail(res.email);
         setState("done");
@@ -728,7 +730,7 @@ export function ConfirmEmailChangePage() {
       title={state === "done" ? "Email changed" : state === "failed" ? "Link didn't work" : "Change your Orbit email?"}
       subtitle={
         state === "done"
-          ? `Sign in with ${email} and your password. Every device was signed out.`
+          ? `Sign in with ${email} and your password. Google was disconnected from the old inbox, and every device was signed out.`
           : state === "failed"
             ? ""
             : "Confirm to make this inbox the account's email."

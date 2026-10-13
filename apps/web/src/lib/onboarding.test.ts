@@ -8,6 +8,7 @@ import {
   interviewSoon,
   loadAnswers,
   nextSteps,
+  practiceHref,
   prefsFromAnswers,
   presetFor,
   saveAnswers,
@@ -100,10 +101,12 @@ describe("nextSteps (Home's 'Your next step')", () => {
     const facts = { ...empty, resumes: 1, bestResume: { id: "r", score: 90 } };
     const practice = (experience: WelcomeAnswers["experience"]) =>
       nextSteps(answers({ goal: "interview", experience }), facts, NOW).find((s) => s.id === "practice");
-    expect(practice("fresher")).toMatchObject({ title: "Do a 5-minute HR round", to: "/mock?preset=hr5" });
-    expect(practice("early")).toMatchObject({ to: "/mock?preset=tmay10" });
-    expect(practice("experienced")).toMatchObject({ to: "/mock?preset=tech15" });
-    expect(practice(null)?.to).toBe("/mock?preset=hr5");
+    expect(practice("fresher")).toMatchObject({ title: "Do a 5-minute HR round", to: "/mock?preset=hr5&role=Data+analyst" });
+    expect(practice("early")?.to).toBe("/mock?preset=tmay10&role=Data+analyst");
+    expect(practice("experienced")?.to).toBe("/mock?preset=tech15&role=Data+analyst");
+    expect(practice(null)?.to).toBe("/mock?preset=hr5&role=Data+analyst");
+    const noRole = nextSteps(answers({ goal: "interview", experience: "fresher", role: " " }), facts, NOW).find((s) => s.id === "practice");
+    expect(noRole?.to).toBe("/mock?preset=hr5");
   });
 
   it("sends practice to a live session when mock interviews are off", () => {
@@ -116,7 +119,11 @@ describe("nextSteps (Home's 'Your next step')", () => {
   it("puts an interview in the next few days before everything else", () => {
     const tracker = [job({ status: "interviewing", company: "Bosch", next_at: inHours(20), document_id: "d1" })];
     const [first] = nextSteps(answers({ goal: "resume" }), { ...empty, tracker }, NOW);
-    expect(first).toMatchObject({ id: "interview-soon", title: "Practise for your Bosch interview", to: "/mock?jd=d1" });
+    expect(first).toMatchObject({
+      id: "interview-soon",
+      title: "Practise for your Bosch interview",
+      to: "/mock?jd=d1&role=SDE-1&company=Bosch",
+    });
     expect(first?.body).toMatch(/^It's tomorrow\./);
   });
 
@@ -131,6 +138,14 @@ describe("nextSteps (Home's 'Your next step')", () => {
     const steps = nextSteps(null, empty, NOW);
     expect(new Set(steps.map((s) => s.id)).size).toBe(steps.length);
     for (const s of steps) expect(s).not.toHaveProperty("done");
+  });
+});
+
+describe("practiceHref", () => {
+  it("keeps only the parts that are known", () => {
+    expect(practiceHref()).toBe("/mock");
+    expect(practiceHref({ preset: "hr5", role: "  " })).toBe("/mock?preset=hr5");
+    expect(practiceHref({ jd: "d1", role: "SDE 1", company: "Bosch" })).toBe("/mock?jd=d1&role=SDE+1&company=Bosch");
   });
 });
 

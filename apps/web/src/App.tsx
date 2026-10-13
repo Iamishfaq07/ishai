@@ -1,4 +1,4 @@
-import { Suspense, useEffect, type ReactNode } from "react";
+import { Suspense, useEffect, useRef, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { NotFoundPage } from "./pages/NotFound";
 import { Layout } from "./components/Layout";
@@ -128,13 +128,17 @@ function useRouteTitle(): void {
 function GoogleClaimNotice() {
   const [params, setParams] = useSearchParams();
   const claimed = params.get("google") === "claimed";
+  const said = useRef(false);
   useEffect(() => {
-    if (!claimed) return;
+    if (!claimed || said.current) return;
+    said.current = true;
     toast("Google is connected. The old password no longer works. Set a new one in Settings if you want one.");
-    const next = new URLSearchParams(params);
-    next.delete("google");
-    setParams(next, { replace: true });
-  }, [claimed, params, setParams]);
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("google");
+      return next;
+    }, { replace: true });
+  }, [claimed, setParams]);
   return null;
 }
 

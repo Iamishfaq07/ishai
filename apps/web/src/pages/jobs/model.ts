@@ -433,17 +433,26 @@ export function inAWeek(now: number = Date.now()): string {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7, 12, 0, 0).toISOString();
 }
 
+function mockFor(entry: { document_id?: string | null; title: string; company: string }): string {
+  const q = new URLSearchParams();
+  if (entry.document_id) q.set("jd", entry.document_id);
+  q.set("preset", "tech15");
+  if (entry.title.trim()) q.set("role", entry.title.trim());
+  if (entry.company.trim()) q.set("company", entry.company.trim());
+  return `/mock?${q}`;
+}
+
 /**
  * Where "Practise" goes for a tracked job: a mock on its saved job post when there is one, else the job's own page
  * (its Prepare saves the post), else a technical mock for its title.
  */
 export function practiceLink(
-  entry: Pick<JobTrackerEntry, "document_id" | "live" | "listing_id" | "title">,
+  entry: Pick<JobTrackerEntry, "document_id" | "live" | "listing_id" | "title" | "company">,
   jobPage: (id: string) => string,
 ): string {
-  if (entry.document_id) return `/mock?jd=${encodeURIComponent(entry.document_id)}&preset=tech15`;
+  if (entry.document_id) return mockFor(entry);
   if (entry.live && !isManual(entry)) return jobPage(entry.listing_id);
-  return `/mock?preset=tech15&role=${encodeURIComponent(entry.title)}`;
+  return mockFor(entry);
 }
 
 // ---- the search box's quick chips ---------------------------------------------------------------------------------

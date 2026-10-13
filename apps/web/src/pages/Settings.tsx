@@ -539,9 +539,9 @@ function PasswordChange() {
     }
   };
   return (
-    <form onSubmit={(e) => void submit(e)} className="mt-4 grid gap-3 border-t border-zinc-100 pt-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end dark:border-zinc-800">
+    <form onSubmit={(e) => void submit(e)} className={cx("mt-4 grid gap-3 border-t border-zinc-100 pt-4 sm:items-end dark:border-zinc-800", googleOnly ? "sm:grid-cols-[1fr_auto]" : "sm:grid-cols-[1fr_1fr_auto]")}>
       {googleOnly ? (
-        <p className="text-sm text-zinc-600 sm:col-span-3 dark:text-zinc-300">
+        <p className="text-sm text-zinc-600 sm:col-span-2 dark:text-zinc-300">
           You sign in with Google. Set a password if you also want to sign in with email.
         </p>
       ) : (
@@ -556,12 +556,12 @@ function PasswordChange() {
         {busy ? "Saving…" : googleOnly ? "Set password" : "Change password"}
       </Button>
       {done && (
-        <p role="status" className="text-sm text-emerald-700 sm:col-span-3 dark:text-emerald-300">
+        <p role="status" className="text-sm text-emerald-700 sm:col-span-full dark:text-emerald-300">
           Password changed. Every other device was signed out.
         </p>
       )}
       {error && (
-        <div className="sm:col-span-3">
+        <div className="sm:col-span-full">
           <ErrorNote>{error}</ErrorNote>
         </div>
       )}

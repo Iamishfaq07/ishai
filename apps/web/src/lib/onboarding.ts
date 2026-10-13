@@ -65,6 +65,17 @@ export function presetFor(answers: Pick<WelcomeAnswers, "experience"> | null): M
   return "hr5";
 }
 
+/** A Practice link: preset, role, company and job post only when each one is known. */
+export function practiceHref(opts: { preset?: string; role?: string; company?: string; jd?: string } = {}): string {
+  const q = new URLSearchParams();
+  if (opts.jd) q.set("jd", opts.jd);
+  if (opts.preset) q.set("preset", opts.preset);
+  if (opts.role?.trim()) q.set("role", opts.role.trim());
+  if (opts.company?.trim()) q.set("company", opts.company.trim());
+  const s = q.toString();
+  return s ? `/mock?${s}` : "/mock";
+}
+
 /** Where someone was headed when they signed up says what they came for (Resume AI's "Start free" → resume). */
 export function goalFromPath(path: string | null | undefined): Goal | null {
   if (!path) return null;
@@ -200,7 +211,9 @@ function catalogue(answers: WelcomeAnswers | null, facts: HomeFacts, now: Date):
       title: `Practise for your ${soon.company} interview`,
       body: `It's ${whenLabel(soon.next_at as string, now)}. A mock interview on their job post shows what to work on.`,
       cta: "Practise now",
-      to: facts.mockEnabled ? (soon.document_id ? `/mock?jd=${encodeURIComponent(soon.document_id)}` : "/mock") : "/start",
+      to: facts.mockEnabled
+        ? practiceHref({ jd: soon.document_id ?? undefined, role: soon.title, company: soon.company })
+        : "/start",
       done: false,
     });
   }
@@ -241,7 +254,7 @@ function catalogue(answers: WelcomeAnswers | null, facts: HomeFacts, now: Date):
     title: fresher || !answers?.experience ? "Do a 5-minute HR round" : preset === "tmay10" ? "Do a 10-minute practice interview" : "Do a 15-minute technical round",
     body: "An AI interviewer asks, you answer out loud, then you get a score and the answers worth redoing.",
     cta: "Start practising",
-    to: facts.mockEnabled ? `/mock?preset=${preset}` : "/start",
+    to: facts.mockEnabled ? practiceHref({ preset, role }) : "/start",
     time: preset === "hr5" ? "5 minutes" : preset === "tmay10" ? "10 minutes" : "15 minutes",
     done: facts.mocks > 0,
   });
@@ -345,7 +358,7 @@ export function checklist(answers: WelcomeAnswers | null, facts: HomeFacts): Che
     practice: {
       id: "practice",
       title: facts.mockEnabled ? "Do a practice interview" : "Try a practice question",
-      to: facts.mockEnabled ? `/mock?preset=${presetFor(answers)}` : "/warmup",
+      to: facts.mockEnabled ? practiceHref({ preset: presetFor(answers), role: answers?.role }) : "/warmup",
       done: facts.mocks > 0,
     },
     story: { id: "story", title: "Add a story", to: "/documents/stories", done: facts.stories > 0 },

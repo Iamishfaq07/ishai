@@ -210,7 +210,7 @@ export function SessionSetupPage() {
     }
     if (!ws) return;
     if (SELECTABLE_TYPES.includes(ws.session_type)) setType(ws.session_type);
-    setRole(ws.role ?? "");
+    setRole((current) => ws.role?.trim() || current);
     setInstructions(ws.notes ?? "");
     setLength(ws.length);
     setStyle(ws.style);
