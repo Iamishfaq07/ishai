@@ -126,6 +126,12 @@ class Settings(BaseSettings):
         None, validation_alias=AliasChoices("ORBIT_UPDATES_GITHUB_TOKEN")
     )
     web_url: str = Field("http://localhost:5173", validation_alias=AliasChoices("ORBIT_WEB_URL"))
+    # Continue with Google. Both must be set or the button stays hidden. The redirect URI registered in
+    # Google Cloud is ORBIT_GOOGLE_REDIRECT_URI, or (when unset) localhost's own callback in development and
+    # {ORBIT_WEB_URL}/api/v1/auth/google/callback in production, where the site proxies /api.
+    google_client_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_GOOGLE_CLIENT_ID"))
+    google_client_secret: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_GOOGLE_CLIENT_SECRET"))
+    google_redirect_uri: str | None = Field(None, validation_alias=AliasChoices("ORBIT_GOOGLE_REDIRECT_URI"))
     # The API's own public base URL (e.g. https://orbit-api.onrender.com). When set, links the API hands out (desktop
     # installer downloads) are built from it instead of the request's Host header.
     api_public_url: str | None = Field(None, validation_alias=AliasChoices("ORBIT_API_PUBLIC_URL"))
@@ -334,6 +340,11 @@ class Settings(BaseSettings):
 
     def is_admin_email(self, email: str) -> bool:
         return bool(self.admin_email) and email.strip().lower() == (self.admin_email or "").strip().lower()
+
+    @property
+    def google_enabled(self) -> bool:
+        secret = self.google_client_secret.get_secret_value().strip() if self.google_client_secret else ""
+        return bool((self.google_client_id or "").strip() and secret)
 
     @property
     def is_sqlite(self) -> bool:

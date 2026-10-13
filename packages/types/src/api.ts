@@ -16,6 +16,8 @@ export interface User {
   email: string;
   name: string | null;
   email_verified: boolean;
+  /** False when the account was created with Google and has not set a password yet. */
+  has_password?: boolean;
   /** Signed up while sign-up approval was on and not given access yet: the app shows a "waiting" banner. */
   approval_pending?: boolean;
   /** Privacy controls (spec §65), account-wide. */
@@ -33,6 +35,8 @@ export interface User {
 export interface AuthConfig {
   captcha: { provider: "turnstile"; site_key: string } | null;
   email_verification: "required" | "off";
+  /** Continue with Google is set up on this server. */
+  google?: boolean;
 }
 
 /** PATCH /v1/auth/me/privacy → User */

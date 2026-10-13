@@ -9,13 +9,14 @@ import {
   PlanetHero,
   ShieldCheck,
   Sparkles,
+  buttonClass,
   cx,
   focusRing,
   type LucideIcon,
 } from "@orbit/ui";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button, ErrorNote, Field, Input } from "../components/ui";
-import { api } from "../lib/api";
+import { api, API_URL } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { errorText } from "../lib/format";
 import { useWelcomeGrant } from "../lib/welcome";
@@ -261,14 +262,68 @@ function useCameFrom(): string | null {
   return from && from.startsWith("/") && from !== "/login" && from !== "/register" ? from : null;
 }
 
+const GOOGLE_ERROR: Record<string, string> = {
+  google: "Google sign-in didn't finish. Try again, or use your email.",
+  private: "This Orbit server is private. Ask the owner to add your email.",
+  suspended: "This account is suspended.",
+  unverified: "That Google account doesn't have a confirmed email. Use another, or sign up with email.",
+  taken: "An account with this email already exists. Sign in with your password and confirm the email, then you can use Google.",
+};
+
+function GoogleMark() {
+  return (
+    <svg viewBox="0 0 18 18" className="h-4 w-4" aria-hidden>
+      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z" />
+      <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z" />
+      <path fill="#FBBC05" d="M3.97 10.72A5.4 5.4 0 0 1 3.68 9c0-.6.1-1.18.29-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.82.96 4.05l3.01-2.33z" />
+      <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z" />
+    </svg>
+  );
+}
+
+function useGoogleOn(): boolean {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    api.authConfig().then((c) => setOn(Boolean(c.google))).catch(() => setOn(false));
+  }, []);
+  return on;
+}
+
+/** Continues with Google when the server has it set up. Hidden otherwise. */
+function GoogleContinue({ next }: { next: string }) {
+  const on = useGoogleOn();
+  if (!on) return null;
+  const href = `${API_URL}/v1/auth/google/start?next=${encodeURIComponent(next || "/")}`;
+  return (
+    <div className="mb-4 space-y-4">
+      <a href={href} className={buttonClass("secondary", "md", "w-full")}>
+        <GoogleMark /> Continue with Google
+      </a>
+      <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">
+        By continuing you agree to the{" "}
+        {TERMS_PAGE && <><a href={TERMS_PAGE} className="underline underline-offset-2">terms</a>, the </>}
+        <a href={PRIVACY_PAGE} className="underline underline-offset-2">privacy policy</a>
+        {REFUND_PAGE && <> and the <a href={REFUND_PAGE} className="underline underline-offset-2">refund policy</a></>}
+        .
+      </p>
+      <div className="flex items-center gap-3 text-xs text-zinc-500">
+        <span className="h-px flex-1 bg-zinc-200 dark:bg-white/10" />
+        or use email
+        <span className="h-px flex-1 bg-zinc-200 dark:bg-white/10" />
+      </div>
+    </div>
+  );
+}
+
 export function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
+  const [search] = useSearchParams();
   const from = useCameFrom();
   const target = from ?? "/";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(GOOGLE_ERROR[search.get("error") ?? ""] ?? null);
   const [busy, setBusy] = useState(false);
 
   if (user) return <Navigate to={target} replace />;
@@ -289,6 +344,7 @@ export function LoginPage() {
 
   return (
     <AuthShell title="Welcome back" subtitle="Sign in to Orbit AI" features>
+      <GoogleContinue next={target} />
       <form onSubmit={(e) => void submit(e)} className="space-y-4">
         <Field label="Email" htmlFor="email">
           <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -382,6 +438,7 @@ export function RegisterPage() {
 
   return (
     <AuthShell title="Create your free account" subtitle="Takes about a minute. Interview copilot, Resume AI and Jobs AI, in one account." features>
+      <GoogleContinue next={from ?? "/"} />
       <form onSubmit={(e) => void submit(e)} className="space-y-4">
         <Field label="Name" htmlFor="name">
           <Input id="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
