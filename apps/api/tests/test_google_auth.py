@@ -77,9 +77,15 @@ def test_google_links_a_confirmed_email_only(google_client: TestClient, monkeypa
         f"/v1/auth/google/callback?code=ok&state={_state(start.headers['location'])}",
         follow_redirects=False,
     )
-    # The password account never confirmed the inbox, so Google must not take it over.
-    assert held.status_code == 302 and held.headers["location"].endswith("/login?error=taken")
-    assert google_client.get("/v1/auth/me").status_code == 401
+    # The password account never confirmed the inbox. Google just did, so it takes the account and the old
+    # password stops working (whoever registered the address first no longer has a way in).
+    assert held.status_code == 302 and "google=claimed" in held.headers["location"]
+    me = google_client.get("/v1/auth/me")
+    assert me.status_code == 200
+    assert me.json()["email"] == email and me.json()["has_password"] is False and me.json()["email_verified"] is True
+    google_client.cookies.clear()
+    denied = google_client.post("/v1/auth/login", json={"email": email, "password": "a real password 1"})
+    assert denied.status_code == 401
 
     async def confirm() -> None:
         from sqlalchemy import select
@@ -89,11 +95,14 @@ def test_google_links_a_confirmed_email_only(google_client: TestClient, monkeypa
 
         async with sessionmaker()() as db:
             user = await db.scalar(select(User).where(User.email == email))
-            assert user is not None and user.google_sub is None and user.email_verified is False
+            assert user is not None and user.google_sub == "google-sub-2" and user.email_verified is True
             user.email_verified = True
+            user.has_password = True
             await db.commit()
 
     google_client.portal.call(confirm)  # type: ignore[union-attr]
+    # A confirmed account keeps its password when the same Google account signs in again.
+    google_client.cookies.clear()
     again = google_client.get("/v1/auth/google/start", follow_redirects=False)
     done = google_client.get(
         f"/v1/auth/google/callback?code=ok&state={_state(again.headers['location'])}",

@@ -1,11 +1,11 @@
 import { Suspense, useEffect, type ReactNode } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { NotFoundPage } from "./pages/NotFound";
 import { Layout } from "./components/Layout";
 import { CookieNotice } from "./components/CookieNotice";
 import { SupportChat } from "./components/SupportChat";
 import { Spinner } from "./components/ui";
-import { Skeleton } from "@orbit/ui";
+import { Skeleton, toast } from "@orbit/ui";
 import { useAuth } from "./lib/auth";
 import { routeDescription, routeTitle } from "./lib/routeTitle";
 import { useDocumentTitle } from "./lib/useDocumentTitle";
@@ -124,12 +124,27 @@ function useRouteTitle(): void {
   useDocumentTitle(routeTitle(pathname, !loading && !user), routeDescription(pathname));
 }
 
+/** Continue with Google took an unconfirmed password account: say so once, then drop the query. */
+function GoogleClaimNotice() {
+  const [params, setParams] = useSearchParams();
+  const claimed = params.get("google") === "claimed";
+  useEffect(() => {
+    if (!claimed) return;
+    toast("Google is connected. The old password no longer works. Set a new one in Settings if you want one.");
+    const next = new URLSearchParams(params);
+    next.delete("google");
+    setParams(next, { replace: true });
+  }, [claimed, params, setParams]);
+  return null;
+}
+
 export function App() {
   useRouteTitle();
   return (
     <Suspense fallback={<PageLoading />}>
     <CookieNotice />
     <SupportChat />
+    <GoogleClaimNotice />
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
