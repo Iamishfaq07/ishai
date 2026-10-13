@@ -10,11 +10,12 @@ import {
   Plus,
   Trash2,
   Users,
+  LoadGate,
   confirmDialog,
   cx,
   focusRing,
 } from "@orbit/ui";
-import { Button, Card, ErrorNote, Field, Input, Select, Textarea } from "../../components/ui";
+import { Button, Card, EmptyState, ErrorNote, Field, Input, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
@@ -126,13 +127,21 @@ export function PeopleSection() {
         />
       )}
 
-      {contacts.error && !contacts.data ? (
+      {contacts.loading && !contacts.data ? (
+        <LoadGate loading variant="card" count={2} label="Loading people">{null}</LoadGate>
+      ) : contacts.error && !contacts.data ? (
         <ErrorNote onRetry={contacts.reload}>{errorText(contacts.error)}</ErrorNote>
       ) : contacts.data && !list.length && !editing ? (
-        <Card className="text-sm text-zinc-600 dark:text-zinc-300">
-          No one yet. Add the senior who offered a referral, the recruiter who called, or an alum at a company you like,
-          and Orbit reminds you when to follow up.
-        </Card>
+        <EmptyState
+          icon={Users}
+          title="No one yet"
+          body="Add the senior who offered a referral, the recruiter who called, or an alum at a company you like. Orbit reminds you when to follow up."
+          action={
+            <Button onClick={() => setEditing({ id: null, initial: EMPTY })}>
+              <Plus className="h-4 w-4" /> Add a person
+            </Button>
+          }
+        />
       ) : (
         <ul className="grid gap-3 md:grid-cols-2">
           {list.map((c) => (
