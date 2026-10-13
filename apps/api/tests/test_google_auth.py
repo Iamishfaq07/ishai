@@ -1,5 +1,6 @@
 """Continue with Google: the button stays hidden until it's configured, and a verified Google email signs in."""
 
+import re
 from collections.abc import Iterator
 from urllib.parse import parse_qs, urlparse
 
@@ -8,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from orbit_api.auth import google
 from orbit_api.config import get_settings
+from orbit_api.providers.email import DevOutbox, get_email_sender
 
 
 @pytest.fixture
@@ -137,3 +139,71 @@ def test_google_rejects_a_bad_state(google_client: TestClient) -> None:
     bad = google_client.get("/v1/auth/google/callback?code=ok&state=nope", follow_redirects=False)
     assert bad.status_code == 302 and bad.headers["location"].endswith("/login?error=google")
     assert google_client.get("/v1/auth/me").status_code == 401
+
+
+def _token(to: str, path: str) -> str:
+    sender = get_email_sender()
+    assert isinstance(sender, DevOutbox)
+    mail = next(m for m in reversed(sender.sent) if m.to == to and path in m.text)
+    match = re.search(re.escape(path) + r"\?token=([\w-]+)", mail.text)
+    assert match, mail.text
+    return match.group(1)
+
+
+def _sign_in_with_google(client: TestClient, monkeypatch: pytest.MonkeyPatch, email: str, sub: str) -> None:
+    async def fake(code: str, verifier: str, uri: str) -> dict[str, str]:
+        return {"sub": sub, "email": email, "name": "Ada"}
+
+    monkeypatch.setattr(google, "fetch_identity", fake)
+    start = client.get("/v1/auth/google/start", follow_redirects=False)
+    done = client.get(
+        f"/v1/auth/google/callback?code=ok&state={_state(start.headers['location'])}",
+        follow_redirects=False,
+    )
+    assert done.status_code == 302
+
+
+def test_password_reset_gives_a_google_account_a_real_password(
+    google_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    email = "reset-google@example.com"
+    _sign_in_with_google(google_client, monkeypatch, email, "google-sub-reset")
+    assert google_client.get("/v1/auth/me").json()["has_password"] is False
+    assert google_client.post("/v1/auth/password-reset/request", json={"email": email}).status_code == 202
+    google_client.cookies.clear()
+    reset = google_client.post(
+        "/v1/auth/password-reset/confirm",
+        json={"token": _token(email, "/reset-password"), "password": "brand new password 2"},
+    )
+    assert reset.status_code == 200 and reset.json()["user"]["has_password"] is True
+    google_client.cookies.clear()
+    signed = google_client.post("/v1/auth/login", json={"email": email, "password": "brand new password 2"})
+    assert signed.status_code == 200 and signed.json()["user"]["has_password"] is True
+
+
+def test_changing_the_email_disconnects_google(google_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    email = "move-google@example.com"
+    _sign_in_with_google(google_client, monkeypatch, email, "google-sub-move")
+    set_pw = google_client.post(
+        "/v1/auth/me/password", json={"current_password": "", "new_password": "a real password 1"},
+    )
+    assert set_pw.status_code == 200
+    new = "moved-google@example.com"
+    asked = google_client.post("/v1/auth/me/email", json={"new_email": new, "password": "a real password 1"})
+    assert asked.status_code == 202
+    changed = google_client.post("/v1/auth/email-change/confirm", json={"token": _token(new, "/confirm-email-change")})
+    assert changed.status_code == 200 and changed.json()["email"] == new
+
+    async def linked() -> str | None:
+        from sqlalchemy import select
+
+        from orbit_api.db import sessionmaker
+        from orbit_api.models import User
+
+        async with sessionmaker()() as db:
+            user = await db.scalar(select(User).where(User.email == new))
+            assert user is not None and user.has_password is True
+            return user.google_sub
+
+    assert google_client.portal.call(linked) is None  # type: ignore[union-attr]
+
