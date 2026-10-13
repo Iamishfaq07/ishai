@@ -503,6 +503,7 @@ async def confirm_password_reset(body: ResetConfirmIn, request: Request, respons
     newly_verified = not user.email_verified
     _check_password(body.password, user.email)
     user.password_hash = await hash_password(body.password)
+    user.has_password = True  # a reset is a password, including for an account that only had Google before
     await _sign_out_everywhere(db, user)  # every session, live socket and unused link
     user.email_verified = True  # they just proved control of the inbox
     db.add(AuditLog(user_id=user.id, action="auth.password_reset", ip=_ip(request)))
@@ -606,6 +607,7 @@ async def confirm_email_change(body: TokenIn, request: Request, response: Respon
     old = user.email
     user.email = row.new_email
     user.email_verified = True  # opening the link proves control of the new inbox
+    user.google_sub = None  # that Google account is the old inbox; it must not keep opening this one
     await _sign_out_everywhere(db, user)  # every session signs in again, with the new address
     db.add(AuditLog(user_id=user.id, action="auth.email_changed", target=old, ip=_ip(request)))
     await db.commit()
