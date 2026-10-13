@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import type { SupportThread } from "@orbit/ui";
-import { MessageCircle, Send, X, cx, focusRing } from "@orbit/ui";
+import { MessageCircle, Send, Skeleton, X, buttonClass, cx, focusRing } from "@orbit/ui";
+import { Input } from "./ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
@@ -68,8 +69,20 @@ export function SupportChat() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const launcherRef = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(false);
   const [seenId, setSeenId] = useState(loadSeen);
   const hidden = pathname.startsWith("/live");
+
+  useEffect(() => {
+    if (open) {
+      wasOpen.current = true;
+      formRef.current?.querySelector<HTMLInputElement>("input")?.focus();
+    } else if (wasOpen.current) {
+      launcherRef.current?.focus();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open || hidden) return;
@@ -211,19 +224,19 @@ export function SupportChat() {
       {open && (
         <section
           aria-label="Support chat"
-          className="pointer-events-auto flex h-[min(32rem,70vh)] w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-white/10"
+          className="pointer-events-auto flex h-[min(32rem,70vh)] w-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-white/10 dark:bg-zinc-950"
         >
           <header className="flex items-center gap-2 border-b border-zinc-200 px-4 py-3 dark:border-white/10">
             <MessageCircle className="h-4 w-4 text-indigo-500" aria-hidden />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">Orbit support</p>
+              <p className="font-display text-sm font-semibold">Orbit support</p>
               <p className="text-xs text-zinc-500">{thread?.status === "waiting" ? "A person has this chat" : "Bot, then a person if you need one"}</p>
             </div>
-            <button type="button" className={cx("rounded-lg p-1", focusRing)} onClick={() => setOpen(false)} aria-label="Close support">
+            <button type="button" className={buttonClass("ghost", "sm", "grid h-9 w-9 place-items-center p-0")} onClick={() => setOpen(false)} aria-label="Close support">
               <X className="h-4 w-4" />
             </button>
           </header>
-          <div ref={scroller} className="flex-1 space-y-2 overflow-y-auto px-3 py-3">
+          <div ref={scroller} role="log" aria-live="polite" aria-relevant="additions" className="flex-1 space-y-2 overflow-y-auto px-3 py-3">
             {(thread?.messages ?? []).map((m) => (
               <p
                 key={m.id}
@@ -240,12 +253,12 @@ export function SupportChat() {
                 {m.text}
               </p>
             ))}
-            {!thread && !error && <p className="text-sm text-zinc-500">Opening chat…</p>}
+            {!thread && !error && <Skeleton variant="line" count={3} label="Opening chat" />}
           </div>
-          {error && <p className="px-3 text-xs text-red-600">{error}</p>}
+          {error && <p role="alert" className="px-3 pb-1 text-xs text-rose-700 dark:text-rose-300">{error}</p>}
           {thread?.status === "closed" ? (
             <div className="border-t border-zinc-200 p-3 dark:border-white/10">
-              <button type="button" onClick={() => void restart()} disabled={busy} className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-300">
+              <button type="button" onClick={() => void restart()} disabled={busy} className={buttonClass("secondary", "sm", "w-full")}>
                 Start a new chat
               </button>
             </div>
@@ -254,14 +267,17 @@ export function SupportChat() {
           {thread?.status !== "waiting" && (
             <div className="px-3 pb-1">
               {needEmail && !user?.email && (
-                <input
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Your email"
-                  type="email"
-                  autoComplete="email"
-                  className="mb-2 w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
-                />
+                <label className="mb-2 block">
+                  <span className="sr-only">Your email, so the team can reply</span>
+                  <Input
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Your email"
+                    type="email"
+                    autoComplete="email"
+                    className="w-full"
+                  />
+                </label>
               )}
               {thread?.status === "bot" && (thread.suggestions?.length ?? 0) > 0 ? (
                 <div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto pb-1">
@@ -272,7 +288,7 @@ export function SupportChat() {
                       disabled={busy || !saved}
                       onClick={() => void send(s)}
                       className={cx(
-                        "rounded-full border px-3 py-1.5 text-left text-xs font-medium disabled:opacity-40",
+                        "min-h-9 rounded-full border px-3 py-1.5 text-left text-xs font-medium disabled:opacity-40",
                         s.id === "human"
                           ? "border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-400/40 dark:bg-indigo-500/10 dark:text-indigo-200"
                           : "border-zinc-200 text-zinc-700 hover:border-indigo-300 hover:bg-indigo-50 dark:border-white/10 dark:text-zinc-200 dark:hover:border-indigo-400/40 dark:hover:bg-indigo-500/10",
@@ -284,26 +300,30 @@ export function SupportChat() {
                   ))}
                 </div>
               ) : (
-                <button type="button" onClick={() => void handoff()} disabled={busy || !saved} className="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-300">
+                <button type="button" onClick={() => void handoff()} disabled={busy || !saved} className={buttonClass("ghost", "sm")}>
                   Talk to a person
                 </button>
               )}
             </div>
           )}
           <form
+            ref={formRef}
             className="flex gap-2 border-t border-zinc-200 p-3 dark:border-white/10"
             onSubmit={(e) => {
               e.preventDefault();
               void send();
             }}
           >
-            <input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder={thread?.status === "waiting" ? "Message the person who has this chat…" : "Or type a question…"}
-              className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
-            />
-            <button type="submit" disabled={busy || !text.trim()} aria-label="Send" className={cx("rounded-xl bg-indigo-600 px-3 text-white disabled:opacity-40", focusRing)}>
+            <label className="min-w-0 flex-1">
+              <span className="sr-only">Message</span>
+              <Input
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder={thread?.status === "waiting" ? "Message the person who has this chat…" : "Or type a question…"}
+                className="w-full"
+              />
+            </label>
+            <button type="submit" disabled={busy || !text.trim()} aria-label="Send" className={buttonClass("primary", "md", "grid h-11 w-11 shrink-0 place-items-center p-0")}>
               <Send className="h-4 w-4" />
             </button>
           </form>
@@ -314,6 +334,7 @@ export function SupportChat() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        ref={launcherRef}
         aria-expanded={open}
         aria-label={unread ? "Support chat, new reply" : open ? "Close support chat" : "Chat with support"}
         className={cx(
