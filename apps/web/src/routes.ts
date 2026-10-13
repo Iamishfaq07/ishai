@@ -122,10 +122,11 @@ export function prefetchRoute(path: string): void {
   if (key) void loaders[key]().catch(() => undefined);
 }
 
-/** After sign-in, when the browser is idle: the pages people open next. */
+/** After sign-in, when the browser is idle: the pages people open next. Not the live session. That chunk is the
+ * heaviest (the interview itself) and only starts when they open one, so it doesn't compete with Home. */
 export function prefetchLikelyRoutes(): void {
   const run = () => {
-    for (const key of ["home", "setup", "sessions", "live", "mock", "documents", "resumes", "jobs"] as const) {
+    for (const key of ["home", "setup", "sessions", "mock", "documents", "resumes", "jobs"] as const) {
       void loaders[key]().catch(() => undefined);
     }
   };

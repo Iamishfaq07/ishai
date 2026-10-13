@@ -1,0 +1,39 @@
+import { describe, expect, it } from "vitest";
+import { clearAsyncCache, shareInflight } from "./useAsync";
+
+describe("shareInflight", () => {
+  it("runs one request while two callers ask for the same key", async () => {
+    clearAsyncCache();
+    let calls = 0;
+    const run = async () => {
+      calls += 1;
+      return calls;
+    };
+    const [a, b] = await Promise.all([shareInflight("resumes", run), shareInflight("resumes", run)]);
+    expect(a).toBe(1);
+    expect(b).toBe(1);
+    expect(calls).toBe(1);
+  });
+
+  it("starts a new request after the account changes, and again once the first has finished", async () => {
+    clearAsyncCache();
+    let calls = 0;
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const run = async () => {
+      calls += 1;
+      const mine = calls;
+      await gate;
+      return mine;
+    };
+    const first = shareInflight("resumes", run);
+    clearAsyncCache();
+    const second = shareInflight("resumes", run);
+    release();
+    expect(await first).toBe(1);
+    expect(await second).toBe(2);
+    expect(await shareInflight("resumes", async () => 3)).toBe(3);
+  });
+});
