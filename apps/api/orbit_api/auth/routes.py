@@ -109,6 +109,8 @@ class UserOut(BaseModel):
     email: str
     name: str | None
     email_verified: bool
+    # False when the account was created with Google and has not set a password yet.
+    has_password: bool = True
     # Signed up while sign-up approval was on and not approved (or granted a plan) yet: the app shows a banner.
     approval_pending: bool = False
     store_transcripts: bool
@@ -131,6 +133,7 @@ class AuthOut(BaseModel):
 
 def _user_out(u: User, *, with_csrf: bool = False) -> UserOut:
     return UserOut(id=u.id, email=u.email, name=u.name, email_verified=u.email_verified,
+                   has_password=u.has_password,
                    approval_pending=awaiting_approval(u), store_transcripts=u.store_transcripts, country=u.country,
                    csrf_token=csrf_token_for(u.id, u.token_version) if with_csrf else None)
 
@@ -164,13 +167,15 @@ class AuthConfigOut(BaseModel):
     """Public: what the sign-in / sign-up screens need to know before anyone is signed in."""
     captcha: dict[str, str] | None
     email_verification: Literal["required", "off"]
+    google: bool = False
 
 
 @router.get("/config", response_model=AuthConfigOut)
 async def auth_config() -> AuthConfigOut:
     s = get_settings()
     return AuthConfigOut(captcha=captcha_config(),
-                         email_verification="required" if s.verification_required else "off")
+                         email_verification="required" if s.verification_required else "off",
+                         google=s.google_enabled)
 
 
 class RegisterPendingOut(BaseModel):
@@ -345,7 +350,10 @@ async def delete_account(body: DeleteAccountIn, request: Request, response: Resp
         if get_settings().is_admin_email(u.email):
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
                                 "The admin account can't be deleted from the app.")
-        await _recheck_password(u, body.password)
+        if u.has_password:
+            await _recheck_password(u, body.password)
+        elif body.password.strip().lower() != u.email.lower():
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Type your email to confirm.")
         # Live work stops first; payments, credit entries and the audit trail stay without personal data
         # (auth/accounts.py, shared with the admin's delete).
         await delete_account_and_data(db, u, AuditLog(user_id=None, action="auth.delete_account", target=user.id))
@@ -619,11 +627,13 @@ async def change_password(body: PasswordChangeIn, request: Request, response: Re
     u = await db.get(User, user.id)
     if u is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not signed in.")
-    await _recheck_password(u, body.current_password)
-    if body.new_password == body.current_password:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Pick a password you haven't used here.")
+    if u.has_password:
+        await _recheck_password(u, body.current_password)
+        if body.new_password == body.current_password:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Pick a password you haven't used here.")
     _check_password(body.new_password, u.email)
     u.password_hash = await hash_password(body.new_password)
+    u.has_password = True
     await _sign_out_everywhere(db, u)
     db.add(AuditLog(user_id=u.id, action="auth.password_change", ip=_ip(request)))
     await db.commit()
@@ -647,3 +657,8 @@ async def export_my_data(user: Annotated[User, Depends(current_user)],
     return Response(content=json.dumps(data, ensure_ascii=False, indent=1, default=str),
                     media_type="application/json",
                     headers={"Content-Disposition": f'attachment; filename="orbit-export-{stamp}.json"'})
+
+
+from orbit_api.auth.google import mount as _mount_google  # noqa: E402
+
+_mount_google(router)

@@ -54,6 +54,11 @@ class User(TimestampMixin, Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     name: Mapped[str | None] = mapped_column(String(200))
     password_hash: Mapped[str] = mapped_column(String(255))
+    # False for an account created with Google that has never set a password. Existing rows are true.
+    has_password: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+    # Google's stable account id, when this account has used Continue with Google. Unique so one Google
+    # account can't be attached twice.
+    google_sub: Mapped[str | None] = mapped_column(String(255), unique=True)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     # Bumped on password reset / "sign out everywhere"; JWTs carry it, so old tokens stop working.
     token_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")

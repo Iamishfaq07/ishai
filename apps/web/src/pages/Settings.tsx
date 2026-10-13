@@ -478,6 +478,8 @@ function AccountCard() {
           Check <strong>{sent}</strong> for a confirmation link. Your email changes when you open it; until then you
           keep signing in with {user.email}.
         </p>
+      ) : user.has_password === false ? (
+        <p className="text-sm text-zinc-600 dark:text-zinc-300">Set a password below before changing the email on this account.</p>
       ) : (
         <form onSubmit={(e) => void change(e)} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <Field label="New email" htmlFor="new-email">
@@ -513,7 +515,8 @@ function AccountCard() {
 
 /** A new password, with the current one. Every other device signs out; this one stays signed in. */
 function PasswordChange() {
-  const { setUser } = useAuth();
+  const { user, setUser } = useAuth();
+  const googleOnly = user?.has_password === false;
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [busy, setBusy] = useState(false);
@@ -524,7 +527,7 @@ function PasswordChange() {
     setBusy(true);
     setError(null);
     try {
-      const res = await api.changePassword(current, next);
+      const res = await api.changePassword(googleOnly ? "" : current, next);
       setUser(res.user);
       setDone(true);
       setCurrent("");
@@ -537,14 +540,20 @@ function PasswordChange() {
   };
   return (
     <form onSubmit={(e) => void submit(e)} className="mt-4 grid gap-3 border-t border-zinc-100 pt-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end dark:border-zinc-800">
-      <Field label="Current password" htmlFor="pw-current">
-        <Input id="pw-current" type="password" autoComplete="current-password" required value={current} onChange={(e) => setCurrent(e.target.value)} />
-      </Field>
-      <Field label="New password (10+ characters)" htmlFor="pw-new">
+      {googleOnly ? (
+        <p className="text-sm text-zinc-600 sm:col-span-3 dark:text-zinc-300">
+          You sign in with Google. Set a password if you also want to sign in with email.
+        </p>
+      ) : (
+        <Field label="Current password" htmlFor="pw-current">
+          <Input id="pw-current" type="password" autoComplete="current-password" required value={current} onChange={(e) => setCurrent(e.target.value)} />
+        </Field>
+      )}
+      <Field label={googleOnly ? "Password (10+ characters)" : "New password (10+ characters)"} htmlFor="pw-new">
         <Input id="pw-new" type="password" autoComplete="new-password" required minLength={10} value={next} onChange={(e) => setNext(e.target.value)} />
       </Field>
-      <Button type="submit" variant="secondary" disabled={busy || !current || next.length < 10}>
-        {busy ? "Saving…" : "Change password"}
+      <Button type="submit" variant="secondary" disabled={busy || (!googleOnly && !current) || next.length < 10}>
+        {busy ? "Saving…" : googleOnly ? "Set password" : "Change password"}
       </Button>
       {done && (
         <p role="status" className="text-sm text-emerald-700 sm:col-span-3 dark:text-emerald-300">
@@ -569,6 +578,8 @@ function PrivacyCard() {
   const [deletePassword, setDeletePassword] = useState("");
 
   if (!user) return null;
+
+  const googleOnly = user.has_password === false;
 
   const setPrivacy = async (patch: { store_transcripts?: boolean }) => {
     setSaving(true);
@@ -640,8 +651,15 @@ function PrivacyCard() {
               void deleteAccount();
             }}
           >
-            <Field label="Your password, to delete the account" htmlFor="delete-password">
-              <Input id="delete-password" type="password" autoComplete="current-password" required value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} />
+            <Field label={googleOnly ? "Type your email to confirm" : "Your password, to delete the account"} htmlFor="delete-password">
+              <Input
+                id="delete-password"
+                type={googleOnly ? "email" : "password"}
+                autoComplete={googleOnly ? "off" : "current-password"}
+                required
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+              />
             </Field>
             <Button type="submit" variant="danger" disabled={!deletePassword}>
               Delete account

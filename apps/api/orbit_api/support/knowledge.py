@@ -180,10 +180,10 @@ _TOPICS: tuple[Topic, ...] = (
     Topic(
         "signin",
         "Sign in",
-        "Sign in with the email you registered. If the page sends you back to login, reload once. "
+        "Sign in with your email, or Continue with Google. If the page sends you back to login, reload once. "
         "Forgot password sends a reset link from the sign-in page. Check spam. "
-        "A new account may need that email confirmed before some actions.",
-        ("sign in", "signin", "login", "log in", "password", "verify email", "verification email"),
+        "A new account may need that email confirmed before some actions. Google accounts are already confirmed.",
+        ("sign in", "signin", "login", "log in", "password", "verify email", "verification email", "google"),
         ("windows", "welcome"),
         True,
     ),
