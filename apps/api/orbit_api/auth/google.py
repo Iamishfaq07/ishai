@@ -156,7 +156,9 @@ async def fetch_identity(code: str, verifier: str, uri: str) -> dict[str, Any]:
     return {"sub": sub[:255], "email": email, "name": name}
 
 
-async def _find_or_create(db: AsyncSession, request: Request, ident: dict[str, Any]) -> tuple[User, bool]:
+async def _find_or_create(db: AsyncSession, request: Request, ident: dict[str, Any]) -> tuple[User, bool, bool]:
+    """(user, created, claimed). `claimed` is an existing password account whose email was never confirmed:
+    Google just proved the inbox, so the old password and every session of it stop working."""
     s = get_settings()
     if not s.email_allowed(ident["email"]):
         raise GoogleDenied("private")
@@ -193,21 +195,29 @@ async def _find_or_create(db: AsyncSession, request: Request, ident: dict[str, A
         db.add(AuditLog(user_id=user.id, action="auth.login_suspended", ip=_ip(request)))
         await db.commit()
         raise GoogleDenied("suspended")
-    # A password account whose email was never confirmed is not this person yet. Linking it would
-    # leave the registrant a password into the Google owner's account (pre-account takeover).
+    # Someone else's Google account must not be attached here.
     already = user.google_sub == ident["sub"]
     if user.google_sub and not already:
         raise GoogleDenied("google")
-    if not created and not already and not user.email_verified:
-        raise GoogleDenied("taken")
+    # The inbox was never confirmed, so whoever set the password never proved they own it. Google just did:
+    # the old password stops working and every session of it ends. A confirmed account keeps its password.
+    claimed = not created and not already and not user.email_verified
+    if claimed:
+        user.password_hash = await hash_password(secrets.token_urlsafe(48))
+        user.has_password = False
     user.google_sub = ident["sub"]
     user.email_verified = True
     if ident["name"] and not user.name:
         user.name = ident["name"]
-    if not created:
+    if claimed:
+        from orbit_api.auth.accounts import sign_out_everywhere
+
+        db.add(AuditLog(user_id=user.id, action="auth.google_claim", ip=_ip(request)))
+        await sign_out_everywhere(db, user)
+    elif not created:
         db.add(AuditLog(user_id=user.id, action="auth.google", ip=_ip(request)))
     await db.commit()
-    return user, created
+    return user, created, claimed
 
 
 def _ip(request: Request) -> str | None:
@@ -256,12 +266,14 @@ def mount(router: APIRouter) -> None:
             return response
         try:
             ident = await fetch_identity(code, packed["cv"], packed["ru"])
-            user, created = await _find_or_create(db, request, ident)
+            user, created, claimed = await _find_or_create(db, request, ident)
         except GoogleDenied as denied:
             response = RedirectResponse(_login_url(denied.code), status_code=302)
             _clear_state(response)
             return response
         dest = "/welcome" if created else safe_next(packed["nx"])
+        if claimed:
+            dest += ("&" if "?" in dest else "?") + "google=claimed"
         response = RedirectResponse(_home(dest), status_code=302)
         set_session_cookie(response, create_access_token(user.id, user.token_version, idle=True))
         _clear_state(response)

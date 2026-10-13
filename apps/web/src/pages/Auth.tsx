@@ -267,7 +267,7 @@ const GOOGLE_ERROR: Record<string, string> = {
   private: "This Orbit server is private. Ask the owner to add your email.",
   suspended: "This account is suspended.",
   unverified: "That Google account doesn't have a confirmed email. Use another, or sign up with email.",
-  taken: "An account with this email already exists. Sign in with your password and confirm the email, then you can use Google.",
+  taken: "An account with this email already exists. Sign in with your password, or Continue with Google.",
 };
 
 function GoogleMark() {
