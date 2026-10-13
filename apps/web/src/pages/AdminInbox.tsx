@@ -144,7 +144,7 @@ export function AdminInboxPage() {
       ) : (
         <>
           <p className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">
-            {data.total.toLocaleString("en-IN")} message{data.total === 1 ? "" : "s"} · showing {items.length.toLocaleString("en-IN")}
+            {(data?.total ?? 0).toLocaleString("en-IN")} message{data?.total === 1 ? "" : "s"} · showing {items.length.toLocaleString("en-IN")}
           </p>
           <ul className="divide-y divide-zinc-100 overflow-hidden rounded-2xl border border-zinc-200 bg-white/70 dark:divide-white/5 dark:border-white/10 dark:bg-white/[0.03]">
             {items.map((m) => (

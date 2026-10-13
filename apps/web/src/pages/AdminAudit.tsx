@@ -102,7 +102,7 @@ export function AdminAuditPage() {
       ) : (
         <>
           <p className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">
-            {data.total.toLocaleString("en-IN")} entr{data.total === 1 ? "y" : "ies"} · showing {items.length.toLocaleString("en-IN")}
+            {(data?.total ?? 0).toLocaleString("en-IN")} entr{data?.total === 1 ? "y" : "ies"} · showing {items.length.toLocaleString("en-IN")}
           </p>
           <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white/70 dark:border-white/10 dark:bg-white/[0.03]">
             <table className="w-full text-left text-sm">
