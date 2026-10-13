@@ -120,6 +120,19 @@ function mockFor(id: PresetId, country: string): MockConfig {
   }
 }
 
+/** The role a mock should use: the link (`?role=`), then the saved job-search title, then the welcome questions. */
+export function roleForPractice(
+  link: string | null | undefined,
+  profileTitle: string | null | undefined,
+  welcomeRole: string | null | undefined,
+): string {
+  for (const value of [link, profileTitle, welcomeRole]) {
+    const role = value?.trim().slice(0, 120) ?? "";
+    if (role) return role;
+  }
+  return "";
+}
+
 /** The session a preset starts: `role` from the profile (or a link), the documents Practice uses for context. */
 export function presetSession(id: PresetId, role: string, documentIds: string[], country: string = INDIA): CreateSessionRequest {
   const preset = PRESETS.find((p) => p.id === id)!;
