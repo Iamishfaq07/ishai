@@ -50,7 +50,7 @@ export default function HelpDialog({ open, onClose, onSearch }: { open: boolean;
     focusRing,
   );
   return (
-    <Sheet open={open} onClose={onClose} title="Help" titleId="help-title">
+    <Sheet open={open} onClose={onClose} title="Questions" titleId="help-title">
       <div className="space-y-7 px-5 py-5">
         <section aria-labelledby="help-contact">
           <h3 id="help-contact" className="font-display text-base font-semibold">

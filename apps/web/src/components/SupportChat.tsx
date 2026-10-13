@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { useLocation } from "react-router-dom";
 import type { SupportThread } from "@orbit/ui";
 import { MessageCircle, Send, Skeleton, X, buttonClass, cx, focusRing } from "@orbit/ui";
 import { Input } from "./ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { SHELL_EVENTS } from "../lib/shell";
+
+const Questions = lazy(() => import("./HelpDialog"));
 
 const STORE = "orbit.support.v1";
 const SEEN = "orbit.support.seen";
@@ -61,6 +64,7 @@ export function SupportChat() {
   const { pathname } = useLocation();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [questions, setQuestions] = useState(false);
   const [thread, setThread] = useState<SupportThread | null>(null);
   const [saved, setSaved] = useState<Saved | null>(null);
   const [text, setText] = useState("");
@@ -74,6 +78,14 @@ export function SupportChat() {
   const wasOpen = useRef(false);
   const [seenId, setSeenId] = useState(loadSeen);
   const hidden = pathname.startsWith("/live");
+
+  useEffect(() => {
+    const onOpen = () => {
+      if (!pathname.startsWith("/live")) setOpen(true);
+    };
+    window.addEventListener(SHELL_EVENTS.support, onOpen);
+    return () => window.removeEventListener(SHELL_EVENTS.support, onOpen);
+  }, [pathname]);
 
   useEffect(() => {
     if (open) {
@@ -232,6 +244,9 @@ export function SupportChat() {
               <p className="font-display text-sm font-semibold">Orbit support</p>
               <p className="text-xs text-zinc-500">{thread?.status === "waiting" ? "A person has this chat" : "Bot, then a person if you need one"}</p>
             </div>
+            <button type="button" className={buttonClass("ghost", "sm")} onClick={() => setQuestions(true)}>
+              Questions
+            </button>
             <button type="button" className={buttonClass("ghost", "sm", "grid h-9 w-9 place-items-center p-0")} onClick={() => setOpen(false)} aria-label="Close support">
               <X className="h-4 w-4" />
             </button>
@@ -345,6 +360,14 @@ export function SupportChat() {
         {unread && <span className="absolute right-0 top-0 h-3 w-3 rounded-full bg-rose-500 ring-2 ring-white dark:ring-zinc-950" />}
         {open ? <X className="h-5 w-5" aria-hidden /> : <MessageCircle className="h-5 w-5" aria-hidden />}
       </button>
+      {questions && (
+        <Suspense fallback={null}>
+          <Questions
+            open
+            onClose={() => setQuestions(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

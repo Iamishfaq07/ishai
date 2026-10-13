@@ -8,8 +8,8 @@ const link = cx(
 );
 
 /**
- * The public pages' footer (the front page and the product pages): the products, help and the policies. Signed in,
- * the layout has its own one-line footer (Help and the policies).
+ * The public pages' footer (the front page and the product pages): the products, support and the policies. Signed in,
+ * the layout has its own one-line footer (Support and the policies).
  */
 export function Footer({ className }: { className?: string }) {
   return (
@@ -57,8 +57,8 @@ export function Footer({ className }: { className?: string }) {
             </li>
           </ul>
         </nav>
-        <nav aria-label="Help">
-          <h2 className="font-display text-sm font-semibold">Help</h2>
+        <nav aria-label="Support">
+          <h2 className="font-display text-sm font-semibold">Support</h2>
           <ul className="mt-2 space-y-0.5">
             <li>
               <Link to="/#pricing" className={link}>

@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
-  CircleQuestionMark,
   CreditCard,
   House,
   LogOut,
   MOCK_INTERVIEW_ENABLED,
+  MessageCircle,
   MoonStar,
   Search,
   Send,
@@ -28,7 +28,7 @@ import { PRODUCTS, ProductMark } from "./products";
  * Escape to close. Its own chunk, loaded the first time it opens; the matching is lib/palette.ts.
  */
 
-const RUN_ICON: Record<NonNullable<Command["run"]>, LucideIcon> = { help: CircleQuestionMark, theme: MoonStar, "sign-out": LogOut };
+const RUN_ICON: Record<NonNullable<Command["run"]>, LucideIcon> = { help: MessageCircle, theme: MoonStar, "sign-out": LogOut };
 const GROUPS: CommandGroup[] = ["Recent", "Actions", "Go to"];
 
 function CommandIcon({ command }: { command: Command }) {

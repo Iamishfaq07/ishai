@@ -29,7 +29,7 @@ import { useAuth } from "../lib/auth";
 import { DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
 import { errorText, formatDate, sessionKindLine } from "../lib/format";
 import { checklist, loadAnswers, nextSteps, type ChecklistItem, type HomeFacts, type Step } from "../lib/onboarding";
-import { openHelp } from "../lib/shell";
+import { openSupport } from "../lib/shell";
 import { SESSION_TYPE_ICON } from "../lib/sessionIcons";
 import { useAsync, type AsyncState } from "../lib/useAsync";
 import { UsageSummary } from "./Billing";
@@ -131,8 +131,8 @@ export function HomePage() {
 
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         Stuck on something?{" "}
-        <button type="button" onClick={openHelp} className={cx("font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
-          Get help
+        <button type="button" onClick={openSupport} className={cx("font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
+          Support
         </button>{" "}
         or press <kbd className="rounded border border-zinc-300 px-1 font-sans text-xs dark:border-white/15">/</kbd> to search.
       </p>
