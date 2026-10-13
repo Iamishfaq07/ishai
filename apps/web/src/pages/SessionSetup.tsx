@@ -39,6 +39,8 @@ import {
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, Meter, PageHeader, Select, Textarea, Toggle } from "../components/ui";
 import { API_URL, api } from "../lib/api";
+import { useAuth } from "../lib/auth";
+import { loadAnswers } from "../lib/onboarding";
 import {
   captureStream,
   levelFromRms,
@@ -158,6 +160,7 @@ export interface LiveLaunchState {
 
 export function SessionSetupPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [params] = useSearchParams();
   // Where a tab's audio can't be shared (phones, Safari, Firefox), listen through the microphone by default.
   const initialType = (params.get("type") as SessionType | null) ?? (supportsDisplayAudio() ? "interview" : "phone");
@@ -165,7 +168,7 @@ export function SessionSetupPage() {
 
   const [title, setTitle] = useState("");
   const [type, setType] = useState<SessionType>(SELECTABLE_TYPES.includes(initialType) ? initialType : "interview");
-  const [role, setRole] = useState("");
+  const [role, setRole] = useState(() => (user ? loadAnswers(user.id)?.role.trim().slice(0, 120) ?? "" : ""));
   const [instructions, setInstructions] = useState("");
   const [length, setLength] = useState<AnswerLength>("auto");
   const [experience, setExperience] = useState<ExperienceLevel>(loadExperience);

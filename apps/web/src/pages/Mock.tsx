@@ -24,9 +24,11 @@ import {
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import { matchStyle, withCompany } from "../lib/companyStyle";
+import { useAuth } from "../lib/auth";
+import { loadAnswers } from "../lib/onboarding";
 import { useAsync } from "../lib/useAsync";
 import { CompanyGuide } from "./CompanyGuide";
-import { PRESETS, isPresetId, presetSession, presetTitle, type PresetId } from "./mockPresets";
+import { PRESETS, isPresetId, presetSession, presetTitle, roleForPractice, type PresetId } from "./mockPresets";
 import { useCountry } from "../lib/country";
 import { CountryField } from "../components/CountryField";
 import { PrepSection } from "./Prep";
@@ -73,13 +75,13 @@ export function MockPage() {
 
 function MockSetup() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const docs = useAsync(() => api.listDocuments(), [], "documents");
-  // The role for the technical round: a link's (`?role=`, e.g. a tracked job), else the Jobs AI profile's first title,
-  // which is where the welcome questions save it.
-  // TODO(ws-b): if lib/onboarding.ts keeps the welcome's role on its own too, read it here before the profile.
+  // The role for the technical round: a link's (`?role=`, a tracked job), else the Jobs AI profile's first title,
+  // else the role from the welcome questions (still there if the profile hasn't saved yet).
   const profile = useAsync(() => api.jobProfile(), [], "job-profile");
   const [params] = useSearchParams();
-  const knownRole = params.get("role")?.trim().slice(0, 120) || profile.data?.prefs.titles[0] || "";
+  const knownRole = roleForPractice(params.get("role"), profile.data?.prefs.titles[0], user ? loadAnswers(user.id)?.role : "");
   const highlighted = params.get("preset");
   const country = useCountry();
   // The company being practised for (`?company=`, or typed): a known one is asked in its style, with its guide shown.

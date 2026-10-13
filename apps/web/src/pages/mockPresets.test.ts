@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { sampleOffer } from "@orbit/ui";
-import { HR_QUESTIONS, PRESETS, isPresetId, presetSession, presetTitle } from "./mockPresets";
+import { HR_QUESTIONS, PRESETS, isPresetId, presetSession, presetTitle, roleForPractice } from "./mockPresets";
+
+describe("roleForPractice", () => {
+  it("uses the link, then the saved job title, then the welcome role", () => {
+    expect(roleForPractice("  SDE  ", "Analyst", "Support")).toBe("SDE");
+    expect(roleForPractice("", "Analyst", "Support")).toBe("Analyst");
+    expect(roleForPractice(null, "  ", "Support")).toBe("Support");
+    expect(roleForPractice(null, null, "   ")).toBe("");
+  });
+});
 
 describe("one-tap mock presets", () => {
   it("start a 5-minute HR round on the campus questions, as a recruiter", () => {
