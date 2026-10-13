@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import type { OrbitSession } from "@orbit/types";
+import type { JobTrackerEntry, OrbitSession } from "@orbit/types";
 import {
   ArrowRight,
   AudioLines,
@@ -66,8 +66,8 @@ export function HomePage() {
   const answers = useMemo(() => (user ? loadAnswers(user.id) : null), [user]);
 
   // Ready once the lists that decide the next step have answered. A list that failed counts as "has it", so Home never
-  // asks for a resume the account may well have; its own card says it didn't load.
-  const settled = [sessions, documents, resumes, tracker, profile].every((s) => s.data !== null || s.error !== null);
+  // asks for a resume or a story the account may well have; its own card says it didn't load.
+  const settled = [sessions, documents, resumes, stories, tracker, profile].every((s) => s.data !== null || s.error !== null);
   const facts = useMemo((): HomeFacts | null => {
     if (!settled) return null;
     const list = resumes.data ?? [];
@@ -103,7 +103,7 @@ export function HomePage() {
 
       <DueToday />
 
-      <FollowUps hideWhenEmpty />
+      <FollowUps tracker={tracker} hideWhenEmpty />
 
       {facts && <SetUp items={checklist(answers, facts)} />}
 
@@ -114,8 +114,8 @@ export function HomePage() {
         <Reveal stagger className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
           <CopilotRow sessions={sessions.data} />
           {MOCK_INTERVIEW_ENABLED && <PracticeRow sessions={sessions.data} />}
-          <ResumeRow />
-          <JobsRow />
+          <ResumeRow resumes={resumes.data} />
+          <JobsRow tracker={tracker.data} />
         </Reveal>
       </section>
 
@@ -431,9 +431,8 @@ function PracticeRow({ sessions }: { sessions: OrbitSession[] | null }) {
   );
 }
 
-function ResumeRow() {
-  const resumes = useAsync(() => api.listResumes(), [], "resumes");
-  const list = resumes.data;
+function ResumeRow({ resumes }: { resumes: { id: string; title: string; score: number }[] | null }) {
+  const list = resumes;
   const best = list?.length ? list.reduce((a, b) => (b.score > a.score ? b : a)) : null;
   return (
     <ProductRow
@@ -458,10 +457,8 @@ function ResumeRow() {
   );
 }
 
-function JobsRow() {
-  // The tracker only: cheap, and Home never asks the job boards for anything.
-  const tracker = useAsync(() => api.jobTracker(), [], "job-tracker");
-  const entries = tracker.data ?? [];
+function JobsRow({ tracker }: { tracker: JobTrackerEntry[] | null }) {
+  const entries = tracker ?? [];
   const columns = byStatus(entries);
   const going = (["interviewing", "applied", "offer"] as const).filter((s) => columns[s].length > 0);
   return (
