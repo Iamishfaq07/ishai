@@ -171,11 +171,13 @@ const STATUS: Record<UpiOrder["status"], { label: string; tone: string }> = {
   submitted: { label: "Checking your payment", tone: "bg-amber-500/10 text-amber-800 dark:text-amber-200" },
   approved: { label: "Paid · credits added", tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" },
   rejected: { label: "Couldn't confirm", tone: "bg-rose-500/10 text-rose-700 dark:text-rose-300" },
+  processing: { label: "Confirming with Razorpay", tone: "bg-amber-500/10 text-amber-800 dark:text-amber-200" },
+  expired: { label: "Not paid", tone: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-300" },
 };
 
 /** Payments made (orders nobody paid for aren't worth listing), with a way back in to fix a UPI payment's UTR. */
 function Payments({ orders, onOpen }: { orders: UpiOrder[]; onOpen: (o: UpiOrder) => void }) {
-  const shown = orders.filter((o) => o.status !== "awaiting_payment");
+  const shown = orders.filter((o) => o.status !== "awaiting_payment" && o.status !== "expired");
   if (!shown.length) return null;
   return (
     <Card>
@@ -199,6 +201,17 @@ function Payments({ orders, onOpen }: { orders: UpiOrder[]; onOpen: (o: UpiOrder
               <Button size="sm" variant="ghost" className="ml-auto" onClick={() => onOpen(o)}>
                 {o.status === "rejected" ? "Send the right UTR" : "Correct the UTR"}
               </Button>
+            )}
+            {!!o.refunded_inr && (
+              <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-xs font-medium text-sky-800 dark:text-sky-200">
+                Refunded ₹{o.refunded_inr}
+              </span>
+            )}
+            {o.status === "processing" && (
+              <span className="basis-full text-xs text-zinc-500">
+                Razorpay has your payment and is confirming it with your bank. The credits are added as soon as it's
+                captured, usually within minutes; nothing more to do. Quote {o.reference} if you contact us.
+              </span>
             )}
             {o.status === "rejected" && o.note && <span className="basis-full text-xs text-rose-700 dark:text-rose-300">{o.note}</span>}
           </li>
@@ -244,7 +257,11 @@ export function BillingPage() {
         const paid = await payWithRazorpay(checkout);
         if (paid) {
           const done = await api.verifyRazorpay(paid);
-          setBought(done.status === "approved" ? `${done.label} added. Thanks!` : "Payment received. Your credits will appear in a moment.");
+          setBought(
+            done.status === "approved"
+              ? `${done.label} added. Thanks!`
+              : "Razorpay has your payment and is confirming it. Your credits are added as soon as it's captured, usually within minutes. This page updates by itself.",
+          );
           orders.reload();
           ent.reload();
         }
@@ -266,6 +283,21 @@ export function BillingPage() {
     setParams({}, { replace: true });
     if (p) void buy(p);
   }, [wanted, packs.data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A payment Razorpay is still confirming: check back every 15 s for a few minutes, so the credits show up here
+  // without a reload once it's captured (the server credits it from Razorpay's webhook or its own check).
+  const confirming = (orders.data ?? []).some((o) => o.status === "processing");
+  useEffect(() => {
+    if (!confirming) return;
+    let tries = 0;
+    const timer = window.setInterval(() => {
+      tries += 1;
+      orders.reload();
+      ent.reload();
+      if (tries >= 16) window.clearInterval(timer);
+    }, 15_000);
+    return () => window.clearInterval(timer);
+  }, [confirming]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (order) checkoutRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -333,7 +365,7 @@ export function BillingPage() {
                       list[0]?.international
                         ? "Cards from outside India work too: you're charged in rupees and your bank converts it."
                         : "Cards issued outside India can't be used yet; that's coming soon."
-                    } Nothing renews, and the credits are added the moment the payment goes through.`
+                    } Nothing renews, and the credits are added as soon as Razorpay confirms the payment, usually within seconds.`
                   : "Pay once over UPI (Google Pay, PhonePe, Paytm or any bank app). Nothing renews or is charged automatically, and the credits are added as soon as your payment is checked."}
               </p>
             </>

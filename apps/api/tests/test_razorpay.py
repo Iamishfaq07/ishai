@@ -111,8 +111,10 @@ def test_an_authorized_payment_does_not_add_credits(client: TestClient, rzp: lis
     monkeypatch.setattr(razorpay, "transport", httpx.MockTransport(authorized))
     held = client.post("/v1/billing/razorpay/verify", headers=h, json={
         "order_id": o["order_id"], "payment_id": "pay_auth", "signature": _sign(o["order_id"], "pay_auth")})
-    assert held.status_code == 409
+    # Not captured: nothing is added, and the order shows as processing (V3-09), not as an error.
+    assert held.status_code == 200 and held.json()["status"] == "processing"
     assert _wallet(client, h)["resume"] == before
+    assert [x["status"] for x in client.get("/v1/billing/upi/orders", headers=h).json()] == ["processing"]
     # An authorized webhook must not grant either.
     body = json.dumps({"event": "payment.captured", "payload": {"payment": {"entity": {
         "id": "pay_auth", "order_id": o["order_id"], "amount": 199_900, "currency": "INR",

@@ -140,7 +140,9 @@ class Payment(TimestampMixin, Base):
     resume_credits: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     interview_minutes: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     reference: Mapped[str] = mapped_column(String(16), unique=True)
-    # awaiting_payment → submitted (UTR given) → approved | rejected (a rejected one can be submitted again)
+    # UPI: awaiting_payment → submitted (UTR given) → approved | rejected (a rejected one can be submitted again).
+    # Razorpay: awaiting_payment → processing (Razorpay has a payment for the order, not captured yet) → approved;
+    # an order nobody paid within RECONCILE_WINDOW becomes expired (billing/reconcile.py).
     status: Mapped[str] = mapped_column(String(20), default="awaiting_payment", index=True)
     utr: Mapped[str | None] = mapped_column(String(32), unique=True)
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -150,6 +152,48 @@ class Payment(TimestampMixin, Base):
     # Razorpay's order and payment ids ("order_…", "pay_…"): unique, so one payment is credited once.
     gateway_order_id: Mapped[str | None] = mapped_column(String(40), unique=True)
     gateway_payment_id: Mapped[str | None] = mapped_column(String(40), unique=True)
+    # Refunds processed against this payment, in paise (the sum of its PaymentRefund rows that went through).
+    refunded_paise: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    # The reconciler's checks with Razorpay of an order still open (billing/reconcile.py): how many, and the last.
+    reconcile_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PaymentRefund(TimestampMixin, Base):
+    """One refund at the payment gateway, keyed by its id ("rfnd_…"), so a refund is recorded once however often its
+    webhook arrives. `payment_id` is set once the payment it refunds is known here; a refund that arrives before its
+    capture is kept unlinked (`gateway_payment_id` only) and linked when the payment lands (billing/reconcile.py).
+    Credits bought are not taken back by a refund (docs/BILLING.md, refund policy)."""
+
+    __tablename__ = "payment_refunds"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    refund_id: Mapped[str] = mapped_column(String(40), unique=True)
+    gateway_payment_id: Mapped[str] = mapped_column(String(40), index=True)
+    payment_id: Mapped[str | None] = mapped_column(ForeignKey("payments.id", ondelete="SET NULL"), index=True,
+                                                   nullable=True)
+    amount_paise: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(16))  # Razorpay's: created | processed | failed
+    linked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PaymentEvent(TimestampMixin, Base):
+    """A webhook event from the payment gateway, recorded once by its event id (Razorpay's X-Razorpay-Event-Id, or
+    a hash of the signed body), so a redelivery is recognized and an event that couldn't be applied is kept for a
+    retry. Holds ids, amounts and statuses only: never the payer's email, phone or card details."""
+
+    __tablename__ = "payment_events"
+    __table_args__ = (Index("ix_payment_events_status_created", "status", "created_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    provider: Mapped[str] = mapped_column(String(16), default="razorpay")
+    event_id: Mapped[str] = mapped_column(String(80), unique=True)
+    event: Mapped[str] = mapped_column(String(40))  # payment.captured | order.paid | refund.processed | ...
+    entity_id: Mapped[str | None] = mapped_column(String(40))  # pay_…, rfnd_… or order_…
+    # received → processed | ignored (nothing to do) | unmatched (its payment isn't known yet) | error
+    status: Mapped[str] = mapped_column(String(12), default="received")
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    error: Mapped[str | None] = mapped_column(String(300))
+    data: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class CreditEntry(TimestampMixin, Base):

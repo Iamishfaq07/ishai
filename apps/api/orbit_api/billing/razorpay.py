@@ -98,6 +98,24 @@ async def fetch_payment(payment_id: str) -> dict[str, object]:
     return data
 
 
+async def order_payments(order_id: str) -> list[dict[str, object]]:
+    """The payments Razorpay has for one of our orders (each attempt is one): id, amount, currency, status."""
+    s = get_settings()
+    if not (s.razorpay_key_id and s.razorpay_key_secret) or not order_id.startswith("order_"):
+        raise RazorpayError("Razorpay isn't set up")
+    async with httpx.AsyncClient(timeout=TIMEOUT_S, transport=transport) as http:
+        try:
+            r = await http.get(f"{API}/orders/{order_id}/payments",
+                               auth=(s.razorpay_key_id, s.razorpay_key_secret.get_secret_value()))
+        except httpx.HTTPError as e:
+            raise RazorpayError(f"couldn't reach Razorpay: {type(e).__name__}") from e
+    if r.status_code != 200:
+        raise RazorpayError(f"Razorpay said {r.status_code}{_why(r)}")
+    data = r.json()
+    items = data.get("items") if isinstance(data, dict) else None
+    return [i for i in items if isinstance(i, dict)] if isinstance(items, list) else []
+
+
 def webhook_signature_ok(body: bytes, signature: str | None) -> bool:
     """A webhook really from Razorpay: X-Razorpay-Signature is HMAC-SHA256 of the raw body with the webhook secret."""
     secret = get_settings().razorpay_webhook_secret
