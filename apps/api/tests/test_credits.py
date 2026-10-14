@@ -174,9 +174,11 @@ def test_packs_are_listed_and_need_a_upi_id(client: TestClient, monkeypatch: pyt
     monkeypatch.setattr(get_settings(), "upi_id", None)
     packs = {p["id"]: p for p in client.get("/v1/billing/packs").json()}
     assert packs["starter"] == {"id": "starter", "label": "Starter", "price_inr": 1999, "resume_credits": 15,
-                                "interview_minutes": 60, "buyable": False, "checkout": None}
+                                "interview_minutes": 60, "buyable": False, "checkout": None,
+                                "international": False}
     assert packs["mini"] == {"id": "mini", "label": "Mini", "price_inr": 499, "resume_credits": 5,
-                             "interview_minutes": 15, "buyable": False, "checkout": None}
+                             "interview_minutes": 15, "buyable": False, "checkout": None,
+                             "international": False}
     assert set(packs) == {"mini", "starter", "plus", "pro"}
     h = _register(client)
     assert client.post("/v1/billing/upi/orders", headers=h, json={"pack": "starter"}).status_code == 503

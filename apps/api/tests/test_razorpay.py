@@ -60,9 +60,12 @@ def _hook(client: TestClient, event: str, order_id: str, payment_id: str, amount
                        headers={"X-Razorpay-Signature": sig, "Content-Type": "application/json"})
 
 
-def test_packs_say_how_they_are_bought(client: TestClient, rzp: list[httpx.Request]) -> None:
+def test_packs_say_how_they_are_bought(client: TestClient, rzp: list[httpx.Request],
+                                       monkeypatch: pytest.MonkeyPatch) -> None:
     packs = client.get("/v1/billing/packs").json()
-    assert all(p["buyable"] and p["checkout"] == "razorpay" for p in packs)
+    assert all(p["buyable"] and p["checkout"] == "razorpay" and not p["international"] for p in packs)
+    monkeypatch.setattr(get_settings(), "razorpay_international", True)
+    assert all(p["international"] for p in client.get("/v1/billing/packs").json())
 
 
 def test_a_paid_checkout_adds_the_pack_once(client: TestClient, rzp: list[httpx.Request]) -> None:
