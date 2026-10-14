@@ -114,6 +114,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   const sysRef = useRef<AudioCapture | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
   const [micOn, setMicOn] = useState(false);
+  const [micStarting, setMicStarting] = useState(false);
   // Mocks and phone / room sessions listen through the microphone only. Resuming from Home or Sessions carries no
   // launch state (the default asks for tab audio), so the session type decides here.
   const systemAudio = launch.systemAudio && session.type !== "mock" && session.type !== "phone";
@@ -134,6 +135,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   const startMic = useCallback(async () => {
     const gen = ++micGenRef.current;
     setMicError(null);
+    setMicStarting(true);
     micRef.current?.stop();
     micRef.current = null;
     try {
@@ -146,14 +148,18 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
         return;
       }
       micRef.current = capture;
+      setMicStarting(false);
       setMicOn(true);
       stream.getAudioTracks()[0]?.addEventListener("ended", () => {
         if (gen !== micGenRef.current) return;
+        capture.stop();
+        micRef.current = null;
         setMicOn(false);
         setMicError("Microphone disconnected.");
       });
     } catch (err) {
       if (gen !== micGenRef.current) return;
+      setMicStarting(false);
       setMicOn(false);
       const denied = err instanceof DOMException && err.name === "NotAllowedError";
       setMicError(
@@ -171,6 +177,13 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       setMicOn(false);
     };
   }, [startMic, stopMic]);
+  useEffect(() => {
+    const recover = () => {
+      if (!micRef.current && !pausedRef.current) void startMic();
+    };
+    navigator.mediaDevices?.addEventListener("devicechange", recover);
+    return () => navigator.mediaDevices?.removeEventListener("devicechange", recover);
+  }, [startMic]);
 
   // The same guard for tab audio: a share picker answered after a second click, after End, or after leaving the
   // page must not start a capture that nothing stops.
@@ -325,6 +338,9 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
 
   const panel = (
     <LivePanel
+      analyser={micRef.current?.analyser}
+      captureHealth={micStarting || sysStarting ? "recovering" : micOn || sysState === "on" ? "active" : "muted"}
+      screenCaptureHealth={shot ? "active" : "muted"}
       mockInterview={session.type === "mock"}
       ratings={ratings}
       onInterviewerSpeaking={onInterviewerSpeaking}

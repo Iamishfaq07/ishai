@@ -156,6 +156,8 @@ export function LiveScreen({
   // The capture this screen owns (0: none). Each start (Retry) gets a new id, so a stop only ever ends this screen's
   // own capture, and events from one that was replaced are ignored.
   const captureId = useRef(0);
+  const audioAmplitude = useRef(0);
+  const [deviceHealth, setDeviceHealth] = useState<{ mic: "active" | "recovering" | "muted"; system: "active" | "recovering" | "muted" }>({ mic: "recovering", system: launch.systemAudio ? "recovering" : "muted" });
   const startAudio = useCallback(async () => {
     const id = newCaptureId();
     captureId.current = id;
@@ -164,6 +166,7 @@ export function LiveScreen({
       if (current()) setCaptureNotes((n) => ({ ...n, [key]: text }));
     };
     setCaptureNotes({});
+    setDeviceHealth({ mic: "recovering", system: launch.systemAudio ? "recovering" : "muted" });
     try {
       const info = await startCapture(
         {
@@ -177,11 +180,13 @@ export function LiveScreen({
         (ev) => {
           if (!current()) return;
           if (ev.kind === "frame") {
+            if (ev.channel === AUDIO_CHANNEL.mic) audioAmplitude.current = ev.rms;
             if (!pausedRef.current && !interviewerSpeakingRef.current) client.sendAudioBytes(ev.channel, base64ToBytes(ev.pcm));
             return;
           }
           const key = ev.channel === AUDIO_CHANNEL.mic ? "mic" : "system";
           if (ev.kind === "status") {
+            setDeviceHealth((previous) => ({ ...previous, [key]: ev.state === "lost" ? "recovering" : "active" }));
             // Device (or the meeting app) came back / switched: clear the "disconnected" note after a moment.
             const text = deviceStatusText(ev);
             note(key, text);
@@ -189,15 +194,18 @@ export function LiveScreen({
               window.setTimeout(() => setCaptureNotes((n) => (n[key] === text ? { ...n, [key]: null } : n)), 4000);
             }
           } else {
+            setDeviceHealth((previous) => ({ ...previous, [key]: "muted" }));
             note(key, friendlyAudioError(ev.message));
           }
         },
       );
+      if (current()) setDeviceHealth({ mic: info.micError ? "muted" : "active", system: !launch.systemAudio || info.systemError ? "muted" : "active" });
       if (launch.systemAudio && info.systemError) {
         note("system", `${friendlyAudioError(info.systemError)} Until then Orbit hears your microphone only.`);
       }
       if (info.micError) note("mic", `${friendlyAudioError(info.micError)} The interviewer is still heard.`);
     } catch (err) {
+      if (current()) setDeviceHealth({ mic: "muted", system: "muted" });
       note("start", friendlyAudioError(err));
     }
   }, [client, launch.micDeviceId, launch.systemAudio, launch.systemProcessId, launch.systemProcessExe, launch.systemDevice]);
@@ -395,6 +403,8 @@ export function LiveScreen({
 
   return (
     <LivePanel
+      audioAmplitude={() => audioAmplitude.current}
+      captureHealth={Object.values(deviceHealth).includes("recovering") ? "recovering" : Object.values(deviceHealth).includes("active") ? "active" : "muted"}
       mockInterview={session.type === "mock"}
       ratings={ratings}
       onInterviewerSpeaking={onInterviewerSpeaking}

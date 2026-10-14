@@ -30,6 +30,7 @@ import {
   LoadGate,
   Skeleton,
   ApiError,
+  InlineResumeDiff,
   confirmDialog,
   cx,
   focusRing,
@@ -1525,7 +1526,6 @@ function SuggestionCard({ s, total, onAccept, onSkip }: { s: ResumeSuggestion; t
   return (
     <Panel title={`Suggestion 1 of ${total}`}>
       <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{s.label}</p>
-      {s.before && <p className="mt-2 rounded-lg bg-rose-500/5 p-2 text-sm text-zinc-500 line-through decoration-rose-400/60 dark:text-zinc-400">{s.before}</p>}
       {kind === "add_skill" ? (
         <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Skills to add">
           {skills.map((skill) => (
@@ -1548,9 +1548,7 @@ function SuggestionCard({ s, total, onAccept, onSkip }: { s: ResumeSuggestion; t
           ))}
         </div>
       ) : (
-        <p className="mt-2 rounded-lg bg-emerald-500/10 p-2 text-sm text-zinc-900 dark:text-zinc-100">
-          <Highlighted text={s.after} />
-        </p>
+        <InlineResumeDiff before={s.before ?? ""} after={s.after} afterContent={<Highlighted text={s.after} />} />
       )}
       {s.reason && <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{s.reason}</p>}
       {s.confirm && (

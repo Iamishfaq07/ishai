@@ -194,6 +194,10 @@ export {
   type MotionLevel,
 } from "./design/design";
 export { currentMotion, useMotion } from "./hooks/useMotion";
+export { OrbitalVisualizer, orbitalState, type OrbitalState } from "./components/OrbitalVisualizer";
+export { DeviceCaptureHealthPill, type CaptureHealth } from "./components/DeviceCaptureHealthPill";
+export { OrbitCareerLoopHero, type CareerLinks } from "./components/OrbitCareerLoopHero";
+export { InlineResumeDiff, wordDiff } from "./components/InlineResumeDiff";
 export { buttonClass, type ButtonSize, type ButtonVariant } from "./components/ui";
 export { Sheet, type SheetSize } from "./components/Sheet";
 export { ToastHost, dismissToast, toast, type ToastOptions, type ToastTone } from "./components/Toast";
