@@ -248,6 +248,9 @@ class SessionProfile:
     # The company interviewing, from the saved setup the session started from (or the mock interview's setup).
     company: str | None = None
     prep_context: dict[str, Any] = field(default_factory=dict)
+    # Only the admin picks how much the model thinks (which changes the model's cost and speed); everyone else's
+    # answers use the default ("off") whatever their client sends.
+    admin: bool = False
 
 
 @dataclass
@@ -713,7 +716,10 @@ class LiveEngine:
 
     async def _apply_settings(self, patch: LiveSettingsPatch) -> None:
         self._drop_speculation()  # it was written for the old length/style
-        self.settings = self.settings.model_copy(update=patch.model_dump(exclude_none=True))
+        update = patch.model_dump(exclude_none=True)
+        if not self.profile.admin:
+            update.pop("thinking", None)  # model choice is admin-only (SessionProfile.admin)
+        self.settings = self.settings.model_copy(update=update)
         self._finalizer.grace_ms = GRACE_MS[self.settings.response_timing]
 
     # ---- STT --------------------------------------------------------------------------------------------

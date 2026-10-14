@@ -33,6 +33,7 @@ import {
   EXPERIENCE_LEVELS,
   RESPONSE_TIMINGS,
   THINKING_LEVELS,
+  useIsAdmin,
   cx,
   focusRing,
   loadExperience,
@@ -171,6 +172,7 @@ export function SetupScreen({
   const [experience, setExperience] = useState<ExperienceLevel>(loadExperience);
   const [style, setStyle] = useState<AnswerStyle>("natural");
   const [thinking, setThinking] = useState<ThinkingLevel>(loadThinking);
+  const admin = useIsAdmin(api);
   const [autoAnswer, setAutoAnswer] = useState(true);
   const [responseTiming, setResponseTiming] = useState<ResponseTiming>(loadResponseTiming);
   const [docs, setDocs] = useState<OrbitDocument[] | null>(null);
@@ -770,25 +772,28 @@ export function SetupScreen({
             </span>
           </label>
 
-          <label className="block space-y-1">
-            <span className="text-xs font-medium">Thinking</span>
-            <select
-              value={thinking}
-              onChange={(e) => {
-                const t = e.target.value as ThinkingLevel;
-                setThinking(t);
-                saveThinking(t);
-              }}
-              className={cx(control, focusRing)}
-            >
-              {THINKING_LEVELS.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
+          {/* Model choice is the admin's alone; the server ignores Thinking from anyone else. */}
+          {admin && (
+            <label className="block space-y-1">
+              <span className="text-xs font-medium">Thinking</span>
+              <select
+                value={thinking}
+                onChange={(e) => {
+                  const t = e.target.value as ThinkingLevel;
+                  setThinking(t);
+                  saveThinking(t);
+                }}
+                className={cx(control, focusRing)}
+              >
+                {THINKING_LEVELS.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
               <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">{THINKING_LEVELS.find((t) => t.value === thinking)?.hint}</span>
-          </label>
+            </label>
+          )}
 
           {autoAnswer && (
             <label className="block space-y-1">

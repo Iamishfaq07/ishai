@@ -17,6 +17,7 @@ import {
   EXPERIENCE_LEVELS,
   RESPONSE_TIMINGS,
   THINKING_LEVELS,
+  useIsAdmin,
   loadExperience,
   loadResponseTiming,
   loadThinking,
@@ -177,6 +178,7 @@ export function SessionSetupPage() {
   const [experience, setExperience] = useState<ExperienceLevel>(loadExperience);
   const [style, setStyle] = useState<AnswerStyle>("natural");
   const [thinking, setThinking] = useState<ThinkingLevel>(loadThinking);
+  const admin = useIsAdmin(api);
   const [autoAnswer, setAutoAnswer] = useState(true);
   const [responseTiming, setResponseTiming] = useState<ResponseTiming>(loadResponseTiming);
   const [systemAudio, setSystemAudio] = useState(type !== "phone" && supportsDisplayAudio());
@@ -388,28 +390,33 @@ export function SessionSetupPage() {
                   ))}
                 </Select>
               </Field>
-              <Field label="Thinking" htmlFor="thinking" hint={THINKING_LEVELS.find((t) => t.value === thinking)?.hint}>
-                <Select
-                  id="thinking"
-                  value={thinking}
-                  onChange={(e) => {
-                    const t = e.target.value as ThinkingLevel;
-                    setThinking(t);
-                    saveThinking(t);
-                  }}
-                >
-                  {THINKING_LEVELS.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="AI model" htmlFor="model" hint="Model routing is automatic: faster for behavioral, deeper for system design and coding.">
-                <Select id="model" disabled value="default">
-                  <option value="default">DeepSeek (default)</option>
-                </Select>
-              </Field>
+              {/* Model choice is the admin's alone; the server ignores Thinking from anyone else. */}
+              {admin && (
+                <>
+                  <Field label="Thinking" htmlFor="thinking" hint={THINKING_LEVELS.find((t) => t.value === thinking)?.hint}>
+                    <Select
+                      id="thinking"
+                      value={thinking}
+                      onChange={(e) => {
+                        const t = e.target.value as ThinkingLevel;
+                        setThinking(t);
+                        saveThinking(t);
+                      }}
+                    >
+                      {THINKING_LEVELS.map((t) => (
+                        <option key={t.value} value={t.value}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="AI model" htmlFor="model" hint="Model routing is automatic: faster for behavioral, deeper for system design and coding.">
+                    <Select id="model" disabled value="default">
+                      <option value="default">DeepSeek (default)</option>
+                    </Select>
+                  </Field>
+                </>
+              )}
             </div>
             <div className="mt-4">
               <Field

@@ -38,6 +38,7 @@ from orbit_api.db import get_db, sessionmaker
 from orbit_api.documents.uploads import MAX_UPLOAD_BYTES, validate_image
 from orbit_api.entitlements import (
     Plan,
+    is_admin,
     minutes_metric,
     minutes_remaining,
     plan_for,
@@ -920,6 +921,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
                           "tech_stack": row.tech_stack or [], "key_requirements": row.key_requirements or []},
             learned=await learned_preferences(db, user_id),
             company=company,
+            admin=await is_admin(db, user),
         )
         settings = LiveSettings(auto_answer=row.auto_answer, length=row.length,
                                 style=row.style)

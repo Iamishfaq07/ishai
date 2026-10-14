@@ -146,6 +146,8 @@ export interface LivePanelProps {
    * so the speakers are never transcribed as part of the interview.
    */
   onInterviewerSpeaking?: (speaking: boolean) => void;
+  /** The admin's account: shows the Thinking setting (model effort). The server ignores it from anyone else. */
+  admin?: boolean;
 }
 
 export function LivePanel(props: LivePanelProps) {
@@ -584,7 +586,7 @@ export function LivePanel(props: LivePanelProps) {
         onAutoAnswer={actions.setAutoAnswer}
         onResponseTiming={actions.setResponseTiming}
         onStyle={actions.setStyle}
-        onThinking={actions.setThinking}
+        onThinking={props.admin ? actions.setThinking : undefined}
         onTogglePause={actions.togglePause}
         onEnd={props.onEnd}
       />}
