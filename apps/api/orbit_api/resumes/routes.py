@@ -25,12 +25,12 @@ import json
 import logging
 import time
 from collections.abc import Awaitable
-from datetime import datetime
-from typing import Annotated, Literal
+from datetime import UTC, datetime
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 
@@ -72,6 +72,9 @@ class ResumeIn(BaseModel):
     job_text: str = Field("", max_length=MAX_JOB_TEXT)
     # Left out (None) by clients that don't edit it, so saving the resume never wipes the letter.
     cover_letter: str | None = Field(None, max_length=ai.MAX_LETTER_CHARS)
+    # The revision this text was based on (from the last GET or save). Given, a save is refused with 409 if another one
+    # landed since; left out (older clients), the save always lands.
+    base_revision: int | None = Field(None, ge=0)
 
 
 class ResumeOut(ResumeIn):
@@ -79,6 +82,7 @@ class ResumeOut(ResumeIn):
     cover_letter: str = ""
     created_at: datetime
     updated_at: datetime
+    revision: int = 0
 
 
 class ResumeSummary(BaseModel):
@@ -99,7 +103,8 @@ def _load(r: Resume) -> tuple[ResumeData, ResumeDesign]:
 def _out(r: Resume) -> ResumeOut:
     data, design = _load(r)
     return ResumeOut(id=r.id, title=r.title, data=data, design=design, job_text=r.job_text or "",
-                     cover_letter=r.cover_letter or "", created_at=r.created_at, updated_at=r.updated_at)
+                     cover_letter=r.cover_letter or "", created_at=r.created_at, updated_at=r.updated_at,
+                     revision=r.revision or 0)
 
 
 async def _owned(db: AsyncSession, resume_id: str, user: User) -> Resume:
@@ -156,12 +161,26 @@ async def get_resume(resume_id: str, user: Annotated[User, Depends(current_user)
 async def update_resume(resume_id: str, body: ResumeIn, user: Annotated[User, Depends(current_user)],
                         db: Annotated[AsyncSession, Depends(get_db)]) -> ResumeOut:
     r = await _owned(db, resume_id, user)
-    r.title = body.title
-    r.data = body.data.model_dump(mode="json")
-    r.design = body.design.model_dump(mode="json")
-    r.job_text = body.job_text
+    values: dict[str, Any] = {
+        "title": body.title, "data": body.data.model_dump(mode="json"),
+        "design": body.design.model_dump(mode="json"), "job_text": body.job_text,
+        "revision": Resume.revision + 1, "updated_at": datetime.now(UTC),
+    }
     if body.cover_letter is not None:
-        r.cover_letter = body.cover_letter
+        values["cover_letter"] = body.cover_letter
+    # One conditional update: with a base revision, it lands only if nothing else did since (the check and the
+    # write can't be split by another request).
+    rid = r.id
+    q = update(Resume).where(Resume.id == rid, Resume.user_id == user.id)
+    if body.base_revision is not None:
+        q = q.where(Resume.revision == body.base_revision)
+    done = await db.execute(q.values(**values).execution_options(synchronize_session=False))
+    if done.rowcount != 1:  # type: ignore[attr-defined]
+        await db.rollback()
+        current = await db.scalar(select(Resume.revision).where(Resume.id == rid))
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            f"This resume was saved somewhere else (another tab or device) since you opened it. "
+                            f"Reload it to see the latest. (revision {current})")
     await db.commit()
     await db.refresh(r)
     return _out(r)

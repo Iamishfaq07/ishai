@@ -52,7 +52,7 @@ jobs:
       # requests, account deletion taking the chat's Inbox copy), on Postgres as well as SQLite.
       - name: Race and lifecycle tests on Postgres
         env: { ORBIT_TEST_DATABASE_URL: "postgresql+asyncpg://orbit:orbit@localhost:5432/orbit" }
-        run: uv run pytest -q tests/test_support_lifecycle.py tests/test_payment_settlement.py tests/test_razorpay.py
+        run: uv run pytest -q tests/test_support_lifecycle.py tests/test_payment_settlement.py tests/test_razorpay.py tests/test_resume_revision.py
 
   frontend:
     runs-on: ubuntu-latest

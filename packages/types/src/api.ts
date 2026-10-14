@@ -1319,6 +1319,8 @@ export interface ResumeInput {
   job_text: string;
   /** Left out, the saved letter is kept as it is. */
   cover_letter?: string;
+  /** The revision this text was based on; the server refuses (409) the save if another one landed since. */
+  base_revision?: number;
 }
 
 export interface Resume extends ResumeInput {
@@ -1326,6 +1328,8 @@ export interface Resume extends ResumeInput {
   id: string;
   created_at: string;
   updated_at: string;
+  /** Bumped by every save (a save based on an older one is refused with 409). */
+  revision?: number;
 }
 
 export interface ResumeSummary {
