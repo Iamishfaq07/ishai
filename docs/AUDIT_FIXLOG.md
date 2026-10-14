@@ -15,6 +15,7 @@ Reproduced against the current checkout (`feat/practice-links`), not `ishai-main
 | ORB-N08 | Any support-chat read error opened a new thread. | A new thread starts only on 404 or 410. Other errors stay on the existing chat. | Code review of `SupportChat.tsx`. |
 | ORB-N09 | `localStorage.setItem` in the support chat was uncaught. | `save` and `markSeen` catch storage failures. The chat still works for the visit. | Code review. |
 | ORB-N11 | `docs/PRIVACY.md` said the resume maker needs no account. The signed-out editor and `/v1/resume-maker` are gone. | Privacy and security docs now say the editor needs an account. | Compared `backend.tsx`, `App.tsx`, and `resumes/routes.py`. |
+| ORB-N12 | Cookie copy mentioned only the sign-in cookie. Google sets `orbit_google` for 10 minutes. | Cookie notice, `cookies.html`, and `PRIVACY.md`. | `auth/google.py` `max_age=600`. |
 | ORB-N13 | Chat line times came from a counter in one process, so another process could file a later line first. Waiting chats also kept polling while the tab was hidden. | The next line is dated after the latest row in the database. The open chat skips polls while the tab is hidden and checks again when it is shown. | `tests/test_support_chat.py::test_a_line_stays_after_one_already_dated_ahead` |
 | ORB-N14 | A support read or send still in flight could land after an account switch and replace the new chat. | Polls ignore a response after they are stopped. Send, handoff and a new chat do nothing if the account changed while they were waiting. | Code review of `SupportChat.tsx`. |
 
