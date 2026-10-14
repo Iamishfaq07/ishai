@@ -40,7 +40,8 @@ discarded when the session ends.
 | Delete your account and everything in it | Settings → Privacy | `DELETE /v1/auth/me` |
 
 ## Cookies and other services
-The web app sets one httpOnly sign-in cookie. It does not set an advertising or analytics cookie. Settings on the
+The web app sets one httpOnly sign-in cookie, and a second httpOnly cookie (`orbit_google`) for about 10 minutes
+only while Continue with Google is in progress. It does not set an advertising or analytics cookie. Settings on the
 device (theme, this notice, a support-chat token) stay in the browser's own storage. Razorpay loads only when
 someone buys a pack. Deepgram transcribes audio. DeepSeek (and a backup model, only if DeepSeek is down) writes
 answers. Cloudflare serves the site. Sentry stays off unless `ORBIT_SENTRY_DSN` is set, and then it sends no
@@ -50,9 +51,10 @@ bodies or PII (`observability.py`). Account email is transactional only. There i
 Orbit is for students and job seekers, including people under 18. Sign-up does not ask for an age or a date of
 birth. A parent can ask for an account to be deleted from the contact page.
 
-Deleting an account cascades to every row above (`ON DELETE CASCADE`), except Contact messages (below). The export
-includes everything above except secrets (the password hash) and derived search data (chunk embeddings). The
-documents' full text is included instead.
+Deleting an account cascades to every row above (`ON DELETE CASCADE`), and deletes support chats you started while
+signed in (they name you and keep what you wrote). Contact messages are the exception below. The export includes
+everything above, plus those support chats, except secrets (the password hash, the support-chat token) and derived
+search data (chunk embeddings). The documents' full text is included instead.
 
 ## Contact messages
 The Contact page (`/contact`, `contact/routes.py`) works signed in or out. A message is kept in `contact_messages`
@@ -85,11 +87,9 @@ The person who runs the server (`ORBIT_ADMIN_EMAIL`) has an admin console (`admi
 - The admin's private notes about an account aren't part of your export. Every admin action is in the audit log.
 - **Reads, answers and handles Contact messages** in the Inbox (above).
 
-**The free resume maker needs no account.** Signed out, the one resume you make is kept only in your browser
-(`localStorage`); the server never stores it, and it isn't tied to you. Scoring, Word export and the AI are done
-per request and nothing is kept: the text you send for an AI fix goes to the AI provider the same way a signed-in
-request does. Clearing your browsing data deletes the resume. If you later create an account, the editor offers to
-save that resume to it.
+**The resume editor needs an account.** A signed-out resume maker used to keep one resume in this browser only.
+That maker is gone. If a resume from it is still on the device, the resume list offers to save it to the account.
+Scoring, Word export and the AI run only once you are signed in.
 
 Resume imports (a PDF, Word file, LinkedIn "Save to PDF" or pasted text) are read once and the file isn't kept:
 only the structured resume you then save is stored.

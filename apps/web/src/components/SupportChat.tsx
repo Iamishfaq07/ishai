@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { useLocation } from "react-router-dom";
 import type { SupportThread } from "@orbit/ui";
-import { MessageCircle, Send, Skeleton, X, buttonClass, cx, focusRing } from "@orbit/ui";
+import { ApiError, MessageCircle, Send, Skeleton, X, buttonClass, cx, focusRing } from "@orbit/ui";
 import { Input } from "./ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -35,7 +35,11 @@ function load(userId?: string | null): Saved | null {
 function save(thread: SupportThread, userId?: string | null): Saved | null {
   if (!thread.token) return load(userId);
   const saved = { id: thread.id, token: thread.token };
-  localStorage.setItem(scopeKey(STORE, userId), JSON.stringify(saved));
+  try {
+    localStorage.setItem(scopeKey(STORE, userId), JSON.stringify(saved));
+  } catch {
+    // storage blocked or full: the chat still works for this visit
+  }
   return saved;
 }
 
@@ -49,7 +53,11 @@ function loadSeen(userId?: string | null): string {
 
 function markSeen(id: string, userId?: string | null): void {
   if (!id) return;
-  localStorage.setItem(scopeKey(SEEN, userId), id);
+  try {
+    localStorage.setItem(scopeKey(SEEN, userId), id);
+  } catch {
+    // storage blocked: the unread dot may come back next visit
+  }
 }
 
 /** A refresh that left before a send must not wipe the message that landed. */
@@ -73,6 +81,8 @@ export function SupportChat() {
   const { pathname } = useLocation();
   const { user } = useAuth();
   const userId = user?.id ?? null;
+  const userNow = useRef(userId);
+  userNow.current = userId;
   const [open, setOpen] = useState(false);
   const [questions, setQuestions] = useState(false);
   const [thread, setThread] = useState<SupportThread | null>(null);
@@ -119,8 +129,13 @@ export function SupportChat() {
     if (!open || hidden) return;
     let cancel = false;
     const existing = load(userId);
+    // A blip (offline, 503) must not throw this chat away and open another.
+    // Only a confirmed missing thread starts a new one.
+    const missing = (err: unknown) => err instanceof ApiError && (err.status === 404 || err.status === 410);
     const start = existing
-      ? api.supportRead(existing.id, existing.token, pathname).catch(() => api.supportOpen(pathname))
+      ? api.supportRead(existing.id, existing.token, pathname).catch((err: unknown) => (
+        missing(err) ? api.supportOpen(pathname) : Promise.reject(err)
+      ))
       : api.supportOpen(pathname);
     void start.then((next) => {
       if (cancel) return;
@@ -137,10 +152,22 @@ export function SupportChat() {
 
   useEffect(() => {
     if (!open || !saved || thread?.status !== "waiting") return;
-    const timer = window.setInterval(() => {
-      void api.supportRead(saved.id, saved.token).then((next) => setThread((current) => preferThread(current, next))).catch(() => undefined);
-    }, 4000);
-    return () => window.clearInterval(timer);
+    let cancel = false;
+    const ticket = saved;
+    const pull = () => {
+      if (cancel || document.hidden) return;
+      void api.supportRead(ticket.id, ticket.token).then((next) => {
+        if (cancel) return;
+        setThread((current) => preferThread(current, next));
+      }).catch(() => undefined);
+    };
+    const timer = window.setInterval(pull, 4000);
+    document.addEventListener("visibilitychange", pull);
+    return () => {
+      cancel = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", pull);
+    };
   }, [open, saved, thread?.status]);
 
   // Closed, and a person has the chat: look for their reply so the icon can show a dot.
@@ -151,6 +178,7 @@ export function SupportChat() {
     if (thread && thread.status !== "waiting") return;
     let cancel = false;
     const tick = () => {
+      if (document.hidden) return;
       void api.supportRead(existing.id, existing.token).then((next) => {
         if (cancel) return;
         setThread((current) => preferThread(current, next));
@@ -187,13 +215,17 @@ export function SupportChat() {
     }
     const typed = text.trim();
     if (!choice && !typed) return;
+    const mine = userId;
+    const ticket = saved;
     setBusy(true);
     setError("");
     try {
-      setThread(await api.supportSend(saved.id, saved.token, choice?.label ?? typed, choice?.id, pathname));
+      const next = await api.supportSend(ticket.id, ticket.token, choice?.label ?? typed, choice?.id, pathname);
+      if (userNow.current !== mine) return;
+      setThread(next);
       setText("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't send that.");
+      if (userNow.current === mine) setError(err instanceof Error ? err.message : "Couldn't send that.");
     } finally {
       setBusy(false);
     }
@@ -207,22 +239,27 @@ export function SupportChat() {
       setError("Add your email so the team knows who to reply to.");
       return;
     }
+    const mine = userId;
+    const ticket = saved;
     setBusy(true);
     setError("");
     try {
-      setThread(await api.supportHandoff(saved.id, saved.token, user?.name || "", address));
+      const next = await api.supportHandoff(ticket.id, ticket.token, user?.name || "", address);
+      if (userNow.current !== mine) return;
+      setThread(next);
       setNeedEmail(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't reach a person.");
+      if (userNow.current === mine) setError(err instanceof Error ? err.message : "Couldn't reach a person.");
     } finally {
       setBusy(false);
     }
   }
 
   async function restart() {
+    const mine = userId;
     try {
-      localStorage.removeItem(scopeKey(STORE, userId));
-      localStorage.removeItem(scopeKey(SEEN, userId));
+      localStorage.removeItem(scopeKey(STORE, mine));
+      localStorage.removeItem(scopeKey(SEEN, mine));
     } catch {
       // storage unavailable: the new chat still starts for this visit
     }
@@ -233,11 +270,12 @@ export function SupportChat() {
     setError("");
     try {
       const next = await api.supportOpen();
+      if (userNow.current !== mine) return;
       setThread(next);
-      const kept = save(next, userId);
+      const kept = save(next, mine);
       if (kept) setSaved(kept);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't start a new chat.");
+      if (userNow.current === mine) setError(err instanceof Error ? err.message : "Couldn't start a new chat.");
     } finally {
       setBusy(false);
     }

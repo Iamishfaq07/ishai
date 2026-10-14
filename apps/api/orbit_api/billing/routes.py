@@ -276,9 +276,51 @@ async def razorpay_verify(body: VerifyIn, background: BackgroundTasks, user: Ann
     if p is None or p.user_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found.")
     if p.status == "awaiting_payment":
+        try:
+            payment = await razorpay.fetch_payment(body.payment_id)
+        except razorpay.RazorpayError as e:
+            log.warning("razorpay verify: couldn't read %s (%s)", body.payment_id, e)
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
+                                "We couldn't confirm that payment with Razorpay yet. If money left your account, "
+                                "it will be added once the payment is captured.") from e
+        captured = (str(payment.get("status")) == "captured" and str(payment.get("order_id")) == body.order_id
+                    and str(payment.get("currency")) == "INR" and payment.get("amount") == p.amount_inr * 100)
+        if not captured:
+            # A valid checkout signature only means Razorpay created the payment. "authorized" is not captured:
+            # the bank can still fail it, so credits wait for capture (the webhook, or a later verify).
+            raise HTTPException(status.HTTP_409_CONFLICT,
+                                "The payment isn't captured yet, so nothing was added. If money left your account, "
+                                "it will show here once Razorpay captures it.")
         await _paid(db, p, body.payment_id, background)
     await db.refresh(p)
     return _order_out(p)
+
+
+async def _refund_noted(db: AsyncSession, event: dict[str, Any]) -> None:
+    """A refund went out. Credits stay: they may already be spent. The note and the audit row are the record, once."""
+    try:
+        refund = event["payload"]["refund"]["entity"]
+        refund_id = str(refund["id"])
+        payment_id = str(refund.get("payment_id") or "")
+        amount = int(refund.get("amount") or 0)
+    except (KeyError, TypeError, ValueError):
+        return
+    if not refund_id.startswith("rfnd_") or not payment_id:
+        return
+    p = await db.scalar(select(Payment).where(Payment.gateway_payment_id == payment_id))
+    if p is None:
+        log.warning("razorpay refund %s for an unknown payment %s", refund_id, payment_id)
+        return
+    seen = await db.scalar(select(AuditLog.id).where(
+        AuditLog.action == "payment.refunded", AuditLog.target.contains(refund_id)))
+    if seen is not None:
+        return
+    rupees = amount // 100 if amount else p.amount_inr
+    if not p.note:
+        p.note = f"Razorpay refunded ₹{rupees} ({refund_id}). Credits were not removed."[:300]
+    db.add(AuditLog(user_id=p.user_id, action="payment.refunded",
+                    target=f"{p.id} {refund_id} ₹{rupees} credits kept"))
+    await db.commit()
 
 
 @router.post("/billing/webhook", include_in_schema=False)
@@ -291,11 +333,20 @@ async def razorpay_webhook(request: Request, background: BackgroundTasks,
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bad signature.")
     try:
         event = json.loads(raw)
+    except ValueError:
+        return {"ok": True}
+    if event.get("event") == "refund.processed":
+        await _refund_noted(db, event)
+        return {"ok": True}
+    try:
         entity = event["payload"]["payment"]["entity"]
         order_id, payment_id, amount = str(entity["order_id"]), str(entity["id"]), int(entity["amount"])
+        currency, pay_status = str(entity.get("currency") or ""), str(entity.get("status") or "")
     except (ValueError, KeyError, TypeError):
         return {"ok": True}  # an event without a payment in it: nothing to do
     if event.get("event") not in ("payment.captured", "order.paid"):
+        return {"ok": True}
+    if pay_status != "captured" or currency != "INR":
         return {"ok": True}
     p = await db.scalar(select(Payment).where(Payment.gateway_order_id == order_id))
     if p is None or p.status != "awaiting_payment":

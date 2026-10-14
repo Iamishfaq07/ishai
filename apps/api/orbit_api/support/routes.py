@@ -13,16 +13,16 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from orbit_api.admin.routes import require_admin
 from orbit_api.auth.security import optional_user
-from orbit_api.config import get_settings
 from orbit_api.billing.packs import packs
+from orbit_api.config import get_settings
 from orbit_api.contact.routes import clean_message, network_hash, one_line
 from orbit_api.credits import interview_minutes_left, resume_balance
 from orbit_api.db import get_db
@@ -124,16 +124,15 @@ def _out(thread: SupportThread, token: str | None = None, user: User | None = No
     )
 
 
-_last_stamp = datetime.min.replace(tzinfo=UTC)
-
-
-def _stamp() -> datetime:
-    """A time that moves forward even when two lines are saved in the same instant, so the chat stays in order."""
-    global _last_stamp
+async def _stamp(db: AsyncSession, thread_id: str) -> datetime:
+    """A time after this chat's latest line. The database is the clock, so two processes can't put a later line first."""
+    latest = await db.scalar(select(func.max(SupportMessage.created_at)).where(SupportMessage.thread_id == thread_id))
     now = datetime.now(UTC)
-    if now <= _last_stamp:
-        now = _last_stamp + timedelta(microseconds=1)
-    _last_stamp = now
+    if isinstance(latest, datetime):
+        if latest.tzinfo is None:
+            latest = latest.replace(tzinfo=UTC)
+        if now <= latest:
+            now = latest + timedelta(microseconds=1)
     return now
 
 
@@ -153,9 +152,17 @@ async def _thread(db: AsyncSession, thread_id: str, token: str) -> SupportThread
     return row
 
 
-def _add(db: AsyncSession, thread: SupportThread, role: str, text: str) -> None:
+def _presented(header: str | None, query: str | None) -> str:
+    """The chat token. The header is preferred. The query still works for an old client."""
+    token = (header or "").strip() or (query or "").strip()
+    if not 20 <= len(token) <= 80:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "This chat can't be found. Start a new one.")
+    return token
+
+
+async def _add(db: AsyncSession, thread: SupportThread, role: str, text: str) -> None:
     # Don't touch thread.messages: reading that list in a request is a lazy load, which async rejects.
-    now = _stamp()
+    now = await _stamp(db, thread.id)
     db.add(SupportMessage(thread_id=thread.id, role=role, text=text, created_at=now))
     thread.updated_at = now
 
@@ -285,19 +292,23 @@ async def open_thread(
     )
     db.add(thread)
     await db.flush()
-    _add(db, thread, "bot", GREETING)
+    await _add(db, thread, "bot", GREETING)
     return _out(await _commit(db, thread), token, user, page)
 
 
 @router.get("/v1/support/threads/{thread_id}", response_model=ThreadOut)
 async def read_thread(
     thread_id: str,
-    token: Annotated[str, Query(min_length=20, max_length=80)],
+    response: Response,
     user: Annotated[User | None, Depends(optional_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    token: Annotated[str | None, Query()] = None,
     page: Annotated[str, Query(max_length=80)] = "",
+    x_orbit_support_token: Annotated[str | None, Header()] = None,
 ) -> ThreadOut:
-    return _out(await _thread(db, thread_id, token), user=user, page=page)
+    # no-store: a token in an old query string must not be cached by a proxy.
+    response.headers["Cache-Control"] = "no-store"
+    return _out(await _thread(db, thread_id, _presented(x_orbit_support_token, token)), user=user, page=page)
 
 
 @router.post("/v1/support/threads/{thread_id}/messages", response_model=ThreadOut)
@@ -319,12 +330,12 @@ async def post_message(
     _claim(thread, user)
     if thread.status == "bot":
         shown, reply = await _bot_answer(db, thread, user, text, choice)
-        _add(db, thread, "user", shown)
-        _add(db, thread, "bot", reply)
+        await _add(db, thread, "user", shown)
+        await _add(db, thread, "bot", reply)
     else:
         if not text:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Type a message.")
-        _add(db, thread, "user", text[:TEXT_MAX])
+        await _add(db, thread, "user", text[:TEXT_MAX])
     return _out(await _commit(db, thread), user=user, page=body.page)
 
 
@@ -346,7 +357,7 @@ async def handoff(
     thread.email = email
     thread.status = "waiting"
     transcript = "\n".join(f"{m.role}: {m.text}" for m in thread.messages)[-2800:]
-    _add(db, thread, "bot", HANDOFF)
+    await _add(db, thread, "bot", HANDOFF)
     db.add(ContactMessage(
         user_id=thread.user_id,
         name=name,
@@ -410,7 +421,7 @@ async def admin_reply(
     if not text:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Type a reply.")
     thread.status = "waiting"
-    _add(db, thread, "human", text[:TEXT_MAX])
+    await _add(db, thread, "human", text[:TEXT_MAX])
     log.info("support reply by %s on %s", admin.email, thread.id)
     return await _admin_out(db, await _commit(db, thread))
 
@@ -427,5 +438,5 @@ async def admin_close(
     if thread is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No chat with that id.")
     thread.status = "closed"
-    _add(db, thread, "bot", "This chat is closed. Start a new one if you need something else.")
+    await _add(db, thread, "bot", "This chat is closed. Start a new one if you need something else.")
     return await _admin_out(db, await _commit(db, thread))

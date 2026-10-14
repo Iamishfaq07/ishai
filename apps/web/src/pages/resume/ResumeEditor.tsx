@@ -48,7 +48,7 @@ import { useBackend } from "./backend";
 import { FixActions, FixResult, fixKind } from "./FixPanel";
 import { InterviewPrep, usePrepState } from "./InterviewPrep";
 import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, suggestedSkills } from "./model";
-import { RESUME_AI_HOME } from "./paths";
+import { RESUME_AI_HOME, shouldFlushResume } from "./paths";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
 import { SaveToDocuments } from "./SaveToDocuments";
@@ -129,10 +129,28 @@ function ResumeEditor() {
   const [pointing, setPointing] = useState<string[]>([]);
 
   useEffect(() => {
+    const requested = resumeId;
+    let cancel = false;
+    setResume(null);
+    setLoadError(null);
+    setReport(null);
+    setScored(null);
+    history.current = { past: [], future: [], at: 0, el: null };
+    setSteps({ undo: 0, redo: 0 });
     backend
-      .get(resumeId)
-      .then(setResume)
-      .catch((err: unknown) => setLoadError(errorText(err)));
+      .get(requested)
+      .then((loaded) => {
+        // A slow fetch for the resume we left must not land on the one we opened, or its save would write the old text.
+        if (cancel || loaded.id !== requested) return;
+        setResume(loaded);
+        setSave({ state: "saved" });
+      })
+      .catch((err: unknown) => {
+        if (!cancel) setLoadError(errorText(err));
+      });
+    return () => {
+      cancel = true;
+    };
   }, [backend, resumeId]);
 
   // Undo/redo. Typing in one field is one step; a pause, another field or a button starts the next.
@@ -199,7 +217,7 @@ function ResumeEditor() {
   useEffect(() => {
     if (!resume || save.state !== "dirty") return;
     const t = window.setTimeout(() => {
-      if (saving.current) return;
+      if (saving.current || resume.id !== resumeId) return;
       saving.current = true;
       setSave({ state: "saving" });
       const { title, data, design, job_text, cover_letter } = resume;
@@ -216,7 +234,7 @@ function ResumeEditor() {
         });
     }, 900);
     return () => window.clearTimeout(t);
-  }, [backend, resume, save.state, flush]);
+  }, [backend, resume, resumeId, save.state, flush]);
 
   // After a dropped connection, save again in a few seconds, or the moment the phone is back online.
   useEffect(() => {
@@ -233,6 +251,23 @@ function ResumeEditor() {
   // Don't lose the last edits when leaving mid-save.
   const unsaved = useRef(false);
   unsaved.current = save.state === "dirty" || save.state === "error";
+  const routeId = useRef(resumeId);
+  useEffect(() => {
+    const previous = routeId.current;
+    routeId.current = resumeId;
+    const leaving = latest.current;
+    if (!shouldFlushResume(leaving?.id, resumeId, unsaved.current) || !leaving || leaving.id !== previous) return;
+    // The autosave timer is cleared by the route change, so write this resume before the next one replaces it.
+    void backend
+      .save(leaving.id, {
+        title: leaving.title.trim() || "Untitled resume",
+        data: leaving.data,
+        design: leaving.design,
+        job_text: leaving.job_text,
+        cover_letter: leaving.cover_letter,
+      })
+      .catch(() => undefined);
+  }, [backend, resumeId]);
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
       // "error" too: a phone that went offline would otherwise close the tab on edits that never reached the server.

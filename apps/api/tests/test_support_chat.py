@@ -1,4 +1,4 @@
-"""Support chat: the bot answers from the help notes, a visitor can ask for a person, and an admin reply shows in the thread."""
+"""Support chat: the bot answers from the help notes, a visitor can ask for a person, and an admin can reply."""
 
 import uuid
 from collections.abc import Iterator
@@ -81,6 +81,13 @@ def test_bot_then_a_person(client: TestClient) -> None:
     seen = client.get(f"/v1/support/threads/{thread['id']}", params={"token": token})
     assert seen.status_code == 200
     assert seen.json()["messages"][-1]["text"].startswith("I can see the payment")
+    assert seen.headers["cache-control"] == "no-store"
+    via_header = client.get(
+        f"/v1/support/threads/{thread['id']}", headers={"X-Orbit-Support-Token": token},
+    )
+    assert via_header.status_code == 200
+    assert "token" not in str(via_header.request.url)
+    assert client.get(f"/v1/support/threads/{thread['id']}").status_code == 404
 
 
 def test_signed_in_sees_their_balance_and_last_payment(client: TestClient) -> None:
@@ -197,3 +204,48 @@ def test_admin_sees_the_account_behind_the_chat(client: TestClient) -> None:
     assert user["email"] in account
     assert "20 interview minutes" in account
     assert "no payment yet" in account.lower() or "No payment" in account or "no payment" in account
+
+
+def test_export_includes_the_chat_and_deleting_the_account_removes_it(client: TestClient) -> None:
+    headers, user = _register(client, f"gone-{uuid.uuid4().hex[:8]}@example.com")
+    opened = client.post("/v1/support/threads", headers=headers)
+    assert opened.status_code == 201, opened.text
+    thread_id, token = opened.json()["id"], opened.json()["token"]
+    export = client.get("/v1/auth/me/export", headers=headers).json()
+    chat = export["support_chats"][0]
+    assert chat["id"] == thread_id and chat["email"] == user["email"]
+    assert "token" not in chat and "token_hash" not in chat
+    deleted = client.request("DELETE", "/v1/auth/me", headers=headers, json={"password": "correct horse battery"})
+    assert deleted.status_code == 204, deleted.text
+    assert client.get(f"/v1/support/threads/{thread_id}", params={"token": token}).status_code == 404
+
+
+def test_a_line_stays_after_one_already_dated_ahead(client: TestClient) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy import select
+
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import SupportMessage
+
+    opened = client.post("/v1/support/threads")
+    assert opened.status_code == 201, opened.text
+    thread_id, token = opened.json()["id"], opened.json()["token"]
+    greeting = opened.json()["messages"][0]["text"]
+    ahead = datetime.now(UTC) + timedelta(hours=2)
+
+    async def bump() -> None:
+        async with sessionmaker()() as db:
+            rows = (await db.scalars(select(SupportMessage).where(SupportMessage.thread_id == thread_id))).all()
+            for row in rows:
+                row.created_at = ahead
+            await db.commit()
+
+    client.portal.call(bump)  # type: ignore[union-attr]
+    sent = client.post(
+        f"/v1/support/threads/{thread_id}/messages",
+        json={"token": token, "text": "The next line"},
+    )
+    assert sent.status_code == 200, sent.text
+    texts = [m["text"] for m in sent.json()["messages"]]
+    assert texts.index(greeting) < texts.index("The next line")

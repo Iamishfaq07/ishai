@@ -59,12 +59,31 @@ def _hmac(secret: str, message: bytes) -> str:
 
 
 def checkout_signature_ok(order_id: str, payment_id: str, signature: str) -> bool:
-    """The checkout's proof that this order was paid with this payment."""
+    """Razorpay handed this payment id back for this order. Not proof the money was captured."""
     secret = get_settings().razorpay_key_secret
     if secret is None or not (order_id and payment_id and signature):
         return False
     expected = _hmac(secret.get_secret_value(), f"{order_id}|{payment_id}".encode())
     return hmac.compare_digest(expected, signature)
+
+
+async def fetch_payment(payment_id: str) -> dict[str, object]:
+    """The payment as Razorpay has it now: id, order_id, amount (paise), currency, status."""
+    s = get_settings()
+    if not (s.razorpay_key_id and s.razorpay_key_secret) or not payment_id.startswith("pay_"):
+        raise RazorpayError("Razorpay isn't set up")
+    async with httpx.AsyncClient(timeout=TIMEOUT_S, transport=transport) as http:
+        try:
+            r = await http.get(f"{API}/payments/{payment_id}",
+                               auth=(s.razorpay_key_id, s.razorpay_key_secret.get_secret_value()))
+        except httpx.HTTPError as e:
+            raise RazorpayError(f"couldn't reach Razorpay: {type(e).__name__}") from e
+    if r.status_code != 200:
+        raise RazorpayError(f"Razorpay said {r.status_code}")
+    data = r.json()
+    if not isinstance(data, dict) or data.get("id") != payment_id:
+        raise RazorpayError("Razorpay sent no payment")
+    return data
 
 
 def webhook_signature_ok(body: bytes, signature: str | None) -> bool:

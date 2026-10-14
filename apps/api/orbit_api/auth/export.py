@@ -11,6 +11,7 @@ from typing import Any
 
 from sqlalchemy import inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from orbit_api.models import (
     Answer,
@@ -29,6 +30,7 @@ from orbit_api.models import (
     SessionSummary,
     SessionTurn,
     Story,
+    SupportThread,
     UsageEvent,
     User,
     Workspace,
@@ -93,6 +95,12 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
                                                       .order_by(UsageEvent.created_at))).all()],
         "contact_messages": [_row(m) for m in (await db.scalars(select(ContactMessage).where(
             ContactMessage.user_id == user_id).order_by(ContactMessage.created_at))).all()],
+        "support_chats": [
+            {"id": t.id, "status": t.status, "name": t.name, "email": t.email, "updated_at": t.updated_at,
+             "messages": [_row(m) for m in t.messages]}
+            for t in (await db.scalars(
+                select(SupportThread).where(SupportThread.user_id == user_id)
+                .options(selectinload(SupportThread.messages)).order_by(SupportThread.created_at))).all()],
         "security_log": [{"action": a.action, "ip": a.ip, "at": a.created_at}
                          for a in (await db.scalars(select(AuditLog).where(AuditLog.user_id == user_id)
                                                     .order_by(AuditLog.created_at))).all()],

@@ -28,11 +28,19 @@ def rzp(enforce: None, monkeypatch: pytest.MonkeyPatch) -> Iterator[list[httpx.R
     monkeypatch.setattr(s, "razorpay_key_secret", SecretStr(KEY_SECRET))
     monkeypatch.setattr(s, "razorpay_webhook_secret", SecretStr(HOOK_SECRET))
     seen: list[httpx.Request] = []
+    orders: list[tuple[str, int]] = []
 
     def handle(request: httpx.Request) -> httpx.Response:
         seen.append(request)
+        if request.method == "GET" and "/payments/" in request.url.path:
+            pay_id = request.url.path.rsplit("/", 1)[-1]
+            order_id, amount = orders[-1]
+            return httpx.Response(200, json={"id": pay_id, "order_id": order_id, "amount": amount,
+                                             "currency": "INR", "status": "captured"})
         body = json.loads(request.content)
-        return httpx.Response(200, json={"id": f"order_{uuid.uuid4().hex[:14]}", "amount": body["amount"],
+        order_id = f"order_{uuid.uuid4().hex[:14]}"
+        orders.append((order_id, int(body["amount"])))
+        return httpx.Response(200, json={"id": order_id, "amount": body["amount"],
                                          "currency": "INR", "status": "created"})
 
     monkeypatch.setattr(razorpay, "transport", httpx.MockTransport(handle))
@@ -85,6 +93,53 @@ def test_a_paid_checkout_adds_the_pack_once(client: TestClient, rzp: list[httpx.
         "order_id": o["order_id"], "payment_id": "pay_X1", "signature": _sign(o["order_id"], "pay_X1")})
     assert again.status_code == 200 and _wallet(client, h) == after
     assert [x["status"] for x in client.get("/v1/billing/upi/orders", headers=h).json()] == ["approved"]
+
+
+def test_an_authorized_payment_does_not_add_credits(client: TestClient, rzp: list[httpx.Request],
+                                                    monkeypatch: pytest.MonkeyPatch) -> None:
+    h = _signup(client, _new_ip())
+    before = _wallet(client, h)["resume"]
+    o = client.post("/v1/billing/razorpay/orders", headers=h, json={"pack": "starter"}).json()
+
+    def authorized(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"id": "pay_auth", "order_id": o["order_id"], "amount": 199_900,
+                                         "currency": "INR", "status": "authorized"})
+
+    monkeypatch.setattr(razorpay, "transport", httpx.MockTransport(authorized))
+    held = client.post("/v1/billing/razorpay/verify", headers=h, json={
+        "order_id": o["order_id"], "payment_id": "pay_auth", "signature": _sign(o["order_id"], "pay_auth")})
+    assert held.status_code == 409
+    assert _wallet(client, h)["resume"] == before
+    # An authorized webhook must not grant either.
+    body = json.dumps({"event": "payment.captured", "payload": {"payment": {"entity": {
+        "id": "pay_auth", "order_id": o["order_id"], "amount": 199_900, "currency": "INR",
+        "status": "authorized"}}}}).encode()
+    sig = hmac.new(HOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
+    assert client.post("/v1/billing/webhook", content=body,
+                       headers={"X-Razorpay-Signature": sig, "Content-Type": "application/json"}).status_code == 200
+    assert _wallet(client, h)["resume"] == before
+
+
+def _signed(client: TestClient, event: dict[str, Any]) -> httpx.Response:
+    body = json.dumps(event).encode()
+    sig = hmac.new(HOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
+    return client.post("/v1/billing/webhook", content=body,
+                       headers={"X-Razorpay-Signature": sig, "Content-Type": "application/json"})
+
+
+def test_a_refund_is_recorded_and_credits_stay(client: TestClient, rzp: list[httpx.Request]) -> None:
+    h = _signup(client, _new_ip())
+    before = _wallet(client, h)["resume"]
+    o = client.post("/v1/billing/razorpay/orders", headers=h, json={"pack": "mini"}).json()
+    assert _hook(client, "payment.captured", o["order_id"], "pay_R1", 49_900).status_code == 200
+    assert _wallet(client, h)["resume"] == before + 5
+    refund = {"event": "refund.processed", "payload": {"refund": {"entity": {
+        "id": "rfnd_R1", "payment_id": "pay_R1", "amount": 49_900, "currency": "INR"}}}}
+    assert _signed(client, refund).json() == {"ok": True}
+    assert _signed(client, refund).json() == {"ok": True}
+    assert _wallet(client, h)["resume"] == before + 5
+    note = client.get("/v1/billing/upi/orders", headers=h).json()[0]["note"]
+    assert note == "Razorpay refunded ₹499 (rfnd_R1). Credits were not removed."
 
 
 def test_the_webhook_confirms_a_payment_whose_page_closed(client: TestClient, rzp: list[httpx.Request]) -> None:

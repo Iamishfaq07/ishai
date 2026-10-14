@@ -676,7 +676,7 @@ class SupportThread(TimestampMixin, Base):
     """A support chat. The bot answers until the visitor asks for a person (`status` becomes `waiting`).
 
     `token_hash` is the only proof a browser may read or write the thread (the raw token is never stored).
-    `user_id` is set when the visitor was signed in; deleting the account keeps the chat."""
+    `user_id` is set when the visitor was signed in. Deleting the account deletes the chat (auth/accounts.py)."""
 
     __tablename__ = "support_threads"
     __table_args__ = (Index("ix_support_threads_status_updated", "status", "updated_at"),)
