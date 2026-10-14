@@ -11,10 +11,11 @@ from tests.test_api import _register
 from tests.test_backend_hardening import _prod
 
 
-def test_proxy_secret_is_required_only_in_production() -> None:
+def test_a_weak_proxy_secret_is_ignored_in_production_and_defaulted_elsewhere() -> None:
+    # Production never trusts a missing, short, repetitive or development secret; it starts anyway (no proxy is
+    # trusted, main.py warns), since refusing to start took production down twice.
     for secret in (None, "", "x" * 40, "orbit-local-proxy-secret-for-development-only"):
-        with pytest.raises(ValueError, match="ORBIT_PROXY_SECRET"):
-            Settings(_env_file=None, **_prod(ORBIT_PROXY_SECRET=secret))
+        assert Settings(_env_file=None, **_prod(ORBIT_PROXY_SECRET=secret)).proxy_secret is None
     assert Settings(_env_file=None, ORBIT_ENV="test", ORBIT_PROXY_SECRET="").proxy_secret is not None
     assert Settings(_env_file=None, ORBIT_ENV="development", ORBIT_PROXY_SECRET=None).proxy_secret is not None
 

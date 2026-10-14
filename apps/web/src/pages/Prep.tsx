@@ -11,6 +11,7 @@ import {
   Target,
   Wand2,
   cx,
+  CompanyLogo,
   focusRing,
   practiceDocumentIds,
   splitPlaceholders,
@@ -374,7 +375,8 @@ export function PrepSection({
         <div className="space-y-3 animate-fade-up">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h3 className="font-display text-lg font-semibold">
+              <h3 className="flex flex-wrap items-center gap-x-2 font-display text-lg font-semibold">
+                {result.company && <CompanyLogo company={result.company} size="sm" />}
                 {result.questions.length} likely questions
                 {result.role ? ` · ${result.role}` : ""}
                 {result.company ? ` at ${result.company}` : ""}

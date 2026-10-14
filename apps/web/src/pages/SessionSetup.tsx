@@ -388,7 +388,7 @@ export function SessionSetupPage() {
                   ))}
                 </Select>
               </Field>
-              <Field label="Thinking" htmlFor="thinking" hint={THINKING_LEVELS.find((t) => t.value === thinking)?.hint}>
+              <Field label="Thinking effort" htmlFor="thinking" hint={THINKING_LEVELS.find((t) => t.value === thinking)?.hint}>
                 <Select
                   id="thinking"
                   value={thinking}
@@ -403,11 +403,6 @@ export function SessionSetupPage() {
                       {t.label}
                     </option>
                   ))}
-                </Select>
-              </Field>
-              <Field label="AI model" htmlFor="model" hint="Model routing is automatic: faster for behavioral, deeper for system design and coding.">
-                <Select id="model" disabled value="default">
-                  <option value="default">DeepSeek (default)</option>
                 </Select>
               </Field>
             </div>

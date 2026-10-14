@@ -771,7 +771,7 @@ export function SetupScreen({
           </label>
 
           <label className="block space-y-1">
-            <span className="text-xs font-medium">Thinking</span>
+            <span className="text-xs font-medium">Thinking effort</span>
             <select
               value={thinking}
               onChange={(e) => {

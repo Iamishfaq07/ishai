@@ -20,6 +20,7 @@ import {
   buttonClass,
   cx,
   focusRing,
+  spotlightMove,
 } from "@orbit/ui";
 import { Card, ErrorNote } from "../components/ui";
 import { PRODUCTS, ProductMark, type ProductId } from "../components/products";
@@ -407,7 +408,7 @@ function ProductRow({ product, status, children }: { product: ProductId; status:
   const { name } = PRODUCTS[product];
   const { glow, planet } = CORNER[product];
   return (
-    <div className="glass-panel lift group relative isolate flex flex-col overflow-hidden rounded-2xl p-5">
+    <div onPointerMove={spotlightMove} className="orbit-card orbit-spotlight lift group relative isolate flex flex-col overflow-hidden rounded-2xl p-5">
       <div
         aria-hidden="true"
         className={cx("absolute -right-12 -top-14 -z-10 h-56 w-56 rounded-full bg-[radial-gradient(closest-side,var(--tw-gradient-stops))] to-transparent", glow)}

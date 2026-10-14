@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { DefenseCard } from "@orbit/types";
 import { Button, ErrorNote, Textarea } from "./ui";
 import { focusRing } from "./cx";
+import { Dropzone } from "./Dropzone";
 
 interface Client {
   defenseNotes(id: string, notes: string): Promise<DefenseCard>;
@@ -29,10 +30,9 @@ export function DefenseWorkspace({ api, sessionId, capture }: { api: Client; ses
       <p className="text-xs text-zinc-500">Get a Defense Card before you explain the design. Uses one analysis from your screenshot allowance; failed assessments are refunded.</p>
       <label className="block text-sm">Architecture notes<Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} maxLength={file ? 5000 : 30_000}
         placeholder="Describe the services, data flow, traffic assumptions and failure handling." /></label>
-      <label className="block text-xs text-zinc-500">Diagram or code file (PNG, JPEG, PDF, DOCX, or text; max 5 MB)
-        <input type="file" disabled={busy} accept=".png,.jpg,.jpeg,.pdf,.docx,.txt,.md,.py,.js,.ts,.tsx,.jsx,.rs,.go,.java,.c,.cpp,.h,.sql,.sh,.yaml,.yml,.json"
-          onChange={(e) => { setFile(e.target.files?.[0] ?? null); setError(null); }} className="mt-2 block w-full text-xs" />
-      </label>
+      <Dropzone busy={busy} file={file} hint="Diagram or code file: PNG, JPEG, PDF, DOCX, or text; max 5 MB"
+        accept=".png,.jpg,.jpeg,.pdf,.docx,.txt,.md,.py,.js,.ts,.tsx,.jsx,.rs,.go,.java,.c,.cpp,.h,.sql,.sh,.yaml,.yml,.json"
+        onFile={(next) => { setFile(next); setError(null); }} />
       <div className="flex flex-wrap gap-2"><Button disabled={busy || (!file && notes.trim().length < 20)} onClick={() => void critique()}>{busy ? "Reviewing…" : "Build Defense Card"}</Button>
         {capture && <Button variant="secondary" disabled={busy} onClick={() => void critique(true)}>Capture diagram</Button>}
       </div>

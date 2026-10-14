@@ -61,6 +61,9 @@ export function withPageMeta(response, url) {
     .on('meta[property="og:title"]', content(meta.title))
     .on('meta[property="og:description"]', content(meta.description))
     .on('meta[property="og:url"]', content(`${url.origin}${meta.path === "/" ? "/" : meta.path}`))
-    .on('meta[property="og:image"]', content(`${url.origin}/og-image.png`))
+    .on('meta[name="twitter:title"]', content(meta.title))
+    .on('meta[name="twitter:description"]', content(meta.description))
+    .on('meta[property="og:image"]', content(`${url.origin}/og-image.jpg`))
+    .on('meta[name="twitter:image"]', content(`${url.origin}/og-image.jpg`))
     .transform(response);
 }

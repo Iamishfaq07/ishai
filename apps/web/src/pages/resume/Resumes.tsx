@@ -17,13 +17,14 @@ import {
   Trash2,
   UserRound,
   X,
+  CosmicEmptyState,
   LoadGate,
   Orb,
   confirmDialog,
   cx,
   focusRing,
 } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote, Field, Select, Textarea } from "../../components/ui";
+import { Button, Card, ErrorNote, Field, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText, formatDate } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
@@ -203,8 +204,8 @@ export function ResumeAiHomePage() {
         <ErrorNote onRetry={list.reload}>{errorText(list.error)}</ErrorNote>
       ) : !list.data?.length ? (
         !creating && (
-          <EmptyState
-            icon={FileText}
+          <CosmicEmptyState
+            variant="resume"
             title="No resumes yet"
             body="Start from scratch or import your PDF, Word file or LinkedIn profile. You get an ATS score out of 100, with a fix for every missing point."
             action={
