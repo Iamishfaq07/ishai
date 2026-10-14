@@ -40,6 +40,8 @@ import { OrbitalVisualizer, orbitalState } from "./OrbitalVisualizer";
 import { DeviceCaptureHealthPill, type CaptureHealth } from "./DeviceCaptureHealthPill";
 import { Teleprompter } from "./Teleprompter";
 import { TranscriptView } from "./TranscriptView";
+import { HeardBar } from "./HeardBar";
+import { useBargeIn } from "../live/bargeIn";
 import {
   BookOpen,
   ChevronLeft,
@@ -174,6 +176,24 @@ export function LivePanel(props: LivePanelProps) {
   const reader = useReadAloud();
   const selfSpeaking = voice.speaking || reader.status === "playing";
   useEffect(() => onInterviewerSpeaking?.(selfSpeaking), [selfSpeaking, onInterviewerSpeaking]);
+  // Barge-in: talking over the AI's voice stops it (speech synthesis can't be turned down mid-sentence), so the mic
+  // goes back to the transcriber at once, and the core shows an emerald listening ring for a moment.
+  const [heard, setHeard] = useState(false);
+  useBargeIn({
+    active: selfSpeaking,
+    analyser: props.analyser,
+    amplitude: props.audioAmplitude,
+    onBargeIn: () => {
+      voice.stop();
+      reader.stop();
+      setHeard(true);
+    },
+  });
+  useEffect(() => {
+    if (!heard) return;
+    const t = window.setTimeout(() => setHeard(false), 2000);
+    return () => window.clearTimeout(t);
+  }, [heard]);
   // Chat replies and screenshot answers aren't spoken to the interviewer: no checklist for those.
   const keyPoints = useKeyPointProgress(live, answer && (answer.source === "auto" || answer.source === "manual")
     ? answer : null);
@@ -184,6 +204,11 @@ export function LivePanel(props: LivePanelProps) {
     () => live.turnOrder.map((id) => live.turns[id]).filter((t): t is TurnView => Boolean(t) && !t?.echo),
     [live.turnOrder, live.turns],
   );
+  // Practice: the candidate's own turn while it's still being transcribed, shown as "Orbit heard…".
+  const liveCandidateText = useMemo(() => {
+    const t = turns[turns.length - 1];
+    return props.mockInterview && t && t.speaker === "candidate" && !t.final ? t.text : "";
+  }, [turns, props.mockInterview]);
   const liveInterviewerTurn = useMemo(() => {
     for (let i = turns.length - 1; i >= 0; i--) {
       const t = turns[i];
@@ -330,7 +355,9 @@ export function LivePanel(props: LivePanelProps) {
         data-tauri-drag-region={props.dragRegion ? "" : undefined}
         className="flex select-none items-center gap-1.5 border-b border-zinc-200 px-3 py-2.5 dark:border-white/[0.06] sm:gap-2.5 sm:px-4"
       >
-        <OrbitalVisualizer size={compact ? 30 : 42} state={orbitalState(live.state)} analyser={props.analyser} amplitude={props.audioAmplitude} />
+        <span className={cx("shrink-0 rounded-full", heard && "listen-ring")}>
+          <OrbitalVisualizer size={compact ? 30 : 42} state={heard ? "listening" : orbitalState(live.state)} analyser={props.analyser} amplitude={props.audioAmplitude} />
+        </span>
         {(compact || !wide) && <h1 className="sr-only">{props.title ?? "Orbit"}</h1>}
         {!compact && wide && (
           <h1
@@ -412,13 +439,16 @@ export function LivePanel(props: LivePanelProps) {
       <div className={cx("relative flex min-h-0 flex-1", sideVisible && "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]")}>
         <main className="flex min-h-0 min-w-0 flex-1 flex-col">
           {props.mockInterview ? (
-            <MockPanel
-              live={live}
-              actions={actions}
-              voice={voice}
-              ended={ended}
-              {...(props.onViewReport ? { onViewReport: props.onViewReport } : {})}
-            />
+            <>
+              {liveCandidateText && <HeardBar text={liveCandidateText} className="mx-3 mt-3 sm:mx-4" />}
+              <MockPanel
+                live={live}
+                actions={actions}
+                voice={voice}
+                ended={ended}
+                {...(props.onViewReport ? { onViewReport: props.onViewReport } : {})}
+              />
+            </>
           ) : (
           <>
           <QuestionCard question={question} liveTurn={liveInterviewerTurn} compact={compact} />

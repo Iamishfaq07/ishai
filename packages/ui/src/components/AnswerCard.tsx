@@ -7,6 +7,7 @@ import type {
 } from "@orbit/types";
 import { SIZE_HINTS } from "../live/answerSize";
 import type { KeyPointProgress } from "../live/coverage";
+import { StreamingText } from "./StreamingText";
 import { splitPlaceholders } from "../live/placeholders";
 import { READ_ALOUD_RATES, speechText } from "../live/readAloud";
 import type { AnswerView } from "../live/reducer";
@@ -51,12 +52,14 @@ export interface AnswerCardProps {
 }
 
 /** Answer text with "[fill in]" prompts rendered as distinct chips so they're never read out verbatim. */
-function Spoken({ text }: { text: string }) {
+function Spoken({ text, live = false }: { text: string; live?: boolean }) {
   return (
     <>
       {splitPlaceholders(text).map((part, i) =>
         part.kind === "text" ? (
-          <span key={i}>{part.text}</span>
+          <span key={i}>
+            <StreamingText text={part.text} live={live} />
+          </span>
         ) : (
           <span
             key={i}
@@ -450,7 +453,7 @@ export const AnswerCard = memo(function AnswerCard({
                   i === 0 ? "font-medium text-zinc-900 dark:text-zinc-50" : "text-zinc-800 dark:text-zinc-200",
                 )}
               >
-                <Spoken text={para} />
+                <Spoken text={para} live={answer.status === "streaming"} />
               </p>
             ))}
           </div>
@@ -476,7 +479,7 @@ export const AnswerCard = memo(function AnswerCard({
               <li key={i} className="flex gap-2 leading-snug text-zinc-800 dark:text-zinc-200">
                 <span className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-indigo-500" aria-hidden="true" />
                 <span>
-                  <Spoken text={point} />
+                  <Spoken text={point} live={answer.status === "streaming"} />
                 </span>
               </li>
             ))}
@@ -568,7 +571,7 @@ export const AnswerCard = memo(function AnswerCard({
           <div className="mt-3">
             {showExample ? (
               <p className="rounded-lg bg-zinc-50 p-3 text-sm leading-relaxed text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-                <Spoken text={a.example} />
+                <Spoken text={a.example} live={answer.status === "streaming"} />
               </p>
             ) : (
               <button
