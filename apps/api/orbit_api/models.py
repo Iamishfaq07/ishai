@@ -651,7 +651,8 @@ class ContactMessage(TimestampMixin, Base):
     __tablename__ = "contact_messages"
     __table_args__ = (Index("ix_contact_messages_status_created", "status", "created_at"),
                       Index("ix_contact_messages_network_created", "network_hash", "created_at"),
-                      Index("ix_contact_messages_created_at", "created_at"))
+                      Index("ix_contact_messages_created_at", "created_at"),
+                      Index("ux_contact_messages_source_thread", "source_support_thread_id", unique=True))
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True,
                                                 nullable=True)
@@ -670,6 +671,11 @@ class ContactMessage(TimestampMixin, Base):
     # Replies the admin sent from the Inbox: [{"at", "by", "text"}], oldest first.
     replies: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON(none_as_null=True))
     network_hash: Mapped[str | None] = mapped_column(String(64))
+    # Set when the message is a support chat's "talk to a person" ticket (support/routes.py handoff), not something
+    # typed on the Contact page: a copy of the chat. One ticket per chat (unique), and it goes with the chat: deleting
+    # the chat (or the account, which deletes its chats) deletes the copy (CASCADE).
+    source_support_thread_id: Mapped[str | None] = mapped_column(
+        ForeignKey("support_threads.id", ondelete="CASCADE", name="fk_contact_messages_source_thread"), nullable=True)
 
 
 class SupportThread(TimestampMixin, Base):

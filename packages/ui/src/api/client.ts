@@ -698,6 +698,12 @@ export function createApiClient(options: ApiClientOptions) {
         method: "POST",
         body: body({ token, name, email }),
       }),
+    /** Public: the visitor deletes their own chat (and the Orbit team's copy of it), with its token. */
+    supportDelete: (threadId: string, token: string) =>
+      json<void>(`/v1/support/threads/${encodeURIComponent(threadId)}`, {
+        method: "DELETE",
+        headers: { "X-Orbit-Support-Token": token },
+      }),
     /** Admin: chats waiting for a person, or every recent chat. */
     adminSupport: (only: "waiting" | "all" = "waiting") =>
       json<SupportAdminItem[]>(`/v1/admin/support?only=${only}`),

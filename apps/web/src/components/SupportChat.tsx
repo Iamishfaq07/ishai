@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { useLocation } from "react-router-dom";
 import type { SupportThread } from "@orbit/ui";
-import { ApiError, MessageCircle, Send, Skeleton, X, buttonClass, cx, focusRing } from "@orbit/ui";
+import { ApiError, MessageCircle, Send, Skeleton, Trash2, X, buttonClass, cx, focusRing } from "@orbit/ui";
 import { Input } from "./ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -93,6 +93,7 @@ export function SupportChat() {
   const [needEmail, setNeedEmail] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
@@ -281,6 +282,27 @@ export function SupportChat() {
     }
   }
 
+  /** Deletes this chat for good (and the copy the team got if a person was asked for), then starts a fresh one. */
+  async function deleteChat() {
+    if (!saved) return;
+    const mine = userId;
+    setBusy(true);
+    setError("");
+    try {
+      await api.supportDelete(saved.id, saved.token);
+    } catch (err) {
+      // Already gone (404) is what was asked for; anything else is said and nothing is cleared.
+      if (!(err instanceof ApiError && err.status === 404)) {
+        if (userNow.current === mine) setError(err instanceof Error ? err.message : "Couldn't delete this chat.");
+        setBusy(false);
+        return;
+      }
+    }
+    setConfirmDelete(false);
+    setBusy(false);
+    await restart();
+  }
+
   const signedIn = Boolean(user);
   const unread = !open && hasUnseenReply(thread, seenId);
 
@@ -308,10 +330,34 @@ export function SupportChat() {
             <button type="button" className={buttonClass("ghost", "sm")} onClick={() => setQuestions(true)}>
               Questions
             </button>
+            {saved && thread && (
+              <button
+                type="button"
+                className={buttonClass("ghost", "sm", "grid h-9 w-9 place-items-center p-0")}
+                onClick={() => setConfirmDelete(true)}
+                aria-label="Delete this chat"
+                title="Delete this chat"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
             <button type="button" className={buttonClass("ghost", "sm", "grid h-9 w-9 place-items-center p-0")} onClick={() => setOpen(false)} aria-label="Close support">
               <X className="h-4 w-4" />
             </button>
           </header>
+          {confirmDelete && (
+            <div role="alertdialog" aria-label="Delete this chat?" className="flex flex-wrap items-center gap-2 border-b border-zinc-200 bg-rose-500/5 px-4 py-2 text-xs dark:border-white/10">
+              <p className="min-w-0 flex-1 text-zinc-700 dark:text-zinc-200">
+                Delete this chat{thread?.status === "bot" ? "" : " and the Orbit team's copy of it"}? This can't be undone.
+              </p>
+              <button type="button" className={buttonClass("danger", "sm")} onClick={() => void deleteChat()} disabled={busy}>
+                Delete
+              </button>
+              <button type="button" className={buttonClass("ghost", "sm")} onClick={() => setConfirmDelete(false)} disabled={busy} autoFocus>
+                Keep
+              </button>
+            </div>
+          )}
           <div ref={scroller} role="log" aria-live="polite" aria-relevant="additions" className="flex-1 space-y-2 overflow-y-auto px-3 py-3">
             {(thread?.messages ?? []).map((m) => (
               <p

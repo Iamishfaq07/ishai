@@ -52,7 +52,7 @@ Orbit is for students and job seekers, including people under 18. Sign-up does n
 birth. A parent can ask for an account to be deleted from the contact page.
 
 Deleting an account cascades to every row above (`ON DELETE CASCADE`), and deletes support chats you started while
-signed in (they name you and keep what you wrote). Contact messages are the exception below. The export includes
+signed in (they name you and keep what you wrote), with the Inbox copy made when one asked for a person. Contact messages are the exception below. The export includes
 everything above, plus those support chats, except secrets (the password hash, the support-chat token) and derived
 search data (chunk embeddings). The documents' full text is included instead.
 
@@ -69,11 +69,29 @@ for the admin to answer in the console's Inbox; **no email is sent when one arri
 - **How long:** a message marked done or spam is deleted 12 months after that (`ORBIT_CONTACT_RETENTION_DAYS`,
   default 365, by the server's periodic sweep); new and open ones stay until handled. The admin can delete any
   message at any time.
-- **Deleting the account** keeps its messages, with the link to the account cleared (`ON DELETE SET NULL`): they
-  were written to Orbit, and an open question shouldn't vanish. The sender can ask, from the Contact page, for one
-  to be deleted.
+- **Deleting the account** keeps the messages typed on the Contact page, with the link to the account cleared
+  (`ON DELETE SET NULL`): they were written to Orbit, and an open question shouldn't vanish. The sender can ask, from
+  the Contact page, for one to be deleted.
 - **The export** includes the account's own messages (sent while signed in) and the replies it was emailed, not the
   admin's note or the network hash.
+
+## Support chat
+The chat bubble (`support/routes.py`) works signed in or out; the browser keeps the chat's token, the only way back
+into it (sent in the `X-Orbit-Support-Token` header).
+- **What's kept:** the chat's lines (`support_threads`, `support_messages`), the name and email given, and, signed
+  in, the account link.
+- **Asking for a person** makes one Inbox ticket for the chat: a copy of the chat so far (up to 3,000 characters) in
+  `contact_messages`, marked with the chat it came from (`source_support_thread_id`, one ticket per chat however many
+  times the button is pressed). This copy is not a Contact page message: it lives and dies with its chat.
+- **Deleting:** the visitor can delete their own chat from the chat panel (the bin icon), signed in or not; that
+  deletes its lines and its Inbox ticket. Deleting the account deletes every chat started while signed in, with their
+  tickets, in the same transaction. The admin can delete a chat on request (a guest writing in), ticket included.
+- **How long:** a chat nobody is waiting on (the bot's, or closed) is deleted, with its ticket, after
+  `ORBIT_CONTACT_RETENTION_DAYS` (default 365) without activity. A chat waiting for a person stays until handled.
+- **The export** includes the account's chats (without the token) and, under `contact_messages`, each ticket with its
+  `source_support_thread_id`, so the copy is identifiable as a copy.
+- **Backups:** database backups taken before a deletion still hold the deleted rows until they expire on the
+  provider's schedule (Neon's point-in-time history); deletion is not retroactive into those.
 
 ## What the server's admin sees and can do
 The person who runs the server (`ORBIT_ADMIN_EMAIL`) has an admin console (`admin/accounts.py`, `admin/routes.py`):

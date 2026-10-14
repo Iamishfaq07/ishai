@@ -9,7 +9,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import jobs
 from orbit_api.auth import email_tokens
-from orbit_api.models import AuditLog, CreditEntry, LiveSessionRow, ProviderRequest, SupportMessage, SupportThread, User
+from orbit_api.models import (
+    AuditLog,
+    ContactMessage,
+    CreditEntry,
+    LiveSessionRow,
+    ProviderRequest,
+    SupportMessage,
+    SupportThread,
+    User,
+)
 from orbit_api.sessions.routes import stop_live, stop_user_live
 
 
@@ -53,7 +62,9 @@ async def delete_account(db: AsyncSession, user: User, audit: AuditLog) -> None:
     """Deletes the account and, via ON DELETE CASCADE, every document, session, resume, story, workspace, job-search
     row, usage row and emailed link, after stopping its live work. Callers check who may do it first. Commits.
 
-    - support chats (deleted here, with their messages): they name the person and keep what they wrote.
+    - support chats (deleted here, with their messages and the Inbox ticket each "talk to a person" made, which is
+      a copy of the chat): they name the person and keep what they wrote. Messages typed on the Contact page are
+      the sender's own correspondence and stay without the account link (ContactMessage).
     Kept on purpose, with nothing personal left in them:
     - payments (ON DELETE SET NULL): the revenue history and each UTR's unique row stay, so a transfer can't be
       submitted again from a new account;
@@ -66,6 +77,9 @@ async def delete_account(db: AsyncSession, user: User, audit: AuditLog) -> None:
     await stop_account_live(db, user_id)
     # Support chats name the person and keep what they wrote. The account asked to be deleted, so the chats go too.
     thread_ids = select(SupportThread.id).where(SupportThread.user_id == user_id)
+    # The Inbox copy of each chat goes with it, in this transaction (the foreign key also cascades; this doesn't
+    # rely on it).
+    await db.execute(delete(ContactMessage).where(ContactMessage.source_support_thread_id.in_(thread_ids)))
     await db.execute(delete(SupportMessage).where(SupportMessage.thread_id.in_(thread_ids)))
     await db.execute(delete(SupportThread).where(SupportThread.user_id == user_id))
     await db.delete(user)

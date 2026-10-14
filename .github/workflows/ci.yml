@@ -48,6 +48,11 @@ jobs:
         run: |
           uv run alembic upgrade head
           uv run alembic downgrade base
+      # The tests whose point is locking and unique constraints (one support ticket per chat under a burst of
+      # requests, account deletion taking the chat's Inbox copy), on Postgres as well as SQLite.
+      - name: Race and lifecycle tests on Postgres
+        env: { ORBIT_TEST_DATABASE_URL: "postgresql+asyncpg://orbit:orbit@localhost:5432/orbit" }
+        run: uv run pytest -q tests/test_support_lifecycle.py
 
   frontend:
     runs-on: ubuntu-latest

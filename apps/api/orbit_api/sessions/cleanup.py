@@ -68,6 +68,7 @@ async def end_abandoned_sessions(now: datetime | None = None) -> int:
 
 async def sweeper(interval_s: float) -> None:
     from orbit_api.contact.routes import purge_expired_messages
+    from orbit_api.support.routes import purge_idle_threads_now
 
     while True:
         try:
@@ -83,6 +84,13 @@ async def sweeper(interval_s: float) -> None:
             raise
         except Exception:
             log.exception("contact retention sweep failed")
+        # And support chats nobody is waiting on, idle that long, go with their Inbox tickets.
+        try:
+            await purge_idle_threads_now()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("support retention sweep failed")
         await asyncio.sleep(interval_s)
 
 
