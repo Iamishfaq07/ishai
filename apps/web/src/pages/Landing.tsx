@@ -398,7 +398,8 @@ function Faq({ welcome, stats, cards = false, abroad = false }: {
             : abroad
               ? " a debit or credit card from any country (charged in Indian rupees; your bank converts it)."
               : " for now an Indian card, UPI or netbanking; cards from other countries are coming soon."}{" "}
-          The credits are added the moment the payment goes through. Nothing renews, and what you buy never expires.
+          The credits are added as soon as Razorpay confirms the payment, usually within seconds. Nothing renews, and
+          what you buy never expires.
         </p>
       ) : india ? (
         <p>

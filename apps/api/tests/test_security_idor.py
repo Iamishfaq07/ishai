@@ -545,6 +545,7 @@ ADMIN_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("POST", "/v1/admin/support/{target_thread}/reply", {"json": {"text": "idor check"}}),
     ("POST", "/v1/admin/support/{target_thread}/close", {}),
     ("DELETE", "/v1/admin/support/{target_thread}", {}),
+    ("POST", "/v1/admin/payments/reconcile", {}),
 ]
 ADMIN_IDS = [f"{m} {p} {json.dumps(k.get('json', ''))[:40]}" for m, p, k in ADMIN_ROUTES]
 

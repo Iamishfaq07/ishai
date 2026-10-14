@@ -2,6 +2,7 @@
 set up (billing/razorpay.py, confirmed by Razorpay's signature), else over UPI (billing/upi.py, approved by the
 admin). Limits and features never come from clients; a payment changes nothing until it's confirmed."""
 
+import hashlib
 import json
 import logging
 from datetime import UTC, datetime
@@ -9,19 +10,19 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits, entitlements
 from orbit_api.admin.routes import require_admin
 from orbit_api.auth.security import current_user
-from orbit_api.billing import razorpay, upi
+from orbit_api.billing import razorpay, settle, upi
 from orbit_api.billing.packs import packs, public_packs
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.entitlements import active_grant, plan_named
-from orbit_api.models import AuditLog, Payment, User
+from orbit_api.models import AuditLog, Payment, PaymentEvent, PaymentRefund, User
 from orbit_api.providers.email import OutgoingEmail, send_safely
 from orbit_api.ratelimit import limit_user
 
@@ -53,7 +54,7 @@ async def my_entitlements(user: Annotated[User, Depends(current_user)],
 
 # ---- UPI ---------------------------------------------------------------------------------------------------------
 
-PaymentStatus = Literal["awaiting_payment", "submitted", "approved", "rejected"]
+PaymentStatus = Literal["awaiting_payment", "submitted", "approved", "rejected", "processing", "expired"]
 
 
 class UpiOrderOut(BaseModel):
@@ -71,6 +72,7 @@ class UpiOrderOut(BaseModel):
     submitted_at: datetime | None
     decided_at: datetime | None
     method: str = "upi"  # "upi" (a UTR the admin checks) or "razorpay" (confirmed by Razorpay)
+    refunded_inr: int = 0  # refunds that went through (credits are kept: docs/BILLING.md, refund policy)
     # How to pay; only while there's still something to pay (not once it's submitted or approved). The app shows
     # `upi_uri` as a QR, and as a tap-through link on phones.
     upi_id: str | None = None
@@ -91,7 +93,8 @@ def _order_out(p: Payment) -> UpiOrderOut:
                       interview_minutes=p.interview_minutes, reference=p.reference, status=p.status, utr=p.utr,
                       note=p.note, created_at=upi.aware(p.created_at),
                       submitted_at=upi.aware(p.submitted_at) if p.submitted_at else None,
-                      decided_at=upi.aware(p.decided_at) if p.decided_at else None, method=p.method or "upi")
+                      decided_at=upi.aware(p.decided_at) if p.decided_at else None, method=p.method or "upi",
+                      refunded_inr=(p.refunded_paise or 0) // 100)
     s = get_settings()
     if p.status in ("awaiting_payment", "rejected") and s.upi_id and out.method == "upi":
         out.upi_id, out.payee_name, out.upi_uri = s.upi_id, s.upi_name, upi.upi_uri(p, label)
@@ -134,8 +137,9 @@ async def my_orders(user: Annotated[User, Depends(current_user)],
     """Newest first: what's waiting to be paid, waiting for the admin, approved or rejected."""
     rows = (await db.scalars(select(Payment).where(Payment.user_id == user.id)
                              .order_by(Payment.created_at.desc()).limit(20))).all()
-    # A Razorpay checkout that was opened and closed unpaid is nothing to show.
-    return [_order_out(p) for p in rows if not (p.method == "razorpay" and p.status == "awaiting_payment")]
+    # A Razorpay checkout that was opened and closed unpaid is nothing to show; one being confirmed is.
+    return [_order_out(p) for p in rows
+            if not (p.method == "razorpay" and p.status in ("awaiting_payment", "expired"))]
 
 
 class UtrIn(BaseModel):
@@ -230,44 +234,12 @@ async def razorpay_order(body: OrderIn, user: Annotated[User, Depends(current_us
                        currency="INR", label=f"{pack.label} pack", email=user.email, name=user.name)
 
 
-async def _paid(db: AsyncSession, p: Payment, gateway_payment_id: str, background: BackgroundTasks) -> bool:
-    """Razorpay says this order is paid: approve it and add the pack's credits, once. False if it already was (or
-    the account is gone)."""
-    now = datetime.now(UTC)
-    done = await db.execute(
-        update(Payment).where(Payment.id == p.id, Payment.status == "awaiting_payment")
-        .values(status="approved", submitted_at=now, decided_at=now, gateway_payment_id=gateway_payment_id))
-    if done.rowcount != 1:  # type: ignore[attr-defined]
-        await db.rollback()
-        return False
-    u = await db.get(User, p.user_id) if p.user_id else None
-    if u is None:
-        await db.commit()  # paid, but the account was deleted: kept for the records
-        return False
-    if p.resume_credits:
-        credits.add(db, u.id, "resume", p.resume_credits, "purchase", payment_id=p.id)
-    if p.interview_minutes:
-        credits.add(db, u.id, "interview_seconds", p.interview_minutes * 60, "purchase", payment_id=p.id)
-    u.approved = True
-    db.add(AuditLog(user_id=u.id, action="payment.razorpay",
-                    target=f"{p.id} {p.plan} ₹{p.amount_inr} {gateway_payment_id}"))
-    try:
-        await db.commit()
-    except IntegrityError:  # credited a moment ago by the other confirmation (checkout vs webhook)
-        await db.rollback()
-        return False
-    web = get_settings().web_url.rstrip("/")
-    background.add_task(send_safely, OutgoingEmail(
-        to=u.email, subject=f"Payment received: {_what(p)} added to Orbit",
-        text=(f"Thanks! We received your ₹{p.amount_inr} payment (Razorpay {gateway_payment_id}).\n\n"
-              f"Your account now has {_what(p)} more. They don't expire. Sign in to use them: {web}/login")))
-    return True
-
-
 @router.post("/billing/razorpay/verify", response_model=UpiOrderOut, dependencies=[Depends(utr_limit)])
 async def razorpay_verify(body: VerifyIn, background: BackgroundTasks, user: Annotated[User, Depends(current_user)],
                           db: Annotated[AsyncSession, Depends(get_db)]) -> UpiOrderOut:
-    """The checkout's "paid": checked against Razorpay's signature, then the pack's credits land."""
+    """The checkout's "paid": checked against Razorpay's signature, then against the payment as Razorpay has it. A
+    capture adds the pack. A payment not captured yet (or Razorpay not answering) leaves the order `processing`:
+    the webhook or the reconciler (billing/settle.py) adds the pack once it's captured, never the browser's word."""
     if not razorpay.checkout_signature_ok(body.order_id, body.payment_id, body.signature):
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             "We couldn't confirm that payment. If money left your account, contact us with the "
@@ -275,59 +247,91 @@ async def razorpay_verify(body: VerifyIn, background: BackgroundTasks, user: Ann
     p = await db.scalar(select(Payment).where(Payment.gateway_order_id == body.order_id))
     if p is None or p.user_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found.")
-    if p.status == "awaiting_payment":
+    if p.status in settle.CREDITABLE:
         try:
             payment = await razorpay.fetch_payment(body.payment_id)
         except razorpay.RazorpayError as e:
-            log.warning("razorpay verify: couldn't read %s (%s)", body.payment_id, e)
-            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
-                                "We couldn't confirm that payment with Razorpay yet. If money left your account, "
-                                "it will be added once the payment is captured.") from e
-        captured = (str(payment.get("status")) == "captured" and str(payment.get("order_id")) == body.order_id
-                    and str(payment.get("currency")) == "INR" and payment.get("amount") == p.amount_inr * 100)
-        if not captured:
-            # A valid checkout signature only means Razorpay created the payment. "authorized" is not captured:
-            # the bank can still fail it, so credits wait for capture (the webhook, or a later verify).
+            log.warning("razorpay verify: couldn't read %s (%s); left processing", body.payment_id, e)
+            await settle.hold(db, p, body.payment_id)
+            return _order_out(p)
+        if settle.captured_for(p, payment):
+            mail = await settle.credit(db, p, body.payment_id)
+            if mail is not None:
+                background.add_task(send_safely, mail)
+        elif str(payment.get("status")) == "failed":
             raise HTTPException(status.HTTP_409_CONFLICT,
-                                "The payment isn't captured yet, so nothing was added. If money left your account, "
-                                "it will show here once Razorpay captures it.")
-        await _paid(db, p, body.payment_id, background)
+                                "That payment failed at the bank, so nothing was added and nothing was charged.")
+        else:
+            # "authorized" isn't captured: the bank can still fail it, so credits wait for the capture.
+            await settle.hold(db, p, body.payment_id)
     await db.refresh(p)
     return _order_out(p)
 
 
-async def _refund_noted(db: AsyncSession, event: dict[str, Any]) -> None:
-    """A refund went out. Credits stay: they may already be spent. The note and the audit row are the record, once."""
+def _event_id(request: Request, raw: bytes) -> str:
+    """Razorpay's id for the event (the same on every redelivery), or a hash of the signed body without one."""
+    given = (request.headers.get("X-Razorpay-Event-Id") or "").strip()
+    if given and len(given) <= 80:
+        return given
+    return "sha256:" + hashlib.sha256(raw).hexdigest()
+
+
+def _event_data(event: dict[str, Any]) -> tuple[str, str | None, dict[str, Any]]:
+    """The event's type, its entity id, and the ids, amounts and statuses worth keeping (no payer details)."""
+    kind = str(event.get("event") or "")[:40]
+    payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+    kept: dict[str, Any] = {}
+    entity_id: str | None = None
+    for name in ("refund", "payment", "order"):
+        part = payload.get(name) if isinstance(payload, dict) else None
+        entity = part.get("entity") if isinstance(part, dict) else None
+        if isinstance(entity, dict):
+            kept[name] = {k: entity.get(k) for k in ("id", "order_id", "payment_id", "amount", "currency", "status")
+                          if entity.get(k) is not None}
+            entity_id = entity_id or (str(entity.get("id"))[:40] if entity.get("id") else None)
+    return kind, entity_id, kept
+
+
+async def _apply(db: AsyncSession, event: dict[str, Any], background: BackgroundTasks) -> str:
+    """What one webhook event does: "processed", "ignored" or "unmatched"."""
+    kind = event.get("event")
+    payload = event.get("payload") or {}
+    if isinstance(kind, str) and kind.startswith("refund."):
+        try:
+            refund = payload["refund"]["entity"]
+        except (KeyError, TypeError):
+            return "ignored"
+        return await settle.record_refund(db, refund)
+    if kind not in ("payment.captured", "order.paid"):
+        return "ignored"
     try:
-        refund = event["payload"]["refund"]["entity"]
-        refund_id = str(refund["id"])
-        payment_id = str(refund.get("payment_id") or "")
-        amount = int(refund.get("amount") or 0)
-    except (KeyError, TypeError, ValueError):
-        return
-    if not refund_id.startswith("rfnd_") or not payment_id:
-        return
-    p = await db.scalar(select(Payment).where(Payment.gateway_payment_id == payment_id))
+        entity = payload["payment"]["entity"]
+        order_id, payment_id = str(entity["order_id"]), str(entity["id"])
+    except (KeyError, TypeError):
+        return "ignored"  # an event without a payment in it: nothing to do
+    p = await db.scalar(select(Payment).where(Payment.gateway_order_id == order_id))
     if p is None:
-        log.warning("razorpay refund %s for an unknown payment %s", refund_id, payment_id)
-        return
-    seen = await db.scalar(select(AuditLog.id).where(
-        AuditLog.action == "payment.refunded", AuditLog.target.contains(refund_id)))
-    if seen is not None:
-        return
-    rupees = amount // 100 if amount else p.amount_inr
-    if not p.note:
-        p.note = f"Razorpay refunded ₹{rupees} ({refund_id}). Credits were not removed."[:300]
-    db.add(AuditLog(user_id=p.user_id, action="payment.refunded",
-                    target=f"{p.id} {refund_id} ₹{rupees} credits kept"))
-    await db.commit()
+        return "unmatched"
+    if p.status not in settle.CREDITABLE:
+        return "processed"  # credited already (or by the checkout a moment ago)
+    if not settle.captured_for(p, entity):
+        if entity.get("amount") != p.amount_inr * 100 or str(entity.get("currency")) != "INR":
+            log.warning("razorpay webhook: %s paid %s %s, expected %s paise INR", order_id, entity.get("amount"),
+                        entity.get("currency"), p.amount_inr * 100)
+        return "ignored"
+    mail = await settle.credit(db, p, payment_id)
+    if mail is not None:
+        background.add_task(send_safely, mail)
+    return "processed"
 
 
 @router.post("/billing/webhook", include_in_schema=False)
 async def razorpay_webhook(request: Request, background: BackgroundTasks,
                            db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, bool]:
-    """Razorpay's webhook (`payment.captured`, `order.paid`): confirms a payment whose page closed before the
-    checkout could. Signed with the webhook secret; anything else is refused."""
+    """Razorpay's webhook (`payment.captured`, `order.paid`, `refund.*`), checked against the signature of the raw
+    body. Each event is recorded once by its id (PaymentEvent): a redelivery of one already applied changes nothing;
+    one that couldn't be applied (its payment unknown, or an error) is tried again. An error answers 500 so Razorpay
+    redelivers it."""
     raw = await request.body()
     if not razorpay.webhook_signature_ok(raw, request.headers.get("X-Razorpay-Signature")):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bad signature.")
@@ -335,26 +339,34 @@ async def razorpay_webhook(request: Request, background: BackgroundTasks,
         event = json.loads(raw)
     except ValueError:
         return {"ok": True}
-    if event.get("event") == "refund.processed":
-        await _refund_noted(db, event)
+    if not isinstance(event, dict):
         return {"ok": True}
+    event_id = _event_id(request, raw)
+    kind, entity_id, kept = _event_data(event)
+    row = await db.scalar(select(PaymentEvent).where(PaymentEvent.event_id == event_id))
+    if row is not None and row.status in ("processed", "ignored"):
+        return {"ok": True}  # a redelivery of an event already applied
+    if row is None:
+        row = PaymentEvent(event_id=event_id, event=kind, entity_id=entity_id, data=kept, status="received")
+        db.add(row)
+        try:
+            await db.commit()
+        except IntegrityError:  # the same event arriving twice at once: the other delivery applies it
+            await db.rollback()
+            return {"ok": True}
+    row_id = row.id
     try:
-        entity = event["payload"]["payment"]["entity"]
-        order_id, payment_id, amount = str(entity["order_id"]), str(entity["id"]), int(entity["amount"])
-        currency, pay_status = str(entity.get("currency") or ""), str(entity.get("status") or "")
-    except (ValueError, KeyError, TypeError):
-        return {"ok": True}  # an event without a payment in it: nothing to do
-    if event.get("event") not in ("payment.captured", "order.paid"):
-        return {"ok": True}
-    if pay_status != "captured" or currency != "INR":
-        return {"ok": True}
-    p = await db.scalar(select(Payment).where(Payment.gateway_order_id == order_id))
-    if p is None or p.status != "awaiting_payment":
-        return {"ok": True}
-    if amount != p.amount_inr * 100:
-        log.warning("razorpay webhook: %s paid %s paise, expected %s", order_id, amount, p.amount_inr * 100)
-        return {"ok": True}
-    await _paid(db, p, payment_id, background)
+        outcome = await _apply(db, event, background)
+    except Exception as e:
+        await db.rollback()
+        await db.execute(update(PaymentEvent).where(PaymentEvent.id == row_id).values(
+            status="error", attempts=PaymentEvent.attempts + 1, error=f"{type(e).__name__}: {e}"[:300]))
+        await db.commit()
+        log.exception("razorpay webhook %s (%s) failed", event_id, kind)
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Couldn't apply the event; send it again.") from e
+    await db.execute(update(PaymentEvent).where(PaymentEvent.id == row_id).values(
+        status=outcome, attempts=PaymentEvent.attempts + 1, error=None, processed_at=datetime.now(UTC)))
+    await db.commit()
     return {"ok": True}
 
 
@@ -374,6 +386,11 @@ class AdminPaymentsOut(BaseModel):
     upi_configured: bool
     waiting: int
     payments: list[AdminPayment]
+    # Razorpay, for the admin to keep an eye on (billing/settle.py): orders whose payment isn't captured yet,
+    # webhook events that couldn't be applied, and refunds whose payment isn't known here.
+    processing: int = 0
+    events_to_review: int = 0
+    unlinked_refunds: int = 0
 
 
 async def _admin_payment(db: AsyncSession, p: Payment) -> AdminPayment:
@@ -397,11 +414,28 @@ async def admin_payments(_: Annotated[User, Depends(require_admin)], db: Annotat
     if only == "submitted":
         q = q.where(Payment.status == "submitted")
     else:
-        q = q.where(Payment.status != "awaiting_payment")  # orders nobody paid for are just noise
+        q = q.where(Payment.status.not_in(("awaiting_payment", "expired")))  # orders nobody paid for are noise
     rows = (await db.scalars(q)).all()
     waiting = len(rows) if only == "submitted" else len([p for p in rows if p.status == "submitted"])
+    processing = await db.scalar(select(func.count()).select_from(Payment).where(Payment.status == "processing"))
+    events = await db.scalar(select(func.count()).select_from(PaymentEvent).where(
+        PaymentEvent.status.in_(("unmatched", "error"))))
+    unlinked = await db.scalar(select(func.count()).select_from(PaymentRefund).where(
+        PaymentRefund.payment_id.is_(None)))
     return AdminPaymentsOut(upi_configured=bool(get_settings().upi_id), waiting=waiting,
-                            payments=[await _admin_payment(db, p) for p in rows])
+                            payments=[await _admin_payment(db, p) for p in rows], processing=int(processing or 0),
+                            events_to_review=int(events or 0), unlinked_refunds=int(unlinked or 0))
+
+
+@router.post("/admin/payments/reconcile")
+async def admin_reconcile(admin: Annotated[User, Depends(require_admin)],
+                          db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, int]:
+    """Asks Razorpay now about every open order that's due a check (the sweeper does this on its own every few
+    minutes). Credits only captures, once; safe to press any number of times."""
+    counts = await settle.reconcile(db)
+    db.add(AuditLog(user_id=admin.id, action="payment.reconcile", target=json.dumps(counts)[:200]))
+    await db.commit()
+    return counts
 
 
 class DecisionIn(BaseModel):
@@ -409,12 +443,6 @@ class DecisionIn(BaseModel):
     note: str | None = Field(None, max_length=300)
     # The UTR the admin checked against the bank statement: if the payer changed it meanwhile, nothing is decided.
     utr: str | None = Field(None, max_length=32)
-
-
-def _what(p: Payment) -> str:
-    parts = [f"{p.resume_credits} resume AI credits" if p.resume_credits else "",
-             f"{p.interview_minutes} interview minutes" if p.interview_minutes else ""]
-    return " and ".join(x for x in parts if x)
 
 
 @router.post("/admin/payments/{payment_id}", response_model=AdminPayment)
@@ -449,9 +477,9 @@ async def decide_payment(payment_id: str, body: DecisionIn, background: Backgrou
         if p.interview_minutes:
             credits.add(db, u.id, "interview_seconds", p.interview_minutes * 60, "purchase", payment_id=p.id)
         u.approved = True
-        mail = OutgoingEmail(to=u.email, subject=f"Payment received: {_what(p)} added to Orbit",
+        mail = OutgoingEmail(to=u.email, subject=f"Payment received: {settle.what(p)} added to Orbit",
                              text=(f"Thanks! We received your ₹{p.amount_inr} payment (UTR {p.utr}).\n\n"
-                                   f"Your account now has {_what(p)} more. They don't expire. "
+                                   f"Your account now has {settle.what(p)} more. They don't expire. "
                                    f"Sign in to use them: {web}/login"))
     else:
         reason = f"\n\nWhy: {note}" if note else ""

@@ -108,7 +108,8 @@ export default function HelpDialog({ open, onClose, onSearch }: { open: boolean;
             {razorpay ? (
               <Question q="I paid. When do my credits arrive?">
                 <p>
-                  The moment the payment goes through: they show on{" "}
+                  As soon as Razorpay confirms the payment, usually within seconds (a bank can take a few minutes; it
+                  says "Confirming with Razorpay" meanwhile). They show on{" "}
                   <Link to="/billing" onClick={onClose} className="font-medium text-indigo-700 underline dark:text-indigo-300">
                     Plan &amp; billing
                   </Link>

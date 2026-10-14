@@ -12,12 +12,16 @@ const TONE: Record<AdminPayment["status"], string> = {
   submitted: "bg-amber-500/10 text-amber-900 ring-amber-500/25 dark:text-amber-200",
   approved: "bg-emerald-500/10 text-emerald-800 ring-emerald-500/25 dark:text-emerald-300",
   rejected: "bg-rose-500/10 text-rose-800 ring-rose-500/25 dark:text-rose-300",
+  processing: "bg-amber-500/10 text-amber-900 ring-amber-500/25 dark:text-amber-200",
+  expired: "bg-zinc-500/10 text-zinc-600 ring-zinc-500/20 dark:text-zinc-300",
 };
 const LABEL: Record<AdminPayment["status"], string> = {
   awaiting_payment: "Not paid",
   submitted: "Check this",
   approved: "Approved",
   rejected: "Rejected",
+  processing: "Confirming",
+  expired: "Not paid",
 };
 
 /** Admin: UPI payments to match against the bank statement. Approving turns the plan on for the payer. */
@@ -27,8 +31,29 @@ export function AdminPaymentsPage() {
   const replace = (row: AdminPayment) =>
     list.setData((prev) => prev && { ...prev, payments: prev.payments.map((p) => (p.id === row.id ? row : p)) });
 
+  const [checking, setChecking] = useState(false);
+  const [checked, setChecked] = useState<string | null>(null);
+  const reconcile = async () => {
+    setChecking(true);
+    setChecked(null);
+    try {
+      const r = await api.adminReconcile();
+      setChecked(
+        r.checked || r.credited || r.expired || r.refunds_linked
+          ? `Asked Razorpay about ${r.checked} order${r.checked === 1 ? "" : "s"}: ${r.credited} credited, ${r.expired} expired, ${r.refunds_linked} refund${r.refunds_linked === 1 ? "" : "s"} linked${r.errors ? `, ${r.errors} couldn't be reached` : ""}.`
+          : "Nothing was due a check: open orders are asked about on a backoff, and none is waiting.",
+      );
+      list.reload();
+    } catch (err) {
+      setChecked(errorText(err));
+    } finally {
+      setChecking(false);
+    }
+  };
+
   if (list.error) return <ErrorNote onRetry={list.reload}>{errorText(list.error)}</ErrorNote>;
   const data = list.data;
+  const watch = data ? (data.processing ?? 0) + (data.events_to_review ?? 0) + (data.unlinked_refunds ?? 0) : 0;
   return (
     <>
       <PageHeader
@@ -41,6 +66,19 @@ export function AdminPaymentsPage() {
         <p className="mb-4 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">
           UPI isn't set up on this server, so nobody can pay. Set <code>ORBIT_UPI_ID</code> (and <code>ORBIT_UPI_NAME</code>) on the API.
         </p>
+      )}
+      {data && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl bg-zinc-500/5 p-3 text-sm ring-1 ring-zinc-500/15">
+          <p className="min-w-0 flex-1 text-zinc-600 dark:text-zinc-300">
+            {watch
+              ? `Razorpay: ${data.processing ?? 0} payment${data.processing === 1 ? "" : "s"} still being confirmed, ${data.events_to_review ?? 0} webhook event${data.events_to_review === 1 ? "" : "s"} to review, ${data.unlinked_refunds ?? 0} refund${data.unlinked_refunds === 1 ? "" : "s"} not matched to a payment yet.`
+              : "Razorpay: nothing waiting. Open orders are checked with Razorpay automatically every few minutes."}
+            {checked && <span role="status" className="mt-1 block text-xs">{checked}</span>}
+          </p>
+          <Button size="sm" variant="secondary" onClick={() => void reconcile()} disabled={checking}>
+            {checking ? "Checking…" : "Check with Razorpay now"}
+          </Button>
+        </div>
       )}
       <div role="tablist" aria-label="Which payments" className="mb-4 inline-flex gap-1 rounded-xl bg-zinc-500/10 p-1">
         {(["submitted", "all"] as const).map((id) => (
@@ -112,7 +150,10 @@ function PaymentRow({ payment: p, onChange }: { payment: AdminPayment; onChange:
           </p>
           <p className="mt-0.5 text-sm tabular-nums">
             {p.method === "razorpay" ? (
-              <>Paid through Razorpay, confirmed automatically · reference <strong>{p.reference}</strong></>
+              <>
+                Paid through Razorpay, confirmed automatically · reference <strong>{p.reference}</strong>
+                {!!p.refunded_inr && <> · refunded ₹{p.refunded_inr} (credits kept)</>}
+              </>
             ) : (
               <>
                 UTR <strong>{p.utr}</strong> · reference <strong>{p.reference}</strong>

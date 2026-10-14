@@ -609,7 +609,9 @@ export interface RazorpayPaid {
   signature: string;
 }
 
-export type UpiOrderStatus = "awaiting_payment" | "submitted" | "approved" | "rejected";
+/** UPI: awaiting_payment → submitted → approved | rejected. Razorpay: awaiting_payment → processing (Razorpay has the
+ *  payment, not captured yet) → approved, or expired (nobody paid the order). */
+export type UpiOrderStatus = "awaiting_payment" | "submitted" | "approved" | "rejected" | "processing" | "expired";
 
 /** A UPI payment for a credit pack: pay, give the UTR, the admin approves it, the credits land. */
 export interface UpiOrder {
@@ -630,6 +632,8 @@ export interface UpiOrder {
   decided_at: string | null;
   /** "upi" (a UTR the admin checks) or "razorpay" (confirmed by Razorpay). */
   method?: "upi" | "razorpay";
+  /** Refunds that went through, in rupees. The credits are kept (docs/BILLING.md). */
+  refunded_inr?: number;
   /** How to pay, while there's still something to pay. `upi_uri` is shown as a QR and, on phones, a tap-through link. */
   upi_id: string | null;
   payee_name: string | null;
@@ -651,6 +655,21 @@ export interface AdminPayments {
   /** Payments with a UTR waiting to be checked. */
   waiting: number;
   payments: AdminPayment[];
+  /** Razorpay orders whose payment isn't captured yet. */
+  processing?: number;
+  /** Razorpay webhook events that couldn't be applied (their payment unknown, or an error). */
+  events_to_review?: number;
+  /** Refunds whose payment isn't known here yet. */
+  unlinked_refunds?: number;
+}
+
+/** POST /v1/admin/payments/reconcile: what asking Razorpay about open orders did. */
+export interface ReconcileResult {
+  checked: number;
+  credited: number;
+  expired: number;
+  errors: number;
+  refunds_linked: number;
 }
 
 /** GET /v1/resumes/allowance: resume credits left (one per AI action), and the cheapest pack that adds more. */

@@ -8,6 +8,7 @@ import type {
   AdminConfigUpdate,
   AdminPayment,
   AdminPayments,
+  ReconcileResult,
   AdminStats,
   AdminUser,
   AdminUserDetail,
@@ -738,6 +739,8 @@ export function createApiClient(options: ApiClientOptions) {
     /** Admin: UPI payments ("submitted" = a UTR waiting to be checked). */
     adminPayments: (only: "submitted" | "all" = "submitted") =>
       json<AdminPayments>(`/v1/admin/payments?only=${only}`),
+    /** Admin: ask Razorpay now about open orders (the server also does this on its own every few minutes). */
+    adminReconcile: () => json<ReconcileResult>("/v1/admin/payments/reconcile", { method: "POST", body: body({}) }),
     /** `utr`: the one you checked against the bank statement; if the payer changed it since, nothing is decided. */
     decidePayment: (paymentId: string, action: "approve" | "reject", note?: string, utr?: string | null) =>
       json<AdminPayment>(`/v1/admin/payments/${encodeURIComponent(paymentId)}`, {
