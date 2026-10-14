@@ -376,6 +376,9 @@ class Resume(TimestampMixin, Base):
     # The cover letter written for this resume and job post (AI draft, then the user's edits).
     cover_letter: Mapped[str] = mapped_column(Text, default="", server_default="")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    # Bumped by every save. A save naming the revision it was based on is refused (409) if another save landed since
+    # (another tab, another device), so one can't silently overwrite the other (V3-06, resumes/routes.py).
+    revision: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
 class WorkspaceDocument(Base):

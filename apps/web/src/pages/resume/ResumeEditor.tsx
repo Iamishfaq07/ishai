@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { Link, useLocation, useParams } from "react-router-dom";
-import type { AtsReport, CoverLetterLength, CoverLetterTone, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
+import type { AtsReport, CoverLetterLength, CoverLetterTone, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeInput, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -44,7 +44,9 @@ import { announceOutOfCredits } from "../../lib/outOfCredits";
 import { jobsForResume, outreachPath } from "../jobs/paths";
 import { ContentForm } from "./ContentForm";
 import { AiCostNote, AiErrorNote, AllowanceBanner, AllowanceContext, isUpgradeError, useAllowance, useResumeAllowance } from "./allowance";
-import { useBackend } from "./backend";
+import { saveQueueFor, useBackend } from "./backend";
+import { drafts, type Draft } from "./saveQueue";
+import { useAuth } from "../../lib/auth";
 import { FixActions, FixResult, fixKind } from "./FixPanel";
 import { InterviewPrep, usePrepState } from "./InterviewPrep";
 import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, suggestedSkills } from "./model";
@@ -104,13 +106,20 @@ function ResumeEditor() {
   const [report, setReport] = useState<AtsReport | null>(null);
   // The resume the report scored: a line's writing issues show only while that line still reads the same.
   const [scored, setScored] = useState<ResumeData | null>(null);
-  const [save, setSave] = useState<{ state: "saved" | "saving" | "dirty" | "error"; error?: string; retry?: boolean }>({
+  const [save, setSave] = useState<{ state: SaveStatus; error?: string; retry?: boolean }>({
     state: "saved",
   });
-  // One save at a time: on a slow connection a second PUT could otherwise overtake the first and the older text would
-  // land last. When the running one finishes it bumps `flush`, which re-checks whether more edits are waiting.
+  // Saves go through one queue per resume (saveQueue.ts), shared with the save this editor makes as it closes and the
+  // next editor's: a resume never has two PUTs in flight, so an older one can't land last (V3-06). Each save names the
+  // revision it was based on; a save from another tab or device since then makes this one a conflict, not an overwrite.
+  // `saving` keeps one autosave per editor at a time; when it finishes it bumps `flush` to pick up newer edits.
+  const saves = saveQueueFor(backend);
+  const userId = useAuth().user?.id ?? null;
   const saving = useRef(false);
   const [flush, setFlush] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
+  // Edits this browser kept because the server never confirmed them (a failed save, a tab closed mid-save).
+  const [draft, setDraft] = useState<Draft<ResumeInput> | null>(null);
   const [queue, setQueue] = useState<ResumeSuggestion[]>([]);
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -137,13 +146,21 @@ function ResumeEditor() {
     setScored(null);
     history.current = { past: [], future: [], at: 0, el: null };
     setSteps({ undo: 0, redo: 0 });
-    backend
-      .get(requested)
+    setDraft(null);
+    // A save of this resume still on its way (from the editor just left, A → B → A) lands before it's read, or the
+    // editor would open the text from before it.
+    saves
+      .idle(requested)
+      .then(() => backend.get(requested))
       .then((loaded) => {
         // A slow fetch for the resume we left must not land on the one we opened, or its save would write the old text.
         if (cancel || loaded.id !== requested) return;
+        saves.setRevision(requested, loaded.revision);
         setResume(loaded);
         setSave({ state: "saved" });
+        const kept = drafts.load<ResumeInput>(userId, requested);
+        if (kept && sameText(kept.payload, payloadOf(loaded))) drafts.clear(userId, requested);
+        else if (kept) setDraft(kept);
       })
       .catch((err: unknown) => {
         if (!cancel) setLoadError(errorText(err));
@@ -151,7 +168,7 @@ function ResumeEditor() {
     return () => {
       cancel = true;
     };
-  }, [backend, resumeId]);
+  }, [backend, resumeId, reloadKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Undo/redo. Typing in one field is one step; a pause, another field or a button starts the next.
   const latest = useRef(resume);
@@ -220,21 +237,30 @@ function ResumeEditor() {
       if (saving.current || resume.id !== resumeId) return;
       saving.current = true;
       setSave({ state: "saving" });
-      const { title, data, design, job_text, cover_letter } = resume;
-      backend
-        .save(resume.id, { title: title.trim() || "Untitled resume", data, design, job_text, cover_letter })
-        .then(() => setSave((s) => (s.state === "saving" ? { state: "saved" } : s)))
-        // A dropped or stalled connection (status 0) is worth trying again on its own; a refusal is not.
-        .catch((err: unknown) =>
-          setSave({ state: "error", error: errorText(err), retry: err instanceof ApiError && err.status === 0 }),
-        )
+      const id = resume.id;
+      const payload = payloadOf(resume);
+      drafts.keep(userId, id, payload, saves.revision(id));
+      saves
+        .save(id, payload)
+        .then(() => {
+          drafts.clear(userId, id);
+          setSave((s) => (s.state === "saving" ? { state: "saved" } : s));
+        })
+        .catch((err: unknown) => {
+          if (err instanceof ApiError && err.status === 409) {
+            setSave({ state: "conflict" });
+            return;
+          }
+          // A dropped or stalled connection (status 0) is worth trying again on its own; a refusal is not.
+          setSave({ state: "error", error: errorText(err), retry: err instanceof ApiError && err.status === 0 });
+        })
         .finally(() => {
           saving.current = false;
           setFlush((n) => n + 1);
         });
     }, 900);
     return () => window.clearTimeout(t);
-  }, [backend, resume, resumeId, save.state, flush]);
+  }, [backend, resume, resumeId, save.state, flush]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // After a dropped connection, save again in a few seconds, or the moment the phone is back online.
   useEffect(() => {
@@ -250,43 +276,67 @@ function ResumeEditor() {
 
   // Don't lose the last edits when leaving mid-save.
   const unsaved = useRef(false);
-  unsaved.current = save.state === "dirty" || save.state === "error";
+  unsaved.current = save.state === "dirty" || save.state === "error" || save.state === "saving";
   const routeId = useRef(resumeId);
   useEffect(() => {
     const previous = routeId.current;
     routeId.current = resumeId;
     const leaving = latest.current;
     if (!shouldFlushResume(leaving?.id, resumeId, unsaved.current) || !leaving || leaving.id !== previous) return;
-    // The autosave timer is cleared by the route change, so write this resume before the next one replaces it.
-    void backend
-      .save(leaving.id, {
-        title: leaving.title.trim() || "Untitled resume",
-        data: leaving.data,
-        design: leaving.design,
-        job_text: leaving.job_text,
-        cover_letter: leaving.cover_letter,
-      })
+    // The autosave timer is cleared by the route change, so write this resume before the next one replaces it. It
+    // goes through the queue, after any autosave of it still in flight; the draft stays until the server confirms.
+    flushResume(leaving);
+  }, [backend, resumeId]); // eslint-disable-line react-hooks/exhaustive-deps
+  function flushResume(r: Resume) {
+    const payload = payloadOf(r);
+    drafts.keep(userId, r.id, payload, saves.revision(r.id));
+    void saves
+      .save(r.id, payload)
+      .then(() => drafts.clear(userId, r.id))
       .catch(() => undefined);
-  }, [backend, resumeId]);
+  }
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
       // "error" too: a phone that went offline would otherwise close the tab on edits that never reached the server.
-      if (save.state !== "saved") e.preventDefault();
+      if (save.state !== "saved") {
+        const r = latest.current;
+        if (r) drafts.keep(userId, r.id, payloadOf(r), saves.revision(r.id)); // kept if the tab does close
+        e.preventDefault();
+      }
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [save.state]);
+  }, [save.state]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(
     () => () => {
       const r = latest.current;
-      if (r && unsaved.current) {
-        void backend
-          .save(r.id, { title: r.title.trim() || "Untitled resume", data: r.data, design: r.design, job_text: r.job_text, cover_letter: r.cover_letter })
-          .catch(() => undefined);
-      }
+      if (r && unsaved.current) flushResume(r);
     },
-    [backend],
+    [backend], // eslint-disable-line react-hooks/exhaustive-deps
   );
+
+  /** Another tab or device saved this resume since it was opened: show theirs (this browser keeps a copy of these
+   *  edits, offered back on reopening), or save these over it. */
+  const loadLatest = () => {
+    const r = latest.current;
+    if (r) drafts.keep(userId, r.id, payloadOf(r), saves.revision(r.id));
+    setReloadKey((n) => n + 1);
+  };
+  const keepMine = () => {
+    const r = latest.current;
+    if (r) saves.setRevision(r.id, undefined); // the next save lands whatever was saved meanwhile
+    setSave({ state: "dirty" });
+  };
+  const restoreDraft = () => {
+    const r = latest.current;
+    if (!r || !draft) return;
+    change((cur) => ({ ...cur, ...draft.payload, cover_letter: draft.payload.cover_letter ?? cur.cover_letter }));
+    setDraft(null);
+  };
+  const discardDraft = () => {
+    if (resume) drafts.clear(userId, resume.id);
+    setDraft(null);
+  };
 
   // Re-score as you type (deterministic and cheap on the server). Only the latest edit's score matters: a new edit
   // cancels the request still running, so slow replies can't pile up or land after a newer one. After a slow (or failed)
@@ -527,7 +577,7 @@ function ResumeEditor() {
           onChange={(e) => change((r) => ({ ...r, title: e.target.value }))}
           className="max-w-xs font-display text-lg font-semibold"
         />
-        <SaveState state={save.state} error={save.error} onRetry={() => setSave({ state: "dirty" })} />
+        <SaveState state={save.state} error={save.error} onRetry={() => setSave({ state: "dirty" })} onLoadLatest={loadLatest} onKeepMine={keepMine} />
         <div className="flex items-center">
           <HistoryButton label="Undo" shortcut="Ctrl+Z" disabled={!steps.undo} onClick={() => step("undo")}>
             <Undo2 className="h-4 w-4" />
@@ -562,6 +612,20 @@ function ResumeEditor() {
 
       <AllowanceBanner />
 
+      {draft && (
+        <div role="alert" className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">
+          <span className="min-w-0 flex-1">
+            This browser kept edits to this resume from {new Date(draft.savedAt).toLocaleString()} that weren't saved.
+            {draft.baseRevision !== undefined && draft.baseRevision !== resume.revision ? " It has been saved elsewhere since; restoring puts your edits over that." : ""}
+          </span>
+          <Button size="sm" onClick={restoreDraft}>
+            Restore them
+          </Button>
+          <Button size="sm" variant="ghost" onClick={discardDraft}>
+            Discard
+          </Button>
+        </div>
+      )}
       {notice && (
         <div role="status" className="mb-4 flex items-start gap-2 rounded-xl bg-indigo-500/10 p-3 text-sm text-indigo-900 dark:text-indigo-200">
           <span className="flex-1">{notice}</span>
@@ -747,7 +811,45 @@ function HistoryButton({ label, shortcut, disabled, onClick, children }: { label
   );
 }
 
-function SaveState({ state, error, onRetry }: { state: "saved" | "saving" | "dirty" | "error"; error?: string; onRetry: () => void }) {
+type SaveStatus = "saved" | "saving" | "dirty" | "error" | "conflict";
+
+/** What's saved: the fields a save sends. */
+function payloadOf(r: Resume): ResumeInput {
+  return { title: r.title.trim() || "Untitled resume", data: r.data, design: r.design, job_text: r.job_text, cover_letter: r.cover_letter };
+}
+
+function sameText(a: ResumeInput, b: ResumeInput): boolean {
+  const pick = (x: ResumeInput) => JSON.stringify([x.title, x.data, x.design, x.job_text, x.cover_letter ?? ""]);
+  return pick(a) === pick(b);
+}
+
+function SaveState({
+  state,
+  error,
+  onRetry,
+  onLoadLatest,
+  onKeepMine,
+}: {
+  state: SaveStatus;
+  error?: string;
+  onRetry: () => void;
+  onLoadLatest: () => void;
+  onKeepMine: () => void;
+}) {
+  if (state === "conflict") {
+    return (
+      <span role="alert" className="inline-flex flex-wrap items-center gap-1.5 text-xs text-amber-800 dark:text-amber-200">
+        Saved in another tab or device since you opened it. Not saved here:
+        <button type="button" onClick={onLoadLatest} className={cx("rounded font-medium underline", focusRing)}>
+          Load the latest
+        </button>
+        or
+        <button type="button" onClick={onKeepMine} className={cx("rounded font-medium underline", focusRing)}>
+          Keep mine
+        </button>
+      </span>
+    );
+  }
   return (
     <span role="status" className={cx("text-xs", state === "error" ? "text-rose-600" : "text-zinc-500 dark:text-zinc-400")}>
       {state === "saved" ? (
