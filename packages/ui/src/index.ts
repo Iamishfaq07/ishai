@@ -3,7 +3,7 @@ export { AppearanceControls } from "./components/AppearanceControls";
 export { OrbitLogo, OrbitWordmark } from "./components/OrbitLogo";
 export { Orb, type OrbState } from "./components/Orb";
 export { CountUp, Reveal, useCountUp, useInView } from "./components/Reveal";
-export { SpaceBackdrop } from "./components/SpaceBackdrop";
+export { CosmicBackground, SpaceBackdrop } from "./components/SpaceBackdrop";
 export { PlanetHero, PulseRings, SpotIllustration } from "./components/Illustrations";
 export { SessionReview } from "./components/SessionReview";
 export { VerifyEmailBanner } from "./components/VerifyEmailBanner";

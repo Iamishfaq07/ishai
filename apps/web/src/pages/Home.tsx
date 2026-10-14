@@ -107,7 +107,11 @@ export function HomePage() {
 
       <FollowUps tracker={tracker} hideWhenEmpty />
 
-      {facts && <SetUp items={checklist(answers, facts)} />}
+      {facts ? (
+        <SetUp items={checklist(answers, facts)} />
+      ) : (
+        !setupHidden(user?.id) && <Skeleton variant="card" label="Loading your checklist" className="min-h-[26rem] rounded-2xl sm:min-h-[13rem]" />
+      )}
 
       <section aria-labelledby="products-title">
         <h2 id="products-title" className="mb-3 font-display text-lg font-semibold tracking-tight">
@@ -145,7 +149,9 @@ export function HomePage() {
 /** The one thing to do now, big, with the two after it as quiet links. */
 function NextStep({ steps, welcomed, askWelcome }: { steps: Step[] | null; welcomed: boolean; askWelcome: boolean }) {
   if (steps === null) {
-    return <Skeleton variant="card" label="Loading your next step" className="min-h-56" />;
+    // The height the card has when it arrives (measured: 493 px on a phone, 423 px from sm up), so nothing below it
+    // jumps when the lists answer.
+    return <Skeleton variant="card" label="Loading your next step" className="min-h-[31rem] rounded-3xl sm:min-h-[26.5rem]" />;
   }
   const [step, ...rest] = steps;
   if (!step) return <AllSet />;
@@ -269,6 +275,16 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
  * "Get set up": five steps across the products after the account, ticked from real data. A list until two are done,
  * then one compact line with the ring (the list a tap away). Gone once all are done, or for good when dismissed.
  */
+/** The checklist was dismissed on this device: no room is kept for it while Home loads. */
+function setupHidden(userId: string | undefined): boolean {
+  if (!userId) return true;
+  try {
+    return localStorage.getItem(checklistKey(userId)) === "1";
+  } catch {
+    return false;
+  }
+}
+
 function SetUp({ items }: { items: ChecklistItem[] }) {
   const { user } = useAuth();
   const key = user ? checklistKey(user.id) : "";

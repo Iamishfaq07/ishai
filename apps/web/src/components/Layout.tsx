@@ -348,7 +348,7 @@ export function Layout() {
 
       <AnnouncementBanner className="sm:px-6" />
 
-      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
+      <main id="main" className="mx-auto min-h-[100dvh] w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
         {copilot && (
           <ProductTabs
             label="Interview copilot"

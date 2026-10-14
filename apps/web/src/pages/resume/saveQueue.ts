@@ -64,14 +64,20 @@ export function createSaveQueue<P>(send: Send<P>): SaveQueue<P> {
     const controller = new AbortController();
     s.controller = controller;
     s.clientRevision += 1;
-    s.running = send(id, payload, s.revision, { signal: controller.signal, clientId: s.clientId, clientRevision: s.clientRevision })
+    const mine = s.clientRevision;
+    s.running = send(id, payload, s.revision, { signal: controller.signal, clientId: s.clientId, clientRevision: mine })
       .then((result) => {
         if (controller.signal.aborted) throw new DOMException("A newer edit superseded this save.", "AbortError");
         s.revision = result.revision;
         for (const w of waiters) w.resolve(result);
       })
       .catch((err: unknown) => {
-        for (const w of waiters) w.reject(err);
+        // A 409 for a save this tab already replaced (it was aborted, or a newer one is waiting) is the server
+        // refusing our own stale write, not another tab's edit: report it as superseded, which the editor ignores.
+        const status = (err as { status?: unknown } | null)?.status;
+        const superseded = status === 409 && (controller.signal.aborted || s.next !== null || s.clientRevision > mine);
+        const reason = superseded ? new DOMException("A newer edit superseded this save.", "AbortError") : err;
+        for (const w of waiters) w.reject(reason);
       })
       .finally(() => {
         s.running = null;

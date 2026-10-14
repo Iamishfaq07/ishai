@@ -256,7 +256,8 @@ function CustomMock({
   busy: boolean;
   onStart: (req: CreateSessionRequest) => void;
 }) {
-  const [role, setRole] = useState("");
+  // Frame 1 already shows the role a link or the profile gave (no empty field that fills in a moment later).
+  const [role, setRole] = useState(() => knownRole);
   const editedRole = useRef(false);
   useEffect(() => {
     if (!editedRole.current && knownRole) setRole(knownRole);

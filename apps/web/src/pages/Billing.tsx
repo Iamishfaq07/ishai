@@ -367,8 +367,10 @@ export function BillingPage() {
                   {bought}
                 </p>
               )}
-              <p className="text-xs text-zinc-500">
-                {list[0]?.checkout === "razorpay"
+              {/* Room for three lines is kept, and nothing is said until the packs say how they're paid: the UPI
+                  wording swapping to Razorpay's moved the page (layout shift). */}
+              <p className="min-h-[3.75rem] text-xs text-zinc-500 sm:min-h-[2.5rem]">
+                {!packs.data ? null : list[0]?.checkout === "razorpay"
                   ? `Pay once by card, UPI, netbanking or wallet, through Razorpay. ${
                       list[0]?.international
                         ? "Cards from outside India work too: you're charged in rupees and your bank converts it."

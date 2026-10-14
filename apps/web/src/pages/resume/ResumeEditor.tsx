@@ -591,7 +591,7 @@ function ResumeEditor() {
           onChange={(e) => change((r) => ({ ...r, title: e.target.value }))}
           className="max-w-xs font-display text-lg font-semibold"
         />
-        <SaveState state={save.state} error={save.error} onRetry={() => setSave({ state: "dirty" })} onLoadLatest={loadLatest} onKeepMine={keepMine} />
+        <SaveState state={save.state} revision={saves.revision(resume.id)} error={save.error} onRetry={() => setSave({ state: "dirty" })} onLoadLatest={loadLatest} onKeepMine={keepMine} />
         <div className="flex items-center">
           <HistoryButton label="Undo" shortcut="Ctrl+Z" disabled={!steps.undo} onClick={() => step("undo")}>
             <Undo2 className="h-4 w-4" />
@@ -840,12 +840,15 @@ function sameText(a: ResumeInput, b: ResumeInput): boolean {
 
 function SaveState({
   state,
+  revision,
   error,
   onRetry,
   onLoadLatest,
   onKeepMine,
 }: {
   state: SaveStatus;
+  /** The revision the server confirmed: shown as "Saved • v3". */
+  revision?: number;
   error?: string;
   onRetry: () => void;
   onLoadLatest: () => void;
@@ -865,11 +868,35 @@ function SaveState({
       </span>
     );
   }
+  if (state === "saved" || state === "saving" || state === "dirty") {
+    // One pill that changes in place: "Saving…" (a breathing dot), then "Saved • v3" as the check draws in. Typing
+    // ("dirty") keeps the last confirmed look until the save starts, so the bar doesn't flicker on every key.
+    const saved = state !== "saving";
+    return (
+      <span
+        role="status"
+        aria-live="polite"
+        className={cx(
+          "save-pill inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium tabular-nums ring-1 transition-colors duration-quick",
+          saved
+            ? "bg-emerald-500/10 text-emerald-800 ring-emerald-500/25 dark:text-emerald-200"
+            : "bg-zinc-500/10 text-zinc-600 ring-zinc-500/20 dark:text-zinc-300",
+        )}
+      >
+        {saved ? (
+          <svg key={revision ?? 0} viewBox="0 0 16 16" className="save-check h-3.5 w-3.5" aria-hidden="true">
+            <path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ) : (
+          <span className="save-dot h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+        )}
+        {saved ? <>Saved{revision ? <span className="opacity-70"> • v{revision}</span> : null}</> : "Saving…"}
+      </span>
+    );
+  }
   return (
     <span role="status" className={cx("text-xs", state === "error" ? "text-rose-600" : "text-zinc-500 dark:text-zinc-400")}>
-      {state === "saved" ? (
-        <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" /> Saved</span>
-      ) : state === "error" ? (
+      {state === "error" ? (
         <span className="inline-flex items-center gap-1.5">
           Not saved: {error ?? "try again"}
           <button type="button" onClick={onRetry} className={cx("rounded font-medium underline", focusRing)}>
