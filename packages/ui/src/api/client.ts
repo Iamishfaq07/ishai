@@ -685,7 +685,9 @@ export function createApiClient(options: ApiClientOptions) {
     supportOpen: (page?: string) =>
       json<SupportThread>(`/v1/support/threads${queryString({ page })}`, { method: "POST", body: body({}) }),
     supportRead: (threadId: string, token: string, page?: string) =>
-      json<SupportThread>(`/v1/support/threads/${encodeURIComponent(threadId)}${queryString({ token, page })}`),
+      json<SupportThread>(`/v1/support/threads/${encodeURIComponent(threadId)}${queryString({ page })}`, {
+        headers: { "X-Orbit-Support-Token": token },
+      }),
     supportSend: (threadId: string, token: string, text: string, choice?: string, page?: string) =>
       json<SupportThread>(`/v1/support/threads/${encodeURIComponent(threadId)}/messages`, {
         method: "POST",

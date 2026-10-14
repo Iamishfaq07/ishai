@@ -20,7 +20,7 @@ Reproduced against the current checkout (`feat/practice-links`), not `ishai-main
 | Id | Why |
 |---|---|
 | ORB-N02 | Already enforced when `ORBIT_PROXY_SECRET` is set: only the Worker header is trusted, otherwise the right-most forwarding hop. Not re-tested against a live edge. |
-| ORB-N10 | The support token is still a query parameter. Moving it to a header needs every client at once. Not done. |
+| ORB-N10 | The support token was a GET query parameter, so it could land in proxy and access logs. | The web app sends `X-Orbit-Support-Token`. The query still works for an old client. The response is `Cache-Control: no-store`. | `tests/test_support_chat.py` reads with the header and still with the query. |
 | ORB-N15 | Refunds and disputes do not adjust credits. Rule is documented, not automated. |
 | C5, desktop audio, Playwright, live Razorpay | No Windows device, no live gateway, no browser runner used here. |
 | Sections E and F (redesign, new products) | Not started. Launch blockers above came first. |

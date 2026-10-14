@@ -13,7 +13,7 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,8 +21,8 @@ from sqlalchemy.orm import selectinload
 
 from orbit_api.admin.routes import require_admin
 from orbit_api.auth.security import optional_user
-from orbit_api.config import get_settings
 from orbit_api.billing.packs import packs
+from orbit_api.config import get_settings
 from orbit_api.contact.routes import clean_message, network_hash, one_line
 from orbit_api.credits import interview_minutes_left, resume_balance
 from orbit_api.db import get_db
@@ -151,6 +151,14 @@ async def _thread(db: AsyncSession, thread_id: str, token: str) -> SupportThread
     if row is None or not hmac.compare_digest(row.token_hash, _hash(token)):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "This chat can't be found. Start a new one.")
     return row
+
+
+def _presented(header: str | None, query: str | None) -> str:
+    """The chat token. The header is preferred. The query still works for an old client."""
+    token = (header or "").strip() or (query or "").strip()
+    if not 20 <= len(token) <= 80:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "This chat can't be found. Start a new one.")
+    return token
 
 
 def _add(db: AsyncSession, thread: SupportThread, role: str, text: str) -> None:
@@ -292,12 +300,16 @@ async def open_thread(
 @router.get("/v1/support/threads/{thread_id}", response_model=ThreadOut)
 async def read_thread(
     thread_id: str,
-    token: Annotated[str, Query(min_length=20, max_length=80)],
+    response: Response,
     user: Annotated[User | None, Depends(optional_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    token: Annotated[str | None, Query()] = None,
     page: Annotated[str, Query(max_length=80)] = "",
+    x_orbit_support_token: Annotated[str | None, Header()] = None,
 ) -> ThreadOut:
-    return _out(await _thread(db, thread_id, token), user=user, page=page)
+    # no-store: a token in an old query string must not be cached by a proxy.
+    response.headers["Cache-Control"] = "no-store"
+    return _out(await _thread(db, thread_id, _presented(x_orbit_support_token, token)), user=user, page=page)
 
 
 @router.post("/v1/support/threads/{thread_id}/messages", response_model=ThreadOut)

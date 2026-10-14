@@ -81,6 +81,13 @@ def test_bot_then_a_person(client: TestClient) -> None:
     seen = client.get(f"/v1/support/threads/{thread['id']}", params={"token": token})
     assert seen.status_code == 200
     assert seen.json()["messages"][-1]["text"].startswith("I can see the payment")
+    assert seen.headers["cache-control"] == "no-store"
+    via_header = client.get(
+        f"/v1/support/threads/{thread['id']}", headers={"X-Orbit-Support-Token": token},
+    )
+    assert via_header.status_code == 200
+    assert "token" not in str(via_header.request.url)
+    assert client.get(f"/v1/support/threads/{thread['id']}").status_code == 404
 
 
 def test_signed_in_sees_their_balance_and_last_payment(client: TestClient) -> None:
