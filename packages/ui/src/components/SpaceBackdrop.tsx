@@ -66,6 +66,11 @@ export const SpaceBackdrop = memo(function SpaceBackdrop({ className }: { classN
           animationDirection: "reverse",
         }}
       />
+      {/* Deep Space 2.0: two slow light orbs (cyan, indigo) under the glass, and a 24px dot grid that fades out toward
+          the edges (base.css .cosmic-*). Transform-only, on their own layer; still when motion is reduced. */}
+      <div className="cosmic-orb cosmic-orb--cyan" />
+      <div className="cosmic-orb cosmic-orb--indigo" />
+      <div className="cosmic-dots" />
       {/* With data saver on, no stars: the sky's glow alone (153 fewer shapes to draw on a low-end phone). */}
       {!motionEnv().saveData && (
         <div className="absolute inset-0 hidden dark:block">
@@ -77,3 +82,6 @@ export const SpaceBackdrop = memo(function SpaceBackdrop({ className }: { classN
     </div>
   );
 });
+
+/** The same sky under its Deep Space 2.0 name. */
+export const CosmicBackground = SpaceBackdrop;

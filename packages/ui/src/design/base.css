@@ -116,9 +116,25 @@ summary,
   background-image: linear-gradient(180deg, rgb(255 255 255 / 0.045), rgb(255 255 255 / 0.01));
   border-color: var(--specular-border);
   border-top-color: var(--specular-top);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+/* The blur lives on a layer of its own, not on the panel: an element with backdrop-filter becomes the backdrop root
+   for everything inside it, so a glass card (or a menu) inside a blurred panel blurred nothing and looked broken in
+   Chrome and WebView2. ::after (::before is .gradient-border's) sits under the content and under that border.
+   position comes through :where() (no specificity), so .absolute / .fixed / .sticky utilities still win. */
+:where(.glass-panel, .orbit-card, .orbit-panel) {
+  position: relative;
+  isolation: isolate;
+}
+.dark :is(.glass-panel, .orbit-card, .orbit-panel)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  border-radius: inherit;
+  pointer-events: none;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 body { font-variant-numeric: tabular-nums; }
@@ -140,7 +156,7 @@ html[data-motion="reduced"] .resume-update-shimmer::after { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .career-telemetry-flow { animation: none; }
   .resume-update-shimmer::after { display: none; }
-  .dark .glass-panel { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .dark :is(.glass-panel, .orbit-card, .orbit-panel)::after { backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
 
 /* Brand gradient text (headlines, stats). */
@@ -514,3 +530,146 @@ html:not(.dark) .text-emerald-600 {
 html:not(.dark) .text-amber-600 {
   color: rgb(180 83 9);
 }
+
+/* ---- Deep Space 2.0 ----------------------------------------------------------------------------------------------
+   Lighting, surfaces and motion added in Phase 6. Every animation here is decorative: the motion levels above stop
+   them (Gentle keeps fades, Off nothing), and the OS reduced-motion setting does the same. */
+
+/* The canvas behind the app shell (CosmicBackground): two slow light orbs give the glass something to refract, and a
+   24px dot grid fades out toward the edges. Transform-only animation on its own layer; it never repaints content. */
+.cosmic-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  contain: strict;
+}
+.cosmic-orb {
+  position: absolute;
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 9999px;
+  will-change: transform;
+  animation: cosmic-drift 26s ease-in-out infinite alternate;
+}
+.cosmic-orb--cyan { left: -20vmax; top: -25vmax; background: radial-gradient(closest-side, rgba(14, 165, 233, 0.07), transparent); }
+.cosmic-orb--indigo {
+  right: -25vmax;
+  bottom: -30vmax;
+  background: radial-gradient(closest-side, rgba(99, 102, 241, 0.06), transparent);
+  animation-delay: -13s;
+  animation-direction: alternate-reverse;
+}
+html:not(.dark) .cosmic-orb--cyan { background: radial-gradient(closest-side, rgba(14, 165, 233, 0.06), transparent); }
+html:not(.dark) .cosmic-orb--indigo { background: radial-gradient(closest-side, rgba(99, 102, 241, 0.05), transparent); }
+.cosmic-dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1.2px);
+  background-size: 24px 24px;
+  -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
+  mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
+}
+html:not(.dark) .cosmic-dots { background-image: radial-gradient(rgba(35, 38, 66, 0.07) 1px, transparent 1.2px); }
+@keyframes cosmic-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(8vmax, 6vmax, 0) scale(1.08); }
+}
+
+/* Glass 2.0: light from the top-left. A brighter top edge, a softer left edge, and a near-black bottom. */
+.orbit-card,
+.orbit-panel {
+  background: linear-gradient(135deg, rgb(255 255 255 / 0.92), rgb(255 255 255 / 0.84));
+  border: 1px solid rgb(var(--ink-200) / 0.9);
+  box-shadow: 0 1px 0 0 rgb(255 255 255 / 0.9) inset, 0 12px 32px -20px rgb(var(--ink-900) / 0.25);
+}
+.dark .orbit-card,
+.dark .orbit-panel {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.055) 0%, rgba(11, 16, 30, 0.8) 45%, rgba(5, 8, 17, 0.92) 100%);
+  border-top: 1px solid rgba(186, 230, 253, 0.26);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+}
+/* The spotlight follows the pointer on primary cards (useSpotlight sets --mouse-x / --mouse-y). Painted under the
+   content (z-index -1 in the card's own stacking context), only on devices that hover. */
+.orbit-spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-panel) var(--ease-standard);
+  background: radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(56, 189, 248, 0.12), transparent 40%);
+}
+@media (hover: hover) {
+  .orbit-spotlight:hover::before { opacity: 1; }
+}
+
+/* The save pill (Resume AI): the check draws in when a save is confirmed; a breathing dot while saving. */
+.save-check path {
+  stroke-dasharray: 16;
+  stroke-dashoffset: 0;
+  animation: save-check-draw 260ms var(--ease-enter) both;
+}
+@keyframes save-check-draw { from { stroke-dashoffset: 16; } }
+.save-dot { animation: save-dot 1s ease-in-out infinite; }
+@keyframes save-dot { 50% { opacity: 0.35; transform: scale(0.75); } }
+
+/* Streamed AI text: each new piece decompresses from a light blur (StreamingResponse). */
+.stream-chunk { animation: stream-in 180ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes stream-in {
+  from { opacity: 0; filter: blur(4px); transform: translateY(2px); }
+  to { opacity: 1; filter: blur(0); transform: translateY(0); }
+}
+:root[data-motion="reduced"] .stream-chunk { animation-name: orbit-fade !important; animation-duration: var(--dur-quick) !important; }
+
+/* Resume AI: a 2px laser sweeps down the preview after a tailor or a new score; the score counts up with a pulse. */
+.laser-scan { position: relative; }
+.laser-scan::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, #38bdf8, #818cf8, transparent);
+  box-shadow: 0 0 12px 2px rgba(56, 189, 248, 0.45);
+  animation: laser-sweep 450ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes laser-sweep {
+  from { transform: translateY(0); opacity: 1; }
+  92% { opacity: 1; }
+  to { transform: translateY(var(--scan-height, 100%)); opacity: 0; }
+}
+:root:is([data-motion="reduced"], [data-motion="off"]) .laser-scan::after { display: none; }
+.pulse-ring { animation: pulse-ring 700ms ease-out; }
+@keyframes pulse-ring {
+  from { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+  to { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+}
+
+/* The listening ring: the user started talking over the AI (barge-in). */
+.listen-ring { box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.85), 0 0 18px 2px rgba(16, 185, 129, 0.35); transition: box-shadow 100ms ease-out; }
+
+/* Dropzone corner brackets: they draw in toward the middle while a file is dragged over. */
+.drop-bracket { transition: transform var(--dur-panel) var(--ease-enter), opacity var(--dur-quick); }
+[data-dragging] .drop-bracket--tl { transform: translate(6px, 6px); }
+[data-dragging] .drop-bracket--tr { transform: translate(-6px, 6px); }
+[data-dragging] .drop-bracket--bl { transform: translate(6px, -6px); }
+[data-dragging] .drop-bracket--br { transform: translate(-6px, -6px); }
+
+/* Empty-state illustrations (CosmicEmptyState). */
+.cosmic-sweep { transform-origin: 60px 60px; animation: cosmic-spin 3.2s linear infinite; }
+.cosmic-float { animation: cosmic-float 4s ease-in-out infinite alternate; }
+.cosmic-blink { animation: cosmic-blink 1.8s ease-in-out infinite; }
+.cosmic-link { stroke-dasharray: 4 6; animation: cosmic-link 1.2s linear infinite; }
+@keyframes cosmic-spin { to { transform: rotate(360deg); } }
+@keyframes cosmic-float { to { transform: translateY(-4px); } }
+@keyframes cosmic-blink { 50% { opacity: 0.25; } }
+@keyframes cosmic-link { to { stroke-dashoffset: -20; } }

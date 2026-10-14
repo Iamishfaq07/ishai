@@ -29,6 +29,29 @@ function server() {
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 describe("resume save queue", () => {
+  it("a 409 for a save this tab already replaced reads as superseded, not as another tab's edit", async () => {
+    let fail: ((e: unknown) => void) | null = null;
+    const q = createSaveQueue<string>(
+      (_id, text) =>
+        new Promise<SaveResult>((resolve, reject) => {
+          if (text === "old") fail = reject;
+          else resolve({ revision: 2 });
+        }),
+    );
+    const old = q.save("A", "old");
+    const newer = q.save("A", "new"); // waiting behind the old one
+    fail!(Object.assign(new Error("conflict"), { status: 409 }));
+    await expect(old).rejects.toMatchObject({ name: "AbortError" });
+    await expect(newer).resolves.toEqual({ revision: 2 });
+  });
+
+  it("a 409 with nothing newer from this tab stays a conflict", async () => {
+    const q = createSaveQueue<string>(async () => {
+      throw Object.assign(new Error("conflict"), { status: 409 });
+    });
+    await expect(q.save("A", "x")).rejects.toMatchObject({ status: 409 });
+  });
+
   it("aborts stale network saves as soon as text changes and advances a writer's monotonic revision", async () => {
     const requests: Array<{ signal: AbortSignal; clientRevision: number; clientId: string }> = [];
     const q = createSaveQueue<string>((_id, _payload, _base, request) => {
