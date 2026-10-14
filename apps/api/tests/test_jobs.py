@@ -590,6 +590,11 @@ def test_the_search_box_is_read_into_filters_and_keywords() -> None:
     assert p.job_types == ["internship"] and p.level == "fresher" and p.posted_within == 1 and p.keywords == "python"
     p = parse_search("golang jobs in the last 30 days, gurgaon or noida")
     assert (p.keywords, p.posted_within, p.locations) == ("golang", 30, ["Gurugram", "Noida"])
+    # "contract" in a title is the job, not a filter that hides every full-time role.
+    titled = parse_search("smart contract engineer")
+    assert titled.job_types == [] and titled.keywords == "smart contract engineer"
+    hired = parse_search("freelance react on contract")
+    assert hired.job_types == ["contract"] and hired.keywords == "react"
     react = _row(title="Frontend Engineer", keywords=["React", "TypeScript"], workplace="remote", cities=[])
     other = _row(title="Backend Engineer", company="X", workplace="remote", cities=[])
     out = ranking.rank([react, other], _search(keywords="react", workplace=["remote"]), MATCHER)

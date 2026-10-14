@@ -29,6 +29,11 @@ class ParsedSearch:
     understood: list[str] = field(default_factory=list)
 
 
+# "contract" in a title ("smart contract", "contract engineer") stays a keyword. These are the employment type.
+_CONTRACT = (
+    r"\bfreelance\b|\bcontractual\b|\bon[- ]contract\b|"
+    r"\bcontract[- ](?:role|roles|job|jobs|position|positions|work|basis)\b"
+)
 _RULES: list[tuple[str, str]] = [
     (r"\b(?:work from home|wfh|remote(?:ly)?)\b", "remote"),
     (r"\bhybrid\b", "hybrid"),
@@ -37,7 +42,7 @@ _RULES: list[tuple[str, str]] = [
     (r"\b(?:freshers?|entry[- ]level|graduates?|new grads?|no experience)\b", "fresher"),
     (r"\b(?:part[- ]time)\b", "part_time"),
     (r"\b(?:full[- ]time)\b", "full_time"),
-    (r"\b(?:contract(?:ual)?|freelance)\b", "contract"),
+    (_CONTRACT, "contract"),
     (r"\b(?:today|last 24 ?hours?|past 24 ?hours?|24 ?h(?:ours?)?)\b", "days:1"),
     (r"\b(?:last|past) (?:3|three) days\b", "days:3"),
     (r"\b(?:this|last|past) week\b|\b7 days\b", "days:7"),
