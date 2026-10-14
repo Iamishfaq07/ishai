@@ -238,6 +238,10 @@ function AllSet() {
 
 const CHECKLIST_KEY = "orbit.checklistDismissed";
 
+function checklistKey(userId: string): string {
+  return `${CHECKLIST_KEY}.${userId}`;
+}
+
 /** A ring that fills as steps get done. */
 function ProgressRing({ done, total }: { done: number; total: number }) {
   const r = 15;
@@ -264,16 +268,28 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
  * then one compact line with the ring (the list a tap away). Gone once all are done, or for good when dismissed.
  */
 function SetUp({ items }: { items: ChecklistItem[] }) {
+  const { user } = useAuth();
+  const key = user ? checklistKey(user.id) : "";
   const [dismissed, setDismissed] = useState(() => {
+    if (!key) return false;
     try {
-      return localStorage.getItem(CHECKLIST_KEY) === "1";
+      return localStorage.getItem(key) === "1";
     } catch {
       return false;
     }
   });
+  const [dismissedFor, setDismissedFor] = useState(key);
+  const [expanded, setExpanded] = useState(false);
+  if (dismissedFor !== key) {
+    setDismissedFor(key);
+    try {
+      setDismissed(key ? localStorage.getItem(key) === "1" : false);
+    } catch {
+      setDismissed(false);
+    }
+  }
   const real = items.filter((i) => i.id !== "account");
   const realDone = real.filter((i) => i.done).length;
-  const [expanded, setExpanded] = useState(false);
   const done = items.filter((i) => i.done).length;
   if (dismissed || done === items.length) return null;
   const compact = realDone >= 2 && !expanded;
@@ -281,7 +297,7 @@ function SetUp({ items }: { items: ChecklistItem[] }) {
   const dismiss = () => {
     setDismissed(true);
     try {
-      localStorage.setItem(CHECKLIST_KEY, "1");
+      if (key) localStorage.setItem(key, "1");
     } catch {
       // storage unavailable: hidden for this visit
     }

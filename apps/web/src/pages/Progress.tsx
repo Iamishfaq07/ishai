@@ -160,9 +160,9 @@ function ScoreDelta({ recent, before }: { recent: number | null; before: number 
 }
 
 /** What counts toward the weekly goal: mock interviews that ended, and warm-up answers checked in this browser. */
-function practiceTimes(progress: Progress | null): number[] {
+function practiceTimes(progress: Progress | null, userId?: string | null): number[] {
   const mocks = (progress?.points ?? []).filter((p) => p.type === "mock" && p.ended_at).map((p) => Date.parse(p.ended_at!));
-  return [...mocks, ...loadWarmupLog()];
+  return [...mocks, ...loadWarmupLog(userId)];
 }
 
 /**
@@ -183,13 +183,19 @@ function OwnProgressGoal({ className }: { className?: string }) {
 
 function GoalCard({ progress, first, className }: { progress: Progress | null; first: boolean; className?: string }) {
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const role = user ? loadAnswers(user.id)?.role : "";
-  const [goal, setGoal] = useState(loadGoal);
+  const [goalFor, setGoalFor] = useState(userId);
+  const [goal, setGoal] = useState(() => loadGoal(userId));
+  if (goalFor !== userId) {
+    setGoalFor(userId);
+    setGoal(loadGoal(userId));
+  }
   const titleId = useId();
-  const state = goalState(practiceTimes(progress), goal);
+  const state = goalState(practiceTimes(progress, userId), goal);
   const pick = (n: number) => {
     setGoal(n);
-    saveGoal(n);
+    saveGoal(n, userId);
   };
   const left = Math.max(goal - state.done, 0);
   const days = state.daysLeft === 1 ? "day" : "days";

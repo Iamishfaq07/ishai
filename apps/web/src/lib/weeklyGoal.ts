@@ -1,6 +1,7 @@
 // The weekly practice goal (Practice → Your progress): "3 this week", counted from mock interviews and warm-up answers,
 // with weeks in a row and a freeze, so one missed week doesn't wipe out a run (Duolingo's finding: freezes keep people
-// going; guilt doesn't). Kept in this browser (localStorage); nothing is sent anywhere. Plain logic, unit-tested.
+// going; guilt doesn't). Kept in this browser, per account, so a shared computer doesn't mix two people's streaks.
+// Nothing is sent anywhere. Plain logic, unit-tested.
 
 export const GOAL_KEY = "orbit.practiceGoal";
 /** Warm-up answers checked in this browser (times), so the free warm-up counts toward the goal too. */
@@ -30,23 +31,27 @@ function write(key: string, value: unknown): void {
   }
 }
 
-export function loadGoal(): number {
-  const n = read<number>(GOAL_KEY, DEFAULT_GOAL);
+function accountKey(base: string, userId?: string | null): string {
+  return `${base}.${userId || "guest"}`;
+}
+
+export function loadGoal(userId?: string | null): number {
+  const n = read<number>(accountKey(GOAL_KEY, userId), DEFAULT_GOAL);
   return (GOAL_CHOICES as readonly number[]).includes(n) ? n : DEFAULT_GOAL;
 }
 
-export function saveGoal(n: number): void {
-  write(GOAL_KEY, n);
+export function saveGoal(n: number, userId?: string | null): void {
+  write(accountKey(GOAL_KEY, userId), n);
 }
 
-export function loadWarmupLog(): number[] {
-  const log = read<unknown>(WARMUP_LOG_KEY, []);
+export function loadWarmupLog(userId?: string | null): number[] {
+  const log = read<unknown>(accountKey(WARMUP_LOG_KEY, userId), []);
   return Array.isArray(log) ? log.filter((t): t is number => typeof t === "number" && Number.isFinite(t)) : [];
 }
 
 /** One warm-up answer checked now. */
-export function logWarmupAnswer(now: number = Date.now()): void {
-  write(WARMUP_LOG_KEY, [...loadWarmupLog(), now].slice(-MAX_LOG));
+export function logWarmupAnswer(now: number = Date.now(), userId?: string | null): void {
+  write(accountKey(WARMUP_LOG_KEY, userId), [...loadWarmupLog(userId), now].slice(-MAX_LOG));
 }
 
 /** Monday 00:00, local time, of the week `t` is in. */

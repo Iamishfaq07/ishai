@@ -249,6 +249,7 @@ function Question({
   onChange: (s: RoundState) => void;
   onPick: () => void;
 }) {
+  const { user } = useAuth();
   const answer = state.answers[question.id] ?? "";
   const spoken = Boolean(state.spoken[question.id]);
   const [checks, setChecks] = useState<Check[] | null>(() => (state.checked[question.id] && answer ? checkAnswer(answer, question, spoken) : null));
@@ -275,7 +276,7 @@ function Question({
     dictation.stop();
     setChecks(checkAnswer(answer, question, spoken));
     if (!state.checked[question.id]) {
-      logWarmupAnswer();
+      logWarmupAnswer(Date.now(), user?.id);
       onChange({ ...state, checked: { ...state.checked, [question.id]: true } });
     }
   };

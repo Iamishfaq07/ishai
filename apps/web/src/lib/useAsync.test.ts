@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { getShownMore, jobProfileWasSuggested, markJobProfileSuggested, setShownMore } from "./jobsSession";
 import { clearAsyncCache, shareInflight } from "./useAsync";
 
@@ -44,5 +44,21 @@ describe("shareInflight", () => {
     clearAsyncCache();
     expect(getShownMore()).toBeNull();
     expect(jobProfileWasSuggested()).toBe(false);
+  });
+
+  it("drops browser data that used to be shared by every account", () => {
+    const store = new Map<string, string>([
+      ["orbit.support.v1", "{\"id\":\"t\"}"],
+      ["orbit.practiceGoal", "7"],
+    ]);
+    vi.stubGlobal("localStorage", {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    });
+    clearAsyncCache();
+    expect(store.has("orbit.support.v1")).toBe(false);
+    expect(store.has("orbit.practiceGoal")).toBe(false);
+    vi.unstubAllGlobals();
   });
 });

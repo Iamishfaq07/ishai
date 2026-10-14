@@ -183,9 +183,11 @@ export function SessionSetupPage() {
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const micPermission = useMicPermission();
+  const workspaceKey = user ? `${WORKSPACE_KEY}.${user.id}` : "";
   const [workspaceId, setWorkspaceId] = useState<string | null>(() => {
+    if (!workspaceKey) return null;
     try {
-      return localStorage.getItem(WORKSPACE_KEY);
+      return localStorage.getItem(workspaceKey);
     } catch {
       return null;
     }
@@ -203,8 +205,8 @@ export function SessionSetupPage() {
   const applyWorkspace = (ws: Workspace | null) => {
     setWorkspaceId(ws?.id ?? null);
     try {
-      if (ws) localStorage.setItem(WORKSPACE_KEY, ws.id);
-      else localStorage.removeItem(WORKSPACE_KEY);
+      if (ws && workspaceKey) localStorage.setItem(workspaceKey, ws.id);
+      else if (workspaceKey) localStorage.removeItem(workspaceKey);
     } catch {
       // storage unavailable — the choice still applies to this session
     }
