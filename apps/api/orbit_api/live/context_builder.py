@@ -12,6 +12,7 @@ from pathlib import Path
 
 from orbit_api.answers.match import DOC_KIND as ANSWER_KIND
 from orbit_api.answers.match import chunk_question, same_question
+from orbit_api.documents.uploads import sanitize_text
 from orbit_api.live import company_styles
 from orbit_api.live.events import (
     AnswerLength,
@@ -109,7 +110,7 @@ _FENCE_TAG = re.compile(r"<\s*(/?)\s*reference_data", re.IGNORECASE)
 def fence(text: str) -> str:
     """Neutralise attempts to open or close the reference fence from inside untrusted text, in any case and spacing
     ("</REFERENCE_DATA>", "< /reference_data>"): a job post or a document can't step outside its data block."""
-    return _FENCE_TAG.sub(lambda m: f"‹{m.group(1)}reference_data", text)
+    return _FENCE_TAG.sub(lambda m: f"‹{m.group(1)}reference_data", sanitize_text(text))
 
 
 @dataclass

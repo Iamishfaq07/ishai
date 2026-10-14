@@ -13,6 +13,7 @@ from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.documents.parsing import ParseError, chunk_document, detect_format, extract_text_isolated
+from orbit_api.documents.uploads import sanitize_text
 from orbit_api.entitlements import plan_for
 from orbit_api.models import Document, DocumentChunk, User
 from orbit_api.ratelimit import limit
@@ -98,6 +99,7 @@ def _chunk_and_embed(text: str, kind: str, title: str) -> tuple[str | None, Prep
 
 
 async def _ingest(db: AsyncSession, doc: Document, text: str) -> None:
+    text = sanitize_text(text)
     # Drop any prior chunks first so re-ingest (an edit) replaces rather than appends.
     await db.execute(delete(DocumentChunk).where(DocumentChunk.document_id == doc.id))
     model_id, prepared = await asyncio.to_thread(_chunk_and_embed, text, doc.kind, doc.title)

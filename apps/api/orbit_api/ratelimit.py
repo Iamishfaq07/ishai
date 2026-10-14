@@ -9,10 +9,12 @@ import hmac
 import ipaddress
 import time
 import weakref
+from collections import deque
 from collections.abc import Awaitable, Callable
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
+from starlette.requests import HTTPConnection
 
 from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
@@ -67,6 +69,51 @@ class TokenBucket:
         self._buckets[key] = (tokens - 1, now)
         return True
 
+    def reset(self) -> None:
+        self._buckets.clear()
+
+
+class SlidingWindow(TokenBucket):
+    """At most `burst` events in any rolling `burst / rate_per_s` seconds, with bounded key storage."""
+
+    def __init__(self, rate_per_s: float, burst: int) -> None:
+        super().__init__(rate_per_s, burst)
+        self.window_s = burst / rate_per_s
+        self._hits: dict[str, deque[float]] = {}
+
+    def _recent(self, key: str, now: float) -> deque[float]:
+        if key not in self._hits and len(self._hits) >= MAX_KEYS:
+            order = sorted(self._hits, key=lambda k: self._hits[k][-1] if self._hits[k] else 0)
+            oldest = order[:max(1, MAX_KEYS // 10)]
+            for k in oldest:
+                del self._hits[k]
+        hits = self._hits.setdefault(key, deque())
+        while hits and hits[0] <= now - self.window_s:
+            hits.popleft()
+        return hits
+
+    def peek(self, key: str) -> bool:
+        return len(self._recent(key, time.monotonic())) < self.burst
+
+    def allow(self, key: str) -> bool:
+        now = time.monotonic()
+        hits = self._recent(key, now)
+        if len(hits) >= self.burst:
+            return False
+        hits.append(now)
+        return True
+
+    def spend(self, key: str) -> None:
+        now = time.monotonic()
+        hits = self._recent(key, now)
+        if len(hits) >= self.burst:
+            hits.popleft()
+        hits.append(now)
+
+    def reset(self) -> None:
+        super().reset()
+        self._hits.clear()
+
 
 PROXY_SECRET_HEADER = "x-orbit-proxy-secret"  # noqa: S105 - a header name, not a secret
 CLIENT_IP_HEADER = "x-orbit-client-ip"
@@ -81,7 +128,7 @@ def _valid_ip(value: str | None) -> str | None:
         return None
 
 
-def client_ip(request: Request) -> str:
+def client_ip(request: HTTPConnection) -> str:
     """The caller's IP, for rate limits and the audit log.
 
     With ORBIT_PROXY_SECRET (production should always have it): the web app's edge proxy, which knows the secret,
@@ -115,7 +162,7 @@ def network_of(ip: str) -> str:
     return str(addr)
 
 
-def client_network(request: Request) -> str:
+def client_network(request: HTTPConnection) -> str:
     return network_of(client_ip(request))
 
 
@@ -143,7 +190,7 @@ def failed(bucket: TokenBucket, key: str) -> None:
 
 def limit(name: str, rate_per_s: float, burst: int) -> Callable[[Request], None]:
     """Per client IP."""
-    bucket = TokenBucket(rate_per_s, burst)
+    bucket = SlidingWindow(rate_per_s, burst)
 
     def dep(request: Request) -> None:
         check(bucket, f"{name}:{client_network(request)}")
@@ -153,7 +200,7 @@ def limit(name: str, rate_per_s: float, burst: int) -> Callable[[Request], None]
 
 def limit_user(name: str, rate_per_s: float, burst: int) -> Callable[..., Awaitable[None]]:
     """Per signed-in user — for provider-cost endpoints, where IP limits alone are easy to spread out."""
-    bucket = TokenBucket(rate_per_s, burst)
+    bucket = SlidingWindow(rate_per_s, burst)
 
     async def dep(user: Annotated[User, Depends(current_user)]) -> None:
         check(bucket, f"{name}:{user.id}")
@@ -164,4 +211,4 @@ def limit_user(name: str, rate_per_s: float, burst: int) -> Callable[..., Awaita
 def reset_all() -> None:
     """Forget every bucket's state (tests)."""
     for bucket in list(_all_buckets):
-        bucket._buckets.clear()
+        bucket.reset()

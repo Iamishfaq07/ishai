@@ -29,6 +29,8 @@ from multiprocessing.connection import Connection
 from pathlib import PurePosixPath
 from typing import Any
 
+from orbit_api.documents.uploads import sanitize_text
+
 MAX_PAGES = 40
 MAX_CHARS = 200_000
 
@@ -66,6 +68,8 @@ ALLOWED_TYPES = {
     "text/markdown": "md",
 }
 ALLOWED_EXT = {".pdf": "pdf", ".docx": "docx", ".txt": "txt", ".md": "md"}
+ALLOWED_EXT.update(dict.fromkeys((".py", ".js", ".ts", ".tsx", ".jsx", ".rs", ".go", ".java", ".c", ".cpp",
+                                 ".h", ".sql", ".sh", ".yaml", ".yml", ".json"), "code"))
 
 
 class ParseError(ValueError):
@@ -77,12 +81,24 @@ def detect_format(filename: str, content_type: str | None, head: bytes) -> str:
     fmt = ALLOWED_EXT.get(ext) or ALLOWED_TYPES.get((content_type or "").split(";")[0].strip())
     if fmt is None:
         raise ParseError("Unsupported file type. Upload PDF, DOCX, TXT or MD.")
+    mime = (content_type or "").split(";", 1)[0].strip()
+    document_mimes = {"pdf": {"application/pdf", "application/octet-stream"},
+                      "docx": {"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                               "application/zip", "application/octet-stream"}}
+    if fmt in document_mimes and mime and mime not in document_mimes[fmt]:
+        raise ParseError("File content does not match its MIME type or extension.")
+    if (mime in ALLOWED_TYPES and ALLOWED_TYPES[mime] != fmt
+            and not (fmt in {"txt", "md", "code"} and mime.startswith("text/"))):
+        raise ParseError("File content does not match its MIME type or extension.")
+    if fmt == "code" and mime and not (mime.startswith("text/") or mime in {
+        "application/json", "application/javascript", "application/octet-stream", "application/x-python-code"}):
+        raise ParseError("Code uploads must be plain text.")
     # Magic-byte check so a renamed binary can't masquerade as another format.
     if fmt == "pdf" and not head.startswith(b"%PDF"):
         raise ParseError("File is not a valid PDF.")
     if fmt == "docx" and not head.startswith(b"PK"):
         raise ParseError("File is not a valid DOCX.")
-    if fmt in ("txt", "md") and b"\x00" in head:
+    if fmt in ("txt", "md", "code") and b"\x00" in head:
         raise ParseError("Text file contains binary data.")
     return fmt
 
@@ -325,12 +341,14 @@ def extract_text(data: bytes, fmt: str) -> str:
         elif fmt == "docx":
             text = _docx_text(data)
         else:
-            text = data.decode("utf-8", errors="replace")
+            if b"\x00" in data:
+                raise ParseError("Text file contains binary data.")
+            text = data.decode("utf-8")
     except ParseError:
         raise
     except Exception as e:
         raise ParseError("Could not read this document.") from e
-    text = text.replace("\r\n", "\n").replace("\x00", "")
+    text = sanitize_text(text)
     if not text.strip():
         raise ParseError("No readable text found in this file. Paste the text instead.")
     return text[:MAX_CHARS]

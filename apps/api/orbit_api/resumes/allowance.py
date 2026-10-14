@@ -16,7 +16,7 @@ from typing import Any
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits
@@ -86,6 +86,9 @@ class Allowance:
         if self.unlimited or self._claimed is not None:
             return
         async with _claim_lock:
+            # The process lock protects SQLite. The row lock makes the balance check and ledger debit atomic
+            # across Postgres connections as well, even if a second process is ever introduced.
+            await self.db.execute(select(User.id).where(User.id == self.user.id).with_for_update())
             if await credits.resume_balance(self.db, self.user.id) <= 0:
                 raise self.exhausted()
             entry = credits.add(self.db, self.user.id, "resume", -1, "resume_ai")

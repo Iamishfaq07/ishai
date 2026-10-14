@@ -40,7 +40,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("ORBIT_CORS_ORIGINS"),
     )
     upload_dir: str = Field("./uploads", validation_alias=AliasChoices("ORBIT_UPLOAD_DIR"))
-    max_upload_bytes: int = 10 * 1024 * 1024
+    max_upload_bytes: int = Field(5 * 1024 * 1024, gt=0, le=5 * 1024 * 1024)
     # Welcome credits for a new account (credits.py): resume-AI credits and interview minutes, once. Sign-up is open
     # without email verification, so they go to one account per network (IP) per ORBIT_WELCOME_IP_DAYS (0 = one per
     # network for good), and to at most ORBIT_WELCOME_DAILY accounts a rolling day: fake accounts can't farm them.
