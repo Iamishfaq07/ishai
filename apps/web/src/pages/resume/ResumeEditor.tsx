@@ -266,6 +266,7 @@ function ResumeEditor() {
       backend.tools
         .scoreResume(resume.data, resume.design, resume.job_text, { signal: ctl.signal })
         .then((r) => {
+          if (ctl.signal.aborted) return;
           sentAt = null;
           scoreWait.current = Math.min(2_500, Math.max(450, performance.now() - started));
           setReport(r);
