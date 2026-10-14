@@ -39,9 +39,8 @@ services:
       # installer downloads) are built from it, never from the request's Host header.
       - key: ORBIT_API_PUBLIC_URL
         sync: false
-      # REQUIRED: the API refuses to start in production without it. 32+ random chars, the same value as the web
-      # Worker's secret (`wrangler secret put PROXY_SECRET`): only the Worker may then state a caller's IP; per-IP
-      # rate limits can't be dodged by faking X-Forwarded-For.
+      # 32+ random chars, the same value as the web Worker's secret (`wrangler secret put PROXY_SECRET`): only
+      # the Worker may then state a caller's IP; per-IP rate limits can't be dodged by faking X-Forwarded-For.
       - key: ORBIT_PROXY_SECRET
         sync: false
       # Razorpay (billing/razorpay.py): with the key id and secret set, packs are bought through Razorpay's checkout
