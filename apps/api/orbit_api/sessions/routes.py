@@ -2,7 +2,9 @@ import asyncio
 import contextlib
 import json
 import logging
+import time
 import uuid
+from collections import deque
 from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
@@ -33,6 +35,7 @@ from orbit_api.auth.security import TICKET_TTL_S, current_user, issue_ticket, re
 from orbit_api.config import get_settings
 from orbit_api.csrf import websocket_origin_allowed
 from orbit_api.db import get_db, sessionmaker
+from orbit_api.documents.uploads import MAX_UPLOAD_BYTES, validate_image
 from orbit_api.entitlements import (
     Plan,
     minutes_metric,
@@ -73,7 +76,7 @@ from orbit_api.observability import request_id_var, session_id_var, user_id_var
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMImage
 from orbit_api.providers.stt import create_stt_provider
-from orbit_api.ratelimit import limit, limit_user
+from orbit_api.ratelimit import SlidingWindow, client_network, limit, limit_user
 from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.retrieval.index import IndexedChunk, SessionIndex, chunk_body
 from orbit_api.sessions import companion, practice_queue
@@ -93,6 +96,8 @@ session_user_limit = limit_user("session-user", rate_per_s=30 / 3600, burst=10)
 ticket_user_limit = limit_user("ticket-user", rate_per_s=120 / 3600, burst=20)  # reconnects need headroom
 screenshot_user_limit = limit_user("screenshot-user", rate_per_s=0.1, burst=10)
 review_user_limit = limit_user("review-user", rate_per_s=10 / 3600, burst=3)
+live_user_messages = SlidingWindow(rate_per_s=200, burst=400)
+live_ip_messages = SlidingWindow(rate_per_s=400, burst=800)
 
 MAX_WS_TEXT_BYTES = 64 * 1024
 MAX_WS_AUDIO_BYTES = 64 * 1024
@@ -108,7 +113,7 @@ CLOSE_TOO_MANY = 4029
 _live_sockets: dict[str, dict[str, WebSocket]] = {}
 # The engine behind each live socket, so HTTP uploads (screenshots) can feed the running session.
 _live_engines: dict[str, LiveEngine] = {}
-MAX_SCREENSHOT_BYTES = 8 * 1024 * 1024
+MAX_SCREENSHOT_BYTES = MAX_UPLOAD_BYTES
 _teardowns: set[asyncio.Task[None]] = set()  # strong refs so an in-flight teardown isn't garbage-collected
 LOW_MINUTES_WARNING_S = 5 * 60
 METER_STOP_S = 5.0  # a closing connection waits this long for the minute meter's beat in progress
@@ -128,6 +133,10 @@ class SessionIn(BaseModel):
     title: str = Field(min_length=1, max_length=300)
     type: SessionType = "interview"
     role: str | None = Field(None, max_length=300)
+    company: str | None = Field(None, max_length=120)
+    interview_stage: str | None = Field(None, max_length=80)
+    tech_stack: list[Annotated[str, Field(max_length=100)]] = Field(default_factory=list, max_length=30)
+    key_requirements: list[Annotated[str, Field(max_length=400)]] = Field(default_factory=list, max_length=20)
     language: str = Field("en", max_length=16)
     answer_language: str | None = Field(None, max_length=16)
     length: AnswerLength = "auto"  # sized per question; clients from before "auto" always send one of the others
@@ -158,6 +167,10 @@ class SessionOut(BaseModel):
     title: str
     type: str
     role: str | None
+    company: str | None = None
+    interview_stage: str | None = None
+    tech_stack: list[str] = Field(default_factory=list)
+    key_requirements: list[str] = Field(default_factory=list)
     language: str
     answer_language: str | None
     length: str
@@ -195,6 +208,8 @@ def _to_out(row: LiveSessionRow, question_count: int, doc_ids: list[str],
             report_status: ReportStatus = None) -> SessionOut:
     return SessionOut(
         id=row.id, title=row.title, type=row.type, role=row.role, language=row.language,
+        company=row.company, interview_stage=row.interview_stage, tech_stack=row.tech_stack or [],
+        key_requirements=row.key_requirements or [],
         answer_language=row.answer_language, length=row.length, style=row.style, auto_answer=row.auto_answer,
         status=row.status, created_at=row.created_at, started_at=row.started_at, ended_at=row.ended_at,
         duration_seconds=row.duration_s, question_count=question_count, document_ids=doc_ids,
@@ -243,6 +258,15 @@ async def create_session(body: SessionIn, user: Annotated[User, Depends(require_
             document_ids = await workspace_document_ids(db, ws.id)
         if body.instructions is None and ws.notes:
             body.instructions = ws.notes[:1000]
+        if body.company is None:
+            body.company = ws.company
+    if body.mock and body.company and not body.mock.company:
+        body.mock.company = body.company
+    if body.type == "mock":
+        body.mock = body.mock or MockConfig()
+        body.mock.interview_stage = body.interview_stage
+        body.mock.tech_stack = list(body.tech_stack)
+        body.mock.key_requirements = list(body.key_requirements)
     if document_ids:
         owned = (await db.scalars(select(Document.id).where(Document.id.in_(document_ids),
                                                             Document.user_id == user.id))).all()
@@ -613,10 +637,11 @@ async def upload_screenshot(session_id: str, image: Annotated[UploadFile, File()
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, "You've used this month's screenshots.")
     data = await image.read(MAX_SCREENSHOT_BYTES + 1)
     if len(data) > MAX_SCREENSHOT_BYTES:
-        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Screenshot is too large (max 8 MB).")
-    media_type = _image_type(data[:8])
-    if media_type is None:
-        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Screenshot must be a PNG or JPEG image.")
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Screenshot is too large (max 5 MB).")
+    try:
+        media_type = await asyncio.to_thread(validate_image, data, image.content_type)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, str(e)) from e
     # Internal metric only: the user's screenshot credit ("screenshots") is spent by the engine when the
     # answer is actually delivered.
     db.add(UsageEvent(user_id=user.id, session_id=session_id, metric="screenshot_attempts", quantity=1))
@@ -650,6 +675,8 @@ async def usage(user: Annotated[User, Depends(current_user)],
 
 async def _session_company(db: AsyncSession, row: LiveSessionRow) -> str | None:
     """Who the interview is with, when the session knows: the saved setup it started from, or the mock setup."""
+    if row.company:
+        return row.company
     if row.workspace_id:
         ws = await db.get(Workspace, row.workspace_id)
         if ws is not None and ws.user_id == row.user_id and (ws.company or "").strip():
@@ -889,6 +916,8 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             allow_fallback=plan.has("provider_fallback"),
             features=frozenset(f for f in ("system_design", "advanced_coding") if plan.has(f)),
             instructions=(row.instructions or "").strip() or None,
+            prep_context={"company": row.company, "stage": row.interview_stage,
+                          "tech_stack": row.tech_stack or [], "key_requirements": row.key_requirements or []},
             learned=await learned_preferences(db, user_id),
             company=company,
         )
@@ -973,11 +1002,27 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
                 await previous.close(code=CLOSE_REPLACED, reason="session opened in another window")
         await ws.accept()
         await engine.start()
+        audio_window: deque[tuple[float, int]] = deque()
+        audio_bytes = 0
+        network = client_network(ws)
         while True:
             msg = await ws.receive()
             if msg["type"] == "websocket.disconnect":
                 break
+            if not live_user_messages.allow(user_id) or not live_ip_messages.allow(network):
+                await ws.close(code=4029, reason="Too many live messages. Reconnect after a short pause.")
+                break
             if (data := msg.get("bytes")) is not None:
+                now = time.monotonic()
+                while audio_window and audio_window[0][0] <= now - 4:
+                    audio_bytes -= audio_window.popleft()[1]
+                audio_bytes += len(data)
+                audio_window.append((now, len(data)))
+                # Two PCM16/16kHz streams normally send 256 kB in four seconds. Allow double that for
+                # scheduling jitter, while preventing accelerated audio from running up STT spend.
+                if audio_bytes > 512 * 1024:
+                    await ws.close(code=4029, reason="Audio arrived faster than real time. Reconnect to continue.")
+                    break
                 if len(data) <= MAX_WS_AUDIO_BYTES:
                     await engine.handle_audio(data)
                 continue

@@ -25,6 +25,12 @@ def two_sum(nums: list[int], target: int) -> list[int]:
 ```
 TIME: O(n)
 SPACE: O(n)
+INTUITION: [mock] I can find the pair in one pass by remembering the values I have already seen.
+COMMENTARY: First I create a map from each value to its index. | \
+For each number I check whether its complement is in the map. | \
+When I find a match I return both indices; otherwise I store this number.
+DEFENSE: Each number needs one constant-time map lookup, so the pass takes O(n) time and \
+the map holds at most n entries, using O(n) extra space.
 FOLLOWUP: How would you handle duplicate values?
 POINTS: Hash map of complements | One pass | O(n) time and space
 """
@@ -44,7 +50,10 @@ def _mock_report(user: str) -> str:
     import json
     import re
 
-    items = [{"q": int(n), "feedback": f"[mock] feedback {n}", "score": 4, "better": f"[mock] better {n}"}
+    items = [{"q": int(n), "feedback": f"[mock] feedback {n}", "score": 4, "better": f"[mock] better {n}",
+              "missing_points": ["[mock] Add the measurement baseline"], "delivery_score": 4, "clarity_score": 4,
+              "dimensions": {"problem_framing": 4, "technical_depth": 4, "scalability": 3,
+                             "edge_case_rigor": 3, "communication_clarity": 4}}
              for n in re.findall(r"^Q(\d+):", user, flags=re.MULTILINE)]
     return json.dumps({
         "summary": "[mock] Session summary.", "topics": [], "important_follow_ups": [],
@@ -314,12 +323,34 @@ class MockLLMProvider(LLMProvider):
             n = body.count("Recruiter:") + 1
             return json.dumps({"question": f"[mock] Recruiter turn {n}: what number did you have in mind?",
                                "is_follow_up": n > 1, "done": "set done to true" in body})
+        if request.request_type == "debrief_retry":
+            # Test provider only; production configuration rejects mock providers.
+            return json.dumps({"score": 4, "clarity_score": 4, "feedback": "[mock] Clear reasoning; add evidence.",
+                "ideal_answer": "[mock] I would state assumptions, explain my approach and test failure cases.",
+                "missing_points": ["[mock] Name a failure case"], "dimensions": {"problem_framing": 4,
+                "technical_depth": 4, "scalability": 3, "edge_case_rigor": 3, "communication_clarity": 4}})
+        if request.request_type == "spoken_walkthrough":
+            return json.dumps({"intuition": "[mock] Use a hash map to find an earlier complement in constant time.",
+                "commentary": ["[mock] Create the map to remember each earlier value and its index.",
+                    "[mock] Check the complement before insertion so a value cannot pair with itself.",
+                    "[mock] Store the current index so later values can find it."],
+                "complexity_defense": "[mock] Each value is visited once, so time and auxiliary space are O(n)."})
+        if request.request_type == "defense_critique":
+            return json.dumps({"spofs": ["[mock] Verify that the database has failover."],
+                "bottlenecks": ["[mock] Measure database write throughput before adding application replicas."],
+                "trade_offs": ["[mock] Explain the consistency and availability trade-off."],
+                "follow_ups": [{"question": "[mock] What happens when the database fails?",
+                    "answer": "[mock] Fail over to a replica and retry idempotent operations."},
+                    {"question": "[mock] How do you handle traffic spikes?",
+                     "answer": "[mock] Use bounded queues and backpressure."},
+                    {"question": "[mock] How do you detect lost events?",
+                     "answer": "[mock] Track offsets and reconcile with the durable source."}]})
         if request.request_type == "mock_question":
             body = request.messages[-1].content if request.messages else ""
             n = body.count("Interviewer:") + 1
             follow = "follow-up on the last answer" in body and n > 1 and n % 2 == 0
             return json.dumps({"question": f"[mock] Question {n}: tell me about a project you're proud of.",
-                               "is_follow_up": follow})
+                               "is_follow_up": follow, "last_answer_score": 4 if n > 1 else None})
         if request.request_type == "classify":
             # Deterministic stand-in for the ambiguous-question classifier: statements about prices/values are
             # not questions; anything else in the band is answered as-is.

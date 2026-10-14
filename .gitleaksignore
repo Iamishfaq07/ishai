@@ -1,0 +1,6 @@
+# Exact historical fingerprints of deliberate, non-functional test fixtures. No path-wide exclusions.
+9061cbe02a265f8622737086b30381d059a4ee7f:apps/api/tests/conftest.py:generic-api-key:12
+158a4dd0709400b71ab1b79719ba7356e95c338f:apps/api/tests/test_security_review.py:generic-api-key:117
+3f11a07e639f897a63f8e0b02e0ce0605c753b02:apps/api/tests/test_backend_hardening.py:generic-api-key:12
+3f11a07e639f897a63f8e0b02e0ce0605c753b02:apps/api/tests/test_launch_security.py:generic-api-key:260
+40e16daf82bfd8db40f478f360207506def4a0d3:apps/api/tests/test_observability.py:generic-api-key:20

@@ -15,10 +15,18 @@ export interface SaveResult {
   revision: number;
 }
 
-export type Send<P> = (id: string, payload: P, baseRevision: number | undefined) => Promise<SaveResult>;
+export interface SaveRequest {
+  signal: AbortSignal;
+  clientId: string;
+  clientRevision: number;
+}
+export type Send<P> = (id: string, payload: P, baseRevision: number | undefined, request: SaveRequest) => Promise<SaveResult>;
 
 interface Slot<P> {
   revision: number | undefined;
+  clientId: string;
+  clientRevision: number;
+  controller: AbortController | null;
   running: Promise<void> | null;
   next: { payload: P; waiters: Array<{ resolve: (r: SaveResult) => void; reject: (e: unknown) => void }> } | null;
 }
@@ -26,6 +34,8 @@ interface Slot<P> {
 export interface SaveQueue<P> {
   /** Saves `payload` for resume `id` after anything already in flight for it. Resolves with the new revision. */
   save(id: string, payload: P): Promise<SaveResult>;
+  /** Cancel stale network work immediately when text changes; the server also guards write order. */
+  supersede(id: string): void;
   /** The revision the server last confirmed (or the one the resume was loaded at). */
   revision(id: string): number | undefined;
   /** What the resume was loaded at, or what a conflict resolution settled on. */
@@ -41,7 +51,7 @@ export function createSaveQueue<P>(send: Send<P>): SaveQueue<P> {
   const slot = (id: string): Slot<P> => {
     let s = slots.get(id);
     if (!s) {
-      s = { revision: undefined, running: null, next: null };
+      s = { revision: undefined, running: null, next: null, clientId: crypto.randomUUID(), clientRevision: 0, controller: null };
       slots.set(id, s);
     }
     return s;
@@ -51,8 +61,12 @@ export function createSaveQueue<P>(send: Send<P>): SaveQueue<P> {
     if (s.running || !s.next) return;
     const { payload, waiters } = s.next;
     s.next = null;
-    s.running = send(id, payload, s.revision)
+    const controller = new AbortController();
+    s.controller = controller;
+    s.clientRevision += 1;
+    s.running = send(id, payload, s.revision, { signal: controller.signal, clientId: s.clientId, clientRevision: s.clientRevision })
       .then((result) => {
+        if (controller.signal.aborted) throw new DOMException("A newer edit superseded this save.", "AbortError");
         s.revision = result.revision;
         for (const w of waiters) w.resolve(result);
       })
@@ -61,11 +75,19 @@ export function createSaveQueue<P>(send: Send<P>): SaveQueue<P> {
       })
       .finally(() => {
         s.running = null;
+        s.controller = null;
         pump(id, s);
       });
   };
 
   return {
+    supersede(id) {
+      const s = slots.get(id);
+      if (!s) return;
+      s.controller?.abort();
+      for (const w of s.next?.waiters ?? []) w.reject(new DOMException("A newer edit superseded this save.", "AbortError"));
+      s.next = null;
+    },
     save(id, payload) {
       const s = slot(id);
       return new Promise<SaveResult>((resolve, reject) => {

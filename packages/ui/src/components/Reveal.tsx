@@ -50,10 +50,11 @@ export function Reveal({
   children: ReactNode;
 } & Record<string, unknown>) {
   const [ref, inView] = useInView<HTMLElement>();
+  const motion = useMotion();
   return (
     <Tag
       ref={ref}
-      data-shown={inView ? "" : undefined}
+      data-shown={inView || motion !== "full" ? "" : undefined}
       className={cx(stagger ? "reveal-stagger" : "reveal", className)}
       style={delay ? { ...style, transitionDelay: `${delay}ms` } : style}
       {...rest}

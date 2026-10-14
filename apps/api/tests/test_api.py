@@ -381,7 +381,7 @@ def test_live_socket_takeover_and_one_live_session_per_account(client: TestClien
             _collect(ws_b, lambda ev: any(e["type"] == "session.started" for e in ev))
 
 
-PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+PNG = (Path(__file__).parent / "smoke" / "sum.png").read_bytes()
 
 
 def test_screenshot_is_answered_over_the_live_socket(client: TestClient) -> None:

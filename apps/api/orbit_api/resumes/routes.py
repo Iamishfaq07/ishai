@@ -29,8 +29,8 @@ from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
-from pydantic import BaseModel, Field
-from sqlalchemy import func, select, update
+from pydantic import BaseModel, Field, model_validator
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 
@@ -75,6 +75,15 @@ class ResumeIn(BaseModel):
     # The revision this text was based on (from the last GET or save). Given, a save is refused with 409 if another one
     # landed since; left out (older clients), the save always lands.
     base_revision: int | None = Field(None, ge=0)
+    client_id: str | None = Field(None, min_length=16, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
+    client_revision: int | None = Field(None, ge=1, le=2_147_483_647)
+    pending_suggestions: list[fixes.Suggestion] | None = Field(None, max_length=40)
+
+    @model_validator(mode="after")
+    def _writer_pair(self) -> "ResumeIn":
+        if (self.client_id is None) != (self.client_revision is None):
+            raise ValueError("client_id and client_revision must be supplied together")
+        return self
 
 
 class ResumeOut(ResumeIn):
@@ -83,6 +92,8 @@ class ResumeOut(ResumeIn):
     created_at: datetime
     updated_at: datetime
     revision: int = 0
+    prep_context: dict[str, Any] | None = None
+    pending_suggestions: list[fixes.Suggestion] = Field(default_factory=list)
 
 
 class ResumeSummary(BaseModel):
@@ -104,7 +115,8 @@ def _out(r: Resume) -> ResumeOut:
     data, design = _load(r)
     return ResumeOut(id=r.id, title=r.title, data=data, design=design, job_text=r.job_text or "",
                      cover_letter=r.cover_letter or "", created_at=r.created_at, updated_at=r.updated_at,
-                     revision=r.revision or 0)
+                     revision=r.revision or 0, prep_context=r.prep_context,
+                     pending_suggestions=[fixes.Suggestion.model_validate(s) for s in r.pending_suggestions or []])
 
 
 async def _owned(db: AsyncSession, resume_id: str, user: User) -> Resume:
@@ -165,14 +177,25 @@ async def update_resume(resume_id: str, body: ResumeIn, user: Annotated[User, De
         "title": body.title, "data": body.data.model_dump(mode="json"),
         "design": body.design.model_dump(mode="json"), "job_text": body.job_text,
         "revision": Resume.revision + 1, "updated_at": datetime.now(UTC),
+        "last_client_id": body.client_id, "client_revision": body.client_revision or 0,
     }
     if body.cover_letter is not None:
         values["cover_letter"] = body.cover_letter
+    if body.pending_suggestions is not None:
+        values["pending_suggestions"] = [s.model_dump(mode="json") for s in body.pending_suggestions]
     # One conditional update: with a base revision, it lands only if nothing else did since (the check and the
     # write can't be split by another request).
     rid = r.id
     q = update(Resume).where(Resume.id == rid, Resume.user_id == user.id)
-    if body.base_revision is not None:
+    if body.client_id is not None:
+        # Aborting fetch cannot undo a commit. A newer edit from this same writer may follow its own unknown
+        # commit, but never a write from another tab; a late lower client revision cannot land after a newer one.
+        own_newer = and_(Resume.last_client_id == body.client_id, Resume.client_revision < body.client_revision)
+        if body.base_revision is not None:
+            q = q.where(or_(Resume.revision == body.base_revision, own_newer))
+        q = q.where(or_(Resume.last_client_id.is_(None), Resume.last_client_id != body.client_id,
+                        Resume.client_revision < body.client_revision))
+    elif body.base_revision is not None:
         q = q.where(Resume.revision == body.base_revision)
     done = await db.execute(q.values(**values).execution_options(synchronize_session=False))
     if done.rowcount != 1:  # type: ignore[attr-defined]
@@ -412,7 +435,8 @@ class SuggestOut(BaseModel):
 SKILL_CHECKS = frozenset({"has_skills", "skills_count"})
 
 
-async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn, allowance: Allowance) -> SuggestOut:
+async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn, allowance: Allowance,
+                   *, strict_ai: bool = False) -> SuggestOut:
     """Fixes for the resume, whichever the problem is. Skills and dates are worked out on the server with no AI call
     (instant, nothing invented, and free on every plan); wording, missing bullets and numbers come from the model,
     checked against the resume. `check` names one ATS problem to fix; without it you get the best fixes across the
@@ -473,7 +497,7 @@ async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn, allowan
             return SuggestOut(suggestions=mechanical)
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Add some experience first, then ask the AI.")
     if not ai_ok:
-        if mechanical:  # the fixes that need no AI are still good
+        if mechanical and not strict_ai:  # the fixes that need no AI are still good
             return SuggestOut(suggestions=mechanical, upgrade_required=True)
         raise allowance.exhausted()
     llm = get_llm_provider()
@@ -482,7 +506,7 @@ async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn, allowan
         resp = await _generate(db, user, req, "suggest", allowance)
         suggestions = ai.parse_suggestions(resp, d, focus=body.focus, job_text=body.job_text)
     except HTTPException as e:
-        if mechanical:  # the AI is down (or the free use just went), but the mechanical fixes are still good
+        if mechanical and not strict_ai:  # The editor can offer free fixes; full job prep requires actual AI tailoring.
             if not used_ai:
                 await allowance.release()
             spent = e.status_code == status.HTTP_402_PAYMENT_REQUIRED
@@ -490,7 +514,7 @@ async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn, allowan
         raise
     except (ValueError, json.JSONDecodeError) as e:
         log.warning("resume suggestions unusable: %s", e)
-        if mechanical:
+        if mechanical and not strict_ai:
             if not used_ai:
                 await allowance.release()
             return SuggestOut(suggestions=mechanical)

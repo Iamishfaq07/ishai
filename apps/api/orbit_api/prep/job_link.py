@@ -95,12 +95,29 @@ def _check_url(url: str) -> tuple[str, str, int]:
 
 async def _pinned_ip(host: str, port: int, resolve: Resolver) -> str:
     try:
-        addrs = [host] if _is_ip(host) else await resolve(host, port)
+        legacy = _legacy_ipv4(host)
+        addrs = [host] if _is_ip(host) else [legacy] if legacy else await resolve(host, port)
     except OSError as e:
         raise JobLinkError("Couldn't find that website. Check the link.") from e
     if not addrs or not all(_public(a) for a in addrs):
         raise JobLinkError("That link points to a private address, so Orbit can't open it.")
     return addrs[0]
+
+
+def _legacy_ipv4(host: str) -> str | None:
+    """Normalize numeric IPv4 spellings before DNS, consistently on Windows and Unix (inet_aton syntax)."""
+    if not re.fullmatch(r"(?:0x[0-9a-f]+|[0-9]+)(?:\.(?:0x[0-9a-f]+|[0-9]+)){0,3}", host, re.I):
+        return None
+    try:
+        pieces = host.split(".")
+        values = [int(p, 16 if p.lower().startswith("0x") else 8 if len(p) > 1 and p.startswith("0") else 10)
+                  for p in pieces]
+        if any(v > 255 for v in values[:-1]) or values[-1] >= 2 ** (8 * (5 - len(values))):
+            raise ValueError
+        value = sum(v << (24 - 8 * i) for i, v in enumerate(values[:-1])) + values[-1]
+        return str(ipaddress.IPv4Address(value))
+    except ValueError as e:
+        raise JobLinkError("That link points to a private address or invalid numeric host.") from e
 
 
 def _is_ip(host: str) -> bool:

@@ -21,9 +21,9 @@ def _at(s: float) -> datetime:
 
 
 def test_each_question_gets_only_the_candidate_turns_that_followed_it() -> None:
-    qs = [SimpleNamespace(text="Tell me about yourself.", created_at=_at(10)),
-          SimpleNamespace(text="Why this role?", created_at=_at(60)),
-          SimpleNamespace(text="Any questions for us?", created_at=_at(120))]
+    qs = [SimpleNamespace(id="q1", text="Tell me about yourself.", created_at=_at(10)),
+          SimpleNamespace(id="q2", text="Why this role?", created_at=_at(60)),
+          SimpleNamespace(id="q3", text="Any questions for us?", created_at=_at(120))]
     turns = [SimpleNamespace(speaker="candidate", text="Hi there.", created_at=_at(5), start_ms=0, end_ms=900),
              SimpleNamespace(speaker="interviewer", text="Tell me about yourself.", created_at=_at(9), start_ms=1000,
                              end_ms=2500),
@@ -37,6 +37,7 @@ def test_each_question_gets_only_the_candidate_turns_that_followed_it() -> None:
     assert [p.answer for p in pairs] == ["I build secure systems. Six years in AppSec.", "The mission.", ""]
     # Each answer's length runs from its first word to its last, pauses between turns included.
     assert [p.answer_ms for p in pairs] == [14_500, 1000, 0]
+    assert [p.question_id for p in pairs] == ["q1", "q2", "q3"]
 
 
 def test_review_uses_transcript_text_and_never_scores_unanswered_questions() -> None:
@@ -49,7 +50,8 @@ def test_review_uses_transcript_text_and_never_scores_unanswered_questions() -> 
     assert r["overall_score"] == 5 and r["strengths"] == ["a", "b"] and r["improvements"] == []
     first, second = r["items"]
     assert first == {"question": "Q one?", "you_said": "my answer", "score": 5, "feedback": "good",
-                     "better": "say more", "answer_s": 64, "words": 2}
+                     "better": "say more", "answer_s": 64, "words": 2, "question_id": None,
+                     "missing_points": [], "delivery_score": None, "clarity_score": None, "dimensions": {}}
     assert second["answer_s"] is None and second["words"] == 0
     assert second["score"] is None and second["feedback"] == "Not answered in the recording."
     # nothing answered at all → no overall score

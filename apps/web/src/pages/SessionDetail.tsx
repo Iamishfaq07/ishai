@@ -8,6 +8,7 @@ import {
   FollowUpCard,
   ReportStatusNote,
   SessionReview,
+  DebriefStudio,
   cx,
   focusRing,
   useAnswerRatings,
@@ -196,6 +197,7 @@ export function SessionDetailPage() {
           }}
         />
         <DeliveryCard delivery={detail.data.summary?.delivery} />
+        {session.status === "ended" && <DebriefStudio api={api} sessionId={session.id} refreshOn={detail.data.summary?.review} />}
         {session.status === "ended" && session.type !== "mock" && (detail.data.turns.length > 0 || detail.data.questions.length > 0) && (
           <FollowUpCard initial={detail.data.summary?.follow_up} load={(refresh) => api.followUp(session.id, refresh)} />
         )}

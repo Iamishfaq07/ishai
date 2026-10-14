@@ -12,10 +12,12 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.64.1",
     "eslint": "^10.12.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.13.0",
@@ -24,6 +26,7 @@
   },
   "pnpm": {
     "overrides": {
+      "postcss-selector-parser": "7.1.6",
       "source-map-js": "1.2.2",
       "braces": "npm:@franciscosolis/braces@3.1.1"
     }

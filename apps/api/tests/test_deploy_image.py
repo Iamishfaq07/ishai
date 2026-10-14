@@ -9,9 +9,9 @@ CI = API.parents[1] / ".github" / "workflows" / "ci.yml"
 
 
 def test_docker_python_matches_ci_and_mypy() -> None:
-    image = re.search(r"^FROM python:(\d+\.\d+)-", (API / "Dockerfile").read_text(), re.M)
+    image = re.search(r"^FROM python:(\d+\.\d+)-", (API / "Dockerfile").read_text(encoding="utf-8"), re.M)
     assert image, "Dockerfile should build FROM python:<major>.<minor>-…"
-    mypy = tomllib.loads((API / "pyproject.toml").read_text())["tool"]["mypy"]["python_version"]
+    mypy = tomllib.loads((API / "pyproject.toml").read_text(encoding="utf-8"))["tool"]["mypy"]["python_version"]
     assert image[1] == mypy
     if CI.is_file():
-        assert set(re.findall(r'python-version: "(\d+\.\d+)"', CI.read_text())) == {image[1]}
+        assert set(re.findall(r'python-version: "(\d+\.\d+)"', CI.read_text(encoding="utf-8"))) == {image[1]}

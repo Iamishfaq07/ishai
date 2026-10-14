@@ -6,13 +6,14 @@ from pydantic import AliasChoices, Field, SecretStr, field_validator, model_vali
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 _DEV_SECRET = "dev-only-insecure-secret-change-me"  # noqa: S105 - rejected outside development
+_DEV_PROXY_SECRET = "orbit-local-proxy-secret-for-development-only"  # noqa: S105 - never valid in production
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     env: Literal["development", "test", "production"] = Field(
-        "development", validation_alias=AliasChoices("ORBIT_ENV")
+        "development", validation_alias=AliasChoices("ORBIT_ENV", "ENV")
     )
     database_url: str = Field(
         "sqlite+aiosqlite:///./orbit.db", validation_alias=AliasChoices("ORBIT_DATABASE_URL")
@@ -39,7 +40,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("ORBIT_CORS_ORIGINS"),
     )
     upload_dir: str = Field("./uploads", validation_alias=AliasChoices("ORBIT_UPLOAD_DIR"))
-    max_upload_bytes: int = 10 * 1024 * 1024
+    max_upload_bytes: int = Field(5 * 1024 * 1024, gt=0, le=5 * 1024 * 1024)
     # Welcome credits for a new account (credits.py): resume-AI credits and interview minutes, once. Sign-up is open
     # without email verification, so they go to one account per network (IP) per ORBIT_WELCOME_IP_DAYS (0 = one per
     # network for good), and to at most ORBIT_WELCOME_DAILY accounts a rolling day: fake accounts can't farm them.
@@ -242,7 +243,7 @@ class Settings(BaseSettings):
             raise ValueError("ORBIT_UPI_ID must look like name@bank (for example yourname@okicici)")
         return v
 
-    @field_validator("razorpay_key_id", "razorpay_key_secret", "razorpay_webhook_secret", mode="before")
+    @field_validator("razorpay_key_id", "razorpay_key_secret", "razorpay_webhook_secret", "proxy_secret", mode="before")
     @classmethod
     def _razorpay_trimmed(cls, v: object) -> object:
         # Keys pasted into a dashboard often carry a space or line break, which Razorpay answers with a 401.
@@ -283,8 +284,10 @@ class Settings(BaseSettings):
                     raise ValueError("ORBIT_FALLBACK_LLM_EXTRA_JSON must be a JSON object")
             if "*" in self.cors_origins:
                 raise ValueError("ORBIT_CORS_ORIGINS must list exact origins in production (no '*')")
-            if self.proxy_secret is not None and len(self.proxy_secret.get_secret_value()) < 32:
-                raise ValueError("ORBIT_PROXY_SECRET must be a random value of 32+ chars")
+            proxy = self.proxy_secret.get_secret_value().strip() if self.proxy_secret else ""
+            if len(proxy) < 32 or proxy == _DEV_PROXY_SECRET or len(set(proxy)) < 12:
+                raise ValueError("ORBIT_PROXY_SECRET is required in production: set a random value of 32+ chars "
+                                 "in Render and the identical PROXY_SECRET in the Cloudflare Worker before deploying")
             if self.api_replicas != 1:
                 raise ValueError("ORBIT_API_REPLICAS must be 1: live-session state is process-local (tickets, "
                                  "socket ownership, screenshot routing, rate limits). See docs/DECISIONS.md D12.")
@@ -305,6 +308,14 @@ class Settings(BaseSettings):
                 raise ValueError("ORBIT_CAPTCHA_PROVIDER=turnstile needs TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY")
         # SMTP is optional for an admin-only deploy: email features are then disabled. It's never faked to the
         # dev outbox in production (see email.py).
+        elif self.proxy_secret is None:
+            self.proxy_secret = SecretStr(_DEV_PROXY_SECRET)
+        if self.env == "production" and bool(self.razorpay_key_id) != bool(self.razorpay_key_secret):
+            raise ValueError("Set both ORBIT_RAZORPAY_KEY_ID and ORBIT_RAZORPAY_KEY_SECRET, or leave both empty")
+        if self.env == "production" and self.razorpay_key_id and not self.razorpay_webhook_secret:
+            raise ValueError("ORBIT_RAZORPAY_WEBHOOK_SECRET is required when production checkout is enabled")
+        if self.env == "production" and bool(self.google_client_id) != bool(self.google_client_secret):
+            raise ValueError("Set both ORBIT_GOOGLE_CLIENT_ID and ORBIT_GOOGLE_CLIENT_SECRET, or leave both empty")
         return self
 
     @property

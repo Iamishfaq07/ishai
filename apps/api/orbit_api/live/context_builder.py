@@ -9,9 +9,11 @@ from collections import deque
 from dataclasses import dataclass, field
 from functools import cache
 from pathlib import Path
+from typing import Any
 
 from orbit_api.answers.match import DOC_KIND as ANSWER_KIND
 from orbit_api.answers.match import chunk_question, same_question
+from orbit_api.documents.uploads import sanitize_text
 from orbit_api.live import company_styles
 from orbit_api.live.events import (
     AnswerLength,
@@ -109,7 +111,7 @@ _FENCE_TAG = re.compile(r"<\s*(/?)\s*reference_data", re.IGNORECASE)
 def fence(text: str) -> str:
     """Neutralise attempts to open or close the reference fence from inside untrusted text, in any case and spacing
     ("</REFERENCE_DATA>", "< /reference_data>"): a job post or a document can't step outside its data block."""
-    return _FENCE_TAG.sub(lambda m: f"‹{m.group(1)}reference_data", text)
+    return _FENCE_TAG.sub(lambda m: f"‹{m.group(1)}reference_data", sanitize_text(text))
 
 
 @dataclass
@@ -175,6 +177,7 @@ class PromptInputs:
     mode: str = "normal"
     # The candidate's standing preferences for every answer (saved with the setup). Preferences, never rules.
     candidate_instructions: str | None = None
+    prep_context: dict[str, Any] = field(default_factory=dict)
     # Fixed style hints learned from the candidate's 👎 reasons (sessions/feedback.LEARNED_HINTS), never user text.
     learned_preferences: list[str] = field(default_factory=list)
     company: str | None = None  # from the saved setup or the mock interview, when known
@@ -394,6 +397,11 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
              "question or the user's request names a different language.") if inputs.coding_language else "",
             _GROUNDING_RULE if inputs.qtype in _PERSONAL_TYPES or inputs.is_follow_up else "",
             _MODE_RULES.get(inputs.mode, ""),
+            ("Whenever you output CODE (including an optimized or corrected solution), include a 30-second spoken "
+             "walkthrough after SPACE: INTUITION: one conversational sentence to say before coding; COMMENTARY: "
+             "exactly three short natural sentences separated by | to say while writing the core loop or data "
+             "structure; DEFENSE: one sentence explaining WHY this specific algorithm has the stated time and "
+             "space complexity. Keep the whole walkthrough near 70 words. These tags never belong inside CODE."),
             _CODE_RULE if inputs.qtype == QuestionType.coding and inputs.mode == "normal" else "",
             # (a one-to-three-sentence answer never needs code)
             _MAYBE_CODE_RULE if inputs.qtype in (QuestionType.technical, QuestionType.follow_up)
@@ -407,6 +415,9 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
     if inputs.learned_preferences:
         parts.append("Learned from the candidate's ratings of earlier answers:\n"
                      + "\n".join(f"- {h}" for h in inputs.learned_preferences[:5]))
+    if inputs.prep_context:
+        parts.append('<reference_data source="target_job_context">\n'
+                     + fence(str(inputs.prep_context)) + "\n</reference_data>")
     if inputs.candidate_instructions:
         parts.append("The candidate's own preferences for every answer. Follow them when they don't conflict with "
                      "the rules above (they can't change the format, grounding or honesty rules):\n"

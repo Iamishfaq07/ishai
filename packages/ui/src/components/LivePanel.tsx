@@ -34,9 +34,10 @@ import { CodeBlock } from "./CodeBlock";
 import { ControlBar } from "./ControlBar";
 import { MockPanel } from "./MockPanel";
 import { cx, focusRing } from "./cx";
-import { OrbitLogo } from "./OrbitLogo";
 import { QuestionCard } from "./QuestionCard";
 import { StatusPill } from "./StatusPill";
+import { OrbitalVisualizer, orbitalState } from "./OrbitalVisualizer";
+import { DeviceCaptureHealthPill, type CaptureHealth } from "./DeviceCaptureHealthPill";
 import { Teleprompter } from "./Teleprompter";
 import { TranscriptView } from "./TranscriptView";
 import {
@@ -103,6 +104,10 @@ function useSidePanel(wide: boolean): [boolean, (open: boolean) => void] {
 }
 
 export interface LivePanelProps {
+  analyser?: AnalyserNode;
+  audioAmplitude?: () => number;
+  captureHealth?: CaptureHealth;
+  screenCaptureHealth?: CaptureHealth;
   live: LiveViewState;
   actions: LiveActions;
   mode: PanelMode;
@@ -117,6 +122,7 @@ export interface LivePanelProps {
   onViewReport?: () => void;
   onScreenshot?: () => void;
   screenshotUnavailableReason?: string;
+  loadWalkthrough?: (answerId: string) => Promise<NonNullable<import("@orbit/types").LiveAnswer["walkthrough"]>>;
   hotkeys?: HotkeyMap;
   title?: string;
   /** Desktop: mark the header as the window drag handle. */
@@ -324,7 +330,7 @@ export function LivePanel(props: LivePanelProps) {
         data-tauri-drag-region={props.dragRegion ? "" : undefined}
         className="flex select-none items-center gap-1.5 border-b border-zinc-200 px-3 py-2.5 dark:border-white/[0.06] sm:gap-2.5 sm:px-4"
       >
-        <OrbitLogo size={18} busy={live.state === "generating" || live.state === "streaming"} />
+        <OrbitalVisualizer size={compact ? 30 : 42} state={orbitalState(live.state)} analyser={props.analyser} amplitude={props.audioAmplitude} />
         {(compact || !wide) && <h1 className="sr-only">{props.title ?? "Orbit"}</h1>}
         {!compact && wide && (
           <h1
@@ -335,6 +341,7 @@ export function LivePanel(props: LivePanelProps) {
           </h1>
         )}
         <StatusPill state={live.state} connection={live.connection} stt={live.providers.stt?.state} />
+        {!compact && props.captureHealth && <DeviceCaptureHealthPill audio={paused || ended ? "muted" : props.captureHealth} screen={props.screenCaptureHealth} />}
         <SessionClock startedAt={live.startedAt} running={!ended && !paused} dragRegion={props.dragRegion} />
         {props.headerEnd}
         {!compact && (
@@ -383,7 +390,7 @@ export function LivePanel(props: LivePanelProps) {
         onBuyMinutes={props.onBuyMinutes}
         onDismiss={actions.dismissError}
       />
-      {props.notice}
+      {props.notice && <div className="max-h-[40vh] shrink-0 overflow-y-auto">{props.notice}</div>}
 
       {paused && !ended && (
         <div
@@ -419,6 +426,7 @@ export function LivePanel(props: LivePanelProps) {
           {answerHistory.liveIndex > 0 && !live.pinnedAnswerId && <HistoryNav nav={answerHistory} />}
           <AnswerCard
             answer={answer}
+            {...(props.loadWalkthrough ? { loadWalkthrough: props.loadWalkthrough } : {})}
             pinned={Boolean(answer && live.pinnedAnswerId === answer.answer_id)}
             onPin={pin}
             {...(retry ? { onRetry: retry } : {})}
@@ -493,7 +501,7 @@ export function LivePanel(props: LivePanelProps) {
       </div>
 
       {mockStt && !ended && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-dashed border-zinc-200 px-4 py-1.5 text-xs text-zinc-500 dark:border-zinc-800">
+        <div className="shrink-0 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-dashed border-zinc-200 px-4 py-1.5 text-xs text-zinc-500 dark:border-zinc-800">
           <span title="The server is using the mock speech-to-text provider — replay a scripted conversation">
             Dev · simulate:
           </span>

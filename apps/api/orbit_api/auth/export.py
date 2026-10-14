@@ -17,12 +17,15 @@ from orbit_api.models import (
     Answer,
     AnswerFeedback,
     AuditLog,
+    CareerPreparation,
     ContactMessage,
+    DebriefAttempt,
     Document,
     JobApplication,
     JobContact,
     JobFitCheck,
     JobSearchProfile,
+    LaunchAccessClaim,
     LiveSessionRow,
     Question,
     Resume,
@@ -77,6 +80,12 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
                                                               .order_by(SavedAnswer.created_at))).all()],
         "resumes": [_row(r) for r in (await db.scalars(select(Resume).where(Resume.user_id == user_id)
                                                        .order_by(Resume.created_at))).all()],
+        "career_preparations": [_row(r) for r in (await db.scalars(select(CareerPreparation).where(
+            CareerPreparation.user_id == user_id).order_by(CareerPreparation.created_at))).all()],
+        "debrief_attempts": [_row(r) for r in (await db.scalars(select(DebriefAttempt).where(
+            DebriefAttempt.user_id == user_id).order_by(DebriefAttempt.created_at))).all()],
+        "launch_access_requests": [_row(r) for r in (await db.scalars(select(LaunchAccessClaim).where(
+            LaunchAccessClaim.user_id == user_id).order_by(LaunchAccessClaim.created_at))).all()],
         "answer_ratings": [_row(f) for f in (await db.scalars(
             select(AnswerFeedback).where(AnswerFeedback.user_id == user_id)
             .order_by(AnswerFeedback.created_at))).all()],

@@ -312,7 +312,7 @@ const SOURCES: Array<{ id: Source; label: string; hint: string; icon: typeof Fil
   { id: "document", label: "From your documents", hint: "A resume you already gave Orbit.", icon: FolderOpen },
 ];
 
-const MAX_FILE_BYTES = 10 * 1024 * 1024; // the server's limit, checked before uploading over a phone connection
+const MAX_FILE_BYTES = 5 * 1024 * 1024; // the server's limit, checked before uploading over a phone connection
 
 /** Shown while a file or text is being read: says it's still going, and lets the person stop waiting. */
 function BusyNote({ onCancel }: { onCancel: () => void }) {
@@ -381,7 +381,7 @@ export function NewResume({ onClose, initial = null }: { onClose?: () => void; i
 
   const importFile = (file: File) => {
     if (file.size > MAX_FILE_BYTES) {
-      setError("That file is over 10 MB. Export a smaller PDF, or paste the text instead.");
+      setError("That file is over 5 MB. Export a smaller PDF, or paste the text instead.");
       return;
     }
     void run(async (signal) => {

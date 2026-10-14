@@ -7,6 +7,7 @@ import time
 import uuid
 from collections.abc import Iterator
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -291,7 +292,7 @@ def test_usage_upsert_is_idempotent() -> None:
 
 # ---- screenshot credits ------------------------------------------------------------------------------------
 
-PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+PNG = (Path(__file__).parent / "smoke" / "sum.png").read_bytes()
 
 
 def test_failed_screenshot_analysis_costs_no_credit(fast_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:

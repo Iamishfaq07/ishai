@@ -6,6 +6,7 @@ export interface PcmFrame {
 }
 
 export interface AudioCapture {
+  analyser?: AnalyserNode;
   stop: () => void;
   /** Underlying stream (e.g. to detect the user ending a screen share). */
   stream: MediaStream;
@@ -50,7 +51,10 @@ export async function captureStream(stream: MediaStream, onFrame: (frame: PcmFra
   node.port.onmessage = (ev: MessageEvent<{ pcm: ArrayBuffer; rms: number }>) => {
     onFrame({ pcm: new Int16Array(ev.data.pcm), rms: ev.data.rms });
   };
-  source.connect(node);
+  const analyser = ctx.createAnalyser();
+  analyser.fftSize = 256;
+  source.connect(analyser);
+  analyser.connect(node);
   // The worklet produces no audio output; connecting keeps it pulled on all browsers
   // while a zero-gain node guarantees nothing is played back.
   const mute = ctx.createGain();
@@ -73,6 +77,7 @@ export async function captureStream(stream: MediaStream, onFrame: (frame: PcmFra
   let stopped = false;
   return {
     stream,
+    analyser,
     // Idempotent: unmount, "End", and a user-ended screen share can all call stop().
     stop: () => {
       if (stopped) return;
@@ -80,6 +85,7 @@ export async function captureStream(stream: MediaStream, onFrame: (frame: PcmFra
       unlockEvents.forEach((e) => document.removeEventListener(e, unlock));
       node.port.onmessage = null;
       source.disconnect();
+      analyser.disconnect();
       node.disconnect();
       stream.getTracks().forEach((t) => t.stop());
       if (ctx.state !== "closed") void ctx.close().catch(() => {});

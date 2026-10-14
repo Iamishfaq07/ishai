@@ -24,6 +24,7 @@ from orbit_api.answers.routes import router as answers_router
 from orbit_api.auth.routes import router as auth_router
 from orbit_api.billing.packs import packs as configured_packs
 from orbit_api.billing.routes import router as billing_router
+from orbit_api.career.routes import router as career_router
 from orbit_api.config import get_settings
 from orbit_api.contact.routes import router as contact_router
 from orbit_api.csrf import HEADER as CSRF_HEADER
@@ -244,6 +245,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(documents_router)
     app.include_router(sessions_router)
+    app.include_router(career_router)
     app.include_router(desktop_router)
     app.include_router(admin_router)
     app.include_router(admin_accounts_router)

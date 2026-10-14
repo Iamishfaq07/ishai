@@ -1,4 +1,9 @@
 import type {
+  CareerContext,
+  Debrief,
+  DebriefAttempt,
+  DefenseCard,
+  FullPreparation,
   AdminActivityItem,
   AtsReport,
   AccessChange,
@@ -367,6 +372,24 @@ export function createApiClient(options: ApiClientOptions) {
   });
 
   return {
+    fullJobPrep: (id: string, resumeId?: string | null) => json<FullPreparation>(`/v1/jobs/listings/${encodeURIComponent(id)}/full-prep`,
+      { method: "POST", body: body({ resume_id: resumeId ?? null }), timeoutMs: LONG_TIMEOUT_MS }),
+    grillResume: (id: string, data: ResumeData, context: CareerContext) => json<OrbitSession>(`/v1/resumes/${encodeURIComponent(id)}/grill`,
+      { method: "POST", body: body({ data, context }), timeoutMs: LONG_TIMEOUT_MS }),
+    debrief: (id: string) => json<Debrief>(`/v1/sessions/${encodeURIComponent(id)}/debrief`),
+    retryDebrief: (id: string, questionId: string, answer: string) => json<DebriefAttempt>(
+      `/v1/sessions/${encodeURIComponent(id)}/debrief/${encodeURIComponent(questionId)}/retry`,
+      { method: "POST", body: body({ answer }), timeoutMs: LONG_TIMEOUT_MS }),
+    spokenWalkthrough: (id: string, answerId: string) => json<NonNullable<import("@orbit/types").LiveAnswer["walkthrough"]>>(
+      `/v1/sessions/${encodeURIComponent(id)}/answers/${encodeURIComponent(answerId)}/walkthrough`, { method: "POST" }),
+    defenseNotes: (id: string, notes: string) => json<DefenseCard>(`/v1/sessions/${encodeURIComponent(id)}/defense`,
+      { method: "POST", body: body({ notes }), timeoutMs: LONG_TIMEOUT_MS }),
+    defenseFile: (id: string, file: Blob, name: string, notes = "") => {
+      const form = new FormData(); form.append("file", file, name); form.append("notes", notes);
+      return json<DefenseCard>(`/v1/sessions/${encodeURIComponent(id)}/defense-file`, { method: "POST", body: form, timeoutMs: LONG_TIMEOUT_MS });
+    },
+    requestLaunchAccess: (pack: string, country: string) => json<{ reference: string; status: "requested"; message: string }>(
+      "/v1/billing/launch-access", { method: "POST", body: body({ pack, country }) }),
     baseUrl,
 
     // Auth
@@ -470,8 +493,8 @@ export function createApiClient(options: ApiClientOptions) {
     listResumes: () => json<ResumeSummary[]>("/v1/resumes"),
     getResume: (id: string) => json<Resume>(`/v1/resumes/${encodeURIComponent(id)}`),
     createResume: (req: ResumeInput) => json<Resume>("/v1/resumes", { method: "POST", body: body(req) }),
-    updateResume: (id: string, req: ResumeInput) =>
-      json<Resume>(`/v1/resumes/${encodeURIComponent(id)}`, { method: "PUT", body: body(req) }),
+    updateResume: (id: string, req: ResumeInput, opts: RequestOptions = {}) =>
+      json<Resume>(`/v1/resumes/${encodeURIComponent(id)}`, { method: "PUT", body: body(req), ...opts }),
     deleteResume: (id: string) => json<void>(`/v1/resumes/${encodeURIComponent(id)}`, { method: "DELETE" }),
     ...resumeTools("/v1/resumes"),
 

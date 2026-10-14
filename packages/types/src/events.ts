@@ -102,6 +102,7 @@ export interface LiveAnswer {
   talking_points: string[];
   example: string | null;
   code: LiveAnswerCode | null;
+  walkthrough?: { intuition: string; commentary: string[]; complexity_defense: string } | null;
   time_complexity: string | null;
   space_complexity: string | null;
   follow_up: string | null;
@@ -253,6 +254,7 @@ export interface ServerEventMap {
   "provider.status": ProviderStatus;
   /** Mock interview: the AI interviewer's next question (the client speaks it). */
   "mock.question": {
+    concept_depth?: number;
     question_id: string;
     text: string;
     is_follow_up: boolean;

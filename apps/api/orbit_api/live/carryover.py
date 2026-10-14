@@ -104,6 +104,8 @@ def to_json(carryover: Carryover, *, transcripts: bool = True) -> dict[str, Any]
         out["mock"] = {
             # mock_interviewer._Asked
             "asked": [{"question_id": a.question_id, "text": a.text, "is_follow_up": a.is_follow_up,
+                       "depth": a.depth,
+                       "speaker": a.speaker,
                        "answer": list(a.answer) if transcripts else [],
                        "drill": a.drill.model_dump(mode="json") if a.drill is not None else None}
                       for a in p.asked],
@@ -138,6 +140,8 @@ def _decode(data: dict[str, Any]) -> Carryover:
     if isinstance(p := data.get("mock"), dict):
         asked = [_Asked(str(a["question_id"]), str(a["text"]), bool(a["is_follow_up"]),
                         answer=[str(x) for x in a.get("answer") or []],
+                        depth=max(1, min(5, int(a.get("depth") or 1))),
+                        speaker=str(a["speaker"]) if a.get("speaker") else None,
                         drill=DrillItem.model_validate(a["drill"]) if a.get("drill") else None)
                  for a in p.get("asked") or []]
         mock = MockProgress(asked=asked, drill_next=int(p["drill_next"]), closing=bool(p["closing"]),

@@ -91,6 +91,7 @@ export function MockPanel({ live, actions, voice, ended, onViewReport }: {
           {q.negotiation ? `Recruiter · turn ${q.index} of up to ${q.total}` : `Question ${q.index} of ${q.total}`}
         </span>
         {q.isFollowUp && <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-indigo-700 dark:text-indigo-300">Follow-up</span>}
+        {q.conceptDepth !== undefined && <span className="telemetry rounded-full bg-cyan-500/10 px-2 py-0.5 text-cyan-700 dark:text-cyan-200" title="Adaptive depth: foundations → architectural trade-offs">Depth {q.conceptDepth}/5</span>}
         {q.drillKind === "retry" && (
           <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-amber-800 dark:text-amber-300" title="A question you found hard last time">
             Drill: try again

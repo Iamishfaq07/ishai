@@ -66,6 +66,9 @@ def enforce(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> Iterator[Non
     monkeypatch.setattr(allowance, "ENFORCE_IN_TESTS", True)
     monkeypatch.setattr(credits, "ENFORCE_IN_TESTS", True)
     monkeypatch.setattr(get_settings(), "proxy_secret", SecretStr(PROXY))
+    # Other suites create hundreds of accounts in the shared test DB. Network/credit tests must not depend on
+    # collection order; the daily-cap test below installs its own explicit cap.
+    monkeypatch.setattr(get_settings(), "welcome_daily_limit", 100_000)
     _register(client)  # with no ORBIT_ADMIN_EMAIL the first account stands in as admin (unlimited): not ours
     yield
 

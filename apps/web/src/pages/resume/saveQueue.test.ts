@@ -29,6 +29,24 @@ function server() {
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 describe("resume save queue", () => {
+  it("aborts stale network saves as soon as text changes and advances a writer's monotonic revision", async () => {
+    const requests: Array<{ signal: AbortSignal; clientRevision: number; clientId: string }> = [];
+    const q = createSaveQueue<string>((_id, _payload, _base, request) => {
+      requests.push(request);
+      return new Promise((resolve, reject) => {
+        request.signal.addEventListener("abort", () => reject(new DOMException("superseded", "AbortError")));
+        if (request.clientRevision === 2) resolve({ revision: 2 });
+      });
+    });
+    const first = q.save("A", "older").catch((e: unknown) => e);
+    q.supersede("A");
+    const second = q.save("A", "newest");
+    expect((await first as DOMException).name).toBe("AbortError");
+    await second;
+    expect(requests[0]!.signal.aborted).toBe(true);
+    expect(requests.map((r) => r.clientRevision)).toEqual([1, 2]);
+    expect(requests[0]!.clientId).toBe(requests[1]!.clientId);
+  });
   it("(the defect) two unqueued saves, as the old editor sent them, let the older text land last", async () => {
     const s = server();
     const v1 = s.send("A", "v1", undefined); // autosave in flight

@@ -128,6 +128,7 @@ export interface LiveViewState {
   usage: { minutesRemaining: number; limitReached: boolean; reason: "monthly" | "session" } | null;
   /** Mock interview: the AI interviewer's current question, and whether the interview is over. */
   mock: {
+    conceptDepth?: number;
     questionId: string;
     text: string;
     isFollowUp: boolean;
@@ -463,6 +464,7 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
       return {
         ...s,
         mock: { questionId: action.data.question_id, text: action.data.text, isFollowUp: action.data.is_follow_up,
+          ...(action.data.concept_depth !== undefined ? { conceptDepth: action.data.concept_depth } : {}),
           drillKind: action.data.drill_kind ?? null, negotiation: Boolean(action.data.negotiation),
           ...(action.data.question_type ? { questionType: action.data.question_type } : {}),
           ...(action.data.speaker ? { speaker: action.data.speaker } : {}),

@@ -30,6 +30,7 @@ import {
   LoadGate,
   Skeleton,
   ApiError,
+  InlineResumeDiff,
   confirmDialog,
   cx,
   focusRing,
@@ -54,12 +55,13 @@ import { RESUME_AI_HOME, shouldFlushResume } from "./paths";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
 import { SaveToDocuments } from "./SaveToDocuments";
+import { ResumeCareerActions } from "./ResumeCareerActions";
 
 type Tab = "content" | "score" | "ai" | "design" | "letter" | "prep";
 
 /** What undo/redo restores: everything the user edits. */
-type Snapshot = Pick<Resume, "title" | "data" | "design" | "job_text" | "cover_letter">;
-const snapshot = (r: Resume): Snapshot => ({ title: r.title, data: r.data, design: r.design, job_text: r.job_text, cover_letter: r.cover_letter });
+type Snapshot = Pick<Resume, "title" | "data" | "design" | "job_text" | "cover_letter" | "pending_suggestions">;
+const snapshot = (r: Resume): Snapshot => ({ title: r.title, data: r.data, design: r.design, job_text: r.job_text, cover_letter: r.cover_letter, pending_suggestions: r.pending_suggestions });
 /** A bracketed cue the AI leaves for the user to fill in ("by [X%]"). */
 const FILL = /\[[^\][\n]{1,160}\]/g;
 const HISTORY_LIMIT = 100;
@@ -157,6 +159,8 @@ function ResumeEditor() {
         if (cancel || loaded.id !== requested) return;
         saves.setRevision(requested, loaded.revision);
         setResume(loaded);
+        setQueue(loaded.pending_suggestions ?? []);
+        if (loaded.pending_suggestions?.length) setTab("ai");
         setSave({ state: "saved" });
         const kept = drafts.load<ResumeInput>(userId, requested);
         if (kept && sameText(kept.payload, payloadOf(loaded))) drafts.clear(userId, requested);
@@ -176,11 +180,12 @@ function ResumeEditor() {
   const history = useRef<{ past: Snapshot[]; future: Snapshot[]; at: number; el: Element | null }>({ past: [], future: [], at: 0, el: null });
   const [steps, setSteps] = useState({ undo: 0, redo: 0 });
   const apply = useCallback((next: Resume) => {
+    saves.supersede(next.id);
     latest.current = next;
     setResume(next);
     setSave({ state: "dirty" });
     setSteps({ undo: history.current.past.length, redo: history.current.future.length });
-  }, []);
+  }, [saves]);
   const change = useCallback(
     (fn: (r: Resume) => Resume) => {
       const r = latest.current;
@@ -228,6 +233,10 @@ function ResumeEditor() {
     return () => window.removeEventListener("keydown", onKey);
   }, [step]);
   const update = useCallback((fn: (d: ResumeData) => ResumeData) => change((r) => ({ ...r, data: fn(r.data) })), [change]);
+  const setSuggestions = (next: ResumeSuggestion[]) => {
+    setQueue(next);
+    change((r) => ({ ...r, pending_suggestions: next }));
+  };
   const setDesign = (patch: Partial<ResumeDesign>) => change((r) => ({ ...r, design: { ...r.design, ...patch } }));
 
   // Autosave, a moment after the last edit.
@@ -247,6 +256,10 @@ function ResumeEditor() {
           setSave((s) => (s.state === "saving" ? { state: "saved" } : s));
         })
         .catch((err: unknown) => {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            setSave((s) => s.state === "saving" ? { state: "dirty" } : s);
+            return;
+          }
           if (err instanceof ApiError && err.status === 409) {
             setSave({ state: "conflict" });
             return;
@@ -421,7 +434,8 @@ function ResumeEditor() {
         ...(focus ? { focus } : {}),
         ...(mode === "shorten" && linesOver ? { lines_over: linesOver } : {}),
       });
-      setQueue(res.suggestions);
+      if (latest.current?.id !== resume.id) return;
+      setSuggestions(res.suggestions);
       if (res.upgrade_required) {
         setAiUpgrade(true);
         setAiError("These are the fixes that need no AI. AI rewrites, new bullets and tailoring need resume credits: you're out.");
@@ -453,7 +467,7 @@ function ResumeEditor() {
     }
     // Picking one draft of a line retires the other drafts (and fixes) of that line: they'd replace the text just set.
     const replaces = s.kind === "rewrite" || s.kind === "set";
-    setQueue((q) => q.filter((x) => x.id !== s.id && !(replaces && x.path === s.path && (x.kind === "rewrite" || x.kind === "set"))));
+    setSuggestions(queue.filter((x) => x.id !== s.id && !(replaces && x.path === s.path && (x.kind === "rewrite" || x.kind === "set"))));
   };
 
   /** Every mechanical fix with nothing to confirm (extra skills the resume proves, dates), at once. */
@@ -461,7 +475,7 @@ function ResumeEditor() {
     const safe = queue.filter(isSafeFix);
     if (!safe.length) return;
     update((d) => safe.reduce((acc, s) => applySuggestion(acc, s, newId), d));
-    setQueue((q) => q.filter((x) => !safe.includes(x)));
+    setSuggestions(queue.filter((x) => !safe.includes(x)));
     setAiError(null);
   };
 
@@ -626,6 +640,7 @@ function ResumeEditor() {
           </Button>
         </div>
       )}
+      <ResumeCareerActions resume={resume} />
       {notice && (
         <div role="status" className="mb-4 flex items-start gap-2 rounded-xl bg-indigo-500/10 p-3 text-sm text-indigo-900 dark:text-indigo-200">
           <span className="flex-1">{notice}</span>
@@ -743,7 +758,7 @@ function ResumeEditor() {
               onAsk={(mode) => void askAi(mode)}
               onAccept={accept}
               onAcceptSafe={acceptSafe}
-              onSkip={(s) => setQueue((q) => q.filter((x) => x.id !== s.id))}
+              onSkip={(s) => setSuggestions(queue.filter((x) => x.id !== s.id))}
               onShowJob={() => setTab("score")}
             />
           )}
@@ -815,7 +830,7 @@ type SaveStatus = "saved" | "saving" | "dirty" | "error" | "conflict";
 
 /** What's saved: the fields a save sends. */
 function payloadOf(r: Resume): ResumeInput {
-  return { title: r.title.trim() || "Untitled resume", data: r.data, design: r.design, job_text: r.job_text, cover_letter: r.cover_letter };
+  return { title: r.title.trim() || "Untitled resume", data: r.data, design: r.design, job_text: r.job_text, cover_letter: r.cover_letter, pending_suggestions: r.pending_suggestions };
 }
 
 function sameText(a: ResumeInput, b: ResumeInput): boolean {
@@ -1520,7 +1535,6 @@ function SuggestionCard({ s, total, onAccept, onSkip }: { s: ResumeSuggestion; t
   return (
     <Panel title={`Suggestion 1 of ${total}`}>
       <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{s.label}</p>
-      {s.before && <p className="mt-2 rounded-lg bg-rose-500/5 p-2 text-sm text-zinc-500 line-through decoration-rose-400/60 dark:text-zinc-400">{s.before}</p>}
       {kind === "add_skill" ? (
         <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Skills to add">
           {skills.map((skill) => (
@@ -1543,9 +1557,7 @@ function SuggestionCard({ s, total, onAccept, onSkip }: { s: ResumeSuggestion; t
           ))}
         </div>
       ) : (
-        <p className="mt-2 rounded-lg bg-emerald-500/10 p-2 text-sm text-zinc-900 dark:text-zinc-100">
-          <Highlighted text={s.after} />
-        </p>
+        <InlineResumeDiff before={s.before ?? ""} after={s.after} afterContent={<Highlighted text={s.after} />} />
       )}
       {s.reason && <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{s.reason}</p>}
       {s.confirm && (

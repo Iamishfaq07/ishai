@@ -18,6 +18,7 @@ import {
   useMotion,
 } from "@orbit/ui";
 import { Footer } from "../components/Footer";
+import { CareerLoop } from "../components/CareerLoop";
 import { SiteMenu } from "../components/SiteMenu";
 import { JobMock, PracticeMock, ResumeMock } from "../components/productArt";
 import { PRODUCTS, ProductMark, type ProductId } from "../components/products";
@@ -571,7 +572,7 @@ export function LandingPage() {
               {USE_WHERE_ALLOWED}
             </p>
           </div>
-          <CopilotMock />
+          <CareerLoop />
         </section>
 
         <section id="products" aria-labelledby="products-title" className="scroll-mt-20 border-t border-zinc-200/70 pt-14 dark:border-white/5">
@@ -594,7 +595,9 @@ export function LandingPage() {
                   Try a practice question, no account needed <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
               }
-              picture={<PracticeMock />}
+              picture={<div className="space-y-4"><PracticeMock /><details className="rounded-xl border border-zinc-500/15 p-3">
+                <summary className="cursor-pointer text-sm font-medium">Live copilot preview</summary><CopilotMock />
+              </details></div>}
             />
             <ProductBand
               product="resume"

@@ -57,6 +57,12 @@ services:
       # their card works. Until then they say cards from other countries are coming soon.
       - key: ORBIT_RAZORPAY_INTERNATIONAL
         value: "false"
+      - key: ORBIT_GOOGLE_CLIENT_ID
+        sync: false
+      - key: ORBIT_GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: ORBIT_GOOGLE_REDIRECT_URI
+        value: https://orbitanswer.com/api/v1/auth/google/callback
       # UPI payments (billing/upi.py), used while Razorpay isn't set up: the UPI ID payers pay to and the name their
       # app shows. Not secret: every payer sees both.
       - key: ORBIT_UPI_ID

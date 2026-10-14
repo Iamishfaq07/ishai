@@ -7,6 +7,7 @@ import { errorText } from "../../lib/format";
 import { practiceHref } from "../../lib/onboarding";
 import { resumeToText } from "../resume/model";
 import { resumePath } from "../resume/paths";
+import { prepParams } from "../../lib/prepContext";
 
 export interface FitState {
   loading: boolean;
@@ -35,7 +36,7 @@ export function useJobActions(
 ) {
   const navigate = useNavigate();
   const [askApplied, setAskApplied] = useState(false);
-  const [busy, setBusy] = useState<"save" | "applied" | "tailor" | "prepare" | null>(null);
+  const [busy, setBusy] = useState<"save" | "applied" | "tailor" | "prepare" | "fullprep" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<ActionNote | null>(null);
   const [fit, setFit] = useState<FitState>({
@@ -133,7 +134,17 @@ export function useJobActions(
     }
   };
 
+  const fullPrep = async () => {
+    setBusy("fullprep"); setError(null);
+    try {
+      const result = await api.fullJobPrep(job.id, resumeId);
+      navigate(`${resumePath(result.resume_id)}?${prepParams(result.context)}`, { state: { fromJob: job.title } });
+    } catch (err) { setError(errorText(err)); }
+    finally { setBusy(null); }
+  };
+
   return {
+    fullPrep: () => void fullPrep(),
     tracked,
     busy,
     error,
