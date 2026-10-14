@@ -12,7 +12,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-USER_AGENT = "OrbitJobs/1.0 (+https://orbit.ishfaq.workers.dev)"
+USER_AGENT = "OrbitJobs/1.0 (+https://orbitanswer.com)"
 TIMEOUT = httpx.Timeout(20.0, connect=8.0)
 MAX_BYTES = 30_000_000  # the biggest boards (Databricks' ~900 posts with their text) are ~10 MB
 
