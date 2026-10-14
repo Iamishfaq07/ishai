@@ -595,6 +595,11 @@ def test_the_search_box_is_read_into_filters_and_keywords() -> None:
     assert titled.job_types == [] and titled.keywords == "smart contract engineer"
     hired = parse_search("freelance react on contract")
     assert hired.job_types == ["contract"] and hired.keywords == "react"
+    # And the word is not thrown away when matching, or "contract engineer" would be every engineer.
+    smart = _row(title="Smart Contract Engineer", keywords=["Solidity"])
+    plain = _row(title="Software Engineer", keywords=["Java"])
+    found = ranking.rank([smart, plain], _search(keywords="smart contract", titles=[], skills=[]), MATCHER)
+    assert [m.id for m in found] == [smart.id]
     react = _row(title="Frontend Engineer", keywords=["React", "TypeScript"], workplace="remote", cities=[])
     other = _row(title="Backend Engineer", company="X", workplace="remote", cities=[])
     out = ranking.rank([react, other], _search(keywords="react", workplace=["remote"]), MATCHER)
