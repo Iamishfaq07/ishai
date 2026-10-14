@@ -107,6 +107,22 @@ def test_production_refuses_wildcard_cors_and_weak_proxy_secret() -> None:
         _prod(ORBIT_PROXY_SECRET="short")
 
 
+def test_production_refuses_to_start_without_a_proxy_secret() -> None:
+    """V3-02: without the Worker's shared secret the API can't tell its statement of a visitor's IP from a caller's
+    own X-Forwarded-For, so production refuses the configuration instead of warning."""
+    from orbit_api.config import Settings
+
+    kept = _prod().model_dump(by_alias=False)
+    assert kept["proxy_secret"] is not None
+    env = dict(ORBIT_ENV="production", ORBIT_JWT_SECRET="Q8f2LmZr7Tq1VbN4xKc9WsYe3HpJd6Ug", DEEPSEEK_API_KEY="k",
+               DEEPGRAM_API_KEY="k", ORBIT_DATABASE_URL="postgresql+asyncpg://u:p@h/db",
+               ORBIT_ADMIN_EMAIL="owner@example.com", ORBIT_LLM_PROVIDER="deepseek", ORBIT_STT_PROVIDER="deepgram")
+    with pytest.raises(ValueError, match="ORBIT_PROXY_SECRET must be set"):
+        Settings(_env_file=None, **env)  # type: ignore[call-arg]
+    with pytest.raises(ValueError, match="ORBIT_PROXY_SECRET must be set"):
+        _prod(ORBIT_PROXY_SECRET="")
+
+
 def test_dropped_email_logs_a_masked_address() -> None:
     from orbit_api.providers.email import mask_email
 

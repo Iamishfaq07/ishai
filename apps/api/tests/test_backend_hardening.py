@@ -13,7 +13,7 @@ def _prod(**over: object) -> dict[str, object]:
                 ORBIT_SMTP_HOST="smtp.example.com",
                 ORBIT_DATABASE_URL="postgresql+asyncpg://u:p@db/orbit", DEEPSEEK_API_KEY="sk-x",
                 DEEPGRAM_API_KEY="dg-x", ORBIT_LLM_PROVIDER="auto", ORBIT_STT_PROVIDER="auto",
-                ORBIT_ADMIN_EMAIL="owner@example.com")
+                ORBIT_ADMIN_EMAIL="owner@example.com", ORBIT_PROXY_SECRET="p" * 32)
     base.update(over)
     return base
 
