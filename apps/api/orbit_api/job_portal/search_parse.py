@@ -58,6 +58,19 @@ _YEARS = re.compile(r"\b(\d{1,2}(?:\.\d)?)\s*\+?\s*(?:-\s*\d{1,2}\s*)?(?:years?|
 _LABEL = {"remote": "Remote", "hybrid": "Hybrid", "onsite": "In office", "internship": "Internships",
           "fresher": "Fresher", "part_time": "Part-time", "full_time": "Full-time", "contract": "Contract",
           "india": "Anywhere in India", "anywhere": "Anywhere"}
+# Also a word or a tool. A place only when the query says so ("in Phoenix", "Reading jobs").
+_AMBIGUOUS_CITIES = frozenset({"Phoenix", "Reading"})
+
+
+def _named_as_place(q: str, city: str) -> bool:
+    names = (city.lower(), *WORLD_CITIES[city][1])
+    for name in names:
+        n = re.escape(name)
+        if re.search(rf"\b(?:in|at|near|around|based in)\s+{n}\b", q):
+            return True
+        if re.search(rf"\b{n}\s+jobs?\b", q):
+            return True
+    return False
 
 
 def parse_search(text: str, country: str | None = None) -> ParsedSearch:
@@ -100,7 +113,8 @@ def parse_search(text: str, country: str | None = None) -> ParsedSearch:
         out.locations += cities
         out.understood += cities
         q = _CITY_RE.sub(" ", q)
-    here = [c for c in world_cities(q) if country and city_country(c) == country.upper()]
+    here = [c for c in world_cities(q) if country and city_country(c) == country.upper()
+            and (c not in _AMBIGUOUS_CITIES or _named_as_place(q, c))]
     if here:
         out.locations += here
         out.understood += here
