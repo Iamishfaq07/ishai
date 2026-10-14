@@ -22,6 +22,9 @@ node_modules/
 dist/
 .turbo/
 *.tsbuildinfo
+playwright-report/
+test-results/
+apps/api/e2e-outbox.txt
 
 # rust / tauri
 target/

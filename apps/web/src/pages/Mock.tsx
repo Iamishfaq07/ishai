@@ -112,7 +112,13 @@ function MockSetup() {
       setStarting(null);
     }
   };
-  const contextDocs = () => practiceDocumentIds(docs.data ?? [], jdId);
+  const contextDocs = () => {
+    const resumeDoc = params.get("resume_document_id");
+    const selected = practiceDocumentIds(docs.data ?? [], jdId);
+    return resumeDoc && (docs.data ?? []).some((d) => d.id === resumeDoc && d.status === "ready")
+      ? [...new Set([resumeDoc, ...(jdId ? [jdId] : []), ...selected.filter((id) => (docs.data ?? []).find((d) => d.id === id)?.kind !== "resume")])]
+      : selected;
+  };
 
   // A link to one preset (Home's "Do a 5-minute HR round", a follow-up's "Practise now") brings it into view.
   const presetRefs = useRef<Partial<Record<PresetId, HTMLButtonElement | null>>>({});

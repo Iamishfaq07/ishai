@@ -16,7 +16,13 @@ export function OrbitCareerLoopHero({ links }: { links: CareerLinks }) {
   return <section aria-label="Orbit career preparation loop" className="glass-panel overflow-hidden rounded-3xl px-2 py-4 sm:px-6">
     <div className="px-4 pt-2"><p className="telemetry text-xs uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-300">Your next move</p>
       <h2 className="mt-1 font-display text-xl font-semibold">One job. A complete preparation loop.</h2></div>
-    <svg viewBox="0 0 600 390" className="mx-auto w-full max-w-3xl" role="img" aria-labelledby={`${id}-title`}>
+    <div className="grid grid-cols-2 gap-3 px-3 py-5 sm:hidden">{nodes.map((node) => <a key={node.key}
+      href={links[node.key]} className={`rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-3 ${focusRing}`}>
+      <span className="telemetry text-xs text-cyan-700 dark:text-cyan-300">{node.number}</span>
+      <span className="mt-2 block text-sm font-semibold">{node.title}</span>
+      <span className="mt-1 block text-xs text-zinc-500">{node.detail}</span>
+    </a>)}</div>
+    <svg viewBox="0 0 600 390" className="mx-auto hidden w-full max-w-3xl sm:block" role="img" aria-labelledby={`${id}-title`}>
       <title id={`${id}-title`}>Discover jobs, tailor your resume, practise, and open the live coding workspace</title>
       <defs><linearGradient id={`${id}-gradient`}><stop stopColor="#38BDF8" /><stop offset="1" stopColor="#6366F1" /></linearGradient></defs>
       <path d="M110 95 C225 -5 375 -5 490 95 C605 150 605 240 490 295 C375 390 225 390 110 295 C-5 240 -5 150 110 95Z"

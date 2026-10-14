@@ -136,6 +136,10 @@ export interface NegotiationSetup {
 export type MockPersona = "recruiter" | "hiring_manager" | "engineer" | "staff_engineer" | "executive";
 
 export interface MockConfig {
+  interview_stage?: string | null;
+  tech_stack?: string[];
+  key_requirements?: string[];
+  adaptive_depth?: boolean;
   interview_type?: MockInterviewType;
   difficulty?: MockDifficulty;
   duration_minutes: number;
@@ -354,6 +358,11 @@ export interface FeedbackReport {
 
 /** One interviewer question, graded on what the candidate actually said after it. */
 export interface ReviewItem {
+  question_id?: string | null;
+  missing_points?: string[];
+  delivery_score?: number | null;
+  clarity_score?: number | null;
+  dimensions?: DepthScores;
   question: string;
   /** The candidate's own words (from the transcript); "" when they didn't answer. */
   you_said: string;
@@ -394,6 +403,39 @@ export interface SessionReview {
   improvements: string[];
   practice: string[];
   items: ReviewItem[];
+}
+
+export interface CareerContext {
+  role: string;
+  company: string;
+  interview_stage: string;
+  tech_stack: string[];
+  key_requirements: string[];
+}
+export interface FullPreparation {
+  resume_id: string;
+  document_id: string;
+  practice_link: string;
+  coding_link: string;
+  context: CareerContext;
+  cached: boolean;
+}
+export type DepthDimension = "problem_framing" | "technical_depth" | "scalability" | "edge_case_rigor" | "communication_clarity";
+export type DepthScores = Partial<Record<DepthDimension, number | null>>;
+export interface DebriefAttempt {
+  id: string; answer: string; created_at: string; score: number; clarity_score: number; feedback: string;
+  ideal_answer: string; missing_points: string[]; dimensions: DepthScores;
+}
+export interface DebriefItem {
+  question_id: string; index: number; time_ms: number; question: string; transcript: string; ideal_answer: string;
+  ideal_code?: string | null; score: number | null; feedback: string; missing_points: string[];
+  delivery_score: number | null; clarity_score: number | null; dimensions: DepthScores; attempts: DebriefAttempt[];
+}
+export interface Debrief {
+  session_id: string; status: string; items: DebriefItem[]; radar: DepthScores; review_ready: boolean; score_basis: string;
+}
+export interface DefenseCard {
+  spofs: string[]; bottlenecks: string[]; trade_offs: string[]; follow_ups: Array<{ question: string; answer: string }>;
 }
 
 export interface SessionSummary {
@@ -1331,9 +1373,12 @@ export interface ResumeInput {
   base_revision?: number;
   client_id?: string;
   client_revision?: number;
+  pending_suggestions?: ResumeSuggestion[];
 }
 
 export interface Resume extends ResumeInput {
+  prep_context?: CareerContext & { practice_link?: string; coding_link?: string } | null;
+  pending_suggestions?: ResumeSuggestion[];
   cover_letter: string;
   id: string;
   created_at: string;

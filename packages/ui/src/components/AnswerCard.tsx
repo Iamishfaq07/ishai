@@ -13,11 +13,13 @@ import type { AnswerView } from "../live/reducer";
 import type { ReadAloud } from "../live/useReadAloud";
 import { AnswerRatingButtons } from "./AnswerRating";
 import { CodeBlock } from "./CodeBlock";
+import { SpokenWalkthrough } from "./SpokenWalkthrough";
 import { cx, focusRing } from "./cx";
 import { Orb } from "./Orb";
 import { ArrowRight, Check, Circle, Feather, Maximize2, Minimize2, Pause, PenLine, Play, Square, Volume2 } from "../icons";
 
 export interface AnswerCardProps {
+  loadWalkthrough?: (answerId: string) => Promise<NonNullable<import("@orbit/types").LiveAnswer["walkthrough"]>>;
   answer: AnswerView | null;
   pinned: boolean;
   onPin: (pinned: boolean) => void;
@@ -251,7 +253,7 @@ function SectionLabel({ children, block = false }: { children: string; block?: b
  */
 export const AnswerCard = memo(function AnswerCard({
   answer, pinned, onPin, onRetry, onStop, compact = false, autoAnswer, progress, onTogglePoint, reader, onCodeLanguage,
-  onShorter, onLonger, onSimpler, readOnly = false, rating = null, onRate,
+  onShorter, onLonger, onSimpler, readOnly = false, rating = null, onRate, loadWalkthrough,
 }: AnswerCardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showExample, setShowExample] = useState(false);
@@ -530,7 +532,10 @@ export const AnswerCard = memo(function AnswerCard({
         {a.code && (
           <div className="mt-3">
             {coding && <SectionLabel block>{debug ? "Corrected code" : "Code"}</SectionLabel>}
-            <CodeBlock code={a.code} {...(onCodeLanguage ? { onLanguage: onCodeLanguage } : {})} />
+            <SpokenWalkthrough key={answer.answer_id} walkthrough={a.walkthrough}
+              {...(loadWalkthrough && answer.status === "complete" ? { load: () => loadWalkthrough(answer.answer_id) } : {})}
+              complete={answer.status === "complete"}
+              code={<CodeBlock code={a.code} {...(onCodeLanguage ? { onLanguage: onCodeLanguage } : {})} />} />
           </div>
         )}
 

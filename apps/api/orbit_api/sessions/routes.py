@@ -262,6 +262,11 @@ async def create_session(body: SessionIn, user: Annotated[User, Depends(require_
             body.company = ws.company
     if body.mock and body.company and not body.mock.company:
         body.mock.company = body.company
+    if body.type == "mock":
+        body.mock = body.mock or MockConfig()
+        body.mock.interview_stage = body.interview_stage
+        body.mock.tech_stack = list(body.tech_stack)
+        body.mock.key_requirements = list(body.key_requirements)
     if document_ids:
         owned = (await db.scalars(select(Document.id).where(Document.id.in_(document_ids),
                                                             Document.user_id == user.id))).all()
@@ -911,6 +916,8 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             allow_fallback=plan.has("provider_fallback"),
             features=frozenset(f for f in ("system_design", "advanced_coding") if plan.has(f)),
             instructions=(row.instructions or "").strip() or None,
+            prep_context={"company": row.company, "stage": row.interview_stage,
+                          "tech_stack": row.tech_stack or [], "key_requirements": row.key_requirements or []},
             learned=await learned_preferences(db, user_id),
             company=company,
         )

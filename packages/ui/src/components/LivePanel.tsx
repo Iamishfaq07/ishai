@@ -122,6 +122,7 @@ export interface LivePanelProps {
   onViewReport?: () => void;
   onScreenshot?: () => void;
   screenshotUnavailableReason?: string;
+  loadWalkthrough?: (answerId: string) => Promise<NonNullable<import("@orbit/types").LiveAnswer["walkthrough"]>>;
   hotkeys?: HotkeyMap;
   title?: string;
   /** Desktop: mark the header as the window drag handle. */
@@ -389,7 +390,7 @@ export function LivePanel(props: LivePanelProps) {
         onBuyMinutes={props.onBuyMinutes}
         onDismiss={actions.dismissError}
       />
-      {props.notice}
+      {props.notice && <div className="max-h-[40vh] shrink-0 overflow-y-auto">{props.notice}</div>}
 
       {paused && !ended && (
         <div
@@ -425,6 +426,7 @@ export function LivePanel(props: LivePanelProps) {
           {answerHistory.liveIndex > 0 && !live.pinnedAnswerId && <HistoryNav nav={answerHistory} />}
           <AnswerCard
             answer={answer}
+            {...(props.loadWalkthrough ? { loadWalkthrough: props.loadWalkthrough } : {})}
             pinned={Boolean(answer && live.pinnedAnswerId === answer.answer_id)}
             onPin={pin}
             {...(retry ? { onRetry: retry } : {})}
@@ -499,7 +501,7 @@ export function LivePanel(props: LivePanelProps) {
       </div>
 
       {mockStt && !ended && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-dashed border-zinc-200 px-4 py-1.5 text-xs text-zinc-500 dark:border-zinc-800">
+        <div className="shrink-0 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-dashed border-zinc-200 px-4 py-1.5 text-xs text-zinc-500 dark:border-zinc-800">
           <span title="The server is using the mock speech-to-text provider — replay a scripted conversation">
             Dev · simulate:
           </span>

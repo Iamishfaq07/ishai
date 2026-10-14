@@ -247,6 +247,7 @@ class SessionProfile:
     learned: list[str] = field(default_factory=list)
     # The company interviewing, from the saved setup the session started from (or the mock interview's setup).
     company: str | None = None
+    prep_context: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -1322,6 +1323,7 @@ class LiveEngine:
             answer_language=self.profile.answer_language or "en",  # English only: no per-session override
             instruction=instruction, coding_language=self.settings.coding_language, mode=mode,
             candidate_instructions=self.profile.instructions, learned_preferences=self.profile.learned,
+            prep_context=self.profile.prep_context,
             company=self.profile.company, parts=asks, size=size,
             level=self._level if experience == "auto" else experience,
             unshown=self._background.unshown(question, qtype) if source != "screenshot" else [], simpler=simpler,

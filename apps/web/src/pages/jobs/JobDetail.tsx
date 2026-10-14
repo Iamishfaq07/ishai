@@ -30,6 +30,7 @@ import {
   ActionNotes,
   ApplyLink,
   FitPanel,
+  FullPrepButton,
   JobPlace,
   JobWhen,
   MatchBadge,
@@ -171,6 +172,7 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
         </div>
         <div className="relative">
           <ActionNotes actions={actions} />
+      <FullPrepButton actions={actions} />
         </div>
       </header>
 

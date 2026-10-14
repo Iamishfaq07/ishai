@@ -396,6 +396,33 @@ class Resume(TimestampMixin, Base):
     revision: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     last_client_id: Mapped[str | None] = mapped_column(String(64))
     client_revision: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    prep_context: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    pending_suggestions: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON)
+
+
+class CareerPreparation(TimestampMixin, Base):
+    __tablename__ = "career_preparations"
+    __table_args__ = (UniqueConstraint("user_id", "listing_id", "source_resume_id", "source_revision",
+                                      name="uq_career_preparation_source"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    listing_id: Mapped[str] = mapped_column(String(36))
+    source_resume_id: Mapped[str] = mapped_column(ForeignKey("resumes.id", ondelete="CASCADE"))
+    source_revision: Mapped[int] = mapped_column(Integer)
+    resume_id: Mapped[str | None] = mapped_column(ForeignKey("resumes.id", ondelete="SET NULL"))
+    document_id: Mapped[str | None] = mapped_column(ForeignKey("documents.id", ondelete="SET NULL"))
+    resume_document_id: Mapped[str | None] = mapped_column(ForeignKey("documents.id", ondelete="SET NULL"))
+    status: Mapped[str] = mapped_column(String(12), default="running")
+    context: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+
+
+class DebriefAttempt(TimestampMixin, Base):
+    __tablename__ = "debrief_attempts"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    question_id: Mapped[str] = mapped_column(ForeignKey("questions.id", ondelete="CASCADE"), index=True)
+    answer: Mapped[str] = mapped_column(Text)
+    result: Mapped[dict[str, Any]] = mapped_column(JSON)
 
 
 class WorkspaceDocument(Base):

@@ -9,6 +9,7 @@ import {
   useAnswerRatings,
   Headphones,
   LivePanel,
+  DefenseWorkspace,
   Mic,
   OrbitLogo,
   ScreenshotPreview,
@@ -361,7 +362,8 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       hotkeys={hotkeys}
       title={session.title}
       headerEnd={<CompanionShare api={api} sessionId={session.id} webUrl={window.location.origin} disabled={live.state === "ended"} />}
-      notice={notice}
+      loadWalkthrough={(answerId) => api.spokenWalkthrough(session.id, answerId)}
+      notice={<>{notice}{session.type !== "mock" && <DefenseWorkspace api={api} sessionId={session.id} {...(supportsScreenCapture() ? { capture: captureScreenFrame } : {})} />}</>}
       overlay={
         shot ? (
           <ScreenshotPreview

@@ -101,6 +101,7 @@ export function JobCard({ job, resumeId, onTracked, showMatch = true }: Props) {
       </div>
 
       <ActionNotes actions={actions} />
+      <FullPrepButton actions={actions} />
       {actions.fit.open && <FitPanel fit={actions.fit} onClose={actions.closeFit} onTailor={actions.tailor} className="mt-4" />}
     </article>
   );
@@ -309,6 +310,13 @@ export function PrepareButton({ actions }: { actions: JobActions }) {
       <Target className="h-4 w-4" aria-hidden /> {actions.busy === "prepare" ? "Saving the job…" : "Prepare"}
     </Button>
   );
+}
+
+export function FullPrepButton({ actions }: { actions: JobActions }) {
+  return <Button variant="primary" size="sm" className="mt-3 w-full sm:w-auto" disabled={Boolean(actions.busy)} onClick={actions.fullPrep}
+    title="Tailors a resume diff using one Resume AI credit and prepares a Practice link for this exact job">
+    <Target className="h-4 w-4" aria-hidden />{actions.busy === "fullprep" ? "Preparing your career loop…" : "Launch Full Prep for This Job"}
+  </Button>;
 }
 
 /** What an action has to say: "Did you apply?", an error, or a note with where to go next. */

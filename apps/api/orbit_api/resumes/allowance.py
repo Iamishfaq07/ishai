@@ -7,16 +7,14 @@ worked out without the model (dates, skills the resume already proves) stay free
 downloads.
 
 The credit is claimed just before the model is called and given back if the request fails, so an AI outage doesn't
-spend it. Claims are serialized in-process (one API instance, docs/DECISIONS.md D12), so two requests at once can't
-both spend the last credit.
+spend it. Claims lock the account in the database, so concurrent requests cannot both spend the last credit.
 """
 
-import asyncio
 from typing import Any
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import delete, select
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits
@@ -24,12 +22,12 @@ from orbit_api.billing.packs import packs
 from orbit_api.config import get_settings
 from orbit_api.entitlements import plan_for
 from orbit_api.models import CreditEntry, User
+from orbit_api.transactions import lock_account
 
 UPGRADE_REQUIRED = "upgrade_required"
 # Like the rate limits, skipped in the test environment so the suite can call the AI freely; allowance tests flip it.
 ENFORCE_IN_TESTS = False
 
-_claim_lock = asyncio.Lock()
 
 
 class UpgradeOffer(BaseModel):
@@ -85,15 +83,12 @@ class Allowance:
     async def claim(self) -> None:
         if self.unlimited or self._claimed is not None:
             return
-        async with _claim_lock:
-            # The process lock protects SQLite. The row lock makes the balance check and ledger debit atomic
-            # across Postgres connections as well, even if a second process is ever introduced.
-            await self.db.execute(select(User.id).where(User.id == self.user.id).with_for_update())
-            if await credits.resume_balance(self.db, self.user.id) <= 0:
-                raise self.exhausted()
-            entry = credits.add(self.db, self.user.id, "resume", -1, "resume_ai")
-            await self.db.commit()
-            self._claimed = entry.id
+        await lock_account(self.db, self.user.id)
+        if await credits.resume_balance(self.db, self.user.id) <= 0:
+            raise self.exhausted()
+        entry = credits.add(self.db, self.user.id, "resume", -1, "resume_ai")
+        await self.db.commit()
+        self._claimed = entry.id
 
     async def release(self) -> None:
         if self._claimed is None:

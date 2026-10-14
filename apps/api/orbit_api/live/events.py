@@ -116,6 +116,12 @@ class Term(BaseModel):
     meaning: str
 
 
+class SpokenWalkthrough(BaseModel):
+    intuition: str = Field("", max_length=500)
+    commentary: list[str] = Field(default_factory=list, max_length=3)
+    complexity_defense: str = Field("", max_length=600)
+
+
 class LiveAnswer(BaseModel):
     question: str = ""
     type: QuestionType = QuestionType.technical
@@ -123,6 +129,7 @@ class LiveAnswer(BaseModel):
     talking_points: list[str] = Field(default_factory=list)
     example: str | None = None
     code: CodeBlock | None = None
+    walkthrough: SpokenWalkthrough | None = None
     time_complexity: str | None = None
     space_complexity: str | None = None
     follow_up: str | None = None

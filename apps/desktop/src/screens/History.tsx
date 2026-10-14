@@ -15,6 +15,7 @@ import {
   PageHeader,
   ReportStatusNote,
   SessionReview,
+  DebriefStudio,
   DeliveryCard,
   FollowUpCard,
   Spinner,
@@ -296,6 +297,7 @@ function SessionDetailView({ id, onDeleted, onDrill }: {
           }}
         />
         <DeliveryCard delivery={detail.summary?.delivery} />
+        {session.status === "ended" && <DebriefStudio api={api} sessionId={session.id} refreshOn={detail.summary?.review} />}
         {session.status === "ended" && session.type !== "mock" && (detail.turns.length > 0 || detail.questions.length > 0) && (
           <FollowUpCard
             initial={detail.summary?.follow_up}

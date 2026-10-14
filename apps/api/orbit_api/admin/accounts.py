@@ -68,6 +68,7 @@ from orbit_api.models import (
     Workspace,
 )
 from orbit_api.providers.email import OutgoingEmail, can_deliver, send_safely
+from orbit_api.transactions import lock_account
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
 
@@ -422,6 +423,7 @@ async def remove_credits(user_id: str, body: RemoveCreditsIn, admin: Annotated[U
     async with _adjust_lock:
         u = await _account(db, user_id)
         await _guard(db, u, admin, "remove credits from")
+        await lock_account(db, u.id)
         resume_left = await credits.resume_balance(db, u.id)
         granted, used = await credits.interview_seconds(db, u.id)
         seconds_left = math.ceil(max(granted - used, 0.0))  # rounded up, so "all" leaves exactly nothing

@@ -24,7 +24,16 @@ format still produces something readable.
 import re
 from collections.abc import Callable
 
-from orbit_api.live.events import CodeBlock, DebugInfo, DesignSection, FactSource, LiveAnswer, QuestionType, Term
+from orbit_api.live.events import (
+    CodeBlock,
+    DebugInfo,
+    DesignSection,
+    FactSource,
+    LiveAnswer,
+    QuestionType,
+    SpokenWalkthrough,
+    Term,
+)
 
 # System design sections, in the order the prompt asks for them (keys are matched case-insensitively).
 DESIGN_TITLES = ("Requirements", "Assumptions", "Scale", "APIs", "Data model", "Architecture", "Storage", "Caching",
@@ -33,7 +42,7 @@ _DESIGN_KEYS = {t.lower().replace("-", "").replace(" ", ""): t for t in DESIGN_T
 _DESIGN_LINE = re.compile(r"^\s*(?:[-*•]\s*)?([A-Za-z][A-Za-z -]{1,20}?)\s*:\s*(.+)$")
 
 _TAG = re.compile(r"^(GROUNDED|PROBLEM|ANSWER|EXAMPLE|CODE|TIME|SPACE|EDGE|TESTS|TERMS|FOLLOWUP|SOURCES|POINTS|DESIGN|"
-                  r"ROOTCAUSE|FIX|WHY|DIFF)\s*:\s*(.*)$",
+                  r"ROOTCAUSE|FIX|WHY|DIFF|INTUITION|COMMENTARY|DEFENSE)\s*:\s*(.*)$",
                   re.IGNORECASE)
 MAX_LIST_ITEMS = 8
 MAX_KEY_POINTS = 6
@@ -54,7 +63,8 @@ _FENCE = re.compile(r"^\s*```\s*([\w+#-]*)\s*$")
 # writes them: uppercase, at the start of the line, not an assignment. A docstring's "Time: O(n)", a typed local
 # "answer: int = 0", a field "code: string;" are code (matched case-insensitively, they ended the block and the rest of
 # the solution was lost or landed in the spoken answer).
-_TRAILER = re.compile(r"^(?:TIME|SPACE|EDGE|TESTS|TERMS|FOLLOWUP|SOURCES|POINTS)\s*:\s*(.*)$")
+_TRAILER = re.compile(r"^(?:TIME|SPACE|EDGE|TESTS|TERMS|FOLLOWUP|SOURCES|POINTS|"
+                      r"INTUITION|COMMENTARY|DEFENSE)\s*:\s*(.*)$")
 _ASSIGNMENT = re.compile(r"\s=\s|;\s*$")
 # A fence before anything else, followed by the reply's first tag, wraps the whole reply: it isn't code.
 _OPENING_TAG = re.compile(r"^(?:GROUNDED|ANSWER)\s*:")
@@ -227,6 +237,17 @@ class AnswerStreamParser:
                     ans.time_complexity = value or None
                 elif section == "SPACE":
                     ans.space_complexity = value or None
+                elif section in ("INTUITION", "COMMENTARY", "DEFENSE"):
+                    ans.walkthrough = ans.walkthrough or SpokenWalkthrough()
+                    if section == "INTUITION":
+                        ans.walkthrough.intuition = humanize(value)[:500]
+                    elif section == "DEFENSE":
+                        ans.walkthrough.complexity_defense = humanize(value)[:600]
+                    else:
+                        ans.walkthrough.commentary = [humanize(s.strip())[:400] for s in value.split("|")
+                                                     if s.strip()][:3]
+                    if section != "COMMENTARY" or value:
+                        section = None
                 elif section == "FOLLOWUP":
                     ans.follow_up = value or None
                 elif section == "PROBLEM":
@@ -270,6 +291,11 @@ class AnswerStreamParser:
                 continue
 
             bullet = _BULLET.match(line)
+            if section == "COMMENTARY" and line.strip() and ans.walkthrough:
+                value = bullet.group(1).strip() if bullet else line.strip()
+                if len(ans.walkthrough.commentary) < 3:
+                    ans.walkthrough.commentary.append(humanize(value)[:400])
+                continue
             if bullet and section in (None, "ANSWER"):
                 point = bullet.group(1).strip()
                 if point and (self._max_points is None or len(ans.talking_points) < self._max_points):

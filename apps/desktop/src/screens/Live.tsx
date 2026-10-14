@@ -11,6 +11,7 @@ import {
   CompanionShare,
   useAnswerRatings,
   LivePanel,
+  DefenseWorkspace,
   answerAsText,
   base64ToBlob,
   cx,
@@ -35,6 +36,7 @@ import { API_URL, WEB_URL, api } from "../api";
 import {
   REGION_CAPTURED_EVENT,
   base64ToBytes,
+  captureScreen,
   deviceStatusText,
   friendlyAudioError,
   newCaptureId,
@@ -421,10 +423,11 @@ export function LiveScreen({
       onViewReport={onViewReview}
       onScreenshot={VISION_ENABLED ? screenshot : undefined}
       screenshotUnavailableReason="Screenshot analysis isn’t enabled yet."
+      loadWalkthrough={(answerId) => api.spokenWalkthrough(session.id, answerId)}
       hotkeys={hotkeys}
       title={session.title}
       dragRegion
-      notice={notice}
+      notice={<>{notice}{session.type !== "mock" && <DefenseWorkspace api={api} sessionId={session.id} capture={async () => base64ToBlob((await captureScreen()).pngBase64)} />}</>}
       headerEnd={
         <>
           <CompanionShare api={api} sessionId={session.id} webUrl={WEB_URL} disabled={ended} />
