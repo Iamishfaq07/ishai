@@ -65,4 +65,6 @@ def checkout() -> str | None:
 
 def public_packs() -> list[dict[str, Any]]:
     how = checkout()
-    return [{**asdict(p), "buyable": how is not None, "checkout": how} for p in packs().values()]
+    abroad = how == "razorpay" and get_settings().razorpay_international
+    return [{**asdict(p), "buyable": how is not None, "checkout": how, "international": abroad}
+            for p in packs().values()]

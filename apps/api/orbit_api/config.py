@@ -64,6 +64,9 @@ class Settings(BaseSettings):
         None, validation_alias=AliasChoices("ORBIT_RAZORPAY_KEY_SECRET", "RAZORPAY_KEY_SECRET"))
     razorpay_webhook_secret: SecretStr | None = Field(
         None, validation_alias=AliasChoices("ORBIT_RAZORPAY_WEBHOOK_SECRET"))
+    # Razorpay takes cards issued outside India only once it has enabled international payments for the account.
+    # Until this is on, pages don't promise buyers abroad that their card will work.
+    razorpay_international: bool = Field(False, validation_alias=AliasChoices("ORBIT_RAZORPAY_INTERNATIONAL"))
 
     llm_provider: Literal["auto", "deepseek", "mock"] = Field(
         "auto", validation_alias=AliasChoices("ORBIT_LLM_PROVIDER")

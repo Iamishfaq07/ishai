@@ -94,7 +94,9 @@ Set-up, in the Razorpay dashboard:
 - **Webhook** (Account & Settings → Webhooks): URL `https://<api host>/v1/billing/webhook`, events `payment.captured`
   and `order.paid`, a secret of your choice in `ORBIT_RAZORPAY_WEBHOOK_SECRET`.
 - **International cards:** ask Razorpay to enable international payments for the account. Buyers abroad are charged
-  in rupees and their bank converts it; prices stay the ones above.
+  in rupees and their bank converts it; prices stay the ones above. Once Razorpay has enabled them, set
+  `ORBIT_RAZORPAY_INTERNATIONAL=true` in Render: until then the pricing, FAQ and Plan & billing tell visitors outside
+  India that cards from other countries are coming soon, rather than promising a card that would be declined.
 
 Razorpay payments show in Settings → Payments as approved, with nothing to check.
 

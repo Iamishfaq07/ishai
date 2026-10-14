@@ -584,8 +584,10 @@ export interface CreditPack {
   interview_minutes: number;
   /** Can be bought right now (Razorpay or a UPI ID is set up). */
   buyable: boolean;
-  /** How: Razorpay's checkout (cards from any country, UPI, netbanking), UPI with a UTR, or not at all. */
+  /** How: Razorpay's checkout (cards, UPI, netbanking), UPI with a UTR, or not at all. */
   checkout?: "razorpay" | "upi" | null;
+  /** Razorpay takes cards issued outside India (ORBIT_RAZORPAY_INTERNATIONAL, once Razorpay has enabled them). */
+  international?: boolean;
 }
 
 /** POST /v1/billing/razorpay/orders: what the page opens Razorpay's checkout with. */

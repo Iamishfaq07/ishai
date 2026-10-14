@@ -329,7 +329,11 @@ export function BillingPage() {
               )}
               <p className="text-xs text-zinc-500">
                 {list[0]?.checkout === "razorpay"
-                  ? "Pay once by card, UPI, netbanking or wallet, through Razorpay. Cards from outside India work too: you're charged in rupees and your bank converts it. Nothing renews, and the credits are added the moment the payment goes through."
+                  ? `Pay once by card, UPI, netbanking or wallet, through Razorpay. ${
+                      list[0]?.international
+                        ? "Cards from outside India work too: you're charged in rupees and your bank converts it."
+                        : "Cards issued outside India can't be used yet; that's coming soon."
+                    } Nothing renews, and the credits are added the moment the payment goes through.`
                   : "Pay once over UPI (Google Pay, PhonePe, Paytm or any bank app). Nothing renews or is charged automatically, and the credits are added as soon as your payment is checked."}
               </p>
             </>

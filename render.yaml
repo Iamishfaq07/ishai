@@ -53,6 +53,10 @@ services:
         sync: false
       - key: ORBIT_RAZORPAY_WEBHOOK_SECRET
         sync: false
+      # "true" once Razorpay has enabled international payments for the account: the pages then tell buyers abroad
+      # their card works. Until then they say cards from other countries are coming soon.
+      - key: ORBIT_RAZORPAY_INTERNATIONAL
+        value: "false"
       # UPI payments (billing/upi.py), used while Razorpay isn't set up: the UPI ID payers pay to and the name their
       # app shows. Not secret: every payer sees both.
       - key: ORBIT_UPI_ID
