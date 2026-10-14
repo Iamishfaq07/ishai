@@ -240,3 +240,59 @@ def test_idle_chats_go_after_retention_but_waiting_ones_stay(client: TestClient)
     assert client.portal.call(later) >= 1  # type: ignore[union-attr]
     assert _rows(client, SupportThread, SupportThread.id == idle_id) == []
     assert len(_rows(client, SupportThread, SupportThread.id == waiting_id)) == 1
+
+
+def test_a_signed_in_chat_needs_its_account_not_just_the_token(client: TestClient) -> None:
+    """V3-12: the token alone (a shared computer, a copied address) doesn't open a chat linked to an account."""
+    headers, _user = _register(client, f"own-{uuid.uuid4().hex[:8]}@example.com")
+    other, _o = _register(client, f"other-{uuid.uuid4().hex[:8]}@example.com")
+    thread_id, token = _open(client, headers)
+    by = {"X-Orbit-Support-Token": token}
+    assert client.get(f"/v1/support/threads/{thread_id}", headers={**headers, **by}).status_code == 200
+    assert client.get(f"/v1/support/threads/{thread_id}", headers=by).status_code == 404  # signed out
+    assert client.get(f"/v1/support/threads/{thread_id}", headers={**other, **by}).status_code == 404
+    sent = client.post(f"/v1/support/threads/{thread_id}/messages", headers=other,
+                       json={"token": token, "text": "let me in"})
+    assert sent.status_code == 404
+    assert client.delete(f"/v1/support/threads/{thread_id}", headers={**other, **by}).status_code == 404
+    # A guest chat stays the token holder's until someone signed in writes in it; then it's theirs.
+    guest_id, guest_token = _open(client)
+    gby = {"X-Orbit-Support-Token": guest_token}
+    assert client.get(f"/v1/support/threads/{guest_id}", headers=gby).status_code == 200
+    _say(client, guest_id, guest_token, "Now signed in", headers)
+    assert client.get(f"/v1/support/threads/{guest_id}", headers=gby).status_code == 404
+    assert client.get(f"/v1/support/threads/{guest_id}", headers={**headers, **gby}).status_code == 200
+
+
+def test_the_old_query_token_still_works_and_is_marked_deprecated(client: TestClient) -> None:
+    """V3-11: old clients put the token in the address; it's still read (and redacted from logs) while they update."""
+    thread_id, token = _open(client)
+    old = client.get(f"/v1/support/threads/{thread_id}", params={"token": token})
+    assert old.status_code == 200 and old.headers.get("Deprecation") == "true"
+    assert old.headers.get("Cache-Control") == "no-store"
+    new = client.get(f"/v1/support/threads/{thread_id}", headers={"X-Orbit-Support-Token": token})
+    assert new.status_code == 200 and "Deprecation" not in new.headers
+
+
+def test_lines_written_at_once_keep_distinct_ordered_times(client: TestClient) -> None:
+    """V3-10: ten sends at once into one chat get ten distinct times, each reply right after its question."""
+    from orbit_api.models import SupportMessage
+
+    thread_id, token = _open(client)
+
+    async def burst() -> list[int]:
+        transport = httpx.ASGITransport(app=client.app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as http:
+            replies = await asyncio.gather(*[
+                http.post(f"/v1/support/threads/{thread_id}/messages",
+                          json={"token": token, "text": f"question {i}"})
+                for i in range(10)])
+        return [r.status_code for r in replies]
+
+    codes = client.portal.call(burst)  # type: ignore[union-attr]
+    assert all(c == 200 for c in codes), codes
+    rows = sorted(_rows(client, SupportMessage, SupportMessage.thread_id == thread_id), key=lambda m: m.created_at)
+    times = [m.created_at for m in rows]
+    assert len(set(times)) == len(times) == 21  # the greeting, then 10 questions and 10 answers
+    roles = [m.role for m in rows[1:]]
+    assert roles == ["user", "bot"] * 10, roles  # no answer lands between another question and its own answer

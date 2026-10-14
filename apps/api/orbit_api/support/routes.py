@@ -128,7 +128,10 @@ def _out(thread: SupportThread, token: str | None = None, user: User | None = No
 
 async def _stamp(db: AsyncSession, thread_id: str) -> datetime:
     """A time after this chat's latest line. The database is the clock, so two processes can't put a later line
-    first."""
+    first. The chat's row is locked first, until the line is committed: a no-op update takes the row lock on Postgres
+    and the write lock on SQLite, so two requests writing to one chat at once go one after the other (V3-10)."""
+    await db.execute(update(SupportThread).where(SupportThread.id == thread_id)
+                     .values(updated_at=SupportThread.updated_at).execution_options(synchronize_session=False))
     latest = await db.scalar(select(func.max(SupportMessage.created_at)).where(SupportMessage.thread_id == thread_id))
     now = datetime.now(UTC)
     if isinstance(latest, datetime):
@@ -148,9 +151,13 @@ async def _load(db: AsyncSession, thread_id: str) -> SupportThread | None:
     )).scalar_one_or_none()
 
 
-async def _thread(db: AsyncSession, thread_id: str, token: str) -> SupportThread:
+async def _thread(db: AsyncSession, thread_id: str, token: str, user: User | None) -> SupportThread:
+    """The chat, for whoever holds its token. A chat linked to an account also needs that account signed in: the
+    token alone (a shared computer, a copied URL from an old client) isn't enough to read someone's chat (V3-12)."""
     row = await _load(db, thread_id)
     if row is None or not hmac.compare_digest(row.token_hash, _hash(token)):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "This chat can't be found. Start a new one.")
+    if row.user_id is not None and (user is None or user.id != row.user_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "This chat can't be found. Start a new one.")
     return row
 
@@ -312,7 +319,12 @@ async def read_thread(
 ) -> ThreadOut:
     # no-store: a token in an old query string must not be cached by a proxy.
     response.headers["Cache-Control"] = "no-store"
-    return _out(await _thread(db, thread_id, _presented(x_orbit_support_token, token)), user=user, page=page)
+    if token and not x_orbit_support_token:
+        # The token in the address is the old clients' way (before 14 Oct 2026); it's still accepted while they
+        # update, and counted here (the token itself is redacted from every log). Removal: docs/SECURITY.md.
+        log.info("support chat read with a token in the query string (legacy client)")
+        response.headers["Deprecation"] = "true"
+    return _out(await _thread(db, thread_id, _presented(x_orbit_support_token, token), user), user=user, page=page)
 
 
 @router.post("/v1/support/threads/{thread_id}/messages", response_model=ThreadOut)
@@ -324,7 +336,7 @@ async def post_message(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ThreadOut:
     _limit(request)
-    thread = await _thread(db, thread_id, body.token)
+    thread = await _thread(db, thread_id, body.token, user)
     if thread.status == "closed":
         raise HTTPException(status.HTTP_409_CONFLICT, "This chat is closed. Start a new one.")
     text = clean_message(body.text)
@@ -352,7 +364,7 @@ async def handoff(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ThreadOut:
     _limit(request)
-    thread = await _thread(db, thread_id, body.token)
+    thread = await _thread(db, thread_id, body.token, user)
     if thread.status == "closed":
         raise HTTPException(status.HTTP_409_CONFLICT, "This chat is closed. Start a new one.")
     if thread.status == "waiting":
@@ -484,12 +496,14 @@ async def _delete_thread(db: AsyncSession, thread_id: str) -> None:
 async def delete_thread(
     thread_id: str,
     request: Request,
+    user: Annotated[User | None, Depends(optional_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     x_orbit_support_token: Annotated[str | None, Header()] = None,
 ) -> Response:
-    """The visitor deletes their own chat, signed in or not: whoever holds its token. Its Inbox ticket goes too."""
+    """The visitor deletes their own chat, signed in or not: whoever holds its token (and, for a chat linked to an
+    account, is signed in as it). Its Inbox ticket goes too."""
     _limit(request)
-    thread = await _thread(db, thread_id, _presented(x_orbit_support_token, None))
+    thread = await _thread(db, thread_id, _presented(x_orbit_support_token, None), user)
     await _delete_thread(db, thread.id)
     return Response(status_code=204)
 
