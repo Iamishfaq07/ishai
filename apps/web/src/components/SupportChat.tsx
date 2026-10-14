@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { useLocation } from "react-router-dom";
 import type { SupportThread } from "@orbit/ui";
-import { MessageCircle, Send, Skeleton, X, buttonClass, cx, focusRing } from "@orbit/ui";
+import { ApiError, MessageCircle, Send, Skeleton, X, buttonClass, cx, focusRing } from "@orbit/ui";
 import { Input } from "./ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -35,7 +35,11 @@ function load(userId?: string | null): Saved | null {
 function save(thread: SupportThread, userId?: string | null): Saved | null {
   if (!thread.token) return load(userId);
   const saved = { id: thread.id, token: thread.token };
-  localStorage.setItem(scopeKey(STORE, userId), JSON.stringify(saved));
+  try {
+    localStorage.setItem(scopeKey(STORE, userId), JSON.stringify(saved));
+  } catch {
+    // storage blocked or full: the chat still works for this visit
+  }
   return saved;
 }
 
@@ -49,7 +53,11 @@ function loadSeen(userId?: string | null): string {
 
 function markSeen(id: string, userId?: string | null): void {
   if (!id) return;
-  localStorage.setItem(scopeKey(SEEN, userId), id);
+  try {
+    localStorage.setItem(scopeKey(SEEN, userId), id);
+  } catch {
+    // storage blocked: the unread dot may come back next visit
+  }
 }
 
 /** A refresh that left before a send must not wipe the message that landed. */
@@ -119,8 +127,13 @@ export function SupportChat() {
     if (!open || hidden) return;
     let cancel = false;
     const existing = load(userId);
+    // A blip (offline, 503) must not throw this chat away and open another.
+    // Only a confirmed missing thread starts a new one.
+    const missing = (err: unknown) => err instanceof ApiError && (err.status === 404 || err.status === 410);
     const start = existing
-      ? api.supportRead(existing.id, existing.token, pathname).catch(() => api.supportOpen(pathname))
+      ? api.supportRead(existing.id, existing.token, pathname).catch((err: unknown) => (
+        missing(err) ? api.supportOpen(pathname) : Promise.reject(err)
+      ))
       : api.supportOpen(pathname);
     void start.then((next) => {
       if (cancel) return;

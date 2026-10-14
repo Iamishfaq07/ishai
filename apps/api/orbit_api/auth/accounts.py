@@ -4,12 +4,12 @@ the owner's."""
 
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import jobs
 from orbit_api.auth import email_tokens
-from orbit_api.models import AuditLog, CreditEntry, LiveSessionRow, ProviderRequest, User
+from orbit_api.models import AuditLog, CreditEntry, LiveSessionRow, ProviderRequest, SupportMessage, SupportThread, User
 from orbit_api.sessions.routes import stop_live, stop_user_live
 
 
@@ -53,6 +53,7 @@ async def delete_account(db: AsyncSession, user: User, audit: AuditLog) -> None:
     """Deletes the account and, via ON DELETE CASCADE, every document, session, resume, story, workspace, job-search
     row, usage row and emailed link, after stopping its live work. Callers check who may do it first. Commits.
 
+    - support chats (deleted here, with their messages): they name the person and keep what they wrote.
     Kept on purpose, with nothing personal left in them:
     - payments (ON DELETE SET NULL): the revenue history and each UTR's unique row stay, so a transfer can't be
       submitted again from a new account;
@@ -63,6 +64,10 @@ async def delete_account(db: AsyncSession, user: User, audit: AuditLog) -> None:
     `audit` records the deletion itself; it outlives the account too."""
     user_id = user.id
     await stop_account_live(db, user_id)
+    # Support chats name the person and keep what they wrote. The account asked to be deleted, so the chats go too.
+    thread_ids = select(SupportThread.id).where(SupportThread.user_id == user_id)
+    await db.execute(delete(SupportMessage).where(SupportMessage.thread_id.in_(thread_ids)))
+    await db.execute(delete(SupportThread).where(SupportThread.user_id == user_id))
     await db.delete(user)
     await db.execute(update(AuditLog).where(AuditLog.user_id == user_id).values(ip=None))
     await db.execute(update(ProviderRequest).where(ProviderRequest.user_id == user_id).values(user_id=None))

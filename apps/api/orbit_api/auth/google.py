@@ -8,6 +8,7 @@ import hashlib
 import re
 import secrets
 import time
+from asyncio import to_thread
 from base64 import urlsafe_b64encode
 from typing import Annotated, Any
 from urllib.parse import urlencode
@@ -124,28 +125,32 @@ async def fetch_identity(code: str, verifier: str, uri: str) -> dict[str, Any]:
     s = get_settings()
     secret = s.google_client_secret.get_secret_value() if s.google_client_secret else ""
     async with httpx.AsyncClient(timeout=10) as client:
-        token = await client.post(
-            _TOKEN_URL,
-            data={
-                "code": code,
-                "client_id": s.google_client_id,
-                "client_secret": secret,
-                "redirect_uri": uri,
-                "grant_type": "authorization_code",
-                "code_verifier": verifier,
-            },
-        )
+        try:
+            token = await client.post(
+                _TOKEN_URL,
+                data={
+                    "code": code,
+                    "client_id": s.google_client_id,
+                    "client_secret": secret,
+                    "redirect_uri": uri,
+                    "grant_type": "authorization_code",
+                    "code_verifier": verifier,
+                },
+            )
+        except httpx.HTTPError as err:
+            raise GoogleDenied("google") from err
     if token.status_code != 200:
         raise GoogleDenied("google")
     id_token = token.json().get("id_token")
     if not isinstance(id_token, str):
         raise GoogleDenied("google")
     try:
-        key = jwt.PyJWKClient(_JWKS_URL).get_signing_key_from_jwt(id_token)
+        # PyJWKClient fetches keys synchronously. A thread keeps that off the event loop, with a bounded timeout.
+        key = await to_thread(jwt.PyJWKClient(_JWKS_URL, timeout=5).get_signing_key_from_jwt, id_token)
         claims: dict[str, Any] = jwt.decode(
             id_token, key.key, algorithms=["RS256"], audience=s.google_client_id, issuer=_ISSUERS,
         )
-    except jwt.PyJWTError as err:
+    except (jwt.PyJWTError, httpx.HTTPError, TimeoutError, OSError) as err:
         raise GoogleDenied("google") from err
     email = str(claims.get("email") or "").strip().lower()
     sub = str(claims.get("sub") or "")

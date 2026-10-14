@@ -1,4 +1,4 @@
-"""Support chat: the bot answers from the help notes, a visitor can ask for a person, and an admin reply shows in the thread."""
+"""Support chat: the bot answers from the help notes, a visitor can ask for a person, and an admin can reply."""
 
 import uuid
 from collections.abc import Iterator
@@ -197,3 +197,17 @@ def test_admin_sees_the_account_behind_the_chat(client: TestClient) -> None:
     assert user["email"] in account
     assert "20 interview minutes" in account
     assert "no payment yet" in account.lower() or "No payment" in account or "no payment" in account
+
+
+def test_export_includes_the_chat_and_deleting_the_account_removes_it(client: TestClient) -> None:
+    headers, user = _register(client, f"gone-{uuid.uuid4().hex[:8]}@example.com")
+    opened = client.post("/v1/support/threads", headers=headers)
+    assert opened.status_code == 201, opened.text
+    thread_id, token = opened.json()["id"], opened.json()["token"]
+    export = client.get("/v1/auth/me/export", headers=headers).json()
+    chat = export["support_chats"][0]
+    assert chat["id"] == thread_id and chat["email"] == user["email"]
+    assert "token" not in chat and "token_hash" not in chat
+    deleted = client.request("DELETE", "/v1/auth/me", headers=headers, json={"password": "correct horse battery"})
+    assert deleted.status_code == 204, deleted.text
+    assert client.get(f"/v1/support/threads/{thread_id}", params={"token": token}).status_code == 404

@@ -129,10 +129,28 @@ function ResumeEditor() {
   const [pointing, setPointing] = useState<string[]>([]);
 
   useEffect(() => {
+    const requested = resumeId;
+    let cancel = false;
+    setResume(null);
+    setLoadError(null);
+    setReport(null);
+    setScored(null);
+    history.current = { past: [], future: [], at: 0, el: null };
+    setSteps({ undo: 0, redo: 0 });
     backend
-      .get(resumeId)
-      .then(setResume)
-      .catch((err: unknown) => setLoadError(errorText(err)));
+      .get(requested)
+      .then((loaded) => {
+        // A slow fetch for the resume we left must not land on the one we opened, or its save would write the old text.
+        if (cancel || loaded.id !== requested) return;
+        setResume(loaded);
+        setSave({ state: "saved" });
+      })
+      .catch((err: unknown) => {
+        if (!cancel) setLoadError(errorText(err));
+      });
+    return () => {
+      cancel = true;
+    };
   }, [backend, resumeId]);
 
   // Undo/redo. Typing in one field is one step; a pause, another field or a button starts the next.
@@ -199,7 +217,7 @@ function ResumeEditor() {
   useEffect(() => {
     if (!resume || save.state !== "dirty") return;
     const t = window.setTimeout(() => {
-      if (saving.current) return;
+      if (saving.current || resume.id !== resumeId) return;
       saving.current = true;
       setSave({ state: "saving" });
       const { title, data, design, job_text, cover_letter } = resume;
@@ -216,7 +234,7 @@ function ResumeEditor() {
         });
     }, 900);
     return () => window.clearTimeout(t);
-  }, [backend, resume, save.state, flush]);
+  }, [backend, resume, resumeId, save.state, flush]);
 
   // After a dropped connection, save again in a few seconds, or the moment the phone is back online.
   useEffect(() => {

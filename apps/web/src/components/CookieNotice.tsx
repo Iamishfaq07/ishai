@@ -31,7 +31,7 @@ export function CookieNotice() {
       className="fixed inset-x-3 z-50 rounded-2xl border border-zinc-200 bg-white p-4 text-sm text-zinc-800 shadow-lg bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-4 md:left-4 md:right-auto md:max-w-sm dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-100"
     >
       <p>
-        Orbit uses one sign-in cookie and saves settings on this device. No advertising cookies.{" "}
+        Orbit uses a sign-in cookie, a short-lived cookie only while Google sign-in is in progress, and saves settings on this device. No advertising cookies.{" "}
         <a href="/cookies.html" className={cx("font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
           Cookie policy
         </a>
