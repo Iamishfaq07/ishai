@@ -27,8 +27,7 @@ export interface ControlBarProps {
   onAutoAnswer: (on: boolean) => void;
   onResponseTiming: (timing: ResponseTiming) => void;
   onStyle: (style: AnswerStyle) => void;
-  /** Admin only: the Thinking setting (which model effort answers) shows only when this is given. */
-  onThinking?: (level: ThinkingLevel) => void;
+  onThinking: (level: ThinkingLevel) => void;
   onTogglePause: () => void;
   onEnd: () => void;
 }
@@ -256,18 +255,16 @@ export function ControlBar(props: ControlBarProps) {
               />
             </Setting>
 
-            {props.onThinking && (
-              <Setting label="Thinking" labelId={`${settingsId}-thinking`}>
-                <MiniSelect
-                  labelledBy={`${settingsId}-thinking`}
-                  title={THINKING_LEVELS.find((t) => t.value === props.thinking)?.hint}
-                  value={props.thinking}
-                  disabled={ended}
-                  onChange={(v) => props.onThinking?.(v as ThinkingLevel)}
-                  options={THINKING_LEVELS.map((t) => ({ value: t.value, label: THINKING_SHORT[t.value] }))}
-                />
-              </Setting>
-            )}
+            <Setting label="Thinking" labelId={`${settingsId}-thinking`}>
+              <MiniSelect
+                labelledBy={`${settingsId}-thinking`}
+                title={THINKING_LEVELS.find((t) => t.value === props.thinking)?.hint}
+                value={props.thinking}
+                disabled={ended}
+                onChange={(v) => props.onThinking(v as ThinkingLevel)}
+                options={THINKING_LEVELS.map((t) => ({ value: t.value, label: THINKING_SHORT[t.value] }))}
+              />
+            </Setting>
 
             <button
               type="button"
@@ -289,7 +286,7 @@ export function ControlBar(props: ControlBarProps) {
               autoAnswer={props.autoAnswer}
               responseTiming={props.responseTiming}
               style={props.style}
-              thinking={props.onThinking ? props.thinking : null}
+              thinking={props.thinking}
               answerHotkey={formatHotkey(hotkeys.answer)}
             />
           )}
@@ -396,7 +393,7 @@ function SettingsHelp(props: {
   autoAnswer: boolean;
   responseTiming: ResponseTiming;
   style: AnswerStyle;
-  thinking: ThinkingLevel | null; // null: not shown (not the admin)
+  thinking: ThinkingLevel;
   answerHotkey: string;
 }) {
   const rows: Array<{ term: string; about: string; options: Array<{ label: string; hint: string; current: boolean }> }> = [
@@ -431,9 +428,7 @@ function SettingsHelp(props: {
       about: "How the answer sounds. All styles are first-person, ready to speak.",
       options: ANSWER_STYLES.map((s) => ({ label: s.label, hint: s.hint, current: s.value === props.style })),
     },
-  ];
-  if (props.thinking !== null) {
-    rows.push({
+    {
       term: "Thinking",
       about: "More thinking gives deeper answers, but the first words appear later.",
       options: THINKING_LEVELS.map((t) => ({
@@ -441,8 +436,8 @@ function SettingsHelp(props: {
         hint: t.hint,
         current: t.value === props.thinking,
       })),
-    });
-  }
+    },
+  ];
   return (
     <dl className="mt-3 grid max-h-[40vh] animate-fade-in gap-3 overflow-y-auto border-t border-zinc-200 pt-3 text-xs sm:grid-cols-2 lg:grid-cols-3 dark:border-white/[0.06]">
       {rows.map((r) => (

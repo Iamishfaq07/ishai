@@ -23,7 +23,6 @@ import {
   loadExperience,
   selectDisplayedAnswer,
   useAnswerHistory,
-  useIsAdmin,
   useLiveSession,
   type PanelMode,
   VISION_ENABLED,
@@ -116,7 +115,6 @@ export function LiveScreen({
   const [shotNote, setShotNote] = useState<string | null>(null);
 
   const ratings = useAnswerRatings(api, session.id);
-  const admin = useIsAdmin(api);
   const { live, actions, client } = useLiveSession({
     apiBaseUrl: API_URL,
     sessionId: session.id,
@@ -407,7 +405,6 @@ export function LiveScreen({
 
   return (
     <LivePanel
-      admin={admin}
       audioAmplitude={() => audioAmplitude.current}
       captureHealth={Object.values(deviceHealth).includes("recovering") ? "recovering" : Object.values(deviceHealth).includes("active") ? "active" : "muted"}
       mockInterview={session.type === "mock"}

@@ -20,7 +20,6 @@ import {
   loadCodingLanguage,
   loadThinking,
   loadExperience,
-  useIsAdmin,
   useLiveSession,
   VISION_ENABLED,
   type LucideIcon,
@@ -87,7 +86,6 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   const [mode, setMode] = useState<PanelMode>(() => (localStorage.getItem(MODE_KEY) as PanelMode | null) ?? "expanded");
   const [hotkeys] = useState(loadHotkeys);
   const ratings = useAnswerRatings(api, session.id);
-  const admin = useIsAdmin(api);
   const { live, actions, client } = useLiveSession({
     apiBaseUrl: LIVE_URL,
     sessionId: session.id,
@@ -341,7 +339,6 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
 
   const panel = (
     <LivePanel
-      admin={admin}
       analyser={micRef.current?.analyser}
       captureHealth={micStarting || sysStarting ? "recovering" : micOn || sysState === "on" ? "active" : "muted"}
       screenCaptureHealth={shot ? "active" : "muted"}

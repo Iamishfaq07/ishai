@@ -29,11 +29,11 @@ class Sink:
                 await asyncio.sleep(0.01)
 
 
-async def _engine(llm: LLMProvider, *, admin: bool = False, **settings: Any) -> tuple[LiveEngine, Sink]:
+async def _engine(llm: LLMProvider, **settings: Any) -> tuple[LiveEngine, Sink]:
     settings.setdefault("response_timing", "quick")  # these tests are about cancel/pin/retry, not patience
     sink = Sink()
     eng = LiveEngine(
-        SessionProfile("s1", "interview", "Engineer", "en", "en", dev_mode=True, admin=admin),
+        SessionProfile("s1", "interview", "Engineer", "en", "en", dev_mode=True),
         LiveSettings(**settings), send=sink, llm=llm, stt=MockSTTProvider(), index=SessionIndex([]),
     )
     await eng.start()
@@ -235,18 +235,6 @@ async def test_live_thinking_setting_reaches_the_model() -> None:
     await sink.wait_for("answer.completed")
     answers = [r for r in llm.requests if r.request_type == "answer"]
     assert answers and all(r.thinking == "max" for r in answers)
-    await eng.handle_client({"type": "session.end", "data": {}})
-
-
-async def test_only_the_admin_can_change_thinking() -> None:
-    eng, _ = await _engine(MockLLMProvider())
-    await eng.handle_client({"type": "settings.update", "data": {"thinking": "max", "length": "short"}})
-    assert eng.settings.thinking == "off" and eng.settings.length == "short"  # the rest still applies
-    await eng.handle_client({"type": "session.end", "data": {}})
-
-    eng, _ = await _engine(MockLLMProvider(), admin=True)
-    await eng.handle_client({"type": "settings.update", "data": {"thinking": "max"}})
-    assert eng.settings.thinking == "max"
     await eng.handle_client({"type": "session.end", "data": {}})
 
 

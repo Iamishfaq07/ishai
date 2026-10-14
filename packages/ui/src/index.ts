@@ -204,7 +204,6 @@ export { Dropzone, ProgressRing } from "./components/Dropzone";
 export { CompanyLogo, monogram } from "./components/CompanyLogo";
 export { CosmicEmptyState, type CosmicEmptyVariant } from "./components/CosmicEmptyState";
 export { spotlightMove } from "./components/useSpotlight";
-export { useIsAdmin } from "./components/useIsAdmin";
 export { ConceptDepthRadar, aggregateDepth } from "./components/ConceptDepthRadar";
 export { buttonClass, type ButtonSize, type ButtonVariant } from "./components/ui";
 export { Sheet, type SheetSize } from "./components/Sheet";
