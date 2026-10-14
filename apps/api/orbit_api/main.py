@@ -67,7 +67,12 @@ configure_logging(_boot.log_format or ("json" if _boot.env == "production" else 
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     s = get_settings()
     if s.env != "production":
-        await db.create_all()  # production uses `alembic upgrade head`; it refuses to start without a proxy secret
+        await db.create_all()  # production uses `alembic upgrade head`
+    elif s.proxy_secret is None:
+        logging.getLogger(__name__).warning(
+            "SECURITY: ORBIT_PROXY_SECRET is not set. Callers reaching the API directly can choose their own IP "
+            "(X-Forwarded-For) and so dodge per-IP limits (sign-up, welcome credits). Set it to the web Worker's "
+            "PROXY_SECRET (wrangler secret put PROXY_SECRET).")
     try:
         async with db.sessionmaker()() as session:
             await refresh_runtime_config(session)  # load admin API-key overrides into providers

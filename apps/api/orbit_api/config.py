@@ -283,11 +283,8 @@ class Settings(BaseSettings):
                     raise ValueError("ORBIT_FALLBACK_LLM_EXTRA_JSON must be a JSON object")
             if "*" in self.cors_origins:
                 raise ValueError("ORBIT_CORS_ORIGINS must list exact origins in production (no '*')")
-            # Without it the API can't tell the web Worker's statement of a visitor's IP from a caller's own
-            # X-Forwarded-For, so per-IP limits (sign-up, welcome credits, support) could be dodged (V3-02).
-            if self.proxy_secret is None or len(self.proxy_secret.get_secret_value()) < 32:
-                raise ValueError("ORBIT_PROXY_SECRET must be set in production to a random value of 32+ chars, the "
-                                 "same as the web Worker's PROXY_SECRET (wrangler secret put PROXY_SECRET)")
+            if self.proxy_secret is not None and len(self.proxy_secret.get_secret_value()) < 32:
+                raise ValueError("ORBIT_PROXY_SECRET must be a random value of 32+ chars")
             if self.api_replicas != 1:
                 raise ValueError("ORBIT_API_REPLICAS must be 1: live-session state is process-local (tickets, "
                                  "socket ownership, screenshot routing, rate limits). See docs/DECISIONS.md D12.")

@@ -1,6 +1,6 @@
 # Orbit release readiness — 14 October 2026
 
-## Decision: **NO-GO** for an unrestricted public launch · **RESTRICTED BETA** for the web app in India (gates 1 and 2 closed)
+## Decision: **NO-GO** for an unrestricted public launch · **RESTRICTED BETA** acceptable for the web app in India
 
 Restricted beta means the web app with Razorpay (India) open to sign-ups, desktop as a labelled beta download, and
 no paid marketing push, **after** gates 1 and 2 below are closed. It changes to GO when every row is PASS.
@@ -9,8 +9,8 @@ no paid marketing push, **after** gates 1 and 2 below are closed. It changes to 
 
 | # | Gate | Status | Owner | How to close it |
 |---|---|---|---|---|
-| 1 | Production proxy secret (V3-02) | Owner-confirmed set in Render and the Worker (14 Oct); production now refuses to start without it | — | If the API fails to start after this deploy, the Render log names `ORBIT_PROXY_SECRET`: set it (32+ chars, same as the Worker's `PROXY_SECRET`) |
-| 2 | Web deploys reach production | PASS: Cloudflare build of `fdea9c2` succeeded (production deploy command fixed; `previews` block added for branch builds) | — | — |
+| 1 | Production proxy secret (V3-02) | **OPEN** | Owner | Confirm `ORBIT_PROXY_SECRET` (32+ random chars) is set in Render and the same value in the Worker (`wrangler secret put PROXY_SECRET`); then merge the held patch so production refuses to start without it |
+| 2 | Web deploys reach production | **OPEN** | Owner | Cloudflare → orbit → Settings → Build: deploy command `npx wrangler deploy` (it is `npx wrangler preview`, which fails). Every web change since 14 Oct 05:16 IST is undeployed until then |
 | 3 | Support transcript lifecycle (V3-01, V3-05, V3-14) | PASS (code + tests, SQLite and Postgres) | — | Verified by `tests/test_support_lifecycle.py`; migration cleanup runs on deploy |
 | 4 | Payment settlement, refunds, reconciliation (V3-07/08/09/13) | PASS in code and tests; **live webhook and refund UNTESTED** | Owner | Razorpay checklist in `docs/RELEASE_VALIDATION.md`, rows 1–6, test mode then live |
 | 5 | A real live purchase (V3-03) | Owner-observed once (Mini ₹499 credited, 14 Oct) | Owner | Record the payment and webhook ids from the checklist |
