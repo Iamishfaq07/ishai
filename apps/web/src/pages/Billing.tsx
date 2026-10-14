@@ -173,7 +173,7 @@ const STATUS: Record<UpiOrder["status"], { label: string; tone: string }> = {
   rejected: { label: "Couldn't confirm", tone: "bg-rose-500/10 text-rose-700 dark:text-rose-300" },
 };
 
-/** Payments with a UTR (orders nobody paid for aren't worth listing), with a way back in to fix a UTR. */
+/** Payments made (orders nobody paid for aren't worth listing), with a way back in to fix a UPI payment's UTR. */
 function Payments({ orders, onOpen }: { orders: UpiOrder[]; onOpen: (o: UpiOrder) => void }) {
   const shown = orders.filter((o) => o.status !== "awaiting_payment");
   if (!shown.length) return null;
@@ -187,7 +187,13 @@ function Payments({ orders, onOpen }: { orders: UpiOrder[]; onOpen: (o: UpiOrder
               {o.label} · ₹{o.amount_inr}
             </span>
             <span className="text-zinc-500">{formatDate(o.submitted_at ?? o.created_at)}</span>
-            <span className="tabular-nums text-zinc-500">UTR {o.utr}</span>
+            {o.method === "razorpay" ? (
+              <span className="text-zinc-500">
+                Razorpay · <span className="font-mono tabular-nums">{o.reference}</span>
+              </span>
+            ) : (
+              o.utr && <span className="tabular-nums text-zinc-500">UTR {o.utr}</span>
+            )}
             <span className={cx("rounded-full px-2 py-0.5 text-xs font-medium", STATUS[o.status].tone)}>{STATUS[o.status].label}</span>
             {(o.status === "rejected" || o.status === "submitted") && (
               <Button size="sm" variant="ghost" className="ml-auto" onClick={() => onOpen(o)}>
@@ -278,7 +284,10 @@ export function BillingPage() {
         <Card className="self-start lg:col-span-1">
           <h2 className="mb-1 font-semibold">{e?.credits ? "Your credits" : "This month"}</h2>
           <p className="mb-4 text-sm text-zinc-500">
-            Plan: <span className="font-medium text-zinc-800 dark:text-zinc-200">{e?.label ?? "—"}</span>
+            {/* Packs add credits; they don't change the plan, so "Plan: Free" after buying one only confuses. */}
+            {e?.credits ? "Pay as you go: buy a pack whenever you need more." : (
+              <>Plan: <span className="font-medium text-zinc-800 dark:text-zinc-200">{e?.label ?? "—"}</span></>
+            )}
             {e?.until && (
               <span className="block">
                 Until {new Date(e.until).toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric" })}

@@ -263,8 +263,8 @@ function UsageCard() {
             </span>
           </div>
           <p className="text-xs text-zinc-500">
-            Credits never expire. Each session can run up to {usage.limits.max_session_minutes} minutes. Packs are paid by
-            UPI in your browser and land here once approved.
+            Credits never expire. Each session can run up to {usage.limits.max_session_minutes} minutes. Packs are bought in
+            your browser (Plan &amp; billing) and land here once they're paid.
           </p>
         </div>
       ) : (
