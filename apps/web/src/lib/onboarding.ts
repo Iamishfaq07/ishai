@@ -114,7 +114,10 @@ export function answersShapeJobSearch(answers: WelcomeAnswers): boolean {
 
 // ─── What the account has, and what to do next ────────────────────────────────────────────────────────────────────
 
-export type TrackedJob = Pick<JobTrackerEntry, "id" | "company" | "title" | "status" | "applied_at" | "next_at" | "document_id">;
+export type TrackedJob = Pick<JobTrackerEntry, "id" | "company" | "title" | "status" | "applied_at" | "next_at" | "document_id"> & {
+  /** When the status last changed. A recent move shouldn't be told to follow up yet. */
+  status_at?: string | null;
+};
 
 export interface HomeFacts {
   /** Resume AI resumes, with the best one's score and id. */
@@ -157,16 +160,23 @@ export interface Step {
 }
 
 const DAY_MS = 86_400_000;
+const FOLLOW_UP_AFTER_DAYS = 7;
+/** After this, the application is stale: the tracker stops asking, and so does Home. */
+const FOLLOW_UP_UNTIL_DAYS = 45;
 
+function startOfDay(x: Date): number {
+  return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+}
+
+/** Calendar days from `fromIso` to `now` in local time (not elapsed 24-hour blocks). */
 function daysBetween(fromIso: string, now: Date): number {
-  return Math.floor((now.getTime() - new Date(fromIso).getTime()) / DAY_MS);
+  return Math.round((startOfDay(now) - startOfDay(new Date(fromIso))) / DAY_MS);
 }
 
 /** "today", "tomorrow", "on Fri 10 Oct". */
 function whenLabel(iso: string, now: Date): string {
   const d = new Date(iso);
-  const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
-  const days = Math.round((startOf(d) - startOf(now)) / DAY_MS);
+  const days = Math.round((startOfDay(d) - startOfDay(now)) / DAY_MS);
   if (days <= 0) return "today";
   if (days === 1) return "tomorrow";
   return `on ${d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}`;
@@ -184,11 +194,15 @@ export function interviewSoon(tracker: TrackedJob[], now: Date): TrackedJob | nu
   return soon[0] ?? null;
 }
 
-/** Applications a week old or more with no reply recorded and no follow-up planned for later. Oldest first. */
+/** Applications the tracker would nudge: a week on the calendar with no reply, no date set, and not gone stale. Oldest first. */
 export function followUpsDue(tracker: TrackedJob[], now: Date): TrackedJob[] {
   return tracker
-    .filter((t) => t.status === "applied" && t.applied_at && daysBetween(t.applied_at, now) >= 7)
-    .filter((t) => !t.next_at || new Date(t.next_at).getTime() <= now.getTime())
+    .filter((t) => t.status === "applied" && t.applied_at && !t.next_at)
+    .filter((t) => {
+      const since = daysBetween(t.applied_at as string, now);
+      const moved = daysBetween(t.status_at || (t.applied_at as string), now);
+      return since >= FOLLOW_UP_AFTER_DAYS && moved >= FOLLOW_UP_AFTER_DAYS && since <= FOLLOW_UP_UNTIL_DAYS;
+    })
     .sort((a, b) => new Date(a.applied_at as string).getTime() - new Date(b.applied_at as string).getTime());
 }
 

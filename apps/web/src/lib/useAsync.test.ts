@@ -51,14 +51,18 @@ describe("shareInflight", () => {
       ["orbit.support.v1", "{\"id\":\"t\"}"],
       ["orbit.practiceGoal", "7"],
     ]);
-    vi.stubGlobal("localStorage", {
-      getItem: (k: string) => store.get(k) ?? null,
-      setItem: (k: string, v: string) => void store.set(k, v),
-      removeItem: (k: string) => void store.delete(k),
+    const session = new Map<string, string>([["orbit.warmupRound", "{\"track\":\"hr\"}"]]);
+    const storage = (map: Map<string, string>) => ({
+      getItem: (k: string) => map.get(k) ?? null,
+      setItem: (k: string, v: string) => void map.set(k, v),
+      removeItem: (k: string) => void map.delete(k),
     });
+    vi.stubGlobal("localStorage", storage(store));
+    vi.stubGlobal("sessionStorage", storage(session));
     clearAsyncCache();
     expect(store.has("orbit.support.v1")).toBe(false);
     expect(store.has("orbit.practiceGoal")).toBe(false);
+    expect(session.has("orbit.warmupRound")).toBe(false);
     vi.unstubAllGlobals();
   });
 });

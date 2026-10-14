@@ -11,10 +11,22 @@ const LEGACY_KEYS = [
   "orbit.workspaceId",
 ];
 
+// This tab only. A warm-up in progress has the person's answers; the next account in the tab must not see them.
+const SESSION_KEYS = ["orbit.warmupRound"];
+
+function drop(storage: Storage, keys: readonly string[]): void {
+  for (const key of keys) storage.removeItem(key);
+}
+
 export function clearLegacyBrowserAccount(): void {
   try {
-    for (const key of LEGACY_KEYS) localStorage.removeItem(key);
+    drop(localStorage, LEGACY_KEYS);
   } catch {
     // storage unavailable: nothing was kept there either
+  }
+  try {
+    drop(sessionStorage, SESSION_KEYS);
+  } catch {
+    // session storage unavailable
   }
 }

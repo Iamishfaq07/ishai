@@ -159,9 +159,15 @@ describe("interviewSoon and followUpsDue", () => {
     expect(interviewSoon([a, b], NOW)?.id).toBe("b");
   });
 
-  it("waits a week and respects a follow-up planned for later", () => {
+  it("waits a week on the calendar, and stops once the application is stale", () => {
     expect(followUpsDue([job({ applied_at: daysAgo(3) })], NOW)).toHaveLength(0);
     expect(followUpsDue([job({ applied_at: daysAgo(8), next_at: inHours(24) })], NOW)).toHaveLength(0);
+    // A date already set is the tracker's own reminder, even if that date has passed.
+    expect(followUpsDue([job({ applied_at: daysAgo(20), next_at: daysAgo(1) })], NOW)).toHaveLength(0);
+    // Applied late on day 1, checked the morning of day 8: seven calendar days, not yet seven blocks of 24 hours.
+    expect(followUpsDue([job({ applied_at: "2026-10-01T22:00:00+05:30" })], NOW)).toHaveLength(1);
+    expect(followUpsDue([job({ applied_at: daysAgo(20), status_at: daysAgo(1) })], NOW)).toHaveLength(0);
+    expect(followUpsDue([job({ applied_at: daysAgo(46) })], NOW)).toHaveLength(0);
     const old = job({ id: "old", applied_at: daysAgo(20) });
     const newer = job({ id: "newer", applied_at: daysAgo(8) });
     expect(followUpsDue([newer, old], NOW).map((t) => t.id)).toEqual(["old", "newer"]);
