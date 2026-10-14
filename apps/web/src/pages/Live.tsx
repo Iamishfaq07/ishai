@@ -297,6 +297,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   const notice = (
     <>
       {endError && <Notice tone="error">{endError}</Notice>}
+      {micError && (
         <Notice tone="error" action={{ label: "Retry", onClick: () => void startMic() }}>
           {micError}
         </Notice>
