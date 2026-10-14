@@ -99,12 +99,13 @@ def test_update_links_use_the_configured_public_url(client: TestClient, tmp_path
     assert r.json()["url"] == "https://api.orbit.example/v1/desktop/download/0.2.0/Orbit_0.2.0_x64-setup.exe"
 
 
-def test_production_refuses_wildcard_cors_and_weak_proxy_secret() -> None:
+def test_production_refuses_wildcard_cors_and_ignores_a_weak_proxy_secret() -> None:
     _prod()  # the baseline is valid
     with pytest.raises(ValueError, match="CORS"):
         _prod(ORBIT_CORS_ORIGINS='["*"]')
-    with pytest.raises(ValueError, match="PROXY_SECRET"):
-        _prod(ORBIT_PROXY_SECRET="short")
+    # A weak or missing secret isn't trusted (no caller may state its IP), and the API still starts: refusing to
+    # start took production down when Render didn't have the secret.
+    assert _prod(ORBIT_PROXY_SECRET="short").proxy_secret is None
 
 
 def test_dropped_email_logs_a_masked_address() -> None:

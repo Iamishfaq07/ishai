@@ -286,8 +286,9 @@ class Settings(BaseSettings):
                 raise ValueError("ORBIT_CORS_ORIGINS must list exact origins in production (no '*')")
             proxy = self.proxy_secret.get_secret_value().strip() if self.proxy_secret else ""
             if len(proxy) < 32 or proxy == _DEV_PROXY_SECRET or len(set(proxy)) < 12:
-                raise ValueError("ORBIT_PROXY_SECRET is required in production: set a random value of 32+ chars "
-                                 "in Render and the identical PROXY_SECRET in the Cloudflare Worker before deploying")
+                # Not usable: trust no proxy (limits key on the socket peer) and warn at startup (main.py), rather
+                # than refuse to start. Refusing took production down twice when Render didn't have the secret.
+                self.proxy_secret = None
             if self.api_replicas != 1:
                 raise ValueError("ORBIT_API_REPLICAS must be 1: live-session state is process-local (tickets, "
                                  "socket ownership, screenshot routing, rate limits). See docs/DECISIONS.md D12.")
