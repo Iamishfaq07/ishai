@@ -674,3 +674,13 @@ html:not(.dark) .cosmic-dots { background-image: radial-gradient(rgba(35, 38, 66
 @keyframes cosmic-float { to { transform: translateY(-4px); } }
 @keyframes cosmic-blink { 50% { opacity: 0.25; } }
 @keyframes cosmic-link { to { stroke-dashoffset: -20; } }
+
+/* Technical details: packets travel the answer pipeline (ArchitecturePipeline, a 600-unit line in its viewBox). */
+.pipe-packet { opacity: 0; animation: pipe-travel 2.7s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+@keyframes pipe-travel {
+  0% { transform: translateX(0); opacity: 0; }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  100% { transform: translateX(600px); opacity: 0; }
+}
+:root:is([data-motion="reduced"], [data-motion="off"]) .pipe-packet { display: none; }

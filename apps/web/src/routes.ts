@@ -13,6 +13,7 @@ const loaders = {
   welcome: () => import("./pages/Welcome"),
   warmup: () => import("./pages/Warmup"),
   contact: () => import("./pages/Contact"),
+  technical: () => import("./pages/Technical"),
   setup: () => import("./pages/SessionSetup"),
   live: () => import("./pages/Live"),
   sessions: () => import("./pages/Sessions"),
@@ -45,6 +46,7 @@ export const LandingPage = page(loaders.landing, (m) => m.LandingPage);
 export const WelcomePage = page(loaders.welcome, (m) => m.WelcomePage);
 export const WarmupPage = page(loaders.warmup, (m) => m.WarmupPage);
 export const ContactPage = page(loaders.contact, (m) => m.ContactPage);
+export const TechnicalPage = page(loaders.technical, (m) => m.TechnicalPage);
 export const SessionSetupPage = page(loaders.setup, (m) => m.SessionSetupPage);
 export const LivePage = page(loaders.live, (m) => m.LivePage);
 export const SessionsPage = page(loaders.sessions, (m) => m.SessionsPage);
@@ -80,6 +82,7 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/welcome\/?$/, "welcome"],
   [/^\/warmup\/?$/, "warmup"],
   [/^\/contact\/?$/, "contact"],
+  [/^\/technical\/?$/, "technical"],
   [/^\/start/, "setup"],
   [/^\/live\//, "live"],
   [/^\/sessions\/[^/]+/, "sessionDetail"],

@@ -426,6 +426,8 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/v1/auth/password-reset/request"), ("POST", "/v1/auth/password-reset/confirm"),
     ("POST", "/v1/auth/email-change/confirm"),
     ("GET", "/v1/plans"), ("GET", "/v1/billing/packs"), ("GET", "/v1/jobs/stats"), ("GET", "/v1/announcement"),
+    # The Technical details page's latency aggregates (nothing per person; empty until enough sessions).
+    ("GET", "/v1/public/engineering-telemetry"),
     ("GET", "/v1/desktop/update/{target}/{arch}/{current_version}"),
     ("GET", "/v1/desktop/download/{version}/{filename}"),
     ("POST", "/v1/companion/redeem"), ("POST", "/v1/companion/{code}"),

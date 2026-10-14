@@ -1021,6 +1021,10 @@ export interface ContactContext {
   reason?: string;
   /** The app page the form was opened from ("/jobs/listing/j3f2"). */
   page?: string;
+  /** Which app sent it: "web" or "desktop-0.1.25". */
+  platform?: string;
+  /** Added by the server for a signed-in sender (never sent): their most recent session. */
+  latest_session_id?: string;
 }
 
 /** POST /v1/contact (public, signed in or out). */
@@ -1035,6 +1039,24 @@ export interface ContactRequest {
   captcha_token?: string;
   /** The honeypot: always empty from a person. */
   website?: string;
+}
+
+/** GET /v1/public/engineering-telemetry. Percentiles are null until enough sessions were measured. */
+export interface LatencyPercentiles {
+  p50_ms: number;
+  p95_ms: number;
+  samples: number;
+}
+export interface EngineeringTelemetry {
+  window_days: number;
+  sessions: number;
+  /** Interviewer stops talking → question recognised. */
+  question_detected: LatencyPercentiles | null;
+  /** Question recognised → first word of the answer. */
+  first_word: LatencyPercentiles | null;
+  /** Seconds since the API last started (each deploy restarts it). */
+  up_for_s: number;
+  measured_at: string;
 }
 
 export interface ContactReceipt {

@@ -102,7 +102,7 @@ export function ContactPage() {
   const set = <K extends keyof ContactFields>(key: K, value: ContactFields[K]) => setFields((f) => ({ ...f, [key]: value }));
 
   const context: ContactContext | null = useMemo(() => {
-    const ctx: ContactContext = {};
+    const ctx: ContactContext = { platform: "web" };
     if (prefill.listing && keepJob) {
       ctx.listing_id = prefill.listing;
       if (job) Object.assign(ctx, { listing_title: job.title, listing_company: job.company, listing_url: job.url });

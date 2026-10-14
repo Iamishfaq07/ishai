@@ -44,7 +44,7 @@ from orbit_api.config import get_settings
 from orbit_api.csrf import HEADER as CSRF_HEADER
 from orbit_api.csrf import token_for as csrf_token_for
 from orbit_api.db import get_db, sessionmaker
-from orbit_api.models import ContactMessage, JobListing, User
+from orbit_api.models import ContactMessage, JobListing, LiveSessionRow, User
 from orbit_api.ratelimit import TokenBucket, check, client_ip, network_of
 
 log = logging.getLogger(__name__)
@@ -68,8 +68,8 @@ Status = Literal["new", "open", "done", "spam"]
 
 NAME_MAX, MESSAGE_MIN, MESSAGE_MAX = 120, 10, 3000
 
-# 5 an hour and 20 a day from one network (token buckets: the hour's 5 come back one every 12 minutes).
-_per_hour = TokenBucket(rate_per_s=5 / 3600, burst=5)
+# 3 an hour and 20 a day from one network (token buckets: the hour's 3 come back one every 20 minutes).
+_per_hour = TokenBucket(rate_per_s=3 / 3600, burst=3)
 _per_day = TokenBucket(rate_per_s=20 / 86400, burst=20)
 SLOW_DOWN = "You've sent a few messages in a short time. Please wait a while (an hour at most) and try again."
 DAY_LIMIT = "You've sent a lot of messages today. Please try again tomorrow."
@@ -145,6 +145,8 @@ class ContextIn(BaseModel):
     listing_url: str | None = Field(None, max_length=600)
     reason: str | None = Field(None, max_length=80)  # "Asked me to pay a fee"
     page: str | None = Field(None, max_length=200)  # "/jobs/listing/j3f2..."
+    # Which app sent it, so a bug report can be matched to a build: "web" or "desktop-0.1.25".
+    platform: str | None = Field(None, max_length=40)
 
     @field_validator("listing_id")
     @classmethod
@@ -167,6 +169,11 @@ class ContextIn(BaseModel):
         v = one_line(v)
         return v if v.startswith("/") and not v.startswith("//") else None
 
+    @field_validator("platform")
+    @classmethod
+    def _platform(cls, v: str | None) -> str | None:
+        return v if v and re.fullmatch(r"web|desktop-\d{1,3}\.\d{1,3}\.\d{1,4}", v) else None
+
 
 class ContactIn(BaseModel):
     name: str = Field(min_length=1, max_length=NAME_MAX)
@@ -185,15 +192,20 @@ class ContactOut(BaseModel):
     reference: str  # "C-1A2B3C4D", to quote when writing again
 
 
-async def _context(db: AsyncSession, given: ContextIn | None) -> dict[str, Any] | None:
-    """The context to keep, with a known listing's title, company and link from the job cache rather than the page."""
-    if given is None:
-        return None
-    ctx = given.model_dump(exclude_none=True)
-    if given.listing_id and (listing := await db.get(JobListing, given.listing_id)) is not None:
+async def _context(db: AsyncSession, given: ContextIn | None, user: User | None = None) -> dict[str, Any] | None:
+    """The context to keep, with a known listing's title, company and link from the job cache rather than the page.
+    Signed in, the sender's most recent session is added from the database (never taken from the client), so a
+    "my session broke" message points straight at it."""
+    ctx = given.model_dump(exclude_none=True) if given is not None else {}
+    if given is not None and given.listing_id and (listing := await db.get(JobListing, given.listing_id)) is not None:
         ctx.update(listing_title=one_line(listing.title)[:300], listing_company=one_line(listing.company)[:200])
         if url := _http_url(listing.url):
             ctx["listing_url"] = url[:600]
+    if user is not None:
+        latest = await db.scalar(select(LiveSessionRow.id).where(LiveSessionRow.user_id == user.id)
+                                 .order_by(LiveSessionRow.created_at.desc()).limit(1))
+        if latest:
+            ctx["latest_session_id"] = latest
     return ctx or None
 
 
@@ -243,7 +255,7 @@ async def send_message(body: ContactIn, request: Request, db: Annotated[AsyncSes
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, BUSY)
 
     row = ContactMessage(user_id=user.id if user else None, name=name, email=email, phone=phone, topic=body.topic,
-                         message=message, context=await _context(db, body.context), status="new",
+                         message=message, context=await _context(db, body.context, user), status="new",
                          network_hash=network_hash(client_ip(request)))
     db.add(row)
     await db.commit()

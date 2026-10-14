@@ -75,6 +75,11 @@ export function Footer({ className }: { className?: string }) {
                 Contact us
               </Link>
             </li>
+            <li>
+              <Link to="/technical" className={link}>
+                How Orbit works
+              </Link>
+            </li>
           </ul>
         </nav>
         <nav aria-label="Policies">

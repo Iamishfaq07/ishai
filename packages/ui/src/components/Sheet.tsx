@@ -14,6 +14,26 @@ const WIDTH: Record<SheetSize, string> = {
   "2xl": "sm:max-w-2xl",
 };
 
+// Panels open on top of each other (a credits panel from an edit panel). The page stays still until the last one
+// closes, in whatever order they close; each saving and restoring `overflow` itself would let the page scroll under
+// a panel still open when the one below it closed first.
+let locks = 0;
+let lockedFrom = "";
+
+/** Stops the page scrolling until every caller has released it. Returns the release. */
+export function lockScroll(): () => void {
+  if (locks++ === 0) {
+    lockedFrom = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+  }
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    if (--locks === 0) document.body.style.overflow = lockedFrom;
+  };
+}
+
 /**
  * The one modal panel. `placement="center"` (the default) is a sheet from the bottom on phones and a centred dialog
  * from `sm` up. `placement="end"` is a full-height panel from the right, under confirm dialogs. Rendered on
@@ -53,11 +73,7 @@ export function Sheet({
 
   useEffect(() => {
     if (!open) return;
-    const before = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = before;
-    };
+    return lockScroll();
   }, [open]);
 
   if (!open || typeof document === "undefined") return null;

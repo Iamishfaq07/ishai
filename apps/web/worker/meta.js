@@ -33,6 +33,11 @@ export const PAGE_META = {
     description:
       "Questions, payments, a technical problem or a job that looks wrong: send the Orbit team a message and we'll reply by email.",
   },
+  "/technical": {
+    title: "How Orbit works: live latency and security | Orbit",
+    description:
+      "Measured answer speed from real sessions, the live answer pipeline step by step, and how the desktop app keeps your sign-in and data safe.",
+  },
 };
 
 /** The page's own preview, or null for any other address (it keeps index.html's). "/jobs/" counts as "/jobs". */
