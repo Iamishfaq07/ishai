@@ -48,7 +48,7 @@ import { useBackend } from "./backend";
 import { FixActions, FixResult, fixKind } from "./FixPanel";
 import { InterviewPrep, usePrepState } from "./InterviewPrep";
 import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, suggestedSkills } from "./model";
-import { RESUME_AI_HOME } from "./paths";
+import { RESUME_AI_HOME, shouldFlushResume } from "./paths";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
 import { SaveToDocuments } from "./SaveToDocuments";
@@ -251,6 +251,23 @@ function ResumeEditor() {
   // Don't lose the last edits when leaving mid-save.
   const unsaved = useRef(false);
   unsaved.current = save.state === "dirty" || save.state === "error";
+  const routeId = useRef(resumeId);
+  useEffect(() => {
+    const previous = routeId.current;
+    routeId.current = resumeId;
+    const leaving = latest.current;
+    if (!shouldFlushResume(leaving?.id, resumeId, unsaved.current) || !leaving || leaving.id !== previous) return;
+    // The autosave timer is cleared by the route change, so write this resume before the next one replaces it.
+    void backend
+      .save(leaving.id, {
+        title: leaving.title.trim() || "Untitled resume",
+        data: leaving.data,
+        design: leaving.design,
+        job_text: leaving.job_text,
+        cover_letter: leaving.cover_letter,
+      })
+      .catch(() => undefined);
+  }, [backend, resumeId]);
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
       // "error" too: a phone that went offline would otherwise close the tab on edits that never reached the server.

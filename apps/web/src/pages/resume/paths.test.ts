@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { isResumeAiHome, movedResumePath, resumePath } from "./paths";
+import { isResumeAiHome, movedResumePath, resumePath, shouldFlushResume } from "./paths";
 
 describe("Resume AI's addresses", () => {
   it("opens a resume under /resume-ai, its id kept safe in the address", () => {
     expect(resumePath("3f2a9c")).toBe("/resume-ai/3f2a9c");
     expect(resumePath("a/b c")).toBe("/resume-ai/a%2Fb%20c");
+  });
+
+  it("saves the resume you left when its edits are not the one you opened", () => {
+    expect(shouldFlushResume("a", "b", true)).toBe(true);
+    expect(shouldFlushResume("a", "a", true)).toBe(false);
+    expect(shouldFlushResume("a", "b", false)).toBe(false);
+    expect(shouldFlushResume(null, "b", true)).toBe(false);
   });
 
   it("knows the product home (where a signed-out visitor sees the product page), and nothing under it", () => {

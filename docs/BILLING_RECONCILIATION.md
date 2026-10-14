@@ -14,8 +14,8 @@ Credits are added only after Razorpay has **captured** the payment, and only onc
 
 The webhook accepts `payment.captured` and `order.paid` only when the payment entity is `captured`, currency is INR, and the amount matches. A second confirmation finds the row already `approved` and adds nothing.
 
-## Not done here
+## Refunds
 
-Refunds, partial refunds and disputes do not automatically remove credits. A refund after credits were spent needs a manual decision recorded in the admin audit log. Do not claw credits back in code until that rule is written.
+`refund.processed` does not remove credits. A pack may already have been spent, and taking it back in code would change a balance the person can no longer see coming. The payment note and an audit row (`payment.refunded`) record the refund once. A person decides whether any credit should be removed.
 
 Live gateway capture, webhook delivery and receipts were not exercised against Razorpay in this change. See `docs/RELEASE_VALIDATION.md`.

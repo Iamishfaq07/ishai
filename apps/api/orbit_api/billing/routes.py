@@ -296,6 +296,30 @@ async def razorpay_verify(body: VerifyIn, background: BackgroundTasks, user: Ann
     return _order_out(p)
 
 
+async def _refund_noted(db: AsyncSession, event: dict[str, Any]) -> None:
+    """A refund went out. Credits stay: they may already be spent. The note and the audit row are the record, once."""
+    try:
+        refund = event["payload"]["refund"]["entity"]
+        refund_id = str(refund["id"])
+        payment_id = str(refund.get("payment_id") or "")
+        amount = int(refund.get("amount") or 0)
+    except (KeyError, TypeError, ValueError):
+        return
+    if not refund_id.startswith("rfnd_") or not payment_id:
+        return
+    p = await db.scalar(select(Payment).where(Payment.gateway_payment_id == payment_id))
+    if p is None:
+        log.warning("razorpay refund %s for an unknown payment %s", refund_id, payment_id)
+        return
+    if p.note and refund_id in p.note:
+        return
+    rupees = amount // 100 if amount else p.amount_inr
+    p.note = f"Razorpay refunded ₹{rupees} ({refund_id}). Credits were not removed."[:300]
+    db.add(AuditLog(user_id=p.user_id, action="payment.refunded",
+                    target=f"{p.id} {refund_id} ₹{rupees} credits kept"))
+    await db.commit()
+
+
 @router.post("/billing/webhook", include_in_schema=False)
 async def razorpay_webhook(request: Request, background: BackgroundTasks,
                            db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, bool]:
@@ -306,6 +330,12 @@ async def razorpay_webhook(request: Request, background: BackgroundTasks,
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bad signature.")
     try:
         event = json.loads(raw)
+    except ValueError:
+        return {"ok": True}
+    if event.get("event") == "refund.processed":
+        await _refund_noted(db, event)
+        return {"ok": True}
+    try:
         entity = event["payload"]["payment"]["entity"]
         order_id, payment_id, amount = str(entity["order_id"]), str(entity["id"]), int(entity["amount"])
         currency, pay_status = str(entity.get("currency") or ""), str(entity.get("status") or "")

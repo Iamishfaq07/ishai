@@ -10,6 +10,11 @@ export function resumePath(id: string): string {
   return `${RESUME_AI_HOME}/${encodeURIComponent(id)}`;
 }
 
+/** True when the open resume has edits and the address is now a different resume. Those edits still have to be saved. */
+export function shouldFlushResume(openId: string | null | undefined, nextId: string, dirty: boolean): boolean {
+  return Boolean(dirty && openId && openId !== nextId);
+}
+
 /** The product home itself, where a signed-out visitor sees the public page instead of signing in. */
 export function isResumeAiHome(pathname: string): boolean {
   return /^\/resume-ai\/?$/.test(pathname);
