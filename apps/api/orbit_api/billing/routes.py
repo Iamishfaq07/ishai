@@ -311,10 +311,13 @@ async def _refund_noted(db: AsyncSession, event: dict[str, Any]) -> None:
     if p is None:
         log.warning("razorpay refund %s for an unknown payment %s", refund_id, payment_id)
         return
-    if p.note and refund_id in p.note:
+    seen = await db.scalar(select(AuditLog.id).where(
+        AuditLog.action == "payment.refunded", AuditLog.target.contains(refund_id)))
+    if seen is not None:
         return
     rupees = amount // 100 if amount else p.amount_inr
-    p.note = f"Razorpay refunded ₹{rupees} ({refund_id}). Credits were not removed."[:300]
+    if not p.note:
+        p.note = f"Razorpay refunded ₹{rupees} ({refund_id}). Credits were not removed."[:300]
     db.add(AuditLog(user_id=p.user_id, action="payment.refunded",
                     target=f"{p.id} {refund_id} ₹{rupees} credits kept"))
     await db.commit()
