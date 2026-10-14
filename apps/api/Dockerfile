@@ -1,7 +1,7 @@
 # Base images are pinned by digest (Dependabot's docker updates bump them), so a re-pushed tag can't change the build.
 # Keep the Python minor in step with CI's (ci.yml) and pyproject's mypy target: the lockfile is only tested there, and
 # a newer interpreter can fail at import (3.14 with the locked pydantic did). tests/test_deploy_image.py checks this.
-FROM python:3.12-slim@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f AS base
+FROM python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1 AS base
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 COPY --from=ghcr.io/astral-sh/uv:0.5@sha256:7bff3c3776ec467fc1437960f2c469d8beb30f536a6465a3350c647ccd260ec2 /uv /usr/local/bin/uv
 WORKDIR /app
