@@ -19,6 +19,10 @@ os.environ.update(
 if os.environ.get("RUN_PROVIDER_SMOKE", "").lower() != "true":  # tests/smoke needs the real keys
     for key in ("DEEPSEEK_API_KEY", "DEEPGRAM_API_KEY"):
         os.environ.pop(key, None)
+    # A developer's own apps/api/.env (Razorpay or provider keys) never reaches the suite: tests set what they need.
+    from orbit_api.config import Settings
+
+    Settings.model_config["env_file"] = None
 
 
 @pytest.fixture

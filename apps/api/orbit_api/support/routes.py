@@ -1,7 +1,8 @@
 """Support chat.
 
 `POST /v1/support/threads` opens a chat (signed in or out). The browser keeps a token that is the only way back in.
-`POST .../messages` adds what the visitor typed, or a topic they tapped. While the thread is `bot`, Orbit answers from the help notes only. It does not call a model. `POST .../handoff` asks for a person:
+`POST .../messages` adds what the visitor typed, or a topic they tapped. While the thread is `bot`, Orbit answers from
+the help notes only. It does not call a model. `POST .../handoff` asks for a person:
 the thread waits, and a copy lands in the admin Inbox so the existing unread badge lights up.
 A person replies at `POST /v1/admin/support/{id}/reply`. That line shows in the visitor's chat.
 """
@@ -111,10 +112,10 @@ def _owns(thread: SupportThread, user: User | None) -> bool:
 def _out(thread: SupportThread, token: str | None = None, user: User | None = None, page: str = "") -> ThreadOut:
     return ThreadOut(
         id=thread.id,
-        status=thread.status,  # type: ignore[arg-type]
+        status=thread.status,
         token=token,
         messages=[
-            MessageOut(id=m.id, role=m.role, text=m.text, created_at=m.created_at)  # type: ignore[arg-type]
+            MessageOut(id=m.id, role=m.role, text=m.text, created_at=m.created_at)
             for m in thread.messages
         ],
         suggestions=[
@@ -125,7 +126,8 @@ def _out(thread: SupportThread, token: str | None = None, user: User | None = No
 
 
 async def _stamp(db: AsyncSession, thread_id: str) -> datetime:
-    """A time after this chat's latest line. The database is the clock, so two processes can't put a later line first."""
+    """A time after this chat's latest line. The database is the clock, so two processes can't put a later line
+    first."""
     latest = await db.scalar(select(func.max(SupportMessage.created_at)).where(SupportMessage.thread_id == thread_id))
     now = datetime.now(UTC)
     if isinstance(latest, datetime):
@@ -191,7 +193,7 @@ def _inr(amount: int) -> str:
 
 def _minutes(value: float) -> str:
     if abs(value - round(value)) < 0.05:
-        n = int(round(value))
+        n = round(value)
         return f"{n} interview minute" if n == 1 else f"{n} interview minutes"
     return f"{value:.1f} interview minutes"
 
@@ -254,7 +256,8 @@ async def _admin_out(db: AsyncSession, thread: SupportThread) -> AdminDetail:
     return AdminDetail(**_out(thread).model_dump(), account=await _account_blurb(db, thread))
 
 
-async def _bot_answer(db: AsyncSession, thread: SupportThread, user: User | None, text: str, choice: str) -> tuple[str, str]:
+async def _bot_answer(db: AsyncSession, thread: SupportThread, user: User | None, text: str,
+                      choice: str) -> tuple[str, str]:
     """The line saved for the visitor, and the bot's exact reply. No model."""
     account = account_choice(text, choice)
     if account:
@@ -377,7 +380,8 @@ async def list_threads(
     db: Annotated[AsyncSession, Depends(get_db)],
     only: Literal["waiting", "all"] = "waiting",
 ) -> list[AdminThread]:
-    q = select(SupportThread).options(selectinload(SupportThread.messages)).order_by(SupportThread.updated_at.desc()).limit(50)
+    q = (select(SupportThread).options(selectinload(SupportThread.messages))
+         .order_by(SupportThread.updated_at.desc()).limit(50))
     if only == "waiting":
         q = q.where(SupportThread.status == "waiting")
     rows = (await db.execute(q)).scalars().unique().all()

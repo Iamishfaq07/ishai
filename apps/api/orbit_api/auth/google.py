@@ -265,7 +265,7 @@ def mount(router: APIRouter) -> None:
     ) -> RedirectResponse:
         packed = _unpack(request.cookies.get(GOOGLE_COOKIE, ""))
         mismatch = packed is None or not secrets.compare_digest(packed["st"], state) or not code
-        if not get_settings().google_enabled or mismatch:
+        if packed is None or not get_settings().google_enabled or mismatch:
             response = RedirectResponse(_login_url("google"), status_code=302)
             _clear_state(response)
             return response

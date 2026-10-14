@@ -120,7 +120,8 @@ def test_admin_must_verify_when_mail_can_be_delivered(monkeypatch: pytest.Monkey
 
 def test_auth_config_is_public(monkeypatch: pytest.MonkeyPatch) -> None:
     with app_with(monkeypatch, ORBIT_EMAIL_VERIFICATION="required") as c:
-        assert c.get("/v1/auth/config").json() == {"captcha": None, "email_verification": "required"}
+        assert c.get("/v1/auth/config").json() == {"captcha": None, "email_verification": "required",
+                                                   "google": False}
     with app_with(monkeypatch, ORBIT_CAPTCHA_PROVIDER="turnstile", TURNSTILE_SITE_KEY="site-123",
                   TURNSTILE_SECRET_KEY="secret") as c:
         assert c.get("/v1/auth/config").json()["captcha"] == {"provider": "turnstile", "site_key": "site-123"}

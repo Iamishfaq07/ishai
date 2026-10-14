@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Annotated, Literal
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
-from sqlalchemy.orm import defer
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import defer
 
 from orbit_api.auth.guards import require_verified_user
 from orbit_api.auth.security import current_user
