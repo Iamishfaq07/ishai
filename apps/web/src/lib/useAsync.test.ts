@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getShownMore, jobProfileWasSuggested, markJobProfileSuggested, setShownMore } from "./jobsSession";
 import { clearAsyncCache, shareInflight } from "./useAsync";
 
 describe("shareInflight", () => {
@@ -35,5 +36,13 @@ describe("shareInflight", () => {
     expect(await first).toBe(1);
     expect(await second).toBe(2);
     expect(await shareInflight("resumes", async () => 3)).toBe(3);
+  });
+
+  it("forgets the last person's extra job pages and the profile suggestion when the account changes", () => {
+    setShownMore({ key: "k", items: [], page: 2, hasMore: false });
+    markJobProfileSuggested();
+    clearAsyncCache();
+    expect(getShownMore()).toBeNull();
+    expect(jobProfileWasSuggested()).toBe(false);
   });
 });

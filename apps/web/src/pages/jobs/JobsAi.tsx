@@ -7,6 +7,7 @@ import { useAsync, type AsyncState } from "../../lib/useAsync";
 import { profileStamp } from "./model";
 import { isOutreach } from "./paths";
 import { JobsAiTabs } from "./product";
+import { jobProfileWasSuggested, markJobProfileSuggested } from "../../lib/jobsSession";
 
 /**
  * Orbit Jobs AI's pages (/jobs/...): the tabs between them, and what they share: the search profile behind the feed,
@@ -24,9 +25,6 @@ export interface JobsAi {
 export function useJobsAi(): JobsAi {
   return useOutletContext<JobsAi>();
 }
-
-// The AI fills in a first profile once per visit, when the user has a resume but hasn't saved a profile yet.
-let autoSuggested = false;
 
 export function JobsAiSection() {
   const profile = useAsync(() => api.jobProfile(), [], "job-profile");
@@ -53,8 +51,9 @@ export function JobsAiSection() {
       next.delete("resume");
       setParams(next, { replace: true });
     }
-    if (!switchTo && (autoSuggested || p.saved || !p.resume || p.ai_left === 0)) return;
-    ran.current = autoSuggested = true;
+    if (!switchTo && (jobProfileWasSuggested() || p.saved || !p.resume || p.ai_left === 0)) return;
+    ran.current = true;
+    markJobProfileSuggested();
     setSuggesting(true);
     api
       .suggestJobProfile(switchTo ?? p.resume?.id ?? null)
@@ -86,12 +85,18 @@ const MAX_POLLS = 40; // about four minutes: a first refresh of every source tak
  */
 export function useJobFeed(profile: JobProfile, query = "", sort: JobSort = "best") {
   const stamp = profileStamp(profile);
+  const feedKey = `${query}|${sort}|${stamp}`;
   const feed = useAsync(
     () => api.jobFeed({ q: query, sort, page_size: PAGE_SIZE }),
     [query, sort, stamp],
-    `job-feed|${query}|${sort}|${stamp}`,
+    `job-feed|${feedKey}`,
   );
   const [polls, setPolls] = useState(0);
+  const [polledFor, setPolledFor] = useState(feedKey);
+  if (polledFor !== feedKey) {
+    setPolledFor(feedKey);
+    setPolls(0);
+  }
   const refreshing = Boolean(feed.data?.refreshing);
   const reload = feed.reload;
   useEffect(() => {
