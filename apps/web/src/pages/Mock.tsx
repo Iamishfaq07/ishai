@@ -242,6 +242,10 @@ function CustomMock({
   onStart: (req: CreateSessionRequest) => void;
 }) {
   const [role, setRole] = useState("");
+  const editedRole = useRef(false);
+  useEffect(() => {
+    if (!editedRole.current && knownRole) setRole(knownRole);
+  }, [knownRole]);
   const [interviewType, setInterviewType] = useState<MockInterviewType>("mixed");
   const [difficulty, setDifficulty] = useState<MockDifficulty>("medium");
   const [duration, setDuration] = useState(20);
@@ -299,7 +303,7 @@ function CustomMock({
         <form onSubmit={start} className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Role" htmlFor="mock-role">
-              <Input id="mock-role" value={role} onChange={(e) => setRole(e.target.value)} placeholder={knownRole || "e.g. Data Analyst"} maxLength={120} />
+              <Input id="mock-role" value={role} onChange={(e) => { editedRole.current = true; setRole(e.target.value); }} placeholder={knownRole || "e.g. Data Analyst"} maxLength={120} />
             </Field>
             <Field label="Interview type" htmlFor="mock-type">
               <Select id="mock-type" value={interviewType} onChange={(e) => setInterviewType(e.target.value as MockInterviewType)}>

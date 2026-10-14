@@ -5,8 +5,10 @@ import { ArrowRight, Check, LoadGate, Target, cx, focusRing } from "@orbit/ui";
 import { Card, ErrorNote } from "../components/ui";
 import { api } from "../lib/api";
 import { SESSION_TYPE_LABEL, errorText } from "../lib/format";
-import { useAsync } from "../lib/useAsync";
+import { useAuth } from "../lib/auth";
+import { loadAnswers, practiceHref } from "../lib/onboarding";
 import { GOAL_CHOICES, goalState, loadGoal, loadWarmupLog, saveGoal } from "../lib/weeklyGoal";
+import { useAsync } from "../lib/useAsync";
 
 const H = 180;
 const PAD = { top: 16, right: 36, bottom: 24, left: 28 };
@@ -158,9 +160,9 @@ function ScoreDelta({ recent, before }: { recent: number | null; before: number 
 }
 
 /** What counts toward the weekly goal: mock interviews that ended, and warm-up answers checked in this browser. */
-function practiceTimes(progress: Progress | null): number[] {
+function practiceTimes(progress: Progress | null, userId?: string | null): number[] {
   const mocks = (progress?.points ?? []).filter((p) => p.type === "mock" && p.ended_at).map((p) => Date.parse(p.ended_at!));
-  return [...mocks, ...loadWarmupLog()];
+  return [...mocks, ...loadWarmupLog(userId)];
 }
 
 /**
@@ -180,12 +182,20 @@ function OwnProgressGoal({ className }: { className?: string }) {
 }
 
 function GoalCard({ progress, first, className }: { progress: Progress | null; first: boolean; className?: string }) {
-  const [goal, setGoal] = useState(loadGoal);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  const role = user ? loadAnswers(user.id)?.role : "";
+  const [goalFor, setGoalFor] = useState(userId);
+  const [goal, setGoal] = useState(() => loadGoal(userId));
+  if (goalFor !== userId) {
+    setGoalFor(userId);
+    setGoal(loadGoal(userId));
+  }
   const titleId = useId();
-  const state = goalState(practiceTimes(progress), goal);
+  const state = goalState(practiceTimes(progress, userId), goal);
   const pick = (n: number) => {
     setGoal(n);
-    saveGoal(n);
+    saveGoal(n, userId);
   };
   const left = Math.max(goal - state.done, 0);
   const days = state.daysLeft === 1 ? "day" : "days";
@@ -257,7 +267,7 @@ function GoalCard({ progress, first, className }: { progress: Progress | null; f
         {first && (
           <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-zinc-200 pt-3 text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-300">
             <span className="min-w-0 flex-1">Your first score shows up after your first mock. A 5-minute HR round is the quickest way in.</span>
-            <Link to="/mock?preset=hr5" className={cx("inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
+            <Link to={practiceHref({ preset: "hr5", role })} className={cx("inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
               <Target className="h-4 w-4" aria-hidden /> Do a 5-minute HR round
             </Link>
           </p>

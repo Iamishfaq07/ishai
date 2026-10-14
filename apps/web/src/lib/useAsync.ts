@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { clearLegacyBrowserAccount } from "./browserAccount";
+import { resetJobsSession } from "./jobsSession";
 
 export interface AsyncState<T> {
   data: T | null;
@@ -19,6 +21,8 @@ export function clearAsyncCache(): void {
   generation += 1;
   cache.clear();
   inflight.clear();
+  resetJobsSession();
+  clearLegacyBrowserAccount();
 }
 
 /** One network call while several callers ask for the same key. A new call after it finishes starts another. */

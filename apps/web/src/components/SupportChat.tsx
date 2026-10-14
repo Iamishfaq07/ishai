@@ -12,14 +12,18 @@ const Questions = lazy(() => import("./HelpDialog"));
 const STORE = "orbit.support.v1";
 const SEEN = "orbit.support.seen";
 
+function scopeKey(base: string, userId?: string | null): string {
+  return `${base}.${userId || "guest"}`;
+}
+
 interface Saved {
   id: string;
   token: string;
 }
 
-function load(): Saved | null {
+function load(userId?: string | null): Saved | null {
   try {
-    const raw = localStorage.getItem(STORE);
+    const raw = localStorage.getItem(scopeKey(STORE, userId));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Saved;
     return parsed.id && parsed.token ? parsed : null;
@@ -28,27 +32,32 @@ function load(): Saved | null {
   }
 }
 
-function save(thread: SupportThread): Saved | null {
-  if (!thread.token) return load();
+function save(thread: SupportThread, userId?: string | null): Saved | null {
+  if (!thread.token) return load(userId);
   const saved = { id: thread.id, token: thread.token };
-  localStorage.setItem(STORE, JSON.stringify(saved));
+  localStorage.setItem(scopeKey(STORE, userId), JSON.stringify(saved));
   return saved;
 }
 
-function loadSeen(): string {
+function loadSeen(userId?: string | null): string {
   try {
-    return localStorage.getItem(SEEN) ?? "";
+    return localStorage.getItem(scopeKey(SEEN, userId)) ?? "";
   } catch {
     return "";
   }
 }
 
-function markSeen(id: string): void {
+function markSeen(id: string, userId?: string | null): void {
   if (!id) return;
-  localStorage.setItem(SEEN, id);
+  localStorage.setItem(scopeKey(SEEN, userId), id);
 }
 
-/** A person replied after the visitor last had this chat open. */
+/** A refresh that left before a send must not wipe the message that landed. */
+function preferThread(current: SupportThread | null, next: SupportThread): SupportThread {
+  if (current && current.id === next.id && current.messages.length > next.messages.length) return current;
+  return next;
+}
+
 function hasUnseenReply(thread: SupportThread | null, seen: string): boolean {
   if (!thread) return false;
   const at = thread.messages.findIndex((m) => m.id === seen);
@@ -63,10 +72,12 @@ function hasUnseenReply(thread: SupportThread | null, seen: string): boolean {
 export function SupportChat() {
   const { pathname } = useLocation();
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [open, setOpen] = useState(false);
   const [questions, setQuestions] = useState(false);
   const [thread, setThread] = useState<SupportThread | null>(null);
-  const [saved, setSaved] = useState<Saved | null>(null);
+  const [saved, setSaved] = useState<Saved | null>(() => load(userId));
+  const [forUser, setForUser] = useState(userId);
   const [text, setText] = useState("");
   const [email, setEmail] = useState("");
   const [needEmail, setNeedEmail] = useState(false);
@@ -76,7 +87,15 @@ export function SupportChat() {
   const formRef = useRef<HTMLFormElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
-  const [seenId, setSeenId] = useState(loadSeen);
+  const [seenId, setSeenId] = useState(() => loadSeen(userId));
+  if (forUser !== userId) {
+    setForUser(userId);
+    setSaved(load(userId));
+    setThread(null);
+    setSeenId(loadSeen(userId));
+    setText("");
+    setError("");
+  }
   const hidden = pathname.startsWith("/live");
 
   useEffect(() => {
@@ -99,14 +118,14 @@ export function SupportChat() {
   useEffect(() => {
     if (!open || hidden) return;
     let cancel = false;
-    const existing = load();
+    const existing = load(userId);
     const start = existing
       ? api.supportRead(existing.id, existing.token, pathname).catch(() => api.supportOpen(pathname))
       : api.supportOpen(pathname);
     void start.then((next) => {
       if (cancel) return;
-      setThread(next);
-      const kept = save(next) ?? existing;
+      setThread((current) => preferThread(current, next));
+      const kept = save(next, userId) ?? existing;
       if (kept) setSaved(kept);
     }).catch(() => {
       if (!cancel) setError("Support is unavailable right now.");
@@ -114,12 +133,12 @@ export function SupportChat() {
     return () => {
       cancel = true;
     };
-  }, [open, hidden, pathname]);
+  }, [open, hidden, pathname, userId]);
 
   useEffect(() => {
     if (!open || !saved || thread?.status !== "waiting") return;
     const timer = window.setInterval(() => {
-      void api.supportRead(saved.id, saved.token).then(setThread).catch(() => undefined);
+      void api.supportRead(saved.id, saved.token).then((next) => setThread((current) => preferThread(current, next))).catch(() => undefined);
     }, 4000);
     return () => window.clearInterval(timer);
   }, [open, saved, thread?.status]);
@@ -127,14 +146,14 @@ export function SupportChat() {
   // Closed, and a person has the chat: look for their reply so the icon can show a dot.
   useEffect(() => {
     if (hidden || open) return;
-    const existing = load();
+    const existing = load(userId);
     if (!existing) return;
     if (thread && thread.status !== "waiting") return;
     let cancel = false;
     const tick = () => {
       void api.supportRead(existing.id, existing.token).then((next) => {
         if (cancel) return;
-        setThread(next);
+        setThread((current) => preferThread(current, next));
         setSaved(existing);
       }).catch(() => undefined);
     };
@@ -144,15 +163,15 @@ export function SupportChat() {
       cancel = true;
       window.clearInterval(timer);
     };
-  }, [hidden, open, thread?.status]);
+  }, [hidden, open, thread?.status, userId]);
 
   useEffect(() => {
     if (!open || !thread?.messages.length) return;
     const last = thread.messages[thread.messages.length - 1]?.id;
     if (!last || last === seenId) return;
     setSeenId(last);
-    markSeen(last);
-  }, [open, thread?.messages, seenId]);
+    markSeen(last, userId);
+  }, [open, thread?.messages, seenId, userId]);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight });
@@ -201,8 +220,12 @@ export function SupportChat() {
   }
 
   async function restart() {
-    localStorage.removeItem(STORE);
-    localStorage.removeItem(SEEN);
+    try {
+      localStorage.removeItem(scopeKey(STORE, userId));
+      localStorage.removeItem(scopeKey(SEEN, userId));
+    } catch {
+      // storage unavailable: the new chat still starts for this visit
+    }
     setSeenId("");
     setSaved(null);
     setThread(null);
@@ -211,7 +234,7 @@ export function SupportChat() {
     try {
       const next = await api.supportOpen();
       setThread(next);
-      const kept = save(next);
+      const kept = save(next, userId);
       if (kept) setSaved(kept);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't start a new chat.");

@@ -65,10 +65,13 @@ describe("what's kept in this browser", () => {
     expect(loadGoal()).toBe(DEFAULT_GOAL);
     saveGoal(5);
     expect(loadGoal()).toBe(5);
-    store.set("orbit.practiceGoal", "42");
+    store.set("orbit.practiceGoal.guest", "42");
     expect(loadGoal()).toBe(DEFAULT_GOAL);
-    store.set("orbit.practiceGoal", "{oops");
+    store.set("orbit.practiceGoal.guest", "{oops");
     expect(loadGoal()).toBe(DEFAULT_GOAL);
+    saveGoal(7, "u1");
+    expect(loadGoal("u1")).toBe(7);
+    expect(loadGoal("u2")).toBe(DEFAULT_GOAL);
   });
 
   it("logs warm-up answers as times only, the latest 200", () => {
@@ -76,7 +79,10 @@ describe("what's kept in this browser", () => {
     const log = loadWarmupLog();
     expect(log).toHaveLength(200);
     expect(log[0]).toBe(NOW + 5);
-    store.set("orbit.warmupLog", JSON.stringify(["x", 1, null]));
+    store.set("orbit.warmupLog.guest", JSON.stringify(["x", 1, null]));
     expect(loadWarmupLog()).toEqual([1]);
+    logWarmupAnswer(9, "u1");
+    expect(loadWarmupLog("u1")).toEqual([9]);
+    expect(loadWarmupLog("u2")).toEqual([]);
   });
 });

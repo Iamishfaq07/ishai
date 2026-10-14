@@ -37,11 +37,9 @@ import {
   withTracked,
   ANYWHERE_TOKENS,
 } from "./model";
+import { getShownMore, setShownMore } from "../../lib/jobsSession";
 import { JOBS_PROFILE } from "./paths";
 import { Sheet } from "./Sheet";
-
-// The pages after the first that were shown last, so coming back from a job's page finds the list as it was left.
-let shownMore: { key: string; items: JobListing[]; page: number; hasMore: boolean } | null = null;
 
 /**
  * Jobs AI → Matches: the latest openings that match the user's resume (from companies' own career pages and
@@ -90,7 +88,7 @@ function Matches({ profile }: { profile: JobProfile }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const { feed, refreshing, key, restartPolling } = useJobFeed(profile, query, sort);
   // Pages after the first, and tracker changes made on this screen (so a card doesn't wait for a reload).
-  const [more, setMore] = useState(shownMore);
+  const [more, setMore] = useState(getShownMore);
   const [changed, setChanged] = useState<Record<string, JobListing["tracked"]>>({});
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState<string | null>(null);
@@ -113,8 +111,9 @@ function Matches({ profile }: { profile: JobProfile }) {
     setMoreError(null);
     try {
       const next = await api.jobFeed({ q: query, sort, page, page_size: PAGE_SIZE });
-      shownMore = { key, items: [...(extra?.items ?? []), ...next.items], page, hasMore: next.has_more };
-      setMore(shownMore);
+      const nextMore = { key, items: [...(extra?.items ?? []), ...next.items], page, hasMore: next.has_more };
+      setShownMore(nextMore);
+      setMore(nextMore);
     } catch (err) {
       setMoreError(errorText(err));
     } finally {

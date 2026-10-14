@@ -591,6 +591,7 @@ async def request_email_change(body: EmailChangeIn, request: Request, user: Anno
 
 class EmailChangedOut(BaseModel):
     email: str
+    google_disconnected: bool = False
 
 
 @router.post("/email-change/confirm", response_model=EmailChangedOut, dependencies=[Depends(auth_limit)])
@@ -605,6 +606,7 @@ async def confirm_email_change(body: TokenIn, request: Request, response: Respon
     if await db.scalar(select(func.count()).select_from(User).where(User.email == row.new_email)):
         raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists.")
     old = user.email
+    had_google = user.google_sub is not None
     user.email = row.new_email
     user.email_verified = True  # opening the link proves control of the new inbox
     user.google_sub = None  # that Google account is the old inbox; it must not keep opening this one
@@ -612,7 +614,7 @@ async def confirm_email_change(body: TokenIn, request: Request, response: Respon
     db.add(AuditLog(user_id=user.id, action="auth.email_changed", target=old, ip=_ip(request)))
     await db.commit()
     _clear_cookie(response)
-    return EmailChangedOut(email=user.email)
+    return EmailChangedOut(email=user.email, google_disconnected=had_google)
 
 
 class PasswordChangeIn(BaseModel):

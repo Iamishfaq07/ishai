@@ -397,7 +397,10 @@ export function createApiClient(options: ApiClientOptions) {
       }),
     /** Changes the email; it signs nobody in (sign in with the new address and your password). */
     confirmEmailChange: (token: string) =>
-      json<{ email: string }>("/v1/auth/email-change/confirm", { method: "POST", body: body({ token }) }),
+      json<{ email: string; google_disconnected?: boolean }>("/v1/auth/email-change/confirm", {
+        method: "POST",
+        body: body({ token }),
+      }),
     /** Everything Orbit stores about the account, as a JSON file (Blob). */
     exportData: async () => (await raw("/v1/auth/me/export")).blob(),
     requestVerification: () => json<{ status: string }>("/v1/auth/verify-email/request", { method: "POST" }),

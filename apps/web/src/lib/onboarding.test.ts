@@ -8,6 +8,7 @@ import {
   interviewSoon,
   loadAnswers,
   nextSteps,
+  practiceHref,
   prefsFromAnswers,
   presetFor,
   saveAnswers,
@@ -100,10 +101,12 @@ describe("nextSteps (Home's 'Your next step')", () => {
     const facts = { ...empty, resumes: 1, bestResume: { id: "r", score: 90 } };
     const practice = (experience: WelcomeAnswers["experience"]) =>
       nextSteps(answers({ goal: "interview", experience }), facts, NOW).find((s) => s.id === "practice");
-    expect(practice("fresher")).toMatchObject({ title: "Do a 5-minute HR round", to: "/mock?preset=hr5" });
-    expect(practice("early")).toMatchObject({ to: "/mock?preset=tmay10" });
-    expect(practice("experienced")).toMatchObject({ to: "/mock?preset=tech15" });
-    expect(practice(null)?.to).toBe("/mock?preset=hr5");
+    expect(practice("fresher")).toMatchObject({ title: "Do a 5-minute HR round", to: "/mock?preset=hr5&role=Data+analyst" });
+    expect(practice("early")?.to).toBe("/mock?preset=tmay10&role=Data+analyst");
+    expect(practice("experienced")?.to).toBe("/mock?preset=tech15&role=Data+analyst");
+    expect(practice(null)?.to).toBe("/mock?preset=hr5&role=Data+analyst");
+    const noRole = nextSteps(answers({ goal: "interview", experience: "fresher", role: " " }), facts, NOW).find((s) => s.id === "practice");
+    expect(noRole?.to).toBe("/mock?preset=hr5");
   });
 
   it("sends practice to a live session when mock interviews are off", () => {
@@ -116,7 +119,11 @@ describe("nextSteps (Home's 'Your next step')", () => {
   it("puts an interview in the next few days before everything else", () => {
     const tracker = [job({ status: "interviewing", company: "Bosch", next_at: inHours(20), document_id: "d1" })];
     const [first] = nextSteps(answers({ goal: "resume" }), { ...empty, tracker }, NOW);
-    expect(first).toMatchObject({ id: "interview-soon", title: "Practise for your Bosch interview", to: "/mock?jd=d1" });
+    expect(first).toMatchObject({
+      id: "interview-soon",
+      title: "Practise for your Bosch interview",
+      to: "/mock?jd=d1&role=SDE-1&company=Bosch",
+    });
     expect(first?.body).toMatch(/^It's tomorrow\./);
   });
 
@@ -134,6 +141,14 @@ describe("nextSteps (Home's 'Your next step')", () => {
   });
 });
 
+describe("practiceHref", () => {
+  it("keeps only the parts that are known", () => {
+    expect(practiceHref()).toBe("/mock");
+    expect(practiceHref({ preset: "hr5", role: "  " })).toBe("/mock?preset=hr5");
+    expect(practiceHref({ jd: "d1", role: "SDE 1", company: "Bosch" })).toBe("/mock?jd=d1&role=SDE+1&company=Bosch");
+  });
+});
+
 describe("interviewSoon and followUpsDue", () => {
   it("only counts interviews from earlier today to three days out", () => {
     expect(interviewSoon([job({ status: "interviewing", next_at: inHours(80) })], NOW)).toBeNull();
@@ -144,9 +159,15 @@ describe("interviewSoon and followUpsDue", () => {
     expect(interviewSoon([a, b], NOW)?.id).toBe("b");
   });
 
-  it("waits a week and respects a follow-up planned for later", () => {
+  it("waits a week on the calendar, and stops once the application is stale", () => {
     expect(followUpsDue([job({ applied_at: daysAgo(3) })], NOW)).toHaveLength(0);
     expect(followUpsDue([job({ applied_at: daysAgo(8), next_at: inHours(24) })], NOW)).toHaveLength(0);
+    // A date already set is the tracker's own reminder, even if that date has passed.
+    expect(followUpsDue([job({ applied_at: daysAgo(20), next_at: daysAgo(1) })], NOW)).toHaveLength(0);
+    // Applied late on day 1, checked the morning of day 8: seven calendar days, not yet seven blocks of 24 hours.
+    expect(followUpsDue([job({ applied_at: "2026-10-01T22:00:00+05:30" })], NOW)).toHaveLength(1);
+    expect(followUpsDue([job({ applied_at: daysAgo(20), status_at: daysAgo(1) })], NOW)).toHaveLength(0);
+    expect(followUpsDue([job({ applied_at: daysAgo(46) })], NOW)).toHaveLength(0);
     const old = job({ id: "old", applied_at: daysAgo(20) });
     const newer = job({ id: "newer", applied_at: daysAgo(8) });
     expect(followUpsDue([newer, old], NOW).map((t) => t.id)).toEqual(["old", "newer"]);

@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { getShownMore, jobProfileWasSuggested, markJobProfileSuggested, setShownMore } from "./jobsSession";
 import { clearAsyncCache, shareInflight } from "./useAsync";
 
 describe("shareInflight", () => {
@@ -35,5 +36,33 @@ describe("shareInflight", () => {
     expect(await first).toBe(1);
     expect(await second).toBe(2);
     expect(await shareInflight("resumes", async () => 3)).toBe(3);
+  });
+
+  it("forgets the last person's extra job pages and the profile suggestion when the account changes", () => {
+    setShownMore({ key: "k", items: [], page: 2, hasMore: false });
+    markJobProfileSuggested();
+    clearAsyncCache();
+    expect(getShownMore()).toBeNull();
+    expect(jobProfileWasSuggested()).toBe(false);
+  });
+
+  it("drops browser data that used to be shared by every account", () => {
+    const store = new Map<string, string>([
+      ["orbit.support.v1", "{\"id\":\"t\"}"],
+      ["orbit.practiceGoal", "7"],
+    ]);
+    const session = new Map<string, string>([["orbit.warmupRound", "{\"track\":\"hr\"}"]]);
+    const storage = (map: Map<string, string>) => ({
+      getItem: (k: string) => map.get(k) ?? null,
+      setItem: (k: string, v: string) => void map.set(k, v),
+      removeItem: (k: string) => void map.delete(k),
+    });
+    vi.stubGlobal("localStorage", storage(store));
+    vi.stubGlobal("sessionStorage", storage(session));
+    clearAsyncCache();
+    expect(store.has("orbit.support.v1")).toBe(false);
+    expect(store.has("orbit.practiceGoal")).toBe(false);
+    expect(session.has("orbit.warmupRound")).toBe(false);
+    vi.unstubAllGlobals();
   });
 });

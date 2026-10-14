@@ -184,10 +184,12 @@ describe("follow-ups", () => {
 
   it("practises on the job's saved post, else its page, else a mock for its title", () => {
     const page = (id: string) => "/jobs/listing/" + id;
-    expect(practiceLink(entry("a", "interviewing", ago(D), { document_id: "doc 1" }), page)).toBe("/mock?jd=doc%201&preset=tech15");
+    expect(practiceLink(entry("a", "interviewing", ago(D), { document_id: "doc 1" }), page)).toBe(
+      "/mock?jd=doc+1&preset=tech15&role=Backend+Engineer&company=Co+a",
+    );
     expect(practiceLink(entry("b", "interviewing", ago(D)), page)).toBe("/jobs/listing/l-b");
     const manual = entry("c", "interviewing", ago(D), { listing_id: "ext:0123456789abcdef0123456789abcdef", live: false, title: "SDE 1" });
-    expect(practiceLink(manual, page)).toBe("/mock?preset=tech15&role=SDE%201");
+    expect(practiceLink(manual, page)).toBe("/mock?preset=tech15&role=SDE+1&company=Co+c");
   });
 });
 

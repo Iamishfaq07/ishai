@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import type { OrbitSession } from "@orbit/types";
+import type { JobTrackerEntry, OrbitSession } from "@orbit/types";
 import {
   ArrowRight,
   AudioLines,
@@ -66,8 +66,8 @@ export function HomePage() {
   const answers = useMemo(() => (user ? loadAnswers(user.id) : null), [user]);
 
   // Ready once the lists that decide the next step have answered. A list that failed counts as "has it", so Home never
-  // asks for a resume the account may well have; its own card says it didn't load.
-  const settled = [sessions, documents, resumes, tracker, profile].every((s) => s.data !== null || s.error !== null);
+  // asks for a resume or a story the account may well have; its own card says it didn't load.
+  const settled = [sessions, documents, resumes, stories, tracker, profile].every((s) => s.data !== null || s.error !== null);
   const facts = useMemo((): HomeFacts | null => {
     if (!settled) return null;
     const list = resumes.data ?? [];
@@ -103,7 +103,7 @@ export function HomePage() {
 
       <DueToday />
 
-      <FollowUps hideWhenEmpty />
+      <FollowUps tracker={tracker} hideWhenEmpty />
 
       {facts && <SetUp items={checklist(answers, facts)} />}
 
@@ -114,8 +114,8 @@ export function HomePage() {
         <Reveal stagger className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
           <CopilotRow sessions={sessions.data} />
           {MOCK_INTERVIEW_ENABLED && <PracticeRow sessions={sessions.data} />}
-          <ResumeRow />
-          <JobsRow />
+          <ResumeRow resumes={resumes.data} />
+          <JobsRow tracker={tracker.data} />
         </Reveal>
       </section>
 
@@ -238,6 +238,10 @@ function AllSet() {
 
 const CHECKLIST_KEY = "orbit.checklistDismissed";
 
+function checklistKey(userId: string): string {
+  return `${CHECKLIST_KEY}.${userId}`;
+}
+
 /** A ring that fills as steps get done. */
 function ProgressRing({ done, total }: { done: number; total: number }) {
   const r = 15;
@@ -264,16 +268,28 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
  * then one compact line with the ring (the list a tap away). Gone once all are done, or for good when dismissed.
  */
 function SetUp({ items }: { items: ChecklistItem[] }) {
+  const { user } = useAuth();
+  const key = user ? checklistKey(user.id) : "";
   const [dismissed, setDismissed] = useState(() => {
+    if (!key) return false;
     try {
-      return localStorage.getItem(CHECKLIST_KEY) === "1";
+      return localStorage.getItem(key) === "1";
     } catch {
       return false;
     }
   });
+  const [dismissedFor, setDismissedFor] = useState(key);
+  const [expanded, setExpanded] = useState(false);
+  if (dismissedFor !== key) {
+    setDismissedFor(key);
+    try {
+      setDismissed(key ? localStorage.getItem(key) === "1" : false);
+    } catch {
+      setDismissed(false);
+    }
+  }
   const real = items.filter((i) => i.id !== "account");
   const realDone = real.filter((i) => i.done).length;
-  const [expanded, setExpanded] = useState(false);
   const done = items.filter((i) => i.done).length;
   if (dismissed || done === items.length) return null;
   const compact = realDone >= 2 && !expanded;
@@ -281,7 +297,7 @@ function SetUp({ items }: { items: ChecklistItem[] }) {
   const dismiss = () => {
     setDismissed(true);
     try {
-      localStorage.setItem(CHECKLIST_KEY, "1");
+      if (key) localStorage.setItem(key, "1");
     } catch {
       // storage unavailable: hidden for this visit
     }
@@ -431,9 +447,8 @@ function PracticeRow({ sessions }: { sessions: OrbitSession[] | null }) {
   );
 }
 
-function ResumeRow() {
-  const resumes = useAsync(() => api.listResumes(), [], "resumes");
-  const list = resumes.data;
+function ResumeRow({ resumes }: { resumes: { id: string; title: string; score: number }[] | null }) {
+  const list = resumes;
   const best = list?.length ? list.reduce((a, b) => (b.score > a.score ? b : a)) : null;
   return (
     <ProductRow
@@ -458,10 +473,8 @@ function ResumeRow() {
   );
 }
 
-function JobsRow() {
-  // The tracker only: cheap, and Home never asks the job boards for anything.
-  const tracker = useAsync(() => api.jobTracker(), [], "job-tracker");
-  const entries = tracker.data ?? [];
+function JobsRow({ tracker }: { tracker: JobTrackerEntry[] | null }) {
+  const entries = tracker ?? [];
   const columns = byStatus(entries);
   const going = (["interviewing", "applied", "offer"] as const).filter((s) => columns[s].length > 0);
   return (

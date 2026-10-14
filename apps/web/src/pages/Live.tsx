@@ -249,9 +249,11 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
 
   // ── End session ────────────────────────────────────────────────────────
   const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState<string | null>(null);
   const ended = live.state === "ended";
   const endSession = async () => {
     if (!(await confirmDialog({ title: "End this session?", body: "The transcript and report are saved to History.", confirmLabel: "End session", danger: true }))) return;
+    setEndError(null);
     setEnding(true);
     actions.end();
   };
@@ -266,12 +268,16 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       const t = setTimeout(() => navigate(`/sessions/${session.id}`), 600);
       return () => clearTimeout(t);
     }
-    // Fallback if the socket is down: end through REST.
+    // Fallback if the socket is down: end through REST. If that fails too, stay here — leaving would look like it
+    // ended while the session kept using minutes.
     const t = setTimeout(() => {
-      api
+      void api
         .endSession(session.id)
-        .catch(() => undefined)
-        .finally(() => navigate(`/sessions/${session.id}`));
+        .then(() => navigate(`/sessions/${session.id}`))
+        .catch(() => {
+          setEnding(false);
+          setEndError("The session is still running, so it can keep using minutes. Check your connection and end it again.");
+        });
     }, 3000);
     return () => clearTimeout(t);
   }, [ending, ended, navigate, session.id, stopMic, stopSystemAudio]);
@@ -290,7 +296,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
 
   const notice = (
     <>
-      {micError && (
+      {endError && <Notice tone="error">{endError}</Notice>}
         <Notice tone="error" action={{ label: "Retry", onClick: () => void startMic() }}>
           {micError}
         </Notice>

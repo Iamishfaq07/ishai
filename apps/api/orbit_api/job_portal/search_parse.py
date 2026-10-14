@@ -29,6 +29,11 @@ class ParsedSearch:
     understood: list[str] = field(default_factory=list)
 
 
+# "contract" in a title ("smart contract", "contract engineer") stays a keyword. These are the employment type.
+_CONTRACT = (
+    r"\bfreelance\b|\bcontractual\b|\bon[- ]contract\b|"
+    r"\bcontract[- ](?:role|roles|job|jobs|position|positions|work|basis)\b"
+)
 _RULES: list[tuple[str, str]] = [
     (r"\b(?:work from home|wfh|remote(?:ly)?)\b", "remote"),
     (r"\bhybrid\b", "hybrid"),
@@ -37,7 +42,7 @@ _RULES: list[tuple[str, str]] = [
     (r"\b(?:freshers?|entry[- ]level|graduates?|new grads?|no experience)\b", "fresher"),
     (r"\b(?:part[- ]time)\b", "part_time"),
     (r"\b(?:full[- ]time)\b", "full_time"),
-    (r"\b(?:contract(?:ual)?|freelance)\b", "contract"),
+    (_CONTRACT, "contract"),
     (r"\b(?:today|last 24 ?hours?|past 24 ?hours?|24 ?h(?:ours?)?)\b", "days:1"),
     (r"\b(?:last|past) (?:3|three) days\b", "days:3"),
     (r"\b(?:this|last|past) week\b|\b7 days\b", "days:7"),
@@ -53,6 +58,19 @@ _YEARS = re.compile(r"\b(\d{1,2}(?:\.\d)?)\s*\+?\s*(?:-\s*\d{1,2}\s*)?(?:years?|
 _LABEL = {"remote": "Remote", "hybrid": "Hybrid", "onsite": "In office", "internship": "Internships",
           "fresher": "Fresher", "part_time": "Part-time", "full_time": "Full-time", "contract": "Contract",
           "india": "Anywhere in India", "anywhere": "Anywhere"}
+# Also a word or a tool. A place only when the query says so ("in Phoenix", "Reading jobs").
+_AMBIGUOUS_CITIES = frozenset({"Phoenix", "Reading"})
+
+
+def _named_as_place(q: str, city: str) -> bool:
+    names = (city.lower(), *WORLD_CITIES[city][1])
+    for name in names:
+        n = re.escape(name)
+        if re.search(rf"\b(?:in|at|near|around|based in)\s+{n}\b", q):
+            return True
+        if re.search(rf"\b{n}\s+jobs?\b", q):
+            return True
+    return False
 
 
 def parse_search(text: str, country: str | None = None) -> ParsedSearch:
@@ -95,7 +113,8 @@ def parse_search(text: str, country: str | None = None) -> ParsedSearch:
         out.locations += cities
         out.understood += cities
         q = _CITY_RE.sub(" ", q)
-    here = [c for c in world_cities(q) if country and city_country(c) == country.upper()]
+    here = [c for c in world_cities(q) if country and city_country(c) == country.upper()
+            and (c not in _AMBIGUOUS_CITIES or _named_as_place(q, c))]
     if here:
         out.locations += here
         out.understood += here

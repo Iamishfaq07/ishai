@@ -111,6 +111,11 @@ def test_searches_links_and_the_search_box_follow_the_country() -> None:
 
     assert parse_search("backend nyc remote", "US").locations == ["New York"]
     assert parse_search("phoenix developer", "IN").keywords == "phoenix developer"  # not a place here
+    assert parse_search("phoenix developer", "US").locations == []  # the framework, not the city
+    assert parse_search("phoenix developer", "US").keywords == "phoenix developer"
+    assert parse_search("backend in phoenix", "US").locations == ["Phoenix"]
+    assert parse_search("reading specialist", "GB").keywords == "reading specialist"
+    assert parse_search("jobs in reading", "GB").locations == ["Reading"]
     assert parse_search("python anywhere", "GB").locations == ["Anywhere"]
 
 

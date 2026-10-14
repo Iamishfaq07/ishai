@@ -348,10 +348,17 @@ function EditModal({
     setSaving(true);
     setError(null);
     try {
+      const next = text.trim();
+      const prev = (loaded.data?.text ?? "").trim();
+      // An empty or tiny save used to be skipped, so the old text stayed and interviews kept using it.
+      if (editable && next !== prev && next.length < 20) {
+        setError("Keep at least a few lines. Shorter than that leaves the old text in place.");
+        return;
+      }
       const updated = await api.updateDocument(doc.id, {
         title: title.trim() || doc.title,
         kind,
-        ...(editable && text.trim() ? { text } : {}),
+        ...(editable && next !== prev ? { text: next } : {}),
       });
       onSaved(updated);
     } catch (err) {

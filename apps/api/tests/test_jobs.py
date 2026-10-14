@@ -590,6 +590,16 @@ def test_the_search_box_is_read_into_filters_and_keywords() -> None:
     assert p.job_types == ["internship"] and p.level == "fresher" and p.posted_within == 1 and p.keywords == "python"
     p = parse_search("golang jobs in the last 30 days, gurgaon or noida")
     assert (p.keywords, p.posted_within, p.locations) == ("golang", 30, ["Gurugram", "Noida"])
+    # "contract" in a title is the job, not a filter that hides every full-time role.
+    titled = parse_search("smart contract engineer")
+    assert titled.job_types == [] and titled.keywords == "smart contract engineer"
+    hired = parse_search("freelance react on contract")
+    assert hired.job_types == ["contract"] and hired.keywords == "react"
+    # And the word is not thrown away when matching, or "contract engineer" would be every engineer.
+    smart = _row(title="Smart Contract Engineer", keywords=["Solidity"])
+    plain = _row(title="Software Engineer", keywords=["Java"])
+    found = ranking.rank([smart, plain], _search(keywords="smart contract", titles=[], skills=[]), MATCHER)
+    assert [m.id for m in found] == [smart.id]
     react = _row(title="Frontend Engineer", keywords=["React", "TypeScript"], workplace="remote", cities=[])
     other = _row(title="Backend Engineer", company="X", workplace="remote", cities=[])
     out = ranking.rank([react, other], _search(keywords="react", workplace=["remote"]), MATCHER)
@@ -894,6 +904,8 @@ def test_the_tracker_saves_moves_notes_and_deletes_and_is_private(jobs: TestClie
     moved = jobs.patch(f"/v1/jobs/tracker/{entry}", headers=h,
                        json={"status": "interviewing", "notes": "Round 1 with the payments team", "next_at": when})
     assert moved.status_code == 200 and moved.json()["status"] == "interviewing" and moved.json()["next_at"]
+    cleared = jobs.patch(f"/v1/jobs/tracker/{entry}", headers=h, json={"clear_applied": True, "clear_next": True})
+    assert cleared.status_code == 200 and cleared.json()["applied_at"] is None and cleared.json()["next_at"] is None
     feed = jobs.get("/v1/jobs/feed", headers=h).json()
     assert feed["items"][0]["tracked"] == {"id": entry, "status": "interviewing"}
     # Someone else sees none of it and can't touch it.

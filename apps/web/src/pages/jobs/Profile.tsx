@@ -197,7 +197,14 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
                   max={50}
                   step={0.5}
                   value={draft.years ?? ""}
-                  onChange={(e) => set("years", e.target.value === "" ? null : Math.min(50, Math.max(0, Number(e.target.value))))}
+                  onChange={(e) => {
+                    if (e.target.value === "") {
+                      set("years", null);
+                      return;
+                    }
+                    const n = Number(e.target.value);
+                    if (Number.isFinite(n)) set("years", Math.min(50, Math.max(0, n)));
+                  }}
                 />
               </Field>
             </div>

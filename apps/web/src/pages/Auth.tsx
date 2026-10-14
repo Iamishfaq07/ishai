@@ -18,6 +18,7 @@ import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react
 import { Button, ErrorNote, Field, Input } from "../components/ui";
 import { api, API_URL } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { clearAsyncCache } from "../lib/useAsync";
 import { errorText } from "../lib/format";
 import { useWelcomeGrant } from "../lib/welcome";
 import { Captcha, useCaptchaConfig } from "../components/Captcha";
@@ -706,6 +707,7 @@ export function ConfirmEmailChangePage() {
   const [state, setState] = useState<"ready" | "working" | "done" | "failed">(token ? "ready" : "failed");
   const [error, setError] = useState<string | null>(token ? null : "This link is missing its token.");
   const [email, setEmail] = useState<string | null>(null);
+  const [googleOff, setGoogleOff] = useState(false);
 
   const confirm = () => {
     if (!token) return;
@@ -713,8 +715,10 @@ export function ConfirmEmailChangePage() {
     api
       .confirmEmailChange(token)
       .then((res) => {
+        clearAsyncCache(); // the old account's lists must not show after the address changes
         setUser(null); // every session was signed out: sign in again with the new address
         setEmail(res.email);
+        setGoogleOff(Boolean(res.google_disconnected));
         setState("done");
       })
       .catch((err: unknown) => {
@@ -728,7 +732,7 @@ export function ConfirmEmailChangePage() {
       title={state === "done" ? "Email changed" : state === "failed" ? "Link didn't work" : "Change your Orbit email?"}
       subtitle={
         state === "done"
-          ? `Sign in with ${email} and your password. Every device was signed out.`
+          ? `Sign in with ${email} and your password.${googleOff ? " Google was disconnected from the old inbox." : ""} Every device was signed out.`
           : state === "failed"
             ? ""
             : "Confirm to make this inbox the account's email."

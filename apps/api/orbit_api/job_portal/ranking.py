@@ -73,12 +73,23 @@ _ROLE_CHANGERS = frozenset({"manager", "director", "head", "vp", "president", "i
                             "firmware", "hardware", "mechanical", "electrical", "civil"})
 
 
-def title_tokens(title: str) -> frozenset[str]:
+def title_tokens(title: str, keep: frozenset[str] = frozenset()) -> frozenset[str]:
+    """Words that say what the role is. `keep`: words usually ignored ("contract") that this search typed on purpose."""
     t = title.lower()
     for pattern, repl in _PHRASES:
         t = re.sub(pattern, repl, t)
     words = re.findall(r"[a-z0-9+#]+", t)
-    return frozenset(_SAME.get(w, w) for w in words if _SAME.get(w, w) not in _DROP and len(w) < 30)
+    return frozenset(_SAME.get(w, w) for w in words
+                     if (_SAME.get(w, w) not in _DROP or _SAME.get(w, w) in keep) and len(w) < 30)
+
+
+# Dropped from titles, but kept when the search box typed them ("contract engineer" is not every engineer).
+_KEEP_IF_TYPED = frozenset({"contract"})
+
+
+def _typed_keep(keywords: str) -> frozenset[str]:
+    words = {_SAME.get(w, w) for w in re.findall(r"[a-z0-9+#]+", keywords.lower())}
+    return frozenset(words & _KEEP_IF_TYPED)
 
 
 def _weight(token: str) -> float:
@@ -251,7 +262,8 @@ def rank(rows: Iterable[Row], search: Search, matcher: SkillMatcher, *, sort: st
     # The search box's words first: what the user is looking for right now.
     targets = [t for t in (title_tokens(x) for x in [search.keywords, *search.titles] if x) if t]
     skill_words = frozenset(w for s in search.skills for w in title_tokens(s))
-    keyword_words = title_tokens(search.keywords) if search.keywords else frozenset()
+    keep = _typed_keep(search.keywords)
+    keyword_words = title_tokens(search.keywords, keep) if search.keywords else frozenset()
     types = _allowed_types(search)
     off = set(search.sources_off)
     exclude = [e.lower() for e in search.exclude if e.strip()]
@@ -271,7 +283,8 @@ def rank(rows: Iterable[Row], search: Search, matcher: SkillMatcher, *, sort: st
                 continue
         tokens = title_tokens(row.title)
         if keyword_words:  # the search box: its words must be in the title or among the post's skills
-            post_words = tokens | frozenset(w for k in row.keywords for w in title_tokens(k))
+            named = title_tokens(row.title, keep)
+            post_words = named | frozenset(w for k in row.keywords for w in title_tokens(k, keep))
             if not keyword_words <= post_words:
                 continue
         experience = _experience_fit(row, search.level, search.years)
@@ -281,7 +294,7 @@ def rank(rows: Iterable[Row], search: Search, matcher: SkillMatcher, *, sort: st
         if keyword_words:
             # What the user typed is what they want right now: a post with those words is a match even when it's
             # not one of the profile's titles ("react" for a backend engineer), a little more so in its title.
-            title = max(title, 0.6 if keyword_words <= tokens else 0.45)
+            title = max(title, 0.6 if keyword_words <= title_tokens(row.title, keep) else 0.45)
         considered = _considered(row.keywords)
         matched = [k for k in considered if matcher.has(k)]
         if considered:
