@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   Briefcase,
   CircleAlert,
-  CircleCheck,
   Clock,
   Mail,
   MessageCircle,
@@ -18,6 +17,7 @@ import {
 } from "@orbit/ui";
 import { Captcha, useCaptchaConfig } from "../components/Captcha";
 import { Footer } from "../components/Footer";
+import { RelayLaunch } from "../components/RelayLaunch";
 import { SiteMenu } from "../components/SiteMenu";
 import { Button, Card, ErrorNote, Input, Textarea } from "../components/ui";
 import { api } from "../lib/api";
@@ -189,9 +189,7 @@ export function ContactPage() {
           {sent ? (
             <Card className="animate-fade-up">
               <div role="status" aria-live="polite">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-700 ring-1 ring-emerald-500/25 dark:text-emerald-300">
-                  <CircleCheck className="h-6 w-6" aria-hidden />
-                </span>
+                <RelayLaunch />
                 <h2 className="mt-4 font-display text-xl font-semibold">Thanks, we've got your message</h2>
                 <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
                   We'll reply to <strong className="break-all">{sent.email}</strong>. Your reference is{" "}

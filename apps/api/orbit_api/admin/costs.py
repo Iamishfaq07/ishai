@@ -18,6 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api.config import get_settings
 from orbit_api.entitlements import plan_for
 from orbit_api.models import LiveSessionRow, ProviderRequest, UsageEvent, User
+from orbit_api.providers.llm.base import Usage
+from orbit_api.providers.llm.pricing import estimate_cost
 
 
 def _usd(x: float) -> float:
@@ -44,6 +46,8 @@ async def cost_report(db: AsyncSession, days: int) -> dict[str, Any]:
     total_in = total_cached = 0
     answers = answer_in = answer_out = 0
     fallback_requests = 0
+    # What the provider's prompt cache saved: each priced call costed again as if no token had been a cache hit.
+    cache_saved = 0.0
     for r in reqs:
         m = by_model[(r.provider, r.model)]
         m["requests"] += 1
@@ -63,6 +67,11 @@ async def cost_report(db: AsyncSession, days: int) -> dict[str, Any]:
                 user_llm[r.user_id] += r.estimated_cost_usd
             if r.session_id:
                 session_llm[r.session_id] += r.estimated_cost_usd
+            if r.cached_input_tokens:
+                uncached = estimate_cost(r.model, Usage(input_tokens=r.input_tokens, output_tokens=r.output_tokens),
+                                         at=r.created_at)
+                if uncached is not None:
+                    cache_saved += max(0.0, uncached - r.estimated_cost_usd)
         total_in += r.input_tokens
         total_cached += r.cached_input_tokens
         if r.request_type in ("answer", "chat", "vision") and r.ok:
@@ -124,6 +133,7 @@ async def cost_report(db: AsyncSession, days: int) -> dict[str, Any]:
         "llm": {
             "requests": len(reqs),
             "cache_hit_ratio": round(total_cached / total_in, 3) if total_in else None,
+            "cache_saved_usd": _usd(cache_saved),
             "tokens_per_answer": {"input": round(answer_in / answers) if answers else None,
                                   "output": round(answer_out / answers) if answers else None},
             "fallback_requests": fallback_requests,

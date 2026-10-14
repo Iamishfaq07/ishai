@@ -1233,6 +1233,8 @@ export interface CostReport {
   llm: {
     requests: number;
     cache_hit_ratio: number | null;
+    /** What the provider's prompt cache saved: priced calls costed again with no cache hits, minus their cost. */
+    cache_saved_usd: number;
     tokens_per_answer: { input: number | null; output: number | null };
     fallback_requests: number;
     by_model: Array<{

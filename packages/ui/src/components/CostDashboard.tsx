@@ -14,6 +14,72 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   );
 }
 
+/** A model's cache health: green from half its prompt tokens cached, amber from a fifth, red below. */
+export function cacheTone(ratio: number | null): { label: string; className: string } {
+  if (ratio === null) return { label: "no prompts", className: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400" };
+  if (ratio >= 0.5) return { label: "healthy", className: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" };
+  if (ratio >= 0.2) return { label: "fair", className: "bg-amber-500/15 text-amber-800 dark:text-amber-300" };
+  return { label: "low", className: "bg-rose-500/15 text-rose-800 dark:text-rose-300" };
+}
+
+/**
+ * Two rings: the outer is the share of prompt tokens served from DeepSeek's cache, the inner what that saved as a
+ * share of what the AI would have cost without it. Both draw in from empty (base.css stops it with reduced motion).
+ */
+function CacheGauge({ ratio, saved, spent }: { ratio: number | null; saved: number; spent: number }) {
+  const savedShare = saved + spent > 0 ? saved / (saved + spent) : 0;
+  const ring = (r: number, share: number, color: string, width: number) => {
+    const length = 2 * Math.PI * r;
+    return (
+      <>
+        <circle cx="50" cy="50" r={r} fill="none" stroke="currentColor" strokeOpacity="0.1" strokeWidth={width} />
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth={width}
+          strokeLinecap="round"
+          strokeDasharray={length}
+          strokeDashoffset={length * (1 - Math.min(1, Math.max(0, share)))}
+          transform="rotate(-90 50 50)"
+          className="gauge-draw"
+          style={{ ["--gauge-len" as string]: `${length}` }}
+        />
+      </>
+    );
+  };
+  return (
+    <div className="flex items-center gap-4 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+      <svg viewBox="0 0 100 100" className="h-24 w-24 shrink-0 text-zinc-500" role="img"
+        aria-label={`Prompt cache: ${ratio === null ? "no data" : `${Math.round(ratio * 100)}% of prompt tokens`}, saved ${usd(saved)}`}>
+        {ring(42, ratio ?? 0, "#22d3ee", 8)}
+        {ring(29, savedShare, "#34d399", 7)}
+        <text x="50" y="54" textAnchor="middle" className="fill-current text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+          {ratio === null ? "—" : `${Math.round(ratio * 100)}%`}
+        </text>
+      </svg>
+      <dl className="space-y-1 text-xs">
+        <div>
+          <dt className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400">
+            <span className="h-2 w-2 rounded-full bg-cyan-400" aria-hidden /> Prompt cache hits
+          </dt>
+          <dd className="font-semibold tabular-nums">{ratio === null ? "—" : `${Math.round(ratio * 100)}% of prompt tokens`}</dd>
+        </div>
+        <div>
+          <dt className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden /> Saved by the cache
+          </dt>
+          <dd className="font-semibold tabular-nums">
+            {usd(saved)} <span className="font-normal text-zinc-500">({Math.round(savedShare * 100)}% of the uncached cost)</span>
+          </dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
 /** Admin: what the AI and transcription providers cost (estimates; unpriced calls are counted, never $0). */
 export function CostDashboard({ load }: { load: (days: number) => Promise<CostReport> }) {
   const [days, setDays] = useState(30);
@@ -72,6 +138,7 @@ export function CostDashboard({ load }: { load: (days: number) => Promise<CostRe
               value={r.llm.tokens_per_answer.input === null ? "—" : `${r.llm.tokens_per_answer.input} in · ${r.llm.tokens_per_answer.output} out`}
             />
           </div>
+          <CacheGauge ratio={r.llm.cache_hit_ratio} saved={r.llm.cache_saved_usd ?? 0} spent={r.totals.llm_usd} />
           {r.totals.unpriced_llm_requests > 0 && (
             <p role="status" className="rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-800 dark:text-amber-200">
               {r.totals.unpriced_llm_requests} AI call{r.totals.unpriced_llm_requests === 1 ? "" : "s"} used a model with no
@@ -85,6 +152,7 @@ export function CostDashboard({ load }: { load: (days: number) => Promise<CostRe
                 <th className="py-1 font-medium">Model</th>
                 <th className="py-1 text-right font-medium">Calls</th>
                 <th className="py-1 text-right font-medium">Tokens in / out</th>
+                <th className="py-1 text-right font-medium">Cache</th>
                 <th className="py-1 text-right font-medium">Cost</th>
               </tr>
             </thead>
@@ -98,6 +166,17 @@ export function CostDashboard({ load }: { load: (days: number) => Promise<CostRe
                   <td className="py-1 text-right">{m.requests}</td>
                   <td className="py-1 text-right">
                     {m.input_tokens.toLocaleString()} / {m.output_tokens.toLocaleString()}
+                  </td>
+                  <td className="py-1 text-right">
+                    {(() => {
+                      const ratio = m.input_tokens ? m.cached_input_tokens / m.input_tokens : null;
+                      const tone = cacheTone(ratio);
+                      return (
+                        <span className={cx("rounded-full px-2 py-0.5 text-[11px] font-medium", tone.className)}>
+                          {ratio === null ? "—" : `${Math.round(ratio * 100)}%`} {tone.label}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="py-1 text-right">
                     {usd(m.usd, 4)}
