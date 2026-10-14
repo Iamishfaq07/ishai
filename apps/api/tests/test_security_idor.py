@@ -432,6 +432,11 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/v1/contact"),
     # Razorpay's webhook: no session, it's authenticated by Razorpay's signature (tests/test_razorpay.py).
     ("POST", "/v1/billing/webhook"),
+    # Google sign-in: the redirect out and back, before anyone is signed in (the state cookie guards the return).
+    ("GET", "/v1/auth/google/start"), ("GET", "/v1/auth/google/callback"),
+    # The support chat works signed out: the thread's 256-bit token (in the body) is the credential.
+    ("POST", "/v1/support/threads"), ("GET", "/v1/support/threads/{thread_id}"),
+    ("POST", "/v1/support/threads/{thread_id}/messages"), ("POST", "/v1/support/threads/{thread_id}/handoff"),
 })
 
 
@@ -533,6 +538,11 @@ ADMIN_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("PATCH", "/v1/admin/inbox/{target_message}", {"json": {"status": "done", "admin_note": "idor"}}),
     ("POST", "/v1/admin/inbox/{target_message}/reply", {"json": {"text": "idor check"}}),
     ("DELETE", "/v1/admin/inbox/{target_message}", {}),
+    ("GET", "/v1/admin/support", {}),
+    ("GET", "/v1/admin/support?only=all", {}),
+    ("GET", "/v1/admin/support/{target_thread}", {}),
+    ("POST", "/v1/admin/support/{target_thread}/reply", {"json": {"text": "idor check"}}),
+    ("POST", "/v1/admin/support/{target_thread}/close", {}),
 ]
 ADMIN_IDS = [f"{m} {p} {json.dumps(k.get('json', ''))[:40]}" for m, p, k in ADMIN_ROUTES]
 
@@ -540,7 +550,8 @@ ADMIN_IDS = [f"{m} {p} {json.dumps(k.get('json', ''))[:40]}" for m, p, k in ADMI
 def test_admin_route_inventory_is_complete() -> None:
     admin = {p for _, p in ROUTES if p.startswith("/v1/admin/")} - {"/v1/admin/status"}
     covered = {p.split("?", 1)[0].replace("{target}", "{user_id}").replace("{target_order}", "{payment_id}")
-               .replace("{target_message}", "{message_id}") for _, p, _ in ADMIN_ROUTES}
+               .replace("{target_message}", "{message_id}").replace("{target_thread}", "{thread_id}")
+               for _, p, _ in ADMIN_ROUTES}
     assert admin <= covered, f"admin routes missing from the matrix: {sorted(admin - covered)}"
 
 
@@ -577,7 +588,9 @@ def test_admin_routes_work_for_the_admin(world: World, method: str, path: str, k
     assert sent.status_code == 201, sent.text
     message = c.get("/v1/admin/inbox", headers=world.admin, params={"q": sent.json()["reference"],
                                                                     "status": "all"}).json()["items"][0]["id"]
-    ids = {"target": user["id"], "target_email": user["email"], "target_order": order, "target_message": message}
+    thread = _created(c.post("/v1/support/threads", headers=h))
+    ids = {"target": user["id"], "target_email": user["email"], "target_order": order, "target_message": message,
+           "target_thread": thread}
     c.cookies.clear()
     r = c.request(method, _fill(path, ids), headers=world.admin, **_fill(kw, ids))
     assert r.status_code in (200, 202, 204), r.text  # 202: an email on its way · 204: deleted

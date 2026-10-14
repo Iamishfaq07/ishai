@@ -21,9 +21,9 @@ from fastapi import (
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import delete, func, select, update
-from sqlalchemy.orm import defer
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import defer
 
 from orbit_api import credits, jobs
 from orbit_api.answers.routes import MAX_ANSWERS, answer_text

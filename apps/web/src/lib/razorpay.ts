@@ -22,6 +22,7 @@ interface RazorpayOptions {
 
 interface RazorpayInstance {
   open: () => void;
+  on: (event: "payment.failed", cb: (r: { error?: { description?: string; reason?: string } }) => void) => void;
 }
 
 declare global {
@@ -48,14 +49,18 @@ function loadScript(): Promise<void> {
   return loading;
 }
 
-/** Opens the checkout for the order. Resolves with the payment's signed answer, or null when it's closed unpaid. */
+/**
+ * Opens the checkout for the order. Resolves with the payment's signed answer, or null when it's closed unpaid; if
+ * an attempt failed and the buyer then closed it, rejects with Razorpay's reason (nothing was charged).
+ */
 export async function payWithRazorpay(order: RazorpayCheckout): Promise<RazorpayPaid | null> {
   await loadScript();
   const Razorpay = window.Razorpay;
   if (!Razorpay) throw new Error("The payment window couldn't load. Try again.");
   // A failed attempt keeps Razorpay's window open (it says why, and the buyer can try another way), so only paying
-  // or closing it settles this.
-  return new Promise<RazorpayPaid | null>((resolve) => {
+  // or closing it settles this; closing after a failure says why on the page too.
+  return new Promise<RazorpayPaid | null>((resolve, reject) => {
+    let failed: string | null = null;
     const rzp = new Razorpay({
       key: order.key_id,
       order_id: order.order_id,
@@ -66,7 +71,14 @@ export async function payWithRazorpay(order: RazorpayCheckout): Promise<Razorpay
       prefill: { email: order.email, ...(order.name ? { name: order.name } : {}) },
       theme: { color: "#6366f1" },
       handler: (r) => resolve({ order_id: r.razorpay_order_id, payment_id: r.razorpay_payment_id, signature: r.razorpay_signature }),
-      modal: { ondismiss: () => resolve(null) },
+      modal: {
+        ondismiss: () =>
+          failed ? reject(new Error(`The payment didn't go through: ${failed} Nothing was charged.`)) : resolve(null),
+      },
+    });
+    rzp.on("payment.failed", (r) => {
+      const why = (r.error?.description || "the bank declined it").trim();
+      failed = /[.!?]$/.test(why) ? why : `${why}.`;
     });
     rzp.open();
   });

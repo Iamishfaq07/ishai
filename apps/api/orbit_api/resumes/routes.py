@@ -31,8 +31,8 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
-from sqlalchemy.orm import defer
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import defer
 
 from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import current_user

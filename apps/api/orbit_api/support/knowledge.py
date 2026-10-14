@@ -5,6 +5,7 @@ A tap sends a topic id. Typed questions hit the first specific phrase, never a l
 
 import re
 from dataclasses import dataclass
+from typing import Any
 
 GREETING = (
     "Hi, I'm Orbit's support bot. Pick a topic below, or type a question. "
@@ -45,7 +46,8 @@ _TOPICS: tuple[Topic, ...] = (
         "welcome",
         "New account",
         "A new account gets 20 interview minutes and 1 Resume AI credit. They never expire. "
-        "One welcome per network every 30 days, so a second account on the same internet connection can start at zero. It can still buy a pack.",
+        "One welcome per network every 30 days, so a second account on the same internet connection can start at "
+        "zero. It can still buy a pack.",
         ("welcome", "new account", "free account", "20 interview", "20 minutes"),
         ("prices", "what_spends", "buy"),
     ),
@@ -59,7 +61,8 @@ _TOPICS: tuple[Topic, ...] = (
     Topic(
         "starter",
         "Starter ₹1,999",
-        "Starter is ₹1,999. You get 60 interview minutes and 15 Resume AI credits. They never expire and nothing renews.",
+        "Starter is ₹1,999. You get 60 interview minutes and 15 Resume AI credits. They never expire and nothing "
+        "renews.",
         ("starter", "₹1,999", "1999", "1,999"),
         ("mini", "plus", "buy"),
     ),
@@ -90,8 +93,10 @@ _TOPICS: tuple[Topic, ...] = (
     Topic(
         "buy",
         "How to pay",
-        "Buy on Plan & billing. If Razorpay is on, pay by card, UPI, or netbanking and the credits land as soon as it goes through. "
-        "If it isn't, pay the UPI ID shown there and paste the 12-digit UTR. A person checks that UTR before the credits land.",
+        "Buy on Plan & billing. If Razorpay is on, pay by card, UPI, or netbanking and the credits land as soon as "
+        "it goes through. "
+        "If it isn't, pay the UPI ID shown there and paste the 12-digit UTR. A person checks that UTR before the "
+        "credits land.",
         ("how to pay", "how do i pay", "how do i buy", "buy a pack", "buy credits", "where to pay"),
         ("razorpay", "upi", "utr", "missing"),
         True,
@@ -99,15 +104,18 @@ _TOPICS: tuple[Topic, ...] = (
     Topic(
         "razorpay",
         "Card, UPI, netbanking",
-        "Tap Buy on Plan & billing. Razorpay takes a card, UPI, or netbanking, and the credits are added the moment the payment succeeds. "
-        "You do not paste a UTR for this. If you closed the page early, refresh Plan & billing. The payment can still land.",
+        "Tap Buy on Plan & billing. Razorpay takes a card, UPI, or netbanking, and the credits are added the moment "
+        "the payment succeeds. "
+        "You do not paste a UTR for this. If you closed the page early, refresh Plan & billing. The payment can "
+        "still land.",
         ("razorpay", "netbanking", "debit card", "credit card"),
         ("missing", "upi", "prices"),
     ),
     Topic(
         "upi",
         "Pay by UPI ID",
-        "Manual UPI is only when Razorpay is not offered. Plan & billing shows a UPI ID, a QR, and a reference like ORB…. "
+        "Manual UPI is only when Razorpay is not offered. Plan & billing shows a UPI ID, a QR, and a reference like "
+        "ORB…. "
         "Pay that exact amount from GPay, PhonePe, or Paytm, then paste the 12-digit UTR on the billing page. "
         "A person matches it and adds the credits. A UTR can be used once.",
         ("upi", "upi id", "gpay", "phonepe", "paytm", "qr code"),
@@ -117,7 +125,8 @@ _TOPICS: tuple[Topic, ...] = (
         "utr",
         "Where is the UTR",
         "The UTR is the 12-digit number your UPI app shows after you pay. Paste it on Plan & billing. "
-        "Orbit never asks for your UPI PIN. If the credits are still missing after a few hours, tap Talk to a person and send the UTR.",
+        "Orbit never asks for your UPI PIN. If the credits are still missing after a few hours, tap Talk to a person "
+        "and send the UTR.",
         ("utr", "12-digit", "12 digit"),
         ("missing", "upi", "refund"),
     ),
@@ -127,7 +136,8 @@ _TOPICS: tuple[Topic, ...] = (
         "Paid with Razorpay? Refresh Plan & billing. The credits should already be there. "
         "Paid the UPI ID? Paste the 12-digit UTR on that page and wait for a person to approve it. "
         "Still missing? Tap Talk to a person and include the pack, plus the UTR or the email on the payment.",
-        ("didn't land", "did not land", "not credited", "not showing", "payment failed", "hasn't arrived", "has not arrived", "where are my credits", "credits not", "didn't work", "did not work"),
+        ("didn't land", "did not land", "not credited", "not showing", "payment failed", "hasn't arrived",
+         "has not arrived", "where are my credits", "credits not", "didn't work", "did not work"),
         ("razorpay", "utr", "refund"),
         True,
     ),
@@ -171,8 +181,10 @@ _TOPICS: tuple[Topic, ...] = (
     Topic(
         "practice",
         "Practice and live",
-        "A mock is practice: Orbit asks, you answer out loud. A live session is the copilot during a real call, in the Windows app. "
-        "Both use interview minutes. One live session at a time. On the free credit balance, one session can last up to 60 minutes.",
+        "A mock is practice: Orbit asks, you answer out loud. A live session is the copilot during a real call, in "
+        "the Windows app. "
+        "Both use interview minutes. One live session at a time. On the free credit balance, one session can last up "
+        "to 60 minutes.",
         ("mock", "practice", "copilot", "live session", "live interview"),
         ("windows", "what_spends", "prices"),
         True,
@@ -267,7 +279,8 @@ def account_choice(text: str, choice: str = "") -> str | None:
     if choice in {"balance", "payment"}:
         return choice
     q = _norm(text)
-    if any(phrase in q for phrase in ("my balance", "credits left", "minutes left", "how many credits", "how many minutes")):
+    if any(phrase in q for phrase in ("my balance", "credits left", "minutes left", "how many credits",
+                                      "how many minutes")):
         return "balance"
     if any(phrase in q for phrase in ("my last payment", "last payment", "payment status")):
         return "payment"
@@ -304,7 +317,7 @@ def respond(text: str = "", choice: str = "") -> tuple[str, list[tuple[str, str]
     return found.answer, options_for(found.id)
 
 
-def suggestions_for(messages: list, status: str, signed_in: bool = False, page: str = "") -> list[tuple[str, str]]:
+def suggestions_for(messages: list[Any], status: str, signed_in: bool = False, page: str = "") -> list[tuple[str, str]]:
     """Chips to show again when the chat is reopened. Waiting on a person: none.
 
     My balance and My last payment are only offered when this browser is signed in as the chat's account.

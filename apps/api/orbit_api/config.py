@@ -57,8 +57,11 @@ class Settings(BaseSettings):
     # Razorpay (billing/razorpay.py): cards (international ones once Razorpay enables them), UPI, netbanking and
     # wallets, confirmed automatically. With the key id and secret set, packs are bought through Razorpay's checkout
     # instead of the manual UPI flow. The webhook secret confirms payments whose page was closed before it returned.
-    razorpay_key_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_RAZORPAY_KEY_ID"))
-    razorpay_key_secret: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_RAZORPAY_KEY_SECRET"))
+    # Also read as plain RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET, the names Razorpay's own guides use.
+    razorpay_key_id: str | None = Field(
+        None, validation_alias=AliasChoices("ORBIT_RAZORPAY_KEY_ID", "RAZORPAY_KEY_ID"))
+    razorpay_key_secret: SecretStr | None = Field(
+        None, validation_alias=AliasChoices("ORBIT_RAZORPAY_KEY_SECRET", "RAZORPAY_KEY_SECRET"))
     razorpay_webhook_secret: SecretStr | None = Field(
         None, validation_alias=AliasChoices("ORBIT_RAZORPAY_WEBHOOK_SECRET"))
 

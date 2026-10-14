@@ -26,8 +26,6 @@ from orbit_api.billing.packs import packs as configured_packs
 from orbit_api.billing.routes import router as billing_router
 from orbit_api.config import get_settings
 from orbit_api.contact.routes import router as contact_router
-from orbit_api.support.routes import admin_router as support_admin_router
-from orbit_api.support.routes import router as support_router
 from orbit_api.csrf import HEADER as CSRF_HEADER
 from orbit_api.csrf import csrf_middleware
 from orbit_api.desktop_updates import router as desktop_router
@@ -57,6 +55,8 @@ from orbit_api.sessions.recorder import replay_failed_writes, running_replayer
 from orbit_api.sessions.routes import drain_teardowns
 from orbit_api.sessions.routes import router as sessions_router
 from orbit_api.stories.routes import router as stories_router
+from orbit_api.support.routes import admin_router as support_admin_router
+from orbit_api.support.routes import router as support_router
 from orbit_api.workspaces.routes import router as workspaces_router
 
 _boot = get_settings()
