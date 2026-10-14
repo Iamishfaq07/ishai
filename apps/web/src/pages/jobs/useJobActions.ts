@@ -112,13 +112,19 @@ export function useJobActions(
       if (!tracked) onTracked(job.id, { id: r.tracker_id, status: "saved" });
       // Practice reads the resume from Documents: save the matched one there too, the way "Use in Orbit" does (kept
       // up to date, not copied). Without it the questions still come; the answers just can't use the resume.
+      let resumeMissed = false;
       if (resumeId) {
-        await api
+        resumeMissed = await api
           .getResume(resumeId)
           .then((resume) => practiceDocuments(api, { title: resume.title, resumeText: resumeToText(resume.data), jobText: "" }))
-          .catch(() => undefined);
+          .then(() => false)
+          .catch(() => true);
       }
-      if (r.note) setNote({ text: r.note, to, label: "Go to Practice" });
+      const missed = resumeMissed
+        ? "The resume couldn't be copied into Documents just now, so practice answers won't use it until you add it there."
+        : "";
+      const text = [r.note, missed].filter(Boolean).join(" ");
+      if (text) setNote({ text, to, label: "Go to Practice" });
       else navigate(to);
     } catch (err) {
       setError(errorText(err));
