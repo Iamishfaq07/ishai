@@ -176,6 +176,32 @@ def test_someone_elses_order_and_setup_problems(client: TestClient, rzp: list[ht
     assert client.get("/v1/billing/packs").json()[0]["checkout"] in ("upi", None)
 
 
+async def test_a_refused_key_says_why_in_the_log(monkeypatch: pytest.MonkeyPatch) -> None:
+    def refused(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, json={"error": {"code": "BAD_REQUEST_ERROR",
+                                                   "description": "Authentication failed"}})
+
+    monkeypatch.setattr(get_settings(), "razorpay_key_id", "rzp_live_key")
+    monkeypatch.setattr(get_settings(), "razorpay_key_secret", SecretStr(KEY_SECRET))
+    monkeypatch.setattr(razorpay, "transport", httpx.MockTransport(refused))
+    with pytest.raises(razorpay.RazorpayError) as e:
+        await razorpay.create_order(99, "ORB1", {})
+    assert "401: Authentication failed" in str(e.value) and "same Test/Live mode" in str(e.value)
+    assert KEY_SECRET not in str(e.value)
+
+
+def test_pasted_keys_lose_stray_spaces(monkeypatch: pytest.MonkeyPatch) -> None:
+    from orbit_api.config import Settings
+
+    monkeypatch.setenv("ORBIT_RAZORPAY_KEY_ID", " rzp_live_abc\n")
+    monkeypatch.setenv("ORBIT_RAZORPAY_KEY_SECRET", "secret \n")
+    monkeypatch.setenv("ORBIT_RAZORPAY_WEBHOOK_SECRET", "  ")
+    s = Settings()
+    assert s.razorpay_key_id == "rzp_live_abc"
+    assert s.razorpay_key_secret is not None and s.razorpay_key_secret.get_secret_value() == "secret"
+    assert s.razorpay_webhook_secret is None
+
+
 def test_the_migration_adds_and_removes_the_columns(tmp_path: Any) -> None:
     import os
     import sqlite3

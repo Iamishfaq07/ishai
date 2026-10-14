@@ -46,12 +46,24 @@ async def create_order(amount_inr: int, receipt: str, notes: dict[str, str]) -> 
         except httpx.HTTPError as e:
             raise RazorpayError(f"couldn't reach Razorpay: {type(e).__name__}") from e
     if r.status_code != 200:
-        raise RazorpayError(f"Razorpay said {r.status_code}")
+        raise RazorpayError(f"Razorpay said {r.status_code}{_why(r)}")
     data = r.json()
     order_id = data.get("id") if isinstance(data, dict) else None
     if not isinstance(order_id, str) or not order_id.startswith("order_"):
         raise RazorpayError("Razorpay sent no order id")
     return order_id
+
+
+def _why(r: httpx.Response) -> str:
+    """Razorpay's own reason for a refusal ("Authentication failed"), for the log; never holds the key."""
+    try:
+        error = r.json().get("error") or {}
+        why = str(error.get("description") or "")[:200]
+    except (ValueError, AttributeError):
+        return ""
+    if r.status_code == 401:
+        why += " (check ORBIT_RAZORPAY_KEY_ID and ORBIT_RAZORPAY_KEY_SECRET: one pair, same Test/Live mode)"
+    return f": {why}" if why else ""
 
 
 def _hmac(secret: str, message: bytes) -> str:
@@ -79,7 +91,7 @@ async def fetch_payment(payment_id: str) -> dict[str, object]:
         except httpx.HTTPError as e:
             raise RazorpayError(f"couldn't reach Razorpay: {type(e).__name__}") from e
     if r.status_code != 200:
-        raise RazorpayError(f"Razorpay said {r.status_code}")
+        raise RazorpayError(f"Razorpay said {r.status_code}{_why(r)}")
     data = r.json()
     if not isinstance(data, dict) or data.get("id") != payment_id:
         raise RazorpayError("Razorpay sent no payment")

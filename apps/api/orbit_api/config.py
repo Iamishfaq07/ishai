@@ -239,6 +239,12 @@ class Settings(BaseSettings):
             raise ValueError("ORBIT_UPI_ID must look like name@bank (for example yourname@okicici)")
         return v
 
+    @field_validator("razorpay_key_id", "razorpay_key_secret", "razorpay_webhook_secret", mode="before")
+    @classmethod
+    def _razorpay_trimmed(cls, v: object) -> object:
+        # Keys pasted into a dashboard often carry a space or line break, which Razorpay answers with a 401.
+        return (v.strip() or None) if isinstance(v, str) else v
+
     @field_validator("stt_price_per_minute", mode="before")
     @classmethod
     def _blank_price_is_unknown(cls, v: object) -> object:
