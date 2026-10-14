@@ -19,7 +19,11 @@
   // service uses ~744 of Render's 750 free instance-hours a month, so keep it the only running free service.
   "triggers": { "crons": ["*/10 * * * *"] },
   // Singapore (Render + Neon aws-ap-southeast-1): ~90 ms from India, vs ~280 ms to the old Ohio service.
-  "vars": { "API_URL": "https://orbit-api-sg.onrender.com" }
+  "vars": { "API_URL": "https://orbit-api-sg.onrender.com" },
+  // Builds of branches other than main run `wrangler preview` (Cloudflare's non-production deploy command), which
+  // needs its own vars. Previews talk to the same API: the web app holds no data of its own, and without the
+  // PROXY_SECRET secret (production only) the API treats a preview like any outside caller for rate limits.
+  "previews": { "vars": { "API_URL": "https://orbit-api-sg.onrender.com" } }
   // Secret (not a var): `wrangler secret put PROXY_SECRET` with the API's ORBIT_PROXY_SECRET, so the API can trust
   // the client IP this Worker forwards (apps/web/worker/index.js).
 }
