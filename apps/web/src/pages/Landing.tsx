@@ -45,7 +45,7 @@ function usePublic<T>(load: () => Promise<T>): T | null {
   return value;
 }
 
-// Packs are priced in rupees and paid with UPI (billing/packs.py) for now, wherever the visitor is.
+// Packs are priced in rupees wherever the visitor is (billing/packs.py); a card from abroad is converted by its bank.
 const rupees = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
 // ─── The copilot mock (the hero's picture) ─────────────────────────────────────────────────────────────────────────
