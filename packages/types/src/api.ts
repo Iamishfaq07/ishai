@@ -1780,6 +1780,7 @@ export interface JobTrackerUpdate {
   notes?: string;
   applied_at?: string;
   next_at?: string;
+  clear_applied?: boolean;
   clear_next?: boolean;
 }
 

@@ -52,7 +52,12 @@ function markSeen(id: string, userId?: string | null): void {
   localStorage.setItem(scopeKey(SEEN, userId), id);
 }
 
-/** A person replied after the visitor last had this chat open. */
+/** A refresh that left before a send must not wipe the message that landed. */
+function preferThread(current: SupportThread | null, next: SupportThread): SupportThread {
+  if (current && current.id === next.id && current.messages.length > next.messages.length) return current;
+  return next;
+}
+
 function hasUnseenReply(thread: SupportThread | null, seen: string): boolean {
   if (!thread) return false;
   const at = thread.messages.findIndex((m) => m.id === seen);
@@ -119,7 +124,7 @@ export function SupportChat() {
       : api.supportOpen(pathname);
     void start.then((next) => {
       if (cancel) return;
-      setThread(next);
+      setThread((current) => preferThread(current, next));
       const kept = save(next, userId) ?? existing;
       if (kept) setSaved(kept);
     }).catch(() => {
@@ -133,7 +138,7 @@ export function SupportChat() {
   useEffect(() => {
     if (!open || !saved || thread?.status !== "waiting") return;
     const timer = window.setInterval(() => {
-      void api.supportRead(saved.id, saved.token).then(setThread).catch(() => undefined);
+      void api.supportRead(saved.id, saved.token).then((next) => setThread((current) => preferThread(current, next))).catch(() => undefined);
     }, 4000);
     return () => window.clearInterval(timer);
   }, [open, saved, thread?.status]);
@@ -148,7 +153,7 @@ export function SupportChat() {
     const tick = () => {
       void api.supportRead(existing.id, existing.token).then((next) => {
         if (cancel) return;
-        setThread(next);
+        setThread((current) => preferThread(current, next));
         setSaved(existing);
       }).catch(() => undefined);
     };
@@ -215,8 +220,12 @@ export function SupportChat() {
   }
 
   async function restart() {
-    localStorage.removeItem(STORE);
-    localStorage.removeItem(SEEN);
+    try {
+      localStorage.removeItem(scopeKey(STORE, userId));
+      localStorage.removeItem(scopeKey(SEEN, userId));
+    } catch {
+      // storage unavailable: the new chat still starts for this visit
+    }
     setSeenId("");
     setSaved(null);
     setThread(null);
@@ -225,7 +234,7 @@ export function SupportChat() {
     try {
       const next = await api.supportOpen();
       setThread(next);
-      const kept = save(next);
+      const kept = save(next, userId);
       if (kept) setSaved(kept);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't start a new chat.");

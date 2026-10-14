@@ -422,6 +422,7 @@ export function EditEntry({ entry, onCancel, onSave }: { entry: JobTrackerEntry;
     const patch: JobTrackerUpdate = { notes };
     const appliedAt = fromDateInput(applied);
     if (appliedAt) patch.applied_at = appliedAt;
+    else if (entry.applied_at) patch.clear_applied = true;
     const nextAt = fromDateInput(next);
     if (nextAt) patch.next_at = nextAt;
     else if (entry.next_at) patch.clear_next = true;

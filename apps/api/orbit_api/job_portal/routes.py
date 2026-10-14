@@ -827,6 +827,7 @@ class TrackPatch(BaseModel):
     notes: str | None = Field(None, max_length=4_000)
     applied_at: datetime | None = None
     next_at: datetime | None = None
+    clear_applied: bool = False
     clear_next: bool = False
 
 
@@ -838,8 +839,8 @@ async def update_tracker(entry_id: str, body: TrackPatch, user: Annotated[User, 
         _move(entry, body.status)
     if body.notes is not None:
         entry.notes = body.notes
-    if body.applied_at is not None:
-        entry.applied_at = body.applied_at
+    if body.applied_at is not None or body.clear_applied:
+        entry.applied_at = None if body.clear_applied else body.applied_at
     if body.next_at is not None or body.clear_next:
         entry.next_at = None if body.clear_next else body.next_at
     await db.commit()

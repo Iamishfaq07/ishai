@@ -894,6 +894,8 @@ def test_the_tracker_saves_moves_notes_and_deletes_and_is_private(jobs: TestClie
     moved = jobs.patch(f"/v1/jobs/tracker/{entry}", headers=h,
                        json={"status": "interviewing", "notes": "Round 1 with the payments team", "next_at": when})
     assert moved.status_code == 200 and moved.json()["status"] == "interviewing" and moved.json()["next_at"]
+    cleared = jobs.patch(f"/v1/jobs/tracker/{entry}", headers=h, json={"clear_applied": True, "clear_next": True})
+    assert cleared.status_code == 200 and cleared.json()["applied_at"] is None and cleared.json()["next_at"] is None
     feed = jobs.get("/v1/jobs/feed", headers=h).json()
     assert feed["items"][0]["tracked"] == {"id": entry, "status": "interviewing"}
     # Someone else sees none of it and can't touch it.
