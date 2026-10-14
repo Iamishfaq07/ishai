@@ -16,7 +16,8 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -26,7 +27,7 @@ from orbit_api.billing.packs import packs
 from orbit_api.config import get_settings
 from orbit_api.contact.routes import clean_message, network_hash, one_line
 from orbit_api.credits import interview_minutes_left, resume_balance
-from orbit_api.db import get_db
+from orbit_api.db import get_db, sessionmaker
 from orbit_api.models import ContactMessage, Payment, SupportMessage, SupportThread, User
 from orbit_api.ratelimit import TokenBucket, check, client_ip
 from orbit_api.support.knowledge import GREETING, HANDOFF, account_choice, option_label, respond, suggestions_for
@@ -352,13 +353,23 @@ async def handoff(
 ) -> ThreadOut:
     _limit(request)
     thread = await _thread(db, thread_id, body.token)
+    if thread.status == "closed":
+        raise HTTPException(status.HTTP_409_CONFLICT, "This chat is closed. Start a new one.")
+    if thread.status == "waiting":
+        return _out(thread)  # already with a person: a retry or a second tap gets the same ticket, not another
     name = one_line(body.name)[:120] or thread.name or (user.name if user else "") or "Someone"
     email = (body.email or thread.email or (user.email if user else "") or "").strip()[:320]
     if "@" not in email:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Add an email so the team knows who to reply to.")
-    thread.name = name
-    thread.email = email
-    thread.status = "waiting"
+    # One request moves the chat from the bot to a person. The conditional update is the lock: a request that loses
+    # the race (a double tap, a retry, another worker) changes nothing and returns the chat as the winner left it.
+    thread_id = thread.id
+    moved = await db.execute(
+        update(SupportThread).where(SupportThread.id == thread_id, SupportThread.status == "bot")
+        .values(status="waiting", name=name, email=email))
+    if moved.rowcount != 1:  # type: ignore[attr-defined]
+        await db.rollback()
+        return await _settled(db, thread_id)
     transcript = "\n".join(f"{m.role}: {m.text}" for m in thread.messages)[-2800:]
     await _add(db, thread, "bot", HANDOFF)
     db.add(ContactMessage(
@@ -370,8 +381,23 @@ async def handoff(
         context={"support_thread_id": thread.id},
         status="new",
         network_hash=network_hash(client_ip(request)),
+        source_support_thread_id=thread.id,
     ))
-    return _out(await _commit(db, thread))
+    try:
+        return _out(await _commit(db, thread))
+    except IntegrityError:  # the chat's one ticket already exists (unique source_support_thread_id)
+        await db.rollback()
+        return await _settled(db, thread_id)
+
+
+async def _settled(db: AsyncSession, thread_id: str) -> ThreadOut:
+    """The chat after another request already handed it off (or closed it)."""
+    loaded = await _load(db, thread_id)
+    if loaded is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "This chat can't be found. Start a new one.")
+    if loaded.status == "closed":
+        raise HTTPException(status.HTTP_409_CONFLICT, "This chat is closed. Start a new one.")
+    return _out(loaded)
 
 
 @admin_router.get("", response_model=list[AdminThread])
@@ -444,3 +470,65 @@ async def admin_close(
     thread.status = "closed"
     await _add(db, thread, "bot", "This chat is closed. Start a new one if you need something else.")
     return await _admin_out(db, await _commit(db, thread))
+
+
+async def _delete_thread(db: AsyncSession, thread_id: str) -> None:
+    """The chat, its lines, and its Inbox ticket (the copy made when it asked for a person), in one transaction."""
+    await db.execute(delete(ContactMessage).where(ContactMessage.source_support_thread_id == thread_id))
+    await db.execute(delete(SupportMessage).where(SupportMessage.thread_id == thread_id))
+    await db.execute(delete(SupportThread).where(SupportThread.id == thread_id))
+    await db.commit()
+
+
+@router.delete("/v1/support/threads/{thread_id}", status_code=204)
+async def delete_thread(
+    thread_id: str,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    x_orbit_support_token: Annotated[str | None, Header()] = None,
+) -> Response:
+    """The visitor deletes their own chat, signed in or not: whoever holds its token. Its Inbox ticket goes too."""
+    _limit(request)
+    thread = await _thread(db, thread_id, _presented(x_orbit_support_token, None))
+    await _delete_thread(db, thread.id)
+    return Response(status_code=204)
+
+
+@admin_router.delete("/{thread_id}", status_code=204)
+async def admin_delete(
+    thread_id: str,
+    _admin: Annotated[User, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    """Deletes a chat on request (a guest asking by email, say), with its Inbox ticket."""
+    if await db.get(SupportThread, thread_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No chat with that id.")
+    await _delete_thread(db, thread_id)
+    return Response(status_code=204)
+
+
+async def purge_idle_threads(db: AsyncSession, now: datetime | None = None) -> int:
+    """Chats nobody is waiting on (the bot's, or closed) untouched for ORBIT_CONTACT_RETENTION_DAYS go, with their
+    lines and Inbox ticket. A chat waiting for a person is never deleted here. Commits; returns how many went."""
+    days = get_settings().contact_retention_days
+    if not days:
+        return 0
+    cutoff = (now or datetime.now(UTC)) - timedelta(days=days)
+    idle = select(SupportThread.id).where(SupportThread.status.in_(("bot", "closed")),
+                                          SupportThread.updated_at < cutoff)
+    ids = list((await db.scalars(idle)).all())
+    for thread_id in ids:
+        await db.execute(delete(ContactMessage).where(ContactMessage.source_support_thread_id == thread_id))
+        await db.execute(delete(SupportMessage).where(SupportMessage.thread_id == thread_id))
+        await db.execute(delete(SupportThread).where(SupportThread.id == thread_id))
+    await db.commit()
+    return len(ids)
+
+
+async def purge_idle_threads_now() -> int:
+    """`purge_idle_threads` in its own database session (the session sweeper calls it each pass)."""
+    async with sessionmaker()() as db:
+        gone = await purge_idle_threads(db)
+    if gone:
+        log.info("deleted %d idle support chat(s) past retention", gone)
+    return gone

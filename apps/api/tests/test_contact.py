@@ -518,10 +518,12 @@ def test_the_migration_adds_and_removes_the_table(tmp_path: Any) -> None:
     alembic("upgrade", "head")
     assert "contact_messages" in tables()
     assert {"id", "created_at", "user_id", "name", "email", "phone", "topic", "message", "context", "status",
-            "read_at", "handled_at", "admin_note", "replies", "network_hash"} == columns()
+            "read_at", "handled_at", "admin_note", "replies", "network_hash", "source_support_thread_id"} == columns()
     with sqlite3.connect(db) as conn:
         fks = list(conn.execute("pragma foreign_key_list(contact_messages)"))
-    assert [(fk[2], fk[3], fk[6]) for fk in fks] == [("users", "user_id", "SET NULL")]
+    # A support chat's ticket goes with its chat (c3e5a7b9d1f2).
+    assert sorted((fk[2], fk[3], fk[6]) for fk in fks) == [("support_threads", "source_support_thread_id", "CASCADE"),
+                                                         ("users", "user_id", "SET NULL")]
     alembic("downgrade", "f3a9c1e7b5d4")
     assert "contact_messages" not in tables() and "users" in tables()
     alembic("upgrade", "head")

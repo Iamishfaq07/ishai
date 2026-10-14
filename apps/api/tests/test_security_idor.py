@@ -437,6 +437,7 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     # The support chat works signed out: the thread's 256-bit token (in the body) is the credential.
     ("POST", "/v1/support/threads"), ("GET", "/v1/support/threads/{thread_id}"),
     ("POST", "/v1/support/threads/{thread_id}/messages"), ("POST", "/v1/support/threads/{thread_id}/handoff"),
+    ("DELETE", "/v1/support/threads/{thread_id}"),
 })
 
 
@@ -543,6 +544,7 @@ ADMIN_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("GET", "/v1/admin/support/{target_thread}", {}),
     ("POST", "/v1/admin/support/{target_thread}/reply", {"json": {"text": "idor check"}}),
     ("POST", "/v1/admin/support/{target_thread}/close", {}),
+    ("DELETE", "/v1/admin/support/{target_thread}", {}),
 ]
 ADMIN_IDS = [f"{m} {p} {json.dumps(k.get('json', ''))[:40]}" for m, p, k in ADMIN_ROUTES]
 
