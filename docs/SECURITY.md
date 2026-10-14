@@ -98,6 +98,19 @@ Sign-in is also limited per target email, so rotating IPs never buys more passwo
 
 Request bodies are capped at the upload limit + 1 MB (`main.BodyLimit`, 413) before anything buffers them.
 
+## Support chat tokens (`support/routes.py`)
+- A chat's token (32 random bytes, stored only as an HMAC) is the only way back into it. The web app sends it in the
+  `X-Orbit-Support-Token` header and keeps it in localStorage scoped to the account (or "guest"); switching account
+  clears the open chat from the page.
+- A chat linked to an account (opened, or written in, while signed in) also needs that account signed in: the token
+  alone gets 404 signed out or as anyone else, so a shared computer or a copied token doesn't open someone's chat.
+- **Legacy `?token=` query (V3-11):** clients from before 14 Oct 2026 put the token in the address. It is still
+  accepted, answered with `Deprecation: true` and `Cache-Control: no-store`, logged as a count without the token, and
+  redacted from every log line including uvicorn's access log (`observability.py`). Plan: once the log shows no
+  query-token reads for 30 days (the web app has sent the header since 14 Oct; desktop builds don't use the chat),
+  remove the `token` query parameter from `read_thread`.
+- One Inbox ticket per chat, deleted with it; see `docs/PRIVACY.md` (Support chat).
+
 ## Bot protection (`auth/captcha.py`)
 - **Scope:** sign-up and password-reset requests.
 - **Provider-neutral:** clients ask `GET /v1/auth/config` which widget to render. Cloudflare Turnstile is
