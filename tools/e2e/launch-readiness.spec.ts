@@ -45,6 +45,7 @@ test("mobile target context survives reload and the career loop remains readable
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "dark" });
   await page.goto("/mock?role=Platform%20engineer&company=Acme&interview_stage=Staff%20panel&tech_stack=%5B%22Go%22%5D");
+  await page.getByRole("button", { name: "OK", exact: true }).click();
   await expect(page).toHaveURL(/company=Acme/);
   await page.reload();
   await expect(page).toHaveURL(/role=Platform/);
@@ -62,6 +63,7 @@ test("mobile target context survives reload and the career loop remains readable
 
 test("live coding exposes the spoken walkthrough and architecture defense", async ({ page, context }, info) => {
   await signup(context);
+  await page.emulateMedia({ colorScheme: "dark" });
   const created = await context.request.post(`${API}/v1/sessions`, { data: { title: "Coding QA", type: "coding" } });
   expect(created.status(), await created.text()).toBe(201);
   const id = (await created.json()).id as string;
