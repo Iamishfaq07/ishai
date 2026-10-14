@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { Link } from "react-router-dom";
 import type { JobTrackerEntry } from "@orbit/types";
-import { BookmarkCheck, CalendarIcon, Check, Plus, Send, Skeleton, Target, cx, focusRing, toast, useLoadPhase } from "@orbit/ui";
+import { BookmarkCheck, CalendarIcon, Check, CompanyLogo, Plus, Send, Skeleton, Target, cx, focusRing, toast, useLoadPhase } from "@orbit/ui";
 import { Card, ErrorNote } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
@@ -139,8 +139,11 @@ function FollowUpsCard({ tracker, limit = 3, hideWhenEmpty = false, className }:
               )}
               <span className="min-w-0 flex-1">
                 <span className={cx("font-medium", item.kind === "overdue" && "text-amber-800 dark:text-amber-200")}>{item.text}</span>
-                <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
-                  {item.entry.title} · {STATUS_LABEL[item.entry.status]}
+                <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                  <CompanyLogo company={item.entry.company} size="xs" />
+                  <span className="truncate">
+                    {item.entry.title} · {STATUS_LABEL[item.entry.status]}
+                  </span>
                 </span>
               </span>
             </p>

@@ -3,13 +3,13 @@ import { Link, useSearchParams } from "react-router-dom";
 import type { JobFeed, JobListing, JobPortalLink, JobPrefs, JobProfile, JobSort } from "@orbit/types";
 import {
   ArrowUpRight,
-  Briefcase,
   FileText,
   RefreshCw,
   Search,
   SlidersHorizontal,
   Sparkles,
   X,
+  CosmicEmptyState,
   LoadGate,
   cx,
   isIndia,
@@ -598,8 +598,8 @@ function NoMatches({ feed, days, searching }: { feed: JobFeed; days: string; sea
       {firstFetch(feed) ? (
         <FirstFetch />
       ) : down ? (
-        <EmptyState
-          icon={Briefcase}
+        <CosmicEmptyState
+          variant="jobs"
           title="Orbit can't reach the job boards right now"
           body="They're usually back within the hour. Meanwhile, search the sites below: the links are filled in from your profile."
         />

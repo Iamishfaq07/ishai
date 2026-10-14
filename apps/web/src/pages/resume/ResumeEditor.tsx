@@ -37,6 +37,7 @@ import {
   linesOver,
   splitPlaceholders,
   toast,
+  useCountUp,
 } from "@orbit/ui";
 import { Button, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -124,6 +125,8 @@ function ResumeEditor() {
   const [draft, setDraft] = useState<Draft<ResumeInput> | null>(null);
   const [queue, setQueue] = useState<ResumeSuggestion[]>([]);
   const [aiBusy, setAiBusy] = useState<string | null>(null);
+  // Bumped when an AI change lands: a laser line sweeps down the preview once (base.css .laser-scan).
+  const [scan, setScan] = useState(0);
   const [aiError, setAiError] = useState<string | null>(null);
   // The free AI use is spent: the AI panel offers the upgrade with its message.
   const [aiUpgrade, setAiUpgrade] = useState(false);
@@ -436,6 +439,7 @@ function ResumeEditor() {
       });
       if (latest.current?.id !== resume.id) return;
       setSuggestions(res.suggestions);
+      if (res.suggestions.length) setScan((n) => n + 1);
       if (res.upgrade_required) {
         setAiUpgrade(true);
         setAiError("These are the fixes that need no AI. AI rewrites, new bullets and tailoring need resume credits: you're out.");
@@ -506,6 +510,7 @@ function ResumeEditor() {
         }
         return { ...cur, data, design: { ...cur.design, ...out.design } };
       });
+      setScan((n) => n + 1);
       // Answers to a fix's questions finish that fix: keep what it still offers for review, and its starting score.
       setFixResult((prev) =>
         facts && prev
@@ -605,10 +610,10 @@ function ResumeEditor() {
             <button
               type="button"
               onClick={() => setTab("score")}
-              className={cx("flex items-center gap-2 rounded-xl px-3 py-1.5 ring-1", scoreTone(report.score), focusRing)}
+              className={cx("relative flex items-center gap-2 rounded-xl px-3 py-1.5 ring-1", scoreTone(report.score), focusRing)}
               aria-label={`ATS score ${report.score} out of 100, ${report.verdict}. Show details`}
             >
-              <span className="font-display text-xl font-semibold tabular-nums">{report.score}</span>
+              <ScoreCount score={report.score} className="font-display text-xl font-semibold" />
               <span className="text-left text-xs leading-tight">
                 ATS score
                 <br />
@@ -793,14 +798,17 @@ function ResumeEditor() {
             {tab === "letter" ? (
               <ScaledLetter data={resume.data} design={resume.design} text={resume.cover_letter} />
             ) : (
-              <ScaledPage
-                data={resume.data}
-                design={resume.design}
-                onFit={(design) => change((r) => ({ ...r, design }))}
-                onShorten={(linesOver) => void askAi("shorten", undefined, undefined, linesOver)}
-                shortening={aiBusy !== null}
-                highlight={tab === "ai" ? (queue[0] ? [queue[0].path] : []) : tab === "content" ? (editing ? [editing] : []) : tab === "score" ? pointing : []}
-              />
+              <div className="relative">
+                {scan > 0 && <span key={scan} aria-hidden="true" className="laser-scan absolute inset-0 z-10" />}
+                <ScaledPage
+                  data={resume.data}
+                  design={resume.design}
+                  onFit={(design) => change((r) => ({ ...r, design }))}
+                  onShorten={(linesOver) => void askAi("shorten", undefined, undefined, linesOver)}
+                  shortening={aiBusy !== null}
+                  highlight={tab === "ai" ? (queue[0] ? [queue[0].path] : []) : tab === "content" ? (editing ? [editing] : []) : tab === "score" ? pointing : []}
+                />
+              </div>
             )}
           </div>
         </div>
@@ -808,6 +816,25 @@ function ResumeEditor() {
       <PrintCopy data={resume.data} design={resume.design} letter={printing === "letter" ? resume.cover_letter : null} />
     </div>
     </AllowanceContext.Provider>
+  );
+}
+
+/**
+ * The ATS score, counted up from its last value (from 0 on first show). A rise also sends an emerald pulse round the
+ * badge it sits in (the parent is `relative`). Screen readers get the final number only.
+ */
+function ScoreCount({ score, className }: { score: number; className?: string }) {
+  const [range, setRange] = useState({ from: 0, to: score });
+  if (range.to !== score) setRange({ from: range.to, to: score });
+  const value = useCountUp(range.to, true, { from: range.from, duration: 700 });
+  return (
+    <>
+      {range.to > range.from && <span key={range.to} aria-hidden="true" className="pulse-ring pointer-events-none absolute inset-0 rounded-[inherit]" />}
+      <span className={cx("tabular-nums", className)}>
+        <span aria-hidden="true">{Math.round(value)}</span>
+        <span className="sr-only">{score}</span>
+      </span>
+    </>
   );
 }
 
@@ -1329,8 +1356,8 @@ function ScorePanel({
     <div className="space-y-4">
       <Panel title="How ATS software reads it">
         <div className="flex items-center gap-4">
-          <div className={cx("flex h-20 w-20 shrink-0 flex-col items-center justify-center rounded-2xl ring-1", scoreTone(report.score))}>
-            <span className="font-display text-3xl font-semibold tabular-nums">{report.score}</span>
+          <div className={cx("relative flex h-20 w-20 shrink-0 flex-col items-center justify-center rounded-2xl ring-1", scoreTone(report.score))}>
+            <ScoreCount score={report.score} className="font-display text-3xl font-semibold" />
             <span className="text-xs">of 100</span>
           </div>
           <div className="min-w-0 flex-1 space-y-1.5">

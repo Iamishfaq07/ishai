@@ -5,7 +5,7 @@ import {
   ArrowUpRight,
   BookmarkCheck,
   Briefcase,
-  Building2,
+  CompanyLogo,
   CalendarIcon,
   SlidersHorizontal,
   Sparkles,
@@ -176,7 +176,7 @@ function TopMatch({ job, showMatch }: { job: JobListing; showMatch: boolean }) {
       <span className="min-w-0 flex-1">
         <span className="block truncate font-display font-semibold group-hover:text-indigo-600 dark:group-hover:text-indigo-300">{job.title}</span>
         <span className="mt-0.5 flex min-w-0 items-center gap-1 text-sm text-zinc-600 dark:text-zinc-300">
-          <Building2 className="h-3.5 w-3.5 shrink-0 text-zinc-400" aria-hidden />
+          <CompanyLogo company={job.company} size="xs" />
           <span className="truncate">
             {job.company}
             {job.place ? ` · ${job.place}` : ""}

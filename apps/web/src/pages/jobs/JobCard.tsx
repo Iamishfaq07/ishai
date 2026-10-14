@@ -5,6 +5,7 @@ import {
   Bookmark,
   BookmarkCheck,
   Building2,
+  CompanyLogo,
   Check,
   CircleAlert,
   CircleCheck,
@@ -112,7 +113,7 @@ export function JobPlace({ job, className }: { job: JobListing; className?: stri
   return (
     <p className={cx("flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-600 dark:text-zinc-300", className)}>
       <span className="inline-flex min-w-0 items-center gap-1">
-        <Building2 className="h-3.5 w-3.5 shrink-0 text-zinc-400" aria-hidden />
+        <CompanyLogo company={job.company} size="xs" />
         <span className="truncate">{job.company}</span>
       </span>
       {job.place && (

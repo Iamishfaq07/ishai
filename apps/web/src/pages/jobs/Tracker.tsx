@@ -15,6 +15,7 @@ import {
   Sparkles,
   Target,
   Trash2,
+  CompanyLogo,
   LoadGate,
   confirmDialog,
   cx,
@@ -241,37 +242,6 @@ const STATUS_EDGE: Record<JobStatus, string> = {
   rejected: "bg-rose-400 dark:bg-rose-400/80",
 };
 
-// A company's initial on a tile whose colour comes from its name, so the same company looks the same everywhere and
-// neighbouring cards differ. Decorative: the name is written beside it.
-const MONOGRAM_TONES = [
-  "bg-indigo-500/15 text-indigo-700 dark:text-indigo-200",
-  "bg-sky-500/15 text-sky-700 dark:text-sky-200",
-  "bg-emerald-500/15 text-emerald-700 dark:text-emerald-200",
-  "bg-amber-500/15 text-amber-800 dark:text-amber-200",
-  "bg-rose-500/15 text-rose-700 dark:text-rose-200",
-  "bg-violet-500/15 text-violet-700 dark:text-violet-200",
-  "bg-teal-500/15 text-teal-700 dark:text-teal-200",
-  "bg-orange-500/15 text-orange-800 dark:text-orange-200",
-];
-
-function Monogram({ name, compact }: { name: string; compact: boolean }) {
-  const letter = name.trim().match(/[\p{L}\p{N}]/u)?.[0]?.toUpperCase() ?? "?";
-  let hash = 0;
-  for (const ch of name.trim().toLowerCase()) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return (
-    <span
-      aria-hidden="true"
-      className={cx(
-        "flex shrink-0 items-center justify-center rounded-lg font-display font-semibold",
-        compact ? "h-8 w-8 text-sm" : "h-10 w-10 text-base",
-        MONOGRAM_TONES[hash % MONOGRAM_TONES.length],
-      )}
-    >
-      {letter}
-    </span>
-  );
-}
-
 function TrackerCard({
   entry,
   compact = false,
@@ -298,7 +268,7 @@ function TrackerCard({
       {/* The status as a colour edge, so a long phone list (one column) still reads at a glance. */}
       <span aria-hidden="true" className={cx("absolute inset-y-0 left-0 w-1", STATUS_EDGE[entry.status])} />
       <div className="flex items-start gap-2.5">
-      <Monogram name={entry.company} compact={compact} />
+      <CompanyLogo company={entry.company} size={compact ? "md" : "lg"} />
       <div className="min-w-0 flex-1">
       <h4 className={cx("font-medium leading-snug", compact ? "text-sm" : "text-base")}>
         {/* The job's own page while it's in the feed; after that, the original post. */}

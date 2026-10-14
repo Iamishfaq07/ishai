@@ -593,7 +593,7 @@ html:not(.dark) .cosmic-dots { background-image: radial-gradient(rgba(35, 38, 66
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
 }
-/* The spotlight follows the pointer on primary cards (useSpotlight sets --mouse-x / --mouse-y). Painted under the
+/* The spotlight follows the pointer on primary cards (spotlightMove sets --mouse-x / --mouse-y). Painted under the
    content (z-index -1 in the card's own stacking context), only on devices that hover. */
 .orbit-spotlight::before {
   content: "";
@@ -629,7 +629,8 @@ html:not(.dark) .cosmic-dots { background-image: radial-gradient(rgba(35, 38, 66
 :root[data-motion="reduced"] .stream-chunk { animation-name: orbit-fade !important; animation-duration: var(--dur-quick) !important; }
 
 /* Resume AI: a 2px laser sweeps down the preview after a tailor or a new score; the score counts up with a pulse. */
-.laser-scan { position: relative; }
+/* .laser-scan is an absolutely placed overlay the size of the preview; its size is the sweep's distance (cqh). */
+.laser-scan { container-type: size; overflow: hidden; pointer-events: none; }
 .laser-scan::after {
   content: "";
   position: absolute;
@@ -645,7 +646,7 @@ html:not(.dark) .cosmic-dots { background-image: radial-gradient(rgba(35, 38, 66
 @keyframes laser-sweep {
   from { transform: translateY(0); opacity: 1; }
   92% { opacity: 1; }
-  to { transform: translateY(var(--scan-height, 100%)); opacity: 0; }
+  to { transform: translateY(calc(100cqh - 2px)); opacity: 0; }
 }
 :root:is([data-motion="reduced"], [data-motion="off"]) .laser-scan::after { display: none; }
 .pulse-ring { animation: pulse-ring 700ms ease-out; }

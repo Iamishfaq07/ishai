@@ -200,6 +200,10 @@ export { OrbitCareerLoopHero, type CareerLinks } from "./components/OrbitCareerL
 export { InlineResumeDiff, wordDiff } from "./components/InlineResumeDiff";
 export { DebriefStudio } from "./components/DebriefStudio";
 export { DefenseWorkspace } from "./components/DefenseWorkspace";
+export { Dropzone, ProgressRing } from "./components/Dropzone";
+export { CompanyLogo, monogram } from "./components/CompanyLogo";
+export { CosmicEmptyState, type CosmicEmptyVariant } from "./components/CosmicEmptyState";
+export { spotlightMove } from "./components/useSpotlight";
 export { ConceptDepthRadar, aggregateDepth } from "./components/ConceptDepthRadar";
 export { buttonClass, type ButtonSize, type ButtonVariant } from "./components/ui";
 export { Sheet, type SheetSize } from "./components/Sheet";
