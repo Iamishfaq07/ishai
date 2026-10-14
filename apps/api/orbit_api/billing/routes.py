@@ -22,15 +22,59 @@ from orbit_api.billing.packs import packs, public_packs
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.entitlements import active_grant, plan_named
-from orbit_api.models import AuditLog, Payment, PaymentEvent, PaymentRefund, User
+from orbit_api.models import AuditLog, ContactMessage, LaunchAccessClaim, Payment, PaymentEvent, PaymentRefund, User
 from orbit_api.providers.email import OutgoingEmail, send_safely
-from orbit_api.ratelimit import limit_user
+from orbit_api.ratelimit import limit, limit_user
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1", tags=["billing"])
 
 order_limit = limit_user("upi-order", rate_per_s=1 / 60, burst=10)
 utr_limit = limit_user("upi-utr", rate_per_s=1 / 60, burst=8)
+claim_ip_limit = limit("launch-access", rate_per_s=3 / 3600, burst=3)
+
+
+class LaunchAccessIn(BaseModel):
+    pack: str = Field(min_length=1, max_length=32)
+    country: str = Field(min_length=2, max_length=2, pattern=r"^[A-Z]{2}$")
+
+
+class LaunchAccessOut(BaseModel):
+    reference: str
+    status: Literal["requested"] = "requested"
+    message: str = ("Your launch access request is in Orbit's Inbox. "
+                    "No payment was taken; credits are added after approval.")
+
+
+@router.post("/billing/launch-access", response_model=LaunchAccessOut,
+             dependencies=[Depends(order_limit), Depends(claim_ip_limit)])
+async def request_launch_access(body: LaunchAccessIn, user: Annotated[User, Depends(current_user)],
+                                db: Annotated[AsyncSession, Depends(get_db)]) -> LaunchAccessOut:
+    from orbit_api.contact.routes import reference
+
+    if body.pack not in packs():
+        raise HTTPException(422, "Unknown credit pack")
+    if body.country == "IN":
+        raise HTTPException(422, "Use the INR checkout for India")
+    uid = user.id  # rollback expires ORM objects; never read `user.id` synchronously after a race.
+    claim = await db.scalar(select(LaunchAccessClaim).where(LaunchAccessClaim.user_id == uid))
+    if claim is None:
+        message = ContactMessage(user_id=user.id, name=(user.name or "")[:120], email=user.email,
+                                 topic="payment",
+                                 message=f"International launch access request: {body.pack}, {body.country}. "
+                                 "Please review and grant launch credits if eligible.", context={"page": "/billing"})
+        db.add(message)
+        await db.flush()
+        claim = LaunchAccessClaim(user_id=user.id, contact_id=message.id, country=body.country, pack=body.pack)
+        db.add(claim)
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()  # Also rolls back the duplicate Inbox row from a concurrent request.
+            claim = await db.scalar(select(LaunchAccessClaim).where(LaunchAccessClaim.user_id == uid))
+            if claim is None:
+                raise
+    return LaunchAccessOut(reference=reference(claim.contact_id))
 
 
 @router.get("/plans")

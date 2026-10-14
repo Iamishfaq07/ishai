@@ -9,6 +9,7 @@ _tmp = Path(tempfile.mkdtemp(prefix="orbit-test-"))
 _sqlite = f"sqlite+aiosqlite:///{(_tmp / 'test.db').as_posix()}"
 os.environ.update(
     ORBIT_ENV="test",
+    ORBIT_PROXY_SECRET="test-fixture-Q8f2LmZr7Tq1VbN4xKc9WsYe3HpJd6Ug",
     # SQLite by default. ORBIT_TEST_DATABASE_URL points a run at a disposable Postgres instead, for the tests whose
     # point is locking and constraints (tests/test_support_lifecycle.py and the other race tests run there in CI).
     ORBIT_DATABASE_URL=os.environ.get("ORBIT_TEST_DATABASE_URL") or _sqlite,

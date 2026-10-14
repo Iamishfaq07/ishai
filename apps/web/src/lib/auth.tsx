@@ -13,6 +13,7 @@ import type { LoginRequest, RegisterRequest, User } from "@orbit/types";
 import { ApiError, detectCountry } from "@orbit/ui";
 import { api, setUnauthorizedHandler } from "./api";
 import { clearAsyncCache } from "./useAsync";
+import { clearPrepContext } from "./prepContext";
 
 export type RegisterOutcome = "signed_in" | "verify_email";
 
@@ -21,9 +22,20 @@ export const LAST_PREP_KEY = "orbit.lastPrep";
 // Account data this browser keeps outside the page cache. localStorage is shared by everyone who signs in on the
 // browser, so it goes with the page cache whenever the account changes.
 const ACCOUNT_STORAGE_KEYS = [LAST_PREP_KEY];
+const ACCOUNT_ID_KEY = "orbit.browser-account-id";
+
+function acceptAccount(account: User): User {
+  try {
+    const previous = localStorage.getItem(ACCOUNT_ID_KEY);
+    if (previous && previous !== account.id) forgetAccount();
+    localStorage.setItem(ACCOUNT_ID_KEY, account.id);
+  } catch { /* Cookie auth works even when browser storage is unavailable. */ }
+  return account;
+}
 
 function forgetAccount(): void {
   clearAsyncCache();
+  clearPrepContext();
   try {
     for (const key of ACCOUNT_STORAGE_KEYS) localStorage.removeItem(key);
   } catch {
@@ -68,12 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
-      clearAsyncCache();
+      forgetAccount();
       setUser(null);
     });
     api
       .me()
-      .then(setUser)
+      .then((account) => setUser(acceptAccount(account)))
       .catch((err: unknown) => {
         if (!(err instanceof ApiError) || err.status !== 401) console.warn("Session check failed", err);
         setUser(null);
@@ -87,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (req: LoginRequest) => {
     await api.login(req);
     forgetAccount();
-    setUser(await confirmSession());
+    setUser(acceptAccount(await confirmSession()));
   }, []);
 
   /** "signed_in", or "verify_email" when the server wants the inbox proven first (nobody is signed in then). */
@@ -95,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api.register({ country: detectCountry(), ...req });
     if ("status" in res && res.status === "verify_email") return "verify_email";
     forgetAccount();
-    setUser(await confirmSession());
+    setUser(acceptAccount(await confirmSession()));
     return "signed_in";
   }, []);
 

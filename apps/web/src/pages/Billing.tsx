@@ -9,7 +9,9 @@ import { errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { RESUME_AI_HOME } from "./resume/paths";
 import { UpiCheckout } from "./UpiCheckout";
-import { payWithRazorpay } from "../lib/razorpay";
+import { InternationalPaymentError, payWithRazorpay } from "../lib/razorpay";
+import { InternationalCheckout } from "../components/InternationalCheckout";
+import { useCountry } from "../lib/country";
 
 function Bar({ used, limit }: { used: number; limit: number | null }) {
   const pct = limit ? Math.min(100, Math.round((used / limit) * 100)) : 0;
@@ -245,8 +247,11 @@ export function BillingPage() {
   const [buyError, setBuyError] = useState<string | null>(null);
   const [bought, setBought] = useState<string | null>(null);
   const checkoutRef = useRef<HTMLDivElement>(null);
+  const country = useCountry();
+  const [internationalPack, setInternationalPack] = useState<CreditPack | null>(null);
 
-  const buy = async (p: CreditPack) => {
+  const buy = async (p: CreditPack, domestic = false) => {
+    if (!domestic && country !== "IN" && !p.international) { setInternationalPack(p); return; }
     setStarting(true);
     setBuyError(null);
     setBought(null);
@@ -269,7 +274,8 @@ export function BillingPage() {
         setOrder(await api.createUpiOrder(p.id));
       }
     } catch (err) {
-      setBuyError(errorText(err));
+      if (err instanceof InternationalPaymentError && country !== "IN") setInternationalPack(p);
+      else setBuyError(errorText(err));
     } finally {
       setStarting(false);
     }
@@ -312,6 +318,8 @@ export function BillingPage() {
   return (
     <div>
       <PageHeader icon={CreditCard} title="Plan & billing" subtitle="Your credits, and packs to top up. Credits never expire." />
+      {internationalPack && <InternationalCheckout pack={internationalPack} country={country} onClose={() => setInternationalPack(null)}
+        onDomestic={() => { const p = internationalPack; setInternationalPack(null); void buy(p, true); }} />}
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="self-start lg:col-span-1">
           <h2 className="mb-1 font-semibold">{e?.credits ? "Your credits" : "This month"}</h2>

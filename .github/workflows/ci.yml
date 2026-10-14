@@ -21,6 +21,8 @@ concurrency:
 jobs:
   api:
     runs-on: ubuntu-latest
+    env:
+      ORBIT_ENV: test
     defaults:
       run:
         working-directory: apps/api
@@ -150,7 +152,7 @@ jobs:
           cache-to: type=gha,mode=max
       # Building isn't enough: a base-image bump can produce an image whose app can't even import.
       - name: Import the app inside the image
-        run: docker run --rm orbit-api:ci python -c "import orbit_api.main"
+        run: docker run --rm -e ORBIT_ENV=test orbit-api:ci python -c "import orbit_api.main"
 
   # SCA + SAST: known-vulnerable dependencies (Python, npm) and risky Python patterns (medium severity and up).
   # See docs/SECURITY_REVIEW.md for the full review and how to run these locally.

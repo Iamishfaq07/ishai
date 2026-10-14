@@ -181,6 +181,30 @@ def test_password_reset_gives_a_google_account_a_real_password(
     assert signed.status_code == 200 and signed.json()["user"]["has_password"] is True
 
 
+def test_password_reset_then_google_keeps_the_account_resumes_credits_and_history(
+    google_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    email = "reset-link-state@example.com"
+    registered = google_client.post("/v1/auth/register", json={"email": email, "password": "a real password 1"})
+    assert registered.status_code == 201
+    uid = google_client.get("/v1/auth/me").json()["id"]
+    resume = google_client.post("/v1/resumes", json={"title": "Keep this"}).json()["id"]
+    session = google_client.post("/v1/sessions", json={"title": "My practice", "type": "mock"}).json()["id"]
+    balances = google_client.get("/v1/entitlements").json()["credits"]
+    assert google_client.post("/v1/auth/password-reset/request", json={"email": email}).status_code == 202
+    google_client.cookies.clear()
+    reset = google_client.post("/v1/auth/password-reset/confirm",
+                               json={"token": _token(email, "/reset-password"), "password": "brand new password 2"})
+    assert reset.status_code == 200
+    google_client.cookies.clear()
+    _sign_in_with_google(google_client, monkeypatch, email, "google-sub-state-preserved")
+    me = google_client.get("/v1/auth/me").json()
+    assert me["id"] == uid and me["has_password"] is True
+    assert google_client.get("/v1/entitlements").json()["credits"] == balances
+    assert google_client.get(f"/v1/resumes/{resume}").status_code == 200
+    assert google_client.get(f"/v1/sessions/{session}").status_code == 200
+
+
 def test_changing_the_email_disconnects_google(google_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     email = "move-google@example.com"
     _sign_in_with_google(google_client, monkeypatch, email, "google-sub-move")

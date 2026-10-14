@@ -54,6 +54,7 @@ import {
 } from "../lib/audio";
 import { SESSION_TYPE_LABEL, errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
+import { usePrepContext } from "../lib/prepContext";
 
 const LENGTHS: Array<{ value: AnswerLength; label: string; hint?: string }> = [
   { value: "auto", label: "Auto (fits each question)", hint: "A sentence or two for a quick question, a full answer for a deep one" },
@@ -161,14 +162,16 @@ export interface LiveLaunchState {
 export function SessionSetupPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+  const [context, updateContext] = usePrepContext(params, setParams, user?.id);
   // Where a tab's audio can't be shared (phones, Safari, Firefox), listen through the microphone by default.
   const initialType = (params.get("type") as SessionType | null) ?? (supportsDisplayAudio() ? "interview" : "phone");
   const docs = useAsync(() => api.listDocuments(), [], "documents");
 
   const [title, setTitle] = useState("");
   const [type, setType] = useState<SessionType>(SELECTABLE_TYPES.includes(initialType) ? initialType : "interview");
-  const [role, setRole] = useState(() => (user ? loadAnswers(user.id)?.role.trim().slice(0, 120) ?? "" : ""));
+  const role = context.role || (user ? loadAnswers(user.id)?.role.trim().slice(0, 120) ?? "" : "");
+  const setRole = (value: string) => updateContext({ role: value });
   const [instructions, setInstructions] = useState("");
   const [length, setLength] = useState<AnswerLength>("auto");
   const [experience, setExperience] = useState<ExperienceLevel>(loadExperience);
@@ -212,7 +215,7 @@ export function SessionSetupPage() {
     }
     if (!ws) return;
     if (SELECTABLE_TYPES.includes(ws.session_type)) setType(ws.session_type);
-    setRole((current) => ws.role?.trim() || current);
+    updateContext({ role: ws.role?.trim() || role, company: ws.company?.trim() || context.company });
     setInstructions(ws.notes ?? "");
     setLength(ws.length);
     setStyle(ws.style);
@@ -268,6 +271,7 @@ export function SessionSetupPage() {
     setError(null);
     try {
       const session = await api.createSession({
+        ...context,
         title: title.trim() || `${SESSION_TYPE_LABEL[type]}${role.trim() ? ` — ${role.trim()}` : ""}`,
         type,
         ...(role.trim() ? { role: role.trim() } : {}),

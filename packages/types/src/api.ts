@@ -216,6 +216,10 @@ export interface CreateSessionRequest {
   title: string;
   type: SessionType;
   role?: string;
+  company?: string;
+  interview_stage?: string;
+  tech_stack?: string[];
+  key_requirements?: string[];
   language: string;
   answer_language?: string;
   length: AnswerLength;
@@ -275,6 +279,10 @@ export interface OrbitSession {
   title: string;
   type: SessionType;
   role: string | null;
+  company?: string | null;
+  interview_stage?: string | null;
+  tech_stack?: string[];
+  key_requirements?: string[];
   language: string;
   answer_language: string | null;
   length: AnswerLength;
@@ -1321,6 +1329,8 @@ export interface ResumeInput {
   cover_letter?: string;
   /** The revision this text was based on; the server refuses (409) the save if another one landed since. */
   base_revision?: number;
+  client_id?: string;
+  client_revision?: number;
 }
 
 export interface Resume extends ResumeInput {

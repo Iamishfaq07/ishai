@@ -367,6 +367,8 @@ export function createApiClient(options: ApiClientOptions) {
   });
 
   return {
+    requestLaunchAccess: (pack: string, country: string) => json<{ reference: string; status: "requested"; message: string }>(
+      "/v1/billing/launch-access", { method: "POST", body: body({ pack, country }) }),
     baseUrl,
 
     // Auth
@@ -470,8 +472,8 @@ export function createApiClient(options: ApiClientOptions) {
     listResumes: () => json<ResumeSummary[]>("/v1/resumes"),
     getResume: (id: string) => json<Resume>(`/v1/resumes/${encodeURIComponent(id)}`),
     createResume: (req: ResumeInput) => json<Resume>("/v1/resumes", { method: "POST", body: body(req) }),
-    updateResume: (id: string, req: ResumeInput) =>
-      json<Resume>(`/v1/resumes/${encodeURIComponent(id)}`, { method: "PUT", body: body(req) }),
+    updateResume: (id: string, req: ResumeInput, opts: RequestOptions = {}) =>
+      json<Resume>(`/v1/resumes/${encodeURIComponent(id)}`, { method: "PUT", body: body(req), ...opts }),
     deleteResume: (id: string) => json<void>(`/v1/resumes/${encodeURIComponent(id)}`, { method: "DELETE" }),
     ...resumeTools("/v1/resumes"),
 

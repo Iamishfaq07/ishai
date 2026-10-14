@@ -121,6 +121,17 @@ class Subscription(TimestampMixin, Base):
     current_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class LaunchAccessClaim(TimestampMixin, Base):
+    """One international launch request per account, visible in the existing admin Inbox."""
+
+    __tablename__ = "launch_access_claims"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True)
+    contact_id: Mapped[str] = mapped_column(ForeignKey("contact_messages.id", ondelete="CASCADE"))
+    country: Mapped[str] = mapped_column(String(2))
+    pack: Mapped[str] = mapped_column(String(32))
+
+
 class Payment(TimestampMixin, Base):
     """A payment for a credit pack. `method` "upi" (billing/upi.py): an order with a reference for the UPI note; the
     payer gives the UTR (the bank's 12-digit transaction number) and the admin approves it against the bank
@@ -280,6 +291,10 @@ class LiveSessionRow(TimestampMixin, Base):
     type: Mapped[str] = mapped_column(String(32))
     title: Mapped[str] = mapped_column(String(300))
     role: Mapped[str | None] = mapped_column(String(300))
+    company: Mapped[str | None] = mapped_column(String(120))
+    interview_stage: Mapped[str | None] = mapped_column(String(80))
+    tech_stack: Mapped[list[str] | None] = mapped_column(JSON)
+    key_requirements: Mapped[list[str] | None] = mapped_column(JSON)
     language: Mapped[str] = mapped_column(String(16), default="en")
     answer_language: Mapped[str | None] = mapped_column(String(16))
     length: Mapped[str] = mapped_column(String(16), default="standard")
@@ -379,6 +394,8 @@ class Resume(TimestampMixin, Base):
     # Bumped by every save. A save naming the revision it was based on is refused (409) if another save landed since
     # (another tab, another device), so one can't silently overwrite the other (V3-06, resumes/routes.py).
     revision: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    last_client_id: Mapped[str | None] = mapped_column(String(64))
+    client_revision: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
 class WorkspaceDocument(Base):

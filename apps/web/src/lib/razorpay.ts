@@ -7,6 +7,13 @@ import type { RazorpayCheckout, RazorpayPaid } from "@orbit/types";
  */
 const SCRIPT = "https://checkout.razorpay.com/v1/checkout.js";
 
+export class InternationalPaymentError extends Error {
+  constructor(message: string) { super(message); this.name = "InternationalPaymentError"; }
+}
+export function internationalCardFailure(reason: string): boolean {
+  return /international|foreign|non[ -]?indian|card.*country|country.*card/i.test(reason);
+}
+
 interface RazorpayOptions {
   key: string;
   order_id: string;
@@ -61,6 +68,7 @@ export async function payWithRazorpay(order: RazorpayCheckout): Promise<Razorpay
   // or closing it settles this; closing after a failure says why on the page too.
   return new Promise<RazorpayPaid | null>((resolve, reject) => {
     let failed: string | null = null;
+    let international = false;
     const rzp = new Razorpay({
       key: order.key_id,
       order_id: order.order_id,
@@ -72,13 +80,16 @@ export async function payWithRazorpay(order: RazorpayCheckout): Promise<Razorpay
       theme: { color: "#6366f1" },
       handler: (r) => resolve({ order_id: r.razorpay_order_id, payment_id: r.razorpay_payment_id, signature: r.razorpay_signature }),
       modal: {
-        ondismiss: () =>
-          failed ? reject(new Error(`The payment didn't go through: ${failed} Nothing was charged.`)) : resolve(null),
+        ondismiss: () => {
+          if (!failed) resolve(null);
+          else reject(international ? new InternationalPaymentError(failed) : new Error(`The payment didn't go through: ${failed} Check your payment status before retrying.`));
+        },
       },
     });
     rzp.on("payment.failed", (r) => {
       const why = (r.error?.description || "the bank declined it").trim();
       failed = /[.!?]$/.test(why) ? why : `${why}.`;
+      international = internationalCardFailure(`${why} ${r.error?.reason ?? ""}`);
     });
     rzp.open();
   });

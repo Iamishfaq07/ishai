@@ -11,7 +11,7 @@ import time
 from asyncio import to_thread
 from base64 import urlsafe_b64encode
 from typing import Annotated, Any
-from urllib.parse import urlencode
+from urllib.parse import unquote, urlencode
 
 import httpx
 import jwt
@@ -48,9 +48,12 @@ class GoogleDenied(Exception):
 
 def safe_next(raw: str | None) -> str:
     """A path on this site. Anything else (another host, a scheme) becomes the home page."""
-    if not raw or not raw.startswith("/") or raw.startswith("//") or "\\" in raw or len(raw) > 200:
+    if not raw or not raw.startswith("/") or raw.startswith("//") or "\\" in raw or len(raw) > 4096:
         return "/"
     path = raw.split("?", 1)[0]
+    decoded = unquote(path)
+    if decoded.startswith("//") or "\\" in decoded or any(ord(c) < 32 for c in raw):
+        return "/"
     return raw if _NEXT.fullmatch(path) else "/"
 
 

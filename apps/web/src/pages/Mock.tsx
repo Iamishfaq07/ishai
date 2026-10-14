@@ -36,6 +36,7 @@ import { PracticeQueueCard } from "./PracticeQueue";
 import { ProgressSection } from "./Progress";
 import type { LiveLaunchState } from "./SessionSetup";
 import { PracticeMock } from "../components/productArt";
+import { usePrepContext } from "../lib/prepContext";
 
 const NO_JD = "none";
 /** The free, no-login warm-up (pages/Warmup.tsx; the route is App.tsx's). */
@@ -80,13 +81,15 @@ function MockSetup() {
   // The role for the technical round: a link's (`?role=`, a tracked job), else the Jobs AI profile's first title,
   // else the role from the welcome questions (still there if the profile hasn't saved yet).
   const profile = useAsync(() => api.jobProfile(), [], "job-profile");
-  const [params] = useSearchParams();
-  const knownRole = roleForPractice(params.get("role"), profile.data?.prefs.titles[0], user ? loadAnswers(user.id)?.role : "");
+  const [params, setParams] = useSearchParams();
+  const [context, updateContext] = usePrepContext(params, setParams, user?.id);
+  const knownRole = roleForPractice(context.role, profile.data?.prefs.titles[0], user ? loadAnswers(user.id)?.role : "");
   const highlighted = params.get("preset");
   const country = useCountry();
   // The company being practised for (`?company=`, or typed): a known one is asked in its style, with its guide shown.
   const styles = useAsync(() => api.interviewStyles(), [], "interview-styles");
-  const [company, setCompany] = useState(() => params.get("company")?.trim().slice(0, 120) ?? "");
+  const company = context.company;
+  const setCompany = (value: string) => updateContext({ company: value });
   const guide = matchStyle(styles.data ?? [], company);
 
   // Which job description the interviewer asks about: the one a link asked for (Jobs → Prepare: `?jd=`), else the
@@ -101,7 +104,7 @@ function MockSetup() {
     setStarting(which);
     setError(null);
     try {
-      const session = await api.createSession(withCompany(req, company));
+      const session = await api.createSession(withCompany({ ...req, ...context, role: req.role || knownRole }, company));
       const launchState: LiveLaunchState = { systemAudio: false };
       navigate(`/live/${session.id}`, { state: launchState });
     } catch (err) {
@@ -143,6 +146,9 @@ function MockSetup() {
               </datalist>
             </Field>
             <CountryField id="mock-country" hint="Sets the salary currency and the wording of the HR round." />
+            <Field label="Interview stage" htmlFor="mock-stage">
+              <Input id="mock-stage" value={context.interview_stage} onChange={(e) => updateContext({ interview_stage: e.target.value })} placeholder="e.g. Technical round, final panel" maxLength={80} />
+            </Field>
             {jds.length > 0 && (
               <Field label="Practise for" htmlFor="mock-jd">
                 <Select id="mock-jd" value={jdId ?? NO_JD} onChange={(e) => setJdChoice(e.target.value)}>
@@ -204,6 +210,7 @@ function MockSetup() {
 
         <CustomMock
           knownRole={knownRole}
+          onRoleChange={(role) => updateContext({ role })}
           company={company}
           open={params.has("customise")}
           busy={starting !== null}
@@ -229,12 +236,14 @@ function MockSetup() {
 /** "Customise": every setting of a mock interview, for when a preset isn't it. The job post is the one picked above. */
 function CustomMock({
   knownRole,
+  onRoleChange,
   company,
   open,
   busy,
   onStart,
 }: {
   knownRole: string;
+  onRoleChange: (role: string) => void;
   /** From the Company field above: the negotiation's recruiter works there; any other round asks in its style. */
   company: string;
   open: boolean;
@@ -303,7 +312,7 @@ function CustomMock({
         <form onSubmit={start} className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Role" htmlFor="mock-role">
-              <Input id="mock-role" value={role} onChange={(e) => { editedRole.current = true; setRole(e.target.value); }} placeholder={knownRole || "e.g. Data Analyst"} maxLength={120} />
+              <Input id="mock-role" value={role} onChange={(e) => { editedRole.current = true; setRole(e.target.value); onRoleChange(e.target.value); }} placeholder={knownRole || "e.g. Data Analyst"} maxLength={120} />
             </Field>
             <Field label="Interview type" htmlFor="mock-type">
               <Select id="mock-type" value={interviewType} onChange={(e) => setInterviewType(e.target.value as MockInterviewType)}>

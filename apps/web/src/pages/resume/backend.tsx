@@ -1,21 +1,24 @@
 import { createContext, useContext } from "react";
 import type { Resume, ResumeInput } from "@orbit/types";
 import { api } from "../../lib/api";
-import { createSaveQueue, type SaveQueue } from "./saveQueue";
+import { createSaveQueue, type SaveQueue, type SaveRequest } from "./saveQueue";
 
 /** Where the editor reads and writes the resume, and the API its tools (score, AI, Word) call: the account. */
 export interface ResumeBackend {
   tools: typeof api;
   get: (id: string) => Promise<Resume>;
   /** One save. `baseRevision`: the revision the text was based on; the server refuses (409) if another landed since. */
-  save: (id: string, input: ResumeInput, baseRevision?: number) => Promise<{ revision: number }>;
+  save: (id: string, input: ResumeInput, baseRevision?: number, request?: SaveRequest) => Promise<{ revision: number }>;
 }
 
 export const accountBackend: ResumeBackend = {
   tools: api,
   get: (id) => api.getResume(id),
-  save: async (id, input, baseRevision) => {
-    const saved = await api.updateResume(id, baseRevision === undefined ? input : { ...input, base_revision: baseRevision });
+  save: async (id, input, baseRevision, request) => {
+    const saved = await api.updateResume(id, {
+      ...input, base_revision: baseRevision,
+      ...(request ? { client_id: request.clientId, client_revision: request.clientRevision } : {}),
+    }, request ? { signal: request.signal } : {});
     return { revision: saved.revision ?? 0 };
   },
 };
@@ -26,7 +29,7 @@ const queues = new WeakMap<ResumeBackend, SaveQueue<ResumeInput>>();
 export function saveQueueFor(backend: ResumeBackend): SaveQueue<ResumeInput> {
   let q = queues.get(backend);
   if (!q) {
-    q = createSaveQueue<ResumeInput>((id, input, base) => backend.save(id, input, base));
+    q = createSaveQueue<ResumeInput>((id, input, base, request) => backend.save(id, input, base, request));
     queues.set(backend, q);
   }
   return q;

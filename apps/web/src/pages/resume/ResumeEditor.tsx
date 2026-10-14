@@ -176,11 +176,12 @@ function ResumeEditor() {
   const history = useRef<{ past: Snapshot[]; future: Snapshot[]; at: number; el: Element | null }>({ past: [], future: [], at: 0, el: null });
   const [steps, setSteps] = useState({ undo: 0, redo: 0 });
   const apply = useCallback((next: Resume) => {
+    saves.supersede(next.id);
     latest.current = next;
     setResume(next);
     setSave({ state: "dirty" });
     setSteps({ undo: history.current.past.length, redo: history.current.future.length });
-  }, []);
+  }, [saves]);
   const change = useCallback(
     (fn: (r: Resume) => Resume) => {
       const r = latest.current;
@@ -247,6 +248,10 @@ function ResumeEditor() {
           setSave((s) => (s.state === "saving" ? { state: "saved" } : s));
         })
         .catch((err: unknown) => {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            setSave((s) => s.state === "saving" ? { state: "dirty" } : s);
+            return;
+          }
           if (err instanceof ApiError && err.status === 409) {
             setSave({ state: "conflict" });
             return;

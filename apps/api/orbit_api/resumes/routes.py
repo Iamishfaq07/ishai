@@ -29,8 +29,8 @@ from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
-from pydantic import BaseModel, Field
-from sqlalchemy import func, select, update
+from pydantic import BaseModel, Field, model_validator
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 
@@ -75,6 +75,14 @@ class ResumeIn(BaseModel):
     # The revision this text was based on (from the last GET or save). Given, a save is refused with 409 if another one
     # landed since; left out (older clients), the save always lands.
     base_revision: int | None = Field(None, ge=0)
+    client_id: str | None = Field(None, min_length=16, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
+    client_revision: int | None = Field(None, ge=1, le=2_147_483_647)
+
+    @model_validator(mode="after")
+    def _writer_pair(self) -> "ResumeIn":
+        if (self.client_id is None) != (self.client_revision is None):
+            raise ValueError("client_id and client_revision must be supplied together")
+        return self
 
 
 class ResumeOut(ResumeIn):
@@ -165,6 +173,7 @@ async def update_resume(resume_id: str, body: ResumeIn, user: Annotated[User, De
         "title": body.title, "data": body.data.model_dump(mode="json"),
         "design": body.design.model_dump(mode="json"), "job_text": body.job_text,
         "revision": Resume.revision + 1, "updated_at": datetime.now(UTC),
+        "last_client_id": body.client_id, "client_revision": body.client_revision or 0,
     }
     if body.cover_letter is not None:
         values["cover_letter"] = body.cover_letter
@@ -172,7 +181,15 @@ async def update_resume(resume_id: str, body: ResumeIn, user: Annotated[User, De
     # write can't be split by another request).
     rid = r.id
     q = update(Resume).where(Resume.id == rid, Resume.user_id == user.id)
-    if body.base_revision is not None:
+    if body.client_id is not None:
+        # Aborting fetch cannot undo a commit. A newer edit from this same writer may follow its own unknown
+        # commit, but never a write from another tab; a late lower client revision cannot land after a newer one.
+        own_newer = and_(Resume.last_client_id == body.client_id, Resume.client_revision < body.client_revision)
+        if body.base_revision is not None:
+            q = q.where(or_(Resume.revision == body.base_revision, own_newer))
+        q = q.where(or_(Resume.last_client_id.is_(None), Resume.last_client_id != body.client_id,
+                        Resume.client_revision < body.client_revision))
+    elif body.base_revision is not None:
         q = q.where(Resume.revision == body.base_revision)
     done = await db.execute(q.values(**values).execution_options(synchronize_session=False))
     if done.rowcount != 1:  # type: ignore[attr-defined]

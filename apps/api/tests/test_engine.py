@@ -377,7 +377,9 @@ async def test_an_early_answer_is_dropped_unseen_when_the_interviewer_keeps_talk
     llm = MockLLMProvider()  # records its own requests
     eng, sink = await _engine(llm, response_timing="balanced")
     await _ask(eng, "Tell me about a difficult bug you fixed.")
-    await asyncio.sleep(0.3)
+    async with asyncio.timeout(2):
+        while not _answer_requests(llm):
+            await asyncio.sleep(0.01)
     await _ask(eng, "Specifically, how did you track it down?")
     await sink.wait_for("answer.completed")
     assert len(sink.of("answer.started")) == 1 and sink.of("answer.cancelled") == []

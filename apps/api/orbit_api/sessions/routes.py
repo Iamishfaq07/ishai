@@ -128,6 +128,10 @@ class SessionIn(BaseModel):
     title: str = Field(min_length=1, max_length=300)
     type: SessionType = "interview"
     role: str | None = Field(None, max_length=300)
+    company: str | None = Field(None, max_length=120)
+    interview_stage: str | None = Field(None, max_length=80)
+    tech_stack: list[Annotated[str, Field(max_length=100)]] = Field(default_factory=list, max_length=30)
+    key_requirements: list[Annotated[str, Field(max_length=400)]] = Field(default_factory=list, max_length=20)
     language: str = Field("en", max_length=16)
     answer_language: str | None = Field(None, max_length=16)
     length: AnswerLength = "auto"  # sized per question; clients from before "auto" always send one of the others
@@ -158,6 +162,10 @@ class SessionOut(BaseModel):
     title: str
     type: str
     role: str | None
+    company: str | None = None
+    interview_stage: str | None = None
+    tech_stack: list[str] = Field(default_factory=list)
+    key_requirements: list[str] = Field(default_factory=list)
     language: str
     answer_language: str | None
     length: str
@@ -195,6 +203,8 @@ def _to_out(row: LiveSessionRow, question_count: int, doc_ids: list[str],
             report_status: ReportStatus = None) -> SessionOut:
     return SessionOut(
         id=row.id, title=row.title, type=row.type, role=row.role, language=row.language,
+        company=row.company, interview_stage=row.interview_stage, tech_stack=row.tech_stack or [],
+        key_requirements=row.key_requirements or [],
         answer_language=row.answer_language, length=row.length, style=row.style, auto_answer=row.auto_answer,
         status=row.status, created_at=row.created_at, started_at=row.started_at, ended_at=row.ended_at,
         duration_seconds=row.duration_s, question_count=question_count, document_ids=doc_ids,
@@ -243,6 +253,10 @@ async def create_session(body: SessionIn, user: Annotated[User, Depends(require_
             document_ids = await workspace_document_ids(db, ws.id)
         if body.instructions is None and ws.notes:
             body.instructions = ws.notes[:1000]
+        if body.company is None:
+            body.company = ws.company
+    if body.mock and body.company and not body.mock.company:
+        body.mock.company = body.company
     if document_ids:
         owned = (await db.scalars(select(Document.id).where(Document.id.in_(document_ids),
                                                             Document.user_id == user.id))).all()
@@ -650,6 +664,8 @@ async def usage(user: Annotated[User, Depends(current_user)],
 
 async def _session_company(db: AsyncSession, row: LiveSessionRow) -> str | None:
     """Who the interview is with, when the session knows: the saved setup it started from, or the mock setup."""
+    if row.company:
+        return row.company
     if row.workspace_id:
         ws = await db.get(Workspace, row.workspace_id)
         if ws is not None and ws.user_id == row.user_id and (ws.company or "").strip():
