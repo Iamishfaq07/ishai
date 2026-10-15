@@ -21,6 +21,7 @@ from orbit_api.models import (
     ContactMessage,
     DebriefAttempt,
     Document,
+    EvidenceItem,
     JobApplication,
     JobContact,
     JobFitCheck,
@@ -76,6 +77,8 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
                                                            .order_by(Workspace.created_at))).all()],
         "stories": [_row(st) for st in (await db.scalars(select(Story).where(Story.user_id == user_id)
                                                           .order_by(Story.created_at))).all()],
+        "evidence": [_row(e) for e in (await db.scalars(select(EvidenceItem).where(EvidenceItem.user_id == user_id)
+                                                         .order_by(EvidenceItem.created_at))).all()],
         "saved_answers": [_row(a) for a in (await db.scalars(select(SavedAnswer).where(SavedAnswer.user_id == user_id)
                                                               .order_by(SavedAnswer.created_at))).all()],
         "resumes": [_row(r) for r in (await db.scalars(select(Resume).where(Resume.user_id == user_id)

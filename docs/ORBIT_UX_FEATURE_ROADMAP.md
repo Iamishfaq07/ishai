@@ -26,6 +26,7 @@ tests, a default-off flag, truthful copy).
 | Counter-offer email after salary practice | `sessions/report.py`, `CounterOfferEmail.tsx` |
 | Technical details page with live 7-day latency (public aggregates only) | `/technical`, `telemetry.py` |
 | Smart 404, contact diagnostics, admin route guard test, cache savings gauge | see PR #292 |
+| Career Evidence Vault, first slice (roadmap F1), flag `ORBIT_EVIDENCE_VAULT` | `evidence/routes.py`, `/documents/evidence` |
 | Adaptive panel turn-taking and typed answers in mock interviews (roadmap F4) | `live/mock_interviewer.py` `_eligible_askers`, `mock.answer`, `MockPanel.tsx` TypedAnswer |
 
 ## Already in Orbit (don't rebuild)
@@ -37,9 +38,7 @@ fit checks, tracker, follow-ups, outreach and people, job safety card, country-a
 
 ## Proposed, in order (not started)
 
-1. **Career Evidence Vault (F1).** Extend the story bank into evidence items (claim, source, verified by user / from
-   document / AI suggestion needing review), reused by resume suggestions, fit checks and interview answers. First
-   slice: evidence chips on resume bullets that come from a story. Needs a model, migration, export/delete, flag.
+1. ~~**Career Evidence Vault (F1).**~~ First slice shipped 15 Oct 2026 behind `ORBIT_EVIDENCE_VAULT` (off by default): claims with their source (your own words, a story, the resume); AI suggestions must quote the source word for word (checked server-side) and wait for you; only confirmed claims reach live answers as verified facts; in the account export, deleted with the account, delete one / all suggestions / everything. Next slices: evidence chips on resume bullets, fit checks reading confirmed evidence.
 2. ~~**Career journey timeline (F2).**~~ Shipped 15 Oct 2026: "Journey" on each tracker card (`job_portal/timeline.py`).
 3. ~~**Interview replay lab (F3).**~~ Shipped: the session review already gave each question what was said, feedback, a stronger answer, retry and the practice queue; 15 Oct 2026 added what was missed, the rubric dimensions and an "In your practice queue" badge.
 4. ~~**Explainable fit (F6).**~~ Shipped 15 Oct 2026 (above).

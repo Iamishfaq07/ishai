@@ -68,6 +68,9 @@ class Settings(BaseSettings):
     # Razorpay takes cards issued outside India only once it has enabled international payments for the account.
     # Until this is on, pages don't promise buyers abroad that their card will work.
     razorpay_international: bool = Field(False, validation_alias=AliasChoices("ORBIT_RAZORPAY_INTERNATIONAL"))
+    # Career Evidence Vault (evidence/routes.py): off until switched on; while off its API answers 404 and live
+    # sessions don't read it.
+    evidence_vault: bool = Field(False, validation_alias=AliasChoices("ORBIT_EVIDENCE_VAULT"))
 
     llm_provider: Literal["auto", "deepseek", "mock"] = Field(
         "auto", validation_alias=AliasChoices("ORBIT_LLM_PROVIDER")

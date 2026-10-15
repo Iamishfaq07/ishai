@@ -20,6 +20,7 @@ const loaders = {
   sessionDetail: () => import("./pages/SessionDetail"),
   documents: () => import("./pages/Documents"),
   stories: () => import("./pages/Stories"),
+  evidence: () => import("./pages/Evidence"),
   answers: () => import("./pages/Answers"),
   resumes: () => import("./pages/resume/Resumes"),
   resumeEditor: () => import("./pages/resume/ResumeEditor"),
@@ -53,6 +54,7 @@ export const SessionsPage = page(loaders.sessions, (m) => m.SessionsPage);
 export const SessionDetailPage = page(loaders.sessionDetail, (m) => m.SessionDetailPage);
 export const DocumentsPage = page(loaders.documents, (m) => m.DocumentsPage);
 export const StoriesPage = page(loaders.stories, (m) => m.StoriesPage);
+export const EvidencePage = page(loaders.evidence, (m) => m.EvidencePage);
 export const AnswersPage = page(loaders.answers, (m) => m.AnswersPage);
 export const ResumeAiHomePage = page(loaders.resumes, (m) => m.ResumeAiHomePage);
 export const ResumeEditorPage = page(loaders.resumeEditor, (m) => m.ResumeEditorPage);
@@ -88,6 +90,7 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/sessions\/[^/]+/, "sessionDetail"],
   [/^\/sessions/, "sessions"],
   [/^\/documents\/stories/, "stories"],
+  [/^\/documents\/evidence/, "evidence"],
   [/^\/documents\/answers/, "answers"],
   [/^\/documents/, "documents"],
   [/^\/resume-ai\/[^/]+/, "resumeEditor"],
