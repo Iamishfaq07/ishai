@@ -45,7 +45,7 @@ import { CODE_HOME } from "../pages/code/paths";
 import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { prefetchRoute } from "../routes";
 import { AnnouncementBanner } from "./AnnouncementBanner";
-import { PRODUCTS, ProductTabs, type ProductId, type ProductSection } from "./products";
+import { AiPill, PRODUCTS, ProductTabs, type ProductId, type ProductSection } from "./products";
 import { Sheet } from "./Sheet";
 
 // Their own chunks, downloaded the first time they open (or when the search button is hovered).
@@ -77,6 +77,8 @@ interface NavItem {
   current: (pathname: string) => boolean;
   /** False: on phones it's in the "Me" sheet, not the tab bar (which fits six). */
   phone?: false;
+  /** An AI tool: its name shows with the AI mark at its top right ("Resume" + AI) instead of the word. */
+  ai?: true;
 }
 
 // One item per product, the same on the top bar and the phone tab bar (where "Me" is the last): the interview copilot
@@ -93,11 +95,12 @@ const NAV: NavItem[] = [
     tab: "Copilot",
     icon: PRODUCTS.interview.icon,
     product: "interview",
+    ai: true,
     current: isCopilotPath,
   },
   // Practice is mock interviews: with them switched off there's nothing to practise here.
   ...(MOCK_INTERVIEW_ENABLED
-    ? [{ to: "/mock", label: "Practice", short: "Practice", icon: PRODUCTS.practice.icon, product: "practice" as const, current: isPracticePath }]
+    ? [{ to: "/mock", label: "Practice", short: "Practice", icon: PRODUCTS.practice.icon, product: "practice" as const, ai: true as const, current: isPracticePath }]
     : []),
   {
     to: RESUME_AI_HOME,
@@ -106,11 +109,12 @@ const NAV: NavItem[] = [
     tab: "Resume",
     icon: PRODUCTS.resume.icon,
     product: "resume",
+    ai: true,
     current: (p) => p === RESUME_AI_HOME || p.startsWith(`${RESUME_AI_HOME}/`),
   },
-  { to: LINKEDIN_HOME, label: "LinkedIn AI", short: "LinkedIn AI", icon: IdCard, phone: false, current: (p) => p === LINKEDIN_HOME || p.startsWith(`${LINKEDIN_HOME}/`) },
-  { to: CODE_HOME, label: "Code AI", short: "Code AI", icon: Code2, phone: false, current: (p) => p === CODE_HOME || p.startsWith(`${CODE_HOME}/`) },
-  { to: OFFERS_HOME, label: "Offer AI", short: "Offer AI", icon: BadgeIndianRupee, phone: false, current: (p) => p === OFFERS_HOME || p.startsWith(`${OFFERS_HOME}/`) },
+  { to: LINKEDIN_HOME, ai: true, label: "LinkedIn AI", short: "LinkedIn AI", icon: IdCard, phone: false, current: (p) => p === LINKEDIN_HOME || p.startsWith(`${LINKEDIN_HOME}/`) },
+  { to: CODE_HOME, ai: true, label: "Code AI", short: "Code AI", icon: Code2, phone: false, current: (p) => p === CODE_HOME || p.startsWith(`${CODE_HOME}/`) },
+  { to: OFFERS_HOME, ai: true, label: "Offer AI", short: "Offer AI", icon: BadgeIndianRupee, phone: false, current: (p) => p === OFFERS_HOME || p.startsWith(`${OFFERS_HOME}/`) },
   {
     to: JOBS_AI_HOME,
     label: "Jobs AI",
@@ -118,6 +122,7 @@ const NAV: NavItem[] = [
     tab: "Jobs",
     icon: PRODUCTS.jobs.icon,
     product: "jobs",
+    ai: true,
     current: (p) => p === JOBS_AI_HOME || p.startsWith(`${JOBS_AI_HOME}/`),
   },
 ];
@@ -264,7 +269,7 @@ export function Layout() {
           </Link>
 
           <nav ref={navRef} aria-label="Main" data-fit={navFit} className="group hidden min-w-0 flex-1 items-center gap-0.5 md:flex lg:gap-1">
-            {NAV.map(({ to, label, short, icon: Icon, product, current }) => {
+            {NAV.map(({ to, label, short, icon: Icon, product, current, ai }) => {
               const active = current(pathname);
               return (
                 <Link
@@ -284,8 +289,8 @@ export function Layout() {
                   )}
                 >
                   <Icon className={cx("h-4 w-4", product ? PRODUCTS[product].text : active && "text-indigo-500 dark:text-indigo-300")} aria-hidden />
-                  <span className="hidden group-data-[fit=full]:inline">{label}</span>
-                  {short && <span className="hidden group-data-[fit=short]:inline">{short}</span>}
+                  <span className="hidden group-data-[fit=full]:inline">{ai ? <AiName name={label} /> : label}</span>
+                  {short && <span className="hidden group-data-[fit=short]:inline">{ai ? <AiName name={short} /> : short}</span>}
                   {active && (
                     <span aria-hidden="true" className="absolute inset-x-3 -bottom-[13px] h-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-aurora-400" />
                   )}
@@ -435,7 +440,7 @@ export function Layout() {
         className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200/70 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.12)] md:hidden dark:border-white/5 dark:bg-zinc-950 dark:shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.6)]"
       >
         <ul className={cx("mx-auto grid max-w-lg", PHONE_NAV.length + 1 >= 6 ? "grid-cols-6" : "grid-cols-5")}>
-          {PHONE_NAV.map(({ to, label, short, tab, icon: Icon, product, current }) => {
+          {PHONE_NAV.map(({ to, label, short, tab, icon: Icon, product, current, ai }) => {
             const active = current(pathname);
             const name = tab ?? short;
             return (
@@ -447,7 +452,10 @@ export function Layout() {
                   onTouchStart={() => prefetchRoute(to)}
                   className={tabClass(active)}
                 >
-                  <TabIcon icon={Icon} active={active} className={product && !active ? PRODUCTS[product].text : undefined} />
+                  <span className="relative">
+                    <TabIcon icon={Icon} active={active} className={product && !active ? PRODUCTS[product].text : undefined} />
+                    {ai && <AiPill className="absolute -right-3.5 -top-1 scale-90" />}
+                  </span>
                   {name}
                 </Link>
               </li>
@@ -496,6 +504,16 @@ const footerLink = cx(
 );
 
 /** A phone tab: 12 px labels (the smallest UI text); five of them fit a 360 px phone with room between. */
+/** "Resume AI" shown as "Resume" with the AI mark at its top right (the name stays whole for screen readers). */
+function AiName({ name }: { name: string }) {
+  return (
+    <span className="inline-flex items-start">
+      {name.replace(/ AI$/, "")}
+      <AiPill className="ml-0.5 -translate-y-1.5 scale-90" />
+    </span>
+  );
+}
+
 function tabClass(active: boolean): string {
   return cx(
     "flex min-h-14 flex-col items-center justify-center gap-1 whitespace-nowrap px-0.5 pb-2 pt-2.5 text-xs font-medium",

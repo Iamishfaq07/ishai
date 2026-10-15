@@ -35,7 +35,7 @@ log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/offers", tags=["offers"])
 read_limit = Depends(limit_user("offers-read", rate_per_s=3, burst=60))
-ai_limits = [Depends(limit("offers-ai", rate_per_s=0.2, burst=10)),
+ai_limits = [Depends(limit("offers-ai", rate_per_s=0.5, burst=20)),
              Depends(limit_user("offers-ai-user", rate_per_s=20 / 3600, burst=6))]
 
 MAX_OFFERS = 20

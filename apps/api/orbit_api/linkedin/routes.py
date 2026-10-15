@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/linkedin", tags=["linkedin"])
 read_limit = Depends(limit_user("linkedin-read", rate_per_s=3, burst=60))
-ai_limits = [Depends(limit("linkedin-ai", rate_per_s=0.2, burst=10)),
+ai_limits = [Depends(limit("linkedin-ai", rate_per_s=0.5, burst=20)),
              Depends(limit_user("linkedin-ai-user", rate_per_s=10 / 3600, burst=5))]
 MIN_TEXT = 200
 MAX_KEYWORDS = 15
