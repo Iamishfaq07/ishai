@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api import credits
 from orbit_api.admin.accounts import AuditItem, about_account, audit_items
 from orbit_api.admin.routes import activity_subquery, require_admin, search_term
+from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.models import AuditLog, ContactMessage, CreditEntry, JobFitCheck, Payment, UsageEvent, User
 
@@ -50,6 +51,14 @@ class StatsOut(BaseModel):
     revenue_month_inr: int  # approved payments decided this month
     revenue_total_inr: int  # includes payments of deleted accounts: they stay on the books
     payments_waiting: int
+    # Server settings the admin must fix, as short codes: "proxy_secret" (ORBIT_PROXY_SECRET missing or weak in
+    # production, so per-IP limits key on a spoofable address and welcome credits are held).
+    warnings: list[str] = []
+
+
+def setup_warnings() -> list[str]:
+    s = get_settings()
+    return ["proxy_secret"] if s.env == "production" and s.proxy_secret is None else []
 
 
 @router.get("/stats", response_model=StatsOut)
@@ -107,6 +116,7 @@ async def stats(_: Annotated[User, Depends(require_admin)], db: Annotated[AsyncS
             Payment.status == "approved"))),
         payments_waiting=int(await scalar(select(func.count()).select_from(Payment).where(
             Payment.status == "submitted"))),
+        warnings=setup_warnings(),
     )
 
 

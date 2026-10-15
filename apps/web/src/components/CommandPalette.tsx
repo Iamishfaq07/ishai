@@ -15,6 +15,7 @@ import {
   focusRing,
   useFocusTrap,
   type LucideIcon,
+  safeLocal,
 } from "@orbit/ui";
 import { api } from "../lib/api";
 import { applyTheme, type ThemePref } from "../lib/theme";
@@ -52,7 +53,7 @@ function CommandIcon({ command }: { command: Command }) {
 function toggleTheme(): void {
   const next: ThemePref = document.documentElement.classList.contains("dark") ? "light" : "dark";
   try {
-    localStorage.setItem("orbit.theme", next);
+    safeLocal.setItem("orbit.theme", next);
   } catch {
     // storage blocked: the switch lasts for this visit
   }

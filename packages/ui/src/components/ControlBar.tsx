@@ -4,6 +4,7 @@ import { formatHotkey, type HotkeyMap } from "../live/hotkeys";
 import { ANSWER_STYLES, RESPONSE_TIMINGS, THINKING_LEVELS } from "../live/preferences";
 import { Camera, ChevronDown, Eraser, Info, MessageSquare, Pause, Play, SlidersHorizontal, Square, Wand2, X } from "../icons";
 import { cx, focusRing } from "./cx";
+import { safeLocal } from "../storage";
 
 export interface ControlBarProps {
   length: AnswerLength;
@@ -47,7 +48,7 @@ const SETTINGS_KEY = "orbit.liveSettingsOpen";
 /** Remembered per device; the first time, open on wide screens and folded on phones (where it'd crowd the answer). */
 function loadSettingsOpen(): boolean {
   try {
-    const saved = localStorage.getItem(SETTINGS_KEY);
+    const saved = safeLocal.getItem(SETTINGS_KEY);
     if (saved) return saved !== "closed";
   } catch {
     // storage unavailable — fall through to the default
@@ -77,7 +78,7 @@ export function ControlBar(props: ControlBarProps) {
 
   useEffect(() => {
     try {
-      localStorage.setItem(SETTINGS_KEY, settingsOpen ? "open" : "closed");
+      safeLocal.setItem(SETTINGS_KEY, settingsOpen ? "open" : "closed");
     } catch {
       // storage unavailable — the choice still applies for this session
     }

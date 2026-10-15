@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { safeLocal } from "@orbit/ui";
 
 export type ThemePref = "dark" | "light" | "system";
 const KEY = "orbit.theme";
@@ -12,10 +13,10 @@ export function applyTheme(pref: ThemePref): void {
 
 export function useTheme(): [ThemePref, (pref: ThemePref) => void] {
   // Unset follows the system, as public/theme-init.js does before the first paint.
-  const [pref, setPref] = useState<ThemePref>(() => (localStorage.getItem(KEY) as ThemePref | null) ?? "system");
+  const [pref, setPref] = useState<ThemePref>(() => (safeLocal.getItem(KEY) as ThemePref | null) ?? "system");
 
   useEffect(() => {
-    localStorage.setItem(KEY, pref);
+    safeLocal.setItem(KEY, pref);
     applyTheme(pref);
     if (pref !== "system") return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");

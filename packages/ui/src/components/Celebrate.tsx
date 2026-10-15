@@ -3,6 +3,7 @@ import { useMotion } from "../hooks/useMotion";
 import { cx } from "./cx";
 import { SPARK } from "./Illustrations";
 import { toast, type ToastOptions } from "./Toast";
+import { safeLocal } from "../storage";
 
 /**
  * Success moments: a milestone is celebrated once per device, with a toast that says what was reached and the next
@@ -16,7 +17,7 @@ const KEY = "orbit.celebrated";
 // Remembered here too, so a browser without storage still celebrates once per visit, not on every save.
 const seen = new Set<string>();
 
-function stored(storage: Storage | undefined): string[] {
+function stored(storage: Store | undefined): string[] {
   try {
     const parsed: unknown = JSON.parse(storage?.getItem(KEY) ?? "[]");
     return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
@@ -25,14 +26,15 @@ function stored(storage: Storage | undefined): string[] {
   }
 }
 
-const local = () => (typeof localStorage !== "undefined" ? localStorage : undefined);
+type Store = Pick<Storage, "getItem" | "setItem">;
+const local = (): Store => safeLocal;
 
-export function hasCelebrated(milestone: Milestone | string, storage: Storage | undefined = local()): boolean {
+export function hasCelebrated(milestone: Milestone | string, storage: Store | undefined = local()): boolean {
   return seen.has(milestone) || stored(storage).includes(milestone);
 }
 
 /** Marks a milestone reached; true only the first time on this device. */
-export function claimMilestone(milestone: Milestone | string, storage: Storage | undefined = local()): boolean {
+export function claimMilestone(milestone: Milestone | string, storage: Store | undefined = local()): boolean {
   if (hasCelebrated(milestone, storage)) return false;
   seen.add(milestone);
   try {

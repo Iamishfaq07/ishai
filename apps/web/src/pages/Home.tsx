@@ -21,6 +21,7 @@ import {
   cx,
   focusRing,
   spotlightMove,
+  safeLocal,
 } from "@orbit/ui";
 import { Card, ErrorNote } from "../components/ui";
 import { PRODUCTS, ProductMark, type ProductId } from "../components/products";
@@ -282,7 +283,7 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
 function setupHidden(userId: string | undefined): boolean {
   if (!userId) return true;
   try {
-    return localStorage.getItem(checklistKey(userId)) === "1";
+    return safeLocal.getItem(checklistKey(userId)) === "1";
   } catch {
     return false;
   }
@@ -294,7 +295,7 @@ function SetUp({ items }: { items: ChecklistItem[] }) {
   const [dismissed, setDismissed] = useState(() => {
     if (!key) return false;
     try {
-      return localStorage.getItem(key) === "1";
+      return safeLocal.getItem(key) === "1";
     } catch {
       return false;
     }
@@ -304,7 +305,7 @@ function SetUp({ items }: { items: ChecklistItem[] }) {
   if (dismissedFor !== key) {
     setDismissedFor(key);
     try {
-      setDismissed(key ? localStorage.getItem(key) === "1" : false);
+      setDismissed(key ? safeLocal.getItem(key) === "1" : false);
     } catch {
       setDismissed(false);
     }
@@ -318,7 +319,7 @@ function SetUp({ items }: { items: ChecklistItem[] }) {
   const dismiss = () => {
     setDismissed(true);
     try {
-      if (key) localStorage.setItem(key, "1");
+      if (key) safeLocal.setItem(key, "1");
     } catch {
       // storage unavailable: hidden for this visit
     }

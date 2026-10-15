@@ -31,6 +31,7 @@ import {
   type PanelMode,
   VISION_ENABLED,
   confirmDialog,
+  safeLocal,
 } from "@orbit/ui";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -112,8 +113,8 @@ export function LiveScreen({
   email: string | null;
   onSignedInAgain: (user: User) => void;
 }) {
-  const [mode, setMode] = useState<PanelMode>(() => (localStorage.getItem(MODE_KEY) as PanelMode | null) ?? "compact");
-  const [onTop, setOnTop] = useState(() => localStorage.getItem(PIN_KEY) !== "false");
+  const [mode, setMode] = useState<PanelMode>(() => (safeLocal.getItem(MODE_KEY) as PanelMode | null) ?? "compact");
+  const [onTop, setOnTop] = useState(() => safeLocal.getItem(PIN_KEY) !== "false");
   const [hotkeys] = useState(loadHotkeys);
   const [captureNotes, setCaptureNotes] = useState<CaptureNotes>({});
   // Whether each source is actually heard (SourceChip), from the frames' levels on this device; its advice joins the
@@ -141,11 +142,11 @@ export function LiveScreen({
   // ── Window behaviour ──────────────────────────────────────────────────
   // Sized for the saved mode as the session opens (Setup leaves the window compact), and on every switch.
   useEffect(() => {
-    localStorage.setItem(MODE_KEY, mode);
+    safeLocal.setItem(MODE_KEY, mode);
     void applyPanelMode(mode);
   }, [mode]);
   useEffect(() => {
-    localStorage.setItem(PIN_KEY, String(onTop));
+    safeLocal.setItem(PIN_KEY, String(onTop));
     void setAlwaysOnTop(onTop);
   }, [onTop]);
   // An update never installs (restarting Orbit) while this screen is open.

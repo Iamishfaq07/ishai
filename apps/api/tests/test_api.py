@@ -30,7 +30,7 @@ def _doc(client: TestClient, h: dict[str, str], name: str) -> str:
 def test_health(client: TestClient) -> None:
     r = client.get("/health")
     assert r.status_code == 200
-    assert r.json()["providers"] == {"llm": "mock", "stt": "mock"}
+    assert set(r.json()) == {"status", "commit"}  # public: nothing about providers or env
     assert r.headers["x-content-type-options"] == "nosniff"
 
 

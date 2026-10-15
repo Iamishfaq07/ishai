@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { READ_ALOUD_RATES, speechChunks } from "./readAloud";
 import { pickVoice } from "./useInterviewerVoice";
+import { safeLocal } from "../storage";
 
 /**
  * "Read aloud" for an answer, on the platform's built-in speech engine (Windows voices in WebView2 / the browser):
@@ -30,7 +31,7 @@ const VOICE_KEY = "orbit.readAloud.voice";
 
 function stored(key: string): string | null {
   try {
-    return typeof localStorage !== "undefined" ? localStorage.getItem(key) : null;
+    return safeLocal.getItem(key);
   } catch {
     return null;
   }
@@ -38,7 +39,7 @@ function stored(key: string): string | null {
 
 function store(key: string, value: string): void {
   try {
-    localStorage.setItem(key, value);
+    safeLocal.setItem(key, value);
   } catch {
     // storage unavailable — still applies now
   }

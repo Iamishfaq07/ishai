@@ -17,6 +17,16 @@ export function AdminOverview({ version = 0 }: { version?: number }) {
   if (stats.error && !s) return <p className="mb-5 text-sm text-rose-600">Couldn't load the numbers: {errorText(stats.error)}</p>;
   return (
     <div className="mb-6 space-y-3">
+      {s?.warnings?.includes("proxy_secret") && (
+        <div role="alert" className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-900 dark:text-rose-100">
+          <p className="font-semibold">Proxy secret missing</p>
+          <p className="mt-1">
+            ORBIT_PROXY_SECRET isn't set on the API (or is too weak), so per-network limits can be dodged. Welcome credits are on hold and
+            new deploys fail their readiness check until it's set. Set the same 32+ character value in Render (ORBIT_PROXY_SECRET) and in
+            Cloudflare (<code>wrangler secret put PROXY_SECRET</code>).
+          </p>
+        </div>
+      )}
       <StatTiles s={s} />
       <div className="grid gap-3 md:grid-cols-2">
         <DailyBars title="Sign-ups per day" data={s?.signups} unit={(n) => `${count(n)} sign-up${n === 1 ? "" : "s"}`} total={(n) => `${count(n)} in ${s?.days ?? 30} days`} />

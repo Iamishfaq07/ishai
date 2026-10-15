@@ -250,3 +250,4 @@ export {
   speechLang,
   type Country,
 } from "./region";
+export { safeLocal, safeSession, readJSON, readChoice, type SafeStorage } from "./storage";

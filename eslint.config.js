@@ -19,6 +19,14 @@ export default tseslint.config(
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      // Raw browser storage throws when site data is blocked or full; use safeLocal / safeSession (@orbit/ui).
+      "no-restricted-globals": ["error",
+        { name: "localStorage", message: "Use safeLocal from @orbit/ui: localStorage throws when storage is blocked." },
+        { name: "sessionStorage", message: "Use safeSession from @orbit/ui: sessionStorage throws when storage is blocked." }],
+      "no-restricted-properties": ["error",
+        { object: "window", property: "localStorage", message: "Use safeLocal from @orbit/ui." },
+        { object: "window", property: "sessionStorage", message: "Use safeSession from @orbit/ui." }],
     },
   },
+  { files: ["**/*.test.{ts,tsx}", "**/test/**", "**/tests/**"], rules: { "no-restricted-globals": "off", "no-restricted-properties": "off" } },
 );

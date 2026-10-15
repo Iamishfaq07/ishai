@@ -2,6 +2,7 @@ import { createContext, useContext } from "react";
 import type { Resume, ResumeInput } from "@orbit/types";
 import { api } from "../../lib/api";
 import { createSaveQueue, type SaveQueue, type SaveRequest } from "./saveQueue";
+import { safeLocal } from "@orbit/ui";
 
 /** Where the editor reads and writes the resume, and the API its tools (score, AI, Word) call: the account. */
 export interface ResumeBackend {
@@ -43,7 +44,7 @@ const KEY = "orbit.guest-resume.v1";
 export const guestResume = {
   load(): Resume | null {
     try {
-      const raw = window.localStorage.getItem(KEY);
+      const raw = safeLocal.getItem(KEY);
       const r = raw ? (JSON.parse(raw) as Resume) : null;
       return r && typeof r === "object" && r.data && r.design ? r : null;
     } catch {
@@ -52,7 +53,7 @@ export const guestResume = {
   },
   clear(): void {
     try {
-      window.localStorage.removeItem(KEY);
+      safeLocal.removeItem(KEY);
     } catch {
       /* nothing to clear */
     }

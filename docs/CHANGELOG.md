@@ -1,5 +1,22 @@
 # Implementation log
 
+## Launch hardening, part 1 (2026-10-16)
+
+- **Proxy secret:** in production without a usable `ORBIT_PROXY_SECRET`, `/ready` now answers 503 (`proxy_secret:
+  missing`), so a deploy without it fails its health check instead of serving. Welcome credits are held (nothing is
+  granted, because one-welcome-per-network can't be enforced on a spoofable address). The admin overview shows a red
+  "Proxy secret missing" banner.
+- **`/health`** is public, so it now returns only the status and the commit. Provider names and env moved to the
+  admin's `/v1/admin/providers`.
+- **Browser storage never throws:** every `localStorage` / `sessionStorage` use in web, desktop and the shared UI goes
+  through `safeLocal` / `safeSession` (`packages/ui/src/storage.ts`). When storage is blocked or full, values are
+  kept in memory for the page. ESLint now rejects direct access.
+- **Live session:** closing or reloading the tab mid-interview asks first (the browser's own prompt).
+- **Feature-flagged pages:** a link to a page that is off for the account (Evidence) goes back to its section with a
+  note, instead of a red "Not found".
+- **Cookie note:** now a slim one-line bar with a close button, beside the support button (not over it). It no
+  longer covers forms or buttons on phones.
+
 ## Saved transcripts keep held-back lines in place (2026-10-11)
 
 - A microphone line that sounds like the interviewer (no headphones: the mic may be hearing them) is held back 1.5 s

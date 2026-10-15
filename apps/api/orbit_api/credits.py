@@ -23,6 +23,7 @@ Plans with their own allowances (the admin's Unlimited, Pro or Unlimited granted
 import asyncio
 import hashlib
 import hmac
+import logging
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
@@ -31,6 +32,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.config import get_settings
 from orbit_api.models import CreditEntry, UsageEvent, User
+
+log = logging.getLogger(__name__)
 
 Kind = Literal["resume", "interview_seconds"]
 INTERVIEW_METRICS = ("live_seconds", "mock_seconds")
@@ -84,6 +87,11 @@ async def grant_welcome(db: AsyncSession, user: User, ip: str) -> bool:
     they were granted."""
     s = get_settings()
     if not (s.welcome_resume_credits or s.welcome_interview_minutes):
+        return False
+    if s.env == "production" and s.proxy_secret is None:
+        # Without the proxy secret the caller's network can be spoofed (X-Forwarded-For), so "one welcome per
+        # network" can't hold: grant nothing rather than let free spend be farmed. The admin overview says why.
+        log.warning("welcome credits held: ORBIT_PROXY_SECRET is not set")
         return False
     async with _welcome_lock:
         now = datetime.now(UTC)

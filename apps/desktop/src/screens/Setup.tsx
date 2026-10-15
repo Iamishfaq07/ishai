@@ -50,6 +50,7 @@ import {
   type Verdict,
   StoryBankNote,
   ResumeMakerNote,
+  safeLocal,
 } from "@orbit/ui";
 import { getVersion } from "@tauri-apps/api/app";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -121,7 +122,7 @@ const control =
   "block w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-sm dark:border-zinc-800 dark:bg-zinc-900";
 
 const WORKSPACE_KEY = "orbit.workspaceId";
-const savedOutput = () => localStorage.getItem(OUTPUT_KEY) ?? "out:default";
+const savedOutput = () => safeLocal.getItem(OUTPUT_KEY) ?? "out:default";
 
 /** Session types where the other side of a call is the point: losing their audio silently is the costly mistake. */
 const CALL_TYPES: ReadonlySet<SessionType> = new Set(["interview", "coding", "meeting"]);
@@ -185,10 +186,10 @@ export function SetupScreen({
   const [outputs, setOutputs] = useState<NativeAudioDevice[]>([]);
   // Device ids are stable endpoint ids, so the last choice is remembered (a missing device falls back to the
   // default at capture time).
-  const [micId, setMicIdState] = useState(() => localStorage.getItem(MIC_KEY) ?? "");
+  const [micId, setMicIdState] = useState(() => safeLocal.getItem(MIC_KEY) ?? "");
   const setMicId = (id: string) => {
     setMicIdState(id);
-    localStorage.setItem(MIC_KEY, id);
+    safeLocal.setItem(MIC_KEY, id);
   };
   // The user's own choice. Phone and mock sessions don't use interviewer audio; switching back to another type
   // brings the choice back instead of leaving it off for good.
@@ -209,7 +210,7 @@ export function SetupScreen({
     appTouched.current = true;
     setSource(value);
     setAppWarning(null);
-    if (value.startsWith("out:")) localStorage.setItem(OUTPUT_KEY, value);
+    if (value.startsWith("out:")) safeLocal.setItem(OUTPUT_KEY, value);
   };
   const showApps = (list: AudioApp[]) => {
     const previous = appsRef.current;
@@ -254,7 +255,7 @@ export function SetupScreen({
   const [offerTarget, setOfferTarget] = useState("");
   const isMock = type === "mock";
   const negotiation = isMock && mockType === "negotiation";
-  const [workspaceId, setWorkspaceId] = useState<string | null>(() => localStorage.getItem(WORKSPACE_KEY));
+  const [workspaceId, setWorkspaceId] = useState<string | null>(() => safeLocal.getItem(WORKSPACE_KEY));
   // Failing critical checks (server, AI, transcription, mic, minutes, verification): Start is disabled unless the user
   // explicitly overrides — a broken setup must never slide into a live interview by default.
   const [blockers, setBlockers] = useState<PreflightCheck[]>([]);
@@ -271,8 +272,8 @@ export function SetupScreen({
 
   const applyWorkspace = (ws: Workspace | null) => {
     setWorkspaceId(ws?.id ?? null);
-    if (ws) localStorage.setItem(WORKSPACE_KEY, ws.id);
-    else localStorage.removeItem(WORKSPACE_KEY);
+    if (ws) safeLocal.setItem(WORKSPACE_KEY, ws.id);
+    else safeLocal.removeItem(WORKSPACE_KEY);
     if (!ws) return;
     setType(ws.session_type);
     setRole(ws.role ?? "");

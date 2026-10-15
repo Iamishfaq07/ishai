@@ -10,7 +10,7 @@ import {
   type SetStateAction,
 } from "react";
 import type { LoginRequest, RegisterRequest, User } from "@orbit/types";
-import { ApiError, detectCountry } from "@orbit/ui";
+import { ApiError, detectCountry, safeLocal } from "@orbit/ui";
 import { api, setUnauthorizedHandler } from "./api";
 import { clearAsyncCache } from "./useAsync";
 import { clearPrepContext } from "./prepContext";
@@ -26,9 +26,9 @@ const ACCOUNT_ID_KEY = "orbit.browser-account-id";
 
 function acceptAccount(account: User): User {
   try {
-    const previous = localStorage.getItem(ACCOUNT_ID_KEY);
+    const previous = safeLocal.getItem(ACCOUNT_ID_KEY);
     if (previous && previous !== account.id) forgetAccount();
-    localStorage.setItem(ACCOUNT_ID_KEY, account.id);
+    safeLocal.setItem(ACCOUNT_ID_KEY, account.id);
   } catch { /* Cookie auth works even when browser storage is unavailable. */ }
   return account;
 }
@@ -37,7 +37,7 @@ function forgetAccount(): void {
   clearAsyncCache();
   clearPrepContext();
   try {
-    for (const key of ACCOUNT_STORAGE_KEYS) localStorage.removeItem(key);
+    for (const key of ACCOUNT_STORAGE_KEYS) safeLocal.removeItem(key);
   } catch {
     // storage unavailable: nothing was kept there either
   }

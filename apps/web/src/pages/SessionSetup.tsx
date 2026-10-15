@@ -36,6 +36,7 @@ import {
   LoadGate,
   cx,
   focusRing,
+  safeLocal,
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, Meter, PageHeader, Select, Textarea, Toggle } from "../components/ui";
 import { API_URL, api } from "../lib/api";
@@ -192,7 +193,7 @@ export function SessionSetupPage() {
   const [workspaceId, setWorkspaceId] = useState<string | null>(() => {
     if (!workspaceKey) return null;
     try {
-      return localStorage.getItem(workspaceKey);
+      return safeLocal.getItem(workspaceKey);
     } catch {
       return null;
     }
@@ -210,8 +211,8 @@ export function SessionSetupPage() {
   const applyWorkspace = (ws: Workspace | null) => {
     setWorkspaceId(ws?.id ?? null);
     try {
-      if (ws && workspaceKey) localStorage.setItem(workspaceKey, ws.id);
-      else if (workspaceKey) localStorage.removeItem(workspaceKey);
+      if (ws && workspaceKey) safeLocal.setItem(workspaceKey, ws.id);
+      else if (workspaceKey) safeLocal.removeItem(workspaceKey);
     } catch {
       // storage unavailable — the choice still applies to this session
     }

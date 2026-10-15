@@ -6,7 +6,7 @@ import { api } from "../../lib/api";
 import { cleanPrepContext, prepParams, readPrepContext } from "../../lib/prepContext";
 import { useAuth } from "../../lib/auth";
 import { errorText } from "../../lib/format";
-import { focusRing } from "@orbit/ui";
+import { focusRing, safeSession } from "@orbit/ui";
 
 export function ResumeCareerActions({ resume }: { resume: Resume }) {
   const navigate = useNavigate();
@@ -15,7 +15,7 @@ export function ResumeCareerActions({ resume }: { resume: Resume }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   let saved = readPrepContext(new URLSearchParams(location.search), user?.id);
-  try { saved = readPrepContext(new URLSearchParams(location.search), user?.id, sessionStorage); } catch { /* Storage blocked. */ }
+  try { saved = readPrepContext(new URLSearchParams(location.search), user?.id, safeSession); } catch { /* Storage blocked. */ }
   const context = cleanPrepContext(resume.prep_context ?? saved);
   const grill = async () => {
     setBusy(true); setError(null);

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { isDialogOpen } from "../hooks/useFocusTrap";
+import { safeLocal } from "../storage";
 
 export type HotkeyAction =
   | "answer"
@@ -177,7 +178,7 @@ const STORAGE_KEY = "orbit.hotkeys";
 
 export function loadHotkeys(): HotkeyMap {
   try {
-    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+    const raw = safeLocal.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_HOTKEYS;
     const parsed = JSON.parse(raw) as Partial<HotkeyMap>;
     return { ...DEFAULT_HOTKEYS, ...parsed };
@@ -187,5 +188,5 @@ export function loadHotkeys(): HotkeyMap {
 }
 
 export function saveHotkeys(map: HotkeyMap): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+  safeLocal.setItem(STORAGE_KEY, JSON.stringify(map));
 }

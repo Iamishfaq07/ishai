@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useRef, type ReactNode } from "react";
+import { FlagGate } from "./components/FlagGate";
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { NotFoundPage } from "./pages/NotFound";
 import { Layout } from "./components/Layout";
@@ -210,7 +211,7 @@ export function App() {
         <Route path="sessions/:sessionId" element={<SessionDetailPage />} />
         <Route path="documents" element={<DocumentsPage />} />
         <Route path="documents/stories" element={<StoriesPage />} />
-        <Route path="documents/evidence" element={<EvidencePage />} />
+        <Route path="documents/evidence" element={<FlagGate flag="evidence_vault" fallback="/documents"><EvidencePage /></FlagGate>} />
         <Route path="documents/answers" element={<AnswersPage />} />
         {/* Resume AI used to be Documents → Resume maker. Signed out, these go through sign-in first, as before. */}
         <Route path="documents/resumes" element={<MovedResume />} />

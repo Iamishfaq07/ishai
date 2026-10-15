@@ -1,3 +1,4 @@
+import { safeLocal } from "@orbit/ui";
 /**
  * Saving resumes one write at a time per resume (V3-06). The editor saves from three places: the autosave a moment
  * after an edit, the flush when the address moves to another resume, and the unmount. Without a queue those could
@@ -141,14 +142,14 @@ export const drafts = {
   keep<P>(userId: string | null | undefined, id: string, payload: P, baseRevision: number | undefined): void {
     try {
       const d: Draft<P> = { payload, savedAt: Date.now(), baseRevision };
-      localStorage.setItem(draftKey(userId, id), JSON.stringify(d));
+      safeLocal.setItem(draftKey(userId, id), JSON.stringify(d));
     } catch {
       // storage full or blocked: the in-page copy still holds the edits while the tab is open
     }
   },
   load<P>(userId: string | null | undefined, id: string): Draft<P> | null {
     try {
-      const raw = localStorage.getItem(draftKey(userId, id));
+      const raw = safeLocal.getItem(draftKey(userId, id));
       const d = raw ? (JSON.parse(raw) as Draft<P>) : null;
       return d && typeof d === "object" && d.payload && typeof d.savedAt === "number" ? d : null;
     } catch {
@@ -157,7 +158,7 @@ export const drafts = {
   },
   clear(userId: string | null | undefined, id: string): void {
     try {
-      localStorage.removeItem(draftKey(userId, id));
+      safeLocal.removeItem(draftKey(userId, id));
     } catch {
       /* nothing to clear */
     }

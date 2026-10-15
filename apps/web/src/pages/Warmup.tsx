@@ -23,6 +23,7 @@ import {
   buttonClass,
   focusRing,
   speechLang,
+  safeSession,
 } from "@orbit/ui";
 import { Button, Card, Textarea } from "../components/ui";
 import { SiteMenu } from "../components/SiteMenu";
@@ -133,7 +134,7 @@ const ROUND_KEY = "orbit.warmupRound";
 
 function loadRound(): RoundState | null {
   try {
-    const raw = sessionStorage.getItem(ROUND_KEY);
+    const raw = safeSession.getItem(ROUND_KEY);
     const s = raw ? (JSON.parse(raw) as RoundState) : null;
     return s && trackById(s.track) && Array.isArray(s.ids) ? s : null;
   } catch {
@@ -143,8 +144,8 @@ function loadRound(): RoundState | null {
 
 function saveRound(s: RoundState | null): void {
   try {
-    if (s) sessionStorage.setItem(ROUND_KEY, JSON.stringify(s));
-    else sessionStorage.removeItem(ROUND_KEY);
+    if (s) safeSession.setItem(ROUND_KEY, JSON.stringify(s));
+    else safeSession.removeItem(ROUND_KEY);
   } catch {
     // no storage: the round just isn't kept across a reload
   }
