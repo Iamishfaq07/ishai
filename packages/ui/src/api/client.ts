@@ -1,5 +1,6 @@
 import type {
   EngineeringTelemetry,
+  JobTimelineEvent,
   LoopMemory,
   CareerContext,
   Debrief,
@@ -650,6 +651,8 @@ export function createApiClient(options: ApiClientOptions) {
         body: body({ utr }),
       }),
 
+    /** One tracked job's journey, oldest first. */
+    trackerTimeline: (id: string) => json<JobTimelineEvent[]>(`/v1/jobs/tracker/${encodeURIComponent(id)}/timeline`),
     /** The candidate's earlier rounds with a company: questions asked, stories already told. */
     loopMemory: (company: string) => json<LoopMemory>(`/v1/sessions/loop-memory${queryString({ company })}`),
     /** Public: rolling 7-day live latency and how long the API has been up (the Technical details page). */

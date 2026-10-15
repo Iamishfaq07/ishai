@@ -39,8 +39,7 @@ fit checks, tracker, follow-ups, outreach and people, job safety card, country-a
 1. **Career Evidence Vault (F1).** Extend the story bank into evidence items (claim, source, verified by user / from
    document / AI suggestion needing review), reused by resume suggestions, fit checks and interview answers. First
    slice: evidence chips on resume bullets that come from a story. Needs a model, migration, export/delete, flag.
-2. **Career journey timeline (F2).** A per-job timeline on the existing tracker (saved → fit → resume version →
-   outreach → applied → interview → outcome), list view first. Reuses tracker rows; no second tracker.
+2. ~~**Career journey timeline (F2).**~~ Shipped 15 Oct 2026: "Journey" on each tracker card (`job_portal/timeline.py`).
 3. **Interview replay lab (F3).** On consented session transcripts: question-bound transcript, rubric notes, one-tap
    retry of a weak answer into the practice queue. No emotion or personality scoring.
 4. ~~**Explainable fit (F6).**~~ Shipped 15 Oct 2026 (above).
