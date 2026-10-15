@@ -1,9 +1,9 @@
 import { useState } from "react";
-import type { AtsCheck, AtsReport, ResumeFixResponse, ResumeSuggestion } from "@orbit/types";
-import { Check, CircleAlert, CircleCheck, PenLine, Plus, Sparkles, Undo2, Wand2, X, cx, focusRing } from "@orbit/ui";
+import type { AtsCheck, AtsReport, ResumeData, ResumeFixResponse, ResumeSuggestion } from "@orbit/types";
+import { Check, CircleAlert, CircleCheck, InlineResumeDiff, PenLine, Plus, Sparkles, Undo2, Wand2, X, cx, focusRing } from "@orbit/ui";
 import { Button, Input } from "../../components/ui";
 import { AiErrorNote } from "./allowance";
-import { suggestedSkills } from "./model";
+import { getAt, isStillApplied, suggestedSkills } from "./model";
 
 /** What the button says for something only the candidate can add. */
 const ADD_LABEL: Record<string, string> = {
@@ -79,8 +79,12 @@ export function FixActions({ check: c, report, busy, onFix, onShow }: {
 }
 
 /** What the last fix did, and what it needs from the candidate to finish: claims to confirm, numbers to give. */
-export function FixResult({ result, report, busy, error, onUndo, onKeep, onSkip, onAnswer, onShow, onPoint, onDismiss }: {
+export function FixResult({ result, report, busy, error, onUndo, onKeep, onSkip, onAnswer, onShow, onPoint, onDismiss, data, onRevert }: {
   result: ResumeFixResponse | null;
+  /** The resume as it is now: which of the fix's changes are still in it. */
+  data?: ResumeData;
+  /** Take back one change (the line reads as before, or the added bullet goes). */
+  onRevert?: (s: ResumeSuggestion) => void;
   report: AtsReport | null;
   busy: string | null;
   error: { text: string; upgrade: boolean } | null;
@@ -134,6 +138,7 @@ export function FixResult({ result, report, busy, error, onUndo, onKeep, onSkip,
         </div>
       )}
       {error && <AiErrorNote error={error.text} upgrade={error.upgrade} />}
+      {result && data && onRevert && <Changes result={result} data={data} onRevert={onRevert} onPoint={onPoint} />}
       {result && result.questions.length > 0 && <Questions key={result.questions.map((q) => q.path).join()} result={result} onAnswer={onAnswer} onPoint={onPoint} />}
       {result && result.review.length > 0 && (
         <div className="space-y-2">
@@ -161,6 +166,72 @@ export function FixResult({ result, report, busy, error, onUndo, onKeep, onSkip,
         </ul>
       )}
     </div>
+  );
+}
+
+/**
+ * What the fix changed, line by line, before and after: each one can be taken back on its own while it still reads as
+ * the fix left it (Undo takes back all of them at once). Closed until asked for.
+ */
+function Changes({ result, data, onRevert, onPoint }: {
+  result: ResumeFixResponse;
+  data: ResumeData;
+  onRevert: (s: ResumeSuggestion) => void;
+  onPoint: (paths: string[]) => void;
+}) {
+  const lines = result.suggestions.filter((s) => s.kind !== "add_skill");
+  const skills = result.suggestions.filter((s) => s.kind === "add_skill").flatMap((s) => suggestedSkills(s));
+  if (!lines.length && !skills.length) return null;
+  const count = lines.length + (skills.length ? 1 : 0);
+  return (
+    <details className="group text-sm">
+      <summary className={cx("cursor-pointer select-none font-medium text-emerald-800 hover:underline dark:text-emerald-300", focusRing)}>
+        See {count === 1 ? "the change" : `the ${count} changes`}
+      </summary>
+      <ul className="mt-2 space-y-2">
+        {lines.map((s) => {
+          const kept = isStillApplied(data, s);
+          const now = s.kind === "add_bullet" ? null : getAt(data, s.path);
+          const status = kept ? null : s.kind === "add_bullet" ? "Removed" : now === s.before ? "Put back" : "You've edited this line since";
+          return (
+            <li
+              key={s.id}
+              onMouseEnter={() => onPoint([s.path])}
+              onMouseLeave={() => onPoint([])}
+              className={cx("rounded-lg bg-white/60 p-2 dark:bg-white/[0.03]", !kept && "opacity-70")}
+            >
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{s.label}</p>
+              {s.kind === "add_bullet" ? (
+                <p className="mt-1 text-zinc-800 dark:text-zinc-200">
+                  <span className="text-emerald-700 dark:text-emerald-300">Added: </span>
+                  {s.after}
+                </p>
+              ) : (
+                <div className="mt-1">
+                  <InlineResumeDiff before={s.before} after={s.after} />
+                </div>
+              )}
+              <div className="mt-1.5 flex items-center gap-2">
+                {kept ? (
+                  <Button size="sm" variant="ghost" onClick={() => onRevert(s)}>
+                    <Undo2 className="h-3.5 w-3.5" /> {s.kind === "add_bullet" ? "Remove it" : "Put it back"}
+                  </Button>
+                ) : (
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">{status}</span>
+                )}
+              </div>
+            </li>
+          );
+        })}
+        {skills.length > 0 && (
+          <li className="rounded-lg bg-white/60 p-2 text-zinc-800 dark:bg-white/[0.03] dark:text-zinc-200">
+            <span className="text-emerald-700 dark:text-emerald-300">Skills added: </span>
+            {skills.join(", ")}
+            <span className="block text-xs text-zinc-500 dark:text-zinc-400">Remove any in Skills, or Undo takes back the whole fix.</span>
+          </li>
+        )}
+      </ul>
+    </details>
   );
 }
 

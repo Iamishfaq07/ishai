@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ResumeData } from "@orbit/types";
-import { DECLARATION, EXTRA_PRESETS, LOOKS, MAX_SKILLS_PER_GROUP, MAX_SKILL_GROUPS, SERIF_FONTS, TEMPLATES, addSkills, emptyData, fresherResume, gradeLine, resumeToText, sectionLabel, shownSections } from "./model";
+import { DECLARATION, applySuggestion, isStillApplied, revertSuggestion, EXTRA_PRESETS, LOOKS, MAX_SKILLS_PER_GROUP, MAX_SKILL_GROUPS, SERIF_FONTS, TEMPLATES, addSkills, emptyData, fresherResume, gradeLine, resumeToText, sectionLabel, shownSections } from "./model";
 
 function ids(): () => string {
   let n = 0;
@@ -114,5 +114,31 @@ describe("addSkills at the group limit", () => {
     const full = groups(MAX_SKILL_GROUPS).map((g) => ({ ...g, items: Array.from({ length: MAX_SKILLS_PER_GROUP }, (_, i) => `${g.id}-${i}`) }));
     const out = addSkills({ ...emptyData(), skills: full } as ResumeData, ["Kafka"], ids());
     expect(out.skills.every((g) => g.items.length === MAX_SKILLS_PER_GROUP)).toBe(true);
+  });
+});
+
+describe("taking back one change", () => {
+  const base = (): ResumeData => {
+    const d = emptyData();
+    return { ...d, basics: { ...d.basics, summary: "Backend engineer." }, experience: [{ id: "e1", title: "Engineer", company: "Acme", location: "", start: "", end: "", current: true, bullets: ["Built APIs"] }] } as ResumeData;
+  };
+  const rewrite = { id: "s1", kind: "rewrite" as const, path: "experience.e1.bullets.0", label: "Bullet", reason: "", before: "Built APIs", after: "Built 12 REST APIs in Go" };
+
+  it("puts a rewritten line back, only while it still reads as the AI left it", () => {
+    const fixed = applySuggestion(base(), rewrite, () => "x");
+    expect(isStillApplied(fixed, rewrite)).toBe(true);
+    expect(revertSuggestion(fixed, rewrite).experience[0]!.bullets[0]).toBe("Built APIs");
+    // Edited since: the candidate's words stay.
+    const edited = { ...fixed, experience: [{ ...fixed.experience[0]!, bullets: ["Built 12 REST APIs in Go and Rust"] }] };
+    expect(isStillApplied(edited, rewrite)).toBe(false);
+    expect(revertSuggestion(edited, rewrite)).toBe(edited);
+  });
+
+  it("removes an added bullet, and leaves skills to Undo", () => {
+    const add = { id: "s2", kind: "add_bullet" as const, path: "experience.e1", label: "New bullet", reason: "", before: "", after: "Mentored two interns" };
+    const added = applySuggestion(base(), add, () => "x");
+    expect(added.experience[0]!.bullets).toContain("Mentored two interns");
+    expect(revertSuggestion(added, add).experience[0]!.bullets).toEqual(["Built APIs"]);
+    expect(isStillApplied(added, { id: "s3", kind: "add_skill", path: "skills", label: "Skills", reason: "", before: "", after: "Go" })).toBe(false);
   });
 });
