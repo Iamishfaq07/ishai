@@ -28,6 +28,7 @@ const loaders = {
   jobs: () => import("./pages/jobs/JobsAiPages"),
   jobsAiPublic: () => import("./pages/jobs/JobsAiPublic"),
   mock: () => import("./pages/Mock"),
+  offers: () => import("./pages/offers/OffersPages"),
   billing: () => import("./pages/Billing"),
   settings: () => import("./pages/Settings"),
   companion: () => import("./pages/Companion"),
@@ -65,6 +66,8 @@ export const JobMatchesPage = page(loaders.jobs, (m) => m.JobMatchesPage);
 export const JobDetailPage = page(loaders.jobs, (m) => m.JobDetailPage);
 export const JobTrackerPage = page(loaders.jobs, (m) => m.JobTrackerPage);
 export const JobOutreachPage = page(loaders.jobs, (m) => m.JobOutreachPage);
+export const OffersPage = page(loaders.offers, (m) => m.OffersPage);
+export const OfferDetailPage = page(loaders.offers, (m) => m.OfferDetailPage);
 export const JobProfilePage = page(loaders.jobs, (m) => m.JobProfilePage);
 export const JobsAiPublicPage = page(loaders.jobsAiPublic, (m) => m.JobsAiPublicPage);
 export const MockPage = page(loaders.mock, (m) => m.MockPage);
@@ -97,6 +100,7 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/resume-ai/, "resumes"],
   [/^\/jobs(\/|$)/, "jobs"],
   [/^\/mock/, "mock"],
+  [/^\/offers(\/|$)/, "offers"],
   [/^\/billing/, "billing"],
   [/^\/settings/, "settings"],
 ];

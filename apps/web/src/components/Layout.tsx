@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useRef, useSta
 import { Link, Outlet, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import {
   AudioLines,
+  BadgeIndianRupee,
   BookOpen,
   ChevronDown,
   CreditCard,
@@ -36,6 +37,7 @@ import { DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
 import { CONTACT_PAGE, POLICY_LINKS } from "../lib/contact";
 import { SHELL_EVENTS, isTypingTarget, openSupport } from "../lib/shell";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
+import { OFFERS_HOME } from "../pages/offers/model";
 import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { prefetchRoute } from "../routes";
 import { AnnouncementBanner } from "./AnnouncementBanner";
@@ -67,6 +69,8 @@ interface NavItem {
   product?: ProductId;
   /** Which addresses the item is current on. */
   current: (pathname: string) => boolean;
+  /** False: on phones it's in the "Me" sheet, not the tab bar (which fits six). */
+  phone?: false;
 }
 
 // One item per product, the same on the top bar and the phone tab bar (where "Me" is the last): the interview copilot
@@ -103,7 +107,11 @@ const NAV: NavItem[] = [
     product: "jobs",
     current: (p) => p === JOBS_AI_HOME || p.startsWith(`${JOBS_AI_HOME}/`),
   },
+  { to: OFFERS_HOME, label: "Offer AI", short: "Offers", icon: BadgeIndianRupee, phone: false, current: (p) => p === OFFERS_HOME || p.startsWith(`${OFFERS_HOME}/`) },
 ];
+/** The phone tab bar's tabs; the rest are in the "Me" sheet. */
+const PHONE_NAV = NAV.filter((n) => n.phone !== false);
+const MORE_TOOLS = NAV.filter((n) => n.phone === false);
 
 /** The tabs between the interview copilot's pages (as Resume AI and Jobs AI have theirs). Practice is one page, so it
  *  has none. */
@@ -414,8 +422,8 @@ export function Layout() {
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200/70 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.12)] md:hidden dark:border-white/5 dark:bg-zinc-950 dark:shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.6)]"
       >
-        <ul className={cx("mx-auto grid max-w-lg", NAV.length + 1 >= 6 ? "grid-cols-6" : "grid-cols-5")}>
-          {NAV.map(({ to, label, short, icon: Icon, product, current }) => {
+        <ul className={cx("mx-auto grid max-w-lg", PHONE_NAV.length + 1 >= 6 ? "grid-cols-6" : "grid-cols-5")}>
+          {PHONE_NAV.map(({ to, label, short, icon: Icon, product, current }) => {
             const active = current(pathname);
             return (
               <li key={to} className="min-w-0">
@@ -515,7 +523,14 @@ function MeMenu({
     <div className="px-3 pb-4 pt-2">
       <p className="truncate px-3 pb-2 text-sm text-zinc-600 dark:text-zinc-400">{email}</p>
       <ul className="space-y-0.5">
-        <li>
+        {MORE_TOOLS.map(({ to, label, icon: Icon }) => (
+          <li key={to}>
+            <button type="button" className={row} onClick={() => onNavigate(to)}>
+              <Icon className={cx(icon, "text-indigo-500 dark:text-indigo-400")} aria-hidden /> {label}
+            </button>
+          </li>
+        ))}
+        <li className={MORE_TOOLS.length ? "border-t border-zinc-200 pt-1 dark:border-white/10" : undefined}>
           <button type="button" className={row} onClick={() => onNavigate("/billing")}>
             <CreditCard className={icon} aria-hidden /> Plan &amp; credits
           </button>

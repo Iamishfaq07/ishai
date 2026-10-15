@@ -1,0 +1,233 @@
+import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
+import type { JobOfferRecord, OfferInput, OfferMarket } from "@orbit/types";
+import { ArrowRight, BadgeIndianRupee, Banknote, Plus, Scale, Search, LoadGate, cx, focusRing } from "@orbit/ui";
+import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader } from "../../components/ui";
+import { api } from "../../lib/api";
+import { errorText } from "../../lib/format";
+import { useAsync } from "../../lib/useAsync";
+import { useCountry } from "../../lib/country";
+import { jobPath } from "../jobs/paths";
+import { OfferForm } from "./OfferForm";
+import { MarketBar } from "./MarketBar";
+import { compareRows, emptyOffer, money, offerPath } from "./model";
+
+const CURRENCY: Record<string, string> = { IN: "INR", US: "USD", GB: "GBP", CA: "CAD", AU: "AUD", SG: "SGD", AE: "AED" };
+
+export const POSITION_TEXT = { below: "Below the market's middle", within: "In the market's middle", above: "Above the market's middle" } as const;
+export const POSITION_TONE = {
+  below: "bg-amber-500/10 text-amber-800 dark:text-amber-200",
+  within: "bg-sky-500/10 text-sky-800 dark:text-sky-200",
+  above: "bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
+} as const;
+
+/**
+ * Offer AI: your offers, what each puts in your account every month, where each sits in the market for the role,
+ * side by side, and a plan to negotiate each (OfferDetail). The market is read from the pay ranges in job posts.
+ */
+export function OffersPage() {
+  const country = useCountry();
+  const offers = useAsync(() => api.offers(), [], "offers");
+  const [adding, setAdding] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const list = offers.data ?? [];
+  const Icon = country === "IN" ? BadgeIndianRupee : Banknote;
+
+  const add = async (o: OfferInput) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const made = await api.addOffer(o);
+      offers.setData((prev) => [made, ...(prev ?? [])]);
+      setAdding(false);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <PageHeader
+        icon={Icon}
+        title="Offer AI"
+        subtitle="What an offer really pays each month, how it compares with the market, and a plan to ask for more."
+        actions={!adding && list.length > 0 ? (
+          <Button onClick={() => setAdding(true)}>
+            <Plus className="h-4 w-4" /> Add an offer
+          </Button>
+        ) : undefined}
+      />
+      {adding && (
+        <div className="mb-6">
+          <OfferForm initial={emptyOffer(CURRENCY[country] ?? "USD")} busy={busy} error={error} onSave={(o) => void add(o)} onCancel={() => setAdding(false)} />
+        </div>
+      )}
+      <LoadGate loading={offers.loading && !offers.data} variant="card" count={2} label="Getting your offers">
+        {offers.error && !offers.data ? (
+          <ErrorNote onRetry={offers.reload}>{errorText(offers.error)}</ErrorNote>
+        ) : list.length === 0 && !adding ? (
+          <EmptyState
+            icon={Icon}
+            title="Got an offer? Add it here"
+            body="Orbit works out what reaches your account each month, shows where it sits in the market for the role, and plans what to ask for. Then practise the call."
+            action={<Button onClick={() => setAdding(true)}><Plus className="h-4 w-4" /> Add your first offer</Button>}
+          />
+        ) : (
+          <div className="space-y-6">
+            <ul className="grid gap-3 md:grid-cols-2">
+              {list.map((o) => (
+                <li key={o.id}>
+                  <OfferCard offer={o} />
+                </li>
+              ))}
+            </ul>
+            {list.length > 1 && <Compare offers={list} />}
+          </div>
+        )}
+      </LoadGate>
+      <PayCheck />
+    </>
+  );
+}
+
+function OfferCard({ offer: o }: { offer: JobOfferRecord }) {
+  return (
+    <Link to={offerPath(o.id)} className={cx("block rounded-2xl", focusRing)}>
+      <Card className="h-full transition-shadow hover:shadow-md">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate font-display text-lg font-semibold">{o.company}</p>
+            <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">{[o.role, o.city].filter(Boolean).join(" · ")}</p>
+          </div>
+          {o.status !== "considering" && (
+            <span className="shrink-0 rounded-full bg-zinc-500/10 px-2 py-0.5 text-xs font-medium capitalize">{o.status}</span>
+          )}
+        </div>
+        <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+          <div>
+            <dt className="text-xs text-zinc-500 dark:text-zinc-400">Fixed a year</dt>
+            <dd className="font-display text-xl font-semibold tabular-nums">{money(o.currency, o.fixed)}</dd>
+          </div>
+          {o.take_home ? (
+            <div>
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">In your account monthly</dt>
+              <dd className="font-display text-xl font-semibold tabular-nums">{money(o.currency, o.take_home.monthly, true)}</dd>
+            </div>
+          ) : (
+            <div>
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">First year, all in</dt>
+              <dd className="font-display text-xl font-semibold tabular-nums">{money(o.currency, o.first_year)}</dd>
+            </div>
+          )}
+        </dl>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          {o.position && <span className={cx("rounded-full px-2 py-0.5 font-medium", POSITION_TONE[o.position])}>{POSITION_TEXT[o.position]}</span>}
+          {o.plan && !o.plan_stale && <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 font-medium text-indigo-800 dark:text-indigo-200">Plan: ask {money(o.currency, o.plan.ask)}</span>}
+          <span className="ml-auto inline-flex items-center gap-1 font-medium text-indigo-600 dark:text-indigo-400">
+            Open <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+          </span>
+        </div>
+      </Card>
+    </Link>
+  );
+}
+
+/** The offers side by side: every figure each gives, the best on each row marked. */
+function Compare({ offers }: { offers: JobOfferRecord[] }) {
+  const currencies = new Set(offers.map((o) => o.currency));
+  const rows = compareRows(offers);
+  return (
+    <Card>
+      <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold">
+        <Scale className="h-5 w-5 text-indigo-500" aria-hidden /> Side by side
+      </h2>
+      {currencies.size > 1 && <p className="mb-2 text-sm text-amber-800 dark:text-amber-200">These offers are in different currencies, so the best on each row isn't marked.</p>}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[28rem] text-sm">
+          <thead>
+            <tr className="text-left">
+              <th scope="col" className="pb-2 font-medium text-zinc-500 dark:text-zinc-400"><span className="sr-only">Figure</span></th>
+              {offers.map((o) => (
+                <th key={o.id} scope="col" className="pb-2 text-right font-semibold">{o.company}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.label} className="border-t border-zinc-200 dark:border-white/10">
+                <th scope="row" className="py-2 pr-3 text-left font-normal text-zinc-600 dark:text-zinc-300">{r.label}</th>
+                {r.values.map((v, i) => {
+                  const best = currencies.size === 1 && r.best === i;
+                  return (
+                    <td key={offers[i]!.id} className={cx("py-2 text-right tabular-nums", best && "font-semibold text-emerald-700 dark:text-emerald-300")}>
+                      {v === null ? "–" : money(offers[i]!.currency, v, r.label === "In the bank each month")}
+                      {best && <span className="sr-only"> (best)</span>}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
+/** What a role pays: the middle of the pay ranges in recent job posts, and which posts. */
+function PayCheck() {
+  const [role, setRole] = useState("");
+  const [city, setCity] = useState("");
+  const [result, setResult] = useState<OfferMarket | null | undefined>(undefined);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const check = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      setResult(await api.payCheck(role.trim(), city.trim()));
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Card className="mt-8">
+      <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+        <Search className="h-5 w-5 text-indigo-500" aria-hidden /> What does a role pay?
+      </h2>
+      <p className="mb-3 text-sm text-zinc-500 dark:text-zinc-400">From the pay ranges in recent job posts Orbit has read. Posts that don't show pay aren't counted.</p>
+      <form onSubmit={(e) => void check(e)} className="grid gap-3 sm:grid-cols-[1fr_12rem_auto] sm:items-end">
+        <Field label="Role" htmlFor="pc-role">
+          <Input id="pc-role" value={role} maxLength={120} placeholder="e.g. Product Designer" onChange={(e) => setRole(e.target.value)} />
+        </Field>
+        <Field label="City (optional)" htmlFor="pc-city">
+          <Input id="pc-city" value={city} maxLength={80} onChange={(e) => setCity(e.target.value)} />
+        </Field>
+        <Button type="submit" variant="secondary" disabled={busy || role.trim().length < 2}>{busy ? "Checking…" : "Check pay"}</Button>
+      </form>
+      {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
+      {result === null && <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-300">Too few posts for that role showed pay to say. Try a broader title, or no city.</p>}
+      {result && (
+        <div className="mt-4 space-y-3">
+          <MarketBar market={result} />
+          <ul className="space-y-1 text-sm">
+            {result.samples.map((s) => (
+              <li key={s.listing_id} className="flex flex-wrap justify-between gap-x-3">
+                <Link to={jobPath(s.listing_id)} className={cx("min-w-0 truncate text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
+                  {s.title} · {s.company}{s.city ? ` · ${s.city}` : ""}
+                </Link>
+                <span className="tabular-nums text-zinc-600 dark:text-zinc-300">{s.salary}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </Card>
+  );
+}

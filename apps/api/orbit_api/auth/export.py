@@ -25,6 +25,7 @@ from orbit_api.models import (
     JobApplication,
     JobContact,
     JobFitCheck,
+    JobOffer,
     JobSearchProfile,
     LaunchAccessClaim,
     LiveSessionRow,
@@ -77,6 +78,8 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
                                                            .order_by(Workspace.created_at))).all()],
         "stories": [_row(st) for st in (await db.scalars(select(Story).where(Story.user_id == user_id)
                                                           .order_by(Story.created_at))).all()],
+        "job_offers": [_row(o) for o in (await db.scalars(select(JobOffer).where(JobOffer.user_id == user_id)
+                                                           .order_by(JobOffer.created_at))).all()],
         "evidence": [_row(e) for e in (await db.scalars(select(EvidenceItem).where(EvidenceItem.user_id == user_id)
                                                          .order_by(EvidenceItem.created_at))).all()],
         "saved_answers": [_row(a) for a in (await db.scalars(select(SavedAnswer).where(SavedAnswer.user_id == user_id)

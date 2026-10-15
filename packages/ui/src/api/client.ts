@@ -65,6 +65,9 @@ import type {
   JobLinkInfo,
   JobManualTrack,
   JobAlert,
+  JobOfferRecord,
+  OfferInput,
+  OfferMarket,
   JobAlertFrequency,
   JobPrefs,
   JobPrepareResponse,
@@ -533,6 +536,15 @@ export function createApiClient(options: ApiClientOptions) {
     jobProfile: () => json<JobProfile>("/v1/jobs/profile"),
     saveJobProfile: (prefs: JobPrefs, resumeId?: string | null) =>
       json<JobProfile>("/v1/jobs/profile", { method: "PUT", body: body({ prefs, resume_id: resumeId ?? null }) }),
+    offers: () => json<JobOfferRecord[]>("/v1/offers"),
+    addOffer: (offer: OfferInput) => json<JobOfferRecord>("/v1/offers", { method: "POST", body: body(offer) }),
+    updateOffer: (id: string, offer: OfferInput) =>
+      json<JobOfferRecord>(`/v1/offers/${encodeURIComponent(id)}`, { method: "PUT", body: body(offer) }),
+    deleteOffer: (id: string) => json<void>(`/v1/offers/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    /** Offer AI's negotiation plan (AI, free, a few a day; the same figures return the plan already made). */
+    offerPlan: (id: string) => json<JobOfferRecord>(`/v1/offers/${encodeURIComponent(id)}/plan`, { method: "POST" }),
+    payCheck: (role: string, city = "") =>
+      json<OfferMarket | null>(`/v1/offers/pay?${new URLSearchParams({ role, city }).toString()}`),
     jobAlert: () => json<JobAlert>("/v1/jobs/alerts"),
     setJobAlert: (frequency: JobAlertFrequency) => json<JobAlert>("/v1/jobs/alerts", { method: "PUT", body: body({ frequency }) }),
     /** The alert email's "stop these emails" link: no sign-in, the token says whose. */

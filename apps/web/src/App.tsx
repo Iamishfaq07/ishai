@@ -48,6 +48,8 @@ import {
   JobTrackerPage,
   JobOutreachPage,
   JobProfilePage,
+  OffersPage,
+  OfferDetailPage,
   AdminUsersPage,
   AdminPaymentsPage,
   AdminAuditPage,
@@ -221,6 +223,8 @@ export function App() {
           <Route path="profile" element={<JobProfilePage />} />
           <Route path="*" element={<Navigate to={JOBS_AI_HOME} replace />} />
         </Route>
+        <Route path="offers" element={<OffersPage />} />
+        <Route path="offers/:offerId" element={<OfferDetailPage />} />
         <Route path="mock" element={<MockPage />} />
         <Route path="billing" element={<BillingPage />} />
         <Route path="settings" element={<SettingsPage />} />
