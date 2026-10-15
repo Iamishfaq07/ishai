@@ -15,6 +15,7 @@ from html import unescape
 from typing import Any, Literal
 
 from orbit_api.job_portal.geo import countries_in, remote_scope, world_cities
+from orbit_api.job_portal.signals import relocation_of, visa_of
 from orbit_api.job_portal.skills import KEYWORDS_VERSION
 from orbit_api.prep.job_link import html_to_text
 
@@ -414,6 +415,7 @@ def normalize(p: Posting, now: datetime | None = None) -> dict[str, Any] | None:
         "exp_min": exp_min, "exp_max": exp_max, "posted_at": posted, "url": p.url,
         "apply_url": p.apply_url if p.apply_url.startswith("https://") else p.url,
         "snippet": snippet_of(description) if description else "", "description": description,
-        "salary": p.salary, "dedupe_key": dedupe_key(p.company, title, cities, workplace),
+        "salary": p.salary, "visa": visa_of(description), "relocation": relocation_of(description),
+        "dedupe_key": dedupe_key(p.company, title, cities, workplace),
         "text_hash": text_hash(title, description),
     }

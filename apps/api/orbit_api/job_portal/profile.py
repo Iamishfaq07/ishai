@@ -73,6 +73,8 @@ class JobPrefs(BaseModel):
     sources_off: list[str] = Field(default_factory=list, max_length=20)
     portals: list[str] = Field(default_factory=lambda: list(DEFAULT_PORTALS), max_length=20)
     exclude: list[str] = Field(default_factory=list, max_length=30)
+    # Needs an employer to sponsor a work visa: posts that say they won't are left out of the feed.
+    needs_sponsorship: bool = False
 
     @field_validator("titles")
     @classmethod

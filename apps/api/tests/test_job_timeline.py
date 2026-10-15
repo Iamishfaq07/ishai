@@ -78,3 +78,19 @@ def test_a_job_says_where_else_it_is_posted(jobs: TestClient) -> None:  # noqa: 
     assert also[b]["source_label"] == "Himalayas" and also[b]["direct"] is False
     assert also[b]["url"] == "https://himalayas.app/jobs/9" and also[c]["url"] == ""  # only http(s) links
     assert detail["job"]["direct"] is True and detail["job"]["first_seen_at"]
+
+
+def test_a_job_carries_its_posting_check_and_visa_line(jobs: TestClient) -> None:  # noqa: F811
+    h = _register(jobs)
+    now = datetime.now(UTC)
+    redated = _listing(company="Globex", title="Platform Engineer", posted_at=now - timedelta(days=1),
+                       created_at=now - timedelta(days=24), visa="not_offered",
+                       description="We're always looking for engineers to join our talent pool. " * 10)
+    earlier = _listing(company="Globex", title="Platform Engineer", source="himalayas",
+                       url="https://himalayas.app/jobs/3", created_at=now - timedelta(days=40))
+    a, _ = insert(jobs, redated, earlier)
+    detail = jobs.get(f"/v1/jobs/listings/{a}", headers=h).json()
+    kinds = [c["kind"] for c in detail["checks"]]
+    assert kinds[:4] == ["old", "redated", "earlier", "evergreen"]
+    assert detail["checks"][0]["tone"] == "caution"
+    assert detail["job"]["visa"] == "not_offered" and detail["job"]["relocation"] is False

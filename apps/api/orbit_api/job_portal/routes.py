@@ -39,7 +39,7 @@ from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.entitlements import is_admin
 from orbit_api.job_portal import fit as fitcheck
-from orbit_api.job_portal import manual, ranking, refresh
+from orbit_api.job_portal import manual, ranking, refresh, signals
 from orbit_api.job_portal.geo import WORLD_CITIES
 from orbit_api.job_portal.portals import portal_links, portals_for
 from orbit_api.job_portal.postings import CITIES, EmploymentType, Level, Workplace
@@ -177,6 +177,8 @@ class JobOut(BaseModel):
     # When Orbit last found the post still on the company's own careers page (a board's refresh drops posts taken
     # down). None for feeds and searches, which Orbit can't re-check, so they never say "still open".
     still_listed_at: datetime | None = None
+    visa: Literal["offered", "not_offered"] | None = None  # what the post says about sponsoring a work visa
+    relocation: bool = False  # the post offers help relocating
     match: MatchOut | None = None
     tracked: TrackedRef | None = None
 
@@ -224,12 +226,21 @@ class AlsoListedOut(BaseModel):
     url: str
 
 
+class SignalOut(BaseModel):
+    kind: str
+    tone: Literal["good", "caution", "info"]
+    text: str
+
+
 class DetailOut(BaseModel):
     job: JobOut
     full_text: bool  # Orbit has the whole post (not only a snippet): tailoring and prep can use it as is
     fit: fitcheck.FitCheck | None
     tracker: "TrackerOut | None"
     also_listed: list[AlsoListedOut] = []
+    # The posting check (signals.py): what Orbit can see about whether this is a live opening. Observations, cautions
+    # first; never a verdict.
+    checks: list[SignalOut] = []
 
 
 class TrackerOut(BaseModel):
@@ -307,6 +318,7 @@ def _job_out(row: JobListing, match: ranking.Match | None = None, tracked: JobAp
         posted_at=_aware(row.posted_at), url=row.url, apply_url=row.apply_url, snippet=row.snippet,
         salary=row.salary, first_seen_at=_aware(row.created_at or row.posted_at),
         still_listed_at=_still_listed(row.source, row.fetched_at),
+        visa=row.visa if row.visa in ("offered", "not_offered") else None, relocation=bool(row.relocation),
         match=MatchOut(score=match.score, matched=match.matched, missing=match.missing) if match else None,
         tracked=TrackedRef(id=tracked.id, status=tracked.status) if tracked else None)
 
@@ -445,7 +457,7 @@ def _search(prefs: JobPrefs, q: str, country: str = "IN") -> tuple[ranking.Searc
         years=parsed.years if parsed.years is not None else prefs.years,
         job_types=parsed.job_types or prefs.job_types,
         days=parsed.posted_within or prefs.posted_within, sources_off=prefs.sources_off, exclude=prefs.exclude,
-        keywords=parsed.keywords, country=country), parsed
+        keywords=parsed.keywords, country=country, needs_sponsorship=prefs.needs_sponsorship), parsed
 
 
 _ROW_COLUMNS = tuple(getattr(JobListing, name) for name in ranking.ROW_FIELDS)
@@ -632,8 +644,16 @@ async def get_listing(listing_id: str, user: Annotated[User, Depends(current_use
                                                            JobFitCheck.resume_hash == resume_hash(data)))
         check = fitcheck.FitCheck.model_validate(cached.result) if cached else None
     source = source_named(row.source)
+    full_text = not (source and source.snippet_only) and len(row.description) >= FULL_TEXT_MIN
+    earliest = await db.scalar(select(func.min(JobListing.created_at)).where(JobListing.dedupe_key == row.dedupe_key,
+                                                                             JobListing.id != row.id))
+    checks = signals.posting_check(
+        title=row.title, description=row.description, salary=row.salary, posted_at=row.posted_at,
+        first_seen_at=row.created_at or row.posted_at, earliest_elsewhere=earliest,
+        still_listed_at=_still_listed(row.source, row.fetched_at), direct=bool(source and source.direct),
+        full_text=full_text)
     return DetailOut(job=_job_out(row, _match_for(row, prefs, data), entry), also_listed=await _also_listed(db, row),
-                     full_text=not (source and source.snippet_only) and len(row.description) >= FULL_TEXT_MIN,
+                     full_text=full_text, checks=[SignalOut(kind=c.kind, tone=c.tone, text=c.text) for c in checks],
                      fit=check, tracker=_tracker_out(entry, True, _still_listed(row.source, row.fetched_at))
                      if entry else None)
 
