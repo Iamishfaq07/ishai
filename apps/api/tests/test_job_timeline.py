@@ -63,3 +63,18 @@ def test_a_just_saved_job_has_one_event(jobs: TestClient) -> None:  # noqa: F811
     entry = jobs.post("/v1/jobs/tracker", headers=h, json={"listing_id": lid}).json()["id"]
     events: list[dict[str, Any]] = jobs.get(f"/v1/jobs/tracker/{entry}/timeline", headers=h).json()
     assert [e["kind"] for e in events] == ["saved"] and events[0]["detail"] == "Backend Engineer at Acme"
+
+
+def test_a_job_says_where_else_it_is_posted(jobs: TestClient) -> None:  # noqa: F811
+    h = _register(jobs)
+    main = _listing(company="Groww", title="Backend Engineer")
+    dup = _listing(company="Groww", title="Backend Engineer", source="himalayas", url="https://himalayas.app/jobs/9")
+    shady = _listing(company="Groww", title="Backend Engineer", source="remoteok", url="javascript:alert(1)")
+    other = _listing(company="Groww", title="Data Analyst")
+    a, b, c, _ = insert(jobs, main, dup, shady, other)
+    detail = jobs.get(f"/v1/jobs/listings/{a}", headers=h).json()
+    also = {x["id"]: x for x in detail["also_listed"]}
+    assert set(also) == {b, c}  # the same job elsewhere, not the company's other jobs
+    assert also[b]["source_label"] == "Himalayas" and also[b]["direct"] is False
+    assert also[b]["url"] == "https://himalayas.app/jobs/9" and also[c]["url"] == ""  # only http(s) links
+    assert detail["job"]["direct"] is True and detail["job"]["first_seen_at"]

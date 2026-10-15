@@ -1920,6 +1920,8 @@ export interface JobDetail {
   full_text: boolean;
   fit: JobFitCheck | null;
   tracker: JobTrackerEntry | null;
+  /** The same job posted elsewhere (same company, title and city); `url` is "" when it isn't an http(s) link. */
+  also_listed?: Array<{ id: string; source_label: string; direct: boolean; url: string }>;
 }
 
 export interface JobTailorResponse {

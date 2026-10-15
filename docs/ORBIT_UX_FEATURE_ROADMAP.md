@@ -42,8 +42,7 @@ fit checks, tracker, follow-ups, outreach and people, job safety card, country-a
 2. ~~**Career journey timeline (F2).**~~ Shipped 15 Oct 2026: "Journey" on each tracker card (`job_portal/timeline.py`).
 3. ~~**Interview replay lab (F3).**~~ Shipped: the session review already gave each question what was said, feedback, a stronger answer, retry and the practice queue; 15 Oct 2026 added what was missed, the rubric dimensions and an "In your practice queue" badge.
 4. ~~**Explainable fit (F6).**~~ Shipped 15 Oct 2026 (above).
-5. **Opportunity provenance (F5).** Source, first-seen and last-seen dates, duplicate fingerprint on job cards; never a
-   "verified" claim without a verification source.
+5. ~~**Opportunity provenance (F5).**~~ Shipped 15 Oct 2026: "Where this post came from" on each job (source, first seen, still listed) and "Also posted on" from the duplicate fingerprint; never a "verified" claim.
 6. **Adaptive panel practice (F4).** Multi-persona mock as a practice mode; bounded tokens; text-only fallback.
 
 Later only: F7 application helper (consent, no auto-submit), F9 experiments, F10 multilingual practice. (F8
