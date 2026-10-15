@@ -177,6 +177,8 @@ class Settings(BaseSettings):
     # Offer AI's negotiation plans a day, free (the admin has no cap).
     # LinkedIn AI's profile reads a day, free (the admin has no cap).
     linkedin_read_daily: int = Field(3, ge=0, validation_alias=AliasChoices("ORBIT_LINKEDIN_READ_DAILY"))
+    # Code AI's interviewer reviews a day, free (the admin has no cap).
+    code_review_daily: int = Field(15, ge=0, validation_alias=AliasChoices("ORBIT_CODE_REVIEW_DAILY"))
     offers_plan_daily: int = Field(5, ge=0, validation_alias=AliasChoices("ORBIT_OFFERS_PLAN_DAILY"))
     jobs_profile_daily: int = Field(5, ge=0, validation_alias=AliasChoices("ORBIT_JOBS_PROFILE_DAILY"))
     # Optional search APIs, each on only when its key is set. Adzuna's free tier: 25 calls a minute, 250 a day,

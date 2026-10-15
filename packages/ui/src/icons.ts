@@ -145,3 +145,6 @@ export { BadgeIndianRupee, Scale } from "lucide-react";
 
 // LinkedIn AI's mark (a profile card: lucide has no brand icons).
 export { IdCard } from "lucide-react";
+
+// Code AI's hints.
+export { Lightbulb } from "lucide-react";

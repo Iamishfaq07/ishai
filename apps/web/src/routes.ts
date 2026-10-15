@@ -30,6 +30,7 @@ const loaders = {
   mock: () => import("./pages/Mock"),
   offers: () => import("./pages/offers/OffersPages"),
   linkedin: () => import("./pages/linkedin/LinkedIn"),
+  code: () => import("./pages/code/CodePages"),
   billing: () => import("./pages/Billing"),
   settings: () => import("./pages/Settings"),
   companion: () => import("./pages/Companion"),
@@ -67,6 +68,8 @@ export const JobMatchesPage = page(loaders.jobs, (m) => m.JobMatchesPage);
 export const JobDetailPage = page(loaders.jobs, (m) => m.JobDetailPage);
 export const JobTrackerPage = page(loaders.jobs, (m) => m.JobTrackerPage);
 export const JobOutreachPage = page(loaders.jobs, (m) => m.JobOutreachPage);
+export const CodeHomePage = page(loaders.code, (m) => m.CodeHomePage);
+export const CodeProblemPage = page(loaders.code, (m) => m.CodeProblemPage);
 export const LinkedInPage = page(loaders.linkedin, (m) => m.LinkedInPage);
 export const OffersPage = page(loaders.offers, (m) => m.OffersPage);
 export const OfferDetailPage = page(loaders.offers, (m) => m.OfferDetailPage);
@@ -104,6 +107,7 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/mock/, "mock"],
   [/^\/offers(\/|$)/, "offers"],
   [/^\/linkedin(\/|$)/, "linkedin"],
+  [/^\/code(\/|$)/, "code"],
   [/^\/billing/, "billing"],
   [/^\/settings/, "settings"],
 ];
