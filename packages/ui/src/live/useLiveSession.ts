@@ -35,6 +35,8 @@ export interface LiveActions {
   setCodingLanguage: (lang: CodingLanguage, regenerateFor?: string) => void;
   /** Mock interview: done answering — the interviewer asks the next question now. */
   mockNext: () => void;
+  /** Mock interview: send a typed answer (the interviewer moves on after it). */
+  mockAnswer: (text: string) => void;
   /** Browse an earlier answer; null returns to the live one. */
   viewAnswer: (answerId: string | null) => void;
   pause: () => void;
@@ -64,6 +66,8 @@ export interface UseLiveSessionResult {
 }
 
 let chatCounter = 0;
+/** The server refuses a typed mock answer longer than this (events.MockAnswer). */
+export const MOCK_ANSWER_CHARS = 4000;
 
 export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionResult {
   const { apiBaseUrl, sessionId, initialSettings, autoConnect = true } = options;
@@ -146,6 +150,10 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
         updateSettings({ response_timing });
       },
       mockNext: () => client.send("mock.next", {}),
+      mockAnswer: (text) => {
+        const trimmed = text.trim().slice(0, MOCK_ANSWER_CHARS);
+        if (trimmed) client.send("mock.answer", { text: trimmed });
+      },
       viewAnswer: (answer_id) => dispatch({ type: "local/view", answer_id }),
       setThinking: (thinking) => {
         saveThinking(thinking);

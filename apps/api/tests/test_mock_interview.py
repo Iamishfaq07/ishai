@@ -254,6 +254,65 @@ async def test_a_panel_takes_turns_and_a_follow_up_stays_with_who_asked() -> Non
     await eng.end()
 
 
+async def test_an_adaptive_panel_lets_the_best_placed_panelist_ask_but_everyone_gets_a_turn() -> None:
+    script = [json.dumps(d) for d in [
+        {"question": "Hi, I'm Rahul; with me are Meera and Anita. Tell me about yourself.", "is_follow_up": False},
+        # The answer skipped why they're moving: the recruiter, not the next in turn, takes it.
+        {"question": "I'm Anita. Why are you looking to move?", "is_follow_up": False, "asked_by": "recruiter"},
+        # Anita just asked, so she can't take the next topic too: the server holds the model to who may.
+        {"question": "Tell me more about your motivation.", "is_follow_up": False, "asked_by": "recruiter"},
+        {"question": "Walk me through a hard trade-off.", "is_follow_up": False, "asked_by": "nobody"},
+    ]]
+    llm = MockLLMProvider(script=script)
+    now = {"t": 0.0}
+    sink, spy = Sink(), Spy()
+    eng = LiveEngine(SessionProfile("s1", "mock", "Backend Engineer", "en", "en", dev_mode=True,
+                                    mock=MockConfig(duration_minutes=12,
+                                                    panel=["hiring_manager", "engineer", "recruiter"])),
+                     LiveSettings(auto_answer=False), send=sink, llm=llm, stt=MockSTTProvider(),
+                     index=SessionIndex([]), recorder=spy, clock=lambda: now["t"])  # type: ignore[arg-type]
+    await eng.start()
+    for n, said in enumerate(["I build payment systems at a fintech in Bengaluru and lead the ledger team",
+                              "I want to work on a bigger platform with more ownership of the architecture",
+                              "Mostly the chance to design systems at a much larger scale than today"], start=1):
+        await sink.wait_for("mock.question", n)
+        await _answer(eng, now, said)
+    await sink.wait_for("mock.question", 4)
+    speakers = [q["speaker"]["persona"] for q in sink.of("mock.question")]
+    # Rahul opens; Anita is chosen; she can't go twice running, so the next in turn (Rahul) asks; with one topic
+    # left, Meera, who hasn't opened one yet, must take it, whatever the model said.
+    assert speakers == ["hiring_manager", "recruiter", "hiring_manager", "engineer"]
+    prompt = llm.requests[1].messages[-1].content
+    assert "best placed to probe" in prompt and "[engineer]" in prompt and "[recruiter]" in prompt
+    assert "[hiring_manager]" not in prompt  # Rahul asked the last topic: the floor moves on
+    await eng.end()
+
+
+async def test_a_typed_answer_is_recorded_and_moves_the_interview_on() -> None:
+    eng, sink, spy, _ = await _engine()
+    await sink.wait_for("mock.question")
+    await eng.handle_client({"type": "mock.answer", "data": {"text": "  I led the ledger migration end to end.  "}})
+    await sink.wait_for("mock.question", 2)
+    assert ("candidate", "I led the ledger migration end to end.") in spy.turns
+    assert any(e["speaker"] == "candidate" for e in sink.of("transcript.final"))
+    assert eng._mock is not None and eng._mock.asked[0].answer == ["I led the ledger migration end to end."]
+    # Too long, or empty: refused, nothing recorded.
+    await eng.handle_client({"type": "mock.answer", "data": {"text": "x" * 4001}})
+    await eng.handle_client({"type": "mock.answer", "data": {"text": ""}})
+    assert [e["code"] for e in sink.of("error")] == ["invalid_event", "invalid_event"]
+    assert sum(1 for who, _ in spy.turns if who == "candidate") == 1
+    await eng.end()
+
+
+async def test_a_typed_answer_is_ignored_while_paused() -> None:
+    eng, sink, spy, _ = await _engine()
+    await sink.wait_for("mock.question")
+    await eng.handle_client({"type": "session.pause", "data": {}})
+    await eng.handle_client({"type": "mock.answer", "data": {"text": "An answer while paused."}})
+    assert not [t for t in spy.turns if t[0] == "candidate"]
+    await eng.end()
+
+
 def test_a_panel_needs_different_interviewers_and_skips_drills() -> None:
     import pytest
     from pydantic import ValidationError

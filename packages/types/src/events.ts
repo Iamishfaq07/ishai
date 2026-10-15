@@ -158,6 +158,8 @@ export interface ClientEventMap {
   "answer.request": { question_text?: string; size?: AnswerSize; simpler?: boolean };
   /** Mock interview: the candidate is done answering — ask the next question now. */
   "mock.next": Record<string, never>;
+  /** Mock interview: an answer typed instead of spoken (no microphone, or speech-to-text is down). 1–4000 chars. */
+  "mock.answer": { text: string };
   "answer.pin": { answer_id: string; pinned: boolean };
   "answer.clear": Record<string, never>;
   /** Stop writing the answer on screen, keeping what's there. */
