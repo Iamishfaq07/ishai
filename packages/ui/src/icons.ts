@@ -139,3 +139,6 @@ export { MessageSquareQuote } from "lucide-react";
 
 // Salary practice outside India (inside it, the rupee).
 export { Banknote } from "lucide-react";
+
+// Offer AI: its mark (the rupee in India, a banknote elsewhere) and the side-by-side comparison.
+export { BadgeIndianRupee, Scale } from "lucide-react";

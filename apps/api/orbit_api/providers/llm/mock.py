@@ -334,6 +334,16 @@ class MockLLMProvider(LLMProvider):
             return _mock_prep_questions(request.messages[-1].content if request.messages else "")
         if request.request_type == "resume_skill_gap":
             return _mock_skill_gap(request.messages[-1].content if request.messages else "")
+        if request.request_type == "offer_plan":
+            return json.dumps({
+                "ask": 0, "ask_why": "[mock] Anchored on the top of the market range for this role.",
+                "reasons": ["[mock] The resume shows the core skills the role asks for."],
+                "call_script": ["[mock] Thank you, I'm excited about the role.",
+                                "[mock] Based on the market for this role, I was hoping for a higher fixed pay.",
+                                "[mock] If the fixed pay can't move, could we look at the joining bonus?"],
+                "email": {"subject": "[mock] Re: your offer",
+                          "body": "Hi [Recruiter name],\n\n[mock] Thank you for the offer.\n\n[Your name]"},
+                "questions": ["[mock] How is the variable pay decided?"], "watch_outs": []})
         if request.request_type == "follow_up":
             return json.dumps({
                 "debrief": {"went_well": ["[mock] clear example"], "to_improve": ["[mock] add a metric"],

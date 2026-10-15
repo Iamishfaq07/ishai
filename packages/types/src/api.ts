@@ -2071,3 +2071,74 @@ export interface JobManualTrack {
   /** The job post saved to Documents, for Practice. */
   document_id?: string;
 }
+
+// ---- Offer AI (orbit_api/offers) ----------------------------------------------------------------------------------
+
+/** The pay range in job posts for a role, read from the posts' own pay lines (a year, one currency). */
+export interface OfferMarket {
+  currency: string;
+  count: number;
+  p25: number;
+  median: number;
+  p75: number;
+  low: number;
+  high: number;
+  /** What was read: "Backend Engineer in Bengaluru", or "…, all cities" when the city had too few. */
+  scope: string;
+  samples: Array<{ listing_id: string; title: string; company: string; salary: string; city: string }>;
+}
+
+export type OfferStatus = "considering" | "accepted" | "declined";
+export type OfferPf = "capped" | "full" | "none";
+
+/** An offer as the user enters it: every figure is a year's, except the one-off joining bonus. */
+export interface OfferInput {
+  company: string;
+  role: string;
+  city: string;
+  currency: string;
+  fixed: number;
+  variable: number;
+  joining_bonus: number;
+  equity_per_year: number;
+  other: number;
+  pf: OfferPf;
+  employer_costs_in_ctc: boolean;
+  deadline: string | null;
+  status: OfferStatus;
+  notes: string;
+}
+
+export interface OfferTakeHome {
+  monthly: number;
+  yearly_tax: number;
+  employee_pf: number;
+  employer_costs: number;
+  professional_tax: number;
+  variable_after_tax: number;
+  assumptions: string[];
+}
+
+export interface OfferPlan {
+  ask: number;
+  ask_why: string;
+  reasons: string[];
+  call_script: string[];
+  email: { subject: string; body: string };
+  questions: string[];
+  watch_outs: string[];
+}
+
+export interface JobOfferRecord extends OfferInput {
+  id: string;
+  first_year: number;
+  yearly: number;
+  /** India only: what reaches the bank each month (an estimate). */
+  take_home: OfferTakeHome | null;
+  market: OfferMarket | null;
+  position: "below" | "within" | "above" | null;
+  plan: OfferPlan | null;
+  plan_stale: boolean;
+  created_at: string;
+  updated_at: string;
+}

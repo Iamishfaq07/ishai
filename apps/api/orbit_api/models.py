@@ -381,6 +381,33 @@ class EvidenceItem(TimestampMixin, Base):
     embedding_model: Mapped[str | None] = mapped_column(String(64))
 
 
+class JobOffer(TimestampMixin, Base):
+    """Offer AI (orbit_api/offers): an offer the user has (or expects), in figures a year, to see what it pays each
+    month, how it compares with the market and their other offers, and to plan the negotiation. `plan` is the AI's
+    negotiation plan, kept with the hash of what it was made from (a changed offer is a new plan)."""
+
+    __tablename__ = "job_offers"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    company: Mapped[str] = mapped_column(String(200))
+    role: Mapped[str] = mapped_column(String(200))
+    city: Mapped[str] = mapped_column(String(120), default="")
+    currency: Mapped[str] = mapped_column(String(3), default="INR")
+    fixed: Mapped[int] = mapped_column(Integer)  # a year
+    variable: Mapped[int] = mapped_column(Integer, default=0)  # a year, at target
+    joining_bonus: Mapped[int] = mapped_column(Integer, default=0)  # once
+    equity_per_year: Mapped[int] = mapped_column(Integer, default=0)  # the grant's value a year, as the offer says
+    other: Mapped[int] = mapped_column(Integer, default=0)  # a year: allowances, retention, relocation
+    pf: Mapped[str] = mapped_column(String(8), default="capped")  # capped | full | none (India)
+    employer_costs_in_ctc: Mapped[bool] = mapped_column(Boolean, default=True)
+    deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(12), default="considering")  # considering | accepted | declined
+    notes: Mapped[str] = mapped_column(Text, default="")
+    plan: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    plan_hash: Mapped[str | None] = mapped_column(String(64))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class SavedAnswer(TimestampMixin, Base):
     """An answer bank entry: a question the user has worked out how to answer, in their own words (often a review's
     "Try saying", edited). Every live session can draw on it, as the stories are, so the copilot's answer to that

@@ -183,6 +183,7 @@ export function baseCommands({ mockEnabled }: { mockEnabled: boolean }): Command
     { id: "go-matches", title: "Job matches", group: "Go to", product: "jobs", to: "/jobs/matches", keywords: ["feed", "openings", "match"] },
     { id: "go-tracker", title: "Job tracker", group: "Go to", product: "jobs", to: "/jobs/tracker", keywords: ["applications", "applied", "saved jobs", "follow up", "kanban"] },
     { id: "go-job-profile", title: "Job search profile", group: "Go to", product: "jobs", to: "/jobs/profile", keywords: ["preferences", "city", "role", "filters", "location"] },
+    { id: "go-offers", title: "Offer AI", group: "Go to", to: "/offers", keywords: ["offer", "salary", "ctc", "in-hand", "take home", "negotiate", "compare offers", "pay"] },
     { id: "go-billing", title: "Plan and credits", group: "Go to", to: "/billing", keywords: ["billing", "upi", "payments", "balance", "minutes left", "credits left"] },
     { id: "go-settings", title: "Settings", group: "Go to", to: "/settings", keywords: ["account", "password", "privacy", "delete account", "appearance", "accent", "text size"] },
     { id: "do-sign-out", title: "Sign out", group: "Actions", run: "sign-out", keywords: ["log out", "logout"] },
