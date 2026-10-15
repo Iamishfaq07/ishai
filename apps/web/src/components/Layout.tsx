@@ -12,6 +12,7 @@ import {
   FolderOpen,
   HistoryIcon,
   IdCard,
+  LayoutGrid,
   House,
   LogOut,
   MessageCircle,
@@ -21,7 +22,6 @@ import {
   Search,
   SettingsIcon,
   ShieldCheck,
-  UserRound,
   VerifyEmailBanner,
   ApprovalBanner,
   buttonClass,
@@ -103,6 +103,9 @@ const NAV: NavItem[] = [
     product: "resume",
     current: (p) => p === RESUME_AI_HOME || p.startsWith(`${RESUME_AI_HOME}/`),
   },
+  { to: LINKEDIN_HOME, label: "LinkedIn AI", short: "LinkedIn", icon: IdCard, phone: false, current: (p) => p === LINKEDIN_HOME || p.startsWith(`${LINKEDIN_HOME}/`) },
+  { to: CODE_HOME, label: "Code AI", short: "Code", icon: Code2, phone: false, current: (p) => p === CODE_HOME || p.startsWith(`${CODE_HOME}/`) },
+  { to: OFFERS_HOME, label: "Offer AI", short: "Offers", icon: BadgeIndianRupee, phone: false, current: (p) => p === OFFERS_HOME || p.startsWith(`${OFFERS_HOME}/`) },
   {
     to: JOBS_AI_HOME,
     label: "Jobs AI",
@@ -111,9 +114,6 @@ const NAV: NavItem[] = [
     product: "jobs",
     current: (p) => p === JOBS_AI_HOME || p.startsWith(`${JOBS_AI_HOME}/`),
   },
-  { to: CODE_HOME, label: "Code AI", short: "Code", icon: Code2, phone: false, current: (p) => p === CODE_HOME || p.startsWith(`${CODE_HOME}/`) },
-  { to: LINKEDIN_HOME, label: "LinkedIn AI", short: "LinkedIn", icon: IdCard, phone: false, current: (p) => p === LINKEDIN_HOME || p.startsWith(`${LINKEDIN_HOME}/`) },
-  { to: OFFERS_HOME, label: "Offer AI", short: "Offers", icon: BadgeIndianRupee, phone: false, current: (p) => p === OFFERS_HOME || p.startsWith(`${OFFERS_HOME}/`) },
 ];
 /** The phone tab bar's tabs; the rest are in the "Me" sheet. */
 const PHONE_NAV = NAV.filter((n) => n.phone !== false);
@@ -239,7 +239,7 @@ export function Layout() {
   const navRef = useRef<HTMLElement>(null);
   const navFit = useNavFit(navRef);
   const copilot = isCopilotPath(pathname);
-  const meActive = ME_PATH.test(pathname);
+  const meActive = ME_PATH.test(pathname) || MORE_TOOLS.some((t) => t.current(pathname));
   const shortcut = isMacPlatform() ? "⌘K" : "Ctrl K";
 
   return (
@@ -452,11 +452,11 @@ export function Layout() {
               onClick={() => setMeOpen(true)}
               aria-haspopup="dialog"
               aria-expanded={meOpen}
-              aria-label="Me: plan, settings, support and sign out"
+              aria-label={`More: ${MORE_TOOLS.map((t) => t.label).join(", ")}, plan, settings, support and sign out`}
               className={cx(tabClass(meActive || meOpen), "w-full")}
             >
-              <TabIcon icon={UserRound} active={meActive || meOpen} />
-              Me
+              <TabIcon icon={LayoutGrid} active={meActive || meOpen} />
+              More
             </button>
           </li>
         </ul>
