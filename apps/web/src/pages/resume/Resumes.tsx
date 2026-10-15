@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { ResumeData, ResumeInput, ResumeSummary } from "@orbit/types";
 import {
@@ -37,6 +37,7 @@ import { resumePath } from "./paths";
 import { RESUME_AI_FEATURES, ResumeAiTabs, scoreTone } from "./product";
 import { ResumeMock } from "../../components/productArt";
 import { fromJsonResume } from "./jsonResume";
+import { TailorQueue } from "./TailorQueue";
 export { scoreTone };
 
 /**
@@ -47,6 +48,13 @@ export function ResumeAiHomePage() {
   const navigate = useNavigate();
   const allowance = useResumeAllowance();
   const list = useAsync(() => api.listResumes(), [], "resumes");
+  // A queued job finished: its new resume goes in the list, and the credits it used come off the banner.
+  const { reload: reloadList } = list;
+  const { refresh: refreshAllowance } = allowance;
+  const afterTailoring = useCallback(() => {
+    reloadList();
+    refreshAllowance();
+  }, [reloadList, refreshAllowance]);
   // Which way of starting is open: the list of sources, or straight to importing a file.
   const [creating, setCreating] = useState<"new" | "import" | null>(null);
   const [copying, setCopying] = useState<string | null>(null);
@@ -267,6 +275,7 @@ export function ResumeAiHomePage() {
         </ul>
       )}
       </LoadGate>
+      {list.data && list.data.length > 0 && <TailorQueue resumes={list.data} onMade={afterTailoring} />}
       {count > 0 && <FindJobs />}
     </AllowanceContext.Provider>
   );

@@ -53,6 +53,7 @@ export {
   House,
   IndianRupee,
   KeyRound,
+  Layers,
   LayoutGrid,
   Link2,
   LogOut,

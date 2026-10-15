@@ -47,6 +47,7 @@ from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.stt import create_stt_provider
 from orbit_api.resumes.kit import router as resume_kit_router
 from orbit_api.resumes.routes import router as resumes_router
+from orbit_api.resumes.tailor_queue import router as tailor_queue_router
 from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.runtime_config import refresh as refresh_runtime_config
 from orbit_api.sessions.cleanup import running_sweeper
@@ -267,6 +268,7 @@ def create_app() -> FastAPI:
     app.include_router(evidence_router)
     app.include_router(answers_router)
     app.include_router(feedback_router)
+    app.include_router(tailor_queue_router)  # before resumes_router: /tailor-queue isn't a resume id
     app.include_router(resumes_router)
     app.include_router(resume_kit_router)
     app.include_router(jobs_router)

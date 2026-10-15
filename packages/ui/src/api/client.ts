@@ -112,6 +112,8 @@ import type {
   EvidenceSuggestRequest,
   EvidenceSuggestResponse,
   Story,
+  TailorQueueItem,
+  TailorQueueJob,
   StoryDraftRequest,
   StoryDraftResponse,
   StoryInput,
@@ -485,6 +487,13 @@ export function createApiClient(options: ApiClientOptions) {
     updateSavedAnswer: (id: string, req: SavedAnswerInput) =>
       json<SavedAnswer>(`/v1/answers/${encodeURIComponent(id)}`, { method: "PUT", body: body(req) }),
     deleteSavedAnswer: (id: string) => json<void>(`/v1/answers/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    // Resume AI's tailoring queue
+    tailorQueue: () => json<TailorQueueItem[]>("/v1/resumes/tailor-queue"),
+    queueTailoring: (resumeId: string, jobs: TailorQueueJob[]) =>
+      json<TailorQueueItem[]>(`/v1/resumes/${encodeURIComponent(resumeId)}/tailor-queue`, { method: "POST", body: body({ jobs }) }),
+    removeTailoring: (itemId: string) =>
+      json<void>(`/v1/resumes/tailor-queue/${encodeURIComponent(itemId)}`, { method: "DELETE" }),
+
     // Career Evidence Vault
     listEvidence: () => json<EvidenceItem[]>("/v1/evidence"),
     addEvidence: (claim: string) => json<EvidenceItem>("/v1/evidence", { method: "POST", body: body({ claim }) }),

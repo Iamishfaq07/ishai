@@ -31,6 +31,11 @@ RETRY_BACKOFF_S = (15, 60, 300)
 
 Handler = Callable[[dict[str, Any]], Awaitable[None]]
 _handlers: dict[str, Handler] = {}
+_timeouts: dict[str, float] = {}  # a kind's own limit, when its work runs longer than JOB_TIMEOUT_S
+
+
+def timeout(kind: str, seconds: float) -> None:
+    _timeouts[kind] = seconds
 
 
 def handler(kind: str) -> Callable[[Handler], Handler]:
@@ -132,7 +137,7 @@ async def run_due_jobs(limit: int = 5) -> int:
         try:
             if fn is None:
                 raise RuntimeError(f"no handler for job kind {kind!r}")
-            await asyncio.wait_for(fn(payload), timeout=JOB_TIMEOUT_S)
+            await asyncio.wait_for(fn(payload), timeout=_timeouts.get(kind, JOB_TIMEOUT_S))
         except asyncio.CancelledError:
             # Shutdown mid-job (a deploy): the next process picks it up at once. Shielded, so the write completes
             # although this task is being cancelled; the cancellation goes on whatever happens to it.

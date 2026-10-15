@@ -28,6 +28,7 @@ tests, a default-off flag, truthful copy).
 | Smart 404, contact diagnostics, admin route guard test, cache savings gauge | see PR #292 |
 | Career Evidence Vault, first slice (roadmap F1), flag `ORBIT_EVIDENCE_VAULT` | `evidence/routes.py`, `/documents/evidence` |
 | Resume AI, from open-source research (Resume-Matcher, Jobscan, Reactive Resume, OpenResume): JSON Resume export/import, bullet strength, job keywords on the preview, "How an ATS reads it" | `pages/resume/jsonResume.ts`, `atsReading.ts`, `previewKeywords.ts`, `model.ts` bulletStrength |
+| Tailoring queue (after Resume-Matcher): one resume tailored to up to 10 jobs in the background, each a new resume fixed for its job post | `resumes/tailor_queue.py`, `TailorQueue.tsx` |
 | Adaptive panel turn-taking and typed answers in mock interviews (roadmap F4) | `live/mock_interviewer.py` `_eligible_askers`, `mock.answer`, `MockPanel.tsx` TypedAnswer |
 
 ## Already in Orbit (don't rebuild)
