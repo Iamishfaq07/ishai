@@ -1,5 +1,6 @@
 import type {
   EngineeringTelemetry,
+  JobMission,
   JobTimelineEvent,
   LoopMemory,
   CareerContext,
@@ -718,6 +719,25 @@ export function createApiClient(options: ApiClientOptions) {
         body: body({ utr }),
       }),
 
+    /** Job Mission Room: one tracked job as a workspace (stages, fit, resume, sent versions, offer, next step). */
+    jobMission: (id: string) => json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission`),
+    linkMissionResume: (id: string, resumeId: string | null) =>
+      json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/resume`, { method: "PUT", body: body({ resume_id: resumeId }) }),
+    /** Keep a copy of the linked resume as it is now: what was sent for this job. */
+    freezeMissionResume: (id: string, note = "") =>
+      json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/snapshots`, { method: "POST", body: body({ note }) }),
+    /** Open a sent version again as a new resume (the version itself never changes). */
+    copyMissionSnapshot: (id: string, snapshotId: string) =>
+      json<{ resume_id: string }>(
+        `/v1/jobs/tracker/${encodeURIComponent(id)}/mission/snapshots/${encodeURIComponent(snapshotId)}/copy`,
+        { method: "POST" },
+      ),
+    deleteMissionSnapshot: (id: string, snapshotId: string) =>
+      json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/snapshots/${encodeURIComponent(snapshotId)}`, {
+        method: "DELETE",
+      }),
+    linkMissionOffer: (id: string, offerId: string | null) =>
+      json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/offer`, { method: "PUT", body: body({ offer_id: offerId }) }),
     /** One tracked job's journey, oldest first. */
     trackerTimeline: (id: string) => json<JobTimelineEvent[]>(`/v1/jobs/tracker/${encodeURIComponent(id)}/timeline`),
     /** The candidate's earlier rounds with a company: questions asked, stories already told. */

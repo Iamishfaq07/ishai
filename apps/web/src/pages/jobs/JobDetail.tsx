@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { JobDetail, JobListing, JobStatus, JobTrackerEntry, JobTrackerUpdate } from "@orbit/types";
 import {
+  ArrowRight,
   ApiError,
   ArrowLeft,
   ArrowUpRight,
@@ -52,6 +53,7 @@ import { SafetyCard } from "./SafetyCard";
 import { EditEntry } from "./Tracker";
 import { JOBS_MATCHES, outreachPath } from "./paths";
 import { useJobActions } from "./useJobActions";
+import { missionPath } from "./mission";
 
 /**
  * Jobs AI → one job: everything Orbit may show about it (the post's summary, its key facts, where it's from, the
@@ -157,6 +159,11 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
         <div className="relative mt-6 flex flex-wrap items-center gap-2">
           <ApplyLink job={job} actions={actions} big />
           <TrackButton actions={actions} />
+          {entry && (
+            <Link to={missionPath(entry.id)} className={linkButton("secondary", "sm")}>
+              Mission room <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          )}
           <TailorButton actions={actions} />
           <PrepareButton actions={actions} />
           {/* Written from the resume tailored for this job if there is one, else the one it's matched to. */}

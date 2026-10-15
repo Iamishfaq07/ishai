@@ -48,7 +48,7 @@ async def timeline(db: AsyncSession, entry: JobApplication, now: datetime | None
                                     detail=f"{verdict} fit" if verdict else ""))
 
     if entry.resume_id and (resume := await db.get(Resume, entry.resume_id)) and resume.user_id == entry.user_id:
-        events.append(TimelineEvent(kind="resume", at=resume.created_at, title="Resume tailored for this job",
+        events.append(TimelineEvent(kind="resume", at=resume.created_at, title="Resume for this job",
                                     detail=resume.title, link=f"/resume-ai/{resume.id}"))
     if entry.document_id and (doc := await db.get(Document, entry.document_id)) and doc.user_id == entry.user_id:
         events.append(TimelineEvent(kind="prep_doc", at=doc.created_at, title="Job post saved for interview prep",
