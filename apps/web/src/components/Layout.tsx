@@ -45,6 +45,7 @@ import { CODE_HOME } from "../pages/code/paths";
 import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { prefetchRoute } from "../routes";
 import { AnnouncementBanner } from "./AnnouncementBanner";
+import { AppError } from "./AppError";
 import { AiPill, PRODUCTS, ProductTabs, type ProductId, type ProductSection } from "./products";
 import { Sheet } from "./Sheet";
 
@@ -406,7 +407,7 @@ export function Layout() {
         <div key={pathname} className="animate-fade-up">
           {/* Inside the layout, and reset by that key on every navigation: a page that fails to load (its code gone
               after a deploy) or to render shows an error with Reload while the nav stays usable. */}
-          <ErrorBoundary>
+          <ErrorBoundary fallback={(error, reset) => <AppError error={error} reset={reset} />}>
             {/* Inside the layout: the nav stays put while a page's code arrives. */}
             <Suspense fallback={<RouteFallback />}>
               <Outlet />
