@@ -14,7 +14,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.guards import require_verified_user
@@ -22,7 +22,7 @@ from orbit_api.auth.security import current_user
 from orbit_api.db import get_db
 from orbit_api.live.answer_format import humanize
 from orbit_api.live.context_builder import fence
-from orbit_api.models import Document, ProviderRequest, Story, User
+from orbit_api.models import Document, EvidenceItem, ProviderRequest, Story, User
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMRequest
 from orbit_api.providers.llm.pricing import estimate_cost
@@ -149,6 +149,9 @@ async def update_story(story_id: str, body: StoryIn, user: Annotated[User, Depen
 async def delete_story(story_id: str, user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> None:
     await db.delete(await _owned(db, story_id, user))
+    # Evidence drawn from it keeps its quote and the story's title; it just no longer links to a story.
+    await db.execute(update(EvidenceItem).where(EvidenceItem.user_id == user.id, EvidenceItem.source_kind == "story",
+                                                EvidenceItem.source_id == story_id).values(source_id=None))
     await db.commit()
 
 

@@ -17,6 +17,7 @@ import {
   OrbitWordmark,
   Search,
   SettingsIcon,
+  ShieldCheck,
   UserRound,
   VerifyEmailBanner,
   ApprovalBanner,
@@ -112,6 +113,8 @@ const COPILOT_SECTIONS: ProductSection[] = [
   { to: "/documents/stories", label: "Story bank", icon: BookOpen },
   { to: "/documents/answers", label: "My answers", icon: MessageSquareQuote },
 ];
+/** Shown when the deployment has the Career Evidence Vault switched on (the account says so). */
+const EVIDENCE_SECTION: ProductSection = { to: "/documents/evidence", label: "Evidence", icon: ShieldCheck };
 
 const ME_PATH = /^\/(billing|settings)(\/|$)/;
 
@@ -352,7 +355,7 @@ export function Layout() {
         {copilot && (
           <ProductTabs
             label="Interview copilot"
-            sections={COPILOT_SECTIONS}
+            sections={user?.evidence_vault ? [...COPILOT_SECTIONS, EVIDENCE_SECTION] : COPILOT_SECTIONS}
             action={
               <Link
                 to="/start"

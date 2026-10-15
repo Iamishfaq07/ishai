@@ -45,6 +45,8 @@ from orbit_api.entitlements import (
     usage_pool,
     usage_this_month,
 )
+from orbit_api.evidence.routes import MAX_EVIDENCE, evidence_text
+from orbit_api.evidence.routes import index_chunk as evidence_chunk
 from orbit_api.live import carryover
 from orbit_api.live.context_builder import SessionMemory
 from orbit_api.live.engine import LiveEngine, SessionProfile
@@ -62,6 +64,7 @@ from orbit_api.models import (
     AuditLog,
     Document,
     DocumentChunk,
+    EvidenceItem,
     LiveSessionRow,
     Question,
     SavedAnswer,
@@ -762,6 +765,20 @@ async def _load_index(db: AsyncSession, session_id: str,
         await db.commit()
     chunks += [answer_chunk(a, (a.embedding or []) if current and a.embedding_model == embedder.model_id else [])
                for a in saved]
+    # And the evidence vault's confirmed claims (never its unchecked suggestions), when it's switched on.
+    if get_settings().evidence_vault:
+        evidence = (await db.scalars(select(EvidenceItem).where(EvidenceItem.user_id == user_id,
+                                                                EvidenceItem.status == "confirmed")
+                                     .order_by(EvidenceItem.updated_at.desc()).limit(MAX_EVIDENCE))).all()
+        unembedded_evidence = [e for e in evidence if e.embedding_model != embedder.model_id] if current else []
+        if unembedded_evidence:
+            vectors = await asyncio.to_thread(lambda: [embedder.embed(evidence_text(e))
+                                                       for e in unembedded_evidence])
+            for e, v in zip(unembedded_evidence, vectors, strict=True):
+                e.embedding, e.embedding_model = v, embedder.model_id
+            await db.commit()
+        chunks += [evidence_chunk(e, (e.embedding or []) if current and e.embedding_model == embedder.model_id
+                                  else []) for e in evidence]
     return SessionIndex(chunks), chunks
 
 

@@ -122,6 +122,8 @@ class UserOut(BaseModel):
     # Browser clients send this back as X-CSRF-Token on state-changing requests (see orbit_api/csrf.py). Only
     # present on auth responses; the desktop app (Bearer token) ignores it.
     csrf_token: str | None = None
+    # The Career Evidence Vault is switched on for this deployment (ORBIT_EVIDENCE_VAULT).
+    evidence_vault: bool = False
 
 
 class AuthOut(BaseModel):
@@ -135,7 +137,8 @@ def _user_out(u: User, *, with_csrf: bool = False) -> UserOut:
     return UserOut(id=u.id, email=u.email, name=u.name, email_verified=u.email_verified,
                    has_password=u.has_password,
                    approval_pending=awaiting_approval(u), store_transcripts=u.store_transcripts, country=u.country,
-                   csrf_token=csrf_token_for(u.id, u.token_version) if with_csrf else None)
+                   csrf_token=csrf_token_for(u.id, u.token_version) if with_csrf else None,
+                   evidence_vault=get_settings().evidence_vault)
 
 
 def _origin(url: str) -> str:

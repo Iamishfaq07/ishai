@@ -27,6 +27,8 @@ export interface User {
   country?: string | null;
   /** Always false: screenshots are analyzed and discarded, never stored. */
   store_screenshots: boolean;
+  /** The Career Evidence Vault is switched on for this deployment. Servers from before it leave it out. */
+  evidence_vault?: boolean;
   /** Auth responses only: browser clients echo it as X-CSRF-Token on state-changing requests. */
   csrf_token?: string | null;
 }
@@ -549,6 +551,34 @@ export interface Story extends StoryInput {
   id: string;
   created_at: string;
   updated_at: string;
+}
+
+/** Career Evidence Vault (/v1/evidence): a claim about the candidate's work and where it comes from. Only
+ *  "confirmed" items are used (live answers draw on them); "suggested" ones came from the AI and wait for a check. */
+export interface EvidenceItem {
+  id: string;
+  claim: string;
+  /** The source's own words, checked to be in it ("" for a claim the user wrote). */
+  quote: string;
+  source_kind: "manual" | "story" | "resume";
+  /** The story or document; null once that was deleted (the title and quote stay). */
+  source_id: string | null;
+  source_title: string;
+  status: "confirmed" | "suggested";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EvidenceSuggestRequest {
+  source: "story" | "resume";
+  story_id?: string;
+  resume_id?: string;
+}
+
+export interface EvidenceSuggestResponse {
+  added: EvidenceItem[];
+  /** Proposed but not kept: the quote wasn't in the source, or the vault already had it. */
+  dropped: number;
 }
 
 /** POST /v1/answers (a question already saved, in near enough the same words, gets this answer instead) and PUT

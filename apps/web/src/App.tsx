@@ -34,6 +34,7 @@ import {
   SessionsPage,
   SettingsPage,
   StoriesPage,
+  EvidencePage,
   AnswersPage,
   ResumeAiHomePage,
   ResumeAiPublicPage,
@@ -200,6 +201,7 @@ export function App() {
         <Route path="sessions/:sessionId" element={<SessionDetailPage />} />
         <Route path="documents" element={<DocumentsPage />} />
         <Route path="documents/stories" element={<StoriesPage />} />
+        <Route path="documents/evidence" element={<EvidencePage />} />
         <Route path="documents/answers" element={<AnswersPage />} />
         {/* Resume AI used to be Documents → Resume maker. Signed out, these go through sign-in first, as before. */}
         <Route path="documents/resumes" element={<MovedResume />} />

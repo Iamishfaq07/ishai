@@ -284,6 +284,13 @@ class MockLLMProvider(LLMProvider):
                  "task": "[mock] I owned the release.", "action": "[mock] I re-planned the work and [what you did].",
                  "result": "[mock] We shipped on time [with a number].", "competencies": [comps[i % len(comps)]]}
                 for i in range(int(m.group(1)) if m else 1)]})
+        if request.request_type == "evidence_suggest":
+            # Grounded like the real thing should be: each quote is a sentence of the source, word for word.
+            body = request.messages[-1].content if request.messages else ""
+            m = re.search(r"<reference_data[^>]*>\s*(.*?)\s*</reference_data>", body, re.S)
+            sentences = [x.strip() for x in re.split(r"(?<=[.!?])\s+", m.group(1) if m else "") if len(x.strip()) > 20]
+            return json.dumps({"items": [{"claim": f"[mock] {q[:80]}", "quote": q} for q in sentences[:3]]
+                               + [{"claim": "[mock] Invented claim", "quote": "words that are not in the source"}]})
         if request.request_type == "resume_import":
             return _mock_resume_import(request.messages[-1].content if request.messages else "")
         if request.request_type == "resume_suggest":

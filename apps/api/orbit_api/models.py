@@ -358,6 +358,28 @@ class Story(TimestampMixin, Base):
     embedding_model: Mapped[str | None] = mapped_column(String(64))
 
 
+class EvidenceItem(TimestampMixin, Base):
+    """Career Evidence Vault: one claim about the candidate's work ("Cut checkout latency by 40%") with where it comes
+    from. `status` "confirmed": the user wrote it or checked it; only these are used (live answers draw on them as
+    verified facts). "suggested": the AI proposed it from a story or the resume, quoting the source word for word
+    (checked on the way in); it waits for the user and is used nowhere until confirmed."""
+
+    __tablename__ = "evidence_items"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    claim: Mapped[str] = mapped_column(String(300))
+    # The source's own words behind the claim ("" for one the user wrote themselves).
+    quote: Mapped[str] = mapped_column(Text, default="")
+    source_kind: Mapped[str] = mapped_column(String(16), default="manual")  # manual | story | resume
+    # The story or document it came from; None once that's deleted (the title and quote stay).
+    source_id: Mapped[str | None] = mapped_column(String(36))
+    source_title: Mapped[str] = mapped_column(String(160), default="")
+    status: Mapped[str] = mapped_column(String(16), default="confirmed")  # confirmed | suggested
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    embedding: Mapped[list[float] | None] = mapped_column(EmbeddingType())
+    embedding_model: Mapped[str | None] = mapped_column(String(64))
+
+
 class SavedAnswer(TimestampMixin, Base):
     """An answer bank entry: a question the user has worked out how to answer, in their own words (often a review's
     "Try saying", edited). Every live session can draw on it, as the stories are, so the copilot's answer to that

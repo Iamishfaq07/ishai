@@ -108,6 +108,9 @@ import type {
   CompanyStyle,
   SavedAnswer,
   SavedAnswerInput,
+  EvidenceItem,
+  EvidenceSuggestRequest,
+  EvidenceSuggestResponse,
   Story,
   StoryDraftRequest,
   StoryDraftResponse,
@@ -482,6 +485,20 @@ export function createApiClient(options: ApiClientOptions) {
     updateSavedAnswer: (id: string, req: SavedAnswerInput) =>
       json<SavedAnswer>(`/v1/answers/${encodeURIComponent(id)}`, { method: "PUT", body: body(req) }),
     deleteSavedAnswer: (id: string) => json<void>(`/v1/answers/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    // Career Evidence Vault
+    listEvidence: () => json<EvidenceItem[]>("/v1/evidence"),
+    addEvidence: (claim: string) => json<EvidenceItem>("/v1/evidence", { method: "POST", body: body({ claim }) }),
+    editEvidence: (id: string, claim: string) =>
+      json<EvidenceItem>(`/v1/evidence/${encodeURIComponent(id)}`, { method: "PUT", body: body({ claim }) }),
+    confirmEvidence: (id: string) =>
+      json<EvidenceItem>(`/v1/evidence/${encodeURIComponent(id)}/confirm`, { method: "POST" }),
+    deleteEvidence: (id: string) => json<void>(`/v1/evidence/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    /** Empty the vault, or only its unchecked suggestions. */
+    clearEvidence: (only?: "suggested") =>
+      json<void>(`/v1/evidence${only ? `?only=${only}` : ""}`, { method: "DELETE" }),
+    suggestEvidence: (req: EvidenceSuggestRequest) =>
+      json<EvidenceSuggestResponse>("/v1/evidence/suggest", { method: "POST", body: body(req) }),
+
     // Story bank
     listStories: () => json<Story[]>("/v1/stories"),
     createStory: (req: StoryInput) => json<Story>("/v1/stories", { method: "POST", body: body(req) }),
