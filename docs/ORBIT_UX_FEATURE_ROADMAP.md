@@ -14,6 +14,19 @@ tests, a default-off flag, truthful copy).
 | Resume conflict choice ("Load the latest" / "Keep mine") and unsaved-draft restore | `ResumeEditor.tsx` | none (data safety) |
 | Truthful payment copy (no "the moment it goes through"; no foreign-card promise before approval) | Landing, Billing, Help | `ORBIT_RAZORPAY_INTERNATIONAL` |
 
+## Shipped 15 Oct 2026 (Phases 6 and 8)
+
+| Item | Where |
+|---|---|
+| Explainable fit: requirement by requirement (met / partly / unclear / missing) with the post's words and the resume line, both checked to be real quotes (roadmap F6) | `job_portal/fit.py`, `JobCard.tsx` FitPanel |
+| Company loop memory and story guard: earlier rounds' questions and stories told, shown before a round and given to live answers | `sessions/loop_memory.py`, `LoopMemoryNote.tsx` |
+| Screen-share visibility test in Session Setup | `ShareMirror.tsx` |
+| Dry-run trace and five edge cases on coding answers | `answer_format.py` TRACE, `AnswerCard.tsx` |
+| Screening answers in the outreach kit | `resumes/kit.py` kind `screening` |
+| Counter-offer email after salary practice | `sessions/report.py`, `CounterOfferEmail.tsx` |
+| Technical details page with live 7-day latency (public aggregates only) | `/technical`, `telemetry.py` |
+| Smart 404, contact diagnostics, admin route guard test, cache savings gauge | see PR #292 |
+
 ## Already in Orbit (don't rebuild)
 
 Story bank (STAR), saved answers (answer bank), mock interviews with company styles and presets, warm-up, practice
@@ -30,14 +43,13 @@ fit checks, tracker, follow-ups, outreach and people, job safety card, country-a
    outreach → applied → interview → outcome), list view first. Reuses tracker rows; no second tracker.
 3. **Interview replay lab (F3).** On consented session transcripts: question-bound transcript, rubric notes, one-tap
    retry of a weak answer into the practice queue. No emotion or personality scoring.
-4. **Explainable fit (F6).** Requirement-by-requirement met / partial / unclear / missing with the JD excerpt and the
-   resume line; builds on fit checks.
+4. ~~**Explainable fit (F6).**~~ Shipped 15 Oct 2026 (above).
 5. **Opportunity provenance (F5).** Source, first-seen and last-seen dates, duplicate fingerprint on job cards; never a
    "verified" claim without a verification source.
 6. **Adaptive panel practice (F4).** Multi-persona mock as a practice mode; bounded tokens; text-only fallback.
 
-Later only: F7 application helper (consent, no auto-submit), F8 negotiation rehearsal, F9 experiments, F10
-multilingual practice.
+Later only: F7 application helper (consent, no auto-submit), F9 experiments, F10 multilingual practice. (F8
+negotiation rehearsal exists: the salary practice preset, now with a counter-offer email.)
 
 ## UX / design work proposed (Phase 5, not started)
 

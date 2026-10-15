@@ -766,6 +766,34 @@ def test_a_fit_check_is_grounded_in_the_resume() -> None:
     assert weak.verdict == "Good"  # "Strong" for a post the resume barely touches is lowered
 
 
+def test_fit_requirements_point_at_real_lines_in_the_post_and_the_resume() -> None:
+    job = {"title": "Backend Engineer", "company": "Groww", "location": "Bengaluru",
+           "text": "You will build Go services on Kubernetes. 3+ years with Kafka. Java and Spring Boot a must."}
+    answer = json.dumps({
+        "verdict": "Good", "summary": "You fit most of it.", "why": [], "gaps": ["The post asks for Java."],
+        "tweaks": [],
+        "requirements": [
+            {"requirement": "Go on Kubernetes", "status": "met", "job_quote": "build Go services on Kubernetes",
+             "resume_quote": "Go microservices on Kubernetes"},
+            {"requirement": "Kafka", "status": "met", "job_quote": "3+ years with Kafka",
+             "resume_quote": "ran Kafka clusters for 9 years"},  # not in the resume: can't be "met"
+            {"requirement": "Java", "status": "missing", "job_quote": "Java and Spring Boot a must",
+             "resume_quote": "Java"},
+            {"requirement": "Leadership", "status": "partial", "job_quote": "leads a team of ten",
+             "resume_quote": ""},
+            {"requirement": "", "status": "met"}, "not an object"]})
+    check = fitcheck.parse_fit(answer, backend_resume(), job, score=70, matched=["Go", "Kubernetes"])
+    reqs = [(r.requirement, r.status, r.job_quote, r.resume_quote) for r in check.requirements]
+    assert reqs[0] == ("Go on Kubernetes", "met", "build Go services on Kubernetes", "Go microservices on Kubernetes")
+    assert reqs[1] == ("Kafka", "unclear", "3+ years with Kafka", "")  # the resume line was made up
+    assert reqs[2] == ("Java", "missing", "Java and Spring Boot a must", "")  # missing carries no resume line
+    assert reqs[3] == ("Leadership", "unclear", "", "")  # a job quote not in the post is dropped
+    assert len(reqs) == 4
+    # A check stored before requirements existed still reads.
+    assert fitcheck.FitCheck.model_validate({"verdict": "Good", "summary": "s", "why": ["w"], "gaps": [],
+                                             "tweaks": []}).requirements == []
+
+
 def test_fit_checks_are_free_cached_and_capped_per_day(jobs: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     h = _register(jobs)
     a, b, c = insert(jobs, _listing(title="Backend Engineer"), _listing(title="Platform Engineer", company="B"),
