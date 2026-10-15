@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@orbit/types": "workspace:*",
-    "lucide-react": "^1.52.0",
+    "lucide-react": "^1.55.0",
     "thinking-orbs": "^0.3.2",
     "uqr": "^0.1.3"
   },
