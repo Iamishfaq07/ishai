@@ -7,6 +7,7 @@ mod updater;
 #[cfg(target_os = "windows")]
 mod wasapi_capture;
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -53,16 +54,49 @@ fn tray_quit(app: &tauri::AppHandle) {
     let _ = app.emit_to("main", CONFIRM_QUIT_EVENT, ());
 }
 
+/// The user's window-privacy choices (Settings → Window privacy), both off until they choose. `shield` keeps
+/// Orbit's windows out of screenshots, screen recordings and Windows Recall (Windows display affinity: not every
+/// capture method honours it, and it hides nothing from Task Manager or anyone looking at the screen).
+/// `hide_from_taskbar` is separate and also off by default, so Orbit shows in the taskbar like any app.
+#[derive(Default)]
+struct WindowPrivacy {
+    shield: AtomicBool,
+    hide_from_taskbar: AtomicBool,
+}
+
+impl WindowPrivacy {
+    fn get(&self) -> (bool, bool) {
+        (
+            self.shield.load(Ordering::Relaxed),
+            self.hide_from_taskbar.load(Ordering::Relaxed),
+        )
+    }
+}
+
 fn protect_window(window: &tauri::WebviewWindow) {
-    let _ = window.set_content_protected(true);
-    let _ = window.set_skip_taskbar(true);
+    let (shield, hide) = window.app_handle().state::<WindowPrivacy>().get();
+    let _ = window.set_content_protected(shield);
+    let _ = window.set_skip_taskbar(hide);
 }
 
 /// Every Orbit window, including ones opened after startup.
 fn protect_all(app: &tauri::AppHandle) {
     for (_, window) in app.webview_windows() {
-        protect_window(&window);
+        if window.label() != screen::OVERLAY_LABEL {
+            protect_window(&window);
+        }
     }
+}
+
+/// Settings → Window privacy (and the first-run choice). Applies at once to every window, no restart.
+#[tauri::command]
+fn set_window_privacy(app: tauri::AppHandle, shield: bool, hide_from_taskbar: bool) {
+    let state = app.state::<WindowPrivacy>();
+    state.shield.store(shield, Ordering::Relaxed);
+    state
+        .hide_from_taskbar
+        .store(hide_from_taskbar, Ordering::Relaxed);
+    protect_all(&app);
 }
 
 fn show_main(app: &tauri::AppHandle) {
@@ -104,6 +138,7 @@ pub fn run() {
         .manage(audio::CaptureState::default())
         .manage(updater::PendingUpdate::default())
         .manage(QuitRequest::default())
+        .manage(WindowPrivacy::default())
         .on_window_event(|window, event| {
             if matches!(
                 event,
@@ -111,7 +146,11 @@ pub fn run() {
                     | WindowEvent::ScaleFactorChanged { .. }
                     | WindowEvent::ThemeChanged(_)
             ) {
-                if let Some(webview) = window.app_handle().get_webview_window(window.label()) {
+                let label = window.label();
+                if label == screen::OVERLAY_LABEL {
+                    return;
+                }
+                if let Some(webview) = window.app_handle().get_webview_window(label) {
                     protect_window(&webview);
                 }
             }
@@ -136,7 +175,7 @@ pub fn run() {
 
             protect_all(app.handle());
 
-            // Windows can drop capture-exclusion after DPI or fullscreen changes.
+            // Windows can drop capture-exclusion after DPI or fullscreen changes: re-apply the user's choice.
             let handle = app.handle().clone();
             std::thread::spawn(move || loop {
                 std::thread::sleep(Duration::from_secs(2));
@@ -146,6 +185,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            set_window_privacy,
             audio::list_audio_devices,
             audio::list_output_devices,
             audio::start_capture,
@@ -169,8 +209,19 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::QuitRequest;
+    use super::{QuitRequest, WindowPrivacy};
     use std::time::Duration;
+
+    #[test]
+    fn window_privacy_is_off_until_the_user_chooses() {
+        // Not hidden from screenshots, and in the taskbar like any app, until Settings says otherwise.
+        assert_eq!(WindowPrivacy::default().get(), (false, false));
+        let conf: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        let main = &conf["app"]["windows"][0];
+        assert_eq!(main["contentProtected"], false);
+        assert_eq!(main["skipTaskbar"], false);
+    }
 
     #[test]
     fn a_second_tray_quit_soon_after_the_first_quits_anyway() {

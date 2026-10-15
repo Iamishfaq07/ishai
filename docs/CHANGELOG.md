@@ -1,5 +1,23 @@
 # Implementation log
 
+## Launch hardening, part 2: window privacy is the user's choice (2026-10-16)
+
+- **Desktop window privacy:** the desktop app used to always keep its window out of screen capture and the taskbar,
+  while the privacy policy said it didn't hide. Now there are two separate settings, both **off** until the user
+  chooses (Settings → Window privacy):
+  - a privacy shield (Windows display affinity);
+  - hide from the taskbar.
+
+  Home asks once about the shield, in plain words, with nothing preselected. Changes apply to every window at once.
+  The region-selection overlay keeps its own protection.
+- **Copy matches the code:** the privacy policy (updated 16 October 2026), terms, landing FAQ, README and desktop
+  README now describe the shield as optional, as a request Windows doesn't always honour, and as not hiding Orbit from
+  Task Manager, other apps or anyone watching.
+- **Windows app labelled Beta** (Home card, account menu, landing) with a one-line SmartScreen note, until
+  `VITE_DESKTOP_SIGNED=true`.
+- Desktop crate builds and tests on Linux again: the non-Windows audio path is updated for cpal 0.18 (`description()`,
+  `u32` sample rate, owned stream config).
+
 ## Launch hardening, part 1 (2026-10-16)
 
 - **Proxy secret:** in production without a usable `ORBIT_PROXY_SECRET`, `/ready` now answers 503 (`proxy_secret:

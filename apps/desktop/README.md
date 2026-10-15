@@ -73,7 +73,9 @@ tested.
   Text always stays fully visible.
 - The window is frameless; drag it by the title bar. Close (×, or Alt+F4) asks whether to hide to the tray or quit,
   and can remember the choice. A remembered "quit" still asks during a live session.
-- There's intentionally **no** content protection, capture exclusion, or "undetectable" mode.
+- Window privacy is the user's choice (Settings → Window privacy), both **off** by default: a privacy shield (Windows
+  display affinity, `set_window_privacy` in `src-tauri/src/lib.rs`) and hide-from-taskbar. There's no "undetectable"
+  mode, and nothing hides Orbit from Task Manager or other programs.
 
 ## Shortcuts
 

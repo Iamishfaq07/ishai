@@ -37,7 +37,7 @@ import {
 import { api } from "../lib/api";
 import { isWindows } from "../lib/audio";
 import { useAuth } from "../lib/auth";
-import { DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
+import { DESKTOP_BETA, DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
 import { CONTACT_PAGE, POLICY_LINKS } from "../lib/contact";
 import { SHELL_EVENTS, isTypingTarget, openSupport } from "../lib/shell";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
@@ -603,7 +603,7 @@ function MeMenu({
         {isWindows() && (
           <li>
             <a href={DESKTOP_DOWNLOAD_URL} className={row}>
-              <Download className={icon} aria-hidden /> Get the Windows app
+              <Download className={icon} aria-hidden /> Get the Windows app{DESKTOP_BETA && " (beta)"}
             </a>
           </li>
         )}
@@ -722,7 +722,7 @@ function AccountMenu({
           {isWindows() && (
             <a role="menuitem" href={DESKTOP_DOWNLOAD_URL} className={item} onClick={() => setOpen(false)}>
               <Download className="h-4 w-4 text-zinc-500" aria-hidden />
-              Get the Windows app
+              Get the Windows app{DESKTOP_BETA && " (beta)"}
             </a>
           )}
           <div className="my-1 h-px bg-zinc-200 dark:bg-white/10" />

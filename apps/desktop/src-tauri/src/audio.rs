@@ -208,13 +208,19 @@ pub async fn list_output_devices() -> Result<Vec<AudioDevice>, String> {
     .await
 }
 
+/// A device's name (cpal 0.18 replaced `name()` with `description()`).
+#[cfg(not(target_os = "windows"))]
+fn cpal_name(device: &cpal::Device) -> Option<String> {
+    device.description().ok().map(|d| d.name().to_string())
+}
+
 #[cfg(not(target_os = "windows"))]
 fn list_cpal_inputs() -> Result<Vec<AudioDevice>, String> {
     let host = cpal::default_host();
-    let default_name = host.default_input_device().and_then(|d| d.name().ok());
+    let default_name = host.default_input_device().and_then(|d| cpal_name(&d));
     let devices = host.input_devices().map_err(|e| e.to_string())?;
     Ok(devices
-        .filter_map(|d| d.name().ok())
+        .filter_map(|d| cpal_name(&d))
         .map(|name| AudioDevice {
             is_default: default_name.as_deref() == Some(name.as_str()),
             is_communications: false,
@@ -421,7 +427,7 @@ fn open_mic(
         Some(id) => host
             .input_devices()
             .map_err(|e| e.to_string())?
-            .find(|d| d.name().map(|n| n == id).unwrap_or(false))
+            .find(|d| cpal_name(d).is_some_and(|n| n == id))
             .ok_or_else(|| format!("device \"{id}\" not found"))?,
         None => host.default_input_device().ok_or("no default microphone")?,
     };
@@ -469,13 +475,13 @@ where
     f32: FromSample<T>,
 {
     let channels = usize::from(config.channels.max(1));
-    let mut resampler = Resampler::new(config.sample_rate.0, TARGET_RATE);
+    let mut resampler = Resampler::new(config.sample_rate, TARGET_RATE);
     let mut pending: Vec<i16> = Vec::with_capacity(FRAME_SAMPLES * 2);
     let err_sink = sink.clone();
 
     device
         .build_input_stream(
-            config,
+            config.clone(),
             move |data: &[T], _: &cpal::InputCallbackInfo| {
                 for frame in data.chunks(channels) {
                     let sum: f32 = frame.iter().map(|s| f32::from_sample(*s)).sum();

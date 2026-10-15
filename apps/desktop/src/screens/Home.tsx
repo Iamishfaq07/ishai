@@ -25,6 +25,7 @@ import { formatDate, formatDuration, sessionKindLine } from "../format";
 import { TitleBar, TitleBarButton } from "../TitleBar";
 import { SESSION_TYPE_ICON, sessionLine } from "../sessionIcons";
 import { UpdateBanner } from "../UpdateBanner";
+import { WindowPrivacyChoice } from "../WindowPrivacyCard";
 
 const QUICK_START: Array<{ type: SessionType; title: string; body: string; icon: LucideIcon }> = [
   { type: "interview", title: "Interview", body: "Live answers grounded in your resume and the JD.", icon: Briefcase },
@@ -85,6 +86,7 @@ export function HomeScreen({
       <UpdateBanner />
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         <div className="mx-auto max-w-4xl space-y-6">
+          <WindowPrivacyChoice />
           <section className="glass-panel gradient-border relative animate-fade-up overflow-hidden rounded-3xl p-5 sm:p-7">
             <PlanetHero className="pointer-events-none absolute -right-10 -top-8 w-40 opacity-90 motion-safe:animate-float sm:-right-4 sm:w-56" />
             <p className="relative inline-flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-200">

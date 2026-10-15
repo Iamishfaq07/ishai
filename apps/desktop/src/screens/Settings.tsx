@@ -29,6 +29,7 @@ import { GlassControls } from "../GlassControls";
 import { GlobalShortcutsCard } from "../GlobalShortcutsCard";
 import { useTheme, type ThemePref } from "../theme";
 import { TitleBar } from "../TitleBar";
+import { WindowPrivacyCard } from "../WindowPrivacyCard";
 
 function errText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -58,6 +59,7 @@ export function SettingsScreen({
           <PageHeader title="Settings" />
           <UsageCard />
           <PrivacyCard user={user} onUser={onUser} onSignOut={onSignOut} />
+          <WindowPrivacyCard />
           <AppearanceCard />
           <GlobalShortcutsCard />
           <AdvancedCard />
