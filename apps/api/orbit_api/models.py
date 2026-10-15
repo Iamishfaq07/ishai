@@ -13,6 +13,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    false,
     text,
     true,
 )
@@ -642,6 +643,10 @@ class JobListing(Base):
     snippet: Mapped[str] = mapped_column(Text, default="")
     description: Mapped[str] = mapped_column(Text, default="")
     salary: Mapped[str | None] = mapped_column(String(120))
+    # What the post says about sponsoring a work visa ("offered" | "not_offered"; None: it doesn't), and whether it
+    # offers help relocating (job_portal/signals.py).
+    visa: Mapped[str | None] = mapped_column(String(12))
+    relocation: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     keywords: Mapped[list[str]] = mapped_column(JSON, default=list)  # the post's skills, read once at fetch time
     text_hash: Mapped[str | None] = mapped_column(String(16))  # of title + description: keywords re-read on change
     dedupe_key: Mapped[str] = mapped_column(String(300))  # company + title + city, normalized

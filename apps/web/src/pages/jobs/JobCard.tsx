@@ -148,6 +148,15 @@ export function JobWhen({ job, className, facts = true }: { job: JobListing; cla
       {facts && job.salary && (
         <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-800 dark:text-emerald-200">{job.salary}</span>
       )}
+      {facts && job.visa === "offered" && (
+        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-800 dark:text-emerald-200">Visa sponsorship</span>
+      )}
+      {facts && job.visa === "not_offered" && (
+        <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 font-medium text-zinc-700 dark:text-zinc-300">No visa sponsorship</span>
+      )}
+      {facts && job.relocation && (
+        <span className="rounded-full bg-sky-500/10 px-2 py-0.5 font-medium text-sky-800 dark:text-sky-200">Relocation help</span>
+      )}
     </p>
   );
 }

@@ -6,9 +6,12 @@ import {
   ArrowLeft,
   ArrowUpRight,
   BookmarkCheck,
+  CircleAlert,
+  CircleCheck,
   CalendarIcon,
   ExternalLink,
   FileText,
+  Info,
   PenLine,
   Search,
   Send,
@@ -264,6 +267,7 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
             }}
           />
 
+          <PostingCheck checks={detail.checks ?? []} />
           <Provenance job={job} also={detail.also_listed ?? []} />
           <SafetyCard job={{ id: job.id, title: job.title, company: job.company, url: job.url }} />
         </aside>
@@ -397,6 +401,37 @@ function TrackerPanel({
           <ErrorNote>{error}</ErrorNote>
         </div>
       )}
+    </Card>
+  );
+}
+
+const SIGNAL_ICON = { caution: CircleAlert, info: Info, good: CircleCheck } as const;
+const SIGNAL_TONE = { caution: "text-amber-500", info: "text-zinc-400", good: "text-emerald-500" } as const;
+
+/**
+ * Is this a live opening? What Orbit can see (its age, whether it was re-dated or posted elsewhere earlier, standing-ad
+ * wording, a pay range, the careers page): signals to weigh, never a verdict, since plenty of real roles stay up long.
+ */
+function PostingCheck({ checks }: { checks: NonNullable<JobDetail["checks"]> }) {
+  if (!checks.length) return null;
+  const cautions = checks.filter((c) => c.tone === "caution").length;
+  return (
+    <Card>
+      <h2 className="font-display text-base font-semibold">Posting check</h2>
+      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+        {cautions ? `${cautions} thing${cautions === 1 ? "" : "s"} to weigh before you spend time on it.` : "Nothing here suggests it isn't a live opening."}
+      </p>
+      <ul className="mt-2 space-y-2 text-sm">
+        {checks.map((c) => {
+          const Icon = SIGNAL_ICON[c.tone];
+          return (
+            <li key={c.kind} className="flex gap-2">
+              <Icon className={cx("mt-0.5 h-4 w-4 shrink-0", SIGNAL_TONE[c.tone])} aria-label={c.tone === "caution" ? "Caution" : c.tone === "good" ? "Good sign" : "Note"} />
+              <span>{c.text}</span>
+            </li>
+          );
+        })}
+      </ul>
     </Card>
   );
 }

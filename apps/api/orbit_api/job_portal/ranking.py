@@ -138,6 +138,7 @@ class Search:
     exclude: list[str] = field(default_factory=list)
     keywords: str = ""
     country: str = "IN"  # where the candidate applies: posts there, or remote and open to it
+    needs_sponsorship: bool = False  # hide posts that say they won't sponsor a visa
     any_country: bool = False  # one job's own score (opened from the tracker): wherever it is
 
     def cities(self) -> frozenset[str]:
@@ -154,7 +155,7 @@ class Search:
     def key(self) -> str:
         return repr((self.titles, sorted(s.lower() for s in self.skills), self.locations, sorted(self.workplace),
                      self.level, self.years, sorted(self.job_types), self.days, sorted(self.sources_off),
-                     sorted(self.exclude), self.keywords.lower(), self.country))
+                     sorted(self.exclude), self.keywords.lower(), self.country, self.needs_sponsorship))
 
 
 @dataclass(frozen=True)
@@ -176,6 +177,7 @@ class Row:
     posted_at: datetime
     keywords: tuple[str, ...]
     dedupe_key: str
+    visa: str | None = None  # "not_offered": the post says it won't sponsor a work visa
 
 
 ROW_FIELDS = tuple(Row.__dataclass_fields__)
@@ -273,6 +275,8 @@ def rank(rows: Iterable[Row], search: Search, matcher: SkillMatcher, *, sort: st
         if posted < since or row.source in off:
             continue
         if row.employment_type and row.employment_type not in types:
+            continue
+        if search.needs_sponsorship and row.visa == "not_offered":
             continue
         place = _place(row, search)
         if place is None:

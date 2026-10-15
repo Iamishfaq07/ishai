@@ -158,7 +158,7 @@ async def _store(source_id: str, board: str | None, rows: list[dict[str, Any]], 
             keep = partial and bool(row.description)  # listed without its text: keep the text and links we have
             for name, value in r.items():
                 if keep and name in ("url", "apply_url", "description", "snippet", "text_hash", "level", "exp_min",
-                                     "exp_max"):
+                                     "exp_max", "visa", "relocation"):
                     continue
                 setattr(row, name, value)
             if keywords is not None and not keep:

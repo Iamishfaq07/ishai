@@ -282,6 +282,17 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
               placeholder="e.g. sales"
               onChange={(v) => set("exclude", v)}
             />
+
+            <label className="flex items-start gap-2 text-sm">
+              <input type="checkbox" checked={draft.needs_sponsorship ?? false} onChange={(e) => set("needs_sponsorship", e.target.checked)}
+                     className="mt-0.5 h-4 w-4 accent-indigo-600" />
+              <span>
+                <span className="font-medium text-zinc-800 dark:text-zinc-200">I need visa sponsorship</span>
+                <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+                  Leaves out posts that say they won't sponsor a work visa. Posts that don't say stay in.
+                </span>
+              </span>
+            </label>
           </div>
         </Section>
 

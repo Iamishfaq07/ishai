@@ -1762,6 +1762,8 @@ export interface JobPrefs {
   /** The "search on" sites to show, by id. */
   portals: string[];
   exclude: string[];
+  /** Needs an employer to sponsor a work visa: posts that say they won't are left out. */
+  needs_sponsorship?: boolean;
 }
 
 export interface JobSuggestedProfile {
@@ -1855,6 +1857,17 @@ export interface JobListing {
   first_seen_at?: string;
   /** When Orbit last found it on the company's own careers page; null for feeds and searches (never re-checked). */
   still_listed_at?: string | null;
+  /** What the post says about sponsoring a work visa; null when it doesn't say. */
+  visa?: "offered" | "not_offered" | null;
+  /** The post offers help relocating. */
+  relocation?: boolean;
+}
+
+/** One observation of the posting check: whether a post looks like a live opening. Never a verdict. */
+export interface JobPostingSignal {
+  kind: string;
+  tone: "good" | "caution" | "info";
+  text: string;
 }
 
 export interface JobFeed {
@@ -1982,6 +1995,8 @@ export interface JobDetail {
   tracker: JobTrackerEntry | null;
   /** The same job posted elsewhere (same company, title and city); `url` is "" when it isn't an http(s) link. */
   also_listed?: Array<{ id: string; source_label: string; direct: boolean; url: string }>;
+  /** The posting check: cautions first, then what's reassuring. */
+  checks?: JobPostingSignal[];
 }
 
 export interface JobTailorResponse {
