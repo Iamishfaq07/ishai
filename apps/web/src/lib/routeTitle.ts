@@ -11,6 +11,7 @@ const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/jobs\/alerts\/off/, "Stop job alerts"],
   [/^\/jobs(\/|$)/, "Jobs AI"],
   [/^\/offers(\/|$)/, "Offer AI"],
+  [/^\/linkedin(\/|$)/, "LinkedIn AI"],
   [/^\/documents\/stories/, "Story bank"],
   [/^\/documents\/evidence/, "Evidence vault"],
   [/^\/documents\/answers/, "My answers"],

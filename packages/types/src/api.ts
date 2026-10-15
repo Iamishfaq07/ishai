@@ -2142,3 +2142,50 @@ export interface JobOfferRecord extends OfferInput {
   created_at: string;
   updated_at: string;
 }
+
+// ---- LinkedIn AI (orbit_api/linkedin) -----------------------------------------------------------------------------
+
+/** The user's LinkedIn profile as read from its "Save to PDF": the text as it is on LinkedIn. */
+export interface LinkedInRead {
+  name: string;
+  headline: string;
+  location: string;
+  about: string;
+  url: string;
+  experience: Array<{ title: string; company: string; dates: string; current: boolean; description: string }>;
+  education: Array<{ school: string; degree: string }>;
+  skills: string[];
+  certifications: string[];
+}
+
+export interface LinkedInCheck {
+  id: string;
+  section: "headline" | "about" | "experience" | "skills" | "keywords" | "extras";
+  ok: boolean;
+  points: number;
+  max: number;
+  title: string;
+  tip: string;
+}
+
+export interface LinkedInAudit {
+  score: number;
+  checks: LinkedInCheck[];
+  /** The skills job posts for the target role ask for most, most asked first. */
+  keywords: string[];
+  found: string[];
+  missing: string[];
+  /** Where the profile and the Orbit resume disagree. */
+  mismatches: string[];
+  /** How many job posts the keywords came from. */
+  posts: number;
+}
+
+export interface LinkedInState {
+  profile: LinkedInRead | null;
+  target_role: string;
+  audit: LinkedInAudit | null;
+  read_at: string | null;
+  /** AI reads left today; null = no cap. */
+  reads_left: number | null;
+}

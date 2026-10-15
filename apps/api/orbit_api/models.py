@@ -408,6 +408,17 @@ class JobOffer(TimestampMixin, Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
+class LinkedInProfileRow(TimestampMixin, Base):
+    """LinkedIn AI (orbit_api/linkedin): the user's LinkedIn profile as last read from its "Save to PDF" (sections, the
+    text as it is on LinkedIn), and the role they're targeting. The PDF itself isn't kept."""
+
+    __tablename__ = "linkedin_profiles"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    target_role: Mapped[str] = mapped_column(String(200), default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class SavedAnswer(TimestampMixin, Base):
     """An answer bank entry: a question the user has worked out how to answer, in their own words (often a review's
     "Try saying", edited). Every live session can draw on it, as the stories are, so the copilot's answer to that

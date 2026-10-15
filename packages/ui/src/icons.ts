@@ -142,3 +142,6 @@ export { Banknote } from "lucide-react";
 
 // Offer AI: its mark (the rupee in India, a banknote elsewhere) and the side-by-side comparison.
 export { BadgeIndianRupee, Scale } from "lucide-react";
+
+// LinkedIn AI's mark (a profile card: lucide has no brand icons).
+export { IdCard } from "lucide-react";

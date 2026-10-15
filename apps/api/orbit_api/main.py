@@ -39,6 +39,7 @@ from orbit_api.job_portal.companies import boards as configured_boards
 from orbit_api.job_portal.contacts import router as job_contacts_router
 from orbit_api.job_portal.refresh import running_refresher as running_job_refresher
 from orbit_api.job_portal.routes import router as jobs_router
+from orbit_api.linkedin.routes import router as linkedin_router
 from orbit_api.observability import configure_logging, init_sentry, request_id_middleware
 from orbit_api.offers.routes import router as offers_router
 from orbit_api.preflight import router as preflight_router
@@ -277,6 +278,7 @@ def create_app() -> FastAPI:
     app.include_router(jobs_router)
     app.include_router(job_contacts_router)
     app.include_router(offers_router)
+    app.include_router(linkedin_router)
     app.include_router(contact_router)
     app.include_router(support_router)
     app.include_router(support_admin_router)
