@@ -1,3 +1,4 @@
+import { safeLocal, safeSession } from "@orbit/ui";
 // Things this browser used to keep once for everyone who signed in on it. They are cleared when the account
 // changes (useAsync.ts). New copies are stored per account, so the next person doesn't inherit them.
 const LEGACY_KEYS = [
@@ -14,18 +15,18 @@ const LEGACY_KEYS = [
 // This tab only. A warm-up in progress has the person's answers; the next account in the tab must not see them.
 const SESSION_KEYS = ["orbit.warmupRound"];
 
-function drop(storage: Storage, keys: readonly string[]): void {
+function drop(storage: Pick<Storage, "removeItem">, keys: readonly string[]): void {
   for (const key of keys) storage.removeItem(key);
 }
 
 export function clearLegacyBrowserAccount(): void {
   try {
-    drop(localStorage, LEGACY_KEYS);
+    drop(safeLocal, LEGACY_KEYS);
   } catch {
     // storage unavailable: nothing was kept there either
   }
   try {
-    drop(sessionStorage, SESSION_KEYS);
+    drop(safeSession, SESSION_KEYS);
   } catch {
     // session storage unavailable
   }

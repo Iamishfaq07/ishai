@@ -1,3 +1,4 @@
+import { safeLocal } from "../storage";
 /**
  * What this browser remembers for the resume maker, per resume: the document "Use in Orbit" made from it (so a second
  * click updates that document instead of adding a copy), and (resume/kit.ts) the profiles and messages written for it.
@@ -11,11 +12,7 @@ export interface KeyValueStore {
 }
 
 export function browserStore(): KeyValueStore | null {
-  try {
-    return typeof localStorage === "undefined" ? null : localStorage;
-  } catch {
-    return null; // storage switched off
-  }
+  return safeLocal; // never throws: blocked or full storage just forgets
 }
 
 export function read(store: KeyValueStore | null, key: string): unknown {

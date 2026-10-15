@@ -3,6 +3,7 @@ import type { CodingLanguage, LiveAnswerCode } from "@orbit/types";
 import { CODING_LANGUAGES } from "../live/preferences";
 import { cx, focusRing } from "./cx";
 import { normalizeLanguage, tokenize, type TokenKind } from "./highlight";
+import { safeLocal } from "../storage";
 
 const TOKEN_CLASS: Record<TokenKind, string> = {
   plain: "",
@@ -21,7 +22,7 @@ const WRAP_KEY = "orbit.codeWrap";
  */
 export function CodeBlock({ code, onLanguage }: { code: LiveAnswerCode; onLanguage?: (lang: CodingLanguage) => void }) {
   const [copied, setCopied] = useState(false);
-  const [wrap, setWrap] = useState(() => localStorage.getItem(WRAP_KEY) === "on");
+  const [wrap, setWrap] = useState(() => safeLocal.getItem(WRAP_KEY) === "on");
   const lines = useMemo(() => {
     // tokenize once, then split tokens across lines so multi-line comments/strings keep their colour
     const out: Array<Array<{ text: string; kind: TokenKind }>> = [[]];
@@ -47,7 +48,7 @@ export function CodeBlock({ code, onLanguage }: { code: LiveAnswerCode; onLangua
     }
   };
   const toggleWrap = () => {
-    localStorage.setItem(WRAP_KEY, wrap ? "off" : "on");
+    safeLocal.setItem(WRAP_KEY, wrap ? "off" : "on");
     setWrap(!wrap);
   };
   const btn = cx("rounded px-1.5 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100", focusRing);

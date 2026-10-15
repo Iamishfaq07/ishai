@@ -1,3 +1,4 @@
+import { safeSession } from "@orbit/ui";
 /**
  * After a deploy, a tab (or a cached page) from the build before asks for page files that no longer exist: their names
  * change with every build. Loading the page again gets the new build. Once, though: if the file is missing for
@@ -18,9 +19,9 @@ export function isStaleBuildError(err: unknown): boolean {
 export function reloadForNewBuild(): boolean {
   if (window.location.pathname.startsWith("/live/")) return false;
   try {
-    const last = Number(sessionStorage.getItem(KEY)) || 0;
+    const last = Number(safeSession.getItem(KEY)) || 0;
     if (Date.now() - last < GAP_MS) return false;
-    sessionStorage.setItem(KEY, String(Date.now()));
+    safeSession.setItem(KEY, String(Date.now()));
   } catch {
     return false; // no storage, so no loop guard: leave it to the error screen
   }

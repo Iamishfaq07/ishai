@@ -18,6 +18,7 @@ import { SpokenWalkthrough } from "./SpokenWalkthrough";
 import { cx, focusRing } from "./cx";
 import { Orb } from "./Orb";
 import { ArrowRight, Check, Circle, Feather, Maximize2, Minimize2, Pause, PenLine, Play, Square, Volume2 } from "../icons";
+import { safeLocal } from "../storage";
 
 export interface AnswerCardProps {
   loadWalkthrough?: (answerId: string) => Promise<NonNullable<import("@orbit/types").LiveAnswer["walkthrough"]>>;
@@ -141,9 +142,9 @@ function KeyPoints({ progress, compact, onToggle }: {
   compact: boolean;
   onToggle?: (index: number) => void;
 }) {
-  const [on, setOn] = useState(() => localStorage.getItem(NEXT_PREF) !== "off");
+  const [on, setOn] = useState(() => safeLocal.getItem(NEXT_PREF) !== "off");
   const toggle = () => {
-    localStorage.setItem(NEXT_PREF, on ? "off" : "on");
+    safeLocal.setItem(NEXT_PREF, on ? "off" : "on");
     setOn(!on);
   };
   const done = progress.next === null;

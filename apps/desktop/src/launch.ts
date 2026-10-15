@@ -1,5 +1,6 @@
 import type { OrbitSession, SessionType } from "@orbit/types";
 import type { AudioApp } from "./native";
+import { safeLocal } from "@orbit/ui";
 
 /**
  * Which audio a session captures: the interviewer's app or output picked on Setup, kept across launches, and rebuilt
@@ -117,7 +118,7 @@ export interface SavedAudio {
   last: LastLaunch | null;
 }
 
-export function loadSavedAudio(storage: Pick<Storage, "getItem"> = localStorage): SavedAudio {
+export function loadSavedAudio(storage: Pick<Storage, "getItem"> = safeLocal): SavedAudio {
   let last: LastLaunch | null = null;
   try {
     const parsed = JSON.parse(storage.getItem(LAST_LAUNCH_KEY) ?? "null") as LastLaunch | null;
@@ -132,7 +133,7 @@ export function loadSavedAudio(storage: Pick<Storage, "getItem"> = localStorage)
 export function rememberLaunch(
   sessionId: string,
   launch: DesktopLaunch,
-  storage: Pick<Storage, "setItem"> = localStorage,
+  storage: Pick<Storage, "setItem"> = safeLocal,
 ): void {
   const last: LastLaunch = { sessionId, ...launch };
   storage.setItem(LAST_LAUNCH_KEY, JSON.stringify(last));

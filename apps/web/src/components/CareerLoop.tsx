@@ -1,5 +1,5 @@
 import { useSearchParams } from "react-router-dom";
-import { OrbitCareerLoopHero } from "@orbit/ui";
+import { OrbitCareerLoopHero, safeSession } from "@orbit/ui";
 import { useAuth } from "../lib/auth";
 import { cleanPrepContext, prepParams, readPrepContext } from "../lib/prepContext";
 import { loadAnswers } from "../lib/onboarding";
@@ -8,7 +8,7 @@ export function CareerLoop() {
   const { user } = useAuth();
   const [params] = useSearchParams();
   let context;
-  try { context = readPrepContext(params, user?.id, sessionStorage); }
+  try { context = readPrepContext(params, user?.id, safeSession); }
   catch { context = readPrepContext(params, user?.id); }
   context = cleanPrepContext({ ...context, role: context.role || (user ? loadAnswers(user.id)?.role : "") });
   const query = prepParams(context).toString();

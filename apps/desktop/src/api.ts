@@ -1,4 +1,4 @@
-import { checkServerUrl, createApiClient, type ServerUrlCheck } from "@orbit/ui";
+import { checkServerUrl, createApiClient, type ServerUrlCheck, safeLocal } from "@orbit/ui";
 import { tokenExpiry } from "./token";
 
 const API_URL_KEY = "orbit.apiUrl";
@@ -16,12 +16,12 @@ export function normalizeApiUrl(value: string | null | undefined): string | null
 }
 
 /** Server URL: a user override saved on the sign-in screen, else the build default. */
-export const API_URL: string = normalizeApiUrl(localStorage.getItem(API_URL_KEY)) ?? DEFAULT_API_URL;
+export const API_URL: string = normalizeApiUrl(safeLocal.getItem(API_URL_KEY)) ?? DEFAULT_API_URL;
 
 /** Persist (or clear, with null) the server override. The API client is created once, so reload. */
 export function setApiUrl(url: string | null): void {
-  if (url) localStorage.setItem(API_URL_KEY, url);
-  else localStorage.removeItem(API_URL_KEY);
+  if (url) safeLocal.setItem(API_URL_KEY, url);
+  else safeLocal.removeItem(API_URL_KEY);
   window.location.reload();
 }
 export const WEB_URL: string = import.meta.env.VITE_WEB_URL ?? "http://localhost:5173";

@@ -1,4 +1,5 @@
 import type { AnswerStyle, CodingLanguage, ExperienceLevel, ResponseTiming, ThinkingLevel } from "@orbit/types";
+import { safeLocal } from "../storage";
 
 /** "Wait before answering" presets — the server holds a detected question this long (finalizer.GRACE_MS). */
 export const RESPONSE_TIMINGS: Array<{ value: ResponseTiming; label: string; hint: string }> = [
@@ -12,7 +13,7 @@ const STORAGE_KEY = "orbit.responseTiming";
 /** A per-device preference (not per session): how someone likes to be answered doesn't change per call. */
 export function loadResponseTiming(): ResponseTiming {
   try {
-    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+    const raw = safeLocal.getItem(STORAGE_KEY);
     return RESPONSE_TIMINGS.some((t) => t.value === raw) ? (raw as ResponseTiming) : "balanced";
   } catch {
     return "balanced";
@@ -21,7 +22,7 @@ export function loadResponseTiming(): ResponseTiming {
 
 export function saveResponseTiming(timing: ResponseTiming): void {
   try {
-    localStorage.setItem(STORAGE_KEY, timing);
+    safeLocal.setItem(STORAGE_KEY, timing);
   } catch {
     // storage unavailable (private mode) — the choice still applies to this session
   }
@@ -46,7 +47,7 @@ const THINKING_KEY = "orbit.thinking";
 
 export function loadThinking(): ThinkingLevel {
   try {
-    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(THINKING_KEY) : null;
+    const raw = safeLocal.getItem(THINKING_KEY);
     return THINKING_LEVELS.some((t) => t.value === raw) ? (raw as ThinkingLevel) : "off";
   } catch {
     return "off";
@@ -55,7 +56,7 @@ export function loadThinking(): ThinkingLevel {
 
 export function saveThinking(level: ThinkingLevel): void {
   try {
-    localStorage.setItem(THINKING_KEY, level);
+    safeLocal.setItem(THINKING_KEY, level);
   } catch {
     // storage unavailable — still applies to this session
   }
@@ -72,7 +73,7 @@ const CODING_KEY = "orbit.codingLanguage";
 
 export function loadCodingLanguage(): CodingLanguage | undefined {
   try {
-    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(CODING_KEY) : null;
+    const raw = safeLocal.getItem(CODING_KEY);
     return CODING_LANGUAGES.find((l) => l.value === raw)?.value;
   } catch {
     return undefined;
@@ -81,7 +82,7 @@ export function loadCodingLanguage(): CodingLanguage | undefined {
 
 export function saveCodingLanguage(lang: CodingLanguage): void {
   try {
-    localStorage.setItem(CODING_KEY, lang);
+    safeLocal.setItem(CODING_KEY, lang);
   } catch {
     // storage unavailable — still applies to this session
   }
@@ -101,7 +102,7 @@ const EXPERIENCE_KEY = "orbit.experience";
 /** A per-device preference, like thinking: who you are doesn't change per call. */
 export function loadExperience(): ExperienceLevel {
   try {
-    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(EXPERIENCE_KEY) : null;
+    const raw = safeLocal.getItem(EXPERIENCE_KEY);
     return EXPERIENCE_LEVELS.some((l) => l.value === raw) ? (raw as ExperienceLevel) : "auto";
   } catch {
     return "auto";
@@ -110,7 +111,7 @@ export function loadExperience(): ExperienceLevel {
 
 export function saveExperience(level: ExperienceLevel): void {
   try {
-    localStorage.setItem(EXPERIENCE_KEY, level);
+    safeLocal.setItem(EXPERIENCE_KEY, level);
   } catch {
     // storage unavailable — still applies to this session
   }

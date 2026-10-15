@@ -1,5 +1,6 @@
 import type { JobLevel, JobPrefs, JobTrackerEntry } from "@orbit/types";
 import type { PresetId } from "../pages/mockPresets";
+import { safeLocal } from "@orbit/ui";
 
 /**
  * First run: the three welcome questions (what you're here for, your experience and role, where you want to work), and
@@ -399,11 +400,7 @@ export interface KeyValueStore {
 }
 
 function browserStore(): KeyValueStore | null {
-  try {
-    return typeof localStorage === "undefined" ? null : localStorage;
-  } catch {
-    return null; // storage blocked
-  }
+  return safeLocal;
 }
 
 /** Per account: several people can sign in on one browser (a shared family laptop or a college lab). */

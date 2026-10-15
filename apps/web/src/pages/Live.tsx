@@ -26,6 +26,7 @@ import {
   VISION_ENABLED,
   type PanelMode,
   confirmDialog,
+  safeLocal,
 } from "@orbit/ui";
 import { Button, ErrorNote, Spinner } from "../components/ui";
 import { LIVE_URL, api } from "../lib/api";
@@ -84,7 +85,7 @@ export function LivePage() {
 
 function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaunchState }) {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<PanelMode>(() => (localStorage.getItem(MODE_KEY) as PanelMode | null) ?? "expanded");
+  const [mode, setMode] = useState<PanelMode>(() => (safeLocal.getItem(MODE_KEY) as PanelMode | null) ?? "expanded");
   const [hotkeys] = useState(loadHotkeys);
   const ratings = useAnswerRatings(api, session.id);
   const { live, actions, client } = useLiveSession({
@@ -102,7 +103,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
     },
   });
 
-  useEffect(() => localStorage.setItem(MODE_KEY, mode), [mode]);
+  useEffect(() => safeLocal.setItem(MODE_KEY, mode), [mode]);
 
   // ── Audio capture ──────────────────────────────────────────────────────
   const pausedRef = useRef(false);
@@ -271,6 +272,16 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState<string | null>(null);
   const ended = live.state === "ended";
+
+  // Closing or reloading the tab mid-interview: the browser asks first (its own wording; some browsers skip it).
+  // The session itself survives a reload (reconnect carries it over), but an accidental close shouldn't end it.
+  const inProgress = !ended && live.state !== "idle";
+  useEffect(() => {
+    if (!inProgress) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [inProgress]);
   const endSession = async () => {
     if (!(await confirmDialog({ title: "End this session?", body: "The transcript and report are saved to History.", confirmLabel: "End session", danger: true }))) return;
     setEndError(null);

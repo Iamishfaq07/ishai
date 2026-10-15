@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Announcement } from "@orbit/types";
-import { Megaphone, X, cx, focusRing } from "@orbit/ui";
+import { Megaphone, X, cx, focusRing, safeLocal } from "@orbit/ui";
 import { api } from "../lib/api";
 import { announcementVisible } from "../pages/admin/logic";
 
@@ -9,7 +9,7 @@ const REFRESH_MS = 5 * 60_000;
 
 function dismissedId(): string | null {
   try {
-    return localStorage.getItem(DISMISSED_KEY);
+    return safeLocal.getItem(DISMISSED_KEY);
   } catch {
     return null;
   }
@@ -57,7 +57,7 @@ export function AnnouncementBanner({ className }: { className?: string }) {
           aria-label="Dismiss the announcement"
           onClick={() => {
             try {
-              localStorage.setItem(DISMISSED_KEY, note.id ?? "");
+              safeLocal.setItem(DISMISSED_KEY, note.id ?? "");
             } catch {
               // storage unavailable: hidden until the page reloads
             }

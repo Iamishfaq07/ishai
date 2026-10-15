@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { SetURLSearchParams } from "react-router-dom";
+import { safeSession } from "@orbit/ui";
 
 export interface PrepContext {
   role: string;
@@ -25,7 +26,7 @@ function arrayParam(params: URLSearchParams, key: string): string[] | undefined 
   try { return list(JSON.parse(params.get(key) ?? "[]") as unknown, 20, 400); } catch { return []; }
 }
 
-export function readPrepContext(params: URLSearchParams, userId: string | undefined, storage?: Storage): PrepContext {
+export function readPrepContext(params: URLSearchParams, userId: string | undefined, storage?: Pick<Storage, "getItem">): PrepContext {
   let saved = empty();
   try {
     const raw = storage?.getItem(KEY + (userId ?? "guest"));
@@ -52,12 +53,12 @@ export function prepParams(context: PrepContext, base = new URLSearchParams()): 
 
 export function usePrepContext(params: URLSearchParams, setParams: SetURLSearchParams, userId?: string) {
   const [context, setContext] = useState(() => {
-    try { return readPrepContext(params, userId, window.sessionStorage); }
+    try { return readPrepContext(params, userId, safeSession); }
     catch { return readPrepContext(params, userId); }
   });
   const query = params.toString();
   useEffect(() => {
-    try { window.sessionStorage.setItem(KEY + (userId ?? "guest"), JSON.stringify(context)); } catch { /* Storage blocked. */ }
+    try { safeSession.setItem(KEY + (userId ?? "guest"), JSON.stringify(context)); } catch { /* Storage blocked. */ }
     const next = prepParams(context, new URLSearchParams(query));
     if (next.toString() !== query) setParams(next, { replace: true });
   }, [context, query, setParams, userId]);
@@ -66,9 +67,6 @@ export function usePrepContext(params: URLSearchParams, setParams: SetURLSearchP
 
 export function clearPrepContext(): void {
   try {
-    for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
-      const k = sessionStorage.key(i);
-      if (k?.startsWith(KEY)) sessionStorage.removeItem(k);
-    }
+    for (const k of safeSession.keys()) if (k.startsWith(KEY)) safeSession.removeItem(k);
   } catch { /* Nothing persisted. */ }
 }

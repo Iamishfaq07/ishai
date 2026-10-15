@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { AnswerView } from "../live/reducer";
 import { cx, focusRing } from "./cx";
+import { safeLocal } from "../storage";
 
 export interface TeleprompterProps {
   answer: AnswerView | null;
@@ -16,7 +17,7 @@ interface PrompterPrefs {
 
 function loadPrefs(): PrompterPrefs {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = safeLocal.getItem(STORAGE_KEY);
     if (raw) return { fontSize: 28, width: 70, speed: 20, ...(JSON.parse(raw) as Partial<PrompterPrefs>) };
   } catch {
     // ignore
@@ -40,7 +41,7 @@ export function Teleprompter({ answer }: TeleprompterProps) {
     : [];
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+    safeLocal.setItem(STORAGE_KEY, JSON.stringify(prefs));
   }, [prefs]);
 
   useEffect(() => {

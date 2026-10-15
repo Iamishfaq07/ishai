@@ -21,6 +21,7 @@ import {
   type LiveAction,
   type LiveViewState,
   type QuestionView,
+  safeSession,
 } from "@orbit/ui";
 import { Spinner } from "../components/ui";
 import { LIVE_URL, api } from "../lib/api";
@@ -87,7 +88,7 @@ function readCode(): string {
   const fromLink = decodeURIComponent(window.location.hash.replace(/^#/, ""));
   if (fromLink) return fromLink;
   try {
-    return sessionStorage.getItem(CODE_KEY) ?? "";
+    return safeSession.getItem(CODE_KEY) ?? "";
   } catch {
     return "";
   }
@@ -96,7 +97,7 @@ function readCode(): string {
 /** The session ended or the code expired: a reload should ask for a fresh scan, not retry a dead code. */
 function forgetCode(): void {
   try {
-    sessionStorage.removeItem(CODE_KEY);
+    safeSession.removeItem(CODE_KEY);
   } catch {
     // storage unavailable: nothing was kept
   }
@@ -117,7 +118,7 @@ export function CompanionPage() {
     // this tab's sessionStorage, so reloading the page (or the phone reloading it) still finds the session.
     window.history.replaceState(null, "", window.location.pathname);
     try {
-      sessionStorage.setItem(CODE_KEY, code);
+      safeSession.setItem(CODE_KEY, code);
     } catch {
       // storage unavailable: a reload will need a fresh scan
     }

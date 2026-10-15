@@ -220,7 +220,10 @@ async def provider_health(_: Annotated[User, Depends(require_admin)]) -> dict[st
     if isinstance(llm, FallbackProvider):
         failover = {"primary": llm.primary.name, "backup": llm.fallback.name if llm.fallback else None,
                     "breaker": llm.breaker.state, "first_token_timeout_s": llm.first_token_timeout_s}
-    return {"dependencies": health.snapshot(), "llm_failover": failover}
+    from orbit_api.providers.stt import create_stt_provider
+
+    return {"dependencies": health.snapshot(), "llm_failover": failover, "env": get_settings().env,
+            "providers": {"llm": llm.name, "stt": create_stt_provider().name}}
 
 
 @router.get("/feedback", response_model=FeedbackReport)

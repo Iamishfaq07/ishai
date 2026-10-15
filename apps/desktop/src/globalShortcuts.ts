@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { register, unregister, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
+import { safeLocal } from "@orbit/ui";
 
 /**
  * System-wide shortcuts (they work while another app — Zoom, Teams, the browser — is focused).
@@ -90,7 +91,7 @@ const CHANGED_EVENT = "orbit:shortcuts-changed";
 
 export function loadShortcuts(): Record<GlobalAction, string> {
   try {
-    const saved = JSON.parse(localStorage.getItem(KEY) ?? "{}") as Partial<Record<GlobalAction, string>>;
+    const saved = JSON.parse(safeLocal.getItem(KEY) ?? "{}") as Partial<Record<GlobalAction, string>>;
     return { ...GLOBAL_DEFAULTS, ...migrateShortcuts(saved) };
   } catch {
     return { ...GLOBAL_DEFAULTS };
@@ -98,12 +99,12 @@ export function loadShortcuts(): Record<GlobalAction, string> {
 }
 
 export function shortcutsEnabled(): boolean {
-  return localStorage.getItem(ENABLED_KEY) !== "false";
+  return safeLocal.getItem(ENABLED_KEY) !== "false";
 }
 
 export function saveShortcuts(map: Record<GlobalAction, string>, enabled: boolean): void {
-  localStorage.setItem(KEY, JSON.stringify(map));
-  localStorage.setItem(ENABLED_KEY, String(enabled));
+  safeLocal.setItem(KEY, JSON.stringify(map));
+  safeLocal.setItem(ENABLED_KEY, String(enabled));
   window.dispatchEvent(new Event(CHANGED_EVENT));
 }
 

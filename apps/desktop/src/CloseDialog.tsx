@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { ArrowDownToLine, Power, OrbitLogo, cx, focusRing, useFocusTrap } from "@orbit/ui";
+import { ArrowDownToLine, Power, OrbitLogo, cx, focusRing, useFocusTrap, safeLocal } from "@orbit/ui";
 
 /** What the × / Alt+F4 does. "ask" shows the dialog; the others are a remembered choice. */
 export type CloseAction = "ask" | "tray" | "quit";
@@ -12,12 +12,12 @@ const REQUEST_EVENT = "orbit:request-close";
 const CONFIRM_QUIT_EVENT = "orbit:confirm-quit";
 
 export function loadCloseAction(): CloseAction {
-  const v = localStorage.getItem(KEY);
+  const v = safeLocal.getItem(KEY);
   return v === "tray" || v === "quit" ? v : "ask";
 }
 
 export function saveCloseAction(action: CloseAction): void {
-  localStorage.setItem(KEY, action);
+  safeLocal.setItem(KEY, action);
 }
 
 /** Title-bar × buttons call this instead of hiding the window directly. */

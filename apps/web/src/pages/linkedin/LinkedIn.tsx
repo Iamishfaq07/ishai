@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { LinkedInProfile, LinkedInState, ResumeSummary } from "@orbit/types";
-import { Check, CircleAlert, CircleCheck, Copy, FileText, IdCard, Sparkles, Trash2, Upload, LoadGate, confirmDialog, cx, focusRing } from "@orbit/ui";
+import { Check, CircleAlert, CircleCheck, Copy, FileText, IdCard, Sparkles, Trash2, Upload, LoadGate, confirmDialog, cx, focusRing, safeLocal } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
@@ -45,7 +45,7 @@ function ReadProfile({ state, onRead }: { state: LinkedInState; onRead: (s: Link
   const input = useRef<HTMLInputElement>(null);
   const [link, setLink] = useState(() => {
     try {
-      return localStorage.getItem(LINK_KEY) ?? "";
+      return safeLocal.getItem(LINK_KEY) ?? "";
     } catch {
       return "";
     }
@@ -58,7 +58,7 @@ function ReadProfile({ state, onRead }: { state: LinkedInState; onRead: (s: Link
     if (!url) return;
     setLinkSet(true);
     try {
-      localStorage.setItem(LINK_KEY, url);
+      safeLocal.setItem(LINK_KEY, url);
     } catch {
       /* the link is a convenience: fine to lose */
     }

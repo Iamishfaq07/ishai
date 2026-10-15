@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { useLocation } from "react-router-dom";
 import type { SupportThread } from "@orbit/ui";
-import { ApiError, MessageCircle, Send, Skeleton, Trash2, X, buttonClass, cx, focusRing } from "@orbit/ui";
+import { ApiError, MessageCircle, Send, Skeleton, Trash2, X, buttonClass, cx, focusRing, safeLocal } from "@orbit/ui";
 import { Input } from "./ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -23,7 +23,7 @@ interface Saved {
 
 function load(userId?: string | null): Saved | null {
   try {
-    const raw = localStorage.getItem(scopeKey(STORE, userId));
+    const raw = safeLocal.getItem(scopeKey(STORE, userId));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Saved;
     return parsed.id && parsed.token ? parsed : null;
@@ -36,7 +36,7 @@ function save(thread: SupportThread, userId?: string | null): Saved | null {
   if (!thread.token) return load(userId);
   const saved = { id: thread.id, token: thread.token };
   try {
-    localStorage.setItem(scopeKey(STORE, userId), JSON.stringify(saved));
+    safeLocal.setItem(scopeKey(STORE, userId), JSON.stringify(saved));
   } catch {
     // storage blocked or full: the chat still works for this visit
   }
@@ -45,7 +45,7 @@ function save(thread: SupportThread, userId?: string | null): Saved | null {
 
 function loadSeen(userId?: string | null): string {
   try {
-    return localStorage.getItem(scopeKey(SEEN, userId)) ?? "";
+    return safeLocal.getItem(scopeKey(SEEN, userId)) ?? "";
   } catch {
     return "";
   }
@@ -54,7 +54,7 @@ function loadSeen(userId?: string | null): string {
 function markSeen(id: string, userId?: string | null): void {
   if (!id) return;
   try {
-    localStorage.setItem(scopeKey(SEEN, userId), id);
+    safeLocal.setItem(scopeKey(SEEN, userId), id);
   } catch {
     // storage blocked: the unread dot may come back next visit
   }
@@ -259,8 +259,8 @@ export function SupportChat() {
   async function restart() {
     const mine = userId;
     try {
-      localStorage.removeItem(scopeKey(STORE, mine));
-      localStorage.removeItem(scopeKey(SEEN, mine));
+      safeLocal.removeItem(scopeKey(STORE, mine));
+      safeLocal.removeItem(scopeKey(SEEN, mine));
     } catch {
       // storage unavailable: the new chat still starts for this visit
     }

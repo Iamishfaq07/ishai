@@ -48,7 +48,6 @@ from orbit_api.prep.company_guides import router as company_guides_router
 from orbit_api.prep.routes import router as prep_router
 from orbit_api.providers import health as dependency_health
 from orbit_api.providers.llm import get_llm_provider
-from orbit_api.providers.stt import create_stt_provider
 from orbit_api.resumes.kit import router as resume_kit_router
 from orbit_api.resumes.routes import router as resumes_router
 from orbit_api.resumes.tailor_queue import router as tailor_queue_router
@@ -226,11 +225,9 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
-        # Liveness only: is the process up. Cheap, never touches the DB.
-        llm = get_llm_provider()
-        stt = create_stt_provider()
-        return {"status": "ok", "env": s.env, "commit": running_commit(),
-                "providers": {"llm": llm.name, "stt": stt.name}}
+        # Liveness only: is the process up. Cheap, never touches the DB. Public, so it names nothing but the
+        # commit (to check what a deploy is running); providers and env are in the admin's /v1/admin/providers.
+        return {"status": "ok", "commit": running_commit()}
 
     @app.get("/ready")
     async def ready(response: Response) -> dict[str, Any]:
@@ -247,6 +244,10 @@ def create_app() -> FastAPI:
         except Exception as e:
             checks["database"] = f"error: {type(e).__name__}"
             dependency_health.record("postgres", "database", False, error=type(e).__name__)
+        if s.env == "production":
+            # Without a usable proxy secret, per-IP limits key on an address the caller can choose: a deploy
+            # missing it fails its health gate instead of serving (the previous deploy keeps running).
+            checks["proxy_secret"] = "ok" if get_settings().proxy_secret is not None else "missing"
         ok = all(v == "ok" for v in checks.values())
         response.status_code = 200 if ok else 503
         return {"status": "ready" if ok else "not_ready", "checks": checks}

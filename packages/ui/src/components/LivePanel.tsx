@@ -57,6 +57,7 @@ import {
   X,
   type LucideIcon,
 } from "../icons";
+import { safeLocal } from "../storage";
 
 export type PanelMode = "compact" | "expanded";
 type SideTab = "transcript" | "chat" | "reading";
@@ -87,7 +88,7 @@ function SessionClock({ startedAt, running, dragRegion }: { startedAt: number | 
 function useSidePanel(wide: boolean): [boolean, (open: boolean) => void] {
   const [wideOpen, setWideOpen] = useState(() => {
     try {
-      return localStorage.getItem(SIDE_PANEL_KEY) !== "closed";
+      return safeLocal.getItem(SIDE_PANEL_KEY) !== "closed";
     } catch {
       return true;
     }
@@ -97,7 +98,7 @@ function useSidePanel(wide: boolean): [boolean, (open: boolean) => void] {
     if (!wide) return setNarrowOpen(open);
     setWideOpen(open);
     try {
-      localStorage.setItem(SIDE_PANEL_KEY, open ? "open" : "closed");
+      safeLocal.setItem(SIDE_PANEL_KEY, open ? "open" : "closed");
     } catch {
       // storage unavailable — still applies for this session
     }

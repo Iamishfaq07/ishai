@@ -1,3 +1,4 @@
+import { safeLocal } from "@orbit/ui";
 // The weekly practice goal (Practice → Your progress): "3 this week", counted from mock interviews and warm-up answers,
 // with weeks in a row and a freeze, so one missed week doesn't wipe out a run (Duolingo's finding: freezes keep people
 // going; guilt doesn't). Kept in this browser, per account, so a shared computer doesn't mix two people's streaks.
@@ -16,7 +17,7 @@ const DAY_MS = 86_400_000;
 
 function read<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = safeLocal.getItem(key);
     return raw === null ? fallback : (JSON.parse(raw) as T);
   } catch {
     return fallback;
@@ -25,7 +26,7 @@ function read<T>(key: string, fallback: T): T {
 
 function write(key: string, value: unknown): void {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    safeLocal.setItem(key, JSON.stringify(value));
   } catch {
     // storage full or blocked: the goal still shows, it just isn't kept
   }

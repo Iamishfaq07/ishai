@@ -16,6 +16,7 @@ import {
   practiceDocumentIds,
   splitPlaceholders,
   toast,
+  safeLocal,
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, Select, Spinner, Textarea } from "../components/ui";
 import { api } from "../lib/api";
@@ -36,7 +37,7 @@ const CATEGORY: Record<PrepCategory, { label: string; tone: string }> = {
 
 function loadLast(): PrepResponse | null {
   try {
-    const raw = localStorage.getItem(LAST_KEY);
+    const raw = safeLocal.getItem(LAST_KEY);
     return raw ? (JSON.parse(raw) as PrepResponse) : null;
   } catch {
     return null;
@@ -180,7 +181,7 @@ export function PrepSection({
       setResult(res);
       setOpen(0);
       try {
-        localStorage.setItem(LAST_KEY, JSON.stringify(res));
+        safeLocal.setItem(LAST_KEY, JSON.stringify(res));
       } catch {
         // storage full or blocked — the result still shows
       }

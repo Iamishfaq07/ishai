@@ -513,3 +513,35 @@ def test_mini_pack_costs_the_same_per_minute_as_starter_and_the_bigger_packs_cos
     per_minute = [p.price_inr / p.interview_minutes for p in sorted(DEFAULT_PACKS, key=lambda p: p.price_inr)]
     assert round(per_minute[0]) == round(per_minute[1])  # Mini ≈ Starter
     assert per_minute[1] > per_minute[2] > per_minute[3]  # Starter > Plus > Pro
+
+
+def test_no_welcome_credits_in_production_without_the_proxy_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Without it the network can be spoofed, so "one welcome per network" can't hold: nothing is granted.
+    from orbit_api.models import User
+
+    monkeypatch.setattr(get_settings(), "env", "production")
+    monkeypatch.setattr(get_settings(), "proxy_secret", None)
+
+    async def grant() -> bool:
+        async with sessionmaker()() as db:
+            user = User(email=f"held-{uuid.uuid4().hex[:8]}@example.com", password_hash="x")
+            return await credits.grant_welcome(db, user, _new_ip())
+
+    import asyncio
+
+    assert asyncio.run(grant()) is False
+
+
+def test_readiness_and_the_admin_flag_a_missing_proxy_secret(client: TestClient,
+                                                             monkeypatch: pytest.MonkeyPatch) -> None:
+    from orbit_api.admin.overview import setup_warnings
+
+    monkeypatch.setattr(get_settings(), "env", "production")
+    monkeypatch.setattr(get_settings(), "proxy_secret", None)
+    r = client.get("/ready")
+    assert r.status_code == 503 and r.json()["checks"]["proxy_secret"] == "missing"
+    assert setup_warnings() == ["proxy_secret"]
+    monkeypatch.setattr(get_settings(), "proxy_secret", SecretStr(PROXY))
+    r = client.get("/ready")
+    assert r.status_code == 200 and r.json()["checks"]["proxy_secret"] == "ok"
+    assert setup_warnings() == []

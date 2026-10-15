@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { safeLocal } from "../storage";
 
 /** User-chosen look & feel, shared by the web and desktop apps (stored per device). */
 export type AccentName = "nebula" | "indigo" | "violet" | "sky" | "emerald" | "rose" | "amber";
@@ -76,7 +77,7 @@ const STORAGE_KEY = "orbit.design";
 
 export function loadDesign(env: MotionEnv = motionEnv()): DesignPrefs {
   try {
-    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+    const raw = safeLocal.getItem(STORAGE_KEY);
     const parsed = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
     return {
       accent: typeof parsed.accent === "string" && parsed.accent in ACCENTS ? (parsed.accent as AccentName) : DEFAULT_DESIGN.accent,
@@ -90,7 +91,7 @@ export function loadDesign(env: MotionEnv = motionEnv()): DesignPrefs {
 
 export function saveDesign(prefs: DesignPrefs): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+    safeLocal.setItem(STORAGE_KEY, JSON.stringify(prefs));
   } catch {
     // storage unavailable — still applied for this session
   }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Effect, getCurrentWindow } from "@tauri-apps/api/window";
+import { safeLocal } from "@orbit/ui";
 
 /**
  * See-through window. Only BACKGROUNDS fade (index.css `html.glass` rules scale their alpha by --glass);
@@ -18,7 +19,7 @@ const DEFAULT: GlassPrefs = { opacity: 1, blur: false };
 
 export function loadGlass(): GlassPrefs {
   try {
-    const p = JSON.parse(localStorage.getItem(KEY) ?? "{}") as Partial<GlassPrefs>;
+    const p = JSON.parse(safeLocal.getItem(KEY) ?? "{}") as Partial<GlassPrefs>;
     const opacity = typeof p.opacity === "number" ? Math.min(1, Math.max(GLASS_MIN, p.opacity)) : DEFAULT.opacity;
     return { opacity, blur: Boolean(p.blur) };
   } catch {
@@ -47,7 +48,7 @@ export function stepGlass(delta: number): void {
   const p = loadGlass();
   const opacity = Math.round(Math.min(1, Math.max(GLASS_MIN, p.opacity + delta)) * 100) / 100;
   const next = { ...p, opacity };
-  localStorage.setItem(KEY, JSON.stringify(next));
+  safeLocal.setItem(KEY, JSON.stringify(next));
   applyGlass(next);
   window.dispatchEvent(new Event(CHANGED));
 }
@@ -61,7 +62,7 @@ export function useGlass(): [GlassPrefs, (patch: Partial<GlassPrefs>) => void] {
   }, []);
   useEffect(() => {
     applyGlass(prefs);
-    localStorage.setItem(KEY, JSON.stringify(prefs));
+    safeLocal.setItem(KEY, JSON.stringify(prefs));
   }, [prefs]);
   const update = useCallback((patch: Partial<GlassPrefs>) => setPrefs((p) => ({ ...p, ...patch })), []);
   return [prefs, update];

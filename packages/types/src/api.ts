@@ -1058,6 +1058,8 @@ export interface AdminStats {
   revenue_month_inr: number;
   revenue_total_inr: number;
   payments_waiting: number;
+  /** Server settings to fix, as codes: "proxy_secret" (ORBIT_PROXY_SECRET missing in production). */
+  warnings?: string[];
 }
 
 /** GET /v1/announcement (public): the site-wide banner, if the admin set one. `id` changes with the text. */
