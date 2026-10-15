@@ -1,5 +1,20 @@
 # Implementation log
 
+## Redesign, part 1: a calm app shell with a task sidebar (2026-10-16)
+
+- **Desktop sidebar** replaces the crowded top bar. It's grouped by task: Home; Prepare (Practice, Resume AI,
+  Learning AI); Apply (Jobs AI, LinkedIn AI); Interview & offer (Copilot AI, Offer AI). Plan & credits, Settings,
+  Admin (admin only) and Support sit at the foot. Every AI tool keeps its AI mark. The sidebar collapses to icons
+  (remembered on the device; collapsed by default under 1280 px). Links are unchanged.
+- **Top bar:** a wide "Search or jump to…" (Ctrl K), a **New** menu (live session, mock interview, resume, job
+  search, offer) and the account menu.
+- **Phones:** five destinations (Home, Jobs, Resume, Practice and Explore). Explore lists the other AI tools as
+  cards, then plan, settings, admin, support and sign out.
+- **Calm surfaces inside the app:** no starfield, dot grid or light orbs behind work, and cards and form fields are
+  opaque. The cinematic sky stays on the public pages.
+- **Jobs AI** opens with a short header and one primary action instead of a marketing banner.
+- The cookie bar now sits beside the support button on desktop, clear of the sidebar.
+
 ## Launch hardening, part 2: window privacy is the user's choice (2026-10-16)
 
 - **Desktop window privacy:** the desktop app used to always keep its window out of screen capture and the taskbar,

@@ -33,7 +33,7 @@ export function CookieNotice() {
       aria-label="Cookies"
       className={cx(
         // Phones: left of the support button (right-3, about 3.5rem wide), at its height, so they never overlap.
-        "fixed left-3 right-[4.75rem] z-40 flex items-center gap-2 rounded-xl border border-zinc-200 bg-white/95 py-1.5 pl-3 pr-1 text-xs text-zinc-700 shadow-md backdrop-blur md:bottom-3 md:right-auto md:max-w-md dark:border-white/10 dark:bg-zinc-900/95 dark:text-zinc-300",
+        "fixed left-3 right-[4.75rem] z-40 flex items-center gap-2 rounded-xl border border-zinc-200 bg-white/95 py-1.5 pl-3 pr-1 text-xs text-zinc-700 shadow-md backdrop-blur md:bottom-5 md:left-auto md:right-24 md:max-w-md dark:border-white/10 dark:bg-zinc-900/95 dark:text-zinc-300",
         user ? "bottom-[calc(4.25rem+env(safe-area-inset-bottom))]" : "bottom-[max(0.75rem,env(safe-area-inset-bottom))]",
       )}
     >

@@ -724,3 +724,19 @@ html:not(.dark) .cosmic-dots { background-image: radial-gradient(rgba(35, 38, 66
 /* A coding answer's dry run: each step slides in after the one before (AnswerCard). */
 .trace-step { animation: trace-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 @keyframes trace-in { from { opacity: 0; transform: translateX(-6px); } }
+
+/* The signed-in app ("Career Mission Control"): calm and readable. The starfield, dot grid and light orbs belong to the
+   public pages and empty states; inside the app shell (html.app-shell, set by the web Layout) the sky is a still
+   two-stop gradient, and cards and panels are opaque so nothing shows through text. */
+html.app-shell .space-stars,
+html.app-shell .cosmic-dots,
+html.app-shell .cosmic-orb { display: none; }
+html.app-shell .glass-panel,
+html.app-shell .orbit-card,
+html.app-shell .orbit-panel { background: rgb(255 255 255); }
+html.app-shell.dark .glass-panel,
+html.app-shell.dark .orbit-card,
+html.app-shell.dark .orbit-panel {
+  background: linear-gradient(180deg, rgb(17 23 39), rgb(12 17 30));
+}
+html.app-shell.dark :is(.glass-panel, .orbit-card, .orbit-panel)::after { backdrop-filter: none; -webkit-backdrop-filter: none; }
