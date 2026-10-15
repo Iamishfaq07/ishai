@@ -155,6 +155,7 @@ def test_negotiation_session_is_created_reviewed_with_the_rubric(client: TestCli
         while not any(e["type"] == "session.ended" for e in events):
             events.append(json.loads(ws.receive_text()))
     detail = _wait_report(client, h, sid)
+    assert detail["session"]["negotiation"] is True
     email = (detail.get("summary") or {}).get("counter_offer_email")
     assert email == {"subject": "[mock] Following up on the offer",
                      "body": "[mock] Thank you for the offer. Could we look at the base again?"}

@@ -40,8 +40,7 @@ fit checks, tracker, follow-ups, outreach and people, job safety card, country-a
    document / AI suggestion needing review), reused by resume suggestions, fit checks and interview answers. First
    slice: evidence chips on resume bullets that come from a story. Needs a model, migration, export/delete, flag.
 2. ~~**Career journey timeline (F2).**~~ Shipped 15 Oct 2026: "Journey" on each tracker card (`job_portal/timeline.py`).
-3. **Interview replay lab (F3).** On consented session transcripts: question-bound transcript, rubric notes, one-tap
-   retry of a weak answer into the practice queue. No emotion or personality scoring.
+3. ~~**Interview replay lab (F3).**~~ Shipped: the session review already gave each question what was said, feedback, a stronger answer, retry and the practice queue; 15 Oct 2026 added what was missed, the rubric dimensions and an "In your practice queue" badge.
 4. ~~**Explainable fit (F6).**~~ Shipped 15 Oct 2026 (above).
 5. **Opportunity provenance (F5).** Source, first-seen and last-seen dates, duplicate fingerprint on job cards; never a
    "verified" claim without a verification source.
