@@ -190,6 +190,12 @@ class ChatMessage(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
 
 
+class MockAnswer(BaseModel):
+    """Mock interview: an answer typed instead of spoken (no microphone, or speech-to-text is down)."""
+
+    text: str = Field(min_length=1, max_length=4000)
+
+
 class SpeakerCorrect(BaseModel):
     turn_id: str = Field(max_length=36)  # a uuid the engine issued
     speaker: Speaker
@@ -208,6 +214,7 @@ CLIENT_EVENT_TYPES = frozenset(
         "session.end",
         "answer.request",
         "mock.next",
+        "mock.answer",
         "answer.pin",
         "answer.clear",
         "answer.stop",

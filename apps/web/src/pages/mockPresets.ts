@@ -35,7 +35,7 @@ export const PRESETS: MockPreset[] = [
     id: "panel15",
     title: "Panel round",
     minutes: 15,
-    blurb: () => "Three interviewers take turns: the hiring manager, a senior engineer and HR.",
+    blurb: () => "The hiring manager, a senior engineer and HR. Whoever is best placed to dig into a gap in your answer asks next.",
   },
   {
     id: "oneway10",

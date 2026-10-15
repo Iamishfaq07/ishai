@@ -4,7 +4,7 @@ import { oneWayPhase } from "../live/oneWay";
 import { answerBand, answerWords, bandLabel, clock, paceState } from "../live/answerPace";
 import type { LiveViewState } from "../live/reducer";
 import type { InterviewerVoice } from "../live/useInterviewerVoice";
-import type { LiveActions } from "../live/useLiveSession";
+import { MOCK_ANSWER_CHARS, type LiveActions } from "../live/useLiveSession";
 import { cx, focusRing } from "./cx";
 import { Orb } from "./Orb";
 
@@ -150,6 +150,9 @@ export function MockPanel({ live, actions, voice, ended, onViewReport }: {
       ) : (
         !q.negotiation && <AnswerTimer key={`timer-${q.questionId}`} live={live} q={q} />
       )}
+      {!q.oneWay && (
+        <TypedAnswer key={`typed-${q.questionId}`} micDown={live.mic.state === "error"} onSend={actions.mockAnswer} />
+      )}
       {q.oneWay && <SelfView />}
       {!q.negotiation && <StructureHint key={`hint-${q.questionId}`} q={q} />}
       {/* Who has the floor, at a glance from across the room: the interviewer talking, or Orbit listening to you. */}
@@ -234,6 +237,73 @@ function AnswerTimer({ live, q }: { live: LiveViewState; q: NonNullable<LiveView
         />
       </div>
     </div>
+  );
+}
+
+/**
+ * The text-only fallback: type the answer instead of saying it, when there's no microphone or speech-to-text is down
+ * (open by itself then), or in a place you can't talk. Sending it is "I'm done": the interviewer moves on.
+ */
+function TypedAnswer({ micDown, onSend }: { micDown: boolean; onSend: (text: string) => void }) {
+  const [open, setOpen] = useState(micDown);
+  const [text, setText] = useState("");
+  const [sent, setSent] = useState(false);
+  useEffect(() => {
+    if (micDown) setOpen(true);
+  }, [micDown]);
+  const send = () => {
+    if (!text.trim() || sent) return;
+    onSend(text);
+    setSent(true);
+  };
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)}
+              className={cx("self-start text-xs font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
+        Can't talk right now? Type your answer instead
+      </button>
+    );
+  }
+  return (
+    <form
+      className="max-w-xl space-y-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        send();
+      }}
+    >
+      {micDown && (
+        <p role="alert" className="text-xs text-amber-700 dark:text-amber-300">
+          Orbit can't hear your microphone, so type your answer. The interviewer reads it the same way.
+        </p>
+      )}
+      <label htmlFor="typed-answer" className="sr-only">Your answer</label>
+      <textarea
+        id="typed-answer"
+        value={text}
+        disabled={sent}
+        maxLength={MOCK_ANSWER_CHARS}
+        rows={4}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault();
+            send();
+          }
+        }}
+        placeholder="Type your answer as you'd say it…"
+        className={cx("w-full resize-y rounded-xl border border-zinc-200 bg-white/70 px-3 py-2 text-sm dark:border-zinc-800 " +
+          "dark:bg-zinc-950/60 disabled:opacity-60", focusRing)}
+      />
+      <div className="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
+        <button type="submit" disabled={!text.trim() || sent}
+                className={cx("rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40", focusRing)}>
+          {sent ? "Sent" : "Send answer"}
+        </button>
+        <span>{sent ? "The interviewer is reading it…" : "Ctrl+Enter to send · the interviewer moves on after it"}</span>
+        <span className="ml-auto tabular-nums">{text.length > MOCK_ANSWER_CHARS - 400 ? `${MOCK_ANSWER_CHARS - text.length} left` : ""}</span>
+      </div>
+    </form>
   );
 }
 

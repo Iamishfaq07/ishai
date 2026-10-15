@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import re
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -269,7 +270,9 @@ async def test_engine_answer_served_by_backup_is_recorded_and_subtle() -> None:
     await sink.wait_for("answer.completed")
     assert ("backup", "backup-model", True) in calls
     recovered = [p for p in sink.of("provider.status") if p.get("detail") == "AI connection recovered"]
-    assert recovered and "503" not in json.dumps(sink.events)  # no provider error codes reach the user
+    # No provider error codes reach the user (the payloads, not the envelopes: a timestamp can contain "503").
+    said = json.dumps([e["data"] for e in sink.events])
+    assert recovered and not re.search(r"\b(http_)?503\b", said)
     assert not sink.of("answer.failed")
     await eng.end()
 

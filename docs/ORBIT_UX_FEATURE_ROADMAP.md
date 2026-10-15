@@ -26,6 +26,7 @@ tests, a default-off flag, truthful copy).
 | Counter-offer email after salary practice | `sessions/report.py`, `CounterOfferEmail.tsx` |
 | Technical details page with live 7-day latency (public aggregates only) | `/technical`, `telemetry.py` |
 | Smart 404, contact diagnostics, admin route guard test, cache savings gauge | see PR #292 |
+| Adaptive panel turn-taking and typed answers in mock interviews (roadmap F4) | `live/mock_interviewer.py` `_eligible_askers`, `mock.answer`, `MockPanel.tsx` TypedAnswer |
 
 ## Already in Orbit (don't rebuild)
 
@@ -43,7 +44,7 @@ fit checks, tracker, follow-ups, outreach and people, job safety card, country-a
 3. ~~**Interview replay lab (F3).**~~ Shipped: the session review already gave each question what was said, feedback, a stronger answer, retry and the practice queue; 15 Oct 2026 added what was missed, the rubric dimensions and an "In your practice queue" badge.
 4. ~~**Explainable fit (F6).**~~ Shipped 15 Oct 2026 (above).
 5. ~~**Opportunity provenance (F5).**~~ Shipped 15 Oct 2026: "Where this post came from" on each job (source, first seen, still listed) and "Also posted on" from the duplicate fingerprint; never a "verified" claim.
-6. **Adaptive panel practice (F4).** Multi-persona mock as a practice mode; bounded tokens; text-only fallback.
+6. ~~**Adaptive panel practice (F4).**~~ Shipped 15 Oct 2026: in a panel round the panelist best placed to probe a gap in the last answer takes the next topic (never the same person twice running, and everyone gets a topic); answers can be typed instead of spoken (opens by itself when the microphone is down). Same 240-token question budget.
 
 Later only: F7 application helper (consent, no auto-submit), F9 experiments, F10 multilingual practice. (F8
 negotiation rehearsal exists: the salary practice preset, now with a counter-offer email.)

@@ -36,6 +36,7 @@ from orbit_api.live.events import (
     LiveSettings,
     LiveSettingsPatch,
     LiveState,
+    MockAnswer,
     QuestionType,
     SessionType,
     Speaker,
@@ -88,7 +89,7 @@ SUMMARY_EVERY_TURNS = 8
 # Client events that each start paid work (an LLM stream, the next mock question): a burst of REQUEST_BURST, then
 # one every REQUEST_EVERY_S, per connection. Far more than a person clicks; a script flooding the socket can't
 # multiply the spend. Extras are dropped.
-CLIENT_REQUESTS = frozenset({"answer.request", "chat.message", "mock.next"})
+CLIENT_REQUESTS = frozenset({"answer.request", "chat.message", "mock.next", "mock.answer"})
 # A candidate turn made of the interviewer's words (≥ this share) is their voice leaking into the mic (speakers, no
 # headphones): kept off the transcript and the conversation. From ECHO_SUSPECT_OVERLAP it waits ECHO_CONFIRM_S for the
 # interviewer's own words before deciding (the mic's copy is often transcribed first).
@@ -702,6 +703,10 @@ class LiveEngine:
             case "mock.next":
                 if self._mock is not None:
                     self._spawn(self._mock.next(self.now_ms()))
+            case "mock.answer":
+                typed = MockAnswer.model_validate(data).text.strip()
+                if self._mock is not None and typed and not self._paused:
+                    await self._on_mock_typed(typed)
             case "dev.simulate":
                 sim = DevSimulate.model_validate(data)
                 if not (self.profile.dev_mode and isinstance(self._stt, MockSTTProvider)):
@@ -1016,6 +1021,20 @@ class LiveEngine:
         qtype = QuestionType.follow_up if is_follow_up else classify_type(normalize(question))
         await self._rec.turn(turn_id, "interviewer", text, now, now)
         await self._rec.question(qid, turn_id, question, qtype.value, 1.0, is_follow_up, "mock")
+
+    async def _on_mock_typed(self, text: str) -> None:
+        """An answer typed instead of spoken: recorded as the candidate's turn (transcript, report), then the
+        interviewer moves on, as "I'm done" does. Only while a question is waiting for an answer."""
+        if self._mock is None or not self._mock.awaiting_answer:
+            return
+        turn_id = self._new_turn_id()
+        now = self.now_ms()
+        await self.send("transcript.final", {"turn_id": turn_id, "speaker": "candidate", "text": text,
+                                             "start_ms": now, "end_ms": now})
+        self.memory.add_turn("candidate", text)
+        await self._rec.turn(turn_id, "candidate", text, now, now)
+        self._mock.on_candidate(text, now, final=True)
+        self._spawn(self._mock.next(now))
 
     async def _on_mock_finish(self) -> None:
         # Not self._spawn: end() cancels the engine's own tasks, and this may be running inside the ticker.

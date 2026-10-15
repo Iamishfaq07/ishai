@@ -358,6 +358,8 @@ class MockInterviewer:
         # The next question, being written during the candidate's pause: (the answer it was written for, the call).
         self._prefetch: tuple[tuple[int, str], asyncio.Task[tuple[str, bool]]] | None = None
         self._proposed_depth: dict[tuple[int, str], int] = {}
+        # A panel interview: who the model chose to ask the next new topic, for the answer it was written after.
+        self._proposed_asker: dict[tuple[int, str], str] = {}
 
     # ---- a dropped connection (live/carryover.py) -------------------------------------------------------------
 
@@ -389,6 +391,10 @@ class MockInterviewer:
             await self._send("mock.question", self._question_payload(self.asked[-1]))
         else:
             await self._ask_next(now_ms)
+
+    @property
+    def awaiting_answer(self) -> bool:
+        return self._awaiting and bool(self.asked) and not self.finished and not self._busy
 
     def on_candidate(self, text: str, now_ms: int, *, final: bool) -> None:
         if not self._awaiting or not self.asked or not text.strip():
@@ -494,7 +500,8 @@ class MockInterviewer:
 
     def _panelist(self, follow_up: bool) -> str | None:
         """A panel interview: who asks next. A follow-up stays with whoever asked the topic; a new topic goes to the
-        next panelist in turn."""
+        panelist the model chose to probe what the last answer left thinnest, if they may take it (_eligible_askers),
+        else the next one in turn."""
         panel = self.config.panel if self.config.is_panel else None
         if not panel:
             return None
@@ -502,13 +509,33 @@ class MockInterviewer:
             topic_by = next((a.speaker for a in reversed(self.asked) if not a.is_follow_up), None)
             if topic_by:
                 return topic_by
-        return panel[self._topics() % len(panel)]
+        eligible = self._eligible_askers()
+        chosen = self._proposed_asker.get(self._answer_key())
+        return chosen if chosen in eligible else eligible[0]
+
+    def _eligible_askers(self) -> list[str]:
+        """Who may open the next topic, in turn order: not whoever asked the last one (the floor moves on), and once
+        the topics left are only enough for the panelists who haven't asked one yet, only them (everyone gets a
+        turn)."""
+        panel: list[str] = list(self.config.panel or [])
+        if not self.asked:
+            return panel[:1]
+        start = self._topics() % len(panel)
+        order = panel[start:] + panel[:start]
+        last_by = next((a.speaker for a in reversed(self.asked) if not a.is_follow_up), None)
+        eligible = [p for p in order if p != last_by] or order
+        opened = {a.speaker for a in self.asked if not a.is_follow_up}
+        silent = [p for p in eligible if p not in opened]
+        if silent and self.config.planned_questions - self._topics() <= len(silent):
+            return silent
+        return eligible
 
     async def _put(self, text: str, follow_up: bool, drill: DrillItem | None = None,
                    speaker: str | None = None) -> None:
         qid = str(uuid.uuid4())
         depth = self._proposed_depth.pop(self._answer_key(), self.asked[-1].depth if self.asked else 1)
         self._proposed_depth.clear()  # Discard assessments from prefetches that were superseded by newer speech.
+        self._proposed_asker.clear()
         asked = _Asked(qid, text, follow_up, drill=drill, speaker=speaker, depth=depth)
         self.asked.append(asked)
         self._last_speech_ms = None
@@ -758,9 +785,18 @@ class MockInterviewer:
                 name = PANELISTS[p][0]
                 return name if p in spoke else f"{name} (speaking for the first time: they give their name and role " \
                                                  "in a few words first)"
+            eligible = self._eligible_askers() if self.asked else []
+            if len(eligible) > 1:
+                # Adaptive: the panelist best placed to probe the gap the last answer left takes the next topic.
+                names = ", ".join(f"{says(p)} [{p}]" for p in eligible)
+                new_topic = (f"a new topic is asked by whichever of {names} is best placed to probe what the "
+                             "candidate's answers have left thinnest so far (their area, not a repeat of the last "
+                             "question), in their style, and your JSON includes asked_by: that panelist's key in "
+                             "brackets")
+            else:
+                new_topic = f"a new topic is asked by {says(next_by)}, in their style"
             steer += (f"\nThis is a PANEL interview: {people}. A follow-up is asked by {says(now_by)}, in their "
-                      f"style; a new topic is asked by {says(next_by)}, in their style. Write only what that person "
-                      "says, without a name label.")
+                      f"style; {new_topic}. Write only what that person says, without a name label.")
         # The transcript window is the last few exchanges; the topics list keeps a long round from circling back.
         covered = [a.text[:160] for a in self.asked if not a.is_follow_up]
         topics = ("<reference_data source=\"topics_already_covered\">\n" + fence("\n".join(covered))
@@ -778,6 +814,8 @@ class MockInterviewer:
             data = json.loads(resp.text[resp.text.find("{"): resp.text.rfind("}") + 1])
             question = str(data.get("question") or "").strip()
             if question:
+                if panel and isinstance(data.get("asked_by"), str) and data["asked_by"] in panel:
+                    self._proposed_asker[answer_key] = data["asked_by"]
                 score = data.get("last_answer_score")
                 if cfg.adaptive_depth and not cfg.drill and not cfg.is_one_way and self.asked:
                     assessed = isinstance(score, int) and not isinstance(score, bool) and 1 <= score <= 5
