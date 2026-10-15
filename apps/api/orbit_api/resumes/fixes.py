@@ -22,6 +22,8 @@ from orbit_api.resumes.ats import (
     AtsReport,
     _term_pattern,
     date_style,
+    is_action_verb,
+    is_quantified,
     pretty_term,
 )
 from orbit_api.resumes.claims import _GENERIC
@@ -215,3 +217,79 @@ def date_suggestions(data: ResumeData) -> list[Suggestion]:
             id=new_id(), path=f"experience.{e.id}.{attr}", label=f"{role}, {attr} date", before=value, after=after,
             reason="Writes every date the same way so a parser can work out how long each role lasted.", kind="set"))
     return out[:12]
+
+
+# ---- bullets: weak openers, too many, too long ------------------------------------------------------------
+
+# "Responsible for building X" -> "Built X": the duty's verb, in the past, when it's one of these.
+_GERUND_PAST = {
+    "building": "Built", "handling": "Handled", "managing": "Managed", "leading": "Led", "running": "Ran",
+    "developing": "Developed", "designing": "Designed", "maintaining": "Maintained", "creating": "Created",
+    "coordinating": "Coordinated", "overseeing": "Oversaw", "writing": "Wrote", "testing": "Tested",
+    "reviewing": "Reviewed", "supporting": "Supported", "implementing": "Implemented", "driving": "Drove",
+    "owning": "Owned", "monitoring": "Monitored", "planning": "Planned", "conducting": "Conducted",
+    "performing": "Performed", "training": "Trained", "mentoring": "Mentored", "delivering": "Delivered",
+    "analyzing": "Analyzed", "analysing": "Analysed", "preparing": "Prepared", "setting": "Set",
+    "operating": "Operated",
+}
+_DUTY = re.compile(r"^(?:i\s+)?(?:was\s+|were\s+|am\s+)?(?:solely\s+|primarily\s+|mainly\s+)?"
+                   r"responsible\s+for\s+", re.I)
+_PART = re.compile(r"^(?:i\s+)?(?:was\s+|were\s+)?(?:actively\s+)?(?:involved\s+in|participated\s+in|"
+                   r"(?:a\s+)?part\s+of|worked\s+on|assisted\s+(?:in|with))\s+", re.I)
+
+
+def stronger_opener(text: str) -> str | None:
+    """The line led by what was done, when it opens with a duty ("Responsible for the X" -> "Owned the X",
+    "Responsible for building X" -> "Built X") or a part ("Involved in X" -> "Contributed to X"). Nothing is added
+    but the verb; None when no rule fits or the result still doesn't start with an action verb."""
+    t = text.strip()
+    if m := _DUTY.match(t):
+        rest = t[m.end():]
+        first, _, tail = rest.partition(" ")
+        verb = _GERUND_PAST.get(first.lower())
+        out = f"{verb} {tail}" if verb and tail else f"Owned {rest}" if rest else ""
+    elif m := _PART.match(t):
+        out = f"Contributed to {t[m.end():]}" if t[m.end():] else ""
+    else:
+        return None
+    out = out.strip()
+    return out if out and is_action_verb(out.split()[0]) and out != t else None
+
+
+def opener_suggestions(data: ResumeData) -> list[Suggestion]:
+    """Bullets that still open with a duty or a part after the AI's pass, led by the verb instead (free)."""
+    out: list[Suggestion] = []
+    for e in data.experience:
+        role = " at ".join(x for x in (e.title, e.company) if x) or "Role"
+        for i, text in enumerate(e.bullets):
+            if text.strip() and not is_action_verb(text.split()[0]) and (better := stronger_opener(text)):
+                out.append(Suggestion(id=new_id(), path=f"experience.{e.id}.bullets.{i}",
+                                      label=f"{role}, bullet {i + 1}", before=text, after=better,
+                                      reason="Leads with what you did.", kind="set"))
+    return out
+
+
+MAX_BULLETS = 6
+
+
+def _strength(text: str, index: int) -> tuple[bool, bool, bool, int]:
+    """Which bullets to keep first: one with a number, one led by what was done, a readable length; then the order
+    the candidate put them in (the best usually come first)."""
+    words = len(text.split())
+    return is_quantified(text), is_action_verb(text.split()[0]) if text.split() else False, 12 <= words <= 30, -index
+
+
+def trim_role(data: ResumeData, role_id: str, keep: int, reason: str) -> list[Suggestion]:
+    """The role's weakest bullets past `keep`, each emptied (an empty bullet doesn't print or count; "Put it back"
+    restores it). Removing nothing the candidate wrote elsewhere, and never below `keep`."""
+    e = next((x for x in data.experience if x.id == role_id), None)
+    if e is None:
+        return []
+    live = [(i, t) for i, t in enumerate(e.bullets) if t.strip()]
+    if len(live) <= keep:
+        return []
+    role = " at ".join(x for x in (e.title, e.company) if x) or "Role"
+    ranked = sorted(live, key=lambda it: _strength(it[1], it[0]), reverse=True)
+    # Weakest first, so a caller trimming to a word count can stop as soon as it's enough.
+    return [Suggestion(id=new_id(), path=f"experience.{role_id}.bullets.{i}", label=f"{role}, bullet {i + 1}",
+                       before=t, after="", reason=reason, kind="set") for i, t in reversed(ranked[keep:])]

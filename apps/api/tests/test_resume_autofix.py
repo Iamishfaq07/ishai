@@ -191,3 +191,78 @@ def test_answering_the_questions_is_part_of_the_fix_and_free(client: TestClient,
     # Out of credits, a fix that used no AI hands out no token to get AI for free with.
     broke, _ = _fix(client, h, weak())
     assert broke["upgrade_required"] is True and broke["followup"] is None
+
+
+def long_senior() -> ResumeData:
+    """Four roles, the current one with nine bullets, about 1,150 words, one bullet led by a duty."""
+    def bullet(i: int, n: int) -> str:
+        figure = f"by {20 + i}%" if i % 3 == 0 else "for the platform, mobile and data teams"
+        return (f"Led the security review program across {n + i} product teams, finding and fixing high risk issues "
+                f"before release and cutting critical production findings {figure} over two steady years of work "
+                "across three regions, two clouds and four audits")
+    roles = []
+    for r, (title, n) in enumerate([("Senior Staff Engineer", 9), ("Staff Engineer", 6), ("Senior Engineer", 6),
+                                     ("Engineer", 6)]):
+        roles.append(Experience(title=title, company=f"Co{r}", location="Bengaluru, India", start=f"Jan {2021 - r * 3}",
+                                end="" if r == 0 else f"Dec {2023 - r * 3}", current=r == 0,
+                                bullets=[bullet(i, r + 3) for i in range(n)]))
+    roles[1].bullets[2] = "Responsible for the threat modelling practice across payments, identity and lending teams"
+    return ResumeData(basics=Basics(name="Asha Rao", email="asha@example.com", phone="+91 98765 43210",
+                                    location="Bengaluru, India", summary="Security engineer. " * 20),
+                      experience=roles, skills=[SkillGroup(name="Skills", items=["Burp Suite", "Python", "Go", "AWS"])])
+
+
+def test_too_many_bullets_keeps_the_strongest_six_free(client: TestClient) -> None:
+    data = long_senior()
+    plain = [f"Led the security review of release {w} with the product and platform teams" for w in "abcdef"]
+    sized = [f"Cut critical production findings by {n}% with threat models and reviews" for n in (30, 40, 50)]
+    data.experience[0].bullets = plain + sized  # the ones with a number come last
+    check = _check(data, "bullets_per_role")
+    assert not check.passed and check.fix_kind == "auto" and "6 strongest" in check.fix
+    h = _register(client)
+    out, fixed = _fix(client, h, data, check="bullets_per_role")
+    kept = [b for b in fixed.experience[0].bullets if b.strip()]
+    assert len(kept) == 6 and _check(fixed, "bullets_per_role").passed
+    # The ones with a number stayed; each removal names the text it took out, so it can be put back.
+    assert kept == plain[:3] + sized  # every one with a number, then the first of the rest, in their order
+    removed = [s for s in out["suggestions"] if s["after"] == ""]
+    assert len(removed) == 3 and all(s["before"] == get_at(data, s["path"]) for s in removed)
+
+
+def test_too_long_is_trimmed_to_fit_oldest_roles_first() -> None:
+    import asyncio
+
+    from orbit_api.models import User
+    from orbit_api.resumes.ats import word_count
+    from orbit_api.resumes.autofix import MAX_WORDS, FixIn, fix_resume
+
+    data = long_senior()
+    assert word_count(data) > MAX_WORDS
+
+    async def no_credit() -> bool:
+        return False
+
+    async def never(_: Any) -> Any:
+        raise AssertionError("no AI without a credit")
+
+    out, used = asyncio.run(fix_resume(FixIn(data=data), User(id="u", email="a@example.com"), no_credit, never))
+    fixed = data
+    for s in out.suggestions:
+        fixed = apply_suggestion(fixed, s)
+    assert not used and word_count(fixed) <= MAX_WORDS
+    counts = [len([b for b in e.bullets if b.strip()]) for e in fixed.experience]
+    assert counts[0] >= 4 and min(counts) >= 2 and counts[-1] <= counts[0]  # the oldest role went first
+    # Free fixes need no credit: the duty-led bullet is led by its verb.
+    assert fixed.experience[1].bullets[2].startswith("Owned the threat modelling practice")
+    assert _check(fixed, "action_verbs").passed and _check(fixed, "bullets_per_role").passed
+
+
+def test_a_duty_or_a_part_becomes_the_verb_and_nothing_else_changes() -> None:
+    from orbit_api.resumes.fixes import stronger_opener
+
+    assert stronger_opener("Responsible for building the payments API in Go") == "Built the payments API in Go"
+    duty = "Was responsible for the on-call rota for 12 services"
+    assert stronger_opener(duty) == "Owned the on-call rota for 12 services"
+    assert stronger_opener("Involved in the migration to Kubernetes") == "Contributed to the migration to Kubernetes"
+    assert stronger_opener("Worked on fraud models") == "Contributed to fraud models"
+    assert stronger_opener("Built the ledger") is None and stronger_opener("Responsible for") is None

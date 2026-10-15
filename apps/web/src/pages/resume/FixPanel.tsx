@@ -206,6 +206,12 @@ function Changes({ result, data, onRevert, onPoint }: {
                   <span className="text-emerald-700 dark:text-emerald-300">Added: </span>
                   {s.after}
                 </p>
+              ) : !s.after ? (
+                <p className="mt-1 text-zinc-600 dark:text-zinc-300">
+                  <span className="text-rose-700 dark:text-rose-300">Removed: </span>
+                  <span className="line-through decoration-rose-500/50">{s.before}</span>
+                  {s.reason && <span className="block text-xs text-zinc-500 dark:text-zinc-400">{s.reason}</span>}
+                </p>
               ) : (
                 <div className="mt-1">
                   <InlineResumeDiff before={s.before} after={s.after} />
