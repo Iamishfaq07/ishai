@@ -367,8 +367,8 @@ function Faq({ welcome, stats, cards = false, abroad = false }: {
         <p>{USE_WHERE_ALLOWED}</p>
         <p>
           Practising is always fine. In a real interview, call or test, some employers, colleges and exams don't allow
-          notes or AI help, and breaking their rules can cost you the job. Orbit stays visible on your screen and
-          doesn't hide from other apps.
+          notes or AI help, and breaking their rules can cost you the job. Orbit doesn't hide from Task Manager, other
+          apps or anyone who can see your screen, and it doesn't claim to be undetectable.
         </p>
       </>,
     ],
@@ -436,7 +436,7 @@ function Faq({ welcome, stats, cards = false, abroad = false }: {
       "Does it work on my phone?",
       <p>
         Yes. Resume AI, Jobs AI and practice work in your phone's browser. For help during a call, open Orbit on a
-        laptop: Chrome and Edge can listen to a meeting tab, and the Orbit app for Windows can listen to any call app.
+        laptop: Chrome and Edge can listen to a meeting tab, and the Orbit app for Windows (beta) can listen to any call app.
       </p>,
     ],
     [

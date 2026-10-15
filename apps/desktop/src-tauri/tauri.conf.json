@@ -27,8 +27,8 @@
         "alwaysOnTop": true,
         "visible": true,
         "center": true,
-        "contentProtected": true,
-        "skipTaskbar": true,
+        "contentProtected": false,
+        "skipTaskbar": false,
         "dragDropEnabled": false
       }
     ],

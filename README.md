@@ -122,5 +122,10 @@ pnpm -r typecheck && pnpm -r lint && pnpm -r test
 
 ## Responsible use
 
-Orbit is built for interview preparation, mock interviews, and meetings where assistance is allowed. It alsot hide from
-screen sharing .
+Orbit is built for interview preparation, mock interviews, and meetings where assistance is allowed. Use it only where
+that's permitted.
+
+The desktop app has two window-privacy settings, both **off** until the user turns them on (Settings → Window privacy):
+a privacy shield (Windows display affinity: keeps Orbit's window out of screenshots, screen recordings and Windows
+Recall, though not every capture tool honours it) and hide-from-taskbar. Neither hides Orbit from Task Manager, other
+programs or anyone looking at the screen, and Orbit makes no claim to be undetectable.

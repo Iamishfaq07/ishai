@@ -7,6 +7,9 @@ interface ImportMetaEnv {
   readonly VITE_SUPPORT_EMAIL?: string;
   /** WhatsApp number with the country code, digits only (919876543210). */
   readonly VITE_SUPPORT_WHATSAPP?: string;
+  readonly VITE_DESKTOP_DOWNLOAD_URL?: string;
+  /** "true" once the Windows installer is Authenticode-signed: drops the Beta label (lib/desktop.ts). */
+  readonly VITE_DESKTOP_SIGNED?: string;
 }
 
 interface ImportMeta {

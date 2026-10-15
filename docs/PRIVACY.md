@@ -38,6 +38,7 @@ discarded when the session ends.
 | Change your email (confirmed from the new inbox; the old one is told) | Settings → Account | `POST /v1/auth/me/email` |
 | Sign out of every device | Settings → Privacy | `POST /v1/auth/logout-all` |
 | Delete your account and everything in it | Settings → Privacy | `DELETE /v1/auth/me` |
+| Privacy shield (keep the desktop window out of screenshots/recordings) and hide-from-taskbar: both off until chosen; changed 16 Oct 2026 from always-on | Desktop → Settings → Window privacy | local (`set_window_privacy`) |
 
 ## Cookies and other services
 The web app sets one httpOnly sign-in cookie, and a second httpOnly cookie (`orbit_google`) for about 10 minutes

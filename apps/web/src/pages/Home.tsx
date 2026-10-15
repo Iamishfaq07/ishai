@@ -28,7 +28,7 @@ import { PRODUCTS, ProductMark, type ProductId } from "../components/products";
 import { api } from "../lib/api";
 import { displayAudioHelp, isWindows } from "../lib/audio";
 import { useAuth } from "../lib/auth";
-import { DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
+import { DESKTOP_BETA, DESKTOP_BETA_NOTE, DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
 import { errorText, formatDate, sessionKindLine } from "../lib/format";
 import { checklist, loadAnswers, nextSteps, type ChecklistItem, type HomeFacts, type Step } from "../lib/onboarding";
 import { openSupport } from "../lib/shell";
@@ -597,11 +597,15 @@ function DesktopPromo() {
             <Monitor className="h-6 w-6" aria-hidden />
           </span>
           <div>
-            <h2 className="font-display text-xl font-semibold">Get Orbit for Windows</h2>
+            <h2 className="font-display text-xl font-semibold">
+              Get Orbit for Windows
+              {DESKTOP_BETA && <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 align-middle text-xs font-semibold">Beta</span>}
+            </h2>
             <p className="mt-1 text-sm text-indigo-100">
               You’re on the browser version. The desktop app hears far more: whole-system audio (any call app, not just
               a tab), per-app capture to target one window, plus screenshots and global hotkeys.
             </p>
+            {DESKTOP_BETA && <p className="mt-2 text-xs text-indigo-100">{DESKTOP_BETA_NOTE}</p>}
           </div>
         </div>
         <a
