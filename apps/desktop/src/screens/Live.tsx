@@ -3,6 +3,10 @@ import { AUDIO_CHANNEL, type OrbitSession, type User } from "@orbit/types";
 import {
   Button,
   CreditCard,
+  Headphones,
+  Mic,
+  SourceChip,
+  useSourceTracker,
   OrbitLogo,
   Pin,
   PinOff,
@@ -112,6 +116,10 @@ export function LiveScreen({
   const [onTop, setOnTop] = useState(() => localStorage.getItem(PIN_KEY) !== "false");
   const [hotkeys] = useState(loadHotkeys);
   const [captureNotes, setCaptureNotes] = useState<CaptureNotes>({});
+  // Whether each source is actually heard (SourceChip), from the frames' levels on this device; its advice joins the
+  // capture notes.
+  const sources = useSourceTracker();
+  const [sourceAdvice, setSourceAdvice] = useState<{ mic: string | null; system: string | null }>({ mic: null, system: null });
   const [shotNote, setShotNote] = useState<string | null>(null);
 
   const ratings = useAnswerRatings(api, session.id);
@@ -182,6 +190,7 @@ export function LiveScreen({
         (ev) => {
           if (!current()) return;
           if (ev.kind === "frame") {
+            sources.feed(ev.channel === AUDIO_CHANNEL.mic ? "mic" : "system", ev.rms);
             if (ev.channel === AUDIO_CHANNEL.mic) audioAmplitude.current = ev.rms;
             if (!pausedRef.current && !interviewerSpeakingRef.current) client.sendAudioBytes(ev.channel, base64ToBytes(ev.pcm));
             return;
@@ -210,7 +219,7 @@ export function LiveScreen({
       if (current()) setDeviceHealth({ mic: "muted", system: "muted" });
       note("start", friendlyAudioError(err));
     }
-  }, [client, launch.micDeviceId, launch.systemAudio, launch.systemProcessId, launch.systemProcessExe, launch.systemDevice]);
+  }, [client, launch.micDeviceId, launch.systemAudio, launch.systemProcessId, launch.systemProcessExe, launch.systemDevice, sources]);
 
   useEffect(() => {
     void startAudio();
@@ -318,7 +327,8 @@ export function LiveScreen({
   // Capture stops when the session ends: what it last said no longer matters.
   const captureLines = ended
     ? []
-    : [captureNotes.start, captureNotes.mic, captureNotes.system].filter((t): t is string => Boolean(t));
+    : [...new Set([captureNotes.start, captureNotes.mic ?? sourceAdvice.mic, captureNotes.system ?? sourceAdvice.system]
+        .filter((t): t is string => Boolean(t)))];
   // The socket that carries audio and answers needs no sign-in once open, so the session carries on; reconnecting
   // (and screenshots, ratings…) needs it again.
   const disconnected = live.connection === "closed" && !ended;
@@ -430,6 +440,13 @@ export function LiveScreen({
       notice={<>{notice}{session.type !== "mock" && <DefenseWorkspace api={api} sessionId={session.id} capture={async () => base64ToBlob((await captureScreen()).pngBase64)} />}</>}
       headerEnd={
         <>
+          {/* Compact: hidden, but still listening, so a silent source's advice reaches the capture notes. */}
+          <span className={cx("flex items-center gap-1.5 text-[11px]", mode === "compact" && "hidden")}>
+            <SourceChip tracker={sources} channel="mic" icon={Mic} label="Mic" on={deviceHealth.mic === "active"} paused={live.state === "paused"}
+                        onAdvice={(mic) => setSourceAdvice((a) => (a.mic === mic ? a : { ...a, mic }))} />
+            <SourceChip tracker={sources} channel="system" icon={Headphones} label="Interviewer" on={launch.systemAudio && deviceHealth.system === "active"}
+                        paused={live.state === "paused"} onAdvice={(system) => setSourceAdvice((a) => (a.system === system ? a : { ...a, system }))} />
+          </span>
           <CompanionShare api={api} sessionId={session.id} webUrl={WEB_URL} disabled={ended} />
           <button
             type="button"

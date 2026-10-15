@@ -202,6 +202,8 @@ export { DebriefStudio } from "./components/DebriefStudio";
 export { DefenseWorkspace } from "./components/DefenseWorkspace";
 export { Dropzone, ProgressRing } from "./components/Dropzone";
 export { CompanyLogo, monogram } from "./components/CompanyLogo";
+export { SourceChip, useSourceTracker, type SourceTracker } from "./components/SourceChip";
+export { SILENT_AFTER_MS, sourceState, sourceText, type SourceChannel, type SourceState } from "./live/sourceActivity";
 export { CosmicEmptyState, type CosmicEmptyVariant } from "./components/CosmicEmptyState";
 export { spotlightMove } from "./components/useSpotlight";
 export { ConceptDepthRadar, aggregateDepth } from "./components/ConceptDepthRadar";
