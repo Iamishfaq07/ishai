@@ -54,6 +54,7 @@ import {
 } from "./model";
 import { JOBS_MATCHES, jobPath, outreachPath } from "./paths";
 import { CompareDrawer } from "./CompareDrawer";
+import { SearchInsightsPanel } from "./Insights";
 import { MAX_COMPARE } from "./compare";
 import { Journey } from "./Journey";
 import { SafetyCard } from "./SafetyCard";
@@ -101,6 +102,7 @@ export function JobTrackerPage() {
           </div>
         }
       />
+      {tracker.data && <SearchInsightsPanel entries={tracker.data} />}
       <JobTracker tracker={tracker} onAdd={() => setAdding(true)} />
       <SafetyCard compact className="mt-6" />
       <AddJob
