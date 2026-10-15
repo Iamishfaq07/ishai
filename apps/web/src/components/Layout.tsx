@@ -67,8 +67,10 @@ function isCopilotPath(pathname: string): boolean {
 interface NavItem {
   to: string;
   label: string;
-  /** The shorter label: the phone tab bar's, and the top bar's below 1024 px. */
+  /** The shorter label: the top bar's when the full names don't fit. */
   short: string;
+  /** The phone tab bar's label, when even shorter than `short` (it fits six tabs on a 360 px screen). */
+  tab?: string;
   icon: LucideIcon;
   product?: ProductId;
   /** Which addresses the item is current on. */
@@ -82,11 +84,13 @@ interface NavItem {
 // Plan & credits, Settings and Support are in the account menu ("Me" on phones). The addresses are the same as before, so
 // nothing redirects.
 const NAV: NavItem[] = [
-  { to: "/", label: "Home", short: "Home", icon: House, current: (p) => p === "/" },
+  // Short naming shows Home as its icon alone (the logo next to it also goes home), so the products keep their names.
+  { to: "/", label: "Home", short: "", tab: "Home", icon: House, current: (p) => p === "/" },
   {
     to: "/sessions",
-    label: "Interview copilot",
-    short: "Copilot",
+    label: "Copilot AI",
+    short: "Copilot AI",
+    tab: "Copilot",
     icon: PRODUCTS.interview.icon,
     product: "interview",
     current: isCopilotPath,
@@ -98,18 +102,20 @@ const NAV: NavItem[] = [
   {
     to: RESUME_AI_HOME,
     label: "Resume AI",
-    short: "Resume",
+    short: "Resume AI",
+    tab: "Resume",
     icon: PRODUCTS.resume.icon,
     product: "resume",
     current: (p) => p === RESUME_AI_HOME || p.startsWith(`${RESUME_AI_HOME}/`),
   },
-  { to: LINKEDIN_HOME, label: "LinkedIn AI", short: "LinkedIn", icon: IdCard, phone: false, current: (p) => p === LINKEDIN_HOME || p.startsWith(`${LINKEDIN_HOME}/`) },
-  { to: CODE_HOME, label: "Code AI", short: "Code", icon: Code2, phone: false, current: (p) => p === CODE_HOME || p.startsWith(`${CODE_HOME}/`) },
-  { to: OFFERS_HOME, label: "Offer AI", short: "Offers", icon: BadgeIndianRupee, phone: false, current: (p) => p === OFFERS_HOME || p.startsWith(`${OFFERS_HOME}/`) },
+  { to: LINKEDIN_HOME, label: "LinkedIn AI", short: "LinkedIn AI", icon: IdCard, phone: false, current: (p) => p === LINKEDIN_HOME || p.startsWith(`${LINKEDIN_HOME}/`) },
+  { to: CODE_HOME, label: "Code AI", short: "Code AI", icon: Code2, phone: false, current: (p) => p === CODE_HOME || p.startsWith(`${CODE_HOME}/`) },
+  { to: OFFERS_HOME, label: "Offer AI", short: "Offer AI", icon: BadgeIndianRupee, phone: false, current: (p) => p === OFFERS_HOME || p.startsWith(`${OFFERS_HOME}/`) },
   {
     to: JOBS_AI_HOME,
     label: "Jobs AI",
-    short: "Jobs",
+    short: "Jobs AI",
+    tab: "Jobs",
     icon: PRODUCTS.jobs.icon,
     product: "jobs",
     current: (p) => p === JOBS_AI_HOME || p.startsWith(`${JOBS_AI_HOME}/`),
@@ -252,7 +258,7 @@ export function Layout() {
       </a>
 
       <header className="sticky top-0 z-20 border-b border-zinc-200/70 bg-white dark:border-white/5 dark:bg-zinc-950">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6 lg:gap-6">
+        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6 lg:gap-5">
           <Link to="/" className={cx("shrink-0 rounded-lg", focusRing)} aria-label="Orbit home">
             <OrbitWordmark size={26} />
           </Link>
@@ -265,7 +271,7 @@ export function Layout() {
                   key={to}
                   to={to}
                   aria-label={label}
-                  title={navFit === "icons" ? label : undefined}
+                  title={navFit === "icons" || (navFit === "short" && !short) ? label : undefined}
                   aria-current={active ? "page" : undefined}
                   onMouseEnter={() => prefetchRoute(to)}
                   onFocus={() => prefetchRoute(to)}
@@ -279,7 +285,7 @@ export function Layout() {
                 >
                   <Icon className={cx("h-4 w-4", product ? PRODUCTS[product].text : active && "text-indigo-500 dark:text-indigo-300")} aria-hidden />
                   <span className="hidden group-data-[fit=full]:inline">{label}</span>
-                  <span className="hidden group-data-[fit=short]:inline">{short}</span>
+                  {short && <span className="hidden group-data-[fit=short]:inline">{short}</span>}
                   {active && (
                     <span aria-hidden="true" className="absolute inset-x-3 -bottom-[13px] h-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-aurora-400" />
                   )}
@@ -299,13 +305,13 @@ export function Layout() {
               aria-haspopup="dialog"
               className={cx(
                 "flex h-10 w-10 items-center justify-center gap-2 rounded-full text-zinc-600 hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
-                "lg:w-auto lg:justify-start lg:border lg:border-zinc-200 lg:pl-3 lg:pr-2 lg:dark:border-white/10",
+                "2xl:w-auto 2xl:justify-start 2xl:border 2xl:border-zinc-200 2xl:pl-3 2xl:pr-2 2xl:dark:border-white/10",
                 focusRing,
               )}
             >
               <Search className="h-[18px] w-[18px]" aria-hidden />
-              <span className="hidden text-sm lg:inline">Search</span>
-              <kbd className="hidden rounded-md bg-zinc-500/10 px-1.5 py-0.5 font-sans text-xs text-zinc-600 lg:inline dark:text-zinc-400">{shortcut}</kbd>
+              <span className="hidden text-sm 2xl:inline">Search</span>
+              <kbd className="hidden rounded-md bg-zinc-500/10 px-1.5 py-0.5 font-sans text-xs text-zinc-600 2xl:inline dark:text-zinc-400">{shortcut}</kbd>
             </button>
             <Link
               to="/settings"
@@ -429,19 +435,20 @@ export function Layout() {
         className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200/70 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.12)] md:hidden dark:border-white/5 dark:bg-zinc-950 dark:shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.6)]"
       >
         <ul className={cx("mx-auto grid max-w-lg", PHONE_NAV.length + 1 >= 6 ? "grid-cols-6" : "grid-cols-5")}>
-          {PHONE_NAV.map(({ to, label, short, icon: Icon, product, current }) => {
+          {PHONE_NAV.map(({ to, label, short, tab, icon: Icon, product, current }) => {
             const active = current(pathname);
+            const name = tab ?? short;
             return (
               <li key={to} className="min-w-0">
                 <Link
                   to={to}
-                  aria-label={short !== label ? label : undefined}
+                  aria-label={name !== label ? label : undefined}
                   aria-current={active ? "page" : undefined}
                   onTouchStart={() => prefetchRoute(to)}
                   className={tabClass(active)}
                 >
                   <TabIcon icon={Icon} active={active} className={product && !active ? PRODUCTS[product].text : undefined} />
-                  {short}
+                  {name}
                 </Link>
               </li>
             );

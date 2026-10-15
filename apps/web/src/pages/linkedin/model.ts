@@ -32,3 +32,10 @@ export function scoreWord(score: number): string {
 export function rewriteBrief(role: string, keywords: string[]): string {
   return [role, keywords.length ? `Skills employers ask for: ${keywords.join(", ")}` : ""].filter(Boolean).join("\n\n");
 }
+
+/** The profile's address when `text` is a LinkedIn profile link ("linkedin.com/in/asha-rao", with or without https). */
+export function profileUrl(text: string): string | null {
+  const m = text.trim().match(/^(?:https?:\/\/)?(?:[a-z]{2,3}\.)?linkedin\.com\/in\/([A-Za-z0-9\-_%]{3,100})\/?(?:[?#].*)?$/i);
+  return m ? `https://www.linkedin.com/in/${m[1]}/` : null;
+}
+

@@ -7,7 +7,9 @@ import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
 import { RESUME_AI_HOME } from "../resume/paths";
-import { rewriteBrief, scoreWord, sectionScores, topFixes } from "./model";
+import { profileUrl, rewriteBrief, scoreWord, sectionScores, topFixes } from "./model";
+
+const LINK_KEY = "orbit.linkedin.url";
 
 /**
  * LinkedIn AI: your LinkedIn profile read from its "Save to PDF", audited section by section against the role you
@@ -41,6 +43,26 @@ function ReadProfile({ state, onRead }: { state: LinkedInState; onRead: (s: Link
   const [paste, setPaste] = useState(false);
   const [text, setText] = useState("");
   const input = useRef<HTMLInputElement>(null);
+  const [link, setLink] = useState(() => {
+    try {
+      return localStorage.getItem(LINK_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const [linkSet, setLinkSet] = useState(() => Boolean(profileUrl(link)));
+  const [dragging, setDragging] = useState(false);
+  const url = profileUrl(link);
+  const useLink = (e: FormEvent) => {
+    e.preventDefault();
+    if (!url) return;
+    setLinkSet(true);
+    try {
+      localStorage.setItem(LINK_KEY, url);
+    } catch {
+      /* the link is a convenience: fine to lose */
+    }
+  };
   const read = async (fn: () => Promise<LinkedInState>) => {
     setBusy(true);
     setError(null);
@@ -55,20 +77,47 @@ function ReadProfile({ state, onRead }: { state: LinkedInState; onRead: (s: Link
     }
   };
   const has = Boolean(state.profile);
+  const readFile = (f: File | undefined) => {
+    if (f) void read(() => api.readLinkedInFile(f, f.name));
+  };
   return (
+    <div
+      className={cx("rounded-2xl", dragging && "ring-2 ring-indigo-500")}
+      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={(e) => { e.preventDefault(); setDragging(false); readFile(e.dataTransfer.files[0]); }}
+    >
     <Card>
       <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
         <Upload className="h-5 w-5 text-indigo-500" aria-hidden /> {has ? "Read your profile again" : "Start with your LinkedIn profile"}
       </h2>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-        On LinkedIn, open your profile, then <strong>Resources</strong> (or <strong>More</strong>) → <strong>Save to PDF</strong>. Upload that file here. Orbit reads it and doesn't keep the file.
-      </p>
+      <form onSubmit={useLink} className="mt-3 flex flex-wrap items-end gap-2">
+        <Field label="Your LinkedIn profile link" htmlFor="li-link">
+          <Input id="li-link" type="text" inputMode="url" autoComplete="url" placeholder="https://www.linkedin.com/in/your-name" value={link}
+                 onChange={(e) => { setLink(e.target.value); setLinkSet(false); }} className="w-80 max-w-full" />
+        </Field>
+        <Button type="submit" variant="secondary" disabled={!url}>Use this link</Button>
+      </form>
+      {link.trim() && !url && <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">That isn't a LinkedIn profile link. It looks like linkedin.com/in/your-name.</p>}
+      {linkSet && url ? (
+        <ol className="mt-3 list-decimal space-y-1.5 rounded-xl bg-indigo-500/[0.07] p-4 pl-8 text-sm">
+          <li>
+            <a href={url} target="_blank" rel="noopener noreferrer" className="font-medium text-indigo-600 underline dark:text-indigo-400">Open your profile on LinkedIn</a> (it opens in a new tab).
+          </li>
+          <li>Click <strong>Resources</strong> (or <strong>More</strong>) under your name, then <strong>Save to PDF</strong>.</li>
+          <li>Drop that PDF on this box, or press <strong>Upload the PDF</strong>. Orbit reads everything from it.</li>
+        </ol>
+      ) : (
+        <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">
+          LinkedIn doesn't let other sites read profiles from a link, so Orbit reads LinkedIn's own PDF of it: on your profile, <strong>Resources</strong> (or <strong>More</strong>) → <strong>Save to PDF</strong>, then upload it here. Orbit doesn't keep the file.
+        </p>
+      )}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <input ref={input} type="file" accept=".pdf,application/pdf,.txt" className="sr-only" aria-label="Your LinkedIn PDF"
                onChange={(e) => {
                  const f = e.target.files?.[0];
                  e.target.value = "";
-                 if (f) void read(() => api.readLinkedInFile(f, f.name));
+                 readFile(f);
                }} />
         <Button disabled={busy || state.reads_left === 0} onClick={() => input.current?.click()}>
           <Upload className="h-4 w-4" /> {busy ? "Reading your profile…" : "Upload the PDF"}
@@ -88,6 +137,7 @@ function ReadProfile({ state, onRead }: { state: LinkedInState; onRead: (s: Link
       )}
       {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
     </Card>
+    </div>
   );
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LinkedInCheck } from "@orbit/types";
-import { rewriteBrief, scoreWord, sectionScores, topFixes } from "./model";
+import { profileUrl, rewriteBrief, scoreWord, sectionScores, topFixes } from "./model";
 
 const c = (id: string, section: LinkedInCheck["section"], ok: boolean, points: number, max: number): LinkedInCheck =>
   ({ id, section, ok, points, max, title: id, tip: "" });
@@ -25,5 +25,14 @@ describe("LinkedIn AI model", () => {
     expect(scoreWord(30)).toBe("Thin");
     expect(rewriteBrief("Backend Engineer", ["Go", "Kafka"])).toBe("Backend Engineer\n\nSkills employers ask for: Go, Kafka");
     expect(rewriteBrief("Backend Engineer", [])).toBe("Backend Engineer");
+  });
+
+  it("reads a profile link however it's pasted", () => {
+    expect(profileUrl("https://www.linkedin.com/in/asha-rao/")).toBe("https://www.linkedin.com/in/asha-rao/");
+    expect(profileUrl("linkedin.com/in/asha-rao")).toBe("https://www.linkedin.com/in/asha-rao/");
+    expect(profileUrl("https://in.linkedin.com/in/asha-rao?utm_source=share")).toBe("https://www.linkedin.com/in/asha-rao/");
+    expect(profileUrl("https://www.linkedin.com/company/orbit")).toBeNull();
+    expect(profileUrl("https://evil.com/linkedin.com/in/x")).toBeNull();
+    expect(profileUrl("")).toBeNull();
   });
 });
