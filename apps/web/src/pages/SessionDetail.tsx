@@ -177,6 +177,7 @@ export function SessionDetailPage() {
         <div className="space-y-6">
         <SessionReview
           review={detail.data.summary?.review}
+          practiceQueue={!session.negotiation}
           ended={session.status === "ended"}
           empty={!detail.data.turns.length && !detail.data.questions.length}
           onGenerate={async () => {

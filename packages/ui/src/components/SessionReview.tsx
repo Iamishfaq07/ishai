@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ReviewItem, SessionReview as Review } from "@orbit/types";
+import type { DepthDimension, DepthScores, ReviewItem, SessionReview as Review } from "@orbit/types";
 import { ArrowUpRight, Bookmark, BookmarkCheck, CircleCheck, MicOff, RotateCcw, Target, type LucideIcon } from "../icons";
 import { clock, reviewLength } from "../live/answerPace";
 import { cx } from "./cx";
@@ -20,6 +20,8 @@ export interface SessionReviewProps {
   onRetry?: (question: number) => Promise<void>;
   /** "Save as my answer": keeps an answer to the question in the answer bank, which live sessions draw on. */
   onSaveAnswer?: (question: string, answer: string) => Promise<void>;
+  /** Whether weak answers here join the practice queue (not for salary practice). Default true. */
+  practiceQueue?: boolean;
 }
 
 /** Scores of 3/5 or lower, or unanswered, are what a drill practises (matches the server's drill_plan). */
@@ -31,7 +33,7 @@ const SCORE_WORD: Record<number, string> = { 1: "Needs work", 2: "Developing", 3
 
 /** Post-call scorecard: overall score, strengths/improvements/practice, and each question graded on what
  * the candidate actually said. Shared by the web session page and the desktop History screen. */
-export function SessionReview({ review, ended, empty = false, onGenerate, onDrill, onRetry, onSaveAnswer }: SessionReviewProps) {
+export function SessionReview({ review, ended, empty = false, onGenerate, onDrill, onRetry, onSaveAnswer, practiceQueue = true }: SessionReviewProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const generate = async () => {
@@ -142,7 +144,7 @@ export function SessionReview({ review, ended, empty = false, onGenerate, onDril
 
       <div className="space-y-3">
         {review.items.map((item, i) => (
-          <QuestionReview key={i} index={i + 1} item={item} busy={busy} onRetry={onRetry ? () => void retry(i + 1) : undefined}
+          <QuestionReview key={i} index={i + 1} item={item} busy={busy} queue={practiceQueue} onRetry={onRetry ? () => void retry(i + 1) : undefined}
                           onSaveAnswer={onSaveAnswer} />
         ))}
       </div>
@@ -216,9 +218,10 @@ function Pips({ score }: { score: number | null }) {
   );
 }
 
-function QuestionReview({ index, item, busy = false, onRetry, onSaveAnswer }: {
+function QuestionReview({ index, item, busy = false, queue = true, onRetry, onSaveAnswer }: {
   index: number;
   item: ReviewItem;
+  queue?: boolean;
   busy?: boolean;
   onRetry?: () => void;
   onSaveAnswer?: (question: string, answer: string) => Promise<void>;
@@ -233,6 +236,12 @@ function QuestionReview({ index, item, busy = false, onRetry, onSaveAnswer }: {
         </p>
         <Pips score={item.score} />
       </div>
+      {queue && queued(item) && (
+        <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-sky-500/10 px-2.5 py-0.5 text-xs font-medium text-sky-800 dark:text-sky-300"
+           title="Answers scored 3 out of 5 or lower come back on a spaced schedule until you answer them well">
+          <RotateCcw className="h-3 w-3" aria-hidden /> In your practice queue
+        </p>
+      )}
       {item.you_said ? (
         <details className="group mt-2">
           <summary className="cursor-pointer select-none text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200">
@@ -247,6 +256,20 @@ function QuestionReview({ index, item, busy = false, onRetry, onSaveAnswer }: {
         <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">No answer was captured for this question.</p>
       )}
       {item.feedback && <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">{item.feedback}</p>}
+      {(item.missing_points?.length ?? 0) > 0 && (
+        <div className="mt-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">What it missed</p>
+          <ul className="mt-1 space-y-0.5 text-sm text-zinc-700 dark:text-zinc-300">
+            {item.missing_points!.map((m) => (
+              <li key={m} className="flex gap-2">
+                <span className="text-amber-500" aria-hidden="true">•</span>
+                {m}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <Rubric scores={item.dimensions} />
       {item.better && (
         <div className="mt-3 rounded-lg border-l-2 border-indigo-500 bg-indigo-500/5 px-3 py-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Try saying</p>
@@ -285,6 +308,44 @@ function QuestionReview({ index, item, busy = false, onRetry, onSaveAnswer }: {
                     onCancel={() => setSaving("closed")} />
       )}
     </Card>
+  );
+}
+
+/** Weak answers (3 of 5 or lower, or none) join the practice queue (sessions/practice_queue.py, WEAK_SCORE). */
+const WEAK_SCORE = 3;
+function queued(item: ReviewItem): boolean {
+  return item.score === null || item.score <= WEAK_SCORE;
+}
+
+const DIMENSION_LABEL: Record<DepthDimension, string> = {
+  problem_framing: "Framing",
+  technical_depth: "Depth",
+  scalability: "Scale",
+  edge_case_rigor: "Edge cases",
+  communication_clarity: "Clarity",
+};
+
+/** The scored rubric dimensions (1–5) as small bars; ones the question didn't test are left out. */
+function Rubric({ scores }: { scores?: DepthScores }) {
+  const shown = (Object.keys(DIMENSION_LABEL) as DepthDimension[]).filter((d) => typeof scores?.[d] === "number");
+  if (!shown.length) return null;
+  return (
+    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
+      {shown.map((d) => {
+        const v = scores![d] as number;
+        return (
+          <div key={d} className="text-xs">
+            <dt className="flex justify-between text-zinc-500 dark:text-zinc-400">
+              {DIMENSION_LABEL[d]} <span className="tabular-nums">{v}/5</span>
+            </dt>
+            <dd className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-white/10">
+              <span className={cx("block h-full rounded-full", v >= 4 ? "bg-emerald-500" : v === 3 ? "bg-amber-500" : "bg-rose-500")}
+                    style={{ width: `${(v / 5) * 100}%` }} />
+            </dd>
+          </div>
+        );
+      })}
+    </dl>
   );
 }
 

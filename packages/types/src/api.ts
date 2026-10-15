@@ -302,6 +302,8 @@ export interface OrbitSession {
   /** Ended sessions: the report is written by a background job after the session ends. */
   report_status?: "pending" | "ready" | "failed" | null;
   workspace_id?: string | null;
+  /** Salary practice (on the session's own page): its lines never join the practice queue. */
+  negotiation?: boolean;
 }
 
 export interface SessionTurn {

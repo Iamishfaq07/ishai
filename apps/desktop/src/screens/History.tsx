@@ -284,6 +284,7 @@ function SessionDetailView({ id, onDeleted, onDrill }: {
         <div className="space-y-6">
         <SessionReview
           review={detail.summary?.review}
+          practiceQueue={!session.negotiation}
           ended={session.status === "ended"}
           empty={!detail.turns.length && !detail.questions.length}
           onGenerate={async () => {
