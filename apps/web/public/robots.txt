@@ -1,0 +1,15 @@
+# Public pages may be indexed; signed-in pages and the API never.
+User-agent: *
+Allow: /$
+Allow: /resume-ai
+Allow: /jobs$
+Allow: /warmup
+Allow: /contact
+Allow: /technical
+Allow: /privacy.html
+Allow: /terms.html
+Allow: /cookies.html
+Allow: /refund.html
+Disallow: /
+
+Sitemap: https://orbitanswer.com/sitemap.xml
