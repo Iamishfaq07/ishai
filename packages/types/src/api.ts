@@ -553,6 +553,34 @@ export interface Story extends StoryInput {
   updated_at: string;
 }
 
+/** The tailoring queue (/v1/resumes/tailor-queue): one resume tailored to several jobs in the background. */
+export interface TailorQueueJob {
+  /** A pasted job post (at least a few lines), or a saved job from Jobs AI. */
+  job_text?: string;
+  listing_id?: string;
+  label?: string;
+}
+
+export interface TailorQueueItem {
+  id: string;
+  label: string;
+  source_resume_id: string;
+  status: "queued" | "running" | "done" | "failed";
+  result: {
+    resume_id: string | null;
+    title: string;
+    score_before: number | null;
+    score_after: number | null;
+    changes: number;
+    /** Claims the resume doesn't prove: offered in the editor's fix, never applied. */
+    to_confirm: number;
+    /** Numbers only the candidate knows. */
+    questions: number;
+  } | null;
+  error: string | null;
+  created_at: string;
+}
+
 /** Career Evidence Vault (/v1/evidence): a claim about the candidate's work and where it comes from. Only
  *  "confirmed" items are used (live answers draw on them); "suggested" ones came from the AI and wait for a check. */
 export interface EvidenceItem {
