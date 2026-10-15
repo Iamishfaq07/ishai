@@ -11,6 +11,8 @@ import {
   LivePanel,
   DefenseWorkspace,
   Mic,
+  SourceChip,
+  useSourceTracker,
   OrbitLogo,
   ScreenshotPreview,
   cx,
@@ -22,7 +24,6 @@ import {
   loadExperience,
   useLiveSession,
   VISION_ENABLED,
-  type LucideIcon,
   type PanelMode,
   confirmDialog,
 } from "@orbit/ui";
@@ -115,6 +116,9 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   const sysRef = useRef<AudioCapture | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
   const [micOn, setMicOn] = useState(false);
+  // Whether each source is actually heard (SourceChip), measured from the frames' levels on this device.
+  const sources = useSourceTracker();
+  const [sourceAdvice, setSourceAdvice] = useState<{ mic: string | null; system: string | null }>({ mic: null, system: null });
   const [micStarting, setMicStarting] = useState(false);
   // Mocks and phone / room sessions listen through the microphone only. Resuming from Home or Sessions carries no
   // launch state (the default asks for tab audio), so the session type decides here.
@@ -142,6 +146,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
     try {
       const stream = await openMicrophone(launch.micDeviceId);
       const capture = await captureStream(stream, (f) => {
+        sources.feed("mic", f.rms);
         if (!pausedRef.current && !interviewerSpeakingRef.current) client.sendAudio(AUDIO_CHANNEL.mic, f.pcm);
       });
       if (gen !== micGenRef.current) {
@@ -169,7 +174,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
           : `Microphone unavailable: ${errorText(err)}`,
       );
     }
-  }, [client, launch.micDeviceId]);
+  }, [client, launch.micDeviceId, sources]);
 
   useEffect(() => {
     void startMic();
@@ -207,6 +212,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
         return;
       }
       const capture = await captureStream(stream, (f) => {
+        sources.feed("system", f.rms);
         if (!pausedRef.current && !interviewerSpeakingRef.current) client.sendAudio(AUDIO_CHANNEL.system, f.pcm);
       });
       if (gen !== sysGenRef.current) {
@@ -334,6 +340,8 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
         </Notice>
       )}
       {shotError && <Notice tone="error">{shotError}</Notice>}
+      {live.state !== "ended" && sourceAdvice.mic && <Notice tone="info">{sourceAdvice.mic}</Notice>}
+      {live.state !== "ended" && sysState === "on" && sourceAdvice.system && <Notice tone="info">{sourceAdvice.system}</Notice>}
     </>
   );
 
@@ -392,8 +400,10 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
           <span className="hidden font-display font-medium min-[360px]:inline">orbit</span>
         </Link>
         <span className="ml-auto flex items-center gap-2">
-          <AudioChip icon={Mic} label="Mic" on={micOn} />
-          <AudioChip icon={Headphones} label="Interviewer" on={sysState === "on"} />
+          <SourceChip tracker={sources} channel="mic" icon={Mic} label="Mic" on={micOn} paused={live.state === "paused"}
+                      onAdvice={(mic) => setSourceAdvice((a) => (a.mic === mic ? a : { ...a, mic }))} />
+          <SourceChip tracker={sources} channel="system" icon={Headphones} label="Interviewer" on={sysState === "on"} paused={live.state === "paused"}
+                      onAdvice={(system) => setSourceAdvice((a) => (a.system === system ? a : { ...a, system }))} />
         </span>
       </nav>
       <div className={cx("min-h-0 flex-1 px-2 pb-2 sm:px-4 sm:pb-4", mode === "compact" && "flex items-start justify-center")}>
@@ -461,22 +471,6 @@ function EndedScreen({ reason, session }: { reason: EndedReason; session: OrbitS
         )}
       </div>
     </div>
-  );
-}
-
-function AudioChip({ icon: Icon, label, on }: { icon: LucideIcon; label: string; on: boolean }) {
-  return (
-    <span
-      className={cx(
-        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 ring-1",
-        on
-          ? "bg-emerald-500/10 text-emerald-700 ring-emerald-500/25 dark:text-emerald-300"
-          : "bg-zinc-500/10 text-zinc-500 ring-zinc-500/15 dark:text-zinc-400",
-      )}
-    >
-      <Icon className="h-3.5 w-3.5" />
-      {label} {on ? "on" : "off"}
-    </span>
   );
 }
 
