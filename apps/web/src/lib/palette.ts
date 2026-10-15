@@ -183,6 +183,7 @@ export function baseCommands({ mockEnabled }: { mockEnabled: boolean }): Command
     { id: "go-matches", title: "Job matches", group: "Go to", product: "jobs", to: "/jobs/matches", keywords: ["feed", "openings", "match"] },
     { id: "go-tracker", title: "Job tracker", group: "Go to", product: "jobs", to: "/jobs/tracker", keywords: ["applications", "applied", "saved jobs", "follow up", "kanban"] },
     { id: "go-job-profile", title: "Job search profile", group: "Go to", product: "jobs", to: "/jobs/profile", keywords: ["preferences", "city", "role", "filters", "location"] },
+    { id: "go-learn", title: "Learning AI", group: "Go to", to: "/learn", keywords: ["learn", "learning", "courses", "cybersecurity", "security", "kashsec", "ai", "study"] },
     { id: "go-code", title: "Code AI", group: "Go to", to: "/code", keywords: ["coding", "dsa", "leetcode", "algorithms", "data structures", "coding round", "practice code", "interview problems"] },
     { id: "go-linkedin", title: "LinkedIn AI", group: "Go to", to: "/linkedin", keywords: ["linkedin", "profile", "headline", "about", "recruiters", "score", "optimize"] },
     { id: "go-offers", title: "Offer AI", group: "Go to", to: "/offers", keywords: ["offer", "salary", "ctc", "in-hand", "take home", "negotiate", "compare offers", "pay"] },

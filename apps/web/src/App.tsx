@@ -51,6 +51,7 @@ import {
   OffersPage,
   LinkedInPage,
   CodeHomePage,
+  LearningPage,
   CodeProblemPage,
   OfferDetailPage,
   AdminUsersPage,
@@ -227,6 +228,7 @@ export function App() {
           <Route path="*" element={<Navigate to={JOBS_AI_HOME} replace />} />
         </Route>
         <Route path="linkedin" element={<LinkedInPage />} />
+        <Route path="learn" element={<LearningPage />} />
         <Route path="code" element={<CodeHomePage />} />
         <Route path="code/:problemId" element={<CodeProblemPage />} />
         <Route path="offers" element={<OffersPage />} />
