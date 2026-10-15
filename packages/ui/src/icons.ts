@@ -28,6 +28,7 @@ export {
   CircleAlert,
   CircleCheck,
   CircleX,
+  ChartColumn,
   ClipboardCheck,
   Columns3,
   Clock,
