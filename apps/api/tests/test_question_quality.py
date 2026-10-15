@@ -265,3 +265,24 @@ async def test_the_answer_is_written_while_the_classifier_decides() -> None:
     await sink.wait_for("answer.completed")
     assert eng.latency.as_dict()["first_token_after_question"][0] < 100  # ready the moment it was confirmed
     await eng.end()
+
+
+def test_the_dry_run_trace_is_parsed_and_kept_out_of_the_code() -> None:
+    from orbit_api.live.answer_format import AnswerStreamParser
+    from orbit_api.live.events import QuestionType
+
+    raw = ("GROUNDED: general\nANSWER: One pass with a map of what I've seen.\nCODE: python\n```python\n"
+           "def two_sum(nums, t):\n    seen = {}\n    return []\n```\nTIME: O(n)\nSPACE: O(n)\n"
+           "EDGE: Empty | Duplicates | Negatives | No answer | One element\n"
+           "TRACE: [3,3], 6 | i=0 seen={3:0} | i=1 need 3, found → [0,1]\n"
+           "TESTS: [3,3], 6 → [0,1]\nPOINTS: Map | One pass")
+    a = AnswerStreamParser("Two sum", QuestionType.coding, []).feed(raw)
+    assert a.trace is not None and a.trace.input == "[3,3], 6"
+    assert a.trace.steps == ["i=0 seen={3:0}", "i=1 need 3, found → [0,1]"]
+    assert a.code and "TRACE" not in a.code.content and len(a.edge_cases) == 5
+    # A trace with no steps isn't one; more than six steps are cut to six.
+    one = AnswerStreamParser("q", QuestionType.coding, []).feed("ANSWER: x\nTRACE: [1]\nPOINTS: a")
+    assert one.trace is None
+    many = AnswerStreamParser("q", QuestionType.coding, []).feed(
+        "ANSWER: x\nTRACE: in | " + " | ".join(f"s{i}" for i in range(9)) + "\nPOINTS: a")
+    assert many.trace is not None and len(many.trace.steps) == 6

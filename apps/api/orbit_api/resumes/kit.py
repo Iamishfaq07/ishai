@@ -61,8 +61,9 @@ LINKEDIN_ABOUT = 2_600
 LINKEDIN_SKILLS = 5
 CONNECTION_NOTE = 200
 SUBJECT = 90
-OutreachKind = Literal["referral", "cold_email", "follow_up", "thank_you"]
-MESSAGE_WORDS: dict[str, int] = {"referral": 150, "cold_email": 150, "follow_up": 100, "thank_you": 120}
+OutreachKind = Literal["referral", "cold_email", "follow_up", "thank_you", "screening"]
+MESSAGE_WORDS: dict[str, int] = {"referral": 150, "cold_email": 150, "follow_up": 100, "thank_you": 120,
+                                 "screening": 250}  # three answers of at most 75 words, and their questions
 # A Jobs AI posting's skills the prompt names (the post's own, read when it was fetched), and how long each may be.
 MAX_REQUIREMENTS = 12
 REQUIREMENT_CHARS = 60
@@ -175,10 +176,18 @@ What each kind of message does:
   was discussed, one sentence on that, in their words; never any other topic, question, explanation or moment ("for
   walking me through the team's work" is made up too). Then why the role appeals, from the job post, with one result
   from the resume. End by saying they look forward to hearing back.
+- screening: NOT a message, so "subject" is "": answers to an application form's screening questions. The body is
+  three question-and-answer pairs separated by a blank line, each the question on its own line, then its answer
+  (40-70 words, first person, ready to paste): "Why do you want to work at <the company>?" (from the job post: what
+  the company does or the role offers, and why that fits them), "Describe a relevant project or system you built or
+  scaled." (their strongest matching result, with its number from the resume), "Why are you a good fit for this
+  role?" (two skills the post asks for that the resume shows, with evidence). Name the company only as the job post
+  or the candidate gives it, else "your company".
 """ + GROUNDING + "\n" + TONE
 
 KIND_LABEL = {"referral": "referral request", "cold_email": "cold email to HR or a recruiter",
-              "follow_up": "follow-up after applying", "thank_you": "thank-you note after an interview"}
+              "follow_up": "follow-up after applying", "thank_you": "thank-you note after an interview",
+              "screening": "set of answers to an application form's screening questions"}
 KIND_SUBJECT = {"cold_email": "Application", "follow_up": "Following up on my application", "thank_you": "Thank you",
                 "referral": "Referral request"}  # when the model's subject line can't be used
 
@@ -596,12 +605,40 @@ def frame(kind: OutreachKind, recipient: str, data: ResumeData) -> tuple[str, st
     return greeting, f"Best regards,\n{name}\n{contact}"
 
 
+SCREENING_ANSWERS = 3
+SCREENING_ANSWER_WORDS = 75
+
+
+def _screening(raw: dict[str, Any], corpus: str) -> str:
+    """Answers to a form's screening questions, as "question\nanswer" pairs a blank line apart. Each answer is
+    checked like any message (a figure or tool nobody gave goes with its sentence) and cut to whole sentences on its
+    own, so one long answer can't push the others out; a pair whose question names something nobody gave is left
+    out. No greeting, no sign-off."""
+    pairs: list[str] = []
+    for block in re.split(r"\n\s*\n", _SIGNOFF.sub("", _GREETING.sub("", _text(raw.get("body"))))):
+        lines = [ln.strip() for ln in block.strip().split("\n") if ln.strip()]
+        if len(lines) < 2:  # a pair is the question on its first line, then the answer
+            continue
+        question = " ".join(lines[0].split())[:160]
+        answer = fit_words(clean_prose(" ".join(lines[1:]), corpus).replace("\n\n", " "), SCREENING_ANSWER_WORDS)
+        if _invented(question, corpus) or invented_figures(question, corpus) or _words(answer) < 8:
+            continue
+        pairs.append(f"{question}\n{answer}")
+        if len(pairs) == SCREENING_ANSWERS:
+            break
+    if len(pairs) < 2:
+        raise ValueError("no usable screening answers")
+    return "\n\n".join(pairs)
+
+
 def parse_outreach(text: str, body: OutreachIn, data: ResumeData) -> OutreachOut:
     raw = _json(text)
     corpus = _corpus(data, body.job_text[:MAX_JOB_CHARS], body.recipient, body.company, body.role, body.details)
     main = _text(raw.get("body"))
     main = _SIGNOFF.sub("", _GREETING.sub("", main)).strip()
     main = clean_prose(main, corpus)
+    if body.kind == "screening":
+        return OutreachOut(kind=body.kind, subject="", connection_note="", message=_screening(raw, corpus))
     greeting, sign_off = frame(body.kind, body.recipient, data)
     main = fit_words(main, max(20, MESSAGE_WORDS[body.kind] - _words(greeting) - _words(sign_off)))
     if _words(main) < 15:

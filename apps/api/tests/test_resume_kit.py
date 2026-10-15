@@ -221,6 +221,29 @@ def test_the_mock_writes_every_kind_of_message_from_the_resume(client: TestClien
         assert bool(out["connection_note"]) == (kind == "referral") and bool(out["subject"]) == (kind != "referral")
 
 
+def test_screening_answers_are_paste_ready_grounded_and_under_their_limit(client: TestClient,
+                                                                          monkeypatch: pytest.MonkeyPatch) -> None:
+    h = _register(client)
+    body = ("Hi there,\n\nWhy do you want to work at Acme?\nAcme's payments platform is the work I do: I led the "
+            "ledger's move to event sourcing on Kafka. It also grew revenue by 900% at a unicorn.\n\n"
+            "Describe a relevant project or system you built or scaled.\n"
+            + "I built Python microservices on Kubernetes for payments. " * 40
+            + "\n\nBest regards,\nSam")
+    mock_llm(monkeypatch, json.dumps({"subject": "Ignored", "connection_note": "Ignored too", "body": body}))
+    out = _outreach(client, h, "screening", company="Acme")
+    message = out["message"]
+    assert out["subject"] == "" and out["connection_note"] == ""  # answers for a form, not a message
+    pairs = message.split("\n\n")
+    assert len(pairs) == 2 and pairs[0].startswith("Why do you want to work at Acme?\n")  # no greeting
+    assert "Best regards" not in message and _words(message) <= kit.MESSAGE_WORDS["screening"]
+    assert "Kafka" in pairs[0] and "900%" not in message  # a figure nobody gave goes with its sentence
+    assert _words(pairs[1].split("\n", 1)[1]) <= kit.SCREENING_ANSWER_WORDS and pairs[1].endswith(".")
+    # The mock writes three questions and answers from the resume.
+    monkeypatch.undo()
+    out = _outreach(client, h, "screening", role="Senior Backend Engineer", company="Acme")
+    assert len(out["message"].split("\n\n")) == 3 and out["message"].startswith("Why do you want to work at Acme?")
+
+
 def test_message_helpers_cut_whole_sentences_and_address_people_by_name() -> None:
     body = "First line here. " + "A long middle sentence that keeps going and going. " * 3 + "\n\nThe ask?"
     cut = kit.fit_words(body, 15)

@@ -14,6 +14,7 @@ from fastapi import (
     Depends,
     File,
     HTTPException,
+    Query,
     Response,
     UploadFile,
     WebSocket,
@@ -81,6 +82,7 @@ from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.retrieval.index import IndexedChunk, SessionIndex, chunk_body
 from orbit_api.sessions import companion, practice_queue
 from orbit_api.sessions.feedback import learned_preferences, session_feedback
+from orbit_api.sessions.loop_memory import loop_memory
 from orbit_api.sessions.recorder import DbRecorder, InterviewTime, upsert_usage
 from orbit_api.sessions.report import generate_report
 from orbit_api.stories.routes import MAX_STORIES, index_chunk, story_text
@@ -280,6 +282,24 @@ async def create_session(body: SessionIn, user: Annotated[User, Depends(require_
         db.add(SessionDocument(session_id=row.id, document_id=doc_id))
     await db.commit()
     return await _session_out(db, row)
+
+
+class LoopMemoryOut(BaseModel):
+    company: str
+    rounds: int
+    last_round_at: datetime | None
+    questions: list[str]
+    stories: list[str]
+
+
+@router.get("/sessions/loop-memory", response_model=LoopMemoryOut)
+async def get_loop_memory(user: Annotated[User, Depends(current_user)], db: Annotated[AsyncSession, Depends(get_db)],
+                          company: Annotated[str, Query(min_length=1, max_length=120)]) -> LoopMemoryOut:
+    """The candidate's earlier rounds with this company: the questions already asked and the stories already told
+    (their own sessions only), shown before a new round and given to its answers."""
+    m = await loop_memory(db, user.id, company)
+    return LoopMemoryOut(company=m.company, rounds=m.rounds, last_round_at=m.last_round_at, questions=m.questions,
+                         stories=m.stories)
 
 
 @router.get("/sessions", response_model=list[SessionOut])
@@ -908,6 +928,8 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
         row.status = "live"
         row.started_at = row.started_at or datetime.now(UTC)
         await db.commit()
+        # Earlier rounds with the same company: what was asked, and the stories already told (sessions/loop_memory).
+        earlier = (await loop_memory(db, user_id, company, exclude_session_id=row.id)).prompt_context()
         profile = SessionProfile(
             session_id=row.id, session_type=row.type,  # type: ignore[arg-type]
             role=row.role, language="en", answer_language="en",  # English only (older rows may say otherwise)
@@ -917,6 +939,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             features=frozenset(f for f in ("system_design", "advanced_coding") if plan.has(f)),
             instructions=(row.instructions or "").strip() or None,
             prep_context={"company": row.company, "stage": row.interview_stage,
+                          **({"earlier_rounds": earlier} if earlier else {}),
                           "tech_stack": row.tech_stack or [], "key_requirements": row.key_requirements or []},
             learned=await learned_preferences(db, user_id),
             company=company,

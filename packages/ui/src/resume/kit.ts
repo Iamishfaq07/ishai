@@ -24,7 +24,7 @@ export const KIT_LIMITS = {
 export const KIT_SHOWN_FIRST = { headline: 60, about: 265 } as const;
 
 /** Each message's word limit, greeting and sign-off included. */
-export const MESSAGE_WORDS: Record<OutreachKind, number> = { referral: 150, cold_email: 150, follow_up: 100, thank_you: 120 };
+export const MESSAGE_WORDS: Record<OutreachKind, number> = { referral: 150, cold_email: 150, follow_up: 100, thank_you: 120, screening: 250 };
 
 export function countWords(text: string): number {
   const t = text.trim();

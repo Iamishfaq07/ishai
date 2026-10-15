@@ -288,7 +288,7 @@ export const AnswerCard = memo(function AnswerCard({
   const a = answer.answer;
   const thinking = answer.status === "streaming" && !answer.has_content;
   // Coding layout: what to SAY (the talk track) is kept apart from what to CODE.
-  const coding = Boolean(a.code || a.problem || a.edge_cases?.length || a.tests?.length);
+  const coding = Boolean(a.code || a.problem || a.edge_cases?.length || a.tests?.length || a.trace?.steps.length);
   const design = a.design ?? [];
   const debug = a.debug ?? null;
   const structured = coding || design.length > 0 || Boolean(debug);
@@ -553,6 +553,24 @@ export const AnswerCard = memo(function AnswerCard({
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {coding && a.trace && a.trace.steps.length > 0 && (
+          <div className="mt-3">
+            <SectionLabel block>Dry run</SectionLabel>
+            <p className="mb-1.5 font-mono text-[0.8125rem] text-zinc-600 dark:text-zinc-400">
+              Input: <span className="text-zinc-900 dark:text-zinc-100">{a.trace.input}</span>
+            </p>
+            <ol className="relative space-y-1 border-l border-sky-500/30 pl-4 font-mono text-[0.8125rem] text-zinc-800 dark:text-zinc-200">
+              {a.trace.steps.map((step, i) => (
+                <li key={i} className="trace-step relative" style={{ animationDelay: `${i * 90}ms` }}>
+                  <span aria-hidden="true" className="absolute -left-[1.3rem] top-1.5 h-2 w-2 rounded-full bg-sky-400" />
+                  <span className="mr-2 text-zinc-400">{i + 1}</span>
+                  {step}
+                </li>
+              ))}
+            </ol>
           </div>
         )}
 

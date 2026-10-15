@@ -453,6 +453,8 @@ export interface SessionSummary {
   delivery?: DeliveryStats | null;
   /** The debrief + thank-you email, once generated (POST /v1/sessions/{id}/follow-up). */
   follow_up?: FollowUp | null;
+  /** Salary practice only: the counter-offer email to send the recruiter, from what was said on the call. */
+  counter_offer_email?: { subject: string; body: string } | null;
 }
 
 export interface DeliveryStats {
@@ -1039,6 +1041,16 @@ export interface ContactRequest {
   captcha_token?: string;
   /** The honeypot: always empty from a person. */
   website?: string;
+}
+
+/** GET /v1/sessions/loop-memory?company=: the candidate's earlier rounds with that company. */
+export interface LoopMemory {
+  company: string;
+  rounds: number;
+  last_round_at: string | null;
+  questions: string[];
+  /** Story-bank titles already told in this loop. */
+  stories: string[];
 }
 
 /** GET /v1/public/engineering-telemetry. Percentiles are null until enough sessions were measured. */
@@ -1633,7 +1645,7 @@ export interface LinkedInProfile {
   skills: string[];
 }
 
-export type OutreachKind = "referral" | "cold_email" | "follow_up" | "thank_you";
+export type OutreachKind = "referral" | "cold_email" | "follow_up" | "thank_you" | "screening";
 
 /** What the candidate says about who they're writing to; all optional. */
 export interface OutreachInputs {

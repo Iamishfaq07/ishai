@@ -60,6 +60,9 @@ def _mock_report(user: str) -> str:
         "potential_weak_areas": [], "suggested_preparation": [],
         "review": {"overall_score": 4, "strengths": ["[mock] clear structure"], "improvements": ["[mock] add metrics"],
                    "practice": ["[mock] rehearse STAR stories"], "items": items},
+        **({"counter_offer_email": {"subject": "[mock] Following up on the offer",
+                                    "body": "[mock] Thank you for the offer. Could we look at the base again?"}}
+           if 'source="negotiation_setup"' in user else {}),
     })
 
 
@@ -194,6 +197,11 @@ def _mock_resume_kit(request_type: str, body: str) -> str:
     role = (f"the {role} role" if role else "a role" if company else "the role on your team") + (
         f" at {company}" if company else "")
     fit = f" (mock) My resume shows {', '.join(shown)}, which the job asks for." if shown else ""
+    if "(kind: screening)" in body:
+        return json.dumps({"subject": "", "connection_note": "", "body": "\n\n".join([
+            f"Why do you want to work at {company or 'your company'}?\n(mock) The work in {role} is what I do. {work}",
+            f"Describe a relevant project or system you built or scaled.\n(mock) {work}",
+            f"Why are you a good fit for this role?\n(mock) As a {title.lower()} I've done this work.{fit} {work}"])})
     return json.dumps({"subject": "(mock) About the role", "connection_note": f"Hi, (mock) I'd like to connect about "
                                                                               f"{role}.",
                        "body": f"(mock) I'm reaching out about {role}. {work}{fit}\n\n(mock) Could we talk about it "

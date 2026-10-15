@@ -720,3 +720,7 @@ html:not(.dark) .cosmic-dots { background-image: radial-gradient(rgba(35, 38, 66
 @keyframes relay-light { from { fill-opacity: 0; transform: scale(0.6); } }
 .relay-check { stroke-dasharray: 16; animation: save-check-draw 360ms 950ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 :root:is([data-motion="reduced"], [data-motion="off"]) .relay-packet { display: none; }
+
+/* A coding answer's dry run: each step slides in after the one before (AnswerCard). */
+.trace-step { animation: trace-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes trace-in { from { opacity: 0; transform: translateX(-6px); } }

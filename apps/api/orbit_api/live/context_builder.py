@@ -253,8 +253,11 @@ def _unshown_rule(terms: list[str]) -> str:
 # Every coding answer, outside the debug and design formats. Without it the model often answered in prose only.
 _CODE_RULE = ("CODING ANSWER: ANSWER is the short spoken talk track, never code. After it you MUST write PROBLEM:, "
               "then CODE: <language> on its own line followed by the complete, runnable solution in a ```<language> "
-              "fenced block, then TIME:, SPACE:, EDGE: and TESTS:. Never answer a coding question in prose alone. A "
-              "conceptual question still gets a short code example that shows the idea.")
+              "fenced block, then TIME:, SPACE:, EDGE: (five edge cases when the problem has that many), TRACE: and "
+              "TESTS:. TRACE is a dry run of the solution on one tricky input from the edge cases: the input, then the "
+              "key variables after each step, all separated by \" | \" (at most 6 steps, e.g. \"[2,7,11], 9 | i=0 "
+              "seen={2:0} | i=1 found 7 → [0,1]\"). Never answer a coding question in prose alone. A conceptual "
+              "question still gets a short code example that shows the idea.")
 # A technical question the detector didn't call coding may still be one ("so, how would you do that in Python?"): the
 # model, which reads the whole conversation, decides.
 _MAYBE_CODE_RULE = ("If answering this properly means writing code (they ask you to write, implement, solve or code "
@@ -418,6 +421,12 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
     if inputs.prep_context:
         parts.append('<reference_data source="target_job_context">\n'
                      + fence(str(inputs.prep_context)) + "\n</reference_data>")
+        if inputs.prep_context.get("earlier_rounds"):
+            parts.append("This is a later round with the same company: `earlier_rounds` lists questions earlier "
+                         "interviewers already asked and the candidate's stories already told. Interviewers in one "
+                         "hiring loop compare notes, so for a behavioural question prefer a different story from the "
+                         "ones already told, unless this question is clearly about that same project; and keep every "
+                         "fact consistent with what was said before.")
     if inputs.candidate_instructions:
         parts.append("The candidate's own preferences for every answer. Follow them when they don't conflict with "
                      "the rules above (they can't change the format, grounding or honesty rules):\n"
