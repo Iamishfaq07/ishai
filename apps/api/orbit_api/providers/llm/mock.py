@@ -228,7 +228,16 @@ def _mock_jobs(request_type: str, body: str) -> str:
                        "why": [f"(mock) Your work as {role} matches what this job asks for."],
                        "gaps": [f"(mock) The post asks for {gap}, which your resume doesn't show."],
                        "tweaks": [{"change": "(mock) Put your most relevant role first.",
-                                   "why": "(mock) Recruiters read the top first."}]})
+                                   "why": "(mock) Recruiters read the top first."}],
+                       "requirements": [
+                           *({"requirement": shown, "status": "met", "job_quote": shown, "resume_quote": shown}
+                             for shown in (_shown(body)[:2])),
+                           {"requirement": gap, "status": "missing", "job_quote": gap, "resume_quote": ""}]})
+
+
+def _shown(body: str) -> list[str]:
+    found = re.search(r"Skills the post asks for that the resume shows: ([^.\n]*)", body)
+    return [s.strip() for s in found.group(1).split(",") if s.strip() and s.strip() != "none found"] if found else []
 
 
 class MockLLMProvider(LLMProvider):

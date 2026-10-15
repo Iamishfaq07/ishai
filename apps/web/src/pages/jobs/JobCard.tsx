@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import type { JobListing, JobMatch } from "@orbit/types";
+import type { JobFitCheck, JobListing, JobMatch } from "@orbit/types";
 import {
   ArrowUpRight,
   Bookmark,
@@ -430,6 +430,7 @@ export function FitPanel({
             </span>
             <span className="text-zinc-700 dark:text-zinc-200">{fit.result.check.summary}</span>
           </p>
+          <Requirements items={fit.result.check.requirements ?? []} />
           <FitList title="Why you fit" items={fit.result.check.why} tone="text-emerald-600 dark:text-emerald-400" icon="check" />
           <FitList title="Gaps" items={fit.result.check.gaps} tone="text-amber-600 dark:text-amber-400" icon="gap" />
           {fit.result.check.tweaks.length > 0 && (
@@ -465,6 +466,40 @@ export function FitPanel({
         </div>
       )}
     </section>
+  );
+}
+
+const REQ_STATUS: Record<"met" | "partial" | "unclear" | "missing", { label: string; tone: string }> = {
+  met: { label: "Met", tone: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" },
+  partial: { label: "Partly", tone: "bg-amber-500/15 text-amber-800 dark:text-amber-300" },
+  unclear: { label: "Unclear", tone: "bg-zinc-500/15 text-zinc-700 dark:text-zinc-300" },
+  missing: { label: "Missing", tone: "bg-rose-500/15 text-rose-800 dark:text-rose-300" },
+};
+
+/**
+ * The post's must-haves one by one: met, partly, unclear or missing, each with the post's words and the resume line
+ * behind it. The server keeps only quotes it found in the post and the resume, so every line here can be checked.
+ */
+function Requirements({ items }: { items: NonNullable<JobFitCheck["requirements"]> }) {
+  if (!items.length) return null;
+  return (
+    <div>
+      <h5 className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Requirement by requirement</h5>
+      <ul className="divide-y divide-zinc-200 rounded-xl border border-zinc-200 dark:divide-white/10 dark:border-white/10">
+        {items.map((r) => (
+          <li key={r.requirement} className="flex flex-col gap-1 px-3 py-2 sm:flex-row sm:items-start sm:gap-3">
+            <span className={cx("w-fit shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold", REQ_STATUS[r.status].tone)}>
+              {REQ_STATUS[r.status].label}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="font-medium">{r.requirement}</span>
+              {r.job_quote && <span className="block text-xs text-zinc-500 dark:text-zinc-400">The post: “{r.job_quote}”</span>}
+              {r.resume_quote && <span className="block text-xs text-emerald-800 dark:text-emerald-300">Your resume: “{r.resume_quote}”</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
