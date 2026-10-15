@@ -35,6 +35,12 @@
   display: none;
 }
 /* The line a suggestion, a check or the field being edited is about, marked on the on-screen preview only. */
+/* The job post's keywords on the on-screen preview (pages/resume/previewKeywords.ts). Never printed. */
+::highlight(resume-keywords) {
+  background-color: rgb(16 185 129 / 0.22);
+  color: inherit;
+}
+
 .resume-hl {
   border-radius: 2px;
   background: rgb(99 102 241 / 0.13);

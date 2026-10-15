@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ResumeData } from "@orbit/types";
-import { DECLARATION, applySuggestion, isStillApplied, revertSuggestion, EXTRA_PRESETS, LOOKS, MAX_SKILLS_PER_GROUP, MAX_SKILL_GROUPS, SERIF_FONTS, TEMPLATES, addSkills, emptyData, fresherResume, gradeLine, resumeToText, sectionLabel, shownSections } from "./model";
+import { DECLARATION, applySuggestion, bulletStrength, isStillApplied, revertSuggestion, EXTRA_PRESETS, LOOKS, MAX_SKILLS_PER_GROUP, MAX_SKILL_GROUPS, SERIF_FONTS, TEMPLATES, addSkills, emptyData, fresherResume, gradeLine, resumeToText, sectionLabel, shownSections } from "./model";
 
 function ids(): () => string {
   let n = 0;
@@ -140,5 +140,27 @@ describe("taking back one change", () => {
     expect(added.experience[0]!.bullets).toContain("Mentored two interns");
     expect(revertSuggestion(added, add).experience[0]!.bullets).toEqual(["Built APIs"]);
     expect(isStillApplied(added, { id: "s3", kind: "add_skill", path: "skills", label: "Skills", reason: "", before: "", after: "Go" })).toBe(false);
+  });
+});
+
+describe("bulletStrength", () => {
+  const data = (): ResumeData => ({ ...emptyData(), experience: [{ id: "e1", title: "Engineer", company: "Acme", location: "", start: "", end: "", current: true,
+    bullets: ["Cut checkout latency by 40% with a pricing cache", "Responsible for the on-call rota", "Built the internal admin tool for support"] }] });
+  const check = (id: string, paths: string[]) => ({ id, category: "experience", label: id, points: 0, max_points: 4, passed: false, fix: "", target: paths[0] ?? null,
+    ai_fixable: true, fix_kind: "ai", paths }) as unknown as import("@orbit/types").AtsCheck;
+  const report = { checks: [check("action_verbs", ["experience.e1.bullets.1"]), check("quantified", ["experience.e1.bullets.1"])], issues: [] };
+
+  it("rates each bullet by the checks that flag it, and a number", () => {
+    const d = data();
+    expect(bulletStrength("experience.e1.bullets.0", d.experience[0]!.bullets[0]!, report, d)).toEqual({ level: "strong", needs: [] });
+    expect(bulletStrength("experience.e1.bullets.1", d.experience[0]!.bullets[1]!, report, d)).toEqual({ level: "weak", needs: ["lead with what you did", "add a number"] });
+    // Nothing flagged it, but it has no number: fair, and says so.
+    expect(bulletStrength("experience.e1.bullets.2", d.experience[0]!.bullets[2]!, report, d)).toEqual({ level: "fair", needs: ["add a number"] });
+  });
+
+  it("says nothing until the line is scored as it reads now", () => {
+    const d = data();
+    expect(bulletStrength("experience.e1.bullets.0", "Cut checkout latency by 40%, edited", report, d)).toBeNull();
+    expect(bulletStrength("experience.e1.bullets.0", d.experience[0]!.bullets[0]!, null, d)).toBeNull();
   });
 });
