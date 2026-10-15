@@ -29,6 +29,7 @@ export {
   CircleCheck,
   CircleX,
   ClipboardCheck,
+  Columns3,
   Clock,
   Code2,
   Contrast,

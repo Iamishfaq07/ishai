@@ -3,6 +3,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import type { JobStatus, JobTrackerEntry, JobTrackerUpdate } from "@orbit/types";
 import {
   ArrowUpRight,
+  Check,
+  Columns3,
   BookmarkCheck,
   CalendarIcon,
   CalendarPlus,
@@ -51,6 +53,8 @@ import {
   trackerCsv,
 } from "./model";
 import { JOBS_MATCHES, jobPath, outreachPath } from "./paths";
+import { CompareDrawer } from "./CompareDrawer";
+import { MAX_COMPARE } from "./compare";
 import { Journey } from "./Journey";
 import { SafetyCard } from "./SafetyCard";
 
@@ -121,6 +125,15 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
   const [error, setError] = useState<string | null>(null);
   const entries = tracker.data ?? [];
   const columns = byStatus(entries);
+  // Jobs picked to compare side by side (CompareDrawer), in the order picked; a removed job drops out.
+  const [picked, setPicked] = useState<string[]>([]);
+  const [comparing, setComparing] = useState(false);
+  const pickedEntries = picked.map((id) => entries.find((e) => e.id === id)).filter((e): e is JobTrackerEntry => Boolean(e));
+  const compareFor = (e: JobTrackerEntry) => ({
+    picked: picked.includes(e.id),
+    full: pickedEntries.length >= MAX_COMPARE,
+    onToggle: () => setPicked((p) => (p.includes(e.id) ? p.filter((x) => x !== e.id) : [...p, e.id].slice(-MAX_COMPARE))),
+  });
 
   const update = async (entry: JobTrackerEntry, patch: JobTrackerUpdate) => {
     setError(null);
@@ -206,7 +219,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
         <ul className="space-y-3">
           {shown.map((e) => (
             <li key={e.id}>
-              <TrackerCard entry={e} onUpdate={(p) => update(e, p)} onRemove={() => void remove(e)} />
+              <TrackerCard entry={e} onUpdate={(p) => update(e, p)} onRemove={() => void remove(e)} compare={compareFor(e)} />
             </li>
           ))}
         </ul>
@@ -224,13 +237,28 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
             <ul className="space-y-2.5">
               {columns[s].map((e) => (
                 <li key={e.id}>
-                  <TrackerCard compact entry={e} onUpdate={(p) => update(e, p)} onRemove={() => void remove(e)} />
+                  <TrackerCard compact entry={e} onUpdate={(p) => update(e, p)} onRemove={() => void remove(e)} compare={compareFor(e)} />
                 </li>
               ))}
             </ul>
           </section>
         ))}
       </div>
+
+      {pickedEntries.length > 0 && (
+        <div role="region" aria-label="Compare jobs" className="sticky bottom-20 z-20 mx-auto flex w-fit max-w-full flex-wrap items-center gap-3 rounded-2xl border border-indigo-500/25 bg-white/95 px-4 py-2.5 shadow-lg backdrop-blur sm:bottom-6 dark:bg-zinc-950/90">
+          <span className="text-sm">
+            {pickedEntries.length === 1 ? "Pick one or two more to compare" : `${pickedEntries.length} jobs picked`}
+          </span>
+          <Button size="sm" disabled={pickedEntries.length < 2} onClick={() => setComparing(true)}>
+            <Columns3 className="h-3.5 w-3.5" aria-hidden /> Compare
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setPicked([])}>
+            Clear
+          </Button>
+        </div>
+      )}
+      <CompareDrawer entries={pickedEntries} open={comparing && pickedEntries.length >= 2} onClose={() => setComparing(false)} />
     </div>
   );
 }
@@ -249,11 +277,14 @@ function TrackerCard({
   compact = false,
   onUpdate,
   onRemove,
+  compare,
 }: {
   entry: JobTrackerEntry;
   compact?: boolean;
   onUpdate: (patch: JobTrackerUpdate) => Promise<boolean>;
   onRemove: () => void;
+  /** Picking jobs to compare side by side: picked, and whether there's room for this one. */
+  compare?: { picked: boolean; full: boolean; onToggle: () => void };
 }) {
   const [editing, setEditing] = useState(false);
   const [journey, setJourney] = useState(false);
@@ -345,6 +376,23 @@ function TrackerCard({
         >
           <Route className="h-3 w-3" aria-hidden /> {journey ? "Hide journey" : "Journey"}
         </button>
+        {compare && (
+          <button
+            type="button"
+            aria-pressed={compare.picked}
+            disabled={!compare.picked && compare.full}
+            onClick={compare.onToggle}
+            title={!compare.picked && compare.full ? `Compare up to ${MAX_COMPARE} at once` : undefined}
+            className={cx(
+              "inline-flex items-center gap-1 font-medium hover:underline disabled:cursor-not-allowed disabled:opacity-40 disabled:no-underline",
+              compare.picked ? "text-emerald-700 dark:text-emerald-300" : "text-indigo-600 dark:text-indigo-400",
+              focusRing,
+            )}
+          >
+            {compare.picked ? <Check className="h-3 w-3" aria-hidden /> : <Columns3 className="h-3 w-3" aria-hidden />}
+            {compare.picked ? "Comparing" : "Compare"}
+          </button>
+        )}
         {entry.next_at && entry.status !== "rejected" && (
           <button
             type="button"
