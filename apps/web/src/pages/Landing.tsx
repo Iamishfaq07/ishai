@@ -20,6 +20,7 @@ import {
 import { Footer } from "../components/Footer";
 import { CareerLoop } from "../components/CareerLoop";
 import { SiteMenu } from "../components/SiteMenu";
+import { KashSecPromo, MoreToolCards } from "../components/Promos";
 import { JobMock, PracticeMock, ResumeMock } from "../components/productArt";
 import { PRODUCTS, ProductMark, type ProductId } from "../components/products";
 import { api } from "../lib/api";
@@ -577,7 +578,7 @@ export function LandingPage() {
 
         <section id="products" aria-labelledby="products-title" className="scroll-mt-20 border-t border-zinc-200/70 pt-14 dark:border-white/5">
           <h2 id="products-title" className="font-display text-3xl font-semibold tracking-tight">
-            One account, three tools
+            One account, every tool for the job hunt
           </h2>
           <p className="mt-3 max-w-2xl text-base text-zinc-600 dark:text-zinc-300">
             Add your resume once. Your practice answers, your ATS score and your job matches all start from it.
@@ -636,6 +637,12 @@ export function LandingPage() {
                 </figure>
               }
             />
+          </div>
+          <div className="border-t border-zinc-200/70 py-10 dark:border-white/5">
+            <h3 className="font-display text-xl font-semibold tracking-tight">More AI tools in the same account</h3>
+            <p className="mb-5 mt-1 text-sm text-zinc-600 dark:text-zinc-300">For the steps around the interview: your LinkedIn profile, the offer, and the skills rounds test.</p>
+            <MoreToolCards />
+            <KashSecPromo className="mt-4" />
           </div>
         </section>
 
