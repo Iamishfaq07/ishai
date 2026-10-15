@@ -44,7 +44,7 @@ import {
 } from "./JobCard";
 import { useJobsAi } from "./JobsAi";
 import { linkButton, textLink } from "./links";
-import { STATUSES, STATUS_LABEL, STATUS_TONE, jobFacts, matchBasis, safeUrl, shortDate } from "./model";
+import { STATUSES, STATUS_LABEL, STATUS_TONE, jobFacts, matchBasis, postedAgo, safeUrl, shortDate, stillOpenAt } from "./model";
 import { SafetyCard } from "./SafetyCard";
 import { EditEntry } from "./Tracker";
 import { JOBS_MATCHES, outreachPath } from "./paths";
@@ -264,6 +264,7 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
             }}
           />
 
+          <Provenance job={job} also={detail.also_listed ?? []} />
           <SafetyCard job={{ id: job.id, title: job.title, company: job.company, url: job.url }} />
         </aside>
       </div>
@@ -394,6 +395,51 @@ function TrackerPanel({
       {error && (
         <div className="mt-3">
           <ErrorNote>{error}</ErrorNote>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/**
+ * Where this post came from: the source, whether it's the company's own careers page, when Orbit first saw it and
+ * last found it still listed, and where else the same job is posted. Facts Orbit recorded, never a "verified" claim.
+ */
+function Provenance({ job, also }: { job: JobListing; also: NonNullable<JobDetail["also_listed"]> }) {
+  const open = stillOpenAt(job);
+  return (
+    <Card>
+      <h2 className="font-display text-base font-semibold">Where this post came from</h2>
+      <dl className="mt-2 space-y-1.5 text-sm">
+        <div className="flex justify-between gap-3">
+          <dt className="text-zinc-500 dark:text-zinc-400">Source</dt>
+          <dd className="text-right">{job.direct ? `${job.company}'s careers page (via ${job.source_label})` : job.source_label}</dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-zinc-500 dark:text-zinc-400">First seen by Orbit</dt>
+          <dd className="text-right">{shortDate(job.first_seen_at ?? job.posted_at)}</dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-zinc-500 dark:text-zinc-400">Still listed</dt>
+          <dd className="text-right">{open ? `Yes, checked ${postedAgo(open).toLowerCase()}` : job.direct ? "Not found at the last check" : "Can't be re-checked for this source"}</dd>
+        </div>
+      </dl>
+      {also.length > 0 && (
+        <div className="mt-3 border-t border-zinc-200 pt-3 text-sm dark:border-white/10">
+          <p className="text-zinc-500 dark:text-zinc-400">Also posted on</p>
+          <ul className="mt-1 space-y-1">
+            {also.map((a) => (
+              <li key={a.id}>
+                {a.url ? (
+                  <a href={a.url} target="_blank" rel="noopener" className={cx(textLink, "inline-flex items-center gap-0.5")}>
+                    {a.direct ? `${job.company}'s careers page (${a.source_label})` : a.source_label} <ArrowUpRight className="h-3 w-3" aria-hidden />
+                  </a>
+                ) : (
+                  a.source_label
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </Card>

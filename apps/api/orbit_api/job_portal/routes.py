@@ -212,11 +212,21 @@ class FitOut(BaseModel):
     left: int | None  # fit checks left today; None = no cap
 
 
+class AlsoListedOut(BaseModel):
+    """The same job posted somewhere else (same company, title and city): the feed shows one, this says where else."""
+
+    id: str
+    source_label: str
+    direct: bool
+    url: str
+
+
 class DetailOut(BaseModel):
     job: JobOut
     full_text: bool  # Orbit has the whole post (not only a snippet): tailoring and prep can use it as is
     fit: fitcheck.FitCheck | None
     tracker: "TrackerOut | None"
+    also_listed: list[AlsoListedOut] = []
 
 
 class TrackerOut(BaseModel):
@@ -619,10 +629,28 @@ async def get_listing(listing_id: str, user: Annotated[User, Depends(current_use
                                                            JobFitCheck.resume_hash == resume_hash(data)))
         check = fitcheck.FitCheck.model_validate(cached.result) if cached else None
     source = source_named(row.source)
-    return DetailOut(job=_job_out(row, _match_for(row, prefs, data), entry),
+    return DetailOut(job=_job_out(row, _match_for(row, prefs, data), entry), also_listed=await _also_listed(db, row),
                      full_text=not (source and source.snippet_only) and len(row.description) >= FULL_TEXT_MIN,
                      fit=check, tracker=_tracker_out(entry, True, _still_listed(row.source, row.fetched_at))
                      if entry else None)
+
+
+MAX_ALSO_LISTED = 5
+
+
+async def _also_listed(db: AsyncSession, row: JobListing) -> list[AlsoListedOut]:
+    """Other posts of the same job (the duplicate fingerprint: company, title, city, workplace), each with its own
+    source; a link only when it's http(s)."""
+    others = (await db.scalars(select(JobListing).where(JobListing.dedupe_key == row.dedupe_key,
+                                                        JobListing.id != row.id)
+                               .order_by(JobListing.fetched_at.desc()).limit(MAX_ALSO_LISTED))).all()
+    out = []
+    for other in others:
+        src = source_named(other.source)
+        url = other.url if other.url.lower().startswith(("https://", "http://")) else ""
+        out.append(AlsoListedOut(id=other.id, source_label=src.label if src else other.source,
+                                 direct=bool(src and src.direct), url=url))
+    return out
 
 
 @router.post("/listings/{listing_id}/fit", response_model=FitOut,
