@@ -377,6 +377,16 @@ class MockLLMProvider(LLMProvider):
             return _mock_prep_questions(request.messages[-1].content if request.messages else "")
         if request.request_type == "resume_skill_gap":
             return _mock_skill_gap(request.messages[-1].content if request.messages else "")
+        if request.request_type == "code_review":
+            body = request.messages[-1].content if request.messages else ""
+            all_pass = re.search(r"Tests: (\d+) of (\d+) passed", body)
+            ok = bool(all_pass and all_pass.group(1) == all_pass.group(2))
+            return json.dumps({
+                "verdict": "solved" if ok else "partly", "summary": "[mock] A reasonable start.",
+                "scores": {"problem_solving": 4, "code_quality": 3, "complexity": 3, "communication": 2},
+                "complexity": "O(n) time, O(n) space", "strengths": ["[mock] Clear names"],
+                "fixes": ["[mock] Handle the empty input", "```js\nreturn x;\n```", "return nums[0];"],
+                "edge_cases": ["[mock] An empty list"], "follow_up": "[mock] What if the input doesn't fit in memory?"})
         if request.request_type == "linkedin_read":
             return _mock_linkedin_read(request.messages[-1].content if request.messages else "")
         if request.request_type == "offer_plan":

@@ -2189,3 +2189,67 @@ export interface LinkedInState {
   /** AI reads left today; null = no cap. */
   reads_left: number | null;
 }
+
+// ---- Code AI (orbit_api/code) -------------------------------------------------------------------------------------
+
+export type CodeLanguage = "javascript" | "python" | "java" | "cpp";
+
+export interface CodeProblem {
+  id: string;
+  title: string;
+  pattern: string;
+  difficulty: "easy" | "medium" | "hard";
+  statement: string;
+  examples: string[];
+  /** The JavaScript function's name: the tests call it. */
+  function: string;
+  js: string;
+  python: string;
+  tests: Array<{ args: unknown[]; expected: unknown }>;
+  /** The answer is a list whose order doesn't matter. */
+  unordered: boolean;
+  hints: string[];
+  /** The time and space a strong answer reaches. */
+  target: string;
+}
+
+export interface CodeProblemSummary {
+  id: string;
+  title: string;
+  pattern: string;
+  difficulty: CodeProblem["difficulty"];
+  attempts: number;
+  solved: boolean;
+}
+
+export interface CodeReview {
+  verdict: "solved" | "partly" | "not_yet";
+  summary: string;
+  scores: { problem_solving: number; code_quality: number; complexity: number; communication: number };
+  complexity: string;
+  strengths: string[];
+  fixes: string[];
+  edge_cases: string[];
+  follow_up: string;
+}
+
+export interface CodeAttemptRecord {
+  id: string;
+  language: CodeLanguage;
+  code: string;
+  approach: string;
+  passed: number;
+  total: number;
+  solved: boolean;
+  review: CodeReview | null;
+  created_at: string;
+}
+
+export interface CodeAttemptInput {
+  language: CodeLanguage;
+  code: string;
+  approach: string;
+  passed: number;
+  total: number;
+  failing: string;
+}

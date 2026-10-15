@@ -65,6 +65,10 @@ import type {
   JobLinkInfo,
   JobManualTrack,
   JobAlert,
+  CodeAttemptInput,
+  CodeAttemptRecord,
+  CodeProblem,
+  CodeProblemSummary,
   JobOfferRecord,
   LinkedInState,
   OfferInput,
@@ -537,6 +541,13 @@ export function createApiClient(options: ApiClientOptions) {
     jobProfile: () => json<JobProfile>("/v1/jobs/profile"),
     saveJobProfile: (prefs: JobPrefs, resumeId?: string | null) =>
       json<JobProfile>("/v1/jobs/profile", { method: "PUT", body: body({ prefs, resume_id: resumeId ?? null }) }),
+    codeProblems: () =>
+      json<{ patterns: string[]; problems: CodeProblemSummary[]; reviews_left: number | null }>("/v1/code/problems"),
+    codeProblem: (id: string) =>
+      json<{ problem: CodeProblem; attempts: CodeAttemptRecord[]; reviews_left: number | null }>(`/v1/code/problems/${encodeURIComponent(id)}`),
+    /** Save an attempt and get the AI interviewer's review (free, a day's allowance). */
+    reviewCode: (id: string, attempt: CodeAttemptInput) =>
+      json<CodeAttemptRecord>(`/v1/code/problems/${encodeURIComponent(id)}/attempts`, { method: "POST", body: body(attempt), timeoutMs: LONG_TIMEOUT_MS }),
     linkedin: () => json<LinkedInState>("/v1/linkedin"),
     /** LinkedIn's "Save to PDF" (AI read, free, a few a day; the file isn't kept). */
     readLinkedInFile: (file: File | Blob, filename?: string) => {

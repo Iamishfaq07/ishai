@@ -5,6 +5,7 @@ import {
   BadgeIndianRupee,
   BookOpen,
   ChevronDown,
+  Code2,
   CreditCard,
   Download,
   ErrorBoundary,
@@ -40,6 +41,7 @@ import { SHELL_EVENTS, isTypingTarget, openSupport } from "../lib/shell";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { OFFERS_HOME } from "../pages/offers/model";
 import { LINKEDIN_HOME } from "../pages/linkedin/model";
+import { CODE_HOME } from "../pages/code/paths";
 import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { prefetchRoute } from "../routes";
 import { AnnouncementBanner } from "./AnnouncementBanner";
@@ -109,6 +111,7 @@ const NAV: NavItem[] = [
     product: "jobs",
     current: (p) => p === JOBS_AI_HOME || p.startsWith(`${JOBS_AI_HOME}/`),
   },
+  { to: CODE_HOME, label: "Code AI", short: "Code", icon: Code2, phone: false, current: (p) => p === CODE_HOME || p.startsWith(`${CODE_HOME}/`) },
   { to: LINKEDIN_HOME, label: "LinkedIn AI", short: "LinkedIn", icon: IdCard, phone: false, current: (p) => p === LINKEDIN_HOME || p.startsWith(`${LINKEDIN_HOME}/`) },
   { to: OFFERS_HOME, label: "Offer AI", short: "Offers", icon: BadgeIndianRupee, phone: false, current: (p) => p === OFFERS_HOME || p.startsWith(`${OFFERS_HOME}/`) },
 ];

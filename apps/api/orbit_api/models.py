@@ -419,6 +419,24 @@ class LinkedInProfileRow(TimestampMixin, Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
+class CodeAttempt(TimestampMixin, Base):
+    """Code AI (orbit_api/code): one go at a practice problem, the code, how the candidate explained their approach,
+    how many of the problem's tests passed (run in their browser; JavaScript only), and the AI interviewer's review."""
+
+    __tablename__ = "code_attempts"
+    __table_args__ = (Index("ix_code_attempts_user_problem", "user_id", "problem_id"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    problem_id: Mapped[str] = mapped_column(String(40))
+    language: Mapped[str] = mapped_column(String(16))
+    code: Mapped[str] = mapped_column(Text)
+    approach: Mapped[str] = mapped_column(Text, default="")
+    passed: Mapped[int] = mapped_column(Integer, default=0)
+    total: Mapped[int] = mapped_column(Integer, default=0)
+    solved: Mapped[bool] = mapped_column(Boolean, default=False)
+    review: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+
+
 class SavedAnswer(TimestampMixin, Base):
     """An answer bank entry: a question the user has worked out how to answer, in their own words (often a review's
     "Try saying", edited). Every live session can draw on it, as the stories are, so the copilot's answer to that
