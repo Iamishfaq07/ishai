@@ -20,6 +20,7 @@ and every route that takes one checks it (404 for anyone else's, the same as a m
 """
 
 import asyncio
+import hashlib
 import logging
 import time
 from dataclasses import replace
@@ -60,6 +61,7 @@ from orbit_api.job_portal.sources import enabled_sources, source_named
 from orbit_api.job_portal.timeline import TimelineEvent, timeline
 from orbit_api.models import (
     Document,
+    EvidenceItem,
     JobApplication,
     JobFitCheck,
     JobListing,
@@ -93,6 +95,7 @@ stats_limit = limit("jobs-stats", rate_per_s=1, burst=30)
 
 PAGE_SIZE = 20
 MAX_TRACKED = 500
+MAX_FIT_EVIDENCE = 40  # confirmed evidence claims a fit check reads, most recently changed first
 FULL_TEXT_MIN = 700  # shorter than this, a post is likely only a snippet: tailoring fetches the page once
 Status = Literal["saved", "applied", "interviewing", "offer", "rejected"]
 Sort = Literal["best", "newest"]
@@ -653,6 +656,16 @@ async def _also_listed(db: AsyncSession, row: JobListing) -> list[AlsoListedOut]
     return out
 
 
+async def _confirmed_evidence(db: AsyncSession, user_id: str) -> str:
+    """The evidence vault's confirmed claims (never its suggestions), when the vault is switched on; else ""."""
+    if not get_settings().evidence_vault:
+        return ""
+    rows = (await db.execute(select(EvidenceItem.claim, EvidenceItem.quote)
+                             .where(EvidenceItem.user_id == user_id, EvidenceItem.status == "confirmed")
+                             .order_by(EvidenceItem.updated_at.desc()).limit(MAX_FIT_EVIDENCE))).all()
+    return fitcheck.evidence_lines([(c, q) for c, q in rows])
+
+
 @router.post("/listings/{listing_id}/fit", response_model=FitOut,
              dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
 async def fit_check(listing_id: str, user: Annotated[User, Depends(require_verified_email)],
@@ -665,7 +678,10 @@ async def fit_check(listing_id: str, user: Annotated[User, Depends(require_verif
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
                             "Make a resume in Resume AI first: the fit check compares it with the job.")
     data = ResumeData.model_validate(resume.data or {})
+    evidence = await _confirmed_evidence(db, user.id)
     rhash = resume_hash(data)
+    if evidence:  # new or changed evidence is a new check, as a changed resume is
+        rhash = hashlib.sha256(f"{rhash}\n{evidence}".encode()).hexdigest()
     cap = get_settings().jobs_fit_daily
     async with _lock(user.id):
         cached = await db.scalar(select(JobFitCheck).where(JobFitCheck.user_id == user.id,
@@ -686,8 +702,8 @@ async def fit_check(listing_id: str, user: Annotated[User, Depends(require_verif
                "text": row.description or row.snippet}
         try:
             resp = await _generate(db, user, fitcheck.fit_request(data.visible(), job, {
-                "matched": match.matched, "missing": match.missing}, get_llm_provider(), user.country))
-            check = fitcheck.parse_fit(resp.text, data, job, match.score, match.matched)
+                "matched": match.matched, "missing": match.missing}, get_llm_provider(), user.country, evidence))
+            check = fitcheck.parse_fit(resp.text, data, job, match.score, match.matched, evidence)
         except LLMError as e:
             log.warning("fit check failed: %s", e)
             raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,

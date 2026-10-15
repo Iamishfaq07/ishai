@@ -495,6 +495,11 @@ function Requirements({ items }: { items: NonNullable<JobFitCheck["requirements"
               <span className="font-medium">{r.requirement}</span>
               {r.job_quote && <span className="block text-xs text-zinc-500 dark:text-zinc-400">The post: “{r.job_quote}”</span>}
               {r.resume_quote && <span className="block text-xs text-emerald-800 dark:text-emerald-300">Your resume: “{r.resume_quote}”</span>}
+              {r.evidence_quote && (
+                <span className="block text-xs text-emerald-800 dark:text-emerald-300">
+                  Your evidence: “{r.evidence_quote}”{!r.resume_quote && " · not on your resume yet"}
+                </span>
+              )}
             </span>
           </li>
         ))}
