@@ -29,6 +29,7 @@ const loaders = {
   jobsAiPublic: () => import("./pages/jobs/JobsAiPublic"),
   mock: () => import("./pages/Mock"),
   offers: () => import("./pages/offers/OffersPages"),
+  linkedin: () => import("./pages/linkedin/LinkedIn"),
   billing: () => import("./pages/Billing"),
   settings: () => import("./pages/Settings"),
   companion: () => import("./pages/Companion"),
@@ -66,6 +67,7 @@ export const JobMatchesPage = page(loaders.jobs, (m) => m.JobMatchesPage);
 export const JobDetailPage = page(loaders.jobs, (m) => m.JobDetailPage);
 export const JobTrackerPage = page(loaders.jobs, (m) => m.JobTrackerPage);
 export const JobOutreachPage = page(loaders.jobs, (m) => m.JobOutreachPage);
+export const LinkedInPage = page(loaders.linkedin, (m) => m.LinkedInPage);
 export const OffersPage = page(loaders.offers, (m) => m.OffersPage);
 export const OfferDetailPage = page(loaders.offers, (m) => m.OfferDetailPage);
 export const JobProfilePage = page(loaders.jobs, (m) => m.JobProfilePage);
@@ -101,6 +103,7 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/jobs(\/|$)/, "jobs"],
   [/^\/mock/, "mock"],
   [/^\/offers(\/|$)/, "offers"],
+  [/^\/linkedin(\/|$)/, "linkedin"],
   [/^\/billing/, "billing"],
   [/^\/settings/, "settings"],
 ];

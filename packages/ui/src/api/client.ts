@@ -66,6 +66,7 @@ import type {
   JobManualTrack,
   JobAlert,
   JobOfferRecord,
+  LinkedInState,
   OfferInput,
   OfferMarket,
   JobAlertFrequency,
@@ -536,6 +537,17 @@ export function createApiClient(options: ApiClientOptions) {
     jobProfile: () => json<JobProfile>("/v1/jobs/profile"),
     saveJobProfile: (prefs: JobPrefs, resumeId?: string | null) =>
       json<JobProfile>("/v1/jobs/profile", { method: "PUT", body: body({ prefs, resume_id: resumeId ?? null }) }),
+    linkedin: () => json<LinkedInState>("/v1/linkedin"),
+    /** LinkedIn's "Save to PDF" (AI read, free, a few a day; the file isn't kept). */
+    readLinkedInFile: (file: File | Blob, filename?: string) => {
+      const form = new FormData();
+      if (filename) form.append("file", file, filename);
+      else form.append("file", file);
+      return json<LinkedInState>("/v1/linkedin/read-file", { method: "POST", body: form });
+    },
+    readLinkedInText: (text: string) => json<LinkedInState>("/v1/linkedin/read", { method: "POST", body: body({ text }) }),
+    setLinkedInTarget: (role: string) => json<LinkedInState>("/v1/linkedin/target", { method: "PUT", body: body({ target_role: role }) }),
+    deleteLinkedIn: () => json<void>("/v1/linkedin", { method: "DELETE" }),
     offers: () => json<JobOfferRecord[]>("/v1/offers"),
     addOffer: (offer: OfferInput) => json<JobOfferRecord>("/v1/offers", { method: "POST", body: body(offer) }),
     updateOffer: (id: string, offer: OfferInput) =>

@@ -49,6 +49,7 @@ import {
   JobOutreachPage,
   JobProfilePage,
   OffersPage,
+  LinkedInPage,
   OfferDetailPage,
   AdminUsersPage,
   AdminPaymentsPage,
@@ -223,6 +224,7 @@ export function App() {
           <Route path="profile" element={<JobProfilePage />} />
           <Route path="*" element={<Navigate to={JOBS_AI_HOME} replace />} />
         </Route>
+        <Route path="linkedin" element={<LinkedInPage />} />
         <Route path="offers" element={<OffersPage />} />
         <Route path="offers/:offerId" element={<OfferDetailPage />} />
         <Route path="mock" element={<MockPage />} />

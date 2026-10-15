@@ -118,6 +118,49 @@ def _mock_resume_import(body: str) -> str:
         "certifications": []})
 
 
+_LI_HEADINGS = ("Contact", "Top Skills", "Languages", "Certifications", "Honors-Awards", "Summary", "Experience",
+                "Education")
+
+
+def _mock_linkedin_read(body: str) -> str:
+    """A LinkedIn "Save to PDF" text sorted the way the real read does, for the layout LinkedIn uses: the side column
+    (Contact, Top Skills, Certifications), then name, headline and location, Summary, Experience, Education."""
+    text = re.sub(r"</?reference_data[^>]*>", "", body)
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip() and not re.match(r"Page \d+ of \d+", ln.strip())]
+    sections: dict[str, list[str]] = {}
+    current = ""
+    for ln in lines:
+        if ln in _LI_HEADINGS:
+            current = ln
+            sections[current] = []
+        elif current:
+            sections[current].append(ln)
+    side = [*sections.get("Certifications", [])] or [*sections.get("Top Skills", [])]
+    head = side[-3:] if len(side) >= 3 else []
+    name, headline, location = [*head, "", "", ""][:3]
+    if sections.get("Certifications") and len(sections["Certifications"]) >= 3:
+        sections["Certifications"] = sections["Certifications"][:-3]
+    elif sections.get("Top Skills") and len(sections["Top Skills"]) >= 3:
+        sections["Top Skills"] = sections["Top Skills"][:-3]
+    roles, exp = [], sections.get("Experience", [])
+    i = 0
+    while i + 2 < len(exp):
+        company, title, dates = exp[i], exp[i + 1], exp[i + 2]
+        desc = []
+        i += 3
+        while i < len(exp) and not (i + 2 < len(exp) and re.search(r"\d{4} - ", exp[i + 2])):
+            desc.append(exp[i])
+            i += 1
+        roles.append({"title": title, "company": company, "dates": dates, "current": "Present" in dates,
+                      "description": " ".join(desc)})
+    edu = sections.get("Education", [])
+    url = next((ln.split(" ")[0] for ln in sections.get("Contact", []) if "linkedin.com/in/" in ln), "")
+    return json.dumps({"name": name, "headline": headline, "location": location,
+                       "about": " ".join(sections.get("Summary", [])), "url": url, "experience": roles,
+                       "education": [{"school": edu[0], "degree": edu[1] if len(edu) > 1 else ""}] if edu else [],
+                       "skills": sections.get("Top Skills", []), "certifications": sections.get("Certifications", [])})
+
+
 def _resume_ref(body: str) -> dict[str, Any]:
     m = re.search(r'<reference_data source="resume">\s*(\{.*?\})\s*</reference_data>', body, re.S)
     try:
@@ -334,6 +377,8 @@ class MockLLMProvider(LLMProvider):
             return _mock_prep_questions(request.messages[-1].content if request.messages else "")
         if request.request_type == "resume_skill_gap":
             return _mock_skill_gap(request.messages[-1].content if request.messages else "")
+        if request.request_type == "linkedin_read":
+            return _mock_linkedin_read(request.messages[-1].content if request.messages else "")
         if request.request_type == "offer_plan":
             return json.dumps({
                 "ask": 0, "ask_why": "[mock] Anchored on the top of the market range for this role.",
