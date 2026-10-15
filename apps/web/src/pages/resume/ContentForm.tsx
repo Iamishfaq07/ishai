@@ -1,5 +1,6 @@
 import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
 import type {
+  EvidenceItem,
   ResumeCertification,
   ResumeData,
   ResumeEducation,
@@ -11,7 +12,8 @@ import type {
   ResumeSectionKey,
   ResumeSkillGroup,
 } from "@orbit/types";
-import { ChevronDown, Copy, Eye, EyeOff, PenLine, Plus, Sparkles, Trash2, X, cx, focusRing } from "@orbit/ui";
+import { ChevronDown, Copy, Eye, EyeOff, PenLine, Plus, ShieldCheck, Sparkles, Trash2, X, cx, focusRing } from "@orbit/ui";
+import { evidenceFor, sourceLabel } from "../../lib/evidence";
 import { Button, Field, Input, Textarea } from "../../components/ui";
 import { EXTRA_PRESETS, MAX_EXTRAS, SECTION_LABEL, getAt, newId, sectionLabel } from "./model";
 
@@ -138,9 +140,26 @@ function TwoCol({ children }: { children: ReactNode }) {
 type Rewrite = ((path: string) => void) | undefined;
 
 /** The latest score's line-by-line writing issues, and the resume it scored (to tell which lines changed since). */
-type LineChecks = { issues: ResumeLineIssue[]; scored: ResumeData | null };
+type LineChecks = { issues: ResumeLineIssue[]; scored: ResumeData | null; evidence?: EvidenceItem[] };
 
 const NO_CHECKS: LineChecks = { issues: [], scored: null };
+
+/** A bullet a confirmed evidence vault claim backs (lib/evidence.ts evidenceFor): the claim and where it's from. */
+function EvidenceMark({ text, items }: { text: string; items: EvidenceItem[] }) {
+  const backing = items.length ? evidenceFor(text, items) : null;
+  if (!backing) return null;
+  const source = sourceLabel(backing);
+  return (
+    <p className="ml-3 mr-7 flex items-start gap-1.5 text-xs text-emerald-800 dark:text-emerald-300"
+       title={backing.quote ? `“${backing.quote}” (${source})` : source}>
+      <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      <span>
+        Backed by your evidence: <span className="font-medium">{backing.claim}</span>
+        <span className="text-zinc-500 dark:text-zinc-400"> · {source}</span>
+      </span>
+    </p>
+  );
+}
 
 const linkButton = cx("inline-flex items-center gap-1 rounded font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing);
 
@@ -266,6 +285,7 @@ function Bullets({ path, bullets, onChange, onRewrite, checks = NO_CHECKS }: {
             onRemove={() => onChange(bullets.filter((_, j) => j !== i))}
             className="ml-3 mr-7"
           />
+          <EvidenceMark text={b} items={checks.evidence ?? []} />
         </div>
       ))}
       <Button
@@ -371,15 +391,17 @@ function SkillItems({ id, items, onChange }: { id: string; items: string[]; onCh
   );
 }
 
-export function ContentForm({ data, update, onRewrite, issues = [], scored = null }: {
+export function ContentForm({ data, update, onRewrite, issues = [], scored = null, evidence = [] }: {
   data: ResumeData;
   update: Update;
   onRewrite?: Rewrite;
   issues?: ResumeLineIssue[];
   scored?: ResumeData | null;
+  /** Confirmed evidence vault claims: a bullet one backs says so. */
+  evidence?: EvidenceItem[];
 }) {
   const b = data.basics;
-  const checks: LineChecks = { issues, scored };
+  const checks: LineChecks = { issues, scored, evidence };
   const [renaming, setRenaming] = useState<ResumeSectionKey | null>(null);
   const summaryWords = b.summary.trim() ? b.summary.trim().split(/\s+/).length : 0;
   const setBasics = (patch: Partial<ResumeData["basics"]>) => update((d) => ({ ...d, basics: { ...d.basics, ...patch } }));
