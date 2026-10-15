@@ -57,6 +57,7 @@ from orbit_api.job_portal.profile import (
 from orbit_api.job_portal.search_parse import parse_search
 from orbit_api.job_portal.skills import SkillMatcher
 from orbit_api.job_portal.sources import enabled_sources, source_named
+from orbit_api.job_portal.timeline import TimelineEvent, timeline
 from orbit_api.models import (
     Document,
     JobApplication,
@@ -847,6 +848,13 @@ async def update_tracker(entry_id: str, body: TrackPatch, user: Annotated[User, 
     await db.refresh(entry)
     live = await _live(db, [entry])
     return _tracker_out(entry, entry.listing_id in live, live.get(entry.listing_id))
+
+
+@router.get("/tracker/{entry_id}/timeline", response_model=list[TimelineEvent], dependencies=[Depends(read_limit)])
+async def tracker_timeline(entry_id: str, user: Annotated[User, Depends(current_user)],
+                           db: Annotated[AsyncSession, Depends(get_db)]) -> list[TimelineEvent]:
+    """One tracked job's journey, oldest first (job_portal/timeline.py): only the owner's own rows."""
+    return await timeline(db, await _owned_entry(db, entry_id, user))
 
 
 @router.delete("/tracker/{entry_id}", status_code=204, dependencies=[Depends(read_limit)])

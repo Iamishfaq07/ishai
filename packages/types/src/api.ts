@@ -1043,6 +1043,16 @@ export interface ContactRequest {
   website?: string;
 }
 
+/** GET /v1/jobs/tracker/{id}/timeline: one event of a tracked job's journey. */
+export interface JobTimelineEvent {
+  kind: "saved" | "fit" | "resume" | "prep_doc" | "contact" | "outreach" | "applied" | "round" | "stage" | "next";
+  at: string;
+  title: string;
+  detail: string;
+  link: string | null;
+  upcoming: boolean;
+}
+
 /** GET /v1/sessions/loop-memory?company=: the candidate's earlier rounds with that company. */
 export interface LoopMemory {
   company: string;

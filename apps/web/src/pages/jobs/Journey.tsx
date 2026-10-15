@@ -1,0 +1,56 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import type { JobTimelineEvent } from "@orbit/types";
+import { Skeleton, cx, focusRing } from "@orbit/ui";
+import { api } from "../../lib/api";
+import { errorText } from "../../lib/format";
+import { shortDate } from "./model";
+
+const DOT: Record<JobTimelineEvent["kind"], string> = {
+  saved: "bg-zinc-400",
+  fit: "bg-sky-400",
+  resume: "bg-indigo-400",
+  prep_doc: "bg-indigo-400",
+  contact: "bg-violet-400",
+  outreach: "bg-violet-400",
+  applied: "bg-sky-500",
+  round: "bg-amber-400",
+  stage: "bg-emerald-500",
+  next: "bg-emerald-400",
+};
+
+/**
+ * One tracked job's journey, oldest first: saved, fit checks, the tailored resume, people, applied, rounds with the
+ * company, where it stands and what's next (GET /v1/jobs/tracker/{id}/timeline). Loads when opened.
+ */
+export function Journey({ entryId }: { entryId: string }) {
+  const [events, setEvents] = useState<JobTimelineEvent[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    api.trackerTimeline(entryId).then((e) => live && setEvents(e), (err) => live && setError(errorText(err)));
+    return () => {
+      live = false;
+    };
+  }, [entryId]);
+  if (error) return <p className="mt-2 text-xs text-rose-700 dark:text-rose-300">{error}</p>;
+  if (!events) return <Skeleton variant="line" count={3} label="Loading the journey" className="mt-2" />;
+  return (
+    <ol aria-label="Journey" className="mt-3 space-y-2 border-l border-zinc-200 pl-4 dark:border-white/10">
+      {events.map((e, i) => (
+        <li key={`${e.kind}-${e.at}-${i}`} className="relative text-xs">
+          <span aria-hidden="true" className={cx("absolute -left-[1.3rem] top-1 h-2 w-2 rounded-full", DOT[e.kind], e.upcoming && "ring-2 ring-emerald-400/40")} />
+          <span className="font-medium text-zinc-800 dark:text-zinc-100">
+            {e.link ? (
+              <Link to={e.link} className={cx("rounded hover:underline", focusRing)}>{e.title}</Link>
+            ) : (
+              e.title
+            )}
+          </span>
+          <span className="ml-1.5 text-zinc-500 dark:text-zinc-400">{e.upcoming ? `on ${shortDate(e.at)}` : shortDate(e.at)}</span>
+          {e.detail && <span className="block truncate text-zinc-600 dark:text-zinc-300">{e.detail}</span>}
+        </li>
+      ))}
+    </ol>
+  );
+}

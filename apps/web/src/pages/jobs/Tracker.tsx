@@ -16,6 +16,7 @@ import {
   Target,
   Trash2,
   CompanyLogo,
+  Route,
   LoadGate,
   confirmDialog,
   cx,
@@ -50,6 +51,7 @@ import {
   trackerCsv,
 } from "./model";
 import { JOBS_MATCHES, jobPath, outreachPath } from "./paths";
+import { Journey } from "./Journey";
 import { SafetyCard } from "./SafetyCard";
 
 /**
@@ -254,6 +256,7 @@ function TrackerCard({
   onRemove: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [journey, setJourney] = useState(false);
   const original = safeUrl(entry.url);
   const apply = safeUrl(entry.apply_url);
   const manual = isManual(entry);
@@ -334,6 +337,14 @@ function TrackerCard({
         >
           <Send className="h-3 w-3" aria-hidden /> Write outreach
         </Link>
+        <button
+          type="button"
+          aria-expanded={journey}
+          onClick={() => setJourney((o) => !o)}
+          className={cx("inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}
+        >
+          <Route className="h-3 w-3" aria-hidden /> {journey ? "Hide journey" : "Journey"}
+        </button>
         {entry.next_at && entry.status !== "rejected" && (
           <button
             type="button"
@@ -349,6 +360,8 @@ function TrackerCard({
           </button>
         )}
       </div>
+
+      {journey && <Journey entryId={entry.id} />}
 
       {editing ? (
         <EditEntry entry={entry} onCancel={() => setEditing(false)} onSave={async (p) => (await onUpdate(p)) && setEditing(false)} />
