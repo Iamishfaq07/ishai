@@ -58,6 +58,7 @@ from orbit_api.sessions.routes import router as sessions_router
 from orbit_api.stories.routes import router as stories_router
 from orbit_api.support.routes import admin_router as support_admin_router
 from orbit_api.support.routes import router as support_router
+from orbit_api.telemetry import router as telemetry_router
 from orbit_api.workspaces.routes import router as workspaces_router
 
 _boot = get_settings()
@@ -204,7 +205,9 @@ def create_app() -> FastAPI:
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
-        response.headers["Cache-Control"] = "no-store"
+        # Nothing is cached, except the public aggregates under /v1/public, which say how long they keep.
+        if not (request.url.path.startswith("/v1/public/") and "cache-control" in response.headers):
+            response.headers["Cache-Control"] = "no-store"
         if not request.url.path.startswith("/docs"):
             response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
         if s.env == "production":
@@ -269,6 +272,7 @@ def create_app() -> FastAPI:
     app.include_router(contact_router)
     app.include_router(support_router)
     app.include_router(support_admin_router)
+    app.include_router(telemetry_router)
     return app
 
 

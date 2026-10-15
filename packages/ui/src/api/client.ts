@@ -1,4 +1,6 @@
 import type {
+  EngineeringTelemetry,
+  LoopMemory,
   CareerContext,
   Debrief,
   DebriefAttempt,
@@ -647,6 +649,11 @@ export function createApiClient(options: ApiClientOptions) {
         method: "POST",
         body: body({ utr }),
       }),
+
+    /** The candidate's earlier rounds with a company: questions asked, stories already told. */
+    loopMemory: (company: string) => json<LoopMemory>(`/v1/sessions/loop-memory${queryString({ company })}`),
+    /** Public: rolling 7-day live latency and how long the API has been up (the Technical details page). */
+    engineeringTelemetry: () => json<EngineeringTelemetry>("/v1/public/engineering-telemetry"),
 
     // Admin / advanced settings
     adminStatus: () => json<{ is_admin: boolean }>("/v1/admin/status"),

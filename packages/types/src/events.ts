@@ -120,6 +120,8 @@ export interface LiveAnswer {
   /** Coding answers: the task in one line, edge cases to mention, example tests (`input → expected`). */
   problem?: string | null;
   edge_cases?: string[];
+  /** A dry run on one tricky input: the input, then the key variables after each step (at most 6). */
+  trace?: { input: string; steps: string[] } | null;
   tests?: string[];
   /** System design mode: structured sections behind the spoken talk track. */
   design?: Array<{ title: string; text: string }>;

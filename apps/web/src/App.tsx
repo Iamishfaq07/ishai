@@ -52,6 +52,7 @@ import {
   AdminInboxPage,
   AdminSupportPage,
   ContactPage,
+  TechnicalPage,
   prefetchLikelyRoutes,
   publicPageFor,
 } from "./routes";
@@ -162,6 +163,8 @@ export function App() {
       <Route path="/warmup" element={<WarmupPage />} />
       {/* Public: the Contact page's form, signed in or out (its messages wait in the admin's Inbox). */}
       <Route path="/contact" element={<ContactPage />} />
+      {/* Public: live latency, the answer pipeline, the desktop app's protections. */}
+      <Route path="/technical" element={<TechnicalPage />} />
       {/* Right after sign-up: the three welcome questions, outside the nav so nothing competes with them. */}
       <Route
         path="/welcome"

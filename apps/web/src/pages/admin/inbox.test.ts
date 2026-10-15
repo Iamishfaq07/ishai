@@ -105,6 +105,14 @@ describe("the context", () => {
     ]);
   });
 
+  it("shows which app sent it and the sender's latest session", () => {
+    expect(contextRows({ platform: "desktop-0.1.25", latest_session_id: "s-1" })).toEqual([
+      { label: "App", value: "Desktop v0.1.25" },
+      { label: "Latest session", value: "s-1" },
+    ]);
+    expect(contextRows({ platform: "web" })).toEqual([{ label: "App", value: "Website" }]);
+  });
+
   it("never links anything but http(s), and is empty without context", () => {
     expect(contextRows({ listing_title: "Job", listing_url: "javascript:alert(1)" })).toEqual([{ label: "Job", value: "Job" }]);
     expect(contextRows({ listing_id: "ext:abc" }).map((r) => r.label)).toEqual(["Job"]);

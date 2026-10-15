@@ -122,6 +122,13 @@ class SpokenWalkthrough(BaseModel):
     complexity_defense: str = Field("", max_length=600)
 
 
+class DryRunTrace(BaseModel):
+    """A coding answer's dry run: one tricky input, then the key variables after each step."""
+
+    input: str = Field("", max_length=200)
+    steps: list[str] = Field(default_factory=list, max_length=6)
+
+
 class LiveAnswer(BaseModel):
     question: str = ""
     type: QuestionType = QuestionType.technical
@@ -146,6 +153,7 @@ class LiveAnswer(BaseModel):
     # Coding answers: the task restated in one line, edge cases to mention, and example tests (input → expected).
     problem: str | None = None
     edge_cases: list[str] = Field(default_factory=list)
+    trace: DryRunTrace | None = None
     tests: list[str] = Field(default_factory=list)
     # System design mode: the structured sections behind the spoken talk track (direct_answer).
     design: list[DesignSection] = Field(default_factory=list)

@@ -28,6 +28,7 @@ from orbit_api.live.events import (
     CodeBlock,
     DebugInfo,
     DesignSection,
+    DryRunTrace,
     FactSource,
     LiveAnswer,
     QuestionType,
@@ -42,7 +43,7 @@ _DESIGN_KEYS = {t.lower().replace("-", "").replace(" ", ""): t for t in DESIGN_T
 _DESIGN_LINE = re.compile(r"^\s*(?:[-*•]\s*)?([A-Za-z][A-Za-z -]{1,20}?)\s*:\s*(.+)$")
 
 _TAG = re.compile(r"^(GROUNDED|PROBLEM|ANSWER|EXAMPLE|CODE|TIME|SPACE|EDGE|TESTS|TERMS|FOLLOWUP|SOURCES|POINTS|DESIGN|"
-                  r"ROOTCAUSE|FIX|WHY|DIFF|INTUITION|COMMENTARY|DEFENSE)\s*:\s*(.*)$",
+                  r"ROOTCAUSE|FIX|WHY|DIFF|INTUITION|COMMENTARY|DEFENSE|TRACE)\s*:\s*(.*)$",
                   re.IGNORECASE)
 MAX_LIST_ITEMS = 8
 MAX_KEY_POINTS = 6
@@ -64,7 +65,7 @@ _FENCE = re.compile(r"^\s*```\s*([\w+#-]*)\s*$")
 # "answer: int = 0", a field "code: string;" are code (matched case-insensitively, they ended the block and the rest of
 # the solution was lost or landed in the spoken answer).
 _TRAILER = re.compile(r"^(?:TIME|SPACE|EDGE|TESTS|TERMS|FOLLOWUP|SOURCES|POINTS|"
-                      r"INTUITION|COMMENTARY|DEFENSE)\s*:\s*(.*)$")
+                      r"INTUITION|COMMENTARY|DEFENSE|TRACE)\s*:\s*(.*)$")
 _ASSIGNMENT = re.compile(r"\s=\s|;\s*$")
 # A fence before anything else, followed by the reply's first tag, wraps the whole reply: it isn't code.
 _OPENING_TAG = re.compile(r"^(?:GROUNDED|ANSWER)\s*:")
@@ -252,6 +253,11 @@ class AnswerStreamParser:
                     ans.follow_up = value or None
                 elif section == "PROBLEM":
                     ans.problem = value[:300] or None
+                    section = None
+                elif section == "TRACE":
+                    parts = [p.strip()[:200] for p in value.split("|") if p.strip()]
+                    if len(parts) >= 2:
+                        ans.trace = DryRunTrace(input=parts[0], steps=parts[1:7])
                     section = None
                 elif section in ("EDGE", "TESTS"):
                     items = [p.strip(" .•-")[:200] for p in value.split("|") if p.strip(" .•-")][:MAX_LIST_ITEMS]

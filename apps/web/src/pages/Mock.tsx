@@ -24,6 +24,7 @@ import {
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import { matchStyle, withCompany } from "../lib/companyStyle";
+import { LoopMemoryNote } from "../components/LoopMemoryNote";
 import { useAuth } from "../lib/auth";
 import { loadAnswers } from "../lib/onboarding";
 import { useAsync } from "../lib/useAsync";
@@ -168,6 +169,7 @@ function MockSetup() {
               </Field>
             )}
           </div>
+          <LoopMemoryNote company={company} />
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {PRESETS.map((p) => {
               const Icon = p.id === "salary" && !isIndia(country) ? Banknote : PRESET_ICON[p.id];

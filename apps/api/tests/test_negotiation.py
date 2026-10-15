@@ -154,8 +154,12 @@ def test_negotiation_session_is_created_reviewed_with_the_rubric(client: TestCli
         ws.send_text(json.dumps({"type": "session.end", "data": {}}))
         while not any(e["type"] == "session.ended" for e in events):
             events.append(json.loads(ws.receive_text()))
-    _wait_report(client, h, sid)
+    detail = _wait_report(client, h, sid)
+    email = (detail.get("summary") or {}).get("counter_offer_email")
+    assert email == {"subject": "[mock] Following up on the offer",
+                     "body": "[mock] Thank you for the offer. Could we look at the base again?"}
     summaries = [r for r in seen if r.request_type == "summary"]
     assert summaries, "the report ran"
     assert "SALARY NEGOTIATION" in summaries[-1].messages[0].content
     assert "Candidate's target: $170k base" in summaries[-1].messages[-1].content
+    assert "counter_offer_email" in summaries[-1].messages[0].content

@@ -104,5 +104,8 @@ export function contextRows(ctx: ContactContext | null): ContextRow[] {
   }
   if (ctx.reason) rows.push({ label: "What's wrong", value: ctx.reason });
   if (ctx.page) rows.push({ label: "Sent from", value: ctx.page });
+  if (ctx.platform) rows.push({ label: "App", value: ctx.platform === "web" ? "Website" : ctx.platform.replace("desktop-", "Desktop v") });
+  // The sender's own session: its id to look up in the logs (an admin can't open another account's session page).
+  if (ctx.latest_session_id) rows.push({ label: "Latest session", value: ctx.latest_session_id });
   return rows;
 }

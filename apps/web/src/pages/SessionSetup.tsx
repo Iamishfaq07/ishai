@@ -55,6 +55,8 @@ import {
 import { SESSION_TYPE_LABEL, errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { usePrepContext } from "../lib/prepContext";
+import { LoopMemoryNote } from "../components/LoopMemoryNote";
+import { ShareMirror } from "../components/ShareMirror";
 
 const LENGTHS: Array<{ value: AnswerLength; label: string; hint?: string }> = [
   { value: "auto", label: "Auto (fits each question)", hint: "A sentence or two for a quick question, a full answer for a deep one" },
@@ -349,6 +351,10 @@ export function SessionSetupPage() {
               <Field label="Role / goal" htmlFor="role">
                 <Input id="role" value={role} onChange={(e) => setRole(e.target.value)} placeholder="Senior Security Engineer" />
               </Field>
+              <Field label="Company (optional)" htmlFor="company" hint="Earlier rounds with the same company are remembered.">
+                <Input id="company" value={context.company} onChange={(e) => updateContext({ company: e.target.value })} maxLength={120} placeholder="e.g. Acme" />
+              </Field>
+              <LoopMemoryNote company={context.company} className="sm:col-span-2" />
               <Field label="Answer style" htmlFor="style" hint={ANSWER_STYLES.find((s) => s.value === style)?.hint}>
                 <Select id="style" value={style} onChange={(e) => setStyle(e.target.value as AnswerStyle)}>
                   {ANSWER_STYLES.map((s) => (
@@ -526,6 +532,7 @@ export function SessionSetupPage() {
                 />
                 {systemAudio && supportsDisplayAudio() && <SystemAudioTest />}
               </div>
+              {type !== "phone" && <ShareMirror />}
               <p className="text-xs text-zinc-500">
                 For the most reliable interviewer capture (any app, not just a browser tab), use the Orbit desktop app. It's
                 also the way to hear the Zoom or Teams app: sharing your whole screen's audio from the browser makes Zoom

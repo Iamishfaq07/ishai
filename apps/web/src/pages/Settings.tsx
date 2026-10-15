@@ -28,6 +28,7 @@ import {
   UserRound,
   Users,
   type LucideIcon,
+  CostDashboard,
 } from "@orbit/ui";
 import { CountryField } from "../components/CountryField";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Toggle } from "../components/ui";
@@ -159,6 +160,9 @@ function AdvancedSettingsCard() {
         <ChevronRight className="h-4 w-4 text-zinc-400" />
       </Link>
       <AdvancedConfig />
+      <Card>
+        <CostDashboard load={api.getCosts} />
+      </Card>
     </>
   );
 }

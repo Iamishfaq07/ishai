@@ -25,6 +25,7 @@ import { useAsync } from "../lib/useAsync";
 import type { LiveLaunchState } from "./SessionSetup";
 import { JOBS_MATCHES } from "./jobs/paths";
 import { RESUME_AI_HOME } from "./resume/paths";
+import { CounterOfferEmail } from "../components/CounterOfferEmail";
 
 type Tab = "review" | "summary" | "transcript" | "questions";
 
@@ -196,6 +197,7 @@ export function SessionDetailPage() {
             await api.saveAnswer({ question, answer, session_id: session.id });
           }}
         />
+        {detail.data.summary?.counter_offer_email && <CounterOfferEmail email={detail.data.summary.counter_offer_email} />}
         <DeliveryCard delivery={detail.data.summary?.delivery} />
         {session.status === "ended" && <DebriefStudio api={api} sessionId={session.id} refreshOn={detail.data.summary?.review} />}
         {session.status === "ended" && session.type !== "mock" && (detail.data.turns.length > 0 || detail.data.questions.length > 0) && (

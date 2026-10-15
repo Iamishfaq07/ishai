@@ -1,6 +1,7 @@
-import { useEffect, useId, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useFocusTrap } from "../hooks/useFocusTrap";
+import { currentMotion } from "../hooks/useMotion";
 import { X } from "../icons";
 import { cx, focusRing } from "./cx";
 
@@ -13,6 +14,107 @@ const WIDTH: Record<SheetSize, string> = {
   xl: "sm:max-w-xl",
   "2xl": "sm:max-w-2xl",
 };
+
+// Panels open on top of each other (a credits panel from an edit panel). The page stays still until the last one
+// closes, in whatever order they close; each saving and restoring `overflow` itself would let the page scroll under
+// a panel still open when the one below it closed first.
+let locks = 0;
+let lockedFrom = "";
+
+/** Stops the page scrolling until every caller has released it. Returns the release. */
+export function lockScroll(): () => void {
+  if (locks++ === 0) {
+    lockedFrom = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+  }
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    if (--locks === 0) document.body.style.overflow = lockedFrom;
+  };
+}
+
+// Open panels, newest last, so the one underneath can tell when it's on top again (its light sweeps once more).
+const stack: object[] = [];
+const listeners = new Set<() => void>();
+function changed() {
+  for (const fn of listeners) fn();
+}
+
+/**
+ * A light sweeps along the panel's top edge when it opens and when a panel opened over it closes: the key bumps
+ * each time it becomes the top one.
+ */
+function useSweep(open: boolean): number {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (!open) return;
+    const me = {};
+    stack.push(me);
+    let top = true;
+    const onChange = () => {
+      const now = stack[stack.length - 1] === me;
+      if (now && !top) setN((x) => x + 1);
+      top = now;
+    };
+    listeners.add(onChange);
+    changed();
+    return () => {
+      listeners.delete(onChange);
+      stack.splice(stack.indexOf(me), 1);
+      changed();
+    };
+  }, [open]);
+  return n;
+}
+
+const MORPH = "height 240ms cubic-bezier(0.22, 1, 0.36, 1)";
+
+/**
+ * When the panel's content grows or shrinks (a step changes, an error appears), its height glides to the new size
+ * instead of jumping. The content is measured inside the scroll area, where the panel's own height can't affect it.
+ */
+function useMorph(open: boolean) {
+  const panel = useRef<HTMLDivElement>(null);
+  const content = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const box = panel.current;
+    const inner = content.current;
+    if (!open || !box || !inner || typeof ResizeObserver === "undefined") return;
+    let last = inner.offsetHeight;
+    let shown = box.offsetHeight;
+    const settle = () => {
+      box.style.height = "";
+      box.style.transition = "";
+      shown = box.offsetHeight;
+    };
+    const ro = new ResizeObserver(() => {
+      const next = inner.offsetHeight;
+      const delta = next - last;
+      last = next;
+      if (!delta || currentMotion() !== "full") return void (shown = box.offsetHeight);
+      const from = shown;
+      box.style.transition = "";
+      box.style.height = "";
+      const to = box.offsetHeight; // the natural height now (capped by max-height)
+      if (to === from) return;
+      box.style.height = `${from}px`;
+      void box.offsetHeight; // start from the old height
+      box.style.transition = MORPH;
+      box.style.height = `${to}px`;
+      shown = to;
+    });
+    box.addEventListener("transitionend", settle);
+    ro.observe(inner);
+    return () => {
+      ro.disconnect();
+      box.removeEventListener("transitionend", settle);
+      settle();
+    };
+  }, [open]);
+  return { panel, content };
+}
 
 /**
  * The one modal panel. `placement="center"` (the default) is a sheet from the bottom on phones and a centred dialog
@@ -50,14 +152,12 @@ export function Sheet({
   const generatedId = useId();
   const labelId = titleId ?? generatedId;
   const ref = useFocusTrap<HTMLDivElement>(open, { onEscape: onClose });
+  const sweep = useSweep(open);
+  const { panel, content } = useMorph(open);
 
   useEffect(() => {
     if (!open) return;
-    const before = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = before;
-    };
+    return lockScroll();
   }, [open]);
 
   if (!open || typeof document === "undefined") return null;
@@ -75,24 +175,28 @@ export function Sheet({
       }}
     >
       <div
-        ref={ref}
+        ref={(el) => {
+          ref.current = el;
+          panel.current = el;
+        }}
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelId}
         className={
           end
             ? cx(
-                "flex h-full w-full max-w-2xl flex-col overflow-hidden border-l border-zinc-200 bg-zinc-50 shadow-2xl animate-fade-in dark:border-white/10 dark:bg-zinc-950",
+                "relative flex h-full w-full max-w-2xl flex-col overflow-hidden border-l border-zinc-200 bg-zinc-50 shadow-2xl animate-fade-in dark:border-white/10 dark:bg-zinc-950",
                 className,
               )
             : cx(
-                "flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-3xl border border-zinc-200 bg-white shadow-2xl animate-rise sm:rounded-3xl dark:border-white/10 dark:bg-zinc-950",
+                "relative flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-3xl border border-zinc-200 bg-white shadow-2xl animate-rise sm:rounded-3xl dark:border-white/10 dark:bg-zinc-950",
                 WIDTH[size],
                 !footer && "pb-[env(safe-area-inset-bottom)]",
                 className,
               )
         }
       >
+        <span key={sweep} aria-hidden="true" className="sheet-sweep" />
         <div
           className={cx(
             "flex shrink-0 gap-3 border-b",
@@ -119,7 +223,9 @@ export function Sheet({
             <X className="h-5 w-5" aria-hidden />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div ref={content}>{children}</div>
+        </div>
         {footer && (
           <div className="shrink-0 border-t border-zinc-200 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] dark:border-white/10">
             {footer}

@@ -71,8 +71,14 @@ _NEGOTIATION_RUBRIC = (
     "too early; asking about the whole package (bonus, equity, benefits, start date, title); handling pushback, "
     "pressure and silence calmly; staying warm and collaborative; never inventing a competing offer; confirming what "
     "was agreed and getting it in writing. In 'better', give the stronger thing to say. In the summary, say where "
-    "the offer ended up versus where it started (and versus the candidate's target, if given)."
+    "the offer ended up versus where it started (and versus the candidate's target, if given). Also add "
+    "\"counter_offer_email\": {\"subject\": string, \"body\": string}: the email the candidate can send the "
+    "recruiter after this call to counter in writing (90-150 words, first person, warm and specific): thank them for "
+    "the offer, restate the role, ask for a specific number on base and, where the call touched them, on bonus, "
+    "equity or the joining date, with the reasons the candidate actually gave on the call. Use only numbers from the "
+    "offer, the candidate's target or what was said; never invent a competing offer. No sign-off name."
 )
+COUNTER_EMAIL_CHARS = 1_400
 
 
 @dataclass
@@ -250,6 +256,11 @@ async def generate_report(session_id: str) -> dict[str, Any]:
                             "suggested_preparation"):
                     if data.get(key):
                         report[key] = data[key]
+                email = data.get("counter_offer_email") if isinstance(negotiation, dict) else None
+                if isinstance(email, dict) and isinstance(email.get("body"), str) and email["body"].strip():
+                    report["counter_offer_email"] = {
+                        "subject": " ".join(str(email.get("subject") or "Following up on the offer").split())[:150],
+                        "body": email["body"].strip()[:COUNTER_EMAIL_CHARS]}
                 review = build_review(data.get("review"), pairs)
                 if review is not None and len(all_pairs) > len(pairs):
                     review["questions_total"] = len(all_pairs)

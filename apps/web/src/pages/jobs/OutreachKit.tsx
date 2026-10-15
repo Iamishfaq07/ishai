@@ -52,6 +52,12 @@ const KINDS: Array<{ id: OutreachKind; label: string; about: string; details: st
     about: "To send the same day as an interview. Say what you talked about below and it'll mention it; otherwise it won't guess.",
     details: "e.g. We talked about moving the reports to Power BI",
   },
+  {
+    id: "screening",
+    label: "Screening answers",
+    about: "Answers to the questions application forms ask (why this company, a project you built or scaled, why you fit), from your resume and the job post, ready to paste.",
+    details: "e.g. I've used their app for two years",
+  },
 ];
 
 /** The job post's first line or sentence: usually the title (as the server reads it, resumes/ai.py job_title). */
@@ -202,7 +208,7 @@ export function MessagesPart({
     const clean = Object.fromEntries(Object.entries(inputs).map(([k, v]) => [k, (v ?? "").trim()]).filter(([, v]) => v)) as OutreachInputs;
     await run(() => api.outreach(resume.data, resumeJob, kind, clean, job?.live ? job.id : null), onMessage);
   };
-  const email = kind !== "referral";
+  const email = kind !== "referral" && kind !== "screening";
   const titleHint = job ? job.title : resumeJob.trim() ? jobTitle(resumeJob) : "";
   return (
     <>
@@ -226,9 +232,11 @@ export function MessagesPart({
         </div>
         <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-300">{meta.about}</p>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label={kind === "thank_you" ? "Interviewer's name" : "Their name"} htmlFor="kit-recipient" hint="Optional">
-            <Input id="kit-recipient" maxLength={80} value={inputs.recipient ?? ""} onChange={(e) => set({ recipient: e.target.value })} placeholder="e.g. Priya Sharma" />
-          </Field>
+          {kind !== "screening" && (
+            <Field label={kind === "thank_you" ? "Interviewer's name" : "Their name"} htmlFor="kit-recipient" hint="Optional">
+              <Input id="kit-recipient" maxLength={80} value={inputs.recipient ?? ""} onChange={(e) => set({ recipient: e.target.value })} placeholder="e.g. Priya Sharma" />
+            </Field>
+          )}
           <Field label="Company" htmlFor="kit-company" hint={job ? "From the job post" : "Optional"}>
             <Input id="kit-company" maxLength={120} value={inputs.company ?? ""} onChange={(e) => set({ company: e.target.value })} placeholder={job?.company || "e.g. Flipkart"} />
           </Field>
@@ -253,7 +261,7 @@ export function MessagesPart({
               <KitField id="kit-note" label="LinkedIn connection note" value={current.connection_note} onChange={(connection_note) => onMessage({ ...current, connection_note })} chars={KIT_LIMITS.connectionNote} rows={3} hint="Free accounts allow 200 characters, Premium 300." />
             )}
             {email && <KitField id="kit-subject" label="Subject" value={current.subject} onChange={(subject) => onMessage({ ...current, subject })} chars={KIT_LIMITS.subject} rows={1} />}
-            <KitField id="kit-message" label={email ? "Email" : "Message for LinkedIn or WhatsApp"} value={current.message} onChange={(message) => onMessage({ ...current, message })} words={MESSAGE_WORDS[kind]} rows={10} />
+            <KitField id="kit-message" label={kind === "screening" ? "Answers to paste into the form" : email ? "Email" : "Message for LinkedIn or WhatsApp"} value={current.message} onChange={(message) => onMessage({ ...current, message })} words={MESSAGE_WORDS[kind]} rows={10} />
           </div>
         </Box>
       )}

@@ -181,6 +181,25 @@ def test_a_reported_job_takes_its_details_from_the_job_cache(inbox: Any) -> None
     assert gone["listing_title"] == "Old post"
 
 
+def test_signed_in_the_app_and_latest_session_are_attached(inbox: Any) -> None:
+    client, admin, _ = inbox
+    h, _user = _register_named(client, f"diag-{uuid.uuid4().hex[:8]}@example.com")
+    sid = client.post("/v1/sessions", headers=h, json={"title": "Loop", "type": "interview"}).json()["id"]
+    tag = _tag()
+    # The session id is the server's own lookup: one the page claims is dropped (an unknown context key).
+    assert _send(client, _msg(tag, context={"latest_session_id": "s-x"}), headers=h).status_code == 422
+    r = _send(client, _msg(tag, context={"platform": "web", "page": "/start"}), headers=h)
+    assert r.status_code == 201, r.text
+    [item] = _find(client, admin, tag)
+    ctx = client.get(f"/v1/admin/inbox/{item['id']}", headers=admin).json()["context"]
+    assert ctx == {"platform": "web", "page": "/start", "latest_session_id": sid}
+    # A made-up platform is dropped; signed out, no session is looked up.
+    tag2 = _tag()
+    assert _send(client, _msg(tag2, context={"platform": "desktop-<script>"})).status_code == 201
+    [out] = _find(client, admin, tag2)
+    assert client.get(f"/v1/admin/inbox/{out['id']}", headers=admin).json()["context"] is None
+
+
 # ---- spam protection --------------------------------------------------------------------------------------------
 
 
@@ -197,16 +216,16 @@ def _via(ip: str) -> dict[str, str]:
     return {"X-Orbit-Proxy-Secret": PROXY, "X-Orbit-Client-IP": ip}
 
 
-def test_five_an_hour_and_twenty_a_day_per_network(inbox: Any, limits: None, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_three_an_hour_and_twenty_a_day_per_network(inbox: Any, limits: None, monkeypatch: pytest.MonkeyPatch) -> None:
     client, _, _ = inbox
-    codes = [_send(client, _msg(_tag()), headers=_via("100.70.1.1")).status_code for _ in range(6)]
-    assert codes == [201] * 5 + [429], codes
+    codes = [_send(client, _msg(_tag()), headers=_via("100.70.1.1")).status_code for _ in range(4)]
+    assert codes == [201] * 3 + [429], codes
     slow = _send(client, _msg(_tag()), headers=_via("100.70.1.1"))
     assert slow.status_code == 429 and "wait" in slow.json()["detail"]
     assert _send(client, _msg(_tag()), headers=_via("100.70.1.2")).status_code == 201  # per network
     # IPv6: one /64 is one network.
-    v6 = [_send(client, _msg(_tag()), headers=_via(f"2001:db8:7:1::{i}")).status_code for i in range(1, 7)]
-    assert v6 == [201] * 5 + [429], v6
+    v6 = [_send(client, _msg(_tag()), headers=_via(f"2001:db8:7:1::{i}")).status_code for i in range(1, 5)]
+    assert v6 == [201] * 3 + [429], v6
     # The day's 20, with the hourly bucket out of the way.
     monkeypatch.setattr(contact_mod, "_per_hour", ratelimit.TokenBucket(rate_per_s=1, burst=1000))
     day = [_send(client, _msg(_tag()), headers=_via("100.70.1.3")).status_code for _ in range(21)]

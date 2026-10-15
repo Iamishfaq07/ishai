@@ -129,3 +129,42 @@ def test_unknown_stt_price_is_unknown_not_zero(monkeypatch: pytest.MonkeyPatch) 
         _, ah = _register(c, admin)
         r = c.get("/v1/admin/costs", headers=ah).json()
     assert r["totals"]["stt_usd"] is None and r["notes"]["stt_price_per_minute"] is None
+
+
+def test_cache_savings_are_the_uncached_price_minus_what_was_paid() -> None:
+    """A priced call with cache hits is costed again with none; unpriced calls and calls with no hits save nothing."""
+    import asyncio
+    from datetime import UTC, datetime
+
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+    from orbit_api.admin.costs import cost_report
+    from orbit_api.db import Base
+    from orbit_api.models import ProviderRequest
+    from orbit_api.providers.llm.base import Usage
+    from orbit_api.providers.llm.pricing import estimate_cost
+
+    at = datetime(2026, 10, 14, 2, 0, tzinfo=UTC)  # a DeepSeek peak hour: list price, no off-peak discount
+    hit = Usage(input_tokens=10_000, cached_input_tokens=9_000, output_tokens=300)
+    paid = estimate_cost("deepseek-flash", hit, at=at)
+    full = estimate_cost("deepseek-flash", Usage(input_tokens=10_000, output_tokens=300), at=at)
+    assert paid is not None and full is not None and full > paid
+
+    async def go() -> dict:  # type: ignore[type-arg]
+        engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        async with async_sessionmaker(engine, expire_on_commit=False)() as db:
+            db.add_all([
+                ProviderRequest(provider="deepseek", model="deepseek-flash", request_type="answer", input_tokens=10_000,
+                                cached_input_tokens=9_000, output_tokens=300, estimated_cost_usd=paid, created_at=at),
+                ProviderRequest(provider="deepseek", model="deepseek-flash", request_type="answer", input_tokens=500,
+                                cached_input_tokens=0, output_tokens=50, estimated_cost_usd=0.0001, created_at=at),
+                ProviderRequest(provider="x", model="unpriced", request_type="answer", input_tokens=500,
+                                cached_input_tokens=400, output_tokens=50, estimated_cost_usd=None, created_at=at),
+            ])
+            await db.commit()
+            return await cost_report(db, 3650)
+
+    r = asyncio.run(go())
+    assert r["llm"]["cache_saved_usd"] == pytest.approx(round(full - paid, 4))

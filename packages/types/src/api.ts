@@ -453,6 +453,8 @@ export interface SessionSummary {
   delivery?: DeliveryStats | null;
   /** The debrief + thank-you email, once generated (POST /v1/sessions/{id}/follow-up). */
   follow_up?: FollowUp | null;
+  /** Salary practice only: the counter-offer email to send the recruiter, from what was said on the call. */
+  counter_offer_email?: { subject: string; body: string } | null;
 }
 
 export interface DeliveryStats {
@@ -1021,6 +1023,10 @@ export interface ContactContext {
   reason?: string;
   /** The app page the form was opened from ("/jobs/listing/j3f2"). */
   page?: string;
+  /** Which app sent it: "web" or "desktop-0.1.25". */
+  platform?: string;
+  /** Added by the server for a signed-in sender (never sent): their most recent session. */
+  latest_session_id?: string;
 }
 
 /** POST /v1/contact (public, signed in or out). */
@@ -1035,6 +1041,34 @@ export interface ContactRequest {
   captcha_token?: string;
   /** The honeypot: always empty from a person. */
   website?: string;
+}
+
+/** GET /v1/sessions/loop-memory?company=: the candidate's earlier rounds with that company. */
+export interface LoopMemory {
+  company: string;
+  rounds: number;
+  last_round_at: string | null;
+  questions: string[];
+  /** Story-bank titles already told in this loop. */
+  stories: string[];
+}
+
+/** GET /v1/public/engineering-telemetry. Percentiles are null until enough sessions were measured. */
+export interface LatencyPercentiles {
+  p50_ms: number;
+  p95_ms: number;
+  samples: number;
+}
+export interface EngineeringTelemetry {
+  window_days: number;
+  sessions: number;
+  /** Interviewer stops talking → question recognised. */
+  question_detected: LatencyPercentiles | null;
+  /** Question recognised → first word of the answer. */
+  first_word: LatencyPercentiles | null;
+  /** Seconds since the API last started (each deploy restarts it). */
+  up_for_s: number;
+  measured_at: string;
 }
 
 export interface ContactReceipt {
@@ -1211,6 +1245,8 @@ export interface CostReport {
   llm: {
     requests: number;
     cache_hit_ratio: number | null;
+    /** What the provider's prompt cache saved: priced calls costed again with no cache hits, minus their cost. */
+    cache_saved_usd: number;
     tokens_per_answer: { input: number | null; output: number | null };
     fallback_requests: number;
     by_model: Array<{
@@ -1609,7 +1645,7 @@ export interface LinkedInProfile {
   skills: string[];
 }
 
-export type OutreachKind = "referral" | "cold_email" | "follow_up" | "thank_you";
+export type OutreachKind = "referral" | "cold_email" | "follow_up" | "thank_you" | "screening";
 
 /** What the candidate says about who they're writing to; all optional. */
 export interface OutreachInputs {
