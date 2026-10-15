@@ -1863,6 +1863,16 @@ export interface JobListing {
   relocation?: boolean;
 }
 
+export type JobAlertFrequency = "off" | "daily" | "weekly";
+
+/** Job alerts: an email of new matches. `can_email` is false until the address is verified (or the server can't mail). */
+export interface JobAlert {
+  frequency: JobAlertFrequency;
+  sent_at: string | null;
+  can_email: boolean;
+  email: string;
+}
+
 /** One observation of the posting check: whether a post looks like a live opening. Never a verdict. */
 export interface JobPostingSignal {
   kind: string;

@@ -13,6 +13,7 @@ import { CountryField } from "../../components/CountryField";
 import { useCountry } from "../../lib/country";
 import { JOBS_MATCHES } from "./paths";
 import { OnThisPage, type PageSection } from "../../components/OnThisPage";
+import { AlertsSection } from "./AlertsSection";
 
 /** Jobs AI → Profile: what the feed looks for, filled in by the AI from the resume, every part of it the user's. */
 export function JobProfilePage() {
@@ -325,6 +326,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
             </fieldset>
           </div>
         </Section>
+        <AlertsSection onProfileSaved={() => !profile.saved && loaded.reload()} />
         {error && <ErrorNote>{error}</ErrorNote>}
 
         {/* Phones and tablets: once there's something to save, saving stays in reach, above the tab bar. Solid, so the
@@ -404,6 +406,7 @@ const PROFILE_SECTIONS: PageSection[] = [
   { id: "where", label: "Where" },
   { id: "which-jobs", label: "Which jobs" },
   { id: "sources", label: "Where Orbit looks" },
+  { id: "alerts", label: "Email alerts" },
 ];
 
 function Section({ id, title, hint, icon: Icon, children }: { id: string; title: string; hint: string; icon: LucideIcon; children: ReactNode }) {

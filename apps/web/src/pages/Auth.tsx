@@ -700,6 +700,45 @@ export function VerifyEmailPage() {
   );
 }
 
+/** The job alert email's "stop these emails" link: a button, so a mail scanner opening the link changes nothing. */
+export function StopJobAlertsPage() {
+  const token = useOneTimeToken();
+  const { user } = useAuth();
+  const [state, setState] = useState<"ready" | "working" | "done" | "failed">(token ? "ready" : "failed");
+  const [error, setError] = useState<string | null>(token ? null : "This link is missing its token.");
+  const stop = () => {
+    if (!token) return;
+    setState("working");
+    api.stopJobAlerts(token).then(
+      () => setState("done"),
+      (err: unknown) => {
+        setError(errorText(err));
+        setState("failed");
+      },
+    );
+  };
+  return (
+    <AuthShell
+      title={state === "done" ? "Job alerts stopped" : "Stop job alert emails?"}
+      subtitle={state === "done" ? "You won't get any more. Turn them back on any time in Jobs AI, Profile." : "Orbit will stop emailing you new job matches."}
+    >
+      <div role="status" className="space-y-4 text-center text-sm">
+        {state === "failed" && error && <ErrorNote>{error}</ErrorNote>}
+        {(state === "ready" || state === "working") && (
+          <Button className="w-full" disabled={state === "working"} onClick={stop}>
+            {state === "working" ? "Stopping…" : "Stop these emails"}
+          </Button>
+        )}
+        {state !== "ready" && state !== "working" && (
+          <Link to={user ? "/jobs/profile" : "/login"} className={cx(linkClass, "inline-block")}>
+            {user ? "Go to your job profile" : "Sign in"}
+          </Link>
+        )}
+      </div>
+    </AuthShell>
+  );
+}
+
 export function ConfirmEmailChangePage() {
   const token = useOneTimeToken();
   const { setUser } = useAuth();

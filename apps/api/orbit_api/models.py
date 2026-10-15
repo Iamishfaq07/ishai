@@ -686,6 +686,11 @@ class JobSearchProfile(TimestampMixin, Base):
     prefs: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     suggested: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     suggested_hash: Mapped[str | None] = mapped_column(String(64))  # the resume content it was read from
+    # Job alerts (job_portal/alerts.py): an email of new matches, "off" | "daily" | "weekly"; when the last went out
+    # (or was due with nothing new); and the token of its one-click "stop these emails" link.
+    alert: Mapped[str] = mapped_column(String(8), default="off", server_default="off")
+    alert_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    alert_token: Mapped[str | None] = mapped_column(String(64), unique=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 

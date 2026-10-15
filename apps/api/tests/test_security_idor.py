@@ -434,6 +434,9 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/v1/contact"),
     # Razorpay's webhook: no session, it's authenticated by Razorpay's signature (tests/test_razorpay.py).
     ("POST", "/v1/billing/webhook"),
+    # The job alert email's "stop these emails" link: the stored random token (in the body) is the credential, and
+    # all it can do is turn that one person's alerts off.
+    ("POST", "/v1/jobs/alerts/off"),
     # Google sign-in: the redirect out and back, before anyone is signed in (the state cookie guards the return).
     ("GET", "/v1/auth/google/start"), ("GET", "/v1/auth/google/callback"),
     # The support chat works signed out: the thread's 256-bit token (in the body) is the credential.
