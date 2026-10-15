@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from "react";
 import { Link, Outlet, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import {
+  ArrowUpRight,
   AudioLines,
   BadgeIndianRupee,
   BookOpen,
@@ -10,6 +11,7 @@ import {
   Download,
   ErrorBoundary,
   FolderOpen,
+  GraduationCap,
   HistoryIcon,
   IdCard,
   LayoutGrid,
@@ -42,6 +44,7 @@ import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { OFFERS_HOME } from "../pages/offers/model";
 import { LINKEDIN_HOME } from "../pages/linkedin/model";
 import { CODE_HOME } from "../pages/code/paths";
+import { KASHSEC_URL, LEARN_HOME } from "../pages/learn/links";
 import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { prefetchRoute } from "../routes";
 import { AnnouncementBanner } from "./AnnouncementBanner";
@@ -114,7 +117,8 @@ const NAV: NavItem[] = [
     current: (p) => p === RESUME_AI_HOME || p.startsWith(`${RESUME_AI_HOME}/`),
   },
   { to: LINKEDIN_HOME, ai: true, label: "LinkedIn AI", short: "LinkedIn AI", icon: IdCard, phone: false, current: (p) => p === LINKEDIN_HOME || p.startsWith(`${LINKEDIN_HOME}/`) },
-  { to: CODE_HOME, ai: true, label: "Code AI", short: "Code AI", icon: Code2, phone: false, current: (p) => p === CODE_HOME || p.startsWith(`${CODE_HOME}/`) },
+  // Learning AI holds Code AI (and links KashSec): one item for both.
+  { to: LEARN_HOME, ai: true, label: "Learning AI", short: "Learning AI", icon: GraduationCap, phone: false, current: (p) => /^\/(learn|code)(\/|$)/.test(p) },
   { to: OFFERS_HOME, ai: true, label: "Offer AI", short: "Offer AI", icon: BadgeIndianRupee, phone: false, current: (p) => p === OFFERS_HOME || p.startsWith(`${OFFERS_HOME}/`) },
   {
     to: JOBS_AI_HOME,
@@ -138,6 +142,11 @@ const COPILOT_SECTIONS: ProductSection[] = [
   { to: "/documents", label: "Documents", icon: FolderOpen, end: true },
   { to: "/documents/stories", label: "Story bank", icon: BookOpen },
   { to: "/documents/answers", label: "My answers", icon: MessageSquareQuote },
+];
+/** Learning AI's tabs: its overview and Code AI; KashSec, another site, is a link beside them. */
+const LEARN_SECTIONS: ProductSection[] = [
+  { to: LEARN_HOME, label: "Overview", icon: GraduationCap, end: true },
+  { to: CODE_HOME, label: "Code AI", icon: Code2 },
 ];
 /** Shown when the deployment has the Career Evidence Vault switched on (the account says so). */
 const EVIDENCE_SECTION: ProductSection = { to: "/documents/evidence", label: "Evidence", icon: ShieldCheck };
@@ -251,6 +260,7 @@ export function Layout() {
   const navRef = useRef<HTMLElement>(null);
   const navFit = useNavFit(navRef);
   const copilot = isCopilotPath(pathname);
+  const learning = /^\/(learn|code)(\/|$)/.test(pathname);
   const meActive = ME_PATH.test(pathname) || MORE_TOOLS.some((t) => t.current(pathname));
   const shortcut = isMacPlatform() ? "⌘K" : "Ctrl K";
 
@@ -378,6 +388,19 @@ export function Layout() {
       <AnnouncementBanner className="sm:px-6" />
 
       <main id="main" className="mx-auto min-h-[100dvh] w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
+        {learning && (
+          <ProductTabs
+            label="Learning AI"
+            sections={LEARN_SECTIONS}
+            action={
+              <a href={KASHSEC_URL} target="_blank" rel="noopener" className={buttonClass("secondary", "md", "min-h-10")}>
+                <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-300" aria-hidden /> KashSec: free security and AI lessons
+                <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                <span className="sr-only">(opens in a new tab)</span>
+              </a>
+            }
+          />
+        )}
         {copilot && (
           <ProductTabs
             label="Interview copilot"
