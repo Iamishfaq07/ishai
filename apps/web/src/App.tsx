@@ -46,6 +46,7 @@ import {
   JobsAiPublicPage,
   JobMatchesPage,
   JobDetailPage,
+  JobMissionPage,
   JobTrackerPage,
   JobOutreachPage,
   JobProfilePage,
@@ -223,6 +224,7 @@ export function App() {
           <Route index element={<JobsAiHomePage />} />
           <Route path="matches" element={<JobMatchesPage />} />
           <Route path="listing/:listingId" element={<JobDetailPage />} />
+          <Route path="mission/:entryId" element={<JobMissionPage />} />
           <Route path="tracker" element={<JobTrackerPage />} />
           <Route path="outreach" element={<JobOutreachPage />} />
           <Route path="profile" element={<JobProfilePage />} />

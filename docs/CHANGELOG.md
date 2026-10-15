@@ -1,5 +1,23 @@
 # Implementation log
 
+## Job Mission Room (2026-10-16)
+
+- **One tracked job as a workspace** (`/jobs/mission/<id>`). Open it from the tracker ("Mission room"), a job's page
+  once it's tracked, or Home's "Coming up".
+- **Six stages:** Discover, Prove, Prepare, Apply, Interview, Negotiate. Each is ticked only when a record exists
+  (a fit check, a linked resume or practice round, applied, interviewing, an offer). There are no percentages.
+- **Next step with the reason:** for example, "Practise for this interview. Why: it's in 2 days." "Not now" hides it
+  for 3 days on this device.
+- **Evidence & fit:** each requirement quotes the job post next to the resume line that shows it. One the resume
+  doesn't show says so: "add it only if it's true".
+- **Resume kit:** pick the resume for the job, then **freeze the version you sent**. The copy outlives later edits
+  and even deleting the resume, and opens again as a new resume.
+- **Practice, Timeline and Offer:** rounds counted for the company, the job's journey, and an offer from Offer AI,
+  linked by you (never matched by name).
+- **Data:** a new `resume_snapshots` table and `job_offers.application_id`. Both are in the account export and are
+  deleted with the job or the account. Migration `b7d9f1a3c5e7` round-trips on SQLite and Postgres.
+- The journey now says "Resume for this job" (not "tailored"), since a resume can also be linked by hand.
+
 ## Redesign, part 2: Home is a Mission Dashboard (2026-10-16)
 
 - **One line on where the search stands**, counted from the tracker. For example: "4 applications in progress ·

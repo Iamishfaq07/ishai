@@ -4,7 +4,8 @@ import { CalendarIcon, CompanyLogo, LoadGate, Target, cx, focusRing } from "@orb
 import { Card } from "../../components/ui";
 import type { AsyncState } from "../../lib/useAsync";
 import { STATUS_LABEL } from "../jobs/model";
-import { JOBS_MATCHES, JOBS_TRACKER, jobPath } from "../jobs/paths";
+import { missionPath } from "../jobs/mission";
+import { JOBS_MATCHES, JOBS_TRACKER } from "../jobs/paths";
 import { RESUME_AI_HOME, resumePath } from "../resume/paths";
 import { scoreTone } from "../resume/product";
 import { PIPELINE_STAGES, countdown, lastWeek, pipeline, upcoming } from "./dashboard";
@@ -99,7 +100,7 @@ export function Upcoming({ tracker }: { tracker: AsyncState<JobTrackerEntry[]> }
           <ul className="space-y-1">
             {next.map((e) => (
               <li key={e.id}>
-                <Link to={jobPath(e.listing_id)} className={cx("flex items-center gap-3 rounded-xl px-1.5 py-2 hover:bg-zinc-900/5 dark:hover:bg-white/5", focusRing)}>
+                <Link to={missionPath(e.id)} className={cx("flex items-center gap-3 rounded-xl px-1.5 py-2 hover:bg-zinc-900/5 dark:hover:bg-white/5", focusRing)}>
                   <CompanyLogo company={e.company} size="sm" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{e.company}</span>

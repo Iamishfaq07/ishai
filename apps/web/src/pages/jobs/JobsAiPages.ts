@@ -6,3 +6,4 @@ export { JobDetailPage } from "./JobDetail";
 export { JobTrackerPage } from "./Tracker";
 export { JobOutreachPage } from "./Outreach";
 export { JobProfilePage } from "./Profile";
+export { JobMissionPage } from "./JobMission";

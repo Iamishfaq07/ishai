@@ -405,6 +405,9 @@ class JobOffer(TimestampMixin, Base):
     notes: Mapped[str] = mapped_column(Text, default="")
     plan: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     plan_hash: Mapped[str | None] = mapped_column(String(64))
+    # The tracked job this offer is for (Job Mission Room), linked by the user, never guessed from the company name.
+    application_id: Mapped[str | None] = mapped_column(ForeignKey("job_applications.id", ondelete="SET NULL"),
+                                                       index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
@@ -775,6 +778,24 @@ class JobApplication(TimestampMixin, Base):
     resume_id: Mapped[str | None] = mapped_column(ForeignKey("resumes.id", ondelete="SET NULL"), index=True)
     document_id: Mapped[str | None] = mapped_column(ForeignKey("documents.id", ondelete="SET NULL"), index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class ResumeSnapshot(TimestampMixin, Base):
+    """The resume as it was sent for one tracked job (Job Mission Room): a frozen copy of its content, design and
+    ATS score, so "which version did I send?" has an answer after the resume is edited or deleted. Made only when the
+    user asks; deleted with the job or the account."""
+
+    __tablename__ = "resume_snapshots"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("job_applications.id", ondelete="CASCADE"), index=True)
+    resume_id: Mapped[str | None] = mapped_column(ForeignKey("resumes.id", ondelete="SET NULL"))
+    title: Mapped[str] = mapped_column(String(160))
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    design: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    job_text: Mapped[str] = mapped_column(Text, default="")
+    score: Mapped[int] = mapped_column(Integer, default=0)
+    note: Mapped[str] = mapped_column(String(200), default="")
 
 
 class JobFitCheck(TimestampMixin, Base):

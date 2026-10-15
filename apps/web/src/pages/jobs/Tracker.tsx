@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { JobStatus, JobTrackerEntry, JobTrackerUpdate } from "@orbit/types";
 import {
+  ArrowRight,
   ArrowUpRight,
   Check,
   Columns3,
@@ -57,6 +58,7 @@ import { CompareDrawer } from "./CompareDrawer";
 import { SearchInsightsPanel } from "./Insights";
 import { MAX_COMPARE } from "./compare";
 import { Journey } from "./Journey";
+import { missionPath } from "./mission";
 import { SafetyCard } from "./SafetyCard";
 
 /**
@@ -347,6 +349,13 @@ function TrackerCard({
       ) : null}
 
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+        <Link
+          to={missionPath(entry.id)}
+          aria-label={`Open the mission room for ${entry.title} at ${entry.company}`}
+          className={cx("inline-flex items-center gap-1 font-semibold text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}
+        >
+          Mission room <ArrowRight className="h-3 w-3" aria-hidden />
+        </Link>
         {entry.status === "saved" && apply && (
           <a href={apply} target="_blank" rel="noopener" className={cx("inline-flex items-center gap-0.5 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
             Apply <ArrowUpRight className="h-3 w-3" aria-hidden />

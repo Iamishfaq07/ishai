@@ -2255,3 +2255,72 @@ export interface CodeAttemptInput {
   total: number;
   failing: string;
 }
+
+/** Job Mission Room (GET /v1/jobs/tracker/{id}/mission): one tracked job as a workspace. Stages are records, not
+ * estimates; `next` is the first gap with the reason. */
+export type MissionStage = "discover" | "prove" | "prepare" | "apply" | "interview" | "negotiate";
+
+export interface MissionRequirement {
+  requirement: string;
+  status: string;
+  job_quote: string;
+  resume_quote: string;
+  evidence_quote: string;
+}
+
+export interface MissionFit {
+  verdict: string;
+  summary: string;
+  gaps: string[];
+  requirements: MissionRequirement[];
+  checked_at: string;
+}
+
+export interface MissionResume {
+  id: string;
+  title: string;
+  score: number;
+  updated_at: string;
+}
+
+/** The resume as it was sent for this job: frozen, kept when the resume itself changes or is deleted. */
+export interface MissionSnapshot {
+  id: string;
+  title: string;
+  score: number;
+  note: string;
+  resume_id: string | null;
+  created_at: string;
+}
+
+export interface MissionOffer {
+  id: string;
+  company: string;
+  role: string;
+  fixed: number;
+  currency: string;
+  status: string;
+}
+
+export interface MissionNextStep {
+  key: string;
+  title: string;
+  why: string;
+  action: string;
+  /** An in-app path, or an in-room action: "link_resume", "snapshot", "link_offer", "mark_applied", "practise", "notes". */
+  to: string;
+}
+
+export interface JobMission {
+  entry_id: string;
+  stages: Record<MissionStage, boolean>;
+  fit: MissionFit | null;
+  resume: MissionResume | null;
+  resume_missing: boolean;
+  snapshots: MissionSnapshot[];
+  offer: MissionOffer | null;
+  offers: MissionOffer[];
+  practice_rounds: number;
+  live_rounds: number;
+  next: MissionNextStep | null;
+}

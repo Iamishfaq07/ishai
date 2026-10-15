@@ -33,6 +33,7 @@ from orbit_api.models import (
     LiveSessionRow,
     Question,
     Resume,
+    ResumeSnapshot,
     SavedAnswer,
     SessionSummary,
     SessionTurn,
@@ -111,6 +112,8 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
                 JobFitCheck.user_id == user_id).order_by(JobFitCheck.created_at))).all()],
             "contacts": [_row(c) for c in (await db.scalars(select(JobContact).where(
                 JobContact.user_id == user_id).order_by(JobContact.created_at))).all()],
+            "sent_resume_versions": [_row(r) for r in (await db.scalars(select(ResumeSnapshot).where(
+                ResumeSnapshot.user_id == user_id).order_by(ResumeSnapshot.created_at))).all()],
         },
         "usage": [_row(u) for u in (await db.scalars(select(UsageEvent).where(UsageEvent.user_id == user_id)
                                                       .order_by(UsageEvent.created_at))).all()],
