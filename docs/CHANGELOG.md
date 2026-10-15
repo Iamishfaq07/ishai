@@ -1,5 +1,18 @@
 # Implementation log
 
+## Redesign, part 2: Home is a Mission Dashboard (2026-10-16)
+
+- **One line on where the search stands**, counted from the tracker. For example: "4 applications in progress ·
+  1 offer · next date tomorrow (Hooli)". Nothing is estimated: there's no readiness score and no hiring probability.
+- **Two columns on desktop.** The work goes on the left: your next step, due today, follow-ups, **Applications** (a
+  count per stage with a thin bar of the same counts, each stage named, never colour alone) and set-up. **At a
+  glance** goes on the right:
+  - **Coming up:** interviews and follow-ups with a countdown;
+  - **Last 7 days:** finished mock and live sessions, and the best ATS check;
+  - credits and usage.
+- The large "career loop" diagram left Home; it stays on the public front page.
+- New `pages/home/dashboard.ts`, with unit tests for every figure.
+
 ## Redesign, part 1: a calm app shell with a task sidebar (2026-10-16)
 
 - **Desktop sidebar** replaces the crowded top bar. It's grouped by task: Home; Prepare (Practice, Resume AI,

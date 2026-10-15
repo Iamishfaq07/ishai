@@ -36,8 +36,9 @@ import { SESSION_TYPE_ICON } from "../lib/sessionIcons";
 import { useAsync, type AsyncState } from "../lib/useAsync";
 import { UsageSummary } from "./Billing";
 import { DueToday } from "./DueToday";
-import { CareerLoop } from "../components/CareerLoop";
 import { KashSecPromo } from "../components/Promos";
+import { summaryLine } from "./home/dashboard";
+import { AtAGlance, Pipeline, Upcoming } from "./home/Mission";
 import { FollowUps } from "./jobs/FollowUps";
 import { STATUS_LABEL, byStatus } from "./jobs/model";
 import { JOBS_AI_HOME, JOBS_MATCHES, JOBS_TRACKER } from "./jobs/paths";
@@ -95,26 +96,39 @@ export function HomePage() {
   const isNew = facts !== null && facts.resumes + facts.resumeDocs + facts.mocks + facts.lives + facts.tracker.length === 0;
 
   return (
-    <div className="space-y-8">
-      <div>
+    <div className="space-y-6">
+      {/* Mission Control: where the search stands, in one line, from the account's own records. */}
+      <header>
         <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
           {greeting()}
           {firstName ? `, ${firstName}` : ""}
         </h1>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          {tracker.data ? summaryLine(tracker.data) : "\u00a0"}
+        </p>
+      </header>
+
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="min-w-0 space-y-6">
+          <NextStep steps={steps} welcomed={welcomed} askWelcome={!answers && isNew} />
+          <DueToday />
+          <FollowUps tracker={tracker} hideWhenEmpty />
+          <Pipeline tracker={tracker} />
+          {facts ? (
+            <SetUp items={checklist(answers, facts)} />
+          ) : (
+            !setupHidden(user?.id) && <Skeleton variant="card" label="Loading your checklist" className="min-h-[26rem] rounded-2xl sm:min-h-[13rem]" />
+          )}
+        </div>
+        <aside aria-label="At a glance" className="min-w-0 space-y-6">
+          <Upcoming tracker={tracker} />
+          <AtAGlance sessions={sessions.data} resumes={resumes.data} mockEnabled={MOCK_INTERVIEW_ENABLED} />
+          <Card>
+            <h2 className="mb-3 font-display text-base font-semibold">Credits and usage</h2>
+            <UsageSummary />
+          </Card>
+        </aside>
       </div>
-
-      <NextStep steps={steps} welcomed={welcomed} askWelcome={!answers && isNew} />
-      <CareerLoop />
-
-      <DueToday />
-
-      <FollowUps tracker={tracker} hideWhenEmpty />
-
-      {facts ? (
-        <SetUp items={checklist(answers, facts)} />
-      ) : (
-        !setupHidden(user?.id) && <Skeleton variant="card" label="Loading your checklist" className="min-h-[26rem] rounded-2xl sm:min-h-[13rem]" />
-      )}
 
       <section aria-labelledby="products-title">
         <h2 id="products-title" className="mb-3 font-display text-lg font-semibold tracking-tight">
@@ -129,13 +143,7 @@ export function HomePage() {
         <KashSecPromo className="mt-4" />
       </section>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-3">
-        <RecentSessions sessions={sessions} />
-        <Card className={cx(!sessions.data?.length && "lg:col-span-3")}>
-          <h2 className="mb-3 font-display font-semibold">Usage</h2>
-          <UsageSummary />
-        </Card>
-      </div>
+      <RecentSessions sessions={sessions} />
 
       <DesktopPromo />
 
@@ -523,7 +531,7 @@ function RecentSessions({ sessions }: { sessions: AsyncState<OrbitSession[]> }) 
   const recent = (sessions.data ?? []).slice(0, 5);
   if (!sessions.loading && !sessions.error && recent.length === 0) return null;
   return (
-    <Card className="lg:col-span-2">
+    <Card>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="flex items-center gap-2 font-display font-semibold">
           <HistoryIcon className="h-4 w-4 text-indigo-500" aria-hidden />
