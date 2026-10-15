@@ -18,6 +18,7 @@ import {
   RegisterPage,
   ResetPasswordPage,
   VerifyEmailPage,
+  StopJobAlertsPage,
 } from "./pages/Auth";
 import {
   BillingPage,
@@ -158,6 +159,8 @@ export function App() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
+      {/* Public: the job alert email's "stop these emails" link (the token says whose). */}
+      <Route path="/jobs/alerts/off" element={<StopJobAlertsPage />} />
       {/* Public: the scanned code is the credential, so the phone needn't sign in. */}
       <Route path="/companion" element={<CompanionPage />} />
       {/* Public: one practice question with instant feedback, no account needed (Workstream C's page). */}

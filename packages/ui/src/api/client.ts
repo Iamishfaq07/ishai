@@ -64,6 +64,8 @@ import type {
   JobFitResponse,
   JobLinkInfo,
   JobManualTrack,
+  JobAlert,
+  JobAlertFrequency,
   JobPrefs,
   JobPrepareResponse,
   JobProfile,
@@ -531,6 +533,10 @@ export function createApiClient(options: ApiClientOptions) {
     jobProfile: () => json<JobProfile>("/v1/jobs/profile"),
     saveJobProfile: (prefs: JobPrefs, resumeId?: string | null) =>
       json<JobProfile>("/v1/jobs/profile", { method: "PUT", body: body({ prefs, resume_id: resumeId ?? null }) }),
+    jobAlert: () => json<JobAlert>("/v1/jobs/alerts"),
+    setJobAlert: (frequency: JobAlertFrequency) => json<JobAlert>("/v1/jobs/alerts", { method: "PUT", body: body({ frequency }) }),
+    /** The alert email's "stop these emails" link: no sign-in, the token says whose. */
+    stopJobAlerts: (token: string) => json<void>("/v1/jobs/alerts/off", { method: "POST", body: body({ token }) }),
     /** Fill the profile from a resume (AI, free, a few a day; else worked out from the resume as written). */
     suggestJobProfile: (resumeId?: string | null) =>
       json<JobProfile>("/v1/jobs/profile/suggest", { method: "POST", body: body({ resume_id: resumeId ?? null }) }),

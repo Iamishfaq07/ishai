@@ -69,6 +69,7 @@ async def end_abandoned_sessions(now: datetime | None = None) -> int:
 async def sweeper(interval_s: float) -> None:
     from orbit_api.billing.settle import reconcile_now
     from orbit_api.contact.routes import purge_expired_messages
+    from orbit_api.job_portal.alerts import send_due
     from orbit_api.support.routes import purge_idle_threads_now
 
     while True:
@@ -100,6 +101,13 @@ async def sweeper(interval_s: float) -> None:
             raise
         except Exception:
             log.exception("support retention sweep failed")
+        # Job alerts that are due (job_portal/alerts.py): a cheap query when none are.
+        try:
+            await send_due()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("job alerts sweep failed")
         await asyncio.sleep(interval_s)
 
 
