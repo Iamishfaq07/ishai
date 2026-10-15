@@ -266,3 +266,20 @@ def test_a_duty_or_a_part_becomes_the_verb_and_nothing_else_changes() -> None:
     assert stronger_opener("Involved in the migration to Kubernetes") == "Contributed to the migration to Kubernetes"
     assert stronger_opener("Worked on fraud models") == "Contributed to fraud models"
     assert stronger_opener("Built the ledger") is None and stronger_opener("Responsible for") is None
+
+
+def test_a_specialists_own_verbs_count_as_action_verbs() -> None:
+    from orbit_api.resumes.ats import is_action_verb
+
+    # An offensive-security resume leads with what was done, in its own words: none of these is a weak opener.
+    for verb in ("Pentested", "Exploited", "Hardened", "Fuzzed", "Reverse-engineered", "Red-teamed", "Triaged"):
+        assert is_action_verb(verb), verb
+    # Describing the person, or being near the work, still isn't.
+    for word in ("Worked", "Helped", "Experienced", "Skilled", "Self-motivated", "Detail-oriented", "Speed", "AWS"):
+        assert not is_action_verb(word), word
+    data = long_senior()
+    data.experience[0].bullets[:3] = ["Exploited an SSRF chain in the payments gateway and shipped the fix in 2 days",
+                                      "Pentested 14 internal services before launch with the platform team",
+                                      "Fuzzed the PDF parser and found 6 memory-safety bugs"]
+    data.experience[1].bullets[2] = "Red-teamed the identity platform with two engineers over a quarter"
+    assert _check(data, "action_verbs").passed

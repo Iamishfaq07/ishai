@@ -113,10 +113,25 @@ _IRREGULAR_PRESENT = {
 }
 
 
+# Words ending in -ed that describe the person, or say they were near the work rather than did it: never an action.
+_NOT_ACTIONS = frozenset("""
+experienced skilled seasoned talented dedicated detailed varied related based focused oriented certified licensed
+interested accomplished distinguished versed worked helped tasked involved acted used needed wanted liked loved hoped
+exposed acquainted familiarised engaged entrusted titled named called
+""".split())
+
+
 def is_action_verb(word: str) -> bool:
     """A bullet opener that says what the person did, in the past ("Led") or, for a current role, the present ("Lead",
-    "Leads", "Manage"). "Co-founded" and "Re-architected" count as their verb."""
+    "Leads", "Manage"). "Co-founded" and "Re-architected" count as their verb, and so does any other verb in the past
+    tense ("Pentested", "Fuzzed", "Red-teamed"), unless it describes the person ("Experienced") or is a weak opener
+    ("Worked", "Helped")."""
     w = word.lower().rstrip(".,;:")
+    parts = w.split("-")
+    last = parts[-1]
+    if (len(last) >= 5 and last.endswith("ed") and not last.endswith("eed") and parts[0] != "self"
+            and w not in _NOT_ACTIONS and last not in _NOT_ACTIONS and last.isalpha()):
+        return True
     for prefix in ("co-", "re-"):
         if w.startswith(prefix) and len(w) > len(prefix) + 2:
             w = w[len(prefix):]

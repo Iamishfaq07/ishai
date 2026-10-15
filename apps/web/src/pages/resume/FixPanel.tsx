@@ -155,6 +155,7 @@ export function FixResult({ result, report, busy, error, onUndo, onKeep, onSkip,
               <CircleAlert className="h-4 w-4 shrink-0 text-amber-500" aria-hidden />
               <span className="min-w-0 flex-1">
                 <span className="font-medium">{c.label}:</span> {stillToDo(c, result)}
+                {data && <FlaggedLines check={c} data={data} onPoint={onPoint} />}
               </span>
               {fixKind(c) === "you" && c.target && (
                 <Button size="sm" variant="secondary" onClick={() => onShow(c.target)}>
@@ -238,6 +239,29 @@ function Changes({ result, data, onRevert, onPoint }: {
         )}
       </ul>
     </details>
+  );
+}
+
+/** The lines a check still flags, quoted (up to three), so it's clear which ones it means. */
+function FlaggedLines({ check: c, data, onPoint }: { check: AtsCheck; data: ResumeData; onPoint: (paths: string[]) => void }) {
+  const lines = (c.paths ?? []).flatMap((p) => {
+    const text = getAt(data, p);
+    return text?.trim() ? [{ path: p, text: text.trim() }] : [];
+  });
+  if (!lines.length) return null;
+  const shown = lines.slice(0, 3);
+  return (
+    <span className="mt-1 block space-y-0.5">
+      {shown.map((l) => (
+        <span key={l.path} onMouseEnter={() => onPoint([l.path])} onMouseLeave={() => onPoint([])}
+              className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
+          “{l.text.split(/\s+/).slice(0, 10).join(" ")}{l.text.split(/\s+/).length > 10 ? "…" : ""}”
+        </span>
+      ))}
+      {lines.length > shown.length && (
+        <span className="block text-xs text-zinc-500 dark:text-zinc-400">and {lines.length - shown.length} more</span>
+      )}
+    </span>
   );
 }
 
