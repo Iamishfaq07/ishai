@@ -886,7 +886,7 @@ function defaultMessage(status: number): string {
   if (status === 403) return "You don't have access to this.";
   if (status === 404) return "Not found.";
   if (status === 413) return "That file is too large.";
-  if (status === 429) return "Too many requests — slow down for a moment.";
+  if (status === 429) return "You're going a little fast. Wait a few seconds, then try again.";
   if (status >= 500) return "Orbit had a problem. Try again shortly.";
   return `Request failed (${status}).`;
 }

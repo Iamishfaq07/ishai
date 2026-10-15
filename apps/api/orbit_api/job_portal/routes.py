@@ -84,7 +84,7 @@ router = APIRouter(prefix="/v1/jobs", tags=["jobs"])
 
 feed_limit = limit_user("jobs-feed", rate_per_s=2, burst=40)
 read_limit = limit_user("jobs-read", rate_per_s=3, burst=60)
-ai_limit = limit("jobs-ai", rate_per_s=0.2, burst=10)
+ai_limit = limit("jobs-ai", rate_per_s=0.5, burst=20)
 ai_user_limit = limit_user("jobs-ai-user", rate_per_s=40 / 3600, burst=10)
 # Tailor and prepare make a resume or a document, and may fetch the post's page once.
 action_limit = limit_user("jobs-action", rate_per_s=30 / 3600, burst=8)

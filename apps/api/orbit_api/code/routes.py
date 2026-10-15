@@ -13,7 +13,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.guards import require_verified_email
@@ -31,7 +31,7 @@ log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/code", tags=["code"])
 read_limit = Depends(limit_user("code-read", rate_per_s=3, burst=60))
-ai_limits = [Depends(limit("code-ai", rate_per_s=0.3, burst=10)),
+ai_limits = [Depends(limit("code-ai", rate_per_s=0.5, burst=20)),
              Depends(limit_user("code-ai-user", rate_per_s=30 / 3600, burst=8))]
 Language = Literal["javascript", "python", "java", "cpp"]
 
@@ -84,7 +84,8 @@ async def _left(db: AsyncSession, user: User) -> int | None:
 @router.get("/problems", response_model=ProblemsOut, dependencies=[read_limit])
 async def list_problems(user: Annotated[User, Depends(current_user)],
                         db: Annotated[AsyncSession, Depends(get_db)]) -> ProblemsOut:
-    rows = (await db.execute(select(CodeAttempt.problem_id, func.count(), func.max(CodeAttempt.solved))
+    solved = func.max(case((CodeAttempt.solved, 1), else_=0))  # over 1/0: Postgres has no max(boolean)
+    rows = (await db.execute(select(CodeAttempt.problem_id, func.count(), solved)
                              .where(CodeAttempt.user_id == user.id).group_by(CodeAttempt.problem_id))).all()
     seen = {pid: (int(n), bool(s)) for pid, n, s in rows}
     return ProblemsOut(patterns=PATTERNS, reviews_left=await _left(db, user), problems=[

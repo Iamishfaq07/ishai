@@ -59,7 +59,8 @@ MAX_JOB_TEXT = 20_000
 MIN_IMPORT_CHARS = 80
 
 score_limit = limit("resume-score", rate_per_s=2, burst=30)
-ai_limit = limit("resume-ai", rate_per_s=0.1, burst=6)
+# Per address, shared by every Resume AI tool: generous, since each account has its own hourly cap and credits.
+ai_limit = limit("resume-ai", rate_per_s=0.5, burst=20)
 ai_user_limit = limit_user("resume-ai-user", rate_per_s=40 / 3600, burst=10)
 list_limit = limit_user("resume-list", rate_per_s=1, burst=20)  # each call scores every saved resume
 score_user_limit = limit_user("resume-score-user", rate_per_s=3, burst=40)

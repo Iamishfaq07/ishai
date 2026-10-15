@@ -20,7 +20,7 @@ from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.models import User
 
-TOO_MANY = "Too many requests — slow down."
+TOO_MANY = "You're going a little fast. Wait a few seconds, then try again."
 # Limits are skipped in the test environment so the suite can hammer endpoints; rate-limit tests flip this.
 ENFORCE_IN_TESTS = False
 
