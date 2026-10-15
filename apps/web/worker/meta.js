@@ -70,5 +70,10 @@ export function withPageMeta(response, url) {
     .on('meta[name="twitter:description"]', content(meta.description))
     .on('meta[property="og:image"]', content(`${url.origin}/og-image.jpg`))
     .on('meta[name="twitter:image"]', content(`${url.origin}/og-image.jpg`))
+    .on('link[rel="canonical"]', {
+      element(el) {
+        el.setAttribute("href", `${url.origin}${meta.path === "/" ? "/" : meta.path}`);
+      },
+    })
     .transform(response);
 }

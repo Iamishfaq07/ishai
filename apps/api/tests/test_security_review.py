@@ -83,7 +83,7 @@ def test_oversized_request_bodies_are_refused(client: TestClient) -> None:
             yield b"x" * (1024 * 1024)
 
     r = client.post("/v1/auth/login", content=chunks(), headers={"content-type": "application/json"})
-    assert r.status_code in (400, 413)
+    assert r.status_code == 413  # answered by BodyLimit itself, not a parse error
 
 
 def test_update_links_use_the_configured_public_url(client: TestClient, tmp_path: Path,

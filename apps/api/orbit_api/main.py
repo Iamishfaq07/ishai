@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import DBAPIError
@@ -147,17 +147,35 @@ class BodyLimit:
             await Response("Request body too large.", status_code=413)(scope, receive, send)
             return
         seen = 0
+        started = False  # the app began its response: too late for a 413
+        refused = False  # we answered 413 ourselves: whatever the app sends after is dropped
+
+        async def tracked_send(message: Any) -> None:
+            nonlocal started
+            if refused:
+                return
+            if message["type"] == "http.response.start":
+                started = True
+            await send(message)
 
         async def counted() -> Any:
-            nonlocal seen
+            nonlocal seen, refused
             message = await receive()
-            if message["type"] == "http.request":
+            if message["type"] == "http.request" and not refused:
                 seen += len(message.get("body", b""))
-                if seen > self.max_bytes:  # chunked upload past the cap: body parsing stops here (400)
-                    raise HTTPException(413, "Request body too large.")
+                if seen > self.max_bytes:
+                    # A chunked upload past the cap: answer 413 here and stop reading, as the Content-Length branch
+                    # does. (Raising inside receive() came back as a 400 or 500.)
+                    if not started:
+                        await Response("Request body too large.", status_code=413)(scope, receive, send)
+                    refused = True
+                    return {"type": "http.disconnect"}
             return message
 
-        await self.app(scope, receive if length is not None else counted, send)
+        if length is not None:
+            await self.app(scope, receive, send)
+        else:
+            await self.app(scope, counted, tracked_send)
 
 
 # Postgres refuses U+0000 in text (22021) and in jsonb (22P05). Anything typed can carry one, so it's bad input.
