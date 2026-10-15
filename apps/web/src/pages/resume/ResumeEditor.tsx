@@ -9,7 +9,9 @@ import {
   Check,
   CircleAlert,
   CircleCheck,
+  Code2,
   Copy,
+  ScanText,
   Download,
   Eye,
   FileText,
@@ -45,13 +47,16 @@ import { downloadText, errorText } from "../../lib/format";
 import { announceOutOfCredits } from "../../lib/outOfCredits";
 import { jobsForResume, outreachPath } from "../jobs/paths";
 import { ContentForm } from "./ContentForm";
+import { toJsonResume } from "./jsonResume";
+import { paintKeywords } from "./previewKeywords";
+import { atsReading, type Reading } from "./atsReading";
 import { AiCostNote, AiErrorNote, AllowanceBanner, AllowanceContext, isUpgradeError, useAllowance, useResumeAllowance } from "./allowance";
 import { saveQueueFor, useBackend } from "./backend";
 import { drafts, type Draft } from "./saveQueue";
 import { useAuth } from "../../lib/auth";
 import { FixActions, FixResult, fixKind } from "./FixPanel";
 import { InterviewPrep, usePrepState } from "./InterviewPrep";
-import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, revertSuggestion, photoToDataUrl, suggestedSkills } from "./model";
+import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, resumeToText, revertSuggestion, photoToDataUrl, suggestedSkills } from "./model";
 import { RESUME_AI_HOME, shouldFlushResume } from "./paths";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
@@ -567,6 +572,8 @@ function ResumeEditor() {
 
   // "Download PDF" prints the resume, or the cover letter from its tab; the browser names the file after the title.
   const [printing, setPrinting] = useState<"resume" | "letter">("resume");
+  // The job post's keywords marked on the on-screen preview (never the printed copy).
+  const [showKeywords, setShowKeywords] = useState(true);
   const printDoc = (kind: "resume" | "letter") => {
     if (!resume) return;
     flushSync(() => setPrinting(kind));
@@ -636,6 +643,14 @@ function ResumeEditor() {
           )}
           <SaveToDocuments resume={resume} />
           <DownloadWord resume={resume} confirm={okToDownload} />
+          <Button
+            variant="ghost"
+            title="Download as JSON Resume (jsonresume.org): take your resume to other tools, or bring it back here exactly"
+            aria-label="Download as JSON Resume"
+            onClick={() => downloadText(`${fileName(resume)}.json`, JSON.stringify(toJsonResume(resume.data), null, 2), "application/json")}
+          >
+            <Code2 className="h-4 w-4" /> JSON
+          </Button>
           <Button onClick={() => void okToDownload().then((ok) => ok && printDoc("resume"))}>
             <Download className="h-4 w-4" /> Download PDF
           </Button>
@@ -724,6 +739,7 @@ function ResumeEditor() {
                 issues={report?.issues ?? []}
                 scored={scored}
                 evidence={evidence}
+                checks={report?.checks ?? []}
               />
             </div>
           )}
@@ -743,6 +759,8 @@ function ResumeEditor() {
               onShow={showTarget}
               fixing={fixing}
               onFix={(check) => void runFix(check)}
+              showKeywords={showKeywords}
+              onShowKeywords={setShowKeywords}
               onPoint={setPointing}
               result={
                 <FixResult
@@ -823,6 +841,7 @@ function ResumeEditor() {
                   onShorten={(linesOver) => void askAi("shorten", undefined, undefined, linesOver)}
                   shortening={aiBusy !== null}
                   highlight={tab === "ai" ? (queue[0] ? [queue[0].path] : []) : tab === "content" ? (editing ? [editing] : []) : tab === "score" ? pointing : []}
+                  keywords={showKeywords ? (report?.keywords?.matched ?? []) : []}
                 />
               </div>
             )}
@@ -1036,9 +1055,12 @@ function ScaledPage({
   onShorten,
   shortening = false,
   highlight = [],
+  keywords = [],
 }: {
   data: ResumeData;
   design: ResumeDesign;
+  /** The job post's keywords on the resume, marked on the page (previewKeywords.ts; screen only). */
+  keywords?: string[];
   onFit: (design: ResumeDesign) => void;
   /** When the layout alone can't fit one page: shorten the longest lines with AI, this many printed lines over. */
   onShorten?: (linesOver: number) => void;
@@ -1064,6 +1086,11 @@ function ScaledPage({
     }
     return () => els.forEach((el) => el.classList.remove("resume-hl"));
   }, [marked, data, design, scale]); // eslint-disable-line react-hooks/exhaustive-deps -- `marked` stands for `highlight`
+  const kw = keywords.join("|");
+  useLayoutEffect(() => {
+    const root = page.current;
+    return root ? paintKeywords(root, keywords) : undefined;
+  }, [kw, data, design, scale]); // eslint-disable-line react-hooks/exhaustive-deps -- `kw` stands for `keywords`
   const [fitting, setFitting] = useState(false);
   const [fitNote, setFitNote] = useState<string | null>(null);
   // Printed lines still over one page at the most compact layout, once Fit to one page has tried them all.
@@ -1109,7 +1136,7 @@ function ScaledPage({
         )}
       </div>
       <div ref={box} className="relative w-full" aria-label={`Resume preview, ${pages} page${pages === 1 ? "" : "s"}`} role="img" style={{ height: realHeight * scale }}>
-        <div ref={page} style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "max-content" }} className="overflow-hidden rounded-sm shadow-xl ring-1 ring-black/5">
+        <div ref={page} data-resume-preview="" style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "max-content" }} className="overflow-hidden rounded-sm shadow-xl ring-1 ring-black/5">
           <ResumePreview data={data} design={design} />
         </div>
         {guides.map((y, i) => (
@@ -1344,6 +1371,8 @@ function ScorePanel({
   onFix,
   result,
   onPoint,
+  showKeywords,
+  onShowKeywords,
 }: {
   resume: Resume;
   report: AtsReport | null;
@@ -1358,6 +1387,9 @@ function ScorePanel({
   result: ReactNode;
   /** The lines a hovered check is about, for the preview to mark (empty: none). */
   onPoint: (paths: string[]) => void;
+  /** The job's keywords marked on the preview. */
+  showKeywords: boolean;
+  onShowKeywords: (on: boolean) => void;
 }) {
   const [url, setUrl] = useState("");
   const [importing, setImporting] = useState(false);
@@ -1453,7 +1485,14 @@ function ScorePanel({
             )}
             {report.keywords.matched.length > 0 && (
               <div>
-                <p className="mb-1.5 font-medium">Already on your resume</p>
+                <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-medium">Already on your resume</p>
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-300">
+                    <input type="checkbox" checked={showKeywords} onChange={(e) => onShowKeywords(e.target.checked)}
+                           className="h-3.5 w-3.5 accent-emerald-600" />
+                    Highlight them on the preview
+                  </label>
+                </div>
                 <ul className="flex flex-wrap gap-1.5">
                   {report.keywords.matched.map((k) => (
                     <li key={k} className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-800 ring-1 ring-emerald-500/25 dark:text-emerald-300">
@@ -1527,7 +1566,70 @@ function ScorePanel({
           </div>
         )}
       </Panel>
+      <AtsReadingPanel data={resume.data} />
     </div>
+  );
+}
+
+/**
+ * "How an ATS reads it" (after OpenResume's parser test): the page's text in the order a parser gets it, and what it
+ * would trip on: contact details it can't find, headings it doesn't know, dates it can't read, a sidebar read first,
+ * icon characters. Read from the on-screen preview when opened, so it's the real layout's order.
+ */
+function AtsReadingPanel({ data }: { data: ResumeData }) {
+  const [reading, setReading] = useState<Reading | null>(null);
+  const [copied, setCopied] = useState(false);
+  const read = () => {
+    const el = document.querySelector<HTMLElement>("[data-resume-preview]");
+    setReading(atsReading(el?.innerText ?? resumeToText(data), data));
+  };
+  useEffect(() => {
+    if (reading) read();
+  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps -- re-read an open view when the resume changes
+  const ok = (good: boolean, yes: string, no: string) => (
+    <li className="flex items-start gap-2">
+      {good ? <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" aria-hidden /> : <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" aria-hidden />}
+      <span>{good ? yes : no}</span>
+    </li>
+  );
+  return (
+    <Panel title="How an ATS reads it">
+      {!reading ? (
+        <div className="space-y-2 text-sm">
+          <p className="text-zinc-600 dark:text-zinc-300">
+            Applicant tracking software reads your resume as plain text before anyone sees the design. See exactly what it gets, and what it might miss.
+          </p>
+          <Button size="sm" variant="secondary" onClick={read}>
+            <ScanText className="h-3.5 w-3.5" /> Read it like an ATS
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-3 text-sm">
+          <ul className="space-y-1.5">
+            {ok(reading.nameFirst, "Your name comes first, so it's read as your name.", "Your name isn't the first thing on the page: a parser may take another line for your name. A one-column template fixes it.")}
+            {ok(reading.found.email && reading.found.phone, `Email and phone found${reading.found.links ? `, and ${reading.found.links} link${reading.found.links === 1 ? "" : "s"}` : ""}.`,
+              `${[!reading.found.email && "No email", !reading.found.phone && "no phone number"].filter(Boolean).join(" and ")} found in the text. Recruiters can't reach you without them.`)}
+            {ok(reading.headings.every((h) => h.recognized), "Every section heading is one parsers know.",
+              `Parsers may not know ${reading.headings.filter((h) => !h.recognized).map((h) => `“${h.heading}”`).join(", ")}: use a standard name like Experience, Education, Skills or Projects.`)}
+            {ok(!reading.unreadableDates.length, "Every role's dates read as dates.",
+              `Dates a parser can't read for ${reading.unreadableDates.join(", ")}: write them like “Jan 2021 – Present”.`)}
+            {ok(!reading.oddCharacters.length, "No icons or symbols that parsers drop.",
+              `Symbols parsers drop or garble: ${reading.oddCharacters.join(" ")}. Use plain words instead.`)}
+          </ul>
+          <details>
+            <summary className={cx("cursor-pointer select-none text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
+              The text it gets
+            </summary>
+            <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg bg-zinc-500/[0.06] p-3 font-mono text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
+              {reading.text}
+            </pre>
+            <Button size="sm" variant="ghost" className="mt-1" onClick={() => void navigator.clipboard?.writeText(reading.text).then(() => setCopied(true))}>
+              <Copy className="h-3.5 w-3.5" /> {copied ? "Copied" : "Copy the plain text"}
+            </Button>
+          </details>
+        </div>
+      )}
+    </Panel>
   );
 }
 

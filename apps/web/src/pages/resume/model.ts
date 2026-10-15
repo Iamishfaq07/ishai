@@ -1,4 +1,5 @@
 import type {
+  AtsReport,
   ResumeData,
   ResumeDesign,
   ResumeEducation,
@@ -396,4 +397,32 @@ export async function photoToDataUrl(file: File): Promise<string> {
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+/** The ATS checks that judge one bullet, as what the bullet needs. */
+const BULLET_NEEDS: Record<string, string> = {
+  action_verbs: "lead with what you did",
+  quantified: "add a number",
+  bullet_length: "keep it to 8-35 words",
+  varied_verbs: "vary the opening verb",
+  no_pronouns: "drop “I” and “my”",
+};
+
+export type BulletStrength = { level: "strong" | "fair" | "weak"; needs: string[] };
+
+/**
+ * One bullet's strength by the latest ATS score (the same checks, so the editor and the score never disagree):
+ * strong is nothing flagged and a number in it; fair is one thing to fix (or no number); weak is two or more. Null
+ * until the line is scored as it reads now.
+ */
+export function bulletStrength(path: string, text: string, report: Pick<AtsReport, "checks" | "issues"> | null,
+  scored: ResumeData | null): BulletStrength | null {
+  if (!report || !scored || !text.trim() || getAt(scored, path) !== text) return null;
+  const needs = report.checks.flatMap((c) => (!c.passed && c.paths?.includes(path) && BULLET_NEEDS[c.id] ? [BULLET_NEEDS[c.id]!] : []));
+  if (!needs.includes(BULLET_NEEDS.quantified!) && !/\d|\b(?:one|two|three|four|five|six|seven|eight|nine|ten|dozens?|hundreds?|thousands?|millions?)\b/i.test(text)) {
+    needs.push(BULLET_NEEDS.quantified!);
+  }
+  const writing = (report.issues ?? []).some((i) => i.path === path && i.kind !== "casing");
+  if (writing) needs.push("see the note above");
+  return { level: needs.length === 0 ? "strong" : needs.length === 1 ? "fair" : "weak", needs };
 }

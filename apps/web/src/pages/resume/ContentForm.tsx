@@ -1,5 +1,6 @@
 import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
 import type {
+  AtsCheck,
   EvidenceItem,
   ResumeCertification,
   ResumeData,
@@ -15,7 +16,7 @@ import type {
 import { ChevronDown, Copy, Eye, EyeOff, PenLine, Plus, ShieldCheck, Sparkles, Trash2, X, cx, focusRing } from "@orbit/ui";
 import { evidenceFor, sourceLabel } from "../../lib/evidence";
 import { Button, Field, Input, Textarea } from "../../components/ui";
-import { EXTRA_PRESETS, MAX_EXTRAS, SECTION_LABEL, getAt, newId, sectionLabel } from "./model";
+import { EXTRA_PRESETS, MAX_EXTRAS, SECTION_LABEL, bulletStrength, getAt, newId, sectionLabel, type BulletStrength } from "./model";
 
 type Update = (fn: (d: ResumeData) => ResumeData) => void;
 
@@ -140,7 +141,31 @@ function TwoCol({ children }: { children: ReactNode }) {
 type Rewrite = ((path: string) => void) | undefined;
 
 /** The latest score's line-by-line writing issues, and the resume it scored (to tell which lines changed since). */
-type LineChecks = { issues: ResumeLineIssue[]; scored: ResumeData | null; evidence?: EvidenceItem[] };
+type LineChecks = { issues: ResumeLineIssue[]; scored: ResumeData | null; evidence?: EvidenceItem[]; checks?: AtsCheck[] };
+
+const STRENGTH: Record<BulletStrength["level"], { label: string; tone: string }> = {
+  strong: { label: "Strong", tone: "text-emerald-700 dark:text-emerald-300" },
+  fair: { label: "Fair", tone: "text-amber-700 dark:text-amber-300" },
+  weak: { label: "Weak", tone: "text-rose-700 dark:text-rose-300" },
+};
+
+/** How strong the bullet reads to a recruiter, by the latest score, and what would make it stronger. */
+function StrengthMark({ path, text, checks }: { path: string; text: string; checks: LineChecks }) {
+  const s = bulletStrength(path, text, checks.checks ? { checks: checks.checks, issues: checks.issues } : null, checks.scored);
+  if (!s) return null;
+  const { label, tone } = STRENGTH[s.level];
+  return (
+    <p className={cx("ml-3 mr-7 flex items-center gap-1.5 text-xs", tone)} aria-label={`Bullet strength: ${label}${s.needs.length ? `, ${s.needs.join(", ")}` : ""}`}>
+      <span aria-hidden="true" className="flex gap-[2px]">
+        {[0, 1, 2].map((i) => (
+          <span key={i} className={cx("h-1.5 w-3 rounded-full bg-current", i >= { weak: 1, fair: 2, strong: 3 }[s.level] && "opacity-20")} />
+        ))}
+      </span>
+      <span className="font-medium">{label}</span>
+      {s.needs.length > 0 && <span className="text-zinc-500 dark:text-zinc-400">· {s.needs.join(", ")}</span>}
+    </p>
+  );
+}
 
 const NO_CHECKS: LineChecks = { issues: [], scored: null };
 
@@ -285,6 +310,7 @@ function Bullets({ path, bullets, onChange, onRewrite, checks = NO_CHECKS }: {
             onRemove={() => onChange(bullets.filter((_, j) => j !== i))}
             className="ml-3 mr-7"
           />
+          <StrengthMark path={`${path}.bullets.${i}`} text={b} checks={checks} />
           <EvidenceMark text={b} items={checks.evidence ?? []} />
         </div>
       ))}
@@ -391,7 +417,7 @@ function SkillItems({ id, items, onChange }: { id: string; items: string[]; onCh
   );
 }
 
-export function ContentForm({ data, update, onRewrite, issues = [], scored = null, evidence = [] }: {
+export function ContentForm({ data, update, onRewrite, issues = [], scored = null, evidence = [], checks: atsChecks = [] }: {
   data: ResumeData;
   update: Update;
   onRewrite?: Rewrite;
@@ -399,9 +425,11 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
   scored?: ResumeData | null;
   /** Confirmed evidence vault claims: a bullet one backs says so. */
   evidence?: EvidenceItem[];
+  /** The latest score's checks: each bullet's strength (bulletStrength). */
+  checks?: AtsCheck[];
 }) {
   const b = data.basics;
-  const checks: LineChecks = { issues, scored, evidence };
+  const checks: LineChecks = { issues, scored, evidence, checks: atsChecks };
   const [renaming, setRenaming] = useState<ResumeSectionKey | null>(null);
   const summaryWords = b.summary.trim() ? b.summary.trim().split(/\s+/).length : 0;
   const setBasics = (patch: Partial<ResumeData["basics"]>) => update((d) => ({ ...d, basics: { ...d.basics, ...patch } }));

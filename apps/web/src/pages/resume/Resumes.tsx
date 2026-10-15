@@ -36,7 +36,7 @@ import { fresherResume, newResume } from "./model";
 import { resumePath } from "./paths";
 import { RESUME_AI_FEATURES, ResumeAiTabs, scoreTone } from "./product";
 import { ResumeMock } from "../../components/productArt";
-
+import { fromJsonResume } from "./jsonResume";
 export { scoreTone };
 
 /**
@@ -307,7 +307,7 @@ type Source ="scratch" | "fresher" | "file" | "linkedin" | "text" | "document";
 const SOURCES: Array<{ id: Source; label: string; hint: string; icon: typeof FileText }> = [
   { id: "scratch", label: "Start from scratch", hint: "A blank resume, section by section.", icon: Plus },
   { id: "fresher", label: "Student / fresher", hint: "One page for campus placements: education first, then projects.", icon: GraduationCap },
-  { id: "file", label: "Import a PDF or Word file", hint: "We read it into editable sections.", icon: FileUp },
+  { id: "file", label: "Import a PDF or Word file", hint: "We read it into editable sections. A JSON Resume file (from Orbit or another tool) comes in exactly, free.", icon: FileUp },
   { id: "linkedin", label: "Import your LinkedIn profile", hint: "From LinkedIn's “Save to PDF”, or pasted.", icon: UserRound },
   { id: "text", label: "Paste text", hint: "Copy from anywhere and paste it in.", icon: ClipboardCheck },
   { id: "document", label: "From your documents", hint: "A resume you already gave Orbit.", icon: FolderOpen },
@@ -381,6 +381,20 @@ export function NewResume({ onClose, initial = null }: { onClose?: () => void; i
   const cancel = () => running.current?.abort();
 
   const importFile = (file: File) => {
+    if (/\.json$/i.test(file.name) || file.type === "application/json") {
+      // A JSON Resume file (jsonresume.org, or one exported from Orbit): read here, exactly, free (no AI).
+      void run(async () => {
+        if (file.size > MAX_FILE_BYTES) throw new Error("That file is over 5 MB.");
+        let parsed: ReturnType<typeof fromJsonResume>;
+        try {
+          parsed = fromJsonResume(JSON.parse(await file.text()));
+        } catch {
+          throw new Error("That isn't a JSON Resume file. Export one from Orbit or another resume tool (jsonresume.org).");
+        }
+        await create(parsed.title, parsed.data);
+      });
+      return;
+    }
     if (file.size > MAX_FILE_BYTES) {
       setError("That file is over 5 MB. Export a smaller PDF, or paste the text instead.");
       return;
@@ -411,7 +425,7 @@ export function NewResume({ onClose, initial = null }: { onClose?: () => void; i
           ref={fileRef}
           type="file"
           aria-label="Choose your resume file"
-          accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+          accept=".pdf,.docx,.txt,.json,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/json"
           className="sr-only"
           onChange={(e) => {
             const f = e.target.files?.[0];
