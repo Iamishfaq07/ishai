@@ -89,7 +89,7 @@ function SampleResume() {
         <div className={cx(floating, "-right-2 -top-4 flex items-center gap-3 p-3 sm:-right-6")}>
           <span className={cx("flex h-12 w-12 flex-col items-center justify-center rounded-xl ring-1", scoreTone(score))}>
             <CountUp to={score} from={54} className="font-display text-xl font-semibold leading-none" />
-            <span className="text-[0.625rem] leading-none opacity-80">ATS</span>
+            <span className="text-[0.625rem] leading-none">ATS</span>
           </span>
           <span className="pr-1 text-xs leading-tight">
             <span className="block font-medium">ATS score</span>

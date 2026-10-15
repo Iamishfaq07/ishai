@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 from orbit_api.resumes.claims import _GENERIC, _figures
 from orbit_api.resumes.lint import LineIssue, line_count, line_issues
-from orbit_api.resumes.schema import Project, ResumeData, ResumeDesign
+from orbit_api.resumes.schema import Experience, Project, ResumeData, ResumeDesign
 
 Category = Literal["contact", "sections", "summary", "experience", "skills", "readability", "layout", "keywords"]
 CATEGORY_LABELS: dict[Category, str] = {
@@ -168,6 +168,11 @@ _NUMBER_WORDS = re.compile(r"\b(?:doubl|tripl|quadrupl|halv)(?:ed|ing|es)\b|\b(?
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
 _WORD = re.compile(r"[A-Za-z][A-Za-z0-9+#.\-']*")
 _MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
+
+
+def word_count(data: ResumeData) -> int:
+    """The resume's length as the "300-1,000 words" check counts it."""
+    return len(_words(resume_text(data)))
 
 
 def _words(text: str) -> list[str]:
@@ -553,14 +558,20 @@ def score_resume(data: ResumeData, design: ResumeDesign | None = None, job_text:
                f"Fill in the title, company and dates for {incomplete.title or incomplete.company or 'each role'}."
                if incomplete else "Add at least one role with a title, company and dates.",
                f"experience.{incomplete.id}" if incomplete else "experience")
-        thin = next((e for e in roles if not 2 <= len([x for x in e.bullets if x.strip()]) <= 6), None)
+        def count(e: Experience) -> int:
+            return len([x for x in e.bullets if x.strip()])
+
+        thin = next((e for e in roles if not 2 <= count(e) <= 6), None)
+        too_few = any(count(e) < 2 for e in roles)
         _check(checks, "bullets_per_role", "experience", "2-6 bullets per role", 4,
-               (sum(1 for e in roles if 2 <= len([x for x in e.bullets if x.strip()]) <= 6) / len(roles))
-               if roles else 0,
-               f"Give \"{thin.title or thin.company}\" 2-6 bullets: fewer looks thin, more gets skimmed." if thin
+               (sum(1 for e in roles if 2 <= count(e) <= 6) / len(roles)) if roles else 0,
+               (f"Trim \"{thin.title or thin.company}\" to its 6 strongest bullets: more gets skimmed."
+                if thin and count(thin) > 6 else
+                f"Give \"{thin.title or thin.company}\" 2-6 bullets: fewer looks thin, more gets skimmed.") if thin
                else "Add 2-6 bullets to each role.", f"experience.{thin.id}" if thin else "experience",
-               ai_fixable=any(len([x for x in e.bullets if x.strip()]) < 2 for e in roles),
-               paths=[f"experience.{e.id}.bullets.+" for e in roles if len([x for x in e.bullets if x.strip()]) < 2])
+               # Too few: the AI drafts some (for review). Too many: the weakest go, free (resumes/autofix.py).
+               ai_fixable=too_few, kind="ai" if too_few else "auto" if roles else None,
+               paths=[f"experience.{e.id}.bullets.+" for e in roles if count(e) < 2])
 
     if bullets:
         weak = [(p, t) for p, t in bullets if not is_action_verb(_first_word(t))]

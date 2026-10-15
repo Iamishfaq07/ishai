@@ -34,7 +34,7 @@ from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMProvider, LLMRequest, LLMResponse
 from orbit_api.resumes import ai, fixes
 from orbit_api.resumes.apply import apply_suggestion, get_at
-from orbit_api.resumes.ats import AtsCheck, AtsReport, date_key, is_quantified, score_resume
+from orbit_api.resumes.ats import AtsCheck, AtsReport, date_key, is_quantified, score_resume, word_count
 from orbit_api.resumes.fixes import Suggestion
 from orbit_api.resumes.schema import Experience, ResumeData, ResumeDesign, new_id
 
@@ -48,6 +48,8 @@ AI_CHECKS = LINE_CHECKS | {"clear_writing", "summary", "bullets_per_role", "leng
                            "skills_count"}
 GENERIC_QUESTION = "What number would show the size of this: how many, how often, or how much?"
 AI_DOWN = "The AI isn't available right now, so only the fixes that need no AI are done. Try again in a minute."
+MAX_WORDS = 1000  # the "300-1,000 words" check
+LATEST_ROLE_KEEPS = 4  # trimming for length never takes the current role below this many bullets
 FOLLOWUP_S = 30 * 60  # how long the answers to a fix's questions are written in for free
 
 
@@ -176,8 +178,8 @@ def _lines(report: AtsReport, ids: set[str], data: ResumeData) -> tuple[dict[str
                 roles += list(ai.addable_roles(data, below=4))
             else:
                 for p, (_, t) in fields.items():
-                    if ".bullets." in p and len(t.split()) > 28:
-                        need(p, "too long: tighten to under 25 words, keeping the result")
+                    if ".bullets." in p and len(t.split()) > 24:
+                        need(p, "too long: tighten to under 22 words, keeping every number and tool it names")
     return lines, list(dict.fromkeys(roles))
 
 
@@ -239,6 +241,12 @@ class _Fix:
             self.design_patch["template"] = "classic"
         if "no_photo" in ids:
             self.design_patch["show_photo"] = False
+        if "bullets_per_role" in ids:
+            # A role with more than six: its strongest six stay (the rest are emptied, each one restorable).
+            for e in self.data.experience:
+                for s in fixes.trim_role(self.data, e.id, fixes.MAX_BULLETS,
+                                         "Kept this role's 6 strongest bullets: more gets skimmed."):
+                    self.take(s)
         order_check = next((c for c in start.checks if c.id == "date_order"), None)
         if "date_order" in ids and order_check is not None and order_check.fix_kind == "auto":
             self.order = _sorted_roles(self.data.experience)
@@ -307,6 +315,27 @@ class _Fix:
             if idea:
                 self.review.append(idea)
 
+    def openers(self, ids: set[str]) -> None:
+        """Bullets still opening with a duty ("Responsible for") after the AI, led by the verb instead (free)."""
+        if ids & {"action_verbs", "clear_writing"}:
+            for s in fixes.opener_suggestions(self.data):
+                self.take(s)
+
+    def trim_length(self, ids: set[str]) -> None:
+        """Still over 1,000 words after the AI tightened the long bullets: the weakest bullets go, oldest roles first
+        and a round at a time (5 per role, then 4, 3, 2), until it fits. The current role keeps at least 4."""
+        if "length" not in ids or word_count(self.data) <= MAX_WORDS:
+            return
+        order = _sorted_roles(self.data.experience)  # most recent first
+        why = "Trimmed to fit 1-2 pages: the weaker bullets of older roles go first."
+        for keep in (5, 4, 3, 2):
+            for rid in reversed(order):
+                floor = max(keep, LATEST_ROLE_KEEPS) if order and rid == order[0] else keep
+                for s in fixes.trim_role(self.data, rid, floor, why):
+                    self.take(s)
+                    if word_count(self.data) <= MAX_WORDS:
+                        return
+
     def questions(self, ids: set[str], end: AtsReport) -> list[Question]:
         """For "needs a number": enough lines to pass, the ones the AI had a question for first."""
         sized = next((c for c in end.checks if c.id == "quantified"), None)
@@ -353,6 +382,8 @@ async def fix_resume(body: FixIn, user: User, can_spend: Callable[[], Awaitable[
         except HTTPException as e:  # the AI is down, or the last credit went meanwhile: keep the free fixes
             upgrade = e.status_code == status.HTTP_402_PAYMENT_REQUIRED
             ai_error = None if upgrade else AI_DOWN
+    fix.openers(ids)
+    fix.trim_length(ids)
     if "tech_names" in ids or used_ai:  # last, so lines the AI just wrote are spelled right too
         for s in fixes.casing_suggestions(fix.data):
             fix.take(s)
