@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { Link, useLocation, useParams } from "react-router-dom";
-import type { AtsReport, CoverLetterLength, CoverLetterTone, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeInput, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
+import type { AtsReport, CoverLetterLength, EvidenceItem, CoverLetterTone, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeInput, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -117,7 +117,20 @@ function ResumeEditor() {
   // revision it was based on; a save from another tab or device since then makes this one a conflict, not an overwrite.
   // `saving` keeps one autosave per editor at a time; when it finishes it bumps `flush` to pick up newer edits.
   const saves = saveQueueFor(backend);
-  const userId = useAuth().user?.id ?? null;
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  // Confirmed evidence vault claims, to mark the bullets they back (signed in, with the vault switched on). A
+  // failure only means no marks.
+  const [evidence, setEvidence] = useState<EvidenceItem[]>([]);
+  const vault = Boolean(user?.evidence_vault);
+  useEffect(() => {
+    if (!vault) return;
+    let live = true;
+    api.listEvidence().then((items) => live && setEvidence(items.filter((i) => i.status === "confirmed")), () => undefined);
+    return () => {
+      live = false;
+    };
+  }, [vault, userId]);
   const saving = useRef(false);
   const [flush, setFlush] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
@@ -710,6 +723,7 @@ function ResumeEditor() {
                 onRewrite={(path) => void askAi("improve", undefined, path)}
                 issues={report?.issues ?? []}
                 scored={scored}
+                evidence={evidence}
               />
             </div>
           )}
