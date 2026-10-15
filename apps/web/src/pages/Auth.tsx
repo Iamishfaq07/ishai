@@ -4,7 +4,6 @@ import {
   Briefcase,
   Eye,
   EyeOff,
-  MessagesSquare,
   OrbitWordmark,
   PlanetHero,
   ShieldCheck,
@@ -23,6 +22,7 @@ import { errorText } from "../lib/format";
 import { useWelcomeGrant } from "../lib/welcome";
 import { Captcha, useCaptchaConfig } from "../components/Captcha";
 import { AiPill } from "../components/products";
+import { KashSecPromo, MoreToolChips } from "../components/Promos";
 import { CONTACT_PAGE, PRIVACY_PAGE, REFUND_PAGE, TERMS_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
 
 type Feature = { icon: LucideIcon; title: string; text: string; ai?: boolean };
@@ -38,8 +38,7 @@ const PRODUCTS: Feature[] = [
   { icon: Briefcase, title: "Jobs", ai: true, text: "The latest jobs from companies' career pages, matched to your resume, and outreach to get referred." },
 ];
 const FEATURES: Feature[] = [
-  { icon: MessagesSquare, title: "Mock interviews", text: "Practise with an AI interviewer, then get a scorecard and the questions to redo." },
-  { icon: ShieldCheck, title: "Private", text: "Your documents and transcripts stay in your account. Delete them any time." },
+  { icon: ShieldCheck, title: "Private", text: "Your documents stay in your account. Delete them any time." },
 ];
 
 /** "Free to start: 20 interview minutes + 1 Resume AI credit", from the server (it decides the welcome credits). */
@@ -97,6 +96,11 @@ function FeatureList({ compact = false }: { compact?: boolean }) {
           </li>
         ))}
       </ul>
+      <div className={cx("flex flex-wrap items-center gap-x-2 gap-y-1.5", !compact && "px-1")}>
+        <span className={cx("text-xs font-medium", compact ? "text-zinc-500 dark:text-zinc-400" : "text-zinc-300")}>More AI tools:</span>
+        <MoreToolChips dark={!compact} practice />
+      </div>
+      <KashSecPromo tone={compact ? "card" : "dark"} />
       <ul className={compact ? "grid gap-3 sm:grid-cols-2" : "space-y-3.5 px-1"}>
         {FEATURES.map(({ icon: Icon, title, text }) => (
           <li key={title} className="flex items-start gap-3">

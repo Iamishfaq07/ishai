@@ -36,6 +36,7 @@ import { useAsync, type AsyncState } from "../lib/useAsync";
 import { UsageSummary } from "./Billing";
 import { DueToday } from "./DueToday";
 import { CareerLoop } from "../components/CareerLoop";
+import { KashSecPromo } from "../components/Promos";
 import { FollowUps } from "./jobs/FollowUps";
 import { STATUS_LABEL, byStatus } from "./jobs/model";
 import { JOBS_AI_HOME, JOBS_MATCHES, JOBS_TRACKER } from "./jobs/paths";
@@ -124,6 +125,7 @@ export function HomePage() {
           <ResumeRow resumes={resumes.data} />
           <JobsRow tracker={tracker.data} />
         </Reveal>
+        <KashSecPromo className="mt-4" />
       </section>
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-3">
