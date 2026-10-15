@@ -148,3 +148,6 @@ export { IdCard } from "lucide-react";
 
 // Code AI's hints.
 export { Lightbulb } from "lucide-react";
+
+// The app sidebar: collapse and expand; Explore (phones).
+export { Compass, PanelLeftClose, PanelLeftOpen } from "lucide-react";

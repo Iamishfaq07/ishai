@@ -73,7 +73,7 @@ export const SpaceBackdrop = memo(function SpaceBackdrop({ className }: { classN
       <div className="cosmic-dots" />
       {/* With data saver on, no stars: the sky's glow alone (153 fewer shapes to draw on a low-end phone). */}
       {!motionEnv().saveData && (
-        <div className="absolute inset-0 hidden dark:block">
+        <div className="space-stars absolute inset-0 hidden dark:block">
           <StarLayer stars={FAR} className="opacity-70" />
           <StarLayer stars={NEAR} className="motion-safe:animate-twinkle-sky" />
           <StarLayer stars={BRIGHT} className="motion-safe:animate-twinkle-sky [animation-delay:-1.6s] [animation-duration:4.5s]" />
