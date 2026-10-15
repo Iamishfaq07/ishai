@@ -1028,3 +1028,60 @@ def test_the_migration_upgrades_and_downgrades_cleanly(tmp_path: Path) -> None:
     assert not jobs_tables & tables() and "resumes" in tables()
     alembic("upgrade", "head")
     assert jobs_tables <= tables()
+
+
+def test_a_fit_check_counts_confirmed_evidence_but_checks_its_quotes() -> None:
+    job = {"title": "Backend Engineer", "company": "Groww", "location": "Bengaluru",
+           "text": "You will build Go services. Experience mentoring engineers. 3+ years with Kafka."}
+    evidence = fitcheck.evidence_lines([("Mentored three junior engineers through their first on-call",
+                                         "I mentored three junior engineers"), ("Ran Ansible for staging", "")])
+    answer = json.dumps({
+        "verdict": "Good", "summary": "You fit most of it.",
+        "why": ["You ran Ansible for staging.", "You used Pulumi for prod."], "gaps": [],
+        "tweaks": [{"change": "Add your Ansible work to your skills.", "why": "Your evidence shows it."}],
+        "requirements": [
+            {"requirement": "Mentoring", "status": "met", "job_quote": "Experience mentoring engineers",
+             "resume_quote": "", "evidence_quote": "I mentored three junior engineers"},
+            {"requirement": "Kafka", "status": "met", "job_quote": "3+ years with Kafka", "resume_quote": "",
+             "evidence_quote": "I ran Kafka for years"}]})  # not in the evidence: can't be "met"
+    check = fitcheck.parse_fit(answer, backend_resume(), job, score=60, matched=["Go"], evidence=evidence)
+    assert [(r.requirement, r.status, r.evidence_quote) for r in check.requirements] == [
+        ("Mentoring", "met", "I mentored three junior engineers"), ("Kafka", "unclear", "")]
+    assert check.why == ["You ran Ansible for staging."]  # from the evidence; Pulumi is in neither
+    assert [t.change for t in check.tweaks] == ["Add your Ansible work to your skills."]
+    # Without the evidence, the same answer can't claim either.
+    bare = fitcheck.parse_fit(answer, backend_resume(), job, score=60, matched=["Go"])
+    assert [r.status for r in bare.requirements] == ["unclear", "unclear"] and not bare.tweaks
+
+
+def test_confirmed_evidence_reaches_the_fit_check_and_makes_it_a_new_one(
+        jobs: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from orbit_api.providers.llm.base import LLMRequest
+    from orbit_api.providers.llm.mock import MockLLMProvider
+
+    h = _register(jobs)
+    (a,) = insert(jobs, _listing(title="Backend Engineer"))
+    make_resume(jobs, h)
+    assert jobs.post(f"/v1/jobs/listings/{a}/fit", headers=h).json()["cached"] is False
+    seen: list[LLMRequest] = []
+    real = MockLLMProvider.generate
+
+    async def spy(self: MockLLMProvider, request: LLMRequest) -> Any:
+        seen.append(request)
+        return await real(self, request)
+
+    monkeypatch.setattr(MockLLMProvider, "generate", spy)
+    monkeypatch.setattr(get_settings(), "evidence_vault", True)
+    # A suggestion isn't evidence yet: the same check, from the cache.
+    story = jobs.post("/v1/stories", headers=h, json={"title": "Mentoring", "action": "I mentored three juniors.",
+                                                      "situation": "", "task": "", "result": "",
+                                                      "competencies": []}).json()
+    jobs.post("/v1/evidence/suggest", headers=h, json={"source": "story", "story_id": story["id"]})
+    assert jobs.post(f"/v1/jobs/listings/{a}/fit", headers=h).json()["cached"] is True
+    # Confirmed evidence is: a new check that reads it.
+    jobs.post("/v1/evidence", headers=h, json={"claim": "Mentored three junior engineers"})
+    seen.clear()
+    assert jobs.post(f"/v1/jobs/listings/{a}/fit", headers=h).json()["cached"] is False
+    prompt = next(r for r in seen if r.request_type == "job_fit").messages[-1].content
+    assert "confirmed_evidence" in prompt and "Mentored three junior engineers" in prompt
+    assert "[mock]" not in prompt.split("confirmed_evidence")[1].split("</reference_data>")[0]  # no suggestions

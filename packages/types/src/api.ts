@@ -1860,7 +1860,9 @@ export interface JobFitCheck {
   gaps: string[];
   tweaks: Array<{ change: string; why: string }>;
   /** Requirement by requirement, each quote checked against the post and the resume (absent on older checks). */
-  requirements?: Array<{ requirement: string; status: "met" | "partial" | "unclear" | "missing"; job_quote: string; resume_quote: string }>;
+  /** evidence_quote: from the candidate's confirmed evidence vault, when that's what meets it (servers from before
+   *  it leave it out). */
+  requirements?: Array<{ requirement: string; status: "met" | "partial" | "unclear" | "missing"; job_quote: string; resume_quote: string; evidence_quote?: string }>;
 }
 
 export interface JobFitResponse {
