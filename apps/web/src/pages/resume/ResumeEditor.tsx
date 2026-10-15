@@ -51,7 +51,7 @@ import { drafts, type Draft } from "./saveQueue";
 import { useAuth } from "../../lib/auth";
 import { FixActions, FixResult, fixKind } from "./FixPanel";
 import { InterviewPrep, usePrepState } from "./InterviewPrep";
-import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, photoToDataUrl, suggestedSkills } from "./model";
+import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, revertSuggestion, photoToDataUrl, suggestedSkills } from "./model";
 import { RESUME_AI_HOME, shouldFlushResume } from "./paths";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
@@ -756,6 +756,8 @@ function ResumeEditor() {
                   }}
                   onKeep={keepReview}
                   onSkip={dropReview}
+                  data={resume.data}
+                  onRevert={(s) => update((d) => revertSuggestion(d, s))}
                   onAnswer={(facts) => void runFix("quantified", facts, fixResult?.followup)}
                   onShow={showTarget}
                   onPoint={setPointing}

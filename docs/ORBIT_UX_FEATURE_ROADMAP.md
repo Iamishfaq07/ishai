@@ -51,5 +51,5 @@ negotiation rehearsal exists: the salary practice preset, now with a counter-off
 ## UX / design work proposed (Phase 5, not started)
 
 Page-by-page visual QA with screenshots at 320 / 390 / 768 / 1024 / 1440 px in both themes; dashboard as "mission
-control" from real data only; interview two-source audio status; resume diff-before-apply; job comparison drawer.
+control" from real data only; interview two-source audio status; ~~resume diff-before-apply~~ (suggestions already showed a diff; 15 Oct 2026 added "See the changes" after Fix with AI, each line before and after with its own "Put it back"); job comparison drawer.
 Performance budgets (LCP ≤ 2.5 s, CLS ≤ 0.1, INP ≤ 200 ms) to be measured before and after, not assumed.

@@ -302,6 +302,25 @@ export function applySuggestion(data: ResumeData, s: ResumeSuggestion, makeId: (
   return setAt(data, s.path, s.after);
 }
 
+/** A change that's still in the resume as it was made: a line still reading what it was set to, or an added bullet
+ *  still there. Skills added aren't tracked one by one (Undo takes them back). */
+export function isStillApplied(data: ResumeData, s: ResumeSuggestion): boolean {
+  if (s.kind === "add_bullet") return data.experience.some((e) => e.id === s.path.split(".")[1] && e.bullets.includes(s.after));
+  if (s.kind === "add_skill") return false;
+  return getAt(data, s.path) === s.after && s.after !== s.before;
+}
+
+/** `data` with one change taken back, if it's still there (see isStillApplied): the line reads as it did, or the
+ *  added bullet goes. Anything edited since is left alone. */
+export function revertSuggestion(data: ResumeData, s: ResumeSuggestion): ResumeData {
+  if (!isStillApplied(data, s)) return data;
+  if (s.kind === "add_bullet") {
+    const id = s.path.split(".")[1];
+    return { ...data, experience: data.experience.map((e) => (e.id !== id ? e : { ...e, bullets: e.bullets.filter((b) => b !== s.after) })) };
+  }
+  return setAt(data, s.path, s.before ?? "");
+}
+
 /** Safe to apply in bulk: mechanical, and nothing the candidate needs to confirm or fill in. */
 export function isSafeFix(s: ResumeSuggestion): boolean {
   return (s.kind === "add_skill" || s.kind === "set") && !s.confirm && !/\[[^\]]+\]/.test(s.after);
