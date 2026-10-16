@@ -11,7 +11,7 @@ import { useDocumentTitle } from "../lib/useDocumentTitle";
 /** The desktop app's protections, each one something the shipped app does (apps/desktop/src-tauri). */
 const DESKTOP = [
   { title: "Sign-in in the OS vault", body: "Your session token lives in the Windows Credential Manager, macOS Keychain or Secret Service: never in a file or browser storage." },
-  { title: "No AI keys on your computer", body: "DeepSeek and Deepgram keys stay on Orbit's server. The app only ever holds your own session." },
+  { title: "No AI keys on your computer", body: "The AI and transcription keys stay on Orbit's server. The app only ever holds your own session." },
   { title: "Signed updates", body: "Every installer is checked against Orbit's minisign public key, built into the app, before it runs, so a compromised server can't push code." },
   { title: "Locked-down window", body: "A strict content policy: no frames, no forms posting elsewhere, no plugins, scripts only from the app itself." },
 ];
