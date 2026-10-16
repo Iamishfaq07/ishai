@@ -8,6 +8,7 @@ import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
 import { MarketBar } from "./MarketBar";
 import { OfferForm } from "./OfferForm";
+import { WhatIf } from "./WhatIf";
 import { POSITION_TEXT, POSITION_TONE } from "./Offers";
 import { OFFERS_HOME, inputOf, money, practiceRequest } from "./model";
 
@@ -142,6 +143,8 @@ function Detail({ offer: o, onChange, onDeleted }: { offer: JobOfferRecord; onCh
           </Card>
         )}
       </div>
+
+      <WhatIf offer={o} />
 
       <Card>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

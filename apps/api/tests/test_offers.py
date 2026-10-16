@@ -98,3 +98,21 @@ def test_offers_are_private(jobs: TestClient) -> None:  # noqa: F811
     assert jobs.get("/v1/offers", headers=b).json() == []
     assert jobs.delete(f"/v1/offers/{oid}", headers=a).status_code == 204
     assert jobs.post("/v1/offers", headers=a, json={**OFFER, "fixed": 0}).status_code == 422
+
+
+def test_what_if_figures_change_nothing_and_stay_private(jobs: TestClient) -> None:  # noqa: F811
+    a, b = _register(jobs), _register(jobs)
+    oid = jobs.post("/v1/offers", headers=a, json=OFFER).json()["id"]
+    same = jobs.post(f"/v1/offers/{oid}/scenario", headers=a, json={}).json()
+    assert same["offer"] == same["scenario"]  # no changes: the same figures
+    r = jobs.post(f"/v1/offers/{oid}/scenario", headers=a, json={
+        "fixed_change_pct": 10, "variable_payout_pct": 50, "joining_bonus": 0, "equity_value_pct": 200})
+    assert r.status_code == 200, r.text
+    s = r.json()["scenario"]
+    assert s["fixed"] == 2_640_000 and s["variable"] == 120_000 and s["joining_bonus"] == 0
+    assert s["first_year"] == 2_640_000 + 120_000
+    assert s["monthly_in_hand"] > same["offer"]["monthly_in_hand"]  # more fixed pay, more each month
+    # Nothing saved: the offer reads as before.
+    assert jobs.get("/v1/offers", headers=a).json()[0]["fixed"] == 2_400_000
+    assert jobs.post(f"/v1/offers/{oid}/scenario", headers=b, json={}).status_code == 404
+    assert jobs.post(f"/v1/offers/{oid}/scenario", headers=a, json={"fixed_change_pct": 500}).status_code == 422
