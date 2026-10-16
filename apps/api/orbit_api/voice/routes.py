@@ -1,0 +1,115 @@
+"""The mock interviewer's natural voice: the question text in, MP3 audio streamed back (providers/tts.py).
+
+The client asks `GET /v1/voice` what's on offer, then `POST /v1/voice/speak` per question. When it's unavailable (no
+key, turned off, the day's characters used up, the provider down), the client reads the question with the device's
+own voice instead, so a mock never goes silent. Only the interviewer's text is sent, and it's capped per request.
+"""
+
+from __future__ import annotations
+
+from collections.abc import AsyncIterator
+from datetime import UTC, datetime
+from typing import Annotated
+
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from orbit_api.auth.security import current_user
+from orbit_api.config import get_settings
+from orbit_api.db import get_db
+from orbit_api.entitlements import is_admin
+from orbit_api.models import UsageEvent, User
+from orbit_api.providers.tts import TTSError, get_tts_provider
+from orbit_api.ratelimit import limit_user
+
+router = APIRouter(prefix="/v1/voice", tags=["voice"])
+speak_limit = Depends(limit_user("voice-speak", rate_per_s=1, burst=20))
+METRIC = "tts_chars"
+NO_ANSWER = "The natural voice didn't answer. Using your device's voice."
+MAX_CHARS = 800  # one interviewer turn; questions are far shorter
+
+
+class Voice(BaseModel):
+    id: str
+    label: str
+    model: str
+
+
+# Deepgram Aura-2 voices whose accent is documented. No Indian English voice is listed there yet; add one here when
+# Deepgram publishes it.
+VOICES: dict[str, Voice] = {
+    v.id: v for v in (
+        Voice(id="us", label="Thalia · American English", model="aura-2-thalia-en"),
+        Voice(id="uk", label="Draco · British English", model="aura-2-draco-en"),
+        Voice(id="au", label="Hyperion · Australian English", model="aura-2-hyperion-en"),
+    )
+}
+DEFAULT_VOICE = "us"
+
+
+def _day_start() -> datetime:
+    return datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+async def chars_left(db: AsyncSession, user: User) -> int | None:
+    """Characters left today; None = no cap (the admin)."""
+    if await is_admin(db, user):
+        return None
+    used = await db.scalar(select(func.coalesce(func.sum(UsageEvent.quantity), 0.0)).where(
+        UsageEvent.user_id == user.id, UsageEvent.metric == METRIC, UsageEvent.created_at >= _day_start()))
+    return max(get_settings().tts_daily_chars - int(used or 0), 0)
+
+
+class VoiceStatus(BaseModel):
+    available: bool
+    voices: list[Voice]
+    default_voice: str
+    chars_left: int | None
+
+
+@router.get("", response_model=VoiceStatus)
+async def voice_status(user: Annotated[User, Depends(current_user)],
+                       db: Annotated[AsyncSession, Depends(get_db)]) -> VoiceStatus:
+    on = get_tts_provider() is not None
+    return VoiceStatus(available=on, voices=list(VOICES.values()) if on else [], default_voice=DEFAULT_VOICE,
+                       chars_left=await chars_left(db, user) if on else 0)
+
+
+class SpeakIn(BaseModel):
+    text: str = Field(min_length=1, max_length=MAX_CHARS)
+    voice: str = Field(DEFAULT_VOICE, max_length=16)
+    session_id: str | None = Field(None, max_length=36)
+
+
+@router.post("/speak", dependencies=[speak_limit])
+async def speak(body: SpeakIn, user: Annotated[User, Depends(current_user)],
+                db: Annotated[AsyncSession, Depends(get_db)]) -> StreamingResponse:
+    provider = get_tts_provider()
+    if provider is None:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "The natural voice isn't set up on this server.")
+    voice = VOICES.get(body.voice)
+    if voice is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Unknown voice")
+    text = " ".join(body.text.split())
+    left = await chars_left(db, user)
+    if left is not None and len(text) > left:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
+                            "Today's natural-voice allowance is used up. Your device's voice reads the questions now.")
+    chunks = provider.stream(text, voice.model)
+    try:
+        first = await anext(chunks)  # fail here (a JSON error the client can fall back on), not mid-stream
+    except (TTSError, StopAsyncIteration, httpx.HTTPError, OSError) as err:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, NO_ANSWER) from err
+    db.add(UsageEvent(user_id=user.id, session_id=body.session_id, metric=METRIC, quantity=float(len(text))))
+    await db.commit()
+
+    async def audio() -> AsyncIterator[bytes]:
+        yield first
+        async for chunk in chunks:
+            yield chunk
+
+    return StreamingResponse(audio(), media_type="audio/mpeg", headers={"Cache-Control": "no-store"})

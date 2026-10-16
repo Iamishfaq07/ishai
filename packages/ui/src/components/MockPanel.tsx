@@ -21,11 +21,14 @@ const PANEL_TONE: Record<string, string> = {
  * Mock interview view: the AI interviewer's question (spoken aloud), whose turn it is, and controls. Orbit never
  * suggests answers here — it's practice; the report afterwards grades what was said.
  */
-export function MockPanel({ live, actions, voice, ended, onViewReport }: {
+export function MockPanel({ live, actions, voice, ended, onViewReport, muted = false, onMutedChange }: {
   live: LiveViewState;
   actions: LiveActions;
   voice: InterviewerVoice;
   ended: boolean;
+  /** The interviewer's voice is off: questions are read on screen only. */
+  muted?: boolean;
+  onMutedChange?: (muted: boolean) => void;
   /** Open the transcript and review, offered once the session has ended. */
   onViewReport?: () => void;
 }) {
@@ -135,14 +138,30 @@ export function MockPanel({ live, actions, voice, ended, onViewReport }: {
         {status}
       </p>
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={voice.speaking ? voice.stop : voice.repeat} className={btn} disabled={!voice.supported}>
+        <button type="button" onClick={voice.speaking ? voice.stop : voice.repeat} className={btn} disabled={!voice.supported || muted}>
           {voice.speaking ? "Stop voice" : q.negotiation ? "Repeat that" : "Repeat question"}
         </button>
+        {onMutedChange && (
+          <button
+            type="button"
+            aria-pressed={muted}
+            onClick={() => {
+              if (!muted) voice.stop();
+              onMutedChange(!muted);
+            }}
+            className={btn}
+          >
+            {muted ? "Turn voice on" : "Mute voice"}
+          </button>
+        )}
         <button type="button" onClick={actions.mockNext} className={btn}>
           {q.negotiation ? "I'm done — your turn, recruiter" : "I'm done — next question"}
         </button>
       </div>
-      {!voice.supported && (
+      {!muted && voice.engine === "natural" && (
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">Natural AI voice. The question stays on screen too.</p>
+      )}
+      {!voice.supported && !muted && (
         <p className="text-xs text-amber-700 dark:text-amber-300">This device has no speech voice — read the question above.</p>
       )}
       {q.oneWay ? (

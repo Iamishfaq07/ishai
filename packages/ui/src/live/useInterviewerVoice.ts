@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { naturalVoiceGone, playResponse, voiceForSpeaker, type NaturalVoiceSource } from "./naturalVoice";
 
 /**
- * Speaks the mock interviewer's questions with the platform's built-in speech engine (Windows voices in WebView2 /
- * the browser): free, local, no provider. A natural-sounding English voice is preferred when installed.
+ * Speaks the mock interviewer's questions: with the natural voice (neural TTS streamed from the API) when it's set
+ * up and chosen, otherwise with the platform's built-in speech engine (Windows voices in WebView2 / the browser),
+ * where a natural-sounding English voice is preferred when installed. A natural-voice failure falls back to the
+ * device's voice for that question, and for the rest of the session when it won't come back (allowance used, off).
  *
  * `speaking` lets the page mute the microphone while the interviewer talks, so its own voice (from the speakers) is
  * never transcribed as the candidate's answer.
@@ -41,13 +44,15 @@ export interface InterviewerVoice {
   supported: boolean;
   speaking: boolean;
   voiceName: string | null;
+  /** Which engine reads the questions now. */
+  engine: "natural" | "device";
   repeat: () => void;
   stop: () => void;
 }
 
 export function useInterviewerVoice(
   question: { id: string; text: string; speaker?: string } | null,
-  { lang = "en", enabled = true }: { lang?: string; enabled?: boolean } = {},
+  { lang = "en", enabled = true, natural = null }: { lang?: string; enabled?: boolean; natural?: NaturalVoiceSource | null } = {},
 ): InterviewerVoice {
   const synth = typeof window !== "undefined" ? window.speechSynthesis : undefined;
   const [speaking, setSpeaking] = useState(false);
@@ -56,6 +61,10 @@ export function useInterviewerVoice(
   const spokenId = useRef<string | null>(null);
   // A panel: each speaker gets the next voice the first time they speak, and keeps it.
   const speakers = useRef(new Map<string, number>());
+  const audio = useRef<HTMLAudioElement | null>(null);
+  const inFlight = useRef<AbortController | null>(null);
+  const [naturalOff, setNaturalOff] = useState(false);
+  const useNatural = Boolean(natural) && !naturalOff;
 
   useEffect(() => {
     if (!synth) return;
@@ -68,14 +77,16 @@ export function useInterviewerVoice(
     return () => synth.removeEventListener("voiceschanged", load);
   }, [synth, lang]);
 
-  const say = useCallback(
+  const sayOnDevice = useCallback(
     (text: string, speaker?: string) => {
-      if (!synth) return;
+      if (!synth) {
+        setSpeaking(false);
+        return;
+      }
       synth.cancel();
       const u = new SpeechSynthesisUtterance(text);
       let chosen = voice;
       if (speaker) {
-        if (!speakers.current.has(speaker)) speakers.current.set(speaker, speakers.current.size);
         const pick = panelVoice(voices, speakers.current.get(speaker)!);
         chosen = pick.voice ?? voice;
         u.pitch = pick.pitch;
@@ -92,21 +103,69 @@ export function useInterviewerVoice(
     [synth, voice, voices, lang],
   );
 
+  const halt = useCallback(() => {
+    inFlight.current?.abort();
+    inFlight.current = null;
+    audio.current?.pause();
+    synth?.cancel();
+  }, [synth]);
+
+  const say = useCallback(
+    (text: string, speaker?: string) => {
+      halt();
+      if (speaker && !speakers.current.has(speaker)) speakers.current.set(speaker, speakers.current.size);
+      if (!natural || naturalOff) {
+        sayOnDevice(text, speaker);
+        return;
+      }
+      const id = voiceForSpeaker(natural.voices, speaker ? speakers.current.get(speaker)! : 0)!;
+      const controller = new AbortController();
+      inFlight.current = controller;
+      audio.current ??= new Audio();
+      setSpeaking(true); // the mic is muted from the request on, as with the device's voice
+      void natural
+        .speak(text, id, controller.signal)
+        .then((res) => playResponse(res, audio.current!, controller.signal))
+        .then(
+          () => {
+            if (inFlight.current === controller) {
+              inFlight.current = null;
+              setSpeaking(false);
+            }
+          },
+          (err: unknown) => {
+            if (controller.signal.aborted) return; // stopped, or the next question took over
+            inFlight.current = null;
+            if (naturalVoiceGone(err)) setNaturalOff(true);
+            sayOnDevice(text, speaker);
+          },
+        );
+    },
+    [natural, naturalOff, halt, sayOnDevice],
+  );
+
   useEffect(() => {
     if (!enabled || !question || spokenId.current === question.id) return;
     spokenId.current = question.id;
     say(question.text, question.speaker);
   }, [question, enabled, say]);
 
-  useEffect(() => () => synth?.cancel(), [synth]);
+  useEffect(() => () => halt(), [halt]);
 
   const stop = useCallback(() => {
-    synth?.cancel();
+    halt();
     setSpeaking(false);
-  }, [synth]);
+  }, [halt]);
   const repeat = useCallback(() => {
     if (question) say(question.text, question.speaker);
   }, [question, say]);
 
-  return { supported: Boolean(synth), speaking, voiceName: voice?.name ?? null, repeat, stop };
+  return {
+    supported: Boolean(synth) || useNatural,
+    speaking,
+    voiceName: useNatural ? null : (voice?.name ?? null),
+    engine: useNatural ? "natural" : "device",
+    repeat,
+    stop,
+  };
 }

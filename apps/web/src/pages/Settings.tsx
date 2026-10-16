@@ -40,6 +40,7 @@ import { errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { useTheme, type ThemePref } from "../lib/theme";
 import { OnThisPage, type PageSection } from "../components/OnThisPage";
+import { InterviewerVoiceCard } from "./InterviewerVoiceCard";
 import { PasskeysCard } from "./PasskeysCard";
 import { TwoFactorCard } from "./TwoFactorCard";
 
@@ -87,6 +88,7 @@ export function SettingsPage() {
           </div>
         </Card>
         <HotkeysCard />
+        <InterviewerVoiceCard />
         <AccountCard />
         <TwoFactorCard />
         <PasskeysCard />
@@ -117,6 +119,7 @@ function SectionTitle({ icon: Icon, className, children }: { icon: LucideIcon; c
 const SECTIONS: PageSection[] = [
   { id: "appearance", label: "Appearance" },
   { id: "shortcuts", label: "Keyboard shortcuts" },
+  { id: "interviewer-voice", label: "Interviewer voice" },
   { id: "account", label: "Account" },
   { id: "two-step", label: "Two-step sign-in" },
   { id: "passkeys", label: "Passkeys" },

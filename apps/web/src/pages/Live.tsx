@@ -27,6 +27,8 @@ import {
   type PanelMode,
   confirmDialog,
   safeLocal,
+  useNaturalVoiceSource,
+  VOICE_CHOICE_KEY,
 } from "@orbit/ui";
 import { Button, ErrorNote, Spinner } from "../components/ui";
 import { LIVE_URL, api } from "../lib/api";
@@ -88,6 +90,8 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   const [mode, setMode] = useState<PanelMode>(() => (safeLocal.getItem(MODE_KEY) as PanelMode | null) ?? "expanded");
   const [hotkeys] = useState(loadHotkeys);
   const ratings = useAnswerRatings(api, session.id);
+  // The mock interviewer reads questions with the natural voice when the server offers it (Settings picks which).
+  const naturalVoice = useNaturalVoiceSource(api, safeLocal.getItem(VOICE_CHOICE_KEY), session.type === "mock");
   const { live, actions, client } = useLiveSession({
     apiBaseUrl: LIVE_URL,
     sessionId: session.id,
@@ -362,6 +366,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       captureHealth={micStarting || sysStarting ? "recovering" : micOn || sysState === "on" ? "active" : "muted"}
       screenCaptureHealth={shot ? "active" : "muted"}
       mockInterview={session.type === "mock"}
+      naturalVoice={naturalVoice}
       ratings={ratings}
       onInterviewerSpeaking={onInterviewerSpeaking}
       live={live}

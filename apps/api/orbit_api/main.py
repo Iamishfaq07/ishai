@@ -69,6 +69,7 @@ from orbit_api.stories.routes import router as stories_router
 from orbit_api.support.routes import admin_router as support_admin_router
 from orbit_api.support.routes import router as support_router
 from orbit_api.telemetry import router as telemetry_router
+from orbit_api.voice.routes import router as voice_router
 from orbit_api.workspaces.routes import router as workspaces_router
 
 _boot = get_settings()
@@ -303,6 +304,7 @@ def create_app() -> FastAPI:
     app.include_router(devices_router)
     app.include_router(two_factor_router)
     app.include_router(passkeys_router)
+    app.include_router(voice_router)
     app.include_router(job_mission_router)
     app.include_router(job_plan_router)
     app.include_router(jobs_router)

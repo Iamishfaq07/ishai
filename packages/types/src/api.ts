@@ -100,6 +100,15 @@ export interface PasskeyOptions {
   options: Record<string, unknown>;
 }
 
+/** GET /v1/voice: the mock interviewer's natural voice, when the server offers it. */
+export interface VoiceStatus {
+  available: boolean;
+  voices: { id: string; label: string; model: string }[];
+  default_voice: string;
+  /** Characters of natural voice left today; null = no cap. */
+  chars_left: number | null;
+}
+
 /** GET /v1/auth/2fa */
 export interface TwoFactorStatus {
   enabled: boolean;

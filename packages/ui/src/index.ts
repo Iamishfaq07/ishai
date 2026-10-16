@@ -179,6 +179,14 @@ export {
 export { READ_ALOUD_RATES, speechChunks, speechText } from "./live/readAloud";
 export { splitPlaceholders } from "./live/placeholders";
 export { useInterviewerVoice, type InterviewerVoice } from "./live/useInterviewerVoice";
+export {
+  DEVICE_VOICE,
+  VOICE_CHOICE_KEY,
+  playResponse,
+  useNaturalVoiceSource,
+  type NaturalVoiceSource,
+  type VoiceOption,
+} from "./live/naturalVoice";
 export { MockPanel } from "./components/MockPanel";
 export { ConfirmHost, confirmDialog, type ConfirmOptions } from "./components/ConfirmDialog";
 export * from "./icons";
