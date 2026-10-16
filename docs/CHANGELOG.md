@@ -1,5 +1,16 @@
 # Implementation log
 
+## Settings → Devices: sign out one device (2026-10-16)
+
+- **Settings → Devices** lists where the account is signed in ("Chrome on Windows", "Safari on iOS", "Orbit for
+  Windows"), when each signed in and when it was last used, and marks "This browser".
+- **Sign out** on any one ends it at once: its token stops working on its next request, even a copied desktop token.
+  "Sign out of all devices" still ends them all.
+- Signing out in a browser now ends that device on the server too, not only its cookie.
+- Each sign-in is a row in `user_sessions`, named by the token's `sid` (kept across renewals). No IP address is
+  kept, only a coarse name from the browser. Tokens from before this change keep working until they expire, so
+  nobody is signed out by the update. The rows are in the data export and deleted with the account.
+
 ## Job Mission Room: Company tab (2026-10-16)
 
 - **Company** in the Mission Room: how the company interviews (Orbit's guide when it has one: the rounds, what they

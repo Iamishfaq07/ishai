@@ -51,7 +51,7 @@ def _now() -> int:
 
 
 def create_access_token(user_id: str, token_version: int = 0, *, idle: bool = False,
-                        signed_in_at: int | None = None) -> str:
+                        signed_in_at: int | None = None, sid: str | None = None) -> str:
     """A session JWT. `signed_in_at` (claim `auth`) is when the person actually signed in, carried across renewals so
     the hard cap (ORBIT_JWT_TTL) counts from there. `idle` tokens (web cookies) also expire after
     ORBIT_SESSION_IDLE_HOURS and are renewed while in use (see `current_user`)."""
@@ -61,8 +61,10 @@ def create_access_token(user_id: str, token_version: int = 0, *, idle: bool = Fa
     exp = auth_time + s.jwt_ttl_minutes * 60
     if idle:
         exp = min(exp, now + int(s.session_idle_hours * 3600))
-    payload = {"sub": user_id, "ver": token_version, "iat": now, "exp": exp, "auth": auth_time, "idle": idle,
-               "jti": uuid.uuid4().hex}
+    payload: dict[str, Any] = {"sub": user_id, "ver": token_version, "iat": now, "exp": exp, "auth": auth_time,
+                               "idle": idle, "jti": uuid.uuid4().hex}
+    if sid:
+        payload["sid"] = sid  # the signed-in device (auth/devices.py), kept across renewals
     return jwt.encode(payload, s.jwt_secret.get_secret_value(), algorithm="HS256")
 
 
@@ -114,6 +116,12 @@ async def current_user(request: Request, response: Response,
     # A token minted before the last password reset / sign-out-everywhere is dead.
     if user is None or claims is None or claims.get("ver", 0) != user.token_version:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
+    # This device signed out from another one (Settings → Security → Devices).
+    from orbit_api.auth.devices import check_session
+
+    sid = claims.get("sid") if isinstance(claims.get("sid"), str) else None
+    if not await check_session(db, user, sid):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
     # Re-checked per request so tightening ORBIT_ALLOWED_EMAILS cuts off existing accounts too.
     if not get_settings().email_allowed(user.email):
         raise HTTPException(status.HTTP_403_FORBIDDEN, NOT_ALLOWED)
@@ -124,7 +132,8 @@ async def current_user(request: Request, response: Response,
     from_cookie = not request.headers.get("authorization", "").lower().startswith("bearer ")
     if from_cookie and claims.get("idle") and _now() - int(claims.get("iat", 0)) >= RENEW_AFTER_S:
         set_session_cookie(response, create_access_token(user.id, user.token_version, idle=True,
-                                                         signed_in_at=int(claims.get("auth") or claims["iat"])))
+                                                         signed_in_at=int(claims.get("auth") or claims["iat"]),
+                                                         sid=sid))
     return user
 
 

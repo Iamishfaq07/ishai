@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import type { AdminConfig, AdminConfigUpdate } from "@orbit/types";
+import type { AdminConfig, AdminConfigUpdate, SignedInDevice } from "@orbit/types";
 import {
   DEFAULT_HOTKEYS,
   HOTKEY_LABELS,
@@ -29,12 +29,14 @@ import {
   Users,
   type LucideIcon,
   CostDashboard,
+  Monitor,
+  toast,
 } from "@orbit/ui";
 import { CountryField } from "../components/CountryField";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Toggle } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { errorText } from "../lib/format";
+import { errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { useTheme, type ThemePref } from "../lib/theme";
 import { OnThisPage, type PageSection } from "../components/OnThisPage";
@@ -84,6 +86,7 @@ export function SettingsPage() {
         </Card>
         <HotkeysCard />
         <AccountCard />
+        <DevicesCard />
         <PrivacyCard />
         <AdvancedSettingsCard />
       </div>
@@ -111,6 +114,7 @@ const SECTIONS: PageSection[] = [
   { id: "appearance", label: "Appearance" },
   { id: "shortcuts", label: "Keyboard shortcuts" },
   { id: "account", label: "Account" },
+  { id: "devices", label: "Devices" },
   { id: "privacy", label: "Privacy" },
 ];
 
@@ -570,6 +574,71 @@ function PasswordChange() {
         </div>
       )}
     </form>
+  );
+}
+
+/** Settings → Devices: where this account is signed in, and a way to sign out any one of them. */
+function DevicesCard() {
+  const devices = useAsync(() => api.devices(), [], "devices");
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState<string | null>(null);
+  const signOut = async (d: SignedInDevice) => {
+    if (!(await confirmDialog({
+      title: d.current ? "Sign out of this browser?" : `Sign out ${d.label}?`,
+      body: d.current ? "You'll need to sign in again here." : "That device will need to sign in again. Anything open there stops working.",
+      confirmLabel: "Sign out",
+      danger: true,
+    }))) return;
+    setBusy(d.id);
+    try {
+      await api.signOutDevice(d.id);
+      if (d.current) {
+        await logout().catch(() => undefined);
+        navigate("/login", { replace: true });
+        return;
+      }
+      devices.setData((prev) => prev?.filter((x) => x.id !== d.id) ?? null);
+      toast({ message: `${d.label} is signed out`, tone: "success" });
+    } catch (err) {
+      toast({ message: errorText(err), tone: "error" });
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <Card id="devices" className="scroll-mt-24">
+      <SectionTitle icon={Monitor} className="mb-1">
+        Devices
+      </SectionTitle>
+      <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">Where your account is signed in. Don't recognise one? Sign it out, then change your password.</p>
+      <LoadGate loading={devices.loading && !devices.data} variant="line" count={2} label="Loading your devices">
+        {devices.error && !devices.data ? (
+          <ErrorNote onRetry={devices.reload}>{errorText(devices.error)}</ErrorNote>
+        ) : devices.data && devices.data.length === 0 ? (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Devices show here from your next sign-in.</p>
+        ) : (
+          <ul className="divide-y divide-zinc-200 dark:divide-white/10">
+            {devices.data?.map((d) => (
+              <li key={d.id} className="flex flex-wrap items-center gap-3 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">
+                    {d.label}
+                    {d.current && <span className="ml-2 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:text-emerald-200">This browser</span>}
+                  </p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Signed in {formatDate(d.created_at)} · last used {formatDate(d.last_seen_at)}
+                  </p>
+                </div>
+                <Button size="sm" variant="secondary" loading={busy === d.id} onClick={() => void signOut(d)}>
+                  Sign out
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </LoadGate>
+    </Card>
   );
 }
 

@@ -798,6 +798,20 @@ class ResumeSnapshot(TimestampMixin, Base):
     note: Mapped[str] = mapped_column(String(200), default="")
 
 
+class UserSession(TimestampMixin, Base):
+    """One signed-in device or browser (Settings → Security → Devices). Its id is the token's `sid` claim, kept across
+    renewals; signing it out (revoked_at) ends every token that carries it, within the next request. `label` is a
+    coarse name from the user agent ("Chrome on Windows"); no IP address is kept."""
+
+    __tablename__ = "user_sessions"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(16), default="web")  # web | desktop | other
+    label: Mapped[str] = mapped_column(String(120), default="")
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class JobPlanCheck(TimestampMixin, Base):
     """One item of a tracked job's interview prep plan (job_portal/plan.py) ticked off by the user. The key names the
     day and the task, so moving the interview date makes a new plan instead of carrying old ticks to new days."""

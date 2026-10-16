@@ -2384,3 +2384,14 @@ export interface OfferScenario {
   scenario: OfferScenarioFigures;
   assumptions: string[];
 }
+
+/** GET /v1/auth/sessions: a signed-in device or browser. No IP address is kept. */
+export interface SignedInDevice {
+  id: string;
+  kind: "web" | "desktop" | "other";
+  label: string;
+  created_at: string;
+  last_seen_at: string;
+  /** The device this request came from. */
+  current: boolean;
+}

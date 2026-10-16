@@ -36,6 +36,7 @@ discarded when the session ends.
 | Delete a resume (and its photo) | Resume AI | `DELETE /v1/resumes/{id}` |
 | Download all your data (one JSON file) | Settings → Account | `GET /v1/auth/me/export` |
 | Change your email (confirmed from the new inbox; the old one is told) | Settings → Account | `POST /v1/auth/me/email` |
+| See where you're signed in, and sign out one device | Settings → Devices | `GET /v1/auth/sessions`, `DELETE /v1/auth/sessions/{id}` |
 | Sign out of every device | Settings → Privacy | `POST /v1/auth/logout-all` |
 | Delete your account and everything in it | Settings → Privacy | `DELETE /v1/auth/me` |
 | Privacy shield (keep the desktop window out of screenshots/recordings) and hide-from-taskbar: both off until chosen; changed 16 Oct 2026 from always-on | Desktop → Settings → Window privacy | local (`set_window_privacy`) |
