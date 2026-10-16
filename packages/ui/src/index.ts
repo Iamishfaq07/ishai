@@ -262,5 +262,19 @@ export {
   speechLang,
   type Country,
 } from "./region";
+export {
+  SAMPLE_CITY,
+  companiesFor,
+  currencySymbol,
+  gradeCopy,
+  regionExamples,
+  regionWords,
+  sampleCity,
+  scamReport,
+  type GradeCopy,
+  type RegionExamples,
+  type RegionWords,
+  type ScamReport,
+} from "./regionCopy";
 export { safeLocal, safeSession, readJSON, readChoice, type SafeStorage } from "./storage";
 export { passkeysSupported, createPasskey, getPasskey, passkeyErrorText } from "./passkey";

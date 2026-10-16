@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Check, CircleAlert, Clock, MapPin, Reveal, cx, isIndia, useCountUp, useInView } from "@orbit/ui";
+import { Check, CircleAlert, Clock, MapPin, Reveal, cx, regionWords, sampleCity, useCountUp, useInView } from "@orbit/ui";
 import { useCountry } from "../lib/country";
 
 /**
@@ -144,13 +144,8 @@ export function ResumeMock() {
   );
 }
 
-/** Jobs AI's feed: the best match on top of the others (labelled an example); its match counts up. */
-// The example job's city, where the visitor applies (India's tech capital first).
-const SAMPLE_CITY: Record<string, string> = {
-  IN: "Bengaluru", US: "Austin", GB: "London", CA: "Toronto", AU: "Sydney", DE: "Berlin", IE: "Dublin", NL: "Amsterdam",
-  AE: "Dubai", SG: "Singapore", FR: "Paris", NZ: "Auckland", ZA: "Cape Town", PH: "Manila", PK: "Lahore", NG: "Lagos",
-};
-
+/** Jobs AI's feed: the best match on top of the others (labelled an example); its match counts up. The example job is
+ *  in a city where the visitor applies (regionCopy.ts). */
 export function JobMock() {
   const country = useCountry();
   const [ref, seen] = useInView<HTMLDivElement>();
@@ -164,10 +159,10 @@ export function JobMock() {
         <div className="relative rounded-2xl bg-white p-4 shadow-xl ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-white/10">
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">Data Analyst, {isIndia(country) ? "fresher" : "entry level"}</p>
+              <p className="text-sm font-semibold">Data Analyst, {regionWords(country).entryLevel.toLowerCase()}</p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">An example company</p>
               <p className="mt-1 flex items-center gap-1 text-xs text-zinc-600 dark:text-zinc-300">
-                <MapPin className="h-3.5 w-3.5" /> {SAMPLE_CITY[country] ?? "Remote"}, hybrid
+                <MapPin className="h-3.5 w-3.5" /> {sampleCity(country) ?? "Remote"}, hybrid
               </p>
             </div>
             <div className="relative">
