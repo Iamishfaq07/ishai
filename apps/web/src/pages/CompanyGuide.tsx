@@ -4,7 +4,7 @@ import { Card } from "../components/ui";
 
 /** "What to expect at Amazon": the rounds, what its interviewers listen for, tips and questions in its style
  *  (GET /v1/interview-styles). A mock started with this company asks in the same style. */
-export function CompanyGuide({ style, className }: { style: CompanyStyle; className?: string }) {
+export function CompanyGuide({ style, className, inMock = true }: { style: CompanyStyle; className?: string; inMock?: boolean }) {
   return (
     <section aria-labelledby={`guide-${style.slug}`} className={className}>
       <Card className="animate-fade-up">
@@ -17,7 +17,7 @@ export function CompanyGuide({ style, className }: { style: CompanyStyle; classN
               What to expect at {style.name}
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              As candidates commonly report it; it varies by team, level and year. Your mock interviewer now asks in this style.
+              As candidates commonly report it; it varies by team, level and year.{inMock && " Your mock interviewer now asks in this style."}
             </p>
           </div>
         </div>

@@ -1,5 +1,13 @@
 # Implementation log
 
+## Job Mission Room: Company tab (2026-10-16)
+
+- **Company** in the Mission Room: how the company interviews (Orbit's guide when it has one: the rounds, what they
+  listen for, tips, as candidates commonly report it), and **what it asked you before**. Those are the questions from
+  your own sessions named for that company, with when the last one was and the stories you've already told them. Then
+  one link to practise in the company's style.
+- Nothing is shown as "the questions they'll ask". With no guide, the job post is the guide.
+
 ## Offer AI: What if (2026-10-16)
 
 - **What if** on each offer: sliders for a raise or cut on the fixed pay (−30% to +50%), how much of the variable is
