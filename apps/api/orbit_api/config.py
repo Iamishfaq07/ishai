@@ -125,6 +125,11 @@ class Settings(BaseSettings):
     # Speech-to-text list price per audio minute for cost estimates (admin cost dashboard). Default: Deepgram Nova-3
     # streaming pay-as-you-go at the time of writing; set your contracted rate. Unset (empty) = STT cost unknown.
     stt_price_per_minute: float | None = Field(0.0077, validation_alias=AliasChoices("ORBIT_STT_PRICE_PER_MINUTE"))
+    # The mock interviewer's natural voice (voice/routes.py): Deepgram Aura text-to-speech, streamed through the API
+    # so the key stays on the server. On when a Deepgram key is set, unless turned off here. Each account gets this
+    # many characters a day (about 100 questions at 20k); past it, the device's own voice reads the questions.
+    natural_voice: bool = Field(True, validation_alias=AliasChoices("ORBIT_NATURAL_VOICE"))
+    tts_daily_chars: int = Field(20000, ge=0, validation_alias=AliasChoices("ORBIT_TTS_DAILY_CHARS"))
     # Plan limits/features/prices overrides (see entitlements.py). Validated at startup.
     plans_json: str | None = Field(None, validation_alias=AliasChoices("ORBIT_PLANS_JSON"))
 

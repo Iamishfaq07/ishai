@@ -16,6 +16,7 @@ import { DEFAULT_HOTKEYS, useHotkeys, type HotkeyMap } from "../live/hotkeys";
 import { CODING_LANGUAGES } from "../live/preferences";
 import { historyLabel, useAnswerHistory, type AnswerHistory } from "../live/useAnswerHistory";
 import { useInterviewerVoice } from "../live/useInterviewerVoice";
+import type { NaturalVoiceSource } from "../live/naturalVoice";
 import { useKeyPointProgress } from "../live/useKeyPointProgress";
 import { useReadAloud } from "../live/useReadAloud";
 import {
@@ -106,6 +107,9 @@ function useSidePanel(wide: boolean): [boolean, (open: boolean) => void] {
   return [wide ? wideOpen : narrowOpen, set];
 }
 
+/** The mock interviewer's voice muted: kept across sessions, on this device. */
+const MUTE_KEY = "orbit.interviewerMuted";
+
 export interface LivePanelProps {
   analyser?: AnalyserNode;
   audioAmplitude?: () => number;
@@ -147,6 +151,8 @@ export interface LivePanelProps {
    * so the speakers are never transcribed as part of the interview.
    */
   onInterviewerSpeaking?: (speaking: boolean) => void;
+  /** The interviewer's natural voice (useNaturalVoiceSource); null or absent = the device's voice. */
+  naturalVoice?: NaturalVoiceSource | null;
 }
 
 export function LivePanel(props: LivePanelProps) {
@@ -172,7 +178,12 @@ export function LivePanel(props: LivePanelProps) {
       : null),
     [live.mock, live.mockCompleted],
   );
-  const voice = useInterviewerVoice(mockQuestion, { enabled: Boolean(props.mockInterview) });
+  const [voiceMuted, setVoiceMuted] = useState(() => safeLocal.getItem(MUTE_KEY) === "1");
+  const changeMuted = useCallback((m: boolean) => {
+    setVoiceMuted(m);
+    safeLocal.setItem(MUTE_KEY, m ? "1" : "0");
+  }, []);
+  const voice = useInterviewerVoice(mockQuestion, { enabled: Boolean(props.mockInterview) && !voiceMuted, natural: props.naturalVoice ?? null });
   const { onInterviewerSpeaking } = props;
   const reader = useReadAloud();
   const selfSpeaking = voice.speaking || reader.status === "playing";
@@ -447,6 +458,8 @@ export function LivePanel(props: LivePanelProps) {
                 actions={actions}
                 voice={voice}
                 ended={ended}
+                muted={voiceMuted}
+                onMutedChange={changeMuted}
                 {...(props.onViewReport ? { onViewReport: props.onViewReport } : {})}
               />
             </>

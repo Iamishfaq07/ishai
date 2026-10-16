@@ -3,6 +3,7 @@ import type {
   TwoFactorChallenge,
   TwoFactorStatus,
   Passkey,
+  VoiceStatus,
   PasskeyOptions,
   SignedInDevice,
   JobMission,
@@ -434,6 +435,15 @@ export function createApiClient(options: ApiClientOptions) {
     twoFactorDisable: (code: string) => json<void>("/v1/auth/2fa/disable", { method: "POST", body: body({ code }) }),
     twoFactorNewCodes: (code: string) =>
       json<{ recovery_codes: string[] }>("/v1/auth/2fa/recovery-codes", { method: "POST", body: body({ code }) }),
+    voiceStatus: () => json<VoiceStatus>("/v1/voice"),
+    /** The interviewer's question as MP3, streamed (read the body as it arrives). */
+    speak: (text: string, voice: string, signal?: AbortSignal, sessionId?: string) =>
+      raw("/v1/voice/speak", {
+        method: "POST",
+        body: body({ text, voice, session_id: sessionId ?? null }),
+        timeoutMs: 15000,
+        ...(signal ? { signal } : {}),
+      }),
     passkeys: () => json<Passkey[]>("/v1/auth/passkeys"),
     passkeyOptions: (password: string) => json<PasskeyOptions>("/v1/auth/passkeys/options", { method: "POST", body: body({ password }) }),
     addPasskey: (credential: Record<string, unknown>, name = "") =>
