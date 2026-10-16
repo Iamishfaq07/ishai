@@ -22,7 +22,16 @@ from orbit_api.admin.accounts import AuditItem, about_account, audit_items
 from orbit_api.admin.routes import activity_subquery, require_admin, search_term
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
-from orbit_api.models import AuditLog, ContactMessage, CreditEntry, JobFitCheck, Payment, UsageEvent, User
+from orbit_api.models import (
+    AuditLog,
+    ContactMessage,
+    CreditEntry,
+    JobFitCheck,
+    Payment,
+    UsageEvent,
+    User,
+    UserTwoFactor,
+)
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
 
@@ -62,7 +71,7 @@ def setup_warnings() -> list[str]:
 
 
 @router.get("/stats", response_model=StatsOut)
-async def stats(_: Annotated[User, Depends(require_admin)], db: Annotated[AsyncSession, Depends(get_db)],
+async def stats(admin: Annotated[User, Depends(require_admin)], db: Annotated[AsyncSession, Depends(get_db)],
                 days: Annotated[int, Query(ge=7, le=90)] = 30,
                 tz_offset: Annotated[int, Query(ge=-720, le=840)] = 0) -> StatsOut:
     """`tz_offset`: minutes east of UTC (India is 330), so a day is the admin's own day."""
@@ -116,7 +125,8 @@ async def stats(_: Annotated[User, Depends(require_admin)], db: Annotated[AsyncS
             Payment.status == "approved"))),
         payments_waiting=int(await scalar(select(func.count()).select_from(Payment).where(
             Payment.status == "submitted"))),
-        warnings=setup_warnings(),
+        warnings=setup_warnings() + ([] if await db.scalar(select(UserTwoFactor.enabled_at).where(
+            UserTwoFactor.user_id == admin.id)) else ["admin_two_factor"]),
     )
 
 
