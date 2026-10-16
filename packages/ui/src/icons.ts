@@ -101,6 +101,7 @@ export {
   ThumbsUp,
   Trash2,
   Fingerprint,
+  PlugZap,
   Pencil,
   Undo2,
   Redo2,

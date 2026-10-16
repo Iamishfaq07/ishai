@@ -35,6 +35,7 @@ import {
   SessionSetupPage,
   SessionsPage,
   SettingsPage,
+  ExtensionConnectPage,
   StoriesPage,
   EvidencePage,
   AnswersPage,
@@ -239,6 +240,7 @@ export function App() {
         <Route path="mock" element={<MockPage />} />
         <Route path="billing" element={<BillingPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="extension/connect" element={<ExtensionConnectPage />} />
         <Route path="admin/users" element={<AdminUsersPage />} />
         <Route path="admin/payments" element={<AdminPaymentsPage />} />
         <Route path="admin/audit" element={<AdminAuditPage />} />

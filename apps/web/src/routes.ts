@@ -34,6 +34,7 @@ const loaders = {
   learn: () => import("./pages/learn/Learning"),
   billing: () => import("./pages/Billing"),
   settings: () => import("./pages/Settings"),
+  extensionConnect: () => import("./pages/ExtensionConnect"),
   companion: () => import("./pages/Companion"),
   adminUsers: () => import("./pages/AdminUsers"),
   adminPayments: () => import("./pages/AdminPayments"),
@@ -81,6 +82,7 @@ export const JobsAiPublicPage = page(loaders.jobsAiPublic, (m) => m.JobsAiPublic
 export const MockPage = page(loaders.mock, (m) => m.MockPage);
 export const BillingPage = page(loaders.billing, (m) => m.BillingPage);
 export const SettingsPage = page(loaders.settings, (m) => m.SettingsPage);
+export const ExtensionConnectPage = page(loaders.extensionConnect, (m) => m.ExtensionConnectPage);
 export const CompanionPage = page(loaders.companion, (m) => m.CompanionPage);
 export const AdminUsersPage = page(loaders.adminUsers, (m) => m.AdminUsersPage);
 export const AdminPaymentsPage = page(loaders.adminPayments, (m) => m.AdminPaymentsPage);

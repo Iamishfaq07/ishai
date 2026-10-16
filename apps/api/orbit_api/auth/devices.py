@@ -27,7 +27,7 @@ TOUCH_EVERY = timedelta(minutes=5)  # how often last_seen_at is written while a 
 MAX_LISTED = 50
 
 
-def device_label(user_agent: str) -> tuple[Literal["web", "desktop", "other"], str]:
+def device_label(user_agent: str) -> tuple[Literal["web", "desktop", "extension", "other"], str]:
     """A coarse, readable name: "Orbit for Windows", "Chrome on Android". Nothing more specific is kept."""
     ua = user_agent or ""
     if "Tauri" in ua or "orbit-desktop" in ua.lower():
