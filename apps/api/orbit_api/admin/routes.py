@@ -560,7 +560,8 @@ async def user_activity(user_id: str, _: Annotated[User, Depends(require_admin)]
     if await db.get(User, user_id) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
     items: list[ActivityItem] = []
-    for e in (await db.scalars(select(CreditEntry).where(CreditEntry.user_id == user_id)
+    for e in (await db.scalars(select(CreditEntry).where(CreditEntry.user_id == user_id,
+                                                         CreditEntry.kind != "resume_fix")
                                .order_by(CreditEntry.created_at.desc()).limit(100))).all():
         items.append(ActivityItem(at=_aware(e.created_at), kind="credit", text=credit_text(e),
                                   amount=credit_amount(e)))

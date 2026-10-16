@@ -860,6 +860,9 @@ export interface ResumeAiAllowance {
   unlimited: boolean;
   credits_left: number;
   upgrade: { pack: string; label: string; price_inr: number; resume_credits: number; interview_minutes: number; buyable: boolean } | null;
+  /** Single AI fixes already paid for: one credit covers `fixes_per_credit` of them (older servers: absent). */
+  fixes_left?: number;
+  fixes_per_credit?: number;
 }
 
 /** GET /v1/entitlements — the signed-in user's plan, limits, this month's usage, features and credits. */

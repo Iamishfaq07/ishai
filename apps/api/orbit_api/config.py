@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     # without email verification, so they go to one account per network (IP) per ORBIT_WELCOME_IP_DAYS (0 = one per
     # network for good), and to at most ORBIT_WELCOME_DAILY accounts a rolling day: fake accounts can't farm them.
     welcome_resume_credits: int = Field(1, ge=0, validation_alias=AliasChoices("ORBIT_WELCOME_RESUME_CREDITS"))
+    # One resume credit covers this many single "Fix with AI" fixes (one ATS check, one section or line rewritten);
+    # imports, tailoring, cover letters and whole-resume rewrites still use a full credit (resumes/allowance.py).
+    resume_fixes_per_credit: int = Field(5, ge=1, le=50, validation_alias=AliasChoices("ORBIT_RESUME_FIXES_PER_CREDIT"))
     welcome_interview_minutes: int = Field(20, ge=0, validation_alias=AliasChoices("ORBIT_WELCOME_INTERVIEW_MINUTES"))
     welcome_ip_days: int = Field(30, ge=0, validation_alias=AliasChoices("ORBIT_WELCOME_IP_DAYS",
                                                                          "ORBIT_FREE_RESUME_AI_IP_DAYS"))

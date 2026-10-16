@@ -2,8 +2,10 @@
 
 A plan with the `resume_ai` feature (the admin, Pro or Unlimited granted for a while) uses the AI as much as the rate
 limits allow. On the Free plan each AI action spends one resume credit: the welcome credit, then credits from a UPI
-pack. An "AI action" is one request that calls the model (import, a rewrite, tailoring, a cover letter); fixes
-worked out without the model (dates, skills the resume already proves) stay free, as do typing, scoring and
+pack. An "AI action" is one request that calls the model (import, tailoring, a cover letter, a whole-resume
+rewrite). A single fix (one ATS check, one section or line rewritten) costs a fraction: the first one spends a credit
+and leaves RESUME_FIXES_PER_CREDIT - 1 fixes paid for (the "resume_fix" ledger), which the next fixes use first.
+Fixes worked out without the model (dates, skills the resume already proves) stay free, as do typing, scoring and
 downloads.
 
 The credit is claimed just before the model is called and given back if the request fails, so an AI outage doesn't
@@ -44,6 +46,9 @@ class AllowanceOut(BaseModel):
     unlimited: bool  # the plan includes resume AI
     credits_left: int  # resume credits left; meaningless when unlimited
     upgrade: UpgradeOffer | None
+    # Single AI fixes already paid for (used before another credit is), and how many fixes one credit covers.
+    fixes_left: int = 0
+    fixes_per_credit: int = 1
 
 
 def upgrade_offer() -> UpgradeOffer | None:
@@ -62,14 +67,28 @@ class Allowance:
 
     def __init__(self, db: AsyncSession, user: User, unlimited: bool) -> None:
         self.db, self.user, self.unlimited = db, user, unlimited
-        self._claimed: str | None = None  # the credit entry this request spent
+        self._claimed: list[str] = []  # the credit entries this request wrote
+        self._fix = False  # a single fix: costs one fix, not a whole credit
+
+    def as_fix(self) -> "Allowance":
+        """This request is one small fix (one ATS check, one section or line): it costs a fraction of a credit."""
+        self._fix = True
+        return self
 
     async def can_spend(self) -> bool:
-        return self.unlimited or self._claimed is not None or await credits.resume_balance(self.db, self.user.id) > 0
+        if self.unlimited or self._claimed:
+            return True
+        if self._fix and await credits.resume_balance(self.db, self.user.id, "resume_fix") > 0:
+            return True
+        return await credits.resume_balance(self.db, self.user.id) > 0
 
     async def status(self) -> AllowanceOut:
-        left = 0 if self.unlimited else await credits.resume_balance(self.db, self.user.id)
-        return AllowanceOut(unlimited=self.unlimited, credits_left=left, upgrade=upgrade_offer())
+        per = get_settings().resume_fixes_per_credit
+        if self.unlimited:
+            return AllowanceOut(unlimited=True, credits_left=0, upgrade=upgrade_offer(), fixes_per_credit=per)
+        return AllowanceOut(unlimited=False, credits_left=await credits.resume_balance(self.db, self.user.id),
+                            upgrade=upgrade_offer(), fixes_per_credit=per,
+                            fixes_left=await credits.resume_balance(self.db, self.user.id, "resume_fix"))
 
     def exhausted(self) -> HTTPException:
         offer = upgrade_offer()
@@ -81,22 +100,29 @@ class Allowance:
         return HTTPException(status.HTTP_402_PAYMENT_REQUIRED, detail=detail)
 
     async def claim(self) -> None:
-        if self.unlimited or self._claimed is not None:
+        if self.unlimited or self._claimed:
             return
         await lock_account(self.db, self.user.id)
-        if await credits.resume_balance(self.db, self.user.id) <= 0:
-            raise self.exhausted()
-        entry = credits.add(self.db, self.user.id, "resume", -1, "resume_ai")
+        entries: list[CreditEntry] = []
+        if self._fix and await credits.resume_balance(self.db, self.user.id, "resume_fix") > 0:
+            entries.append(credits.add(self.db, self.user.id, "resume_fix", -1, "resume_ai"))
+        else:
+            if await credits.resume_balance(self.db, self.user.id) <= 0:
+                raise self.exhausted()
+            entries.append(credits.add(self.db, self.user.id, "resume", -1, "resume_ai"))
+            if self._fix and (per := get_settings().resume_fixes_per_credit) > 1:
+                # The credit pays for this fix and the next few.
+                entries.append(credits.add(self.db, self.user.id, "resume_fix", per - 1, "resume_ai"))
         await self.db.commit()
-        self._claimed = entry.id
+        self._claimed = [e.id for e in entries]
 
     async def release(self) -> None:
-        if self._claimed is None:
+        if not self._claimed:
             return
         await self.db.rollback()  # whatever the failed request left half-done
-        await self.db.execute(delete(CreditEntry).where(CreditEntry.id == self._claimed))
+        await self.db.execute(delete(CreditEntry).where(CreditEntry.id.in_(self._claimed)))
         await self.db.commit()
-        self._claimed = None
+        self._claimed = []
 
 
 async def allowance_for(db: AsyncSession, user: User) -> Allowance:
