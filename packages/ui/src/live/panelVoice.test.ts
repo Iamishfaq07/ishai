@@ -17,3 +17,24 @@ describe("panel voices", () => {
     expect(panelVoice([], 1)).toEqual({ voice: undefined, pitch: 0.85 });
   });
 });
+
+describe("practice-language voices", () => {
+  const v = (name: string, lang: string) => ({ name, lang }) as SpeechSynthesisVoice;
+  const all = [v("Microsoft David", "en-US"), v("Google UK English", "en-GB"), v("Microsoft Heera", "en-IN"), v("Google हिन्दी", "hi-IN")];
+
+  it("maps the practice language to a speech language", async () => {
+    const { voiceLanguage } = await import("./useInterviewerVoice");
+    expect(voiceLanguage("hi")).toBe("hi-IN");
+    expect(voiceLanguage("hinglish")).toBe("en-IN");
+    expect(voiceLanguage("en")).toBe("en");
+    expect(voiceLanguage(undefined)).toBe("en");
+  });
+
+  it("prefers the region's own voice, then the language's others", async () => {
+    const { pickVoice } = await import("./useInterviewerVoice");
+    expect(pickVoice(all, "hi-IN")?.name).toBe("Google हिन्दी");
+    expect(pickVoice(all, "en-IN")?.name).toBe("Microsoft Heera");
+    expect(pickVoice(all, "en")?.name).toBe("Microsoft David"); // unchanged for plain English
+    expect(pickVoices(all, "en-IN")[0]?.name).toBe("Microsoft Heera");
+  });
+});

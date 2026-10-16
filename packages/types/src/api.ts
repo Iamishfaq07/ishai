@@ -29,6 +29,8 @@ export interface User {
   store_screenshots: boolean;
   /** The Career Evidence Vault is switched on for this deployment. Servers from before it leave it out. */
   evidence_vault?: boolean;
+  /** Mock-interview languages this server offers: ["en"], or with Hindi and Hinglish when it has them on. */
+  practice_languages?: string[];
   /** Auth responses only: browser clients echo it as X-CSRF-Token on state-changing requests. */
   csrf_token?: string | null;
 }

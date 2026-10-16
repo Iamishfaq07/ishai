@@ -91,7 +91,11 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   const [hotkeys] = useState(loadHotkeys);
   const ratings = useAnswerRatings(api, session.id);
   // The mock interviewer reads questions with the natural voice when the server offers it (Settings picks which).
-  const naturalVoice = useNaturalVoiceSource(api, safeLocal.getItem(VOICE_CHOICE_KEY), session.type === "mock");
+  const naturalVoice = useNaturalVoiceSource(
+    api,
+    safeLocal.getItem(VOICE_CHOICE_KEY),
+    session.type === "mock" && (session.language ?? "en") === "en", // the natural voices are English
+  );
   const { live, actions, client } = useLiveSession({
     apiBaseUrl: LIVE_URL,
     sessionId: session.id,
@@ -367,6 +371,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       screenCaptureHealth={shot ? "active" : "muted"}
       mockInterview={session.type === "mock"}
       naturalVoice={naturalVoice}
+      practiceLanguage={session.language}
       ratings={ratings}
       onInterviewerSpeaking={onInterviewerSpeaking}
       live={live}

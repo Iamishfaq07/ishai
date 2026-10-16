@@ -12,23 +12,34 @@ import { naturalVoiceGone, playResponse, voiceForSpeaker, type NaturalVoiceSourc
  */
 const PREFERRED = [/natural/i, /aria|jenny|guy|sonia|ryan|libby/i, /zira|david|mark/i];
 
+/** The speech-synthesis language for a mock's practice language: Hindi in Devanagari, Hinglish (Roman Hindi) read
+ * best by an Indian English voice. */
+export function voiceLanguage(practiceLanguage: string | undefined): string {
+  return practiceLanguage === "hi" ? "hi-IN" : practiceLanguage === "hinglish" ? "en-IN" : "en";
+}
+
 export function pickVoice(voices: SpeechSynthesisVoice[], lang: string): SpeechSynthesisVoice | undefined {
   const base = lang.split("-")[0]!.toLowerCase();
-  const matching = voices.filter((v) => v.lang.toLowerCase().startsWith(base));
-  for (const pattern of PREFERRED) {
-    const hit = matching.find((v) => pattern.test(v.name));
-    if (hit) return hit;
-  }
-  return matching[0] ?? voices[0];
+  const best = (pool: SpeechSynthesisVoice[]) => {
+    for (const pattern of PREFERRED) {
+      const hit = pool.find((v) => pattern.test(v.name));
+      if (hit) return hit;
+    }
+    return pool[0];
+  };
+  // A region asked for (en-IN, hi-IN): the most natural of its own voices, else of the language's others.
+  const regional = lang.includes("-") ? voices.filter((v) => v.lang.toLowerCase().replace("_", "-") === lang.toLowerCase()) : [];
+  return best(regional) ?? best(voices.filter((v) => v.lang.toLowerCase().startsWith(base))) ?? voices[0];
 }
 
 /** Every voice for the language, the most natural first: a panel gives each interviewer a different one. */
 export function pickVoices(voices: SpeechSynthesisVoice[], lang: string): SpeechSynthesisVoice[] {
   const base = lang.split("-")[0]!.toLowerCase();
   const matching = voices.filter((v) => v.lang.toLowerCase().startsWith(base));
+  const regional = (v: SpeechSynthesisVoice) => (lang.includes("-") && v.lang.toLowerCase().replace("_", "-") === lang.toLowerCase() ? 0 : 1);
   const rank = (v: SpeechSynthesisVoice) => {
     const i = PREFERRED.findIndex((p) => p.test(v.name));
-    return i === -1 ? PREFERRED.length : i;
+    return regional(v) * (PREFERRED.length + 1) + (i === -1 ? PREFERRED.length : i);
   };
   return [...matching].sort((a, b) => rank(a) - rank(b));
 }

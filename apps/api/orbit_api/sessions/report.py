@@ -20,7 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orbit_api import jobs
+from orbit_api import jobs, practice_language
 from orbit_api.career.schema import DIMENSIONS
 from orbit_api.db import sessionmaker
 from orbit_api.live.context_builder import fence
@@ -232,7 +232,8 @@ async def generate_report(session_id: str) -> dict[str, Any]:
                 user += ("\n\nEarlier questions (not scored; cover them in the summary and topics):\n"
                          "<reference_data source=\"earlier_questions\">\n"
                          f"{fence(earlier[:MAX_EARLIER_QUESTIONS_CHARS])}\n</reference_data>")
-            system = _SYSTEM
+            system = _SYSTEM + practice_language.report_instruction(
+                practice_language.normalize(row.language, row.type))
             negotiation = (row.mock_config or {}).get("negotiation") if row.type == "mock" else None
             if isinstance(negotiation, dict):
                 system += _NEGOTIATION_RUBRIC

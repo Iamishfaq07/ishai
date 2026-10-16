@@ -20,6 +20,8 @@ import {
   practiceDocumentIds,
   sampleOffer,
   type LucideIcon,
+  readChoice,
+  safeLocal,
 } from "@orbit/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
@@ -59,6 +61,9 @@ const PRESET_ICON: Record<PresetId, LucideIcon> = { hr5: Users, tmay10: UserRoun
  * from a preset (`?preset=` highlights one, `?role=` names the role, `?jd=` picks the job post); the full form is under
  * "Customise". Then your progress and the weekly goal, and prep from a job post.
  */
+const LANGUAGE_KEY = "orbit.practiceLanguage";
+const LANGUAGE_LABEL: Record<string, string> = { en: "English", hi: "हिन्दी (Hindi)", hinglish: "Hinglish (Hindi + English)" };
+
 export function MockPage() {
   // The AI interviewer isn't built yet — show a coming-soon state instead of a form that dead-ends.
   if (!MOCK_INTERVIEW_ENABLED) {
@@ -92,6 +97,14 @@ function MockSetup() {
   const company = context.company;
   const setCompany = (value: string) => updateContext({ company: value });
   const guide = matchStyle(styles.data ?? [], company);
+  // Hindi and Hinglish mocks, when the server offers them (ORBIT_MULTILINGUAL); English otherwise and by default.
+  const languages = user?.practice_languages?.length ? user.practice_languages : ["en"];
+  const [language, setLanguageState] = useState(() => readChoice(safeLocal, LANGUAGE_KEY, languages, "en"));
+  const practiceLanguage = languages.includes(language) ? language : "en";
+  const setLanguage = (value: string) => {
+    setLanguageState(value);
+    safeLocal.setItem(LANGUAGE_KEY, value);
+  };
 
   // Which job description the interviewer asks about: the one a link asked for (Jobs → Prepare: `?jd=`), else the
   // newest (like Prep), or none.
@@ -105,7 +118,9 @@ function MockSetup() {
     setStarting(which);
     setError(null);
     try {
-      const session = await api.createSession(withCompany({ ...req, ...context, role: req.role || knownRole }, company));
+      const session = await api.createSession(
+        withCompany({ ...req, ...context, role: req.role || knownRole, language: practiceLanguage }, company),
+      );
       const launchState: LiveLaunchState = { systemAudio: false };
       navigate(`/live/${session.id}`, { state: launchState });
     } catch (err) {
@@ -156,6 +171,17 @@ function MockSetup() {
             <Field label="Interview stage" htmlFor="mock-stage">
               <Input id="mock-stage" value={context.interview_stage} onChange={(e) => updateContext({ interview_stage: e.target.value })} placeholder="e.g. Technical round, final panel" maxLength={80} />
             </Field>
+            {languages.length > 1 && (
+              <Field label="Language" htmlFor="mock-language" hint="The interviewer asks, and your review is written, in this language. Answer in whatever mix feels natural.">
+                <Select id="mock-language" value={practiceLanguage} onChange={(e) => setLanguage(e.target.value)}>
+                  {languages.map((l) => (
+                    <option key={l} value={l}>
+                      {LANGUAGE_LABEL[l] ?? l}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
             {jds.length > 0 && (
               <Field label="Practise for" htmlFor="mock-jd">
                 <Select id="mock-jd" value={jdId ?? NO_JD} onChange={(e) => setJdChoice(e.target.value)}>

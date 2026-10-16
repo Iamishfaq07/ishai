@@ -15,7 +15,7 @@ import { currentRun, nudgeFor } from "../live/deliveryNudge";
 import { DEFAULT_HOTKEYS, useHotkeys, type HotkeyMap } from "../live/hotkeys";
 import { CODING_LANGUAGES } from "../live/preferences";
 import { historyLabel, useAnswerHistory, type AnswerHistory } from "../live/useAnswerHistory";
-import { useInterviewerVoice } from "../live/useInterviewerVoice";
+import { useInterviewerVoice, voiceLanguage } from "../live/useInterviewerVoice";
 import type { NaturalVoiceSource } from "../live/naturalVoice";
 import { useKeyPointProgress } from "../live/useKeyPointProgress";
 import { useReadAloud } from "../live/useReadAloud";
@@ -153,6 +153,8 @@ export interface LivePanelProps {
   onInterviewerSpeaking?: (speaking: boolean) => void;
   /** The interviewer's natural voice (useNaturalVoiceSource); null or absent = the device's voice. */
   naturalVoice?: NaturalVoiceSource | null;
+  /** A mock's practice language ("en", "hi", "hinglish"): which device voice reads the questions. */
+  practiceLanguage?: string;
 }
 
 export function LivePanel(props: LivePanelProps) {
@@ -183,7 +185,11 @@ export function LivePanel(props: LivePanelProps) {
     setVoiceMuted(m);
     safeLocal.setItem(MUTE_KEY, m ? "1" : "0");
   }, []);
-  const voice = useInterviewerVoice(mockQuestion, { enabled: Boolean(props.mockInterview) && !voiceMuted, natural: props.naturalVoice ?? null });
+  const voice = useInterviewerVoice(mockQuestion, {
+    enabled: Boolean(props.mockInterview) && !voiceMuted,
+    natural: props.naturalVoice ?? null,
+    lang: voiceLanguage(props.practiceLanguage),
+  });
   const { onInterviewerSpeaking } = props;
   const reader = useReadAloud();
   const selfSpeaking = voice.speaking || reader.status === "playing";
