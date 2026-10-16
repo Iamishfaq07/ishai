@@ -430,6 +430,8 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/v1/auth/email-change/confirm"),
     ("GET", "/v1/plans"), ("GET", "/v1/billing/packs"),
     ("GET", "/v1/billing/monthly"), ("GET", "/v1/jobs/stats"), ("GET", "/v1/announcement"),
+    # The visitor's country from the web app's edge, for signed-out wording (nothing stored, no cookie).
+    ("GET", "/v1/region"),
     # The Technical details page's latency aggregates (nothing per person; empty until enough sessions).
     ("GET", "/v1/public/engineering-telemetry"),
     ("GET", "/v1/desktop/update/{target}/{arch}/{current_version}"),

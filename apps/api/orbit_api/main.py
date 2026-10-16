@@ -40,6 +40,7 @@ from orbit_api.documents.routes import router as documents_router
 from orbit_api.entitlements import plans as configured_plans
 from orbit_api.evidence.routes import router as evidence_router
 from orbit_api.extension.routes import router as extension_router
+from orbit_api.geo import router as region_router
 from orbit_api.job_portal.alerts import router as job_alerts_router
 from orbit_api.job_portal.companies import boards as configured_boards
 from orbit_api.job_portal.contacts import router as job_contacts_router
@@ -301,6 +302,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_overview_router)
     app.include_router(admin_inbox_router)
     app.include_router(announcement_router)
+    app.include_router(region_router)
     app.include_router(workspaces_router)
     app.include_router(preflight_router)
     app.include_router(billing_router)
