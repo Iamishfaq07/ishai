@@ -1,5 +1,15 @@
 # Implementation log
 
+## Speaking feedback: pauses and time to start (2026-10-16)
+
+- "How you sounded" on a session gains **Time to start** (the median time from the end of a question to your first
+  words) and **Pauses mid-answer** (silences of 3 s or more inside one answer). Both come from the transcript's own
+  timings, with no AI.
+- A new tip when answers usually start after a long silence: a short opener fills it.
+- **How these are measured** (folded under the card): approximate, and about how you spoke. Nothing about how good
+  an answer was, how confident you are, or how you'll be judged. One older tip that mentioned "confidence" is
+  reworded to match.
+
 ## Interview prep plan with countdown (2026-10-16)
 
 - **A day-by-day plan to the interview** in the Job Mission Room's new **Prep plan** tab. It opens first when the job

@@ -8,6 +8,7 @@ import { Button, Card, ErrorNote } from "./ui";
 const PACE_OK = [110, 170] as const;
 const FILLERS_OK = 4;
 const TALK_SHARE_OK = 0.8;
+const START_OK = 6;
 
 type Tone = "good" | "warning";
 
@@ -57,7 +58,7 @@ export function DeliveryCard({ delivery }: { delivery: DeliveryStats | null | un
       <p className="text-sm text-zinc-500 dark:text-zinc-400">
         From your side of the transcript — {Math.max(1, Math.round(delivery.speaking_seconds / 60))} min of speaking.
       </p>
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <Tile
           label="Pace"
           value={String(pace)}
@@ -101,7 +102,36 @@ export function DeliveryCard({ delivery }: { delivery: DeliveryStats | null | un
             }
           />
         )}
+        {delivery.median_start_seconds != null && (
+          <Tile
+            label="Time to start"
+            value={String(delivery.median_start_seconds)}
+            unit="s"
+            status={
+              <Status
+                tone={delivery.median_start_seconds <= START_OK ? "good" : "warning"}
+                label={delivery.median_start_seconds <= START_OK ? "Quick" : "Long silence"}
+              />
+            }
+          />
+        )}
+        {delivery.long_pauses != null && (
+          <Tile
+            label="Pauses mid-answer"
+            value={String(delivery.long_pauses)}
+            unit="of 3 s+"
+            status={<Status tone="good" label={delivery.long_pauses === 0 ? "None long" : "A pause can help"} />}
+          />
+        )}
       </div>
+      <details className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+        <summary className={cx("cursor-pointer rounded", focusRing)}>How these are measured</summary>
+        <p className="mt-1">
+          Counted from the transcript's words and timings for this saved session: pace is words over your speaking time, fillers are words like
+          "um" and "you know", time to start is from the end of each question to your first words. They're approximate, and they describe how
+          you spoke, not how good an answer was, how confident you are or how an interviewer will judge you.
+        </p>
+      </details>
       {delivery.top_fillers.length > 0 && (
         <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-300">
           <span className="text-zinc-500 dark:text-zinc-400">Most used: </span>

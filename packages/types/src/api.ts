@@ -473,6 +473,10 @@ export interface DeliveryStats {
   answers: number;
   average_answer_words: number | null;
   longest_answer_words: number | null;
+  /** Silences of 3 s or more inside one answer (sessions reviewed before 16 Oct 2026 don't have it). */
+  long_pauses?: number;
+  /** Median seconds from the end of a question to your first words; null when it couldn't be measured. */
+  median_start_seconds?: number | null;
   tips: string[];
 }
 

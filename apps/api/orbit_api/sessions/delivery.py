@@ -9,6 +9,7 @@ conversational pace is roughly 120-160 words per minute, and a few fillers a min
 import re
 from collections import Counter
 from collections.abc import Sequence
+from itertools import pairwise
 from typing import Any, Protocol
 
 # Multi-word fillers first so "you know" isn't also counted as two words of something else.
@@ -22,6 +23,9 @@ SLOW_WPM, FAST_WPM = 110, 170
 MANY_FILLERS_PER_MIN = 4.0
 LONG_ANSWER_WORDS = 300  # ~2 minutes spoken
 MIN_SPEAKING_S = 20  # below this there isn't enough speech to say anything useful
+LONG_PAUSE_S = 3.0  # a silence this long inside one answer (between two of the candidate's own lines)
+SLOW_START_S = 6.0  # median time from the end of a question to the candidate's first words
+MAX_START_S = 30.0  # longer gaps are someone stepping away or a muted mic, not thinking time
 
 
 class TurnLike(Protocol):
@@ -58,18 +62,23 @@ def delivery_stats(turns: Sequence[TurnLike], answers: Sequence[str] = ()) -> di
     fillers_per_min = round(filler_total / minutes, 1) if minutes else 0.0
     others_s = sum(_seconds(t) for t in others)
     talk_share = round(speaking_s / (speaking_s + others_s), 2) if speaking_s + others_s else None
+    pauses, starts = _pauses_and_starts(turns)
     answer_words = [len(_WORDS.findall(a)) for a in answers if a.strip()]
 
     tips: list[str] = []
     if wpm > FAST_WPM:
         tips.append(f"You spoke at about {wpm} words a minute — slow down a little and pause between points.")
     elif wpm < SLOW_WPM:
-        tips.append(f"About {wpm} words a minute is on the slow side — tighter sentences will sound more confident.")
+        tips.append(f"About {wpm} words a minute is on the slow side — shorter sentences keep the listener with you.")
     if fillers_per_min > MANY_FILLERS_PER_MIN:
         top = ", ".join(f"“{w}”" for w, _ in fillers.most_common(2))
         tips.append(f"{fillers_per_min} filler words a minute (mostly {top}) — a short silent pause works better.")
     if answer_words and max(answer_words) > LONG_ANSWER_WORDS:
         tips.append("Some answers ran past two minutes — lead with the point, then one example.")
+    median_start = _median(starts)
+    if median_start is not None and median_start > SLOW_START_S:
+        tips.append(f"You usually started about {median_start:.0f} s after a question. Thinking is fine; a short "
+                    "opener (\"Let me think about a good example\") fills the silence.")
     if talk_share is not None and talk_share > 0.8 and others:
         tips.append("You did most of the talking — leave room for the interviewer's follow-ups.")
     return {
@@ -80,8 +89,34 @@ def delivery_stats(turns: Sequence[TurnLike], answers: Sequence[str] = ()) -> di
         "fillers_per_minute": fillers_per_min,
         "top_fillers": [{"word": w, "count": c} for w, c in fillers.most_common(5)],
         "talk_share": talk_share,
+        "long_pauses": pauses,
+        "median_start_seconds": round(median_start, 1) if median_start is not None else None,
         "answers": len(answer_words),
         "average_answer_words": round(sum(answer_words) / len(answer_words)) if answer_words else None,
         "longest_answer_words": max(answer_words) if answer_words else None,
         "tips": tips,
     }
+
+
+def _median(values: list[float]) -> float | None:
+    if not values:
+        return None
+    v = sorted(values)
+    mid = len(v) // 2
+    return v[mid] if len(v) % 2 else (v[mid - 1] + v[mid]) / 2
+
+
+def _pauses_and_starts(turns: Sequence[TurnLike]) -> tuple[int, list[float]]:
+    """Long silences inside the candidate's own speech (two of their lines in a row, nobody else between, 3 s or
+    more apart), and how long each answer took to start after the interviewer stopped. From the transcript's
+    timings only: approximate, and nothing about why."""
+    ordered = sorted((t for t in turns if t.text.strip()), key=lambda t: t.start_ms)
+    pauses = 0
+    starts: list[float] = []
+    for prev, cur in pairwise(ordered):
+        gap = (cur.start_ms - prev.end_ms) / 1000
+        if cur.speaker == "candidate" and prev.speaker == "candidate" and gap >= LONG_PAUSE_S:
+            pauses += 1
+        elif cur.speaker == "candidate" and prev.speaker == "interviewer" and 0 <= gap <= MAX_START_S:
+            starts.append(gap)
+    return pauses, starts
