@@ -34,16 +34,26 @@ amber is `text-amber-950` (white on amber is 2.1:1). Figures are tabular by defa
 - `gradient-border` — 1 px accent → aurora hairline around hero cards.
 - `text-gradient` — accent → aurora headline text.
 - `SpaceBackdrop` — the animated sky, mounted once per app.
+- **Calm inside the app**: the signed-in shell (`html.app-shell`, set by the web Layout) hides the starfield, dot
+  grid and light orbs, and `glass-panel` / `orbit-card` / `orbit-panel` turn opaque there, so nothing shows through
+  text while people work. The cinematic sky is for public pages and empty states.
 
 ## Navigation (web)
 
-- **Main nav** (`apps/web/src/components/Layout.tsx`): the daily destinations only, the same on the top bar and the
-  phone tab bar: Home, Practice, Sessions, Documents, Resume AI, Jobs AI. The AI products show their word and the
-  gradient `AiPill` ("Resume", "Jobs"; their links are labelled "Resume AI" and "Jobs AI"). Settings is a gear beside
-  the account menu (and in it, with Plan & billing). The top bar drops its icons between 768 and 1023 px; the tab bar
-  has a column each and fits a 360 px phone.
-- **A product's own pages** sit under its nav item as `ProductTabs` (`components/products.tsx`): Jobs AI's Overview,
-  Matches, Tracker and Profile. The tabs hide while a product has only one page (Resume AI today).
+One definition, `apps/web/src/components/nav.ts`, feeds the desktop sidebar, the phone tab bar and the phone's Explore
+sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav does.
+- **Desktop sidebar**, grouped by the job to be done: Home; **Prepare** (Practice and Video interview while mock
+  interviews are on, Resume AI, Learning AI); **Apply** (Jobs AI, LinkedIn AI); **Interview & offer** (Copilot AI,
+  Offer AI). Plan & credits, Settings, Admin (admins only) and Support sit at its foot. Every AI tool carries the AI
+  mark at its icon's top right. It collapses to icons; the choice is kept on the device (`orbit.sidebar`), and with
+  none it starts collapsed under 1280 px.
+- **Top bar**: a wide "Search or jump to…" (Ctrl K, the command palette), a **New** menu (live session, mock
+  interview, resume, job search, offer) and the account menu.
+- **Phones**: five destinations, Home, Jobs, Resume, Practice (the copilot when mock interviews are off) and
+  **Explore**, a sheet with the other tools as cards, then plan, settings, admin, support and sign out.
+- **A product's own pages** sit under its item as `ProductTabs` (`components/products.tsx`): Jobs AI's Overview,
+  Matches, Tracker and Profile. The tabs hide while a product has only one page. A product opens with a short
+  header and one primary action, not a marketing banner.
 
 ## Motion
 
