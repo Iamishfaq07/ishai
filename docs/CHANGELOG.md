@@ -1,5 +1,24 @@
 # Implementation log
 
+## The API outside India: each user's own job market (2026-10-17)
+
+- **Google sign-up** keeps the country it came from (Cloudflare's, through the web app), as a password sign-up keeps
+  the browser's guess. Signing in again never changes it; Settings does.
+- **No country saved yet:** job search, portals and cities, the LinkedIn audit's keywords, Offer AI's pay range and
+  the Practice page's company guides follow where the request came from, then India as before.
+- **Live copilot:** told the job market and its currency outside India ("Job market: the United Kingdom… in GBP"),
+  and a student or new graduate is ENTRY-LEVEL there; India's prompt is unchanged, FRESHER and all.
+- **Mock interviews:** a panel outside India is Emma, Daniel, Maya, Omar and James (India keeps Anita, Rahul, Meera,
+  Arjun and Vikram). Accenture's spoken-English test, Cognizant's GenC rounds and Deloitte's group discussion are
+  India's only; elsewhere those guides read as candidates there report them, and Google's estimation question is set
+  in the user's biggest city (New York, London) instead of Bengaluru.
+- **Offer AI:** the plan for an offer that isn't in rupees says base salary, target bonus and signing bonus (a rupee
+  offer keeps fixed pay, variable and joining bonus). A new offer sent without a currency gets the user's own. A "$" in a Canadian,
+  Australian, New Zealand, Singapore or Hong Kong post is that country's dollar ("CA$", "A$", "S$" read as written),
+  and pay lines naming CHF, SEK, JPY and other local currencies are read.
+- Small words: the search box says "Entry level" outside India; a referral request is "LinkedIn or email" outside
+  India; the contact form's phone hint says "your country code", not "+91".
+
 ## PayPal for buyers outside India (2026-10-17)
 
 - **Outside India, plans and packs are paid in US dollars through PayPal**: a PayPal account, or a card where PayPal

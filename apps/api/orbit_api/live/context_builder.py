@@ -26,6 +26,7 @@ from orbit_api.live.events import (
     Speaker,
 )
 from orbit_api.providers.llm.base import LLMMessage
+from orbit_api.region import country_name, currency, is_india
 from orbit_api.retrieval.index import Hit, IndexedChunk, SessionIndex
 
 RECENT_TURNS = 6
@@ -67,6 +68,27 @@ _LEVEL_RULES: dict[str, str] = {
     "senior": "Candidate level: SENIOR. Judgment from experience: the trade-offs and decisions behind the work, said "
               "plainly, not as a lecture.",
 }
+# "Fresher" is India's word; elsewhere the same candidate is entry-level.
+_ENTRY_LEVEL_RULE = _LEVEL_RULES["fresher"].replace("FRESHER (a student or recent graduate)",
+                                                    "ENTRY-LEVEL (student or recent graduate)")
+
+
+def _level_rule(level: str | None, country: str | None) -> str:
+    if level == "fresher" and not is_india(country):
+        return _ENTRY_LEVEL_RULE
+    return _LEVEL_RULES.get(level or "", "")
+
+
+def _market_rule(country: str | None) -> list[str]:
+    """Where the user applies, outside India, so pay and the job market are talked about as they are there. India
+    (the copilot's first market) and an unknown country get no line: their prompt stays as it always was."""
+    name = country_name(country)
+    if name is None or is_india(country):
+        return []
+    money = currency(country)
+    return [f"Job market: {name}. Any salary or pay range is {f'in {money}, ' if money else ''}as pay is quoted there."]
+
+
 _SIMPLER = ("SIMPLER: the user asked for this answer again in plainer words. Same substance, everyday words and short "
             "sentences, at most one technical term, said in passing, as if to a smart friend outside the field.")
 _NATURAL = ("Style: NATURAL, a sharp and prepared person talking, not an essay: first person, contractions, plain "
@@ -101,8 +123,10 @@ _SESSION_RULES: dict[SessionType, str] = {
 
 
 @cache
-def live_system_prompt() -> str:
-    return (Path(__file__).resolve().parents[1] / "prompts" / "live_system.md").read_text(encoding="utf-8")
+def live_system_prompt(country: str | None = None) -> str:
+    """The copilot's rules, in the words of the country the user applies in ("a fresher" in India)."""
+    text = (Path(__file__).resolve().parents[1] / "prompts" / "live_system.md").read_text(encoding="utf-8")
+    return text.replace("__A_FRESHER__", "A fresher" if is_india(country) else "An entry-level candidate")
 
 
 _FENCE_TAG = re.compile(r"<\s*(/?)\s*reference_data", re.IGNORECASE)
@@ -191,6 +215,8 @@ class PromptInputs:
     # Technologies the question asks about that the verified facts never show (live/background.py).
     unshown: list[str] = field(default_factory=list)
     simpler: bool = False  # the card's "Simpler": the same answer in plainer words
+    # The country the user applies in (the account's), for the job market's words and currency; None when unknown.
+    country: str | None = None
 
 
 @dataclass
@@ -390,9 +416,11 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
         [
             _SESSION_RULES[inputs.session_type],
             f"Target role: {inputs.role}" if inputs.role else "",
-            _LEVEL_RULES.get(inputs.level or "", ""),
+            _level_rule(inputs.level, inputs.country),
+            *_market_rule(inputs.country),
             f"Company: {inputs.company}" if inputs.company else "",
-            company_styles.copilot_hint(style) if (style := company_styles.match(inputs.company)) else "",
+            company_styles.copilot_hint(company_styles.for_country(style, inputs.country))
+            if (style := company_styles.match(inputs.company)) else "",
             _SIZE_RULES[inputs.size] if inputs.size else _LENGTH_RULES.get(inputs.length, _LENGTH_RULES["standard"]),
             _STYLE_RULES[inputs.style] if inputs.qtype != QuestionType.coding else "",
             f"Answer language: {(inputs.answer_language or '').strip() or 'English'}",
@@ -473,7 +501,7 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
     parts.append("QUESTION: " + fence(inputs.question))
 
     return BuiltPrompt(
-        messages=[LLMMessage("system", live_system_prompt()), LLMMessage("user", "\n\n".join(parts))],
+        messages=[LLMMessage("system", live_system_prompt(inputs.country)), LLMMessage("user", "\n\n".join(parts))],
         context_used=used,
         hits=hits,
         facts=facts,

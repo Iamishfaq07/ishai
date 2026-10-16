@@ -250,6 +250,9 @@ class SessionProfile:
     # The company interviewing, from the saved setup the session started from (or the mock interview's setup).
     company: str | None = None
     prep_context: dict[str, Any] = field(default_factory=dict)
+    # The country the user applies in (the account's, read when the session connects): the job market's words and
+    # currency in answers, and the mock interview's panel and examples. None when they haven't said.
+    country: str | None = None
 
 
 @dataclass
@@ -447,7 +450,7 @@ class LiveEngine:
             self._mock = MockInterviewer(profile.mock or MockConfig(), llm=llm, index=index, role=profile.role,
                                          send=self.send, on_question=self._on_mock_question,
                                          on_finish=self._on_mock_finish, record_usage=self._record_mock_usage,
-                                         company=profile.company, language=profile.language)
+                                         company=profile.company, language=profile.language, country=profile.country)
         if resume is not None:  # a reconnect: pick up the conversation (and the mock round) where it was
             self.memory = resume.memory
             if self._mock is not None and resume.mock is not None:
@@ -1347,6 +1350,7 @@ class LiveEngine:
             company=self.profile.company, parts=asks, size=size,
             level=self._level if experience == "auto" else experience,
             unshown=self._background.unshown(question, qtype) if source != "screenshot" else [], simpler=simpler,
+            country=self.profile.country,
         )
         built = build_prompt(self._index, inputs, self.memory)
         # Technical questions get room for code as well: the model writes it when the question turns out to need it,
