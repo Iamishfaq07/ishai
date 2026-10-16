@@ -64,7 +64,7 @@ export function OutOfCreditsHost() {
         <p>{copy.body}</p>
         {offer && adds && (
           <p>
-            The {offer.label} pack adds {adds} for {rupees(offer.price_inr)}. They never expire.
+            The {offer.label} pack adds {adds} for {offer.price_text ?? rupees(offer.price_inr)}. They never expire.
           </p>
         )}
       </div>

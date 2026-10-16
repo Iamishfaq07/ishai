@@ -258,9 +258,11 @@ async def export_docx(body: DocxIn, _: Annotated[User, Depends(current_user)]) -
 # ---- AI: import and suggestions ----------------------------------------------------------------------------
 
 
-async def account_allowance(user: Annotated[User, Depends(require_verified_email)],
+async def account_allowance(request: Request, user: Annotated[User, Depends(require_verified_email)],
                             db: Annotated[AsyncSession, Depends(get_db)]) -> Allowance:
-    return await allowance_for(db, user)
+    from orbit_api.billing import pricing
+
+    return await allowance_for(db, user, pricing.currency_for(request, user))
 
 
 async def _spend[T](allowance: Allowance, work: Awaitable[T]) -> T:

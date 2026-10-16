@@ -22,6 +22,11 @@ describe("outOfCreditsFrom", () => {
     });
   });
 
+  it("keeps the price in the buyer's currency when the server sends it", () => {
+    const abroad = { detail: { ...RESUME_402.detail, price_text: "$29.99" } };
+    expect(outOfCreditsFrom("/api/v1/resumes/suggest", "POST", abroad)?.offer?.price_text).toBe("$29.99");
+  });
+
   it("says minutes when starting a session is refused", () => {
     const body = { detail: "You're out of interview minutes. Buy a pack to keep going." };
     expect(outOfCreditsFrom("/api/v1/sessions", "POST", body)).toEqual({ kind: "minutes" });

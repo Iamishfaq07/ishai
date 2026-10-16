@@ -12,6 +12,8 @@ export interface CreditsOffer {
   pack: string;
   label: string;
   price_inr: number;
+  /** The price in the buyer's currency ("₹499", "$7.99"), when the server sent it. */
+  price_text?: string;
   resume_credits: number;
   interview_minutes: number;
 }
@@ -36,12 +38,13 @@ export function announceOutOfCredits(event: OutOfCredits): void {
 }
 
 function offerFrom(detail: Record<string, unknown>): CreditsOffer | undefined {
-  const { pack, label, price_inr, resume_credits, interview_minutes } = detail;
+  const { pack, label, price_inr, price_text, resume_credits, interview_minutes } = detail;
   if (typeof pack !== "string" || typeof price_inr !== "number") return undefined;
   return {
     pack,
     label: typeof label === "string" ? label : pack,
     price_inr,
+    ...(typeof price_text === "string" && price_text ? { price_text } : {}),
     resume_credits: typeof resume_credits === "number" ? resume_credits : 0,
     interview_minutes: typeof interview_minutes === "number" ? interview_minutes : 0,
   };

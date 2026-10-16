@@ -35,6 +35,11 @@ def currency_for(request: HTTPConnection, user: User | None = None) -> str:
     return INR if region.is_india(country) else USD
 
 
+def account_currency(user: User) -> str:
+    """The currency for someone with no request at hand (a background job): their account's country, then India."""
+    return INR if region.is_india(user.country or region.INDIA) else USD
+
+
 def usd_cents(price_inr: int) -> int:
     s = get_settings()
     dollars = math.ceil(price_inr / s.usd_inr_rate * s.intl_markup - 1e-9)

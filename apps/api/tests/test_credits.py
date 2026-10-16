@@ -133,6 +133,11 @@ def test_each_resume_ai_action_spends_a_credit_then_offers_a_pack(client: TestCl
     assert again.status_code == 402
     detail = again.json()["detail"]
     assert detail["code"] == "upgrade_required" and detail["pack"] == "mini" and "₹499" in detail["message"]
+    assert detail["price_text"] == "₹499"
+    # Out of credits abroad: the same pack, priced the way the visitor pays (the country Cloudflare saw).
+    abroad = client.post("/v1/resumes/cover-letter", headers={**h, "X-Orbit-Client-Country": "US"}, json=_letter())
+    assert abroad.status_code == 402
+    assert abroad.json()["detail"]["price_text"] == "$7.99" and "₹" not in abroad.json()["detail"]["message"]
     assert client.post("/v1/resumes/import", headers=h, json={"source": "text", "text": "x" * 200}).status_code == 402
     # Fixes that need no AI stay free, and say what a pack adds.
     s = client.post("/v1/resumes/suggest", headers=h, json={"data": strong_resume().model_dump(mode="json"),
