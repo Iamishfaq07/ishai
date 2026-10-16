@@ -5,10 +5,10 @@ Status: shipped 16 Oct 2026. On automatically when `DEEPGRAM_API_KEY` is set (pr
 ## What it does
 - The mock interviewer reads each question with a neural voice (Deepgram Aura-2), streamed through the API and
   played as it arrives. The Deepgram key never leaves the server.
-- Voices with a documented accent: Thalia (American), Draco (British), Hyperion (Australian). Deepgram doesn't list
-  an Indian English Aura-2 voice yet, so none is offered. Add one to `VOICES` in `orbit_api/voice/routes.py` when it
-  exists. In a panel interview, each interviewer gets the next voice.
-- Settings → Interviewer voice: pick a natural voice or the device's own, and play a sample.
+- **One voice: Thalia (`aura-2-thalia-en`), Deepgram's default American English voice.** The British and Australian
+  model names couldn't be verified, and a model name Deepgram doesn't have fails every request, so they were removed
+  (17 Oct). A voice saved by an older client (`uk`, `au`) gets Thalia.
+- Settings → Interviewer voice: the natural voice or the device's own, and play a sample.
 - During a mock: **Mute voice** (remembered on the device), Repeat, Stop. The question is always on screen.
 - Talking over the voice stops it (the existing barge-in).
 
@@ -26,8 +26,15 @@ Status: shipped 16 Oct 2026. On automatically when `DEEPGRAM_API_KEY` is set (pr
 
 ## Not built (from the brief)
 - The interviewer cutting in when an answer runs long ("Let me stop you there…") and back-channel cues.
-- Latency wasn't measured against a real Deepgram account here (no key in this environment). The client starts
-  playback on the first chunk wherever MediaSource takes MP3 (Chrome, Edge, Firefox, Safari on macOS).
+- Latency wasn't measured against a real Deepgram account here (no key in this environment).
+
+## Playback (fixed 17 Oct)
+- Each question plays in its own new `<audio>` element, once its MP3 has arrived. The first version reused one element
+  and streamed into it with MediaSource. Loading a new source while the last `play()` was still starting made browsers
+  throw "The play() request was interrupted by a new load request", and the question then fell back to the device's
+  voice. A clip stopped on purpose (the next question, Stop, barge-in) is not treated as a failure.
+- The first question waits (up to 2.5 s) for the server to say whether the natural voice is on, instead of being
+  read by the device's voice while that's still loading.
 
 ## Tests
 - `apps/api/tests/test_voice.py`: off without a key, streaming through the API, the key kept server-side, the daily

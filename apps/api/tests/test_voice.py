@@ -49,13 +49,13 @@ def test_speaks_through_the_api_and_counts_characters(client: TestClient, monkey
     seen: list[httpx.Request] = []
     _deepgram(monkeypatch, seen=seen)
     s = client.get("/v1/voice", headers=h).json()
-    assert s["available"] is True and {v["id"] for v in s["voices"]} == {"us", "uk", "au"}
+    assert s["available"] is True and [v["model"] for v in s["voices"]] == ["aura-2-thalia-en"]  # one real voice
     assert s["chars_left"] == get_settings().tts_daily_chars
-    r = client.post("/v1/voice/speak", headers=h, json={"text": "  Tell me   about yourself. ", "voice": "uk"})
+    r = client.post("/v1/voice/speak", headers=h, json={"text": "  Tell me   about yourself. ", "voice": "us"})
     assert r.status_code == 200, r.text
     assert r.headers["content-type"] == "audio/mpeg" and r.content == AUDIO
     req = seen[0]
-    assert req.url.params["model"] == "aura-2-draco-en" and req.url.params["encoding"] == "mp3"
+    assert req.url.params["model"] == "aura-2-thalia-en" and req.url.params["encoding"] == "mp3"
     assert req.headers["authorization"] == "Token dg-secret-key"
     assert json.loads(req.content) == {"text": "Tell me about yourself."}  # whitespace tidied, nothing else sent
     assert "dg-secret-key" not in r.text
@@ -71,7 +71,9 @@ def test_the_daily_allowance_and_limits(client: TestClient, monkeypatch: pytest.
     over = client.post("/v1/voice/speak", headers=h, json={"text": "y" * 20})
     assert over.status_code == 429 and "device's voice" in over.json()["detail"]
     assert client.post("/v1/voice/speak", headers=h, json={"text": "x" * 801}).status_code == 422
-    assert client.post("/v1/voice/speak", headers=h, json={"text": "hi", "voice": "klingon"}).status_code == 422
+    # A voice saved by an older client (uk, au) gets the one voice instead of failing.
+    old_choice = client.post("/v1/voice/speak", headers=h, json={"text": "hi", "voice": "uk"})
+    assert old_choice.status_code == 200
 
 
 def test_a_provider_failure_is_a_json_error_and_free(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:

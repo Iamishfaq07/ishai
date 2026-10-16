@@ -39,14 +39,10 @@ class Voice(BaseModel):
     model: str
 
 
-# Deepgram Aura-2 voices whose accent is documented. No Indian English voice is listed there yet; add one here when
-# Deepgram publishes it.
+# One voice: Deepgram's own default Aura-2 voice, a clear American English one. Others weren't verifiable, and a
+# model name Deepgram doesn't have fails every request.
 VOICES: dict[str, Voice] = {
-    v.id: v for v in (
-        Voice(id="us", label="Thalia · American English", model="aura-2-thalia-en"),
-        Voice(id="uk", label="Draco · British English", model="aura-2-draco-en"),
-        Voice(id="au", label="Hyperion · Australian English", model="aura-2-hyperion-en"),
-    )
+    "us": Voice(id="us", label="Thalia · American English", model="aura-2-thalia-en"),
 }
 DEFAULT_VOICE = "us"
 
@@ -91,9 +87,7 @@ async def speak(body: SpeakIn, user: Annotated[User, Depends(current_user)],
     provider = get_tts_provider()
     if provider is None:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "The natural voice isn't set up on this server.")
-    voice = VOICES.get(body.voice)
-    if voice is None:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Unknown voice")
+    voice = VOICES.get(body.voice) or VOICES[DEFAULT_VOICE]  # an older client's other choice: the one voice
     text = " ".join(body.text.split())
     left = await chars_left(db, user)
     if left is not None and len(text) > left:

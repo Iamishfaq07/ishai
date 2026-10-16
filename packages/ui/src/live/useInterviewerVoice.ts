@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { naturalVoiceGone, playResponse, voiceForSpeaker, type NaturalVoiceSource } from "./naturalVoice";
 
 /**
- * Speaks the mock interviewer's questions: with the natural voice (neural TTS streamed from the API) when it's set
+ * Speaks the mock interviewer's questions: with the natural voice (neural TTS from the API, one voice) when it's set
  * up and chosen, otherwise with the platform's built-in speech engine (Windows voices in WebView2 / the browser),
  * where a natural-sounding English voice is preferred when installed. A natural-voice failure falls back to the
  * device's voice for that question, and for the rest of the session when it won't come back (allowance used, off).
@@ -72,10 +72,9 @@ export function useInterviewerVoice(
   const spokenId = useRef<string | null>(null);
   // A panel: each speaker gets the next voice the first time they speak, and keeps it.
   const speakers = useRef(new Map<string, number>());
-  const audio = useRef<HTMLAudioElement | null>(null);
   const inFlight = useRef<AbortController | null>(null);
   const [naturalOff, setNaturalOff] = useState(false);
-  const useNatural = Boolean(natural) && !naturalOff;
+  const useNatural = Boolean(natural) && !natural?.pending && !naturalOff;
 
   useEffect(() => {
     if (!synth) return;
@@ -117,7 +116,6 @@ export function useInterviewerVoice(
   const halt = useCallback(() => {
     inFlight.current?.abort();
     inFlight.current = null;
-    audio.current?.pause();
     synth?.cancel();
   }, [synth]);
 
@@ -125,18 +123,17 @@ export function useInterviewerVoice(
     (text: string, speaker?: string) => {
       halt();
       if (speaker && !speakers.current.has(speaker)) speakers.current.set(speaker, speakers.current.size);
-      if (!natural || naturalOff) {
+      if (!natural || natural.pending || naturalOff) {
         sayOnDevice(text, speaker);
         return;
       }
       const id = voiceForSpeaker(natural.voices, speaker ? speakers.current.get(speaker)! : 0)!;
       const controller = new AbortController();
       inFlight.current = controller;
-      audio.current ??= new Audio();
       setSpeaking(true); // the mic is muted from the request on, as with the device's voice
       void natural
         .speak(text, id, controller.signal)
-        .then((res) => playResponse(res, audio.current!, controller.signal))
+        .then((res) => playResponse(res, controller.signal))
         .then(
           () => {
             if (inFlight.current === controller) {
@@ -156,10 +153,12 @@ export function useInterviewerVoice(
   );
 
   useEffect(() => {
+    // Still finding out whether the natural voice is on: wait (a moment at most) instead of the device's voice.
+    if (natural?.pending && !naturalOff) return;
     if (!enabled || !question || spokenId.current === question.id) return;
     spokenId.current = question.id;
     say(question.text, question.speaker);
-  }, [question, enabled, say]);
+  }, [question, enabled, say, natural?.pending, naturalOff]);
 
   useEffect(() => () => halt(), [halt]);
 
