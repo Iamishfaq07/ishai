@@ -25,6 +25,7 @@ import { OFFERS_HOME, money, offerPath } from "../offers/model";
 import { RESUME_AI_HOME, resumePath } from "../resume/paths";
 import { scoreTone } from "../resume/product";
 import { useJobsAi } from "./JobsAi";
+import { CompanyPanel } from "./CompanyPanel";
 import { Journey } from "./Journey";
 import { PrepPlanPanel } from "./PrepPlan";
 import { linkButton, textLink } from "./links";
@@ -32,11 +33,12 @@ import { MISSION_STAGES, isSnoozed, requirementTone, snooze, stagesDone } from "
 import { STATUS_LABEL, STATUS_TONE, practiceLink } from "./model";
 import { JOBS_TRACKER, jobPath } from "./paths";
 
-type Tab = "plan" | "fit" | "resume" | "practice" | "timeline" | "offer";
+type Tab = "plan" | "fit" | "resume" | "company" | "practice" | "timeline" | "offer";
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "plan", label: "Prep plan" },
   { id: "fit", label: "Evidence & fit" },
   { id: "resume", label: "Resume kit" },
+  { id: "company", label: "Company" },
   { id: "practice", label: "Practice" },
   { id: "timeline", label: "Timeline" },
   { id: "offer", label: "Offer" },
@@ -111,6 +113,7 @@ export function JobMissionPage() {
                   {tab === "plan" && <PrepPlanPanel entry={entry} />}
                   {tab === "fit" && <FitPanel fit={m.fit} entry={entry} />}
                   {tab === "resume" && <ResumePanel mission={m} entry={entry} onMission={update} />}
+                  {tab === "company" && <CompanyPanel entry={entry} />}
                   {tab === "practice" && <PracticePanel mission={m} entry={entry} />}
                   {tab === "timeline" && (
                     <Card>
