@@ -26,6 +26,7 @@ const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/admin\/inbox/, "Inbox"],
   [/^\/admin\/support/, "Support"],
   [/^\/settings/, "Settings"],
+  [/^\/extension\/connect/, "Connect the extension"],
   [/^\/live\//, "Live session"],
   [/^\/companion/, "Phone companion"],
   [/^\/contact/, "Contact us"],

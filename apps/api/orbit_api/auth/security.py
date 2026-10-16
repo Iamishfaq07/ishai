@@ -50,8 +50,16 @@ def _now() -> int:
     return int(time.time())
 
 
+# A token with `scope` works only on that scope's routes. "extension": the browser extension (extension/routes.py)
+# can clip a job to the tracker, check a page's fit and read the autofill basics; nothing else.
+SCOPED_PATHS: dict[str, frozenset[str]] = {
+    "extension": frozenset({"/v1/extension/me", "/v1/extension/profile", "/v1/extension/fit",
+                            "/v1/jobs/tracker/manual", "/v1/auth/logout"}),
+}
+
+
 def create_access_token(user_id: str, token_version: int = 0, *, idle: bool = False,
-                        signed_in_at: int | None = None, sid: str | None = None) -> str:
+                        signed_in_at: int | None = None, sid: str | None = None, scope: str | None = None) -> str:
     """A session JWT. `signed_in_at` (claim `auth`) is when the person actually signed in, carried across renewals so
     the hard cap (ORBIT_JWT_TTL) counts from there. `idle` tokens (web cookies) also expire after
     ORBIT_SESSION_IDLE_HOURS and are renewed while in use (see `current_user`)."""
@@ -65,6 +73,8 @@ def create_access_token(user_id: str, token_version: int = 0, *, idle: bool = Fa
                                "idle": idle, "jti": uuid.uuid4().hex}
     if sid:
         payload["sid"] = sid  # the signed-in device (auth/devices.py), kept across renewals
+    if scope:
+        payload["scope"] = scope
     return jwt.encode(payload, s.jwt_secret.get_secret_value(), algorithm="HS256")
 
 
@@ -118,6 +128,9 @@ async def current_user(request: Request, response: Response,
     # A token minted before the last password reset / sign-out-everywhere is dead.
     if user is None or claims is None or claims.get("ver", 0) != user.token_version:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
+    scope = claims.get("scope")
+    if scope is not None and request.url.path not in SCOPED_PATHS.get(str(scope), frozenset()):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This sign-in only works for the browser extension.")
     # This device signed out from another one (Settings → Security → Devices).
     from orbit_api.auth.devices import check_session
 

@@ -437,6 +437,8 @@ export function createApiClient(options: ApiClientOptions) {
     twoFactorNewCodes: (code: string) =>
       json<{ recovery_codes: string[] }>("/v1/auth/2fa/recovery-codes", { method: "POST", body: body({ code }) }),
     voiceStatus: () => json<VoiceStatus>("/v1/voice"),
+    /** A sign-in only the browser extension can use, handed to it on the Connect page (never shown). */
+    extensionConnect: () => json<{ token: string }>("/v1/extension/connect", { method: "POST" }),
     /** The camera coach's numbers so far for a mock session (sent again as they grow). */
     saveCameraMetrics: (sessionId: string, metrics: CameraMetrics) =>
       json<void>(`/v1/sessions/${encodeURIComponent(sessionId)}/camera-metrics`, { method: "PUT", body: body(metrics) }),

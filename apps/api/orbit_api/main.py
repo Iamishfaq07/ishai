@@ -38,6 +38,7 @@ from orbit_api.documents.parsing import isolation_selftest
 from orbit_api.documents.routes import router as documents_router
 from orbit_api.entitlements import plans as configured_plans
 from orbit_api.evidence.routes import router as evidence_router
+from orbit_api.extension.routes import router as extension_router
 from orbit_api.job_portal.alerts import router as job_alerts_router
 from orbit_api.job_portal.companies import boards as configured_boards
 from orbit_api.job_portal.contacts import router as job_contacts_router
@@ -307,6 +308,7 @@ def create_app() -> FastAPI:
     app.include_router(passkeys_router)
     app.include_router(voice_router)
     app.include_router(camera_router)
+    app.include_router(extension_router)
     app.include_router(job_mission_router)
     app.include_router(job_plan_router)
     app.include_router(jobs_router)
