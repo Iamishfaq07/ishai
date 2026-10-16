@@ -1,4 +1,4 @@
-import { BadgeIndianRupee, GraduationCap, House, IdCard, MOCK_INTERVIEW_ENABLED, type LucideIcon } from "@orbit/ui";
+import { BadgeIndianRupee, GraduationCap, House, IdCard, MOCK_INTERVIEW_ENABLED, Video, type LucideIcon } from "@orbit/ui";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { LEARN_HOME } from "../pages/learn/links";
 import { LINKEDIN_HOME } from "../pages/linkedin/model";
@@ -41,6 +41,8 @@ const PRACTICE: NavItem = {
   id: "practice", to: "/mock", label: "Practice", icon: PRODUCTS.practice.icon, product: "practice", ai: true,
   current: (p) => /^\/mock(\/|$)/.test(p),
 };
+// The AI video interview: a face-to-face practice call with the AI interviewer (pages/VideoInterview.tsx).
+const VIDEO: NavItem = { id: "video", to: "/interview", label: "Video interview", icon: Video, ai: true, current: (p) => p === "/interview" };
 const RESUME: NavItem = {
   id: "resume", to: RESUME_AI_HOME, label: "Resume AI", tab: "Resume", icon: PRODUCTS.resume.icon, product: "resume", ai: true,
   current: under(RESUME_AI_HOME),
@@ -61,7 +63,7 @@ const OFFER: NavItem = { id: "offer", to: OFFERS_HOME, label: "Offer AI", icon: 
 export function navGroups(mock: boolean = MOCK_INTERVIEW_ENABLED): NavGroup[] {
   return [
     { label: null, items: [HOME] },
-    { label: "Prepare", items: [...(mock ? [PRACTICE] : []), RESUME, LEARNING] },
+    { label: "Prepare", items: [...(mock ? [PRACTICE, VIDEO] : []), RESUME, LEARNING] },
     { label: "Apply", items: [JOBS, LINKEDIN] },
     { label: "Interview & offer", items: [COPILOT, OFFER] },
   ];

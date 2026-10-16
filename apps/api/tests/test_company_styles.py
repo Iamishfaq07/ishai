@@ -120,3 +120,27 @@ async def test_a_fixed_round_names_the_company() -> None:
                              role=None, send=_noop, on_question=on_question, on_finish=_noop, company=company)
         await mi.start(0)
         assert said and said[0].endswith(expected), (company, said)
+
+
+async def test_a_topic_steers_every_question() -> None:
+    llm = _Recording()
+    mi = MockInterviewer(MockConfig(topic="React performance", video=True), llm=llm, index=SessionIndex([]), role="SDE",
+                         send=_noop, on_question=_noop, on_finish=_noop)
+    await mi._generate()
+    assert "TOPIC: this interview is about the topic below" in llm.systems[0] and "React performance" in llm.systems[0]
+    plain = _Recording()
+    await _interviewer(plain, None)._generate()
+    assert "TOPIC:" not in plain.systems[0]
+
+
+def test_a_video_interview_is_marked_on_the_session(client: TestClient) -> None:
+    h = _register(client)
+    r = client.post("/v1/sessions", headers=h, json={"title": "Video interview: React", "type": "mock",
+                                                      "mock": {"video": True, "topic": "React performance"}})
+    assert r.status_code == 201, r.text
+    assert r.json()["video"] is True
+    assert client.get(f"/v1/sessions/{r.json()['id']}", headers=h).json()["session"]["video"] is True
+    plain = client.post("/v1/sessions", headers=h, json={"title": "Mock", "type": "mock", "mock": {}}).json()
+    assert plain["video"] is False
+    too_long = client.post("/v1/sessions", headers=h, json={"title": "x", "type": "mock", "mock": {"topic": "y" * 201}})
+    assert too_long.status_code == 422

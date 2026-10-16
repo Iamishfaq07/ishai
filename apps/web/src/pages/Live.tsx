@@ -375,6 +375,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       captureHealth={micStarting || sysStarting ? "recovering" : micOn || sysState === "on" ? "active" : "muted"}
       screenCaptureHealth={shot ? "active" : "muted"}
       mockInterview={session.type === "mock"}
+      videoInterview={Boolean(session.video)}
       naturalVoice={naturalVoice}
       practiceLanguage={session.language}
       {...(cameraCoach ? { cameraCoach } : {})}

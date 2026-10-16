@@ -188,6 +188,7 @@ export {
   type VoiceOption,
 } from "./live/naturalVoice";
 export { MockPanel, type CameraCoach } from "./components/MockPanel";
+export { VideoInterviewRoom, INTERVIEWER_NAME } from "./components/VideoInterviewRoom";
 export { ConfirmHost, confirmDialog, type ConfirmOptions } from "./components/ConfirmDialog";
 export * from "./icons";
 

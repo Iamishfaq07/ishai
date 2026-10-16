@@ -427,6 +427,7 @@ export function LiveScreen({
       audioAmplitude={() => audioAmplitude.current}
       captureHealth={Object.values(deviceHealth).includes("recovering") ? "recovering" : Object.values(deviceHealth).includes("active") ? "active" : "muted"}
       mockInterview={session.type === "mock"}
+      videoInterview={Boolean(session.video)}
       naturalVoice={naturalVoice}
       practiceLanguage={session.language}
       ratings={ratings}

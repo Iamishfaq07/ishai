@@ -103,6 +103,12 @@ class MockConfig(BaseModel):
     # The company the candidate is practising for: a known one is interviewed in its style (live/company_styles.py).
     # A negotiation names its company in `negotiation` instead.
     company: str | None = Field(None, max_length=120)
+    # The AI video interview (a video-call room: the interviewer's tile, your camera, captions). The questions are the
+    # same live, adaptive interview; only the room differs.
+    video: bool = False
+    # What the interview is about, typed by the candidate ("React performance", "system design for payments"): every
+    # question tests it, with the resume and job description as context.
+    topic: str | None = Field(None, max_length=200)
 
     @model_validator(mode="after")
     def _negotiation_needs_an_offer(self) -> "MockConfig":
@@ -738,6 +744,11 @@ class MockInterviewer:
             system += "\n" + company_styles.interviewer_brief(style)
         if lang_rule := practice_language.interviewer_instruction(self._language):
             system += "\n" + lang_rule
+        if cfg.topic and cfg.topic.strip() and not cfg.drill:
+            system += ("\nTOPIC: this interview is about the topic below. Every question should test it (concepts, "
+                       "how the candidate has applied it, trade-offs), using the resume and job description only to "
+                       "make it specific to them.\n"
+                       f'<reference_data source="topic">\n{fence(cfg.topic.strip())}\n</reference_data>')
         follow_ups = self._follow_ups_in_topic()
         if follow_up_on is not None and follow_up_on.kind in ("prep", "answer"):
             # A question from their prep, or one they've prepared an answer to: probe the claim behind it, the way the

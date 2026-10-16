@@ -196,6 +196,7 @@ class SessionOut(BaseModel):
     instructions: str | None = None
     # Salary practice: its review is about negotiating, and its lines never join the practice queue.
     negotiation: bool = False
+    video: bool = False  # an AI video interview (MockConfig.video): the web app opens it in the video-call room
 
 
 class SessionDetail(BaseModel):
@@ -226,6 +227,7 @@ def _to_out(row: LiveSessionRow, question_count: int, doc_ids: list[str],
         duration_seconds=row.duration_s, question_count=question_count, document_ids=doc_ids,
         report_status=report_status, workspace_id=row.workspace_id, instructions=row.instructions,
         negotiation=_is_negotiation(row),
+        video=_is_video(row),
     )
 
 
@@ -233,6 +235,11 @@ def _is_negotiation(row: LiveSessionRow) -> bool:
     # Read only when loaded: the session list defers mock_config, and a lazy load can't run here.
     mock = row.__dict__.get("mock_config")
     return isinstance(mock, dict) and bool(mock.get("negotiation"))
+
+
+def _is_video(row: LiveSessionRow) -> bool:
+    mock = row.__dict__.get("mock_config")
+    return isinstance(mock, dict) and bool(mock.get("video"))
 
 
 async def _report_statuses(db: AsyncSession, rows: Sequence[LiveSessionRow]) -> dict[str, ReportStatus]:
