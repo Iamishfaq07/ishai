@@ -1,5 +1,36 @@
 # Implementation log
 
+## Jobs AI outside India: 117 more company boards, SmartRecruiters per country, pay from Greenhouse (2026-10-17)
+
+The company boards were chosen for India. Outside it, a feed had the global companies' posts (Stripe, Databricks,
+Okta…) and little else: SmartRecruiters was asked for India's posts only, and Offer AI's pay ranges had almost
+nothing outside the US. Now:
+
+- **117 more boards** hiring in the US, the UK, Canada, Germany and the rest of Europe, and Australia, each checked
+  live with the feed's own parsers (`companies.py` goes from 147 to 264): 69 on Greenhouse (Anthropic, Airbnb,
+  Datadog, Waymo, DoorDash, Robinhood, Deliveroo, Monzo, HelloFresh, GetYourGuide, Adyen, Culture Amp…), 5 on Lever
+  (Spotify, Zoox…), 39 on Ashby (Notion, Ramp, Plaid, Harvey, Cohere, Wealthsimple, Wayve, ElevenLabs, Enpal…) and
+  4 on SmartRecruiters (Ubisoft, Canva, Western Digital, Delivery Hero). Left out: boards over the 30 MB answer cap
+  (Anduril, SpaceX), with plain-http job links (Block, Squarespace), or mostly gym or catering jobs (Equinox, Sodexo).
+- **SmartRecruiters is asked one country at a time**: India as before (the same calls, first), then each of
+  `ORBIT_JOBS_BOARD_COUNTRIES` (default US, GB, CA, DE, AU) for the boards that aren't India-first. Swiggy, PhonePe and
+  ixigo stay India only.
+- **Pay from Greenhouse**: the pay range a post publishes (`pay_transparency`, required in most of the US and Canada)
+  is its salary, so Offer AI's market has Greenhouse boards' ranges too. A post that's also open in India shows only a
+  rupee range (a dollar one is the US pay).
+- **India**: its boards, their order and SmartRecruiters' India calls are unchanged; every post an India user could be
+  shown before still is, with the same card. The new boards' own posts in India or open to it are listed too (84 in
+  this run: Supabase, Ubisoft in Pune, ZoomInfo, ElevenLabs, Anthropic…).
+- Posts listed by country, from a real first refresh of every keyless source (local, real network): US 1,757 → 6,222,
+  UK 269 → 1,331, Germany 113 → 1,186, Canada 255 → 744, Australia 89 → 220, India 2,187 → 2,243 (5,943 → 14,207 in
+  all). With a pay range: US 449 → 3,092, Canada 72 → 319, UK 11 → 75.
+- The cost, the same machine and network back to back: a first refresh of an empty cache takes 382 s → 1,132 s
+  (SmartRecruiters' 183 country lists and ~2,000 text calls, a second apart; every other source is done by 502 s)
+  and 108 → 236 s of CPU, nearly all of it reading skills from new posts. A refresh 6 hours later takes 204 s → 893 s
+  and 25 → 53 s of CPU (for the first day it also fetches the text of SmartRecruiters' posts still without it, 40 per
+  board and country a run). Peak memory over both is about the same (190 → 198 MB working set), since at most two
+  boards are read at once. The cache grows from 46 to 103 MB (SQLite; 33 → 74 million characters of post text).
+
 ## Orbit for the US, the UK and everywhere else, with India kept as it is (2026-10-17)
 
 - **Prices and payment text in the visitor's currency everywhere**: the support bot's prices and payment answers
