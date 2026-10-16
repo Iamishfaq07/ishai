@@ -1,5 +1,22 @@
 # Implementation log
 
+## Orbit for the US, the UK and everywhere else, with India kept as it is (2026-10-17)
+
+- **Prices and payment text in the visitor's currency everywhere**: the support bot's prices and payment answers
+  (PayPal abroad, no UPI or UTR chips), the out-of-credits message and dialog, the Free tier and comparison while
+  plans load, Help, Contact, the front page and the Resume AI page. India's wording is unchanged.
+- **Signed-out pages know the visitor's country**: `GET /v1/region` returns the country Cloudflare saw, and the web
+  uses the saved country, then that, then the browser's guess (no cookie). Password and Google sign-ups keep it.
+- **Resume AI by country**: GPA, or First/2:1 in the UK, instead of CGPA; local schools and degrees; no Class 10/12,
+  date of birth or declaration outside India; "Student / new grad" and a Graduate template; US/CA resumes start on
+  Letter; a sample resume per country.
+- **Jobs, Practice, Offer AI and onboarding**: Naukri only in India; local examples, cities and outreach; "Entry
+  level" and "recruiter screen" outside India; Hindi only in India; Offer AI leads with first-year value abroad and
+  says monthly take-home is India-only for now; EUR and other currencies work; "Base salary / Target bonus /
+  Signing bonus". Scam reporting by country (FTC and IC3, Action Fraud).
+- **Policies**: terms, refund, privacy and cookie pages cover US dollars and PayPal; UK and EU buyers get a 14-day
+  cancellation right and a GDPR section. The AI model provider is named by its role.
+
 ## The API outside India: each user's own job market (2026-10-17)
 
 - **Google sign-up** keeps the country it came from (Cloudflare's, through the web app), as a password sign-up keeps
