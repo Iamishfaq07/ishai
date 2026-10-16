@@ -100,6 +100,8 @@ export {
   ThumbsDown,
   ThumbsUp,
   Trash2,
+  Fingerprint,
+  Pencil,
   Undo2,
   Redo2,
   Upload,

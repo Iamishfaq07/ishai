@@ -16,7 +16,7 @@ dependencies = [
     "httpx>=0.27",
     "websockets>=13",
     "argon2-cffi>=23.1",
-    "pyjwt>=2.15.1",  # 2.14 had PYSEC-2026-4141
+    "pyjwt>=2.15.1", # 2.14 had PYSEC-2026-4141
     "python-multipart>=0.0.9",
     "pypdf>=5.0",
     "python-docx>=1.1",
@@ -25,6 +25,7 @@ dependencies = [
     "fastembed>=0.7",
     "pypdfium2>=4.30",
     "pillow>=10.1",
+    "webauthn>=2.5",
 ]
 
 [dependency-groups]

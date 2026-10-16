@@ -42,6 +42,7 @@ from orbit_api.models import (
     SupportThread,
     UsageEvent,
     User,
+    UserPasskey,
     UserSession,
     UserTwoFactor,
     Workspace,
@@ -123,6 +124,10 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
         # Whether two-step sign-in is on, and since when; never the secret or the recovery codes.
         "two_factor": {"enabled_at": tf.enabled_at.isoformat() if tf.enabled_at else None}
         if (tf := await db.get(UserTwoFactor, user_id)) else None,
+        # Each passkey's name and dates; the public key is a technical detail of no use outside Orbit.
+        "passkeys": [{"name": k.name, "synced": k.backed_up, "created_at": k.created_at, "last_used_at": k.last_used_at}
+                     for k in (await db.scalars(select(UserPasskey).where(
+                         UserPasskey.user_id == user_id).order_by(UserPasskey.created_at))).all()],
         "signed_in_devices": [_row(d) for d in (await db.scalars(select(UserSession).where(
             UserSession.user_id == user_id).order_by(UserSession.created_at))).all()],
         "usage": [_row(u) for u in (await db.scalars(select(UsageEvent).where(UsageEvent.user_id == user_id)

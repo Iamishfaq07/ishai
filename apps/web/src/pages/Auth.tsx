@@ -4,6 +4,7 @@ import {
   Briefcase,
   Eye,
   EyeOff,
+  KeyRound,
   OrbitWordmark,
   PlanetHero,
   ShieldCheck,
@@ -11,6 +12,7 @@ import {
   buttonClass,
   cx,
   focusRing,
+  passkeysSupported,
   type LucideIcon,
 } from "@orbit/ui";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -321,7 +323,7 @@ function GoogleContinue({ next }: { next: string }) {
 }
 
 export function LoginPage() {
-  const { user, login, finishSecondStep } = useAuth();
+  const { user, login, finishSecondStep, loginWithPasskey } = useAuth();
   const navigate = useNavigate();
   const [search] = useSearchParams();
   const from = useCameFrom();
@@ -336,6 +338,18 @@ export function LoginPage() {
   const [code, setCode] = useState("");
 
   if (user) return <Navigate to={target} replace />;
+
+  const withPasskey = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      if (await loginWithPasskey()) navigate(target, { replace: true });
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -410,6 +424,11 @@ export function LoginPage() {
         <Button type="submit" disabled={busy} className="w-full">
           {busy ? "Signing in…" : "Sign in"}
         </Button>
+        {passkeysSupported() && (
+          <Button type="button" variant="secondary" disabled={busy} onClick={() => void withPasskey()} className="w-full">
+            <KeyRound className="h-4 w-4" aria-hidden /> Sign in with a passkey
+          </Button>
+        )}
         <p className="text-center text-sm">
           <Link
             to="/forgot-password"

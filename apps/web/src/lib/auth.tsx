@@ -10,7 +10,7 @@ import {
   type SetStateAction,
 } from "react";
 import type { LoginRequest, RegisterRequest, User } from "@orbit/types";
-import { ApiError, detectCountry, safeLocal } from "@orbit/ui";
+import { ApiError, detectCountry, getPasskey, passkeyErrorText, safeLocal } from "@orbit/ui";
 import { api, setUnauthorizedHandler } from "./api";
 import { clearAsyncCache } from "./useAsync";
 import { clearPrepContext } from "./prepContext";
@@ -50,6 +50,8 @@ interface AuthContextValue {
   login: (req: LoginRequest) => Promise<{ challenge: string } | null>;
   /** The authenticator code (or a recovery code). `challenge` is null after Google: it's in a cookie. */
   finishSecondStep: (code: string, challenge: string | null) => Promise<void>;
+  /** Sign in with a passkey: false when it was cancelled (nobody signed in, nothing to say). */
+  loginWithPasskey: () => Promise<boolean>;
   register: (req: RegisterRequest) => Promise<RegisterOutcome>;
   logout: () => Promise<void>;
   setUser: Dispatch<SetStateAction<User | null>>;
@@ -113,6 +115,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(acceptAccount(await confirmSession()));
   }, []);
 
+  const loginWithPasskey = useCallback(async () => {
+    const { options } = await api.passkeyLoginOptions();
+    let credential: Record<string, unknown>;
+    try {
+      credential = await getPasskey(options);
+    } catch (err) {
+      const text = passkeyErrorText(err);
+      if (text) throw new Error(text, { cause: err });
+      return false;
+    }
+    await api.loginWithPasskey(credential);
+    forgetAccount();
+    setUser(acceptAccount(await confirmSession()));
+    return true;
+  }, []);
+
   /** "signed_in", or "verify_email" when the server wants the inbox proven first (nobody is signed in then). */
   const register = useCallback(async (req: RegisterRequest): Promise<RegisterOutcome> => {
     const res = await api.register({ country: detectCountry(), ...req });
@@ -146,8 +164,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, login, finishSecondStep, register, logout, setUser }),
-    [user, loading, login, finishSecondStep, register, logout],
+    () => ({ user, loading, login, finishSecondStep, loginWithPasskey, register, logout, setUser }),
+    [user, loading, login, finishSecondStep, loginWithPasskey, register, logout],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

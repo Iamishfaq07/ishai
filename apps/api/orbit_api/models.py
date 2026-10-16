@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -809,6 +810,33 @@ class UserTwoFactor(TimestampMixin, Base):
     enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_step: Mapped[int | None] = mapped_column(BigInteger)
     recovery_hashes: Mapped[list[str] | None] = mapped_column(JSON)
+
+
+class UserPasskey(TimestampMixin, Base):
+    """A passkey (WebAuthn credential) for signing in without a password (auth/passkeys.py). Only the public key is
+    kept; the private key never leaves the person's device or password manager. `name` is theirs to set."""
+
+    __tablename__ = "user_passkeys"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    credential_id: Mapped[str] = mapped_column(String(1400), unique=True)  # base64url, as the browser sends it
+    public_key: Mapped[bytes] = mapped_column(LargeBinary)
+    sign_count: Mapped[int] = mapped_column(BigInteger, default=0)
+    transports: Mapped[list[str] | None] = mapped_column(JSON)
+    name: Mapped[str] = mapped_column(String(60), default="Passkey")
+    backed_up: Mapped[bool] = mapped_column(Boolean, default=False)  # synced (iCloud Keychain, Google…) or one device
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PasskeyChallenge(Base):
+    """A WebAuthn challenge Orbit handed out: single use (deleted when used), five minutes. Only its SHA-256 is kept.
+    `user_id` is set when adding a passkey; signing in starts without knowing who."""
+
+    __tablename__ = "passkey_challenges"
+    challenge_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    purpose: Mapped[str] = mapped_column(String(16))  # register | login
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
 
 
 class UserSession(TimestampMixin, Base):
