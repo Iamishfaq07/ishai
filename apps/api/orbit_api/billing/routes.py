@@ -307,6 +307,10 @@ async def razorpay_order(body: OrderIn, request: Request, user: Annotated[User, 
     key_id = get_settings().razorpay_key_id
     if not razorpay.configured() or not key_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Card payments aren't set up yet.")
+    if cost.currency != pricing.INR and not get_settings().razorpay_international:
+        # The pages show dollar prices with Buy off until then (_priced); a direct call mustn't open a checkout
+        # Razorpay would refuse.
+        raise HTTPException(status.HTTP_409_CONFLICT, "Card payments from outside India aren't switched on yet.")
     reference = upi.new_reference()
     try:
         order_id = await razorpay.create_order(cost.minor, reference, {"pack": pid, "orbit_ref": reference},

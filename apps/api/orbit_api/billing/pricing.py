@@ -8,7 +8,6 @@ A dollar price is the rupee price at ORBIT_USD_INR rupees to the dollar, plus OR
 to the next whole dollar less a cent ($135.99). Rupee prices stay exactly as configured (packs.py, monthly.py).
 """
 
-import hmac
 import math
 from dataclasses import dataclass
 
@@ -17,7 +16,7 @@ from starlette.requests import HTTPConnection
 from orbit_api import region
 from orbit_api.config import get_settings
 from orbit_api.models import Payment, User
-from orbit_api.ratelimit import PROXY_SECRET_HEADER
+from orbit_api.ratelimit import proxy_signed
 
 CLIENT_COUNTRY_HEADER = "x-orbit-client-country"
 INR, USD = "INR", "USD"
@@ -26,11 +25,8 @@ SYMBOL = {INR: "₹", USD: "$"}
 
 def request_country(request: HTTPConnection) -> str | None:
     """The country the edge saw the request come from, when it can be believed."""
-    secret = get_settings().proxy_secret
-    if secret is not None:
-        sent = request.headers.get(PROXY_SECRET_HEADER, "")
-        if not (sent and hmac.compare_digest(sent.encode(), secret.get_secret_value().encode())):
-            return None
+    if get_settings().proxy_secret is not None and not proxy_signed(request):
+        return None
     return region.country_code(request.headers.get(CLIENT_COUNTRY_HEADER))
 
 

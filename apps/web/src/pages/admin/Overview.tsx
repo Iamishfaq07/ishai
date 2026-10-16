@@ -27,6 +27,16 @@ export function AdminOverview({ version = 0 }: { version?: number }) {
           </p>
         </div>
       )}
+      {s?.warnings?.includes("proxy_unsigned") && (
+        <div role="alert" className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-900 dark:text-rose-100">
+          <p className="font-semibold">The website isn't sending the proxy secret</p>
+          <p className="mt-1">
+            Requests from the Cloudflare Worker reach the API without ORBIT_PROXY_SECRET, so the API can't see visitors' countries or IPs:
+            everyone is priced in rupees as if in India, and web visitors share rate limits. Give the Worker the same value as Render's
+            ORBIT_PROXY_SECRET (<code>wrangler secret put PROXY_SECRET --name orbit</code>).
+          </p>
+        </div>
+      )}
       {s?.warnings?.includes("admin_two_factor") && (
         <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
           <p>

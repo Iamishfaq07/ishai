@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orbit_api import credits
+from orbit_api import credits, ratelimit
 from orbit_api.admin.accounts import AuditItem, about_account, audit_items
 from orbit_api.admin.routes import activity_subquery, require_admin, search_term
 from orbit_api.config import get_settings
@@ -61,13 +61,19 @@ class StatsOut(BaseModel):
     revenue_total_inr: int  # includes payments of deleted accounts: they stay on the books
     payments_waiting: int
     # Server settings the admin must fix, as short codes: "proxy_secret" (ORBIT_PROXY_SECRET missing or weak in
-    # production, so per-IP limits key on a spoofable address and welcome credits are held).
+    # production, so per-IP limits key on a spoofable address and welcome credits are held); "proxy_unsigned"
+    # (the web Worker's requests arrive without that secret, so every visitor is priced as in India and web users
+    # share rate limits by Cloudflare's address).
     warnings: list[str] = []
 
 
 def setup_warnings() -> list[str]:
     s = get_settings()
-    return ["proxy_secret"] if s.env == "production" and s.proxy_secret is None else []
+    if s.env != "production":
+        return []
+    if s.proxy_secret is None:
+        return ["proxy_secret"]
+    return ["proxy_unsigned"] if ratelimit.site_worker_unsigned() else []
 
 
 @router.get("/stats", response_model=StatsOut)
