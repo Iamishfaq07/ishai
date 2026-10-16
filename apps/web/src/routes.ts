@@ -35,6 +35,7 @@ const loaders = {
   billing: () => import("./pages/Billing"),
   settings: () => import("./pages/Settings"),
   extensionConnect: () => import("./pages/ExtensionConnect"),
+  videoInterview: () => import("./pages/VideoInterview"),
   companion: () => import("./pages/Companion"),
   adminUsers: () => import("./pages/AdminUsers"),
   adminPayments: () => import("./pages/AdminPayments"),
@@ -83,6 +84,7 @@ export const MockPage = page(loaders.mock, (m) => m.MockPage);
 export const BillingPage = page(loaders.billing, (m) => m.BillingPage);
 export const SettingsPage = page(loaders.settings, (m) => m.SettingsPage);
 export const ExtensionConnectPage = page(loaders.extensionConnect, (m) => m.ExtensionConnectPage);
+export const VideoInterviewPage = page(loaders.videoInterview, (m) => m.VideoInterviewPage);
 export const CompanionPage = page(loaders.companion, (m) => m.CompanionPage);
 export const AdminUsersPage = page(loaders.adminUsers, (m) => m.AdminUsersPage);
 export const AdminPaymentsPage = page(loaders.adminPayments, (m) => m.AdminPaymentsPage);

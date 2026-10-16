@@ -34,6 +34,7 @@ import { ChatInput } from "./ChatInput";
 import { CodeBlock } from "./CodeBlock";
 import { ControlBar } from "./ControlBar";
 import { MockPanel, type CameraCoach } from "./MockPanel";
+import { VideoInterviewRoom } from "./VideoInterviewRoom";
 import { cx, focusRing } from "./cx";
 import { QuestionCard } from "./QuestionCard";
 import { StatusPill } from "./StatusPill";
@@ -155,6 +156,8 @@ export interface LivePanelProps {
   naturalVoice?: NaturalVoiceSource | null;
   /** A mock's practice language ("en", "hi", "hinglish"): which device voice reads the questions. */
   practiceLanguage?: string;
+  /** An AI video interview: the video-call room instead of the practice panel. */
+  videoInterview?: boolean;
   /** The camera coach for mock rounds (web, when the server has it on). */
   cameraCoach?: CameraCoach;
 }
@@ -365,6 +368,34 @@ export function LivePanel(props: LivePanelProps) {
     };
   }, [actions, againText, againVia, answerSize, followLive]);
   const mockStt = live.providers.stt?.state === "mock";
+
+  if (props.videoInterview && props.mockInterview) {
+    return (
+      <VideoInterviewRoom
+        {...(props.title ? { title: props.title } : {})}
+        live={live}
+        actions={actions}
+        voice={voice}
+        ended={ended}
+        paused={paused}
+        muted={voiceMuted}
+        onMutedChange={changeMuted}
+        candidateText={liveCandidateText}
+        {...(props.cameraCoach ? { cameraCoach: props.cameraCoach } : {})}
+        banners={
+          <Banners
+            live={live}
+            onReconnect={props.onReconnect}
+            onEndOtherSession={props.onEndOtherSession}
+            onBuyMinutes={props.onBuyMinutes}
+            onDismiss={actions.dismissError}
+          />
+        }
+        onEnd={props.onEnd}
+        {...(props.onViewReport ? { onViewReport: props.onViewReport } : {})}
+      />
+    );
+  }
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">

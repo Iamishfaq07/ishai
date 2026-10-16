@@ -189,6 +189,10 @@ export interface MockConfig {
   persona?: MockPersona;
   /** A panel interview: two or three different interviewers taking turns (not for drills or negotiations). */
   panel?: MockPersona[];
+  /** The AI video interview: the video-call room (interviewer tile, your camera, captions). Same live interview. */
+  video?: boolean;
+  /** What the interview is about ("React performance"): every question tests it, resume and job post as context. */
+  topic?: string | null;
   /** A one-way (recorded, HireVue-style) video interview: thinking time, then a fixed time to answer each prompt. */
   one_way?: { think_seconds: number; answer_seconds: number };
   /** A fixed list of questions, asked in order (re-drills, or questions from interview prep: kind "prep"). */
@@ -347,6 +351,8 @@ export interface OrbitSession {
   workspace_id?: string | null;
   /** Salary practice (on the session's own page): its lines never join the practice queue. */
   negotiation?: boolean;
+  /** An AI video interview (opened in the video-call room). */
+  video?: boolean;
 }
 
 export interface SessionTurn {

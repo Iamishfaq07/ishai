@@ -6,12 +6,12 @@ describe("app navigation", () => {
     expect(navGroups(true).map((g) => g.label)).toEqual([null, "Prepare", "Apply", "Interview & offer"]);
     const ids = allNavItems(true).map((i) => i.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toEqual(["home", "practice", "resume", "learning", "jobs", "linkedin", "copilot", "offer"]);
+    expect(ids).toEqual(["home", "practice", "video", "resume", "learning", "jobs", "linkedin", "copilot", "offer"]);
   });
 
   it("gives phones five destinations: four tabs and Explore with the rest", () => {
     expect(phoneTabs(true).map((t) => t.id)).toEqual(["home", "jobs", "resume", "practice"]);
-    expect(exploreItems(true).map((t) => t.id)).toEqual(["learning", "linkedin", "copilot", "offer"]);
+    expect(exploreItems(true).map((t) => t.id)).toEqual(["video", "learning", "linkedin", "copilot", "offer"]);
     // Mock interviews off: the copilot takes Practice's tab, and nothing is lost.
     expect(phoneTabs(false).map((t) => t.id)).toEqual(["home", "jobs", "resume", "copilot"]);
     expect([...phoneTabs(false), ...exploreItems(false)].length).toBe(allNavItems(false).length);
@@ -23,6 +23,7 @@ describe("app navigation", () => {
     expect(current("/documents/stories")).toEqual(["copilot"]);
     expect(current("/code/two-sum")).toEqual(["learning"]);
     expect(current("/mock")).toEqual(["practice"]);
+    expect(current("/interview")).toEqual(["video"]);
   });
 
   it("remembers the sidebar choice, otherwise collapses on narrower screens", () => {
