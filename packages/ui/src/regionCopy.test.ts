@@ -91,3 +91,13 @@ describe("companies to practise for", () => {
     expect(companiesFor(styles, "US").map((s) => s.slug)).toEqual(["amazon", "google", "stripe", "tcs", "infosys", "wipro", "cognizant"]);
   });
 });
+
+describe("the copilot's experience levels", () => {
+  it("say Fresher in India and Student / new grad elsewhere, with the same stored values", async () => {
+    const { EXPERIENCE_LEVELS, experienceLevels } = await import("./live/preferences");
+    expect(experienceLevels("IN")).toBe(EXPERIENCE_LEVELS);
+    expect(experienceLevels("IN").find((l) => l.value === "fresher")?.label).toBe("Fresher");
+    expect(experienceLevels("US").find((l) => l.value === "fresher")?.label).toBe("Student / new grad");
+    expect(experienceLevels(null).map((l) => l.value)).toEqual(EXPERIENCE_LEVELS.map((l) => l.value));
+  });
+});

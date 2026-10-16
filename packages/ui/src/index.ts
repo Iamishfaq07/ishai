@@ -66,6 +66,7 @@ export {
   THINKING_LEVELS,
   CODING_LANGUAGES,
   EXPERIENCE_LEVELS,
+  experienceLevels,
   loadCodingLanguage,
   saveCodingLanguage,
   loadExperience,

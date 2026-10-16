@@ -34,7 +34,9 @@ import {
   RESPONSE_TIMINGS,
   THINKING_LEVELS,
   cx,
+  experienceLevels,
   focusRing,
+  sampleOffer,
   loadExperience,
   loadResponseTiming,
   loadThinking,
@@ -253,6 +255,9 @@ export function SetupScreen({
   const [offer, setOffer] = useState("");
   const [offerCompany, setOfferCompany] = useState("");
   const [offerTarget, setOfferTarget] = useState("");
+  // The account's country words the level and the sample offer; without one (offline), something neutral.
+  const country = user?.country ?? null;
+  const offerExample = country ? sampleOffer(country) : null;
   const isMock = type === "mock";
   const negotiation = isMock && mockType === "negotiation";
   const [workspaceId, setWorkspaceId] = useState<string | null>(() => safeLocal.getItem(WORKSPACE_KEY));
@@ -592,10 +597,10 @@ export function SetupScreen({
               {negotiation && (
                 <>
                   <label className="col-span-2 space-y-1"><span className="text-xs">The offer</span>
-                    <input value={offer} onChange={(e) => setOffer(e.target.value)} maxLength={300} placeholder="$150,000 base, 10% bonus" className={cx(control, focusRing)} />
+                    <input value={offer} onChange={(e) => setOffer(e.target.value)} maxLength={300} placeholder={offerExample?.offer ?? "The base pay and bonus, as offered"} className={cx(control, focusRing)} />
                   </label>
                   <label className="col-span-2 space-y-1"><span className="text-xs">Your target (optional — only your review sees it)</span>
-                    <input value={offerTarget} onChange={(e) => setOfferTarget(e.target.value)} maxLength={300} placeholder="$170,000 base" className={cx(control, focusRing)} />
+                    <input value={offerTarget} onChange={(e) => setOfferTarget(e.target.value)} maxLength={300} placeholder={offerExample?.target ?? "What you'd like instead"} className={cx(control, focusRing)} />
                   </label>
                 </>
               )}
@@ -760,7 +765,7 @@ export function SetupScreen({
               }}
               className={cx(control, focusRing)}
             >
-              {EXPERIENCE_LEVELS.map((l) => (
+              {experienceLevels(country).map((l) => (
                 <option key={l.value} value={l.value}>
                   {l.label}
                 </option>
