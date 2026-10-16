@@ -15,6 +15,7 @@ import {
   focusRing,
   formatNumber,
   isIndia,
+  regionWords,
   useMotion,
 } from "@orbit/ui";
 import { Footer } from "../components/Footer";
@@ -593,7 +594,7 @@ export function LandingPage() {
               id="interview"
               title="Practise out loud, then get help when it counts"
               line="An AI interviewer asks the questions, you answer out loud, and you get a score with the answers worth redoing. In a live call, Orbit hears the question and suggests an answer from your own resume."
-              points={["5-minute HR rounds, technical rounds and salary talks", "A story bank for “Tell me about a time…” questions", "Coding help from a screenshot"]}
+              points={[`5-minute ${regionWords(country).screen}s, technical rounds and salary talks`, "A story bank for “Tell me about a time…” questions", "Coding help from a screenshot"]}
               free={welcome?.interview_minutes ? `Mock interviews and live sessions use interview minutes; a new account gets ${welcome.interview_minutes} to start.` : "Mock interviews and live sessions use interview minutes."}
               link={
                 <Link to="/warmup" className={cx("inline-flex min-h-10 items-center gap-1.5 rounded-lg font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>

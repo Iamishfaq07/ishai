@@ -49,6 +49,7 @@ export function Stage({ product, children }: { product: keyof typeof STAGE; chil
 
 /** The AI interviewer asking, then the round's scorecard (like the real session review); the score counts up. */
 export function PracticeMock() {
+  const screen = regionWords(useCountry()).screen;
   const [ref, seen] = useInView<HTMLDivElement>();
   const score = useCountUp(7.5, seen);
   return (
@@ -73,7 +74,7 @@ export function PracticeMock() {
               <span className="absolute inset-0 flex items-center justify-center font-display text-lg font-semibold tabular-nums">{score.toFixed(1)}</span>
             </div>
             <div>
-              <p className="text-sm font-semibold">HR round, 5 minutes</p>
+              <p className="text-sm font-semibold">{screen.charAt(0).toUpperCase() + screen.slice(1)}, 5 minutes</p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">Score out of 10</p>
             </div>
           </div>

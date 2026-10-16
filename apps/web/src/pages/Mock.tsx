@@ -18,6 +18,7 @@ import {
   focusRing,
   companiesFor,
   isIndia,
+  regionWords,
   practiceDocumentIds,
   sampleOffer,
   type LucideIcon,
@@ -191,7 +192,7 @@ function MockSetup() {
                 ))}
               </datalist>
             </Field>
-            <CountryField id="mock-country" hint="Sets the salary currency and the wording of the HR round." />
+            <CountryField id="mock-country" hint={`Sets the salary currency and the wording of the ${regionWords(country).screen}.`} />
             <Field label="Interview stage" htmlFor="mock-stage">
               <Input id="mock-stage" value={context.interview_stage} onChange={(e) => updateContext({ interview_stage: e.target.value })} placeholder="e.g. Technical round, final panel" maxLength={80} />
             </Field>
