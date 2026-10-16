@@ -13,9 +13,10 @@ export function InterviewerVoiceCard() {
   const [choice, setChoice] = useState<string>(() => safeLocal.getItem(VOICE_CHOICE_KEY) ?? "");
   const [playing, setPlaying] = useState(false);
   const stopper = useRef<AbortController | null>(null);
-  const audio = useRef<HTMLAudioElement | null>(null);
   const s = status.data;
-  const selected = choice || (s?.available ? s.default_voice : DEVICE_VOICE);
+  // One natural voice: anything but "device" means it (older saved choices like "uk" included).
+  const natural = s?.voices[0];
+  const selected = !natural || choice === DEVICE_VOICE ? DEVICE_VOICE : natural.id;
 
   const pick = (value: string) => {
     setChoice(value);
@@ -40,8 +41,7 @@ export function InterviewerVoiceCard() {
         window.speechSynthesis.speak(u);
         return;
       }
-      audio.current ??= new Audio();
-      await playResponse(await api.speak(SAMPLE, selected, controller.signal), audio.current, controller.signal);
+      await playResponse(await api.speak(SAMPLE, selected, controller.signal), controller.signal);
       status.reload();
     } catch (err) {
       if (!controller.signal.aborted) toast({ message: errorText(err), tone: "error" });
@@ -64,11 +64,7 @@ export function InterviewerVoiceCard() {
         <div className="flex flex-wrap items-end gap-2">
           <Field label="Voice" htmlFor="interviewer-voice-select">
             <Select id="interviewer-voice-select" value={selected} onChange={(e) => pick(e.target.value)}>
-              {s?.voices.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.label} (natural AI voice)
-                </option>
-              ))}
+              {natural && <option value={natural.id}>Natural AI voice ({natural.label})</option>}
               <option value={DEVICE_VOICE}>This device's voice</option>
             </Select>
           </Field>
@@ -78,10 +74,10 @@ export function InterviewerVoiceCard() {
         </div>
         <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
           {s?.available
-            ? `Natural voices are made by Deepgram from the question text only, never from what you say.${
+            ? `The natural voice is made by Deepgram from the question text only, never from what you say.${
                 s.chars_left !== null ? ` ${s.chars_left.toLocaleString("en-IN")} characters left today (about ${Math.floor(s.chars_left / 120)} questions); after that, this device's voice takes over.` : ""
               }`
-            : "Natural AI voices aren't available on this server, so this device's own voice reads the questions."}
+            : "The natural AI voice isn't available on this server, so this device's own voice reads the questions."}
         </p>
       </LoadGate>
     </Card>

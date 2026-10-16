@@ -2,15 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import { ApiError } from "../api/client";
 
 /**
- * The mock interviewer's natural voice: neural text-to-speech streamed from the API (Deepgram Aura behind it), played
- * as it arrives. When it can't be used (not set up, today's allowance used, the provider down, autoplay refused), the
+ * The mock interviewer's natural voice: neural text-to-speech from the API (Deepgram Aura behind it, one voice). When it can't be used (not set up, today's allowance used, the provider down, autoplay refused), the
  * device's own voice reads the question instead: the mock never goes silent, and the question is always on screen.
  */
 export interface NaturalVoiceSource {
   /** Voice ids, the chosen one first; a panel gives each interviewer the next one. */
   voices: string[];
   speak: (text: string, voice: string, signal: AbortSignal) => Promise<Response>;
+  /** Still finding out whether the server has it: hold the first question for a moment rather than use the device's. */
+  pending?: boolean;
 }
+
+const STATUS_WAIT_MS = 2500;
 
 export interface VoiceOption {
   id: string;
@@ -39,76 +42,36 @@ export function orderVoices(options: VoiceOption[], choice: string | null, fallb
   return [first, ...ids.filter((id) => id !== first)];
 }
 
-function untilEnded(audio: HTMLAudioElement, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const done = () => {
-      cleanup();
-      resolve();
-    };
-    const fail = () => {
-      cleanup();
-      reject(new Error("Playback failed"));
-    };
-    const cleanup = () => {
-      audio.removeEventListener("ended", done);
-      audio.removeEventListener("error", fail);
-      signal.removeEventListener("abort", done);
-    };
-    audio.addEventListener("ended", done);
-    audio.addEventListener("error", fail);
-    signal.addEventListener("abort", done);
-  });
+/** Stopped on purpose (the next question, Stop, barge-in): not a failure, so no fallback voice. */
+function isAbort(err: unknown): boolean {
+  return err instanceof DOMException && err.name === "AbortError";
 }
 
 /**
- * Plays an MP3 response in `audio`, starting with the first chunk where MediaSource takes MP3 (Chrome, Edge,
- * Firefox, Safari on macOS), or once it's all in elsewhere. Resolves when it ends or `signal` stops it; rejects when it
- * can't play (the caller then uses the device's voice).
+ * Plays an MP3 response once it has all arrived (an interviewer's question is a second or two of audio), in its own
+ * new <audio> element. A fresh element every time: reusing one and loading a new source while it was still starting
+ * is what made browsers throw "The play() request was interrupted by a new load request". Resolves when it ends or
+ * `signal` stops it; rejects only when it can't play (the caller then uses the device's voice).
  */
-export async function playResponse(res: Response, audio: HTMLAudioElement, signal: AbortSignal): Promise<void> {
-  const streaming = typeof MediaSource !== "undefined" && MediaSource.isTypeSupported("audio/mpeg") && res.body;
-  let url = "";
+export async function playResponse(res: Response, signal: AbortSignal): Promise<void> {
+  const blob = await res.blob();
+  if (signal.aborted) return;
+  const url = URL.createObjectURL(blob);
+  const audio = new Audio(url);
+  const stop = () => audio.pause();
+  signal.addEventListener("abort", stop);
   try {
-    if (streaming && res.body) {
-      const source = new MediaSource();
-      url = URL.createObjectURL(source);
-      audio.src = url;
-      await new Promise<void>((resolve) => source.addEventListener("sourceopen", () => resolve(), { once: true }));
-      const buffer = source.addSourceBuffer("audio/mpeg");
-      const reader = res.body.getReader();
-      const append = (chunk: Uint8Array) =>
-        new Promise<void>((resolve, reject) => {
-          buffer.addEventListener("updateend", () => resolve(), { once: true });
-          buffer.addEventListener("error", () => reject(new Error("Couldn't decode the voice")), { once: true });
-          buffer.appendBuffer(chunk as BufferSource);
-        });
-      let started = false;
-      for (;;) {
-        if (signal.aborted) {
-          void reader.cancel();
-          return;
-        }
-        const { done, value } = await reader.read();
-        if (done) break;
-        await append(value);
-        if (!started) {
-          started = true;
-          await audio.play(); // throws when autoplay is refused: the caller falls back
-        }
-      }
-      if (source.readyState === "open") source.endOfStream();
-      if (!started) return;
-    } else {
-      const blob = await res.blob();
-      if (signal.aborted) return;
-      url = URL.createObjectURL(blob);
-      audio.src = url;
-      await audio.play();
-    }
-    await untilEnded(audio, signal);
+    await new Promise<void>((resolve, reject) => {
+      audio.addEventListener("ended", () => resolve(), { once: true });
+      audio.addEventListener("error", () => reject(new Error("The voice couldn't play.")), { once: true });
+      signal.addEventListener("abort", () => resolve(), { once: true });
+      audio.play().catch((err: unknown) => (signal.aborted || isAbort(err) ? resolve() : reject(err)));
+    });
   } finally {
+    signal.removeEventListener("abort", stop);
     audio.pause();
-    if (url) URL.revokeObjectURL(url);
+    audio.removeAttribute("src");
+    URL.revokeObjectURL(url);
   }
 }
 
@@ -120,20 +83,28 @@ export function useNaturalVoiceSource(api: {
   voiceStatus: () => Promise<{ available: boolean; voices: VoiceOption[]; default_voice: string }>;
   speak: (text: string, voice: string, signal: AbortSignal) => Promise<Response>;
 } | null, choice: string | null, enabled = true): NaturalVoiceSource | null {
-  const [voices, setVoices] = useState<string[] | null>(null);
+  // undefined: still asking the server (the first question waits for the answer, up to STATUS_WAIT_MS).
+  const [voices, setVoices] = useState<string[] | null | undefined>(undefined);
   useEffect(() => {
     if (!api || !enabled || choice === DEVICE_VOICE) {
       setVoices(null);
       return;
     }
     let live = true;
+    setVoices(undefined);
+    const giveUp = window.setTimeout(() => live && setVoices((v) => (v === undefined ? null : v)), STATUS_WAIT_MS);
     api.voiceStatus().then(
       (s) => live && setVoices(s.available ? orderVoices(s.voices, choice, s.default_voice) : null),
       () => live && setVoices(null),
     );
     return () => {
       live = false;
+      window.clearTimeout(giveUp);
     };
   }, [api, choice, enabled]);
-  return useMemo(() => (api && voices ? { voices, speak: api.speak } : null), [api, voices]);
+  return useMemo(() => {
+    if (!api || voices === null) return null;
+    if (voices === undefined) return { voices: [], speak: api.speak, pending: true };
+    return { voices, speak: api.speak };
+  }, [api, voices]);
 }
