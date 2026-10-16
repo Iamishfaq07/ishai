@@ -39,6 +39,7 @@ from orbit_api.job_portal.alerts import router as job_alerts_router
 from orbit_api.job_portal.companies import boards as configured_boards
 from orbit_api.job_portal.contacts import router as job_contacts_router
 from orbit_api.job_portal.mission import router as job_mission_router
+from orbit_api.job_portal.plan import router as job_plan_router
 from orbit_api.job_portal.refresh import running_refresher as running_job_refresher
 from orbit_api.job_portal.routes import router as jobs_router
 from orbit_api.linkedin.routes import router as linkedin_router
@@ -297,6 +298,7 @@ def create_app() -> FastAPI:
     app.include_router(resume_kit_router)
     app.include_router(job_alerts_router)
     app.include_router(job_mission_router)
+    app.include_router(job_plan_router)
     app.include_router(jobs_router)
     app.include_router(job_contacts_router)
     app.include_router(offers_router)

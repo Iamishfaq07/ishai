@@ -1,5 +1,21 @@
 # Implementation log
 
+## Interview prep plan with countdown (2026-10-16)
+
+- **A day-by-day plan to the interview** in the Job Mission Room's new **Prep plan** tab. It opens first when the job
+  has an interview date. Each day has up to three tasks:
+  - an example for an open requirement from the fit check;
+  - a mock round;
+  - the practice questions due again;
+  - STAR stories until you have three.
+
+  The day before and the interview day are light: warm-up, logistics, review. Every task has a **Start** link and a
+  tick.
+- **It follows the date:** move the interview in the tracker and the plan is rebuilt. Ticks on the old interview
+  day's tasks don't carry to the new days.
+- **Home:** "Coming up" shows the nearest plan's progress.
+- No AI and no cost: built from your own records. New table `job_plan_checks` (in the export, deleted with the job).
+
 ## Job Mission Room (2026-10-16)
 
 - **One tracked job as a workspace** (`/jobs/mission/<id>`). Open it from the tracker ("Mission room"), a job's page

@@ -2324,3 +2324,31 @@ export interface JobMission {
   live_rounds: number;
   next: MissionNextStep | null;
 }
+
+/** Interview prep plan (GET /v1/jobs/tracker/{id}/plan): day by day to the interview, from the account's records. */
+export type PlanItemKind = "research" | "gap" | "mock" | "queue" | "story" | "warmup" | "logistics" | "review";
+
+export interface PlanItem {
+  key: string;
+  kind: PlanItemKind;
+  title: string;
+  detail: string;
+  done: boolean;
+}
+
+export interface PlanDay {
+  date: string;
+  /** 0 = the interview day. */
+  days_before: number;
+  items: PlanItem[];
+}
+
+export interface PrepPlan {
+  interview_at: string | null;
+  days_left: number | null;
+  /** Later than today when the interview is more than two weeks away. */
+  starts_on: string | null;
+  days: PlanDay[];
+  done: number;
+  total: number;
+}

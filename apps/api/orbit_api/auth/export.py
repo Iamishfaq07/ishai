@@ -27,6 +27,7 @@ from orbit_api.models import (
     JobContact,
     JobFitCheck,
     JobOffer,
+    JobPlanCheck,
     JobSearchProfile,
     LaunchAccessClaim,
     LinkedInProfileRow,
@@ -112,6 +113,8 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
                 JobFitCheck.user_id == user_id).order_by(JobFitCheck.created_at))).all()],
             "contacts": [_row(c) for c in (await db.scalars(select(JobContact).where(
                 JobContact.user_id == user_id).order_by(JobContact.created_at))).all()],
+            "prep_plan_ticks": [_row(r) for r in (await db.scalars(select(JobPlanCheck).where(
+                JobPlanCheck.user_id == user_id).order_by(JobPlanCheck.created_at))).all()],
             "sent_resume_versions": [_row(r) for r in (await db.scalars(select(ResumeSnapshot).where(
                 ResumeSnapshot.user_id == user_id).order_by(ResumeSnapshot.created_at))).all()],
         },
