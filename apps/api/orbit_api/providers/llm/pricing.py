@@ -42,8 +42,9 @@ DEFAULT_PRICES: dict[str, ModelPrice] = {
 
 def is_deepseek_peak(at: datetime) -> bool:
     """DeepSeek peak: Mon–Fri 01:00–04:00 and 06:00–10:00 UTC. Chinese public holidays (off-peak) aren't
-    modelled, so estimates err slightly high on those days, never low."""
-    at = at.astimezone(UTC)
+    modelled, so estimates err slightly high on those days, never low. A naive time (SQLite) is UTC, not
+    the machine's local time."""
+    at = at.replace(tzinfo=UTC) if at.tzinfo is None else at.astimezone(UTC)
     return at.weekday() < 5 and (1 <= at.hour < 4 or 6 <= at.hour < 10)
 
 
