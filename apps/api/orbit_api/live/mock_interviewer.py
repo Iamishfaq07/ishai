@@ -46,6 +46,12 @@ QUESTION_TIMEOUT_S = 10
 # A pause this long in the candidate's answer starts writing the next question in the background, so the interviewer
 # speaks the moment the answer is judged complete instead of a model call later. Discarded if they keep talking.
 PREFETCH_SILENCE_MS = 900
+# The AI video interview keeps a call's pace: the pauses that end an answer are this much shorter, and the next
+# question starts being written sooner (the candidate can always say "I'm done" or keep talking).
+VIDEO_PACE = 0.7
+VIDEO_PREFETCH_SILENCE_MS = 600
+# The video interviewer's name: she introduces herself in the opening line (video_greeting).
+INTERVIEWER_NAME = "Saba"
 # A one-way interview moves on by itself this long after the answer time is up (the app moves on at the moment
 # itself; this is for a tab in the background or a lost "next").
 ONE_WAY_GRACE_MS = 3000
@@ -163,6 +169,21 @@ def answer_silence_ms(answer: str) -> int:
     if len(text.split()) >= LONG_ANSWER_WORDS:
         return LONG_ANSWER_MS
     return ANSWER_SILENCE_MS
+
+
+def video_greeting(config: "MockConfig", role: str | None, company: str | None) -> str:
+    """The AI video interview's opening, said the moment the call starts (no model call to wait on): Saba introduces
+    herself and the interview, then asks the candidate to introduce themselves, the way a real first round opens."""
+    def tidy(text: str | None, cap: int) -> str:
+        return " ".join((text or "").split())[:cap].rstrip(" .,;:!?")
+    role_, company_, topic = tidy(role, 80), tidy(company or config.company, 60), tidy(config.topic, 80)
+    for_what = (f" for the {role_} role at {company_}" if role_ and company_ else f" for the {role_} role" if role_
+                else f" at {company_}" if company_ else "")
+    about = f" about {topic}" if topic else " about your experience and the role" if role_ else " about your experience"
+    return (f"Hi, my name is {INTERVIEWER_NAME}, and I'll be taking your interview today{for_what}. It will take "
+            f"about {config.duration_minutes} minutes: I'll ask you some questions{about}, and I may follow up on "
+            "your answers. Take your time, and when you've finished an answer, just pause and I'll move on. To start, "
+            "could you briefly introduce yourself and walk me through your background?")
 
 
 WEAK_SCORE = 3  # review scores of 3/5 or lower (or unanswered) are worth drilling
@@ -430,9 +451,11 @@ class MockInterviewer:
         if len(answer.split()) < MIN_ANSWER_WORDS:
             return
         silence = now_ms - self._last_speech_ms
-        if silence >= answer_silence_ms(answer):
+        video = self.config.video
+        if silence >= answer_silence_ms(answer) * (VIDEO_PACE if video else 1):
             await self._ask_next(now_ms)
-        elif silence >= PREFETCH_SILENCE_MS and self._prefetch is None and self._can_prefetch(now_ms):
+        elif (silence >= (VIDEO_PREFETCH_SILENCE_MS if video else PREFETCH_SILENCE_MS) and self._prefetch is None
+              and self._can_prefetch(now_ms)):
             self._prefetch = (self._answer_key(), asyncio.ensure_future(self._generate()))
 
     def _answer_key(self) -> tuple[int, str]:
@@ -495,6 +518,9 @@ class MockInterviewer:
                     self._topics() >= self.config.planned_questions and self._follow_ups_in_topic() >= 1)):
                 await self._finish()
                 return
+            if not self.asked and self._greets():
+                await self._put(video_greeting(self.config, self._role, self._company), False)
+                return
             self._busy = True
             self._awaiting = False
             try:
@@ -505,6 +531,11 @@ class MockInterviewer:
                 await self._finish()  # the model wanted a new topic but the plan is complete
                 return
             await self._put(text, follow_up, speaker=self._panelist(follow_up))
+
+    def _greets(self) -> bool:
+        """The English video interview opens with Saba's fixed greeting (instant); other rounds write their opening."""
+        cfg = self.config
+        return cfg.video and self._language == "en" and not cfg.is_panel and not cfg.is_one_way
 
     def _panelist(self, follow_up: bool) -> str | None:
         """A panel interview: who asks next. A follow-up stays with whoever asked the topic; a new topic goes to the
@@ -744,6 +775,10 @@ class MockInterviewer:
             system += "\n" + company_styles.interviewer_brief(style)
         if lang_rule := practice_language.interviewer_instruction(self._language):
             system += "\n" + lang_rule
+        if cfg.video and not panel:
+            system += (f"\nThis is a video call and your name is {INTERVIEWER_NAME}. Speak the way a warm, sharp "
+                       "interviewer does on a call: a few words acknowledging what they said when it fits (never "
+                       "praise or a verdict), then one clear question of one or two short sentences.")
         if cfg.topic and cfg.topic.strip() and not cfg.drill:
             system += ("\nTOPIC: this interview is about the topic below. Every question should test it (concepts, "
                        "how the candidate has applied it, trade-offs), using the resume and job description only to "
@@ -782,6 +817,10 @@ class MockInterviewer:
             first = PANELISTS[panel[0]][0]
             steer = (f"This is the first question: {first} opens the interview with one short greeting, introduces "
                      "the panel in one sentence (names and roles), then asks it (is_follow_up false).")
+        elif not self.asked and cfg.video:
+            steer = (f"This is the first question: greet the candidate, say your name is {INTERVIEWER_NAME} and that "
+                     "you'll be taking their interview today, then ask them to introduce themselves "
+                     "(is_follow_up false).")
         elif not self.asked:
             steer = "This is the first question: open the interview naturally (one short greeting, then the question)."
         elif follow_ups >= MAX_FOLLOW_UPS_PER_TOPIC:

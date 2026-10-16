@@ -144,3 +144,35 @@ def test_a_video_interview_is_marked_on_the_session(client: TestClient) -> None:
     assert plain["video"] is False
     too_long = client.post("/v1/sessions", headers=h, json={"title": "x", "type": "mock", "mock": {"topic": "y" * 201}})
     assert too_long.status_code == 422
+
+
+async def test_saba_opens_the_video_interview_at_once_and_keeps_a_calls_pace() -> None:
+    from orbit_api.live.mock_interviewer import answer_silence_ms
+
+    llm = _Recording()
+    sent: list[tuple[str, dict[str, Any]]] = []
+
+    async def send(kind: str, payload: dict[str, Any]) -> None:
+        sent.append((kind, payload))
+
+    mi = MockInterviewer(MockConfig(video=True, topic="React performance", duration_minutes=15), llm=llm,
+                         index=SessionIndex([]), role="Frontend Engineer", company="Acme", send=send,
+                         on_question=_noop, on_finish=_noop)
+    await mi.start(0)
+    assert llm.systems == []  # no model call before the first words
+    text = sent[0][1]["text"]
+    assert text.startswith("Hi, my name is Saba, and I'll be taking your interview today for the Frontend Engineer "
+                           "role at Acme.")
+    assert "about 15 minutes" in text and "about React performance" in text and "introduce yourself" in text
+    # Later questions come from the model, told it's Saba on a video call.
+    await mi._generate()
+    assert "your name is Saba" in llm.systems[0]
+    # A call's pace: an answer ends on a shorter pause than in the classic mock.
+    mi.on_candidate("I built the checkout page and cut its load time in half using code splitting", 1000, final=True)
+    pause = answer_silence_ms(" ".join(mi.asked[-1].answer))
+    await mi.tick(1000 + int(pause * 0.75))
+    assert len(sent) == 2 and sent[1][0] == "mock.question"
+    # Hindi, a panel or a one-way round write their own opening.
+    hindi = MockInterviewer(MockConfig(video=True), llm=_Recording(), index=SessionIndex([]), role=None, send=send,
+                            on_question=_noop, on_finish=_noop, language="hi")
+    assert not hindi._greets()

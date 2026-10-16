@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { naturalVoiceGone, playResponse, voiceForSpeaker, type NaturalVoiceSource } from "./naturalVoice";
+import { NaturalVoiceError, naturalVoiceGone, speakNatural, voiceForSpeaker, type NaturalVoiceSource } from "./naturalVoice";
 
 /**
  * Speaks the mock interviewer's questions: with the natural voice (neural TTS from the API, one voice) when it's set
@@ -131,10 +131,7 @@ export function useInterviewerVoice(
       const controller = new AbortController();
       inFlight.current = controller;
       setSpeaking(true); // the mic is muted from the request on, as with the device's voice
-      void natural
-        .speak(text, id, controller.signal)
-        .then((res) => playResponse(res, controller.signal))
-        .then(
+      void speakNatural(text, natural.speak, id, controller.signal).then(
           () => {
             if (inFlight.current === controller) {
               inFlight.current = null;
@@ -144,8 +141,9 @@ export function useInterviewerVoice(
           (err: unknown) => {
             if (controller.signal.aborted) return; // stopped, or the next question took over
             inFlight.current = null;
-            if (naturalVoiceGone(err)) setNaturalOff(true);
-            sayOnDevice(text, speaker);
+            const cause = err instanceof NaturalVoiceError ? err.reason : err;
+            if (naturalVoiceGone(cause)) setNaturalOff(true);
+            sayOnDevice(err instanceof NaturalVoiceError ? err.rest : text, speaker); // only what wasn't heard yet
           },
         );
     },
