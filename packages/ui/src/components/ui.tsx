@@ -13,11 +13,12 @@ import { SPARK, SpotIllustration } from "./Illustrations";
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
 
+// One solid accent for the main action (white on accent-600 is over 5:1 in every accent), a bordered secondary, and
+// quiet ghost and danger. No gradients, glows or sheens: a button says what it does, it doesn't perform.
 const VARIANT: Record<ButtonVariant, string> = {
-  primary:
-    "btn-sheen bg-gradient-to-b from-indigo-500 to-indigo-600 text-white shadow-glow-sm hover:from-indigo-400 hover:to-indigo-500 hover:shadow-glow",
+  primary: "bg-indigo-600 text-white shadow-sm shadow-zinc-900/10 hover:bg-indigo-700 dark:shadow-none",
   secondary:
-    "border border-zinc-200 bg-white/90 text-zinc-900 hover:border-zinc-300 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:hover:border-white/20 dark:hover:bg-white/10",
+    "border border-zinc-300 bg-white text-zinc-900 shadow-sm shadow-zinc-900/5 hover:bg-zinc-50 dark:border-white/15 dark:bg-white/[0.04] dark:text-zinc-100 dark:shadow-none dark:hover:bg-white/[0.08]",
   ghost: "text-zinc-700 hover:bg-zinc-900/5 dark:text-zinc-300 dark:hover:bg-white/5",
   danger: "text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10",
 };
@@ -31,8 +32,8 @@ export function buttonClass(variant: ButtonVariant = "primary", size: ButtonSize
     // Pressed feedback on touch and click, at Full motion only (buttons get theirs from base.css).
     "inline-flex select-none items-center justify-center gap-2 rounded-xl font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-quick ease-standard motion-ok:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50",
     size === "sm" && "px-2.5 py-1.5 text-xs",
-    size === "md" && "px-4 py-2 text-sm",
-    size === "lg" && "px-6 py-3 text-base",
+    size === "md" && "px-3.5 py-2 text-sm",
+    size === "lg" && "px-5 py-2.5 text-base",
     VARIANT[variant],
     focusRing,
     className,
@@ -70,14 +71,15 @@ export function Button({
   );
 }
 
-/** Frosted-glass surface. `interactive` adds a hover lift for cards that are links or buttons. */
+/** A surface: frosted glass on the public pages, opaque with a hairline border in the app (base.css). `interactive`
+ *  (a card that is a link or a button) darkens its border on hover; it doesn't move. */
 export function Card({ children, className, interactive, id }: { children: ReactNode; className?: string; interactive?: boolean; id?: string }) {
   return (
     <div
       id={id}
       className={cx(
         "glass-panel rounded-2xl p-5",
-        interactive && "lift hover:border-indigo-400/40 dark:hover:border-indigo-400/30",
+        interactive && "transition-colors duration-quick hover:!border-zinc-300 dark:hover:!border-white/20",
         className,
       )}
     >
@@ -98,16 +100,16 @@ export function PageHeader({
   icon?: ComponentType<{ className?: string }>;
 }) {
   return (
-    <div className="mb-8 flex flex-wrap items-end justify-between gap-4 animate-fade-up">
-      <div className="flex items-center gap-3">
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div className="flex min-w-0 items-center gap-3">
         {Icon && (
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-aurora-400/10 text-indigo-600 ring-1 ring-indigo-500/20 dark:text-indigo-300">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
             <Icon className="h-5 w-5" />
           </span>
         )}
-        <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
-          {subtitle && <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>}
+        <div className="min-w-0">
+          <h1 className="font-display text-2xl font-semibold tracking-tight">{title}</h1>
+          {subtitle && <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>}
         </div>
       </div>
       {actions}
@@ -173,7 +175,7 @@ export function Toggle({
         aria-hidden="true"
         className={cx(
           "relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors",
-          checked ? "bg-gradient-to-r from-indigo-500 to-indigo-600 shadow-glow-sm" : "bg-zinc-300 dark:bg-zinc-700",
+          checked ? "bg-indigo-600" : "bg-zinc-300 dark:bg-zinc-700",
         )}
       >
         <span
@@ -313,7 +315,7 @@ export function Meter({ level, label }: { level: number; label: string }) {
     >
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-white/10">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-aurora-400 transition-[width] duration-75 motion-reduce:transition-none"
+          className="h-full rounded-full bg-emerald-500 transition-[width] duration-75 motion-reduce:transition-none"
           style={{ width: `${Math.round(level * 100)}%` }}
         />
       </div>

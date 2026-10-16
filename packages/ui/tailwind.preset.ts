@@ -16,8 +16,13 @@ export default {
   theme: {
     extend: {
       colors: { indigo: scale("accent"), zinc: scale("ink"), aurora: scale("aurora") },
+      // Corners say how a thing behaves: controls (xl) are crisp, cards (2xl) a little softer, big panels (3xl) the
+      // softest. Tighter than Tailwind's defaults (12 / 16 / 24 px), which read as a consumer app.
+      borderRadius: { xl: "0.5rem", "2xl": "0.75rem", "3xl": "1rem" },
       fontFamily: {
-        sans: ["Inter Variable", "Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
+        // IBM Plex Sans for the product (text, numbers, and the app's headings: base.css). Inter stays as the fallback.
+        sans: ["IBM Plex Sans Variable", "IBM Plex Sans", "Inter Variable", "Inter", "ui-sans-serif", "system-ui",
+               "-apple-system", "Segoe UI", "sans-serif"],
         display: ["Space Grotesk Variable", "Space Grotesk", "Inter Variable", "ui-sans-serif", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono Variable", "JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },

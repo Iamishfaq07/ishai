@@ -51,7 +51,7 @@ const secondaryLink = buttonClass("secondary", "md", "min-h-10");
 
 function greeting(): string {
   const h = new Date().getHours();
-  return h < 5 ? "Burning the midnight oil" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  return h >= 5 && h < 12 ? "Good morning" : h >= 12 && h < 18 ? "Good afternoon" : "Good evening";
 }
 
 /**
@@ -172,8 +172,7 @@ function NextStep({ steps, welcomed, askWelcome }: { steps: Step[] | null; welco
   if (!step) return <AllSet />;
   const { name } = PRODUCTS[step.product];
   return (
-    <section aria-labelledby="next-step-title" className="glass-panel gradient-border relative overflow-hidden rounded-3xl">
-      <span aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-64 w-64 rounded-full bg-aurora-400/15 blur-3xl" />
+    <section aria-labelledby="next-step-title" className="glass-panel relative overflow-hidden rounded-3xl">
       <div className="relative p-5 sm:p-8">
         <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">{welcomed ? "From your answers, start here" : "Your next step"}</p>
         <div className="mt-3 flex items-start gap-4">
@@ -601,7 +600,7 @@ function DesktopPromo() {
     );
   }
   return (
-    <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-zinc-950 p-6 text-white sm:p-8">
+    <section className="relative overflow-hidden rounded-3xl bg-zinc-900 p-6 text-white ring-1 ring-inset ring-white/10 sm:p-8">
       <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex max-w-2xl gap-4">
           <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25 sm:flex">

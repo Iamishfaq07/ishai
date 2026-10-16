@@ -3,6 +3,25 @@
 Shared by the web and desktop apps. Source of truth: `packages/ui/tailwind.preset.ts` and
 `packages/ui/src/design/base.css`.
 
+## Two places: the front door and the workbench
+
+- **The front door** (signed-out pages: the front page, the public product pages, sign-in) keeps the sky: the
+  animated backdrop, glass, gradient headlines and the Orbit scenes. It's where Orbit introduces itself.
+- **The workbench** (everything signed in, `html.app-shell` from the web Layout) is where people run their job search
+  every day, so it reads as professional software: one still canvas (`--canvas`, #F5F6F8 / #0D121C), opaque surfaces
+  (`--surface`) with a hairline border (`--line`) and no shadow, headings in the product face, and no gradients,
+  glows, sheens or decorative blobs. Only things that float (a menu, a dialog, a toast) cast a shadow.
+- **One accent, used sparingly**: the main action, links, focus and the page you're on. Everything else is ink. Status
+  colours mean status only. Product colours mark a product's own content (its mark, its row on Home), not the nav.
+- **Corners say how a thing behaves**: controls 8 px (`rounded-xl`), cards 12 px (`rounded-2xl`), large panels 16 px
+  (`rounded-3xl`).
+- **Buttons**: primary is the solid accent (white on accent-600 passes AA in every accent), secondary is bordered,
+  ghost is plain. Nothing on a button moves except the press.
+- **AI is named, not badged**: tools carry their name ("Resume AI", "Jobs AI") in the nav; there is no AI chip per
+  item.
+- **No new gradients in the app.** A highlighted block (the Windows app, the video interview) is a solid ink panel
+  (`bg-zinc-900 text-white`); an icon tile is neutral (`bg-zinc-100 ring-zinc-200`) or the solid accent.
+
 ## Colour
 
 Components use plain Tailwind names; the preset maps them to CSS variables (RGB triplets, so `/alpha` works):
@@ -20,8 +39,10 @@ amber is `text-amber-950` (white on amber is 2.1:1). Figures are tabular by defa
 
 ## Type
 
-`font-display` (Space Grotesk) for headings — applied to `h1`–`h3` globally — `font-sans` (Inter) for body,
-`font-mono` (JetBrains Mono) for code. Self-hosted via Fontsource.
+`font-sans` is **IBM Plex Sans** everywhere: body, numbers (tabular) and, in the workbench, headings too (base.css
+maps `h1`–`h3` and `font-display` to it inside `html.app-shell`). Its engineered, institutional shapes read as a
+serious tool. `font-display` (Space Grotesk) stays for the front door's headlines; `font-mono` (JetBrains Mono) is
+for code only, never for small data labels. Self-hosted via Fontsource (`apps/web/src/fonts.css`, Latin only).
 
 ## Surfaces
 

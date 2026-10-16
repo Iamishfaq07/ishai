@@ -37,7 +37,7 @@ export function JobsAiHomePage() {
           (JobsAiPublic.tsx); signed in, the matches go straight under the header. */}
       <section aria-labelledby="jobs-ai-title" className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500/20 to-aurora-400/10 text-sky-700 ring-1 ring-sky-500/20 dark:text-sky-300">
+          <span aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-500/10 text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:text-sky-300">
             <Briefcase className="h-5 w-5" />
           </span>
           <div>

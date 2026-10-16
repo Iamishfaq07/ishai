@@ -209,7 +209,7 @@ function PickTrack({ onPick }: { onPick: (track: Track) => void }) {
                   onClick={() => onPick(t)}
                   className={cx("glass-panel lift flex h-full w-full items-start gap-3 rounded-2xl p-4 text-left hover:border-indigo-400/40 dark:hover:border-indigo-400/30", focusRing)}
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-aurora-400/10 text-indigo-600 ring-1 ring-indigo-500/20 dark:text-indigo-300">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
                     <Icon className="h-5 w-5" aria-hidden />
                   </span>
                   <span className="min-w-0">

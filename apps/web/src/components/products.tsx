@@ -76,7 +76,7 @@ export function AiPill({ className }: { className?: string }) {
   return (
     <span
       className={cx(
-        "inline-flex items-center rounded-[5px] bg-gradient-to-r from-indigo-600 to-aurora-600 px-1 py-px text-[0.625rem] font-bold leading-[0.875rem] tracking-wide text-white shadow-sm",
+        "inline-flex items-center rounded-[5px] bg-indigo-600 px-1 py-px text-[0.625rem] font-bold leading-[0.875rem] tracking-wide text-white",
         className,
       )}
     >

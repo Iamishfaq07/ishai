@@ -52,7 +52,7 @@ import { prefetchRoute } from "../routes";
 import { AnnouncementBanner } from "./AnnouncementBanner";
 import { AppError } from "./AppError";
 import { COPILOT_PATH, LEARNING_PATH, SIDEBAR_KEY, exploreItems, navGroups, phoneTabs, sidebarCollapsed, type NavItem } from "./nav";
-import { AiPill, PRODUCTS, ProductTabs, type ProductSection } from "./products";
+import { PRODUCTS, ProductTabs, type ProductSection } from "./products";
 import { Sheet } from "./Sheet";
 
 // Their own chunks, downloaded the first time they open (or when the search button is hovered).
@@ -355,7 +355,7 @@ export function Layout() {
         className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200/70 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.12)] md:hidden dark:border-white/5 dark:bg-zinc-950 dark:shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.6)]"
       >
         <ul className="mx-auto grid max-w-lg grid-cols-5">
-          {TABS.map(({ to, label, tab, icon: Icon, product, current, ai }) => {
+          {TABS.map(({ to, label, tab, icon: Icon, current }) => {
             const active = current(pathname);
             const name = tab ?? label;
             return (
@@ -367,10 +367,7 @@ export function Layout() {
                   onTouchStart={() => prefetchRoute(to)}
                   className={tabClass(active)}
                 >
-                  <span className="relative">
-                    <TabIcon icon={Icon} active={active} className={product && !active ? PRODUCTS[product].text : undefined} />
-                    {ai && <AiPill className="absolute -right-3.5 -top-1 scale-90" />}
-                  </span>
+                  <TabIcon icon={Icon} active={active} />
                   {name}
                 </Link>
               </li>
@@ -471,7 +468,7 @@ function Sidebar({
               (collapsed ? (
                 <div className="mx-3 mb-2 h-px bg-zinc-200 dark:bg-white/10" aria-hidden />
               ) : (
-                <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{group.label}</p>
+                <p className="mb-1 px-3 text-xs font-medium text-zinc-500 dark:text-zinc-400">{group.label}</p>
               ))}
             <ul className="space-y-0.5">
               {group.items.map((item) => (
@@ -520,14 +517,16 @@ function sideClass(active: boolean, collapsed: boolean): string {
     "relative flex min-h-10 items-center gap-3 rounded-lg text-sm font-medium transition-colors duration-150",
     collapsed ? "justify-center px-0" : "px-3",
     active
-      ? "bg-indigo-500/10 text-indigo-700 dark:bg-white/[0.07] dark:text-white"
-      : "text-zinc-600 hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
+      ? "bg-zinc-900/[0.06] text-zinc-900 dark:bg-white/[0.07] dark:text-white"
+      : "text-zinc-600 hover:bg-zinc-900/[0.04] hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
     focusRing,
   );
 }
 
 function SideLink({ item, active, collapsed }: { item: NavItem; active: boolean; collapsed: boolean }) {
-  const { to, label, icon: Icon, product, ai } = item;
+  // One colour for every icon (the accent marks the page you're on), and each tool by its whole name ("Resume AI"):
+  // a different colour and an AI badge per item read as noise in a list people scan all day.
+  const { to, label, icon: Icon } = item;
   return (
     <Link
       to={to}
@@ -538,12 +537,9 @@ function SideLink({ item, active, collapsed }: { item: NavItem; active: boolean;
       onFocus={() => prefetchRoute(to)}
       className={sideClass(active, collapsed)}
     >
-      {active && <span aria-hidden className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-gradient-to-b from-indigo-500 to-aurora-400" />}
-      <span className="relative">
-        <Icon className={cx("h-[18px] w-[18px] shrink-0", product ? PRODUCTS[product].text : active && "text-indigo-500 dark:text-indigo-300")} aria-hidden />
-        {collapsed && ai && <span aria-hidden className="absolute -right-1 -top-1 h-1.5 w-1.5 rounded-full bg-indigo-500" />}
-      </span>
-      {!collapsed && (ai ? <AiName name={label} /> : label)}
+      {active && <span aria-hidden className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-indigo-600 dark:bg-indigo-400" />}
+      <Icon className={cx("h-[18px] w-[18px] shrink-0", active ? "text-indigo-600 dark:text-indigo-300" : "text-zinc-500 dark:text-zinc-400")} aria-hidden />
+      {!collapsed && label}
     </Link>
   );
 }
@@ -677,8 +673,8 @@ function ExploreMenu({
                   focusRing,
                 )}
               >
-                <Icon className={cx("h-5 w-5", item.product ? PRODUCTS[item.product].text : "text-indigo-500 dark:text-indigo-400")} aria-hidden />
-                {item.ai ? <AiName name={item.label} /> : item.label}
+                <Icon className="h-5 w-5 text-zinc-500 dark:text-zinc-400" aria-hidden />
+                {item.label}
               </button>
             </li>
           );
@@ -731,16 +727,6 @@ const footerLink = cx(
 );
 
 /** A phone tab: 12 px labels (the smallest UI text); five of them fit a 360 px phone with room between. */
-/** "Resume AI" shown as "Resume" with the AI mark at its top right (the name stays whole for screen readers). */
-function AiName({ name }: { name: string }) {
-  return (
-    <span className="inline-flex items-start">
-      {name.replace(/ AI$/, "")}
-      <AiPill className="ml-0.5 -translate-y-1.5 scale-90" />
-    </span>
-  );
-}
-
 function tabClass(active: boolean): string {
   return cx(
     "flex min-h-14 flex-col items-center justify-center gap-1 whitespace-nowrap px-0.5 pb-2 pt-2.5 text-xs font-medium",
@@ -753,9 +739,9 @@ function TabIcon({ icon: Icon, active, className }: { icon: LucideIcon; active: 
   return (
     <span
       aria-hidden="true"
-      className={cx("flex h-7 w-12 items-center justify-center rounded-full transition-colors", active && "bg-gradient-to-r from-indigo-500/25 to-aurora-400/15")}
+      className={cx("flex h-7 w-12 items-center justify-center rounded-full transition-colors", active && "bg-indigo-600/10 dark:bg-indigo-400/15")}
     >
-      <Icon className={cx("h-5 w-5", active ? "text-indigo-700 dark:text-indigo-200" : className)} />
+      <Icon className={cx("h-5 w-5", active ? "text-indigo-700 dark:text-indigo-200" : cx("text-zinc-500 dark:text-zinc-400", className))} />
     </span>
   );
 }
@@ -832,7 +818,7 @@ function AccountMenu({
         aria-label="Account menu"
         className={cx("flex items-center gap-1.5 rounded-full p-0.5 pr-1.5 hover:bg-zinc-900/5 dark:hover:bg-white/5", focusRing)}
       >
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-aurora-500 text-xs font-semibold text-white shadow-glow-sm">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 text-xs font-semibold text-zinc-700 dark:bg-white/10 dark:text-zinc-100">
           {initials(name, email)}
         </span>
         <ChevronDown className={cx("h-4 w-4 text-zinc-500 transition-transform", open && "rotate-180")} aria-hidden />

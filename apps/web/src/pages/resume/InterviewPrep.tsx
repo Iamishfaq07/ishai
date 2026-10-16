@@ -193,7 +193,7 @@ function QuestionList({ resume, result, state, setState }: {
       {MOCK_INTERVIEW_ENABLED && (
         <section aria-label="Practise in a mock interview" className="gradient-border rounded-2xl bg-white/70 p-4 dark:bg-white/[0.03]">
           <div className="flex items-start gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-aurora-500 text-white shadow-glow-sm">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white">
               <Target className="h-4 w-4" aria-hidden />
             </span>
             <div className="min-w-0 flex-1">

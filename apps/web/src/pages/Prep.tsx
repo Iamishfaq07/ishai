@@ -243,7 +243,7 @@ export function PrepSection({
     <section aria-labelledby="prep-title" className="space-y-4">
       <Card className="gradient-border">
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-aurora-500 text-white shadow-glow-sm">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white">
             <Sparkles className="h-5 w-5" />
           </span>
           <div>
