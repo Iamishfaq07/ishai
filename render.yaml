@@ -57,6 +57,18 @@ services:
       # their card works. Until then they say cards from other countries are coming soon.
       - key: ORBIT_RAZORPAY_INTERNATIONAL
         value: "false"
+      # PayPal (billing/paypal.py): buyers outside India pay their dollar prices through PayPal once the REST app's
+      # client id and secret are set. The webhook id is the one PayPal shows for the webhook (URL:
+      # https://<api>/v1/billing/paypal/webhook; events Checkout order approved, Payment capture completed / pending /
+      # refunded / reversed). ORBIT_PAYPAL_ENV: "sandbox" (no real money) or "live".
+      - key: ORBIT_PAYPAL_CLIENT_ID
+        sync: false
+      - key: ORBIT_PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: ORBIT_PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: ORBIT_PAYPAL_ENV
+        sync: false
       - key: ORBIT_GOOGLE_CLIENT_ID
         sync: false
       - key: ORBIT_GOOGLE_CLIENT_SECRET

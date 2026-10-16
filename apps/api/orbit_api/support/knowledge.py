@@ -109,10 +109,20 @@ _TOPICS: tuple[Topic, ...] = (
         "Buy on Plan & billing. If Razorpay is on, pay by card, UPI, or netbanking and the credits land as soon as "
         "it goes through. "
         "If it isn't, pay the UPI ID shown there and paste the 12-digit UTR. A person checks that UTR before the "
-        "credits land.",
+        "credits land. Outside India, prices are in US dollars and you pay through PayPal.",
         ("how to pay", "how do i pay", "how do i buy", "buy a pack", "buy credits", "where to pay"),
-        ("razorpay", "upi", "utr", "missing"),
+        ("razorpay", "paypal", "upi", "utr", "missing"),
         True,
+    ),
+    Topic(
+        "paypal",
+        "Paying from outside India",
+        "Outside India, prices are in US dollars and you pay through PayPal: your PayPal account, or a card where "
+        "PayPal offers it. Tap Buy on Plan & billing, approve the payment on PayPal, and you come back to Orbit with "
+        "it added. If you closed PayPal's page after approving, refresh Plan & billing in a few minutes. It still "
+        "lands, and it's never charged twice.",
+        ("paypal", "outside india", "us dollars", "in dollars", "usd", "international card", "foreign card"),
+        ("missing", "prices", "refund"),
     ),
     Topic(
         "razorpay",
@@ -146,7 +156,7 @@ _TOPICS: tuple[Topic, ...] = (
     Topic(
         "missing",
         "Payment didn't land",
-        "Paid with Razorpay? Refresh Plan & billing. The credits should already be there. "
+        "Paid with Razorpay or PayPal? Refresh Plan & billing. The credits should already be there. "
         "Paid the UPI ID? Paste the 12-digit UTR on that page and wait for a person to approve it. "
         "Still missing? Tap Talk to a person and include the pack, plus the UTR or the email on the payment.",
         ("didn't land", "did not land", "not credited", "not showing", "payment failed", "hasn't arrived",
@@ -219,7 +229,7 @@ _TOPICS: tuple[Topic, ...] = (
 TOPICS: dict[str, Topic] = {t.id: t for t in _TOPICS}
 # Specific packs and problems before the broad "prices" phrases.
 _MATCH_ORDER: tuple[str, ...] = (
-    "mini", "starter", "plus", "pro", "refund", "utr", "missing", "razorpay", "upi",
+    "mini", "starter", "plus", "pro", "refund", "utr", "missing", "razorpay", "paypal", "upi",
     "what_spends", "welcome", "windows", "signin", "resume", "jobs", "practice", "buy", "prices",
 )
 

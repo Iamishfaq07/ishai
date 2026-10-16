@@ -86,14 +86,14 @@ async def sweeper(interval_s: float) -> None:
             raise
         except Exception:
             log.exception("contact retention sweep failed")
-        # Razorpay orders still open are checked with Razorpay (a lost webhook or a closed page can't leave a captured
-        # payment uncredited), on a backoff per order (billing/settle.py).
+        # Razorpay and PayPal orders still open are checked with the gateway (a lost webhook or a closed page can't
+        # leave a captured payment uncredited), on a backoff per order (billing/settle.py).
         try:
             await reconcile_now()
         except asyncio.CancelledError:
             raise
         except Exception:
-            log.exception("razorpay reconcile sweep failed")
+            log.exception("payment reconcile sweep failed")
         # And support chats nobody is waiting on, idle that long, go with their Inbox tickets.
         try:
             await purge_idle_threads_now()

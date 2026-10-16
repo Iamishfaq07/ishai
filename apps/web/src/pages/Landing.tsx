@@ -253,6 +253,7 @@ function ProductBand({
 function Pricing({ packs, monthly, welcome, stats }: { packs: CreditPack[] | null; monthly: MonthlyPlan[] | null; welcome: WelcomeGrant | null; stats: JobStats | null }) {
   const india = useIndia();
   const cards = packs?.[0]?.checkout === "razorpay";
+  const paypal = packs?.[0]?.checkout === "paypal";
   const abroad = !!packs?.[0]?.international;
   const sorted = packs ? [...packs].sort((a, b) => a.price_inr - b.price_inr) : null;
   return (
@@ -274,7 +275,9 @@ function Pricing({ packs, monthly, welcome, stats }: { packs: CreditPack[] | nul
 
       <h3 className="mt-14 font-display text-xl font-semibold">Pay as you go: credits</h3>
       <p className="mt-1 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-        {cards
+        {paypal
+          ? "1 interview credit is 1 hour of live or mock interviews, with Resume AI credits included. Bought once when you need them, in US dollars through PayPal (your PayPal account, or a card where PayPal offers it). What's in them never expires."
+          : cards
           ? `1 interview credit is 1 hour of live or mock interviews, with Resume AI credits included. Bought once when you need them, by ${india ? "UPI, card or netbanking" : packs?.[0]?.currency === "USD" ? "card, in US dollars" : abroad ? "card from any country (in US dollars outside India)" : "an Indian card, UPI or netbanking for now (cards from other countries are coming soon)"}. What's in them never expires.`
           : india
             ? "Credit packs, bought once with any UPI app when you need them. What's in them never expires."
@@ -349,8 +352,8 @@ function Pricing({ packs, monthly, welcome, stats }: { packs: CreditPack[] | nul
 
 // ─── Questions ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-function Faq({ welcome, stats, cards = false, abroad = false }: {
-  welcome: WelcomeGrant | null; stats: JobStats | null; cards?: boolean; abroad?: boolean;
+function Faq({ welcome, stats, cards = false, abroad = false, paypal = false }: {
+  welcome: WelcomeGrant | null; stats: JobStats | null; cards?: boolean; abroad?: boolean; paypal?: boolean;
 }) {
   const country = useCountry();
   const india = isIndia(country);
@@ -386,7 +389,13 @@ function Faq({ welcome, stats, cards = false, abroad = false }: {
     ],
     [
       "How do I pay? Is there a subscription?",
-      cards ? (
+      paypal ? (
+        <p>
+          There's no subscription. Outside India, plans and packs are priced in US dollars and paid through PayPal: with
+          your PayPal account, or a debit or credit card where PayPal offers it. What you bought is added as soon as
+          PayPal confirms the payment, usually within seconds. Nothing renews, and credits never expire.
+        </p>
+      ) : cards ? (
         <p>
           There's no subscription. When you want more interview minutes or AI credits, you buy a pack through Razorpay:
           {india
@@ -665,7 +674,8 @@ export function LandingPage() {
         </section>
 
         <Pricing packs={packs} monthly={monthly} welcome={welcome} stats={stats} />
-        <Faq welcome={welcome} stats={stats} cards={packs?.[0]?.checkout === "razorpay"} abroad={!!packs?.[0]?.international} />
+        <Faq welcome={welcome} stats={stats} cards={packs?.[0]?.checkout === "razorpay"} abroad={!!packs?.[0]?.international}
+          paypal={packs?.[0]?.checkout === "paypal"} />
 
         <Reveal as="section" aria-labelledby="start-title" className="mb-16 rounded-3xl bg-zinc-500/[0.06] p-6 text-center ring-1 ring-zinc-500/15 sm:p-10">
           <h2 id="start-title" className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">

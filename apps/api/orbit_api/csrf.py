@@ -49,7 +49,7 @@ def _token_exempt(path: str) -> bool:
 
 
 # Server-to-server callbacks authenticated by their own signatures (e.g. a payment webhook).
-FULLY_EXEMPT: frozenset[str] = frozenset({"/v1/billing/webhook"})
+FULLY_EXEMPT: frozenset[str] = frozenset({"/v1/billing/webhook", "/v1/billing/paypal/webhook"})
 
 
 def token_for(user_id: str, token_version: int) -> str:

@@ -40,7 +40,7 @@ export function AdminPaymentsPage() {
       const r = await api.adminReconcile();
       setChecked(
         r.checked || r.credited || r.expired || r.refunds_linked
-          ? `Asked Razorpay about ${r.checked} order${r.checked === 1 ? "" : "s"}: ${r.credited} credited, ${r.expired} expired, ${r.refunds_linked} refund${r.refunds_linked === 1 ? "" : "s"} linked${r.errors ? `, ${r.errors} couldn't be reached` : ""}.`
+          ? `Asked Razorpay and PayPal about ${r.checked} order${r.checked === 1 ? "" : "s"}:${r.credited} credited, ${r.expired} expired, ${r.refunds_linked} refund${r.refunds_linked === 1 ? "" : "s"} linked${r.errors ? `, ${r.errors} couldn't be reached` : ""}.`
           : "Nothing was due a check: open orders are asked about on a backoff, and none is waiting.",
       );
       list.reload();
@@ -71,12 +71,12 @@ export function AdminPaymentsPage() {
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl bg-zinc-500/5 p-3 text-sm ring-1 ring-zinc-500/15">
           <p className="min-w-0 flex-1 text-zinc-600 dark:text-zinc-300">
             {watch
-              ? `Razorpay: ${data.processing ?? 0} payment${data.processing === 1 ? "" : "s"} still being confirmed, ${data.events_to_review ?? 0} webhook event${data.events_to_review === 1 ? "" : "s"} to review, ${data.unlinked_refunds ?? 0} refund${data.unlinked_refunds === 1 ? "" : "s"} not matched to a payment yet.`
-              : "Razorpay: nothing waiting. Open orders are checked with Razorpay automatically every few minutes."}
+              ? `Card payments: ${data.processing ?? 0} payment${data.processing === 1 ? "" : "s"} still being confirmed, ${data.events_to_review ?? 0} webhook event${data.events_to_review === 1 ? "" : "s"} to review, ${data.unlinked_refunds ?? 0} refund${data.unlinked_refunds === 1 ? "" : "s"} not matched to a payment yet.`
+              : "Card payments: nothing waiting. Open orders are checked with Razorpay and PayPal automatically every few minutes."}
             {checked && <span role="status" className="mt-1 block text-xs">{checked}</span>}
           </p>
           <Button size="sm" variant="secondary" onClick={() => void reconcile()} disabled={checking}>
-            {checking ? "Checking…" : "Check with Razorpay now"}
+            {checking ? "Checking…" : "Check open orders now"}
           </Button>
         </div>
       )}
@@ -146,13 +146,15 @@ function PaymentRow({ payment: p, onChange }: { payment: AdminPayment; onChange:
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate font-medium">
-            ₹{p.amount_inr} · {p.label} · {p.name ? `${p.name} · ${p.email}` : p.email}
+            {p.currency === "USD" && p.amount_text ? `${p.amount_text} (≈ ₹${p.amount_inr})` : `₹${p.amount_inr}`} · {p.label} ·{" "}
+            {p.name ? `${p.name} · ${p.email}` : p.email}
           </p>
           <p className="mt-0.5 text-sm tabular-nums">
-            {p.method === "razorpay" ? (
+            {p.method === "razorpay" || p.method === "paypal" ? (
               <>
-                Paid through Razorpay, confirmed automatically · reference <strong>{p.reference}</strong>
-                {!!p.refunded_inr && <> · refunded ₹{p.refunded_inr} (credits kept)</>}
+                Paid through {p.method === "paypal" ? "PayPal" : "Razorpay"}, confirmed automatically · reference{" "}
+                <strong>{p.reference}</strong>
+                {!!p.refunded_inr && <> · refunded {p.refunded_text || `₹${p.refunded_inr}`} (credits kept)</>}
               </>
             ) : (
               <>

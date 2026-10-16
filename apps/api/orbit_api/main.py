@@ -89,6 +89,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             "SECURITY: ORBIT_PROXY_SECRET is not set. Callers reaching the API directly can choose their own IP "
             "(X-Forwarded-For) and so dodge per-IP limits (sign-up, welcome credits). Set it to the web Worker's "
             "PROXY_SECRET (wrangler secret put PROXY_SECRET).")
+    if s.env == "production" and bool(s.paypal_client_id) != bool(s.paypal_client_secret):
+        logging.getLogger(__name__).warning("PayPal is off: set both ORBIT_PAYPAL_CLIENT_ID and "
+                                            "ORBIT_PAYPAL_CLIENT_SECRET (one REST app, same mode as ORBIT_PAYPAL_ENV)")
+    elif s.env == "production" and s.paypal_client_id:
+        if not s.paypal_webhook_id:
+            logging.getLogger(__name__).warning(
+                "PayPal: ORBIT_PAYPAL_WEBHOOK_ID is not set, so PayPal's webhooks are refused. Payments still land "
+                "when the buyer comes back, or within minutes through the reconciler.")
+        if s.paypal_env == "sandbox":
+            logging.getLogger(__name__).warning("PayPal is in SANDBOX mode: no real money is taken. Set "
+                                                "ORBIT_PAYPAL_ENV=live with the live app's keys to sell.")
     try:
         async with db.sessionmaker()() as session:
             await refresh_runtime_config(session)  # load admin API-key overrides into providers

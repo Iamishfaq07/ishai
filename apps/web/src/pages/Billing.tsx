@@ -132,9 +132,12 @@ const STATUS: Record<UpiOrder["status"], { label: string; tone: string }> = {
   submitted: { label: "Checking your payment", tone: "bg-amber-500/10 text-amber-800 dark:text-amber-200" },
   approved: { label: "Paid · added", tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" },
   rejected: { label: "Couldn't confirm", tone: "bg-rose-500/10 text-rose-700 dark:text-rose-300" },
-  processing: { label: "Confirming with Razorpay", tone: "bg-amber-500/10 text-amber-800 dark:text-amber-200" },
+  processing: { label: "Confirming the payment", tone: "bg-amber-500/10 text-amber-800 dark:text-amber-200" },
   expired: { label: "Not paid", tone: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-300" },
 };
+
+/** Who confirms a card payment: Razorpay (India), PayPal (outside India). */
+const gateway = (o: UpiOrder) => (o.method === "paypal" ? "PayPal" : "Razorpay");
 
 /** Payments made (orders nobody paid for aren't worth listing), with a way back in to fix a UPI payment's UTR. */
 function Payments({ orders, onOpen }: { orders: UpiOrder[]; onOpen: (o: UpiOrder) => void }) {
@@ -150,14 +153,16 @@ function Payments({ orders, onOpen }: { orders: UpiOrder[]; onOpen: (o: UpiOrder
               {o.label} · {o.amount_text || `₹${o.amount_inr}`}
             </span>
             <span className="text-zinc-500">{formatDate(o.submitted_at ?? o.created_at)}</span>
-            {o.method === "razorpay" ? (
+            {o.method === "razorpay" || o.method === "paypal" ? (
               <span className="text-zinc-500">
-                Razorpay · <span className="font-mono tabular-nums">{o.reference}</span>
+                {gateway(o)} · <span className="font-mono tabular-nums">{o.reference}</span>
               </span>
             ) : (
               o.utr && <span className="tabular-nums text-zinc-500">UTR {o.utr}</span>
             )}
-            <span className={cx("rounded-full px-2 py-0.5 text-xs font-medium", STATUS[o.status].tone)}>{STATUS[o.status].label}</span>
+            <span className={cx("rounded-full px-2 py-0.5 text-xs font-medium", STATUS[o.status].tone)}>
+              {o.status === "processing" ? `Confirming with ${gateway(o)}` : STATUS[o.status].label}
+            </span>
             {(o.status === "rejected" || o.status === "submitted") && (
               <Button size="sm" variant="ghost" className="ml-auto" onClick={() => onOpen(o)}>
                 {o.status === "rejected" ? "Send the right UTR" : "Correct the UTR"}
@@ -165,13 +170,13 @@ function Payments({ orders, onOpen }: { orders: UpiOrder[]; onOpen: (o: UpiOrder
             )}
             {!!o.refunded_inr && (
               <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-xs font-medium text-sky-800 dark:text-sky-200">
-                Refunded ₹{o.refunded_inr}
+                Refunded {o.refunded_text || `₹${o.refunded_inr}`}
               </span>
             )}
             {o.status === "processing" && (
               <span className="basis-full text-xs text-zinc-500">
-                Razorpay has your payment and is confirming it with your bank. The credits are added as soon as it's
-                captured, usually within minutes; nothing more to do. Quote {o.reference} if you contact us.
+                {gateway(o)} has your payment and is confirming it{o.method === "paypal" ? "" : " with your bank"}. The credits are added
+                as soon as it's captured, usually within minutes; nothing more to do. Quote {o.reference} if you contact us.
               </span>
             )}
             {o.status === "rejected" && o.note && <span className="basis-full text-xs text-rose-700 dark:text-rose-300">{o.note}</span>}
@@ -206,6 +211,7 @@ export function BillingPage() {
   const [starting, setStarting] = useState(false);
   const [buyError, setBuyError] = useState<string | null>(null);
   const [bought, setBought] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const checkoutRef = useRef<HTMLDivElement>(null);
   const country = useCountry();
   const [internationalPack, setInternationalPack] = useState<CreditPack | null>(null);
@@ -216,7 +222,17 @@ export function BillingPage() {
     setStarting(true);
     setBuyError(null);
     setBought(null);
+    setNotice(null);
+    let leaving = false;
     try {
+      if (p.checkout === "paypal") {
+        // PayPal (outside India): its own page takes the payment and sends the buyer back here (?paypal=return),
+        // where the server captures it. The page is left now, so the button stays busy.
+        const checkout = await api.createPaypalOrder(p.id);
+        leaving = true;
+        window.location.assign(checkout.approve_url);
+        return;
+      }
       if (p.checkout === "razorpay") {
         // Razorpay: its window takes the payment; its signed answer is checked on the server, which adds the pack.
         const checkout = await api.createRazorpayOrder(p.id);
@@ -240,7 +256,7 @@ export function BillingPage() {
       if (err instanceof InternationalPaymentError && country !== "IN" && isPack && p.currency !== "USD") setInternationalPack(p);
       else setBuyError(errorText(err));
     } finally {
-      setStarting(false);
+      if (!leaving) setStarting(false);
     }
   };
 
@@ -253,8 +269,35 @@ export function BillingPage() {
     if (p) void buy(p);
   }, [wanted, packs.data, monthly.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // A payment Razorpay is still confirming: check back every 15 s for a few minutes, so the credits show up here
-  // without a reload once it's captured (the server credits it from Razorpay's webhook or its own check).
+  // Back from PayPal: ?paypal=return&token=<order id> after approving (the server takes the money and adds what was
+  // bought, on PayPal's word), ?paypal=cancel after backing out. Either way the address is cleaned up.
+  const paypalBack = params.get("paypal");
+  const paypalOrder = params.get("token");
+  useEffect(() => {
+    if (paypalBack === null) return;
+    setParams({}, { replace: true });
+    if (paypalBack === "cancel") {
+      setNotice("You left PayPal before paying, so nothing was charged.");
+      return;
+    }
+    if (paypalBack !== "return" || !paypalOrder) return;
+    setStarting(true);
+    setBuyError(null);
+    api.capturePaypal(paypalOrder)
+      .then((done) => {
+        if (done.status === "approved") setBought(`${done.label} added. Thanks!`);
+        else if (done.status === "processing") {
+          setBought("PayPal has your payment and is confirming it. It's added as soon as PayPal does, usually within minutes. This page updates by itself.");
+        } else setNotice("PayPal hasn't confirmed a payment for this, so nothing was charged. Buy again if you meant to.");
+        orders.reload();
+        ent.reload();
+      })
+      .catch((err) => setBuyError(errorText(err)))
+      .finally(() => setStarting(false));
+  }, [paypalBack]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A payment the gateway is still confirming: check back every 15 s for a few minutes, so the credits show up here
+  // without a reload once it's captured (the server credits it from the gateway's webhook or its own check).
   const confirming = (orders.data ?? []).some((o) => o.status === "processing");
   useEffect(() => {
     if (!confirming) return;
@@ -321,15 +364,22 @@ export function BillingPage() {
             {bought}
           </p>
         )}
+        {notice && (
+          <p role="status" className="rounded-xl bg-zinc-500/10 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-200">
+            {notice}
+          </p>
+        )}
         {/* Room for three lines is kept, and nothing is said until the packs say how they're paid: the UPI
             wording swapping to Razorpay's moved the page (layout shift). */}
         <p className="min-h-[3.75rem] text-xs text-zinc-500 sm:min-h-[2.5rem]">
-          {!packs.data ? null : list[0]?.checkout === "razorpay"
+          {!packs.data ? null : list[0]?.checkout === "paypal"
+            ? "Prices outside India are in US dollars, paid through PayPal: with your PayPal account, or a card where PayPal offers it. Nothing renews, and what you bought is added as soon as PayPal confirms the payment, usually within seconds."
+            : list[0]?.checkout === "razorpay"
             ? `Pay once by card, UPI, netbanking or wallet, through Razorpay. ${
                 list[0]?.international
                   ? list[0]?.currency === "USD"
                     ? "Prices outside India are in US dollars, charged by card."
-                    : "Cards from outside India work too: prices there are shown in US dollars."
+                    : "Buyers outside India pay in US dollars."
                   : "Cards issued outside India can't be used yet; that's coming soon."
               } Nothing renews, and what you bought is added as soon as Razorpay confirms the payment, usually within seconds.`
             : "Pay once over UPI (Google Pay, PhonePe, Paytm or any bank app). Nothing renews or is charged automatically, and what you bought is added as soon as your payment is checked."}

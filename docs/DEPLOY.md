@@ -35,6 +35,9 @@ Render dashboard → New → Blueprint → this repo (`render.yaml`). Set the pr
 | `ORBIT_USD_INR` | no | rupees to the dollar for prices outside India (default 88) |
 | `ORBIT_INTL_MARKUP` | no | how much more buyers outside India pay (default 1.3 = 30% more) |
 | `ORBIT_RAZORPAY_INTERNATIONAL` | no | `true` once Razorpay has approved international cards: dollar prices become buyable |
+| `ORBIT_PAYPAL_CLIENT_ID` / `ORBIT_PAYPAL_CLIENT_SECRET` | no | a PayPal REST app's keys: dollar prices outside India are paid through PayPal (docs/BILLING.md) |
+| `ORBIT_PAYPAL_ENV` | no | `sandbox` (default, no real money) or `live`, matching the keys |
+| `ORBIT_PAYPAL_WEBHOOK_ID` | no | the PayPal webhook's ID, so its events (`/v1/billing/paypal/webhook`) are believed |
 | `ORBIT_LLM_PRICING_JSON` | no | extra/override LLM prices for internal cost estimates (see `providers/llm/pricing.py`) |
 | `ORBIT_LIVE_HEARTBEAT_S` | no | live-minute commit/enforcement interval, default 15 |
 | `ORBIT_SPOOL_DIR` | no | where dead-lettered writes spool if the DB is unreachable (default: temp dir) |

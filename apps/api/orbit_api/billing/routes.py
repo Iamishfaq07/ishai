@@ -1,10 +1,12 @@
 """Plans and entitlements over HTTP, and buying credit packs (billing/packs.py): through Razorpay's checkout when it's
 set up (billing/razorpay.py, confirmed by Razorpay's signature), else over UPI (billing/upi.py, approved by the
-admin). Limits and features never come from clients; a payment changes nothing until it's confirmed."""
+admin). Outside India, dollar prices are paid through PayPal when it's set up (billing/paypal.py, confirmed by
+PayPal's capture). Limits and features never come from clients; a payment changes nothing until it's confirmed."""
 
 import hashlib
 import json
 import logging
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
@@ -17,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api import entitlements
 from orbit_api.admin.routes import require_admin
 from orbit_api.auth.security import current_user, optional_user
-from orbit_api.billing import pricing, razorpay, settle, upi
+from orbit_api.billing import paypal, pricing, razorpay, settle, upi
 from orbit_api.billing.monthly import monthly_plans, public_monthly
 from orbit_api.billing.packs import pack_label as packs_label
 from orbit_api.billing.packs import packs, public_packs
@@ -92,7 +94,9 @@ def _priced(items: list[dict[str, Any]], currency: str) -> list[dict[str, Any]]:
     for item in items:
         cost = pricing.price(item["price_inr"], currency)
         extra: dict[str, Any] = {"currency": cost.currency, "price": cost.major, "price_text": cost.text()}
-        if cost.currency != pricing.INR:  # dollars are charged by card through Razorpay, once it takes them
+        if cost.currency != pricing.INR and paypal.configured():  # dollars: PayPal (an account, or a card)
+            extra |= {"checkout": "paypal", "buyable": True, "international": True}
+        elif cost.currency != pricing.INR:  # or by card through Razorpay, once it takes cards from abroad
             extra["buyable"] = bool(item.get("buyable") and item.get("checkout") == "razorpay"
                                     and item.get("international"))
         if "days" in item:
@@ -143,6 +147,7 @@ class UpiOrderOut(BaseModel):
     decided_at: datetime | None
     method: str = "upi"  # "upi" (a UTR the admin checks) or "razorpay" (confirmed by Razorpay)
     refunded_inr: int = 0  # refunds that went through (credits are kept: docs/BILLING.md, refund policy)
+    refunded_text: str = ""  # the same, in the payment's currency: "₹500", "$10.00"
     # What was charged, in its own currency: "₹3,599" or "$53.99" (amount_inr is the rupee equivalent abroad).
     currency: str = "INR"
     amount_text: str = ""
@@ -171,7 +176,9 @@ def _order_out(p: Payment) -> UpiOrderOut:
                       submitted_at=upi.aware(p.submitted_at) if p.submitted_at else None,
                       decided_at=upi.aware(p.decided_at) if p.decided_at else None, method=p.method or "upi",
                       refunded_inr=(p.refunded_paise or 0) // 100, currency=pricing.payment_currency(p),
-                      amount_text=pricing.payment_text(p))
+                      amount_text=pricing.payment_text(p),
+                      refunded_text=pricing.money(pricing.payment_currency(p), p.refunded_paise)
+                      if p.refunded_paise else "")
     s = get_settings()
     if p.status in ("awaiting_payment", "rejected") and s.upi_id and out.method == "upi":
         out.upi_id, out.payee_name, out.upi_uri = s.upi_id, s.upi_name, upi.upi_uri(p, label)
@@ -436,13 +443,22 @@ async def razorpay_webhook(request: Request, background: BackgroundTasks,
         return {"ok": True}
     if not isinstance(event, dict):
         return {"ok": True}
-    event_id = _event_id(request, raw)
     kind, entity_id, kept = _event_data(event)
+    return await _run_event(db, "razorpay", _event_id(request, raw), kind, entity_id, kept,
+                            lambda: _apply(db, event, background))
+
+
+async def _run_event(db: AsyncSession, provider: str, event_id: str, kind: str, entity_id: str | None,
+                     kept: dict[str, Any], apply: Callable[[], Awaitable[str]]) -> dict[str, bool]:
+    """A verified webhook event, applied once: recorded by its id (PaymentEvent), so a redelivery of one already
+    applied changes nothing, and one that couldn't be applied (its payment unknown, or an error) is tried again. An
+    error answers 500 so the gateway redelivers it."""
     row = await db.scalar(select(PaymentEvent).where(PaymentEvent.event_id == event_id))
     if row is not None and row.status in ("processed", "ignored"):
         return {"ok": True}  # a redelivery of an event already applied
     if row is None:
-        row = PaymentEvent(event_id=event_id, event=kind, entity_id=entity_id, data=kept, status="received")
+        row = PaymentEvent(provider=provider, event_id=event_id, event=kind, entity_id=entity_id, data=kept,
+                           status="received")
         db.add(row)
         try:
             await db.commit()
@@ -451,18 +467,144 @@ async def razorpay_webhook(request: Request, background: BackgroundTasks,
             return {"ok": True}
     row_id = row.id
     try:
-        outcome = await _apply(db, event, background)
+        outcome = await apply()
     except Exception as e:
         await db.rollback()
         await db.execute(update(PaymentEvent).where(PaymentEvent.id == row_id).values(
             status="error", attempts=PaymentEvent.attempts + 1, error=f"{type(e).__name__}: {e}"[:300]))
         await db.commit()
-        log.exception("razorpay webhook %s (%s) failed", event_id, kind)
+        log.exception("%s webhook %s (%s) failed", provider, event_id, kind)
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Couldn't apply the event; send it again.") from e
     await db.execute(update(PaymentEvent).where(PaymentEvent.id == row_id).values(
         status=outcome, attempts=PaymentEvent.attempts + 1, error=None, processed_at=datetime.now(UTC)))
     await db.commit()
     return {"ok": True}
+
+
+# ---- PayPal (outside India) ------------------------------------------------------------------------------------------
+
+
+class PaypalCheckoutOut(BaseModel):
+    """Where the page sends the buyer to approve the payment at PayPal."""
+
+    payment_id: str  # Orbit's
+    order_id: str  # PayPal's
+    approve_url: str
+
+
+class PaypalCaptureIn(BaseModel):
+    order_id: str = Field(min_length=1, max_length=40, pattern=r"^[A-Za-z0-9]+$")  # the return URL's `token`
+
+
+@router.post("/billing/paypal/orders", response_model=PaypalCheckoutOut, status_code=201,
+             dependencies=[Depends(order_limit)])
+async def paypal_order(body: OrderIn, request: Request, user: Annotated[User, Depends(current_user)],
+                       db: Annotated[AsyncSession, Depends(get_db)]) -> PaypalCheckoutOut:
+    """Start paying a dollar price through PayPal: an order there for it, kept here until it's captured. Buyers in
+    India pay rupees through Razorpay (a PayPal India account can't take payments from India)."""
+    pid, label, price_inr, days, resume_credits, minutes = _product(body.pack)
+    if not paypal.configured():
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "PayPal payments aren't set up yet.")
+    cost = pricing.price(price_inr, pricing.currency_for(request, user))
+    if cost.currency == pricing.INR:
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            "PayPal is for payments from outside India. Pay by UPI or card instead.")
+    reference = upi.new_reference()
+    try:
+        order_id, approve = await paypal.create_order(cost.minor, cost.currency, reference, label,
+                                                      request_id=f"order-{reference}")
+    except paypal.PayPalError as e:
+        log.warning("paypal order failed: %s", e)
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
+                            "PayPal isn't reachable right now. Try again in a minute.") from e
+    p = Payment(user_id=user.id, plan=pid, amount_inr=cost.inr, days=days, resume_credits=resume_credits,
+                interview_minutes=minutes, reference=reference, status="awaiting_payment", method="paypal",
+                gateway_order_id=order_id, currency=cost.currency, amount_minor=cost.minor)
+    db.add(p)
+    await db.commit()
+    return PaypalCheckoutOut(payment_id=p.id, order_id=order_id, approve_url=approve)
+
+
+@router.post("/billing/paypal/capture", response_model=UpiOrderOut, dependencies=[Depends(utr_limit)])
+async def paypal_capture(body: PaypalCaptureIn, background: BackgroundTasks,
+                         user: Annotated[User, Depends(current_user)],
+                         db: Annotated[AsyncSession, Depends(get_db)]) -> UpiOrderOut:
+    """The buyer is back from PayPal: take the money and add what they bought, only on PayPal's COMPLETED capture of
+    exactly the order's amount. A capture PayPal still holds as pending leaves the order `processing` (the webhook or
+    the reconciler finish it); an order not approved stays `awaiting_payment`, nothing charged."""
+    p = await db.scalar(select(Payment).where(Payment.gateway_order_id == body.order_id, Payment.method == "paypal"))
+    if p is None or p.user_id != user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found.")
+    if p.status in settle.CREDITABLE:
+        try:
+            mail = await settle.paypal_complete(db, p)
+        except paypal.PayPalError as e:
+            if e.issue == "INSTRUMENT_DECLINED":
+                raise HTTPException(status.HTTP_409_CONFLICT,
+                                    "PayPal couldn't take that way of paying, so nothing was charged. Try again and "
+                                    "choose another card or your PayPal balance.") from e
+            log.warning("paypal capture %s failed (%s); left for the reconciler", body.order_id, e)
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
+                                "PayPal didn't answer. If you approved the payment it's added within minutes, and "
+                                "it's never charged twice.") from e
+        if mail is not None:
+            background.add_task(send_safely, mail)
+    await db.refresh(p)
+    return _order_out(p)
+
+
+async def _apply_paypal(db: AsyncSession, kind: str, resource: dict[str, Any], background: BackgroundTasks) -> str:
+    """What one PayPal webhook event does: "processed", "ignored" or "unmatched"."""
+    if kind in ("PAYMENT.CAPTURE.REFUNDED", "PAYMENT.CAPTURE.REVERSED"):  # a refund, or a chargeback
+        return await settle.record_paypal_refund(db, resource)
+    if kind == "CHECKOUT.ORDER.APPROVED":  # approved, and maybe never brought back: capture it here
+        order_id = str(resource.get("id") or "")
+    elif kind in ("PAYMENT.CAPTURE.COMPLETED", "PAYMENT.CAPTURE.PENDING"):
+        order_id = paypal.capture_order_id(resource) or ""
+    else:
+        return "ignored"
+    p = await db.scalar(select(Payment).where(Payment.gateway_order_id == order_id, Payment.method == "paypal")) \
+        if order_id else None
+    if p is None:
+        return "unmatched"
+    if p.status not in settle.CREDITABLE:
+        return "processed"  # credited already (or by the buyer's return a moment ago)
+    if kind == "CHECKOUT.ORDER.APPROVED":
+        try:
+            mail = await settle.paypal_complete(db, p)
+        except paypal.PayPalError as e:
+            if e.issue != "INSTRUMENT_DECLINED":
+                raise
+            return "ignored"  # the buyer is asked to pay another way on their return
+    else:
+        mail = await settle.paypal_settle(db, p, {"purchase_units": [{"payments": {"captures": [resource]}}]})
+    if mail is not None:
+        background.add_task(send_safely, mail)
+    await db.refresh(p)
+    return "processed" if p.status in ("approved", "processing") else "ignored"
+
+
+@router.post("/billing/paypal/webhook", include_in_schema=False)
+async def paypal_webhook(request: Request, background: BackgroundTasks,
+                         db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, bool]:
+    """PayPal's webhook (CHECKOUT.ORDER.APPROVED, PAYMENT.CAPTURE.*), believed only when PayPal's own
+    verify-webhook-signature says so; applied once per event id, like Razorpay's."""
+    raw = await request.body()
+    if not await paypal.webhook_ok(request.headers, raw):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bad signature.")
+    event = json.loads(raw)
+    if not isinstance(event, dict):
+        return {"ok": True}
+    kind = str(event.get("event_type") or "")[:40]
+    given = event.get("resource")
+    resource: dict[str, Any] = given if isinstance(given, dict) else {}
+    event_id = str(event.get("id") or "")[:80] or "sha256:" + hashlib.sha256(raw).hexdigest()
+    kept = {k: resource.get(k) for k in ("id", "status", "amount", "custom_id") if resource.get(k) is not None}
+    if paypal.capture_order_id(resource):
+        kept["order_id"] = paypal.capture_order_id(resource)
+    entity_id = str(resource.get("id"))[:40] if resource.get("id") else None
+    return await _run_event(db, "paypal", event_id, kind, entity_id, kept,
+                            lambda: _apply_paypal(db, kind, resource, background))
 
 
 # ---- admin: check and approve payments --------------------------------------------------------------------------

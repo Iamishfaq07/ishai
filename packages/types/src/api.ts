@@ -784,9 +784,13 @@ export interface MonthlyPlan {
   /** Unlimited Resume AI: no credits needed. */
   resume_ai: boolean;
   buyable: boolean;
-  checkout?: "razorpay" | "upi" | null;
+  checkout?: CheckoutMethod | null;
   international?: boolean;
 }
+
+/** How a price is paid: Razorpay's checkout (India; cards abroad once enabled), UPI with a UTR, or PayPal (dollar
+ *  prices outside India, once ORBIT_PAYPAL_* is set). */
+export type CheckoutMethod = "razorpay" | "upi" | "paypal";
 
 export interface CreditPack {
   id: string;
@@ -803,12 +807,20 @@ export interface CreditPack {
   currency?: "INR" | "USD";
   price?: number;
   price_text?: string;
-  /** Can be bought right now (Razorpay or a UPI ID is set up). */
+  /** Can be bought right now (Razorpay, PayPal or a UPI ID is set up). */
   buyable: boolean;
-  /** How: Razorpay's checkout (cards, UPI, netbanking), UPI with a UTR, or not at all. */
-  checkout?: "razorpay" | "upi" | null;
-  /** Razorpay takes cards issued outside India (ORBIT_RAZORPAY_INTERNATIONAL, once Razorpay has enabled them). */
+  /** How: Razorpay's checkout (cards, UPI, netbanking), PayPal (outside India), UPI with a UTR, or not at all. */
+  checkout?: CheckoutMethod | null;
+  /** Buyers outside India can pay: PayPal is set up, or Razorpay takes their cards (ORBIT_RAZORPAY_INTERNATIONAL). */
   international?: boolean;
+}
+
+/** POST /v1/billing/paypal/orders: the page sends the buyer to `approve_url` (PayPal's own page). PayPal brings them
+ *  back to /billing?paypal=return&token=<order_id>, and the page asks the server to capture it. */
+export interface PaypalCheckout {
+  payment_id: string;
+  order_id: string;
+  approve_url: string;
 }
 
 /** POST /v1/billing/razorpay/orders: what the page opens Razorpay's checkout with. */
@@ -854,10 +866,12 @@ export interface UpiOrder {
   created_at: string;
   submitted_at: string | null;
   decided_at: string | null;
-  /** "upi" (a UTR the admin checks) or "razorpay" (confirmed by Razorpay). */
-  method?: "upi" | "razorpay";
-  /** Refunds that went through, in rupees. The credits are kept (docs/BILLING.md). */
+  /** "upi" (a UTR the admin checks), "razorpay" (confirmed by Razorpay) or "paypal" (confirmed by PayPal). */
+  method?: "upi" | "razorpay" | "paypal";
+  /** Refunds that went through, in whole units of the payment's currency. The credits are kept (docs/BILLING.md). */
   refunded_inr?: number;
+  /** The same in the payment's currency: "₹500", "$10.00". */
+  refunded_text?: string;
   /** How to pay, while there's still something to pay. `upi_uri` is shown as a QR and, on phones, a tap-through link. */
   upi_id: string | null;
   payee_name: string | null;

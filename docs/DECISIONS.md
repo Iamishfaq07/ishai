@@ -336,3 +336,19 @@ browser post can't put words in a user's mouth. Deleting an account keeps its me
 they were written to Orbit, and an unanswered question shouldn't vanish with the account. Handled messages are
 deleted after 12 months by the existing session sweeper (no new job runner). The Contact page goes live on its own;
 Terms and Refund stay drafts behind `LEGAL_PAGES_PUBLISHED`, and the draft static `contact.html` is superseded.
+
+**D51 — PayPal takes the dollar prices, by redirect, and only its capture credits.** The owner has a PayPal Business
+account and asked for PayPal for buyers outside India. A PayPal India account can only take payments from abroad,
+which matches the split the prices already make (rupees in India, dollars elsewhere: billing/pricing.py), so PayPal
+is offered for every dollar price and never for rupees; Razorpay's USD orders stay as the fallback when PayPal isn't
+set up. The buyer goes to PayPal's approval page and back (Orders v2 with `return_url`), rather than PayPal's JS
+buttons in the page: no third-party script in the app, no Content-Security-Policy change, the same flow on phones, and
+nothing for the page to trust. The server captures on the return and credits only a COMPLETED capture of exactly the
+order's amount and currency, through the same `credit()` as Razorpay (one conditional update, unique capture ids), so
+a reloaded return page, the webhook and the reconciler can all arrive and the order is credited once. An approved
+order whose buyer never came back is captured by the `CHECKOUT.ORDER.APPROVED` webhook or the reconciler, so approving
+is enough. Webhooks are verified by PayPal's own verify-webhook-signature endpoint with the event bytes as received
+(re-encoding the JSON can change what was signed); without a webhook id they're refused and the return plus the
+reconciler still settle every order. No migration: `payments` already had a method, currency, cents and gateway ids.
+A half-configured PayPal logs a warning and stays off instead of refusing to start (refusing took production down
+twice before).
