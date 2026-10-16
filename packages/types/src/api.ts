@@ -2356,3 +2356,31 @@ export interface PrepPlan {
   done: number;
   total: number;
 }
+
+/** POST /v1/offers/{id}/scenario: the offer next to a what-if version (nothing saved). */
+export interface OfferScenarioInput {
+  fixed_change_pct?: number;
+  variable_payout_pct?: number;
+  joining_bonus?: number | null;
+  equity_value_pct?: number;
+  pf?: "capped" | "full" | "none" | null;
+}
+
+export interface OfferScenarioFigures {
+  fixed: number;
+  variable: number;
+  joining_bonus: number;
+  equity_per_year: number;
+  first_year: number;
+  yearly: number;
+  /** India only. */
+  monthly_in_hand: number | null;
+  yearly_tax: number | null;
+  variable_after_tax: number | null;
+}
+
+export interface OfferScenario {
+  offer: OfferScenarioFigures;
+  scenario: OfferScenarioFigures;
+  assumptions: string[];
+}

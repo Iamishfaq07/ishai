@@ -72,6 +72,8 @@ import type {
   CodeProblem,
   CodeProblemSummary,
   JobOfferRecord,
+  OfferScenario,
+  OfferScenarioInput,
   LinkedInState,
   OfferInput,
   OfferMarket,
@@ -562,6 +564,9 @@ export function createApiClient(options: ApiClientOptions) {
     setLinkedInTarget: (role: string) => json<LinkedInState>("/v1/linkedin/target", { method: "PUT", body: body({ target_role: role }) }),
     deleteLinkedIn: () => json<void>("/v1/linkedin", { method: "DELETE" }),
     offers: () => json<JobOfferRecord[]>("/v1/offers"),
+    /** What-if figures for an offer (nothing saved). */
+    offerScenario: (id: string, input: OfferScenarioInput) =>
+      json<OfferScenario>(`/v1/offers/${encodeURIComponent(id)}/scenario`, { method: "POST", body: body(input) }),
     addOffer: (offer: OfferInput) => json<JobOfferRecord>("/v1/offers", { method: "POST", body: body(offer) }),
     updateOffer: (id: string, offer: OfferInput) =>
       json<JobOfferRecord>(`/v1/offers/${encodeURIComponent(id)}`, { method: "PUT", body: body(offer) }),

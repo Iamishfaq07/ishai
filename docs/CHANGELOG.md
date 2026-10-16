@@ -1,5 +1,13 @@
 # Implementation log
 
+## Offer AI: What if (2026-10-16)
+
+- **What if** on each offer: sliders for a raise or cut on the fixed pay (−30% to +50%), how much of the variable is
+  paid out, the joining bonus, and what the equity turns out to be worth. The offer and the what-if version sit side
+  by side, with each change marked, down to the first year and (in India) **each month's in-hand pay to the rupee**.
+- The same tax model as the offer itself (new regime FY 2026-27, PF, professional tax), with its assumptions listed.
+  Nothing is saved, and the offer doesn't change. `POST /v1/offers/{id}/scenario`, owner only, no AI.
+
 ## Speaking feedback: pauses and time to start (2026-10-16)
 
 - "How you sounded" on a session gains **Time to start** (the median time from the end of a question to your first

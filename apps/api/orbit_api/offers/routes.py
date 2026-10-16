@@ -289,3 +289,68 @@ async def make_plan(offer_id: str, user: Annotated[User, Depends(require_verifie
         await db.commit()
         await db.refresh(o)
         return await _out(db, o, user)
+
+
+# ---- what if ------------------------------------------------------------------------------------------------------
+
+
+class ScenarioIn(BaseModel):
+    """Changes to try on an offer, none of them saved: a higher or lower fixed pay, how much of the variable pay is
+    paid out, a different joining bonus, what the equity turns out to be worth, and how PF is taken."""
+
+    fixed_change_pct: float = Field(0, ge=-50, le=100)
+    variable_payout_pct: float = Field(100, ge=0, le=200)
+    joining_bonus: int | None = Field(None, ge=0, le=MAX_MONEY)
+    equity_value_pct: float = Field(100, ge=0, le=500)
+    pf: PfMode | None = None
+
+
+class ScenarioFigures(BaseModel):
+    fixed: int
+    variable: int  # as paid out
+    joining_bonus: int
+    equity_per_year: int  # at the value tried
+    first_year: int
+    yearly: int
+    monthly_in_hand: int | None  # India only: fixed pay after tax, PF and professional tax, each month
+    yearly_tax: int | None
+    variable_after_tax: int | None
+
+
+class ScenarioOut(BaseModel):
+    offer: ScenarioFigures
+    scenario: ScenarioFigures
+    assumptions: list[str]
+
+
+def figures(o: OfferIn | JobOffer, fixed: int, variable: int, bonus: int, equity: int, pf: str) -> ScenarioFigures:
+    other = o.other
+    monthly = tax = var_after = None
+    if o.currency == "INR":
+        t = take_home(fixed, variable, pf, o.employer_costs_in_ctc)  # type: ignore[arg-type]
+        monthly, tax, var_after = t.monthly, t.yearly_tax, t.variable_after_tax
+    return ScenarioFigures(fixed=fixed, variable=variable, joining_bonus=bonus, equity_per_year=equity,
+                           first_year=fixed + variable + bonus + equity + other,
+                           yearly=fixed + variable + equity + other,
+                           monthly_in_hand=monthly, yearly_tax=tax, variable_after_tax=var_after)
+
+
+def scenario(o: JobOffer, s: ScenarioIn) -> ScenarioOut:
+    fixed = max(1, round(o.fixed * (1 + s.fixed_change_pct / 100)))
+    variable = round(o.variable * s.variable_payout_pct / 100)
+    bonus = o.joining_bonus if s.joining_bonus is None else s.joining_bonus
+    equity = round(o.equity_per_year * s.equity_value_pct / 100)
+    pf = s.pf or o.pf
+    assumptions = ["What-if figures only: nothing is saved, and the offer itself doesn't change.",
+                   "Equity is valued as you set it; real value depends on vesting and the company."]
+    if o.currency == "INR":
+        assumptions += take_home(fixed, variable, pf, o.employer_costs_in_ctc).assumptions  # type: ignore[arg-type]
+    return ScenarioOut(offer=figures(o, o.fixed, o.variable, o.joining_bonus, o.equity_per_year, o.pf),
+                       scenario=figures(o, fixed, variable, bonus, equity, pf), assumptions=assumptions)
+
+
+@router.post("/{offer_id}/scenario", response_model=ScenarioOut, dependencies=[read_limit])
+async def try_scenario(offer_id: str, body: ScenarioIn, user: Annotated[User, Depends(current_user)],
+                       db: Annotated[AsyncSession, Depends(get_db)]) -> ScenarioOut:
+    """The offer next to a what-if version of it (no AI, nothing saved)."""
+    return scenario(await _owned(db, offer_id, user), body)
