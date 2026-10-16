@@ -53,6 +53,8 @@ class Settings(BaseSettings):
                                                                          "ORBIT_FREE_RESUME_AI_IP_DAYS"))
     welcome_daily_limit: int = Field(100, ge=0, validation_alias=AliasChoices("ORBIT_WELCOME_DAILY"))
     # Credit packs for sale over UPI, overriding the defaults in billing/packs.py (validated at startup).
+    # Monthly plans (billing/monthly.py): a plan for 30 days, paid once; nothing renews. JSON list replaces defaults.
+    monthly_plans_json: str | None = Field(None, validation_alias=AliasChoices("ORBIT_MONTHLY_PLANS_JSON"))
     credit_packs_json: str | None = Field(None, validation_alias=AliasChoices("ORBIT_CREDIT_PACKS_JSON"))
     # UPI payments (billing/upi.py): the UPI ID people pay to and the name their UPI app shows. Unset = nothing can
     # be bought. Each payment is checked by the admin against the bank statement (UTR) before its credits land.

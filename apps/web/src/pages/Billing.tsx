@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CircleCheck, CountUp, CreditCard, Crown, LoadGate, Mic, Sparkles, cx, focusRing, type LucideIcon } from "@orbit/ui";
-import type { CreditPack, Entitlements, UpiOrder } from "@orbit/types";
+import type { CreditPack, Entitlements, MonthlyPlan, UpiOrder } from "@orbit/types";
 import { Button, Card, ErrorNote, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
 import { contactHref } from "../lib/contactForm";
@@ -11,6 +11,7 @@ import { RESUME_AI_HOME } from "./resume/paths";
 import { UpiCheckout } from "./UpiCheckout";
 import { InternationalPaymentError, payWithRazorpay } from "../lib/razorpay";
 import { InternationalCheckout } from "../components/InternationalCheckout";
+import { PlanComparison, PricingTiers } from "../components/PricingTiers";
 import { useCountry } from "../lib/country";
 
 function Bar({ used, limit }: { used: number; limit: number | null }) {
@@ -171,7 +172,7 @@ function PackLine({ children }: { children: ReactNode }) {
 const STATUS: Record<UpiOrder["status"], { label: string; tone: string }> = {
   awaiting_payment: { label: "Not paid yet", tone: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-300" },
   submitted: { label: "Checking your payment", tone: "bg-amber-500/10 text-amber-800 dark:text-amber-200" },
-  approved: { label: "Paid · credits added", tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" },
+  approved: { label: "Paid · added", tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" },
   rejected: { label: "Couldn't confirm", tone: "bg-rose-500/10 text-rose-700 dark:text-rose-300" },
   processing: { label: "Confirming with Razorpay", tone: "bg-amber-500/10 text-amber-800 dark:text-amber-200" },
   expired: { label: "Not paid", tone: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-300" },
@@ -240,6 +241,7 @@ export function UsageSummary() {
 export function BillingPage() {
   const ent = useAsync(() => api.entitlements(), [], "entitlements");
   const packs = useAsync(() => api.listPacks(), [], "packs");
+  const monthly = useAsync(() => api.listMonthly().catch(() => [] as MonthlyPlan[]), [], "monthly");
   const orders = useAsync(() => api.listUpiOrders().catch(() => [] as UpiOrder[]), [], "upi-orders");
   const [params, setParams] = useSearchParams();
   const [order, setOrder] = useState<UpiOrder | null>(null);
@@ -250,8 +252,9 @@ export function BillingPage() {
   const country = useCountry();
   const [internationalPack, setInternationalPack] = useState<CreditPack | null>(null);
 
-  const buy = async (p: CreditPack, domestic = false) => {
-    if (!domestic && country !== "IN" && !p.international) { setInternationalPack(p); return; }
+  const buy = async (p: CreditPack | MonthlyPlan, domestic = false) => {
+    const isPack = !("days" in p);
+    if (!domestic && isPack && country !== "IN" && !p.international) { setInternationalPack(p); return; }
     setStarting(true);
     setBuyError(null);
     setBought(null);
@@ -265,7 +268,7 @@ export function BillingPage() {
           setBought(
             done.status === "approved"
               ? `${done.label} added. Thanks!`
-              : "Razorpay has your payment and is confirming it. Your credits are added as soon as it's captured, usually within minutes. This page updates by itself.",
+              : `Razorpay has your payment and is confirming it. Your ${isPack ? "credits are" : "plan is"} added as soon as it's captured, usually within minutes. This page updates by itself.`,
           );
           orders.reload();
           ent.reload();
@@ -274,21 +277,21 @@ export function BillingPage() {
         setOrder(await api.createUpiOrder(p.id));
       }
     } catch (err) {
-      if (err instanceof InternationalPaymentError && country !== "IN") setInternationalPack(p);
+      if (err instanceof InternationalPaymentError && country !== "IN" && isPack) setInternationalPack(p);
       else setBuyError(errorText(err));
     } finally {
       setStarting(false);
     }
   };
 
-  // Arriving from "Get credits" elsewhere (/billing?pack=starter): open that pack's checkout straight away.
+  // Arriving from "Get credits" elsewhere (/billing?pack=starter, or a monthly plan's id): open that checkout.
   const wanted = params.get("pack");
   useEffect(() => {
-    if (wanted === null || !packs.data) return;
-    const p = packs.data.find((x) => x.id === wanted && x.buyable);
+    if (wanted === null || !packs.data || !monthly.data) return;
+    const p = [...packs.data, ...monthly.data].find((x) => x.id === wanted && x.buyable);
     setParams({}, { replace: true });
     if (p) void buy(p);
-  }, [wanted, packs.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [wanted, packs.data, monthly.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A payment Razorpay is still confirming: check back every 15 s for a few minutes, so the credits show up here
   // without a reload once it's captured (the server credits it from Razorpay's webhook or its own check).
@@ -311,15 +314,33 @@ export function BillingPage() {
 
   const e = ent.data;
   const list = packs.data ?? [];
+  const months = monthly.data ?? [];
   // The second-largest pack (Plus) is the usual pick: more per rupee than the small ones without the largest spend.
   // With one or two packs, none is singled out.
   const bestId = list.length >= 3 ? [...list].sort((a, b) => a.price_inr - b.price_inr)[list.length - 2]?.id : undefined;
 
   return (
     <div>
-      <PageHeader icon={CreditCard} title="Plan & billing" subtitle="Your credits, and packs to top up. Credits never expire." />
+      <PageHeader icon={CreditCard} title="Plan & billing" subtitle="A monthly plan, or packs of credits that never expire. Nothing renews automatically." />
       {internationalPack && <InternationalCheckout pack={internationalPack} country={country} onClose={() => setInternationalPack(null)}
         onDomestic={() => { const p = internationalPack; setInternationalPack(null); void buy(p, true); }} />}
+      {months.length > 0 && (
+        <section aria-labelledby="monthly-title" className="mb-10 space-y-4">
+          <div>
+            <h2 id="monthly-title" className="font-semibold">Plans</h2>
+            <p className="text-sm text-zinc-500">
+              Pay for a month at a time: a plan never renews by itself, and your credits stay for when it ends.
+            </p>
+          </div>
+          <div className="pt-2">
+            <PricingTiers monthly={months} current={e ? { plan: e.plan, until: e.until ?? null } : null} onBuy={(m) => void buy(m)} busy={starting} />
+          </div>
+          <details className="group">
+            <summary className={cx("cursor-pointer text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>Compare plans</summary>
+            <PlanComparison monthly={months} />
+          </details>
+        </section>
+      )}
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="self-start lg:col-span-1">
           <h2 className="mb-1 font-semibold">{e?.credits ? "Your credits" : "This month"}</h2>
@@ -344,7 +365,7 @@ export function BillingPage() {
         </Card>
 
         <div className="space-y-4 lg:col-span-2">
-          {e && !e.credits ? (
+          {e && !e.credits && !months.some((m) => m.plan === e.plan) ? (
             <Card>
               <p className="text-sm text-zinc-600 dark:text-zinc-300">
                 Your plan includes its own monthly allowance, so you don't need credit packs.
@@ -352,6 +373,12 @@ export function BillingPage() {
             </Card>
           ) : (
             <>
+              {months.length > 0 && (
+                <div className="pt-2">
+                  <h2 className="font-semibold">Credit packs</h2>
+                  <p className="text-sm text-zinc-500">Pay as you go: credits that never expire, used whenever you're not on a plan.</p>
+                </div>
+              )}
               <div className="grid gap-4 pt-2 sm:grid-cols-2">
                 <LoadGate loading={packs.loading && !packs.data} variant="card" count={2} label="Loading packs" className="sm:col-span-2">
                 {packs.error ? (
@@ -375,8 +402,8 @@ export function BillingPage() {
                       list[0]?.international
                         ? "Cards from outside India work too: you're charged in rupees and your bank converts it."
                         : "Cards issued outside India can't be used yet; that's coming soon."
-                    } Nothing renews, and the credits are added as soon as Razorpay confirms the payment, usually within seconds.`
-                  : "Pay once over UPI (Google Pay, PhonePe, Paytm or any bank app). Nothing renews or is charged automatically, and the credits are added as soon as your payment is checked."}
+                    } Nothing renews, and what you bought is added as soon as Razorpay confirms the payment, usually within seconds.`
+                  : "Pay once over UPI (Google Pay, PhonePe, Paytm or any bank app). Nothing renews or is charged automatically, and what you bought is added as soon as your payment is checked."}
               </p>
             </>
           )}

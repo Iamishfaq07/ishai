@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import type { CreditPack, JobStats } from "@orbit/types";
+import type { CreditPack, JobStats, MonthlyPlan } from "@orbit/types";
 import {
   ArrowRight,
   AudioLines,
@@ -27,6 +27,7 @@ import { api } from "../lib/api";
 import { useCountry, useIndia } from "../lib/country";
 import { CONTACT_PAGE, REFUND_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
 import { useWelcomeGrant, type WelcomeGrant } from "../lib/welcome";
+import { PlanComparison, PricingTiers } from "../components/PricingTiers";
 
 /**
  * Orbit's front door at "/" for anyone signed out: what each of the three products does, what's free and what it
@@ -251,7 +252,7 @@ function ProductBand({
 
 // ─── Pricing ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
-function Pricing({ packs, welcome, stats }: { packs: CreditPack[] | null; welcome: WelcomeGrant | null; stats: JobStats | null }) {
+function Pricing({ packs, monthly, welcome, stats }: { packs: CreditPack[] | null; monthly: MonthlyPlan[] | null; welcome: WelcomeGrant | null; stats: JobStats | null }) {
   const india = useIndia();
   const cards = packs?.[0]?.checkout === "razorpay";
   const abroad = !!packs?.[0]?.international;
@@ -259,28 +260,31 @@ function Pricing({ packs, welcome, stats }: { packs: CreditPack[] | null; welcom
   const card = "flex flex-col rounded-2xl p-5 ring-1";
   return (
     <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-20 border-t border-zinc-200/70 py-14 dark:border-white/5">
-      <h2 id="pricing-title" className="font-display text-3xl font-semibold tracking-tight">
-        Start free. Pay only when you need more.
-      </h2>
-      <p className="mt-3 max-w-2xl text-base text-zinc-600 dark:text-zinc-300">
+      <div className="mx-auto max-w-2xl text-center">
+        <p className="text-sm font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-300">Pricing</p>
+        <h2 id="pricing-title" className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+          Plans for every stage of your job search
+        </h2>
+        <p className="mt-3 text-base text-zinc-600 dark:text-zinc-300">
+          Start free. Pick a monthly plan when you're interviewing, or top up with credits that never expire. Nothing
+          renews or is charged automatically.
+        </p>
+      </div>
+      <div className="mt-10">
+        <PricingTiers monthly={monthly} welcome={welcome} />
+      </div>
+      <PlanComparison monthly={monthly} />
+
+      <h3 className="mt-14 font-display text-xl font-semibold">Pay as you go</h3>
+      <p className="mt-1 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
         {cards
-          ? `No subscription and nothing that renews by itself. Buy a pack when you need one, by ${india ? "UPI, card or netbanking" : abroad ? "card from any country (charged in rupees; your bank converts it)" : "an Indian card, UPI or netbanking for now (cards from other countries are coming soon)"}; what's in it never expires.`
+          ? `Credit packs, bought once when you need them, by ${india ? "UPI, card or netbanking" : abroad ? "card from any country (charged in rupees; your bank converts it)" : "an Indian card, UPI or netbanking for now (cards from other countries are coming soon)"}. What's in them never expires.`
           : india
-            ? "No subscription and nothing that renews by itself. Buy a pack with any UPI app when you need one; what's in it never expires."
-            : "No subscription and nothing that renews by itself, and what you buy never expires. Packs are priced in Indian rupees and paid with UPI for now; card payments for other countries are coming soon."}
+            ? "Credit packs, bought once with any UPI app when you need them. What's in them never expires."
+            : "Credit packs that never expire, priced in Indian rupees and paid with UPI for now; card payments for other countries are coming soon."}
       </p>
 
-      <Reveal as="ul" stagger className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <li className={cx(card, "bg-emerald-500/[0.06] ring-emerald-600/25 dark:ring-emerald-400/20")}>
-          <p className="font-display text-base font-semibold">Free</p>
-          <p className="mt-1 font-display text-3xl font-semibold tabular-nums">₹0</p>
-          <ul className="mt-3 space-y-1 text-sm text-zinc-700 dark:text-zinc-300">
-            {welcome?.interview_minutes ? <li>{welcome.interview_minutes} interview minutes to start</li> : null}
-            {welcome?.resume_credits ? <li>{welcome.resume_credits} AI credit{welcome.resume_credits === 1 ? "" : "s"} to start</li> : null}
-            <li>Resume editing, ATS score, downloads</li>
-            <li>Job matches and the tracker</li>
-          </ul>
-        </li>
+      <Reveal as="ul" stagger className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {sorted?.map((p) => (
           <li key={p.id} className={cx(card, "glass-panel ring-0")}>
             <p className="font-display text-base font-semibold">{p.label}</p>
@@ -497,6 +501,7 @@ export function LandingPage() {
   const country = useCountry();
   const welcome = useWelcomeGrant();
   const packs = usePublic(() => api.listPacks());
+  const monthly = usePublic(() => api.listMonthly());
   const stats = usePublic(() => api.jobStats());
   const { hash } = useLocation();
   // "/#pricing" from another page (the footer): scroll there once the page is drawn.
@@ -670,7 +675,7 @@ export function LandingPage() {
           </ol>
         </section>
 
-        <Pricing packs={packs} welcome={welcome} stats={stats} />
+        <Pricing packs={packs} monthly={monthly} welcome={welcome} stats={stats} />
         <Faq welcome={welcome} stats={stats} cards={packs?.[0]?.checkout === "razorpay"} abroad={!!packs?.[0]?.international} />
 
         <Reveal as="section" aria-labelledby="start-title" className="mb-16 rounded-3xl bg-zinc-500/[0.06] p-6 text-center ring-1 ring-zinc-500/15 sm:p-10">

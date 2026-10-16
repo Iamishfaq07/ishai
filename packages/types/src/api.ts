@@ -736,7 +736,7 @@ export interface ScreenshotAccepted {
 // ─── Usage / billing ─────────────────────────────────────────────────────────
 
 /** "pending": a new account waiting for the admin (sign-up approval), with nothing included. */
-export type PlanId = "free" | "pro" | "unlimited" | "pending";
+export type PlanId = "free" | "basic" | "pro" | "unlimited" | "pending";
 
 /** GET /v1/plans (public) — what each plan includes. The server is the only source of limits and prices. */
 export interface PlanInfo {
@@ -758,6 +758,26 @@ export interface PlanInfo {
 // ─── Credits and UPI payments ──────────────────────────────────────────────────
 
 /** GET /v1/billing/packs (public) — a credit pack for sale over UPI. Credits never expire. */
+/** A plan for 30 days, paid once through the pack checkout; nothing renews (GET /v1/billing/monthly). */
+export interface MonthlyPlan {
+  id: string;
+  label: string;
+  price_inr: number;
+  days: number;
+  plan: PlanId;
+  /** What each 30 days includes (null = unlimited). */
+  live_minutes: number | null;
+  mock_minutes: number | null;
+  screenshots: number | null;
+  documents: number | null;
+  max_session_minutes: number;
+  /** Unlimited Resume AI: no credits needed. */
+  resume_ai: boolean;
+  buyable: boolean;
+  checkout?: "razorpay" | "upi" | null;
+  international?: boolean;
+}
+
 export interface CreditPack {
   id: string;
   label: string;

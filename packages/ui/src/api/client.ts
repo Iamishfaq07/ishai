@@ -47,6 +47,7 @@ import type {
   CoverLetterLength,
   CoverLetterTone,
   CreditPack,
+  MonthlyPlan,
   RazorpayCheckout,
   RazorpayPaid,
   LinkedInProfile,
@@ -753,6 +754,8 @@ export function createApiClient(options: ApiClientOptions) {
     entitlements: () => json<Entitlements>("/v1/entitlements"),
     /** The credit packs for sale (public). */
     listPacks: () => json<CreditPack[]>("/v1/billing/packs"),
+    /** The monthly plans for sale (public): 30 days, paid once; buy through the same orders as packs. */
+    listMonthly: () => json<MonthlyPlan[]>("/v1/billing/monthly"),
     /** Start paying for a credit pack over UPI (an open order for the same pack is handed back). */
     createUpiOrder: (pack: string) =>
       json<UpiOrder>("/v1/billing/upi/orders", { method: "POST", body: body({ pack }) }),

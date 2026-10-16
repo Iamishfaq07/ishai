@@ -25,6 +25,7 @@ from orbit_api.auth.devices import router as devices_router
 from orbit_api.auth.passkeys import router as passkeys_router
 from orbit_api.auth.routes import router as auth_router
 from orbit_api.auth.two_factor import router as two_factor_router
+from orbit_api.billing.monthly import monthly_plans as configured_monthly
 from orbit_api.billing.packs import packs as configured_packs
 from orbit_api.billing.routes import router as billing_router
 from orbit_api.career.routes import router as career_router
@@ -209,6 +210,7 @@ def create_app() -> FastAPI:
     s = get_settings()
     configured_plans()  # fail fast on a bad ORBIT_PLANS_JSON / *_MAX_SESSION_MINUTES instead of at first use
     configured_packs()  # and on a bad ORBIT_CREDIT_PACKS_JSON
+    configured_monthly()  # and on a bad ORBIT_MONTHLY_PLANS_JSON
     configured_boards()  # and on a bad ORBIT_JOBS_BOARDS_JSON
     if init_sentry(s.sentry_dsn, s.env, running_commit()):
         logging.getLogger(__name__).info("sentry error reporting enabled")
