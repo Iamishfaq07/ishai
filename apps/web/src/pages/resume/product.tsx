@@ -1,4 +1,4 @@
-import { FileText, FileUp, Gauge, GraduationCap, Mail, MessagesSquare, Wand2, type LucideIcon } from "@orbit/ui";
+import { FileText, FileUp, Gauge, GraduationCap, INDIA, Mail, MessagesSquare, Wand2, gradeCopy, isIndia, type LucideIcon } from "@orbit/ui";
 import { ProductTabs, type ProductSection } from "../../components/products";
 import { RESUME_AI_HOME } from "./paths";
 
@@ -17,7 +17,8 @@ export interface ResumeAiFeature {
 
 /**
  * Only what Resume AI really does today, in the order people need it. Finding jobs, and the outreach messages and the
- * Naukri and LinkedIn profiles written from a resume, are Jobs AI's (pages/jobs).
+ * Naukri and LinkedIn profiles written from a resume, are Jobs AI's (pages/jobs). India's as written; resumeAiFeatures
+ * words the student resume for everywhere else.
  */
 export const RESUME_AI_FEATURES: ResumeAiFeature[] = [
   {
@@ -57,6 +58,21 @@ export const RESUME_AI_FEATURES: ResumeAiFeature[] = [
     text: "Written from your resume and the job post, in the tone and length you choose.",
   },
 ];
+
+/** What Resume AI does, worded for where the user applies: outside India the campus mode is for new graduates. */
+export function resumeAiFeatures(country: string = INDIA): ResumeAiFeature[] {
+  if (isIndia(country)) return RESUME_AI_FEATURES;
+  return RESUME_AI_FEATURES.map((f) =>
+    f.icon === GraduationCap
+      ? {
+          ...f,
+          short: "Student / new grad mode",
+          title: "Student and new grad mode",
+          text: `One page for graduate jobs and internships: education first with your ${gradeCopy(country).word}, then projects, internships and leadership roles.`,
+        }
+      : f,
+  );
+}
 
 /** Resume AI's own pages, as tabs under its header once there's more than one. */
 export const RESUME_AI_SECTIONS: ProductSection[] = [{ to: RESUME_AI_HOME, label: "My resumes", icon: FileText, end: true }];

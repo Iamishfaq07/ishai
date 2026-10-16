@@ -13,10 +13,11 @@ import type {
   ResumeSectionKey,
   ResumeSkillGroup,
 } from "@orbit/types";
-import { ChevronDown, Copy, Eye, EyeOff, PenLine, Plus, ShieldCheck, Sparkles, Trash2, X, cx, focusRing } from "@orbit/ui";
+import { ChevronDown, Copy, Eye, EyeOff, PenLine, Plus, ShieldCheck, Sparkles, Trash2, X, cx, focusRing, gradeCopy, isIndia, regionExamples } from "@orbit/ui";
+import { useCountry } from "../../lib/country";
 import { evidenceFor, sourceLabel } from "../../lib/evidence";
 import { Button, Field, Input, Textarea } from "../../components/ui";
-import { EXTRA_PRESETS, MAX_EXTRAS, SECTION_LABEL, bulletStrength, getAt, newId, sectionLabel, type BulletStrength } from "./model";
+import { MAX_EXTRAS, SECTION_LABEL, bulletStrength, extraPresets, getAt, newId, presetForTitle, sectionLabel, type BulletStrength } from "./model";
 
 type Update = (fn: (d: ResumeData) => ResumeData) => void;
 
@@ -338,7 +339,7 @@ function ExtraEditor({ x, i, n, onPatch, onMove, onRemove }: {
   onMove: (by: -1 | 1) => void;
   onRemove: () => void;
 }) {
-  const preset = EXTRA_PRESETS.find((p) => p.title.toLowerCase() === x.title.trim().toLowerCase());
+  const preset = presetForTitle(x.title, useCountry());
   const placeholder = preset?.placeholder ?? "One item per line";
   const items = x.items.length ? x.items : [""];
   const setItems = (next: string[]) => onPatch({ items: next });
@@ -429,6 +430,11 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
   checks?: AtsCheck[];
 }) {
   const b = data.basics;
+  // Education is written the way it's read where the user applies: Class 10 and 12, CGPA and marksheets in India.
+  const country = useCountry();
+  const india = isIndia(country);
+  const example = regionExamples(country);
+  const grade = gradeCopy(country);
   const checks: LineChecks = { issues, scored, evidence, checks: atsChecks };
   const [renaming, setRenaming] = useState<ResumeSectionKey | null>(null);
   const summaryWords = b.summary.trim() ? b.summary.trim().split(/\s+/).length : 0;
@@ -683,7 +689,9 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
         }
       >
         <p className="-mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          Most recent first. Students and freshers: add Class 12 and Class 10 as their own entries, with the board, the year and your percentage.
+          {india
+            ? "Most recent first. Students and freshers: add Class 12 and Class 10 as their own entries, with the board, the year and your percentage."
+            : "Most recent first."}
         </p>
         {data.education.map((e, i) => (
           <div key={e.id} data-path={`education.${e.id}`} tabIndex={-1} className="scroll-mt-24 space-y-3 rounded-xl border border-zinc-200 p-3 outline-none dark:border-white/10">
@@ -693,10 +701,10 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
             </div>
             <TwoCol>
               <Field label="School, college or university" htmlFor={`es-${e.id}`}>
-                <Input id={`es-${e.id}`} maxLength={160} value={e.school} placeholder="IIT Delhi, or Delhi Public School (CBSE)" onChange={(ev) => edu.patch(e.id, { school: ev.target.value })} />
+                <Input id={`es-${e.id}`} maxLength={160} value={e.school} placeholder={example.school} onChange={(ev) => edu.patch(e.id, { school: ev.target.value })} />
               </Field>
-              <Field label="Degree or class" htmlFor={`ed-${e.id}`}>
-                <Input id={`ed-${e.id}`} maxLength={160} value={e.degree} placeholder="B.Tech, or Class 12 (PCM)" onChange={(ev) => edu.patch(e.id, { degree: ev.target.value })} />
+              <Field label={india ? "Degree or class" : "Degree"} htmlFor={`ed-${e.id}`}>
+                <Input id={`ed-${e.id}`} maxLength={160} value={e.degree} placeholder={example.degree} onChange={(ev) => edu.patch(e.id, { degree: ev.target.value })} />
               </Field>
               <Field label="Field of study" htmlFor={`ef-${e.id}`}>
                 <Input id={`ef-${e.id}`} maxLength={160} value={e.field} placeholder="Computer Science" onChange={(ev) => edu.patch(e.id, { field: ev.target.value })} />
@@ -705,8 +713,8 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
                 <Field label="Start" htmlFor={`e1-${e.id}`}><Input id={`e1-${e.id}`} maxLength={40} value={e.start} placeholder="2021" onChange={(ev) => edu.patch(e.id, { start: ev.target.value })} /></Field>
                 <Field label="End" htmlFor={`e2-${e.id}`}><Input id={`e2-${e.id}`} maxLength={40} value={e.end} placeholder="2025" onChange={(ev) => edu.patch(e.id, { end: ev.target.value })} /></Field>
               </div>
-              <Field label="CGPA or percentage (optional)" htmlFor={`eg-${e.id}`} hint="As on your marksheet, with the scale.">
-                <Input id={`eg-${e.id}`} maxLength={60} value={e.grade ?? ""} placeholder="8.6 / 10 CGPA, or 92%" onChange={(ev) => edu.patch(e.id, { grade: ev.target.value })} />
+              <Field label={grade.label} htmlFor={`eg-${e.id}`} hint={grade.hint}>
+                <Input id={`eg-${e.id}`} maxLength={60} value={e.grade ?? ""} placeholder={grade.placeholder} onChange={(ev) => edu.patch(e.id, { grade: ev.target.value })} />
               </Field>
             </TwoCol>
             <Field label="Details (optional)" htmlFor={`ex-${e.id}`} hint="Honours, rank, scholarships.">
@@ -755,7 +763,7 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
               {data.extras.length ? "Add another:" : "Languages, awards, volunteering: add the ones that help you stand out."}
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {EXTRA_PRESETS.filter((p) => !usedTitles.has(p.title.toLowerCase())).map((p) => (
+              {extraPresets(country).filter((p) => !usedTitles.has(p.title.toLowerCase())).map((p) => (
                 <Button key={p.title} size="sm" variant="secondary" onClick={() => addExtra(p.title, p.style, p.fill)}>
                   <Plus className="h-3.5 w-3.5" /> {p.title}
                 </Button>
