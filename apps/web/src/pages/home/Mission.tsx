@@ -2,7 +2,8 @@ import { Link } from "react-router-dom";
 import type { JobTrackerEntry, OrbitSession } from "@orbit/types";
 import { CalendarIcon, CompanyLogo, LoadGate, Target, cx, focusRing } from "@orbit/ui";
 import { Card } from "../../components/ui";
-import type { AsyncState } from "../../lib/useAsync";
+import { useAsync, type AsyncState } from "../../lib/useAsync";
+import { api } from "../../lib/api";
 import { STATUS_LABEL } from "../jobs/model";
 import { missionPath } from "../jobs/mission";
 import { JOBS_MATCHES, JOBS_TRACKER } from "../jobs/paths";
@@ -97,6 +98,7 @@ export function Upcoming({ tracker }: { tracker: AsyncState<JobTrackerEntry[]> }
             and it counts down here.
           </p>
         ) : (
+          <>
           <ul className="space-y-1">
             {next.map((e) => (
               <li key={e.id}>
@@ -113,6 +115,8 @@ export function Upcoming({ tracker }: { tracker: AsyncState<JobTrackerEntry[]> }
               </li>
             ))}
           </ul>
+          {next[0] && (next[0].status === "interviewing" || next[0].status === "applied") && <PlanLine entry={next[0]} />}
+          </>
         )}
       </LoadGate>
     </Card>
@@ -167,5 +171,20 @@ export function AtAGlance({
         )}
       </div>
     </Card>
+  );
+}
+
+/** The nearest interview's prep plan in one line: what's ticked, and the way into it. */
+function PlanLine({ entry }: { entry: JobTrackerEntry }) {
+  const plan = useAsync(() => api.prepPlan(entry.id), [entry.id, entry.next_at], `prep-plan:${entry.id}`);
+  const p = plan.data;
+  if (!p || p.total === 0) return null;
+  return (
+    <Link to={missionPath(entry.id)} className={cx("mt-3 flex items-center justify-between gap-2 rounded-xl bg-indigo-500/5 px-3 py-2 text-sm hover:bg-indigo-500/10", focusRing)}>
+      <span>
+        Prep plan for {entry.company}: <span className="font-medium tabular-nums">{p.done} of {p.total}</span> done
+      </span>
+      <span aria-hidden className="text-indigo-700 dark:text-indigo-300">Open</span>
+    </Link>
   );
 }

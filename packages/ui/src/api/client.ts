@@ -1,6 +1,7 @@
 import type {
   EngineeringTelemetry,
   JobMission,
+  PrepPlan,
   JobTimelineEvent,
   LoopMemory,
   CareerContext,
@@ -738,6 +739,14 @@ export function createApiClient(options: ApiClientOptions) {
       }),
     linkMissionOffer: (id: string, offerId: string | null) =>
       json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/offer`, { method: "PUT", body: body({ offer_id: offerId }) }),
+    /** The interview prep plan for a tracked job (minutes east of UTC, so the days are the person's own). */
+    prepPlan: (id: string, tzOffset = -new Date().getTimezoneOffset()) =>
+      json<PrepPlan>(`/v1/jobs/tracker/${encodeURIComponent(id)}/plan${queryString({ tz_offset: tzOffset })}`),
+    tickPlanItem: (id: string, key: string, done: boolean, tzOffset = -new Date().getTimezoneOffset()) =>
+      json<PrepPlan>(
+        `/v1/jobs/tracker/${encodeURIComponent(id)}/plan/checks/${encodeURIComponent(key)}${queryString({ tz_offset: tzOffset })}`,
+        { method: "PUT", body: body({ done }) },
+      ),
     /** One tracked job's journey, oldest first. */
     trackerTimeline: (id: string) => json<JobTimelineEvent[]>(`/v1/jobs/tracker/${encodeURIComponent(id)}/timeline`),
     /** The candidate's earlier rounds with a company: questions asked, stories already told. */

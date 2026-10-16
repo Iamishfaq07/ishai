@@ -26,13 +26,15 @@ import { RESUME_AI_HOME, resumePath } from "../resume/paths";
 import { scoreTone } from "../resume/product";
 import { useJobsAi } from "./JobsAi";
 import { Journey } from "./Journey";
+import { PrepPlanPanel } from "./PrepPlan";
 import { linkButton, textLink } from "./links";
 import { MISSION_STAGES, isSnoozed, requirementTone, snooze, stagesDone } from "./mission";
 import { STATUS_LABEL, STATUS_TONE, practiceLink } from "./model";
 import { JOBS_TRACKER, jobPath } from "./paths";
 
-type Tab = "fit" | "resume" | "practice" | "timeline" | "offer";
+type Tab = "plan" | "fit" | "resume" | "practice" | "timeline" | "offer";
 const TABS: Array<{ id: Tab; label: string }> = [
+  { id: "plan", label: "Prep plan" },
   { id: "fit", label: "Evidence & fit" },
   { id: "resume", label: "Resume kit" },
   { id: "practice", label: "Practice" },
@@ -50,7 +52,8 @@ export function JobMissionPage() {
   const { tracker } = useJobsAi();
   const entry = tracker.data?.find((e) => e.id === entryId) ?? null;
   const mission = useAsync(() => api.jobMission(entryId), [entryId], `job-mission:${entryId}`);
-  const [tab, setTab] = useState<Tab>("fit");
+  // An interview on the calendar opens on its plan; otherwise on the fit.
+  const [tab, setTab] = useState<Tab>(() => (entry?.next_at && (entry.status === "interviewing" || entry.status === "applied") ? "plan" : "fit"));
 
   if (tracker.data && !entry) {
     return (
@@ -105,6 +108,7 @@ export function JobMissionPage() {
                   ))}
                 </div>
                 <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
+                  {tab === "plan" && <PrepPlanPanel entry={entry} />}
                   {tab === "fit" && <FitPanel fit={m.fit} entry={entry} />}
                   {tab === "resume" && <ResumePanel mission={m} entry={entry} onMission={update} />}
                   {tab === "practice" && <PracticePanel mission={m} entry={entry} />}

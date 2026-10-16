@@ -798,6 +798,18 @@ class ResumeSnapshot(TimestampMixin, Base):
     note: Mapped[str] = mapped_column(String(200), default="")
 
 
+class JobPlanCheck(TimestampMixin, Base):
+    """One item of a tracked job's interview prep plan (job_portal/plan.py) ticked off by the user. The key names the
+    day and the task, so moving the interview date makes a new plan instead of carrying old ticks to new days."""
+
+    __tablename__ = "job_plan_checks"
+    __table_args__ = (UniqueConstraint("application_id", "item_key", name="uq_job_plan_checks_item"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("job_applications.id", ondelete="CASCADE"), index=True)
+    item_key: Mapped[str] = mapped_column(String(64))
+
+
 class JobFitCheck(TimestampMixin, Base):
     """An AI fit check of one resume against one job, kept so asking again (same job, same resume content) is
     instant and free. Today's rows (created_at) are also what the daily cap counts."""
