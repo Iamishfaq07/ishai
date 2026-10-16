@@ -80,7 +80,7 @@ def test_invalid_plan_config_fails_fast(monkeypatch: pytest.MonkeyPatch, bad: di
 def test_plans_endpoint_is_public_and_hides_stripe_ids(monkeypatch: pytest.MonkeyPatch) -> None:
     with app_with(monkeypatch, ORBIT_PLANS_JSON=json.dumps({"pro": {"stripe_price_id": "price_secret"}})) as c:
         plans = c.get("/v1/plans").json()
-        assert [p["name"] for p in plans] == ["free", "basic", "pro", "unlimited"]
+        assert [p["name"] for p in plans] == ["free", "basic", "pro", "premium", "unlimited"]
         assert plans[0]["welcome"] == {"resume_credits": 1, "interview_minutes": 20}
         assert "price_secret" not in json.dumps(plans) and all("stripe_price_id" not in p for p in plans)
 

@@ -71,6 +71,9 @@ DEFAULT_PLANS: dict[str, Plan] = {
                   max_session_minutes=90, features=_ALL),
     "pro": Plan("pro", "Pro", live_minutes=600, mock_minutes=300, screenshots=500, documents=50,
                 max_session_minutes=180, features=_ALL),
+    # The paid plans' (billing/monthly.py): the copilot at the market's "unlimited" level, under a fair-use cap.
+    "premium": Plan("premium", "Premium", live_minutes=3000, mock_minutes=1500, screenshots=None, documents=None,
+                    max_session_minutes=240, features=_ALL),
     "unlimited": Plan("unlimited", "Unlimited", live_minutes=None, mock_minutes=None, screenshots=None,
                       documents=None, max_session_minutes=240, features=_ALL),
 }
@@ -119,7 +122,7 @@ def plan_named(name: str) -> Plan:
 # plan: never listed, never configurable.
 PENDING = Plan("pending", "Awaiting approval", live_minutes=0, mock_minutes=0, screenshots=0, documents=0,
                max_session_minutes=1, features=frozenset())
-GRANT_PLANS = ("basic", "pro", "unlimited")
+GRANT_PLANS = ("basic", "pro", "premium", "unlimited")
 
 
 def _aware(d: datetime) -> datetime:

@@ -30,14 +30,19 @@ def _pay(client: TestClient, h: dict[str, str], admin: dict[str, str], product: 
 
 def test_monthly_plans_are_listed_with_what_a_month_includes(client: TestClient) -> None:
     plans = {p["id"]: p for p in client.get("/v1/billing/monthly").json()}
-    assert set(plans) == {"basic_monthly", "pro_monthly"}
-    basic = plans["basic_monthly"]
-    assert (basic["label"], basic["price_inr"], basic["days"], basic["plan"]) == ("Basic", 1499, 30, "basic")
-    assert basic["resume_ai"] is True and basic["live_minutes"] == 120 and basic["mock_minutes"] == 180
-    assert plans["pro_monthly"]["price_inr"] == 3999 and plans["pro_monthly"]["live_minutes"] == 600
+    assert list(plans) == ["premium_monthly", "premium_quarterly", "premium_yearly"]
+    month, quarter, year = plans.values()
+    assert (month["label"], month["price_inr"], month["days"], month["plan"]) == ("Monthly", 8999, 30, "premium")
+    assert (quarter["price_inr"], quarter["days"], quarter["per_month_inr"], quarter["badge"]) == (
+        14999, 90, 5000, "Most popular")
+    assert (year["price_inr"], year["days"], year["per_month_inr"], year["badge"]) == (17999, 365, 1479, "Best value")
+    # About 30% under Final Round AI's $150 / $250 / $300 (≈ ₹88 to the dollar), or more.
+    for plan, usd in ((month, 150), (quarter, 250), (year, 300)):
+        assert plan["price_inr"] <= usd * 88 * 0.7
+    assert month["resume_ai"] is True and month["live_minutes"] == 3000 and month["screenshots"] is None
 
 
-def test_buying_a_month_gives_the_plan_and_buying_again_adds_30_days(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_buying_a_month_gives_the_plan_and_buying_more_extends_it(monkeypatch: pytest.MonkeyPatch) -> None:
     admin_email = f"admin-{uuid.uuid4().hex[:8]}@example.com"
     gen = _client(monkeypatch, ORBIT_ADMIN_EMAIL=admin_email, ORBIT_UPI_ID="owner@okicici", ORBIT_UPI_NAME="Ishfaq")
     client = next(gen)
@@ -46,28 +51,22 @@ def test_buying_a_month_gives_the_plan_and_buying_again_adds_30_days(monkeypatch
         h, _user = _register_named(client, f"m-{uuid.uuid4().hex[:8]}@example.com")
         assert client.get("/v1/entitlements", headers=h).json()["plan"] == "free"
 
-        o = _pay(client, h, admin, "basic_monthly")
+        o = _pay(client, h, admin, "premium_monthly")
         assert (o["label"], o["amount_inr"], o["resume_credits"], o["interview_minutes"]) == (
-            "Basic plan · 30 days", 1499, 0, 0)
+            "Monthly plan · 30 days", 8999, 0, 0)
         e = client.get("/v1/entitlements", headers=h).json()
-        assert e["plan"] == "basic" and e["credits"] is None and e["features"]["resume_ai"] is True
+        assert e["plan"] == "premium" and e["credits"] is None and e["features"]["resume_ai"] is True
         until = datetime.fromisoformat(e["until"])
         assert timedelta(days=29, hours=23) < until - datetime.now(UTC) <= timedelta(days=30)
-        assert e["limits"]["live_minutes"] == 120
+        assert e["limits"]["live_minutes"] == 3000
         assert client.get("/v1/resumes/allowance", headers=h).json()["unlimited"] is True
         mail = next(m for m in reversed(_outbox().sent) if m.subject.startswith("Payment received"))
-        assert "the Basic plan for 30 days" in mail.subject and "Nothing renews" in mail.text
+        assert "the Monthly plan (30 days)" in mail.subject and "Nothing renews" in mail.text
 
-        # Another month of the same plan starts where this one ends.
-        _pay(client, h, admin, "basic_monthly")
+        # A year bought while the month runs starts where the month ends (it's the same plan).
+        _pay(client, h, admin, "premium_yearly")
         later = datetime.fromisoformat(client.get("/v1/entitlements", headers=h).json()["until"])
-        assert later - until == timedelta(days=30)
-        # A different plan starts now, replacing it.
-        _pay(client, h, admin, "pro_monthly")
-        e = client.get("/v1/entitlements", headers=h).json()
-        assert e["plan"] == "pro" and datetime.fromisoformat(e["until"]) - datetime.now(UTC) <= timedelta(days=30)
-        # The credits are untouched, for when the plan runs out.
-        assert e["credits"] is None
+        assert later - until == timedelta(days=365)
         assert client.post("/v1/billing/upi/orders", headers=h, json={"pack": "nope"}).status_code == 422
     finally:
         gen.close()

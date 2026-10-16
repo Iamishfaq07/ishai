@@ -54,10 +54,23 @@ An order keeps what the pack gave when it was bought, so changing packs never ch
 UPI with the admin's check). Buy one with `POST /v1/billing/razorpay/orders` or `/v1/billing/upi/orders` and
 `{"pack": "<monthly id>"}`. `GET /v1/billing/monthly` lists them for the pricing pages.
 
-| Plan | Price | Each 30 days |
-|---|---|---|
-| Basic (`basic_monthly` → plan `basic`) | ₹1,499 | Unlimited Resume AI, 120 live + 180 mock interview minutes, 100 screenshots, 20 documents, 90-min sessions |
-| Pro (`pro_monthly` → plan `pro`) | ₹3,999 | Unlimited Resume AI, 600 live + 300 mock interview minutes, 500 screenshots, 50 documents, 180-min sessions |
+The structure follows the interview-copilot market: Final Round AI and Parakeet AI sell monthly, quarterly and yearly
+plans, and the longer the plan, the cheaper a month. Each price here is about 30% under Final Round AI's list prices
+in October 2026 ($150 / $250 / $300, taken at ≈ ₹88 to the dollar). All three give the same `premium` plan.
+
+| Plan | Price | Per month | Length |
+|---|---|---|---|
+| Monthly (`premium_monthly`) | ₹8,999 | ₹8,999 | 30 days |
+| Quarterly (`premium_quarterly`, "Most popular") | ₹14,999 | ≈ ₹5,000 | 90 days |
+| Yearly (`premium_yearly`, "Best value") | ₹17,999 | ≈ ₹1,479 | 365 days |
+
+Every 30 days the `premium` plan includes:
+- unlimited Resume AI;
+- 50 hours of live interview help (3,000 minutes, a fair-use cap) and 25 hours of mock and video interviews;
+- unlimited screenshots and documents;
+- sessions of up to 4 hours.
+
+Competitors call this level "unlimited". Orbit states the cap.
 
 - **Nothing renews.** A paid month sets `User.grant_plan` and `grant_until`, the same fields as the admin's
   time-limited grants. When it ends the account is back on Free, and the credits it had are still there.
@@ -74,9 +87,13 @@ UPI with the admin's check). Buy one with `POST /v1/billing/razorpay/orders` or 
   - A bad value stops the API at boot.
 - **Two months approved at the same moment** both add their days (the account row is locked while the end date is
   read).
-- **OWNER ACTION REQUIRED:** check the prices against your costs (the table under "What it costs to run"). Basic's
-  5 hours of interviews cost about ₹400 in speech-to-text at list price, and Pro's 15 hours about ₹1,200, before the
-  model's cost. The pricing pages also show an Enterprise tier with no price: its button opens the Contact form
+- **OWNER ACTION REQUIRED:** check the prices against your costs (the table under "What it costs to run").
+  - A subscriber who uses the whole 75 hours a month costs about ₹5,900 a month in speech-to-text at list price,
+    before the model's cost.
+  - On the yearly plan (≈ ₹1,479 a month) that loses money for heavy users. Lower the `premium` plan's caps with
+    `ORBIT_PLANS_JSON` if needed.
+  - Competitors' prices were read from third-party pricing pages in October 2026; re-check them before you rely on
+    the "30% less" claim. The pricing pages also show an Enterprise tier with no price: its button opens the Contact form
   (topic "Business or partnership"), and you arrange group access by hand (an admin grant per account).
 
 ## Plans are server configuration

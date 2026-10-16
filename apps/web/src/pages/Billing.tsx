@@ -321,7 +321,7 @@ export function BillingPage() {
 
   return (
     <div>
-      <PageHeader icon={CreditCard} title="Plan & billing" subtitle="A monthly plan, or packs of credits that never expire. Nothing renews automatically." />
+      <PageHeader icon={CreditCard} title="Plan & billing" subtitle="A plan for a month, a quarter or a year, or credit packs that never expire. Nothing renews automatically." />
       {internationalPack && <InternationalCheckout pack={internationalPack} country={country} onClose={() => setInternationalPack(null)}
         onDomestic={() => { const p = internationalPack; setInternationalPack(null); void buy(p, true); }} />}
       {months.length > 0 && (
@@ -329,7 +329,7 @@ export function BillingPage() {
           <div>
             <h2 id="monthly-title" className="font-semibold">Plans</h2>
             <p className="text-sm text-zinc-500">
-              Pay for a month at a time: a plan never renews by itself, and your credits stay for when it ends.
+              Pay once for a month, a quarter or a year: a plan never renews by itself, and your credits stay for when it ends.
             </p>
           </div>
           <div className="pt-2">

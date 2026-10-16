@@ -736,7 +736,7 @@ export interface ScreenshotAccepted {
 // ─── Usage / billing ─────────────────────────────────────────────────────────
 
 /** "pending": a new account waiting for the admin (sign-up approval), with nothing included. */
-export type PlanId = "free" | "basic" | "pro" | "unlimited" | "pending";
+export type PlanId = "free" | "basic" | "pro" | "premium" | "unlimited" | "pending";
 
 /** GET /v1/plans (public) — what each plan includes. The server is the only source of limits and prices. */
 export interface PlanInfo {
@@ -765,6 +765,10 @@ export interface MonthlyPlan {
   price_inr: number;
   days: number;
   plan: PlanId;
+  /** "Most popular", "Best value": the card's badge. */
+  badge?: string | null;
+  /** The price spread over 30-day months (a quarter or a year bought at once). */
+  per_month_inr?: number;
   /** What each 30 days includes (null = unlimited). */
   live_minutes: number | null;
   mock_minutes: number | null;

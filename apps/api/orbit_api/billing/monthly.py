@@ -29,11 +29,16 @@ class MonthlyPlan:
     price_inr: int
     plan: str  # the entitlements plan it gives (entitlements.GRANT_PLANS)
     days: int = PERIOD_DAYS
+    badge: str | None = None  # "Most popular", "Best value": shown on the pricing card
 
 
+# The structure the interview-copilot market uses (Final Round AI, Parakeet AI: monthly, quarterly, yearly, the longer
+# the cheaper a month), each about 30% under Final Round AI's list prices as of October 2026 ($150 / $250 / $300,
+# at ≈ ₹88 to the dollar). All three give the same plan; only the length and the price differ.
 DEFAULT_MONTHLY: tuple[MonthlyPlan, ...] = (
-    MonthlyPlan("basic_monthly", "Basic", price_inr=1499, plan="basic"),
-    MonthlyPlan("pro_monthly", "Pro", price_inr=3999, plan="pro"),
+    MonthlyPlan("premium_monthly", "Monthly", price_inr=8999, plan="premium", days=30),
+    MonthlyPlan("premium_quarterly", "Quarterly", price_inr=14999, plan="premium", days=90, badge="Most popular"),
+    MonthlyPlan("premium_yearly", "Yearly", price_inr=17999, plan="premium", days=365, badge="Best value"),
 )
 
 
@@ -52,8 +57,9 @@ def monthly_plans() -> dict[str, MonthlyPlan]:
     taken = set(packs())
     for item in items:
         if not isinstance(item, dict) or not {"id", "label", "price_inr", "plan"} <= set(item) or not set(item) <= {
-                "id", "label", "price_inr", "plan", "days"}:
-            raise ValueError("ORBIT_MONTHLY_PLANS_JSON: each plan needs id, label, price_inr, plan (and optional days)")
+                "id", "label", "price_inr", "plan", "days", "badge"}:
+            raise ValueError("ORBIT_MONTHLY_PLANS_JSON: each plan needs id, label, price_inr, plan (optional: days, "
+                             "badge)")
         pid = item["id"]
         if not (isinstance(pid, str) and 0 < len(pid) <= 32 and pid not in out and pid not in taken):
             raise ValueError("ORBIT_MONTHLY_PLANS_JSON: ids must be unique short strings, not a credit pack's id")
@@ -78,6 +84,7 @@ def public_monthly() -> list[dict[str, Any]]:
     for m in monthly_plans().values():
         p = plan_named(m.plan)
         out.append({"id": m.id, "label": m.label, "price_inr": m.price_inr, "days": m.days, "plan": m.plan,
+                    "badge": m.badge, "per_month_inr": round(m.price_inr * PERIOD_DAYS / m.days),
                     "live_minutes": p.live_minutes, "mock_minutes": p.mock_minutes, "screenshots": p.screenshots,
                     "documents": p.documents, "max_session_minutes": p.max_session_minutes,
                     "resume_ai": p.has("resume_ai"), "buyable": how is not None, "checkout": how,
@@ -104,4 +111,4 @@ def apply(user: User, p: Payment, now: datetime | None = None) -> datetime:
 
 def what(p: Payment) -> str:
     m = monthly_plans().get(p.plan)
-    return f"the {m.label if m else p.plan} plan for {p.days} days"
+    return f"the {m.label if m else p.plan} plan ({p.days} days)"
