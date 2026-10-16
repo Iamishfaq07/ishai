@@ -63,6 +63,8 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [challenge, setChallenge] = useState<string | null>(null);
+  const [code, setCode] = useState("");
   const [serverOpen, setServerOpen] = useState(false);
   const [serverShown, setServerShown] = useState(CUSTOM_SERVER || import.meta.env.DEV);
   const welcome = useWelcome();
@@ -84,7 +86,12 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
     setBusy(true);
     setError(null);
     try {
-      const res = await api.login({ email: email.trim(), password });
+      // Two-step sign-in: the password is right; a code from the authenticator app finishes it.
+      const res = challenge ? await api.loginSecondStep(code, challenge) : await api.login({ email: email.trim(), password });
+      if ("two_factor_required" in res) {
+        setChallenge(res.challenge);
+        return;
+      }
       if (!res.access_token) throw new Error("Sign-in didn't finish. Please try again.");
       setAccessToken(res.access_token);
       await saveToken(res.access_token).catch((err: unknown) =>
@@ -149,9 +156,24 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
                   </button>
                 </div>
               </div>
+              {challenge && (
+                <label className="block text-xs font-medium">
+                  Code from your authenticator app
+                  <input
+                    required
+                    autoFocus
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    className={cx(input, "mt-1 tracking-widest", focusRing)}
+                  />
+                  <span className="mt-1 block font-normal text-zinc-500">Lost your phone? Use one of your recovery codes.</span>
+                </label>
+              )}
               {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
-              <Button type="submit" disabled={busy} className="w-full">
-                {busy ? "Signing in…" : "Sign in"}
+              <Button type="submit" disabled={busy || (challenge !== null && code.trim().length < 6)} className="w-full">
+                {busy ? "Signing in…" : challenge ? "Verify and sign in" : "Sign in"}
               </Button>
               <button
                 type="button"

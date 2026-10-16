@@ -4,6 +4,7 @@ from typing import Any
 
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     DateTime,
     Float,
@@ -796,6 +797,18 @@ class ResumeSnapshot(TimestampMixin, Base):
     job_text: Mapped[str] = mapped_column(Text, default="")
     score: Mapped[int] = mapped_column(Integer, default=0)
     note: Mapped[str] = mapped_column(String(200), default="")
+
+
+class UserTwoFactor(TimestampMixin, Base):
+    """Two-step sign-in (auth/two_factor.py): the authenticator secret, encrypted; on once `enabled_at` is set. The
+    last accepted 30-second step stops a code being used twice; recovery codes are kept only as SHA-256 hashes."""
+
+    __tablename__ = "user_two_factor"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    secret_enc: Mapped[str] = mapped_column(Text)
+    enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_step: Mapped[int | None] = mapped_column(BigInteger)
+    recovery_hashes: Mapped[list[str] | None] = mapped_column(JSON)
 
 
 class UserSession(TimestampMixin, Base):

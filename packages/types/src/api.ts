@@ -79,6 +79,19 @@ export interface AuthResponse {
   access_token?: string | null;
 }
 
+/** POST /v1/auth/login when two-step sign-in is on: the password was right; the authenticator code comes next. */
+export interface TwoFactorChallenge {
+  two_factor_required: true;
+  challenge: string;
+}
+
+/** GET /v1/auth/2fa */
+export interface TwoFactorStatus {
+  enabled: boolean;
+  recovery_left: number;
+  enabled_at: string | null;
+}
+
 // ─── Documents ───────────────────────────────────────────────────────────────
 
 export type DocumentKind = "resume" | "job_description" | "notes" | "other";

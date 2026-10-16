@@ -43,6 +43,7 @@ from orbit_api.models import (
     UsageEvent,
     User,
     UserSession,
+    UserTwoFactor,
     Workspace,
 )
 
@@ -119,6 +120,9 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
             "sent_resume_versions": [_row(r) for r in (await db.scalars(select(ResumeSnapshot).where(
                 ResumeSnapshot.user_id == user_id).order_by(ResumeSnapshot.created_at))).all()],
         },
+        # Whether two-step sign-in is on, and since when; never the secret or the recovery codes.
+        "two_factor": {"enabled_at": tf.enabled_at.isoformat() if tf.enabled_at else None}
+        if (tf := await db.get(UserTwoFactor, user_id)) else None,
         "signed_in_devices": [_row(d) for d in (await db.scalars(select(UserSession).where(
             UserSession.user_id == user_id).order_by(UserSession.created_at))).all()],
         "usage": [_row(u) for u in (await db.scalars(select(UsageEvent).where(UsageEvent.user_id == user_id)

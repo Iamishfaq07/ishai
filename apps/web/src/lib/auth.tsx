@@ -46,7 +46,10 @@ function forgetAccount(): void {
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
-  login: (req: LoginRequest) => Promise<void>;
+  /** Signs in, or returns the challenge when two-step sign-in is on (then `finishSecondStep` with the code). */
+  login: (req: LoginRequest) => Promise<{ challenge: string } | null>;
+  /** The authenticator code (or a recovery code). `challenge` is null after Google: it's in a cookie. */
+  finishSecondStep: (code: string, challenge: string | null) => Promise<void>;
   register: (req: RegisterRequest) => Promise<RegisterOutcome>;
   logout: () => Promise<void>;
   setUser: Dispatch<SetStateAction<User | null>>;
@@ -97,7 +100,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Cached page data (and the account's saved bits) belongs to one account: dropped before the user changes, so
   // nobody sees the last person's.
   const login = useCallback(async (req: LoginRequest) => {
-    await api.login(req);
+    const res = await api.login(req);
+    if ("two_factor_required" in res) return { challenge: res.challenge };
+    forgetAccount();
+    setUser(acceptAccount(await confirmSession()));
+    return null;
+  }, []);
+
+  const finishSecondStep = useCallback(async (code: string, challenge: string | null) => {
+    await api.loginSecondStep(code, challenge);
     forgetAccount();
     setUser(acceptAccount(await confirmSession()));
   }, []);
@@ -135,8 +146,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, login, register, logout, setUser }),
-    [user, loading, login, register, logout],
+    () => ({ user, loading, login, finishSecondStep, register, logout, setUser }),
+    [user, loading, login, finishSecondStep, register, logout],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

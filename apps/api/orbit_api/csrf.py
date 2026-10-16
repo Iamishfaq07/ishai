@@ -32,7 +32,7 @@ UNSAFE = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 # Entry points that run before (or instead of) a valid session: a stale cookie must not block signing in.
 # The Origin check still applies to them.
 TOKEN_EXEMPT = frozenset({
-    "/v1/auth/login", "/v1/auth/register", "/v1/auth/logout",
+    "/v1/auth/login", "/v1/auth/login/2fa", "/v1/auth/register", "/v1/auth/logout",
     "/v1/auth/password-reset/request", "/v1/auth/password-reset/confirm", "/v1/auth/verify-email/confirm",
     "/v1/auth/email-change/confirm",
     # The Contact page works signed out (a visitor whose cookie went stale has no token to send). A message posted in

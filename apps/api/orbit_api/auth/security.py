@@ -76,6 +76,8 @@ def decode_claims(token: str) -> dict[str, Any] | None:
         return None
     if not isinstance(payload.get("sub"), str) or not isinstance(payload.get("ver", 0), int):
         return None
+    if "purpose" in payload:  # a single-purpose token (a sign-in challenge) is never a session
+        return None
     return payload
 
 

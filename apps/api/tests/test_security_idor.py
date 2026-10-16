@@ -422,6 +422,7 @@ def test_someone_elses_object_looks_exactly_like_a_missing_one(world: World, met
 PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("GET", "/health"), ("GET", "/ready"),
     ("GET", "/v1/auth/config"), ("POST", "/v1/auth/register"), ("POST", "/v1/auth/login"),
+    ("POST", "/v1/auth/login/2fa"),  # before any session: the signed sign-in challenge is the credential
     ("POST", "/v1/auth/logout"), ("POST", "/v1/auth/verify-email/confirm"),
     ("POST", "/v1/auth/password-reset/request"), ("POST", "/v1/auth/password-reset/confirm"),
     ("POST", "/v1/auth/email-change/confirm"),

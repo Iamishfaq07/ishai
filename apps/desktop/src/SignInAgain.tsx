@@ -25,6 +25,8 @@ export function SignInAgain({
   const [address, setAddress] = useState(email ?? "");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [challenge, setChallenge] = useState<string | null>(null);
+  const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const submit = async (e: FormEvent) => {
@@ -32,7 +34,12 @@ export function SignInAgain({
     setBusy(true);
     setError(null);
     try {
-      const res = await signInRequest(() => api.login({ email: address.trim(), password }));
+      // Two-step sign-in: the password is right; a code from the authenticator app finishes it.
+      const res = challenge ? await signInRequest(() => api.loginSecondStep(code, challenge)) : await signInRequest(() => api.login({ email: address.trim(), password }));
+      if ("two_factor_required" in res) {
+        setChallenge(res.challenge);
+        return;
+      }
       if (!res.access_token) throw new Error("Sign-in didn't finish. Please try again.");
       setAccessToken(res.access_token);
       await saveToken(res.access_token).catch((err: unknown) =>
@@ -71,20 +78,34 @@ export function SignInAgain({
               className={cx(input, focusRing)}
             />
           )}
-          <input
-            type="password"
-            required
-            autoFocus
-            autoComplete="current-password"
-            placeholder={email ? `Password for ${email}` : "Password"}
-            aria-label="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={cx(input, focusRing)}
-          />
+          {challenge ? (
+            <input
+              required
+              autoFocus
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="Code from your authenticator app"
+              aria-label="Code from your authenticator app, or a recovery code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              className={cx(input, focusRing)}
+            />
+          ) : (
+            <input
+              type="password"
+              required
+              autoFocus
+              autoComplete="current-password"
+              placeholder={email ? `Password for ${email}` : "Password"}
+              aria-label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={cx(input, focusRing)}
+            />
+          )}
           <button
             type="submit"
-            disabled={busy || !password}
+            disabled={busy || (challenge ? code.trim().length < 6 : !password)}
             className={cx("shrink-0 rounded-md bg-indigo-600 px-2.5 py-1 font-medium text-white hover:bg-indigo-500 disabled:opacity-50", focusRing)}
           >
             {busy ? "Signing in…" : "Sign in"}

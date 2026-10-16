@@ -29,6 +29,8 @@ from orbit_api.auth.security import (
     token_from_request,
     verify_password,
 )
+from orbit_api.auth.two_factor import TwoFactorChallenge, challenge_for
+from orbit_api.auth.two_factor import enabled as two_factor_enabled
 from orbit_api.config import get_settings
 from orbit_api.csrf import token_for as csrf_token_for
 from orbit_api.db import get_db
@@ -262,9 +264,9 @@ async def _verify_token(db: AsyncSession, user: User) -> str:
     return token
 
 
-@router.post("/login", response_model=AuthOut, dependencies=[Depends(auth_limit)])
+@router.post("/login", response_model=AuthOut | TwoFactorChallenge, dependencies=[Depends(auth_limit)])
 async def login(body: LoginIn, request: Request, response: Response,
-                db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut:
+                db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut | TwoFactorChallenge:
     email = body.email.lower()
     here = f"{email}|{client_network(request)}"
     if blocked(_login_fail_here, here) or blocked(_login_fail_anywhere, email):
@@ -283,6 +285,10 @@ async def login(body: LoginIn, request: Request, response: Response,
         raise HTTPException(status.HTTP_403_FORBIDDEN, suspended_detail(user))
     if needs_rehash(user.password_hash):
         user.password_hash = await hash_password(body.password)
+    if await two_factor_enabled(db, user.id):
+        # The password was right; the authenticator code comes next (POST /v1/auth/login/2fa).
+        await db.commit()
+        return TwoFactorChallenge(challenge=challenge_for(user))
     db.add(AuditLog(user_id=user.id, action="auth.login", ip=_ip(request)))
     await db.commit()
     return await _auth_out(request, response, user, db)
