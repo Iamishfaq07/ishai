@@ -47,18 +47,37 @@ You get the offer, the market range Orbit read from job posts for this role (it 
 resume and their confirmed evidence. Use only these. Never invent a figure, a competing offer or an achievement.
 
 Return ONLY a JSON object:
-{"ask": number (the fixed pay a year to ask for, same currency as the offer: anchored on the market range when there
+{"ask": number (the __FIXED__ a year to ask for, same currency as the offer: anchored on the market range when there
 is one, usually 10-20% above the offer, never below it),
  "ask_why": "one sentence: why this number",
  "reasons": ["2-4 points that make the case, each from the resume, the evidence or the market range"],
  "call_script": ["4-7 short lines to say on the call, in order: thanks and enthusiasm, the ask with the reason,
-   then silence; how to answer 'the budget is fixed'; what to trade for (joining bonus, review in 6 months, more
-   variable, a start date) if the fixed pay can't move"],
+   then silence; how to answer 'the budget is fixed'; what to trade for (__JOINING__, review in 6 months, more
+   __VARIABLE__, a start date) if the __FIXED__ can't move"],
  "email": {"subject": "...", "body": "90-150 words, first person, warm and specific, with the ask and one reason,
    [Your name] at the end"},
  "questions": ["2-4 questions to ask about this offer before accepting: what isn't clear in it"],
- "watch_outs": ["0-3 things in this offer to check: a large variable share, an equity value that's only on paper,
-   a joining bonus with a clawback, a short deadline"]}"""
+ "watch_outs": ["0-3 things in this offer to check: a large __VARIABLE__ share, an equity value that's only on paper,
+   a __JOINING__ with a clawback, a short deadline"]}"""
+
+# What the parts of the pay are called: an Indian offer letter's fixed pay, variable pay and joining bonus are a base
+# salary, a target bonus and a signing bonus elsewhere. Told by the offer's currency, so a rupee offer reads as it
+# always has, whoever's account it's in.
+_WORDS = {True: {"__FIXED__": "fixed pay", "__VARIABLE__": "variable", "__JOINING__": "joining bonus"},
+          False: {"__FIXED__": "base salary", "__VARIABLE__": "bonus", "__JOINING__": "signing bonus"}}
+_LABELS = {True: ("Fixed pay a year", "Variable pay a year (target)", "Joining bonus"),
+           False: ("Base salary a year", "Target bonus a year", "Signing bonus")}
+
+
+def _rupees(offer: dict[str, Any]) -> bool:
+    return offer.get("currency") == "INR"
+
+
+def system_prompt(offer: dict[str, Any], country: str | None) -> str:
+    out = localize(SYSTEM, country)
+    for marker, word in _WORDS[_rupees(offer)].items():
+        out = out.replace(marker, word)
+    return out
 
 
 def _money(currency: str, value: float) -> str:
@@ -69,11 +88,12 @@ def _money(currency: str, value: float) -> str:
 
 def offer_text(offer: dict[str, Any]) -> str:
     c = offer["currency"]
+    fixed, variable, joining = _LABELS[_rupees(offer)]
     parts = [f"Company: {offer['company']}", f"Role: {offer['role']}"]
     if offer.get("city"):
         parts.append(f"City: {offer['city']}")
-    parts.append(f"Fixed pay a year: {_money(c, offer['fixed'])}")
-    for key, label in (("variable", "Variable pay a year (target)"), ("joining_bonus", "Joining bonus"),
+    parts.append(f"{fixed}: {_money(c, offer['fixed'])}")
+    for key, label in (("variable", variable), ("joining_bonus", joining),
                        ("equity_per_year", "Equity a year (as stated)"), ("other", "Other pay a year")):
         if offer.get(key):
             parts.append(f"{label}: {_money(c, offer[key])}")
@@ -99,7 +119,7 @@ def plan_request(offer: dict[str, Any], market: dict[str, Any] | None, resume: s
             + (f"<reference_data source=\"resume\">\n{fence(resume[:6_000])}\n</reference_data>\n\n" if resume else "")
             + (f"<reference_data source=\"confirmed_evidence\">\n{fence(evidence)}\n</reference_data>\n\n"
                if evidence else ""))
-    return LLMRequest(messages=[LLMMessage("system", localize(SYSTEM, country)), LLMMessage("user", body.strip())],
+    return LLMRequest(messages=[LLMMessage("system", system_prompt(offer, country)), LLMMessage("user", body.strip())],
                       json_mode=llm.supports_structured_output(), max_tokens=1_400, temperature=0.4,
                       request_type="offer_plan")
 

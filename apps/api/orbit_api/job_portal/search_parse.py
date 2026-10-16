@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 
 from orbit_api.job_portal.geo import WORLD_CITIES, city_country, world_cities
 from orbit_api.job_portal.postings import _CITY_RE, EmploymentType, Level, Workplace, find_cities
+from orbit_api.region import INDIA, market_country
 
 _STOP = frozenset("""
 job jobs opening openings role roles position positions vacancy vacancies hiring for in at near me with and or of
@@ -56,7 +57,7 @@ _RULES: list[tuple[str, str]] = [
 _YEARS = re.compile(r"\b(\d{1,2}(?:\.\d)?)\s*\+?\s*(?:-\s*\d{1,2}\s*)?(?:years?|yrs?)"
                     r"(?:\s+(?:of\s+)?(?:exp|experience))?\b")
 _LABEL = {"remote": "Remote", "hybrid": "Hybrid", "onsite": "In office", "internship": "Internships",
-          "fresher": "Fresher", "part_time": "Part-time", "full_time": "Full-time", "contract": "Contract",
+          "part_time": "Part-time", "full_time": "Full-time", "contract": "Contract",
           "india": "Anywhere in India", "anywhere": "Anywhere"}
 # Also a word or a tool. A place only when the query says so ("in Phoenix", "Reading jobs").
 _AMBIGUOUS_CITIES = frozenset({"Phoenix", "Reading"})
@@ -89,6 +90,9 @@ def parse_search(text: str, country: str | None = None) -> ParsedSearch:
                 out.level = "fresher"
         elif meaning == "fresher":
             out.level = "fresher"
+            # "Fresher" is India's word for it; elsewhere the chip says "Entry level" (either is understood typed).
+            out.understood.append("Fresher" if market_country(country) == INDIA else "Entry level")
+            continue
         elif meaning.startswith("days:"):
             out.posted_within = int(meaning[5:])
             out.understood.append({1: "Last 24 hours", 3: "Last 3 days", 7: "Last 7 days",

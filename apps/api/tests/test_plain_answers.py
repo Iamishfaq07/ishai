@@ -171,7 +171,7 @@ def _inputs(q: str, **kw: Any) -> PromptInputs:
 
 def test_prompt_carries_the_size_level_and_honesty_rules() -> None:
     built = build_prompt(SessionIndex([]), _inputs("Have you used Kubernetes?", qtype=QuestionType.resume,
-                                                   length="short", size="brief", level="fresher",
+                                                   length="short", size="brief", level="fresher", country="IN",
                                                    unshown=["Kubernetes"]), SessionMemory())
     user = built.messages[1].content
     assert "Length: BRIEF" in user and "STANDARD" not in user
@@ -274,9 +274,10 @@ class Sink:
                 await asyncio.sleep(0.01)
 
 
-async def _engine(llm: MockLLMProvider, resume: str | None = None, **settings: Any) -> tuple[LiveEngine, Sink]:
+async def _engine(llm: MockLLMProvider, resume: str | None = None, country: str | None = None,
+                  **settings: Any) -> tuple[LiveEngine, Sink]:
     sink = Sink()
-    eng = LiveEngine(SessionProfile("s1", "interview", "Associate Software Engineer", "en", "en"),
+    eng = LiveEngine(SessionProfile("s1", "interview", "Associate Software Engineer", "en", "en", country=country),
                      LiveSettings(**settings), send=sink, llm=llm, stt=MockSTTProvider(),
                      index=SessionIndex(_chunks(resume) if resume else []))
     await eng.start()
@@ -347,7 +348,7 @@ async def test_make_it_shorter_in_chat_steps_down_from_the_last_size() -> None:
 
 async def test_level_and_unshown_topics_reach_the_prompt() -> None:
     llm = MockLLMProvider()
-    eng, sink = await _engine(llm, resume=FRESHER)
+    eng, sink = await _engine(llm, resume=FRESHER, country="IN")
     await eng.handle_client({"type": "answer.request", "data": {"question_text": "Have you used Kubernetes?"}})
     await sink.wait_for("answer.completed")
     user = _answers(llm)[0].messages[1].content
@@ -382,3 +383,39 @@ def test_sessions_and_setups_store_auto_without_a_migration(client: TestClient) 
     assert ws.status_code == 201 and ws.json()["length"] == "auto"
     listed = client.get(f"/v1/sessions/{default.json()['id']}", headers=h).json()
     assert (listed.get("session") or listed)["length"] == "auto"
+
+
+def test_the_copilot_knows_the_job_market_and_its_words() -> None:
+    from pathlib import Path
+
+    def prompt(country: str | None, level: str = "fresher") -> tuple[str, str]:
+        built = build_prompt(SessionIndex([]), _inputs("What salary are you expecting?", level=level,
+                                                       country=country), SessionMemory())
+        return built.messages[0].content, built.messages[1].content
+
+    system, user = prompt("US")
+    assert "Candidate level: ENTRY-LEVEL (student or recent graduate)" in user and "FRESHER" not in user
+    assert "Job market: the United States. Any salary or pay range is in USD, as pay is quoted there." in user
+    assert "An entry-level candidate answers with a graduate's depth" in system and "fresher" not in system.lower()
+    assert "Job market: the United Kingdom. Any salary or pay range is in GBP" in prompt("GB")[1]
+    assert "Job market: FJ. Any salary or pay range is as pay is quoted there." in prompt("FJ")[1]  # no currency known
+    unknown_system, unknown = prompt(None)  # not said: worldwide words, and no market to name
+    assert "ENTRY-LEVEL" in unknown and "Job market" not in unknown and unknown_system == system
+    # India is as it always was: its own words, no market line, the prompt file as written.
+    india_system, india = prompt("IN")
+    assert "Candidate level: FRESHER (a student or recent graduate)" in india and "ENTRY-LEVEL" not in india
+    assert "Job market" not in india and "__" not in india_system
+    raw = (Path(__file__).parents[1] / "orbit_api" / "prompts" / "live_system.md").read_text(encoding="utf-8")
+    assert india_system == raw.replace("__A_FRESHER__", "A fresher") and raw.count("__A_FRESHER__") == 1
+    assert prompt("IN", "mid")[1] == prompt(None, "mid")[1]  # nothing added for India, not even a blank line
+
+
+async def test_the_session_tells_the_copilot_where_the_user_applies() -> None:
+    llm = MockLLMProvider()
+    eng, sink = await _engine(llm, country="GB")
+    await eng.handle_client({"type": "answer.request", "data": {"question_text": "What salary are you expecting?"}})
+    await sink.wait_for("answer.completed")
+    request = _answers(llm)[0]
+    assert "Job market: the United Kingdom" in request.messages[1].content
+    assert "An entry-level candidate answers" in request.messages[0].content
+    await eng.handle_client({"type": "session.end", "data": {}})

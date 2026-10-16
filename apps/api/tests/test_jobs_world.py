@@ -144,3 +144,32 @@ def test_the_migration_adds_and_removes_remote_scope(tmp_path: Any) -> None:
     alembic("downgrade", "f5c7e9a1b3d4")
     assert "remote_scope" not in columns()
     alembic("upgrade", "head")
+
+
+def test_without_a_saved_country_the_edge_decides_then_india(jobs: TestClient) -> None:  # noqa: F811
+    import os
+
+    insert(jobs, _listing(title="Backend Engineer Bengaluru"),
+           _listing(title="Backend Engineer Austin", locations=["Austin, TX"], cities=["Austin"], country="US"))
+    h = _register(jobs)
+    make_resume(jobs, h)
+    seen_in_us = {**h, "X-Orbit-Proxy-Secret": os.environ["ORBIT_PROXY_SECRET"], "X-Orbit-Client-Country": "US"}
+    assert _feed(jobs, seen_in_us) == ["Backend Engineer Austin"]
+    profile = jobs.get("/v1/jobs/profile", headers=seen_in_us).json()
+    assert profile["cities"][:2] == ["Anywhere", "New York"] and "naukri" not in profile["portals"]
+    # Nothing to go on (the desktop app, or a country the Worker didn't vouch for): India, as it always was.
+    assert _feed(jobs, h) == ["Backend Engineer Bengaluru"]
+    assert _feed(jobs, {**h, "X-Orbit-Client-Country": "US"}) == ["Backend Engineer Bengaluru"]
+    profile = jobs.get("/v1/jobs/profile", headers=h).json()
+    assert profile["cities"][:2] == ["India", "Bengaluru"] and "naukri" in profile["portals"]
+    # A saved country wins over where the request came from.
+    assert jobs.patch("/v1/auth/me/region", headers=h, json={"country": "IN"}).status_code == 200
+    assert _feed(jobs, seen_in_us) == ["Backend Engineer Bengaluru"]
+
+
+def test_the_search_box_says_entry_level_outside_india() -> None:
+    assert parse_search("fresher python jobs", "IN").understood == ["Fresher"]
+    assert parse_search("fresher python jobs").understood == ["Fresher"]  # no country: India's word, as always
+    for q in ("fresher python jobs", "entry level python jobs"):
+        parsed = parse_search(q, "US")
+        assert parsed.understood == ["Entry level"] and parsed.level == "fresher" and parsed.keywords == "python"

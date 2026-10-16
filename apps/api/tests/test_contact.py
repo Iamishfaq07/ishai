@@ -554,3 +554,13 @@ def test_the_topic_list_and_its_type_agree() -> None:
 
     assert set(get_args(contact_mod.Topic)) == set(contact_mod.TOPICS)
     assert set(get_args(contact_mod.Status)) == set(contact_mod.STATUSES)
+
+
+def test_a_bad_phone_number_is_explained_for_any_country() -> None:
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as refused:
+        contact_mod.clean_phone("12345")
+    assert "with your country code" in str(refused.value.detail) and "+91" not in str(refused.value.detail)
+    assert contact_mod.clean_phone("+44 20 7946 0958") == "+44 20 7946 0958"
+    assert contact_mod.clean_phone("+91 98765 43210") == "+91 98765 43210"
