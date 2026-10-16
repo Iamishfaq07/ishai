@@ -199,6 +199,10 @@ class Settings(BaseSettings):
     jobs_sources_off: str = Field("", validation_alias=AliasChoices("ORBIT_JOBS_SOURCES_OFF"))
     # Company job boards added to (or taken off) the built-in list, as JSON (job_portal/companies.py).
     jobs_boards_json: str | None = Field(None, validation_alias=AliasChoices("ORBIT_JOBS_BOARDS_JSON"))
+    # Countries besides India that a board answering one country at a time (SmartRecruiters) is asked for, as ISO
+    # codes, comma-separated: one more call per board and country every 6 hours. The other boards send every
+    # country's posts in one answer.
+    jobs_board_countries: str = Field("US,GB,CA,DE,AU", validation_alias=AliasChoices("ORBIT_JOBS_BOARD_COUNTRIES"))
     # Free AI per account per day (UTC): fit checks, and search profiles read from a resume. The admin has no cap.
     jobs_fit_daily: int = Field(15, ge=0, validation_alias=AliasChoices("ORBIT_JOBS_FIT_DAILY"))
     # Offer AI's negotiation plans a day, free (the admin has no cap).
@@ -285,6 +289,16 @@ class Settings(BaseSettings):
     def _razorpay_trimmed(cls, v: object) -> object:
         # Keys pasted into a dashboard often carry a space or line break, which Razorpay answers with a 401.
         return (v.strip() or None) if isinstance(v, str) else v
+
+    @field_validator("jobs_board_countries", mode="before")
+    @classmethod
+    def _country_codes(cls, v: object) -> object:
+        if not isinstance(v, str):
+            return v
+        codes = [c.strip().upper() for c in v.split(",") if c.strip()]
+        if any(not re.fullmatch(r"[A-Z]{2}", c) for c in codes):
+            raise ValueError("ORBIT_JOBS_BOARD_COUNTRIES must be two-letter country codes, comma-separated (US,GB)")
+        return ",".join(dict.fromkeys(c for c in codes if c != "IN"))  # India is always asked for
 
     @field_validator("stt_price_per_minute", mode="before")
     @classmethod
