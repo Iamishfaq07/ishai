@@ -4,6 +4,7 @@ import type { SessionAnswer, SessionDetail, SessionSummary } from "@orbit/types"
 import {
   AnswerRatingButtons,
   CodeBlock,
+  CameraCard,
   DeliveryCard,
   FollowUpCard,
   ReportStatusNote,
@@ -200,6 +201,7 @@ export function SessionDetailPage() {
         />
         {detail.data.summary?.counter_offer_email && <CounterOfferEmail email={detail.data.summary.counter_offer_email} />}
         <DeliveryCard delivery={detail.data.summary?.delivery} />
+        <CameraCard camera={detail.data.camera} />
         {session.status === "ended" && <DebriefStudio api={api} sessionId={session.id} refreshOn={detail.data.summary?.review} />}
         {session.status === "ended" && session.type !== "mock" && (detail.data.turns.length > 0 || detail.data.questions.length > 0) && (
           <FollowUpCard initial={detail.data.summary?.follow_up} load={(refresh) => api.followUp(session.id, refresh)} />

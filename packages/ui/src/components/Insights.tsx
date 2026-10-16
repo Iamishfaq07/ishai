@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import type { DeliveryStats, FollowUp } from "@orbit/types";
+import type { DeliveryStats, FollowUp, SessionCamera } from "@orbit/types";
 import { Check, CircleAlert, CircleCheck, Copy, Mail, RefreshCw } from "../icons";
 import { cx, focusRing } from "./cx";
 import { Button, Card, ErrorNote } from "./ui";
@@ -306,6 +306,104 @@ export function FollowUpCard({
           </Button>
         </div>
       </div>
+    </Card>
+  );
+}
+
+function shortDate(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+
+/**
+ * "On camera": the camera coach's numbers, measured on the person's device during a mock (no video or images were
+ * kept or sent), with "facing the camera" across their last few sessions. Descriptive only: it doesn't judge
+ * confidence, emotion or how an interviewer will see them.
+ */
+export function CameraCard({ camera }: { camera: SessionCamera | null | undefined }) {
+  if (!camera) return null;
+  const m = camera.metrics;
+  const movement = m.head_movement_deg_s <= 5 ? "Mostly still" : m.head_movement_deg_s <= 12 ? "Some movement" : "A lot of movement";
+  const sawFace = m.face_in_frame_pct > 0;
+  const minutes = m.seconds < 60 ? "under a minute" : `${Math.round(m.seconds / 60)} min`;
+  const trend = camera.trend;
+  return (
+    <Card className="animate-fade-up">
+      <h2 className="font-display text-lg font-semibold">On camera</h2>
+      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        Measured on your device over {minutes} with the camera coach on. The video never left your device.
+      </p>
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Tile label="Face in frame" value={String(Math.round(m.face_in_frame_pct))} unit="%" />
+        <Tile label="Facing the camera" value={sawFace ? String(Math.round(m.facing_camera_pct)) : "–"} unit={sawFace ? "% of that time" : undefined} />
+        <Tile
+          label="Head movement"
+          value={sawFace ? String(m.head_movement_deg_s) : "–"}
+          unit={sawFace ? "°/s" : undefined}
+          status={sawFace ? <span className="text-xs text-zinc-500 dark:text-zinc-400">{movement}</span> : undefined}
+        />
+      </div>
+      {!sawFace && (
+        <p className="mt-3 text-sm text-amber-700 dark:text-amber-300">
+          No face was found in the picture. Check the camera faces you, with light in front of you rather than behind.
+        </p>
+      )}
+      {trend.length > 1 && (
+        <figure className="mt-4">
+          <figcaption className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Facing the camera, your last {trend.length} sessions</figcaption>
+          <div className="mt-2 flex items-end gap-2" role="img" aria-label={`Facing the camera: ${trend.map((p) => `${Math.round(p.facing_camera_pct)}%`).join(", ")}, oldest first`}>
+            {trend.map((p, i) => {
+              const latest = i === trend.length - 1;
+              return (
+                <div key={p.session_id} className="flex flex-1 flex-col items-center gap-1" title={`${shortDate(p.at)}: ${Math.round(p.facing_camera_pct)}%`}>
+                  <span className={cx("h-4 text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-50", !latest && "invisible")}>
+                    {Math.round(p.facing_camera_pct)}%
+                  </span>
+                  {/* Every bar on the same 64px track, so equal values are equal heights. */}
+                  <span className="flex h-16 w-full max-w-10 items-end">
+                    <span
+                      className={cx("w-full rounded-t", latest ? "bg-indigo-500" : "bg-indigo-500/35")}
+                      style={{ height: `${Math.max(3, p.facing_camera_pct)}%` }}
+                    />
+                  </span>
+                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{latest ? "This one" : shortDate(p.at)}</span>
+                </div>
+              );
+            })}
+          </div>
+          <details className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+            <summary className={cx("cursor-pointer rounded", focusRing)}>Show the numbers</summary>
+            <table className="mt-1 w-full text-left tabular-nums">
+              <thead>
+                <tr>
+                  <th className="font-medium">Session</th>
+                  <th className="font-medium">Face in frame</th>
+                  <th className="font-medium">Facing the camera</th>
+                  <th className="font-medium">Head movement</th>
+                </tr>
+              </thead>
+              <tbody>
+                {trend.map((p) => (
+                  <tr key={p.session_id}>
+                    <td>{shortDate(p.at)}</td>
+                    <td>{Math.round(p.face_in_frame_pct)}%</td>
+                    <td>{Math.round(p.facing_camera_pct)}%</td>
+                    <td>{p.head_movement_deg_s}°/s</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </details>
+        </figure>
+      )}
+      <details className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+        <summary className={cx("cursor-pointer rounded", focusRing)}>How these are measured</summary>
+        <p className="mt-1">
+          A face model ran in your browser about ten times a second. "Facing the camera" means your head was turned within about 20° of the camera,
+          left, right, up or down; it's head direction, not where your eyes looked. Glasses, lighting and camera position affect it. These numbers
+          describe where you faced, not how confident, engaged or employable you are, and they're for your own practice.
+        </p>
+      </details>
     </Card>
   );
 }

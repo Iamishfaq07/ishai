@@ -31,6 +31,8 @@ export interface User {
   evidence_vault?: boolean;
   /** Mock-interview languages this server offers: ["en"], or with Hindi and Hinglish when it has them on. */
   practice_languages?: string[];
+  /** The camera coach in mock interviews is on for this server. */
+  video_mock?: boolean;
   /** Auth responses only: browser clients echo it as X-CSRF-Token on state-changing requests. */
   csrf_token?: string | null;
 }
@@ -554,6 +556,25 @@ export interface SessionDetail {
   questions: SessionQuestion[];
   answers: SessionAnswer[];
   summary: SessionSummary | null;
+  /** The camera coach's numbers and their trend; null when it wasn't used. */
+  camera?: SessionCamera | null;
+}
+
+/** The camera coach's numbers, measured on the person's device (no video or images are kept or sent). */
+export interface CameraMetrics {
+  seconds: number;
+  samples: number;
+  face_in_frame_pct: number;
+  /** Of the time a face was in frame: the head turned toward the camera (head direction, not eye gaze). */
+  facing_camera_pct: number;
+  /** Average head turning speed, degrees per second. */
+  head_movement_deg_s: number;
+}
+
+export interface SessionCamera {
+  metrics: CameraMetrics;
+  /** Oldest first, this session last. */
+  trend: { session_id: string; at: string; face_in_frame_pct: number; facing_camera_pct: number; head_movement_deg_s: number }[];
 }
 
 export interface LiveTicket {

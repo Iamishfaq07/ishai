@@ -33,7 +33,7 @@ import type { AnswerRatings } from "./AnswerRating";
 import { ChatInput } from "./ChatInput";
 import { CodeBlock } from "./CodeBlock";
 import { ControlBar } from "./ControlBar";
-import { MockPanel } from "./MockPanel";
+import { MockPanel, type CameraCoach } from "./MockPanel";
 import { cx, focusRing } from "./cx";
 import { QuestionCard } from "./QuestionCard";
 import { StatusPill } from "./StatusPill";
@@ -155,6 +155,8 @@ export interface LivePanelProps {
   naturalVoice?: NaturalVoiceSource | null;
   /** A mock's practice language ("en", "hi", "hinglish"): which device voice reads the questions. */
   practiceLanguage?: string;
+  /** The camera coach for mock rounds (web, when the server has it on). */
+  cameraCoach?: CameraCoach;
 }
 
 export function LivePanel(props: LivePanelProps) {
@@ -466,6 +468,7 @@ export function LivePanel(props: LivePanelProps) {
                 ended={ended}
                 muted={voiceMuted}
                 onMutedChange={changeMuted}
+                {...(props.cameraCoach ? { cameraCoach: props.cameraCoach } : {})}
                 {...(props.onViewReport ? { onViewReport: props.onViewReport } : {})}
               />
             </>

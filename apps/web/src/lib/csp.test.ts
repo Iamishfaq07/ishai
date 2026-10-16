@@ -18,6 +18,10 @@ describe("content security policy", () => {
     expect(csp).toContain("wss://orbit-api-sg.onrender.com");
     expect(csp).toContain("sha256-");
     expect(csp).toContain("frame-ancestors 'none'");
+    // The camera coach's face model is WebAssembly served from this site; still no 'unsafe-eval' for scripts.
+    expect(csp).toMatch(/script-src 'self' 'wasm-unsafe-eval'/);
+    expect(csp).not.toMatch(/'unsafe-eval'/);
+    expect(csp).not.toContain("cdn.jsdelivr.net");
   });
 
   it("does not add a second policy in public/_headers", () => {

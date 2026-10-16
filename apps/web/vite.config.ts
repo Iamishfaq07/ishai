@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
-import { appendFileSync, existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { appendFileSync, copyFileSync, createReadStream, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -28,7 +29,8 @@ export function contentSecurityPolicy(inlineScripts: string[], env: Record<strin
   ];
   return [
     "default-src 'self'",
-    `script-src 'self' ${hashes.join(" ")} ${TURNSTILE} ${RAZORPAY_SCRIPTS}`.replace(/\s+/g, " "),
+    // 'wasm-unsafe-eval': the camera coach's face model runs as WebAssembly, served from this site (never eval).
+    `script-src 'self' 'wasm-unsafe-eval' ${hashes.join(" ")} ${TURNSTILE} ${RAZORPAY_SCRIPTS}`.replace(/\s+/g, " "),
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https://cdn.razorpay.com",
     "font-src 'self' data:",
@@ -74,14 +76,44 @@ function securityHeaders(mode: string): Plugin {
   X-Frame-Options: DENY
   Referrer-Policy: no-referrer
   Cross-Origin-Opener-Policy: same-origin
-  Permissions-Policy: camera=(), geolocation=(), payment=(), usb=(), microphone=(self), display-capture=(self)
+  Permissions-Policy: camera=(self), geolocation=(), payment=(), usb=(), microphone=(self), display-capture=(self)
 `,
       );
     },
   };
 }
 
+/**
+ * The camera coach's WebAssembly (MediaPipe Tasks Vision, from node_modules): served at /mediapipe/wasm/ in dev and
+ * copied there in the build, so the face model runs from this site and the browser never fetches it from a CDN. The
+ * model file itself is public/mediapipe/face_landmarker.task (Apache-2.0, from Google's MediaPipe model card).
+ */
+const MEDIAPIPE_WASM = ["vision_wasm_internal.js", "vision_wasm_internal.wasm", "vision_wasm_nosimd_internal.js", "vision_wasm_nosimd_internal.wasm"];
+function mediapipeWasm(): Plugin {
+  const dir = join(dirname(createRequire(import.meta.url).resolve("@mediapipe/tasks-vision")), "wasm");
+  let outDir = "dist";
+  return {
+    name: "orbit-mediapipe-wasm",
+    configResolved(config) {
+      outDir = config.build.outDir;
+    },
+    configureServer(server) {
+      server.middlewares.use("/mediapipe/wasm", (req, res, next) => {
+        const name = (req.url ?? "").replace(/^\//, "").split("?")[0] ?? "";
+        if (!MEDIAPIPE_WASM.includes(name)) return next();
+        res.setHeader("Content-Type", name.endsWith(".wasm") ? "application/wasm" : "text/javascript");
+        createReadStream(join(dir, name)).pipe(res);
+      });
+    },
+    writeBundle() {
+      const target = join(outDir, "mediapipe", "wasm");
+      mkdirSync(target, { recursive: true });
+      for (const name of MEDIAPIPE_WASM) copyFileSync(join(dir, name), join(target, name));
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), securityHeaders(mode)],
+  plugins: [react(), securityHeaders(mode), mediapipeWasm()],
   server: { port: 5173, strictPort: true },
 }));
