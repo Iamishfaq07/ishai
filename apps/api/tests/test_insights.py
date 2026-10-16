@@ -43,6 +43,24 @@ def test_delivery_stats_pace_fillers_and_tips() -> None:
     assert delivery_stats([T("candidate", "Too short.", 0, 5_000)]) is None  # not enough speech to judge
 
 
+def test_pauses_and_time_to_start_from_the_timings() -> None:
+    words = " ".join(["word"] * 60)
+    turns = [
+        T("interviewer", "Tell me about a hard project.", 0, 4_000),
+        T("candidate", words, 12_000, 32_000),  # started 8 s after the question
+        T("candidate", words, 36_000, 56_000),  # a 4 s pause inside the same answer
+        T("interviewer", "And the result?", 57_000, 59_000),
+        T("candidate", words, 69_000, 89_000),  # 10 s
+        T("interviewer", "Thanks.", 90_000, 91_000),
+        T("candidate", "Sure.", 200_000, 201_000),  # 109 s: someone stepped away, not thinking time
+    ]
+    d = delivery_stats(turns)
+    assert d is not None and d["long_pauses"] == 1 and d["median_start_seconds"] == 9.0
+    assert any("opener" in t for t in d["tips"])
+    # Never a word about confidence or how hireable someone is: only what was measured.
+    assert not any("confiden" in t.lower() for t in d["tips"])
+
+
 def test_filler_words_only_requested_when_asked() -> None:
     assert "filler_words=true" in build_url("nova-3", STTConfig(filler_words=True))
     assert "filler_words" not in build_url("nova-3", STTConfig())
