@@ -484,11 +484,25 @@ def test_report_jobs_retry_then_succeed_and_give_up_after_max_attempts(monkeypat
             assert job is not None
             return job.status, job.attempts
 
+    async def count(key: str) -> int:
+        async with sessionmaker()() as db:
+            from sqlalchemy import func, select
+
+            return int(await db.scalar(select(func.count()).select_from(Job).where(Job.dedupe_key == key)) or 0)
+
+    async def enqueue_twice(kind: str, payload: dict[str, Any], key: str) -> None:
+        # One transaction, so no worker can run the job in between: a second enqueue of a job that already ran
+        # re-arms it (by design), and the suite's other app has a worker polling the same DB.
+        async with sessionmaker()() as db:
+            await jobs.enqueue(db, kind, payload, key)
+            await jobs.enqueue(db, kind, payload, key)  # deduped: still one job
+            await db.commit()
+
     with TestClient(create_app()) as c:
         a, b = f"t:{uuid.uuid4()}", f"t:{uuid.uuid4()}"
         _call(c, jobs.enqueue_now, "test_flaky", {"id": "once"}, a)
-        _call(c, jobs.enqueue_now, "test_flaky", {"id": "never"}, b)
-        _call(c, jobs.enqueue_now, "test_flaky", {"id": "never"}, b)  # deduped
+        _call(c, enqueue_twice, "test_flaky", {"id": "never"}, b)
+        assert _call(c, count, b) == 1
         deadline = time.monotonic() + 10
         while time.monotonic() < deadline:
             if _call(c, state, a)[0] == "done" and _call(c, state, b)[0] == "failed":
