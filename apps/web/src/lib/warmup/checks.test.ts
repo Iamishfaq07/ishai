@@ -174,3 +174,16 @@ describe("a round", () => {
     expect(summarise([]).focus).toBeNull();
   });
 });
+
+describe("the numbers tip outside India", () => {
+  it("uses the local money and grades rather than marks and rank", () => {
+    expect(checkSpecifics("We got many sponsors.").detail).toContain("hours or ₹ saved, marks, rank");
+    expect(checkSpecifics("We got many sponsors.", "IN").detail).toContain("₹");
+    const us = checkSpecifics("We got many sponsors.", "US").detail;
+    expect(us).toContain("hours or $ saved, grades");
+    expect(us).not.toMatch(/₹|marks|rank/);
+    expect(checkSpecifics("We got many sponsors.", "GB").detail).toContain("£");
+    expect(checkSpecifics("We got 3 sponsors.", "US").detail).not.toMatch(/marks|rank/);
+    expect(checkAnswer(STAR_ANSWER, { kind: "story" }, false, "US").find((c) => c.id === "specifics")?.verdict).toBe("good");
+  });
+});

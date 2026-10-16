@@ -84,3 +84,19 @@ describe("one-tap mock presets", () => {
     expect(isPresetId(null)).toBe(false);
   });
 });
+
+describe("the first screen outside India", () => {
+  it("is a recruiter screen, without India's shift-work question; India's stays the HR round", async () => {
+    const { hrQuestions } = await import("./mockPresets");
+    const hr5 = PRESETS.find((p) => p.id === "hr5")!;
+    expect(presetTitle(hr5)).toBe("5-min HR round");
+    expect(presetTitle(hr5, "US")).toBe("5-min recruiter screen");
+    expect(presetSession("hr5", "", [], "IN").title).toBe("Mock — 5-min HR round");
+    expect(presetSession("hr5", "", [], "GB").title).toBe("Mock — 5-min recruiter screen");
+    expect(hrQuestions("IN")).toBe(HR_QUESTIONS);
+    const gb = presetSession("hr5", "", [], "GB").mock?.drill?.map((d) => d.question) ?? [];
+    expect(gb).toHaveLength(HR_QUESTIONS.length);
+    expect(gb.join(" ")).not.toMatch(/shift/);
+    expect(gb).toContain("Are you open to relocating if the role needs it?");
+  });
+});

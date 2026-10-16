@@ -2,6 +2,7 @@
 // anywhere. Each check is a few cue lists and a verdict: how long it would take to say, whether it has the shape the
 // question wants (STAR for a story; now, before, next for an introduction; steps for "what would you do"), numbers,
 // filler words and hedges, and "I" against "we". They're rough on purpose, and say what they looked for.
+import { INDIA, currencySymbol, isIndia } from "@orbit/ui";
 import type { QuestionKind, WarmupQuestion } from "./bank";
 
 export type CheckId = "length" | "structure" | "specifics" | "clarity" | "ownership";
@@ -124,13 +125,20 @@ export function numbersIn(text: string): string[] {
   return (text.toLowerCase().match(NUMBER) ?? []).map((x) => x.trim()).filter(Boolean);
 }
 
-export function checkSpecifics(text: string): Check {
+/** `country`: the examples of what to count use its money and, outside India, grades rather than marks and rank. */
+export function checkSpecifics(text: string, country: string = INDIA): Check {
   const found = numbersIn(text);
   const shown = [...new Set(found)].slice(0, 3).join(", ");
+  const india = isIndia(country);
   if (found.length >= 2) return { id: "specifics", label: "Numbers", verdict: "good", detail: `Specific: ${shown}. Numbers make it believable.` };
   if (found.length === 1)
-    return { id: "specifics", label: "Numbers", verdict: "ok", detail: `One number (${shown}). Another would help: how many people, how much time saved, marks or rank.` };
-  return { id: "specifics", label: "Numbers", verdict: "improve", detail: "No numbers yet. Add one: how many users or people, hours or ₹ saved, marks, rank, or a % change." };
+    return { id: "specifics", label: "Numbers", verdict: "ok", detail: `One number (${shown}). Another would help: how many people, how much time saved, ${india ? "marks or rank" : "or a grade"}.` };
+  return {
+    id: "specifics",
+    label: "Numbers",
+    verdict: "improve",
+    detail: `No numbers yet. Add one: how many users or people, hours or ${currencySymbol(country)} saved, ${india ? "marks, rank" : "grades"}, or a % change.`,
+  };
 }
 
 // ---- I and we ------------------------------------------------------------------------------------------------------
@@ -245,14 +253,15 @@ export function checkStructure(text: string, kind: QuestionKind): Check | null {
 const SPECIFICS: QuestionKind[] = ["intro", "story", "case"];
 const OWNERSHIP: QuestionKind[] = ["story", "situational"];
 
-/** Every check for one answer, in the order shown. `spoken`: the answer came from speech-to-text. */
-export function checkAnswer(text: string, question: Pick<WarmupQuestion, "kind" | "words">, spoken = false): Check[] {
+/** Every check for one answer, in the order shown. `spoken`: the answer came from speech-to-text; `country`: where
+ *  the user applies (the examples follow it). */
+export function checkAnswer(text: string, question: Pick<WarmupQuestion, "kind" | "words">, spoken = false, country: string = INDIA): Check[] {
   const n = words(text).length;
   if (n < MIN_WORDS) return [];
   const out: Check[] = [checkLength(n, question.words ?? LENGTH[question.kind])];
   const shape = checkStructure(text, question.kind);
   if (shape) out.push(shape);
-  if (SPECIFICS.includes(question.kind)) out.push(checkSpecifics(text));
+  if (SPECIFICS.includes(question.kind)) out.push(checkSpecifics(text, country));
   if (OWNERSHIP.includes(question.kind)) out.push(checkOwnership(text));
   out.push(checkClarity(text, n, spoken));
   return out;
