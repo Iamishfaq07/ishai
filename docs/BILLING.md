@@ -49,6 +49,27 @@ ORBIT_CREDIT_PACKS_JSON='[{"id": "starter", "label": "Starter", "price_inr": 199
 ```
 An order keeps what the pack gave when it was bought, so changing packs never changes a paid order.
 
+## Prices outside India: US dollars, 30% higher
+`apps/api/orbit_api/billing/pricing.py`.
+- **Currency:** a buyer in India sees and pays rupees. Everyone else sees and pays **US dollars**.
+- **Formula:** rupee price ÷ `ORBIT_USD_INR` (default 88) × `ORBIT_INTL_MARKUP` (default 1.3), rounded up to the
+  next whole dollar less a cent. Examples:
+  - ₹3,599 → $53.99;
+  - ₹9,199 a month → $135.99;
+  - ₹35,999 a year → $531.99.
+- **Where the country comes from:** the visitor's IP. The web app's Cloudflare Worker sends Cloudflare's country as
+  `X-Orbit-Client-Country`.
+  - The API believes it only with the proxy secret, like the client IP.
+  - Without that header (the desktop app, a direct caller) it uses the account's saved country, then India.
+  - A VPN into India shows rupees, but those orders are then paid with Indian methods.
+- **Payments:**
+  - Dollar orders go through Razorpay in USD. `payments.currency` is "USD", `amount_minor` holds cents, and
+    `amount_inr` is the rupee equivalent for reports.
+  - UPI is rupees only, so it is refused for buyers outside India.
+- **Turning on dollar checkout (OWNER ACTION REQUIRED):** dollar prices can only be bought once Razorpay's
+  international card payments are approved on your account and `ORBIT_RAZORPAY_INTERNATIONAL=true` is set. Until
+  then, dollar prices show with their Buy buttons off.
+
 ## Monthly plans (paid once a month, never auto-renewing)
 `apps/api/orbit_api/billing/monthly.py` sells a plan for 30 days through the same checkout as the packs (Razorpay, or
 UPI with the admin's check). Buy one with `POST /v1/billing/razorpay/orders` or `/v1/billing/upi/orders` and

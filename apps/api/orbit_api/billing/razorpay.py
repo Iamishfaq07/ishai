@@ -33,15 +33,15 @@ def configured() -> bool:
     return bool(s.razorpay_key_id and s.razorpay_key_secret)
 
 
-async def create_order(amount_inr: int, receipt: str, notes: dict[str, str]) -> str:
-    """A Razorpay order for `amount_inr` rupees; returns its id ("order_…")."""
+async def create_order(amount_minor: int, receipt: str, notes: dict[str, str], currency: str = "INR") -> str:
+    """A Razorpay order for `amount_minor` paise (or cents, in `currency`); returns its id ("order_…")."""
     s = get_settings()
     if not (s.razorpay_key_id and s.razorpay_key_secret):
         raise RazorpayError("Razorpay isn't set up")
     async with httpx.AsyncClient(timeout=TIMEOUT_S, transport=transport) as http:
         try:
             r = await http.post(f"{API}/orders", auth=(s.razorpay_key_id, s.razorpay_key_secret.get_secret_value()),
-                                json={"amount": amount_inr * 100, "currency": "INR", "receipt": receipt[:40],
+                                json={"amount": amount_minor, "currency": currency, "receipt": receipt[:40],
                                       "notes": notes})
         except httpx.HTTPError as e:
             raise RazorpayError(f"couldn't reach Razorpay: {type(e).__name__}") from e

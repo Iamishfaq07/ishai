@@ -41,6 +41,17 @@ function time(minutes: number | null): string {
   return minutes >= 120 && minutes % 60 === 0 ? `${minutes / 60} hours` : `${minutes} minutes`;
 }
 
+/** An amount in the buyer's currency: "₹3,599" or "$53.99". */
+function money(v: number, currency: string = "INR"): string {
+  if (currency === "USD") return `$${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return rupees(v);
+}
+
+/** A pack's or plan's price as the server wrote it for this buyer (rupees from older servers). */
+function priceOf(p: { price_text?: string; price_inr: number }): string {
+  return p.price_text ?? rupees(p.price_inr);
+}
+
 function rupees(v: number): string {
   return `₹${v.toLocaleString("en-IN")}`;
 }
@@ -138,7 +149,7 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
     <ul className={cx("grid gap-5 sm:grid-cols-2", plans.length >= 3 ? "xl:grid-cols-4" : plans.length === 2 ? "xl:grid-cols-3" : "xl:grid-cols-2")}>
       <Tier
         name="Free"
-        price="₹0"
+        price={plans[0]?.currency === "USD" ? "$0" : "₹0"}
         per="forever"
         tagline={FREE_TAGLINE}
         cta={signedIn ? { label: onFree ? "Your current plan" : "Included", disabled: true } : { label: "Start free", to: "/register" }}
@@ -153,13 +164,13 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
       {plans.map((m) => {
         const mine = current?.plan === m.plan && Boolean(current?.until);
         const cta: Cta = signedIn
-          ? { label: mine ? `Extend · ${rupees(m.price_inr)}` : `Get ${m.label}`, onClick: () => onBuy?.(m), disabled: busy || !m.buyable, primary: m.id === popular || mine }
+          ? { label: mine ? `Extend · ${priceOf(m)}` : `Get ${m.label}`, onClick: () => onBuy?.(m), disabled: busy || !m.buyable, primary: m.id === popular || mine }
           : { label: `Get ${m.label}`, to: "/register", from: `/billing?pack=${m.id}`, primary: m.id === popular };
         return (
           <Tier
             key={m.id}
             name={m.label}
-            price={rupees(m.price_inr)}
+            price={priceOf(m)}
             per={periodLabel(m.days)}
             tagline={tagline(m)}
             badge={m.badge ?? undefined}
@@ -168,8 +179,8 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
             note={
               mine && current?.until
                 ? `Your plan is active until ${formatDate(current.until)}`
-                : m.days > 30 && m.per_month_inr
-                  ? `${rupees(m.per_month_inr)} a month, billed once. Never auto-renews.`
+                : m.days > 30 && (m.per_month_text || m.per_month_inr)
+                  ? `${m.per_month_text ?? rupees(m.per_month_inr!)} a month, billed once. Never auto-renews.`
                   : "Billed once. Never auto-renews."
             }
           >
@@ -207,10 +218,11 @@ export function PlanComparison({ monthly }: { monthly: MonthlyPlan[] | null }) {
   const free = useFreePlan();
   const plans = [...(monthly ?? [])].sort((a, b) => a.price_inr - b.price_inr);
   if (!plans.length) return null;
+  const zero = plans[0]?.currency === "USD" ? "$0" : "₹0";
   const yes = <Check className="mx-auto h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-label="Included" />;
   const rows: Array<[string, ReactNode, ...ReactNode[]]> = [
-    ["Price", "₹0", ...plans.map((m) => `${rupees(m.price_inr)} ${periodLabel(m.days)}`), "Custom"],
-    ["Per month", "₹0", ...plans.map((m) => (m.days < 30 ? "—" : rupees(m.per_month_inr ?? m.price_inr))), "Custom"],
+    ["Price", zero, ...plans.map((m) => `${priceOf(m)} ${periodLabel(m.days)}`), "Custom"],
+    ["Per month", zero, ...plans.map((m) => (m.days < 30 ? "—" : (m.per_month_text ?? rupees(m.per_month_inr ?? m.price_inr)))), "Custom"],
     ["Resume editor, ATS score, downloads", yes, ...plans.map(() => yes), yes],
     ["Job matches, fit checks, tracker", yes, ...plans.map(() => yes), yes],
     ["Resume AI", "1 credit per action (a fix: 1/5)", ...plans.map((m) => (m.resume_ai ? "Unlimited" : "Credits")), "Unlimited"],
@@ -275,10 +287,12 @@ export function CreditPackGrid({ packs, onBuy, busy = false }: { packs: CreditPa
           const total = p.total_minutes ?? p.interview_minutes + (p.bonus_minutes ?? 0);
           const paid = hours(p.interview_minutes);
           const free = hours(p.bonus_minutes ?? 0);
-          const perHour = Math.round(p.price_inr / (total / 60));
+          const cur = p.currency ?? "INR";
+          const perHourValue = (p.price ?? p.price_inr) / (total / 60);
+          const perHour = money(cur === "USD" ? Math.round(perHourValue * 100) / 100 : Math.round(perHourValue), cur);
           const highlight = p.badge === "Most popular";
           const cta: Cta = onBuy
-            ? { label: `Buy · ${rupees(p.price_inr)}`, onClick: () => onBuy(p), disabled: busy || !p.buyable, primary: highlight }
+            ? { label: `Buy · ${priceOf(p)}`, onClick: () => onBuy(p), disabled: busy || !p.buyable, primary: highlight }
             : { label: "Get started", to: "/register", from: `/billing?pack=${p.id}`, primary: highlight };
           return (
             <li key={p.id} className={cx("relative flex flex-col rounded-2xl bg-white p-6 ring-1 dark:bg-zinc-900/60", highlight ? "ring-2 ring-indigo-500 dark:ring-indigo-400" : "ring-zinc-900/10 dark:ring-white/10")}>
@@ -294,8 +308,8 @@ export function CreditPackGrid({ packs, onBuy, busy = false }: { packs: CreditPa
               <p className="mt-1 h-5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
                 {free > 0 ? `${paid} credits + ${free} free` : ""}
               </p>
-              <p className="mt-3 font-display text-2xl font-semibold tabular-nums">{rupees(p.price_inr)}</p>
-              <p className="text-xs text-zinc-500">{rupees(perHour)} an hour · paid once</p>
+              <p className="mt-3 font-display text-2xl font-semibold tabular-nums">{priceOf(p)}</p>
+              <p className="text-xs text-zinc-500">{perHour} an hour · paid once</p>
               <CtaButton cta={cta} />
               <ul className="mt-5 space-y-2 border-t border-zinc-900/5 pt-5 text-sm text-zinc-700 dark:border-white/5 dark:text-zinc-300">
                 <Feature>{hours(total)} hour{hours(total) === 1 ? "" : "s"} of live or mock interviews</Feature>
@@ -313,14 +327,14 @@ export function CreditPackGrid({ packs, onBuy, busy = false }: { packs: CreditPa
           </span>
           <div className="min-w-0 flex-1">
             <p className="font-semibold">
-              {p.label}: {p.resume_credits} Resume AI credits · {rupees(p.price_inr)}
+              {p.label}: {p.resume_credits} Resume AI credits · {priceOf(p)}
             </p>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               Only need Resume AI? Imports, tailoring and cover letters use 1 credit; a single AI fix uses a fifth. Never expire.
             </p>
           </div>
           <div className="sm:w-48 [&>*]:mt-0">
-            <CtaButton cta={onBuy ? { label: `Buy · ${rupees(p.price_inr)}`, onClick: () => onBuy(p), disabled: busy || !p.buyable } : { label: "Get started", to: "/register", from: `/billing?pack=${p.id}` }} />
+            <CtaButton cta={onBuy ? { label: `Buy · ${priceOf(p)}`, onClick: () => onBuy(p), disabled: busy || !p.buyable } : { label: "Get started", to: "/register", from: `/billing?pack=${p.id}` }} />
           </div>
         </div>
       ))}

@@ -163,6 +163,10 @@ class Payment(TimestampMixin, Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     note: Mapped[str | None] = mapped_column(String(300))  # the admin's reason, shown to the payer
     method: Mapped[str] = mapped_column(String(16), default="upi", server_default="upi")
+    # What was charged: INR (amount_inr) or, outside India, USD in cents (amount_minor; amount_inr is then its rupee
+    # equivalent, for reports). billing/pricing.py.
+    currency: Mapped[str] = mapped_column(String(3), default="INR", server_default="INR")
+    amount_minor: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Razorpay's order and payment ids ("order_…", "pay_…"): unique, so one payment is credited once.
     gateway_order_id: Mapped[str | None] = mapped_column(String(40), unique=True)
     gateway_payment_id: Mapped[str | None] = mapped_column(String(40), unique=True)

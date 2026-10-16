@@ -54,7 +54,7 @@ export function UpgradeLink({ className, children }: { className?: string; child
       )}
     >
       <Crown className="h-4 w-4" />
-      {children ?? (offer ? `Get credits · from ${priceText(offer.price_inr)}` : "Get credits")}
+      {children ?? (offer ? `Get credits · from ${(offer.price_text ?? priceText(offer.price_inr))}` : "Get credits")}
     </Link>
   );
 }
@@ -102,12 +102,12 @@ export function AllowanceBanner() {
             {" "}
             Each AI import, tailoring, cover letter, whole-resume rewrite, profile or message uses one
             {fixesPerCredit(allowance) > 1 ? `, and one covers ${fixesPerCredit(allowance)} single AI fixes` : ""}; typing, the ATS score and downloads are free.
-            {offer && ` The ${offer.label} pack adds ${offer.resume_credits} credits${offer.interview_minutes ? ` and ${offer.interview_minutes} interview minutes` : ""} for ${priceText(offer.price_inr)}, and they never expire.`}
+            {offer && ` The ${offer.label} pack adds ${offer.resume_credits} credits${offer.interview_minutes ? ` and ${offer.interview_minutes} interview minutes` : ""} for ${(offer.price_text ?? priceText(offer.price_inr))}, and they never expire.`}
           </span>
         </span>
         <UpgradeLink className="shrink-0 !px-2.5 !py-1 !text-xs sm:!px-3 sm:!py-1.5 sm:!text-sm">
           <span className="sm:hidden">Get credits</span>
-          <span className="hidden sm:inline">{offer ? `Get credits · from ${priceText(offer.price_inr)}` : "Get credits"}</span>
+          <span className="hidden sm:inline">{offer ? `Get credits · from ${(offer.price_text ?? priceText(offer.price_inr))}` : "Get credits"}</span>
         </UpgradeLink>
       </div>
     );
@@ -129,7 +129,7 @@ export function AllowanceBanner() {
         </strong>{" "}
         Each AI import, tailoring, cover letter, whole-resume rewrite, profile or message uses one
         {fixesPerCredit(allowance) > 1 ? `, and one covers ${fixesPerCredit(allowance)} single AI fixes` : ""}; typing, the ATS score and downloads are free.
-        {offer && ` The ${offer.label} pack adds ${offer.resume_credits} credits${offer.interview_minutes ? ` and ${offer.interview_minutes} interview minutes` : ""} for ${priceText(offer.price_inr)}, and they never expire.`}
+        {offer && ` The ${offer.label} pack adds ${offer.resume_credits} credits${offer.interview_minutes ? ` and ${offer.interview_minutes} interview minutes` : ""} for ${(offer.price_text ?? priceText(offer.price_inr))}, and they never expire.`}
       </span>
       <UpgradeLink className="shrink-0" />
     </div>

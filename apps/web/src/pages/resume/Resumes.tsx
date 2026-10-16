@@ -530,7 +530,7 @@ export function NewResume({ onClose, initial = null }: { onClose?: () => void; i
             to={`/billing?pack=${ai?.upgrade?.pack ?? ""}`}
             className={cx("inline-flex rounded-xl bg-amber-500 px-3 py-1.5 font-medium text-white hover:bg-amber-600", focusRing)}
           >
-            {ai?.upgrade ? `Get credits · ${priceText(ai.upgrade.price_inr)}` : "Get credits"}
+            {ai?.upgrade ? `Get credits · ${(ai.upgrade.price_text ?? priceText(ai.upgrade.price_inr))}` : "Get credits"}
           </Link>
         </div>
       )}

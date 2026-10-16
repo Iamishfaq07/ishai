@@ -275,10 +275,12 @@ function Pricing({ packs, monthly, welcome, stats }: { packs: CreditPack[] | nul
       <h3 className="mt-14 font-display text-xl font-semibold">Pay as you go: credits</h3>
       <p className="mt-1 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
         {cards
-          ? `1 interview credit is 1 hour of live or mock interviews, with Resume AI credits included. Bought once when you need them, by ${india ? "UPI, card or netbanking" : abroad ? "card from any country (charged in rupees; your bank converts it)" : "an Indian card, UPI or netbanking for now (cards from other countries are coming soon)"}. What's in them never expires.`
+          ? `1 interview credit is 1 hour of live or mock interviews, with Resume AI credits included. Bought once when you need them, by ${india ? "UPI, card or netbanking" : packs?.[0]?.currency === "USD" ? "card, in US dollars" : abroad ? "card from any country (in US dollars outside India)" : "an Indian card, UPI or netbanking for now (cards from other countries are coming soon)"}. What's in them never expires.`
           : india
             ? "Credit packs, bought once with any UPI app when you need them. What's in them never expires."
-            : "Credit packs that never expire, priced in Indian rupees and paid with UPI for now; card payments for other countries are coming soon."}
+            : packs?.[0]?.currency === "USD"
+              ? "Credit packs that never expire, priced in US dollars. Card payments from outside India are coming soon."
+              : "Credit packs that never expire, priced in Indian rupees and paid with UPI for now; card payments for other countries are coming soon."}
       </p>
 
       <div className="mt-6">
@@ -390,7 +392,7 @@ function Faq({ welcome, stats, cards = false, abroad = false }: {
           {india
             ? " UPI, a debit or credit card, netbanking or a wallet."
             : abroad
-              ? " a debit or credit card from any country (charged in Indian rupees; your bank converts it)."
+              ? " a debit or credit card from any country (in US dollars outside India)."
               : " for now an Indian card, UPI or netbanking; cards from other countries are coming soon."}{" "}
           The credits are added as soon as Razorpay confirms the payment, usually within seconds. Nothing renews, and
           what you buy never expires.

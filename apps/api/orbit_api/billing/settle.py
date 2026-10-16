@@ -21,7 +21,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits
-from orbit_api.billing import monthly, razorpay
+from orbit_api.billing import monthly, pricing, razorpay
 from orbit_api.config import get_settings
 from orbit_api.db import sessionmaker
 from orbit_api.models import AuditLog, Payment, PaymentRefund, User
@@ -49,7 +49,8 @@ def what(p: Payment) -> str:
 def captured_for(p: Payment, payment: dict[str, Any]) -> bool:
     """Razorpay's payment is a capture of exactly this order's price, in rupees."""
     return (str(payment.get("status")) == "captured" and str(payment.get("order_id")) == p.gateway_order_id
-            and str(payment.get("currency")) == "INR" and payment.get("amount") == p.amount_inr * 100)
+            and str(payment.get("currency")) == pricing.payment_currency(p)
+            and payment.get("amount") == pricing.payment_minor(p))
 
 
 def aware(d: datetime | None) -> datetime | None:
@@ -72,7 +73,7 @@ async def credit(db: AsyncSession, p: Payment, gateway_payment_id: str) -> Outgo
         return None
     await grant(db, u, p)
     db.add(AuditLog(user_id=u.id, action="payment.razorpay",
-                    target=f"{p.id} {p.plan} ₹{p.amount_inr} {gateway_payment_id}"))
+                    target=f"{p.id} {p.plan} {pricing.payment_text(p)} {gateway_payment_id}"))
     try:
         await db.commit()
     except IntegrityError:  # credited a moment ago by another confirmation (checkout, webhook or reconciler)
@@ -106,13 +107,13 @@ def receipt(u: User, p: Payment, paid_by: str) -> OutgoingEmail:
         ends = f" It runs until {until:%d %b %Y}." if until else ""
         return OutgoingEmail(
             to=u.email, subject=f"Payment received: {what(p)} on Orbit",
-            text=(f"Thanks! We received your ₹{p.amount_inr} payment ({paid_by}).\n\nYour account now has "
+            text=(f"Thanks! We received your {pricing.payment_text(p)} payment ({paid_by}).\n\nYour account now has "
                   f"{what(p)}.{ends} Nothing renews or is charged automatically: buy another month from Plan & "
                   f"billing whenever you want more. Sign in to use it: {web}/login"))
     return OutgoingEmail(
         to=u.email, subject=f"Payment received: {what(p)} added to Orbit",
-        text=(f"Thanks! We received your ₹{p.amount_inr} payment ({paid_by}).\n\nYour account now has {what(p)} "
-              f"more. They don't expire. Sign in to use them: {web}/login"))
+        text=(f"Thanks! We received your {pricing.payment_text(p)} payment ({paid_by}).\n\n"
+              f"Your account now has {what(p)} more. They don't expire. Sign in to use them: {web}/login"))
 
 
 async def hold(db: AsyncSession, p: Payment, gateway_payment_id: str) -> None:
@@ -134,9 +135,11 @@ async def _refresh_refunded(db: AsyncSession, p: Payment) -> None:
         .order_by(PaymentRefund.created_at))).all()
     p.refunded_paise = sum(r.amount_paise for r in done)
     if p.refunded_paise:
-        whole = p.refunded_paise >= p.amount_inr * 100
+        whole = p.refunded_paise >= pricing.payment_minor(p)
         ids = ", ".join(r.refund_id for r in done)
-        p.note = (f"Razorpay refunded ₹{p.refunded_paise // 100}{'' if whole else f' of ₹{p.amount_inr}'} "
+        cur = pricing.payment_currency(p)
+        refunded = pricing.money(cur, p.refunded_paise)
+        p.note = (f"Razorpay refunded {refunded}{'' if whole else f' of {pricing.payment_text(p)}'} "
                   f"({ids}). Credits were not removed.")[:300]
 
 

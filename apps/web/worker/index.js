@@ -30,9 +30,13 @@ async function proxyToApi(request, env, url) {
   // client IP stated here and nothing a caller sends directly; never forward a client's own copy of either header.
   proxied.headers.delete("x-orbit-proxy-secret");
   proxied.headers.delete("x-orbit-client-ip");
+  proxied.headers.delete("x-orbit-client-country");
   if (env.PROXY_SECRET && clientIp) {
     proxied.headers.set("x-orbit-proxy-secret", env.PROXY_SECRET);
     proxied.headers.set("x-orbit-client-ip", clientIp);
+    // The visitor's country, from Cloudflare: prices are in rupees in India and US dollars elsewhere.
+    const country = request.cf?.country || request.headers.get("cf-ipcountry");
+    if (country && country !== "XX" && country !== "T1") proxied.headers.set("x-orbit-client-country", country);
   }
   return fetch(proxied);
 }

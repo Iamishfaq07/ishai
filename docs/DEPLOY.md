@@ -32,6 +32,9 @@ Render dashboard → New → Blueprint → this repo (`render.yaml`). Set the pr
 | `ORBIT_FALLBACK_LLM_*`, `ORBIT_LLM_FIRST_TOKEN_TIMEOUT_S` | no | backup LLM (any OpenAI-compatible API) used when DeepSeek fails before its first token. See [AI_PROVIDER.md](AI_PROVIDER.md) |
 | `ORBIT_EMBEDDER` | no | `hash` (default) or `bge-small`: local neural retrieval, about +200 MB RAM, much better recall. See [RETRIEVAL.md](RETRIEVAL.md) |
 | `ORBIT_STT_PRICE_PER_MINUTE` | no | per-minute speech-to-text price for the admin cost dashboard (default 0.0077, Deepgram Nova-3 streaming list price; set your rate, or empty = unknown) |
+| `ORBIT_USD_INR` | no | rupees to the dollar for prices outside India (default 88) |
+| `ORBIT_INTL_MARKUP` | no | how much more buyers outside India pay (default 1.3 = 30% more) |
+| `ORBIT_RAZORPAY_INTERNATIONAL` | no | `true` once Razorpay has approved international cards: dollar prices become buyable |
 | `ORBIT_LLM_PRICING_JSON` | no | extra/override LLM prices for internal cost estimates (see `providers/llm/pricing.py`) |
 | `ORBIT_LIVE_HEARTBEAT_S` | no | live-minute commit/enforcement interval, default 15 |
 | `ORBIT_SPOOL_DIR` | no | where dead-lettered writes spool if the DB is unreachable (default: temp dir) |
