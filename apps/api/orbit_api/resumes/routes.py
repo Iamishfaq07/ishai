@@ -28,7 +28,7 @@ from collections.abc import Awaitable
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -144,10 +144,16 @@ async def list_resumes(user: Annotated[User, Depends(current_user)],
 
 # Before "/{resume_id}", which would otherwise take "allowance" for an id.
 @router.get("/allowance", response_model=AllowanceOut)
-async def my_allowance(user: Annotated[User, Depends(current_user)],
+async def my_allowance(request: Request, user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> AllowanceOut:
-    """Whether the AI is unlimited on this plan, or how many resume credits are left (and what a pack costs)."""
-    return await (await allowance_for(db, user)).status()
+    """Whether the AI is unlimited on this plan, or how many resume credits are left (and what a pack costs, in the
+    buyer's currency)."""
+    from orbit_api.billing import pricing
+
+    out = await (await allowance_for(db, user)).status()
+    if out.upgrade is not None:
+        out.upgrade.price_text = pricing.price(out.upgrade.price_inr, pricing.currency_for(request, user)).text()
+    return out
 
 
 @router.post("", response_model=ResumeOut, status_code=201)

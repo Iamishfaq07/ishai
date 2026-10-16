@@ -147,7 +147,7 @@ function Payments({ orders, onOpen }: { orders: UpiOrder[]; onOpen: (o: UpiOrder
         {shown.map((o) => (
           <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
             <span className="font-medium">
-              {o.label} · ₹{o.amount_inr}
+              {o.label} · {o.amount_text || `₹${o.amount_inr}`}
             </span>
             <span className="text-zinc-500">{formatDate(o.submitted_at ?? o.created_at)}</span>
             {o.method === "razorpay" ? (
@@ -325,7 +325,9 @@ export function BillingPage() {
           {!packs.data ? null : list[0]?.checkout === "razorpay"
             ? `Pay once by card, UPI, netbanking or wallet, through Razorpay. ${
                 list[0]?.international
-                  ? "Cards from outside India work too: you're charged in rupees and your bank converts it."
+                  ? list[0]?.currency === "USD"
+                    ? "Prices outside India are in US dollars, charged by card."
+                    : "Cards from outside India work too: prices there are shown in US dollars."
                   : "Cards issued outside India can't be used yet; that's coming soon."
               } Nothing renews, and what you bought is added as soon as Razorpay confirms the payment, usually within seconds.`
             : "Pay once over UPI (Google Pay, PhonePe, Paytm or any bank app). Nothing renews or is charged automatically, and what you bought is added as soon as your payment is checked."}

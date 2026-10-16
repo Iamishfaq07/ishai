@@ -28,20 +28,20 @@ def rzp(enforce: None, monkeypatch: pytest.MonkeyPatch) -> Iterator[list[httpx.R
     monkeypatch.setattr(s, "razorpay_key_secret", SecretStr(KEY_SECRET))
     monkeypatch.setattr(s, "razorpay_webhook_secret", SecretStr(HOOK_SECRET))
     seen: list[httpx.Request] = []
-    orders: list[tuple[str, int]] = []
+    orders: list[tuple[str, int, str]] = []
 
     def handle(request: httpx.Request) -> httpx.Response:
         seen.append(request)
         if request.method == "GET" and "/payments/" in request.url.path:
             pay_id = request.url.path.rsplit("/", 1)[-1]
-            order_id, amount = orders[-1]
+            order_id, amount, currency = orders[-1]
             return httpx.Response(200, json={"id": pay_id, "order_id": order_id, "amount": amount,
-                                             "currency": "INR", "status": "captured"})
+                                             "currency": currency, "status": "captured"})
         body = json.loads(request.content)
         order_id = f"order_{uuid.uuid4().hex[:14]}"
-        orders.append((order_id, int(body["amount"])))
+        orders.append((order_id, int(body["amount"]), str(body["currency"])))
         return httpx.Response(200, json={"id": order_id, "amount": body["amount"],
-                                         "currency": "INR", "status": "created"})
+                                         "currency": body["currency"], "status": "created"})
 
     monkeypatch.setattr(razorpay, "transport", httpx.MockTransport(handle))
     yield seen
@@ -232,3 +232,41 @@ def test_the_migration_adds_and_removes_the_columns(tmp_path: Any) -> None:
     alembic("downgrade", "a6d8f0b2c4e5")
     assert "gateway_order_id" not in columns()
     alembic("upgrade", "head")
+
+
+def test_outside_india_prices_and_charges_are_in_dollars_30_percent_higher(
+        client: TestClient, rzp: list[httpx.Request], monkeypatch: pytest.MonkeyPatch) -> None:
+    from orbit_api.billing import pricing
+    from tests.test_credits import PROXY
+
+    us = {"X-Orbit-Proxy-Secret": PROXY, "X-Orbit-Client-Country": "US"}
+    india = {"X-Orbit-Proxy-Secret": PROXY, "X-Orbit-Client-Country": "IN"}
+    starter_in = next(p for p in client.get("/v1/billing/packs", headers=india).json() if p["id"] == "starter")
+    assert (starter_in["currency"], starter_in["price_text"]) == ("INR", "₹3,599")
+    # ₹3,599 at ₹88 to the dollar is $40.90; 30% more is $53.17, shown as $53.99.
+    starter_us = next(p for p in client.get("/v1/billing/packs", headers=us).json() if p["id"] == "starter")
+    assert (starter_us["currency"], starter_us["price"], starter_us["price_text"]) == ("USD", 53.99, "$53.99")
+    assert starter_us["buyable"] is False  # dollars need Razorpay's international payments switched on
+    month = next(m for m in client.get("/v1/billing/monthly", headers=us).json() if m["id"] == "premium_monthly")
+    assert month["price_text"] == "$135.99" and month["per_month_text"] == "$135.99"
+    # A spoofed country without the proxy secret counts for nothing: rupees (the default).
+    assert client.get("/v1/billing/packs", headers={"X-Orbit-Client-Country": "US"}).json()[0]["currency"] == "INR"
+    for inr in (499, 2299, 3599, 7199, 10899, 4799, 9199, 35999):
+        cents = pricing.usd_cents(inr)
+        assert cents % 100 == 99 and cents / 100 >= inr / 88 * 1.3
+
+    monkeypatch.setattr(get_settings(), "razorpay_international", True)
+    assert next(p for p in client.get("/v1/billing/packs", headers=us).json() if p["id"] == "starter")["buyable"]
+    h = {**_signup(client, _new_ip()), "X-Orbit-Client-Country": "US"}
+    before = _wallet(client, h)
+    o = client.post("/v1/billing/razorpay/orders", headers=h, json={"pack": "starter"}).json()
+    assert (o["amount_paise"], o["currency"]) == (5399, "USD")
+    assert json.loads(rzp[-1].content)["currency"] == "USD"
+    ok = client.post("/v1/billing/razorpay/verify", headers=h, json={
+        "order_id": o["order_id"], "payment_id": "pay_U1", "signature": _sign(o["order_id"], "pay_U1")})
+    assert ok.status_code == 200 and ok.json()["status"] == "approved"
+    assert (ok.json()["currency"], ok.json()["amount_text"]) == ("USD", "$53.99")
+    assert _wallet(client, h)["resume"] == before["resume"] + 30
+    # UPI is rupees, for India only.
+    upi = client.post("/v1/billing/upi/orders", headers=h, json={"pack": "starter"})
+    assert upi.status_code in (409, 503)

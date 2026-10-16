@@ -769,6 +769,12 @@ export interface MonthlyPlan {
   badge?: string | null;
   /** The price spread over 30-day months (a quarter or a year bought at once). */
   per_month_inr?: number;
+  /** The buyer's currency and price: "INR" in India, "USD" elsewhere (30% above the rupee price). */
+  currency?: "INR" | "USD";
+  price?: number;
+  price_text?: string;
+  per_month?: number;
+  per_month_text?: string;
   /** What each 30 days includes (null = unlimited). */
   live_minutes: number | null;
   mock_minutes: number | null;
@@ -793,6 +799,10 @@ export interface CreditPack {
   total_minutes?: number;
   /** "Most popular", "Best value". */
   badge?: string | null;
+  /** The buyer's currency and price: "INR" in India, "USD" elsewhere (30% above the rupee price). */
+  currency?: "INR" | "USD";
+  price?: number;
+  price_text?: string;
   /** Can be bought right now (Razorpay or a UPI ID is set up). */
   buyable: boolean;
   /** How: Razorpay's checkout (cards, UPI, netbanking), UPI with a UTR, or not at all. */
@@ -826,6 +836,9 @@ export type UpiOrderStatus = "awaiting_payment" | "submitted" | "approved" | "re
 
 /** A UPI payment for a credit pack: pay, give the UTR, the admin approves it, the credits land. */
 export interface UpiOrder {
+  /** What was charged in its own currency ("$53.99"); amount_inr is the rupee equivalent abroad. */
+  currency?: "INR" | "USD";
+  amount_text?: string;
   id: string;
   pack: string;
   label: string;
@@ -888,7 +901,7 @@ export interface ResumeAiAllowance {
   /** The plan includes resume AI: no credits needed. */
   unlimited: boolean;
   credits_left: number;
-  upgrade: { pack: string; label: string; price_inr: number; resume_credits: number; interview_minutes: number; buyable: boolean } | null;
+  upgrade: { pack: string; label: string; price_inr: number; price_text?: string | null; resume_credits: number; interview_minutes: number; buyable: boolean } | null;
   /** Single AI fixes already paid for: one credit covers `fixes_per_credit` of them (older servers: absent). */
   fixes_left?: number;
   fixes_per_credit?: number;

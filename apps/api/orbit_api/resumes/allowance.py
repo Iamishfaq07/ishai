@@ -40,6 +40,7 @@ class UpgradeOffer(BaseModel):
     resume_credits: int
     interview_minutes: int
     buyable: bool
+    price_text: str | None = None  # in the buyer's currency ("$7.99" outside India), where the request is known
 
 
 class AllowanceOut(BaseModel):

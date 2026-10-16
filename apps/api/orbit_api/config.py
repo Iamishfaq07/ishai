@@ -72,6 +72,9 @@ class Settings(BaseSettings):
         None, validation_alias=AliasChoices("ORBIT_RAZORPAY_WEBHOOK_SECRET"))
     # Razorpay takes cards issued outside India only once it has enabled international payments for the account.
     # Until this is on, pages don't promise buyers abroad that their card will work.
+    # Prices outside India (billing/pricing.py): dollars at this many rupees to the dollar, plus this markup.
+    usd_inr_rate: float = Field(88.0, gt=1, validation_alias=AliasChoices("ORBIT_USD_INR"))
+    intl_markup: float = Field(1.3, ge=1, le=5, validation_alias=AliasChoices("ORBIT_INTL_MARKUP"))
     razorpay_international: bool = Field(False, validation_alias=AliasChoices("ORBIT_RAZORPAY_INTERNATIONAL"))
     # Career Evidence Vault (evidence/routes.py): off until switched on; while off its API answers 404 and live
     # sessions don't read it.

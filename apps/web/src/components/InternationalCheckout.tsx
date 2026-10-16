@@ -30,7 +30,7 @@ export function InternationalCheckout({ pack, country, onClose, onDomestic }: {
         {receipt ? <p role="status" className="rounded-xl bg-emerald-500/10 p-4">{receipt.message}<br /><strong className="tabular-nums">{receipt.reference}</strong></p>
           : <Button disabled={busy} onClick={() => void claim()}>{busy ? "Reserving…" : "Request launch access"}</Button>}
       </> : <>
-        <p className="tabular-nums">{pack.label} · ₹{pack.price_inr.toLocaleString("en-IN")}</p>
+        <p className="tabular-nums">{pack.label} · {pack.price_text ?? `₹${pack.price_inr.toLocaleString("en-IN")}`}</p>
         <p className="text-sm text-zinc-500">Use UPI or a card issued in India. Your bank may convert the charge; international cards may still be declined.</p>
         <Button onClick={onDomestic}>Continue with INR</Button>
       </>}

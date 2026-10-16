@@ -16,8 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import entitlements
 from orbit_api.admin.routes import require_admin
-from orbit_api.auth.security import current_user
-from orbit_api.billing import razorpay, settle, upi
+from orbit_api.auth.security import current_user, optional_user
+from orbit_api.billing import pricing, razorpay, settle, upi
 from orbit_api.billing.monthly import monthly_plans, public_monthly
 from orbit_api.billing.packs import pack_label as packs_label
 from orbit_api.billing.packs import packs, public_packs
@@ -85,16 +85,34 @@ async def list_plans() -> list[dict[str, Any]]:
     return entitlements.public_plans()
 
 
+def _priced(items: list[dict[str, Any]], currency: str) -> list[dict[str, Any]]:
+    """Each item's price in the buyer's currency: `price` (major units), `price_text` and, for a long plan, the
+    monthly equivalent. `price_inr` stays (the configured rupee price)."""
+    out = []
+    for item in items:
+        cost = pricing.price(item["price_inr"], currency)
+        extra: dict[str, Any] = {"currency": cost.currency, "price": cost.major, "price_text": cost.text()}
+        if cost.currency != pricing.INR:  # dollars are charged by card through Razorpay, once it takes them
+            extra["buyable"] = bool(item.get("buyable") and item.get("checkout") == "razorpay"
+                                    and item.get("international"))
+        if "days" in item:
+            per = round(cost.minor * 30 / item["days"])
+            extra |= {"per_month": per / 100, "per_month_text": pricing.money(cost.currency, per)}
+        out.append({**item, **extra})
+    return out
+
+
 @router.get("/billing/monthly")
-async def list_monthly() -> list[dict[str, Any]]:
-    """The monthly plans for sale (public): a plan for 30 days, paid once; nothing renews."""
-    return public_monthly()
+async def list_monthly(request: Request, user: Annotated[User | None, Depends(optional_user)]) -> list[dict[str, Any]]:
+    """The monthly plans for sale (public): a plan for 30 days, paid once; nothing renews. Priced in rupees in
+    India and US dollars elsewhere (billing/pricing.py)."""
+    return _priced(public_monthly(), pricing.currency_for(request, user))
 
 
 @router.get("/billing/packs")
-async def list_packs() -> list[dict[str, Any]]:
+async def list_packs(request: Request, user: Annotated[User | None, Depends(optional_user)]) -> list[dict[str, Any]]:
     """Public: the credit packs for sale, and whether they can be bought right now (a UPI ID is set)."""
-    return public_packs()
+    return _priced(public_packs(), pricing.currency_for(request, user))
 
 
 @router.get("/entitlements")
@@ -125,6 +143,9 @@ class UpiOrderOut(BaseModel):
     decided_at: datetime | None
     method: str = "upi"  # "upi" (a UTR the admin checks) or "razorpay" (confirmed by Razorpay)
     refunded_inr: int = 0  # refunds that went through (credits are kept: docs/BILLING.md, refund policy)
+    # What was charged, in its own currency: "₹3,599" or "$53.99" (amount_inr is the rupee equivalent abroad).
+    currency: str = "INR"
+    amount_text: str = ""
     # How to pay; only while there's still something to pay (not once it's submitted or approved). The app shows
     # `upi_uri` as a QR, and as a tap-through link on phones.
     upi_id: str | None = None
@@ -149,7 +170,8 @@ def _order_out(p: Payment) -> UpiOrderOut:
                       note=p.note, created_at=upi.aware(p.created_at),
                       submitted_at=upi.aware(p.submitted_at) if p.submitted_at else None,
                       decided_at=upi.aware(p.decided_at) if p.decided_at else None, method=p.method or "upi",
-                      refunded_inr=(p.refunded_paise or 0) // 100)
+                      refunded_inr=(p.refunded_paise or 0) // 100, currency=pricing.payment_currency(p),
+                      amount_text=pricing.payment_text(p))
     s = get_settings()
     if p.status in ("awaiting_payment", "rejected") and s.upi_id and out.method == "upi":
         out.upi_id, out.payee_name, out.upi_uri = s.upi_id, s.upi_name, upi.upi_uri(p, label)
@@ -173,11 +195,13 @@ def _product(product_id: str) -> tuple[str, str, int, int, int, int]:
 
 
 @router.post("/billing/upi/orders", response_model=UpiOrderOut, status_code=201, dependencies=[Depends(order_limit)])
-async def create_order(body: OrderIn, user: Annotated[User, Depends(current_user)],
+async def create_order(body: OrderIn, request: Request, user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> UpiOrderOut:
     """Start paying for a credit pack: the amount, reference and UPI link. An open order for the same pack from the
     last day is handed back instead of making another."""
     pid, _, price, days, resume_credits, minutes = _product(body.pack)
+    if pricing.currency_for(request, user) != pricing.INR:
+        raise HTTPException(status.HTTP_409_CONFLICT, "UPI is for payments from India. Pay by card instead.")
     if not get_settings().upi_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "UPI payments aren't set up yet.")
     since = datetime.now(UTC) - upi.OPEN_ORDER_REUSE
@@ -274,27 +298,31 @@ class VerifyIn(BaseModel):
 
 @router.post("/billing/razorpay/orders", response_model=CheckoutOut, status_code=201,
              dependencies=[Depends(order_limit)])
-async def razorpay_order(body: OrderIn, user: Annotated[User, Depends(current_user)],
+async def razorpay_order(body: OrderIn, request: Request, user: Annotated[User, Depends(current_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> CheckoutOut:
-    """Start buying a pack through Razorpay: an order there for the pack's price, kept here until it's paid."""
-    pid, label, price, days, resume_credits, minutes = _product(body.pack)
+    """Start buying a pack through Razorpay: an order there for the pack's price (rupees in India, US dollars
+    elsewhere: billing/pricing.py), kept here until it's paid."""
+    pid, label, price_inr, days, resume_credits, minutes = _product(body.pack)
+    cost = pricing.price(price_inr, pricing.currency_for(request, user))
     key_id = get_settings().razorpay_key_id
     if not razorpay.configured() or not key_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Card payments aren't set up yet.")
     reference = upi.new_reference()
     try:
-        order_id = await razorpay.create_order(price, reference, {"pack": pid, "orbit_ref": reference})
+        order_id = await razorpay.create_order(cost.minor, reference, {"pack": pid, "orbit_ref": reference},
+                                               currency=cost.currency)
     except razorpay.RazorpayError as e:
         log.warning("razorpay order failed: %s", e)
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
                             "Payments aren't reachable right now. Try again in a minute.") from e
-    p = Payment(user_id=user.id, plan=pid, amount_inr=price, days=days, resume_credits=resume_credits,
+    p = Payment(user_id=user.id, plan=pid, amount_inr=cost.inr, days=days, resume_credits=resume_credits,
                 interview_minutes=minutes, reference=reference, status="awaiting_payment",
-                method="razorpay", gateway_order_id=order_id)
+                method="razorpay", gateway_order_id=order_id, currency=cost.currency,
+                amount_minor=cost.minor if cost.currency != pricing.INR else None)
     db.add(p)
     await db.commit()
-    return CheckoutOut(payment_id=p.id, order_id=order_id, key_id=key_id, amount_paise=price * 100,
-                       currency="INR", label=label, email=user.email, name=user.name)
+    return CheckoutOut(payment_id=p.id, order_id=order_id, key_id=key_id, amount_paise=cost.minor,
+                       currency=cost.currency, label=label, email=user.email, name=user.name)
 
 
 @router.post("/billing/razorpay/verify", response_model=UpiOrderOut, dependencies=[Depends(utr_limit)])
@@ -378,9 +406,9 @@ async def _apply(db: AsyncSession, event: dict[str, Any], background: Background
     if p.status not in settle.CREDITABLE:
         return "processed"  # credited already (or by the checkout a moment ago)
     if not settle.captured_for(p, entity):
-        if entity.get("amount") != p.amount_inr * 100 or str(entity.get("currency")) != "INR":
-            log.warning("razorpay webhook: %s paid %s %s, expected %s paise INR", order_id, entity.get("amount"),
-                        entity.get("currency"), p.amount_inr * 100)
+        if entity.get("amount") != pricing.payment_minor(p) or str(entity.get("currency")) != p.currency:
+            log.warning("razorpay webhook: %s paid %s %s, expected %s %s", order_id, entity.get("amount"),
+                        entity.get("currency"), pricing.payment_minor(p), p.currency)
         return "ignored"
     mail = await settle.credit(db, p, payment_id)
     if mail is not None:
