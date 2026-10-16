@@ -1,6 +1,6 @@
 // Jobs AI's plain logic (no React): labels, "posted 3h ago", the match colours, the tracker's columns, the small
 // list edits the profile page makes, and which message Outreach starts on. Kept here so it's unit-tested (model.test.ts).
-import { INDIA, countryInSentence, isIndia } from "@orbit/ui";
+import { INDIA, countryInSentence, isIndia, regionWords } from "@orbit/ui";
 import type {
   JobEmploymentType,
   JobLevel,
@@ -53,6 +53,16 @@ export const LEVELS: Array<{ id: JobLevel; label: string; hint: string }> = [
   { id: "mid", label: "Mid-level", hint: "3-6 years" },
   { id: "senior", label: "Senior", hint: "6+ years" },
 ];
+
+/** The levels as named where the user applies ("Fresher" in India, "Entry level" elsewhere); the ids stay the server's. */
+export function levelsFor(country: string = INDIA): typeof LEVELS {
+  if (isIndia(country)) return LEVELS;
+  return LEVELS.map((l) => (l.id === "fresher" ? { ...l, label: regionWords(country).entryLevel } : l));
+}
+
+export function levelLabel(level: JobLevel | null | undefined, country: string = INDIA): string | undefined {
+  return levelsFor(country).find((l) => l.id === level)?.label;
+}
 
 export const POSTED_WITHIN: Array<{ days: JobPostedWithin; label: string; short: string }> = [
   { days: 1, label: "Last 24 hours", short: "24h" },
@@ -109,13 +119,14 @@ export function factsLine(job: Pick<JobListing, "employment_type" | "experience"
 /** A job's key facts for its own page, only those the post states: [label, value]. */
 export function jobFacts(
   job: Pick<JobListing, "company" | "place" | "workplace" | "employment_type" | "level" | "experience" | "salary">,
+  country: string = INDIA,
 ): Array<[string, string]> {
   const facts: Array<[string, string | null | undefined]> = [
     ["Company", job.company],
     ["Location", job.place],
     ["Work mode", WORKPLACES.find((w) => w.id === job.workplace)?.label],
     ["Job type", employmentLabel(job.employment_type)],
-    ["Level", LEVELS.find((l) => l.id === job.level)?.label],
+    ["Level", levelLabel(job.level, country)],
     ["Experience", job.experience],
     ["Salary", job.salary],
   ];
@@ -171,7 +182,7 @@ export function profileSummary(prefs: JobPrefs, country: string = INDIA): string
     : cities.length
       ? `${cities.slice(0, 2).join(", ")}${remoteToo ? " or remote" : ""}`
       : `${anywhereLabel(country)}${remoteToo ? " or remote" : ""}`;
-  const years = prefs.years !== null ? `${Math.round(prefs.years * 10) / 10} years` : (LEVELS.find((l) => l.id === prefs.level)?.label ?? null);
+  const years = prefs.years !== null ? `${Math.round(prefs.years * 10) / 10} years` : (levelLabel(prefs.level, country) ?? null);
   return [titles || "Any role", where, years].filter(Boolean).join(" · ");
 }
 
@@ -480,7 +491,7 @@ export function activeFilterCount(
     (prefs.posted_within !== 7 ? 1 : 0) +
     (prefs.workplace.length < 3 ? 1 : 0) +
     (sort !== defaultSort ? 1 : 0) +
-    (hasQueryWord(query, "fresher") ? 1 : 0) +
+    (hasQueryWord(query, "fresher") || hasQueryWord(query, "entry-level") ? 1 : 0) +
     (hasQueryWord(query, "internship") ? 1 : 0)
   );
 }

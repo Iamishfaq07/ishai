@@ -14,6 +14,8 @@ import {
   cx,
   isIndia,
   focusRing,
+  regionWords,
+  sampleCity,
 } from "@orbit/ui";
 import { Button, Card, EmptyState, ErrorNote, PageHeader, Select, Spinner } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -168,7 +170,7 @@ function Matches({ profile }: { profile: JobProfile }) {
               onChange={(e) => setText(e.target.value)}
               maxLength={200}
               enterKeyHint="search"
-              placeholder={`Try: remote React jobs in ${profile.cities.find((c) => !ANYWHERE_TOKENS.includes(c)) ?? "Bangalore"}, 2 years`}
+              placeholder={`Try: remote React jobs in ${profile.cities.find((c) => !ANYWHERE_TOKENS.includes(c)) ?? (isIndia(country) ? "Bangalore" : (sampleCity(country) ?? "your city"))}, 2 years`}
               className={cx(
                 "block w-full rounded-xl border border-zinc-200 bg-white/90 py-2.5 pl-9 pr-9 text-sm placeholder:text-zinc-400 hover:border-zinc-300 focus:border-indigo-500 dark:border-white/10 dark:bg-zinc-950/60 dark:placeholder:text-zinc-500",
                 focusRing,
@@ -341,13 +343,15 @@ function chipClass(on: boolean, size = "px-2.5 py-1 text-xs"): string {
 
 /**
  * "Fresher" and "Internship": words the search box already understands (fresher-level posts; internships), toggled in
- * the search rather than saved to the profile, so they're as quick to take off as to put on.
+ * the search rather than saved to the profile, so they're as quick to take off as to put on. Outside India the first is
+ * "Entry level" (the word "entry-level", which the search reads as the same level).
  */
 function WordChips({ query, onToggle, big = false, className }: { query: string; onToggle: (word: string) => void; big?: boolean; className?: string }) {
+  const words = regionWords(useCountry());
   return (
-    <div role="group" aria-label="For freshers" className={cx("flex shrink-0 gap-1.5", className)}>
+    <div role="group" aria-label={words.earlyCareer} className={cx("flex shrink-0 gap-1.5", className)}>
       {[
-        ["fresher", "Fresher"],
+        [words.entryLevelQuery, words.entryLevel],
         ["internship", "Internship"],
       ].map(([word, label]) => {
         const on = hasQueryWord(query, word!);
@@ -390,6 +394,7 @@ function QuickFilters({
   layout?: "row" | "sheet";
   words?: React.ReactNode;
 }) {
+  const country = useCountry();
   // Shown at once while it saves; the feed waits for the saved profile, so it never ranks with the old one.
   const [pending, setPending] = useState<JobPrefs | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -454,7 +459,7 @@ function QuickFilters({
         </fieldset>
         {words && (
           <fieldset>
-            <legend className="mb-2 text-sm font-medium">For freshers</legend>
+            <legend className="mb-2 text-sm font-medium">{regionWords(country).earlyCareer}</legend>
             {words}
           </fieldset>
         )}

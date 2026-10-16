@@ -1,5 +1,6 @@
 import type { JobDetail, JobTrackerEntry } from "@orbit/types";
-import { LEVELS, STATUS_LABEL, WORKPLACES, employmentLabel, postedAgo, shortDate, sourceLine } from "./model";
+import { INDIA } from "@orbit/ui";
+import { STATUS_LABEL, levelLabel, WORKPLACES, employmentLabel, postedAgo, shortDate, sourceLine } from "./model";
 
 /** The most jobs side by side: more than three columns don't fit a phone, or a decision. */
 export const MAX_COMPARE = 3;
@@ -31,7 +32,7 @@ function requirementsMet(d: JobDetail | null): { text: string; ratio: number } |
 }
 
 /** The comparison, row by row, from what each post states and what Orbit worked out (match, fit check). */
-export function compareRows(jobs: CompareJob[], now: number = Date.now()): CompareRow[] {
+export function compareRows(jobs: CompareJob[], now: number = Date.now(), country: string = INDIA): CompareRow[] {
   const job = (j: CompareJob) => j.detail?.job ?? null;
   const row = (label: string, values: Array<string | null>, scores?: Array<number | null>): CompareRow => ({
     label,
@@ -46,7 +47,7 @@ export function compareRows(jobs: CompareJob[], now: number = Date.now()): Compa
     row("Work mode", jobs.map((j) => WORKPLACES.find((w) => w.id === job(j)?.workplace)?.label ?? null)),
     row("Job type", jobs.map((j) => employmentLabel(job(j)?.employment_type ?? null))),
     row("Level", jobs.map((j) => {
-      const level = LEVELS.find((l) => l.id === job(j)?.level)?.label;
+      const level = levelLabel(job(j)?.level, country);
       return [level, job(j)?.experience].filter(Boolean).join(" · ") || null;
     })),
     row("Salary", jobs.map((j) => job(j)?.salary ?? null)),

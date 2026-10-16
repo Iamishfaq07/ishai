@@ -16,6 +16,7 @@ import {
   type SavedKit,
   LoadGate,
   isIndia,
+  regionWords,
 } from "@orbit/ui";
 import { Card, EmptyState, ErrorNote, Field, PageHeader, Select, Spinner } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -48,7 +49,8 @@ const PARTS: Array<{ id: Part; label: string; more?: string }> = [
  * keeps what was written, per resume (and messages per job), as last edited.
  */
 export function JobOutreachPage() {
-  const india = isIndia(useCountry());
+  const country = useCountry();
+  const india = isIndia(country);
   const [params, setParams] = useSearchParams();
   const resumes = useAsync(() => api.listResumes(), [], "resumes");
   const allowance = useResumeAllowance();
@@ -68,7 +70,7 @@ export function JobOutreachPage() {
       <PageHeader
         icon={Send}
         title="Outreach"
-        subtitle={`Referral requests, emails to HR, follow-ups and thank-you notes, and your ${india ? "Naukri and LinkedIn profiles" : "LinkedIn profile"}.`}
+        subtitle={`Referral requests, ${regionWords(country).coldEmails}, follow-ups and thank-you notes, and your ${india ? "Naukri and LinkedIn profiles" : "LinkedIn profile"}.`}
       />
       <LoadGate loading={resumes.loading && !list} variant="card" count={2} label="Getting your resumes">
       {resumes.error && !list ? (
