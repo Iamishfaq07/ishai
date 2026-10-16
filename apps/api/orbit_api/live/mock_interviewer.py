@@ -20,6 +20,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from orbit_api import practice_language
 from orbit_api.live import company_styles
 from orbit_api.live.carryover import MockProgress
 from orbit_api.live.context_builder import fence
@@ -334,8 +335,9 @@ class MockInterviewer:
     def __init__(self, config: MockConfig, *, llm: LLMProvider, index: SessionIndex, role: str | None,
                  send: Send, on_question: OnQuestion, on_finish: OnFinish,
                  record_usage: Callable[[LLMResponse, int], Awaitable[None]] | None = None,
-                 company: str | None = None) -> None:
+                 company: str | None = None, language: str = "en") -> None:
         self.config = config
+        self._language = language
         self._llm = llm
         self._index = index
         self._role = role
@@ -674,6 +676,8 @@ class MockInterviewer:
         system = _NEGOTIATION_SYSTEM.format(
             company=f" at {setup.company}" if setup.company else "", role=f" for {self._role}" if self._role else "",
             offer=setup.offer, stance=_NEGOTIATION_STANCE[cfg.difficulty])
+        if lang_rule := practice_language.interviewer_instruction(self._language):
+            system += "\n" + lang_rule
         if not self.asked:
             steer = "Open the call: congratulate them and present the offer, then ask how it sounds."
         elif len(self.asked) >= cfg.planned_questions - 1:
@@ -732,6 +736,8 @@ class MockInterviewer:
         style = company_styles.match(self._company)
         if style is not None and not cfg.drill:
             system += "\n" + company_styles.interviewer_brief(style)
+        if lang_rule := practice_language.interviewer_instruction(self._language):
+            system += "\n" + lang_rule
         follow_ups = self._follow_ups_in_topic()
         if follow_up_on is not None and follow_up_on.kind in ("prep", "answer"):
             # A question from their prep, or one they've prepared an answer to: probe the claim behind it, the way the
@@ -825,8 +831,11 @@ class MockInterviewer:
         except (TimeoutError, LLMError, json.JSONDecodeError, ValueError) as e:
             log.warning("mock interviewer question failed (%s); using a fallback", type(e).__name__)
         if follow_up_on is not None:
-            return "Can you make that more concrete? What exactly did you do, and what was the result?", True
+            english = "Can you make that more concrete? What exactly did you do, and what was the result?"
+            return practice_language.FALLBACK_FOLLOW_UP.get(self._language, english), True
         asked = {a.text for a in self.asked}
-        own = list(style.questions) if style is not None and not cfg.drill else []
-        fallback = next((q for q in [*own, *_FALLBACK] if q not in asked), _FALLBACK[-1])
+        # A company's own questions are in English: used for an English round only.
+        own = list(style.questions) if style is not None and not cfg.drill and self._language == "en" else []
+        pool = practice_language.FALLBACK_QUESTIONS.get(self._language, _FALLBACK)
+        fallback = next((q for q in [*own, *pool] if q not in asked), pool[-1])
         return fallback, False

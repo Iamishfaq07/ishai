@@ -128,6 +128,9 @@ class Settings(BaseSettings):
     # The mock interviewer's natural voice (voice/routes.py): Deepgram Aura text-to-speech, streamed through the API
     # so the key stays on the server. On when a Deepgram key is set, unless turned off here. Each account gets this
     # many characters a day (about 100 questions at 20k); past it, the device's own voice reads the questions.
+    # Mock interviews in Hindi and Hinglish (practice_language.py). Off until the owner has checked transcription and
+    # review quality on real Hindi/Hinglish answers; English stays the default either way.
+    multilingual: bool = Field(False, validation_alias=AliasChoices("ORBIT_MULTILINGUAL"))
     natural_voice: bool = Field(True, validation_alias=AliasChoices("ORBIT_NATURAL_VOICE"))
     tts_daily_chars: int = Field(20000, ge=0, validation_alias=AliasChoices("ORBIT_TTS_DAILY_CHARS"))
     # Plan limits/features/prices overrides (see entitlements.py). Validated at startup.

@@ -17,6 +17,7 @@ from typing import Any, Literal, Protocol
 
 from pydantic import ValidationError
 
+from orbit_api import practice_language
 from orbit_api.live.answer_format import AnswerStreamParser, finalize_grounding, trim_cut_off
 from orbit_api.live.background import Background, infer_level
 from orbit_api.live.carryover import Carryover
@@ -446,7 +447,7 @@ class LiveEngine:
             self._mock = MockInterviewer(profile.mock or MockConfig(), llm=llm, index=index, role=profile.role,
                                          send=self.send, on_question=self._on_mock_question,
                                          on_finish=self._on_mock_finish, record_usage=self._record_mock_usage,
-                                         company=profile.company)
+                                         company=profile.company, language=profile.language)
         if resume is not None:  # a reconnect: pick up the conversation (and the mock round) where it was
             self.memory = resume.memory
             if self._mock is not None and resume.mock is not None:
@@ -488,7 +489,7 @@ class LiveEngine:
     # ---- lifecycle --------------------------------------------------------------------------------------
 
     async def start(self) -> None:
-        cfg = STTConfig(language=self.profile.language, keyterms=self.profile.keyterms)
+        cfg = STTConfig(language=practice_language.stt_language(self.profile.language), keyterms=self.profile.keyterms)
         channels: tuple[Channel, Channel] = ("mic", "system")
         # fillers: speaking feedback on you only. Phone / room mode: one mic hears both people, so tell voices apart.
         configs = {"mic": replace(cfg, filler_words=True, diarize=self.profile.session_type == "phone"),

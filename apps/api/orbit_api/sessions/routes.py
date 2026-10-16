@@ -22,13 +22,13 @@ from fastapi import (
     status,
 )
 from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 
-from orbit_api import credits, jobs
+from orbit_api import credits, jobs, practice_language
 from orbit_api.answers.routes import MAX_ANSWERS, answer_text
 from orbit_api.answers.routes import index_chunk as answer_chunk
 from orbit_api.auth.guards import require_verified_user
@@ -155,11 +155,12 @@ class SessionIn(BaseModel):
     # The candidate's standing instructions for answers; from a saved setup's notes when not given.
     instructions: str | None = Field(None, max_length=1000)
 
-    # Orbit is English only: older clients and saved setups may still send another language, so it's pinned here.
-    @field_validator("language")
-    @classmethod
-    def _english(cls, _: str) -> str:
-        return "en"
+    # English, except a mock interview in a practice language while ORBIT_MULTILINGUAL is on (practice_language.py).
+    # Older clients and saved setups may still send another language; it's pinned to English here.
+    @model_validator(mode="after")
+    def _practice_language(self) -> "SessionIn":
+        self.language = practice_language.normalize(self.language, self.type)
+        return self
 
     @field_validator("answer_language")
     @classmethod
@@ -958,7 +959,8 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
         earlier = (await loop_memory(db, user_id, company, exclude_session_id=row.id)).prompt_context()
         profile = SessionProfile(
             session_id=row.id, session_type=row.type,  # type: ignore[arg-type]
-            role=row.role, language="en", answer_language="en",  # English only (older rows may say otherwise)
+            # English, or the mock's practice language; the copilot's answers are always English.
+            role=row.role, language=practice_language.normalize(row.language, row.type), answer_language="en",
             keyterms=keyterms, dev_mode=get_settings().env != "production",
             mock=MockConfig.model_validate(row.mock_config) if row.mock_config else None,
             allow_fallback=plan.has("provider_fallback"),

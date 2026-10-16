@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orbit_api import credits
+from orbit_api import credits, practice_language
 from orbit_api.auth import email_tokens
 from orbit_api.auth.accounts import delete_account as delete_account_and_data
 from orbit_api.auth.accounts import sign_out_everywhere as _sign_out_everywhere
@@ -129,6 +129,8 @@ class UserOut(BaseModel):
     csrf_token: str | None = None
     # The Career Evidence Vault is switched on for this deployment (ORBIT_EVIDENCE_VAULT).
     evidence_vault: bool = False
+    # Mock-interview languages this server offers (practice_language.py): ["en"] unless ORBIT_MULTILINGUAL is on.
+    practice_languages: list[str] = ["en"]
 
 
 class AuthOut(BaseModel):
@@ -143,7 +145,7 @@ def _user_out(u: User, *, with_csrf: bool = False) -> UserOut:
                    has_password=u.has_password,
                    approval_pending=awaiting_approval(u), store_transcripts=u.store_transcripts, country=u.country,
                    csrf_token=csrf_token_for(u.id, u.token_version) if with_csrf else None,
-                   evidence_vault=get_settings().evidence_vault)
+                   evidence_vault=get_settings().evidence_vault, practice_languages=practice_language.available())
 
 
 def _origin(url: str) -> str:
