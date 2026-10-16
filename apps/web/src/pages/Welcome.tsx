@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Globe, MapPin, Orb, OrbitWordmark, buttonClass, cx, focusRing, isIndia } from "@orbit/ui";
+import { ArrowLeft, ArrowRight, Globe, MapPin, Orb, OrbitWordmark, buttonClass, cx, focusRing, isIndia, regionExamples } from "@orbit/ui";
 import { ProductMark } from "../components/products";
 import { Input } from "../components/ui";
 import { api } from "../lib/api";
@@ -8,14 +8,14 @@ import { useAuth } from "../lib/auth";
 import {
   ANYWHERE,
   ANYWHERE_IN_INDIA,
-  EXPERIENCE,
   GOALS,
   PLACE_IDEAS,
   REMOTE,
-  ROLE_IDEAS,
   answersShapeJobSearch,
+  experienceChoices,
   goalFromPath,
   prefsFromAnswers,
+  roleIdeas,
   saveAnswers,
   type Experience,
   type Goal,
@@ -107,6 +107,7 @@ export function WelcomePage() {
   const india = isIndia(country);
   const anywhere = india ? ANYWHERE_IN_INDIA : ANYWHERE;
   const cities = (profile.data?.cities ?? (india ? PLACE_IDEAS : [])).filter((c) => c !== ANYWHERE_IN_INDIA && c !== ANYWHERE).slice(0, 9);
+  const otherCityExample = regionExamples(country).otherCity;
 
   // Each question's heading takes focus, so a screen reader hears the new question and Tab starts from it.
   const heading = useRef<HTMLHeadingElement>(null);
@@ -230,7 +231,7 @@ export function WelcomePage() {
               <fieldset>
                 <legend className="text-sm font-medium text-zinc-800 dark:text-zinc-200">How much work experience do you have?</legend>
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                  {EXPERIENCE.map((e) => (
+                  {experienceChoices(country).map((e) => (
                     <Choice key={e.id} pressed={experience === e.id} onClick={() => pickExperience(e.id)} className="sm:flex-col sm:items-start sm:gap-1">
                       <span className="block font-display text-base font-semibold">{e.title}</span>
                       <span className="block text-sm text-zinc-600 dark:text-zinc-300">{e.body}</span>
@@ -245,7 +246,7 @@ export function WelcomePage() {
                     What job do you want? <span className="font-normal text-zinc-600 dark:text-zinc-400">(you can change it any time)</span>
                   </label>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {ROLE_IDEAS[experience ?? "fresher"].map((idea) => (
+                    {roleIdeas(experience ?? "fresher", country).map((idea) => (
                       <Chip
                         key={idea}
                         pressed={role === idea}
@@ -306,7 +307,7 @@ export function WelcomePage() {
                   id="welcome-city"
                   value={otherCity}
                   onChange={(e) => setOtherCity(e.target.value)}
-                  placeholder="Another city, e.g. Indore"
+                  placeholder={otherCityExample ? `Another city, e.g. ${otherCityExample}` : "Another city"}
                   autoComplete="address-level2"
                   maxLength={60}
                   className="min-h-11 text-base"

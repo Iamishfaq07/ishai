@@ -4,13 +4,14 @@ import type { JobOfferRecord, OfferInput } from "@orbit/types";
 import { ArrowLeft, Check, CircleAlert, Copy, Mic, PenLine, Sparkles, Trash2, LoadGate, confirmDialog, cx, focusRing } from "@orbit/ui";
 import { Button, Card, EmptyState, ErrorNote } from "../../components/ui";
 import { api } from "../../lib/api";
+import { useCountry } from "../../lib/country";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
 import { MarketBar } from "./MarketBar";
 import { OfferForm } from "./OfferForm";
 import { WhatIf } from "./WhatIf";
 import { POSITION_TEXT, POSITION_TONE } from "./Offers";
-import { OFFERS_HOME, inputOf, money, practiceRequest } from "./model";
+import { OFFERS_HOME, inputOf, money, offerTerms, practiceRequest } from "./model";
 
 /** One offer: what it's made of, what reaches the account, where it sits in the market, and the negotiation. */
 export function OfferDetailPage() {
@@ -37,6 +38,8 @@ export function OfferDetailPage() {
 }
 
 function Detail({ offer: o, onChange, onDeleted }: { offer: JobOfferRecord; onChange: (o: JobOfferRecord) => void; onDeleted: () => void }) {
+  const country = useCountry();
+  const terms = offerTerms(country);
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -70,7 +73,7 @@ function Detail({ offer: o, onChange, onDeleted }: { offer: JobOfferRecord; onCh
   };
   const plan = () => run("plan", async () => onChange(await api.offerPlan(o.id)));
   const practise = () => run("practise", async () => {
-    const session = await api.createSession(practiceRequest(o));
+    const session = await api.createSession(practiceRequest(o, country));
     navigate(`/live/${session.id}`, { state: { systemAudio: false } });
   });
 
@@ -96,7 +99,7 @@ function Detail({ offer: o, onChange, onDeleted }: { offer: JobOfferRecord; onCh
         <Card>
           <h2 className="mb-3 font-display text-base font-semibold">What it's made of</h2>
           <dl className="space-y-1.5 text-sm">
-            {([["Fixed pay a year", o.fixed], ["Variable a year (target)", o.variable], ["Joining bonus (once)", o.joining_bonus], ["Equity a year", o.equity_per_year], ["Other a year", o.other]] as const)
+            {([[`${terms.fixed} a year`, o.fixed], [terms.variableYear, o.variable], [`${terms.joining} (once)`, o.joining_bonus], ["Equity a year", o.equity_per_year], ["Other a year", o.other]] as const)
               .filter(([, v]) => v > 0)
               .map(([label, v]) => (
                 <div key={label} className="flex justify-between gap-3">
@@ -115,7 +118,7 @@ function Detail({ offer: o, onChange, onDeleted }: { offer: JobOfferRecord; onCh
           </dl>
           {o.variable > 0 && o.variable / (o.fixed + o.variable) > 0.2 && (
             <p className="mt-3 flex gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
-              <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> Over a fifth of the pay is variable: ask how much was actually paid out last year.
+              <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> Over a fifth of the pay is {terms.bonusWord}: ask how much was actually paid out last year.
             </p>
           )}
         </Card>
@@ -192,11 +195,12 @@ function PlanView({ offer: o }: { offer: JobOfferRecord }) {
     window.setTimeout(() => setCopied(false), 1800);
   };
   const raise = p.ask - o.fixed;
+  const terms = offerTerms(useCountry());
   return (
     <div className="mt-4 space-y-5">
       <div className="rounded-xl bg-indigo-500/[0.07] p-4">
         <p className="text-sm text-zinc-600 dark:text-zinc-300">Ask for</p>
-        <p className="font-display text-3xl font-semibold tabular-nums">{money(o.currency, p.ask)} <span className="text-base font-normal text-zinc-500">fixed a year</span></p>
+        <p className="font-display text-3xl font-semibold tabular-nums">{money(o.currency, p.ask)} <span className="text-base font-normal text-zinc-500">{terms.fixedWord} a year</span></p>
         {raise > 0 && <p className="text-sm text-zinc-600 dark:text-zinc-300">{money(o.currency, raise)} ({Math.round((raise / o.fixed) * 100)}%) more than offered. {p.ask_why}</p>}
       </div>
       {p.reasons.length > 0 && <Section title="Your case">{p.reasons}</Section>}

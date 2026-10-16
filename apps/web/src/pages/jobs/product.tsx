@@ -9,6 +9,9 @@ import {
   Sparkles,
   Target,
   Wand2,
+  INDIA,
+  isIndia,
+  regionWords,
   type LucideIcon,
 } from "@orbit/ui";
 import { ProductTabs, type ProductSection } from "../../components/products";
@@ -27,7 +30,8 @@ export interface JobsAiFeature {
   text: string;
 }
 
-/** Only what Jobs AI really does today, in the order people need it. */
+/** Only what Jobs AI really does today, in the order people need it (as written for India; jobsAiFeatures words it for
+ *  everywhere else). */
 export const JOBS_AI_FEATURES: JobsAiFeature[] = [
   {
     icon: Gauge,
@@ -84,6 +88,24 @@ export const JOBS_AI_FEATURES: JobsAiFeature[] = [
     text: "The job description saved for Practice: the questions that job is likely to ask, and a mock interview on them.",
   },
 ];
+
+/** What Jobs AI does, for where the user applies: Naukri is India's, and outside India outreach writes to recruiters. */
+export function jobsAiFeatures(country: string = INDIA): JobsAiFeature[] {
+  if (isIndia(country)) return JOBS_AI_FEATURES;
+  return JOBS_AI_FEATURES.map((f) => {
+    if (f.icon === Search) {
+      return { ...f, short: "Search LinkedIn, Indeed and more", text: "LinkedIn, Indeed and more, opened with your search already filled in. Orbit doesn't copy their listings." };
+    }
+    if (f.icon === Send) {
+      return {
+        ...f,
+        short: "Outreach + LinkedIn profile",
+        text: `Referral requests, ${regionWords(country).coldEmails}, follow-ups and thank-you notes for each job, and your LinkedIn profile, written from your resume.`,
+      };
+    }
+    return f;
+  });
+}
 
 /** Jobs AI's own pages, as tabs under its header. A job's own page counts as Matches. */
 export function jobsAiSections(tracked = 0): ProductSection[] {

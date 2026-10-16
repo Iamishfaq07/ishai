@@ -164,3 +164,60 @@ describe("bulletStrength", () => {
     expect(bulletStrength("experience.e1.bullets.0", d.experience[0]!.bullets[0]!, null, d)).toBeNull();
   });
 });
+
+describe("outside India", () => {
+  it("doesn't offer Personal details or a Declaration, and words the rest for there (India's stay as they are)", async () => {
+    const { extraPresets, presetForTitle } = await import("./model");
+    expect(extraPresets("IN")).toBe(EXTRA_PRESETS);
+    const us = extraPresets("US");
+    const titles = us.map((p) => p.title);
+    expect(titles).not.toContain("Personal details");
+    expect(titles).not.toContain("Declaration");
+    expect(titles).toContain("Leadership");
+    expect(JSON.stringify(us)).not.toMatch(/Smart India|NSS|Positions of Responsibility/);
+    // A section someone already has keeps its advice.
+    expect(presetForTitle("Personal details", "US")?.note).toMatch(/government/);
+    expect(presetForTitle("achievements", "US")?.placeholder).toMatch(/university hackathon/);
+    expect(presetForTitle("Achievements", "IN")?.placeholder).toMatch(/Smart India Hackathon/);
+  });
+
+  it("calls the Campus template Graduate, and keeps its id", async () => {
+    const { templatesFor, looksFor } = await import("./model");
+    expect(templatesFor("IN")).toBe(TEMPLATES);
+    const campus = templatesFor("GB").find((t) => t.id === "campus")!;
+    expect(campus.label).toBe("Graduate");
+    expect(campus.note).not.toMatch(/fresher/);
+    expect(looksFor("US").find((l) => l.design.template === "campus")?.label).toBe("Graduate");
+    expect(looksFor("IN")).toBe(LOOKS);
+  });
+
+  it("starts new resumes on Letter in the US and Canada, A4 elsewhere", async () => {
+    const { defaultDesign, newResume } = await import("./model");
+    expect(defaultDesign().page).toBe("a4");
+    expect(defaultDesign("IN").page).toBe("a4");
+    expect(defaultDesign("GB").page).toBe("a4");
+    expect(defaultDesign("US").page).toBe("letter");
+    expect(defaultDesign("ca").page).toBe("letter");
+    expect(newResume("Mine", emptyData(), "US").design.page).toBe("letter");
+    expect(fresherResume(ids(), "US").design.page).toBe("letter");
+  });
+
+  it("makes the student resume with Leadership instead of Positions of Responsibility", () => {
+    const { data } = fresherResume(ids(), "US");
+    expect(shownSections(data).map((s) => sectionLabel(data, s))).toEqual(["Summary", "Education", "Projects", "Skills", "Experience", "Leadership", "Achievements", "Certifications"]);
+    expect(fresherResume(ids(), "IN").data.extras[0]!.title).toBe("Positions of Responsibility");
+  });
+
+  it("shows a sample resume written for there, with a real score", async () => {
+    const { SAMPLE_RESUME, sampleResume } = await import("./sample");
+    expect(sampleResume("IN")).toBe(SAMPLE_RESUME);
+    expect(sampleResume("US").design.page).toBe("letter");
+    expect(sampleResume("US").data.education[0]!.grade).toBe("3.7 / 4.0 GPA");
+    expect(sampleResume("DE").data.basics.location).toBe("Berlin, Germany");
+    for (const code of ["US", "CA", "GB", "DE", "BR"]) {
+      const text = JSON.stringify(sampleResume(code).data);
+      for (const word of ["+91", "Bengaluru", "Pune", "₹", "lakh", "B.Tech", "CGPA", "IPL", "Pvt. Ltd."]) expect(text, `${code}: ${word}`).not.toContain(word);
+      expect(sampleResume(code).score).toBeGreaterThanOrEqual(96);
+    }
+  });
+});

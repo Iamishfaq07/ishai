@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import type { JobLinkInfo, JobStatus, JobTrackerEntry } from "@orbit/types";
-import { ApiError, CircleAlert, Link2, cx, focusRing, toast } from "@orbit/ui";
+import { ApiError, CircleAlert, Link2, cx, focusRing, isIndia, regionExamples, sampleCity, toast } from "@orbit/ui";
 import { Button, ErrorNote, Field, Input, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
-import { useIndia } from "../../lib/country";
+import { useCountry } from "../../lib/country";
 import { STATUS_LABEL, dateInput, fromDateInput } from "./model";
 import { Sheet } from "./Sheet";
 
@@ -24,7 +24,11 @@ const EMPTY: Fields = { company: "", title: "", location: "" };
  * also be read for its text (POST /v1/prep/import-link), which can be saved to Documents for interview practice.
  */
 export function AddJob({ open, onClose, onAdded }: { open: boolean; onClose: () => void; onAdded: (entry: JobTrackerEntry) => void }) {
-  const india = useIndia();
+  const country = useCountry();
+  const india = isIndia(country);
+  // The examples, as a job there reads ("Infosys", "Pune" in India).
+  const example = regionExamples(country);
+  const city = india ? "Pune" : sampleCity(country);
   const formId = useId();
   const [url, setUrl] = useState("");
   const [info, setInfo] = useState<JobLinkInfo | null>(null);
@@ -222,14 +226,14 @@ export function AddJob({ open, onClose, onAdded }: { open: boolean; onClose: () 
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Company" htmlFor="add-company">
-            <Input id="add-company" required maxLength={200} autoComplete="organization" value={fields.company} onChange={(e) => setFields((f) => ({ ...f, company: e.target.value }))} placeholder="e.g. Infosys" />
+            <Input id="add-company" required maxLength={200} autoComplete="organization" value={fields.company} onChange={(e) => setFields((f) => ({ ...f, company: e.target.value }))} placeholder={`e.g. ${example.company}`} />
           </Field>
           <Field label="Job title" htmlFor="add-title">
-            <Input id="add-title" required maxLength={300} value={fields.title} onChange={(e) => setFields((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Systems Engineer" />
+            <Input id="add-title" required maxLength={300} value={fields.title} onChange={(e) => setFields((f) => ({ ...f, title: e.target.value }))} placeholder={`e.g. ${example.jobTitle}`} />
           </Field>
         </div>
         <Field label="City (optional)" htmlFor="add-city">
-          <Input id="add-city" maxLength={300} value={fields.location} onChange={(e) => setFields((f) => ({ ...f, location: e.target.value }))} placeholder="e.g. Pune, or Remote" />
+          <Input id="add-city" maxLength={300} value={fields.location} onChange={(e) => setFields((f) => ({ ...f, location: e.target.value }))} placeholder={city ? `e.g. ${city}, or Remote` : "e.g. your city, or Remote"} />
         </Field>
 
         <fieldset>

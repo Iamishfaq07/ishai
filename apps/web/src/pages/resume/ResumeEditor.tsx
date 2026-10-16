@@ -54,9 +54,10 @@ import { AiCostNote, AiErrorNote, AllowanceBanner, AllowanceContext, isUpgradeEr
 import { saveQueueFor, useBackend } from "./backend";
 import { drafts, type Draft } from "./saveQueue";
 import { useAuth } from "../../lib/auth";
+import { useCountry } from "../../lib/country";
 import { FixActions, FixResult, fixKind } from "./FixPanel";
 import { InterviewPrep, usePrepState } from "./InterviewPrep";
-import { ACCENTS, FONTS, LINE_HEIGHTS, LOOKS, SPACING, TEMPLATES, addSkills, applySuggestion, canApply, isSafeFix, newId, resumeToText, revertSuggestion, photoToDataUrl, suggestedSkills } from "./model";
+import { ACCENTS, FONTS, LINE_HEIGHTS, SPACING, addSkills, looksFor, templatesFor, applySuggestion, canApply, isSafeFix, newId, resumeToText, revertSuggestion, photoToDataUrl, suggestedSkills } from "./model";
 import { RESUME_AI_HOME, shouldFlushResume } from "./paths";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
@@ -1832,6 +1833,7 @@ function TemplateSketch({ template, accent }: { template: ResumeDesign["template
 }
 
 function DesignPanel({ design, setDesign }: { design: ResumeDesign; setDesign: (patch: Partial<ResumeDesign>) => void }) {
+  const country = useCountry();
   const photoRef = useRef<HTMLInputElement>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   return (
@@ -1839,7 +1841,7 @@ function DesignPanel({ design, setDesign }: { design: ResumeDesign; setDesign: (
       <Panel title="Quick looks">
         <p className="-mt-1 mb-3 text-xs text-zinc-500 dark:text-zinc-400">One click sets the template, colour and font together. Fine-tune below.</p>
         <div className="flex flex-wrap gap-2">
-          {LOOKS.map((look) => {
+          {looksFor(country).map((look) => {
             const on = look.design.template === design.template && look.design.accent === design.accent && look.design.font === design.font;
             return (
               <button
@@ -1862,7 +1864,7 @@ function DesignPanel({ design, setDesign }: { design: ResumeDesign; setDesign: (
       </Panel>
       <Panel title="Template">
         <div className="grid grid-cols-2 gap-2">
-          {TEMPLATES.map((t) => (
+          {templatesFor(country).map((t) => (
             <button
               key={t.id}
               type="button"

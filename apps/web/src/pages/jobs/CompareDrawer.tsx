@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import type { JobTrackerEntry } from "@orbit/types";
 import { Check, CompanyLogo, LoadGate, Sheet, cx, focusRing } from "@orbit/ui";
 import { api } from "../../lib/api";
+import { useCountry } from "../../lib/country";
 import { compareRows, type CompareJob } from "./compare";
 import { jobPath } from "./paths";
 
@@ -17,6 +18,7 @@ function andList(items: string[]): string {
  * from the tracker alone.
  */
 export function CompareDrawer({ entries, open, onClose }: { entries: JobTrackerEntry[]; open: boolean; onClose: () => void }) {
+  const country = useCountry();
   const [jobs, setJobs] = useState<CompareJob[] | null>(null);
   const key = entries.map((e) => e.id).join();
   useEffect(() => {
@@ -32,7 +34,7 @@ export function CompareDrawer({ entries, open, onClose }: { entries: JobTrackerE
     // `key` stands for the entries: the same jobs aren't loaded twice.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, key]);
-  const rows = jobs ? compareRows(jobs) : [];
+  const rows = jobs ? compareRows(jobs, Date.now(), country) : [];
   const unchecked = jobs?.filter((j) => j.detail && !j.detail.fit) ?? [];
   return (
     <Sheet open={open} onClose={onClose} title={`Compare ${entries.length} jobs`} placement="end" size="2xl">

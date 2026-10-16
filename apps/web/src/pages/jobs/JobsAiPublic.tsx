@@ -18,6 +18,7 @@ import {
   cx,
   formatNumber,
   isIndia,
+  sampleCity,
   focusRing,
   Reveal,
 } from "@orbit/ui";
@@ -30,7 +31,7 @@ import { RESUME_AI_HOME } from "../resume/paths";
 import { linkButton, textLink } from "./links";
 import { postedAgo } from "./model";
 import { JOBS_AI_HOME } from "./paths";
-import { JOBS_AI_FEATURES } from "./product";
+import { jobsAiFeatures } from "./product";
 
 /** Sign-up and sign-in from here come back to Jobs AI. */
 const BACK_HERE = { from: JOBS_AI_HOME };
@@ -66,8 +67,10 @@ function FreeNote({ stats, className }: { stats: JobStats | null; className?: st
   );
 }
 
-/** An example match, drawn with the real card's parts: a job, its match, the skills, and a fit check beside it. */
+/** An example match, drawn with the real card's parts: a job, its match, the skills, and a fit check beside it. The job is
+ *  in a city where the visitor applies (remote where there's no example city). */
 function SampleMatch() {
+  const city = sampleCity(useCountry());
   // Solid, not glass: the page's glow would show through.
   const solid = "rounded-2xl bg-white shadow-xl ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-white/10";
   return (
@@ -86,7 +89,7 @@ function SampleMatch() {
                   <Building2 className="h-3.5 w-3.5 text-zinc-400" /> Kestrel Pay
                 </span>
                 <span className="inline-flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5 text-zinc-400" /> Bengaluru · Hybrid
+                  <MapPin className="h-3.5 w-3.5 text-zinc-400" /> {city ? `${city} · Hybrid` : "Remote"}
                 </span>
               </p>
               <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-zinc-500 dark:text-zinc-400">
@@ -140,7 +143,7 @@ function SampleMatch() {
         </div>
       </div>
       <figcaption className="sr-only">
-        An example backend engineer job in Bengaluru, an 88 percent match, with the skills the resume shows and the one it doesn't, and an AI fit
+        An example backend engineer job {city ? `in ${city}` : "that's remote"}, an 88 percent match, with the skills the resume shows and the one it doesn't, and an AI fit
         check saying it's a strong fit.
       </figcaption>
     </figure>
@@ -230,7 +233,7 @@ export function JobsAiPublicPage() {
             You stay in charge: you apply on the original site, and nothing is sent to an employer for you.
           </p>
           <Reveal as="ul" stagger className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {JOBS_AI_FEATURES.map(({ icon: Icon, title, text }) => (
+            {jobsAiFeatures(country).map(({ icon: Icon, title, text }) => (
               <li key={title} className="glass-panel rounded-2xl p-5">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-aurora-400/10 text-indigo-600 ring-1 ring-indigo-500/20 dark:text-indigo-300">
                   <Icon className="h-5 w-5" aria-hidden />

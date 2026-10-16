@@ -120,3 +120,13 @@ describe("contactErrorText", () => {
     expect(contactErrorText(new Error("boom"))).toMatch(/try again in a minute/);
   });
 });
+
+describe("the topics outside India", () => {
+  it("offer partnerships to universities and teams; India's stay as they are", async () => {
+    const { CONTACT_TOPICS, contactTopics } = await import("./contactForm");
+    expect(contactTopics("IN")).toBe(CONTACT_TOPICS);
+    const hint = contactTopics("US").find((t) => t.id === "business")?.hint;
+    expect(hint).toBe("Universities, career services, bootcamps and teams: tell us what you have in mind.");
+    expect(contactTopics("US").map((t) => t.id)).toEqual(CONTACT_TOPICS.map((t) => t.id));
+  });
+});

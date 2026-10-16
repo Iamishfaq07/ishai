@@ -2,7 +2,7 @@
   "name": "Orbit AI: interview practice, Resume AI and Jobs AI",
   "short_name": "Orbit",
   "description": "Practise interviews, fix your resume and find jobs, with one free account.",
-  "lang": "en-IN",
+  "lang": "en",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

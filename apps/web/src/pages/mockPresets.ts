@@ -3,13 +3,13 @@
 // practice in the terms of the country the user applies in (India's ₹ LPA first). Plain data, unit-tested
 // (mockPresets.test.ts).
 import type { CreateSessionRequest, MockConfig } from "@orbit/types";
-import { INDIA, isIndia, sampleOffer } from "@orbit/ui";
+import { INDIA, isIndia, regionWords, sampleOffer } from "@orbit/ui";
 
 export type PresetId = "hr5" | "tmay10" | "tech15" | "panel15" | "oneway10" | "salary";
 
 export interface MockPreset {
   id: PresetId;
-  /** "5-min HR round" (the salary preset's is presetTitle's: "(₹)" in India). */
+  /** "5-min HR round" (presetTitle words it for the country: a recruiter screen outside India, "(₹)" on India's salary talk). */
   title: string;
   /** One line on the card, with the role when it's known, for the country the user applies in. */
   blurb: (role: string, country?: string) => string;
@@ -22,7 +22,7 @@ export const PRESETS: MockPreset[] = [
     title: "5-min HR round",
     minutes: 5,
     blurb: (_role, country = INDIA) =>
-      `Tell me about yourself, why us, strengths, relocation: the ${isIndia(country) ? "campus HR round" : "first HR screen"}.`,
+      `Tell me about yourself, why us, strengths, relocation: the ${isIndia(country) ? "campus HR round" : "first recruiter screen"}.`,
   },
   { id: "tmay10", title: "Tell me about yourself", minutes: 10, blurb: () => "The full answer, a project from your resume, then the 30-second version." },
   {
@@ -51,9 +51,12 @@ export const PRESETS: MockPreset[] = [
   },
 ];
 
-/** The card's title: the salary preset names the rupee in India, where it started. */
+/** The card's title: the salary preset names the rupee in India, where it started; outside India the HR round is the
+ *  recruiter screen. */
 export function presetTitle(p: MockPreset, country: string = INDIA): string {
-  return p.id === "salary" && isIndia(country) ? "Salary talk (₹)" : p.title;
+  if (p.id === "salary" && isIndia(country)) return "Salary talk (₹)";
+  if (p.id === "hr5" && !isIndia(country)) return `5-min ${regionWords(country).screen}`;
+  return p.title;
 }
 
 /** The HR screen's usual questions (in India, the campus round at TCS, Infosys, Wipro and most service companies). */
@@ -64,6 +67,12 @@ export const HR_QUESTIONS = [
   "Are you open to relocating, or to working in shifts if the role needs it?",
 ];
 
+/** The screen's questions for the country: India's as above; elsewhere shift work isn't a first-call question. */
+export function hrQuestions(country: string = INDIA): string[] {
+  if (isIndia(country)) return HR_QUESTIONS;
+  return HR_QUESTIONS.map((q) => (q.startsWith("Are you open to relocating") ? "Are you open to relocating if the role needs it?" : q));
+}
+
 function mockFor(id: PresetId, country: string): MockConfig {
   switch (id) {
     case "hr5":
@@ -72,7 +81,7 @@ function mockFor(id: PresetId, country: string): MockConfig {
         persona: "recruiter",
         difficulty: "easy",
         duration_minutes: 5,
-        drill: HR_QUESTIONS.map((question) => ({ question, kind: "prep" as const })),
+        drill: hrQuestions(country).map((question) => ({ question, kind: "prep" as const })),
       };
     case "tmay10":
       return {
@@ -145,7 +154,7 @@ export function presetSession(id: PresetId, role: string, documentIds: string[],
           ? `Mock — ${r} (technical)`
           : id === "panel15" && r
             ? `Panel — ${r}`
-            : `Mock — ${preset.title}`,
+            : `Mock — ${presetTitle(preset, country)}`,
     type: "mock",
     ...(r ? { role: r } : {}),
     language: "en",

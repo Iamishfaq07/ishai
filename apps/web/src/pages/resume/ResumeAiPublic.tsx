@@ -4,8 +4,11 @@ import type { CreditPack } from "@orbit/types";
 import { ArrowRight, OrbitWordmark, Palette, Send, Sparkles, Wand2, buttonClass, cx, focusRing,
   Reveal,
   CountUp,
+  isIndia,
+  regionWords,
 } from "@orbit/ui";
 import { api } from "../../lib/api";
+import { useCountry } from "../../lib/country";
 import { useWelcomeGrant } from "../../lib/welcome";
 import { JOBS_AI_HOME } from "../jobs/paths";
 import { TEMPLATES } from "./model";
@@ -13,9 +16,9 @@ import { RESUME_AI_HOME } from "./paths";
 import { AiPill } from "../../components/products";
 import { Footer } from "../../components/Footer";
 import { SiteMenu } from "../../components/SiteMenu";
-import { RESUME_AI_FEATURES, scoreTone } from "./product";
+import { resumeAiFeatures, scoreTone } from "./product";
 import { MM_TO_PX, PAGE_MM, ResumePreview } from "./ResumePreview";
-import { SAMPLE_RESUME } from "./sample";
+import { sampleResume } from "./sample";
 
 /** Sign-up and sign-in from here come back to Resume AI. */
 const BACK_HERE = { from: RESUME_AI_HOME };
@@ -53,12 +56,14 @@ function FreeNote({ className }: { className?: string }) {
   );
 }
 
-/** The sample resume at real size, scaled to its column and cut off with a fade, with its ATS score beside it. */
+/** The sample resume at real size, scaled to its column and cut off with a fade, with its ATS score beside it. It's
+ *  written for where the visitor applies (sample.ts). */
 function SampleResume() {
+  const sample = sampleResume(useCountry());
   const box = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.5);
-  const pageWidth = PAGE_MM[SAMPLE_RESUME.design.page].w * MM_TO_PX;
-  const pageHeight = PAGE_MM[SAMPLE_RESUME.design.page].h * MM_TO_PX;
+  const pageWidth = PAGE_MM[sample.design.page].w * MM_TO_PX;
+  const pageHeight = PAGE_MM[sample.design.page].h * MM_TO_PX;
   useLayoutEffect(() => {
     const measure = () => setScale(Math.min(1, (box.current?.clientWidth ?? pageWidth) / pageWidth));
     measure();
@@ -66,7 +71,7 @@ function SampleResume() {
     if (box.current) ro.observe(box.current);
     return () => ro.disconnect();
   }, [pageWidth]);
-  const { score } = SAMPLE_RESUME;
+  const { score } = sample;
   // Solid, not glass: the resume's text would show through.
   const floating = "absolute rounded-2xl bg-white shadow-xl ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-white/10";
   return (
@@ -84,7 +89,7 @@ function SampleResume() {
         }}
       >
         <div aria-hidden="true" style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "max-content" }}>
-          <ResumePreview data={SAMPLE_RESUME.data} design={SAMPLE_RESUME.design} />
+          <ResumePreview data={sample.data} design={sample.design} />
         </div>
       </div>
       {score > 0 && (
@@ -123,6 +128,8 @@ function SampleResume() {
  * sample, and "Start free", which signs up and comes back here. Nothing here calls the AI.
  */
 export function ResumeAiPublicPage() {
+  const country = useCountry();
+  const india = isIndia(country);
   return (
     <div className="min-h-full overflow-x-clip">
       <header className="relative mx-auto flex max-w-6xl items-center gap-3 px-4 py-4 sm:px-6">
@@ -182,7 +189,7 @@ export function ResumeAiPublicPage() {
             You see every change the AI makes to your resume, and any of them can be undone.
           </p>
           <Reveal as="ul" stagger className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {RESUME_AI_FEATURES.map(({ icon: Icon, title, text }) => (
+            {resumeAiFeatures(country).map(({ icon: Icon, title, text }) => (
               <li key={title} className="glass-panel rounded-2xl p-5">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-aurora-400/10 text-indigo-600 ring-1 ring-indigo-500/20 dark:text-indigo-300">
                   <Icon className="h-5 w-5" aria-hidden />
@@ -197,7 +204,7 @@ export function ResumeAiPublicPage() {
               </span>
               <h3 className="mt-4 font-display text-base font-semibold">{TEMPLATES.length} templates, Word and PDF</h3>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                Classic, Modern, Campus, Harvard and more, downloaded as a Word file or a PDF ready to send.
+                Classic, Modern, {regionWords(country).campusTemplate}, Harvard and more, downloaded as a Word file or a PDF ready to send.
               </p>
             </li>
             <li className="glass-panel rounded-2xl p-5">
@@ -206,7 +213,9 @@ export function ResumeAiPublicPage() {
               </span>
               <h3 className="mt-4 font-display text-base font-semibold">Outreach, in Jobs AI</h3>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                Referral requests, emails to HR and your Naukri and LinkedIn profiles are written from your resume in{" "}
+                {india
+                  ? "Referral requests, emails to HR and your Naukri and LinkedIn profiles are written from your resume in"
+                  : `Referral requests, ${regionWords(country).coldEmails} and your LinkedIn profile are written from your resume in`}{" "}
                 <Link to={JOBS_AI_HOME} className={cx("font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
                   Jobs AI
                 </Link>

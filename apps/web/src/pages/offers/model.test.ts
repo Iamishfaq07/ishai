@@ -48,3 +48,19 @@ describe("Offer AI model", () => {
     expect(rows.find((r) => r.label === "Variable (target)")).toBeUndefined(); // nobody has one
   });
 });
+
+describe("offers outside India", () => {
+  it("use base salary, target bonus and signing bonus; India keeps fixed, variable and joining bonus", async () => {
+    const { offerTerms } = await import("./model");
+    expect(offerTerms("IN")).toMatchObject({ fixed: "Fixed pay", joining: "Joining bonus", variableRow: "Variable (target)" });
+    expect(offerTerms("US")).toMatchObject({ fixed: "Base salary", joining: "Signing bonus", variableRow: "Target bonus" });
+    expect(offerLine({ ...emptyOffer("USD"), fixed: 150_000, variable: 15_000, joining_bonus: 10_000 }, "US"))
+      .toBe("$150k base + $15k target bonus + $10k signing bonus");
+    expect(offerLine({ ...emptyOffer("GBP"), fixed: 60_000 }, "GB")).toBe("£60k base a year");
+    const plan = { ask: 165_000, ask_why: "", reasons: [], call_script: [], email: { subject: "", body: "" }, questions: [], watch_outs: [] };
+    expect(practiceRequest(rec({ currency: "USD", fixed: 150_000, plan }), "US").mock?.negotiation?.target).toBe("$165k base");
+    const rows = compareRows([rec({ id: "a", fixed: 150_000, joining_bonus: 10_000 }), rec({ id: "b", fixed: 140_000 })], "US");
+    expect(rows.map((r) => r.label)).toEqual(expect.arrayContaining(["Base salary", "Signing bonus"]));
+    expect(rows.map((r) => r.label)).not.toContain("Fixed pay");
+  });
+});
