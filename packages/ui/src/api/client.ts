@@ -1,5 +1,6 @@
 import type {
   EngineeringTelemetry,
+  SignedInDevice,
   JobMission,
   PrepPlan,
   JobTimelineEvent,
@@ -436,6 +437,9 @@ export function createApiClient(options: ApiClientOptions) {
         body: body({ current_password: currentPassword, new_password: newPassword }),
       }),
     logoutAll: () => json<void>("/v1/auth/logout-all", { method: "POST" }),
+    /** Signed-in devices, most recently used first. */
+    devices: () => json<SignedInDevice[]>("/v1/auth/sessions"),
+    signOutDevice: (id: string) => json<void>(`/v1/auth/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),
     requestEmailChange: (newEmail: string, password: string) =>
       json<{ status: string }>("/v1/auth/me/email", {
         method: "POST",

@@ -21,6 +21,7 @@ from orbit_api.admin.overview import router as admin_overview_router
 from orbit_api.admin.routes import public_router as announcement_router
 from orbit_api.admin.routes import router as admin_router
 from orbit_api.answers.routes import router as answers_router
+from orbit_api.auth.devices import router as devices_router
 from orbit_api.auth.routes import router as auth_router
 from orbit_api.billing.packs import packs as configured_packs
 from orbit_api.billing.routes import router as billing_router
@@ -297,6 +298,7 @@ def create_app() -> FastAPI:
     app.include_router(resumes_router)
     app.include_router(resume_kit_router)
     app.include_router(job_alerts_router)
+    app.include_router(devices_router)
     app.include_router(job_mission_router)
     app.include_router(job_plan_router)
     app.include_router(jobs_router)

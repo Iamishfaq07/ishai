@@ -283,6 +283,10 @@ def mount(router: APIRouter) -> None:
         if claimed:
             dest += ("&" if "?" in dest else "?") + "google=claimed"
         response = RedirectResponse(_home(dest), status_code=302)
-        set_session_cookie(response, create_access_token(user.id, user.token_version, idle=True))
+        from orbit_api.auth.devices import start_session
+
+        sid = await start_session(db, user, request)
+        await db.commit()
+        set_session_cookie(response, create_access_token(user.id, user.token_version, idle=True, sid=sid))
         _clear_state(response)
         return response
