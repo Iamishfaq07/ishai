@@ -119,7 +119,7 @@ function Coverage({ stories, onPick }: { stories: Story[]; onPick: (c: StoryComp
           </p>
           <div aria-hidden="true" className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-white/10">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-emerald-500 motion-ok:transition-[width] motion-ok:duration-700 motion-ok:ease-out"
+              className="h-full rounded-full bg-emerald-500 motion-ok:transition-[width] motion-ok:duration-700 motion-ok:ease-out"
               style={{ width: `${(covered.size / STORY_COMPETENCIES.length) * 100}%` }}
             />
           </div>

@@ -225,7 +225,7 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
             <FitPanel fit={actions.fit} onTailor={actions.tailor} card />
           ) : (
             <Card className="flex flex-wrap items-center gap-4">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-aurora-400/10 text-indigo-600 ring-1 ring-indigo-500/20 dark:text-indigo-300">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
                 <Sparkles className="h-5 w-5" aria-hidden />
               </span>
               <div className="min-w-0 flex-1 basis-56">

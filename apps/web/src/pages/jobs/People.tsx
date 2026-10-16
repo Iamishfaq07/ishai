@@ -192,7 +192,7 @@ function PersonCard({ contact: c, busy, onTouched, onEdit, onDelete }: {
   return (
     <Card className="flex h-full flex-col gap-2">
       <div className="flex items-start gap-3">
-        <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 text-sm font-semibold text-white">
+        <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-sm font-semibold text-zinc-700 dark:bg-white/10 dark:text-zinc-100">
           {c.name.slice(0, 1).toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">

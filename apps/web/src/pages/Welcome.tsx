@@ -186,7 +186,7 @@ export function WelcomePage() {
             {Array.from({ length: QUESTIONS }, (_, i) => (
               <span
                 key={i}
-                className={cx("h-1.5 rounded-full transition-colors duration-300", i <= step ? "bg-gradient-to-r from-indigo-500 to-aurora-400" : "bg-zinc-200 dark:bg-white/10")}
+                className={cx("h-1.5 rounded-full transition-colors duration-300", i <= step ? "bg-indigo-600" : "bg-zinc-200 dark:bg-white/10")}
               />
             ))}
           </div>

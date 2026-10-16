@@ -156,7 +156,7 @@ export function ResumeAiHomePage() {
       ) : (
         <section aria-labelledby="resume-ai-title" className="mb-6 flex flex-wrap items-end justify-between gap-4 animate-fade-up">
           <div className="flex items-center gap-3">
-            <span aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/20 to-aurora-400/10 text-emerald-700 ring-1 ring-emerald-500/20 dark:text-emerald-300">
+            <span aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-300">
               <FileText className="h-5 w-5" />
             </span>
             <div>
@@ -298,7 +298,7 @@ function FindJobs() {
         focusRing,
       )}
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-aurora-500 text-white shadow-glow-sm">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white">
         <Briefcase className="h-5 w-5" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">

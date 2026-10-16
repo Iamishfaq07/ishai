@@ -256,7 +256,7 @@ function GoalCard({ progress, first, className }: { progress: Progress | null; f
           aria-valuemax={goal}
           aria-valuenow={Math.min(state.done, goal)}
         >
-          <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-aurora-400" style={{ width: Math.min(state.done / goal, 1) * 100 + "%" }} />
+          <div className="h-full rounded-full bg-indigo-600" style={{ width: Math.min(state.done / goal, 1) * 100 + "%" }} />
         </div>
         <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
           Mock interviews and warm-up answers count.{" "}

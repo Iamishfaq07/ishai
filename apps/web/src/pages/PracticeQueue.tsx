@@ -43,7 +43,7 @@ export function PracticeQueueCard({ className }: { className?: string }) {
       <section aria-labelledby="queue-title">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-400/10 text-amber-700 ring-1 ring-amber-500/20 dark:text-amber-300">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:text-amber-300">
               <RotateCcw className="h-5 w-5" aria-hidden />
             </span>
             <div className="min-w-0">

@@ -155,7 +155,7 @@ function MockSetup() {
         <Link
           to="/interview"
           className={cx(
-            "group relative flex flex-wrap items-center gap-4 overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-sky-500 p-5 text-white shadow-lg ring-1 ring-white/10 sm:p-6",
+            "group relative flex flex-wrap items-center gap-4 overflow-hidden rounded-3xl bg-zinc-900 p-5 text-white ring-1 ring-inset ring-white/10 sm:p-6",
             focusRing,
           )}
         >
@@ -241,7 +241,7 @@ function MockSetup() {
                     )}
                   >
                     <span className="flex w-full items-center justify-between gap-2">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-aurora-400/10 text-indigo-600 ring-1 ring-indigo-500/20 dark:text-indigo-300">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
                         <Icon className="h-4 w-4" aria-hidden />
                       </span>
                       <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-xs font-medium tabular-nums text-zinc-700 dark:text-zinc-300">{p.minutes} min</span>

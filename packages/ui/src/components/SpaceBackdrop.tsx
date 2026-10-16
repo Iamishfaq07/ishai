@@ -53,7 +53,7 @@ function StarLayer({ stars, className }: { stars: Star[]; className?: string }) 
  */
 export const SpaceBackdrop = memo(function SpaceBackdrop({ className }: { className?: string }) {
   return (
-    <div aria-hidden="true" className={cx("pointer-events-none fixed inset-0 -z-10 overflow-hidden", className)}>
+    <div aria-hidden="true" className={cx("space-backdrop pointer-events-none fixed inset-0 -z-10 overflow-hidden", className)}>
       <div
         className="absolute -right-[20%] -top-[30%] h-[80vmax] w-[80vmax] rounded-full opacity-60 motion-safe:animate-drift dark:opacity-100"
         style={{ background: "radial-gradient(closest-side, rgb(var(--accent-500) / 0.22), transparent)" }}

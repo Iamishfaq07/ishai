@@ -83,7 +83,7 @@ export function MoreToolCards() {
       {tools.map(({ to, name, icon: Icon, line }) => (
         <li key={name} className="min-w-0">
           <Link to={to} className={cx("orbit-card lift flex h-full flex-col rounded-2xl p-5", focusRing)}>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-aurora-500 text-white shadow-glow-sm">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white">
               <Icon className="h-5 w-5" aria-hidden />
             </span>
             <span className="mt-3 flex items-center gap-1 font-display text-lg font-semibold">{name} <AiPill /></span>
