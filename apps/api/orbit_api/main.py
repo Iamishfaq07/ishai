@@ -58,6 +58,7 @@ from orbit_api.resumes.routes import router as resumes_router
 from orbit_api.resumes.tailor_queue import router as tailor_queue_router
 from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.runtime_config import refresh as refresh_runtime_config
+from orbit_api.sessions.camera import router as camera_router
 from orbit_api.sessions.cleanup import running_sweeper
 from orbit_api.sessions.companion import router as companion_router
 from orbit_api.sessions.feedback import router as feedback_router
@@ -305,6 +306,7 @@ def create_app() -> FastAPI:
     app.include_router(two_factor_router)
     app.include_router(passkeys_router)
     app.include_router(voice_router)
+    app.include_router(camera_router)
     app.include_router(job_mission_router)
     app.include_router(job_plan_router)
     app.include_router(jobs_router)

@@ -131,6 +131,8 @@ class UserOut(BaseModel):
     evidence_vault: bool = False
     # Mock-interview languages this server offers (practice_language.py): ["en"] unless ORBIT_MULTILINGUAL is on.
     practice_languages: list[str] = ["en"]
+    # The camera coach in mock interviews is on for this server (ORBIT_VIDEO_MOCK).
+    video_mock: bool = False
 
 
 class AuthOut(BaseModel):
@@ -145,7 +147,8 @@ def _user_out(u: User, *, with_csrf: bool = False) -> UserOut:
                    has_password=u.has_password,
                    approval_pending=awaiting_approval(u), store_transcripts=u.store_transcripts, country=u.country,
                    csrf_token=csrf_token_for(u.id, u.token_version) if with_csrf else None,
-                   evidence_vault=get_settings().evidence_vault, practice_languages=practice_language.available())
+                   evidence_vault=get_settings().evidence_vault, practice_languages=practice_language.available(),
+                   video_mock=get_settings().video_mock)
 
 
 def _origin(url: str) -> str:

@@ -32,6 +32,8 @@ import {
 } from "@orbit/ui";
 import { Button, ErrorNote, Spinner } from "../components/ui";
 import { LIVE_URL, api } from "../lib/api";
+import { useAuth } from "../lib/auth";
+import { useCameraCoach } from "../lib/useCameraCoach";
 import {
   captureScreenFrame,
   captureStream,
@@ -91,6 +93,9 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   const [hotkeys] = useState(loadHotkeys);
   const ratings = useAnswerRatings(api, session.id);
   // The mock interviewer reads questions with the natural voice when the server offers it (Settings picks which).
+  // The camera coach (ORBIT_VIDEO_MOCK): on-device numbers about facing the camera, offered in mock rounds.
+  const { user } = useAuth();
+  const cameraCoach = useCameraCoach(session.id, session.type === "mock" && Boolean(user?.video_mock));
   const naturalVoice = useNaturalVoiceSource(
     api,
     safeLocal.getItem(VOICE_CHOICE_KEY),
@@ -372,6 +377,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       mockInterview={session.type === "mock"}
       naturalVoice={naturalVoice}
       practiceLanguage={session.language}
+      {...(cameraCoach ? { cameraCoach } : {})}
       ratings={ratings}
       onInterviewerSpeaking={onInterviewerSpeaking}
       live={live}

@@ -4,6 +4,7 @@ import type {
   TwoFactorStatus,
   Passkey,
   VoiceStatus,
+  CameraMetrics,
   PasskeyOptions,
   SignedInDevice,
   JobMission,
@@ -436,6 +437,9 @@ export function createApiClient(options: ApiClientOptions) {
     twoFactorNewCodes: (code: string) =>
       json<{ recovery_codes: string[] }>("/v1/auth/2fa/recovery-codes", { method: "POST", body: body({ code }) }),
     voiceStatus: () => json<VoiceStatus>("/v1/voice"),
+    /** The camera coach's numbers so far for a mock session (sent again as they grow). */
+    saveCameraMetrics: (sessionId: string, metrics: CameraMetrics) =>
+      json<void>(`/v1/sessions/${encodeURIComponent(sessionId)}/camera-metrics`, { method: "PUT", body: body(metrics) }),
     /** The interviewer's question as MP3, streamed (read the body as it arrives). */
     speak: (text: string, voice: string, signal?: AbortSignal, sessionId?: string) =>
       raw("/v1/voice/speak", {

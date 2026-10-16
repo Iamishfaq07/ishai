@@ -84,6 +84,7 @@ from orbit_api.ratelimit import SlidingWindow, client_network, limit, limit_user
 from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.retrieval.index import IndexedChunk, SessionIndex, chunk_body
 from orbit_api.sessions import companion, practice_queue
+from orbit_api.sessions.camera import CameraOut, camera_for
 from orbit_api.sessions.feedback import learned_preferences, session_feedback
 from orbit_api.sessions.loop_memory import loop_memory
 from orbit_api.sessions.recorder import DbRecorder, InterviewTime, upsert_usage
@@ -203,6 +204,8 @@ class SessionDetail(BaseModel):
     questions: list[dict[str, Any]]
     answers: list[dict[str, Any]]
     summary: dict[str, Any] | None
+    # The camera coach's numbers and their trend across sessions (sessions/camera.py); null when it wasn't used.
+    camera: CameraOut | None = None
 
 
 async def _owned(db: AsyncSession, session_id: str, user: User) -> LiveSessionRow:
@@ -363,6 +366,7 @@ async def get_session(session_id: str, user: Annotated[User, Depends(current_use
                   "first_token_ms": a.first_token_ms, "total_ms": a.total_ms, "feedback": ratings.get(a.id)}
                  for a in answers],
         summary=summary.content if summary else None,
+        camera=await camera_for(db, row),
     )
 
 

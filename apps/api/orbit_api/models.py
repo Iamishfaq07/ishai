@@ -319,6 +319,9 @@ class LiveSessionRow(TimestampMixin, Base):
     # What the live connection remembers (live/carryover.py, as JSON): saved every heartbeat and when it drops, so a
     # server restart mid-session continues the conversation and the mock round. Cleared when the session ends.
     carryover: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
+    # Mock interviews with the camera coach on (sessions/camera.py): numbers measured on the person's own device
+    # (face in frame %, facing the camera %, head movement). Never video, images or face landmarks.
+    camera_metrics: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
 
 
 class Workspace(TimestampMixin, Base):

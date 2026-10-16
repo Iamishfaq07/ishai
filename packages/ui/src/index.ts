@@ -159,7 +159,7 @@ export { CompanionShare, QrCode, companionLink } from "./components/CompanionSha
 export { StoryBankNote } from "./components/StoryBankNote";
 export { ResumeMakerNote } from "./components/ResumeMakerNote";
 export { AnswerRatingButtons, FEEDBACK_REASONS, useAnswerRatings, type AnswerRatings } from "./components/AnswerRating";
-export { DeliveryCard, FollowUpCard } from "./components/Insights";
+export { CameraCard, DeliveryCard, FollowUpCard } from "./components/Insights";
 export { LatencyDiagnostics } from "./components/LatencyDiagnostics";
 export { FeedbackDiagnostics } from "./components/FeedbackDiagnostics";
 export { applyOverrides, scoreKeyPoints, type KeyPointProgress, type PointProgress } from "./live/coverage";
@@ -187,7 +187,7 @@ export {
   type NaturalVoiceSource,
   type VoiceOption,
 } from "./live/naturalVoice";
-export { MockPanel } from "./components/MockPanel";
+export { MockPanel, type CameraCoach } from "./components/MockPanel";
 export { ConfirmHost, confirmDialog, type ConfirmOptions } from "./components/ConfirmDialog";
 export * from "./icons";
 

@@ -21,7 +21,12 @@ const PANEL_TONE: Record<string, string> = {
  * Mock interview view: the AI interviewer's question (spoken aloud), whose turn it is, and controls. Orbit never
  * suggests answers here — it's practice; the report afterwards grades what was said.
  */
-export function MockPanel({ live, actions, voice, ended, onViewReport, muted = false, onMutedChange }: {
+/** The camera coach (web, ORBIT_VIDEO_MOCK): measures the self-view on this device; start() returns stop(). */
+export interface CameraCoach {
+  start: (video: HTMLVideoElement) => Promise<() => void>;
+}
+
+export function MockPanel({ live, actions, voice, ended, onViewReport, muted = false, onMutedChange, cameraCoach }: {
   live: LiveViewState;
   actions: LiveActions;
   voice: InterviewerVoice;
@@ -29,6 +34,8 @@ export function MockPanel({ live, actions, voice, ended, onViewReport, muted = f
   /** The interviewer's voice is off: questions are read on screen only. */
   muted?: boolean;
   onMutedChange?: (muted: boolean) => void;
+  /** Offered with the self-view, in every mock round, when the server has it on. */
+  cameraCoach?: CameraCoach;
   /** Open the transcript and review, offered once the session has ended. */
   onViewReport?: () => void;
 }) {
@@ -172,7 +179,7 @@ export function MockPanel({ live, actions, voice, ended, onViewReport, muted = f
       {!q.oneWay && (
         <TypedAnswer key={`typed-${q.questionId}`} micDown={live.mic.state === "error"} onSend={actions.mockAnswer} />
       )}
-      {q.oneWay && <SelfView />}
+      {(q.oneWay || cameraCoach) && <SelfView {...(cameraCoach ? { coach: cameraCoach } : {})} />}
       {!q.negotiation && <StructureHint key={`hint-${q.questionId}`} q={q} />}
       {/* Who has the floor, at a glance from across the room: the interviewer talking, or Orbit listening to you. */}
       <div aria-hidden="true" className="flex min-h-48 flex-1 flex-col items-center justify-center gap-10">
@@ -400,11 +407,50 @@ function OneWayClock({ think, answer, onTimeUp }: { think: number; answer: numbe
   );
 }
 
-/** Your own camera, mirrored, as a one-way interview shows it: on this device only, never recorded or sent. */
-function SelfView() {
+/**
+ * Your own camera, mirrored, as a one-way interview shows it: on this device only, never recorded or sent. With the
+ * camera coach, it can also measure (on this device) how much of the time you face the camera; only those numbers
+ * are saved with the session.
+ */
+function SelfView({ coach }: { coach?: CameraCoach }) {
   const [on, setOn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [measuring, setMeasuring] = useState(false);
+  const [coachState, setCoachState] = useState<"off" | "loading" | "on">("off");
   const video = useRef<HTMLVideoElement | null>(null);
+  useEffect(() => {
+    if (!on || !measuring || !coach) {
+      setCoachState("off");
+      return;
+    }
+    let stop: (() => void) | null = null;
+    let cancelled = false;
+    setCoachState("loading");
+    const begin = () => {
+      const el = video.current;
+      if (!el) return;
+      void coach.start(el).then(
+        (s) => {
+          if (cancelled) s();
+          else {
+            stop = s;
+            setCoachState("on");
+          }
+        },
+        () => {
+          if (cancelled) return;
+          setError("The camera coach couldn't start on this device. The camera still works.");
+          setMeasuring(false);
+        },
+      );
+    };
+    const t = window.setTimeout(begin, 0); // after the video element mounts
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+      stop?.();
+    };
+  }, [on, measuring, coach]);
   useEffect(() => {
     if (!on) return;
     let stream: MediaStream | null = null;
@@ -451,6 +497,25 @@ function SelfView() {
           aria-label="Your camera (only on this device, not recorded)"
           className="w-48 -scale-x-100 rounded-xl bg-zinc-900 ring-1 ring-zinc-200 dark:ring-white/10"
         />
+      )}
+      {coach && (
+        <label className="flex max-w-sm items-start gap-2 text-xs text-zinc-600 dark:text-zinc-300">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={measuring}
+            onChange={(e) => {
+              setError(null);
+              setMeasuring(e.target.checked);
+              if (e.target.checked) setOn(true);
+            }}
+          />
+          <span>
+            <span className="font-medium">Camera coach</span>
+            {coachState === "loading" ? " (starting…)" : coachState === "on" ? " (measuring)" : ""}: how much of the time you face the camera,
+            measured on this device. Video never leaves your device; only the numbers are saved with this session.
+          </span>
+        </label>
       )}
       {error && <p className="text-xs text-amber-700 dark:text-amber-300">{error}</p>}
     </div>
