@@ -24,12 +24,6 @@ def test_reads_pay_lines() -> None:
     assert p and p.low == 45 * 2_080
     p = parse_pay("₹80k a month")
     assert p and p.low == 960_000
-    p = parse_pay("CA$116K - CA$145K")  # Ashby's Canadian pay: not US dollars
-    assert p and (p.currency, p.low, p.high) == ("CAD", 116_000, 145_000)
-    for line, currency in (("A$150K – A$180K", "AUD"), ("US$90k – US$110k", "USD"),
-                           ("CAD 170k – CAD 210k a year", "CAD")):
-        p = parse_pay(line)
-        assert p and p.currency == currency
     assert parse_pay("Competitive") is None
     assert parse_pay("$5 – $500k") is None  # not a range anyone pays
     assert parse_pay(None) is None

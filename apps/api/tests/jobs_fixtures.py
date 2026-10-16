@@ -44,38 +44,6 @@ def greenhouse() -> dict[str, Any]:
     ], "meta": {"total": 4}}
 
 
-WORLD_BOARD = "anthropic"  # a built-in board hiring mostly outside India: served greenhouse_world()
-
-
-def greenhouse_world() -> dict[str, Any]:
-    """A board hiring in the US, the UK and Canada, with pay ranges (`pay_transparency=true`; fetched 2026-10-17)."""
-    body = ("&lt;h2&gt;About the role&lt;/h2&gt;&lt;p&gt;Build the backend services behind our API in Python and Go, "
-            "on Kubernetes in AWS, with PostgreSQL, Redis and Kafka.&lt;/p&gt;&lt;h2&gt;You may be a good fit if you"
-            "&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Have 3+ years of backend experience&lt;/li&gt;&lt;li&gt;Know Docker, "
-            "Terraform and gRPC&lt;/li&gt;&lt;/ul&gt;")
-
-    def job(n: int, title: str, where: str, pay: list[dict[str, Any]], **kw: Any) -> dict[str, Any]:
-        return {"id": 5_017_000 + n, "title": title, "location": {"name": where}, "content": body,
-                "absolute_url": f"https://job-boards.greenhouse.io/anthropic/jobs/{5_017_000 + n}",
-                "first_published": ago(days=n).isoformat(), "updated_at": ago(hours=n).isoformat(),
-                "metadata": [], "pay_input_ranges": pay, **kw}
-
-    def usd(lo: int, hi: int, title: str = "Annual Salary:") -> list[dict[str, Any]]:
-        return [{"min_cents": lo * 100, "max_cents": hi * 100, "currency_type": "USD", "title": title,
-                 "blurb": "<p>The annual compensation range for this role is listed below.</p>"}]
-
-    return {"jobs": [
-        job(1, "Software Engineer, Backend", "San Francisco, CA | New York City, NY", usd(222_800, 290_000)),
-        job(2, "Backend Engineer, Platform", "Seattle, WA", usd(200_000, 260_000)),
-        job(3, "Senior Backend Engineer", "Remote-Friendly, United States", usd(240_000, 310_000)),
-        job(4, "Backend Engineer", "London, UK", [{"min_cents": 11_000_000, "max_cents": 15_000_000,
-                                                   "currency_type": "GBP", "title": "Annual Salary:"}]),
-        job(5, "Backend Engineer, Developer Platform", "Toronto, ON",
-            [{"min_cents": 17_000_000, "max_cents": 21_000_000, "currency_type": "CAD", "title": "Toronto Pay Range"}]),
-        job(6, "Software Engineering Intern", "New York, NY", usd(50, 60, "Hourly Pay")),
-    ], "meta": {"total": 6}}
-
-
 def lever() -> list[Any]:
     return [
         {"id": "aa98a938-af3a-45f5-851d-966b2b5bad33", "text": "SDE 2 - Platform",
@@ -120,17 +88,7 @@ def ashby() -> dict[str, Any]:
     ]}
 
 
-def smartrecruiters_list(country: str = "in") -> dict[str, Any]:
-    """The posts in the `country` asked for: India's (Swiggy's), one in the US (ServiceNow's), none elsewhere."""
-    if country == "us":
-        return {"offset": 0, "limit": 100, "totalFound": 1, "content": [
-            {"id": "744000160000001", "name": "Senior Backend Engineer", "releasedDate": iso(ago(hours=6)),
-             "company": {"identifier": "ServiceNow", "name": "ServiceNow"},
-             "location": {"city": "Santa Clara", "region": "CA", "country": "us", "remote": False, "hybrid": True,
-                          "fullLocation": "Santa Clara, CA, United States"},
-             "typeOfEmployment": {"label": "Full-time"}, "experienceLevel": {"id": "mid_senior_level"}}]}
-    if country != "in":
-        return {"offset": 0, "limit": 100, "totalFound": 0, "content": []}
+def smartrecruiters_list() -> dict[str, Any]:
     return {"offset": 0, "limit": 100, "totalFound": 2, "content": [
         {"id": "744000153719375", "name": "Backend Engineer II", "releasedDate": iso(ago(hours=10)),
          "company": {"identifier": "Swiggy", "name": "SWIGGY"},
@@ -144,12 +102,10 @@ def smartrecruiters_list(country: str = "in") -> dict[str, Any]:
 
 
 def smartrecruiters_detail(posting_id: str) -> dict[str, Any]:
-    company, about = (("ServiceNow", "ServiceNow makes the AI platform for business.")
-                      if posting_id.startswith("7440001600") else ("Swiggy", "Swiggy is India's food app."))
-    return {"id": posting_id, "postingUrl": f"https://jobs.smartrecruiters.com/{company}/{posting_id}-backend-engineer-ii",
-            "applyUrl": f"https://jobs.smartrecruiters.com/{company}/{posting_id}-backend-engineer-ii?oga=true",
+    return {"id": posting_id, "postingUrl": f"https://jobs.smartrecruiters.com/Swiggy/{posting_id}-backend-engineer-ii",
+            "applyUrl": f"https://jobs.smartrecruiters.com/Swiggy/{posting_id}-backend-engineer-ii?oga=true",
             "jobAd": {"sections": {
-                "companyDescription": {"title": "Company Description", "text": f"<p>{about}</p>"},
+                "companyDescription": {"title": "Company Description", "text": "<p>Swiggy is India's food app.</p>"},
                 "jobDescription": {"title": "Job Description", "text": "<p>Build order services in Java and Go "
                                                                         "with Kafka and Redis.</p>"},
                 "qualifications": {"title": "Qualifications", "text": "<p>3+ years of experience.</p>"}}}}
@@ -238,15 +194,14 @@ def transport(seen: list[httpx.Request] | None = None, *, fail: dict[str, int] |
         if override and host in override:
             return httpx.Response(200, content=json.dumps(override[host]).encode())
         if host == "boards-api.greenhouse.io":
-            payload: Any = greenhouse_world() if path.split("/")[3:4] == [WORLD_BOARD] else greenhouse()
+            payload: Any = greenhouse()
         elif host == "api.lever.co":
             payload = lever()
         elif host == "api.ashbyhq.com":
             payload = ashby()
         elif host == "api.smartrecruiters.com":
             tail = path.rstrip("/").rsplit("/", 1)[-1]
-            payload = (smartrecruiters_list(request.url.params.get("country", "in")) if tail == "postings"
-                       else smartrecruiters_detail(tail))
+            payload = smartrecruiters_list() if tail == "postings" else smartrecruiters_detail(tail)
         elif host == "himalayas.app":
             payload = himalayas() if request.url.params.get("page") == "1" else {"jobs": []}
         elif host == "remoteok.com":
