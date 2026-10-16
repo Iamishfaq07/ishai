@@ -74,7 +74,7 @@ def test_a_payment_is_credited_once_and_only_with_the_utr_the_admin_checked(shop
     ok = client.post(f"/v1/admin/payments/{o['id']}", headers=admin, json={"action": "approve", "utr": new_utr})
     assert ok.status_code == 200
     assert client.post(f"/v1/admin/payments/{o['id']}", headers=admin, json={"action": "approve"}).status_code == 409
-    assert _wallet(client, h)["resume"] == 16  # welcome + one pack
+    assert _wallet(client, h)["resume"] == 31  # welcome + one pack (3 credits: 30 Resume AI credits)
     # And an approved order can't be given another UTR.
     assert client.post(f"/v1/billing/upi/orders/{o['id']}/utr", headers=h, json={"utr": _utr()}).status_code == 409
 

@@ -32,13 +32,12 @@ class MonthlyPlan:
     badge: str | None = None  # "Most popular", "Best value": shown on the pricing card
 
 
-# The structure the interview-copilot market uses (Final Round AI, Parakeet AI: monthly, quarterly, yearly, the longer
-# the cheaper a month), each about 30% under Final Round AI's list prices as of October 2026 ($150 / $250 / $300,
-# at ≈ ₹88 to the dollar). All three give the same plan; only the length and the price differ.
+# Unlimited the way Parakeet AI sells it (a week, a month, a year), each about 30% under its prices as of October 2026
+# ($78 / $149.90 / $599.90, at ≈ ₹88 to the dollar). All three give the same plan; only the length and price differ.
 DEFAULT_MONTHLY: tuple[MonthlyPlan, ...] = (
-    MonthlyPlan("premium_monthly", "Monthly", price_inr=8999, plan="premium", days=30),
-    MonthlyPlan("premium_quarterly", "Quarterly", price_inr=14999, plan="premium", days=90, badge="Most popular"),
-    MonthlyPlan("premium_yearly", "Yearly", price_inr=17999, plan="premium", days=365, badge="Best value"),
+    MonthlyPlan("premium_weekly", "Weekly", price_inr=4799, plan="premium", days=7),
+    MonthlyPlan("premium_monthly", "Monthly", price_inr=9199, plan="premium", days=30, badge="Most popular"),
+    MonthlyPlan("premium_yearly", "Yearly", price_inr=35999, plan="premium", days=365, badge="Best value"),
 )
 
 

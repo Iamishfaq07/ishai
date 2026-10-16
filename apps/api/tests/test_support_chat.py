@@ -23,7 +23,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
 
 def test_lookup_knows_the_packs() -> None:
     assert "₹499" in (lookup("how much is the mini pack") or "")
-    assert "15 interview minutes" in (lookup("how much is the mini pack") or "")
+    assert "25 Resume AI credits" in (lookup("how much is the mini pack") or "")
     assert lookup("hello")
     assert lookup("what is the weather in srinagar") is None
     # A payment that didn't land is not the price list.
@@ -42,12 +42,12 @@ def test_bot_then_a_person(client: TestClient) -> None:
 
     asked = client.post(
         f"/v1/support/threads/{thread['id']}/messages",
-        json={"token": token, "choice": "mini", "text": "Mini ₹499"},
+        json={"token": token, "choice": "mini", "text": "AI credits ₹499"},
     )
     assert asked.status_code == 200, asked.text
     body = asked.json()
     assert "₹499" in body["messages"][-1]["text"]
-    assert "15 interview minutes" in body["messages"][-1]["text"]
+    assert "25 Resume AI credits" in body["messages"][-1]["text"]
     assert any(item["id"] == "human" for item in body["suggestions"])
 
     unknown = client.post(
@@ -145,7 +145,7 @@ def test_signed_in_sees_their_balance_and_last_payment(client: TestClient) -> No
     )
     assert paid.status_code == 200, paid.text
     last = paid.json()["messages"][-1]["text"]
-    assert "landed" in last and "₹499" in last and "Mini" in last
+    assert "landed" in last and "₹499" in last and "AI credits" in last
 
 
 def test_the_page_leads_the_menu_but_not_a_follow_up(client: TestClient) -> None:

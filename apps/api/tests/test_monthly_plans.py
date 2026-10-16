@@ -30,14 +30,14 @@ def _pay(client: TestClient, h: dict[str, str], admin: dict[str, str], product: 
 
 def test_monthly_plans_are_listed_with_what_a_month_includes(client: TestClient) -> None:
     plans = {p["id"]: p for p in client.get("/v1/billing/monthly").json()}
-    assert list(plans) == ["premium_monthly", "premium_quarterly", "premium_yearly"]
-    month, quarter, year = plans.values()
-    assert (month["label"], month["price_inr"], month["days"], month["plan"]) == ("Monthly", 8999, 30, "premium")
-    assert (quarter["price_inr"], quarter["days"], quarter["per_month_inr"], quarter["badge"]) == (
-        14999, 90, 5000, "Most popular")
-    assert (year["price_inr"], year["days"], year["per_month_inr"], year["badge"]) == (17999, 365, 1479, "Best value")
-    # About 30% under Final Round AI's $150 / $250 / $300 (≈ ₹88 to the dollar), or more.
-    for plan, usd in ((month, 150), (quarter, 250), (year, 300)):
+    assert list(plans) == ["premium_weekly", "premium_monthly", "premium_yearly"]
+    week, month, year = plans.values()
+    assert (week["label"], week["price_inr"], week["days"]) == ("Weekly", 4799, 7)
+    assert (month["label"], month["price_inr"], month["days"], month["plan"], month["badge"]) == (
+        "Monthly", 9199, 30, "premium", "Most popular")
+    assert (year["price_inr"], year["days"], year["per_month_inr"], year["badge"]) == (35999, 365, 2959, "Best value")
+    # About 30% under Parakeet AI's $78 / $149.90 / $599.90 (≈ ₹88 to the dollar), or more.
+    for plan, usd in ((week, 78), (month, 149.90), (year, 599.90)):
         assert plan["price_inr"] <= usd * 88 * 0.7
     assert month["resume_ai"] is True and month["live_minutes"] == 3000 and month["screenshots"] is None
 
@@ -53,7 +53,7 @@ def test_buying_a_month_gives_the_plan_and_buying_more_extends_it(monkeypatch: p
 
         o = _pay(client, h, admin, "premium_monthly")
         assert (o["label"], o["amount_inr"], o["resume_credits"], o["interview_minutes"]) == (
-            "Monthly plan · 30 days", 8999, 0, 0)
+            "Monthly plan · 30 days", 9199, 0, 0)
         e = client.get("/v1/entitlements", headers=h).json()
         assert e["plan"] == "premium" and e["credits"] is None and e["features"]["resume_ai"] is True
         until = datetime.fromisoformat(e["until"])
