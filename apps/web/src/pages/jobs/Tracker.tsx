@@ -38,7 +38,7 @@ import { linkButton } from "./links";
 import {
   STATUSES,
   STATUS_LABEL,
-  STATUS_TONE,
+  STATUS_MARK,
   byStatus,
   dateInput,
   fileSlug,
@@ -54,6 +54,7 @@ import {
   stillOpenAt,
   trackerCsv,
 } from "./model";
+import { StagePill } from "./StagePill";
 import { JOBS_MATCHES, jobPath, outreachPath } from "./paths";
 import { CompareDrawer } from "./CompareDrawer";
 import { SearchInsightsPanel } from "./SearchInsightsPanel";
@@ -133,6 +134,8 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
   // Jobs picked to compare side by side (CompareDrawer), in the order picked; a removed job drops out.
   const [picked, setPicked] = useState<string[]>([]);
   const [comparing, setComparing] = useState(false);
+  // The card that just changed stage, so it flashes where it lands.
+  const [moved, setMoved] = useState<string | null>(null);
   const pickedEntries = picked.map((id) => entries.find((e) => e.id === id)).filter((e): e is JobTrackerEntry => Boolean(e));
   const compareFor = (e: JobTrackerEntry) => ({
     picked: picked.includes(e.id),
@@ -145,6 +148,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
     const before = tracker.data;
     if (patch.status) {
       // Moves show at once; the server's answer (with its dates) replaces it.
+      setMoved(entry.id);
       tracker.setData((prev) => prev?.map((e) => (e.id === entry.id ? { ...e, status: patch.status!, status_at: new Date().toISOString() } : e)) ?? null);
     }
     try {
@@ -224,7 +228,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
         <ul className="space-y-3">
           {shown.map((e) => (
             <li key={e.id}>
-              <TrackerCard entry={e} onUpdate={(p) => update(e, p)} onRemove={() => void remove(e)} compare={compareFor(e)} />
+              <TrackerCard entry={e} onUpdate={(p) => update(e, p)} onRemove={() => void remove(e)} compare={compareFor(e)} moved={moved === e.id} />
             </li>
           ))}
         </ul>
@@ -234,15 +238,15 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
       <div className="hidden gap-3 lg:grid lg:grid-cols-5">
         {STATUSES.map((s) => (
           <section key={s} aria-label={STATUS_LABEL[s]} className="relative min-w-0 rounded-2xl bg-zinc-500/[0.06] p-2.5 dark:bg-white/[0.02]">
-            <span aria-hidden="true" className={cx("absolute inset-x-4 top-0 h-0.5 rounded-full", STATUS_EDGE[s])} />
+            <span aria-hidden="true" className={cx("absolute inset-x-4 top-0 h-0.5 rounded-full", STATUS_MARK[s])} />
             <h3 className="mb-2 flex items-center gap-2 px-1 text-sm font-semibold">
-              <span className={cx("rounded-full px-2 py-0.5 text-xs ring-1", STATUS_TONE[s])}>{STATUS_LABEL[s]}</span>
+              <StagePill status={s} />
               <span className="text-xs font-normal text-zinc-500 tabular-nums dark:text-zinc-400">{columns[s].length}</span>
             </h3>
             <ul className="space-y-2.5">
               {columns[s].map((e) => (
                 <li key={e.id}>
-                  <TrackerCard compact entry={e} onUpdate={(p) => update(e, p)} onRemove={() => void remove(e)} compare={compareFor(e)} />
+                  <TrackerCard compact entry={e} onUpdate={(p) => update(e, p)} onRemove={() => void remove(e)} compare={compareFor(e)} moved={moved === e.id} />
                 </li>
               ))}
             </ul>
@@ -268,15 +272,6 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
   );
 }
 
-// Each status's colour as a solid edge: the card's left side, the top of its column on the board.
-const STATUS_EDGE: Record<JobStatus, string> = {
-  saved: "bg-zinc-400 dark:bg-zinc-500",
-  applied: "bg-indigo-500 dark:bg-indigo-400",
-  interviewing: "bg-sky-500 dark:bg-sky-400",
-  offer: "bg-emerald-500 dark:bg-emerald-400",
-  rejected: "bg-rose-400 dark:bg-rose-400/80",
-};
-
 /** A card's own actions: small accent links, the same weight whether a link or a button. */
 const cardAction = "inline-flex items-center gap-1 rounded font-medium text-indigo-600 hover:underline dark:text-indigo-400";
 
@@ -286,9 +281,12 @@ function TrackerCard({
   onUpdate,
   onRemove,
   compare,
+  moved = false,
 }: {
   entry: JobTrackerEntry;
   compact?: boolean;
+  /** It just changed stage: a ring that fades (base.css `.moved-flash`). */
+  moved?: boolean;
   onUpdate: (patch: JobTrackerUpdate) => Promise<boolean>;
   onRemove: () => void;
   /** Picking jobs to compare side by side: picked, and whether there's room for this one. */
@@ -308,7 +306,8 @@ function TrackerCard({
   return (
     <article className={cx("glass-panel relative overflow-hidden rounded-xl", compact ? "p-3 pl-3.5" : "p-4 pl-5")}>
       {/* The status as a colour edge, so a long phone list (one column) still reads at a glance. */}
-      <span aria-hidden="true" className={cx("absolute inset-y-0 left-0 w-1", STATUS_EDGE[entry.status])} />
+      <span aria-hidden="true" className={cx("absolute inset-y-0 left-0 w-1", STATUS_MARK[entry.status])} />
+      {moved && <span key={entry.status} aria-hidden="true" className="moved-flash pointer-events-none absolute inset-0 rounded-[inherit]" />}
       <div className="flex items-start gap-2.5">
       <CompanyLogo company={entry.company} size={compact ? "md" : "lg"} />
       <div className="min-w-0 flex-1">

@@ -93,13 +93,35 @@ export function useCountUp(to: number, start: boolean, { from = 0, duration = 11
   return value;
 }
 
-/** A counted-up number in text. Screen readers get the final value only. */
-export function CountUp({ to, from = 0, decimals = 0, suffix = "", className }: { to: number; from?: number; decimals?: number; suffix?: string; className?: string }) {
+/**
+ * A counted-up number in text, the first time it's in view. Screen readers get the final value only. `format` writes
+ * it ("₹12,400", "3 days"), given the value rounded to `decimals`. Proportional figures, as a stat's number should have;
+ * add `tabular-nums` to `className` where it lines up in a column.
+ */
+export function CountUp({
+  to,
+  from = 0,
+  decimals = 0,
+  suffix = "",
+  format,
+  className,
+}: {
+  to: number;
+  from?: number;
+  decimals?: number;
+  suffix?: string;
+  format?: (n: number) => string;
+  className?: string;
+}) {
   const [ref, inView] = useInView<HTMLSpanElement>();
-  const value = useCountUp(to, inView, { from });
-  const text = (n: number) => `${n.toFixed(decimals)}${suffix}`;
+  // A new value counts on from the last one, not from `from` again. A small step (3 applications) isn't counted at all:
+  // "0, 1, 2, 3" in a second reads as a flicker of wrong numbers.
+  const [range, setRange] = useState({ from: Math.abs(to - from) < 10 ? to : from, to });
+  if (range.to !== to) setRange({ from: Math.abs(to - range.to) < 10 ? to : range.to, to });
+  const value = useCountUp(range.to, inView, { from: range.from });
+  const text = (n: number) => (format ? format(Number(n.toFixed(decimals))) : `${n.toFixed(decimals)}${suffix}`);
   return (
-    <span ref={ref} className={cx("tabular-nums", className)}>
+    <span ref={ref} className={className}>
       <span aria-hidden="true">{text(value)}</span>
       <span className="sr-only">{text(to)}</span>
     </span>

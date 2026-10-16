@@ -5,17 +5,25 @@
  * - `indigo-*` is the ACCENT (`--accent-50` … `--accent-950`, set by `applyDesign` from the user's choice).
  * - `zinc-*` is INK: the cool, blue-violet neutrals every surface, border and secondary text is drawn with.
  * - `aurora-*` is the fixed cyan the brand gradients fade into (logo, hero glows) — never used for UI state.
+ * - `stage-*` is a job's stage (saved … rejected): fixed colours, not the accent.
  * Motion is tokens too (`--dur-*`, `--ease-*` in base.css): `duration-quick`, `ease-enter`, and the animations below.
  * (Untyped on purpose: @orbit/ui doesn't depend on tailwindcss; each app's config types it.)
  */
 const shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
 const scale = (name: string) => Object.fromEntries(shades.map((s) => [s, `rgb(var(--${name}-${s}) / <alpha-value>)`]));
+const stages = ["saved", "applied", "interviewing", "offer", "rejected"] as const;
 
 export default {
   content: [],
   theme: {
     extend: {
-      colors: { indigo: scale("accent"), zinc: scale("ink"), aurora: scale("aurora") },
+      colors: {
+        indigo: scale("accent"),
+        zinc: scale("ink"),
+        aurora: scale("aurora"),
+        // `bg-stage-applied`: a job's stage, the same whatever the accent (base.css says why).
+        stage: Object.fromEntries(stages.map((s) => [s, `rgb(var(--stage-${s}) / <alpha-value>)`])),
+      },
       // Corners say how a thing behaves: controls (xl) are crisp, cards (2xl) a little softer, big panels (3xl) the
       // softest. Tighter than Tailwind's defaults (12 / 16 / 24 px), which read as a consumer app.
       borderRadius: { xl: "0.5rem", "2xl": "0.75rem", "3xl": "1rem" },

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { LinkedInProfile, LinkedInState, ResumeSummary } from "@orbit/types";
-import { Check, CircleAlert, CircleCheck, Copy, FileText, IdCard, Sparkles, Trash2, Upload, LoadGate, confirmDialog, cx, focusRing, safeLocal } from "@orbit/ui";
+import { Check, CircleAlert, CircleCheck, Copy, FileText, IdCard, Sparkles, Trash2, Upload, LoadGate, confirmDialog, cx, focusRing, safeLocal, useCountUp, useInView } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
@@ -345,19 +345,35 @@ function CopyBlock({ label, text }: { label: string; text: string }) {
   );
 }
 
-/** The score as a ring: the number in the middle says it; the ring is decoration. */
+// A score's ring: the fill says how it went; the track is a pale step of the same colour, so the whole ring reads.
+const RING_TONE = {
+  good: ["stroke-emerald-500", "stroke-emerald-500/15"],
+  fair: ["stroke-indigo-500", "stroke-indigo-500/15"],
+  low: ["stroke-amber-500", "stroke-amber-500/20"],
+} as const;
+
+/**
+ * The score as a ring: the number in the middle says it; the ring is decoration. The first time it's in view the ring
+ * draws round and the number counts up with it (Full motion; otherwise both are there at once).
+ */
 function ScoreRing({ score }: { score: number }) {
   const r = 34;
   const c = 2 * Math.PI * r;
+  const [ref, seen] = useInView<HTMLDivElement>();
+  const shown = useCountUp(score, seen, { duration: 900 });
+  const [fill, track] = RING_TONE[score >= 85 ? "good" : score >= 65 ? "fair" : "low"];
   return (
-    <div className="relative h-24 w-24">
+    <div ref={ref} className="relative h-24 w-24">
       <svg viewBox="0 0 80 80" className="h-24 w-24 -rotate-90" aria-hidden>
-        <circle cx="40" cy="40" r={r} fill="none" strokeWidth="7" className="stroke-zinc-500/15" />
-        <circle cx="40" cy="40" r={r} fill="none" strokeWidth="7" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - score / 100)}
-                className={score >= 85 ? "stroke-emerald-500" : score >= 65 ? "stroke-indigo-500" : "stroke-amber-500"} />
+        <circle cx="40" cy="40" r={r} fill="none" strokeWidth="7" className={track} />
+        <circle cx="40" cy="40" r={r} fill="none" strokeWidth="7" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - shown / 100)}
+                className={cx(fill, shown < 1 && "opacity-0")} />
       </svg>
       <span className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-display text-2xl font-semibold tabular-nums">{score}</span>
+        <span className="stat-value font-display text-2xl font-semibold">
+          <span aria-hidden>{Math.round(shown)}</span>
+          <span className="sr-only">{score}</span>
+        </span>
         <span className="text-[10px] text-zinc-500">out of 100</span>
       </span>
     </div>

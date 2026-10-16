@@ -20,7 +20,8 @@ import { useJobFeed, useJobsAi } from "./JobsAi";
 import { JobWhen, MatchBadge, TrustBadges } from "./JobCard";
 import { linkButton, textLink } from "./links";
 import { Busy, FirstFetch, NoResume, PortalCard, ProfileCard, firstFetch } from "./Matches";
-import { POSTED_WITHIN, STATUSES, STATUS_LABEL, STATUS_TONE, byStatus, matchBasis, nextUp, shortDate, withTracked } from "./model";
+import { POSTED_WITHIN, STATUSES, STATUS_LABEL, STATUS_MARK, byStatus, matchBasis, nextUp, shortDate, withTracked } from "./model";
+import { StagePill } from "./StagePill";
 import { JOBS_MATCHES, JOBS_PROFILE, JOBS_TRACKER, jobPath } from "./paths";
 
 const TOP = 4;
@@ -169,9 +170,7 @@ function TopMatch({ job, showMatch }: { job: JobListing; showMatch: boolean }) {
         </span>
       </span>
       {job.tracked && (
-        <span className={cx("hidden shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ring-1 sm:inline", STATUS_TONE[job.tracked.status])}>
-          {STATUS_LABEL[job.tracked.status]}
-        </span>
+        <StagePill status={job.tracked.status} className="hidden shrink-0 sm:inline-flex" />
       )}
       <ArrowUpRight className="h-4 w-4 shrink-0 text-zinc-400 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-indigo-500" aria-hidden />
     </Link>
@@ -208,9 +207,12 @@ function TrackerSummary({ entries, loading }: { entries: JobTrackerEntry[] | nul
           <ul className="mt-3 grid grid-cols-2 gap-2">
             {STATUSES.filter((s) => s !== "rejected").map((s) => (
               <li key={s}>
-                <Link to={JOBS_TRACKER} className={cx("block rounded-xl px-3 py-2 ring-1", STATUS_TONE[s], focusRing)}>
-                  <span className="block font-display text-xl font-semibold tabular-nums leading-tight">{columns[s].length}</span>
-                  <span className="block text-xs">{STATUS_LABEL[s]}</span>
+                <Link to={JOBS_TRACKER} className={cx("block rounded-xl px-3 py-2 ring-1 ring-zinc-200 hover:ring-indigo-400/50 dark:ring-white/10", focusRing)}>
+                  <span className="stat-value block font-display text-xl font-semibold leading-tight">{columns[s].length}</span>
+                  <span className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
+                    <span aria-hidden className={cx("h-1.5 w-1.5 rounded-full", STATUS_MARK[s])} />
+                    {STATUS_LABEL[s]}
+                  </span>
                 </Link>
               </li>
             ))}

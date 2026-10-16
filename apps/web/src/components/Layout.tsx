@@ -538,7 +538,8 @@ function SideLink({ item, active, collapsed }: { item: NavItem; active: boolean;
       onFocus={() => prefetchRoute(to)}
       className={sideClass(active, collapsed)}
     >
-      {active && <span aria-hidden className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-indigo-600 dark:bg-indigo-400" />}
+      {/* Grows in when you arrive on the page (base.css .nav-mark). */}
+      {active && <span aria-hidden className="nav-mark absolute inset-y-2 left-0 w-0.5 rounded-full bg-indigo-600 dark:bg-indigo-400" />}
       <Icon className={cx("h-[18px] w-[18px] shrink-0", active ? "text-indigo-600 dark:text-indigo-300" : "text-zinc-500 dark:text-zinc-400")} aria-hidden />
       {!collapsed && label}
     </Link>
