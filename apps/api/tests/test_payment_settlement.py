@@ -24,6 +24,7 @@ from tests.test_credits import _new_ip, _signup, _wallet, enforce  # noqa: F401 
 KEY_SECRET = "rzp_test_secret"
 HOOK_SECRET = "rzp_hook_secret"
 MINI = 49_900  # paise
+MINI_CREDITS = 25  # the "AI credits" pack (id "mini")
 
 
 class Gateway:
@@ -153,7 +154,7 @@ def test_a_redelivered_event_is_applied_once(client: TestClient, gw: Gateway) ->
     body = _captured(gw, order, pay)
     for _ in range(3):
         assert _post(client, body, event_id="evt_same_1").status_code == 200
-    assert _wallet(client, h)["resume"] == before + 5
+    assert _wallet(client, h)["resume"] == before + MINI_CREDITS
     rows = _db(client, lambda db: db.scalars(select(PaymentEvent).where(PaymentEvent.event_id == "evt_same_1")))
     events = list(rows.all())
     assert len(events) == 1 and events[0].status == "processed" and events[0].attempts == 1
@@ -222,7 +223,7 @@ def test_an_event_that_fails_is_retried_on_redelivery(client: TestClient, gw: Ga
     assert row.status == "error" and "database hiccup" in row.error
     monkeypatch.setattr(settle, "credit", real)
     assert _post(client, _captured(gw, order, pay), "evt_retry").status_code == 200
-    assert _wallet(client, h)["resume"] == before + 5
+    assert _wallet(client, h)["resume"] == before + MINI_CREDITS
 
 
 # ---- refunds -----------------------------------------------------------------------------------------------------
@@ -243,7 +244,7 @@ def test_partial_then_full_refund_is_recorded_once_each(client: TestClient, gw: 
     p = _payment(client, order)
     assert p.refunded_paise == MINI
     assert p.note == "Razorpay refunded ₹499 (rfnd_P1, rfnd_P2). Credits were not removed."
-    assert _wallet(client, h)["resume"] == before + 5  # the published policy: credits are kept
+    assert _wallet(client, h)["resume"] == before + MINI_CREDITS  # the published policy: credits are kept
     shown = client.get("/v1/billing/upi/orders", headers=h).json()[0]
     assert shown["refunded_inr"] == 499
 
@@ -278,7 +279,7 @@ def test_a_refund_before_its_capture_is_linked_when_the_capture_lands(client: Te
     assert p.status == "approved" and p.refunded_paise == MINI
     row = _db(client, lambda db: db.scalar(select(PaymentRefund).where(PaymentRefund.refund_id == "rfnd_E1")))
     assert row.payment_id == p.id and row.linked_at is not None
-    assert _wallet(client, h)["resume"] == before + 5
+    assert _wallet(client, h)["resume"] == before + MINI_CREDITS
 
 
 def test_a_payment_for_a_deleted_account_is_recorded_without_credits(client: TestClient, gw: Gateway) -> None:
@@ -306,7 +307,7 @@ def test_a_lost_webhook_and_closed_page_are_reconciled(client: TestClient, gw: G
     counts = _reconcile(client)
     assert counts["credited"] == 1
     assert _payment(client, order).gateway_payment_id == pay
-    assert _wallet(client, h)["resume"] == before + 5
+    assert _wallet(client, h)["resume"] == before + MINI_CREDITS
     assert _reconcile(client, timedelta(hours=2))["credited"] == 0
     assert _purchases(client, user_id) == 1
 
@@ -325,7 +326,7 @@ def test_delayed_capture_after_verify_is_credited_once(client: TestClient, gw: G
     assert _reconcile(client, timedelta(hours=1))["credited"] == 1
     # The webhook arriving afterwards adds nothing.
     assert _post(client, _captured(gw, order, pay)).status_code == 200
-    assert _wallet(client, h)["resume"] == before + 5
+    assert _wallet(client, h)["resume"] == before + MINI_CREDITS
     assert _purchases(client, user_id) == 1
 
 
@@ -342,7 +343,7 @@ def test_a_gateway_timeout_at_verify_leaves_it_processing(client: TestClient, gw
     assert _reconcile(client)["errors"] >= 1  # still down: counted, nothing credited
     gw.down = False
     assert _reconcile(client, timedelta(hours=1))["credited"] == 1
-    assert _wallet(client, h)["resume"] == before + 5
+    assert _wallet(client, h)["resume"] == before + MINI_CREDITS
 
 
 def test_two_orders_are_each_matched_by_their_own_order(client: TestClient, gw: Gateway) -> None:
@@ -353,7 +354,7 @@ def test_two_orders_are_each_matched_by_their_own_order(client: TestClient, gw: 
     assert _reconcile(client)["credited"] == 1
     assert _payment(client, first).status == "awaiting_payment"
     assert _payment(client, second).status == "approved"
-    assert _wallet(client, h)["resume"] == before + 15
+    assert _wallet(client, h)["resume"] == before + 30  # the starter pack (3 credits)
 
 
 def test_checks_back_off_and_unpaid_orders_expire(client: TestClient, gw: Gateway) -> None:
@@ -387,4 +388,4 @@ def test_a_capture_on_an_expired_order_is_still_credited(client: TestClient, gw:
     pay = gw.pay(order)  # the tab was left open for days, then paid
     assert _post(client, _captured(gw, order, pay)).status_code == 200
     assert _payment(client, order).status == "approved"
-    assert _wallet(client, h)["resume"] == before + 5
+    assert _wallet(client, h)["resume"] == before + MINI_CREDITS

@@ -36,10 +36,12 @@ _TOPICS: tuple[Topic, ...] = (
     Topic(
         "prices",
         "Prices",
-        "Credits never expire and nothing renews. A new account gets 20 interview minutes and 1 Resume AI credit. "
-        "Packs: Mini ₹499, Starter ₹1,999, Plus ₹3,999, Pro ₹7,999. Tap a pack for exactly what it includes.",
-        ("price", "prices", "how much", "pack", "rupee", "₹", "cost"),
-        ("welcome", "mini", "starter", "plus", "pro", "what_spends"),
+        "Start free: a new account gets 20 interview minutes and 1 Resume AI credit. Then either buy credits "
+        "(1 interview credit = 1 hour, they never expire): 1 credit ₹2,299, 3 credits ₹3,599, 8 credits ₹7,199, "
+        "15 credits ₹10,899, or AI credits ₹499 for Resume AI alone. Or go unlimited: ₹4,799 a week, "
+        "₹9,199 a month or ₹35,999 a year. Nothing renews automatically.",
+        ("price", "prices", "how much", "pack", "rupee", "₹", "cost", "plan", "unlimited"),
+        ("welcome", "mini", "starter", "plus", "pro", "unlimited", "what_spends"),
         True,
     ),
     Topic(
@@ -47,39 +49,50 @@ _TOPICS: tuple[Topic, ...] = (
         "New account",
         "A new account gets 20 interview minutes and 1 Resume AI credit. They never expire. "
         "One welcome per network every 30 days, so a second account on the same internet connection can start at "
-        "zero. It can still buy a pack.",
+        "zero. It can still buy credits.",
         ("welcome", "new account", "free account", "20 interview", "20 minutes"),
         ("prices", "what_spends", "buy"),
     ),
     Topic(
         "mini",
-        "Mini ₹499",
-        "Mini is ₹499. You get 15 interview minutes and 5 Resume AI credits. They never expire and nothing renews.",
-        ("mini", "₹499", "499"),
+        "AI credits ₹499",
+        "AI credits is ₹499 for 25 Resume AI credits (a single AI fix uses a fifth of one). No interview time. They "
+        "never expire and nothing renews.",
+        ("ai credits", "mini", "₹499", "499"),
         ("starter", "what_spends", "buy"),
     ),
     Topic(
         "starter",
-        "Starter ₹1,999",
-        "Starter is ₹1,999. You get 60 interview minutes and 15 Resume AI credits. They never expire and nothing "
-        "renews.",
-        ("starter", "₹1,999", "1999", "1,999"),
+        "1 or 3 credits",
+        "1 interview credit is 1 hour of live or mock interviews. 1 credit is ₹2,299 (with 10 Resume AI credits); 3 "
+        "credits are ₹3,599 (with 30 Resume AI credits). They never expire and nothing renews.",
+        ("starter", "3 credits", "1 credit", "₹3,599", "3599", "₹2,299", "2299"),
         ("mini", "plus", "buy"),
     ),
     Topic(
         "plus",
-        "Plus ₹3,999",
-        "Plus is ₹3,999. You get 150 interview minutes and 40 Resume AI credits. They never expire and nothing renews.",
-        ("plus pack", "₹3,999", "3999", "3,999"),
+        "8 credits ₹7,199",
+        "8 credits are ₹7,199: 6 interview credits plus 2 free, so 8 hours of interviews, and 80 Resume AI credits. "
+        "They never expire and nothing renews.",
+        ("plus pack", "8 credits", "₹7,199", "7199", "7,199"),
         ("starter", "pro", "buy"),
     ),
     Topic(
         "pro",
-        "Pro ₹7,999",
-        "Pro is ₹7,999. You get 360 interview minutes and 100 Resume AI credits. "
-        "This is a credit pack, not a monthly plan. Pro and Unlimited plans are not for sale. An admin grants those.",
-        ("pro pack", "₹7,999", "7999", "7,999"),
-        ("plus", "what_spends", "buy"),
+        "15 credits ₹10,899",
+        "15 credits are ₹10,899: 9 interview credits plus 6 free, so 15 hours of interviews, and 150 Resume AI "
+        "credits. They never expire and nothing renews.",
+        ("pro pack", "15 credits", "₹10,899", "10899", "10,899"),
+        ("plus", "unlimited", "buy"),
+    ),
+    Topic(
+        "unlimited",
+        "Unlimited plans",
+        "Unlimited is ₹4,799 for a week, ₹9,199 for a month or ₹35,999 for a year, paid once (it never renews by "
+        "itself). It includes unlimited Resume AI and, every 30 days, up to 50 hours of live interview help and 25 "
+        "hours of mock and video interviews (fair use), with unlimited screenshots and documents.",
+        ("unlimited", "weekly", "monthly", "yearly", "subscription", "₹9,199", "₹35,999", "₹4,799"),
+        ("prices", "pro", "buy"),
     ),
     Topic(
         "what_spends",

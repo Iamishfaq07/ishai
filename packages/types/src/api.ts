@@ -788,6 +788,11 @@ export interface CreditPack {
   price_inr: number;
   resume_credits: number;
   interview_minutes: number;
+  /** Free interview time on top ("6 credits + 2 free"); total_minutes is both together. */
+  bonus_minutes?: number;
+  total_minutes?: number;
+  /** "Most popular", "Best value". */
+  badge?: string | null;
   /** Can be bought right now (Razorpay or a UPI ID is set up). */
   buyable: boolean;
   /** How: Razorpay's checkout (cards, UPI, netbanking), UPI with a UTR, or not at all. */

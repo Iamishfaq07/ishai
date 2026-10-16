@@ -27,7 +27,7 @@ import { api } from "../lib/api";
 import { useCountry, useIndia } from "../lib/country";
 import { CONTACT_PAGE, REFUND_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
 import { useWelcomeGrant, type WelcomeGrant } from "../lib/welcome";
-import { PlanComparison, PricingTiers } from "../components/PricingTiers";
+import { CreditPackGrid, PlanComparison, PricingTiers } from "../components/PricingTiers";
 
 /**
  * Orbit's front door at "/" for anyone signed out: what each of the three products does, what's free and what it
@@ -48,8 +48,6 @@ function usePublic<T>(load: () => Promise<T>): T | null {
   return value;
 }
 
-// Packs are priced in rupees wherever the visitor is (billing/packs.py); a card from abroad is converted by its bank.
-const rupees = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
 // ─── The copilot mock (the hero's picture) ─────────────────────────────────────────────────────────────────────────
 
@@ -257,7 +255,6 @@ function Pricing({ packs, monthly, welcome, stats }: { packs: CreditPack[] | nul
   const cards = packs?.[0]?.checkout === "razorpay";
   const abroad = !!packs?.[0]?.international;
   const sorted = packs ? [...packs].sort((a, b) => a.price_inr - b.price_inr) : null;
-  const card = "flex flex-col rounded-2xl p-5 ring-1";
   return (
     <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-20 border-t border-zinc-200/70 py-14 dark:border-white/5">
       <div className="mx-auto max-w-2xl text-center">
@@ -275,28 +272,18 @@ function Pricing({ packs, monthly, welcome, stats }: { packs: CreditPack[] | nul
       </div>
       <PlanComparison monthly={monthly} />
 
-      <h3 className="mt-14 font-display text-xl font-semibold">Pay as you go</h3>
+      <h3 className="mt-14 font-display text-xl font-semibold">Pay as you go: credits</h3>
       <p className="mt-1 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
         {cards
-          ? `Credit packs, bought once when you need them, by ${india ? "UPI, card or netbanking" : abroad ? "card from any country (charged in rupees; your bank converts it)" : "an Indian card, UPI or netbanking for now (cards from other countries are coming soon)"}. What's in them never expires.`
+          ? `1 interview credit is 1 hour of live or mock interviews, with Resume AI credits included. Bought once when you need them, by ${india ? "UPI, card or netbanking" : abroad ? "card from any country (charged in rupees; your bank converts it)" : "an Indian card, UPI or netbanking for now (cards from other countries are coming soon)"}. What's in them never expires.`
           : india
             ? "Credit packs, bought once with any UPI app when you need them. What's in them never expires."
             : "Credit packs that never expire, priced in Indian rupees and paid with UPI for now; card payments for other countries are coming soon."}
       </p>
 
-      <Reveal as="ul" stagger className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {sorted?.map((p) => (
-          <li key={p.id} className={cx(card, "glass-panel ring-0")}>
-            <p className="font-display text-base font-semibold">{p.label}</p>
-            <p className="mt-1 font-display text-3xl font-semibold tabular-nums">{rupees(p.price_inr)}</p>
-            <ul className="mt-3 space-y-1 text-sm text-zinc-700 dark:text-zinc-300">
-              {p.interview_minutes > 0 && <li className="tabular-nums">{p.interview_minutes} interview minutes</li>}
-              {p.resume_credits > 0 && <li className="tabular-nums">{p.resume_credits} AI credits</li>}
-              <li>Never expires</li>
-            </ul>
-          </li>
-        ))}
-      </Reveal>
+      <div className="mt-6">
+        <CreditPackGrid packs={sorted} />
+      </div>
       {sorted === null && (
         <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">Pack prices are on the Plan &amp; credits page once you're signed in.</p>
       )}
@@ -328,7 +315,7 @@ function Pricing({ packs, monthly, welcome, stats }: { packs: CreditPack[] | nul
               ["A practice question with instant feedback", "Free, no account needed"],
               ["An AI action in Resume AI or Outreach: import, tailor, whole-resume rewrite, cover letter, a message", "1 AI credit each"],
               ["A single AI fix in Resume AI: one ATS check, one section or line", "1/5 of an AI credit"],
-              ["A mock interview or a live session", "Interview minutes, by the minute"],
+              ["A mock interview or a live session", "Interview credits (1 credit = 1 hour), used by the minute"],
             ] as Array<[string, string]>).map(([what, cost]) => (
               <tr key={what}>
                 <th scope="row" className="px-4 py-3 font-normal text-zinc-800 dark:text-zinc-200">

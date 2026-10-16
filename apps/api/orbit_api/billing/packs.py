@@ -1,10 +1,12 @@
 """Credit packs sold over UPI (billing/upi.py). A pack adds resume-AI credits and interview minutes that never
 expire; nothing renews. Defaults below; `ORBIT_CREDIT_PACKS_JSON` replaces them, for example
-`[{"id": "starter", "label": "Starter", "price_inr": 1999, "resume_credits": 15, "interview_minutes": 60}]`.
+`[{"id": "starter", "label": "3 credits", "price_inr": 3599, "resume_credits": 30, "interview_minutes": 180}]`
+(optional: "bonus_minutes" of free time on top, and a "badge").
 Invalid packs stop the API at boot.
 """
 
 import json
+import re
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -18,17 +20,29 @@ class CreditPack:
     price_inr: int
     resume_credits: int
     interview_minutes: int
+    # Free interview time on top ("6 credits + 2 free"): added with the rest, shown apart on the card.
+    bonus_minutes: int = 0
+    badge: str | None = None  # "Most popular", "Best value"
+
+    @property
+    def total_minutes(self) -> int:
+        return self.interview_minutes + self.bonus_minutes
 
 
-# Mini is the first purchase that doesn't need a big decision: the same ≈ ₹33 an interview minute as Starter, so it
-# undercuts nothing, and the bigger packs stay the better value per minute.
+# Interview credits the way Parakeet AI sells them (1 credit = 1 hour of interviews; 1, 3, 6 + 2 free, 9 + 6 free),
+# each about 30% under its prices as of October 2026 ($38 / $59 / $118 / $177, at ≈ ₹88 to the dollar), with Resume AI
+# credits included. "AI credits" is Resume AI alone, for someone who doesn't need interview time.
 DEFAULT_PACKS: tuple[CreditPack, ...] = (
-    CreditPack("mini", "Mini", price_inr=499, resume_credits=5, interview_minutes=15),
-    CreditPack("starter", "Starter", price_inr=1999, resume_credits=15, interview_minutes=60),
-    CreditPack("plus", "Plus", price_inr=3999, resume_credits=40, interview_minutes=150),
-    CreditPack("pro", "Pro", price_inr=7999, resume_credits=100, interview_minutes=360),
+    CreditPack("mini", "AI credits", price_inr=499, resume_credits=25, interview_minutes=0),
+    CreditPack("single", "1 credit", price_inr=2299, resume_credits=10, interview_minutes=60),
+    CreditPack("starter", "3 credits", price_inr=3599, resume_credits=30, interview_minutes=180),
+    CreditPack("plus", "8 credits", price_inr=7199, resume_credits=80, interview_minutes=360, bonus_minutes=120,
+               badge="Most popular"),
+    CreditPack("pro", "15 credits", price_inr=10899, resume_credits=150, interview_minutes=540, bonus_minutes=360,
+               badge="Best value"),
 )
 _INT_FIELDS = ("price_inr", "resume_credits", "interview_minutes")
+_OPTIONAL = ("bonus_minutes", "badge")
 
 
 def packs() -> dict[str, CreditPack]:
@@ -40,18 +54,27 @@ def packs() -> dict[str, CreditPack]:
         raise ValueError("ORBIT_CREDIT_PACKS_JSON must be a non-empty JSON list of packs")
     out: dict[str, CreditPack] = {}
     for item in items:
-        if not isinstance(item, dict) or set(item) != {"id", "label", *_INT_FIELDS}:
-            raise ValueError(f"ORBIT_CREDIT_PACKS_JSON: each pack needs exactly id, label, {', '.join(_INT_FIELDS)}")
+        if not isinstance(item, dict) or not {"id", "label", *_INT_FIELDS} <= set(item) <= {
+                "id", "label", *_INT_FIELDS, *_OPTIONAL}:
+            raise ValueError(f"ORBIT_CREDIT_PACKS_JSON: each pack needs id, label, {', '.join(_INT_FIELDS)} "
+                             f"(optional: {', '.join(_OPTIONAL)})")
         if not (isinstance(item["id"], str) and 0 < len(item["id"]) <= 32 and item["id"] not in out):
             raise ValueError("ORBIT_CREDIT_PACKS_JSON: pack ids must be unique short strings")
-        for key in _INT_FIELDS:
-            v = item[key]
+        for key in (*_INT_FIELDS, "bonus_minutes"):
+            v = item.get(key, 0)
             if not isinstance(v, int) or isinstance(v, bool) or v < 0:
                 raise ValueError(f"ORBIT_CREDIT_PACKS_JSON: {item['id']}.{key} must be a whole number")
         if item["price_inr"] <= 0 or not (item["resume_credits"] or item["interview_minutes"]):
             raise ValueError(f"ORBIT_CREDIT_PACKS_JSON: {item['id']} needs a price and something in it")
         out[item["id"]] = CreditPack(**item)
     return out
+
+
+def pack_label(p: CreditPack) -> str:
+    """How an order for it reads: "3 credits pack" → "3 interview credits", "AI credits" stays, others "X pack"."""
+    if "credit" in p.label.lower():
+        return re.sub(r"\bcredit", "interview credit", p.label) if p.interview_minutes else p.label
+    return f"{p.label} pack"
 
 
 def checkout() -> str | None:
@@ -66,5 +89,5 @@ def checkout() -> str | None:
 def public_packs() -> list[dict[str, Any]]:
     how = checkout()
     abroad = how == "razorpay" and get_settings().razorpay_international
-    return [{**asdict(p), "buyable": how is not None, "checkout": how, "international": abroad}
-            for p in packs().values()]
+    return [{**asdict(p), "total_minutes": p.total_minutes, "buyable": how is not None, "checkout": how,
+             "international": abroad} for p in packs().values()]

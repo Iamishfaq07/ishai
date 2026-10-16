@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { CircleCheck, CountUp, CreditCard, Crown, LoadGate, Mic, Sparkles, cx, focusRing, type LucideIcon } from "@orbit/ui";
+import { CountUp, CreditCard, Crown, LoadGate, Mic, Sparkles, cx, focusRing, type LucideIcon } from "@orbit/ui";
 import type { CreditPack, Entitlements, MonthlyPlan, UpiOrder } from "@orbit/types";
 import { Button, Card, ErrorNote, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
@@ -11,7 +11,7 @@ import { RESUME_AI_HOME } from "./resume/paths";
 import { UpiCheckout } from "./UpiCheckout";
 import { InternationalPaymentError, payWithRazorpay } from "../lib/razorpay";
 import { InternationalCheckout } from "../components/InternationalCheckout";
-import { PlanComparison, PricingTiers } from "../components/PricingTiers";
+import { CreditPackGrid, PlanComparison, PricingTiers } from "../components/PricingTiers";
 import { useCountry } from "../lib/country";
 
 function Bar({ used, limit }: { used: number; limit: number | null }) {
@@ -63,14 +63,14 @@ function CreditRows({ e, wide = false }: { e: Entitlements; wide?: boolean }) {
           a full row or beside Recent sessions, Plan & billing in a narrow column. */}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-3">
         <Balance icon={Mic} tone="interview" value={Math.round(c.interview_minutes_left)} unit="min left" label="Interview minutes">
-          Live interviews and mock interviews both use these.
+          Live and mock interviews both use these. 60 minutes = 1 interview credit.
         </Balance>
         <Balance icon={Sparkles} tone="resume" value={c.resume} unit="left" label="Resume AI credits">
-          One per AI action in{" "}
+          For{" "}
           <Link to={RESUME_AI_HOME} className={cx("font-medium text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}>
             Resume AI
           </Link>
-          : an import, rewrite, tailoring, cover letter, profile or message.
+          : one per import, tailoring, cover letter, profile or message; a single AI fix uses a fifth.
         </Balance>
       </div>
       {empty && c.welcome_missed && (
@@ -126,48 +126,6 @@ function UsageRows({ e }: { e: Entitlements }) {
   );
 }
 
-function PackCard({ p, best, busy, onBuy }: { p: CreditPack; best: boolean; busy: boolean; onBuy: (p: CreditPack) => void }) {
-  const perMinute = p.interview_minutes ? p.price_inr / p.interview_minutes : null;
-  return (
-    <Card className={cx("lift relative flex flex-col", best ? "!ring-2 ring-amber-500/70 dark:ring-amber-400/60" : "ring-1 ring-zinc-500/10")}>
-      {best && (
-        <span className="absolute -top-3 left-4 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-semibold text-amber-950">
-          Best value
-        </span>
-      )}
-      <h3 className="flex items-center gap-1.5 font-semibold">
-        <Crown className="h-4 w-4 text-amber-500" /> {p.label}
-      </h3>
-      <p className="mt-1 font-display text-2xl font-semibold tabular-nums">₹{p.price_inr.toLocaleString("en-IN")}</p>
-      {perMinute && <p className="text-xs text-zinc-500">≈ ₹{perMinute.toFixed(perMinute < 10 ? 1 : 0)} per interview minute, paid once</p>}
-      <ul className="mt-4 flex-1 space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
-        {p.interview_minutes > 0 && (
-          <PackLine>
-            <strong className="font-semibold tabular-nums">{p.interview_minutes}</strong> interview minutes (live or mock)
-          </PackLine>
-        )}
-        {p.resume_credits > 0 && (
-          <PackLine>
-            <strong className="font-semibold tabular-nums">{p.resume_credits}</strong> Resume AI credits
-          </PackLine>
-        )}
-        <PackLine>Never expire, no subscription</PackLine>
-      </ul>
-      <Button className="mt-5 w-full" variant={best ? "primary" : "secondary"} disabled={busy || !p.buyable} onClick={() => onBuy(p)} title={p.buyable ? undefined : "Payments aren't set up yet"}>
-        Buy · ₹{p.price_inr.toLocaleString("en-IN")}
-      </Button>
-    </Card>
-  );
-}
-
-function PackLine({ children }: { children: ReactNode }) {
-  return (
-    <li className="flex items-start gap-2">
-      <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
-      <span>{children}</span>
-    </li>
-  );
-}
 
 const STATUS: Record<UpiOrder["status"], { label: string; tone: string }> = {
   awaiting_payment: { label: "Not paid yet", tone: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-300" },
@@ -315,13 +273,10 @@ export function BillingPage() {
   const e = ent.data;
   const list = packs.data ?? [];
   const months = monthly.data ?? [];
-  // The second-largest pack (Plus) is the usual pick: more per rupee than the small ones without the largest spend.
-  // With one or two packs, none is singled out.
-  const bestId = list.length >= 3 ? [...list].sort((a, b) => a.price_inr - b.price_inr)[list.length - 2]?.id : undefined;
 
   return (
     <div>
-      <PageHeader icon={CreditCard} title="Plan & billing" subtitle="A plan for a month, a quarter or a year, or credit packs that never expire. Nothing renews automatically." />
+      <PageHeader icon={CreditCard} title="Plan & billing" subtitle="Unlimited for a week, a month or a year, or credits that never expire. Nothing renews automatically." />
       {internationalPack && <InternationalCheckout pack={internationalPack} country={country} onClose={() => setInternationalPack(null)}
         onDomestic={() => { const p = internationalPack; setInternationalPack(null); void buy(p, true); }} />}
       {months.length > 0 && (
@@ -329,7 +284,7 @@ export function BillingPage() {
           <div>
             <h2 id="monthly-title" className="font-semibold">Plans</h2>
             <p className="text-sm text-zinc-500">
-              Pay once for a month, a quarter or a year: a plan never renews by itself, and your credits stay for when it ends.
+              Pay once for a week, a month or a year: a plan never renews by itself, and your credits stay for when it ends.
             </p>
           </div>
           <div className="pt-2">
@@ -341,6 +296,41 @@ export function BillingPage() {
           </details>
         </section>
       )}
+      <section aria-labelledby="packs-title" className="mb-10 space-y-4">
+        <div>
+          <h2 id="packs-title" className="font-semibold">Credits</h2>
+          <p className="text-sm text-zinc-500">
+            Pay as you go: 1 interview credit is 1 hour of live or mock interviews, and Resume AI credits come with
+            every pack. Credits never expire and are used whenever you're not on a plan.
+          </p>
+        </div>
+        <LoadGate loading={packs.loading && !packs.data} variant="card" count={2} label="Loading packs">
+          {packs.error ? (
+            <ErrorNote onRetry={packs.reload}>{errorText(packs.error)}</ErrorNote>
+          ) : (
+            <div className="pt-2">
+              <CreditPackGrid packs={list} onBuy={(x) => void buy(x)} busy={starting} />
+            </div>
+          )}
+        </LoadGate>
+        {buyError && <ErrorNote>{buyError}</ErrorNote>}
+        {bought && (
+          <p role="status" className="rounded-xl bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-800 dark:text-emerald-200">
+            {bought}
+          </p>
+        )}
+        {/* Room for three lines is kept, and nothing is said until the packs say how they're paid: the UPI
+            wording swapping to Razorpay's moved the page (layout shift). */}
+        <p className="min-h-[3.75rem] text-xs text-zinc-500 sm:min-h-[2.5rem]">
+          {!packs.data ? null : list[0]?.checkout === "razorpay"
+            ? `Pay once by card, UPI, netbanking or wallet, through Razorpay. ${
+                list[0]?.international
+                  ? "Cards from outside India work too: you're charged in rupees and your bank converts it."
+                  : "Cards issued outside India can't be used yet; that's coming soon."
+              } Nothing renews, and what you bought is added as soon as Razorpay confirms the payment, usually within seconds.`
+            : "Pay once over UPI (Google Pay, PhonePe, Paytm or any bank app). Nothing renews or is charged automatically, and what you bought is added as soon as your payment is checked."}
+        </p>
+      </section>
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="self-start lg:col-span-1">
           <h2 className="mb-1 font-semibold">{e?.credits ? "Your credits" : "This month"}</h2>
@@ -365,48 +355,6 @@ export function BillingPage() {
         </Card>
 
         <div className="space-y-4 lg:col-span-2">
-          {e && !e.credits && !months.some((m) => m.plan === e.plan) ? (
-            <Card>
-              <p className="text-sm text-zinc-600 dark:text-zinc-300">
-                Your plan includes its own monthly allowance, so you don't need credit packs.
-              </p>
-            </Card>
-          ) : (
-            <>
-              {months.length > 0 && (
-                <div className="pt-2">
-                  <h2 className="font-semibold">Credit packs</h2>
-                  <p className="text-sm text-zinc-500">Pay as you go: credits that never expire, used whenever you're not on a plan.</p>
-                </div>
-              )}
-              <div className="grid gap-4 pt-2 sm:grid-cols-2">
-                <LoadGate loading={packs.loading && !packs.data} variant="card" count={2} label="Loading packs" className="sm:col-span-2">
-                {packs.error ? (
-                  <ErrorNote onRetry={packs.reload}>{errorText(packs.error)}</ErrorNote>
-                ) : (
-                  list.map((p) => <PackCard key={p.id} p={p} best={p.id === bestId} busy={starting} onBuy={(x) => void buy(x)} />)
-                )}
-                </LoadGate>
-              </div>
-              {buyError && <ErrorNote>{buyError}</ErrorNote>}
-              {bought && (
-                <p role="status" className="rounded-xl bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-800 dark:text-emerald-200">
-                  {bought}
-                </p>
-              )}
-              {/* Room for three lines is kept, and nothing is said until the packs say how they're paid: the UPI
-                  wording swapping to Razorpay's moved the page (layout shift). */}
-              <p className="min-h-[3.75rem] text-xs text-zinc-500 sm:min-h-[2.5rem]">
-                {!packs.data ? null : list[0]?.checkout === "razorpay"
-                  ? `Pay once by card, UPI, netbanking or wallet, through Razorpay. ${
-                      list[0]?.international
-                        ? "Cards from outside India work too: you're charged in rupees and your bank converts it."
-                        : "Cards issued outside India can't be used yet; that's coming soon."
-                    } Nothing renews, and what you bought is added as soon as Razorpay confirms the payment, usually within seconds.`
-                  : "Pay once over UPI (Google Pay, PhonePe, Paytm or any bank app). Nothing renews or is charged automatically, and what you bought is added as soon as your payment is checked."}
-              </p>
-            </>
-          )}
           <div ref={checkoutRef} className="scroll-mt-20">
             {order && (
               <UpiCheckout

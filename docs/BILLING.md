@@ -54,23 +54,35 @@ An order keeps what the pack gave when it was bought, so changing packs never ch
 UPI with the admin's check). Buy one with `POST /v1/billing/razorpay/orders` or `/v1/billing/upi/orders` and
 `{"pack": "<monthly id>"}`. `GET /v1/billing/monthly` lists them for the pricing pages.
 
-The structure follows the interview-copilot market: Final Round AI and Parakeet AI sell monthly, quarterly and yearly
-plans, and the longer the plan, the cheaper a month. Each price here is about 30% under Final Round AI's list prices
-in October 2026 ($150 / $250 / $300, taken at ≈ ₹88 to the dollar). All three give the same `premium` plan.
+The structure copies Parakeet AI's: a free start, interview credits where 1 credit = 1 hour and bigger packs add free
+credits, and unlimited plans for a week, a month or a year. Each price is about 30% under Parakeet's in October 2026,
+taken at ≈ ₹88 to the dollar. Parakeet's own page couldn't be reached from the build environment; its prices come from
+third-party reviews. All three unlimited plans give the same `premium` plan.
 
-| Plan | Price | Per month | Length |
-|---|---|---|---|
-| Monthly (`premium_monthly`) | ₹8,999 | ₹8,999 | 30 days |
-| Quarterly (`premium_quarterly`, "Most popular") | ₹14,999 | ≈ ₹5,000 | 90 days |
-| Yearly (`premium_yearly`, "Best value") | ₹17,999 | ≈ ₹1,479 | 365 days |
+**Unlimited (billing/monthly.py)**
+
+| Plan | Price | Parakeet AI |
+|---|---|---|
+| Weekly (`premium_weekly`) | ₹4,799 / 7 days | $78 |
+| Monthly (`premium_monthly`, "Most popular") | ₹9,199 / 30 days | $149.90 |
+| Yearly (`premium_yearly`, "Best value") | ₹35,999 / 365 days (≈ ₹2,959 a month) | $599.90 |
 
 Every 30 days the `premium` plan includes:
 - unlimited Resume AI;
-- 50 hours of live interview help (3,000 minutes, a fair-use cap) and 25 hours of mock and video interviews;
+- 50 hours of live interview help (3,000 minutes, fair use) and 25 hours of mock and video interviews;
 - unlimited screenshots and documents;
 - sessions of up to 4 hours.
 
-Competitors call this level "unlimited". Orbit states the cap.
+**Credit packs (billing/packs.py).** 1 interview credit = 60 minutes of live or mock interviews. Each pack also includes
+10 Resume AI credits per hour.
+
+| Pack (id) | Price | Interview credits | Resume AI credits | Parakeet AI |
+|---|---|---|---|---|
+| AI credits (`mini`) | ₹499 | — | 25 | — (ours: Resume AI alone) |
+| 1 credit (`single`) | ₹2,299 | 1 | 10 | $38 |
+| 3 credits (`starter`) | ₹3,599 | 3 | 30 | $59 |
+| 8 credits (`plus`, "Most popular") | ₹7,199 | 6 + 2 free | 80 | $118 |
+| 15 credits (`pro`, "Best value") | ₹10,899 | 9 + 6 free | 150 | $177 |
 
 - **Nothing renews.** A paid month sets `User.grant_plan` and `grant_until`, the same fields as the admin's
   time-limited grants. When it ends the account is back on Free, and the credits it had are still there.
@@ -90,8 +102,8 @@ Competitors call this level "unlimited". Orbit states the cap.
 - **OWNER ACTION REQUIRED:** check the prices against your costs (the table under "What it costs to run").
   - A subscriber who uses the whole 75 hours a month costs about ₹5,900 a month in speech-to-text at list price,
     before the model's cost.
-  - On the yearly plan (≈ ₹1,479 a month) that loses money for heavy users. Lower the `premium` plan's caps with
-    `ORBIT_PLANS_JSON` if needed.
+  - On the yearly plan (≈ ₹2,959 a month) that loses money for the heaviest users. Lower the `premium` plan's caps
+    with `ORBIT_PLANS_JSON` if needed.
   - Competitors' prices were read from third-party pricing pages in October 2026; re-check them before you rely on
     the "30% less" claim. The pricing pages also show an Enterprise tier with no price: its button opens the Contact form
   (topic "Business or partnership"), and you arrange group access by hand (an admin grant per account).

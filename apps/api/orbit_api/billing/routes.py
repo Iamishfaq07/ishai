@@ -19,6 +19,7 @@ from orbit_api.admin.routes import require_admin
 from orbit_api.auth.security import current_user
 from orbit_api.billing import razorpay, settle, upi
 from orbit_api.billing.monthly import monthly_plans, public_monthly
+from orbit_api.billing.packs import pack_label as packs_label
 from orbit_api.billing.packs import packs, public_packs
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
@@ -134,7 +135,7 @@ class UpiOrderOut(BaseModel):
 def _label(p: Payment) -> str:
     pack = packs().get(p.plan)
     if pack is not None:
-        return f"{pack.label} pack"
+        return packs_label(pack)
     month = monthly_plans().get(p.plan)
     if month is not None:
         return f"{month.label} plan · {p.days} days"
@@ -164,7 +165,7 @@ def _product(product_id: str) -> tuple[str, str, int, int, int, int]:
     days; a monthly plan has its days and no credits."""
     pack = packs().get(product_id)
     if pack is not None:
-        return pack.id, f"{pack.label} pack", pack.price_inr, 0, pack.resume_credits, pack.interview_minutes
+        return pack.id, packs_label(pack), pack.price_inr, 0, pack.resume_credits, pack.total_minutes
     month = monthly_plans().get(product_id)
     if month is not None:
         return month.id, f"{month.label} plan · {month.days} days", month.price_inr, month.days, 0, 0

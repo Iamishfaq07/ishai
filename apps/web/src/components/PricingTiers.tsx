@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import type { MonthlyPlan, PlanInfo } from "@orbit/types";
+import type { CreditPack, MonthlyPlan, PlanInfo } from "@orbit/types";
 import { Building2, Check, CircleCheck, Minus, Sparkles, cx, focusRing } from "@orbit/ui";
 import { api } from "../lib/api";
 import { contactHref } from "../lib/contactForm";
@@ -18,11 +18,13 @@ const FREE_TAGLINE = "Try everything, pay only for the AI you use.";
 function tagline(m: MonthlyPlan): string {
   if (m.days >= 360) return "Your whole job search, at the lowest price a month.";
   if (m.days >= 85) return "Three months of interview season, paid once.";
-  return "Full access for one month. Try it for a round of interviews.";
+  if (m.days <= 7) return "A week of interviews: for a hiring sprint.";
+  return "Full access for a month of interviews.";
 }
 
 /** "/ month", "/ 3 months", "/ year". */
 export function periodLabel(days: number): string {
+  if (days === 7) return "/ week";
   if (days === 30) return "/ month";
   if (days === 365) return "/ year";
   if (days % 30 === 0) return `/ ${days / 30} months`;
@@ -208,7 +210,7 @@ export function PlanComparison({ monthly }: { monthly: MonthlyPlan[] | null }) {
   const yes = <Check className="mx-auto h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-label="Included" />;
   const rows: Array<[string, ReactNode, ...ReactNode[]]> = [
     ["Price", "₹0", ...plans.map((m) => `${rupees(m.price_inr)} ${periodLabel(m.days)}`), "Custom"],
-    ["Per month", "₹0", ...plans.map((m) => rupees(m.per_month_inr ?? m.price_inr)), "Custom"],
+    ["Per month", "₹0", ...plans.map((m) => (m.days < 30 ? "—" : rupees(m.per_month_inr ?? m.price_inr))), "Custom"],
     ["Resume editor, ATS score, downloads", yes, ...plans.map(() => yes), yes],
     ["Job matches, fit checks, tracker", yes, ...plans.map(() => yes), yes],
     ["Resume AI", "1 credit per action (a fix: 1/5)", ...plans.map((m) => (m.resume_ai ? "Unlimited" : "Credits")), "Unlimited"],
@@ -248,6 +250,80 @@ export function PlanComparison({ monthly }: { monthly: MonthlyPlan[] | null }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/** "8" from 480 minutes: interview credits are hours. */
+function hours(minutes: number): number {
+  return Math.round((minutes / 60) * 10) / 10;
+}
+
+/**
+ * Credit packs the way interview copilots sell them: interview credits (1 credit = 1 hour, live or mock), bigger packs
+ * with free credits on top and a lower price an hour, Resume AI credits included; and an AI-credits pack for Resume AI
+ * alone. Signed out, the buttons lead to sign-up; signed in, they buy.
+ */
+export function CreditPackGrid({ packs, onBuy, busy = false }: { packs: CreditPack[] | null; onBuy?: (p: CreditPack) => void; busy?: boolean }) {
+  if (!packs?.length) return null;
+  const interview = packs.filter((p) => p.interview_minutes > 0).sort((a, b) => a.price_inr - b.price_inr);
+  const aiOnly = packs.filter((p) => p.interview_minutes === 0);
+  return (
+    <div className="space-y-4">
+      <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {interview.map((p) => {
+          const total = p.total_minutes ?? p.interview_minutes + (p.bonus_minutes ?? 0);
+          const paid = hours(p.interview_minutes);
+          const free = hours(p.bonus_minutes ?? 0);
+          const perHour = Math.round(p.price_inr / (total / 60));
+          const highlight = p.badge === "Most popular";
+          const cta: Cta = onBuy
+            ? { label: `Buy · ${rupees(p.price_inr)}`, onClick: () => onBuy(p), disabled: busy || !p.buyable, primary: highlight }
+            : { label: "Get started", to: "/register", from: `/billing?pack=${p.id}`, primary: highlight };
+          return (
+            <li key={p.id} className={cx("relative flex flex-col rounded-2xl bg-white p-6 ring-1 dark:bg-zinc-900/60", highlight ? "ring-2 ring-indigo-500 dark:ring-indigo-400" : "ring-zinc-900/10 dark:ring-white/10")}>
+              {p.badge && (
+                <span className={cx("absolute -top-3 left-6 rounded-full px-2.5 py-0.5 text-xs font-semibold", highlight ? "bg-indigo-600 text-white dark:bg-indigo-500" : "bg-amber-400 text-amber-950")}>
+                  {p.badge}
+                </span>
+              )}
+              <p className="flex items-baseline gap-2">
+                <span className="font-display text-4xl font-semibold tabular-nums">{hours(total)}</span>
+                <span className="text-sm font-medium text-zinc-500">credit{hours(total) === 1 ? "" : "s"}</span>
+              </p>
+              <p className="mt-1 h-5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                {free > 0 ? `${paid} credits + ${free} free` : ""}
+              </p>
+              <p className="mt-3 font-display text-2xl font-semibold tabular-nums">{rupees(p.price_inr)}</p>
+              <p className="text-xs text-zinc-500">{rupees(perHour)} an hour · paid once</p>
+              <CtaButton cta={cta} />
+              <ul className="mt-5 space-y-2 border-t border-zinc-900/5 pt-5 text-sm text-zinc-700 dark:border-white/5 dark:text-zinc-300">
+                <Feature>{hours(total)} hour{hours(total) === 1 ? "" : "s"} of live or mock interviews</Feature>
+                {p.resume_credits > 0 && <Feature>{p.resume_credits} Resume AI credits</Feature>}
+                <Feature>Never expire</Feature>
+              </ul>
+            </li>
+          );
+        })}
+      </ul>
+      {aiOnly.map((p) => (
+        <div key={p.id} className="flex flex-col gap-3 rounded-2xl bg-white p-5 ring-1 ring-zinc-900/10 sm:flex-row sm:items-center dark:bg-zinc-900/60 dark:ring-white/10">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" aria-hidden="true">
+            <Sparkles className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">
+              {p.label}: {p.resume_credits} Resume AI credits · {rupees(p.price_inr)}
+            </p>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Only need Resume AI? Imports, tailoring and cover letters use 1 credit; a single AI fix uses a fifth. Never expire.
+            </p>
+          </div>
+          <div className="sm:w-48 [&>*]:mt-0">
+            <CtaButton cta={onBuy ? { label: `Buy · ${rupees(p.price_inr)}`, onClick: () => onBuy(p), disabled: busy || !p.buyable } : { label: "Get started", to: "/register", from: `/billing?pack=${p.id}` }} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
