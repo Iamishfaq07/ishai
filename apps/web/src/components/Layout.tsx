@@ -221,7 +221,8 @@ export function Layout() {
               onClick={openSearch}
               onMouseEnter={() => void loadPalette()}
               onFocus={() => void loadPalette()}
-              aria-label={`Search and jump to (${shortcut})`}
+              // The visible words come first (WCAG 2.5.3): on phones they're hidden, so the label still says them.
+              aria-label={`Search or jump to… ${shortcut}`}
               aria-haspopup="dialog"
               className={cx(
                 "ml-auto flex h-10 items-center gap-2 rounded-xl text-zinc-600 hover:bg-zinc-900/5 hover:text-zinc-900 md:ml-0 md:w-full md:max-w-sm md:border md:border-zinc-200 md:bg-zinc-50 md:pl-3 md:pr-2 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white md:dark:border-white/10 md:dark:bg-white/[0.03]",
@@ -815,7 +816,8 @@ function AccountMenu({
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Account menu"
+        // The initials it shows are in its name too (WCAG 2.5.3: say what you see).
+        aria-label={`${initials(name, email)} account menu`}
         className={cx("flex items-center gap-1.5 rounded-full p-0.5 pr-1.5 hover:bg-zinc-900/5 dark:hover:bg-white/5", focusRing)}
       >
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 text-xs font-semibold text-zinc-700 dark:bg-white/10 dark:text-zinc-100">

@@ -15,7 +15,9 @@ The disposable SQLite database and email outbox are ignored by Git. Stop other s
 running; local runs can reuse existing test servers. Do not point these tests at production.
 
 Checks cover aborted autosaves, cross-tab conflicts, mobile context reloads, reduced motion, architecture critique,
-code walkthroughs, and the final debrief/radar/retry flow. Screenshots and traces are in `test-results/`.
+code walkthroughs, and the final debrief/radar/retry flow. `accessibility.spec.ts` runs axe-core (WCAG 2.0, 2.1 and 2.2,
+A and AA) on the app's main screens in light and dark, and fails on any violation, naming the screen and the element.
+Screenshots and traces are in `test-results/`.
 The frontend CI job runs this gate; Postgres locking and career endpoint tests run in the API CI job.
 
 The older `resume-race.mjs` script remains available for manual route-switch diagnostics.

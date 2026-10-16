@@ -239,7 +239,7 @@ export function ResumeAiHomePage() {
                       aria-label={`ATS score ${r.score} out of 100`}
                     >
                       <span className="font-display text-lg font-semibold leading-none tabular-nums">{r.score}</span>
-                      <span className="text-[0.625rem] leading-none opacity-80">ATS</span>
+                      <span className="text-[0.625rem] leading-none">ATS</span>
                     </span>
                     <span className="min-w-0 pr-16">
                       <span className="block truncate font-medium">{r.title}</span>

@@ -40,7 +40,7 @@ function Weeks({ weeks }: { weeks: SearchInsights["weeks"] }) {
             const x = i * (bw + gap);
             return (
               <g key={w.start} tabIndex={0} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} onFocus={() => setHover(i)} onBlur={() => setHover(null)}
-                 aria-label={`Week of ${weekLabel(w.start)}: ${w.count} application${w.count === 1 ? "" : "s"}`} className="outline-none">
+                 role="img" aria-label={`Week of ${weekLabel(w.start)}: ${w.count} application${w.count === 1 ? "" : "s"}`} className="outline-none">
                 <rect x={x - gap / 2} y={0} width={bw + gap} height={H} fill="transparent" />
                 {h > 0 && <path d={`M${x},${H} v${-(h - 4)} q0,-4 4,-4 h${bw - 8} q4,0 4,4 v${h - 4} z`} className={cx("fill-indigo-500 dark:fill-indigo-400", hover !== null && hover !== i && "opacity-60")} />}
                 {i === weeks.length - 1 || i === 0 ? (

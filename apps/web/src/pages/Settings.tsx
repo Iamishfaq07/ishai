@@ -418,7 +418,8 @@ function HotkeysCard() {
               onClick={() => setRecording(recording === action ? null : action)}
               onKeyDown={onKeyDown(action)}
               onBlur={() => recording === action && setRecording(null)}
-              aria-label={`Change shortcut for ${HOTKEY_LABELS[action]}`}
+              // What it shows first (the keys, or "Press keys…"), then what it changes (WCAG 2.5.3).
+              aria-label={`${recording === action ? "Press keys…" : formatHotkey(map[action])}: change the shortcut for ${HOTKEY_LABELS[action]}`}
               className={cx(
                 "min-w-[8rem] rounded-lg border px-3 py-1.5 font-mono text-xs",
                 recording === action
