@@ -11,6 +11,7 @@ import {
   CalendarPlus,
   FileText,
   MapPin,
+  MoreHorizontal,
   PenLine,
   Plus,
   Send,
@@ -276,6 +277,9 @@ const STATUS_EDGE: Record<JobStatus, string> = {
   rejected: "bg-rose-400 dark:bg-rose-400/80",
 };
 
+/** A card's own actions: small accent links, the same weight whether a link or a button. */
+const cardAction = "inline-flex items-center gap-1 rounded font-medium text-indigo-600 hover:underline dark:text-indigo-400";
+
 function TrackerCard({
   entry,
   compact = false,
@@ -339,7 +343,7 @@ function TrackerCard({
       </p>
       {entry.notes && !editing && <p className="mt-1.5 line-clamp-3 whitespace-pre-line text-xs text-zinc-600 dark:text-zinc-300">{entry.notes}</p>}
       {manual ? (
-        <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">Added by you{linkHost(entry.url) ? ` · ${linkHost(entry.url)}` : ""}</p>
+        linkHost(entry.url) && <p className="mt-1.5 truncate text-xs text-zinc-500 dark:text-zinc-400">From {linkHost(entry.url)}</p>
       ) : !entry.live ? (
         <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">This post is no longer listed in the feed.</p>
       ) : open ? (
@@ -348,6 +352,9 @@ function TrackerCard({
         </p>
       ) : null}
 
+      {/* The card leads with one place to work on the job (its mission room) and the step its stage calls for (apply
+          while saved, practise while interviewing); everything else waits under More, so a board of cards reads at
+          a glance. A job picked for comparing says so on the card. */}
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
         <Link
           to={missionPath(entry.id)}
@@ -357,68 +364,85 @@ function TrackerCard({
           Mission room <ArrowRight className="h-3 w-3" aria-hidden />
         </Link>
         {entry.status === "saved" && apply && (
-          <a href={apply} target="_blank" rel="noopener" className={cx("inline-flex items-center gap-0.5 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
+          <a href={apply} target="_blank" rel="noopener" className={cx(cardAction, focusRing)}>
             Apply <ArrowUpRight className="h-3 w-3" aria-hidden />
           </a>
         )}
-        {entry.resume_id && (
-          <Link to={resumePath(entry.resume_id)} className={cx("inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
-            <FileText className="h-3 w-3" aria-hidden /> Tailored resume
-          </Link>
-        )}
         {(entry.document_id || entry.status === "interviewing") && (
-          <Link to={practiceLink(entry, jobPath)} className={cx("inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
+          <Link to={practiceLink(entry, jobPath)} className={cx(cardAction, focusRing)}>
             <Target className="h-3 w-3" aria-hidden /> Practise
           </Link>
         )}
-        {/* A referral before applying, a follow-up after, a thank-you once interviewing (Outreach picks by status). */}
-        <Link
-          to={outreachPath({ job: entry.listing_id, resume: entry.resume_id })}
-          aria-label={`Write outreach for ${entry.title}`}
-          className={cx("inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}
-        >
-          <Send className="h-3 w-3" aria-hidden /> Write outreach
-        </Link>
-        <button
-          type="button"
-          aria-expanded={journey}
-          onClick={() => setJourney((o) => !o)}
-          className={cx("inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}
-        >
-          <Route className="h-3 w-3" aria-hidden /> {journey ? "Hide journey" : "Journey"}
-        </button>
-        {compare && (
-          <button
-            type="button"
-            aria-pressed={compare.picked}
-            disabled={!compare.picked && compare.full}
-            onClick={compare.onToggle}
-            title={!compare.picked && compare.full ? `Compare up to ${MAX_COMPARE} at once` : undefined}
-            className={cx(
-              "inline-flex items-center gap-1 font-medium hover:underline disabled:cursor-not-allowed disabled:opacity-40 disabled:no-underline",
-              compare.picked ? "text-emerald-700 dark:text-emerald-300" : "text-indigo-600 dark:text-indigo-400",
-              focusRing,
-            )}
-          >
-            {compare.picked ? <Check className="h-3 w-3" aria-hidden /> : <Columns3 className="h-3 w-3" aria-hidden />}
-            {compare.picked ? "Comparing" : "Compare"}
-          </button>
-        )}
-        {entry.next_at && entry.status !== "rejected" && (
-          <button
-            type="button"
-            onClick={() => {
-              const ics = nextDateIcs(entry);
-              if (ics) downloadText(`${fileSlug(entry.company, entry.title)}.ics`, ics, "text/calendar;charset=utf-8");
-            }}
-            aria-label={`Add to calendar: ${nextDateTitle(entry)}, ${shortDate(entry.next_at)}`}
-            title="A calendar file for this date: opens in Google Calendar, Outlook or your phone's calendar"
-            className={cx("inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}
-          >
-            <CalendarPlus className="h-3 w-3" aria-hidden /> Add to calendar
+        {compare?.picked && (
+          <button type="button" aria-pressed onClick={compare.onToggle} className={cx(cardAction, "!text-emerald-700 dark:!text-emerald-300", focusRing)}>
+            <Check className="h-3 w-3" aria-hidden /> Comparing
           </button>
         )}
       </div>
+      <details className="group mt-1.5 text-xs">
+        <summary
+          className={cx(
+            "inline-flex cursor-pointer list-none items-center gap-1 rounded font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100 [&::-webkit-details-marker]:hidden",
+            focusRing,
+          )}
+        >
+          <MoreHorizontal className="h-3.5 w-3.5" aria-hidden /> More<span className="sr-only"> for {entry.title}</span>
+        </summary>
+        <ul className="mt-1.5 space-y-1 border-l border-zinc-200 pl-3 dark:border-white/10">
+          {entry.resume_id && (
+            <li>
+              <Link to={resumePath(entry.resume_id)} className={cx(cardAction, focusRing)}>
+                <FileText className="h-3 w-3" aria-hidden /> Tailored resume
+              </Link>
+            </li>
+          )}
+          <li>
+            {/* A referral before applying, a follow-up after, a thank-you once interviewing (Outreach picks by status). */}
+            <Link
+              to={outreachPath({ job: entry.listing_id, resume: entry.resume_id })}
+              aria-label={`Write outreach for ${entry.title}`}
+              className={cx(cardAction, focusRing)}
+            >
+              <Send className="h-3 w-3" aria-hidden /> Write outreach
+            </Link>
+          </li>
+          <li>
+            <button type="button" aria-expanded={journey} onClick={() => setJourney((o) => !o)} className={cx(cardAction, focusRing)}>
+              <Route className="h-3 w-3" aria-hidden /> {journey ? "Hide journey" : "Journey"}
+            </button>
+          </li>
+          {compare && !compare.picked && (
+            <li>
+              <button
+                type="button"
+                aria-pressed={false}
+                disabled={compare.full}
+                onClick={compare.onToggle}
+                title={compare.full ? `Compare up to ${MAX_COMPARE} at once` : undefined}
+                className={cx(cardAction, "disabled:cursor-not-allowed disabled:opacity-40 disabled:no-underline", focusRing)}
+              >
+                <Columns3 className="h-3 w-3" aria-hidden /> Compare
+              </button>
+            </li>
+          )}
+          {entry.next_at && entry.status !== "rejected" && (
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  const ics = nextDateIcs(entry);
+                  if (ics) downloadText(`${fileSlug(entry.company, entry.title)}.ics`, ics, "text/calendar;charset=utf-8");
+                }}
+                aria-label={`Add to calendar: ${nextDateTitle(entry)}, ${shortDate(entry.next_at)}`}
+                title="A calendar file for this date: opens in Google Calendar, Outlook or your phone's calendar"
+                className={cx(cardAction, focusRing)}
+              >
+                <CalendarPlus className="h-3 w-3" aria-hidden /> Add to calendar
+              </button>
+            </li>
+          )}
+        </ul>
+      </details>
 
       {journey && <Journey entryId={entry.id} />}
 

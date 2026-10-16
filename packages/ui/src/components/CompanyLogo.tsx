@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { cx } from "./cx";
 
-// Gradient pairs dark enough for white letters to pass WCAG AA on either end (all -600/-700 steps).
+// Colour pairs dark enough for white letters to pass WCAG AA (all -600/-700 steps); the tile is the first of each.
 const GRADIENTS: ReadonlyArray<readonly [string, string]> = [
   ["#4f46e5", "#0369a1"], // indigo → sky
   ["#0f766e", "#047857"], // teal → emerald
@@ -28,7 +28,7 @@ export function monogram(company: string): { letters: string; from: string; to: 
 }
 
 /**
- * A company's logo when there's a URL that loads, else a monogram on a gradient picked from the name. A real logo sits
+ * A company's logo when there's a URL that loads, else a monogram on a colour picked from the name. A real logo sits
  * on a white backing pill so a dark logo stays visible on the dark theme. Decorative: the name is always shown beside.
  */
 export function CompanyLogo({
@@ -56,17 +56,13 @@ export function CompanyLogo({
       </span>
     );
   }
-  const { letters, from, to } = monogram(company);
-  const id = `mg-${letters}-${from.slice(1)}-${to.slice(1)}`;
+  // A solid tile in the name's colour. (A gradient here needed an id, and two marks for the same company, or one in a
+  // hidden layout, shared it: the tile then pointed at a hidden definition and wasn't painted, leaving white letters
+  // on a white card.)
+  const { letters, from } = monogram(company);
   return (
     <svg aria-hidden="true" width={px} height={px} viewBox="0 0 40 40" className={cx("shrink-0", radius, className)}>
-      <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor={from} />
-          <stop offset="1" stopColor={to} />
-        </linearGradient>
-      </defs>
-      <rect width="40" height="40" rx={size === "xs" ? 8 : 10} fill={`url(#${id})`} />
+      <rect width="40" height="40" rx={size === "xs" ? 8 : 10} fill={from} />
       <text
         x="20"
         y="20"

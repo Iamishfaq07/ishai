@@ -69,6 +69,7 @@ export {
   Mic,
   Minus,
   Monitor,
+  MoreHorizontal,
   MoonStar,
   Palette,
   PanelRightClose,

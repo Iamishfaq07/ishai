@@ -71,7 +71,7 @@ function useFreePlan(): PlanInfo | null {
 
 function Feature({ children, off = false }: { children: ReactNode; off?: boolean }) {
   return (
-    <li className={cx("flex items-start gap-2", off && "text-zinc-400 dark:text-zinc-500")}>
+    <li className={cx("flex items-start gap-2", off && "text-zinc-400")}>
       {off ? (
         <Minus className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
       ) : (
@@ -88,7 +88,7 @@ function CtaButton({ cta }: { cta: Cta }) {
   const cls = cx(
     "mt-6 inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition",
     cta.primary
-      ? "bg-indigo-600 text-white shadow-sm hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+      ? "bg-indigo-600 text-white shadow-sm hover:bg-indigo-700"
       : "bg-zinc-900/5 text-zinc-900 ring-1 ring-zinc-900/10 hover:bg-zinc-900/10 dark:bg-white/5 dark:text-white dark:ring-white/10 dark:hover:bg-white/10",
     cta.disabled && "pointer-events-none opacity-50",
     focusRing,
@@ -113,7 +113,7 @@ function Tier({ name, price, per, tagline, badge, highlight, cta, note, children
       )}
     >
       {badge && (
-        <span className="absolute -top-3 left-6 rounded-full bg-indigo-600 px-2.5 py-0.5 text-xs font-semibold text-white dark:bg-indigo-500">
+        <span className="absolute -top-3 left-6 rounded-full bg-indigo-600 px-2.5 py-0.5 text-xs font-semibold text-white">
           {badge}
         </span>
       )}
@@ -308,7 +308,7 @@ export function CreditPackGrid({ packs, onBuy, busy = false }: { packs: CreditPa
           return (
             <li key={p.id} className={cx("relative flex flex-col rounded-2xl bg-white p-6 ring-1 dark:bg-zinc-900/60", highlight ? "ring-2 ring-indigo-500 dark:ring-indigo-400" : "ring-zinc-900/10 dark:ring-white/10")}>
               {p.badge && (
-                <span className={cx("absolute -top-3 left-6 rounded-full px-2.5 py-0.5 text-xs font-semibold", highlight ? "bg-indigo-600 text-white dark:bg-indigo-500" : "bg-amber-400 text-amber-950")}>
+                <span className={cx("absolute -top-3 left-6 rounded-full px-2.5 py-0.5 text-xs font-semibold", highlight ? "bg-indigo-600 text-white" : "bg-amber-400 text-amber-950")}>
                   {p.badge}
                 </span>
               )}

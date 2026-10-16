@@ -81,7 +81,7 @@ function Chip({ pressed, onClick, children }: { pressed?: boolean; onClick: () =
       className={cx(
         "inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm font-medium ring-1 transition-colors",
         pressed
-          ? "bg-indigo-600 text-white ring-indigo-600 dark:bg-indigo-500 dark:ring-indigo-400"
+          ? "bg-indigo-600 text-white ring-indigo-600 dark:ring-indigo-400"
           : "bg-white/80 text-zinc-800 ring-zinc-200 hover:ring-indigo-400/60 dark:bg-white/[0.05] dark:text-zinc-100 dark:ring-white/10",
         focusRing,
       )}
