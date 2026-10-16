@@ -266,8 +266,8 @@ function Pricing({ packs, monthly, welcome, stats }: { packs: CreditPack[] | nul
           Plans for every stage of your job search
         </h2>
         <p className="mt-3 text-base text-zinc-600 dark:text-zinc-300">
-          Start free. Pick a monthly plan when you're interviewing, or top up with credits that never expire. Nothing
-          renews or is charged automatically.
+          Start free. Pick a plan when you're interviewing (the longer, the cheaper a month), or top up with credits that
+          never expire. Nothing renews or is charged automatically.
         </p>
       </div>
       <div className="mt-10">

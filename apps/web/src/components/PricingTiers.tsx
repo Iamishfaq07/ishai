@@ -12,15 +12,31 @@ import { formatDate } from "../lib/format";
  * Used on the landing page (buttons lead to sign-up) and Plan & billing (buttons buy).
  */
 
-const TAGLINE: Record<string, string> = {
-  free: "Try everything, pay only for the AI you use.",
-  basic: "For an active job search: unlimited resume AI and regular practice.",
-  pro: "For interview season: hours of live help and mock interviews every month.",
-  unlimited: "No caps on interview minutes.",
-};
+const FREE_TAGLINE = "Try everything, pay only for the AI you use.";
+
+/** A plan's line under its name, by length. */
+function tagline(m: MonthlyPlan): string {
+  if (m.days >= 360) return "Your whole job search, at the lowest price a month.";
+  if (m.days >= 85) return "Three months of interview season, paid once.";
+  return "Full access for one month. Try it for a round of interviews.";
+}
+
+/** "/ month", "/ 3 months", "/ year". */
+export function periodLabel(days: number): string {
+  if (days === 30) return "/ month";
+  if (days === 365) return "/ year";
+  if (days % 30 === 0) return `/ ${days / 30} months`;
+  return `/ ${days} days`;
+}
 
 function n(value: number | null, unit = ""): string {
   return value === null ? "Unlimited" : `${value.toLocaleString("en-IN")}${unit}`;
+}
+
+/** Interview time as people say it: "50 hours" from 3000 minutes, "90 minutes" otherwise. */
+function time(minutes: number | null): string {
+  if (minutes === null) return "Unlimited";
+  return minutes >= 120 && minutes % 60 === 0 ? `${minutes / 60} hours` : `${minutes} minutes`;
 }
 
 function rupees(v: number): string {
@@ -111,17 +127,18 @@ export interface PricingTiersProps {
 
 export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }: PricingTiersProps) {
   const plans = [...(monthly ?? [])].sort((a, b) => a.price_inr - b.price_inr);
-  const popular = plans.length >= 2 ? plans[plans.length - 1]!.id : undefined;
+  // The server's badge ("Most popular") picks the highlighted plan; without one, the dearest of two or more.
+  const popular = plans.find((m) => m.badge === "Most popular")?.id ?? (plans.length >= 2 ? plans[plans.length - 1]!.id : undefined);
   const signedIn = Boolean(onBuy);
   const onFree = signedIn && (!current || !plans.some((m) => m.plan === current.plan));
 
   return (
-    <ul className={cx("grid gap-5 sm:grid-cols-2", plans.length >= 2 ? "xl:grid-cols-4" : "xl:grid-cols-3")}>
+    <ul className={cx("grid gap-5 sm:grid-cols-2", plans.length >= 3 ? "xl:grid-cols-4" : plans.length === 2 ? "xl:grid-cols-3" : "xl:grid-cols-2")}>
       <Tier
         name="Free"
         price="₹0"
         per="forever"
-        tagline={TAGLINE.free!}
+        tagline={FREE_TAGLINE}
         cta={signedIn ? { label: onFree ? "Your current plan" : "Included", disabled: true } : { label: "Start free", to: "/register" }}
       >
         {welcome?.interview_minutes ? <Feature>{welcome.interview_minutes} interview minutes to start</Feature> : null}
@@ -134,40 +151,51 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
       {plans.map((m) => {
         const mine = current?.plan === m.plan && Boolean(current?.until);
         const cta: Cta = signedIn
-          ? { label: mine ? `Add ${m.days} days · ${rupees(m.price_inr)}` : `Get ${m.label}`, onClick: () => onBuy?.(m), disabled: busy || !m.buyable, primary: m.id === popular || mine }
+          ? { label: mine ? `Extend · ${rupees(m.price_inr)}` : `Get ${m.label}`, onClick: () => onBuy?.(m), disabled: busy || !m.buyable, primary: m.id === popular || mine }
           : { label: `Get ${m.label}`, to: "/register", from: `/billing?pack=${m.id}`, primary: m.id === popular };
         return (
           <Tier
             key={m.id}
             name={m.label}
             price={rupees(m.price_inr)}
-            per={m.days === 30 ? "/ month" : `/ ${m.days} days`}
-            tagline={TAGLINE[m.plan] ?? ""}
-            badge={mine ? "Your plan" : m.id === popular ? "Most popular" : undefined}
-            highlight={mine || (!current?.until && m.id === popular)}
+            per={periodLabel(m.days)}
+            tagline={tagline(m)}
+            badge={m.badge ?? undefined}
+            highlight={m.id === popular}
             cta={cta}
-            note={mine && current?.until ? `Active until ${formatDate(current.until)}` : "Billed once. Never auto-renews."}
+            note={
+              mine && current?.until
+                ? `Your plan is active until ${formatDate(current.until)}`
+                : m.days > 30 && m.per_month_inr
+                  ? `${rupees(m.per_month_inr)} a month, billed once. Never auto-renews.`
+                  : "Billed once. Never auto-renews."
+            }
           >
             {m.resume_ai && <Feature><strong className="font-semibold">Unlimited Resume AI</strong>: fixes, rewrites, tailoring, cover letters</Feature>}
-            <Feature>{n(m.live_minutes)} live interview minutes</Feature>
-            <Feature>{n(m.mock_minutes)} mock and video interview minutes</Feature>
+            <Feature>{time(m.live_minutes)} of live interview help a month</Feature>
+            <Feature>{time(m.mock_minutes)} of mock and video interviews a month</Feature>
             <Feature>{n(m.screenshots)} screenshot answers</Feature>
             <Feature>{n(m.documents)} documents</Feature>
             <Feature>Sessions up to {m.max_session_minutes} minutes</Feature>
           </Tier>
         );
       })}
-      <Tier
-        name="Enterprise"
-        price="Custom"
-        tagline="For colleges, placement cells, bootcamps and teams."
-        cta={{ label: "Contact us", to: contactHref({ topic: "business", from: "/pricing" }) }}
-      >
-        <Feature>Access for a whole batch or team</Feature>
-        <Feature>Interview minutes and limits sized to your group</Feature>
-        <Feature>Unlimited Resume AI for everyone</Feature>
-        <Feature>One payment for the group, arranged with us</Feature>
-      </Tier>
+      <li className="flex flex-col gap-4 rounded-2xl bg-white p-6 ring-1 ring-zinc-900/10 sm:col-span-2 md:flex-row md:items-center xl:col-span-full dark:bg-zinc-900/60 dark:ring-white/10">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-300" aria-hidden="true">
+          <Building2 className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-display text-lg font-semibold">Enterprise</h3>
+          <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
+            For colleges, placement cells, bootcamps and teams: access for a whole batch, interview time and limits
+            sized to your group, unlimited Resume AI for everyone, and one payment arranged with us.
+          </p>
+        </div>
+        <Link to={contactHref({ topic: "business", from: "/pricing" })}
+              className={cx("inline-flex shrink-0 items-center justify-center rounded-xl bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200", focusRing)}>
+          Contact us
+        </Link>
+      </li>
     </ul>
   );
 }
@@ -179,13 +207,14 @@ export function PlanComparison({ monthly }: { monthly: MonthlyPlan[] | null }) {
   if (!plans.length) return null;
   const yes = <Check className="mx-auto h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-label="Included" />;
   const rows: Array<[string, ReactNode, ...ReactNode[]]> = [
-    ["Price", "₹0", ...plans.map((m) => `${rupees(m.price_inr)} / month`), "Custom"],
+    ["Price", "₹0", ...plans.map((m) => `${rupees(m.price_inr)} ${periodLabel(m.days)}`), "Custom"],
+    ["Per month", "₹0", ...plans.map((m) => rupees(m.per_month_inr ?? m.price_inr)), "Custom"],
     ["Resume editor, ATS score, downloads", yes, ...plans.map(() => yes), yes],
     ["Job matches, fit checks, tracker", yes, ...plans.map(() => yes), yes],
     ["Resume AI", "1 credit per action (a fix: 1/5)", ...plans.map((m) => (m.resume_ai ? "Unlimited" : "Credits")), "Unlimited"],
-    ["Live interview minutes", "From credits", ...plans.map((m) => `${n(m.live_minutes)} / month`), "Custom"],
-    ["Mock and video interview minutes", "From credits", ...plans.map((m) => `${n(m.mock_minutes)} / month`), "Custom"],
-    ["Screenshot answers", free ? `${n(free.screenshots)} / month` : "Limited", ...plans.map((m) => `${n(m.screenshots)} / month`), "Custom"],
+    ["Live interview help", "From credits", ...plans.map((m) => `${time(m.live_minutes)} / month`), "Custom"],
+    ["Mock and video interviews", "From credits", ...plans.map((m) => `${time(m.mock_minutes)} / month`), "Custom"],
+    ["Screenshot answers", free ? `${n(free.screenshots)} / month` : "Limited", ...plans.map((m) => (m.screenshots === null ? "Unlimited" : `${n(m.screenshots)} / month`)), "Custom"],
     ["Documents", free ? n(free.documents) : "Limited", ...plans.map((m) => n(m.documents)), "Custom"],
     ["Longest session", free ? `${free.max_session_minutes} min` : "—", ...plans.map((m) => `${m.max_session_minutes} min`), "Custom"],
     ["Renewal", "—", ...plans.map(() => "Never automatic"), "Arranged with us"],
@@ -200,7 +229,7 @@ export function PlanComparison({ monthly }: { monthly: MonthlyPlan[] | null }) {
             <th scope="col" className="px-4 py-3 text-center font-semibold">Free</th>
             {plans.map((m) => (
               <th key={m.id} scope="col" className="px-4 py-3 text-center font-semibold">
-                <span className="inline-flex items-center gap-1">{m.label}{m === plans[plans.length - 1] && plans.length > 1 && <Sparkles className="h-3.5 w-3.5 text-indigo-500" aria-hidden />}</span>
+                <span className="inline-flex items-center gap-1">{m.label}{m.badge === "Most popular" && <Sparkles className="h-3.5 w-3.5 text-indigo-500" aria-hidden />}</span>
               </th>
             ))}
             <th scope="col" className="px-4 py-3 text-center font-semibold">
