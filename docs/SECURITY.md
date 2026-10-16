@@ -207,3 +207,23 @@ The full review, its method and its accepted risks are in [SECURITY_REVIEW.md](S
 - an API-level bomb upload.
 
 `packages/ui/src/api/client.test.ts` covers the client's CSRF header and structured errors.
+
+
+## Two-step sign-in and devices (16 Oct 2026)
+
+- **Two-step sign-in** (`auth/two_factor.py`):
+  - TOTP per RFC 6238: SHA-1, 6 digits, 30 s, ±1 step. A used step is never accepted again.
+  - The secret is Fernet-encrypted with `ORBIT_CONFIG_SECRET`.
+  - 10 single-use recovery codes, stored only as SHA-256 hashes.
+  - A correct password, or Google, gives a 5-minute **challenge**, never a session. The challenge is signed with
+    its own derived key, and `decode_claims` refuses any token carrying `purpose`, so a challenge can't pass as a
+    session (a test caught this before release).
+  - After Google, the challenge travels in a short httpOnly cookie, not the URL.
+  - Wrong codes are throttled: 5 per account per 15 minutes.
+  - Turning 2FA off, or making new recovery codes, needs a current code.
+- **Devices** (`auth/devices.py`):
+  - Each sign-in is a `user_sessions` row named by the token's `sid` claim, checked on every request.
+  - Signing one device out ends its tokens on their next request.
+  - Logout revokes the current device server-side.
+- **Not done yet:** passkeys (WebAuthn), and requiring 2FA for the admin account. The admin should turn it on in
+  Settings now.

@@ -321,7 +321,7 @@ function GoogleContinue({ next }: { next: string }) {
 }
 
 export function LoginPage() {
-  const { user, login } = useAuth();
+  const { user, login, finishSecondStep } = useAuth();
   const navigate = useNavigate();
   const [search] = useSearchParams();
   const from = useCameFrom();
@@ -330,6 +330,10 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(GOOGLE_ERROR[search.get("error") ?? ""] ?? null);
   const [busy, setBusy] = useState(false);
+  // Two-step sign-in: after the password (a challenge) or after Google (?step=2fa: the challenge is in a cookie).
+  const [challenge, setChallenge] = useState<string | null>(null);
+  const [secondStep, setSecondStep] = useState(search.get("step") === "2fa");
+  const [code, setCode] = useState("");
 
   if (user) return <Navigate to={target} replace />;
 
@@ -338,7 +342,17 @@ export function LoginPage() {
     setBusy(true);
     setError(null);
     try {
-      await login({ email, password });
+      if (secondStep) {
+        await finishSecondStep(code, challenge);
+        navigate(target, { replace: true });
+        return;
+      }
+      const pending = await login({ email, password });
+      if (pending) {
+        setChallenge(pending.challenge);
+        setSecondStep(true);
+        return;
+      }
       navigate(target, { replace: true });
     } catch (err) {
       setError(errorText(err));
@@ -349,6 +363,41 @@ export function LoginPage() {
 
   return (
     <AuthShell title="Welcome back" subtitle="Sign in to Orbit AI" features>
+      {secondStep ? (
+        <form onSubmit={(e) => void submit(e)} className="space-y-4">
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">Enter the 6-digit code from your authenticator app.</p>
+          <Field label="Code" htmlFor="totp">
+            <Input
+              id="totp"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              required
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              className="tracking-widest"
+            />
+          </Field>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Lost your phone? Enter one of your recovery codes instead.</p>
+          {error && <ErrorNote>{error}</ErrorNote>}
+          <Button type="submit" disabled={busy || code.trim().length < 6} className="w-full">
+            {busy ? "Checking…" : "Verify and sign in"}
+          </Button>
+          <button
+            type="button"
+            onClick={() => {
+              setSecondStep(false);
+              setChallenge(null);
+              setCode("");
+              setError(null);
+            }}
+            className={cx("mx-auto block rounded text-sm text-zinc-600 hover:underline dark:text-zinc-400", focusRing)}
+          >
+            Start again
+          </button>
+        </form>
+      ) : (
+      <>
       <GoogleContinue next={target} />
       <form onSubmit={(e) => void submit(e)} className="space-y-4">
         <Field label="Email" htmlFor="email">
@@ -370,6 +419,8 @@ export function LoginPage() {
           </Link>
         </p>
       </form>
+      </>
+      )}
       <p className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
         New to Orbit?{" "}
         <Link

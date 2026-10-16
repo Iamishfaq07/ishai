@@ -40,6 +40,7 @@ import { errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { useTheme, type ThemePref } from "../lib/theme";
 import { OnThisPage, type PageSection } from "../components/OnThisPage";
+import { TwoFactorCard } from "./TwoFactorCard";
 
 export function SettingsPage() {
   const [theme, setTheme] = useTheme();
@@ -86,6 +87,7 @@ export function SettingsPage() {
         </Card>
         <HotkeysCard />
         <AccountCard />
+        <TwoFactorCard />
         <DevicesCard />
         <PrivacyCard />
         <AdvancedSettingsCard />
@@ -114,6 +116,7 @@ const SECTIONS: PageSection[] = [
   { id: "appearance", label: "Appearance" },
   { id: "shortcuts", label: "Keyboard shortcuts" },
   { id: "account", label: "Account" },
+  { id: "two-step", label: "Two-step sign-in" },
   { id: "devices", label: "Devices" },
   { id: "privacy", label: "Privacy" },
 ];

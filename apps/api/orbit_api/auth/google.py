@@ -284,7 +284,17 @@ def mount(router: APIRouter) -> None:
             dest += ("&" if "?" in dest else "?") + "google=claimed"
         response = RedirectResponse(_home(dest), status_code=302)
         from orbit_api.auth.devices import start_session
+        from orbit_api.auth.two_factor import CHALLENGE_COOKIE, CHALLENGE_TTL_S, challenge_for, enabled
 
+        if await enabled(db, user.id):
+            # Google proved who it is; the authenticator code still comes next. The challenge rides in a short
+            # httpOnly cookie, never in the URL, and the sign-in page asks for the code.
+            response = RedirectResponse(_home("/login?step=2fa"), status_code=302)
+            secure, samesite = cookie_policy()
+            response.set_cookie(CHALLENGE_COOKIE, challenge_for(user), max_age=CHALLENGE_TTL_S, httponly=True,
+                                secure=secure, samesite=samesite, path="/")
+            _clear_state(response)
+            return response
         sid = await start_session(db, user, request)
         await db.commit()
         set_session_cookie(response, create_access_token(user.id, user.token_version, idle=True, sid=sid))

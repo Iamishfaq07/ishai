@@ -1,5 +1,15 @@
 # Implementation log
 
+## Two-step sign-in (2026-10-16)
+
+- **Settings → Two-step sign-in:** scan a QR code with an authenticator app (Google Authenticator, Microsoft
+  Authenticator, 1Password and others) and enter its code. You get 10 single-use recovery codes, shown once.
+- **Signing in** with it on: after the password, or after Google, Orbit asks for the 6-digit code (or a recovery
+  code). This works on the web and in the Windows app, including its "sign in again" prompt.
+- Codes can't be reused, wrong codes are limited to 5 per 15 minutes, and turning it off needs a code. The secret is
+  stored encrypted; recovery codes only as hashes.
+- The export says whether it's on and since when; never the secret.
+
 ## Settings → Devices: sign out one device (2026-10-16)
 
 - **Settings → Devices** lists where the account is signed in ("Chrome on Windows", "Safari on iOS", "Orbit for

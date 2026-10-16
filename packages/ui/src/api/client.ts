@@ -1,5 +1,7 @@
 import type {
   EngineeringTelemetry,
+  TwoFactorChallenge,
+  TwoFactorStatus,
   SignedInDevice,
   JobMission,
   PrepPlan,
@@ -419,7 +421,17 @@ export function createApiClient(options: ApiClientOptions) {
     authConfig: () => json<AuthConfig>("/v1/auth/config"),
     register: (req: RegisterRequest) =>
       json<AuthResponse | RegisterPending>("/v1/auth/register", { method: "POST", body: body(req) }),
-    login: (req: LoginRequest) => json<AuthResponse>("/v1/auth/login", { method: "POST", body: body(req) }),
+    login: (req: LoginRequest) => json<AuthResponse | TwoFactorChallenge>("/v1/auth/login", { method: "POST", body: body(req) }),
+    /** The second step: a code from the authenticator app or a recovery code. After Google, `challenge` is in a cookie. */
+    loginSecondStep: (code: string, challenge?: string | null) =>
+      json<AuthResponse>("/v1/auth/login/2fa", { method: "POST", body: body({ code, challenge: challenge ?? null }) }),
+    twoFactorStatus: () => json<TwoFactorStatus>("/v1/auth/2fa"),
+    twoFactorSetup: (password: string) =>
+      json<{ secret: string; otpauth_uri: string }>("/v1/auth/2fa/setup", { method: "POST", body: body({ password }) }),
+    twoFactorEnable: (code: string) => json<{ recovery_codes: string[] }>("/v1/auth/2fa/enable", { method: "POST", body: body({ code }) }),
+    twoFactorDisable: (code: string) => json<void>("/v1/auth/2fa/disable", { method: "POST", body: body({ code }) }),
+    twoFactorNewCodes: (code: string) =>
+      json<{ recovery_codes: string[] }>("/v1/auth/2fa/recovery-codes", { method: "POST", body: body({ code }) }),
     me: () => json<User>("/v1/auth/me"),
     logout: async () => {
       await json<void>("/v1/auth/logout", { method: "POST" });
