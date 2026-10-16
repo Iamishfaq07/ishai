@@ -1,5 +1,5 @@
 import type { ContactContext, ContactRequest, ContactTopic } from "@orbit/types";
-import { ApiError } from "@orbit/ui";
+import { ApiError, INDIA, isIndia } from "@orbit/ui";
 import { CONTACT_PAGE } from "./contact";
 
 /**
@@ -23,6 +23,14 @@ export const CONTACT_TOPICS: ReadonlyArray<{ id: ContactTopic; label: string; hi
   { id: "feedback", label: "Feedback", hint: "What works, what doesn't, what you'd like next." },
   { id: "other", label: "Other", hint: "Anything else." },
 ];
+
+/** The topics for where the user applies: outside India, partnerships are with universities and teams. */
+export function contactTopics(country: string = INDIA): typeof CONTACT_TOPICS {
+  if (isIndia(country)) return CONTACT_TOPICS;
+  return CONTACT_TOPICS.map((t) =>
+    t.id === "business" ? { ...t, hint: "Universities, career services, bootcamps and teams: tell us what you have in mind." } : t,
+  );
+}
 
 export function topicLabel(id: string): string {
   return CONTACT_TOPICS.find((t) => t.id === id)?.label ?? id;

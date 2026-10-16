@@ -14,6 +14,8 @@ import {
   buttonClass,
   cx,
   focusRing,
+  isIndia,
+  scamReport,
 } from "@orbit/ui";
 import { Captcha, useCaptchaConfig } from "../components/Captcha";
 import { Footer } from "../components/Footer";
@@ -22,11 +24,11 @@ import { SiteMenu } from "../components/SiteMenu";
 import { Button, Card, ErrorNote, Input, Textarea } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { useIndia } from "../lib/country";
+import { useCountry } from "../lib/country";
 import { SUPPORT_EMAIL, mailLink, whatsappLink } from "../lib/contact";
 import {
-  CONTACT_TOPICS,
   MESSAGE_MAX,
+  contactTopics,
   NAME_MAX,
   PHONE_MAX,
   buildContactRequest,
@@ -53,7 +55,10 @@ interface ReportedJob {
  * limits and says when someone has sent too many.
  */
 export function ContactPage() {
-  const india = useIndia();
+  const country = useCountry();
+  const india = isIndia(country);
+  const topics = contactTopics(country);
+  const scam = scamReport(country);
   const { user } = useAuth();
   const { search } = useLocation();
   const prefill = useMemo(() => readPrefill(search), [search]);
@@ -98,7 +103,7 @@ export function ContactPage() {
   const errors: FieldErrors = tried ? fieldErrors(fields) : {};
   const counter = messageCounter(fields.message);
   const needsCaptcha = !user && Boolean(captcha);
-  const topic = CONTACT_TOPICS.find((t) => t.id === fields.topic);
+  const topic = topics.find((t) => t.id === fields.topic);
   const set = <K extends keyof ContactFields>(key: K, value: ContactFields[K]) => setFields((f) => ({ ...f, [key]: value }));
 
   const context: ContactContext | null = useMemo(() => {
@@ -216,7 +221,7 @@ export function ContactPage() {
                 <fieldset>
                   <legend className="text-sm font-medium text-zinc-800 dark:text-zinc-200">What's it about?</legend>
                   <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-describedby={errors.topic ? `${ids}-topic-error` : `${ids}-topic-hint`}>
-                    {CONTACT_TOPICS.map((t, i) => (
+                    {topics.map((t, i) => (
                       <label
                         key={t.id}
                         className={cx(
@@ -413,15 +418,31 @@ export function ContactPage() {
                 <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden /> Job scams
               </h2>
               <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
-                Real employers never ask for a fee or an OTP. Lost money already? Report it at{" "}
-                <a href="https://cybercrime.gov.in/" target="_blank" rel="noopener noreferrer" className={cx("font-medium text-indigo-700 underline dark:text-indigo-300", focusRing)}>
-                  cybercrime.gov.in
-                </a>{" "}
-                or call{" "}
-                <a href="tel:1930" className={cx("font-medium text-indigo-700 underline dark:text-indigo-300", focusRing)}>
-                  1930
-                </a>
-                .
+                Real employers never ask for a fee or an OTP. Lost money already?{" "}
+                {scam ? (
+                  <>
+                    Report it at{" "}
+                    {scam.links.map(([label, url], i) => (
+                      <span key={url}>
+                        {i > 0 && " and "}
+                        <a href={url} target="_blank" rel="noopener noreferrer" className={cx("font-medium text-indigo-700 underline dark:text-indigo-300", focusRing)}>
+                          {label}
+                        </a>
+                      </span>
+                    ))}
+                    {scam.phone && (
+                      <>
+                        {" "}or call{" "}
+                        <a href={`tel:${scam.phone.replace(/\s/g, "")}`} className={cx("font-medium text-indigo-700 underline dark:text-indigo-300", focusRing)}>
+                          {scam.phone}
+                        </a>
+                      </>
+                    )}
+                    .
+                  </>
+                ) : (
+                  "Tell your bank straight away, then report it to your local police or consumer-protection agency."
+                )}
               </p>
             </Card>
           </aside>

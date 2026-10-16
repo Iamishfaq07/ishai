@@ -1,20 +1,36 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, BadgeIndianRupee, MessagesSquare, GraduationCap, IdCard, ShieldCheck, cx, focusRing, type LucideIcon } from "@orbit/ui";
+import { ArrowRight, ArrowUpRight, BadgeIndianRupee, Banknote, MessagesSquare, GraduationCap, IdCard, ShieldCheck, cx, focusRing, type LucideIcon } from "@orbit/ui";
+import { useIndia } from "../lib/country";
 import { KASHSEC_URL, LEARN_HOME } from "../pages/learn/links";
 import { LINKEDIN_HOME } from "../pages/linkedin/model";
 import { OFFERS_HOME } from "../pages/offers/model";
 import { AiPill } from "./products";
 
-/** Orbit's newer tools, as the sign-in screens and the front page show them. */
-export const MORE_TOOLS: Array<{ to: string; name: string; icon: LucideIcon; line: string }> = [
+type Tool = { to: string; name: string; icon: LucideIcon; line: string };
+
+/** Orbit's newer tools, as the sign-in screens and the front page show them (in India; moreTools words them for elsewhere). */
+export const MORE_TOOLS: Tool[] = [
   { to: LINKEDIN_HOME, name: "LinkedIn", icon: IdCard, line: "Score your LinkedIn profile against the role you want, and fix what recruiters search for." },
   { to: OFFERS_HOME, name: "Offer", icon: BadgeIndianRupee, line: "What an offer pays each month, how it compares with the market, and a plan to ask for more." },
   { to: LEARN_HOME, name: "Learning", icon: GraduationCap, line: "Coding-round practice with an AI interviewer's review, and free cybersecurity lessons." },
 ];
 
+/** The tools for where the visitor applies: outside India, Offer AI's take-home is rupee-only, so it promises the first
+ *  year's value, and its mark isn't the rupee. */
+function useMoreTools(): Tool[] {
+  const india = useIndia();
+  if (india) return MORE_TOOLS;
+  return MORE_TOOLS.map((t) =>
+    t.to === OFFERS_HOME
+      ? { ...t, icon: Banknote, line: "What an offer is worth in its first year, how it compares with the market, and a plan to ask for more." }
+      : t,
+  );
+}
+
 /** The tools as one line of chips: for the sign-in panel, where space is short. */
 export function MoreToolChips({ dark = false, practice = false }: { dark?: boolean; practice?: boolean }) {
-  const tools = practice ? [{ name: "Practice", icon: MessagesSquare }, ...MORE_TOOLS] : MORE_TOOLS;
+  const more = useMoreTools();
+  const tools = practice ? [{ name: "Practice", icon: MessagesSquare }, ...more] : more;
   return (
     <ul className="flex flex-wrap gap-1.5" aria-label="Also in Orbit">
       {tools.map(({ name, icon: Icon }) => (
@@ -61,9 +77,10 @@ export function KashSecPromo({ tone = "card", className }: { tone?: "dark" | "ca
 
 /** The newer tools as cards with a line each (the front page). */
 export function MoreToolCards() {
+  const tools = useMoreTools();
   return (
     <ul className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-3">
-      {MORE_TOOLS.map(({ to, name, icon: Icon, line }) => (
+      {tools.map(({ to, name, icon: Icon, line }) => (
         <li key={name} className="min-w-0">
           <Link to={to} className={cx("orbit-card lift flex h-full flex-col rounded-2xl p-5", focusRing)}>
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-aurora-500 text-white shadow-glow-sm">

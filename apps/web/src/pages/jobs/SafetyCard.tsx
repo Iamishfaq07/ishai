@@ -1,15 +1,12 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { CircleAlert, Copy, ExternalLink, Mail, MessageSquare, Send, ShieldCheck, cx, focusRing, isIndia, toast } from "@orbit/ui";
+import { CircleAlert, Copy, ExternalLink, Mail, MessageSquare, Send, ShieldCheck, cx, focusRing, isIndia, scamReport, toast } from "@orbit/ui";
 import { Card } from "../../components/ui";
 import { SUPPORT_EMAIL, SUPPORT_WHATSAPP } from "../../lib/contact";
 import { contactHref } from "../../lib/contactForm";
 import { useCountry } from "../../lib/country";
 import { textLink } from "./links";
 
-/** India's national cyber-crime portal and helpline (I4C), for a job scam that has already cost money or details. */
-export const CYBERCRIME_URL = "https://cybercrime.gov.in/";
-export const CYBERCRIME_HELPLINE = "1930";
 
 /** The warning signs, in the order they're most often seen in job scams (written for India; SafetyList words the
  * payment one for everywhere else). */
@@ -46,7 +43,8 @@ export function reportText(job: ReportedJob, reason: string): string {
 /**
  * Staying safe with jobs: the signs of a job scam, and "Report this job": to Orbit through the Contact page (the job
  * and the reason filled in; it lands in the admin's Inbox), by email or WhatsApp when this build has them, as copied
- * text, and always the national cyber-crime portal. `compact` is the one-line version for the tracker.
+ * text, and the national place to report a scam where we know one (regionCopy.ts: India's cyber-crime portal and
+ * 1930, the FTC and IC3 in the US, Action Fraud in the UK). `compact` is the one-line version for the tracker.
  */
 export function SafetyCard({ job, compact = false, className }: { job?: ReportedJob; compact?: boolean; className?: string }) {
   if (compact) {
@@ -90,25 +88,35 @@ function SafetyList({ className }: { className?: string }) {
 }
 
 function ScamHelp({ className }: { className?: string }) {
-  if (!isIndia(useCountry())) {
+  const scam = scamReport(useCountry());
+  if (!scam) {
     return (
       <p className={cx("text-xs text-zinc-600 dark:text-zinc-400", className)}>
-        Paid money or shared details already? Tell your bank straight away, then report it to the police or your
-        country's fraud-reporting service.
+        Paid money or shared details already? Tell your bank straight away, then report it to your local police or
+        consumer-protection agency.
       </p>
     );
   }
   return (
     <p className={cx("text-xs text-zinc-600 dark:text-zinc-400", className)}>
       Paid money or shared details already? Report it at{" "}
-      <a href={CYBERCRIME_URL} target="_blank" rel="noopener noreferrer" className={textLink}>
-        cybercrime.gov.in
-      </a>{" "}
-      or call{" "}
-      <a href={`tel:${CYBERCRIME_HELPLINE}`} className={textLink}>
-        {CYBERCRIME_HELPLINE}
-      </a>
-      , the national cyber-crime helpline.
+      {scam.links.map(([label, url], i) => (
+        <span key={url}>
+          {i > 0 && " and "}
+          <a href={url} target="_blank" rel="noopener noreferrer" className={textLink}>
+            {label}
+          </a>
+        </span>
+      ))}
+      {scam.phone ? (
+        <>
+          {" "}or call{" "}
+          <a href={`tel:${scam.phone.split(" ").join("")}`} className={textLink}>
+            {scam.phone}
+          </a>
+        </>
+      ) : null}
+      , {scam.about}.
     </p>
   );
 }
@@ -116,7 +124,7 @@ function ScamHelp({ className }: { className?: string }) {
 /** "Report this job": pick what's wrong, then send it to Orbit (the Contact page, filled in), email or WhatsApp it
  * (when configured), or copy it. */
 function ReportJob({ job, className }: { job: ReportedJob; className?: string }) {
-  const india = isIndia(useCountry());
+  const scam = scamReport(useCountry());
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string>(REPORT_REASONS[0]);
@@ -182,11 +190,11 @@ function ReportJob({ job, className }: { job: ReportedJob; className?: string })
             <button type="button" onClick={() => void copy()} className={action}>
               <Copy className="h-3.5 w-3.5" aria-hidden /> Copy the details
             </button>
-            {india && (
-              <a href={CYBERCRIME_URL} target="_blank" rel="noopener noreferrer" className={action}>
-                <ExternalLink className="h-3.5 w-3.5" aria-hidden /> Report at cybercrime.gov.in
+            {scam?.links.map(([label, url]) => (
+              <a key={url} href={url} target="_blank" rel="noopener noreferrer" className={action}>
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden /> Report at {label}
               </a>
-            )}
+            ))}
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400" role="status">
             Reports go to the Orbit team, who check the job. Nothing is sent until you press send.

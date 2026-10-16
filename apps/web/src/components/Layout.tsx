@@ -39,6 +39,7 @@ import {
 import { api } from "../lib/api";
 import { isWindows } from "../lib/audio";
 import { useAuth } from "../lib/auth";
+import { useCountry } from "../lib/country";
 import { DESKTOP_BETA, DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
 import { CONTACT_PAGE, POLICY_LINKS } from "../lib/contact";
 import { SHELL_EVENTS, isTypingTarget, openSupport } from "../lib/shell";
@@ -58,9 +59,10 @@ import { Sheet } from "./Sheet";
 const loadPalette = () => import("./CommandPalette");
 const CommandPalette = lazy(loadPalette);
 
-const GROUPS = navGroups();
 const TABS = phoneTabs();
-const EXPLORE = exploreItems();
+// The sidebar's groups and the Explore sheet's items: the same everywhere but for Offer AI's mark (the rupee in India).
+const useNavGroups = () => navGroups(MOCK_INTERVIEW_ENABLED, useCountry());
+const useExploreItems = () => exploreItems(MOCK_INTERVIEW_ENABLED, useCountry());
 
 /** The tabs between the interview copilot's pages (as Resume AI and Jobs AI have theirs). */
 const COPILOT_SECTIONS: ProductSection[] = [
@@ -130,6 +132,7 @@ function useSidebar(): [boolean, () => void] {
 
 export function Layout() {
   const { user, logout, setUser } = useAuth();
+  const explore = useExploreItems();
   // Only nag when this server actually locks paid features behind verification.
   const [verificationRequired, setVerificationRequired] = useState(false);
   useEffect(() => {
@@ -187,7 +190,7 @@ export function Layout() {
 
   const copilot = COPILOT_PATH.test(pathname);
   const learning = LEARNING_PATH.test(pathname);
-  const exploreActive = EXPLORE_PATH.test(pathname) || EXPLORE.some((t) => t.current(pathname));
+  const exploreActive = EXPLORE_PATH.test(pathname) || explore.some((t) => t.current(pathname));
   const shortcut = isMacPlatform() ? "⌘K" : "Ctrl K";
 
   return (
@@ -379,7 +382,7 @@ export function Layout() {
               onClick={() => setExploreOpen(true)}
               aria-haspopup="dialog"
               aria-expanded={exploreOpen}
-              aria-label={`Explore: ${EXPLORE.map((t) => t.label).join(", ")}, plan, settings, support and sign out`}
+              aria-label={`Explore: ${explore.map((t) => t.label).join(", ")}, plan, settings, support and sign out`}
               className={cx(tabClass(exploreActive || exploreOpen), "w-full")}
             >
               <TabIcon icon={Compass} active={exploreActive || exploreOpen} />
@@ -430,6 +433,7 @@ function Sidebar({
   admin: boolean;
   onHelp: () => void;
 }) {
+  const groups = useNavGroups();
   const foot: Array<{ to: string; label: string; icon: LucideIcon }> = [
     { to: "/billing", label: "Plan & credits", icon: CreditCard },
     { to: "/settings", label: "Settings", icon: SettingsIcon },
@@ -461,7 +465,7 @@ function Sidebar({
         </button>
       </div>
       <nav aria-label="Main" className="flex-1 overflow-y-auto px-2 py-3">
-        {GROUPS.map((group) => (
+        {groups.map((group) => (
           <div key={group.label ?? "top"} className={group.label ? "mt-4" : undefined}>
             {group.label &&
               (collapsed ? (
@@ -649,6 +653,7 @@ function ExploreMenu({
   onHelp: () => void;
   onSignOut: () => void;
 }) {
+  const explore = useExploreItems();
   const row = cx(
     "flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-base text-zinc-800 hover:bg-zinc-900/5 dark:text-zinc-100 dark:hover:bg-white/5",
     focusRing,
@@ -657,7 +662,7 @@ function ExploreMenu({
   return (
     <div className="px-3 pb-4 pt-2">
       <ul className="grid grid-cols-2 gap-2">
-        {EXPLORE.map((item) => {
+        {explore.map((item) => {
           const active = item.current(pathname);
           const Icon = item.icon;
           return (
