@@ -14,10 +14,11 @@ from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orbit_api import credits, entitlements
+from orbit_api import entitlements
 from orbit_api.admin.routes import require_admin
 from orbit_api.auth.security import current_user
 from orbit_api.billing import razorpay, settle, upi
+from orbit_api.billing.monthly import monthly_plans, public_monthly
 from orbit_api.billing.packs import packs, public_packs
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
@@ -83,6 +84,12 @@ async def list_plans() -> list[dict[str, Any]]:
     return entitlements.public_plans()
 
 
+@router.get("/billing/monthly")
+async def list_monthly() -> list[dict[str, Any]]:
+    """The monthly plans for sale (public): a plan for 30 days, paid once; nothing renews."""
+    return public_monthly()
+
+
 @router.get("/billing/packs")
 async def list_packs() -> list[dict[str, Any]]:
     """Public: the credit packs for sale, and whether they can be bought right now (a UPI ID is set)."""
@@ -128,6 +135,9 @@ def _label(p: Payment) -> str:
     pack = packs().get(p.plan)
     if pack is not None:
         return f"{pack.label} pack"
+    month = monthly_plans().get(p.plan)
+    if month is not None:
+        return f"{month.label} plan · {p.days} days"
     return plan_named(p.plan).label if p.days else p.plan  # an order from before credit packs
 
 
@@ -146,7 +156,19 @@ def _order_out(p: Payment) -> UpiOrderOut:
 
 
 class OrderIn(BaseModel):
-    pack: str = Field(min_length=1, max_length=32)
+    pack: str = Field(min_length=1, max_length=32)  # a credit pack's id, or a monthly plan's
+
+
+def _product(product_id: str) -> tuple[str, str, int, int, int, int]:
+    """What an order is for: (id, label, price, days, resume credits, interview minutes). A credit pack has no
+    days; a monthly plan has its days and no credits."""
+    pack = packs().get(product_id)
+    if pack is not None:
+        return pack.id, f"{pack.label} pack", pack.price_inr, 0, pack.resume_credits, pack.interview_minutes
+    month = monthly_plans().get(product_id)
+    if month is not None:
+        return month.id, f"{month.label} plan · {month.days} days", month.price_inr, month.days, 0, 0
+    raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That pack can't be bought.")
 
 
 @router.post("/billing/upi/orders", response_model=UpiOrderOut, status_code=201, dependencies=[Depends(order_limit)])
@@ -154,21 +176,19 @@ async def create_order(body: OrderIn, user: Annotated[User, Depends(current_user
                        db: Annotated[AsyncSession, Depends(get_db)]) -> UpiOrderOut:
     """Start paying for a credit pack: the amount, reference and UPI link. An open order for the same pack from the
     last day is handed back instead of making another."""
-    pack = packs().get(body.pack)
-    if pack is None:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That pack can't be bought.")
+    pid, _, price, days, resume_credits, minutes = _product(body.pack)
     if not get_settings().upi_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "UPI payments aren't set up yet.")
     since = datetime.now(UTC) - upi.OPEN_ORDER_REUSE
     open_order = await db.scalar(
-        select(Payment).where(Payment.user_id == user.id, Payment.plan == pack.id,
-                              Payment.status == "awaiting_payment", Payment.amount_inr == pack.price_inr,
+        select(Payment).where(Payment.user_id == user.id, Payment.plan == pid,
+                              Payment.status == "awaiting_payment", Payment.amount_inr == price,
                               Payment.created_at >= since)
         .order_by(Payment.created_at.desc()).limit(1))
     if open_order is not None:
         return _order_out(open_order)
-    p = Payment(user_id=user.id, plan=pack.id, amount_inr=pack.price_inr, days=0, resume_credits=pack.resume_credits,
-                interview_minutes=pack.interview_minutes, reference=upi.new_reference(), status="awaiting_payment")
+    p = Payment(user_id=user.id, plan=pid, amount_inr=price, days=days, resume_credits=resume_credits,
+                interview_minutes=minutes, reference=upi.new_reference(), status="awaiting_payment")
     db.add(p)
     await db.commit()
     await db.refresh(p)
@@ -256,26 +276,24 @@ class VerifyIn(BaseModel):
 async def razorpay_order(body: OrderIn, user: Annotated[User, Depends(current_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> CheckoutOut:
     """Start buying a pack through Razorpay: an order there for the pack's price, kept here until it's paid."""
-    pack = packs().get(body.pack)
-    if pack is None:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That pack can't be bought.")
+    pid, label, price, days, resume_credits, minutes = _product(body.pack)
     key_id = get_settings().razorpay_key_id
     if not razorpay.configured() or not key_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Card payments aren't set up yet.")
     reference = upi.new_reference()
     try:
-        order_id = await razorpay.create_order(pack.price_inr, reference, {"pack": pack.id, "orbit_ref": reference})
+        order_id = await razorpay.create_order(price, reference, {"pack": pid, "orbit_ref": reference})
     except razorpay.RazorpayError as e:
         log.warning("razorpay order failed: %s", e)
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
                             "Payments aren't reachable right now. Try again in a minute.") from e
-    p = Payment(user_id=user.id, plan=pack.id, amount_inr=pack.price_inr, days=0, resume_credits=pack.resume_credits,
-                interview_minutes=pack.interview_minutes, reference=reference, status="awaiting_payment",
+    p = Payment(user_id=user.id, plan=pid, amount_inr=price, days=days, resume_credits=resume_credits,
+                interview_minutes=minutes, reference=reference, status="awaiting_payment",
                 method="razorpay", gateway_order_id=order_id)
     db.add(p)
     await db.commit()
-    return CheckoutOut(payment_id=p.id, order_id=order_id, key_id=key_id, amount_paise=pack.price_inr * 100,
-                       currency="INR", label=f"{pack.label} pack", email=user.email, name=user.name)
+    return CheckoutOut(payment_id=p.id, order_id=order_id, key_id=key_id, amount_paise=price * 100,
+                       currency="INR", label=label, email=user.email, name=user.name)
 
 
 @router.post("/billing/razorpay/verify", response_model=UpiOrderOut, dependencies=[Depends(utr_limit)])
@@ -516,15 +534,8 @@ async def decide_payment(payment_id: str, body: DecisionIn, background: Backgrou
         await db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "This payment was just decided. Reload the list.")
     if body.action == "approve":
-        if p.resume_credits:
-            credits.add(db, u.id, "resume", p.resume_credits, "purchase", payment_id=p.id)
-        if p.interview_minutes:
-            credits.add(db, u.id, "interview_seconds", p.interview_minutes * 60, "purchase", payment_id=p.id)
-        u.approved = True
-        mail = OutgoingEmail(to=u.email, subject=f"Payment received: {settle.what(p)} added to Orbit",
-                             text=(f"Thanks! We received your ₹{p.amount_inr} payment (UTR {p.utr}).\n\n"
-                                   f"Your account now has {settle.what(p)} more. They don't expire. "
-                                   f"Sign in to use them: {web}/login"))
+        await settle.grant(db, u, p)
+        mail = settle.receipt(u, p, f"UTR {p.utr}")
     else:
         reason = f"\n\nWhy: {note}" if note else ""
         mail = OutgoingEmail(to=u.email, subject="We couldn't confirm your Orbit payment",

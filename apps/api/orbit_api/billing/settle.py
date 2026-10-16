@@ -21,11 +21,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits
-from orbit_api.billing import razorpay
+from orbit_api.billing import monthly, razorpay
 from orbit_api.config import get_settings
 from orbit_api.db import sessionmaker
 from orbit_api.models import AuditLog, Payment, PaymentRefund, User
 from orbit_api.providers.email import OutgoingEmail, send_safely
+from orbit_api.transactions import lock_account
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +39,8 @@ CREDITABLE = (*OPEN, "expired")
 
 
 def what(p: Payment) -> str:
+    if p.days:  # a monthly plan (billing/monthly.py)
+        return monthly.what(p)
     parts = [f"{p.resume_credits} resume AI credits" if p.resume_credits else "",
              f"{p.interview_minutes} interview minutes" if p.interview_minutes else ""]
     return " and ".join(x for x in parts if x)
@@ -67,11 +70,7 @@ async def credit(db: AsyncSession, p: Payment, gateway_payment_id: str) -> Outgo
     if u is None:
         await db.commit()  # paid, but the account was deleted: kept for the records
         return None
-    if p.resume_credits:
-        credits.add(db, u.id, "resume", p.resume_credits, "purchase", payment_id=p.id)
-    if p.interview_minutes:
-        credits.add(db, u.id, "interview_seconds", p.interview_minutes * 60, "purchase", payment_id=p.id)
-    u.approved = True
+    await grant(db, u, p)
     db.add(AuditLog(user_id=u.id, action="payment.razorpay",
                     target=f"{p.id} {p.plan} ₹{p.amount_inr} {gateway_payment_id}"))
     try:
@@ -81,12 +80,39 @@ async def credit(db: AsyncSession, p: Payment, gateway_payment_id: str) -> Outgo
         return None
     await db.refresh(p)
     await link_refunds(db, p)
+    return receipt(u, p, f"Razorpay {gateway_payment_id}, reference {p.reference}")
+
+
+async def grant(db: AsyncSession, u: User, p: Payment) -> None:
+    """What an approved payment gives: a pack's credits (never expire), or a monthly plan's 30 days. Staged; the
+    caller commits."""
+    if p.days:
+        # Two months paid at the same moment must both add their days: read the plan's end under the account lock.
+        await lock_account(db, u.id)
+        await db.refresh(u, ["grant_plan", "grant_until"])
+        monthly.apply(u, p)
+        return
+    if p.resume_credits:
+        credits.add(db, u.id, "resume", p.resume_credits, "purchase", payment_id=p.id)
+    if p.interview_minutes:
+        credits.add(db, u.id, "interview_seconds", p.interview_minutes * 60, "purchase", payment_id=p.id)
+    u.approved = True
+
+
+def receipt(u: User, p: Payment, paid_by: str) -> OutgoingEmail:
     web = get_settings().web_url.rstrip("/")
+    if p.days:
+        until = aware(u.grant_until)
+        ends = f" It runs until {until:%d %b %Y}." if until else ""
+        return OutgoingEmail(
+            to=u.email, subject=f"Payment received: {what(p)} on Orbit",
+            text=(f"Thanks! We received your ₹{p.amount_inr} payment ({paid_by}).\n\nYour account now has "
+                  f"{what(p)}.{ends} Nothing renews or is charged automatically: buy another month from Plan & "
+                  f"billing whenever you want more. Sign in to use it: {web}/login"))
     return OutgoingEmail(
         to=u.email, subject=f"Payment received: {what(p)} added to Orbit",
-        text=(f"Thanks! We received your ₹{p.amount_inr} payment (Razorpay {gateway_payment_id}, reference "
-              f"{p.reference}).\n\nYour account now has {what(p)} more. They don't expire. Sign in to use them: "
-              f"{web}/login"))
+        text=(f"Thanks! We received your ₹{p.amount_inr} payment ({paid_by}).\n\nYour account now has {what(p)} "
+              f"more. They don't expire. Sign in to use them: {web}/login"))
 
 
 async def hold(db: AsyncSession, p: Payment, gateway_payment_id: str) -> None:

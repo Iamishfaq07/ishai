@@ -49,6 +49,36 @@ ORBIT_CREDIT_PACKS_JSON='[{"id": "starter", "label": "Starter", "price_inr": 199
 ```
 An order keeps what the pack gave when it was bought, so changing packs never changes a paid order.
 
+## Monthly plans (paid once a month, never auto-renewing)
+`apps/api/orbit_api/billing/monthly.py` sells a plan for 30 days through the same checkout as the packs (Razorpay, or
+UPI with the admin's check). Buy one with `POST /v1/billing/razorpay/orders` or `/v1/billing/upi/orders` and
+`{"pack": "<monthly id>"}`. `GET /v1/billing/monthly` lists them for the pricing pages.
+
+| Plan | Price | Each 30 days |
+|---|---|---|
+| Basic (`basic_monthly` → plan `basic`) | ₹1,499 | Unlimited Resume AI, 120 live + 180 mock interview minutes, 100 screenshots, 20 documents, 90-min sessions |
+| Pro (`pro_monthly` → plan `pro`) | ₹3,999 | Unlimited Resume AI, 600 live + 300 mock interview minutes, 500 screenshots, 50 documents, 180-min sessions |
+
+- **Nothing renews.** A paid month sets `User.grant_plan` and `grant_until`, the same fields as the admin's
+  time-limited grants. When it ends the account is back on Free, and the credits it had are still there.
+- **Buying again:**
+  - The same plan while it's running adds 30 days to the end.
+  - A different plan starts now and replaces the old one. Leftover days aren't carried over; the page says "Add 30
+    days" only on the plan you have.
+- **Metering:** the allowance is per 30-day period counted back from the plan's end (`entitlements.period_start`), not
+  per calendar month. A month bought on the 28th is one allowance, not two. Admin grants are metered the same way
+  while they run.
+- **Config:** `ORBIT_MONTHLY_PLANS_JSON` replaces the list, for example
+  `[{"id": "pro_monthly", "label": "Pro", "price_inr": 3999, "plan": "pro", "days": 30}]`. `[]` sells none.
+  - `plan` is one of `basic`, `pro` or `unlimited`. Change a plan's allowance with `ORBIT_PLANS_JSON`.
+  - A bad value stops the API at boot.
+- **Two months approved at the same moment** both add their days (the account row is locked while the end date is
+  read).
+- **OWNER ACTION REQUIRED:** check the prices against your costs (the table under "What it costs to run"). Basic's
+  5 hours of interviews cost about ₹400 in speech-to-text at list price, and Pro's 15 hours about ₹1,200, before the
+  model's cost. The pricing pages also show an Enterprise tier with no price: its button opens the Contact form
+  (topic "Business or partnership"), and you arrange group access by hand (an admin grant per account).
+
 ## Plans are server configuration
 `apps/api/orbit_api/entitlements.py` holds the plan table. Clients never decide limits: they render `GET /v1/plans`,
 `GET /v1/billing/packs` (both public) and `GET /v1/entitlements` (signed in; `credits` holds a Free account's

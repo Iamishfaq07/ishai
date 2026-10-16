@@ -22,7 +22,7 @@ import json
 import logging
 import os
 from dataclasses import asdict, dataclass, replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, or_, select
@@ -66,6 +66,9 @@ DEFAULT_PLANS: dict[str, Plan] = {
     "free": Plan("free", "Free", live_minutes=None, mock_minutes=None, screenshots=10, documents=3,
                  max_session_minutes=60, features=frozenset({"live", "documents", "mock", "vision"}),
                  price_usd_month=0, credits=True),
+    # Sold by the month (billing/monthly.py): unlimited resume AI and a modest interview allowance.
+    "basic": Plan("basic", "Basic", live_minutes=120, mock_minutes=180, screenshots=100, documents=20,
+                  max_session_minutes=90, features=_ALL),
     "pro": Plan("pro", "Pro", live_minutes=600, mock_minutes=300, screenshots=500, documents=50,
                 max_session_minutes=180, features=_ALL),
     "unlimited": Plan("unlimited", "Unlimited", live_minutes=None, mock_minutes=None, screenshots=None,
@@ -116,7 +119,7 @@ def plan_named(name: str) -> Plan:
 # plan: never listed, never configurable.
 PENDING = Plan("pending", "Awaiting approval", live_minutes=0, mock_minutes=0, screenshots=0, documents=0,
                max_session_minutes=1, features=frozenset())
-GRANT_PLANS = ("pro", "unlimited")
+GRANT_PLANS = ("basic", "pro", "unlimited")
 
 
 def _aware(d: datetime) -> datetime:
@@ -176,10 +179,26 @@ def _month_start() -> datetime:
     return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
+PERIOD = timedelta(days=30)
+
+
+def period_start(user: User | None, now: datetime | None = None) -> datetime:
+    """Where this allowance period began. A plan for a while (a paid month, or the admin's grant) runs in 30-day
+    periods counted back from its end, so a month bought on the 28th is one allowance, not two calendar months'.
+    Everything else: the calendar month (UTC)."""
+    now = now or datetime.now(UTC)
+    if user is not None and active_grant(user, now) and user.grant_until is not None:
+        until = _aware(user.grant_until)
+        periods = -((now - until) // PERIOD)  # whole 30-day periods left, rounded up
+        return until - periods * PERIOD
+    return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
 async def usage_this_month(db: AsyncSession, user_id: str, metric: str, pool: str | None = None) -> float:
-    """This calendar month's total of `metric`; with `pool`, only the interview time drawn from that balance (and
-    rows from before pools were recorded)."""
-    where = [UsageEvent.user_id == user_id, UsageEvent.metric == metric, UsageEvent.created_at >= _month_start()]
+    """This allowance period's total of `metric` (period_start: the calendar month, or the 30 days of a paid month);
+    with `pool`, only the interview time drawn from that balance (and rows from before pools were recorded)."""
+    since = period_start(await db.get(User, user_id))
+    where = [UsageEvent.user_id == user_id, UsageEvent.metric == metric, UsageEvent.created_at >= since]
     if pool is not None:
         where.append(or_(UsageEvent.pool == pool, UsageEvent.pool.is_(None)))
     total = await db.scalar(select(func.coalesce(func.sum(UsageEvent.quantity), 0.0)).where(*where))
