@@ -28,6 +28,7 @@ import { PRODUCTS, ProductMark, type ProductId } from "../components/products";
 import { api } from "../lib/api";
 import { displayAudioHelp, isWindows } from "../lib/audio";
 import { useAuth } from "../lib/auth";
+import { useCountry } from "../lib/country";
 import { DESKTOP_BETA, DESKTOP_BETA_NOTE, DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
 import { errorText, formatDate, sessionKindLine } from "../lib/format";
 import { checklist, loadAnswers, nextSteps, type ChecklistItem, type HomeFacts, type Step } from "../lib/onboarding";
@@ -69,6 +70,7 @@ export function HomePage() {
   const tracker = useAsync(() => api.jobTracker(), [], "job-tracker");
   const profile = useAsync(() => api.jobProfile(), [], "job-profile");
   const answers = useMemo(() => (user ? loadAnswers(user.id) : null), [user]);
+  const country = useCountry();
 
   // Ready once the lists that decide the next step have answered. A list that failed counts as "has it", so Home never
   // asks for a resume or a story the account may well have; its own card says it didn't load.
@@ -88,8 +90,9 @@ export function HomePage() {
       jobProfileSaved: profile.error ? true : Boolean(profile.data?.saved),
       tracker: tracker.data ?? [],
       mockEnabled: MOCK_INTERVIEW_ENABLED,
+      country,
     };
-  }, [settled, resumes.data, resumes.error, documents.data, documents.error, sessions.data, sessions.error, stories.data, stories.error, profile.data, profile.error, tracker.data]);
+  }, [country, settled, resumes.data, resumes.error, documents.data, documents.error, sessions.data, sessions.error, stories.data, stories.error, profile.data, profile.error, tracker.data]);
 
   const steps = facts ? nextSteps(answers, facts) : null;
   const firstName = user?.name?.split(" ")[0];

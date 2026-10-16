@@ -37,7 +37,7 @@ from orbit_api.live.context_builder import fence
 from orbit_api.models import JobListing, User
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMMessage, LLMRequest
-from orbit_api.region import localize
+from orbit_api.region import is_india, localize
 from orbit_api.resumes.ai import MAX_JOB_CHARS, job_title
 from orbit_api.resumes.allowance import Allowance
 from orbit_api.resumes.ats import date_key, resume_text, score_resume
@@ -247,7 +247,7 @@ class Requirements(BaseModel):
 
 class OutreachOut(BaseModel):
     kind: OutreachKind
-    subject: str  # "" for a LinkedIn or WhatsApp message
+    subject: str  # "" for a referral request (a LinkedIn or WhatsApp message, or a short email)
     connection_note: str  # a referral request's LinkedIn note; "" otherwise
     message: str  # greeting, body and sign-off, ready to send
 
@@ -360,6 +360,16 @@ def profile_request(kind: Literal["naukri", "linkedin"], data: ResumeData, job_t
     )
 
 
+def outreach_system(country: str | None) -> str:
+    """The message rules for where the candidate applies: a referral request goes by LinkedIn or WhatsApp in India,
+    and by LinkedIn or email everywhere else (or when it isn't said)."""
+    system = localize(OUTREACH_SYSTEM, country)
+    if is_india(country):
+        return system
+    return (system.replace("is a LinkedIn or WhatsApp message", "is a LinkedIn message or a short email")
+            .replace("read on LinkedIn or WhatsApp", "read on LinkedIn or in an email"))
+
+
 def outreach_request(body: OutreachIn, data: ResumeData, needs: Requirements | None = None,
                      country: str | None = None) -> LLMRequest:
     role = body.role.strip() or (job_title(body.job_text) if body.job_text.strip() else "")
@@ -380,7 +390,7 @@ def outreach_request(body: OutreachIn, data: ResumeData, needs: Requirements | N
                                         ensure_ascii=False))
                      + "\n</reference_data>")
     llm = get_llm_provider()
-    return LLMRequest(messages=[LLMMessage("system", localize(OUTREACH_SYSTEM, country)),
+    return LLMRequest(messages=[LLMMessage("system", outreach_system(country)),
                                 LLMMessage("user", "\n\n".join(parts))],
                       json_mode=llm.supports_structured_output(), max_tokens=800, temperature=0.5,
                       request_type="resume_outreach")

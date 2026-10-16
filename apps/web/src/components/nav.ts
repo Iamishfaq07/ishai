@@ -1,4 +1,4 @@
-import { BadgeIndianRupee, GraduationCap, House, IdCard, MOCK_INTERVIEW_ENABLED, Video, type LucideIcon } from "@orbit/ui";
+import { BadgeIndianRupee, Banknote, GraduationCap, House, INDIA, IdCard, MOCK_INTERVIEW_ENABLED, Video, isIndia, type LucideIcon } from "@orbit/ui";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { LEARN_HOME } from "../pages/learn/links";
 import { LINKEDIN_HOME } from "../pages/linkedin/model";
@@ -58,19 +58,22 @@ const COPILOT: NavItem = {
   current: (p) => COPILOT_PATH.test(p),
 };
 const OFFER: NavItem = { id: "offer", to: OFFERS_HOME, label: "Offer AI", icon: BadgeIndianRupee, ai: true, current: under(OFFERS_HOME) };
+// Outside India, Offer AI's mark is money in general, not the rupee.
+const OFFER_WORLD: NavItem = { ...OFFER, icon: Banknote };
 
-/** The sidebar, top to bottom. Practice only when mock interviews are switched on. */
-export function navGroups(mock: boolean = MOCK_INTERVIEW_ENABLED): NavGroup[] {
+/** The sidebar, top to bottom. Practice only when mock interviews are switched on. `country`: where the user applies. */
+export function navGroups(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavGroup[] {
+  const offer = isIndia(country) ? OFFER : OFFER_WORLD;
   return [
     { label: null, items: [HOME] },
     { label: "Prepare", items: [...(mock ? [PRACTICE, VIDEO] : []), RESUME, LEARNING] },
     { label: "Apply", items: [JOBS, LINKEDIN] },
-    { label: "Interview & offer", items: [COPILOT, OFFER] },
+    { label: "Interview & offer", items: [COPILOT, offer] },
   ];
 }
 
-export function allNavItems(mock: boolean = MOCK_INTERVIEW_ENABLED): NavItem[] {
-  return navGroups(mock).flatMap((g) => g.items);
+export function allNavItems(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavItem[] {
+  return navGroups(mock, country).flatMap((g) => g.items);
 }
 
 /** Phones: four tabs and Explore (five destinations). Practice is the fourth, or the copilot when mock is off. */
@@ -79,9 +82,9 @@ export function phoneTabs(mock: boolean = MOCK_INTERVIEW_ENABLED): NavItem[] {
 }
 
 /** Everything else, in the Explore sheet (in the sidebar's order). */
-export function exploreItems(mock: boolean = MOCK_INTERVIEW_ENABLED): NavItem[] {
+export function exploreItems(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavItem[] {
   const tabs = new Set(phoneTabs(mock).map((t) => t.id));
-  return allNavItems(mock).filter((i) => !tabs.has(i.id));
+  return allNavItems(mock, country).filter((i) => !tabs.has(i.id));
 }
 
 /** The sidebar's state on this device; with no choice yet, collapsed on narrower screens. */

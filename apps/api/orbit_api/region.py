@@ -3,6 +3,8 @@ search and wording they see. India, the first market, keeps its own conventions 
 everywhere else gets worldwide ones.
 """
 
+from starlette.requests import HTTPConnection
+
 # Every officially assigned ISO 3166-1 alpha-2 code.
 _CODES = frozenset("""
 AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC
@@ -27,6 +29,18 @@ def country_code(value: str | None) -> str | None:
 def is_india(country: str | None) -> bool:
     return (country or "").upper() == INDIA
 
+
+def market_country(country: str | None, request: HTTPConnection | None = None) -> str:
+    """The country a feature without the AI (job search, portals, pay ranges) follows: the account's own, else where
+    the request came from (when the web app's edge says so and can be believed), else India, as Orbit always was."""
+    code = country_code(country)
+    if code is None and request is not None:
+        from orbit_api.billing.pricing import request_country  # here: pricing itself imports this module
+
+        code = request_country(request)
+    return code or INDIA
+
+
 # Names for the countries people most often apply in; any other valid code is named by its code in prompts.
 NAMES: dict[str, str] = {
     "IN": "India", "US": "the United States", "GB": "the United Kingdom", "CA": "Canada", "AU": "Australia",
@@ -50,6 +64,26 @@ _ENGLISH = {"IN": "plain Indian-English business style", "GB": "plain British bu
 def country_name(country: str | None) -> str | None:
     code = country_code(country)
     return NAMES.get(code, code) if code else None
+
+
+_EURO = "AT BE CY DE EE ES FI FR GR HR IE IT LT LU LV MT NL PT SI SK".split()
+# The currency pay is written in, for the countries people most often apply in (offers, the live copilot's salary
+# answers). Others have none here.
+CURRENCIES: dict[str, str] = {
+    **dict.fromkeys(_EURO, "EUR"),
+    "IN": "INR", "US": "USD", "GB": "GBP", "CA": "CAD", "AU": "AUD", "NZ": "NZD", "SG": "SGD", "HK": "HKD",
+    "CH": "CHF", "SE": "SEK", "NO": "NOK", "DK": "DKK", "PL": "PLN", "CZ": "CZK", "RO": "RON", "AE": "AED",
+    "SA": "SAR", "QA": "QAR", "KW": "KWD", "OM": "OMR", "BH": "BHD", "IL": "ILS", "TR": "TRY", "EG": "EGP",
+    "MY": "MYR", "ID": "IDR", "PH": "PHP", "TH": "THB", "VN": "VND", "JP": "JPY", "KR": "KRW", "CN": "CNY",
+    "TW": "TWD", "PK": "PKR", "BD": "BDT", "LK": "LKR", "NP": "NPR", "ZA": "ZAR", "NG": "NGN", "KE": "KES",
+    "GH": "GHS", "BR": "BRL", "MX": "MXN", "AR": "ARS", "CL": "CLP", "CO": "COP", "PE": "PEN",
+}
+
+
+def currency(country: str | None) -> str | None:
+    """The country's currency code ("GB" → "GBP"), or None when it isn't one listed."""
+    code = country_code(country)
+    return CURRENCIES.get(code) if code else None
 
 
 def localize(prompt: str, country: str | None) -> str:

@@ -16,7 +16,9 @@ import {
   Video,
   cx,
   focusRing,
+  companiesFor,
   isIndia,
+  regionWords,
   practiceDocumentIds,
   sampleOffer,
   type LucideIcon,
@@ -63,6 +65,7 @@ const PRESET_ICON: Record<PresetId, LucideIcon> = { hr5: Users, tmay10: UserRoun
  */
 const LANGUAGE_KEY = "orbit.practiceLanguage";
 const LANGUAGE_LABEL: Record<string, string> = { en: "English", hi: "हिन्दी (Hindi)", hinglish: "Hinglish (Hindi + English)" };
+const INDIA_ONLY_LANGUAGES = new Set(["hi", "hinglish"]);
 
 export function MockPage() {
   // The AI interviewer isn't built yet — show a coming-soon state instead of a form that dead-ends.
@@ -97,8 +100,11 @@ function MockSetup() {
   const company = context.company;
   const setCompany = (value: string) => updateContext({ company: value });
   const guide = matchStyle(styles.data ?? [], company);
-  // Hindi and Hinglish mocks, when the server offers them (ORBIT_MULTILINGUAL); English otherwise and by default.
-  const languages = user?.practice_languages?.length ? user.practice_languages : ["en"];
+  // Hindi and Hinglish mocks, when the server offers them (ORBIT_MULTILINGUAL) and the user applies in India; English
+  // otherwise and by default.
+  const offered = user?.practice_languages?.length ? user.practice_languages : ["en"];
+  const forCountry = isIndia(country) ? offered : offered.filter((l) => !INDIA_ONLY_LANGUAGES.has(l));
+  const languages = forCountry.length ? forCountry : ["en"];
   const [language, setLanguageState] = useState(() => readChoice(safeLocal, LANGUAGE_KEY, languages, "en"));
   const practiceLanguage = languages.includes(language) ? language : "en";
   const setLanguage = (value: string) => {
@@ -181,12 +187,12 @@ function MockSetup() {
               <Input id="mock-company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder={isIndia(country) ? "e.g. Amazon, TCS, Flipkart" : "e.g. Amazon, Google, Deloitte"}
                      maxLength={120} list="mock-company-styles" autoComplete="off" />
               <datalist id="mock-company-styles">
-                {(styles.data ?? []).map((s) => (
+                {companiesFor(styles.data ?? [], country).map((s) => (
                   <option key={s.slug} value={s.name} />
                 ))}
               </datalist>
             </Field>
-            <CountryField id="mock-country" hint="Sets the salary currency and the wording of the HR round." />
+            <CountryField id="mock-country" hint={`Sets the salary currency and the wording of the ${regionWords(country).screen}.`} />
             <Field label="Interview stage" htmlFor="mock-stage">
               <Input id="mock-stage" value={context.interview_stage} onChange={(e) => updateContext({ interview_stage: e.target.value })} placeholder="e.g. Technical round, final panel" maxLength={80} />
             </Field>

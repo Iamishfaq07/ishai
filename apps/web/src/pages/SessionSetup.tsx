@@ -15,6 +15,7 @@ import type {
 import {
   ANSWER_STYLES,
   EXPERIENCE_LEVELS,
+  experienceLevels,
   RESPONSE_TIMINGS,
   THINKING_LEVELS,
   loadExperience,
@@ -41,6 +42,7 @@ import {
 import { Button, Card, ErrorNote, Field, Input, Meter, PageHeader, Select, Textarea, Toggle } from "../components/ui";
 import { API_URL, api } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { useCountry } from "../lib/country";
 import { loadAnswers } from "../lib/onboarding";
 import {
   captureStream,
@@ -165,6 +167,7 @@ export interface LiveLaunchState {
 export function SessionSetupPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const country = useCountry();
   const [params, setParams] = useSearchParams();
   const [context, updateContext] = usePrepContext(params, setParams, user?.id);
   // Where a tab's audio can't be shared (phones, Safari, Firefox), listen through the microphone by default.
@@ -388,7 +391,7 @@ export function SessionSetupPage() {
                     saveExperience(level);
                   }}
                 >
-                  {EXPERIENCE_LEVELS.map((l) => (
+                  {experienceLevels(country).map((l) => (
                     <option key={l.value} value={l.value}>
                       {l.label}
                     </option>

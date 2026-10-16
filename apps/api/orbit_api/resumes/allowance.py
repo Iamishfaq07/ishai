@@ -20,6 +20,7 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits
+from orbit_api.billing import pricing
 from orbit_api.billing.packs import packs
 from orbit_api.config import get_settings
 from orbit_api.entitlements import plan_for
@@ -66,8 +67,10 @@ class Allowance:
     """One request's view of the user's resume credits. `claim()` before each model call (repeat calls in the same
     request are free); `release()` when the request ends up giving the person nothing."""
 
-    def __init__(self, db: AsyncSession, user: User, unlimited: bool) -> None:
+    def __init__(self, db: AsyncSession, user: User, unlimited: bool, currency: str | None = None) -> None:
         self.db, self.user, self.unlimited = db, user, unlimited
+        # The buyer's currency for the out-of-credits message: the request's when there is one, else the account's.
+        self.currency = currency or pricing.account_currency(user)
         self._claimed: list[str] = []  # the credit entries this request wrote
         self._fix = False  # a single fix: costs one fix, not a whole credit
 
@@ -93,7 +96,9 @@ class Allowance:
 
     def exhausted(self) -> HTTPException:
         offer = upgrade_offer()
-        more = (f" Packs start at ₹{offer.price_inr} for {offer.resume_credits} resume credits"
+        if offer is not None:
+            offer.price_text = pricing.price(offer.price_inr, self.currency).text()
+        more = (f" Packs start at {offer.price_text} for {offer.resume_credits} resume credits"
                 + (f" and {offer.interview_minutes} interview minutes." if offer.interview_minutes else ".")
                 if offer else "")
         detail: dict[str, Any] = {"code": UPGRADE_REQUIRED, "message": f"You're out of resume AI credits.{more}",
@@ -126,7 +131,7 @@ class Allowance:
         self._claimed = []
 
 
-async def allowance_for(db: AsyncSession, user: User) -> Allowance:
+async def allowance_for(db: AsyncSession, user: User, currency: str | None = None) -> Allowance:
     if get_settings().env == "test" and not ENFORCE_IN_TESTS:
-        return Allowance(db, user, unlimited=True)
-    return Allowance(db, user, unlimited=(await plan_for(db, user.id)).has("resume_ai"))
+        return Allowance(db, user, unlimited=True, currency=currency)
+    return Allowance(db, user, unlimited=(await plan_for(db, user.id)).has("resume_ai"), currency=currency)

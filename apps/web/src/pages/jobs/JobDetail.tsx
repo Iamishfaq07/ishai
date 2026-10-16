@@ -23,9 +23,11 @@ import {
   confirmDialog,
   cx,
   focusRing,
+  isIndia,
 } from "@orbit/ui";
 import { Button, Card, EmptyState, ErrorNote, Select } from "../../components/ui";
 import { api } from "../../lib/api";
+import { useCountry } from "../../lib/country";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
 import { practiceHref } from "../../lib/onboarding";
@@ -109,6 +111,7 @@ function BackLink() {
 }
 
 function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }) {
+  const country = useCountry();
   const { profile, tracker } = useJobsAi();
   const resumeId = profile.data?.resume?.id ?? null;
   // A change made here shows at once; the page and the tracker are then asked again for the server's copy, which
@@ -134,7 +137,7 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
     detail.fit,
   );
   const original = safeUrl(job.url);
-  const facts = jobFacts(job);
+  const facts = jobFacts(job, country);
   const entry = detail.tracker && job.tracked ? detail.tracker : null;
   // No match % until there's a resume or skills to match against (model.ts `matchBasis`).
   const showMatch = profile.data ? matchBasis(profile.data) !== null : false;
@@ -170,7 +173,7 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
           <Link
             to={outreachPath({ job: job.id, resume: entry?.resume_id ?? resumeId })}
             className={linkButton("ghost", "sm")}
-            title="A referral request, an email to HR, a follow-up or a thank-you note for this job"
+            title={`A referral request, ${isIndia(country) ? "an email to HR" : "an email to a recruiter"}, a follow-up or a thank-you note for this job`}
           >
             <Send className="h-4 w-4" aria-hidden /> Write outreach
           </Link>

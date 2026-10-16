@@ -176,3 +176,58 @@ async def test_saba_opens_the_video_interview_at_once_and_keeps_a_calls_pace() -
     hindi = MockInterviewer(MockConfig(video=True), llm=_Recording(), index=SessionIndex([]), role=None, send=send,
                             on_question=_noop, on_finish=_noop, language="hi")
     assert not hindi._greets()
+
+
+def test_outside_india_a_guide_drops_indias_campus_rounds() -> None:
+    m, local = company_styles.match, company_styles.for_country
+    for name in ("Accenture", "Cognizant", "Deloitte", "Google", "Amazon"):
+        assert local(m(name), "IN") is m(name)  # type: ignore[arg-type]  # India: as written
+    us = {n: local(m(n), "US") for n in ("Accenture", "Cognizant", "Deloitte", "Google", "Amazon")}  # type: ignore[arg-type]
+    accenture, cognizant, deloitte = us["Accenture"], us["Cognizant"], us["Deloitte"]
+    assert not any("spoken" in x.lower() for x in (*accenture.rounds, *accenture.tips))
+    assert not any("relocat" in x.lower() for x in (*cognizant.looks_for, *cognizant.questions))
+    assert not any("group discussion" in r.lower() for r in deloitte.rounds)
+    assert "Communication assessment (spoken English)" in m("Accenture").rounds  # type: ignore[union-attr]
+    assert "Group discussion (some campus roles)" in m("Deloitte").rounds  # type: ignore[union-attr]
+    google = " ".join(us["Google"].questions)
+    assert "weekday morning in New York?" in google and "Bengaluru" not in google
+    assert "in London?" in " ".join(local(m("Google"), "GB").questions)  # type: ignore[arg-type]
+    assert "in a big city?" in " ".join(local(m("Google"), None).questions)  # type: ignore[arg-type]
+    assert "in Bengaluru?" in " ".join(m("Google").questions)  # type: ignore[union-attr]
+    assert us["Amazon"] == m("Amazon")  # nothing India-only in it
+    for s in company_styles.STYLES:  # every guide outside India is complete
+        out = local(s, "US")
+        assert out.rounds and out.looks_for and out.questions and out.tips, s.slug
+
+
+async def test_the_mock_and_the_copilot_use_the_guide_for_the_users_country() -> None:
+    def mock(country: str | None, company: str = "Google") -> MockInterviewer:
+        return MockInterviewer(MockConfig(company=company), llm=llm, index=SessionIndex([]), role="SDE", send=_noop,
+                               on_question=_noop, on_finish=_noop, company=company, country=country)
+
+    llm = _Recording()
+    await mock("US")._generate()
+    await mock("IN")._generate()
+    assert "New York" in llm.systems[0] and "Bengaluru" not in llm.systems[0]
+    assert "Bengaluru" in llm.systems[1]
+
+    def hint(country: str | None) -> str:
+        inputs = PromptInputs(question="Tell me about yourself.", qtype=QuestionType.behavioral, is_follow_up=False,
+                              session_type="interview", role=None, length="standard", style="natural",
+                              answer_language="en", company="Cognizant", country=country)
+        return build_prompt(SessionIndex([]), inputs, SessionMemory()).messages[1].content
+
+    assert "Willingness to learn and relocate" in hint("IN") and "relocate" not in hint("US")
+
+
+def test_the_practice_page_gets_the_guides_for_the_users_country(client: TestClient) -> None:
+    h = _register(client)
+
+    def accenture() -> list[str]:
+        styles = client.get("/v1/interview-styles", headers=h).json()
+        rounds: list[str] = next(s for s in styles if s["slug"] == "accenture")["rounds"]
+        return rounds
+
+    assert "Communication assessment (spoken English)" in accenture()  # no country yet: India's, as always
+    assert client.patch("/v1/auth/me/region", headers=h, json={"country": "GB"}).status_code == 200
+    assert not any("spoken English" in r for r in accenture())

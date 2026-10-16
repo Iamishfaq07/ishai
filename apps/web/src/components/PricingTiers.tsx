@@ -4,6 +4,7 @@ import type { CreditPack, MonthlyPlan, PlanInfo } from "@orbit/types";
 import { Building2, Check, CircleCheck, Minus, Sparkles, cx, focusRing } from "@orbit/ui";
 import { api } from "../lib/api";
 import { contactHref } from "../lib/contactForm";
+import { useIndia } from "../lib/country";
 import { formatDate } from "../lib/format";
 
 /**
@@ -138,8 +139,17 @@ export interface PricingTiersProps {
   busy?: boolean;
 }
 
+/** "₹0" or "$0" for the Free tier: the plans' currency once they're here, the visitor's country until then. */
+function useZero(plans: MonthlyPlan[]): string {
+  const india = useIndia();
+  const currency = plans[0]?.currency ?? (india ? "INR" : "USD");
+  return currency === "USD" ? "$0" : "₹0";
+}
+
 export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }: PricingTiersProps) {
   const plans = [...(monthly ?? [])].sort((a, b) => a.price_inr - b.price_inr);
+  const zero = useZero(plans);
+  const india = useIndia();
   // The server's badge ("Most popular") picks the highlighted plan; without one, the dearest of two or more.
   const popular = plans.find((m) => m.badge === "Most popular")?.id ?? (plans.length >= 2 ? plans[plans.length - 1]!.id : undefined);
   const signedIn = Boolean(onBuy);
@@ -149,7 +159,7 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
     <ul className={cx("grid gap-5 sm:grid-cols-2", plans.length >= 3 ? "xl:grid-cols-4" : plans.length === 2 ? "xl:grid-cols-3" : "xl:grid-cols-2")}>
       <Tier
         name="Free"
-        price={plans[0]?.currency === "USD" ? "$0" : "₹0"}
+        price={zero}
         per="forever"
         tagline={FREE_TAGLINE}
         cta={signedIn ? { label: onFree ? "Your current plan" : "Included", disabled: true } : { label: "Start free", to: "/register" }}
@@ -200,8 +210,9 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
         <div className="min-w-0 flex-1">
           <h3 className="font-display text-lg font-semibold">Enterprise</h3>
           <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
-            For colleges, placement cells, bootcamps and teams: access for a whole batch, interview time and limits
-            sized to your group, unlimited Resume AI for everyone, and one payment arranged with us.
+            {india
+              ? "For colleges, placement cells, bootcamps and teams: access for a whole batch, interview time and limits sized to your group, unlimited Resume AI for everyone, and one payment arranged with us."
+              : "For universities, career services, bootcamps and teams: access for a whole cohort, interview time and limits sized to your group, unlimited Resume AI for everyone, and one payment arranged with us."}
           </p>
         </div>
         <Link to={contactHref({ topic: "business", from: "/pricing" })}
@@ -217,8 +228,8 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
 export function PlanComparison({ monthly }: { monthly: MonthlyPlan[] | null }) {
   const free = useFreePlan();
   const plans = [...(monthly ?? [])].sort((a, b) => a.price_inr - b.price_inr);
+  const zero = useZero(plans);
   if (!plans.length) return null;
-  const zero = plans[0]?.currency === "USD" ? "$0" : "₹0";
   const yes = <Check className="mx-auto h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-label="Included" />;
   const rows: Array<[string, ReactNode, ...ReactNode[]]> = [
     ["Price", zero, ...plans.map((m) => `${priceOf(m)} ${periodLabel(m.days)}`), "Custom"],

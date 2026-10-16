@@ -22,6 +22,7 @@ import {
   cx,
   buttonClass,
   focusRing,
+  regionWords,
   speechLang,
   safeSession,
 } from "@orbit/ui";
@@ -251,9 +252,10 @@ function Question({
   onPick: () => void;
 }) {
   const { user } = useAuth();
+  const country = useCountry();
   const answer = state.answers[question.id] ?? "";
   const spoken = Boolean(state.spoken[question.id]);
-  const [checks, setChecks] = useState<Check[] | null>(() => (state.checked[question.id] && answer ? checkAnswer(answer, question, spoken) : null));
+  const [checks, setChecks] = useState<Check[] | null>(() => (state.checked[question.id] && answer ? checkAnswer(answer, question, spoken, country) : null));
   const count = words(answer).length;
   const last = index === total - 1;
   const feedback = useRef<HTMLDivElement>(null);
@@ -275,7 +277,7 @@ function Question({
 
   const check = () => {
     dictation.stop();
-    setChecks(checkAnswer(answer, question, spoken));
+    setChecks(checkAnswer(answer, question, spoken, country));
     if (!state.checked[question.id]) {
       logWarmupAnswer(Date.now(), user?.id);
       onChange({ ...state, checked: { ...state.checked, [question.id]: true } });
@@ -436,9 +438,11 @@ function Summary({
   onAgain: () => void;
   onPick: () => void;
 }) {
+  const country = useCountry();
+  const screen = regionWords(country).screen;
   const results = useMemo(
-    () => questions.map((q) => (state.checked[q.id] ? checkAnswer(state.answers[q.id] ?? "", q, Boolean(state.spoken[q.id])) : [])),
-    [questions, state],
+    () => questions.map((q) => (state.checked[q.id] ? checkAnswer(state.answers[q.id] ?? "", q, Boolean(state.spoken[q.id]), country) : [])),
+    [questions, state, country],
   );
   const s = summarise(results);
   const name = (id: string) => (s.labels[id as keyof typeof s.labels] ?? id).toLowerCase();
@@ -486,10 +490,10 @@ function Summary({
         {signedIn ? (
           <>
             <h2 className="font-display text-lg font-semibold">Now say it out loud to an interviewer</h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">A 5-minute HR round with Orbit's AI interviewer, then a report with a score.</p>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">A 5-minute {screen} with Orbit's AI interviewer, then a report with a score.</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Link to="/mock?preset=hr5" className={navButton("primary")}>
-                Do a 5-minute HR round
+                Do a 5-minute {screen}
               </Link>
               <Link to="/mock" className={navButton("secondary")}>
                 Back to Practice

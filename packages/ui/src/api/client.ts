@@ -868,6 +868,8 @@ export function createApiClient(options: ApiClientOptions) {
       json<AdminStats>(`/v1/admin/stats${queryString({ days, tz_offset: tzOffsetMinutes })}`),
     /** Public: the site-wide announcement banner, if the admin set one. */
     announcement: () => json<Announcement>("/v1/announcement"),
+    /** Public: the country the visitor's request came from (the web app's edge says), or null when unknown. */
+    visitorRegion: () => json<{ country: string | null }>("/v1/region"),
     /** Public (signed in or out): leave a message for the team; it waits in the admin's Inbox. */
     sendContact: (req: ContactRequest) => json<ContactReceipt>("/v1/contact", { method: "POST", body: body(req) }),
     /** Public: open a support chat. The token is the only way back into it. `page` puts that screen's topics first. */

@@ -133,6 +133,11 @@ def test_each_resume_ai_action_spends_a_credit_then_offers_a_pack(client: TestCl
     assert again.status_code == 402
     detail = again.json()["detail"]
     assert detail["code"] == "upgrade_required" and detail["pack"] == "mini" and "₹499" in detail["message"]
+    assert detail["price_text"] == "₹499"
+    # Out of credits abroad: the same pack, priced the way the visitor pays (the country Cloudflare saw).
+    abroad = client.post("/v1/resumes/cover-letter", headers={**h, "X-Orbit-Client-Country": "US"}, json=_letter())
+    assert abroad.status_code == 402
+    assert abroad.json()["detail"]["price_text"] == "$7.99" and "₹" not in abroad.json()["detail"]["message"]
     assert client.post("/v1/resumes/import", headers=h, json={"source": "text", "text": "x" * 200}).status_code == 402
     # Fixes that need no AI stay free, and say what a pack adds.
     s = client.post("/v1/resumes/suggest", headers=h, json={"data": strong_resume().model_dump(mode="json"),
@@ -586,6 +591,20 @@ def test_readiness_and_the_admin_flag_a_missing_proxy_secret(client: TestClient,
     r = client.get("/ready")
     assert r.status_code == 200 and r.json()["checks"]["proxy_secret"] == "ok"
     assert setup_warnings() == []
+
+
+def test_a_password_sign_up_without_a_guess_takes_the_country_it_came_from(client: TestClient,
+                                                                           enforce: None) -> None:
+    def register(extra: dict[str, str]) -> str | None:
+        r = client.post("/v1/auth/register", headers={**_ip(_new_ip()), "X-Orbit-Client-Country": "GB"},
+                        json={"email": f"c-{uuid.uuid4().hex[:8]}@example.com", "password": "correct horse battery",
+                              **extra})
+        assert r.status_code == 201, r.text
+        client.cookies.clear()
+        return r.json()["user"].get("country")
+
+    assert register({}) == "GB"  # an older client or the desktop app sends no guess
+    assert register({"country": "IN"}) == "IN"  # the browser's own guess wins
 
 
 def test_the_admin_is_told_when_the_web_worker_sends_no_proxy_secret(client: TestClient,

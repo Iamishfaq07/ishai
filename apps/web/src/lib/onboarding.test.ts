@@ -270,3 +270,25 @@ describe("saved answers", () => {
     expect(() => saveAnswers("u1", answers(), null)).not.toThrow();
   });
 });
+
+describe("outside India", () => {
+  it("asks about students and new graduates, and names first jobs as they're called there", async () => {
+    const { EXPERIENCE, ROLE_IDEAS, experienceChoices, roleIdeas } = await import("./onboarding");
+    expect(experienceChoices("IN")).toBe(EXPERIENCE);
+    expect(experienceChoices("IN")[0]!.title).toBe("Fresher or student");
+    expect(experienceChoices("US")[0]!.title).toBe("Student or new graduate");
+    expect(experienceChoices("US").map((e) => e.id)).toEqual(EXPERIENCE.map((e) => e.id));
+    expect(roleIdeas("fresher", "IN")).toEqual(ROLE_IDEAS.fresher);
+    expect(roleIdeas("fresher", "GB")).toEqual(["Software developer", "Data analyst", "Customer support", "Sales representative", "Business analyst", "HR coordinator"]);
+    expect(roleIdeas("experienced", "GB")).toEqual(ROLE_IDEAS.experienced);
+  });
+
+  it("suggests the recruiter screen rather than the HR round", () => {
+    const facts = { ...empty, resumes: 1, bestResume: { id: "r", score: 90 } };
+    const practice = (country?: string) =>
+      nextSteps(answers({ goal: "interview", experience: "fresher" }), { ...facts, country }, NOW).find((s) => s.id === "practice");
+    expect(practice()?.title).toBe("Do a 5-minute HR round");
+    expect(practice("IN")?.title).toBe("Do a 5-minute HR round");
+    expect(practice("US")).toMatchObject({ title: "Do a 5-minute recruiter screen", to: "/mock?preset=hr5&role=Data+analyst" });
+  });
+});

@@ -231,7 +231,7 @@ async def test_a_panel_takes_turns_and_a_follow_up_stays_with_who_asked() -> Non
     llm = MockLLMProvider(script=script)
     now = {"t": 0.0}
     sink, spy = Sink(), Spy()
-    eng = LiveEngine(SessionProfile("s1", "mock", "Backend Engineer", "en", "en", dev_mode=True,
+    eng = LiveEngine(SessionProfile("s1", "mock", "Backend Engineer", "en", "en", dev_mode=True, country="IN",
                                     mock=MockConfig(duration_minutes=15,
                                                     panel=["hiring_manager", "engineer", "recruiter"])),
                      LiveSettings(auto_answer=False), send=sink, llm=llm, stt=MockSTTProvider(),
@@ -252,6 +252,58 @@ async def test_a_panel_takes_turns_and_a_follow_up_stays_with_who_asked() -> Non
     assert "PANEL interview" in first_prompt and "introduces the panel" in first_prompt
     assert "Meera (speaking for the first time" in llm.requests[1].messages[-1].content
     await eng.end()
+
+
+async def test_a_panel_outside_india_has_names_heard_everywhere() -> None:
+    from orbit_api.live.mock_interviewer import PANELISTS, WORLD_PANELISTS, panelists_for
+
+    assert panelists_for("IN") is PANELISTS and panelists_for("US") is panelists_for(None) is WORLD_PANELISTS
+    assert {k: t for k, (_, t) in WORLD_PANELISTS.items()} == {k: t for k, (_, t) in PANELISTS.items()}
+    llm = MockLLMProvider(script=[json.dumps({"question": "Hi, I'm Daniel. Tell me about yourself.",
+                                              "is_follow_up": False})])
+    sink, spy = Sink(), Spy()
+    eng = LiveEngine(SessionProfile("s1", "mock", "Backend Engineer", "en", "en", dev_mode=True, country="GB",
+                                    mock=MockConfig(duration_minutes=15,
+                                                    panel=["hiring_manager", "engineer", "recruiter"])),
+                     LiveSettings(auto_answer=False), send=sink, llm=llm, stt=MockSTTProvider(),
+                     index=SessionIndex([]), recorder=spy, clock=lambda: 0.0)  # type: ignore[arg-type]
+    await eng.start()
+    await sink.wait_for("mock.question")
+    assert sink.of("mock.question")[0]["speaker"] == {"persona": "hiring_manager", "name": "Daniel",
+                                                       "title": "Hiring manager"}
+    system, steer = llm.requests[0].messages[0].content, llm.requests[0].messages[-1].content
+    assert "(Daniel, Maya, Emma)" in system and "Maya, a senior engineer" in steer
+    assert not any(name in system + steer for name, _ in PANELISTS.values())
+    await eng.end()
+
+
+def test_a_live_session_carries_the_accounts_country(client: TestClient) -> None:
+    from tests.test_api import _register
+
+    def first_speaker(h: dict[str, str]) -> str:
+        s = client.post("/v1/sessions", headers=h, json={
+            "title": "Panel", "type": "mock", "role": "Backend Engineer", "auto_answer": False,
+            "mock": {"duration_minutes": 10, "panel": ["hiring_manager", "engineer"]}})
+        assert s.status_code == 201, s.text
+        sid = s.json()["id"]
+        ticket = client.post(f"/v1/sessions/{sid}/live-ticket", headers=h).json()["ticket"]
+        with client.websocket_connect(f"/v1/sessions/{sid}/live?ticket={ticket}") as ws:
+            events: list[dict[str, Any]] = []
+            deadline = time.monotonic() + 10
+            while not any(e["type"] == "mock.question" for e in events) and time.monotonic() < deadline:
+                events.append(json.loads(ws.receive_text()))
+            ws.send_text(json.dumps({"type": "session.end", "data": {}}))
+            while not any(e["type"] == "session.ended" for e in events):
+                events.append(json.loads(ws.receive_text()))
+        name: str = next(e for e in events if e["type"] == "mock.question")["data"]["speaker"]["name"]
+        return name
+
+    uk = _register(client)
+    assert client.patch("/v1/auth/me/region", headers=uk, json={"country": "GB"}).status_code == 200
+    assert first_speaker(uk) == "Daniel"
+    india = _register(client)
+    assert client.patch("/v1/auth/me/region", headers=india, json={"country": "IN"}).status_code == 200
+    assert first_speaker(india) == "Rahul"
 
 
 async def test_an_adaptive_panel_lets_the_best_placed_panelist_ask_but_everyone_gets_a_turn() -> None:

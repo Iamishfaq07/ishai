@@ -26,6 +26,7 @@ from orbit_api.live.carryover import MockProgress
 from orbit_api.live.context_builder import fence
 from orbit_api.live.question_detector import classify_type, normalize
 from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMProvider, LLMRequest, LLMResponse
+from orbit_api.region import is_india
 from orbit_api.retrieval.index import SessionIndex
 
 log = logging.getLogger(__name__)
@@ -246,7 +247,8 @@ _PERSONAS: dict[str, str] = {
     "staff_engineer": "a staff engineer, probing architecture, scale, ambiguity and long-term technical judgement",
     "executive": "an executive, probing strategy, business impact, leadership and clarity at a high level",
 }
-# Who sits on a panel: a name to introduce themselves with and the title the panel shows.
+# Who sits on a panel: a name to introduce themselves with and the title the panel shows. India's panel; anywhere
+# else (or not said) a mix of names heard on teams everywhere (panelists_for).
 PANELISTS: dict[str, tuple[str, str]] = {
     "recruiter": ("Anita", "Recruiter"),
     "hiring_manager": ("Rahul", "Hiring manager"),
@@ -254,6 +256,17 @@ PANELISTS: dict[str, tuple[str, str]] = {
     "staff_engineer": ("Arjun", "Staff engineer"),
     "executive": ("Vikram", "Director"),
 }
+WORLD_PANELISTS: dict[str, tuple[str, str]] = {
+    "recruiter": ("Emma", "Recruiter"),
+    "hiring_manager": ("Daniel", "Hiring manager"),
+    "engineer": ("Maya", "Senior engineer"),
+    "staff_engineer": ("Omar", "Staff engineer"),
+    "executive": ("James", "Director"),
+}
+
+
+def panelists_for(country: str | None) -> dict[str, tuple[str, str]]:
+    return PANELISTS if is_india(country) else WORLD_PANELISTS
 _TYPES: dict[str, str] = {
     "behavioral": "behavioral questions (past situations, conflict, failure, leadership)",
     "technical": "technical/conceptual questions for the role",
@@ -362,13 +375,16 @@ class MockInterviewer:
     def __init__(self, config: MockConfig, *, llm: LLMProvider, index: SessionIndex, role: str | None,
                  send: Send, on_question: OnQuestion, on_finish: OnFinish,
                  record_usage: Callable[[LLMResponse, int], Awaitable[None]] | None = None,
-                 company: str | None = None, language: str = "en") -> None:
+                 company: str | None = None, language: str = "en", country: str | None = None) -> None:
         self.config = config
         self._language = language
         self._llm = llm
         self._index = index
         self._role = role
         self._company = company
+        # The country the user applies in (the account's): the panel's names and the company guide follow it.
+        self._country = country
+        self._panelists = panelists_for(country)
         self._send = send
         self._on_question = on_question
         self._on_finish = on_finish
@@ -605,8 +621,8 @@ class MockInterviewer:
         if self.config.is_one_way and self.config.one_way is not None:
             payload["one_way"] = {"think_seconds": self.config.one_way.think_seconds,
                                   "answer_seconds": self.config.one_way.answer_seconds}
-        if asked.speaker in PANELISTS:
-            name, title = PANELISTS[asked.speaker]
+        if asked.speaker in self._panelists:
+            name, title = self._panelists[asked.speaker]
             payload["speaker"] = {"persona": asked.speaker, "name": name, "title": title}
         return payload
 
@@ -754,8 +770,8 @@ class MockInterviewer:
         if self._company:
             role += f" at {self._company}"
         panel = cfg.panel if cfg.is_panel else None
-        persona = (f"a panel of {len(panel)} interviewers ({', '.join(PANELISTS[p][0] for p in panel)})" if panel
-                   else _PERSONAS[cfg.persona])
+        names = ", ".join(self._panelists[p][0] for p in panel) if panel else ""
+        persona = f"a panel of {len(panel)} interviewers ({names})" if panel else _PERSONAS[cfg.persona]
         system = _SYSTEM.format(persona=persona, role=role, difficulty=_DIFFICULTY[cfg.difficulty],
                                 focus=_TYPES[cfg.interview_type])
         if cfg.interview_stage or cfg.tech_stack or cfg.key_requirements:
@@ -771,6 +787,7 @@ class MockInterviewer:
                        "the level. Start from foundations, then find the candidate's knowledge ceiling without "
                        "repeating a mastered question. Never reward length alone.")
         style = company_styles.match(self._company)
+        style = company_styles.for_country(style, self._country) if style is not None else None
         if style is not None and not cfg.drill:
             system += "\n" + company_styles.interviewer_brief(style)
         if lang_rule := practice_language.interviewer_instruction(self._language):
@@ -814,7 +831,7 @@ class MockInterviewer:
                      "false), a NEW topic each time" + (", opening with a one-line welcome." if not self.asked
                                                          else "."))
         elif not self.asked and panel:
-            first = PANELISTS[panel[0]][0]
+            first = self._panelists[panel[0]][0]
             steer = (f"This is the first question: {first} opens the interview with one short greeting, introduces "
                      "the panel in one sentence (names and roles), then asks it (is_follow_up false).")
         elif not self.asked and cfg.video:
@@ -833,12 +850,12 @@ class MockInterviewer:
             # the next panelist (the server holds them to it: _panelist).
             spoke = {a.speaker for a in self.asked}
             now_by, next_by = self._panelist(True), self._panelist(False)
-            people = "; ".join(f"{PANELISTS[p][0]}, {_PERSONAS[p]}" for p in panel)
+            people = "; ".join(f"{self._panelists[p][0]}, {_PERSONAS[p]}" for p in panel)
 
             def says(p: str | None) -> str:
                 if p is None:
                     return "the panel"
-                name = PANELISTS[p][0]
+                name = self._panelists[p][0]
                 return name if p in spoke else f"{name} (speaking for the first time: they give their name and role " \
                                                  "in a few words first)"
             eligible = self._eligible_askers() if self.asked else []

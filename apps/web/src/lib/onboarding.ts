@@ -1,6 +1,6 @@
 import type { JobLevel, JobPrefs, JobTrackerEntry } from "@orbit/types";
 import type { PresetId } from "../pages/mockPresets";
-import { safeLocal } from "@orbit/ui";
+import { INDIA, isIndia, regionWords, safeLocal } from "@orbit/ui";
 
 /**
  * First run: the three welcome questions (what you're here for, your experience and role, where you want to work), and
@@ -46,12 +46,26 @@ export const EXPERIENCE: Array<{ id: Experience; title: string; body: string }> 
   { id: "experienced", title: "3 years or more", body: "Experienced" },
 ];
 
+/** The experience choices as said where the user applies ("Fresher or student" in India). */
+export function experienceChoices(country: string = INDIA): typeof EXPERIENCE {
+  if (isIndia(country)) return EXPERIENCE;
+  return EXPERIENCE.map((e) => (e.id === "fresher" ? { ...e, title: regionWords(country).studentOrGraduate } : e));
+}
+
 /** A few common first roles, so most people tap instead of typing. */
 export const ROLE_IDEAS: Record<Experience, string[]> = {
   fresher: ["Software developer", "Data analyst", "Customer support", "Sales executive", "Business analyst", "HR executive"],
   early: ["Software engineer", "Data analyst", "Business analyst", "Digital marketing", "Customer success", "Accountant"],
   experienced: ["Senior software engineer", "Product manager", "Data scientist", "Engineering manager", "Sales manager", "Project manager"],
 };
+// "Executive" is an entry-level title in India; elsewhere these first jobs go by other names.
+const WORLD_ROLE: Record<string, string> = { "Sales executive": "Sales representative", "HR executive": "HR coordinator" };
+
+/** The role chips for the experience, named as the jobs are where the user applies. */
+export function roleIdeas(experience: Experience, country: string = INDIA): string[] {
+  const ideas = ROLE_IDEAS[experience];
+  return isIndia(country) ? ideas : ideas.map((r) => WORLD_ROLE[r] ?? r);
+}
 
 /** The cities most jobs are in (canonical names, as Jobs AI's profile spells them). */
 export const PLACE_IDEAS = ["Bengaluru", "Hyderabad", "Pune", "Chennai", "Mumbai", "Delhi", "Gurugram", "Noida", "Kolkata"];
@@ -134,6 +148,8 @@ export interface HomeFacts {
   tracker: TrackedJob[];
   /** Practice (mock interviews) is on in this build. */
   mockEnabled: boolean;
+  /** The country the user applies in (the wording follows it); India when not given. */
+  country?: string;
 }
 
 export type StepId =
@@ -266,7 +282,7 @@ function catalogue(answers: WelcomeAnswers | null, facts: HomeFacts, now: Date):
   steps.push({
     id: "practice",
     product: "practice",
-    title: fresher || !answers?.experience ? "Do a 5-minute HR round" : preset === "tmay10" ? "Do a 10-minute practice interview" : "Do a 15-minute technical round",
+    title: fresher || !answers?.experience ? `Do a 5-minute ${regionWords(facts.country ?? INDIA).screen}` : preset === "tmay10" ? "Do a 10-minute practice interview" : "Do a 15-minute technical round",
     body: "An AI interviewer asks, you answer out loud, then you get a score and the answers worth redoing.",
     cta: "Start practising",
     to: facts.mockEnabled ? practiceHref({ preset, role }) : "/start",

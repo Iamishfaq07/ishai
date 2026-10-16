@@ -4,10 +4,26 @@ the Practice page's "What to expect".
 Each entry is what candidates commonly report and what the company says publicly about what it looks for (values,
 principles, round types), kept general on purpose: rounds change by team, level and year, so nothing here is a
 promise of a specific process. Matching is by name or a common alias ("AWS" is Amazon, "Tata Consultancy" is TCS).
+
+The guides are written as India's candidates report them. `for_country` gives the one for wherever else the user
+applies: a guide whose rounds are India's campus hiring (a spoken-English test, GenC, a group discussion) reads as
+its `abroad` version, and an estimation question set in Bengaluru moves to a big city there.
 """
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+
+from orbit_api.job_portal.geo import cities_in
+from orbit_api.region import country_code, is_india
+
+
+@dataclass(frozen=True)
+class Abroad:
+    """What candidates outside India report instead (None: the same as in India)."""
+    rounds: tuple[str, ...]
+    looks_for: tuple[str, ...] | None = None
+    questions: tuple[str, ...] | None = None
+    tips: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -22,6 +38,8 @@ class CompanyStyle:
     # Questions in the company's style, asked as written when the model is unavailable.
     questions: tuple[str, ...]
     tips: tuple[str, ...] = field(default_factory=tuple)
+    # India-only rounds above (campus hiring): the guide outside India.
+    abroad: Abroad | None = None
 
 
 STYLES: tuple[CompanyStyle, ...] = (
@@ -142,6 +160,12 @@ STYLES: tuple[CompanyStyle, ...] = (
                    "What do you know about Accenture?", "How do you keep learning new technologies?"),
         tips=("Speak clearly and at an even pace: there's a separate spoken-English test.",
               "Read Accenture's recent work in your area before the interview."),
+        abroad=Abroad(
+            rounds=("Online application, with a short assessment for some roles", "Recruiter screen",
+                    "Interviews with the team: technical or case questions alongside behavioral ones",
+                    "Final interview with a manager or senior leader"),
+            tips=("Have stories ready about working with clients and in teams under deadlines.",
+                  "Read Accenture's recent work in your area before the interview.")),
     ),
     CompanyStyle(
         "cognizant", "Cognizant", ("cts", "cognizant technology solutions", "genc", "genc next", "genc elevate"),
@@ -151,6 +175,14 @@ STYLES: tuple[CompanyStyle, ...] = (
         questions=("Tell me about yourself.", "Write a SQL query to find the second-highest salary.",
                    "Explain your project's architecture.", "Are you comfortable relocating?"),
         tips=("Revise SQL joins and simple queries.", "Be ready to explain every technology on your resume."),
+        abroad=Abroad(
+            rounds=("Recruiter screen", "Technical interview with the team",
+                    "Manager or client interview (some roles)", "HR interview"),
+            looks_for=("Fundamentals: OOP, databases and SQL, a language", "Your projects", "Communication",
+                       "Working with clients and learning what their work needs"),
+            questions=("Tell me about yourself.", "Write a SQL query to find the second-highest salary.",
+                       "Explain your project's architecture.",
+                       "Tell me about a time you worked directly with a client.")),
     ),
     CompanyStyle(
         "deloitte", "Deloitte", ("deloitte india", "deloitte usi", "deloitte consulting"),
@@ -163,6 +195,9 @@ STYLES: tuple[CompanyStyle, ...] = (
                    "Why consulting, and why Deloitte?"),
         tips=("Structure answers out loud: 'I'd look at three things…'.",
               "For case questions, ask clarifying questions before you answer."),
+        abroad=Abroad(rounds=("Online application, with an assessment for some roles",
+                              "First-round interview: behavioral questions and a case or technical problem",
+                              "Final round with a partner or director")),
     ),
     CompanyStyle(
         "goldman-sachs", "Goldman Sachs", ("goldman", "goldman sachs india"),
@@ -349,6 +384,22 @@ def match(company: str | None) -> CompanyStyle | None:
         if hit is not None:
             return hit
     return None
+
+
+_INDIA_CITY = "Bengaluru"  # where the guides' estimation questions are set
+
+
+def for_country(style: CompanyStyle, country: str | None) -> CompanyStyle:
+    """The guide where the user applies: as written in India; elsewhere (or not said) its `abroad` version, with an
+    estimation question set in the country's biggest job market ("a big city" when there's none to name)."""
+    if is_india(country):
+        return style
+    a = style.abroad
+    out = style if a is None else replace(style, rounds=a.rounds, looks_for=a.looks_for or style.looks_for,
+                                          questions=a.questions or style.questions, tips=a.tips or style.tips)
+    code = country_code(country)
+    city = next(iter(cities_in(code)), "a big city") if code else "a big city"
+    return replace(out, questions=tuple(q.replace(_INDIA_CITY, city) for q in out.questions))
 
 
 def interviewer_brief(style: CompanyStyle) -> str:

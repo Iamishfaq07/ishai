@@ -33,3 +33,15 @@ describe("app navigation", () => {
     expect(sidebarCollapsed("collapsed", 1920)).toBe(true);
   });
 });
+
+describe("Offer AI's mark", () => {
+  it("is the rupee in India and money in general elsewhere", async () => {
+    const { BadgeIndianRupee, Banknote } = await import("@orbit/ui");
+    const offer = (country?: string) => allNavItems(true, country).find((i) => i.id === "offer")!;
+    expect(offer().icon).toBe(BadgeIndianRupee);
+    expect(offer("IN").icon).toBe(BadgeIndianRupee);
+    expect(offer("US").icon).toBe(Banknote);
+    expect(exploreItems(true, "GB").find((i) => i.id === "offer")?.icon).toBe(Banknote);
+    expect(navGroups(true, "US").map((g) => g.items.map((i) => i.id))).toEqual(navGroups(true).map((g) => g.items.map((i) => i.id)));
+  });
+});

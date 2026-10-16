@@ -10,6 +10,9 @@ import {
   countWords,
   cx,
   focusRing,
+  isIndia,
+  regionExamples,
+  regionWords,
   shownFirst,
   skillList,
   toast,
@@ -17,6 +20,7 @@ import {
 } from "@orbit/ui";
 import { Button, Field, Input, Spinner, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
+import { useCountry } from "../../lib/country";
 import { errorText } from "../../lib/format";
 import { AiCostNote, AiErrorNote, isUpgradeError, useAllowance } from "../resume/allowance";
 import { outreachKindFor } from "./model";
@@ -27,7 +31,9 @@ import { outreachKindFor } from "./model";
  * back is edited here and copied out. The page around them (pickers, what's kept) is Outreach.tsx.
  */
 
-const KINDS: Array<{ id: OutreachKind; label: string; about: string; details: string }> = [
+type Kind = { id: OutreachKind; label: string; about: string; details: string };
+
+const KINDS: Kind[] = [
   {
     id: "referral",
     label: "Referral request",
@@ -59,6 +65,23 @@ const KINDS: Array<{ id: OutreachKind; label: string; about: string; details: st
     details: "e.g. I've used their app for two years",
   },
 ];
+
+/** The messages, with examples from where the user applies (India's as written above). */
+function kindsFor(country: string): Kind[] {
+  if (isIndia(country)) return KINDS;
+  const example = regionExamples(country);
+  const details: Partial<Record<OutreachKind, string>> = { referral: example.referral, cold_email: example.coldEmail, follow_up: example.followUp };
+  return KINDS.map((k) => ({
+    ...k,
+    ...(k.id === "cold_email"
+      ? {
+          label: regionWords(country).coldEmail,
+          about: "A short email to a recruiter or hiring manager, with a subject line, for when you send your resume directly.",
+        }
+      : {}),
+    details: details[k.id] ? `e.g. ${details[k.id]}` : k.details,
+  }));
+}
 
 /** The job post's first line or sentence: usually the title (as the server reads it, resumes/ai.py job_title). */
 export function jobTitle(jobText: string): string {
@@ -188,6 +211,9 @@ export function MessagesPart({
   onSlot: (change: (slot: MessageKit) => MessageKit) => void;
 }) {
   const { busy, error, run } = useWrite();
+  const country = useCountry();
+  const kinds = kindsFor(country);
+  const example = regionExamples(country);
   const [kind, setKind] = useState<OutreachKind>(() => outreachKindFor(job?.status) ?? "referral");
   // A job (another one, or the one asked for once it's read) opens on the message for how far along it is.
   const [kindFor, setKindFor] = useState(job?.id ?? null);
@@ -195,7 +221,7 @@ export function MessagesPart({
     setKindFor(job.id);
     setKind(outreachKindFor(job.status) ?? kind);
   }
-  const meta = KINDS.find((k) => k.id === kind) ?? KINDS[0]!;
+  const meta = kinds.find((k) => k.id === kind) ?? kinds[0]!;
   const current = slot.messages?.[kind];
   // For a job, its company and role until something's typed for it.
   const inputs: OutreachInputs = slot.inputs ?? (job ? { company: job.company.slice(0, 120), role: job.title.slice(0, 120) } : {});
@@ -214,7 +240,7 @@ export function MessagesPart({
     <>
       <Box title="Messages">
         <div role="group" aria-label="Message" className="mb-3 flex flex-wrap gap-1.5">
-          {KINDS.map((k) => (
+          {kinds.map((k) => (
             <button
               key={k.id}
               type="button"
@@ -234,11 +260,11 @@ export function MessagesPart({
         <div className="grid gap-3 sm:grid-cols-2">
           {kind !== "screening" && (
             <Field label={kind === "thank_you" ? "Interviewer's name" : "Their name"} htmlFor="kit-recipient" hint="Optional">
-              <Input id="kit-recipient" maxLength={80} value={inputs.recipient ?? ""} onChange={(e) => set({ recipient: e.target.value })} placeholder="e.g. Priya Sharma" />
+              <Input id="kit-recipient" maxLength={80} value={inputs.recipient ?? ""} onChange={(e) => set({ recipient: e.target.value })} placeholder={`e.g. ${example.person}`} />
             </Field>
           )}
           <Field label="Company" htmlFor="kit-company" hint={job ? "From the job post" : "Optional"}>
-            <Input id="kit-company" maxLength={120} value={inputs.company ?? ""} onChange={(e) => set({ company: e.target.value })} placeholder={job?.company || "e.g. Flipkart"} />
+            <Input id="kit-company" maxLength={120} value={inputs.company ?? ""} onChange={(e) => set({ company: e.target.value })} placeholder={job?.company || `e.g. ${example.outreachCompany}`} />
           </Field>
           <Field label="Role" htmlFor="kit-role" hint={job ? "From the job post" : titleHint ? "Optional: the job post's title otherwise" : "Optional"}>
             <Input id="kit-role" maxLength={120} value={inputs.role ?? ""} onChange={(e) => set({ role: e.target.value })} placeholder={titleHint || "e.g. Data Analyst"} />

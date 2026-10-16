@@ -23,18 +23,21 @@ import {
   confirmDialog,
   cx,
   focusRing,
+  isIndia,
+  regionWords,
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText, formatDate } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
+import { useCountry } from "../../lib/country";
 import { AiPill } from "../../components/products";
 import { JOBS_AI_HOME } from "../jobs/paths";
 import { AllowanceBanner, AllowanceContext, isUpgradeError, priceText, useResumeAllowance } from "./allowance";
 import { guestResume } from "./backend";
-import { fresherResume, newResume } from "./model";
+import { fresherResume, newId, newResume } from "./model";
 import { resumePath } from "./paths";
-import { RESUME_AI_FEATURES, ResumeAiTabs, scoreTone } from "./product";
+import { ResumeAiTabs, resumeAiFeatures, scoreTone } from "./product";
 import { ResumeMock } from "../../components/productArt";
 import { fromJsonResume } from "./jsonResume";
 import { TailorQueue } from "./TailorQueue";
@@ -46,6 +49,7 @@ export { scoreTone };
  */
 export function ResumeAiHomePage() {
   const navigate = useNavigate();
+  const country = useCountry();
   const allowance = useResumeAllowance();
   const list = useAsync(() => api.listResumes(), [], "resumes");
   // A queued job finished: its new resume goes in the list, and the credits it used come off the banner.
@@ -133,7 +137,7 @@ export function ResumeAiHomePage() {
                 </Button>
               </div>
               <ul aria-label="What Resume AI does" className="mt-6 flex flex-wrap gap-1.5 sm:mt-7 sm:gap-2">
-                {RESUME_AI_FEATURES.map(({ icon: Icon, short }) => (
+                {resumeAiFeatures(country).map(({ icon: Icon, short }) => (
                   <li
                     key={short}
                     className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-xs font-medium text-zinc-700 ring-1 ring-zinc-500/15 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10"
@@ -350,7 +354,11 @@ function BusyNote({ onCancel }: { onCancel: () => void }) {
 export function NewResume({ onClose, initial = null }: { onClose?: () => void; initial?: Source | null }) {
   const navigate = useNavigate();
   const tools = api;
-  const sources = SOURCES;
+  const country = useCountry();
+  // The student resume, as it's called where the user applies (campus placements in India).
+  const sources = isIndia(country)
+    ? SOURCES
+    : SOURCES.map((x) => (x.id === "fresher" ? { ...x, label: regionWords(country).student, hint: "One page for graduate jobs and internships: education first, then projects." } : x));
   const [source, setSource] = useState<Source | null>(initial);
   const [text, setText] = useState("");
   const [docId, setDocId] = useState("");
@@ -368,7 +376,7 @@ export function NewResume({ onClose, initial = null }: { onClose?: () => void; i
     const r = await api.createResume(input);
     navigate(resumePath(r.id), { state: { imported } });
   };
-  const create = (title: string, data?: ResumeData) => open(newResume(title, data), Boolean(data));
+  const create = (title: string, data?: ResumeData) => open(newResume(title, data, country), Boolean(data));
 
   // The running import, so "Cancel" can stop waiting on a slow connection.
   const running = useRef<AbortController | null>(null);
@@ -552,7 +560,7 @@ export function NewResume({ onClose, initial = null }: { onClose?: () => void; i
                 type="button"
                 disabled={busy}
                 onClick={() =>
-                  id === "scratch" ? void run(() => create("My resume")) : id === "fresher" ? void run(() => open(fresherResume(), false)) : setSource(id)
+                  id === "scratch" ? void run(() => create("My resume")) : id === "fresher" ? void run(() => open(fresherResume(newId, country), false)) : setSource(id)
                 }
                 className={cx(
                   "flex w-full items-start gap-3 rounded-xl border border-zinc-200 p-3 text-left transition-colors hover:border-indigo-400 hover:bg-indigo-500/5 dark:border-white/10",

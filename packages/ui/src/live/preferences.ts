@@ -1,4 +1,6 @@
 import type { AnswerStyle, CodingLanguage, ExperienceLevel, ResponseTiming, ThinkingLevel } from "@orbit/types";
+import { INDIA, isIndia } from "../region";
+import { regionWords } from "../regionCopy";
 import { safeLocal } from "../storage";
 
 /** "Wait before answering" presets — the server holds a detected question this long (finalizer.GRACE_MS). */
@@ -96,6 +98,12 @@ export const EXPERIENCE_LEVELS: Array<{ value: ExperienceLevel; label: string; h
   { value: "mid", label: "Mid-level", hint: "About 3–6 years: features owned end to end" },
   { value: "senior", label: "Senior", hint: "7+ years, or a senior / lead title" },
 ];
+
+/** The levels as named where the user applies: "Fresher" in India, "Student / new grad" elsewhere (same values). */
+export function experienceLevels(country: string | null | undefined = INDIA): typeof EXPERIENCE_LEVELS {
+  if (isIndia(country)) return EXPERIENCE_LEVELS;
+  return EXPERIENCE_LEVELS.map((l) => (l.value === "fresher" ? { ...l, label: regionWords(country).studentLevel } : l));
+}
 
 const EXPERIENCE_KEY = "orbit.experience";
 

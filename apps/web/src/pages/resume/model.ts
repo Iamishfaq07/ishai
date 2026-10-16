@@ -13,6 +13,7 @@ import type {
   ResumeSuggestion,
   ResumeTemplate,
 } from "@orbit/types";
+import { INDIA, isIndia, regionWords } from "@orbit/ui";
 
 export const SECTION_LABEL: Record<ResumeSectionId, string> = {
   summary: "Summary",
@@ -58,6 +59,35 @@ export const EXTRA_PRESETS: Array<{ title: string; style: ResumeExtraSection["st
   },
 ];
 
+type ExtraPreset = (typeof EXTRA_PRESETS)[number];
+
+// Outside India: the presets as resumes are written there. Personal details (a date of birth) and a Declaration aren't
+// expected anywhere else, so they aren't offered; a section someone already has stays as it is.
+const WORLD_PRESETS: Record<string, Partial<ExtraPreset> | null> = {
+  Achievements: { placeholder: "Winner, university hackathon 2023, out of 120 teams" },
+  "Positions of Responsibility": { title: "Leadership", placeholder: "President, Coding Club: ran a 300-student hackathon" },
+  "Extracurricular activities": { placeholder: "Volunteer tutor: taught 30 children to code every weekend" },
+  "Personal details": null,
+  Declaration: null,
+};
+
+/** The extra sections offered where the user applies: India's as they are, elsewhere without the India-only ones. */
+export function extraPresets(country: string = INDIA): ExtraPreset[] {
+  if (isIndia(country)) return EXTRA_PRESETS;
+  return EXTRA_PRESETS.flatMap((p) => {
+    const change = WORLD_PRESETS[p.title];
+    return change === null ? [] : [change ? { ...p, ...change } : p];
+  });
+}
+
+/** The preset an extra section was made from (by its title), for its example and advice: the country's own first,
+ *  then any, so a section made before keeps its note. */
+export function presetForTitle(title: string, country: string = INDIA): ExtraPreset | undefined {
+  const t = title.trim().toLowerCase();
+  const same = (p: ExtraPreset) => p.title.toLowerCase() === t;
+  return extraPresets(country).find(same) ?? EXTRA_PRESETS.find(same);
+}
+
 /** The extra section a `section_order` entry ("extra:<id>") names. */
 export function extraOf(data: ResumeData, key: ResumeSectionKey): ResumeExtraSection | undefined {
   return key.startsWith("extra:") ? data.extras.find((x) => `extra:${x.id}` === key) : undefined;
@@ -88,6 +118,14 @@ export const TEMPLATES: Array<{ id: ResumeTemplate; label: string; note: string 
   { id: "harvard", label: "Harvard", note: "Serif, centred headings, generous space. The classic US style." },
   { id: "sidebar", label: "Sidebar", note: "Two columns. Looks great; some ATS read it out of order." },
 ];
+
+/** The templates as named where the user applies: Campus is "Graduate" outside India. */
+export function templatesFor(country: string = INDIA): typeof TEMPLATES {
+  if (isIndia(country)) return TEMPLATES;
+  return TEMPLATES.map((t) =>
+    t.id === "campus" ? { ...t, label: regionWords(country).campusTemplate, note: "Small-caps headings, tight lines, dates on the right. Fits a new graduate's page." } : t,
+  );
+}
 
 /** Fonts with serifs: Harvard's name and headings use the chosen one, or a serif next to a sans-serif body. */
 export const SERIF_FONTS: ReadonlySet<ResumeFont> = new Set<ResumeFont>(["georgia", "garamond", "cambria", "times"]);
@@ -129,6 +167,12 @@ export const LOOKS: Array<{ label: string; design: Pick<ResumeDesign, "template"
   { label: "Harvard", design: { template: "harvard", accent: "#111827", font: "times" } },
 ];
 
+/** The quick looks as named where the user applies (the Campus look is "Graduate" outside India). */
+export function looksFor(country: string = INDIA): typeof LOOKS {
+  if (isIndia(country)) return LOOKS;
+  return LOOKS.map((l) => (l.design.template === "campus" ? { ...l, label: regionWords(country).campusTemplate } : l));
+}
+
 export const ACCENTS = [
   "#4f46e5", "#0f766e", "#1d4ed8", "#b91c1c", "#9333ea", "#c2410c", "#334155", "#111827",
   "#0369a1", "#15803d", "#a16207", "#be185d", "#7c2d12", "#4338ca",
@@ -151,28 +195,33 @@ export function emptyData(): ResumeData {
   };
 }
 
-export function defaultDesign(): ResumeDesign {
+// Where resumes are printed on US Letter rather than A4.
+const LETTER_COUNTRIES = new Set(["US", "CA"]);
+
+/** A new resume's design. The page is Letter in the US and Canada, A4 everywhere else (a saved resume keeps its own). */
+export function defaultDesign(country: string = INDIA): ResumeDesign {
   return {
     template: "classic",
     accent: ACCENTS[0]!,
     font: "inter",
     font_size: 10.5,
     spacing: "normal",
-    page: "a4",
+    page: LETTER_COUNTRIES.has(country.toUpperCase()) ? "letter" : "a4",
     photo: null,
     show_photo: false,
   };
 }
 
-export function newResume(title = "My resume", data: ResumeData = emptyData()): ResumeInput {
-  return { title, data, design: defaultDesign(), job_text: "" };
+export function newResume(title = "My resume", data: ResumeData = emptyData(), country: string = INDIA): ResumeInput {
+  return { title, data, design: defaultDesign(country), job_text: "" };
 }
 
 /**
  * "Student / fresher": a one-page Campus resume laid out for placements. Education leads, then projects, skills,
- * internships, positions of responsibility and achievements, the last two ready to fill in.
+ * internships, positions of responsibility and achievements, the last two ready to fill in. Outside India it's the
+ * "Student / new grad" resume: the same page, with Leadership for positions of responsibility.
  */
-export function fresherResume(makeId: () => string = newId): ResumeInput {
+export function fresherResume(makeId: () => string = newId, country: string = INDIA): ResumeInput {
   const roles = makeId();
   const wins = makeId();
   const data: ResumeData = {
@@ -180,13 +229,13 @@ export function fresherResume(makeId: () => string = newId): ResumeInput {
     education: [{ id: makeId(), school: "", degree: "", field: "", start: "", end: "", grade: "", details: "" }],
     projects: [{ id: makeId(), name: "", link: "", description: "", bullets: [""] }],
     extras: [
-      { id: roles, title: "Positions of Responsibility", items: [""], style: "bullets" },
+      { id: roles, title: isIndia(country) ? "Positions of Responsibility" : "Leadership", items: [""], style: "bullets" },
       { id: wins, title: "Achievements", items: [""], style: "bullets" },
     ],
     // An empty summary doesn't print, so Education leads; a summary written later goes on top, where recruiters look.
     section_order: ["summary", "education", "projects", "skills", "experience", `extra:${roles}`, `extra:${wins}`, "certifications"],
   };
-  return { title: "My resume", data, design: { ...defaultDesign(), template: "campus", accent: "#111827", font: "cambria" }, job_text: "" };
+  return { title: "My resume", data, design: { ...defaultDesign(country), template: "campus", accent: "#111827", font: "cambria" }, job_text: "" };
 }
 
 /**

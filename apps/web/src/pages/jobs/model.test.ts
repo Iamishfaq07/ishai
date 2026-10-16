@@ -235,3 +235,22 @@ describe("the profile outside India", () => {
     );
   });
 });
+
+describe("the entry level outside India", () => {
+  it("is called Entry level there and Fresher in India, with the server's id either way", async () => {
+    const { LEVELS, activeFilterCount, levelLabel, levelsFor } = await import("./model");
+    expect(levelsFor("IN")).toBe(LEVELS);
+    expect(levelsFor("US").map((l) => l.id)).toEqual(LEVELS.map((l) => l.id));
+    expect(levelLabel("fresher", "IN")).toBe("Fresher");
+    expect(levelLabel("fresher", "US")).toBe("Entry level");
+    expect(levelLabel("senior", "US")).toBe("Senior");
+    const job = { company: "X", place: "", workplace: null, employment_type: null, level: "fresher" as const, experience: null, salary: null };
+    expect(jobFacts(job)).toContainEqual(["Level", "Fresher"]);
+    expect(jobFacts(job, "GB")).toContainEqual(["Level", "Entry level"]);
+    expect(profileSummary(prefs({ years: null, level: "fresher" }), "US")).toMatch(/Entry level$/);
+    // The quick chip's word ("entry-level" outside India) counts as a filter, like "fresher".
+    const p = { posted_within: 7 as const, workplace: ["onsite", "remote", "hybrid"] as JobPrefs["workplace"] };
+    expect(activeFilterCount(p, "react entry-level", "best")).toBe(1);
+    expect(activeFilterCount(p, "react fresher", "best")).toBe(1);
+  });
+});

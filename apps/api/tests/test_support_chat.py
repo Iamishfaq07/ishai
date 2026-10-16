@@ -148,6 +148,58 @@ def test_signed_in_sees_their_balance_and_last_payment(client: TestClient) -> No
     assert "landed" in last and "₹499" in last and "AI credits" in last
 
 
+def test_prices_and_payments_are_in_the_visitors_currency(client: TestClient,
+                                                           monkeypatch: pytest.MonkeyPatch) -> None:
+    """Outside India the bot quotes dollars and points to PayPal; in India every word is as it was."""
+    from pydantic import SecretStr
+
+    from orbit_api.config import get_settings
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import Payment
+    from orbit_api.support.knowledge import TOPICS, answer_for, match, options_for, respond
+
+    india, _chips = respond("", "prices")
+    assert india == (
+        "Start free: a new account gets 20 interview minutes and 1 Resume AI credit. Then either buy credits "
+        "(1 interview credit = 1 hour, they never expire): 1 credit ₹2,299, 3 credits ₹3,599, 8 credits ₹7,199, "
+        "15 credits ₹10,899, or AI credits ₹499 for Resume AI alone. Or go unlimited: ₹4,799 a week, "
+        "₹9,199 a month or ₹35,999 a year. Nothing renews automatically.")
+    usa, chips = respond("", "prices", "USD")
+    assert "₹" not in usa and "AI credits $7.99" in usa and "$135.99 a month" in usa and "$531.99 a year" in usa
+    assert ("mini", "AI credits $7.99") in chips
+    assert {"razorpay", "upi", "utr"} <= {i for i, _ in options_for("buy")}
+    assert not {"razorpay", "upi", "utr"} & {i for i, _ in options_for("buy", "USD")}
+    assert "PayPal" in answer_for(TOPICS["buy"], "USD") and "UPI" not in answer_for(TOPICS["buy"], "USD")
+    assert getattr(match("can I pay by upi", "USD"), "id", None) == "paypal"
+    assert getattr(match("can I pay by upi"), "id", None) == "upi"
+
+    # Through the chat: the country Cloudflare saw (believed with the proxy secret) sets the currency.
+    secret = "s" * 32
+    monkeypatch.setattr(get_settings(), "proxy_secret", SecretStr(secret))
+    abroad = {"X-Orbit-Proxy-Secret": secret, "X-Orbit-Client-Country": "US"}
+    opened = client.post("/v1/support/threads", headers=abroad).json()
+    assert not any(item["id"] in {"razorpay", "upi", "utr"} for item in opened["suggestions"])
+    asked = client.post(f"/v1/support/threads/{opened['id']}/messages", headers=abroad,
+                        json={"token": opened["token"], "choice": "mini"}).json()
+    assert asked["messages"][-2]["text"] == "AI credits $7.99" and "$7.99 for 25" in asked["messages"][-1]["text"]
+
+    headers, user = _register(client, f"buyer-{uuid.uuid4().hex[:8]}@example.com")
+
+    async def add() -> None:
+        async with sessionmaker()() as db:
+            db.add(Payment(user_id=user["id"], plan="plus", amount_inr=9415, days=0, resume_credits=80,
+                           interview_minutes=480, reference=f"ORB{uuid.uuid4().hex[:8]}", status="approved",
+                           method="paypal", currency="USD", amount_minor=10699))
+            await db.commit()
+
+    client.portal.call(add)  # type: ignore[union-attr]
+    mine = client.post("/v1/support/threads", headers={**headers, **abroad}).json()
+    paid = client.post(f"/v1/support/threads/{mine['id']}/messages", headers={**headers, **abroad},
+                       json={"token": mine["token"], "choice": "payment"}).json()
+    last = paid["messages"][-1]["text"]
+    assert "$106.99 via PayPal" in last and "₹" not in last
+
+
 def test_the_page_leads_the_menu_but_not_a_follow_up(client: TestClient) -> None:
     billing = client.post("/v1/support/threads?page=/billing")
     assert billing.status_code == 201, billing.text

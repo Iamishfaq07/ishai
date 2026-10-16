@@ -15,6 +15,7 @@ import {
   focusRing,
   formatNumber,
   isIndia,
+  regionWords,
   useMotion,
 } from "@orbit/ui";
 import { Footer } from "../components/Footer";
@@ -275,7 +276,9 @@ function Pricing({ packs, monthly, welcome, stats }: { packs: CreditPack[] | nul
 
       <h3 className="mt-14 font-display text-xl font-semibold">Pay as you go: credits</h3>
       <p className="mt-1 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-        {paypal
+        {packs === null && !india
+          ? "1 interview credit is 1 hour of live or mock interviews, with Resume AI credits included. Bought once when you need them; what's in them never expires."
+          : paypal
           ? "1 interview credit is 1 hour of live or mock interviews, with Resume AI credits included. Bought once when you need them, in US dollars through PayPal (your PayPal account, or a card where PayPal offers it). What's in them never expires."
           : cards
           ? `1 interview credit is 1 hour of live or mock interviews, with Resume AI credits included. Bought once when you need them, by ${india ? "UPI, card or netbanking" : packs?.[0]?.currency === "USD" ? "card, in US dollars" : abroad ? "card from any country (in US dollars outside India)" : "an Indian card, UPI or netbanking for now (cards from other countries are coming soon)"}. What's in them never expires.`
@@ -352,8 +355,10 @@ function Pricing({ packs, monthly, welcome, stats }: { packs: CreditPack[] | nul
 
 // ─── Questions ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-function Faq({ welcome, stats, cards = false, abroad = false, paypal = false }: {
+function Faq({ welcome, stats, cards = false, abroad = false, paypal = false, loaded = true }: {
   welcome: WelcomeGrant | null; stats: JobStats | null; cards?: boolean; abroad?: boolean; paypal?: boolean;
+  /** The packs (and so how they're paid) have arrived: until then nothing is said about payment methods abroad. */
+  loaded?: boolean;
 }) {
   const country = useCountry();
   const india = isIndia(country);
@@ -411,6 +416,11 @@ function Faq({ welcome, stats, cards = false, abroad = false, paypal = false }: 
           There's no subscription. When you want more interview minutes or AI credits, you buy a pack with any UPI app
           (Google Pay, PhonePe, Paytm or your bank's app). Each payment is checked against its UTR, the 12-digit number
           your UPI app shows, and then the credits are added. Nothing renews, and what you buy never expires.
+        </p>
+      ) : !loaded ? (
+        <p>
+          There's no subscription, nothing renews, and what you buy never expires. Everything free works the same
+          wherever you are.
         </p>
       ) : (
         <p>
@@ -593,7 +603,7 @@ export function LandingPage() {
               id="interview"
               title="Practise out loud, then get help when it counts"
               line="An AI interviewer asks the questions, you answer out loud, and you get a score with the answers worth redoing. In a live call, Orbit hears the question and suggests an answer from your own resume."
-              points={["5-minute HR rounds, technical rounds and salary talks", "A story bank for “Tell me about a time…” questions", "Coding help from a screenshot"]}
+              points={[`5-minute ${regionWords(country).screen}s, technical rounds and salary talks`, "A story bank for “Tell me about a time…” questions", "Coding help from a screenshot"]}
               free={welcome?.interview_minutes ? `Mock interviews and live sessions use interview minutes; a new account gets ${welcome.interview_minutes} to start.` : "Mock interviews and live sessions use interview minutes."}
               link={
                 <Link to="/warmup" className={cx("inline-flex min-h-10 items-center gap-1.5 rounded-lg font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
@@ -675,7 +685,7 @@ export function LandingPage() {
 
         <Pricing packs={packs} monthly={monthly} welcome={welcome} stats={stats} />
         <Faq welcome={welcome} stats={stats} cards={packs?.[0]?.checkout === "razorpay"} abroad={!!packs?.[0]?.international}
-          paypal={packs?.[0]?.checkout === "paypal"} />
+          paypal={packs?.[0]?.checkout === "paypal"} loaded={packs !== null} />
 
         <Reveal as="section" aria-labelledby="start-title" className="mb-16 rounded-3xl bg-zinc-500/[0.06] p-6 text-center ring-1 ring-zinc-500/15 sm:p-10">
           <h2 id="start-title" className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">

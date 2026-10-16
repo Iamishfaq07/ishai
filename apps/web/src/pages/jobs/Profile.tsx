@@ -1,14 +1,14 @@
 import { useEffect, useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { JobPrefs, JobProfile } from "@orbit/types";
-import { ArrowRight, Briefcase, Building2, Check, FileText, LoadGate, MapPin, Search, SlidersHorizontal, Sparkles, X, cx, focusRing, type LucideIcon } from "@orbit/ui";
+import { ArrowRight, Briefcase, Building2, Check, FileText, LoadGate, MapPin, Search, SlidersHorizontal, Sparkles, X, cx, focusRing, isIndia, type LucideIcon } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { RESUME_AI_HOME, resumePath } from "../resume/paths";
 import { useJobsAi } from "./JobsAi";
 import { textLink, linkButton } from "./links";
-import { ANYWHERE_TOKENS, JOB_TYPES, LEVELS, POSTED_WITHIN, WORKPLACES, addItem, anywhereLabel, profileSummary, samePrefs, toggle, toggleWorkplace } from "./model";
+import { ANYWHERE_TOKENS, JOB_TYPES, POSTED_WITHIN, levelsFor, WORKPLACES, addItem, anywhereLabel, profileSummary, samePrefs, toggle, toggleWorkplace } from "./model";
 import { CountryField } from "../../components/CountryField";
 import { useCountry } from "../../lib/country";
 import { JOBS_MATCHES } from "./paths";
@@ -182,7 +182,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
               <Field label="Experience level" htmlFor="jp-level">
                 <Select id="jp-level" value={draft.level ?? ""} onChange={(e) => set("level", (e.target.value || null) as JobPrefs["level"])}>
                   <option value="">Any</option>
-                  {LEVELS.map((l) => (
+                  {levelsFor(country).map((l) => (
                     <option key={l.id} value={l.id}>
                       {l.label} ({l.hint})
                     </option>
@@ -251,7 +251,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
                   </ToggleChip>
                 ))}
               </div>
-              <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">None picked: full-time, part-time and contract (and internships for freshers).</p>
+              <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">None picked: full-time, part-time and contract (and internships for {isIndia(country) ? "freshers" : "entry-level roles"}).</p>
             </fieldset>
 
             <fieldset>
@@ -314,7 +314,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
             <fieldset>
               <legend className="mb-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">"Search on" links</legend>
               <p className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">
-                Sites Orbit can't read jobs from (like LinkedIn and Naukri): a link opens their own search, filled in from this profile.
+                Sites Orbit can't read jobs from (like {isIndia(country) ? "LinkedIn and Naukri" : "LinkedIn and Indeed"}): a link opens their own search, filled in from this profile.
               </p>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(profile.portals).map(([id, name]) => (

@@ -14,6 +14,7 @@ import { ApiError, detectCountry, getPasskey, passkeyErrorText, safeLocal } from
 import { api, setUnauthorizedHandler } from "./api";
 import { clearAsyncCache } from "./useAsync";
 import { clearPrepContext } from "./prepContext";
+import { visitorCountryWithin } from "./visitorCountry";
 
 export type RegisterOutcome = "signed_in" | "verify_email";
 
@@ -133,20 +134,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /** "signed_in", or "verify_email" when the server wants the inbox proven first (nobody is signed in then). */
   const register = useCallback(async (req: RegisterRequest): Promise<RegisterOutcome> => {
-    const res = await api.register({ country: detectCountry(), ...req });
+    // The country they apply in: where the web app's edge saw the visit come from, else the browser's guess.
+    const res = await api.register({ country: (await visitorCountryWithin(1500)) ?? detectCountry(), ...req });
     if ("status" in res && res.status === "verify_email") return "verify_email";
     forgetAccount();
     setUser(acceptAccount(await confirmSession()));
     return "signed_in";
   }, []);
 
-  // An account without a country (from before there was one) gets the browser's guess, once; Settings changes it.
+  // An account without a country (from before there was one) gets the visitor's country (or the browser's guess),
+  // once; Settings changes it.
   const needsCountry = Boolean(user && !user.country);
   useEffect(() => {
     if (!needsCountry) return;
     let cancelled = false;
-    api
-      .updateRegion(detectCountry())
+    visitorCountryWithin(3000)
+      .then((visitor) => api.updateRegion(visitor ?? detectCountry()))
       .then((u) => !cancelled && setUser((prev) => (prev && prev.id === u.id ? { ...prev, country: u.country } : prev)))
       .catch(() => undefined); // the guess is still used on screen; it's tried again next visit
     return () => {

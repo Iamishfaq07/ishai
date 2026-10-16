@@ -12,7 +12,7 @@ from collections import Counter
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,6 +31,7 @@ from orbit_api.models import JobListing, LinkedInProfileRow, User
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError
 from orbit_api.ratelimit import limit, limit_user
+from orbit_api.region import market_country
 
 log = logging.getLogger(__name__)
 
@@ -120,7 +121,8 @@ async def _resume_roles(db: AsyncSession, user: User) -> list[tuple[str, str]]:
     return [(e.title, e.company) for e in data.experience] if data is not None else []
 
 
-async def _out(db: AsyncSession, user: User, row: LinkedInProfileRow | None) -> LinkedInOut:
+async def _out(db: AsyncSession, user: User, row: LinkedInProfileRow | None,
+               request: Request | None = None) -> LinkedInOut:
     from orbit_api.job_portal.routes import _ai_left
 
     left = await _ai_left(db, user, "linkedin_read", get_settings().linkedin_read_daily)
@@ -129,7 +131,7 @@ async def _out(db: AsyncSession, user: User, row: LinkedInProfileRow | None) -> 
                            reads_left=left)
     profile = Profile.model_validate(row.data or {})
     target = row.target_role or await _default_target(db, user, profile)
-    keywords, posts = await market_keywords(db, target, (user.country or "IN").upper())
+    keywords, posts = await market_keywords(db, target, market_country(user.country, request))
     a = await asyncio.to_thread(auditmod.audit, profile, target, keywords, await _resume_roles(db, user))
     return LinkedInOut(profile=profile, target_role=target, read_at=row.updated_at, reads_left=left, audit=AuditOut(
         score=a.score, checks=[CheckOut(**c.__dict__) for c in a.checks], keywords=a.keywords, found=a.found,
@@ -137,9 +139,9 @@ async def _out(db: AsyncSession, user: User, row: LinkedInProfileRow | None) -> 
 
 
 @router.get("", response_model=LinkedInOut, dependencies=[read_limit])
-async def get_linkedin(user: Annotated[User, Depends(current_user)],
+async def get_linkedin(request: Request, user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> LinkedInOut:
-    return await _out(db, user, await db.get(LinkedInProfileRow, user.id))
+    return await _out(db, user, await db.get(LinkedInProfileRow, user.id), request)
 
 
 class TargetIn(BaseModel):
@@ -147,14 +149,14 @@ class TargetIn(BaseModel):
 
 
 @router.put("/target", response_model=LinkedInOut, dependencies=[read_limit])
-async def set_target(body: TargetIn, user: Annotated[User, Depends(current_user)],
+async def set_target(request: Request, body: TargetIn, user: Annotated[User, Depends(current_user)],
                      db: Annotated[AsyncSession, Depends(get_db)]) -> LinkedInOut:
     row = await db.get(LinkedInProfileRow, user.id)
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Read your LinkedIn profile first.")
     row.target_role = " ".join(body.target_role.split())
     await db.commit()
-    return await _out(db, user, row)
+    return await _out(db, user, row, request)
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT, dependencies=[read_limit])
@@ -170,7 +172,7 @@ async def delete_linkedin(user: Annotated[User, Depends(current_user)],
 _locks: dict[str, asyncio.Lock] = {}
 
 
-async def _read(db: AsyncSession, user: User, text: str) -> LinkedInOut:
+async def _read(db: AsyncSession, user: User, text: str, request: Request) -> LinkedInOut:
     from orbit_api.job_portal.routes import _ai_left, _generate
 
     text = text.strip()
@@ -205,7 +207,7 @@ async def _read(db: AsyncSession, user: User, text: str) -> LinkedInOut:
         row.data = profile.model_dump(mode="json")
         await db.commit()
         await db.refresh(row)
-        return await _out(db, user, row)
+        return await _out(db, user, row, request)
 
 
 class ReadIn(BaseModel):
@@ -213,13 +215,14 @@ class ReadIn(BaseModel):
 
 
 @router.post("/read", response_model=LinkedInOut, dependencies=ai_limits)
-async def read_text(body: ReadIn, user: Annotated[User, Depends(require_verified_email)],
+async def read_text(request: Request, body: ReadIn, user: Annotated[User, Depends(require_verified_email)],
                     db: Annotated[AsyncSession, Depends(get_db)]) -> LinkedInOut:
-    return await _read(db, user, body.text)
+    return await _read(db, user, body.text, request)
 
 
 @router.post("/read-file", response_model=LinkedInOut, dependencies=ai_limits)
-async def read_file(file: Annotated[UploadFile, File()], user: Annotated[User, Depends(require_verified_email)],
+async def read_file(request: Request, file: Annotated[UploadFile, File()],
+                    user: Annotated[User, Depends(require_verified_email)],
                     db: Annotated[AsyncSession, Depends(get_db)]) -> LinkedInOut:
     """LinkedIn's "Save to PDF" (profile → More → Save to PDF). The file isn't kept."""
     max_bytes = get_settings().max_upload_bytes
@@ -232,4 +235,4 @@ async def read_file(file: Annotated[UploadFile, File()], user: Annotated[User, D
         text = await asyncio.to_thread(extract_text_isolated, raw, fmt)
     except ParseError as e:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e
-    return await _read(db, user, text)
+    return await _read(db, user, text, request)

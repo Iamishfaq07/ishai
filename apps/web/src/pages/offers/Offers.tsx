@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { JobOfferRecord, OfferInput, OfferMarket } from "@orbit/types";
-import { ArrowRight, BadgeIndianRupee, Banknote, Plus, Scale, Search, LoadGate, cx, focusRing } from "@orbit/ui";
+import { ArrowRight, BadgeIndianRupee, Banknote, Plus, Scale, Search, LoadGate, currencyFor, cx, focusRing, isIndia } from "@orbit/ui";
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
@@ -10,9 +10,7 @@ import { useCountry } from "../../lib/country";
 import { jobPath } from "../jobs/paths";
 import { OfferForm } from "./OfferForm";
 import { MarketBar } from "./MarketBar";
-import { compareRows, emptyOffer, money, offerPath } from "./model";
-
-const CURRENCY: Record<string, string> = { IN: "INR", US: "USD", GB: "GBP", CA: "CAD", AU: "AUD", SG: "SGD", AE: "AED" };
+import { compareRows, emptyOffer, money, offerPath, offerTerms } from "./model";
 
 export const POSITION_TEXT = { below: "Below the market's middle", within: "In the market's middle", above: "Above the market's middle" } as const;
 export const POSITION_TONE = {
@@ -22,11 +20,13 @@ export const POSITION_TONE = {
 } as const;
 
 /**
- * Offer AI: your offers, what each puts in your account every month, where each sits in the market for the role,
- * side by side, and a plan to negotiate each (OfferDetail). The market is read from the pay ranges in job posts.
+ * Offer AI: your offers, what each puts in your account every month (India; elsewhere what each is worth in its first
+ * year), where each sits in the market for the role, side by side, and a plan to negotiate each (OfferDetail). The
+ * market is read from the pay ranges in job posts.
  */
 export function OffersPage() {
   const country = useCountry();
+  const india = isIndia(country);
   const offers = useAsync(() => api.offers(), [], "offers");
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -53,7 +53,11 @@ export function OffersPage() {
       <PageHeader
         icon={Icon}
         title="Offer AI"
-        subtitle="What an offer really pays each month, how it compares with the market, and a plan to ask for more."
+        subtitle={
+          india
+            ? "What an offer really pays each month, how it compares with the market, and a plan to ask for more."
+            : "What an offer is worth in its first year, how it compares with the market, and a plan to ask for more. Monthly take-home after tax is India-only for now."
+        }
         actions={!adding && list.length > 0 ? (
           <Button onClick={() => setAdding(true)}>
             <Plus className="h-4 w-4" /> Add an offer
@@ -62,7 +66,7 @@ export function OffersPage() {
       />
       {adding && (
         <div className="mb-6">
-          <OfferForm initial={emptyOffer(CURRENCY[country] ?? "USD")} busy={busy} error={error} onSave={(o) => void add(o)} onCancel={() => setAdding(false)} />
+          <OfferForm initial={emptyOffer(currencyFor(country))} busy={busy} error={error} onSave={(o) => void add(o)} onCancel={() => setAdding(false)} />
         </div>
       )}
       <LoadGate loading={offers.loading && !offers.data} variant="card" count={2} label="Getting your offers">
@@ -72,7 +76,11 @@ export function OffersPage() {
           <EmptyState
             icon={Icon}
             title="Got an offer? Add it here"
-            body="Orbit works out what reaches your account each month, shows where it sits in the market for the role, and plans what to ask for. Then practise the call."
+            body={
+              india
+                ? "Orbit works out what reaches your account each month, shows where it sits in the market for the role, and plans what to ask for. Then practise the call."
+                : "Orbit adds up what it's worth in the first year, shows where it sits in the market for the role, and plans what to ask for. Then practise the call."
+            }
             action={<Button onClick={() => setAdding(true)}><Plus className="h-4 w-4" /> Add your first offer</Button>}
           />
         ) : (
@@ -94,6 +102,7 @@ export function OffersPage() {
 }
 
 function OfferCard({ offer: o }: { offer: JobOfferRecord }) {
+  const terms = offerTerms(useCountry());
   return (
     <Link to={offerPath(o.id)} className={cx("block rounded-2xl", focusRing)}>
       <Card className="h-full transition-shadow hover:shadow-md">
@@ -108,7 +117,7 @@ function OfferCard({ offer: o }: { offer: JobOfferRecord }) {
         </div>
         <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
           <div>
-            <dt className="text-xs text-zinc-500 dark:text-zinc-400">Fixed a year</dt>
+            <dt className="text-xs text-zinc-500 dark:text-zinc-400">{terms.fixedShort} a year</dt>
             <dd className="font-display text-xl font-semibold tabular-nums">{money(o.currency, o.fixed)}</dd>
           </div>
           {o.take_home ? (
@@ -138,7 +147,7 @@ function OfferCard({ offer: o }: { offer: JobOfferRecord }) {
 /** The offers side by side: every figure each gives, the best on each row marked. */
 function Compare({ offers }: { offers: JobOfferRecord[] }) {
   const currencies = new Set(offers.map((o) => o.currency));
-  const rows = compareRows(offers);
+  const rows = compareRows(offers, useCountry());
   return (
     <Card>
       <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold">

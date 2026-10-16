@@ -28,6 +28,7 @@ from orbit_api.auth.security import (
     hash_password,
     set_session_cookie,
 )
+from orbit_api.billing.pricing import request_country
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.models import AuditLog, User
@@ -185,6 +186,10 @@ async def _find_or_create(db: AsyncSession, request: Request, ident: dict[str, A
             google_sub=ident["sub"],
             email_verified=True,
             approved=approved,
+            # Google doesn't say where they apply, so it's where they signed up from (the web app's edge says,
+            # through the Worker), as a password sign-up keeps the browser's guess. Settings change it later;
+            # signing in again never does.
+            country=request_country(request),
         )
         db.add(user)
         try:

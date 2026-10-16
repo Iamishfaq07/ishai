@@ -232,3 +232,32 @@ def test_changing_the_email_disconnects_google(google_client: TestClient, monkey
 
     assert google_client.portal.call(linked) is None  # type: ignore[union-attr]
 
+
+
+def test_a_new_google_account_is_for_the_country_it_signed_up_from(google_client: TestClient,
+                                                                     monkeypatch: pytest.MonkeyPatch) -> None:
+    import os
+
+    worker = {"X-Orbit-Proxy-Secret": os.environ["ORBIT_PROXY_SECRET"]}
+    who = {"sub": "google-sub-gb", "email": "grace@gmail.com", "name": "Grace Hopper"}
+
+    async def fake(code: str, verifier: str, uri: str) -> dict[str, str]:
+        return who
+
+    monkeypatch.setattr(google, "fetch_identity", fake)
+
+    def sign_in(headers: dict[str, str]) -> str | None:
+        google_client.cookies.clear()
+        start = google_client.get("/v1/auth/google/start", follow_redirects=False)
+        done = google_client.get(f"/v1/auth/google/callback?code=ok&state={_state(start.headers['location'])}",
+                                 headers=headers, follow_redirects=False)
+        assert done.status_code == 302
+        me: str | None = google_client.get("/v1/auth/me").json()["country"]
+        return me
+
+    assert sign_in({**worker, "X-Orbit-Client-Country": "GB"}) == "GB"
+    # Signing in again from somewhere else doesn't move the account: only settings change it.
+    assert sign_in({**worker, "X-Orbit-Client-Country": "US"}) == "GB"
+    # A country the Worker didn't vouch for is no guess at all.
+    who = {"sub": "google-sub-xx", "email": "ada-unsure@gmail.com", "name": "Ada"}
+    assert sign_in({"X-Orbit-Client-Country": "US"}) is None
