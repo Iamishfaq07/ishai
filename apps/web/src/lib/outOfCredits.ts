@@ -13,7 +13,7 @@ export interface CreditsOffer {
   label: string;
   price_inr: number;
   /** The price in the buyer's currency ("₹499", "$7.99"), when the server sent it. */
-  price_text?: string;
+  price_text?: string | null;
   resume_credits: number;
   interview_minutes: number;
 }

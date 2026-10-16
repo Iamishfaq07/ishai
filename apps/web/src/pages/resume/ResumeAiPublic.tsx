@@ -46,7 +46,9 @@ function FreeNote({ className }: { className?: string }) {
       )}
       Typing, the ATS score and Word and PDF downloads never use credits.
       {pack &&
-        ` More AI credits come in UPI packs, from ₹${pack.price_inr.toLocaleString("en-IN")} for ${pack.resume_credits}, and they never expire.`}
+        (pack.currency === "USD" && pack.price_text
+          ? ` More AI credits come in packs, from ${pack.price_text} for ${pack.resume_credits}, and they never expire.`
+          : ` More AI credits come in UPI packs, from ₹${pack.price_inr.toLocaleString("en-IN")} for ${pack.resume_credits}, and they never expire.`)}
     </p>
   );
 }

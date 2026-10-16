@@ -122,7 +122,9 @@ export default function HelpDialog({ open, onClose, onSearch }: { open: boolean;
                   with the amount, the date and the ORB… reference shown there.
                 </p>
               </Question>
-            ) : (
+            ) : how !== "upi" ? null : (
+              // Paying a UPI ID by hand (India, without Razorpay). Nothing is said while the packs are still on
+              // their way, so a visitor abroad isn't shown UPI questions for a moment.
               <>
                 <Question q="I paid by UPI. When do my credits arrive?">
                   <p>
@@ -169,7 +171,7 @@ export default function HelpDialog({ open, onClose, onSearch }: { open: boolean;
             Words you'll see
           </h3>
           <dl className="mt-3 space-y-3 text-sm">
-            {(automatic ? GLOSSARY : [...GLOSSARY, UTR_TERM]).map(([term, meaning]) => (
+            {(how === "upi" ? [...GLOSSARY, UTR_TERM] : GLOSSARY).map(([term, meaning]) => (
               <div key={term}>
                 <dt className="font-medium">{term}</dt>
                 <dd className="text-zinc-600 dark:text-zinc-300">{meaning}</dd>

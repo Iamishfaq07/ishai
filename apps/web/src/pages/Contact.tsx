@@ -380,7 +380,11 @@ export function ContactPage() {
               <ul className="mt-2 space-y-1.5 text-sm text-zinc-600 dark:text-zinc-300">
                 <li>A person on the Orbit team reads every message.</li>
                 <li>We reply by email, usually within a working day.</li>
-                <li>Payments: add the UTR so we can find yours fast.</li>
+                <li>
+                  {india
+                    ? "Payments: add the UTR so we can find yours fast."
+                    : "Payments: add the ORB… reference from Plan & billing, or the PayPal transaction ID."}
+                </li>
               </ul>
             </Card>
             {(whatsapp || mail) && (
@@ -403,9 +407,11 @@ export function ContactPage() {
             <Card>
               <h2 className="font-display text-base font-semibold">Who runs Orbit</h2>
               <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
-                Orbit is an individual service. The price on the site is the full amount in rupees. No fee is added at
-                the last step, and these pages don't list a GSTIN. Refunds, complaints and requests to delete your
-                data come through this form. If you can sign in, Settings also downloads your data or deletes the account.
+                {india
+                  ? "Orbit is an individual service. The price on the site is the full amount in rupees. No fee is added at the last step, and these pages don't list a GSTIN."
+                  : "Orbit is an individual service based in India. The price on the site is the full amount in US dollars. No fee is added at the last step; your bank or card may add its own fee for a payment abroad."}{" "}
+                Refunds, complaints and requests to delete your data come through this form. If you can sign in,
+                Settings also downloads your data or deletes the account.
               </p>
             </Card>
             <Card>
