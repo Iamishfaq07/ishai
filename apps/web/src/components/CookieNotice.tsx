@@ -4,7 +4,7 @@ import { useAuth } from "../lib/auth";
 
 const KEY = "orbit.cookies.v1";
 
-/** A notice, not a wall. The only cookie is the sign-in cookie. OK remembers the choice on this device. */
+/** A notice, not a wall. The only cookie is the sign-in cookie. Dismissing it is remembered on this device. */
 export function CookieNotice() {
   const { user } = useAuth();
   const [show, setShow] = useState(false);

@@ -35,6 +35,12 @@ def test_deepseek_flash_is_priced_with_cache_hits_and_peak_windows() -> None:
     assert estimate_cost("deepseek-flash", Usage(0, 1_000_000), PEAK) == pytest.approx(1.20)
 
 
+def test_naive_times_from_sqlite_are_utc_not_local() -> None:
+    # SQLite hands back naive datetimes; astimezone() would read them in the machine's zone (IST: 02:00 -> 20:30 UTC)
+    assert is_deepseek_peak(PEAK.replace(tzinfo=None))
+    assert not is_deepseek_peak(OFFPEAK.replace(tzinfo=None))
+
+
 def test_zero_tokens_cost_zero_and_unknown_models_are_unknown_not_free(caplog: Any) -> None:
     assert estimate_cost("deepseek-flash", Usage(), PEAK) == 0.0
     with caplog.at_level("WARNING"):

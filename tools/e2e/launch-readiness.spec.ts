@@ -40,25 +40,27 @@ test("cancelled autosave preserves newer text; another tab receives a conflict",
   expect((await (await context.request.get(`${API}/v1/resumes/${id}`)).json()).title).toBe("Saved from first tab");
 });
 
-test("mobile target context survives reload and the career loop remains readable", async ({ page, context }, info) => {
+test("mobile target context survives a reload and a trip through Home", async ({ page, context }, info) => {
   await signup(context);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "dark" });
   await page.goto("/mock?role=Platform%20engineer&company=Acme&interview_stage=Staff%20panel&tech_stack=%5B%22Go%22%5D");
-  await page.getByRole("button", { name: "OK", exact: true }).click();
+  await page.getByRole("button", { name: "Dismiss the cookie note", exact: true }).click();
   await expect(page).toHaveURL(/company=Acme/);
   await page.reload();
   await expect(page).toHaveURL(/role=Platform/);
   await expect(page.getByLabel("Company (optional)", { exact: true })).toHaveValue("Acme");
   await expect(page.getByLabel("Interview stage", { exact: true })).toHaveValue("Staff panel");
+  // Signed-in Home is the Mission Dashboard (the career loop is on the signed-out front page). Its Practise link
+  // is a plain /mock; the target comes back from this tab's saved context.
   await page.goto("/");
-  const loop = page.getByRole("region", { name: "Orbit career preparation loop" });
-  await expect(loop).toBeVisible();
-  await expect(loop.getByRole("link", { name: /Orbit Jobs AI/ })).toBeVisible();
-  const practice = loop.getByRole("link", { name: /Orbit Practice/ });
-  await expect(practice).toHaveAttribute("href", /company=Acme/);
+  const tools = page.getByRole("region", { name: "Your tools" });
+  await expect(tools).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.screenshot({ path: info.outputPath("mobile-career-loop.png"), fullPage: true });
+  await page.screenshot({ path: info.outputPath("mobile-home.png"), fullPage: true });
+  await tools.getByRole("link", { name: "Practise", exact: true }).click();
+  await expect(page).toHaveURL(/\/mock\?.*company=Acme/);
+  await expect(page.getByLabel("Company (optional)", { exact: true })).toHaveValue("Acme");
 });
 
 test("live coding exposes the spoken walkthrough and architecture defense", async ({ page, context }, info) => {
@@ -68,7 +70,7 @@ test("live coding exposes the spoken walkthrough and architecture defense", asyn
   expect(created.status(), await created.text()).toBe(201);
   const id = (await created.json()).id as string;
   await page.goto(`/live/${id}`);
-  await page.getByRole("button", { name: "OK", exact: true }).click();
+  await page.getByRole("button", { name: "Dismiss the cookie note", exact: true }).click();
   await page.getByText("Critique architecture / diagram", { exact: true }).click();
   await page.getByLabel("Architecture notes", { exact: false }).fill("A Go API writes events to Kafka and stores idempotent ledger entries in Postgres.");
   await page.getByRole("button", { name: "Build Defense Card" }).click();

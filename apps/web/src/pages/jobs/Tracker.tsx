@@ -55,7 +55,7 @@ import {
 } from "./model";
 import { JOBS_MATCHES, jobPath, outreachPath } from "./paths";
 import { CompareDrawer } from "./CompareDrawer";
-import { SearchInsightsPanel } from "./Insights";
+import { SearchInsightsPanel } from "./SearchInsightsPanel";
 import { MAX_COMPARE } from "./compare";
 import { Journey } from "./Journey";
 import { missionPath } from "./mission";
