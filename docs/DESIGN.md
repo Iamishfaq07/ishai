@@ -31,11 +31,29 @@ Components use plain Tailwind names; the preset maps them to CSS variables (RGB 
 | `indigo-*`    | `--accent-*`    | The accent. Default **Nebula**; users can pick another in Settings.     |
 | `zinc-*`      | `--ink-*`       | Neutrals: surfaces, borders, secondary text. Cool, slightly violet.     |
 | `aurora-*`    | `--aurora-*`    | Cyan. Brand gradients only (logo, hero glows) — never UI state.         |
+| `stage-*`     | `--stage-*`     | A job's stage: `saved`, `applied`, `interviewing`, `offer`, `rejected`. |
 
 Status colours stay Tailwind's own (`emerald` live, `amber` warning, `rose` error).
+**Stage colours** are fixed (not the accent, so a stage looks the same for everyone and never meets a status colour
+that means something else): saved → applied → interviewing is one ordered violet ramp, further along = more ink
+(darker in light mode, lighter in dark mode); an offer is the status green; "not this time" a quiet grey. They're
+marks only (`STATUS_MARK` in `pages/jobs/model.ts`: the dot in a `StagePill`, a tracker card's edge, the Home pipeline
+bar), never text, and always beside the stage's name. Both themes' steps passed the dataviz palette validator
+(ordinal, colour-blind separation, contrast); re-run it if you change one.
 Contrast: secondary text is remapped in `base.css` so it passes WCAG AA on every surface in both themes, and so are
 `text-emerald-600` / `text-amber-600` in light mode (they draw in -700). Small text never takes `opacity-80`; text on
-amber is `text-amber-950` (white on amber is 2.1:1). Figures are tabular by default (`tnum`, web).
+amber is `text-amber-950` (white on amber is 2.1:1). Figures are tabular by default (`tnum`, web), so columns of
+numbers line up; a stat's big number (a tile, a ring) takes `stat-value`, the font's proportional figures.
+
+## Charts
+
+One series over time is `ColumnChart` (`components/ColumnChart.tsx`; geometry in `lib/chart.ts`): admin sign-ups
+and interview minutes, the tracker's applications a week. Columns at most 24 px wide, 4 px rounded tops, square at the
+baseline; one hue (the accent), so the title names it and there is no legend; solid hairline gridlines at the top of
+the axis and its half; the busiest column carries its number. Hover, a tap or the arrow keys (Home and End too) show
+any column, value first; "Show the numbers" is the same data as a table. While loading, the frame holds, faded. A
+part-to-whole is one stacked bar with 2 px gaps between its parts (the Home pipeline), its counts below as legend.
+Score rings: the fill says how it went, the track is a pale step of the same colour.
 
 ## Type
 
@@ -98,8 +116,14 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
   fades only; Off, print and no-JS show everything as is. For public pages and long marketing sections, not for
   the app's working screens.
 - **Counting numbers:** `useCountUp(to, start, { from })` (with `useInView()`) for a score or percentage drawn on an
-  illustration, `<CountUp to={98} />` in text. At Gentle and Off the final number shows at once; screen readers only
-  ever get the final number.
+  illustration, `<CountUp to={98} format={…} />` in text (the stat tiles). A new value counts on from the last one;
+  a step under 10 isn't counted at all. At Gentle and Off the final number shows at once; screen readers only ever
+  get the final number.
+- **The workbench's few moments**, each once and each saying what changed: a chart's columns grow up from the
+  baseline one after another the first time it's in view, and a stacked bar fills from the left (`.chart`,
+  `.chart-bar`, `.chart-fill`; a fade at Gentle); a score ring draws round as its number counts; the sidebar's "you
+  are here" bar grows in on arrival (`.nav-mark`); a tracker card that changes stage wears a fading accent ring where
+  it lands (`.moved-flash`, opacity only, so Gentle keeps it).
 - **Bars stay solid:** the sticky header and the phone tab bar are opaque (no see-through, no backdrop blur: page
   text under the labels made them hard to read, and blur over the animated sky costs too much on a phone).
 - `scroll-padding` keeps a focused field clear of the sticky header and the phone tab bar.

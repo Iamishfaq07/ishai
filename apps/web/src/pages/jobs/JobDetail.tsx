@@ -50,7 +50,8 @@ import {
 } from "./JobCard";
 import { useJobsAi } from "./JobsAi";
 import { linkButton, textLink } from "./links";
-import { STATUSES, STATUS_LABEL, STATUS_TONE, jobFacts, matchBasis, postedAgo, safeUrl, shortDate, stillOpenAt } from "./model";
+import { STATUSES, STATUS_LABEL, jobFacts, matchBasis, postedAgo, safeUrl, shortDate, stillOpenAt } from "./model";
+import { StagePill } from "./StagePill";
 import { SafetyCard } from "./SafetyCard";
 import { EditEntry } from "./Tracker";
 import { JOBS_MATCHES, outreachPath } from "./paths";
@@ -363,7 +364,7 @@ function TrackerPanel({
     <Card>
       <h2 className="flex items-center gap-2 font-display text-base font-semibold">
         <BookmarkCheck className="h-4 w-4 text-indigo-500" aria-hidden /> On your tracker
-        <span className={cx("ml-auto rounded-full px-2 py-0.5 text-xs font-medium ring-1", STATUS_TONE[shown.status])}>{STATUS_LABEL[shown.status]}</span>
+        <StagePill status={shown.status} className="ml-auto" />
       </h2>
       <p className="mt-2 flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
         <CalendarIcon className="h-3 w-3 shrink-0" aria-hidden />

@@ -141,7 +141,7 @@ function Tile({ label, value, detail }: { label: string; value: string | null; d
       {value === null ? (
         <p className="mt-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">Not yet</p>
       ) : (
-        <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+        <p className="stat-value mt-1 text-2xl font-semibold">{value}</p>
       )}
       {detail && <p className="mt-0.5 text-xs">{detail}</p>}
     </div>

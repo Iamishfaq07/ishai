@@ -27,7 +27,8 @@ import { AllowanceContext, useResumeAllowance } from "../resume/allowance";
 import { RESUME_AI_HOME, resumePath } from "../resume/paths";
 import { useJobsAi } from "./JobsAi";
 import { linkButton, textLink } from "./links";
-import { STATUS_LABEL, STATUS_TONE, jobAsks, shortDate } from "./model";
+import { jobAsks, shortDate } from "./model";
+import { StagePill } from "./StagePill";
 import { LinkedInPart, MessagesPart, NaukriPart, jobTitle, type OutreachJob } from "./OutreachKit";
 import { jobPath } from "./paths";
 import { PeopleSection } from "./People";
@@ -271,7 +272,7 @@ function JobPicker({ jobId, state, resumeJob, onPick }: { jobId: string | null; 
               {job.place ? ` · ${job.place}` : ""}
             </span>
           </p>
-          {job.status && <span className={cx("mt-2 inline-block rounded-full px-2 py-0.5 text-xs font-medium ring-1", STATUS_TONE[job.status])}>{STATUS_LABEL[job.status]}</span>}
+          {job.status && <StagePill status={job.status} className="mt-2" />}
           {job.asks.length > 0 && (
             <>
               <p className="mt-2.5 text-xs text-zinc-500 dark:text-zinc-400">It asks for</p>

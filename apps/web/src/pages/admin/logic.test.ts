@@ -5,7 +5,6 @@ import {
   auditDetail,
   exportFileName,
   nextSort,
-  niceCeiling,
   plannedRemoval,
   sinceText,
   wholeNumber,
@@ -47,18 +46,6 @@ describe("the list's columns", () => {
     expect(sinceText(new Date(2026, 9, 6, 23, 0).toISOString(), now)).toBe("Yesterday");
     expect(sinceText(new Date(2026, 9, 2, 12, 0).toISOString(), now)).toBe("5 days ago");
     expect(sinceText(new Date(2026, 8, 9, 12, 0).toISOString(), now)).toBe("4 weeks ago");
-  });
-});
-
-describe("the dashboard's charts", () => {
-  it("tops the axis at a round number", () => {
-    expect(niceCeiling(0)).toBe(1);
-    expect(niceCeiling(1)).toBe(1);
-    expect(niceCeiling(3)).toBe(5);
-    expect(niceCeiling(7)).toBe(10);
-    expect(niceCeiling(12)).toBe(20);
-    expect(niceCeiling(140)).toBe(200);
-    expect(niceCeiling(0.4)).toBe(0.5);
   });
 });
 

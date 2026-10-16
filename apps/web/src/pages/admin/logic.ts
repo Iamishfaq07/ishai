@@ -30,16 +30,6 @@ export function nextSort(current: SortState, column: AdminUserSort): SortState {
   return { sort: column, order: column === "email" ? "asc" : "desc" };
 }
 
-/** The top of a bar chart's axis: a round number (1, 2, 5 × 10ⁿ) at or above the biggest value; at least 1. */
-export function niceCeiling(max: number): number {
-  if (!(max > 0)) return 1;
-  const power = 10 ** Math.floor(Math.log10(max));
-  for (const step of [1, 2, 5, 10]) {
-    if (step * power >= max) return step * power;
-  }
-  return 10 * power;
-}
-
 /** "Today", "Yesterday", "3 days ago", "5 weeks ago", or the date, for when an account was last active. */
 export function sinceText(iso: string | null, now: Date = new Date()): string {
   if (!iso) return "Never";

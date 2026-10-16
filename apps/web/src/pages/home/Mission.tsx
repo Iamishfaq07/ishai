@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
-import type { JobTrackerEntry, OrbitSession } from "@orbit/types";
-import { CalendarIcon, CompanyLogo, LoadGate, Target, cx, focusRing } from "@orbit/ui";
+import type { JobStatus, JobTrackerEntry, OrbitSession } from "@orbit/types";
+import { CalendarIcon, CompanyLogo, CountUp, LoadGate, Target, cx, focusRing, useInView } from "@orbit/ui";
 import { Card } from "../../components/ui";
 import { useAsync, type AsyncState } from "../../lib/useAsync";
 import { api } from "../../lib/api";
-import { STATUS_LABEL } from "../jobs/model";
+import { STATUS_LABEL, STATUS_MARK } from "../jobs/model";
 import { missionPath } from "../jobs/mission";
 import { JOBS_MATCHES, JOBS_TRACKER } from "../jobs/paths";
 import { RESUME_AI_HOME, resumePath } from "../resume/paths";
@@ -13,15 +13,24 @@ import { PIPELINE_STAGES, countdown, lastWeek, pipeline, upcoming } from "./dash
 
 const link = cx("rounded text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing);
 
-// Each stage's mark (the tracker's own colours), always next to its name and count: never colour alone.
-const STAGE_DOT: Record<string, string> = {
-  saved: "bg-zinc-400",
-  applied: "bg-indigo-500",
-  interviewing: "bg-sky-500",
-  offer: "bg-emerald-500",
-};
+/**
+ * The pipeline as one bar: each stage's share of what's tracked, in order, 2 px apart. It fills from the left the
+ * first time it's in view (Full motion; a fade at Gentle). The counts below are its legend and its numbers.
+ */
+function StageBar({ stages }: { stages: Record<JobStatus, number> }) {
+  const [ref, seen] = useInView<HTMLDivElement>();
+  return (
+    <div ref={ref} data-shown={seen ? "" : undefined} aria-hidden className="chart mb-3">
+      <div className="chart-marks chart-fill flex h-2 gap-0.5 overflow-hidden rounded-full">
+        {PIPELINE_STAGES.filter((s) => stages[s] > 0).map((s) => (
+          <span key={s} className={cx("h-full", STATUS_MARK[s])} style={{ flexGrow: stages[s] }} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
-/** Applications by stage: four counts, each a link into the tracker, and a thin bar of the same counts. */
+/** Applications by stage: the bar, then four counts (each a link into the tracker), each stage's colour by its name. */
 export function Pipeline({ tracker }: { tracker: AsyncState<JobTrackerEntry[]> }) {
   const entries = tracker.data ?? [];
   const { stages, total } = pipeline(entries);
@@ -45,6 +54,7 @@ export function Pipeline({ tracker }: { tracker: AsyncState<JobTrackerEntry[]> }
           </p>
         ) : (
           <>
+            {shown > 0 && <StageBar stages={stages} />}
             <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {PIPELINE_STAGES.map((s) => (
                 <li key={s}>
@@ -53,23 +63,17 @@ export function Pipeline({ tracker }: { tracker: AsyncState<JobTrackerEntry[]> }
                     className={cx("block rounded-xl border border-zinc-200 px-3 py-2.5 hover:border-indigo-400/50 dark:border-white/10", focusRing)}
                   >
                     <span className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
-                      <span aria-hidden className={cx("h-2 w-2 rounded-full", STAGE_DOT[s])} />
+                      <span aria-hidden className={cx("h-2 w-2 rounded-full", STATUS_MARK[s])} />
                       {STATUS_LABEL[s]}
                     </span>
-                    <span className="mt-1 block font-display text-2xl font-semibold tabular-nums">{stages[s]}</span>
+                    <CountUp to={stages[s]} className="stat-value mt-1 block font-display text-2xl font-semibold" />
                   </Link>
                 </li>
               ))}
             </ul>
-            {shown > 0 && (
-              <div aria-hidden className="mt-3 flex h-1.5 gap-0.5 overflow-hidden rounded-full">
-                {PIPELINE_STAGES.filter((s) => stages[s] > 0).map((s) => (
-                  <span key={s} className={cx("h-full rounded-full", STAGE_DOT[s])} style={{ flexGrow: stages[s] }} />
-                ))}
-              </div>
-            )}
             {stages.rejected > 0 && (
-              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+              <p className="mt-2 flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                <span aria-hidden className={cx("h-1.5 w-1.5 rounded-full", STATUS_MARK.rejected)} />
                 {stages.rejected} closed as "{STATUS_LABEL.rejected.toLowerCase()}".
               </p>
             )}
@@ -144,12 +148,12 @@ export function AtAGlance({
         {mockEnabled && (
           <div>
             <dt className="text-xs text-zinc-600 dark:text-zinc-400">Mock interviews</dt>
-            <dd className="font-display text-2xl font-semibold tabular-nums">{sessions ? week.mocks : "–"}</dd>
+            <dd className="stat-value font-display text-2xl font-semibold">{sessions ? <CountUp to={week.mocks} /> : "–"}</dd>
           </div>
         )}
         <div>
           <dt className="text-xs text-zinc-600 dark:text-zinc-400">Live sessions</dt>
-          <dd className="font-display text-2xl font-semibold tabular-nums">{sessions ? week.lives : "–"}</dd>
+          <dd className="stat-value font-display text-2xl font-semibold">{sessions ? <CountUp to={week.lives} /> : "–"}</dd>
         </div>
       </dl>
       <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-white/10">

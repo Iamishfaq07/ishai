@@ -30,7 +30,8 @@ import { Journey } from "./Journey";
 import { PrepPlanPanel } from "./PrepPlan";
 import { linkButton, textLink } from "./links";
 import { MISSION_STAGES, isSnoozed, requirementTone, snooze, stagesDone } from "./mission";
-import { STATUS_LABEL, STATUS_TONE, practiceLink } from "./model";
+import { practiceLink } from "./model";
+import { StagePill } from "./StagePill";
 import { JOBS_TRACKER, jobPath } from "./paths";
 
 type Tab = "plan" | "fit" | "resume" | "company" | "practice" | "timeline" | "offer";
@@ -156,7 +157,7 @@ function Header({ entry }: { entry: JobTrackerEntry }) {
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <span className={cx("rounded-full px-2.5 py-1 text-xs font-medium ring-1", STATUS_TONE[entry.status])}>{STATUS_LABEL[entry.status]}</span>
+        <StagePill status={entry.status} className="px-2.5 py-1" />
         {entry.live && (
           <Link to={jobPath(entry.listing_id)} className={linkButton("secondary", "sm")}>
             Job page

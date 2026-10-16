@@ -25,14 +25,16 @@ export const STATUS_LABEL: Record<JobStatus, string> = {
   rejected: "Not this time",
 };
 
-/** The tracker column's accent (status colours stay Tailwind's own, docs/DESIGN.md). */
-export const STATUS_TONE: Record<JobStatus, string> = {
-  saved: "bg-zinc-500/10 text-zinc-700 ring-zinc-500/20 dark:text-zinc-300",
-  applied: "bg-indigo-500/10 text-indigo-700 ring-indigo-500/25 dark:text-indigo-300",
-  interviewing: "bg-sky-500/10 text-sky-700 ring-sky-500/25 dark:text-sky-300",
-  // -800: the tint behind it costs emerald-700 its 4.5:1.
-  offer: "bg-emerald-500/10 text-emerald-800 ring-emerald-500/25 dark:text-emerald-300",
-  rejected: "bg-rose-500/10 text-rose-700 ring-rose-500/20 dark:text-rose-300",
+/**
+ * Each stage's colour, as a solid mark: the dot in its pill, a tracker card's edge, its share of the Home pipeline bar.
+ * Fixed stage colours (base.css `--stage-*`), never on text, and always next to the stage's name.
+ */
+export const STATUS_MARK: Record<JobStatus, string> = {
+  saved: "bg-stage-saved",
+  applied: "bg-stage-applied",
+  interviewing: "bg-stage-interviewing",
+  offer: "bg-stage-offer",
+  rejected: "bg-stage-rejected",
 };
 
 export const WORKPLACES: Array<{ id: JobWorkplace; label: string }> = [
