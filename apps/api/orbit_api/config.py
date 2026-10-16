@@ -76,6 +76,14 @@ class Settings(BaseSettings):
     usd_inr_rate: float = Field(88.0, gt=1, validation_alias=AliasChoices("ORBIT_USD_INR"))
     intl_markup: float = Field(1.3, ge=1, le=5, validation_alias=AliasChoices("ORBIT_INTL_MARKUP"))
     razorpay_international: bool = Field(False, validation_alias=AliasChoices("ORBIT_RAZORPAY_INTERNATIONAL"))
+    # PayPal (billing/paypal.py): how buyers outside India pay their dollar prices (a PayPal account, or a card where
+    # PayPal offers it). On when the REST app's client id and secret are set. The webhook id (from the app's webhook
+    # settings) lets the API believe PayPal's webhooks; without it, payments still land on the buyer's return and
+    # through the reconciler. "sandbox" takes no real money; "live" does.
+    paypal_client_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_PAYPAL_CLIENT_ID"))
+    paypal_client_secret: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_PAYPAL_CLIENT_SECRET"))
+    paypal_webhook_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_PAYPAL_WEBHOOK_ID"))
+    paypal_env: Literal["sandbox", "live"] = Field("sandbox", validation_alias=AliasChoices("ORBIT_PAYPAL_ENV"))
     # Career Evidence Vault (evidence/routes.py): off until switched on; while off its API answers 404 and live
     # sessions don't read it.
     evidence_vault: bool = Field(False, validation_alias=AliasChoices("ORBIT_EVIDENCE_VAULT"))
@@ -271,7 +279,8 @@ class Settings(BaseSettings):
             raise ValueError("ORBIT_UPI_ID must look like name@bank (for example yourname@okicici)")
         return v
 
-    @field_validator("razorpay_key_id", "razorpay_key_secret", "razorpay_webhook_secret", "proxy_secret", mode="before")
+    @field_validator("razorpay_key_id", "razorpay_key_secret", "razorpay_webhook_secret", "proxy_secret",
+                     "paypal_client_id", "paypal_client_secret", "paypal_webhook_id", mode="before")
     @classmethod
     def _razorpay_trimmed(cls, v: object) -> object:
         # Keys pasted into a dashboard often carry a space or line break, which Razorpay answers with a 401.

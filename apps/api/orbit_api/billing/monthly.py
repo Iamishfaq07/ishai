@@ -74,11 +74,11 @@ def monthly_plans() -> dict[str, MonthlyPlan]:
 
 def public_monthly() -> list[dict[str, Any]]:
     """For the pricing pages: each plan with what its month includes."""
-    from orbit_api.billing.packs import checkout
+    from orbit_api.billing.packs import abroad_payable, checkout
     from orbit_api.entitlements import plan_named
 
     how = checkout()
-    abroad = how == "razorpay" and get_settings().razorpay_international
+    abroad = abroad_payable(how)
     out = []
     for m in monthly_plans().values():
         p = plan_named(m.plan)

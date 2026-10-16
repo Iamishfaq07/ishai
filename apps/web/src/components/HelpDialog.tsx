@@ -45,9 +45,11 @@ function Question({ q, children }: { q: string; children: ReactNode }) {
 
 export default function HelpDialog({ open, onClose, onSearch }: { open: boolean; onClose: () => void; onSearch?: () => void }) {
   const welcome = useWelcomeGrant();
-  // Same cache key as Plan & billing. Through Razorpay, credits land by themselves: no UTR to look for.
+  // Same cache key as Plan & billing. Through Razorpay (or PayPal, abroad) credits land by themselves: no UTR.
   const packs = useAsync(() => api.listPacks(), [], "packs");
-  const razorpay = packs.data?.[0]?.checkout === "razorpay";
+  const how = packs.data?.[0]?.checkout;
+  const automatic = how === "razorpay" || how === "paypal";
+  const gateway = how === "paypal" ? "PayPal" : "Razorpay";
   const whatsapp = whatsappLink("Hi Orbit, I need help with: ");
   const mail = mailLink("Help with Orbit");
   const mod = isMacPlatform() ? "⌘" : "Ctrl";
@@ -105,11 +107,11 @@ export default function HelpDialog({ open, onClose, onSearch }: { open: boolean;
                 tracker, and a few AI fit checks a day.
               </p>
             </Question>
-            {razorpay ? (
+            {automatic ? (
               <Question q="I paid. When do my credits arrive?">
                 <p>
-                  As soon as Razorpay confirms the payment, usually within seconds (a bank can take a few minutes; it
-                  says "Confirming with Razorpay" meanwhile). They show on{" "}
+                  As soon as {gateway} confirms the payment, usually within seconds (it can take a few minutes; it
+                  says "Confirming with {gateway}" meanwhile). They show on{" "}
                   <Link to="/billing" onClick={onClose} className="font-medium text-indigo-700 underline dark:text-indigo-300">
                     Plan &amp; billing
                   </Link>
@@ -167,7 +169,7 @@ export default function HelpDialog({ open, onClose, onSearch }: { open: boolean;
             Words you'll see
           </h3>
           <dl className="mt-3 space-y-3 text-sm">
-            {(razorpay ? GLOSSARY : [...GLOSSARY, UTR_TERM]).map(([term, meaning]) => (
+            {(automatic ? GLOSSARY : [...GLOSSARY, UTR_TERM]).map(([term, meaning]) => (
               <div key={term}>
                 <dt className="font-medium">{term}</dt>
                 <dd className="text-zinc-600 dark:text-zinc-300">{meaning}</dd>

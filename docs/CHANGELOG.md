@@ -1,5 +1,17 @@
 # Implementation log
 
+## PayPal for buyers outside India (2026-10-17)
+
+- **Outside India, plans and packs are paid in US dollars through PayPal**: a PayPal account, or a card where PayPal
+  offers guest checkout. Buy goes to PayPal's own page, and the buyer comes back to Plan & billing with it added.
+  Backing out at PayPal says nothing was charged. Buyers in India keep Razorpay (or UPI) in rupees.
+- Credited only when PayPal says the capture COMPLETED for exactly the order's amount, once: on the buyer's return,
+  or by PayPal's webhook or the reconciler when they approved and closed the tab. A pending capture shows as
+  "Confirming with PayPal"; refunds and chargebacks are recorded, and the credits are kept.
+- Off until `ORBIT_PAYPAL_CLIENT_ID` and `ORBIT_PAYPAL_CLIENT_SECRET` are set (`ORBIT_PAYPAL_ENV` sandbox or live,
+  `ORBIT_PAYPAL_WEBHOOK_ID` for webhooks). Set-up steps in docs/BILLING.md.
+- Payment history and the admin's Payments show a dollar refund in dollars (it said ₹).
+
 ## Two-step sign-in (2026-10-16)
 
 - **Settings → Two-step sign-in:** scan a QR code with an authenticator app (Google Authenticator, Microsoft

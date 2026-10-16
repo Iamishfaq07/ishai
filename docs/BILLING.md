@@ -65,13 +65,14 @@ An order keeps what the pack gave when it was bought, so changing packs never ch
   - Without that header (the desktop app, a direct caller) it uses the account's saved country, then India.
   - A VPN into India shows rupees, but those orders are then paid with Indian methods.
 - **Payments:**
-  - Dollar orders go through Razorpay in USD. `payments.currency` is "USD", `amount_minor` holds cents, and
-    `amount_inr` is the rupee equivalent for reports.
-  - UPI is rupees only, so it is refused for buyers outside India.
+  - Dollar orders go through **PayPal** when it's set up (below), else through Razorpay in USD. `payments.currency`
+    is "USD", `amount_minor` holds cents, and `amount_inr` is the rupee equivalent for reports.
+  - UPI is rupees only, so it is refused for buyers outside India. PayPal is dollars only, so it is refused for
+    buyers in India (a PayPal India account can't take payments from India anyway).
 - **Turning on dollar checkout (OWNER ACTION REQUIRED):**
-  1. Razorpay's international card payments are approved on your account, and `ORBIT_RAZORPAY_INTERNATIONAL=true`
-     is set on Render. Until then, dollar prices show with their Buy buttons off, and the API refuses a dollar
-     order (409).
+  1. A way to take dollars: PayPal set up (the next section), or Razorpay's international card payments approved
+     on your account with `ORBIT_RAZORPAY_INTERNATIONAL=true` on Render. Until one of them is, dollar prices show
+     with their Buy buttons off, and the API refuses a dollar order (409).
   2. The web Worker has the same secret as Render's `ORBIT_PROXY_SECRET`:
      `pnpm dlx wrangler@4 secret put PROXY_SECRET --name orbit`. Check with
      `pnpm dlx wrangler@4 secret list --name orbit`. Without it, nobody is ever shown dollars on the website.
@@ -190,6 +191,38 @@ Set-up, in the Razorpay dashboard:
   India that cards from other countries are coming soon, rather than promising a card that would be declined.
 
 Razorpay payments show in Settings → Payments as approved, with nothing to check.
+
+## Payments: PayPal (buyers outside India, in US dollars)
+With `ORBIT_PAYPAL_CLIENT_ID` and `ORBIT_PAYPAL_CLIENT_SECRET` set, every dollar price (packs and plans) is bought
+through PayPal (`apps/api/orbit_api/billing/paypal.py`, Orders v2). Buyers in India keep Razorpay or UPI in rupees.
+1. **Buy** makes a PayPal order for the price (`POST /v1/billing/paypal/orders`), kept as a payment
+   (`method: paypal`). Its invoice id is the payment's ORB… reference, so PayPal refuses to take one order twice.
+2. **The buyer approves it on PayPal's own page** (their PayPal account, or a card where PayPal offers guest
+   checkout) and PayPal sends them back to `/billing?paypal=return&token=<order id>`. Backing out returns to
+   `/billing?paypal=cancel`: nothing is charged.
+3. **On the way back the API captures the order** (`POST /v1/billing/paypal/capture`) and adds what was bought only
+   when PayPal says the capture is COMPLETED for exactly the order's amount and currency. A capture PayPal holds as
+   PENDING shows as "Confirming with PayPal" until it completes.
+4. **If the buyer approved and never came back**, the webhook (`CHECKOUT.ORDER.APPROVED`) or the reconciler (every
+   few minutes, the same one as Razorpay's) captures it. `PAYMENT.CAPTURE.COMPLETED` credits a pending capture;
+   `PAYMENT.CAPTURE.REFUNDED` and `.REVERSED` (a chargeback) are recorded like Razorpay refunds, with the credits
+   kept. Webhooks are believed only when PayPal's `verify-webhook-signature` says SUCCESS for the event as received.
+
+Set-up (OWNER ACTION REQUIRED), at developer.paypal.com with your PayPal Business login:
+- **Apps & Credentials → Create App** (type Merchant), first under **Sandbox** to try it with PayPal's test buyers,
+  then under **Live**. The app's Client ID and Secret go in Render as `ORBIT_PAYPAL_CLIENT_ID` and
+  `ORBIT_PAYPAL_CLIENT_SECRET`, with `ORBIT_PAYPAL_ENV` = `sandbox` or `live` (one app, the same mode as its keys).
+- **The app → Webhooks → Add Webhook:** URL `https://orbit-api-sg.onrender.com/v1/billing/paypal/webhook`, events
+  *Checkout order approved*, *Payment capture completed*, *Payment capture pending*, *Payment capture refunded* and
+  *Payment capture reversed*. PayPal then shows the webhook's ID: it goes in `ORBIT_PAYPAL_WEBHOOK_ID`. Without it
+  webhooks are refused (logged at startup), and payments still land on the buyer's return or through the reconciler.
+- **The PayPal Business account (India):** it can only take payments from outside India, which is exactly who it's
+  offered to. PayPal asks Indian accounts for a purpose code for what's sold (software or services) and moves the
+  balance to your bank account; check both in the account's settings.
+- **Guest card checkout:** in the account settings, *Website payments → PayPal account optional* lets buyers pay by
+  card without a PayPal account, where PayPal offers it.
+
+PayPal payments show in Settings → Payments as approved, with nothing to check.
 
 ## Payments: UPI, checked by the admin (when Razorpay isn't set up)
 No payment gateway: people pay `ORBIT_UPI_ID` (shown as `ORBIT_UPI_NAME`) from any UPI app, and the admin confirms

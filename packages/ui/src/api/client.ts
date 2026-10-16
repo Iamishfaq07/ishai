@@ -48,6 +48,7 @@ import type {
   CoverLetterTone,
   CreditPack,
   MonthlyPlan,
+  PaypalCheckout,
   RazorpayCheckout,
   RazorpayPaid,
   LinkedInProfile,
@@ -765,6 +766,12 @@ export function createApiClient(options: ApiClientOptions) {
       json<RazorpayCheckout>("/v1/billing/razorpay/orders", { method: "POST", body: body({ pack }) }),
     verifyRazorpay: (paid: RazorpayPaid) =>
       json<UpiOrder>("/v1/billing/razorpay/verify", { method: "POST", body: body(paid) }),
+    /** PayPal (outside India): an order whose approval page the buyer is sent to; then, back from PayPal, its
+     *  capture (credited only on PayPal's word that the money was taken). */
+    createPaypalOrder: (pack: string) =>
+      json<PaypalCheckout>("/v1/billing/paypal/orders", { method: "POST", body: body({ pack }) }),
+    capturePaypal: (orderId: string) =>
+      json<UpiOrder>("/v1/billing/paypal/capture", { method: "POST", body: body({ order_id: orderId }) }),
     /** "I've paid": the 12-digit UTR from the UPI app, for the admin to check. */
     submitUtr: (orderId: string, utr: string) =>
       json<UpiOrder>(`/v1/billing/upi/orders/${encodeURIComponent(orderId)}/utr`, {

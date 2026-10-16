@@ -86,8 +86,15 @@ def checkout() -> str | None:
     return "upi" if get_settings().upi_id else None
 
 
+def abroad_payable(how: str | None) -> bool:
+    """Buyers outside India can pay: PayPal is set up, or Razorpay takes their cards."""
+    from orbit_api.billing import paypal
+
+    return paypal.configured() or (how == "razorpay" and get_settings().razorpay_international)
+
+
 def public_packs() -> list[dict[str, Any]]:
     how = checkout()
-    abroad = how == "razorpay" and get_settings().razorpay_international
+    abroad = abroad_payable(how)
     return [{**asdict(p), "total_minutes": p.total_minutes, "buyable": how is not None, "checkout": how,
              "international": abroad} for p in packs().values()]
