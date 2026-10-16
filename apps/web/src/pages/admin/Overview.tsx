@@ -27,6 +27,17 @@ export function AdminOverview({ version = 0 }: { version?: number }) {
           </p>
         </div>
       )}
+      {s?.warnings?.includes("admin_two_factor") && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
+          <p>
+            <span className="font-semibold">Turn on two-step sign-in for this account.</span> It can approve payments and change other accounts, so a
+            stolen password shouldn't be enough to get in.
+          </p>
+          <Link to="/settings#two-step" className={cx("shrink-0 rounded font-medium underline", focusRing)}>
+            Set it up
+          </Link>
+        </div>
+      )}
       <StatTiles s={s} />
       <div className="grid gap-3 md:grid-cols-2">
         <DailyBars title="Sign-ups per day" data={s?.signups} unit={(n) => `${count(n)} sign-up${n === 1 ? "" : "s"}`} total={(n) => `${count(n)} in ${s?.days ?? 30} days`} />

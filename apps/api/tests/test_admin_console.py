@@ -590,3 +590,16 @@ def test_session_rows_stop_when_suspended_even_without_a_socket(console: Any) ->
     ended = _db(client, row)
     assert ended.status == "ended" and ended.carryover is None  # nothing left to reconnect to
     assert ended.ended_at is not None
+
+
+def test_the_dashboard_asks_the_admin_to_turn_on_two_step_sign_in(console: Any) -> None:
+    import time
+
+    from orbit_api.auth.two_factor import code_at
+
+    client, admin, _ = console
+    assert "admin_two_factor" in client.get("/v1/admin/stats", headers=admin).json()["warnings"]
+    secret = client.post("/v1/auth/2fa/setup", headers=admin, json={"password": PASSWORD}).json()["secret"]
+    on = client.post("/v1/auth/2fa/enable", headers=admin, json={"code": code_at(secret, int(time.time() // 30))})
+    assert on.status_code == 200, on.text
+    assert "admin_two_factor" not in client.get("/v1/admin/stats", headers=admin).json()["warnings"]

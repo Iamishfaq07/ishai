@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Copy, KeyRound, LoadGate, QrCode, confirmDialog, toast } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input } from "../components/ui";
 import { api } from "../lib/api";
@@ -18,6 +18,13 @@ export function TwoFactorCard() {
   const [step, setStep] = useState<Step>({ kind: "idle" });
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
+  // The admin dashboard links here as /settings#two-step: bring the card into view once its status is in.
+  const loaded = Boolean(status.data);
+  useEffect(() => {
+    if (loaded && window.location.hash === "#two-step") {
+      document.getElementById("two-step")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [loaded]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const hasPassword = user?.has_password !== false;
