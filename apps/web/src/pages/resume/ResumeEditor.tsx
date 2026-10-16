@@ -1519,10 +1519,11 @@ function ScorePanel({
         {fixable > 0 && (
           <p className="-mt-1 mb-3 text-xs text-zinc-500 dark:text-zinc-400">
             Rewrites every flagged line, adds what's missing, then checks the score again. One resume credit for the whole
-            resume; fixes that need no AI are free. Anything not in your resume yet is shown for you to keep or skip.
+            resume; fixing a single check costs only a fraction of one, and fixes that need no AI are free. Anything not
+            in your resume yet is shown for you to keep or skip.
           </p>
         )}
-        {fixable > 0 && <AiCostNote className="-mt-2 mb-3" />}
+        {fixable > 0 && <AiCostNote fix className="-mt-2 mb-3" />}
         <div className="mb-3 empty:hidden">{result}</div>
         <ul className="space-y-2">
           {failed.map((c) => (

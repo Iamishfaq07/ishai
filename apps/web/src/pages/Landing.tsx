@@ -322,7 +322,8 @@ function Pricing({ packs, welcome, stats }: { packs: CreditPack[] | null; welcom
               ["Job matches, search links to other job sites, the application tracker", "Free"],
               ["An AI fit check for a job", stats ? `Free, ${stats.fit_daily} a day` : "Free, a few a day"],
               ["A practice question with instant feedback", "Free, no account needed"],
-              ["An AI action in Resume AI or Outreach: import, rewrite, tailor, cover letter, a message", "1 AI credit each"],
+              ["An AI action in Resume AI or Outreach: import, tailor, whole-resume rewrite, cover letter, a message", "1 AI credit each"],
+              ["A single AI fix in Resume AI: one ATS check, one section or line", "1/5 of an AI credit"],
               ["A mock interview or a live session", "Interview minutes, by the minute"],
             ] as Array<[string, string]>).map(([what, cost]) => (
               <tr key={what}>

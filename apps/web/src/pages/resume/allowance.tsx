@@ -5,8 +5,9 @@ import { ApiError, Crown, Sparkles, cx, focusRing } from "@orbit/ui";
 import { useBackend } from "./backend";
 
 /**
- * The resume AI's credits. On the Free plan each AI action (import, rewrite, tailoring, cover letter) spends one
- * resume credit: the welcome credit, then credits from a pack. The server enforces it (`402 upgrade_required`) and
+ * The resume AI's credits. On the Free plan each AI action (import, tailoring, cover letter, a whole-resume rewrite)
+ * spends one resume credit: the welcome credit, then credits from a pack. A single fix (one ATS check, one section)
+ * costs a fraction: one credit covers `fixes_per_credit` of them. The server enforces it (`402 upgrade_required`) and
  * says what's left (`/allowance`); the editor shows it, offers a pack, and refreshes it after each AI call.
  */
 export interface AllowanceState {
@@ -58,17 +59,28 @@ export function UpgradeLink({ className, children }: { className?: string; child
   );
 }
 
-/** What an AI action costs right now, for the line under AI buttons. */
-export function AiCostNote({ className }: { className?: string }) {
+/** How many single AI fixes one credit covers (1 on an older server). */
+export const fixesPerCredit = (a: ResumeAiAllowance | null): number => Math.max(1, a?.fixes_per_credit ?? 1);
+
+/** Single AI fixes this account can still make: the ones already paid for, plus what its credits cover. */
+export function fixesLeft(a: ResumeAiAllowance): number {
+  return (a.fixes_left ?? 0) + a.credits_left * fixesPerCredit(a);
+}
+
+/** What an AI action costs right now, for the line under AI buttons. `fix`: a single fix (a fraction of a credit). */
+export function AiCostNote({ className, fix = false }: { className?: string; fix?: boolean }) {
   const { allowance } = useAllowance();
   if (!allowance || allowance.unlimited) return null;
-  return (
-    <p className={cx("text-xs text-zinc-500 dark:text-zinc-400", className)}>
-      {allowance.credits_left > 0
-        ? `Uses 1 resume credit. You have ${allowance.credits_left}.`
-        : "You're out of resume credits. Fixes that need no AI (skills, dates) stay free."}
-    </p>
-  );
+  const per = fixesPerCredit(allowance);
+  let text: string;
+  if (fix && per > 1 && fixesLeft(allowance) > 0) {
+    text = `Each AI fix uses 1/${per} of a resume credit. You have ${fixesLeft(allowance)} fix${fixesLeft(allowance) === 1 ? "" : "es"} left.`;
+  } else if (allowance.credits_left > 0) {
+    text = `Uses 1 resume credit. You have ${allowance.credits_left}.`;
+  } else {
+    text = "You're out of resume credits. Fixes that need no AI (skills, dates) stay free.";
+  }
+  return <p className={cx("text-xs text-zinc-500 dark:text-zinc-400", className)}>{text}</p>;
 }
 
 /** The editor's banner: resume credits left, and what a pack adds. Hidden on plans with unlimited resume AI. */
@@ -88,7 +100,8 @@ export function AllowanceBanner() {
           <span className="sm:hidden"> AI actions use one; the rest is free.</span>
           <span className="hidden sm:inline">
             {" "}
-            Each AI import, rewrite, tailoring, cover letter, profile or message uses one; typing, the ATS score and downloads are free.
+            Each AI import, tailoring, cover letter, whole-resume rewrite, profile or message uses one
+            {fixesPerCredit(allowance) > 1 ? `, and one covers ${fixesPerCredit(allowance)} single AI fixes` : ""}; typing, the ATS score and downloads are free.
             {offer && ` The ${offer.label} pack adds ${offer.resume_credits} credits${offer.interview_minutes ? ` and ${offer.interview_minutes} interview minutes` : ""} for ${priceText(offer.price_inr)}, and they never expire.`}
           </span>
         </span>
@@ -114,7 +127,8 @@ export function AllowanceBanner() {
         <strong>
           {left <= 0 ? "You're out of resume credits." : `${left} resume credit${left === 1 ? "" : "s"} left.`}
         </strong>{" "}
-        Each AI import, rewrite, tailoring, cover letter, profile or message uses one; typing, the ATS score and downloads are free.
+        Each AI import, tailoring, cover letter, whole-resume rewrite, profile or message uses one
+        {fixesPerCredit(allowance) > 1 ? `, and one covers ${fixesPerCredit(allowance)} single AI fixes` : ""}; typing, the ATS score and downloads are free.
         {offer && ` The ${offer.label} pack adds ${offer.resume_credits} credits${offer.interview_minutes ? ` and ${offer.interview_minutes} interview minutes` : ""} for ${priceText(offer.price_inr)}, and they never expire.`}
       </span>
       <UpgradeLink className="shrink-0" />

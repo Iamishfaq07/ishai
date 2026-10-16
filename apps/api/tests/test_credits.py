@@ -163,6 +163,37 @@ def test_a_failed_ai_call_gives_the_credit_back(client: TestClient, enforce: Non
     assert client.post("/v1/resumes/cover-letter", headers=h, json=_letter()).status_code == 200
 
 
+def test_one_credit_covers_several_single_fixes(client: TestClient, enforce: None,
+                                              monkeypatch: pytest.MonkeyPatch) -> None:
+    from orbit_api.resumes import routes
+
+    h = _signup(client, _new_ip())
+    fix = {"data": strong_resume().model_dump(mode="json"), "focus": "basics.summary"}
+    per = get_settings().resume_fixes_per_credit
+    assert per == 5 and client.get("/v1/resumes/allowance", headers=h).json()["fixes_per_credit"] == 5
+
+    from orbit_api.providers.llm.mock import MockLLMProvider
+
+    class Down(MockLLMProvider):
+        async def generate(self, request: Any) -> Any:
+            raise LLMError("http_503", "down", retryable=True)
+
+    with monkeypatch.context() as m:  # a failed fix spends nothing, the prepaid fixes included
+        m.setattr(routes, "get_llm_provider", lambda: Down())
+        assert client.post("/v1/resumes/suggest", headers=h, json=fix).status_code == 503
+    a = client.get("/v1/resumes/allowance", headers=h).json()
+    assert (a["credits_left"], a["fixes_left"]) == (1, 0)
+
+    for done in range(1, per + 1):
+        r = client.post("/v1/resumes/suggest", headers=h, json=fix)
+        assert r.status_code == 200, r.text
+        a = client.get("/v1/resumes/allowance", headers=h).json()
+        assert (a["credits_left"], a["fixes_left"]) == (0, per - done)  # the first fix spent the credit
+    assert client.post("/v1/resumes/suggest", headers=h, json=fix).status_code == 402
+    # Prepaid fixes don't pay for a big action: a cover letter still needs a whole credit.
+    assert client.post("/v1/resumes/cover-letter", headers=h, json=_letter()).status_code == 402
+
+
 def test_there_is_no_signed_out_resume_maker(client: TestClient) -> None:
     client.cookies.clear()
     for path in ("/v1/resume-maker/score", "/v1/resume-maker/suggest", "/v1/resume-maker/allowance"):

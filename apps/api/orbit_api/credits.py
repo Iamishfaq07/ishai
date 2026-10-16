@@ -35,7 +35,8 @@ from orbit_api.models import CreditEntry, UsageEvent, User
 
 log = logging.getLogger(__name__)
 
-Kind = Literal["resume", "interview_seconds"]
+# "resume_fix": single AI fixes already paid for: a resume credit spent on a fix buys a few (resumes/allowance.py).
+Kind = Literal["resume", "interview_seconds", "resume_fix"]
 INTERVIEW_METRICS = ("live_seconds", "mock_seconds")
 # `usage.pool` of interview time spent from the credits (entitlements.usage_pool).
 POOL = "credits"
@@ -122,9 +123,9 @@ async def never_credited(db: AsyncSession, user_id: str) -> bool:
     return not await db.scalar(select(exists().where(CreditEntry.user_id == user_id)))
 
 
-async def resume_balance(db: AsyncSession, user_id: str) -> int:
+async def resume_balance(db: AsyncSession, user_id: str, kind: Kind = "resume") -> int:
     total = await db.scalar(select(func.coalesce(func.sum(CreditEntry.amount), 0)).where(
-        CreditEntry.user_id == user_id, CreditEntry.kind == "resume"))
+        CreditEntry.user_id == user_id, CreditEntry.kind == kind))
     return max(int(total or 0), 0)
 
 

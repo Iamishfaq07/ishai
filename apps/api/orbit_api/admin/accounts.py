@@ -309,12 +309,16 @@ def about_account(user_id: str, payment_ids: list[str]) -> Any:
     return or_(starts(user_id), *(starts(pid) for pid in payment_ids))
 
 
+# Prepaid single fixes (resumes/allowance.py) are bookkeeping inside a spent credit: not ledger lines of their own.
+_LEDGER_KINDS = CreditEntry.kind != "resume_fix"
+
+
 async def _detail(db: AsyncSession, u: User, admin: User) -> UserDetailOut:
     row = (await admin_rows(db, [u]))[0]
     ledger = [LedgerItem(id=e.id, at=_aware(e.created_at), kind="resume" if e.kind == "resume" else "interview_seconds",
                          amount=e.amount, reason=e.reason, text=credit_text(e), amount_text=credit_amount(e),
                          note=e.note, payment_id=e.payment_id)
-              for e in (await db.scalars(select(CreditEntry).where(CreditEntry.user_id == u.id)
+              for e in (await db.scalars(select(CreditEntry).where(CreditEntry.user_id == u.id, _LEDGER_KINDS)
                                          .order_by(CreditEntry.created_at.desc()).limit(LEDGER_MAX))).all()]
     used = {sid: float(total or 0) for sid, total in (await db.execute(
         select(UsageEvent.session_id, func.sum(UsageEvent.quantity))

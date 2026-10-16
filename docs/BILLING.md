@@ -8,6 +8,11 @@ or over UPI) for more. Credits never expire and nothing renews.
   socket every heartbeat, and a session ends cleanly when the balance runs out.
 - **Resume AI credits:** one per AI action in Resume AI: an import, a rewrite, tailoring, a cover letter, interview
   questions, a profile or a message.
+  A **single AI fix** costs a fraction of a credit: one ATS check fixed, or one section or line rewritten.
+  `ORBIT_RESUME_FIXES_PER_CREDIT` (default 5) fixes share one credit. The first fix spends the credit and leaves the
+  rest prepaid (the `resume_fix` ledger kind, hidden from the admin's ledger), and the next fixes use those first.
+  "Fix everything" on the whole resume is still one credit. The landing page's price table says "1/5": change it there
+  if you change the setting.
   Typing, the ATS score, templates, PDF/Word downloads, and fixes worked out without the AI (dates, skills the resume
   already proves) are free. A failed AI call gives its credit back.
 

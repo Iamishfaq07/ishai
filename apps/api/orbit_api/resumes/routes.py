@@ -527,6 +527,8 @@ async def _suggest(db: AsyncSession, user: User | None, body: SuggestIn, allowan
 async def suggest(body: SuggestIn, user: Annotated[User, Depends(require_verified_email)],
                   db: Annotated[AsyncSession, Depends(get_db)],
                   allowance: Annotated[Allowance, Depends(account_allowance)]) -> SuggestOut:
+    if body.mode == "improve" and (body.focus or body.check):
+        allowance.as_fix()  # one section, line or ATS check: a fraction of a credit
     return await _spend(allowance, _suggest(db, user, body, allowance))
 
 
@@ -544,6 +546,8 @@ async def fix(body: autofix.FixIn, user: Annotated[User, Depends(require_verifie
         # Answers to the questions a fix asked: part of that fix, already paid for. Only those lines.
         body = body.model_copy(update={"check": "quantified"})
         allowance = Allowance(db, user, unlimited=True)
+    elif body.check:
+        allowance.as_fix()  # one ATS check: a fraction of a credit ("fix everything" is a whole rewrite: one credit)
 
     async def run() -> autofix.FixOut:
         out, used_ai = await autofix.fix_resume(body, user, allowance.can_spend,
