@@ -7,11 +7,13 @@ the address comes from.
 
 import hmac
 import ipaddress
+import itertools
 import time
 import weakref
 from collections import deque
 from collections.abc import Awaitable, Callable
 from typing import Annotated
+from urllib.parse import urlsplit
 
 from fastapi import Depends, HTTPException, Request, status
 from starlette.requests import HTTPConnection
@@ -117,6 +119,39 @@ class SlidingWindow(TokenBucket):
 
 PROXY_SECRET_HEADER = "x-orbit-proxy-secret"  # noqa: S105 - a header name, not a secret
 CLIENT_IP_HEADER = "x-orbit-client-ip"
+WORKER_HEADER = "cf-worker"  # Cloudflare stamps it on every request a Worker makes: the zone that owns the Worker
+# Which came last: a request with the secret, or one from our site's Worker without it (an ever-rising count).
+_order = itertools.count(1)
+_last_signed = 0
+_last_unsigned_site = 0
+
+
+def _from_our_site(request: HTTPConnection) -> bool:
+    """A Worker in the web app's own zone made this request (branch previews run elsewhere, without the secret)."""
+    zone = request.headers.get(WORKER_HEADER, "").strip().lower()
+    host = (urlsplit(get_settings().web_url).hostname or "").lower()
+    return bool(zone) and (host == zone or host.endswith(f".{zone}"))
+
+
+def proxy_signed(request: HTTPConnection) -> bool:
+    """The request carries the web Worker's proxy secret, so its client IP and country can be believed."""
+    global _last_signed, _last_unsigned_site
+    secret = get_settings().proxy_secret
+    if secret is None:
+        return False
+    sent = request.headers.get(PROXY_SECRET_HEADER, "")
+    if sent and hmac.compare_digest(sent.encode(), secret.get_secret_value().encode()):
+        _last_signed = next(_order)
+        return True
+    if _from_our_site(request):
+        _last_unsigned_site = next(_order)
+    return False
+
+
+def site_worker_unsigned() -> bool:
+    """The web Worker's latest request came without the proxy secret: it has no PROXY_SECRET (or a different one),
+    so visitors' IPs and countries are unknown here (admin/overview.py warns)."""
+    return _last_unsigned_site > _last_signed
 
 
 def _valid_ip(value: str | None) -> str | None:
@@ -138,11 +173,9 @@ def client_ip(request: HTTPConnection) -> str:
     web visitors, but a direct caller can spoof it, so the server warns at startup in production.
     """
     fallback = request.client.host if request.client else "unknown"
-    secret = get_settings().proxy_secret
-    if secret is None:
+    if get_settings().proxy_secret is None:
         return fallback
-    sent = request.headers.get(PROXY_SECRET_HEADER, "")
-    if sent and hmac.compare_digest(sent.encode(), secret.get_secret_value().encode()):
+    if proxy_signed(request):
         return _valid_ip(request.headers.get(CLIENT_IP_HEADER)) or fallback
     hops = [h for h in ",".join(request.headers.getlist("x-forwarded-for")).split(",") if h.strip()]
     return (_valid_ip(hops[-1]) if hops else None) or fallback

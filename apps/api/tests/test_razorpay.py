@@ -270,3 +270,15 @@ def test_outside_india_prices_and_charges_are_in_dollars_30_percent_higher(
     # UPI is rupees, for India only.
     upi = client.post("/v1/billing/upi/orders", headers=h, json={"pack": "starter"})
     assert upi.status_code in (409, 503)
+
+
+def test_a_dollar_order_is_refused_until_international_cards_are_on(
+        client: TestClient, rzp: list[httpx.Request], monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(get_settings(), "razorpay_international", False)
+    h = {**_signup(client, _new_ip()), "X-Orbit-Client-Country": "US"}
+    asked = len(rzp)
+    r = client.post("/v1/billing/razorpay/orders", headers=h, json={"pack": "starter"})
+    assert r.status_code == 409 and len(rzp) == asked  # Razorpay was never asked for a dollar order
+    india = {**h, "X-Orbit-Client-Country": "IN"}
+    o = client.post("/v1/billing/razorpay/orders", headers=india, json={"pack": "starter"})
+    assert o.status_code == 201 and o.json()["currency"] == "INR"

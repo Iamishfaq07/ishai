@@ -235,7 +235,9 @@ export function BillingPage() {
         setOrder(await api.createUpiOrder(p.id));
       }
     } catch (err) {
-      if (err instanceof InternationalPaymentError && country !== "IN" && isPack) setInternationalPack(p);
+      // The sheet offers a rupee checkout and a launch-access request: only true of a rupee order. A dollar order
+      // is charged in dollars whatever the sheet says, so its card's failure is shown as it is.
+      if (err instanceof InternationalPaymentError && country !== "IN" && isPack && p.currency !== "USD") setInternationalPack(p);
       else setBuyError(errorText(err));
     } finally {
       setStarting(false);

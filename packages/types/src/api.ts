@@ -1173,7 +1173,8 @@ export interface AdminStats {
   revenue_month_inr: number;
   revenue_total_inr: number;
   payments_waiting: number;
-  /** Server settings to fix, as codes: "proxy_secret" (ORBIT_PROXY_SECRET missing in production). */
+  /** Server settings to fix, as codes: "proxy_secret" (ORBIT_PROXY_SECRET missing in production), "proxy_unsigned"
+   * (the web Worker's requests arrive without it: no visitor country or IP). */
   warnings?: string[];
 }
 

@@ -586,3 +586,29 @@ def test_readiness_and_the_admin_flag_a_missing_proxy_secret(client: TestClient,
     r = client.get("/ready")
     assert r.status_code == 200 and r.json()["checks"]["proxy_secret"] == "ok"
     assert setup_warnings() == []
+
+
+def test_the_admin_is_told_when_the_web_worker_sends_no_proxy_secret(client: TestClient,
+                                                                       monkeypatch: pytest.MonkeyPatch) -> None:
+    from orbit_api import ratelimit
+    from orbit_api.admin.overview import setup_warnings
+
+    monkeypatch.setattr(ratelimit, "_last_signed", 0)
+    monkeypatch.setattr(ratelimit, "_last_unsigned_site", 0)
+    monkeypatch.setattr(get_settings(), "env", "production")
+    monkeypatch.setattr(get_settings(), "proxy_secret", SecretStr(PROXY))
+    monkeypatch.setattr(get_settings(), "web_url", "https://orbitanswer.com")
+    worker = {"CF-Worker": "orbitanswer.com", "X-Orbit-Client-Country": "US"}
+
+    def packs(headers: dict[str, str]) -> str:
+        return str(client.get("/v1/billing/packs", headers=headers).json()[0]["currency"])
+
+    # A direct caller without the secret is any outside caller; the Worker with it is believed.
+    assert packs({"X-Orbit-Client-Country": "US"}) == "INR" and setup_warnings() == []
+    assert packs({**worker, "X-Orbit-Proxy-Secret": PROXY}) == "USD" and setup_warnings() == []
+    # The Worker without it (no PROXY_SECRET there): the visitor abroad is priced as in India, and the admin hears.
+    assert packs(worker) == "INR" and setup_warnings() == ["proxy_unsigned"]
+    # Fixed (the secret arrives again): the warning goes at once, without a restart.
+    assert packs({**worker, "X-Orbit-Proxy-Secret": PROXY}) == "USD" and setup_warnings() == []
+    # A branch preview runs on workers.dev without the secret by design: not a warning.
+    assert packs({**worker, "CF-Worker": "ishfaq.workers.dev"}) == "INR" and setup_warnings() == []

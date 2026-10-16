@@ -59,16 +59,22 @@ An order keeps what the pack gave when it was bought, so changing packs never ch
   - ₹35,999 a year → $531.99.
 - **Where the country comes from:** the visitor's IP. The web app's Cloudflare Worker sends Cloudflare's country as
   `X-Orbit-Client-Country`.
-  - The API believes it only with the proxy secret, like the client IP.
+  - The API believes it only with the proxy secret, like the client IP. The Worker sends both only when it has
+    the `PROXY_SECRET` secret, so a Worker without it prices every web visitor as in India. The admin Overview
+    then shows "The website isn't sending the proxy secret".
   - Without that header (the desktop app, a direct caller) it uses the account's saved country, then India.
   - A VPN into India shows rupees, but those orders are then paid with Indian methods.
 - **Payments:**
   - Dollar orders go through Razorpay in USD. `payments.currency` is "USD", `amount_minor` holds cents, and
     `amount_inr` is the rupee equivalent for reports.
   - UPI is rupees only, so it is refused for buyers outside India.
-- **Turning on dollar checkout (OWNER ACTION REQUIRED):** dollar prices can only be bought once Razorpay's
-  international card payments are approved on your account and `ORBIT_RAZORPAY_INTERNATIONAL=true` is set. Until
-  then, dollar prices show with their Buy buttons off.
+- **Turning on dollar checkout (OWNER ACTION REQUIRED):**
+  1. Razorpay's international card payments are approved on your account, and `ORBIT_RAZORPAY_INTERNATIONAL=true`
+     is set on Render. Until then, dollar prices show with their Buy buttons off, and the API refuses a dollar
+     order (409).
+  2. The web Worker has the same secret as Render's `ORBIT_PROXY_SECRET`:
+     `pnpm dlx wrangler@4 secret put PROXY_SECRET --name orbit`. Check with
+     `pnpm dlx wrangler@4 secret list --name orbit`. Without it, nobody is ever shown dollars on the website.
 
 ## Monthly plans (paid once a month, never auto-renewing)
 `apps/api/orbit_api/billing/monthly.py` sells a plan for 30 days through the same checkout as the packs (Razorpay, or
