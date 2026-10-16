@@ -123,8 +123,9 @@ def clean_phone(text: str | None) -> str | None:
         return None
     digits = sum(c.isdigit() for c in text)
     if not _PHONE.fullmatch(text) or not 7 <= digits <= 15:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That phone number doesn't look right. Use "
-                                                                   "digits, with +91 if you like, or leave it empty.")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            "That phone number doesn't look right. Use digits, with your country code if you like, "
+                            "or leave it empty.")
     return text
 
 

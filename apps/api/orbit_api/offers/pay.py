@@ -12,7 +12,16 @@ import statistics
 from dataclasses import dataclass
 
 CURRENCY_SIGNS = {"₹": "INR", "$": "USD", "€": "EUR", "£": "GBP"}
-_CODES = ("INR", "USD", "EUR", "GBP", "CAD", "AUD", "SGD", "AED")
+# The currencies a pay line may name by code (region.CURRENCIES' ones, but not TRY, PHP, PEN or COP: words or a
+# language in a post before they're money).
+_CODES = ("INR", "USD", "EUR", "GBP", "CAD", "AUD", "SGD", "NZD", "HKD", "AED", "CHF", "SEK", "NOK", "DKK", "PLN",
+          "CZK", "RON", "SAR", "QAR", "KWD", "OMR", "BHD", "ILS", "EGP", "MYR", "IDR", "THB", "VND", "JPY", "KRW",
+          "CNY", "TWD", "PKR", "BDT", "LKR", "NPR", "ZAR", "NGN", "KES", "GHS", "BRL", "MXN", "ARS", "CLP")
+# A bare "$" is the dollar where the post is (anywhere else, the US dollar); "CA$", "A$", "S$" say which outright.
+DOLLARS = {"CA": "CAD", "AU": "AUD", "NZ": "NZD", "SG": "SGD", "HK": "HKD"}
+_DOLLAR_PREFIX = {"US": "USD", "CA": "CAD", "C": "CAD", "AU": "AUD", "A": "AUD", "NZ": "NZD", "SG": "SGD",
+                  "S": "SGD", "HK": "HKD"}
+_PREFIXED = re.compile(r"\b(US|CA|C|AU|A|NZ|SG|S|HK)\$")
 _UNIT = {"k": 1_000, "l": 100_000, "lakh": 100_000, "lakhs": 100_000, "lac": 100_000, "lacs": 100_000, "lpa": 100_000,
          "cr": 10_000_000, "crore": 10_000_000, "m": 1_000_000, "mn": 1_000_000}
 _AMOUNT = re.compile(r"(?<![\w.])(\d{1,3}(?:,\d{2,3})+|\d+(?:\.\d+)?)\s*(lakhs?|lacs?|lpa|crore|cr|mn|k|l|m)?(?![a-z])",
@@ -26,10 +35,21 @@ class Pay:
     high: float
 
 
-def _currency(text: str) -> str | None:
+def _dollar(text: str, country: str | None) -> str:
+    """Which dollar a "$" is: the one the line names ("CA$90k", "$120k CAD"), else the one where the post is."""
+    upper = text.upper()
+    if m := _PREFIXED.search(upper):
+        return _DOLLAR_PREFIX[m.group(1)]
+    for code in ("USD", *DOLLARS.values()):
+        if re.search(rf"\b{code}\b", upper):
+            return code
+    return DOLLARS.get((country or "").upper(), "USD")
+
+
+def _currency(text: str, country: str | None = None) -> str | None:
     for sign, code in CURRENCY_SIGNS.items():
         if sign in text:
-            return code
+            return _dollar(text, country) if sign == "$" else code
     upper = text.upper()
     for code in _CODES:
         if re.search(rf"\b{code}\b", upper):
@@ -48,12 +68,12 @@ def _per_year(text: str) -> float:
     return 1
 
 
-def parse_pay(text: str | None) -> Pay | None:
+def parse_pay(text: str | None, country: str | None = None) -> Pay | None:
     """A post's pay line as a year's range, or None when it isn't one (no currency, no figure, an implausible
-    figure)."""
+    figure). `country`: where the post is, when known, for which dollar a "$" means."""
     if not text:
         return None
-    currency = _currency(text)
+    currency = _currency(text, country)
     if currency is None:
         return None
     found: list[tuple[float, str]] = []

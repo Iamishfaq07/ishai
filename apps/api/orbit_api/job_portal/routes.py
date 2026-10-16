@@ -27,7 +27,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -75,6 +75,7 @@ from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError, LLMRequest, LLMResponse
 from orbit_api.providers.llm.pricing import estimate_cost
 from orbit_api.ratelimit import limit, limit_user
+from orbit_api.region import market_country
 from orbit_api.resumes.ats import resume_text
 from orbit_api.resumes.routes import MAX_JOB_TEXT, MAX_RESUMES
 from orbit_api.resumes.schema import ResumeData
@@ -442,9 +443,10 @@ async def _track(db: AsyncSession, user: User, row: JobListing, status_: Status 
     return entry
 
 
-def _country(user: User) -> str:
-    """The country the user applies in (India until they've said, as the app always was)."""
-    return (user.country or "IN").upper()
+def _country(user: User, request: Request | None = None) -> str:
+    """The country the user applies in: until they've said, where the request came from, else India, as the app
+    always was (region.market_country)."""
+    return market_country(user.country, request)
 
 
 def _search(prefs: JobPrefs, q: str, country: str = "IN") -> tuple[ranking.Search, Any]:
@@ -504,22 +506,23 @@ def _sources_out(statuses: list[refresh.SourceStatus]) -> list[SourceOut]:
 
 
 async def _profile_out(db: AsyncSession, user: User, row: JobSearchProfile | None, prefs: JobPrefs,
-                       resume: Resume | None, note: str | None = None) -> ProfileOut:
+                       resume: Resume | None, note: str | None = None, request: Request | None = None) -> ProfileOut:
     resumes = await _resumes(db, user)
+    country = _country(user, request)
     return ProfileOut(
         prefs=prefs, suggested=Suggested.model_validate(row.suggested) if row is not None and row.suggested else None,
         resume=ResumeRef(id=resume.id, title=resume.title) if resume else None,
         resumes=[ResumeRef(id=r.id, title=r.title) for r in resumes],
         ai_left=await _ai_left(db, user, "job_profile", get_settings().jobs_profile_daily), saved=row is not None,
-        portals=portals_for(_country(user)), sources=[{"id": s.id, "label": s.label} for s in enabled_sources()],
-        cities=[anywhere_for(_country(user)), *cities_for(_country(user))], note=note)
+        portals=portals_for(country), sources=[{"id": s.id, "label": s.label} for s in enabled_sources()],
+        cities=[anywhere_for(country), *cities_for(country)], note=note)
 
 
 @router.get("/profile", response_model=ProfileOut, dependencies=[Depends(read_limit)])
-async def get_profile(user: Annotated[User, Depends(current_user)],
+async def get_profile(request: Request, user: Annotated[User, Depends(current_user)],
                       db: Annotated[AsyncSession, Depends(get_db)]) -> ProfileOut:
     row, prefs, resume = await _profile(db, user)
-    return await _profile_out(db, user, row, prefs, resume)
+    return await _profile_out(db, user, row, prefs, resume, request=request)
 
 
 class ProfileIn(BaseModel):
@@ -528,7 +531,7 @@ class ProfileIn(BaseModel):
 
 
 @router.put("/profile", response_model=ProfileOut, dependencies=[Depends(read_limit)])
-async def save_profile(body: ProfileIn, user: Annotated[User, Depends(current_user)],
+async def save_profile(request: Request, body: ProfileIn, user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> ProfileOut:
     resume = await _owned_resume(db, body.resume_id, user) if body.resume_id else None
     row = await db.get(JobSearchProfile, user.id)
@@ -538,7 +541,7 @@ async def save_profile(body: ProfileIn, user: Annotated[User, Depends(current_us
     row.prefs = body.prefs.model_dump(mode="json")
     row.resume_id = resume.id if resume else None
     await db.commit()
-    return await _profile_out(db, user, row, body.prefs, await _resume_for(db, user, row))
+    return await _profile_out(db, user, row, body.prefs, await _resume_for(db, user, row), request=request)
 
 
 class SuggestIn(BaseModel):
@@ -546,7 +549,7 @@ class SuggestIn(BaseModel):
 
 
 @router.post("/profile/suggest", response_model=ProfileOut, dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
-async def suggest_profile(body: SuggestIn, user: Annotated[User, Depends(require_verified_email)],
+async def suggest_profile(request: Request, body: SuggestIn, user: Annotated[User, Depends(require_verified_email)],
                           db: Annotated[AsyncSession, Depends(get_db)]) -> ProfileOut:
     """Fill the profile from a resume: titles, seniority, skills and cities. The AI reads it once per resume content
     (asking again for the same resume is free and instant); past today's allowance, or if the AI is down, it's
@@ -583,20 +586,22 @@ async def suggest_profile(body: SuggestIn, user: Annotated[User, Depends(require
     prefs = apply_suggestion(suggestion, prev)
     row.prefs, row.resume_id = prefs.model_dump(mode="json"), resume.id
     await db.commit()
-    return await _profile_out(db, user, row, prefs, resume, note)
+    return await _profile_out(db, user, row, prefs, resume, note, request)
 
 
 # ---- feed ----------------------------------------------------------------------------------------------------------
 
 
 @router.get("/feed", response_model=FeedOut, dependencies=[Depends(feed_limit)])
-async def feed(user: Annotated[User, Depends(current_user)], db: Annotated[AsyncSession, Depends(get_db)],
+async def feed(request: Request, user: Annotated[User, Depends(current_user)],
+               db: Annotated[AsyncSession, Depends(get_db)],
                q: Annotated[str, Query(max_length=200)] = "", sort: Sort = "best",
                page: Annotated[int, Query(ge=1, le=200)] = 1,
                page_size: Annotated[int, Query(ge=1, le=50)] = PAGE_SIZE) -> FeedOut:
     row, prefs, resume = await _profile(db, user)
-    search, parsed = _search(prefs, q, _country(user))
-    await refresh.ensure_fresh(db, search_queries(prefs, parsed.keywords, _country(user)))
+    country = _country(user, request)
+    search, parsed = _search(prefs, q, country)
+    await refresh.ensure_fresh(db, search_queries(prefs, parsed.keywords, country))
     data = _data(resume)
     matches = await _matches(db, user, search, data, sort)
     window = matches[(page - 1) * page_size: page * page_size]
@@ -688,7 +693,7 @@ async def _confirmed_evidence(db: AsyncSession, user_id: str) -> str:
 
 @router.post("/listings/{listing_id}/fit", response_model=FitOut,
              dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
-async def fit_check(listing_id: str, user: Annotated[User, Depends(require_verified_email)],
+async def fit_check(request: Request, listing_id: str, user: Annotated[User, Depends(require_verified_email)],
                     db: Annotated[AsyncSession, Depends(get_db)]) -> FitOut:
     """How well the resume fits this job, by the AI: free, ORBIT_JOBS_FIT_DAILY a day (the admin has no cap). The
     same job and the same resume content are answered from the last check, at no cost to the allowance."""
@@ -715,7 +720,7 @@ async def fit_check(listing_id: str, user: Annotated[User, Depends(require_verif
             raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, detail={
                 "code": "fit_check_limit",
                 "message": f"You've used today's {cap} free fit checks. They're back tomorrow ("
-                           + ("at 5:30 am India time" if _country(user) == "IN" else "at midnight UTC")
+                           + ("at 5:30 am India time" if _country(user, request) == "IN" else "at midnight UTC")
                            + "). Checks you've already run stay open."})
         match = _match_for(row, prefs, data)
         job = {"title": row.title, "company": row.company, "location": _location_line(row),

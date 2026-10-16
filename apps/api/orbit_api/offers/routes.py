@@ -12,11 +12,12 @@ import logging
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from orbit_api import region
 from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
@@ -40,14 +41,18 @@ ai_limits = [Depends(limit("offers-ai", rate_per_s=0.5, burst=20)),
 
 MAX_OFFERS = 20
 MAX_MONEY = 10**10
-COUNTRY_CURRENCY = {"IN": "INR", "US": "USD", "GB": "GBP", "CA": "CAD", "AU": "AUD", "SG": "SGD", "AE": "AED",
-                    "DE": "EUR", "FR": "EUR", "NL": "EUR", "IE": "EUR", "ES": "EUR", "IT": "EUR"}
 Status = Literal["considering", "accepted", "declined"]
 PfMode = Literal["capped", "full", "none"]
 
 
-def _currency_for(user: User) -> str:
-    return COUNTRY_CURRENCY.get((user.country or "IN").upper(), "USD")
+def _country(user: User, request: Request | None = None) -> str:
+    """The country whose job posts the market is read from (region.market_country)."""
+    return region.market_country(user.country, request)
+
+
+def _currency_for(country: str) -> str:
+    """What pay is written in there (US dollars where region.CURRENCIES doesn't say)."""
+    return region.currency(country) or "USD"
 
 
 # ---- the market ----------------------------------------------------------------------------------------------------
@@ -92,7 +97,7 @@ async def market_for(db: AsyncSession, role: str, city: str, country: str, curre
     for lid, title, company, salary, cities, _ in rows:
         if not want <= title_tokens(title):
             continue
-        parsed = paymod.parse_pay(salary)
+        parsed = paymod.parse_pay(salary, country)  # a "$" in Canada is a Canadian dollar
         if parsed is None:
             continue
         found.append((paymod.Sample(lid, title, company, salary, ", ".join((cities or [])[:2])), parsed, cities or []))
@@ -113,10 +118,12 @@ async def market_for(db: AsyncSession, role: str, city: str, country: str, curre
 
 
 @router.get("/pay", response_model=MarketOut | None, dependencies=[read_limit])
-async def pay_check(user: Annotated[User, Depends(current_user)], db: Annotated[AsyncSession, Depends(get_db)],
+async def pay_check(request: Request, user: Annotated[User, Depends(current_user)],
+                    db: Annotated[AsyncSession, Depends(get_db)],
                     role: Annotated[str, Query(min_length=2, max_length=120)],
                     city: Annotated[str, Query(max_length=80)] = "") -> MarketOut | None:
-    return await market_for(db, role, city.strip(), (user.country or "IN").upper(), _currency_for(user))
+    country = _country(user, request)
+    return await market_for(db, role, city.strip(), country, _currency_for(country))
 
 
 # ---- offers --------------------------------------------------------------------------------------------------------
@@ -126,7 +133,8 @@ class OfferIn(BaseModel):
     company: str = Field(min_length=1, max_length=200)
     role: str = Field(min_length=1, max_length=200)
     city: str = Field("", max_length=120)
-    currency: str = Field("INR", pattern=r"^[A-Z]{3}$")
+    # Left out: the currency where the user applies (a new offer), or the one it already has (an edit).
+    currency: str | None = Field(None, pattern=r"^[A-Z]{3}$")
     fixed: int = Field(gt=0, le=MAX_MONEY)
     variable: int = Field(0, ge=0, le=MAX_MONEY)
     joining_bonus: int = Field(0, ge=0, le=MAX_MONEY)
@@ -156,6 +164,7 @@ class TakeHomeOut(BaseModel):
 
 class OfferOut(OfferIn):
     id: str
+    currency: str  # always set on a saved offer
     first_year: int  # fixed + variable + joining bonus + equity + other
     yearly: int  # what repeats each year: all but the joining bonus
     take_home: TakeHomeOut | None  # India only
@@ -173,8 +182,8 @@ def _plan_hash(o: JobOffer) -> str:
     return hashlib.sha256(json.dumps({k: getattr(o, k) for k in keys}, sort_keys=True).encode()).hexdigest()
 
 
-async def _out(db: AsyncSession, o: JobOffer, user: User) -> OfferOut:
-    market = await market_for(db, o.role, o.city, (user.country or "IN").upper(), o.currency)
+async def _out(db: AsyncSession, o: JobOffer, country: str) -> OfferOut:
+    market = await market_for(db, o.role, o.city, country, o.currency)
     position = None
     if market is not None:
         position = "below" if o.fixed < market.p25 else "above" if o.fixed > market.p75 else "within"
@@ -201,35 +210,37 @@ async def _owned(db: AsyncSession, offer_id: str, user: User) -> JobOffer:
 
 
 @router.get("", response_model=list[OfferOut], dependencies=[read_limit])
-async def list_offers(user: Annotated[User, Depends(current_user)],
+async def list_offers(request: Request, user: Annotated[User, Depends(current_user)],
                       db: Annotated[AsyncSession, Depends(get_db)]) -> list[OfferOut]:
     rows = (await db.scalars(select(JobOffer).where(JobOffer.user_id == user.id)
                              .order_by(JobOffer.created_at.desc()))).all()
-    return [await _out(db, o, user) for o in rows]
+    country = _country(user, request)
+    return [await _out(db, o, country) for o in rows]
 
 
 @router.post("", response_model=OfferOut, status_code=status.HTTP_201_CREATED, dependencies=[read_limit])
-async def add_offer(body: OfferIn, user: Annotated[User, Depends(current_user)],
+async def add_offer(request: Request, body: OfferIn, user: Annotated[User, Depends(current_user)],
                     db: Annotated[AsyncSession, Depends(get_db)]) -> OfferOut:
     count = len((await db.scalars(select(JobOffer.id).where(JobOffer.user_id == user.id))).all())
     if count >= MAX_OFFERS:
         raise HTTPException(status.HTTP_409_CONFLICT, f"You can keep {MAX_OFFERS} offers. Delete one you've settled.")
-    o = JobOffer(user_id=user.id, **body.model_dump())
+    country = _country(user, request)
+    o = JobOffer(user_id=user.id, **{**body.model_dump(), "currency": body.currency or _currency_for(country)})
     db.add(o)
     await db.commit()
     await db.refresh(o)
-    return await _out(db, o, user)
+    return await _out(db, o, country)
 
 
 @router.put("/{offer_id}", response_model=OfferOut, dependencies=[read_limit])
-async def update_offer(offer_id: str, body: OfferIn, user: Annotated[User, Depends(current_user)],
+async def update_offer(request: Request, offer_id: str, body: OfferIn, user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> OfferOut:
     o = await _owned(db, offer_id, user)
-    for k, v in body.model_dump().items():
+    for k, v in body.model_dump(exclude={"currency"} if body.currency is None else None).items():
         setattr(o, k, v)
     await db.commit()
     await db.refresh(o)
-    return await _out(db, o, user)
+    return await _out(db, o, _country(user, request))
 
 
 @router.delete("/{offer_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[read_limit])
@@ -247,7 +258,7 @@ _locks: dict[str, asyncio.Lock] = {}
 
 
 @router.post("/{offer_id}/plan", response_model=OfferOut, dependencies=ai_limits)
-async def make_plan(offer_id: str, user: Annotated[User, Depends(require_verified_email)],
+async def make_plan(request: Request, offer_id: str, user: Annotated[User, Depends(require_verified_email)],
                     db: Annotated[AsyncSession, Depends(get_db)]) -> OfferOut:
     """The AI's negotiation plan for this offer: free, ORBIT_OFFERS_PLAN_DAILY a day. The same figures are answered
     from the plan already made."""
@@ -255,9 +266,10 @@ async def make_plan(offer_id: str, user: Annotated[User, Depends(require_verifie
     from orbit_api.resumes.ats import resume_text
 
     o = await _owned(db, offer_id, user)
+    country = _country(user, request)
     h = _plan_hash(o)
     if o.plan and o.plan_hash == h:
-        return await _out(db, o, user)
+        return await _out(db, o, country)
     cap = get_settings().offers_plan_daily
     async with _locks.setdefault(user.id, asyncio.Lock()):
         if await _ai_left(db, user, "offer_plan", cap) == 0:
@@ -268,7 +280,7 @@ async def make_plan(offer_id: str, user: Annotated[User, Depends(require_verifie
         data = _data(resume)
         corpus = resume_text(data.visible()) if data is not None else ""
         evidence = await _confirmed_evidence(db, user.id)
-        market = await market_for(db, o.role, o.city, (user.country or "IN").upper(), o.currency)
+        market = await market_for(db, o.role, o.city, country, o.currency)
         offer = {k: getattr(o, k) for k in ("company", "role", "city", "currency", "fixed", "variable",
                                             "joining_bonus", "equity_per_year", "other", "notes")}
         offer["deadline"] = o.deadline.date().isoformat() if o.deadline else None
@@ -288,7 +300,7 @@ async def make_plan(offer_id: str, user: Annotated[User, Depends(require_verifie
         o.plan_hash = h
         await db.commit()
         await db.refresh(o)
-        return await _out(db, o, user)
+        return await _out(db, o, country)
 
 
 # ---- what if ------------------------------------------------------------------------------------------------------

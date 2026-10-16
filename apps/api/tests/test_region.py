@@ -77,3 +77,43 @@ def test_prompts_are_written_for_the_country() -> None:
     assert "international business English" in localize(OUTREACH_SYSTEM, "DE")
     for p in (us, india, unknown, localize(NAUKRI_SYSTEM, "IN")):
         assert "__" not in p
+
+
+def test_a_feature_without_the_ai_follows_the_account_then_the_edge_then_india() -> None:
+    import os
+
+    from starlette.requests import Request
+
+    from orbit_api.region import market_country
+
+    def request(**headers: str) -> Request:
+        return Request({"type": "http", "method": "GET", "path": "/", "query_string": b"",
+                        "headers": [(k.replace("_", "-").encode(), v.encode()) for k, v in headers.items()]})
+
+    seen_in_us = request(x_orbit_proxy_secret=os.environ["ORBIT_PROXY_SECRET"], x_orbit_client_country="US")
+    assert market_country("GB", seen_in_us) == "GB"  # the account's own country wins
+    assert market_country(None, seen_in_us) == "US"
+    assert market_country(None, request(x_orbit_client_country="US")) == "IN"  # not from the Worker: not believed
+    assert market_country(None) == "IN" and market_country("xx") == "IN"  # nothing to go on: India, as always
+    assert market_country("gb") == "GB"
+
+
+def test_each_country_has_its_currency() -> None:
+    from orbit_api.region import currency
+
+    assert currency("IN") == "INR" and currency("gb") == "GBP" and currency("UK") == "GBP"
+    assert currency("DE") == currency("PT") == currency("FI") == "EUR" and currency("NZ") == "NZD"
+    assert currency(None) is None and currency("FJ") is None and currency("XX") is None
+
+
+def test_a_referral_goes_by_whatsapp_only_in_india() -> None:
+    from orbit_api.region import localize
+    from orbit_api.resumes.kit import OUTREACH_SYSTEM, outreach_system
+
+    india = outreach_system("IN")
+    assert india == localize(OUTREACH_SYSTEM, "IN")  # as it always was
+    assert "a LinkedIn or WhatsApp message" in india and "read on LinkedIn or WhatsApp" in india
+    for country in ("US", "GB", None):
+        rules = outreach_system(country)
+        assert "WhatsApp" not in rules, country
+        assert "a LinkedIn message or a short email" in rules and "read on LinkedIn or in an email" in rules

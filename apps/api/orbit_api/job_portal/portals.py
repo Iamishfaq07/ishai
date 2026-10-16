@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from urllib.parse import quote_plus, urlencode
 
 from orbit_api.job_portal.postings import Level
-from orbit_api.region import country_name
+from orbit_api.region import INDIA, country_name, market_country
 
 # Display order, and the ones shown until the user picks.
 PORTALS: dict[str, str] = {
@@ -37,7 +37,7 @@ _INDEED_HOST = {
 
 def portals_for(country: str | None) -> dict[str, str]:
     """The portals there are links to in this country, in display order."""
-    india = (country or "IN").upper() == "IN"
+    india = market_country(country) == INDIA
     return {k: v for k, v in PORTALS.items() if india or k not in INDIA_ONLY}
 LINKEDIN_INDIA_GEO = "102713980"
 _LINKEDIN_TPR = {1: "r86400", 3: "r259200", 7: "r604800", 30: "r2592000"}

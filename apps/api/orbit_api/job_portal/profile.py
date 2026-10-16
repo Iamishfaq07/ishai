@@ -24,7 +24,7 @@ from orbit_api.job_portal.sources import all_sources
 from orbit_api.job_portal.sources.base import SearchQuery
 from orbit_api.live.context_builder import fence
 from orbit_api.providers.llm.base import LLMMessage, LLMProvider, LLMRequest
-from orbit_api.region import localize
+from orbit_api.region import INDIA, localize, market_country
 from orbit_api.resumes.ai import _json  # the resume maker's reader of the model's JSON answer
 from orbit_api.resumes.ats import _norm, _term_pattern, date_key, resume_text
 from orbit_api.resumes.schema import ResumeData
@@ -38,13 +38,13 @@ _ANYWHERE_WORDS = frozenset({"anywhere", "nationwide", "any city", "all cities"}
 
 
 def anywhere_for(country: str | None) -> str:
-    return ANYWHERE_IN_INDIA if (country or "IN").upper() == "IN" else ANYWHERE
+    return ANYWHERE_IN_INDIA if market_country(country) == INDIA else ANYWHERE
 
 
 def cities_for(country: str | None) -> list[str]:
     """The cities the profile offers for the country the user applies in, biggest job markets first."""
-    c = (country or "IN").upper()
-    return list(CITIES) if c == "IN" else list(cities_in(c))
+    c = market_country(country)
+    return list(CITIES) if c == INDIA else list(cities_in(c))
 MAX_TITLES = 5
 MAX_SKILLS = 15
 
@@ -271,7 +271,7 @@ def search_queries(prefs: JobPrefs, keywords: str = "", country: str | None = No
     """What the search APIs are asked for this profile: its top two titles (or the search box's words) in its first
     city in the country the user applies in, or anywhere there. Lowercased and without seniority words, so people
     looking for the same role share one cached answer. Always the last 7 days: the feed filters recency itself."""
-    c = (country or "IN").upper()
+    c = market_country(country)
     whats = [keywords] if keywords.strip() else [plain_title(t) for t in prefs.titles[:2]]
     mine = set(cities_for(c))
     city = next((x for x in prefs.locations if x in mine), anywhere_for(c))
