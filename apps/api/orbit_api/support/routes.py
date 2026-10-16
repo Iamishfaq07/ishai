@@ -23,6 +23,7 @@ from sqlalchemy.orm import selectinload
 
 from orbit_api.admin.routes import require_admin
 from orbit_api.auth.security import optional_user
+from orbit_api.billing import pricing
 from orbit_api.billing.packs import packs
 from orbit_api.config import get_settings
 from orbit_api.contact.routes import clean_message, network_hash, one_line
@@ -110,7 +111,8 @@ def _owns(thread: SupportThread, user: User | None) -> bool:
     return user is not None and (thread.user_id is None or thread.user_id == user.id)
 
 
-def _out(thread: SupportThread, token: str | None = None, user: User | None = None, page: str = "") -> ThreadOut:
+def _out(thread: SupportThread, token: str | None = None, user: User | None = None, page: str = "",
+         currency: str = pricing.INR) -> ThreadOut:
     return ThreadOut(
         id=thread.id,
         status=thread.status,
@@ -121,7 +123,7 @@ def _out(thread: SupportThread, token: str | None = None, user: User | None = No
         ],
         suggestions=[
             SuggestionOut(id=i, label=label)
-            for i, label in suggestions_for(thread.messages, thread.status, _owns(thread, user), page)
+            for i, label in suggestions_for(thread.messages, thread.status, _owns(thread, user), page, currency)
         ],
     )
 
@@ -195,8 +197,7 @@ def _claim(thread: SupportThread, user: User | None) -> None:
     thread.name = thread.name or (user.name or "")
 
 
-def _inr(amount: int) -> str:
-    return f"₹{amount:,}"
+_GATEWAY = {"razorpay": "Razorpay", "paypal": "PayPal"}  # anything else was a UPI transfer
 
 
 def _minutes(value: float) -> str:
@@ -210,7 +211,7 @@ def _credit_word(n: int) -> str:
     return f"{n} Resume AI credit" if n == 1 else f"{n} Resume AI credits"
 
 
-async def _account_answer(db: AsyncSession, user: User, kind: str) -> str:
+async def _account_answer(db: AsyncSession, user: User, kind: str, currency: str = pricing.INR) -> str:
     if kind == "balance":
         resume = await resume_balance(db, user.id)
         minutes = await interview_minutes_left(db, user.id)
@@ -219,13 +220,15 @@ async def _account_answer(db: AsyncSession, user: User, kind: str) -> str:
         select(Payment).where(Payment.user_id == user.id).order_by(Payment.created_at.desc()).limit(1)
     )).scalar_one_or_none()
     if payment is None:
-        return "This account has no payment yet. Buy a pack on Plan & billing. Packs start at Mini ₹499."
+        cheapest = min(packs().values(), key=lambda p: p.price_inr)
+        return ("This account has no payment yet. Buy a pack on Plan & billing. Packs start at Mini "
+                f"{pricing.price(cheapest.price_inr, currency).text()}.")
     pack = packs().get(payment.plan)
     name = pack.label if pack else payment.plan
-    money = _inr(payment.amount_inr)
+    money = pricing.payment_text(payment)  # in what was charged: "₹7,199", or "$106.99" through PayPal
     got = f"{payment.interview_minutes} interview minutes and {payment.resume_credits} Resume AI credits"
     if payment.status == "approved":
-        how = "Razorpay" if payment.method == "razorpay" else "UPI"
+        how = _GATEWAY.get(payment.method or "", "UPI")
         return f"Your last payment landed. {name} for {money} via {how} added {got}."
     if payment.status == "submitted":
         utr = f" UTR {payment.utr}." if payment.utr else ""
@@ -265,8 +268,8 @@ async def _admin_out(db: AsyncSession, thread: SupportThread) -> AdminDetail:
 
 
 async def _bot_answer(db: AsyncSession, thread: SupportThread, user: User | None, text: str,
-                      choice: str) -> tuple[str, str]:
-    """The line saved for the visitor, and the bot's exact reply. No model."""
+                      choice: str, currency: str = pricing.INR) -> tuple[str, str]:
+    """The line saved for the visitor, and the bot's exact reply, with prices in their currency. No model."""
     account = account_choice(text, choice)
     if account:
         shown = option_label(account) if choice else text[:TEXT_MAX]
@@ -274,14 +277,14 @@ async def _bot_answer(db: AsyncSession, thread: SupportThread, user: User | None
             return shown or "My balance", SIGN_IN
         if thread.user_id not in (None, user.id):
             return shown or "My balance", OTHER_ACCOUNT
-        return shown or option_label(account) or account, await _account_answer(db, user, account)
+        return shown or option_label(account) or account, await _account_answer(db, user, account, currency)
     if choice:
-        label = option_label(choice)
+        label = option_label(choice, currency)
         if label is None:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That option isn't available.")
-        answer, _options = respond("", choice)
+        answer, _options = respond("", choice, currency)
         return label, answer
-    answer, _options = respond(text)
+    answer, _options = respond(text, currency=currency)
     return text[:TEXT_MAX], answer
 
 
@@ -304,12 +307,13 @@ async def open_thread(
     db.add(thread)
     await db.flush()
     await _add(db, thread, "bot", GREETING)
-    return _out(await _commit(db, thread), token, user, page)
+    return _out(await _commit(db, thread), token, user, page, pricing.currency_for(request, user))
 
 
 @router.get("/v1/support/threads/{thread_id}", response_model=ThreadOut)
 async def read_thread(
     thread_id: str,
+    request: Request,
     response: Response,
     user: Annotated[User | None, Depends(optional_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -324,7 +328,8 @@ async def read_thread(
         # update, and counted here (the token itself is redacted from every log). Removal: docs/SECURITY.md.
         log.info("support chat read with a token in the query string (legacy client)")
         response.headers["Deprecation"] = "true"
-    return _out(await _thread(db, thread_id, _presented(x_orbit_support_token, token), user), user=user, page=page)
+    return _out(await _thread(db, thread_id, _presented(x_orbit_support_token, token), user), user=user, page=page,
+                currency=pricing.currency_for(request, user))
 
 
 @router.post("/v1/support/threads/{thread_id}/messages", response_model=ThreadOut)
@@ -344,15 +349,16 @@ async def post_message(
     if not text and not choice:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Type a message.")
     _claim(thread, user)
+    currency = pricing.currency_for(request, user)
     if thread.status == "bot":
-        shown, reply = await _bot_answer(db, thread, user, text, choice)
+        shown, reply = await _bot_answer(db, thread, user, text, choice, currency)
         await _add(db, thread, "user", shown)
         await _add(db, thread, "bot", reply)
     else:
         if not text:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Type a message.")
         await _add(db, thread, "user", text[:TEXT_MAX])
-    return _out(await _commit(db, thread), user=user, page=body.page)
+    return _out(await _commit(db, thread), user=user, page=body.page, currency=currency)
 
 
 @router.post("/v1/support/threads/{thread_id}/handoff", response_model=ThreadOut)
