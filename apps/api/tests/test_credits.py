@@ -593,6 +593,20 @@ def test_readiness_and_the_admin_flag_a_missing_proxy_secret(client: TestClient,
     assert setup_warnings() == []
 
 
+def test_a_password_sign_up_without_a_guess_takes_the_country_it_came_from(client: TestClient,
+                                                                           enforce: None) -> None:
+    def register(extra: dict[str, str]) -> str | None:
+        r = client.post("/v1/auth/register", headers={**_ip(_new_ip()), "X-Orbit-Client-Country": "GB"},
+                        json={"email": f"c-{uuid.uuid4().hex[:8]}@example.com", "password": "correct horse battery",
+                              **extra})
+        assert r.status_code == 201, r.text
+        client.cookies.clear()
+        return r.json()["user"].get("country")
+
+    assert register({}) == "GB"  # an older client or the desktop app sends no guess
+    assert register({"country": "IN"}) == "IN"  # the browser's own guess wins
+
+
 def test_the_admin_is_told_when_the_web_worker_sends_no_proxy_secret(client: TestClient,
                                                                        monkeypatch: pytest.MonkeyPatch) -> None:
     from orbit_api import ratelimit

@@ -252,8 +252,12 @@ async def _create_user(db: AsyncSession, request: Request, email: str, body: Reg
     first_dev_user = (not s.admin_email and s.env != "production"
                       and not await db.scalar(select(func.count()).select_from(User)))
     approved = not s.approval_required or s.is_admin_email(email) or bool(first_dev_user)
+    # The country the browser guessed, else where the sign-up came from (Cloudflare's, through the web app): an
+    # older client or the desktop app sends none, and a missing country reads as India.
+    from orbit_api.billing.pricing import request_country
+
     user = User(email=email, name=body.name, password_hash=await hash_password(body.password), approved=approved,
-                country=country_code(body.country))
+                country=country_code(body.country) or request_country(request))
     db.add(user)
     await db.flush()
     db.add(AuditLog(user_id=user.id, action="auth.register", ip=_ip(request)))
