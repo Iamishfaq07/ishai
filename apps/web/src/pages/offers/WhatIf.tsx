@@ -3,8 +3,9 @@ import type { JobOfferRecord, OfferScenario, OfferScenarioInput } from "@orbit/t
 import { RotateCcw, cx, focusRing } from "@orbit/ui";
 import { Card } from "../../components/ui";
 import { api } from "../../lib/api";
+import { useCountry } from "../../lib/country";
 import { errorText } from "../../lib/format";
-import { money } from "./model";
+import { capital, money, offerTerms } from "./model";
 
 const START: Required<Omit<OfferScenarioInput, "joining_bonus" | "pf">> = { fixed_change_pct: 0, variable_payout_pct: 100, equity_value_pct: 100 };
 
@@ -13,6 +14,7 @@ const START: Required<Omit<OfferScenarioInput, "joining_bonus" | "pf">> = { fixe
  * out to be worth, and see the first year and (in India) each month's in-hand pay next to the offer. Nothing is saved.
  */
 export function WhatIf({ offer: o }: { offer: JobOfferRecord }) {
+  const terms = offerTerms(useCountry());
   const [input, setInput] = useState({ ...START, joining_bonus: o.joining_bonus });
   const [result, setResult] = useState<OfferScenario | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,9 +40,9 @@ export function WhatIf({ offer: o }: { offer: JobOfferRecord }) {
     return <span className={cx("ml-1.5 text-xs font-medium", d > 0 ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300")}>{d > 0 ? "+" : "−"}{money(o.currency, Math.abs(d), exact)}</span>;
   };
   const rows: Array<{ label: string; key: keyof OfferScenario["offer"]; show: boolean }> = [
-    { label: "Fixed pay a year", key: "fixed", show: true },
-    { label: "Variable, as paid out", key: "variable", show: o.variable > 0 },
-    { label: "Joining bonus", key: "joining_bonus", show: true },
+    { label: `${terms.fixed} a year`, key: "fixed", show: true },
+    { label: `${capital(terms.bonusWord)}, as paid out`, key: "variable", show: o.variable > 0 },
+    { label: terms.joining, key: "joining_bonus", show: true },
     { label: "Equity a year", key: "equity_per_year", show: o.equity_per_year > 0 },
     { label: "First year in all", key: "first_year", show: true },
     { label: "In your account each month", key: "monthly_in_hand", show: o.currency === "INR" },
@@ -60,11 +62,11 @@ export function WhatIf({ offer: o }: { offer: JobOfferRecord }) {
           </button>
         )}
       </div>
-      <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">Try a counter-offer or a bad year for the variable pay. Nothing here is saved.</p>
+      <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">Try a counter-offer or a bad year for {terms.bonusPay}. Nothing here is saved.</p>
       <div className="grid gap-5 md:grid-cols-2">
         <div className="space-y-4">
           <Slider
-            label="Fixed pay"
+            label={terms.fixed}
             value={input.fixed_change_pct}
             min={-30}
             max={50}
@@ -74,7 +76,7 @@ export function WhatIf({ offer: o }: { offer: JobOfferRecord }) {
           />
           {o.variable > 0 && (
             <Slider
-              label="Variable paid out"
+              label={`${capital(terms.bonusWord)} paid out`}
               value={input.variable_payout_pct}
               min={0}
               max={150}
@@ -95,7 +97,7 @@ export function WhatIf({ offer: o }: { offer: JobOfferRecord }) {
             />
           )}
           <Slider
-            label="Joining bonus"
+            label={terms.joining}
             value={input.joining_bonus}
             min={0}
             max={Math.max(o.joining_bonus * 3, Math.round(o.fixed * 0.3))}

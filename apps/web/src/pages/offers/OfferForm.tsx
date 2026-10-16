@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react";
 import type { OfferInput, OfferPf } from "@orbit/types";
+import { currencyFor, sampleCity } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, Select, Textarea } from "../../components/ui";
-import { money, unitFor } from "./model";
+import { useCountry } from "../../lib/country";
+import { money, offerTerms, unitFor } from "./model";
 
 const CURRENCIES = ["INR", "USD", "EUR", "GBP", "CAD", "AUD", "SGD", "AED"];
 
@@ -30,6 +32,12 @@ function Amount({ id, label, value, currency, onChange, hint }: { id: string; la
 /** Add or change an offer: the figures as the offer letter gives them, and how its PF works (India). */
 export function OfferForm({ initial, busy, error, onSave, onCancel }: { initial: OfferInput; busy: boolean; error: string | null; onSave: (o: OfferInput) => void; onCancel: () => void }) {
   const [o, setO] = useState<OfferInput>(initial);
+  // Worded and ordered for where the user applies: their currency first, their city as the example.
+  const country = useCountry();
+  const terms = offerTerms(country);
+  const own = currencyFor(country);
+  const currencies = [...new Set([own, ...CURRENCIES, o.currency])];
+  const city = sampleCity(country);
   const set = <K extends keyof OfferInput>(key: K, value: OfferInput[K]) => setO((prev) => ({ ...prev, [key]: value }));
   const india = o.currency === "INR";
   const ready = o.company.trim() && o.role.trim() && o.fixed > 0;
@@ -48,20 +56,20 @@ export function OfferForm({ initial, busy, error, onSave, onCancel }: { initial:
             <Input id="of-role" value={o.role} maxLength={200} placeholder="e.g. Backend Engineer" onChange={(e) => set("role", e.target.value)} />
           </Field>
           <Field label="City" htmlFor="of-city">
-            <Input id="of-city" value={o.city} maxLength={120} placeholder="e.g. Bengaluru" onChange={(e) => set("city", e.target.value)} />
+            <Input id="of-city" value={o.city} maxLength={120} placeholder={city ? `e.g. ${city}` : undefined} onChange={(e) => set("city", e.target.value)} />
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Currency" htmlFor="of-currency">
             <Select id="of-currency" value={o.currency} onChange={(e) => set("currency", e.target.value)}>
-              {CURRENCIES.map((c) => (
+              {currencies.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </Select>
           </Field>
-          <Amount key={`fixed-${o.currency}`} id="of-fixed" label="Fixed pay a year" value={o.fixed} currency={o.currency} onChange={(v) => set("fixed", v)} />
-          <Amount key={`var-${o.currency}`} id="of-variable" label="Variable / bonus a year" value={o.variable} currency={o.currency} onChange={(v) => set("variable", v)} />
-          <Amount key={`jb-${o.currency}`} id="of-joining" label="Joining bonus (once)" value={o.joining_bonus} currency={o.currency} onChange={(v) => set("joining_bonus", v)} />
+          <Amount key={`fixed-${o.currency}`} id="of-fixed" label={`${terms.fixed} a year`} value={o.fixed} currency={o.currency} onChange={(v) => set("fixed", v)} />
+          <Amount key={`var-${o.currency}`} id="of-variable" label={terms.variableForm} value={o.variable} currency={o.currency} onChange={(v) => set("variable", v)} />
+          <Amount key={`jb-${o.currency}`} id="of-joining" label={`${terms.joining} (once)`} value={o.joining_bonus} currency={o.currency} onChange={(v) => set("joining_bonus", v)} />
           <Amount key={`eq-${o.currency}`} id="of-equity" label="Equity a year" value={o.equity_per_year} currency={o.currency} onChange={(v) => set("equity_per_year", v)}
                   hint="The grant's value divided by its vesting years, as the offer states it" />
           <Amount key={`ot-${o.currency}`} id="of-other" label="Other pay a year" value={o.other} currency={o.currency} onChange={(v) => set("other", v)}
