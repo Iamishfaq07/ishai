@@ -154,3 +154,6 @@ export { Lightbulb } from "lucide-react";
 
 // The app sidebar: collapse and expand; Explore (phones).
 export { Compass, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+
+// The AI video interview room's call controls.
+export { Captions, CaptionsOff, PhoneOff, ScanFace, VideoOff, VolumeX } from "lucide-react";

@@ -382,14 +382,18 @@ export function LivePanel(props: LivePanelProps) {
         onMutedChange={changeMuted}
         candidateText={liveCandidateText}
         {...(props.cameraCoach ? { cameraCoach: props.cameraCoach } : {})}
+        {...(props.analyser ? { analyser: props.analyser } : {})}
         banners={
-          <Banners
-            live={live}
-            onReconnect={props.onReconnect}
-            onEndOtherSession={props.onEndOtherSession}
-            onBuyMinutes={props.onBuyMinutes}
-            onDismiss={actions.dismissError}
-          />
+          <>
+            <Banners
+              live={live}
+              onReconnect={props.onReconnect}
+              onEndOtherSession={props.onEndOtherSession}
+              onBuyMinutes={props.onBuyMinutes}
+              onDismiss={actions.dismissError}
+            />
+            {props.notice}
+          </>
         }
         onEnd={props.onEnd}
         {...(props.onViewReport ? { onViewReport: props.onViewReport } : {})}

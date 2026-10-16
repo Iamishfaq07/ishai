@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { CreateSessionRequest, MockDifficulty, OrbitDocument } from "@orbit/types";
-import { INTERVIEWER_NAME, LoadGate, Video, cx, focusRing } from "@orbit/ui";
+import { INTERVIEWER_NAME, LoadGate, Video, cx, focusRing, warmVoiceStatus } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Textarea } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
@@ -80,6 +80,10 @@ function DeviceCheck({ onReady }: { onReady: (ok: boolean) => void }) {
  */
 export function VideoInterviewPage() {
   const navigate = useNavigate();
+  // Ask now which voice the server has, so Saba's first words don't wait on it once you join.
+  useEffect(() => {
+    warmVoiceStatus(api).catch(() => undefined);
+  }, []);
   const [params] = useSearchParams();
   const docs = useAsync(() => api.listDocuments(), [], "documents");
   const ready = (kind: OrbitDocument["kind"]) => (docs.data ?? []).filter((d) => d.kind === kind && d.status === "ready");

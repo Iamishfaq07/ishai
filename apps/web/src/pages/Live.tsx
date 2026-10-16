@@ -416,6 +416,9 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
     />
   );
 
+  // The AI video interview is a full-screen call: its own header and controls, no page chrome around it.
+  if (session.video && !endedWhy) return <div className="h-dvh min-h-0 bg-[#07070c]">{panel}</div>;
+
   return (
     <div className="flex h-full flex-col">
       <nav aria-label="Session" className="flex items-center gap-3 px-4 py-2.5 text-xs text-zinc-500 dark:text-zinc-400">
