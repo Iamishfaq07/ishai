@@ -85,6 +85,21 @@ export interface TwoFactorChallenge {
   challenge: string;
 }
 
+/** GET /v1/auth/passkeys: one passkey (only its public key is on the server). */
+export interface Passkey {
+  id: string;
+  name: string;
+  /** Synced by a password manager (iCloud Keychain, Google Password Manager…) rather than kept on one device. */
+  backed_up: boolean;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+/** WebAuthn options as JSON (binary fields base64url), from /v1/auth/passkeys/options and /login/passkey/options. */
+export interface PasskeyOptions {
+  options: Record<string, unknown>;
+}
+
 /** GET /v1/auth/2fa */
 export interface TwoFactorStatus {
   enabled: boolean;

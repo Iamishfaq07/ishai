@@ -33,6 +33,8 @@ UNSAFE = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 # The Origin check still applies to them.
 TOKEN_EXEMPT = frozenset({
     "/v1/auth/login", "/v1/auth/login/2fa", "/v1/auth/register", "/v1/auth/logout",
+    # Passkey sign-in starts signed out; the signature over a single-use challenge is the credential.
+    "/v1/auth/login/passkey/options", "/v1/auth/login/passkey",
     "/v1/auth/password-reset/request", "/v1/auth/password-reset/confirm", "/v1/auth/verify-email/confirm",
     "/v1/auth/email-change/confirm",
     # The Contact page works signed out (a visitor whose cookie went stale has no token to send). A message posted in

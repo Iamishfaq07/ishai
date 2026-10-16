@@ -251,3 +251,4 @@ export {
   type Country,
 } from "./region";
 export { safeLocal, safeSession, readJSON, readChoice, type SafeStorage } from "./storage";
+export { passkeysSupported, createPasskey, getPasskey, passkeyErrorText } from "./passkey";

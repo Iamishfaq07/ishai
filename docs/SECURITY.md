@@ -225,5 +225,21 @@ The full review, its method and its accepted risks are in [SECURITY_REVIEW.md](S
   - Each sign-in is a `user_sessions` row named by the token's `sid` claim, checked on every request.
   - Signing one device out ends its tokens on their next request.
   - Logout revokes the current device server-side.
-- **Not done yet:** passkeys (WebAuthn), and requiring 2FA for the admin account. The admin should turn it on in
-  Settings now.
+- **Admin reminder:** the admin dashboard shows a banner while the signed-in admin has no two-step sign-in. It
+  isn't forced, so the owner can't be locked out by a lost phone.
+- **Passkeys** (`auth/passkeys.py`, py_webauthn):
+  - The relying party is the host of `ORBIT_WEB_URL`, and only that exact origin is accepted. A look-alike domain
+    can't use an Orbit passkey.
+  - Discoverable credentials with user verification required, so a passkey sign-in skips the authenticator code
+    (it is already two factors). Suspension and the allowed-email list still apply.
+  - Challenges are 32 random bytes, single use (the row is deleted when spent), last 5 minutes, and are stored only
+    as SHA-256. Adding a passkey ties its challenge to the account and asks for the password again (accounts that
+    have one).
+  - Only public keys are stored. A sign count that goes backwards is refused (a cloned key).
+  - Passkey sign-in is IP rate limited and CSRF-exempt like `/login`: the signature over a single-use challenge
+    is the credential.
+  - Tests (`tests/test_passkeys.py`) use a software P-256 authenticator, so the whole WebAuthn check runs. They
+    cover replays, the wrong origin, a missing user verification, forged signatures, unknown keys and cloned
+    counters. A Playwright run with Chromium's virtual authenticator covers the browser side.
+  - The desktop app keeps password, Google and two-step sign-in. Passkeys are on the website only, because the
+    app's webview origin isn't the site's.

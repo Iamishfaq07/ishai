@@ -423,6 +423,8 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("GET", "/health"), ("GET", "/ready"),
     ("GET", "/v1/auth/config"), ("POST", "/v1/auth/register"), ("POST", "/v1/auth/login"),
     ("POST", "/v1/auth/login/2fa"),  # before any session: the signed sign-in challenge is the credential
+    ("POST", "/v1/auth/login/passkey/options"),  # a passkey sign-in starts signed out
+    ("POST", "/v1/auth/login/passkey"),  # the passkey's signature over a single-use challenge is the credential
     ("POST", "/v1/auth/logout"), ("POST", "/v1/auth/verify-email/confirm"),
     ("POST", "/v1/auth/password-reset/request"), ("POST", "/v1/auth/password-reset/confirm"),
     ("POST", "/v1/auth/email-change/confirm"),

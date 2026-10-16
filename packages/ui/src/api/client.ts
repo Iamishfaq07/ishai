@@ -2,6 +2,8 @@ import type {
   EngineeringTelemetry,
   TwoFactorChallenge,
   TwoFactorStatus,
+  Passkey,
+  PasskeyOptions,
   SignedInDevice,
   JobMission,
   PrepPlan,
@@ -432,6 +434,16 @@ export function createApiClient(options: ApiClientOptions) {
     twoFactorDisable: (code: string) => json<void>("/v1/auth/2fa/disable", { method: "POST", body: body({ code }) }),
     twoFactorNewCodes: (code: string) =>
       json<{ recovery_codes: string[] }>("/v1/auth/2fa/recovery-codes", { method: "POST", body: body({ code }) }),
+    passkeys: () => json<Passkey[]>("/v1/auth/passkeys"),
+    passkeyOptions: (password: string) => json<PasskeyOptions>("/v1/auth/passkeys/options", { method: "POST", body: body({ password }) }),
+    addPasskey: (credential: Record<string, unknown>, name = "") =>
+      json<Passkey>("/v1/auth/passkeys", { method: "POST", body: body({ credential, name }) }),
+    renamePasskey: (id: string, name: string) =>
+      json<Passkey>(`/v1/auth/passkeys/${encodeURIComponent(id)}`, { method: "PATCH", body: body({ name }) }),
+    removePasskey: (id: string) => json<void>(`/v1/auth/passkeys/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    passkeyLoginOptions: () => json<PasskeyOptions>("/v1/auth/login/passkey/options", { method: "POST" }),
+    loginWithPasskey: (credential: Record<string, unknown>) =>
+      json<AuthResponse>("/v1/auth/login/passkey", { method: "POST", body: body({ credential }) }),
     me: () => json<User>("/v1/auth/me"),
     logout: async () => {
       await json<void>("/v1/auth/logout", { method: "POST" });
