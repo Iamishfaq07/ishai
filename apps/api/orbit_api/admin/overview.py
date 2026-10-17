@@ -18,6 +18,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits, ratelimit
+from orbit_api import db as database
 from orbit_api.admin.accounts import AuditItem, about_account, audit_items
 from orbit_api.admin.routes import activity_subquery, require_admin, search_term
 from orbit_api.config import get_settings
@@ -64,7 +65,8 @@ class StatsOut(BaseModel):
     # production, so per-IP limits key on a spoofable address and welcome credits are held); "proxy_unsigned"
     # (the web Worker's requests arrive without that secret, so every visitor is priced as in India and web users
     # share rate limits by Cloudflare's address); "api_cloudflare_proxied" (the API's own DNS record goes through
-    # Cloudflare's proxy, so desktop users share limits by Cloudflare's edge address).
+    # Cloudflare's proxy, so desktop users share limits by Cloudflare's edge address); "database_read_only" (the
+    # database answers reads but refuses every write, so sign-ins, payments and sessions fail: DECISIONS D56).
     warnings: list[str] = []
 
 
@@ -137,7 +139,8 @@ async def stats(admin: Annotated[User, Depends(require_admin)], db: Annotated[As
             Payment.status == "approved"))),
         payments_waiting=int(await scalar(select(func.count()).select_from(Payment).where(
             Payment.status == "submitted"))),
-        warnings=setup_warnings() + ([] if await db.scalar(select(UserTwoFactor.enabled_at).where(
+        warnings=setup_warnings() + (["database_read_only"] if await database.refuses_writes(db) else [])
+        + ([] if await db.scalar(select(UserTwoFactor.enabled_at).where(
             UserTwoFactor.user_id == admin.id)) else ["admin_two_factor"]),
     )
 

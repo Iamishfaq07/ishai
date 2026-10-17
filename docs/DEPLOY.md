@@ -25,7 +25,7 @@ dashboard's settings on the next deploy.
 
 - **Source**: this repo, root directory `apps/api`, built from its `Dockerfile` (it runs `alembic upgrade head`,
   then uvicorn on `$PORT`). Railway injects `PORT` (8080 here): the custom domain's target port must match it.
-- **Healthcheck path**: `/ready` (it checks the database and the proxy secret).
+- **Healthcheck path**: `/ready` (it checks the database, that it takes writes, and the proxy secret: D56).
 - **Replicas: exactly 1** (see below; `ORBIT_API_REPLICAS` above 1 stops a production boot, D12).
 - **Variables**: the same values the old host had: above all `ORBIT_JWT_SECRET` (a new one signs
   everyone out), `ORBIT_CONFIG_SECRET` (a new one can't read the settings saved in the app) and `ORBIT_PROXY_SECRET`

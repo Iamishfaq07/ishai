@@ -8,6 +8,7 @@ this change.
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -16,12 +17,14 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user, decode_claims, token_from_request
 from orbit_api.db import get_db
 from orbit_api.models import AuditLog, User, UserSession
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/auth/sessions", tags=["auth"])
 TOUCH_EVERY = timedelta(minutes=5)  # how often last_seen_at is written while a device is in use
 MAX_LISTED = 50
@@ -68,7 +71,14 @@ async def check_session(db: AsyncSession, user: User, sid: str | None) -> bool:
     now = datetime.now(UTC)
     if now - _aware(row.last_seen_at) >= TOUCH_EVERY:
         row.last_seen_at = now
-        await db.commit()
+        try:
+            await db.commit()
+        except DBAPIError:
+            # Only a "last used" time: a database refusing writes (read-only, D56) mustn't turn every signed-in
+            # request into a 500. The rollback expires the account, so it's read again for the caller.
+            log.warning("couldn't touch device %s; carrying on", sid, exc_info=True)
+            await db.rollback()
+            await db.refresh(user)
     return True
 
 

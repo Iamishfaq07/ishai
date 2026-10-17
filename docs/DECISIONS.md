@@ -412,3 +412,15 @@ resumed if that turns out to matter. The code no longer reads Render's variables
 `RENDER_EXTERNAL_URL`), the Worker no longer keeps it warm, and `render.yaml` is gone. Payment webhooks name a host's
 own address, so they move to `https://api.orbitanswer.com/...` in Razorpay's and PayPal's dashboards; until they do,
 payments still settle through the checkout return and the reconciler.
+
+**D56 — Readiness fails on a database that refuses writes.** On 2026-10-18 the production database was left with
+`default_transaction_read_only = on`: every read worked, every write (sign-in, Google sign-in, payments, sessions)
+failed, and `/ready` still said `"database": "ok"` because it only ran `SELECT 1`. `/ready` now also asks Postgres
+whether the transaction is read-only or the server is a standby (`current_setting('transaction_read_only')`,
+`pg_is_in_recovery()`; skipped on SQLite) and answers 503 with `"database": "read_only"`. The admin Overview shows a
+`database_read_only` warning with the fix. Railway runs the healthcheck only while a deploy goes live, so this
+doesn't restart a running service when the database turns read-only later; it does block a new deploy until the
+database takes writes again, and that is accepted: a deploy can't serve then anyway, and the previous one keeps
+running. While a database refuses writes, the device "last used" touch on each signed-in request is skipped instead
+of failing the request, so reading what's already there keeps working, and Google's callback sends the browser back
+to `/login?error=server` instead of a bare 500 on the API's address.
