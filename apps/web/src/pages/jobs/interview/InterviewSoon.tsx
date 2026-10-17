@@ -37,7 +37,7 @@ export function InterviewSoon({ tracker }: { tracker: AsyncState<JobTrackerEntry
                 <Link to={interviewPrepPath(entry.id)} className={linkButton("secondary", "sm")} aria-label={`Prepare for ${entry.company}`}>
                   Prepare
                 </Link>
-                <Link to={copilotPath(entry.id)} className={linkButton("primary", "sm")} aria-label={`Start the copilot for ${entry.company}`}>
+                <Link to={copilotPath(entry.id)} className={linkButton("primary", "sm")} aria-label={`Start copilot for ${entry.company}`}>
                   <Rocket className="h-3.5 w-3.5" aria-hidden /> Start copilot
                 </Link>
               </div>

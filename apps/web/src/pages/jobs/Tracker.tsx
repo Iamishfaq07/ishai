@@ -387,7 +387,7 @@ function TrackerCard({
         {preparing ? (
           <Link
             to={interviewPrepPath(entry.id)}
-            aria-label={`Prepare for the interview for ${entry.title} at ${entry.company}`}
+            aria-label={`Prepare for interview: ${entry.title} at ${entry.company}`}
             className={cx(cardAction, focusRing)}
           >
             <Target className="h-3 w-3" aria-hidden /> Prepare for interview
