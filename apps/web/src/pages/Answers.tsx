@@ -5,7 +5,7 @@ import { CosmicEmptyState, LoadGate, MessageSquareQuote, PenLine, Plus, Search, 
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Textarea } from "../components/ui";
 import { answerPracticeSession } from "../lib/answerPractice";
 import { api } from "../lib/api";
-import { errorText, formatDate } from "../lib/format";
+import { errorText, formatDate, spokenTime } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import type { LiveLaunchState } from "./SessionSetup";
 import { LibraryTabs } from "./Stories";
@@ -83,7 +83,7 @@ function AnswerCard({ saved, onEdit, onDelete, onPractise, practising }: {
       </div>
       <p className="mt-2 line-clamp-4 whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">{saved.answer}</p>
       <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-        {words} word{words === 1 ? "" : "s"} · about {Math.max(1, Math.round(words / 140))} min out loud · saved{" "}
+        {words} word{words === 1 ? "" : "s"} · {spokenTime(words)} out loud · saved{" "}
         {formatDate(saved.updated_at)}
         {saved.session_id && (
           <>
