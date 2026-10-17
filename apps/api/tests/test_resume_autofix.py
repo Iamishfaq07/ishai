@@ -146,6 +146,62 @@ def test_the_ai_being_down_keeps_the_free_fixes_and_the_credit(client: TestClien
     assert client.get("/v1/resumes/allowance", headers=h).json()["credits_left"] == 1
 
 
+class _Scripted:
+    """The test AI, with some of its calls replaced: `script[i]` is the i-th call's answer ("real", "garbled",
+    "down")."""
+
+    name = "scripted"
+
+    def __init__(self, *script: str) -> None:
+        from orbit_api.providers.llm import get_llm_provider
+
+        self.real, self.script, self.calls = get_llm_provider(), script, 0
+
+    def supports_structured_output(self) -> bool:
+        return True
+
+    async def generate(self, req: Any) -> Any:
+        from orbit_api.providers.llm.base import LLMResponse, Usage
+
+        what = self.script[min(self.calls, len(self.script) - 1)]
+        self.calls += 1
+        if what == "down":
+            raise LLMError("http_503", "down", retryable=True)
+        if what == "garbled":
+            return LLMResponse(text="Sorry, I can't help with that.", model="scripted", usage=Usage())
+        return await self.real.generate(req)
+
+
+def test_an_ai_answer_that_gives_nothing_keeps_the_credit(client: TestClient, welcome: None,
+                                                          monkeypatch: pytest.MonkeyPatch) -> None:
+    """The model answered, but nothing it said could be used: only the free fixes come back, so nothing is spent
+    (it used to be: "the AI answered" was taken as "the AI's work was delivered")."""
+    from orbit_api.resumes import routes
+
+    h = _signup(client, _new_ip())
+    ai = _Scripted("garbled")
+    monkeypatch.setattr(routes, "get_llm_provider", lambda: ai)
+    out, fixed = _fix(client, h, weak())
+    assert ai.calls >= 1 and _check(fixed, "dates").passed and out["followup"] is None
+    assert client.get("/v1/resumes/allowance", headers=h).json()["credits_left"] == 1
+
+
+def test_a_later_ai_pass_failing_still_pays_for_the_first_ones(client: TestClient, welcome: None,
+                                                               monkeypatch: pytest.MonkeyPatch) -> None:
+    """The first pass's rewrites are delivered, so its credit stays spent: a later pass failing used to give the
+    credit back with the AI's work still in the answer."""
+    from orbit_api.resumes import routes
+
+    h = _signup(client, _new_ip())
+    free, _ = _fix(client, h, weak(), check="dates")
+    ai = _Scripted("real", "down")
+    monkeypatch.setattr(routes, "get_llm_provider", lambda: ai)
+    out, _ = _fix(client, h, weak())
+    assert ai.calls >= 2, "the fix needs a second AI call for this test"
+    assert len(out["suggestions"]) > len(free["suggestions"])  # the first pass's rewrites are in it
+    assert client.get("/v1/resumes/allowance", headers=h).json()["credits_left"] == 0
+
+
 def test_unknown_checks_are_refused(client: TestClient) -> None:
     h = _register(client)
     r = client.post("/v1/resumes/fix", headers=h, json={"data": weak().model_dump(mode="json"), "check": "nope"})

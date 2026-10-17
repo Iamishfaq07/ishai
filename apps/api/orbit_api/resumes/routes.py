@@ -296,9 +296,11 @@ async def _generate(db: AsyncSession, user: User | None, req: LLMRequest, what: 
                                request_type=req.request_type, estimated_cost_usd=estimate_cost(model, Usage()),
                                latency_ms=int((time.perf_counter() - started) * 1000), ok=False))
         await db.commit()
-        await allowance.release()
+        if not allowance.answered:  # else an earlier answer may still be delivered (Allowance.answered)
+            await allowance.release()
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
                             "The AI isn't available right now. Try again in a moment.") from e
+    allowance.answered = True
     # Who actually answered: the backup when the primary failed over (resp.provider), else the primary.
     db.add(ProviderRequest(user_id=user.id if user else None, provider=resp.provider or llm.name, model=resp.model,
                            request_type=req.request_type,
