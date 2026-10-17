@@ -615,7 +615,7 @@ function ResumeEditor() {
           value={resume.title}
           maxLength={160}
           onChange={(e) => change((r) => ({ ...r, title: e.target.value }))}
-          className="max-w-xs font-display text-lg font-semibold"
+          className="min-w-0 flex-1 basis-48 font-display text-lg font-semibold sm:max-w-[16rem]"
         />
         <SaveState state={save.state} revision={saves.revision(resume.id)} error={save.error} onRetry={() => setSave({ state: "dirty" })} onLoadLatest={loadLatest} onKeepMine={keepMine} />
         <div className="flex items-center">
@@ -686,7 +686,7 @@ function ResumeEditor() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <div className="min-w-0">
-          <div className="sticky top-16 z-10 mb-4 flex gap-1 rounded-xl bg-zinc-100/90 p-1 backdrop-blur-sm dark:bg-zinc-900/90">
+          <div className="sticky top-16 z-10 mb-4 flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
             <div role="tablist" aria-label="Resume editor" className="flex min-w-0 flex-1 flex-wrap gap-1">
               {TABS.map(({ id, label, short, icon: Icon }) => (
                 <button
@@ -1708,7 +1708,7 @@ function SuggestionCard({ s, total, onAccept, onSkip }: { s: ResumeSuggestion; t
     });
   return (
     <Panel title={`Suggestion 1 of ${total}`}>
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{s.label}</p>
+      <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{s.label}</p>
       {kind === "add_skill" ? (
         <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Skills to add">
           {skills.map((skill) => (
@@ -2024,7 +2024,7 @@ function PreviewJump({ letter }: { letter: boolean }) {
       type="button"
       onClick={() => document.getElementById("resume-preview")?.scrollIntoView({ behavior: "smooth", block: "start" })}
       className={cx(
-        "fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-20 inline-flex items-center gap-2 rounded-full bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-lg ring-1 ring-black/10 motion-ok:animate-fade-up md:bottom-6 lg:hidden dark:bg-white dark:text-zinc-900",
+        "fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 mx-auto inline-flex w-fit items-center gap-2 rounded-full bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-lg ring-1 ring-black/10 motion-ok:animate-fade-up md:bottom-6 lg:hidden dark:bg-white dark:text-zinc-900",
         focusRing,
       )}
     >

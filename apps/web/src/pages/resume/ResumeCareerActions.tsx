@@ -6,7 +6,7 @@ import { api } from "../../lib/api";
 import { cleanPrepContext, prepParams, readPrepContext } from "../../lib/prepContext";
 import { useAuth } from "../../lib/auth";
 import { errorText } from "../../lib/format";
-import { focusRing, safeSession } from "@orbit/ui";
+import { buttonClass, safeSession } from "@orbit/ui";
 
 export function ResumeCareerActions({ resume }: { resume: Resume }) {
   const navigate = useNavigate();
@@ -26,14 +26,18 @@ export function ResumeCareerActions({ resume }: { resume: Resume }) {
     finally { setBusy(false); }
   };
   const practice = resume.prep_context?.practice_link ?? `/mock?${prepParams(context)}`;
-  return <div className="mb-5 space-y-3 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4">
-    <div className="flex flex-wrap items-center gap-3">
-      <Button disabled={busy} onClick={() => void grill()}>{busy ? "Preparing your defense…" : "Grill My Resume (5-Min Drill)"}</Button>
-      <Link to={practice} className={`rounded-lg px-2 py-2 text-sm font-medium text-cyan-800 hover:underline dark:text-cyan-200 ${focusRing}`}>Practice Link</Link>
-      {resume.prep_context?.coding_link && <Link to={resume.prep_context.coding_link} className={`rounded-lg px-2 py-2 text-sm font-medium text-cyan-800 dark:text-cyan-200 ${focusRing}`}>Open coding workspace</Link>}
+  // A quiet workbench card: the editor's one primary action stays Download PDF.
+  return <section aria-label="Defend this resume" className="glass-panel mb-5 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl p-4">
+    <div className="min-w-0 flex-1 basis-72">
+      <p className="text-sm font-medium">Defend this resume out loud</p>
+      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">A focused drill on your current metrics, architecture claims and projects. Preparing it uses one Resume AI credit; the interview uses five minutes.</p>
+      {context.role && <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">{context.role}{context.company ? ` · ${context.company}` : ""}{context.tech_stack.length ? ` · ${context.tech_stack.join(", ")}` : ""}</p>}
     </div>
-    <p className="text-xs text-zinc-500">A focused drill on your current metrics, architecture claims and projects. Preparing it uses one Resume AI credit; the interview uses five minutes.</p>
-    {context.role && <p className="text-xs">{context.role}{context.company ? ` · ${context.company}` : ""}{context.tech_stack.length ? ` · ${context.tech_stack.join(", ")}` : ""}</p>}
-    {error && <ErrorNote>{error}</ErrorNote>}
-  </div>;
+    <div className="flex flex-wrap items-center gap-2">
+      <Link to={practice} className={buttonClass("ghost")}>Practice link</Link>
+      {resume.prep_context?.coding_link && <Link to={resume.prep_context.coding_link} className={buttonClass("ghost")}>Open coding workspace</Link>}
+      <Button variant="secondary" disabled={busy} onClick={() => void grill()}>{busy ? "Preparing your defense…" : "Grill my resume (5-minute drill)"}</Button>
+    </div>
+    {error && <div className="basis-full"><ErrorNote>{error}</ErrorNote></div>}
+  </section>;
 }
