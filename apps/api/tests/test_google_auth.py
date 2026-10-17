@@ -33,7 +33,8 @@ def _state(location: str) -> str:
 
 def test_google_is_off_until_configured(client: TestClient) -> None:
     assert client.get("/v1/auth/config").json()["google"] is False
-    assert client.get("/v1/auth/google/start", follow_redirects=False).status_code == 404
+    off = client.get("/v1/auth/google/start", follow_redirects=False)  # a stale link: back to sign-in, not JSON
+    assert off.status_code == 302 and off.headers["location"].endswith("/login?error=google_off")
 
 
 def test_google_creates_then_signs_in_again(google_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -346,3 +347,21 @@ def test_a_google_only_account_sets_a_password_only_after_a_recent_sign_in(
     fresh = {"Authorization": "Bearer " + create_access_token(uid, ver)}
     r = google_client.post("/v1/auth/me/password", headers=fresh, json=body)
     assert r.status_code == 200 and r.json()["user"]["has_password"] is True
+
+
+def test_google_sign_in_refusals_go_back_to_the_sign_in_page(google_client: TestClient,
+                                                              monkeypatch: pytest.MonkeyPatch) -> None:
+    """The browser is on the API's address for these two: too many attempts, or Google not set up, used to leave it on
+    a bare JSON 429 or 404. They go back to the sign-in page, which says why."""
+    from orbit_api import ratelimit
+
+    monkeypatch.setattr(ratelimit, "ENFORCE_IN_TESTS", True)
+    ratelimit.reset_all()
+    try:
+        answers = [google_client.get("/v1/auth/google/start", follow_redirects=False) for _ in range(12)]
+        assert all(a.status_code == 302 for a in answers)
+        assert answers[-1].headers["location"].endswith("/login?error=busy")
+        back = google_client.get("/v1/auth/google/callback?code=x&state=y", follow_redirects=False)
+        assert back.status_code == 302 and back.headers["location"].endswith("/login?error=busy")
+    finally:
+        ratelimit.reset_all()
