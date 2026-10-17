@@ -232,8 +232,11 @@ async def _find_or_create(db: AsyncSession, request: Request, ident: dict[str, A
     if ident["name"] and not user.name:
         user.name = ident["name"]
     if claimed:
-        from orbit_api.auth.accounts import sign_out_everywhere
+        from orbit_api.auth.accounts import forget_unproven_sign_ins, sign_out_everywhere
 
+        # Passkeys and an authenticator set up before the inbox was proven belong to whoever registered the
+        # address: one would still sign in without the password, the other would lock the owner out.
+        await forget_unproven_sign_ins(db, user.id)
         db.add(AuditLog(user_id=user.id, action="auth.google_claim", ip=_ip(request)))
         await sign_out_everywhere(db, user)
     elif not created:

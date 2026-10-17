@@ -1,4 +1,5 @@
 import { checkServerUrl, createApiClient, type ServerUrlCheck, safeLocal } from "@orbit/ui";
+import { clearToken } from "./native";
 import { tokenExpiry } from "./token";
 
 const API_URL_KEY = "orbit.apiUrl";
@@ -28,8 +29,16 @@ export function savedApiUrl(value: string | null | undefined): string | null {
 /** Server URL: a user override saved on the sign-in screen, else the build default. */
 export const API_URL: string = savedApiUrl(safeLocal.getItem(API_URL_KEY)) ?? DEFAULT_API_URL;
 
-/** Persist (or clear, with null) the server override. The API client is created once, so reload. */
-export function setApiUrl(url: string | null): void {
+/** Whether saving `url` (null: the standard server) moves the app to a different server than `current`. */
+export function changesServer(url: string | null, current: string = API_URL): boolean {
+  return (savedApiUrl(url) ?? DEFAULT_API_URL) !== current;
+}
+
+/** Persist (or clear, with null) the server override. The API client is created once, so reload. A sign-in belongs to
+ * the server that issued it: moving to another one forgets the saved token first, so a token still in the keychain
+ * (one the app couldn't read at launch, say) is never sent to the new address. */
+export async function setApiUrl(url: string | null): Promise<void> {
+  if (changesServer(url)) await clearToken().catch(() => undefined);
   if (url) safeLocal.setItem(API_URL_KEY, url);
   else safeLocal.removeItem(API_URL_KEY);
   window.location.reload();

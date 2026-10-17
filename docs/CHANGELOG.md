@@ -1,5 +1,31 @@
 # Implementation log
 
+## Red team: account takeover paths closed (2026-10-18)
+
+An attacker's-eye pass over the API, web app, Worker, desktop app and extension (docs/SECURITY_REVIEW.md "Red team,
+18 October 2026"; DECISIONS D71). Every finding was reproduced on a local stack before it was fixed.
+
+- **A reset link no longer skips two-step sign-in** (High). The new password is set; with 2FA on, the answer is a
+  challenge, and the web reset page goes on to the code step.
+- **No pre-account takeover** (High). Someone who registered another person's address without proving it could add
+  a passkey that still opened the account after the owner reset the password. Adding a passkey or an authenticator
+  now needs a verified email. The first proof of the inbox (a reset, or Google claiming the address) removes any
+  passkeys and 2FA set up before it.
+- **Throttles hold under concurrent guesses** (Medium). Wrong passwords and wrong codes are counted before the check,
+  not after it. A code is checked under the account lock, and the code step has a per-network limit.
+- **Desktop updater refuses downgrades** (Medium). `requireSignedVersion` is on; every release since 0.1.41 signs its
+  version. Smaller desktop fixes:
+  - reveal-in-folder is no longer granted;
+  - switching server forgets the saved token;
+  - rustls is patched;
+  - the unused zip extractor (and its three advisories) is gone.
+- **Smaller fixes:**
+  - the Worker drops forwarding headers that visitors send, and never follows the API's redirects;
+  - the extension's Fill skips fields nobody can see;
+  - the natural voice needs a verified email.
+- **Tests:** `apps/api/tests/test_security_redteam.py`, `apps/web/worker/index.test.js`, the desktop updater tests
+  and `api.test.ts`, and the extension's `fields.test.ts`. Each test fails on the old code.
+
 ## Scenes for every feature, and a touch of motion (2026-10-18)
 
 - **Nine new scenes** in the house style (DECISIONS D68; DESIGN.md "Scenes"): LinkedIn AI, Code AI, Learning AI,

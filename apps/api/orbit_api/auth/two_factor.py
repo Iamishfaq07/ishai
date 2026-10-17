@@ -27,11 +27,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import current_user, decode_claims, token_from_request, verify_password
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.models import AuditLog, User, UserTwoFactor
-from orbit_api.ratelimit import TokenBucket, blocked, failed, limit_user
+from orbit_api.ratelimit import TokenBucket, attempt, limit, limit_user, succeeded
+from orbit_api.transactions import lock_account
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 STEP_S = 30
@@ -44,6 +46,9 @@ ISSUER = "Orbit"
 _wrong_codes = TokenBucket(rate_per_s=5 / 900, burst=5)  # 5 wrong codes per account per 15 min
 _wrong_setting_codes = TokenBucket(rate_per_s=5 / 900, burst=5)  # the same, to turn it off or get new codes
 settings_limit = Depends(limit_user("auth-2fa", rate_per_s=1, burst=10))
+# The code step per network too, like the password step (auth_limit): the per-account throttle alone let one network
+# work through many accounts' challenges at full speed.
+code_ip_limit = Depends(limit("auth-2fa-code", rate_per_s=0.2, burst=10))
 
 
 # ---- TOTP ---------------------------------------------------------------------------------------------------------
@@ -173,7 +178,7 @@ class SecondStepIn(BaseModel):
     code: str = Field(min_length=6, max_length=20)
 
 
-@router.post("/login/2fa")
+@router.post("/login/2fa", dependencies=[code_ip_limit])
 async def second_step(body: SecondStepIn, request: Request, response: Response,
                       db: Annotated[AsyncSession, Depends(get_db)]) -> Any:
     """Finish signing in with a code from the authenticator app (or a recovery code)."""
@@ -183,13 +188,17 @@ async def second_step(body: SecondStepIn, request: Request, response: Response,
     user = await db.get(User, claims["sub"]) if claims else None
     if user is None or claims is None or claims.get("ver", 0) != user.token_version or user.suspended_at:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "That sign-in timed out. Start again.")
-    if blocked(_wrong_codes, user.id):
+    # The token is taken before the code is checked (and given back if it's right): wrong codes sent all at once
+    # can't each pass a check made before the first of them is counted.
+    if not attempt(_wrong_codes, user.id):
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many wrong codes. Try again in 15 minutes.")
+    # One code check at a time per account, so the same code (or recovery code) sent twice at once is used once.
+    await lock_account(db, user.id)
     row = await db.get(UserTwoFactor, user.id)
     if row is None or row.enabled_at is None or not await check_code(db, row, body.code):
-        failed(_wrong_codes, user.id)
         await db.commit()  # a used recovery code stays used even when the rest fails
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "That code didn't work. Check the time on your phone.")
+    succeeded(_wrong_codes, user.id)
     db.add(AuditLog(user_id=user.id, action="auth.login_2fa", ip=_ip(request)))
     await db.commit()
     response.delete_cookie(CHALLENGE_COOKIE, path="/")
@@ -249,7 +258,7 @@ def require_recent_sign_in(request: Request) -> None:
 
 
 @router.post("/2fa/setup", response_model=SetupOut, dependencies=[settings_limit])
-async def setup(body: SetupIn, request: Request, user: Annotated[User, Depends(current_user)],
+async def setup(body: SetupIn, request: Request, user: Annotated[User, Depends(require_verified_email)],
                 db: Annotated[AsyncSession, Depends(get_db)]) -> SetupOut:
     """Start (or restart) setting up: a new secret for the app, not on until a code from it is entered."""
     await _confirm_password(request, user, body.password)
@@ -274,7 +283,7 @@ class CodesOut(BaseModel):
 
 
 @router.post("/2fa/enable", response_model=CodesOut, dependencies=[settings_limit])
-async def enable(body: CodeIn, request: Request, user: Annotated[User, Depends(current_user)],
+async def enable(body: CodeIn, request: Request, user: Annotated[User, Depends(require_verified_email)],
                  db: Annotated[AsyncSession, Depends(get_db)]) -> CodesOut:
     """Turn it on with a first code from the app; the recovery codes are shown this once."""
     from orbit_api.auth.routes import _ip
@@ -299,13 +308,14 @@ async def _settings_code(db: AsyncSession, user: User, code: str) -> UserTwoFact
     """The account's second step, once `code` checks out (it's used up). Wrong codes are throttled as at sign-in, so a
     session left open can't guess its way to turning it off; counted apart from sign-in's, so it can't use those up
     to block the owner either."""
-    if blocked(_wrong_setting_codes, user.id):
+    if not attempt(_wrong_setting_codes, user.id):
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many wrong codes. Try again in 15 minutes.")
+    await lock_account(db, user.id)
     row = await db.get(UserTwoFactor, user.id)
     if row is None or row.enabled_at is None or not await check_code(db, row, code):
-        failed(_wrong_setting_codes, user.id)
         await db.commit()  # a used recovery code stays used
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "That code didn't work.")
+    succeeded(_wrong_setting_codes, user.id)
     return row
 
 

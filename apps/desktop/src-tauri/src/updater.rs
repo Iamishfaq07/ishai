@@ -6,7 +6,12 @@
 //! a packaged process reports "no update" and refuses to install one.
 //!
 //! Transport policy: https everywhere, except plain http to localhost/127.0.0.1 for local development.
-//! (The plugin-level `dangerousInsecureTransportProtocol` flag is on only so this check can decide.)
+//! (The plugin-level `dangerousInsecureTransportProtocol` flag is on only in tauri.dev.conf.json, for that.)
+//!
+//! No downgrades: the manifest's `version` isn't signed, only the installer is, so a server (or a custom server the
+//! user typed in) could announce "9.9.9" with an old genuine installer and its signature. `requireSignedVersion`
+//! makes the plugin take the version from the signature's trusted comment (the Tauri CLI writes `version:` there;
+//! every release from 0.1.41 has it) and refuse a manifest whose version doesn't match it.
 //!
 //! Downloading and installing are separate steps, because installing closes Orbit (on Windows the plugin starts the
 //! installer, then exits the process). The download can run while the user sets up; the install re-checks right
@@ -227,6 +232,33 @@ mod tests {
     #[test]
     fn an_unpackaged_process_is_not_the_store_build() {
         assert!(!is_packaged()); // cargo test runs without package identity
+    }
+
+    #[test]
+    fn the_release_config_refuses_a_downgrade_to_an_older_signed_build() {
+        let conf: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        let updater: tauri_plugin_updater::Config =
+            serde_json::from_value(conf["plugins"]["updater"].clone()).unwrap();
+        assert!(updater.require_signed_version);
+        assert!(!updater.dangerous_insecure_transport_protocol);
+    }
+
+    #[test]
+    fn the_windows_can_open_links_but_not_reveal_files() {
+        // opener:default also grants reveal_item_in_dir (any path, UNC shares included), which nothing uses.
+        let caps: serde_json::Value =
+            serde_json::from_str(include_str!("../capabilities/default.json")).unwrap();
+        let granted: Vec<&str> = caps["permissions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|p| p.as_str())
+            .collect();
+        assert!(granted.contains(&"opener:allow-open-url"));
+        assert!(!granted
+            .iter()
+            .any(|p| *p == "opener:default" || p.contains("reveal")));
     }
 
     #[test]

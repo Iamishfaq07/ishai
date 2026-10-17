@@ -1,6 +1,34 @@
 # Orbit security model
 
-What protects what, and where it lives in the code. Report issues privately to the repository owner.
+What protects what, and where it lives in the code.
+
+## Reporting a vulnerability
+Write to the Orbit team privately through the [Contact page](https://orbitanswer.com/contact) (topic "Technical
+problem"). `/.well-known/security.txt` points there too. Say what you found and how to reproduce it, and please don't
+post it publicly until it's fixed. Test only against your own account. Don't run automated scans against
+production, and don't touch other people's data.
+
+## Threat model (short)
+- **Assets:**
+  - accounts and their sign-in factors;
+  - what people store: resumes, documents, transcripts, job search, payments;
+  - credits and paid plans;
+  - the provider keys;
+  - the admin console;
+  - the desktop app's access to the screen and microphone.
+- **Attackers:**
+  - an anonymous visitor;
+  - another signed-in user (IDOR, cross-account data);
+  - someone holding a victim's inbox, password or a stolen session (account takeover);
+  - a hostile web page or job post (XSS, SSRF through the link fetchers, prompt injection);
+  - a malicious or compromised update server (the desktop updater);
+  - a buyer gaming payments or referrals.
+- **Out of scope:**
+  - a fully compromised device;
+  - the hosting providers themselves (Railway, Cloudflare, the AI and payment providers);
+  - an attacker who controls both the inbox and the second factor.
+- **Where each is handled:** the sections below, the IDOR matrix (`tests/test_security_idor.py`), and
+  [SECURITY_REVIEW.md](SECURITY_REVIEW.md), which holds the reviews and red-team findings with their accepted risks.
 
 ## Secrets
 - **Provider keys** (DeepSeek, Deepgram) exist only in the API process: env vars, or admin overrides encrypted at
@@ -219,8 +247,13 @@ The full review, its method and its accepted risks are in [SECURITY_REVIEW.md](S
     its own derived key, and `decode_claims` refuses any token carrying `purpose`, so a challenge can't pass as a
     session (a test caught this before release).
   - After Google, the challenge travels in a short httpOnly cookie, not the URL.
-  - Wrong codes are throttled: 5 per account per 15 minutes.
+  - Wrong codes are throttled: 5 per account per 15 minutes, plus a per-network limit on the code step. The token
+    is taken before the code is checked and given back when it's right, and the check runs under the account lock, so
+    guesses (or one code) sent at once can't outrun it. Wrong passwords at sign-in work the same way.
   - Turning 2FA off, or making new recovery codes, needs a current code.
+  - **A password reset doesn't skip it** (D71): the reset sets the new password, then answers with a challenge (in
+    the same httpOnly cookie as after Google), and the code still comes next.
+  - Turning it on needs a verified email.
 - **Devices** (`auth/devices.py`):
   - Each sign-in is a `user_sessions` row named by the token's `sid` claim, checked on every request.
   - Signing one device out ends its tokens on their next request.
@@ -233,8 +266,10 @@ The full review, its method and its accepted risks are in [SECURITY_REVIEW.md](S
   - Discoverable credentials with user verification required, so a passkey sign-in skips the authenticator code
     (it is already two factors). Suspension and the allowed-email list still apply.
   - Challenges are 32 random bytes, single use (the row is deleted when spent), last 5 minutes, and are stored only
-    as SHA-256. Adding a passkey ties its challenge to the account and asks for the password again (accounts that
-    have one).
+    as SHA-256. Adding a passkey ties its challenge to the account, asks for the password again (accounts that
+    have one) and needs a verified email.
+  - **No pre-account takeover** (D71): the first proof of an inbox by a reset link or a Google claim removes the
+    passkeys and 2FA set up before it, so whoever registered the address first can't keep a way in.
   - Only public keys are stored. A sign count that goes backwards is refused (a cloned key).
   - Passkey sign-in is IP rate limited and CSRF-exempt like `/login`: the signature over a single-use challenge
     is the credential.

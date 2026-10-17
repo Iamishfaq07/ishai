@@ -41,6 +41,7 @@ from webauthn.helpers.structs import (
 )
 
 from orbit_api.auth.devices import device_label
+from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import NOT_ALLOWED, current_user, suspended_detail
 from orbit_api.auth.two_factor import SetupIn, _confirm_password
 from orbit_api.config import get_settings
@@ -129,7 +130,8 @@ class OptionsOut(BaseModel):
 
 
 @router.post("/passkeys/options", response_model=OptionsOut, dependencies=[settings_limit])
-async def registration_options(body: SetupIn, request: Request, user: Annotated[User, Depends(current_user)],
+async def registration_options(body: SetupIn, request: Request,
+                               user: Annotated[User, Depends(require_verified_email)],
                                db: Annotated[AsyncSession, Depends(get_db)]) -> OptionsOut:
     """Start adding a passkey: the password again (when the account has one; else a recent sign-in), then what the
     browser asks for."""
@@ -164,7 +166,7 @@ def _transports(credential: dict[str, Any]) -> list[str]:
 
 @router.post("/passkeys", response_model=PasskeyOut, status_code=status.HTTP_201_CREATED,
              dependencies=[settings_limit])
-async def add_passkey(body: RegisterIn, request: Request, user: Annotated[User, Depends(current_user)],
+async def add_passkey(body: RegisterIn, request: Request, user: Annotated[User, Depends(require_verified_email)],
                       db: Annotated[AsyncSession, Depends(get_db)]) -> PasskeyOut:
     """Finish adding a passkey with what the browser made."""
     from orbit_api.auth.routes import _ip

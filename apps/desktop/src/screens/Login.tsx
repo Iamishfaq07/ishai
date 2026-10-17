@@ -246,7 +246,7 @@ function ServerSwitch({ open, onOpen, onClose }: { open: boolean; onOpen: () => 
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (check.ok) setApiUrl(check.url === DEFAULT_API_URL ? null : check.url);
+        if (check.ok) void setApiUrl(check.url === DEFAULT_API_URL ? null : check.url);
       }}
       className="mt-6 space-y-1.5 text-xs text-zinc-500"
     >
@@ -270,7 +270,7 @@ function ServerSwitch({ open, onOpen, onClose }: { open: boolean; onOpen: () => 
         </button>
       </div>
       {CUSTOM_SERVER && (
-        <button type="button" onClick={() => setApiUrl(null)} className={cx("hover:underline", focusRing)}>
+        <button type="button" onClick={() => void setApiUrl(null)} className={cx("hover:underline", focusRing)}>
           Use the standard Orbit server
         </button>
       )}

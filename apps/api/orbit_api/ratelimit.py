@@ -71,6 +71,12 @@ class TokenBucket:
         self._buckets[key] = (tokens - 1, now)
         return True
 
+    def refund(self, key: str) -> None:
+        """Give back a token `allow` took (an attempt that turned out right)."""
+        if key in self._buckets:
+            now = time.monotonic()
+            self._buckets[key] = (min(float(self.burst), self._tokens(key, now) + 1), now)
+
     def reset(self) -> None:
         self._buckets.clear()
 
@@ -111,6 +117,11 @@ class SlidingWindow(TokenBucket):
         if len(hits) >= self.burst:
             hits.popleft()
         hits.append(now)
+
+    def refund(self, key: str) -> None:
+        hits = self._hits.get(key)
+        if hits:
+            hits.pop()
 
     def reset(self) -> None:
         super().reset()
@@ -236,6 +247,20 @@ def failed(bucket: TokenBucket, key: str) -> None:
     """Count a failure (a wrong password) against `key`."""
     if _enforced():
         bucket.spend(key)
+
+
+def attempt(bucket: TokenBucket, key: str) -> bool:
+    """Take a token for a guess about to be checked (a password, an authenticator code); False when none is left.
+    For throttles that count only failures: taken *before* the check and given back by `succeeded`, because a peek
+    (`blocked`) followed by a spend after an awaited check lets any number of concurrent guesses through the peek
+    before the first failure is counted."""
+    return not _enforced() or bucket.allow(key)
+
+
+def succeeded(bucket: TokenBucket, key: str) -> None:
+    """The guess `attempt` took a token for was right: a correct one never counts."""
+    if _enforced():
+        bucket.refund(key)
 
 
 def limit(name: str, rate_per_s: float, burst: int) -> Callable[[Request], None]:

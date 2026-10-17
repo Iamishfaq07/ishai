@@ -623,6 +623,12 @@ export function ResetPasswordPage() {
     setError(null);
     try {
       const res = await api.confirmPasswordReset(token, password);
+      // A reset link proves the inbox, not the authenticator: with two-step sign-in on, the code comes next (the
+      // challenge waits in an httpOnly cookie, as after Google).
+      if ("two_factor_required" in res) {
+        navigate("/login?step=2fa", { replace: true });
+        return;
+      }
       setUser(res.user);
       navigate("/", { replace: true });
     } catch (err) {

@@ -57,3 +57,22 @@ export function classifyField(f: FieldInfo): ProfileKey | null {
   for (const [key, re] of RULES) if (re.test(text)) return key;
   return null;
 }
+
+/** A field's box on the page: its viewport rectangle plus how far the page is scrolled. */
+export interface FieldBox {
+  width: number;
+  height: number;
+  right: number;
+  bottom: number;
+  scrollX: number;
+  scrollY: number;
+}
+
+/**
+ * Whether a field's box is somewhere the person can see it: a few pixels at least, and not pushed off the page's
+ * top or left edge (below the fold is fine: they scroll). A job page can't have Orbit fill fields nobody reviews,
+ * such as a 1-pixel phone box or one parked at left:-9999px, and read them back.
+ */
+export function boxOnPage(box: FieldBox): boolean {
+  return box.width >= 4 && box.height >= 4 && box.right + box.scrollX > 0 && box.bottom + box.scrollY > 0;
+}
