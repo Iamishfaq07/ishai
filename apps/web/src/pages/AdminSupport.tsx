@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { SupportAdminItem, SupportThread } from "@orbit/ui";
+import { CosmicEmptyState, type SupportAdminItem, type SupportThread } from "@orbit/ui";
 import { api } from "../lib/api";
 import { useAsync } from "../lib/useAsync";
 import { AdminTabs, when } from "./admin/shared";
@@ -79,6 +79,11 @@ export function AdminSupportPage() {
             </li>
           ))}
         </ul>
+        {!open && !list.error && (
+          <CosmicEmptyState variant="inbox" kind={items.length ? "first-use" : "cleared"} className="hidden lg:flex"
+                            title={items.length ? "Pick a chat to answer" : "All caught up"}
+                            body={items.length ? "Your reply shows in their window." : "Chats that ask for a person show up here."} />
+        )}
         {open && (
           <div className="flex min-h-80 flex-col rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
             {open.account && (

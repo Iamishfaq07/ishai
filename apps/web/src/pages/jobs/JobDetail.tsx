@@ -14,7 +14,6 @@ import {
   FileText,
   Info,
   PenLine,
-  Search,
   Send,
   Sparkles,
   Target,
@@ -24,8 +23,9 @@ import {
   cx,
   focusRing,
   isIndia,
+  CosmicEmptyState,
 } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote, IconButton, Select } from "../../components/ui";
+import { Button, Card, ErrorNote, IconButton, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useCountry } from "../../lib/country";
 import { errorText } from "../../lib/format";
@@ -72,8 +72,8 @@ export function JobDetailPage() {
       <BackLink />
       <LoadGate loading={detail.loading && !detail.data} variant="job-card" count={1} label="Opening the job">
       {missing ? (
-        <EmptyState
-          icon={Search}
+        <CosmicEmptyState
+          variant="no-results"
           title="This job isn't listed any more"
           body="Posts leave the feed once the company takes them down, or after about 30 days. Your matches have the latest ones."
           action={

@@ -14,8 +14,9 @@ import {
   confirmDialog,
   cx,
   focusRing,
+  CosmicEmptyState,
 } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote, Field, Input, Select, Textarea } from "../../components/ui";
+import { Button, Card, ErrorNote, Field, Input, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
@@ -132,8 +133,8 @@ export function PeopleSection() {
       ) : contacts.error && !contacts.data ? (
         <ErrorNote onRetry={contacts.reload}>{errorText(contacts.error)}</ErrorNote>
       ) : contacts.data && !list.length && !editing ? (
-        <EmptyState
-          icon={Users}
+        <CosmicEmptyState
+          variant="people"
           title="No one yet"
           body="Add the senior who offered a referral, the recruiter who called, or an alum at a company you like. Orbit reminds you when to follow up."
           action={
