@@ -72,3 +72,20 @@ def test_only_numbers_only_mocks_only_yours(client: TestClient) -> None:
     empty = _mock(client, h)
     assert client.put(f"/v1/sessions/{empty}/camera-metrics", headers=h, json={**GOOD, "samples": 0}).status_code == 204
     assert client.get(f"/v1/sessions/{empty}", headers=h).json()["camera"] is None
+
+
+def test_the_privacy_policy_names_every_number_kept() -> None:
+    """The privacy policy's camera line says what the coach saves with a session: every stored number, so one added
+    to CameraMetrics has to be named there too."""
+    from pathlib import Path
+
+    from orbit_api.sessions.camera import CameraMetrics
+
+    policy = (Path(__file__).resolve().parents[3] / "apps" / "web" / "public" / "privacy.html").read_text("utf-8")
+    line = next(li for li in policy.split("<li>") if "camera coach" in li)
+    named = {"seconds": "how long it measured", "samples": "how long it measured",
+             "face_in_frame_pct": "face was in frame", "facing_camera_pct": "faced the camera",
+             "head_movement_deg_s": "head moved"}
+    assert set(named) == set(CameraMetrics.model_fields)
+    assert all(phrase in line for phrase in named.values()), line
+    assert "three numbers" not in line

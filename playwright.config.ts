@@ -17,6 +17,8 @@ export default defineConfig({
       url: "http://127.0.0.1:8000/health", timeout: 120_000, reuseExistingServer: !process.env.CI,
       env: { ORBIT_ENV: "test", ORBIT_LLM_PROVIDER: "mock", ORBIT_STT_PROVIDER: "mock",
         ORBIT_DATABASE_URL: "sqlite+aiosqlite:///./e2e.db", ORBIT_ADMIN_EMAIL: "qa-admin@example.com",
+        // The camera coach is on, so the video room is checked with its button (video-room.spec.ts).
+        ORBIT_VIDEO_MOCK: "true",
         ORBIT_WEB_URL: "http://127.0.0.1:5173", ORBIT_CORS_ORIGINS: "http://127.0.0.1:5173",
         DEEPSEEK_API_KEY: "", DEEPGRAM_API_KEY: "", ORBIT_SMTP_HOST: "", ORBIT_DEV_OUTBOX: "./e2e-outbox.txt" } },
     { command: "pnpm --filter @orbit/web dev --host 127.0.0.1", url: "http://127.0.0.1:5173", timeout: 60_000,

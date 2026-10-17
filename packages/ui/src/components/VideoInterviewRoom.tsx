@@ -234,7 +234,7 @@ function RoundButton({
         aria-label={label}
         {...(pressed !== undefined ? { "aria-pressed": pressed } : {})}
         className={cx(
-          "flex h-12 w-12 items-center justify-center rounded-full transition-all duration-150 active:scale-95 disabled:opacity-35 sm:h-14 sm:w-14",
+          "flex h-10 w-10 items-center justify-center rounded-full transition-all duration-150 active:scale-95 disabled:opacity-35 min-[440px]:h-12 min-[440px]:w-12 sm:h-14 sm:w-14",
           danger
             ? "bg-rose-600 text-white hover:bg-rose-500"
             : active
@@ -449,7 +449,9 @@ export function VideoInterviewRoom({
               {mood === "thinking" ? `${INTERVIEWER_NAME} is thinking…` : "I'm done answering"}
             </button>
           )}
-          <div className="flex items-center gap-2 rounded-full bg-white/[0.04] p-2 ring-1 ring-white/10 backdrop-blur sm:gap-3">
+          {/* Six round buttons (seven with the camera coach): a size smaller below 440 px, so End stays on screen on a 360 px
+              phone. */}
+          <div className="flex items-center gap-1 rounded-full bg-white/[0.04] p-1.5 ring-1 ring-white/10 backdrop-blur min-[440px]:gap-2 min-[440px]:p-2 sm:gap-3">
             <RoundButton label={paused ? "Unmute mic" : "Mute mic"} onClick={actions.togglePause} active={paused} pressed={paused}>
               {paused ? <MicOff className="h-5 w-5" aria-hidden /> : <Mic className="h-5 w-5" aria-hidden />}
             </RoundButton>
