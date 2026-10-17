@@ -637,9 +637,9 @@ function ResumeEditor() {
               className={cx("relative flex items-center gap-2 rounded-xl px-3 py-1.5 ring-1", scoreTone(report.score), focusRing)}
               aria-label={`${report.score} ATS score, ${report.verdict}, out of 100. Show details`}
             >
-              <ScoreCount score={report.score} className="font-display text-xl font-semibold" />
+              <ScoreCount score={report.score} className="font-display text-xl font-semibold" />{" "}
               <span className="text-left text-xs leading-tight">
-                ATS score
+                ATS score{" "}
                 <br />
                 {report.verdict}
               </span>
