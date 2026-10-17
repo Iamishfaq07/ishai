@@ -6,9 +6,10 @@ import { X } from "../icons";
 import { cx, focusRing } from "./cx";
 
 /** Dialog width from `sm` up. Phones always use the full width, as a sheet from the bottom. */
-export type SheetSize = "md" | "lg" | "xl" | "2xl";
+export type SheetSize = "sm" | "md" | "lg" | "xl" | "2xl";
 
 const WIDTH: Record<SheetSize, string> = {
+  sm: "sm:max-w-sm",
   md: "sm:max-w-md",
   lg: "sm:max-w-lg",
   xl: "sm:max-w-xl",
@@ -117,7 +118,7 @@ function useMorph(open: boolean) {
 }
 
 /**
- * The one modal panel. `placement="center"` (the default) is a sheet from the bottom on phones and a centred dialog
+ * The one modal panel (also exported as `Dialog`). `placement="center"` (the default) is a sheet from the bottom on phones and a centred dialog
  * from `sm` up. `placement="end"` is a full-height panel from the right, under confirm dialogs. Rendered on
  * `document.body` so a sticky bar cannot cover it. Focus moves in, stays in, and returns on close. Escape, the
  * close button and a press on the backdrop close it. The page behind does not scroll.
@@ -167,8 +168,8 @@ export function Sheet({
     <div
       className={
         end
-          ? "fixed inset-0 z-40 flex justify-end bg-black/40"
-          : "fixed inset-0 z-50 flex animate-fade-in items-end justify-center bg-black/50 sm:items-center sm:p-4"
+          ? "fixed inset-0 z-dialog flex animate-fade-in justify-end bg-zinc-950/40"
+          : "fixed inset-0 z-dialog flex animate-fade-in items-end justify-center bg-zinc-950/50 sm:items-center sm:p-4"
       }
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -185,11 +186,12 @@ export function Sheet({
         className={
           end
             ? cx(
-                "relative flex h-full w-full max-w-2xl flex-col overflow-hidden border-l border-zinc-200 bg-zinc-50 shadow-2xl animate-fade-in dark:border-white/10 dark:bg-zinc-950",
+                "relative flex h-full w-full max-w-2xl animate-panel-in flex-col overflow-hidden border-l border-zinc-200 bg-zinc-50 shadow-dialog dark:border-white/10 dark:bg-zinc-950",
                 className,
               )
             : cx(
-                "relative flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-3xl border border-zinc-200 bg-white shadow-2xl animate-rise sm:rounded-3xl dark:border-white/10 dark:bg-zinc-950",
+                // Phones: a sheet that rises from the bottom edge. From sm: a dialog that fades in from a touch smaller.
+                "relative flex max-h-[88vh] w-full animate-sheet-up flex-col overflow-hidden rounded-t-3xl border border-zinc-200 bg-white shadow-dialog sm:animate-dialog-in sm:rounded-2xl dark:border-white/10 dark:bg-zinc-950",
                 WIDTH[size],
                 !footer && "pb-[env(safe-area-inset-bottom)]",
                 className,
@@ -201,7 +203,7 @@ export function Sheet({
           className={cx(
             "flex shrink-0 gap-3 border-b",
             end
-              ? "items-start border-zinc-200 bg-white/80 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-zinc-900/80 sm:px-5"
+              ? "items-start border-zinc-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-zinc-950 sm:px-5"
               : "items-center border-zinc-200/70 px-5 py-3.5 dark:border-white/10",
           )}
         >
@@ -216,11 +218,11 @@ export function Sheet({
             onClick={onClose}
             aria-label="Close"
             className={cx(
-              "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-500 hover:bg-zinc-900/5 dark:hover:bg-white/5",
+              "-mr-1.5 flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
               focusRing,
             )}
           >
-            <X className="h-5 w-5" aria-hidden />
+            <X className="h-[18px] w-[18px]" aria-hidden />
           </button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
@@ -236,3 +238,6 @@ export function Sheet({
     document.body,
   );
 }
+
+/** The modal dialog: the same component as Sheet (a bottom sheet on phones, a centred dialog from sm up). */
+export const Dialog = Sheet;

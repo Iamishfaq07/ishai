@@ -1,9 +1,11 @@
-import { CircleAlert, CircleCheck, Info, X } from "../icons";
+import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from "../icons";
 import { cx, focusRing } from "./cx";
 import type { ToastItem } from "./Toast";
 
 const TONE = {
-  neutral: { icon: Info, className: "text-indigo-600 dark:text-indigo-300" },
+  neutral: { icon: Info, className: "text-zinc-500 dark:text-zinc-400" },
+  info: { icon: Info, className: "text-zinc-500 dark:text-zinc-400" },
+  warning: { icon: TriangleAlert, className: "text-amber-600 dark:text-amber-300" },
   success: { icon: CircleCheck, className: "text-emerald-600 dark:text-emerald-400" },
   error: { icon: CircleAlert, className: "text-rose-600 dark:text-rose-400" },
 } as const;
@@ -29,7 +31,7 @@ export default function ToastCards({
         onPointerLeave={() => onHold("pointer", false)}
         onKeyDown={(e) => e.key === "Escape" && onDismiss(t.id)}
         className={cx(
-          "pointer-events-auto flex items-start gap-3 rounded-xl border border-zinc-200 bg-white px-3.5 py-3 text-sm text-zinc-900 shadow-[0_16px_40px_-16px_rgb(var(--ink-900)/0.45)] dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-100 dark:shadow-[0_16px_40px_-12px_rgb(0_0_0/0.8)]",
+          "pointer-events-auto flex items-start gap-3 rounded-xl border border-zinc-200 bg-white px-3.5 py-3 text-sm text-zinc-900 shadow-toast dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-100",
           t.leaving ? "animate-fade-out" : "animate-rise",
         )}
       >

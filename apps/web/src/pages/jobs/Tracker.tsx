@@ -255,7 +255,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
       </div>
 
       {pickedEntries.length > 0 && (
-        <div role="region" aria-label="Compare jobs" className="sticky bottom-20 z-20 mx-auto flex w-fit max-w-full flex-wrap items-center gap-3 rounded-2xl border border-indigo-500/25 bg-white/95 px-4 py-2.5 shadow-lg backdrop-blur sm:bottom-6 dark:bg-zinc-950/90">
+        <div role="region" aria-label="Compare jobs" className="sticky bottom-20 z-20 mx-auto flex w-fit max-w-full flex-wrap items-center gap-3 rounded-2xl border border-indigo-500/25 bg-white/95 px-4 py-2.5 shadow-popover backdrop-blur sm:bottom-6 dark:bg-zinc-950/90">
           <span className="text-sm">
             {pickedEntries.length === 1 ? "Pick one or two more to compare" : `${pickedEntries.length} jobs picked`}
           </span>

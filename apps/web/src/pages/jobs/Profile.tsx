@@ -333,7 +333,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
             form doesn't show through. */}
         {(dirty || saved) && (
           <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 animate-fade-up md:bottom-4 lg:hidden">
-            <div className="rounded-2xl bg-white p-3 shadow-xl ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-white/10">{actions}</div>
+            <div className="rounded-2xl bg-white p-3 shadow-popover ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-white/10">{actions}</div>
           </div>
         )}
       </div>

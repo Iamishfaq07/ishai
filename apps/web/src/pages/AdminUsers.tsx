@@ -355,7 +355,7 @@ function BulkBar({ ids, onDone, onClear }: { ids: string[]; onDone: (message: st
   return (
     <form
       aria-label="Give credits to the selected accounts"
-      className="sticky top-2 z-10 mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-indigo-400/40 bg-white/95 p-2.5 text-sm shadow-lg dark:bg-zinc-900/95"
+      className="sticky top-2 z-10 mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-indigo-400/40 bg-white/95 p-2.5 text-sm shadow-popover dark:bg-zinc-900/95"
       onSubmit={(e) => {
         e.preventDefault();
         setBusy(true);

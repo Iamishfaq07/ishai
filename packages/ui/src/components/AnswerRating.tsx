@@ -73,7 +73,7 @@ export function AnswerRatingButtons({
     <span
       role="group"
       aria-label="What was off?"
-      className="glass-panel absolute right-0 top-full z-30 mt-1.5 flex w-64 !bg-white dark:!bg-zinc-900 animate-fade-up flex-wrap items-center gap-1 rounded-xl p-2.5 text-left shadow-xl"
+      className="glass-panel absolute right-0 top-full z-30 mt-1.5 flex w-64 !bg-white dark:!bg-zinc-900 animate-fade-up flex-wrap items-center gap-1 rounded-xl p-2.5 text-left shadow-menu"
     >
       <span className="basis-full pb-0.5 text-xs font-medium text-zinc-600 dark:text-zinc-300">
         What was off? <span className="font-normal text-zinc-500">Orbit adjusts to what you keep telling it.</span>

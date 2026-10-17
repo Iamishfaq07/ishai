@@ -111,7 +111,7 @@ function ScoreChart({ points }: { points: ProgressPoint[] }) {
       {hp && hc && (
         <div
           role="status"
-          className="glass-panel pointer-events-none absolute z-10 rounded-xl p-2.5 text-xs shadow-lg"
+          className="glass-panel pointer-events-none absolute z-10 rounded-xl p-2.5 text-xs shadow-popover"
           style={{
             width: Math.min(TIP_W, width),
             left: Math.max(0, Math.min(hc[0] - TIP_W / 2, width - TIP_W)),

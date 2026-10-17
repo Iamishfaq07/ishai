@@ -92,7 +92,7 @@ export function Term({ children, term, tip }: { children: ReactNode; term?: Glos
         // Still in the page when closed (display: none), so aria-describedby keeps reading it.
         className={cx(
           open ? "block" : "hidden",
-          "absolute left-1/2 top-full z-40 mt-1.5 w-max max-w-[min(18rem,calc(100vw-1rem))] -translate-x-1/2 rounded-lg bg-zinc-900 px-3 py-2 text-left font-sans text-xs font-normal normal-case leading-relaxed tracking-normal text-white shadow-lg animate-fade-in dark:bg-zinc-100 dark:text-zinc-900",
+          "absolute left-1/2 top-full z-40 mt-1.5 w-max max-w-[min(18rem,calc(100vw-1rem))] -translate-x-1/2 rounded-lg bg-zinc-900 px-3 py-2 text-left font-sans text-xs font-normal normal-case leading-relaxed tracking-normal text-white shadow-popover animate-fade-in dark:bg-zinc-100 dark:text-zinc-900",
         )}
       >
         {meaning}

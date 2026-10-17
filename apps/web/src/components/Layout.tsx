@@ -27,6 +27,11 @@ import {
   UsersRound,
   VerifyEmailBanner,
   ApprovalBanner,
+  Avatar,
+  floatingClass,
+  menuItemClass,
+  menuKeys,
+  useDismiss,
   buttonClass,
   cx,
   focusRing,
@@ -552,23 +557,11 @@ function NewMenu({ onNavigate }: { onNavigate: (to: string) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => setOpen(false), []);
+  // Escape (focus back on New) or a press outside closes it; focus starts on the first item.
+  useDismiss(open, close, ref, buttonRef);
   useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setOpen(false);
-      buttonRef.current?.focus();
-    };
-    document.addEventListener("pointerdown", onDown);
-    document.addEventListener("keydown", onKey);
-    menuRef.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
-    return () => {
-      document.removeEventListener("pointerdown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
+    if (open) menuRef.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
   }, [open]);
   return (
     <div ref={ref} className="relative">
@@ -589,8 +582,8 @@ function NewMenu({ onNavigate }: { onNavigate: (to: string) => void }) {
           ref={menuRef}
           role="menu"
           aria-label="New"
-          onKeyDown={(e) => menuKeys(e, menuRef.current, () => setOpen(false))}
-          className="glass-panel absolute right-0 top-full z-30 mt-2 w-60 animate-scale-in rounded-2xl p-1.5 shadow-xl"
+          onKeyDown={(e) => menuKeys(e, menuRef.current, close)}
+          className={cx(floatingClass("menu"), "absolute right-0 top-full mt-2 w-60 origin-top-right animate-menu-in p-1")}
         >
           {NEW_ACTIONS.map(({ to, label, icon: Icon }) => (
             <button
@@ -613,25 +606,9 @@ function NewMenu({ onNavigate }: { onNavigate: (to: string) => void }) {
   );
 }
 
-const menuItem = cx(
-  "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-900/5 dark:text-zinc-200 dark:hover:bg-white/5",
-  focusRing,
-);
-
-/** Arrow keys move between a menu's items, as in any menu; Tab leaves it. */
-function menuKeys(e: ReactKeyboardEvent<HTMLDivElement>, menu: HTMLDivElement | null, close: () => void): void {
-  const items = [...(menu?.querySelectorAll<HTMLElement>("[role=menuitem]") ?? [])];
-  const i = items.indexOf(document.activeElement as HTMLElement);
-  const go = (n: number) => {
-    e.preventDefault();
-    items[(n + items.length) % items.length]?.focus();
-  };
-  if (e.key === "ArrowDown") go(i + 1);
-  else if (e.key === "ArrowUp") go(i - 1);
-  else if (e.key === "Home") go(0);
-  else if (e.key === "End") go(items.length - 1);
-  else if (e.key === "Tab") close();
-}
+// The shared menu row (packages/ui Menu): arrow keys, first letters, Escape and outside presses work the same in
+// every menu.
+const menuItem = menuItemClass();
 
 /** Phones: Explore lists every other tool (with the AI mark), then the account's places, in big rows for thumbs. */
 function ExploreMenu({
@@ -768,43 +745,14 @@ function AccountMenu({
   const ref = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => setOpen(false), []);
+  useDismiss(open, close, ref, buttonRef);
+  // Focus starts on the first item, so the arrow keys work straight away.
   useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setOpen(false);
-      buttonRef.current?.focus();
-    };
-    document.addEventListener("pointerdown", onDown);
-    document.addEventListener("keydown", onKey);
-    // Focus starts on the first item, so the arrow keys work straight away.
-    menuRef.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
-    return () => {
-      document.removeEventListener("pointerdown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
+    if (open) menuRef.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
   }, [open]);
-  // Arrow keys move between the items, as in any menu; Tab leaves it.
-  const onMenuKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
-    const items = [...(menuRef.current?.querySelectorAll<HTMLElement>("[role=menuitem]") ?? [])];
-    const i = items.indexOf(document.activeElement as HTMLElement);
-    const go = (n: number) => {
-      e.preventDefault();
-      items[(n + items.length) % items.length]?.focus();
-    };
-    if (e.key === "ArrowDown") go(i + 1);
-    else if (e.key === "ArrowUp") go(i - 1);
-    else if (e.key === "Home") go(0);
-    else if (e.key === "End") go(items.length - 1);
-    else if (e.key === "Tab") setOpen(false);
-  };
-  const item = cx(
-    "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-900/5 dark:text-zinc-200 dark:hover:bg-white/5",
-    focusRing,
-  );
+  const onMenuKey = (e: ReactKeyboardEvent<HTMLDivElement>) => menuKeys(e, menuRef.current, close);
+  const item = menuItemClass();
   const choose = (fn: () => void) => () => {
     setOpen(false);
     fn();
@@ -821,9 +769,7 @@ function AccountMenu({
         aria-label={`${initials(name, email)} account menu`}
         className={cx("flex items-center gap-1.5 rounded-full p-0.5 pr-1.5 hover:bg-zinc-900/5 dark:hover:bg-white/5", focusRing)}
       >
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 text-xs font-semibold text-zinc-700 dark:bg-white/10 dark:text-zinc-100">
-          {initials(name, email)}
-        </span>
+        <Avatar name={name || email} size="sm" className="h-8 w-8" />
         <ChevronDown className={cx("h-4 w-4 text-zinc-500 transition-transform", open && "rotate-180")} aria-hidden />
       </button>
       {open && (
@@ -832,7 +778,7 @@ function AccountMenu({
           role="menu"
           aria-label="Account"
           onKeyDown={onMenuKey}
-          className="glass-panel absolute right-0 top-full z-30 mt-2 w-64 animate-scale-in rounded-2xl p-1.5 shadow-xl"
+          className={cx(floatingClass("menu"), "absolute right-0 top-full mt-2 w-64 origin-top-right animate-menu-in p-1")}
         >
           <div className="px-3 py-2">
             {name && <p className="truncate text-sm font-medium">{name}</p>}

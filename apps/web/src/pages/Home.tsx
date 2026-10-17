@@ -596,7 +596,7 @@ function DesktopPromo() {
         <a
           href={DESKTOP_DOWNLOAD_URL}
           className={cx(
-            "inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-indigo-700 shadow-lg hover:bg-indigo-50",
+            "inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-50",
             focusRing,
           )}
         >
