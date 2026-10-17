@@ -28,8 +28,14 @@ const LABEL: Record<AdminPayment["status"], string> = {
 export function AdminPaymentsPage() {
   const [only, setOnly] = useState<"submitted" | "all">("submitted");
   const list = useAsync(() => api.adminPayments(only), [only], `admin-payments-${only}`);
+  // A decided payment stays in the list (marked Approved or Rejected); the tab's count of those still to check is the
+  // server's count of the listed ones, so it's worked out again here, or it kept counting the one just approved.
   const replace = (row: AdminPayment) =>
-    list.setData((prev) => prev && { ...prev, payments: prev.payments.map((p) => (p.id === row.id ? row : p)) });
+    list.setData((prev) => {
+      if (!prev) return prev;
+      const payments = prev.payments.map((p) => (p.id === row.id ? row : p));
+      return { ...prev, payments, waiting: payments.filter((p) => p.status === "submitted").length };
+    });
 
   const [checking, setChecking] = useState(false);
   const [checked, setChecked] = useState<string | null>(null);
