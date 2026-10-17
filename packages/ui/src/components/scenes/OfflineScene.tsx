@@ -1,4 +1,4 @@
-import { ACCENT, LINE, PAPER, Scene, Stars, type SceneProps } from "./parts";
+import { ACCENT, FADE, LINE, PAPER, Scene, Stars, at, type SceneProps } from "./parts";
 
 /** Offline: a dish reaching for a satellite, the signal breaking off halfway. */
 export function OfflineScene(props: SceneProps) {
@@ -13,8 +13,8 @@ export function OfflineScene(props: SceneProps) {
       </g>
       {/* The signal: it starts out, then gaps and fades. */}
       <path d="M107 72 128 60" className={ACCENT} strokeWidth="1.5" />
-      <path d="M137 55 147 49M157 44l3-1.5" className={ACCENT} strokeOpacity="0.4" strokeWidth="1.5" />
-      <path d="M114 55q7 4 6 12M120 47q13 7 10 22" className={ACCENT} strokeOpacity="0.5" />
+      <path d="M137 55 147 49M157 44l3-1.5" className={`${ACCENT} ${FADE}`} strokeOpacity="0.4" strokeWidth="1.5" style={at(450)} />
+      <path d="M114 55q7 4 6 12M120 47q13 7 10 22" className={`${ACCENT} ${FADE}`} strokeOpacity="0.5" style={at(250)} />
       {/* The dish: bowl, rim, the arms to its feed, on a stand. */}
       <path d="M86 100v24M70 126h36" className={LINE} strokeWidth="1.5" />
       <rect x="78" y="120" width="20" height="8" rx="2" className={PAPER} />

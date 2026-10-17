@@ -1,4 +1,4 @@
-import { ACCENT, ACCENT_SOFT, LABEL, LINE, PAPER, SPARK, Scene, Stars, pin, type SceneProps } from "./parts";
+import { ACCENT, ACCENT_SOFT, LABEL, LINE, PAPER, POP, SPARK, Scene, Stars, at, pin, type SceneProps } from "./parts";
 
 /** Welcome: Orbit as a planet, with a moon for each product on one orbit: interview, resume, jobs. */
 export function WelcomeScene(props: SceneProps) {
@@ -16,20 +16,26 @@ export function WelcomeScene(props: SceneProps) {
         <path d={SPARK(153, 46, 4.5)} className="fill-aurora-400 motion-ok:animate-twinkle" />
       </g>
       {/* Interview: a microphone. */}
-      <circle cx="25.5" cy="88.9" r="13" className={PAPER} />
-      <rect x="22.5" y="81" width="6" height="10" rx="3" className={ACCENT} strokeWidth="1.5" />
-      <path d="M19.5 88a6 6 0 0 0 12 0M25.5 94v3" className={ACCENT} strokeWidth="1.5" />
-      <text x="25.5" y="115" textAnchor="middle" className={LABEL}>Interview</text>
+      <g className={POP} style={at(200)}>
+        <circle cx="25.5" cy="88.9" r="13" className={PAPER} />
+        <rect x="22.5" y="81" width="6" height="10" rx="3" className={ACCENT} strokeWidth="1.5" />
+        <path d="M19.5 88a6 6 0 0 0 12 0M25.5 94v3" className={ACCENT} strokeWidth="1.5" />
+        <text x="25.5" y="115" textAnchor="middle" className={LABEL}>Interview</text>
+      </g>
       {/* Resume: a page. */}
-      <circle cx="193.2" cy="56.2" r="13" className={PAPER} />
-      <rect x="188" y="49" width="10.5" height="14" rx="1.5" className={ACCENT} strokeWidth="1.5" />
-      <path d="M190.5 53.5h5.5M190.5 57h5.5M190.5 60.5h3.5" className={ACCENT} />
-      <text x="193.2" y="35" textAnchor="middle" className={LABEL}>Resume</text>
+      <g className={POP} style={at(350)}>
+        <circle cx="193.2" cy="56.2" r="13" className={PAPER} />
+        <rect x="188" y="49" width="10.5" height="14" rx="1.5" className={ACCENT} strokeWidth="1.5" />
+        <path d="M190.5 53.5h5.5M190.5 57h5.5M190.5 60.5h3.5" className={ACCENT} />
+        <text x="193.2" y="35" textAnchor="middle" className={LABEL}>Resume</text>
+      </g>
       {/* Jobs: a pin. */}
-      <circle cx="173.1" cy="104.8" r="13" className={PAPER} />
-      <path d={pin(173.1, 112, 4.6)} className={ACCENT} strokeWidth="1.5" />
-      <circle cx="173.1" cy="104.2" r="1.6" className="fill-indigo-500 dark:fill-indigo-400" />
-      <text x="173.1" y="131" textAnchor="middle" className={LABEL}>Jobs</text>
+      <g className={POP} style={at(500)}>
+        <circle cx="173.1" cy="104.8" r="13" className={PAPER} />
+        <path d={pin(173.1, 112, 4.6)} className={ACCENT} strokeWidth="1.5" />
+        <circle cx="173.1" cy="104.2" r="1.6" className="fill-indigo-500 dark:fill-indigo-400" />
+        <text x="173.1" y="131" textAnchor="middle" className={LABEL}>Jobs</text>
+      </g>
     </Scene>
   );
 }

@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { ACCENT, ACCENT_FILL, BAR, LINE, PAPER, SPARK, Scene, Stars, type SceneProps } from "./parts";
+import { ACCENT, ACCENT_FILL, BAR, IN, LINE, NUDGE, PAPER, SPARK, Scene, Stars, type SceneProps } from "./parts";
 
 const R = 17;
 const RING = 2 * Math.PI * R;
@@ -11,18 +11,22 @@ export function ResumeScene({ score = 82, ...props }: SceneProps & { score?: num
     <Scene {...props}>
       <Stars at={[[20, 24, 1], [36, 132, 1.2], [214, 136, 0.8], [228, 96, 1], [128, 12, 0.8]]} />
       <ellipse cx="104" cy="86" rx="88" ry="24" transform="rotate(-10 104 86)" className={LINE} strokeDasharray="2 5" />
-      <g transform="rotate(-4 104 76)">
-        <rect x="72" y="28" width="64" height="86" rx="4" className={PAPER} />
-        <rect x="80" y="37" width="30" height="4.5" rx="2" className={ACCENT_FILL} />
-        <rect x="80" y="45" width="40" height="2.5" rx="1.25" className={BAR} />
-        <rect x="80" y="55" width="14" height="2.5" rx="1.25" className={ACCENT_FILL} opacity="0.6" />
-        <rect x="80" y="61" width="48" height="2.5" rx="1.25" className={BAR} />
-        <rect x="80" y="66" width="44" height="2.5" rx="1.25" className={BAR} />
-        <rect x="80" y="71" width="46" height="2.5" rx="1.25" className={BAR} />
-        <rect x="80" y="81" width="14" height="2.5" rx="1.25" className={ACCENT_FILL} opacity="0.6" />
-        <rect x="80" y="87" width="48" height="2.5" rx="1.25" className={BAR} />
-        <rect x="80" y="92" width="36" height="2.5" rx="1.25" className={BAR} />
-        <rect x="80" y="102" width="26" height="2.5" rx="1.25" className={BAR} />
+      <g className={NUDGE}>
+        <g className={IN}>
+          <g transform="rotate(-4 104 76)">
+            <rect x="72" y="28" width="64" height="86" rx="4" className={PAPER} />
+            <rect x="80" y="37" width="30" height="4.5" rx="2" className={ACCENT_FILL} />
+            <rect x="80" y="45" width="40" height="2.5" rx="1.25" className={BAR} />
+            <rect x="80" y="55" width="14" height="2.5" rx="1.25" className={ACCENT_FILL} opacity="0.6" />
+            <rect x="80" y="61" width="48" height="2.5" rx="1.25" className={BAR} />
+            <rect x="80" y="66" width="44" height="2.5" rx="1.25" className={BAR} />
+            <rect x="80" y="71" width="46" height="2.5" rx="1.25" className={BAR} />
+            <rect x="80" y="81" width="14" height="2.5" rx="1.25" className={ACCENT_FILL} opacity="0.6" />
+            <rect x="80" y="87" width="48" height="2.5" rx="1.25" className={BAR} />
+            <rect x="80" y="92" width="36" height="2.5" rx="1.25" className={BAR} />
+            <rect x="80" y="102" width="26" height="2.5" rx="1.25" className={BAR} />
+          </g>
+        </g>
       </g>
       {/* A moon on the page's orbit. */}
       <circle cx="71.2" cy="113.9" r="4" className="fill-aurora-400" />
