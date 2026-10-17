@@ -18,25 +18,23 @@ export function AdminOverview({ version = 0 }: { version?: number }) {
   return (
     <div className="mb-6 space-y-3">
       {s?.warnings?.includes("database_read_only") && (
-        <div role="alert" className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-900 dark:text-rose-100">
-          <p className="font-semibold">The database is read-only</p>
-          <p className="mt-1">
+        <Callout tone="error" title="The database is read-only">
+          <p>
             It answers reads but refuses every write, so sign-ins, payments, sessions and saves fail, and new deploys fail their readiness check. In
             Railway's Postgres console, <code>SHOW default_transaction_read_only;</code> says <code>on</code> (or the database is a standby). Turn it
             off with <code>SET default_transaction_read_only = off;</code> then <code>ALTER DATABASE railway SET default_transaction_read_only = off;</code>{" "}
             (use the database's real name), then restart the API: its open connections keep the old setting.
           </p>
-        </div>
+        </Callout>
       )}
       {s?.warnings?.includes("proxy_secret") && (
-        <div role="alert" className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-900 dark:text-rose-100">
-          <p className="font-semibold">Proxy secret missing</p>
-          <p className="mt-1">
+        <Callout tone="error" title="Proxy secret missing">
+          <p>
             ORBIT_PROXY_SECRET isn't set on the API (or is too weak), so per-network limits can be dodged. Welcome credits are on hold and
             new deploys fail their readiness check until it's set. Set the same 32+ character value on the API host (ORBIT_PROXY_SECRET, in Railway) and in
             Cloudflare (<code>wrangler secret put PROXY_SECRET</code>).
           </p>
-        </div>
+        </Callout>
       )}
       {s?.warnings?.includes("proxy_unsigned") && (
         <Callout tone="error" title="The website isn't sending the proxy secret">
