@@ -2,3 +2,5 @@
 export const PAGE_META: Record<string, { title: string; description: string }>;
 export function metaFor(pathname: string): ({ path: string; title: string; description: string }) | null;
 export function withPageMeta(response: Response, url: URL): Response;
+export const PAGE_IMAGES: Record<string, string>;
+export function imageFor(path: string): string;

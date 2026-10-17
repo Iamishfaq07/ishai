@@ -53,9 +53,12 @@ export const PAGE_IMAGES = {
   "/warmup": "/og/warmup.jpg",
   "/contact": "/og/contact.jpg",
   "/technical": "/og/technical.jpg",
+  "/companies": "/og/companies.jpg",
+  "/roles": "/og/roles.jpg",
 };
 
-/** The picture for a page's preview: its own, else the front page's. */
+/** The picture for a page's preview: its own, else the front page's. The built pages use it too
+ * (src/prerender/seo.ts): each company guide shows /companies's card, each role guide /roles's. */
 export function imageFor(path) {
   return Object.prototype.hasOwnProperty.call(PAGE_IMAGES, path) ? PAGE_IMAGES[path] : "/og-image.jpg";
 }
