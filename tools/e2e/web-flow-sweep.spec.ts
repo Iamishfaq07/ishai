@@ -143,3 +143,15 @@ test("offer form: the joining bonus is paid once, and equity says its unit", asy
   await page.getByLabel("Equity a year").fill("3");
   await expect(form.getByText("₹3,00,000", { exact: false })).toBeVisible();
 });
+
+test("billing as the admin: Free isn't called the current plan", async ({ page, context }) => {
+  // The suite's API makes qa-admin@example.com the admin (playwright.config.ts): Unlimited, not Free.
+  const creds = { email: "qa-admin@example.com", password: "correct horse battery" };
+  const r = await context.request.post(`${API}/v1/auth/register`, { data: { ...creds, name: "QA Admin", country: "IN" } });
+  if (r.status() !== 201) expect((await context.request.post(`${API}/v1/auth/login`, { data: creds })).status()).toBe(200);
+  await context.addInitScript(() => localStorage.setItem("orbit.cookies.v1", "1"));
+  await page.goto("/billing");
+  await expect(page.getByText("Weekly", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Your current plan" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Included" })).toBeVisible();
+});
