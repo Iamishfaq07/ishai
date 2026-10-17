@@ -463,3 +463,13 @@ which isn't `app-shell`) are untouched, and it makes dark mode the light theme's
 surface, the canvas recessed). The cost is that inside the dark workbench `zinc-950` no longer means "darkest": a
 page that wants the canvas names `--canvas`. The live session page joins the workbench in the same change: it's
 where the copilot is used, so it gets the still canvas and opaque panels, not the sky.
+The same round made the workbench one component system (the owner asked for "a pure enterprise big product"). Each
+primitive is built once in `packages/ui` and adopted where the hand-rolled versions were: one Button with six
+variants and fields at its height, one Dialog/confirm/menu/tooltip/toast family on four elevation tokens (menu <
+popover < dialog < toast) and a z-index scale, Callout and Badge for every banner and status pill, a Table with a
+sortable header and a phone card view, SegmentedControl and Tabs with a sliding indicator, and an Orbit scene for each
+product's empty screen. Two choices were deliberate: a loading button shows a spinner in its label's place at the same
+width (nothing beside it shifts; the name stays for screen readers), and the gallery of all of it lives at
+`/dev/components` in development builds only, behind `import.meta.env.DEV`, rather than a Storybook (no new
+dependency, and it renders inside the real Layout, tokens and themes). Primitives are presentational: none changed
+what a page does.

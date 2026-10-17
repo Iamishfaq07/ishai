@@ -22,7 +22,8 @@ Shared by the web and desktop apps. Source of truth: `packages/ui/tailwind.prese
 - **Corners say how a thing behaves**: controls 8 px (`rounded-xl`), cards 12 px (`rounded-2xl`), large panels 16 px
   (`rounded-3xl`).
 - **Buttons**: primary is the solid accent (white on accent-600 passes AA in every accent), secondary is bordered,
-  ghost is plain, danger is rose-700 text. Nothing on a button moves except the press, and buttons cast no shadow.
+  ghost is plain, danger is rose-700 text, destructive is solid rose (inside a confirm), link is inline text. Nothing
+  on a button moves except the press, and buttons cast no shadow.
 - **Fields and buttons are one height**: a text field, a select and a regular button are all 38 px (every button
   variant carries a 1 px border, transparent unless it's bordered), so a field and its button line up in a row.
   `sm` buttons are for dense rows and cards, not beside a field.
@@ -79,16 +80,81 @@ for code only, never for small data labels. Self-hosted via Fontsource (`apps/we
 
 - `glass-panel` — frosted card (the `Card` primitive). In see-through desktop windows it drops its blur and follows
   the window's transparency.
-- `Sheet` — the one modal. A sheet from the bottom on a phone, a centred dialog from `sm` up, portaled to `body` so
-  the tab bar cannot cover it. `placement="end"` is the full-height panel from the right (an account or a message).
-  Focus is trapped, Escape and the backdrop close it, and the page behind does not scroll. A `footer` stays pinned
-  while the body scrolls. A confirm sits above it.
+- `Sheet` (also exported as `Dialog`) — the one modal. A sheet that rises from the bottom on a phone, a centred dialog
+  that fades in from a touch smaller from `sm` up (sizes `sm`–`2xl`), portaled to `body` so the tab bar cannot cover
+  it. `placement="end"` is the full-height panel from the right (an account or a message). Focus moves in, is
+  trapped, and returns on close; Escape and the backdrop close it, and the page behind does not scroll. A `footer`
+  (use `DialogActions`) stays pinned while the body scrolls. A confirm sits above it.
 - `gradient-border` — 1 px accent → aurora hairline around hero cards.
 - `text-gradient` — accent → aurora headline text.
 - `SpaceBackdrop` — the animated sky, mounted once per app.
 - **Calm inside the app**: the signed-in shell (`html.app-shell`, set by the web Layout) hides the starfield, dot
   grid and light orbs, and `glass-panel` / `orbit-card` / `orbit-panel` turn opaque there, so nothing shows through
   text while people work. The cinematic sky is for public pages and empty states.
+
+## Components (the inventory)
+
+One system, in `packages/ui` (shared with the desktop app), exported from `@orbit/ui`. Use these before writing a
+class string; `/dev/components` (development builds) shows each in its states, in both themes. D58 says why.
+
+**Tokens**
+- Radius: controls 8 px (`rounded-xl`), cards 12 px (`rounded-2xl`), large panels 16 px (`rounded-3xl`).
+- Height: `sm` 30 px, `md` 38 px (fields and regular buttons), `lg` 46 px.
+- Spacing: page sections `space-y-6`/`8`; a card's padding `p-5` (`p-4` dense); a page head `mb-6`; gaps 2/3/4.
+- Elevation, floating things only, lowest to highest: `shadow-menu` (menus) < `shadow-popover` (popovers, tooltips,
+  sticky action bars) < `shadow-dialog` (dialogs, side panels, the command palette) < `shadow-toast`; each with a
+  hairline border, and its own dark value. Z order: `z-bar` 20 < `z-sidebar` 30 < `z-menu`/`z-popover` 40 <
+  `z-dialog` 50 < `z-confirm` 60 < `z-toast` 70.
+- Motion: `duration-press/quick/panel/page` (100/160/240/280 ms), `ease-standard/enter/exit`; overlay entrances
+  `animate-dialog-in`, `animate-sheet-up`, `animate-menu-in`, `animate-panel-in`; the `.indicator` slide. Gentle turns
+  each into a fade, Off into nothing.
+
+**Actions**
+- `Button` — `primary` (one per view), `secondary`, `ghost`, `danger` (quiet rose: a Delete that asks first),
+  `destructive` (solid rose: the button that deletes, inside a confirm), `link`. `loading` swaps the label for a
+  spinner at the same width (aria-busy); `aria-pressed` styles a toggle; `block` is full width on phones.
+- `IconButton` (icon only, named by `label`, which is also its tooltip), `ButtonGroup`, `MenuButton`, `SplitButton`,
+  `buttonClass(variant, size)` for links that look like buttons.
+
+**Overlays**
+- `Dialog`/`Sheet` + `DialogActions` (the way out first, the main action last; stacked, main on top, on phones).
+- `confirmDialog({ title, body, confirmLabel, danger, typeToConfirm })` — `danger` uses the destructive button;
+  `typeToConfirm` ("DELETE") for what can't be undone (an account).
+- `MenuButton` / hand-built menus with `useDismiss`, `menuKeys`, `floatingClass`, `menuItemClass` (arrows, Home/End,
+  first letters, Escape back to the button, a press outside closes). `Popover` for small forms and filters.
+- `Tooltip` — on hover after 400 ms and on focus at once, aria-describedby, Escape hides. It only repeats or adds:
+  never put information people need only in a tooltip (phones can't hover).
+- `toast()` — `neutral`/`info`, `success`, `warning`, `error`; one action (Undo); stacks three; polite live region;
+  above dialogs. `Callout` — inline banners: `info` (ink), `success`, `warning`, `error` (announced); optional title,
+  action, dismiss. `ErrorNote` is the error callout with Retry.
+
+**Forms**
+- `Field` (label; `required` marker; `hint`; `error`, wired with aria-describedby and aria-invalid; `counter`, amber in
+  the last tenth), `Input`, `Textarea`, `Select` (date fields are `Input type="date"`), `SearchInput`, `Checkbox`,
+  `RadioGroup`, `Toggle` (a switch), `Slider`, `SegmentedControl` (a few exclusive options; a radio group with a
+  sliding indicator), `Dropzone`.
+- Errors say what to do ("Add a company name"), appear when the person leaves the field or submits, never while
+  they type.
+
+**Data**
+- `Table`, `THead`, `Th` (sortable: `sort` + `onSort`, aria-sort, the direction's arrow), `Tr` (hover, `selected`),
+  `Td` (`label` for the phone's card view with `stack`, `primary` for the row's title, `align="right"` for figures),
+  `TableEmpty`, `TableLoading`. Wide tables scroll inside their card, never the page.
+- `StatTile`, `Badge` (status only, always in words: `success`, `warning`, `danger`, `info`, `accent`, `neutral`),
+  `Avatar` (initials, never photos), `ProgressBar`, `Stepper`, `Pagination`, `Breadcrumbs`, `Kbd`, `IconTile`.
+- `Tabs` + `TabPanel` (a sliding underline, arrow keys; only the chosen panel is in the page), or `tabClass` /
+  `tabListClass` for a tab list that manages itself. `ProductTabs` for a product's own pages (links).
+- `PageHeader` (title, a line, actions, `back`), `BackLink`, `Card`, `EmptyState` / `CosmicEmptyState`, `Skeleton`.
+
+**Do / don't**
+- Do reuse a primitive; extend it (a prop, a variant) rather than copying its classes. Don't hand-roll a button,
+  badge, table header or menu.
+- Do give every icon-only control a name (`IconButton label`). Don't show colour without words.
+- Do use `shadow-*` tokens for things that float, and nothing else. Don't put a shadow, a gradient or a glow on a
+  card.
+- Do prefer Undo (a toast's action) to a confirm where the code can restore what was removed; keep the confirm for
+  what can't come back.
+- Do keep a phone's main action in thumb reach (`block`, `DialogActions`, the sheet's footer).
 
 ## Navigation (web)
 
@@ -158,7 +224,8 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
   tracker"). Not for errors that need action (`ErrorNote`) or questions (`confirmDialog`).
 - **Loading:** `Skeleton` (`line`, `card`, `job-card`, `resume-card`, `session-row`) with `useLoadPhase(loading)`.
   `LoadGate` is that timing around a list: nothing, then the skeleton, then the list.
-  (shown after 150 ms, kept at least 300 ms). Buttons keep their label with `loading`. Spinners (`Spinner`, the
+  (shown after 150 ms, kept at least 300 ms). A `loading` button keeps its name and width (a spinner takes the
+  label's place; no "Saving…" swap needed). Spinners (`Spinner`, the
   orb) are for small or unknown-shaped waits. In the workbench a placeholder is an ink tint, not the accent.
 - **Empty states:** `EmptyState` with `kind` `first-use` (with a `GhostPreview` of the filled screen), `no-results`,
   `cleared` or `offline` (`onRetry`). A headline, one line, one imperative action. Its art is an Orbit scene
