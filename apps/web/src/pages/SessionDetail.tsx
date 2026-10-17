@@ -21,11 +21,12 @@ import {
   Tabs,
 } from "@orbit/ui";
 import { BackLink } from "../components/BackLink";
-import { Button, Card, ErrorNote, Input, PageHeader } from "../components/ui";
+import { Button, Card, EmptyState, ErrorNote, Input, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
-import { SESSION_TYPE_LABEL, downloadText, errorText, formatClock, formatDate, formatDuration } from "../lib/format";
+import { SESSION_TYPE_LABEL, downloadText, errorText, formatClock, formatDate, formatDuration, isNotFound } from "../lib/format";
 import { SESSION_TYPE_ICON } from "../lib/sessionIcons";
 import { useAsync } from "../lib/useAsync";
+import { looseAnswers } from "../lib/sessionQa";
 import type { LiveLaunchState } from "./SessionSetup";
 import { JOBS_MATCHES } from "./jobs/paths";
 import { RESUME_AI_HOME } from "./resume/paths";
@@ -52,9 +53,19 @@ export function SessionDetailPage() {
 
   if (detail.loading && !detail.data) return <LoadGate loading variant="card" count={2} label="Opening the session">{null}</LoadGate>;
   if (detail.error || !detail.data) {
-    return <ErrorNote onRetry={detail.reload}>{errorText(detail.error ?? new Error("Session not found."))}</ErrorNote>;
+    if (!detail.error || isNotFound(detail.error)) {
+      return (
+        <EmptyState
+          title="That session isn't here"
+          body="It may have been deleted."
+          action={<Link to="/sessions" className="text-indigo-600 underline dark:text-indigo-400">See your sessions</Link>}
+        />
+      );
+    }
+    return <ErrorNote onRetry={detail.reload}>{errorText(detail.error)}</ErrorNote>;
   }
   const { session } = detail.data;
+  const qaCount = detail.data.questions.length + looseAnswers(detail.data.questions, detail.data.answers).length;
 
   const exportMd = async () => {
     setActionError(null);
@@ -163,7 +174,7 @@ export function SessionDetailPage() {
             ["review", "Review", "Review"],
             ["summary", "Summary", "Summary"],
             ["transcript", `Transcript (${detail.data.turns.length})`, "Transcript"],
-            ["questions", `Questions & answers (${detail.data.questions.length})`, `Q&A (${detail.data.questions.length})`],
+            ["questions", `Questions & answers (${qaCount})`, `Q&A (${qaCount})`],
           ] as const
         ).map(([id, label, short]) => ({
           value: id,
@@ -325,7 +336,30 @@ function QuestionsView({ detail }: { detail: SessionDetail }) {
     return map;
   }, [detail.answers]);
 
-  if (detail.questions.length === 0) return <p className="text-sm text-zinc-500">No questions were detected.</p>;
+  const loose = looseAnswers(detail.questions, detail.answers);
+  const answerBlock = (a: SessionAnswer) => (
+    <div key={a.id} className="mt-3 border-t border-zinc-100 pt-3 text-sm dark:border-zinc-800">
+      {a.content.direct_answer && <p className="whitespace-pre-line">{a.content.direct_answer}</p>}
+      <ul className="mt-1 space-y-1 text-zinc-700 dark:text-zinc-300">
+        {a.content.talking_points.map((p, i) => (
+          <li key={i}>· {p}</li>
+        ))}
+      </ul>
+      {a.content.code && (
+        <div className="mt-2">
+          <CodeBlock code={a.content.code} />
+        </div>
+      )}
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <p className="text-xs text-zinc-400">
+          {a.first_token_ms !== null && `${a.model ?? "model"} · first token ${Math.round(a.first_token_ms)} ms`}
+        </p>
+        <AnswerRatingButtons value={ratings.get(a.id)} onRate={(r, why) => ratings.rate(a.id, r, why)} />
+      </div>
+    </div>
+  );
+
+  if (detail.questions.length === 0 && loose.length === 0) return <p className="text-sm text-zinc-500">No questions were detected.</p>;
   return (
     <ol className="space-y-4">
       {detail.questions.map((q) => (
@@ -339,27 +373,21 @@ function QuestionsView({ detail }: { detail: SessionDetail }) {
               <span>{formatDate(q.created_at)}</span>
             </div>
             <p className="font-medium">{q.text}</p>
-            {(answersByQuestion.get(q.id) ?? []).map((a) => (
-              <div key={a.id} className="mt-3 border-t border-zinc-100 pt-3 text-sm dark:border-zinc-800">
-                {a.content.direct_answer && <p className="whitespace-pre-line">{a.content.direct_answer}</p>}
-                <ul className="mt-1 space-y-1 text-zinc-700 dark:text-zinc-300">
-                  {a.content.talking_points.map((p, i) => (
-                    <li key={i}>· {p}</li>
-                  ))}
-                </ul>
-                {a.content.code && (
-                  <div className="mt-2">
-                    <CodeBlock code={a.content.code} />
-                  </div>
-                )}
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <p className="text-xs text-zinc-400">
-                    {a.first_token_ms !== null && `${a.model ?? "model"} · first token ${Math.round(a.first_token_ms)} ms`}
-                  </p>
-                  <AnswerRatingButtons value={ratings.get(a.id)} onRate={(r, why) => ratings.rate(a.id, r, why)} />
-                </div>
-              </div>
-            ))}
+            {(answersByQuestion.get(q.id) ?? []).map(answerBlock)}
+          </Card>
+        </li>
+      ))}
+      {/* Asked in chat or with Answer, or their question went with the transcript: the answer is still kept. */}
+      {loose.map((a) => (
+        <li key={a.id}>
+          <Card>
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+              <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 font-medium text-indigo-700 dark:text-indigo-300">
+                {a.question_id ? "Answer" : "You asked"}
+              </span>
+            </div>
+            {a.content.question && <p className="font-medium">{a.content.question}</p>}
+            {answerBlock(a)}
           </Card>
         </li>
       ))}

@@ -5,7 +5,7 @@ import { Badge, CircleAlert, CircleCheck, Lightbulb, Play, Sparkles, LoadGate, c
 import { BackLink } from "../../components/BackLink";
 import { Button, Card, EmptyState, ErrorNote, Field, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
-import { errorText } from "../../lib/format";
+import { errorText, isNotFound } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
 import { DIFFICULTY_TONE } from "./CodeHome";
 import { CODE_HOME } from "./paths";
@@ -30,7 +30,7 @@ export function CodeProblemPage() {
     <>
       <BackLink to={CODE_HOME} className="mb-4">All problems</BackLink>
       <LoadGate loading={data.loading && !data.data} variant="card" count={2} label="Getting the problem">
-        {data.error && !data.data ? (
+        {data.error && !data.data && !isNotFound(data.error) ? (
           <ErrorNote onRetry={data.reload}>{errorText(data.error)}</ErrorNote>
         ) : data.data ? (
           <Workspace key={problemId} problem={data.data.problem} attempts={data.data.attempts} reviewsLeft={data.data.reviews_left}

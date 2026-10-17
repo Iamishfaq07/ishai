@@ -1,5 +1,35 @@
 # Implementation log
 
+## Web flow sweep: what a click got wrong (2026-10-18)
+
+Every screen driven on a local stack (mock AI), at 1440×900, 820×1180 and 390×844, light and dark. Fixed:
+
+- **Documents**: the page said and checked "up to 10 MB", but the API takes 5 MB; a bigger file failed as "Can't
+  reach Orbit" (the refusal carries no CORS headers). It now says 5 MB and refuses the file before sending.
+- **Billing**: a purchase's result (added, a failed card, back from PayPal) sat under every pack on a phone and far
+  below a plan's button, so a purchase looked like it did nothing; it now scrolls into view. Outside India with
+  dollar checkout off, the note no longer says "Pay once over UPI"; it says paying in dollars isn't open yet, with
+  a link to tell us. India's wording is unchanged.
+- **Live session setup** ticks at most 20 documents (the API's limit), the newest resume and job post first, the
+  same rules as the desktop's Setup: past 20 saved documents Start was refused ("at most 20 items").
+- **Support chat**: `X-Orbit-Support-Token` is allowed through CORS, so a reopened chat reads its thread when the
+  API is on another origin (local dev, e2e; production web goes through the same-origin proxy). Send waits for
+  the chat to open, instead of dropping a message sent while it was opening.
+- **Session Q&A** lists answers no detected question carries: chat answers, and every answer after "Delete
+  transcript" (which keeps them, as it says).
+- **Not found**: a deleted resume, session or coding problem says "That … isn't here" with a link back, instead of
+  the API's message with no way out or a Retry that can only fail.
+- **Offer form**: the joining bonus is "In lakh", not "In lakh a year", and equity and other pay say their unit.
+- **My answers**: a short answer takes "a few seconds" to say, not "about 1 min".
+- **Admin payments**: the tab's count drops as soon as a payment is approved or rejected.
+- **Plans**: the Free card says "Your current plan" only on the free plan, not for the admin's Unlimited or a plan
+  given for a while. **Tracker numbers**: a job added straight in as interviewing no longer makes "Typical wait: 0
+  days" before any answer; a real answer within the day reads "Same day".
+- **Practice**: the preset a link points at (`/mock?preset=hr5`) is ringed again (the app shell's cards had
+  dropped the box-shadow a ring is drawn with).
+- `tools/e2e/web-flow-sweep.spec.ts` covers the upload limit, the purchase message on a phone, the dollar note,
+  22 saved job posts on /start, the support chat across origins, not-found pages and the offer form's units.
+
 ## Referrals: invite links, creator and campus codes (2026-10-18)
 
 - **Off until switched on** (`ORBIT_REFERRALS`, DECISIONS D61). Defaults to review first: a friend gets 10% off their

@@ -18,7 +18,7 @@ function Tile({ label, value, format, detail }: { label: string; value: number |
 }
 
 const percent = (n: number) => `${n}%`;
-const days = (n: number) => `${n} day${n === 1 ? "" : "s"}`;
+const days = (n: number) => (n === 0 ? "Same day" : `${n} day${n === 1 ? "" : "s"}`);
 
 /** Applications a week, the last eight (the shared column chart: one hue, a tooltip per column, the table view). */
 function Weeks({ weeks }: { weeks: SearchInsights["weeks"] }) {
@@ -51,7 +51,7 @@ export function SearchInsightsPanel({ entries }: { entries: JobTrackerEntry[] })
         <Tile label="Applied" value={s.applied} format={String} detail="from your tracker" />
         <Tile label="Heard back" value={share(s.responseRate)} format={percent} detail={`${s.heardBack} of ${s.applied}: a next step or a no`} />
         <Tile label="Reached interview" value={share(s.interviewRate)} format={percent} detail={`${s.interviews} of ${s.applied}${s.offers ? `, ${s.offers} offer${s.offers === 1 ? "" : "s"}` : ""}`} />
-        <Tile label="Typical wait" value={s.medianDaysToHear} format={days} detail={s.medianDaysToHear === null ? "no answers yet" : "from applying to an answer"} />
+        <Tile label="Typical wait" value={s.medianDaysToHear} format={days} detail={s.medianDaysToHear !== null ? "from applying to an answer" : s.heardBack ? "not enough to tell yet" : "no answers yet"} />
       </div>
       <div className="mt-5 grid gap-6 lg:grid-cols-2">
         <Weeks weeks={s.weeks} />

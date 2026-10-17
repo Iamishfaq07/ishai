@@ -42,9 +42,9 @@ import {
   toast,
   useCountUp,
 } from "@orbit/ui";
-import { Button, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
+import { Button, EmptyState, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
 import { api } from "../../lib/api";
-import { downloadText, errorText } from "../../lib/format";
+import { downloadText, errorText, isNotFound } from "../../lib/format";
 import { announceOutOfCredits } from "../../lib/outOfCredits";
 import { jobsForResume, outreachPath } from "../jobs/paths";
 import { ContentForm } from "./ContentForm";
@@ -111,7 +111,7 @@ function ResumeEditor() {
   const { resumeId = "" } = useParams();
   const location = useLocation();
   const [resume, setResume] = useState<Resume | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<{ text: string; missing: boolean } | null>(null);
   const [tab, setTab] = useState<Tab>("content");
   const [report, setReport] = useState<AtsReport | null>(null);
   // The resume the report scored: a line's writing issues show only while that line still reads the same.
@@ -190,7 +190,7 @@ function ResumeEditor() {
         else if (kept) setDraft(kept);
       })
       .catch((err: unknown) => {
-        if (!cancel) setLoadError(errorText(err));
+        if (!cancel) setLoadError({ text: errorText(err), missing: isNotFound(err) });
       });
     return () => {
       cancel = true;
@@ -592,7 +592,21 @@ function ResumeEditor() {
     window.print();
   };
 
-  if (loadError) return <ErrorNote>{loadError}</ErrorNote>;
+  if (loadError) {
+    // A deleted resume (or an old link) gets a way back, not just the error.
+    return loadError.missing ? (
+      <EmptyState
+        title="That resume isn't here"
+        body="It may have been deleted."
+        action={<Link to={RESUME_AI_HOME} className="text-indigo-600 underline dark:text-indigo-400">See your resumes</Link>}
+      />
+    ) : (
+      <div className="space-y-4">
+        <ErrorNote>{loadError.text}</ErrorNote>
+        <Link to={RESUME_AI_HOME} className="text-sm text-indigo-600 underline dark:text-indigo-400">All resumes</Link>
+      </div>
+    );
+  }
   if (!resume) {
     return (
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">

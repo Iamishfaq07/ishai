@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { formatDuration, sessionKindLine, whenDue } from "./format";
+import { ApiError } from "@orbit/ui";
+import { formatDuration, isNotFound, sessionKindLine, spokenTime, whenDue } from "./format";
 
 describe("sessionKindLine", () => {
   it("skips the type when the title is the type (a session started without a name)", () => {
@@ -30,5 +31,23 @@ describe("whenDue", () => {
     expect(whenDue(new Date(2026, 9, 12, 9, 0).toISOString(), now)).toBe("tomorrow");
     expect(whenDue(new Date(2026, 9, 14, 9, 0).toISOString(), now)).toBe("in 3 days");
     expect(whenDue(new Date(2026, 9, 25, 9, 0).toISOString(), now)).toMatch(/^on /);
+  });
+});
+
+describe("spokenTime", () => {
+  it("says seconds for a short answer, not \"about 1 min\"", () => {
+    expect(spokenTime(3)).toBe("a few seconds");
+    expect(spokenTime(50)).toBe("about 20 seconds");
+    expect(spokenTime(110)).toBe("about 45 seconds");
+    expect(spokenTime(140)).toBe("about 1 min");
+    expect(spokenTime(300)).toBe("about 2 min");
+  });
+});
+
+describe("isNotFound", () => {
+  it("is a 404 from the API, nothing else", () => {
+    expect(isNotFound(new ApiError(404, "Resume not found"))).toBe(true);
+    expect(isNotFound(new ApiError(500, "Server error"))).toBe(false);
+    expect(isNotFound(new Error("offline"))).toBe(false);
   });
 });

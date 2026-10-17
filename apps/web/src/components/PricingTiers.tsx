@@ -161,7 +161,9 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
   // The server's badge ("Most popular") picks the highlighted plan; without one, the dearest of two or more.
   const popular = plans.find((m) => m.badge === "Most popular")?.id ?? (plans.length >= 2 ? plans[plans.length - 1]!.id : undefined);
   const signedIn = Boolean(onBuy);
-  const onFree = signedIn && (!current || !plans.some((m) => m.plan === current.plan));
+  // Free is "your current plan" only on the free plan: an admin's Unlimited, or a plan the admin gave for a while that
+  // isn't one sold here (Pro, Basic), isn't Free either. Still loading, it says what most accounts are on.
+  const onFree = signedIn && (!current || current.plan === "free");
 
   return (
     <ul className={cx("grid gap-5 sm:grid-cols-2", plans.length >= 3 ? "xl:grid-cols-4" : plans.length === 2 ? "xl:grid-cols-3" : "xl:grid-cols-2")}>

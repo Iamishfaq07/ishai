@@ -35,6 +35,7 @@ import {
   WorkspaceBar,
   confirmDialog,
   LoadGate,
+  MAX_SESSION_DOCUMENTS,
   cx,
   focusRing,
   safeLocal,
@@ -58,6 +59,7 @@ import {
 import { SESSION_TYPE_LABEL, errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { usePrepContext } from "../lib/prepContext";
+import { defaultSessionDocuments, restoredSessionDocuments, sessionDocumentIds, toggleSessionDocument } from "../lib/sessionDocs";
 import { LoopMemoryNote } from "../components/LoopMemoryNote";
 import { ShareMirror } from "../components/ShareMirror";
 
@@ -226,7 +228,7 @@ export function SessionSetupPage() {
     setLength(ws.length);
     setStyle(ws.style);
     setAutoAnswer(ws.auto_answer);
-    setSelectedDocs(new Set(ws.document_ids));
+    setSelectedDocs(restoredSessionDocuments(ws.document_ids, docs.data ?? null));
   };
   // Restore the last-used setup once documents are loaded (its document ids replace the default selection).
   const restored = useRef(false);
@@ -239,10 +241,11 @@ export function SessionSetupPage() {
       .catch(() => undefined);
   }, [docs.data, workspaceId]);
 
-  // Default selection: every ready resume + JD (spec §23 — not every document).
+  // Default selection: the ready resumes + JDs (spec §23 — not every document), newest first, as many as a session
+  // can take (Jobs AI saves a JD per job, and past the limit Start was refused).
   useEffect(() => {
     if (!docs.data || selectedDocs !== null) return;
-    setSelectedDocs(new Set(docs.data.filter((d) => d.status === "ready" && (d.kind === "resume" || d.kind === "job_description")).map((d) => d.id)));
+    setSelectedDocs(defaultSessionDocuments(docs.data));
   }, [docs.data, selectedDocs]);
 
   useEffect(() => {
@@ -263,13 +266,9 @@ export function SessionSetupPage() {
      
   }, []);
 
-  const toggleDoc = (id: string) =>
-    setSelectedDocs((prev) => {
-      const next = new Set(prev ?? []);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const toggleDoc = (id: string) => setSelectedDocs((prev) => toggleSessionDocument(prev ?? new Set(), id));
+  // As many ticked as a session can take: the others can't be ticked (the API refuses more).
+  const docsFull = (selectedDocs?.size ?? 0) >= MAX_SESSION_DOCUMENTS;
 
   const start = async (e: FormEvent) => {
     e.preventDefault();
@@ -285,7 +284,7 @@ export function SessionSetupPage() {
         length,
         style,
         auto_answer: autoAnswer,
-        document_ids: [...(selectedDocs ?? [])],
+        document_ids: sessionDocumentIds(selectedDocs ?? new Set(), docs.data ?? null),
         ...(workspaceId ? { workspace_id: workspaceId } : {}),
         ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
       });
@@ -335,7 +334,7 @@ export function SessionSetupPage() {
               style,
               auto_answer: autoAnswer,
               notes: instructions.trim() || null,
-              document_ids: [...(selectedDocs ?? [])],
+              document_ids: sessionDocumentIds(selectedDocs ?? new Set(), docs.data ?? null),
             }}
           />
           <Card>
@@ -479,12 +478,17 @@ export function SessionSetupPage() {
               </p>
             ) : (
               <ul className="space-y-2">
+                {docsFull && sortedDocs.some((d) => d.status === "ready" && !selectedDocs?.has(d.id)) && (
+                  <li role="status" className="text-xs text-amber-700 dark:text-amber-300">
+                    A session can use up to {MAX_SESSION_DOCUMENTS} documents. Untick one to use another.
+                  </li>
+                )}
                 {sortedDocs.map((d) => (
                   <li key={d.id}>
                     <label className="flex items-center gap-3 text-sm">
                       <input
                         type="checkbox"
-                        disabled={d.status !== "ready"}
+                        disabled={d.status !== "ready" || (docsFull && !selectedDocs?.has(d.id))}
                         checked={selectedDocs?.has(d.id) ?? false}
                         onChange={() => toggleDoc(d.id)}
                         className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"

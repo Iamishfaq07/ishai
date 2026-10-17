@@ -1,4 +1,5 @@
 import type { SessionType } from "@orbit/types";
+import { ApiError } from "@orbit/ui";
 
 export const SESSION_TYPE_LABEL: Record<SessionType, string> = {
   interview: "Interview",
@@ -35,6 +36,17 @@ export function formatDuration(seconds: number | null): string {
   return `${Math.floor(m / 60)} h ${m % 60} min`;
 }
 
+/**
+ * How long an answer of `words` takes to say, at about 140 words a minute: "a few seconds", "about 20 seconds",
+ * "about 2 min". Short answers used to read "about 1 min" (it never went under a minute).
+ */
+export function spokenTime(words: number): string {
+  const seconds = (words / 140) * 60;
+  if (seconds < 10) return "a few seconds";
+  if (seconds < 50) return `about ${Math.round(seconds / 5) * 5} seconds`;
+  return `about ${Math.max(1, Math.round(seconds / 60))} min`;
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -48,6 +60,11 @@ export function formatClock(ms: number): string {
   const sec = s % 60;
   const pad = (n: number) => String(n).padStart(2, "0");
   return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`;
+}
+
+/** The thing asked for doesn't exist (any more): a page shows that, not a Retry that can only fail again. */
+export function isNotFound(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 404;
 }
 
 export function errorText(err: unknown): string {

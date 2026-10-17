@@ -246,7 +246,9 @@ function MockSetup() {
                     onClick={() => void launch(presetSession(p.id, knownRole, contextDocs(), country, practiceLanguage), p.id)}
                     className={cx(
                       "glass-panel lift flex h-full w-full flex-col items-start gap-1.5 rounded-2xl p-3.5 text-left hover:border-indigo-400/40 disabled:cursor-wait disabled:opacity-70 sm:p-4 dark:hover:border-indigo-400/30",
-                      highlighted === p.id && "ring-2 ring-indigo-500",
+                      // "!": inside the app the cards drop their box-shadow (html.app-shell .glass-panel), which a plain
+                      // ring is drawn with, so the preset a link points at wasn't marked at all.
+                      highlighted === p.id && "!ring-2 ring-indigo-500",
                       focusRing,
                     )}
                   >

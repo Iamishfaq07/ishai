@@ -49,14 +49,20 @@ function monday(t: number): number {
   return d.getTime() - ((d.getUTCDay() + 6) % 7) * DAY;
 }
 
+/** Less than this between applying and the answer: both were entered together, not waited for. */
+const MEASURED_MS = 60_000;
+
 export function searchInsights(entries: JobTrackerEntry[], now: number = Date.now()): SearchInsights {
   const applied = entries.filter((e) => e.applied_at);
   const answered = (e: JobTrackerEntry) => e.status === "interviewing" || e.status === "offer" || e.status === "rejected";
   const interviewed = (e: JobTrackerEntry) => e.status === "interviewing" || e.status === "offer";
   const heard = applied.filter(answered);
+  // A wait is only measured when the answer came after the application. A job added straight in as interviewing
+  // (or offer) gets both dates at once: that's no wait at all, and it made "Typical wait: 0 days" before any reply.
   const waits = heard
-    .map((e) => (Date.parse(e.status_at) - Date.parse(e.applied_at!)) / DAY)
-    .filter((d) => Number.isFinite(d) && d >= 0)
+    .map((e) => Date.parse(e.status_at) - Date.parse(e.applied_at!))
+    .filter((ms) => Number.isFinite(ms) && ms >= MEASURED_MS)
+    .map((ms) => ms / DAY)
     .sort((a, b) => a - b);
   const median = waits.length ? (waits.length % 2 ? waits[(waits.length - 1) / 2]! : (waits[waits.length / 2 - 1]! + waits[waits.length / 2]!) / 2) : null;
   const channels = (["Company careers pages", "Job boards", "Found elsewhere"] as const)

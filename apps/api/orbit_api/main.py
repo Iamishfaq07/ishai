@@ -242,7 +242,9 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         # PUT: workspace updates and admin config use it; without it the browser's preflight blocks them.
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-        allow_headers=["Authorization", "Content-Type", CSRF_HEADER],
+        # X-Orbit-Support-Token: the support chat reads (and deletes) its thread with it. Without it here the
+        # preflight is refused and the open chat never sees a reply when the API is on another origin.
+        allow_headers=["Authorization", "Content-Type", CSRF_HEADER, "X-Orbit-Support-Token"],
     )
 
     @app.middleware("http")
