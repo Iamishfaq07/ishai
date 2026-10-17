@@ -67,6 +67,39 @@ def report_instruction(language: str) -> str:
     return _REPORT.get(language, "")
 
 
+# The same text costs more tokens in these languages (DeepSeek-V3's tokenizer on one review: Hindi in Devanagari about
+# 2.2x English, Hinglish about 1.5x), so the interviewer's and the review's output budgets grow with them; a budget
+# sized for English cuts a Hindi review's JSON off, and then there's no review at all.
+_TOKEN_FACTOR: dict[str, float] = {"hi": 2.5, "hinglish": 1.6}
+MAX_OUTPUT_TOKENS = 8_000
+
+
+def max_tokens(english: int, language: str) -> int:
+    """An output budget sized for English, for the round's language."""
+    return min(MAX_OUTPUT_TOKENS, max(english, round(english * _TOKEN_FACTOR.get(language, 1.0))))
+
+
+# A drill's lead lines (live/mock_interviewer._DRILL_LEAD, same keys), said in the round's language.
+DRILL_LEAD: dict[str, dict[str, str]] = {
+    "hi": {
+        "first": "चलिए, आपके पिछले सेशन के कुछ सवालों पर काम करते हैं। ",
+        "first_prep": "चलिए, आपकी तैयारी वाले सवालों का अभ्यास करते हैं। ",
+        "first_story": "चलिए, आपकी एक कहानी सुनाने का अभ्यास करते हैं। ",
+        "first_answer": "चलिए, आपके तैयार किए गए एक जवाब का अभ्यास करते हैं। ",
+        "retry": "चलिए, इस सवाल को एक बार फिर से करते हैं। ",
+        "concise": "अब यही जवाब छोटे में, लगभग तीस सेकंड में। ",
+    },
+    "hinglish": {
+        "first": "Chaliye, aapke pichhle session ke kuch questions par kaam karte hain. ",
+        "first_prep": "Chaliye, aapki preparation wale questions ki practice karte hain. ",
+        "first_story": "Chaliye, aapki ek story sunane ki practice karte hain. ",
+        "first_answer": "Chaliye, aapke prepared answers mein se ek ki practice karte hain. ",
+        "retry": "Chaliye, is question ko ek baar phir try karte hain. ",
+        "concise": "Ab yahi answer short mein, lagbhag tees second mein. ",
+    },
+}
+
+
 # When the model can't be reached, the interviewer falls back to these (the English ones live with the interviewer).
 FALLBACK_QUESTIONS: dict[str, list[str]] = {
     "hi": [

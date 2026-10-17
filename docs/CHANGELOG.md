@@ -1,5 +1,26 @@
 # Implementation log
 
+## The three switched-off features, checked before they're switched on (2026-10-18)
+
+- Hindi/Hinglish mocks (`ORBIT_MULTILINGUAL`), the camera coach (`ORBIT_VIDEO_MOCK`, in Practice and the AI video
+  interview) and the Career Evidence Vault (`ORBIT_EVIDENCE_VAULT`) were driven end to end with each flag on: headless
+  Chrome at 1440×900 and 390×844, light and dark, a fake camera only (a public-domain portrait, and Chrome's default
+  with no face), axe, other users' data, the export and account deletion. Fixed:
+- **Hindi and Hinglish one-tap rounds were in English.** The 5-min HR round and "Tell me about yourself" ask fixed
+  questions, which were English whatever the Language picker said, and so were a drill's lead lines ("Let's try this
+  one again"). Both are now in the round's language (`apps/web/src/pages/mockPresets.ts`,
+  `practice_language.DRILL_LEAD`); "हमारी कंपनी" / "hamari company" names the company as "our company" does.
+- **A Hindi review could be cut off.** The same text costs about 2.2x the tokens in Hindi (1.5x in Hinglish, measured
+  with DeepSeek-V3's tokenizer), and the review's output budget was sized for English, so its JSON could stop half-way
+  and the round got no review. The review's and the interviewer's budgets now grow with the language
+  (`practice_language.max_tokens`, at most 8,000).
+- **The video interview's controls on a phone.** With the camera coach's button, seven 48 px buttons pushed Mute mic and
+  End off screens 360–437 px wide. Below 440 px they're 40 px (`tools/e2e/video-room.spec.ts` checks 360 px; the e2e
+  API now runs with `ORBIT_VIDEO_MOCK=true`).
+- **The camera trend** showed a session where no face was found as "0%" facing the camera; it shows "–" now.
+- **Evidence:** the "It's true" button's accessible name starts with its visible words (axe: label in name).
+- **Privacy policy:** the camera coach saves how long it measured as well as the three numbers it named.
+
 ## Desktop sweep: Setup, the window and shortcuts (2026-10-18)
 
 - **Start works with many saved documents**: New session ticked every ready resume and job description. Jobs AI

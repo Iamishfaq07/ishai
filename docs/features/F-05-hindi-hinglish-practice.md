@@ -14,6 +14,10 @@ Status: built 16 Oct 2026, **off by default** (`ORBIT_MULTILINGUAL=false`). Engl
   - Hindi uses a hi-IN device voice; Hinglish uses an en-IN one.
   - The natural AI voices are English only, so they're skipped for these rounds.
 - If the model can't be reached, the fallback questions are in the chosen language.
+- The one-tap rounds with fixed questions (the 5-min HR round, Tell me about yourself) ask them in the chosen language,
+  and a drill's lead lines ("Let's try this one again") are in it too.
+- Hindi takes about 2.2x the tokens of the same English text (Hinglish about 1.5x, measured with DeepSeek-V3's
+  tokenizer), so the interviewer's and the review's output budgets grow with the language.
 
 ## Scope
 - Only mock interviews change language. The live copilot, saved setups and the rest of the UI stay English.
@@ -24,7 +28,8 @@ Status: built 16 Oct 2026, **off by default** (`ORBIT_MULTILINGUAL=false`). Engl
 1. Run a few real Hindi and Hinglish mocks with production Deepgram. Read the transcripts; there are third-party
    reports of Hinglish being mistaken for another language in `multi` mode.
 2. Read the reviews a fluent speaker would get: check the wording, and that answers aren't marked down for language.
-3. Then set `ORBIT_MULTILINGUAL=true` on Render. Turning it off again sends every new session back to English.
+3. Then set `ORBIT_MULTILINGUAL=true` on Railway (the API service). Turning it off again sends every new session back to
+   English.
 
 ## Tests
 - `apps/api/tests/test_practice_language.py`:

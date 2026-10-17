@@ -16,6 +16,13 @@ export function suggestNote(added: number, dropped: number): string {
   return dropped ? `${head} ${dropped} left out because the source doesn't say ${dropped === 1 ? "it" : "them"} word for word, or ${dropped === 1 ? "it's" : "they're"} already here.` : head;
 }
 
+/** A row button's accessible name: its visible words first (WCAG 2.5.3, label in name), then which claim it acts on. The
+ *  delete button shows only an icon, so its name says whether it discards a suggestion or deletes a claim. */
+export function actionLabel(action: "confirm" | "edit" | "delete", item: Pick<EvidenceItem, "claim" | "status">): string {
+  const what = action === "confirm" ? "It's true: confirm" : action === "edit" ? "Edit" : item.status === "suggested" ? "Discard" : "Delete";
+  return `${what} “${item.claim}”`;
+}
+
 const STOP = new Set(("the and for with that this from into over under about our their your was were are has have had " +
   "who what when where which while than then them they its it's not but all any per via out off one two led").split(" "));
 

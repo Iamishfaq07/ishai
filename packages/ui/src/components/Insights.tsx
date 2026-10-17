@@ -315,6 +315,12 @@ function shortDate(iso: string): string {
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
 }
 
+/** A session's "facing the camera" in the trend: a percentage of the time a face was in frame, so with no face at all
+ *  there's nothing to give ("–"), not 0%. */
+export function facingInTrend(p: { face_in_frame_pct: number; facing_camera_pct: number }): string {
+  return p.face_in_frame_pct > 0 ? `${Math.round(p.facing_camera_pct)}%` : "–";
+}
+
 /**
  * "On camera": the camera coach's numbers, measured on the person's device during a mock (no video or images were
  * kept or sent), with "facing the camera" across their last few sessions. Descriptive only: it doesn't judge
@@ -351,19 +357,19 @@ export function CameraCard({ camera }: { camera: SessionCamera | null | undefine
       {trend.length > 1 && (
         <figure className="mt-4">
           <figcaption className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Facing the camera, your last {trend.length} sessions</figcaption>
-          <div className="mt-2 flex items-end gap-2" role="img" aria-label={`Facing the camera: ${trend.map((p) => `${Math.round(p.facing_camera_pct)}%`).join(", ")}, oldest first`}>
+          <div className="mt-2 flex items-end gap-2" role="img" aria-label={`Facing the camera: ${trend.map((p) => (p.face_in_frame_pct > 0 ? facingInTrend(p) : "no face found")).join(", ")}, oldest first`}>
             {trend.map((p, i) => {
               const latest = i === trend.length - 1;
               return (
-                <div key={p.session_id} className="flex flex-1 flex-col items-center gap-1" title={`${shortDate(p.at)}: ${Math.round(p.facing_camera_pct)}%`}>
+                <div key={p.session_id} className="flex flex-1 flex-col items-center gap-1" title={`${shortDate(p.at)}: ${p.face_in_frame_pct > 0 ? facingInTrend(p) : "no face found"}`}>
                   <span className={cx("h-4 text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-50", !latest && "invisible")}>
-                    {Math.round(p.facing_camera_pct)}%
+                    {facingInTrend(p)}
                   </span>
                   {/* Every bar on the same 64px track, so equal values are equal heights. */}
                   <span className="flex h-16 w-full max-w-10 items-end">
                     <span
                       className={cx("w-full rounded-t", latest ? "bg-indigo-500" : "bg-indigo-500/35")}
-                      style={{ height: `${Math.max(3, p.facing_camera_pct)}%` }}
+                      style={{ height: p.face_in_frame_pct > 0 ? `${Math.max(3, p.facing_camera_pct)}%` : 0 }}
                     />
                   </span>
                   <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{latest ? "This one" : shortDate(p.at)}</span>
@@ -387,8 +393,8 @@ export function CameraCard({ camera }: { camera: SessionCamera | null | undefine
                   <tr key={p.session_id}>
                     <td>{shortDate(p.at)}</td>
                     <td>{Math.round(p.face_in_frame_pct)}%</td>
-                    <td>{Math.round(p.facing_camera_pct)}%</td>
-                    <td>{p.head_movement_deg_s}°/s</td>
+                    <td>{facingInTrend(p)}</td>
+                    <td>{p.face_in_frame_pct > 0 ? `${p.head_movement_deg_s}°/s` : "–"}</td>
                   </tr>
                 ))}
               </tbody>

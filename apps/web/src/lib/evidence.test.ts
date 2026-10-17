@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evidenceFor, sourceLabel, suggestNote } from "./evidence";
+import { actionLabel, evidenceFor, sourceLabel, suggestNote } from "./evidence";
 
 describe("evidence vault copy", () => {
   it("names where a claim comes from, and says when the source is gone", () => {
@@ -7,6 +7,14 @@ describe("evidence vault copy", () => {
     expect(sourceLabel({ source_kind: "story", source_title: "Launch conflict", source_id: "s1" })).toBe("Story: Launch conflict");
     expect(sourceLabel({ source_kind: "story", source_title: "Launch conflict", source_id: null })).toBe("Story: Launch conflict (since deleted)");
     expect(sourceLabel({ source_kind: "resume", source_title: "", source_id: "d1" })).toBe("Resume: your resume");
+  });
+
+  it("names each row button by its visible words first, then the claim (WCAG 2.5.3, label in name)", () => {
+    const suggestion = { claim: "Cut checkout latency by 40%", status: "suggested" as const };
+    expect(actionLabel("confirm", suggestion)).toBe("It's true: confirm “Cut checkout latency by 40%”"); // reads "It's true"
+    expect(actionLabel("edit", suggestion)).toBe("Edit “Cut checkout latency by 40%”");
+    expect(actionLabel("delete", suggestion)).toBe("Discard “Cut checkout latency by 40%”");
+    expect(actionLabel("delete", { ...suggestion, status: "confirmed" })).toBe("Delete “Cut checkout latency by 40%”");
   });
 
   it("says how many to check and why some were left out", () => {
