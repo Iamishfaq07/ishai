@@ -14,7 +14,8 @@ describe("IndexNow submission", () => {
 
   it("takes only addresses on the site, once each", () => {
     expect(normalise(["/warmup", "https://orbitanswer.com/warmup#x", "/jobs"])).toEqual(["https://orbitanswer.com/warmup", "https://orbitanswer.com/jobs"]);
-    expect(() => normalise(["https://example.com/"])).toThrow(/not on orbitanswer.com/);
+    expect(() => normalise(["https://example.com/"])).toThrow(/is not on https:\/\/orbitanswer\.com/);
+    expect(() => normalise(["http://orbitanswer.com/warmup"])).toThrow(/is not on/);
   });
 
   it("picks changed pages from the sitemap by lastmod", () => {

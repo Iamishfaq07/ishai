@@ -1,4 +1,5 @@
-// Edge entry for the Orbit web app. Static assets (the SPA) are served by Cloudflare before this runs.
+// Edge entry for the Orbit web app. It runs first for every page address; the built files under /assets/ (and the
+// few listed in wrangler.jsonc) are served by Cloudflare without it.
 //
 // /api/* is proxied to the API so the browser sees it as the web app's own origin. The session cookie is then
 // first-party: Safari (and every iOS browser, all WebKit) and other browsers that block third-party cookies drop a

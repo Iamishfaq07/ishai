@@ -34,7 +34,7 @@ export const APP_ROUTES = [
   /^\/code\/[^/]+$/,
   /^\/offers\/[^/]+$/,
   /^\/extension\/connect$/,
-  /^\/admin\/(?:users|payments|audit|inbox|support)$/,
+  /^\/admin\/[a-z-]+$/, // every admin page (users, payments, audit, inbox, support, and any added later)
 ];
 
 /** Invite links (feat/referrals): /r/<code>. */
@@ -63,18 +63,33 @@ export const ROBOTS_DISALLOW_EXACT = [
   "/verify-email",
   "/confirm-email-change",
 ];
+/**
+ * The API calls the public pages make while they draw (prices, job counts, latency figures, whether someone is
+ * signed in): open, so a crawler that renders the page (Googlebot) sees what a person sees. Each is longer than
+ * "/api/", so it wins over that rule.
+ */
+export const ROBOTS_ALLOW_API = [
+  "/api/v1/auth/me$",
+  "/api/v1/plans",
+  "/api/v1/billing/packs",
+  "/api/v1/billing/monthly",
+  "/api/v1/jobs/stats",
+  "/api/v1/region",
+  "/api/v1/public/",
+];
 /** Whole subtrees robots.txt keeps crawlers out of (the public page at "/jobs" and "/resume-ai" itself stays open). */
-export const ROBOTS_DISALLOW_PREFIX = ["/api/", "/live/", "/sessions/", "/documents/", "/resume-ai/", "/jobs/", "/code/", "/offers/", "/extension/", "/admin/"];
+export const ROBOTS_DISALLOW_PREFIX = ["/api/", "/_prerender/", "/live/", "/sessions/", "/documents/", "/resume-ai/", "/jobs/", "/code/", "/offers/", "/extension/", "/admin/"];
 
 /**
  * An address that moved, and where it is now (a 301, so search engines move their record too), or null. Mirrors the
  * app's own redirects (pages/resume/paths.ts movedResumePath, pages/jobs/paths.ts movedJobsPath).
  */
 export function movedPath(pathname, search = "") {
-  if (pathname === "/resume-maker") return { pathname: "/resume-ai", search };
-  const resume = /^\/documents\/resumes(?:\/([^/]+))?$/.exec(pathname);
+  // Without regard to case, like React Router; an id keeps its own case.
+  if (/^\/resume-maker$/i.test(pathname)) return { pathname: "/resume-ai", search };
+  const resume = /^\/documents\/resumes(?:\/([^/]+))?$/i.exec(pathname);
   if (resume) return { pathname: resume[1] ? `/resume-ai/${resume[1]}` : "/resume-ai", search };
-  const jobs = /^\/resume-ai\/jobs(\/.*)?$/.exec(pathname);
+  const jobs = /^\/resume-ai\/jobs(\/.*)?$/i.exec(pathname);
   if (jobs) {
     const params = new URLSearchParams(search);
     const view = params.get("view");
@@ -99,4 +114,21 @@ export function routeKind(pathname) {
 export function isFixedAddress(pathname) {
   if (routeKind(pathname) === "public") return true;
   return APP_ROUTES.some((re) => re.test(pathname) && !/\[\^\/\]\+/.test(re.source));
+}
+
+/** Lower case, leaving percent-escapes ("%C3%A9") exactly as they were sent. */
+export const lowerOutsideEscapes = (path) => path.replace(/(%[0-9A-Fa-f]{2})|[^%]+/g, (m, escape) => (escape ? m : m.toLowerCase()));
+
+/**
+ * The address in its one letter case: a fixed address all lower case ("/Resume-AI" → "/resume-ai"); an address that
+ * ends in an id with only its fixed part folded ("/Resume-AI/AbC" → "/resume-ai/AbC": ids are always the last part).
+ * Anything else stays as it is.
+ */
+export function foldCase(pathname) {
+  const lower = lowerOutsideEscapes(pathname);
+  if (lower === pathname) return pathname;
+  if (isFixedAddress(lower)) return lower;
+  const cut = pathname.lastIndexOf("/");
+  const prefixed = lowerOutsideEscapes(pathname.slice(0, cut)) + pathname.slice(cut);
+  return prefixed !== pathname && routeKind(prefixed) !== null ? prefixed : pathname;
 }

@@ -13,9 +13,9 @@
   in a single 301 (Cloudflare's own were 307s, which search engines don't treat as a move).
 - **robots.txt** (written by the Worker): every public page open, including the scripts, styles, favicon and preview
   image pages need (the old allow-list blocked them, so Google rendered an empty page and X/LinkedIn couldn't load
-  the image); the API and signed-in pages closed, as exact paths; every search and AI crawler named; AI training
-  crawlers allowed by default (`AI_TRAINING_CRAWLERS=block` to opt out); previews and `*.workers.dev` closed and
-  noindex.
+  the image); the API and signed-in pages closed, as exact paths (the public API reads the pages draw from stay
+  open); every search and AI crawler named; AI training crawlers allowed by default (`AI_TRAINING_CRAWLERS=block` to
+  opt out); previews and `*.workers.dev` closed and noindex.
 - **Head tags**: each public page gets what it lacks: canonical, `hreflang` `en`/`x-default`, Open Graph and Twitter
   tags, and structured data (Organization, WebSite, WebApplication, the Windows app, breadcrumbs: no ratings, prices
   or FAQ markup); the front page gets the search engines' verification codes when they're set as `vars`

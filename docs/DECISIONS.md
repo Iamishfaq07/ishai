@@ -641,9 +641,11 @@ a `Disallow: /` robots.txt. Nothing depends on who is asking: crawlers and peopl
 
 robots.txt is written by the Worker (so the disallowed paths come from the same route list): everything open except
 the API and the signed-in pages, as exact paths (`/mock$`, `/mock?`), so a future `/mock-interview` guide is never
-blocked; sign-in pages and invite links stay crawlable so their noindex is seen. Every search, answer and
-user-triggered crawler is named and allowed (Googlebot, Bingbot, OAI-SearchBot, ChatGPT-User, Claude-SearchBot,
-Claude-User, PerplexityBot, Perplexity-User, Applebot, DuckAssistBot, YandexBot and others). **Training crawlers
+blocked; sign-in pages and invite links stay crawlable so their noindex is seen; the few public API reads the
+public pages draw from (prices, job counts, latency figures) stay open so Google's renderer sees what a person sees.
+Every search, answer and user-triggered crawler is named and allowed (Googlebot, Bingbot, OAI-SearchBot,
+ChatGPT-User, Claude-SearchBot, Claude-User, PerplexityBot, Perplexity-User, Applebot, DuckAssistBot, YandexBot and
+others). **Training crawlers
 (GPTBot, ClaudeBot, Google-Extended, Applebot-Extended, CCBot, meta-externalagent, Amazonbot, MistralAI-Training) are
 allowed too, as the default the owner can flip with one var, `AI_TRAINING_CRAWLERS=block`.** Why allow: the public
 pages are marketing and guides meant to be repeated; Google-Extended also governs grounding in Gemini apps, so

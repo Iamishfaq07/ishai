@@ -9,17 +9,19 @@
 //   - noindex everywhere on any host that isn't the site's own (preview deployments, *.workers.dev).
 // Everyone gets the same page: nothing here looks at who is asking (no cloaking).
 import { metaFor, withPageMeta } from "./meta.js";
-import {
-  ROBOTS_DISALLOW_EXACT,
-  ROBOTS_DISALLOW_PREFIX,
-  isFixedAddress,
-  movedPath,
-  routeKind,
-} from "./routes.js";
+import { ROBOTS_ALLOW_API, ROBOTS_DISALLOW_EXACT, ROBOTS_DISALLOW_PREFIX, foldCase, movedPath, routeKind } from "./routes.js";
 import { SITE, SITE_NAME, jsonLdText, structuredDataFor } from "./site.js";
 
-/** The site's own origin; a deployment may say otherwise (SITE_ORIGIN, e.g. for a local check). */
-export const originOf = (env) => String(env?.SITE_ORIGIN || SITE).replace(/\/+$/, "");
+/** The site's own origin; a deployment may say otherwise (SITE_ORIGIN, e.g. for a local check). A value that isn't
+ *  an address is ignored, so a typo in the var can't take every page down. */
+export function originOf(env) {
+  const origin = String(env?.SITE_ORIGIN || SITE).replace(/\/+$/, "");
+  try {
+    return new URL(origin).origin;
+  } catch {
+    return SITE;
+  }
+}
 
 // ---------------------------------------------------------------- redirects
 
@@ -36,13 +38,16 @@ export function canonicalLocation(url, env) {
 
   let path = url.pathname;
   let search = url.search;
+  // In this order, so "/privacy.html/" and "/x/index.html" are one hop too.
   path = path.replace(/\/{2,}/g, "/");
-  if (/\.html$/i.test(path)) path = path.replace(/\.html$/i, "").replace(/\/index$/i, "/");
   if (path.length > 1) path = path.replace(/\/+$/, "") || "/";
-  const lower = path.toLowerCase();
-  if (lower !== path && isFixedAddress(lower)) path = lower;
+  path = path.replace(/\.html$/i, "").replace(/\/index$/i, "") || "/";
+  path = foldCase(path);
   const moved = movedPath(path, search);
-  if (moved) ({ pathname: path, search } = moved);
+  if (moved) {
+    path = foldCase(moved.pathname);
+    search = moved.search;
+  }
 
   if (host === url.host && protocol === url.protocol && path === url.pathname && search === url.search) return null;
   return `${protocol}//${host}${path}${search}`;
@@ -100,6 +105,7 @@ export function robotsTxt(env, url) {
     "User-agent: *",
     ...welcome.map((ua) => `User-agent: ${ua}`),
     "Allow: /",
+    ...ROBOTS_ALLOW_API.map((p) => `Allow: ${p}`),
     ...disallow.map((p) => `Disallow: ${p}`),
     // Cloudflare's Content Signals (https://contentsignals.org): the same stance, in words some crawlers read.
     `Content-Signal: search=yes, ai-input=yes, ai-train=${blockTraining ? "no" : "yes"}`,
@@ -121,6 +127,8 @@ const unesc = (s) =>
     .replace(/&#39;|&apos;/g, "'")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
     .replace(/&amp;/g, "&");
 
 /** The search engines' site-verification codes, from the Worker's vars (wrangler.jsonc): the owner pastes them there. */
@@ -137,7 +145,8 @@ export const VERIFICATION_VARS = {
  * states its own canonical, preview tags or structured data (the prerendered pages) keeps them.
  */
 export function headAdditions(path, seen, env) {
-  const canonical = `${originOf(env)}${path === "/" ? "/" : path}`;
+  // The page's own canonical where it states one (the alternates must name the same address), else this one.
+  const canonical = seen.canonicalHref || `${originOf(env)}${path === "/" ? "/" : path}`;
   const title = seen.title ? unesc(seen.title.trim()) : null;
   const description = seen.description ? unesc(seen.description) : null;
   const out = [];
@@ -149,12 +158,12 @@ export function headAdditions(path, seen, env) {
     out.push(`<link rel="alternate" hreflang="x-default" href="${esc(canonical)}" />`);
   }
   const og = seen.og || {};
-  if (!og["og:type"]) out.push(`<meta property="og:type" content="website" />`);
-  if (!og["og:site_name"]) out.push(`<meta property="og:site_name" content="${esc(SITE_NAME)}" />`);
-  if (!og["og:url"]) out.push(`<meta property="og:url" content="${esc(canonical)}" />`);
-  if (!og["og:title"] && title) out.push(`<meta property="og:title" content="${esc(title)}" />`);
-  if (!og["og:description"] && description) out.push(`<meta property="og:description" content="${esc(description)}" />`);
-  if (!og["og:image"]) out.push(`<meta property="og:image" content="${esc(`${originOf(env)}/og-image.jpg`)}" />`);
+  if (!("og:type" in og)) out.push(`<meta property="og:type" content="website" />`);
+  if (!("og:site_name" in og)) out.push(`<meta property="og:site_name" content="${esc(SITE_NAME)}" />`);
+  if (!("og:url" in og)) out.push(`<meta property="og:url" content="${esc(canonical)}" />`);
+  if (!("og:title" in og) && title) out.push(`<meta property="og:title" content="${esc(title)}" />`);
+  if (!("og:description" in og) && description) out.push(`<meta property="og:description" content="${esc(description)}" />`);
+  if (!("og:image" in og)) out.push(`<meta property="og:image" content="${esc(`${originOf(env)}/og-image.jpg`)}" />`);
   if (!seen.twitterCard) out.push(`<meta name="twitter:card" content="summary_large_image" />`);
   if (path === "/") {
     for (const [key, name] of Object.entries(VERIFICATION_VARS)) {
@@ -175,7 +184,12 @@ export function withSeoHead(response, path, env) {
   const seen = { og: {}, verification: {}, title: "" };
   const mark = (key) => ({ element: () => void (seen[key] = true) });
   const res = new HTMLRewriter()
-    .on('link[rel="canonical"]', mark("canonical"))
+    .on('link[rel="canonical"]', {
+      element(el) {
+        seen.canonical = true;
+        seen.canonicalHref = el.getAttribute("href") || null;
+      },
+    })
     .on("link[hreflang]", mark("hreflang"))
     .on('script[type="application/ld+json"]', mark("jsonLd"))
     .on('meta[name="twitter:card"]', mark("twitterCard"))
@@ -242,13 +256,16 @@ function withHeader(response, name, value) {
   return res;
 }
 
-/** The app's page (index.html) for this request: no conditional headers, so it's never an empty 304. */
-async function appShell(env, request, url) {
+/** The request without conditional or range headers: the page is rewritten on the way out, so the asset's 304 or 206
+ *  for the original bytes would be wrong. */
+function wholeRequest(request, target = request.url) {
   const headers = new Headers(request.headers);
-  headers.delete("if-none-match");
-  headers.delete("if-modified-since");
-  return env.ASSETS.fetch(new Request(new URL("/", url), { method: request.method === "HEAD" ? "HEAD" : "GET", headers }));
+  for (const h of ["if-none-match", "if-modified-since", "if-match", "if-unmodified-since", "range", "if-range"]) headers.delete(h);
+  return new Request(target, { method: request.method === "HEAD" ? "HEAD" : "GET", headers });
 }
+
+/** The app's page (index.html) for this request, whole. */
+const appShell = (env, request, url) => env.ASSETS.fetch(wholeRequest(request, new URL("/", url)));
 
 /** The app with noindex, and without a canonical that would name another page (the shell's says "/"). */
 function appPage(shell, { keepCanonical = false } = {}) {
@@ -288,7 +305,7 @@ export async function notFound(env, request, url) {
   }
   const res = new Response(request.method === "HEAD" ? null : body, { status: 404, headers: shell.headers });
   for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
-  res.headers.delete("etag");
+  for (const h of ["etag", "content-length", "last-modified"]) res.headers.delete(h);
   return res;
 }
 
@@ -318,11 +335,16 @@ export async function withSeo(request, env, url, serve) {
   const kind = routeKind(path);
   let response;
   try {
-    if (readable && (kind === "app" || kind === "referral")) {
+    if (readable && path.startsWith("/_prerender/")) {
+      // The built copies of public pages (the question bank's prerender) are for the Worker to serve at their own
+      // address; asked for directly, they'd be duplicates of those pages.
+      response = await notFound(env, request, url);
+    } else if (readable && (kind === "app" || kind === "referral")) {
       // The app draws these in the browser: its page, never indexed. An invite link's canonical stays the front page.
       response = appPage(await appShell(env, request, url), { keepCanonical: kind === "referral" });
     } else {
-      response = await serve(request);
+      // A public page gets head tags added on the way out, so it's always fetched whole (never a 304 for the bytes).
+      response = await serve(readable && kind === "public" ? wholeRequest(request) : request);
       if (readable && response.status === 404) {
         if (kind === "public" && metaFor(path)) {
           // A public page the app draws, with no built copy among the assets: the app, with this page's head.

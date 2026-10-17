@@ -7,9 +7,9 @@
 //   node apps/web/scripts/indexnow.mjs --sitemap https://orbitanswer.com/sitemap.xml --since 2026-10-18 --send
 //   node apps/web/scripts/indexnow.mjs --sitemap https://orbitanswer.com/sitemap.xml --all --send   # first time only
 //
-// Run it AFTER a deploy (the key file has to be live): it checks https://orbitanswer.com/<key>.txt first and stops if
-// the file isn't there. Without --send nothing leaves the machine but that check. Submit changed pages only: the
-// engines ask that unchanged pages aren't sent again. Removed or redirected pages may be sent too.
+// Run it AFTER a deploy (the key file has to be live): with --send it checks https://orbitanswer.com/<key>.txt first
+// and stops if the file isn't there. Without --send nothing is submitted (a --sitemap address is still read). Submit
+// changed pages only: the engines ask that unchanged pages aren't sent again. Removed or redirected pages may be sent.
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -43,11 +43,11 @@ export const changedSince = (entries, since) => entries.filter((e) => e.lastmod 
 
 /** Absolute addresses on the site, de-duplicated; anything on another host is refused (the engines answer 422). */
 export function normalise(urls, site = SITE) {
-  const host = new URL(site).host;
+  const { host, protocol } = new URL(site);
   const out = [];
   for (const raw of urls) {
     const u = new URL(raw, `${site}/`);
-    if (u.host !== host) throw new Error(`${raw} is not on ${host}`);
+    if (u.host !== host || u.protocol !== protocol) throw new Error(`${raw} is not on ${site}`);
     u.hash = "";
     if (!out.includes(u.href)) out.push(u.href);
   }
@@ -104,8 +104,12 @@ export async function main(argv, { fetchImpl = fetch, log = console.log, env = p
     for (const child of entries.filter((e) => e.isSitemap)) entries.push(...sitemapEntries(await fetchText(child.loc, fetchImpl)));
     entries = entries.filter((e) => !e.isSitemap);
     if (args.all) urls.push(...entries.map((e) => e.loc));
-    else if (args.since) urls.push(...changedSince(entries, args.since));
-    else throw new Error("with --sitemap, say which pages: --since YYYY-MM-DD (changed pages) or --all (first submission)");
+    else if (args.since) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(args.since)) throw new Error(`--since wants a date like 2026-10-18, not "${args.since}"`);
+      const undated = entries.filter((e) => !e.lastmod).length;
+      if (undated) log(`Note: ${undated} of ${entries.length} sitemap pages have no lastmod, so --since never picks them.`);
+      urls.push(...changedSince(entries, args.since));
+    } else throw new Error("with --sitemap, say which pages: --since YYYY-MM-DD (changed pages) or --all (first submission)");
   }
   urls = normalise(urls, args.site);
   if (!urls.length) {

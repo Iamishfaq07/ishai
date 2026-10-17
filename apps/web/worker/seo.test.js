@@ -87,6 +87,32 @@ describe("canonicalLocation (one address per page)", () => {
     expect(at(`${SITE}/companies/tcs.html`)).toBe(`${SITE}/companies/tcs`);
   });
 
+  it("fixes a trailing slash and .html or /index together, in one hop", () => {
+    expect(at(`${SITE}/privacy.html/`)).toBe(`${SITE}/privacy`);
+    expect(at(`${SITE}/index.html/`)).toBe(`${SITE}/`);
+    expect(at(`${SITE}/index`)).toBe(`${SITE}/`);
+    expect(at(`${SITE}/companies/index.html`)).toBe(`${SITE}/companies`);
+    expect(at(`${SITE}/Companies/TCS.HTML/`)).toBe(`${SITE}/companies/tcs`);
+  });
+
+  it("folds only the fixed part of an address that ends in an id, and leaves percent-escapes alone", () => {
+    expect(at(`${SITE}/Resume-AI/AbC`)).toBe(`${SITE}/resume-ai/AbC`);
+    expect(at(`${SITE}/Jobs/Listing/Xy9`)).toBe(`${SITE}/jobs/listing/Xy9`);
+    expect(at(`${SITE}/R/FRIEND10`)).toBe(`${SITE}/r/FRIEND10`);
+    expect(at(`${SITE}/Resume-Maker`)).toBe(`${SITE}/resume-ai`);
+    expect(at(`${SITE}/Documents/Resumes/AbC`)).toBe(`${SITE}/resume-ai/AbC`);
+    expect(at(`${SITE}/Resume-AI/Jobs/Tracker`)).toBe(`${SITE}/jobs/tracker`);
+    expect(at(`${SITE}/companies/caf%C3%A9`)).toBeNull();
+  });
+
+  it("always lands on an address that needs no further redirect", () => {
+    for (const p of ["/Jobs/", "/privacy.html/", "//Warmup//", "/Resume-AI/AbC/", "/Documents/Resumes/", "/resume-ai/jobs/Tracker/", "/INDEX.HTML", "/r/abc/", "/Companies/Infosys.html"]) {
+      const first = at(`${SITE}${p}`);
+      expect(first, p).not.toBeNull();
+      expect(at(first), `${p} -> ${first}`).toBeNull();
+    }
+  });
+
   it("folds fixed addresses to lower case, never an id", () => {
     expect(at(`${SITE}/Resume-AI`)).toBe(`${SITE}/resume-ai`);
     expect(at(`${SITE}/Companies/TCS`)).toBe(`${SITE}/companies/tcs`);
@@ -119,6 +145,7 @@ describe("routeKind (which addresses are pages)", () => {
       expect(routeKind(p)).toBe("app");
     }
     expect(routeKind("/r/FRIEND10")).toBe("referral");
+    expect(routeKind("/admin/referrals")).toBe("app"); // any admin page, including ones other branches add
   });
 
   it("calls everything else not a page", () => {
@@ -160,6 +187,17 @@ describe("the Worker's answers", () => {
       expect(res.headers.get("x-robots-tag")).toBe("noindex");
       expect(res.headers.get("content-type")).toMatch(/text\/html/);
       expect(await res.text()).toContain('id="root"'); // the app still draws its own "not found"
+    }
+  });
+
+  it("never serves the prerender's built copies at their own address (they'd duplicate the pages)", async () => {
+    FILES["/_prerender/home"] = [SHELL, "text/html"];
+    try {
+      const res = await get("/_prerender/home");
+      expect(res.status).toBe(404);
+      expect(res.headers.get("x-robots-tag")).toBe("noindex");
+    } finally {
+      delete FILES["/_prerender/home"];
     }
   });
 
@@ -257,6 +295,15 @@ describe("robots.txt", () => {
     for (const p of ["/login", "/register", "/r/FRIEND10", "/jobs", "/resume-ai"]) expect(allowed(robots, "Googlebot", p), p).toBe(true);
   });
 
+  it("lets a rendering crawler make the API calls public pages draw from, and no others", () => {
+    for (const p of ["/api/v1/plans", "/api/v1/billing/packs", "/api/v1/billing/monthly", "/api/v1/jobs/stats", "/api/v1/region", "/api/v1/public/engineering-telemetry", "/api/v1/auth/me"]) {
+      expect(allowed(robots, "Googlebot", p), p).toBe(true);
+    }
+    for (const p of ["/api/v1/auth/me/region", "/api/v1/sessions", "/api/v1/resumes", "/api/v1/admin/users", "/api/v1/auth/login"]) {
+      expect(allowed(robots, "Googlebot", p), p).toBe(false);
+    }
+  });
+
   it("names every AI crawler, with training crawlers welcome by default and blockable by one setting", () => {
     for (const bot of [...SEARCH_CRAWLERS, ...TRAINING_CRAWLERS]) expect(robots.groups[0].agents).toContain(bot.toLowerCase());
     for (const bot of BLOCKED_CRAWLERS) expect(allowed(robots, bot, "/"), bot).toBe(false);
@@ -276,6 +323,18 @@ describe("headAdditions", () => {
     expect(add).toContain(`<meta property="og:title" content="Orbit privacy policy" />`);
     expect(add).toContain('<meta name="twitter:card"');
     expect(add).toContain('<script type="application/ld+json">');
+  });
+
+  it("keeps a page's own canonical for the alternates, and counts an empty preview tag as stated", () => {
+    const seen = { canonical: true, canonicalHref: `${SITE}/companies/tcs`, og: { "og:image": "" }, title: "TCS &amp; you &#8217;26" };
+    const add = headAdditions("/companies/tcs", seen, { SITE_ORIGIN: "http://127.0.0.1:5187" });
+    expect(add).toContain(`hreflang="en" href="${SITE}/companies/tcs"`);
+    expect(add).not.toContain("og:image");
+    expect(add).toContain("content=\"TCS &amp; you ’26\"");
+  });
+
+  it("ignores a SITE_ORIGIN that isn't an address", () => {
+    expect(canonicalLocation(new URL(`${SITE}/jobs`), { SITE_ORIGIN: "not a url" })).toBeNull();
   });
 
   it("adds nothing a page already states", () => {
