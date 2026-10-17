@@ -252,12 +252,13 @@ async function captureSet({ themes, width, height, scale, outFor, names }) {
 }
 
 /** PNG → WebP in headless Chrome (canvas.toBlob), scaled to `w` x `h`. */
+/** PNG captures to WebP at w x h; an entry's optional crop [x, y, w, h] (capture pixels) is drawn instead of the whole. */
 async function toWebp(files, w, h, quality) {
   const browser = await chromium.launch(launchOpts);
   const page = await browser.newPage();
-  for (const [src, dest] of files) {
+  for (const [src, dest, crop] of files) {
     const data = readFileSync(src).toString("base64");
-    const b64 = await page.evaluate(async ({ data, w, h, quality }) => {
+    const b64 = await page.evaluate(async ({ data, w, h, quality, crop }) => {
       const img = new Image();
       img.src = `data:image/png;base64,${data}`;
       await img.decode();
@@ -266,13 +267,14 @@ async function toWebp(files, w, h, quality) {
       c.height = h;
       const g = c.getContext("2d");
       g.imageSmoothingQuality = "high";
-      g.drawImage(img, 0, 0, w, h);
+      if (crop) g.drawImage(img, crop[0], crop[1], crop[2], crop[3], 0, 0, w, h);
+      else g.drawImage(img, 0, 0, w, h);
       const blob = await new Promise((r) => c.toBlob(r, "image/webp", quality));
       const buf = new Uint8Array(await blob.arrayBuffer());
       let s = "";
       for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode(...buf.subarray(i, i + 0x8000));
       return btoa(s);
-    }, { data, w, h, quality });
+    }, { data, w, h, quality, crop: crop ?? null });
     mkdirSync(dirname(dest), { recursive: true });
     const { writeFileSync, statSync } = await import("node:fs");
     writeFileSync(dest, Buffer.from(b64, "base64"));
@@ -294,6 +296,13 @@ if (flag("webp")) {
     if (existsSync(src) && want(n)) files.push([src, join(HERE, "..", "..", "apps", "web", "src", "marketing", "shots", `${n}-${t}.webp`)]);
   }
   await toWebp(files, 1600, 1000, Number(opt("quality", "0.8")));
+  // Phones get a 4:3 crop of each screen's working area (ProductShot's <source> under 640 px), so it stays legible.
+  const PHONE_CROP = { copilot: [130, 80, 1580, 1185], practice: [500, 300, 1600, 1200], resume: [500, 180, 1600, 1200], jobs: [500, 300, 1600, 1200], mission: [500, 300, 1600, 1200] };
+  const phone = files.map(([src, dest]) => {
+    const n = SITE.find((x) => dest.includes(`${x}-`));
+    return [src, dest.replace(/.webp$/, "-phone.webp"), PHONE_CROP[n]];
+  });
+  await toWebp(phone, 1200, 900, Number(opt("quality", "0.8")));
 } else if (flag("store")) {
   const out = join(HERE, "..", "store");
   for (const [w, h, scale] of [[1366, 768, 1], [1280, 720, 2]]) {
