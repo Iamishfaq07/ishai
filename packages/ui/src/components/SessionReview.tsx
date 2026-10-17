@@ -281,14 +281,14 @@ function QuestionReview({ index, item, busy = false, queue = true, onRetry, onSa
           {onRetry && (
             <Button variant="secondary" size="sm" onClick={onRetry} disabled={busy}
                     title="A short mock round: this question again, out loud, with a follow-up on what was missing"
-                    aria-label={`Try question ${index} again`}>
+                    aria-label={`Try this one again (question ${index})`}>
               <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Try this one again
             </Button>
           )}
           {onSaveAnswer && saving === "closed" && (
             <Button variant="ghost" size="sm" onClick={() => setSaving("open")}
                     title="Keep your answer to this question: the copilot starts from it when it comes up in an interview"
-                    aria-label={`Save an answer to question ${index}`}>
+                    aria-label={`Save as my answer (question ${index})`}>
               <Bookmark className="h-3.5 w-3.5" aria-hidden /> Save as my answer
             </Button>
           )}

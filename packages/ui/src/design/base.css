@@ -645,6 +645,10 @@ html:not(.dark) .text-emerald-600 {
 html:not(.dark) .text-amber-600 {
   color: rgb(180 83 9);
 }
+/* …and rose-600 (4.3:1 on the workbench canvas) draws in -700 (6.0:1), so a small Delete or error line passes too. */
+html:not(.dark) .text-rose-600 {
+  color: rgb(190 18 60);
+}
 
 /* ---- Deep Space 2.0 ----------------------------------------------------------------------------------------------
    Lighting, surfaces and motion added in Phase 6. Every animation here is decorative: the motion levels above stop
