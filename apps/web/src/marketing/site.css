@@ -1,0 +1,276 @@
+/* The front door (signed-out pages): html.site, set by PublicLayout / AuthShell while they are mounted (useSiteScope).
+   Enterprise and product-led (DECISIONS D66): a white canvas (a deep blue-grey one in dark mode, the workbench's
+   twin), ink neutrals, one accent, IBM Plex Sans for every heading, no sky. Only the floating product windows cast a
+   shadow. Plain CSS (no @apply) so it reads on its own; the Tailwind classes in the components do the rest. */
+
+/* The site palette is defined everywhere (so a site component outside the scope still draws), and the scope below
+   applies it to the page. */
+:root {
+  --site-canvas: 255 255 255;
+  --site-subtle: 247 248 250; /* #F7F8FA: alternate bands, the sign-in side panel */
+  --site-surface: 255 255 255;
+  --site-line: 228 231 236; /* #E4E7EC */
+  --site-line-strong: 208 213 221;
+}
+.dark {
+  --site-canvas: 11 15 23; /* #0B0F17 */
+  --site-subtle: 15 20 30; /* #0F141E */
+  --site-surface: 20 27 39; /* #141B27, the workbench's surface */
+  --site-line: 35 44 59; /* #232C3B */
+  --site-line-strong: 54 64 84;
+}
+html.site.dark {
+  /* Dark mode is one blue-grey family, as in the workbench (D58): what `dark:` classes paint with matches it, so a
+     shared component (pricing cards, fields, a dialog) looks the same signed in or out. Text steps keep their values. */
+  --ink-950: 20 27 39;
+  --ink-900: 27 35 50;
+  --ink-800: 35 44 59;
+  --ink-700: 54 64 84;
+}
+
+/* One still canvas: no sky, no stars, no orbs, no coloured wash. `.dark` twice outranks the body's dark:bg utility. */
+html.site body,
+html.site.dark body {
+  background-color: rgb(var(--site-canvas));
+  background-image: none;
+}
+html.site :is(.space-backdrop, .space-stars, .cosmic-dots, .cosmic-orb),
+html.site .gradient-border::before {
+  display: none;
+}
+html.site :is(.glass-panel, .orbit-card, .orbit-panel) {
+  background: rgb(var(--site-surface));
+  border: 1px solid rgb(var(--site-line));
+  box-shadow: none;
+}
+html.site :is(.glass-panel, .orbit-card, .orbit-panel)::after {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html.site .text-gradient {
+  background-image: none;
+  color: inherit;
+}
+html.site .btn-sheen::after {
+  display: none;
+}
+html.site :is(.shadow-glow, .shadow-glow-sm) {
+  box-shadow: none;
+}
+
+/* Type: IBM Plex Sans everywhere, headings included (Space Grotesk stays only inside the logo, outlined). */
+html.site :is(h1, h2, h3, h4, .font-display) {
+  font-family: "IBM Plex Sans Variable", "IBM Plex Sans", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.012em;
+}
+/* The scale (DESIGN.md "Front door"): display 36-60 px, section 28-40 px, card 20 px; a lead paragraph 18-20 px. */
+.mk-display {
+  font-size: clamp(2.25rem, 1.35rem + 3.4vw, 3.75rem);
+  line-height: 1.04;
+  letter-spacing: -0.032em !important;
+  font-weight: 600;
+  text-wrap: balance;
+}
+.mk-h2 {
+  font-size: clamp(1.75rem, 1.25rem + 1.9vw, 2.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.026em !important;
+  font-weight: 600;
+  text-wrap: balance;
+}
+.mk-h3 {
+  font-size: 1.25rem;
+  line-height: 1.35;
+  letter-spacing: -0.012em;
+  font-weight: 600;
+}
+.mk-lead {
+  font-size: clamp(1.0625rem, 0.98rem + 0.35vw, 1.25rem);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+/* Prices, counts and plan figures keep the app's tabular figures; prose on the front door uses proportional ones. */
+html.site :is(p, h1, h2, h3, li, summary) {
+  font-variant-numeric: normal;
+  font-feature-settings: normal;
+}
+html.site :is(.tabular-nums, td, th) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hairlines and bands. */
+.mk-line {
+  border-color: rgb(var(--site-line));
+}
+.mk-band {
+  background-color: rgb(var(--site-subtle));
+}
+.mk-surface {
+  background-color: rgb(var(--site-surface));
+}
+.mk-canvas {
+  background-color: rgb(var(--site-canvas));
+}
+
+/* Elevation, for things that float only: the product windows (and a menu). */
+.mk-float {
+  box-shadow:
+    0 0 0 1px rgb(var(--ink-900) / 0.07),
+    0 2px 4px -1px rgb(var(--ink-900) / 0.05),
+    0 18px 40px -14px rgb(var(--ink-900) / 0.2),
+    0 44px 80px -36px rgb(var(--ink-900) / 0.22);
+}
+html.dark .mk-float {
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.08),
+    0 24px 64px -18px rgb(0 0 0 / 0.65);
+}
+.mk-menu-shadow {
+  box-shadow:
+    0 0 0 1px rgb(var(--ink-900) / 0.06),
+    0 16px 36px -12px rgb(var(--ink-900) / 0.22);
+}
+html.dark .mk-menu-shadow {
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.08),
+    0 18px 40px -12px rgb(0 0 0 / 0.6);
+}
+
+/* The one hero detail: a hairline grid that fades out, and a faint accent light at the top. Still, never animated. */
+.mk-hero-detail {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(56rem 26rem at 72% -6%, rgb(var(--accent-500) / 0.09), transparent 70%),
+    linear-gradient(to right, rgb(var(--site-line) / 0.7) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(var(--site-line) / 0.7) 1px, transparent 1px);
+  background-size: auto, 56px 56px, 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 70% 20%, #000 20%, transparent 75%);
+  mask-image: radial-gradient(ellipse 80% 70% at 70% 20%, #000 20%, transparent 75%);
+}
+html.dark .mk-hero-detail {
+  background-image:
+    radial-gradient(56rem 26rem at 72% -6%, rgb(var(--accent-500) / 0.14), transparent 70%),
+    linear-gradient(to right, rgb(255 255 255 / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.045) 1px, transparent 1px);
+}
+
+/* The live answer demo: each streamed word fades in (Full motion; Gentle and Off show the finished card). */
+.mk-word {
+  animation: mk-word 220ms var(--ease-enter) both;
+}
+@keyframes mk-word {
+  from {
+    opacity: 0;
+  }
+}
+.mk-caret {
+  display: inline-block;
+  width: 0.45em;
+  height: 1em;
+  margin-left: 0.15em;
+  translate: 0 0.15em;
+  border-radius: 2px;
+  background: rgb(var(--accent-500) / 0.7);
+}
+.mk-listen {
+  animation: mk-listen 1.1s ease-in-out infinite;
+}
+@keyframes mk-listen {
+  50% {
+    transform: scaleY(0.35);
+  }
+}
+:root:is([data-motion="reduced"], [data-motion="off"]) :is(.mk-listen, .mk-word) {
+  animation: none !important;
+}
+
+/* The phone menu sheet slides down under the header (a fade at Gentle). */
+.mk-drawer {
+  animation: mk-drawer var(--dur-panel) var(--ease-enter) both;
+}
+@keyframes mk-drawer {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+.mk-popover {
+  animation: mk-popover var(--dur-quick) var(--ease-enter) both;
+}
+@keyframes mk-popover {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.99);
+  }
+}
+:root[data-motion="reduced"] :is(.mk-drawer, .mk-popover) {
+  animation-name: orbit-fade !important;
+}
+
+/* The sticky call-to-action bar (phones and tablets) rises in once the hero has scrolled away. */
+.mk-sticky {
+  transition:
+    transform var(--dur-panel) var(--ease-enter),
+    opacity var(--dur-quick) var(--ease-standard);
+}
+.mk-sticky[data-hidden] {
+  transform: translateY(calc(100% + 1.5rem));
+  opacity: 0;
+  pointer-events: none;
+}
+:root:is([data-motion="reduced"], [data-motion="off"]) .mk-sticky[data-hidden] {
+  transform: none;
+}
+
+/* "Sign in with Google", drawn to Google's branding rules: Google Sans Medium 14/20 (a subset of just the button's
+   words, OFL, see assets/google-sans-OFL.txt), 40 px tall, 12 px in from each side, 10 px between the G and the words,
+   the standard G at 20 px; light, dark and neutral fills as specified. */
+@font-face {
+  font-family: "Google Sans Signin";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(./assets/google-sans-medium-signin.woff2) format("woff2");
+}
+.mk-google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 4px;
+  font-family: "Google Sans Signin", "Google Sans", Roboto, Arial, sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.25px;
+  background: #ffffff;
+  color: #1f1f1f;
+  box-shadow: inset 0 0 0 1px #747775;
+  transition: background-color var(--dur-quick) var(--ease-standard);
+}
+.mk-google:hover {
+  background: #f8f9fa;
+}
+html.dark .mk-google {
+  background: #131314;
+  color: #e3e3e3;
+  box-shadow: inset 0 0 0 1px #8e918f;
+}
+html.dark .mk-google:hover {
+  background: #1b1b1d;
+}
+.mk-google img {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+/* Hairlines between rows (tables, the FAQ list): the site's line colour. */
+.mk-divide > :not(:first-child) {
+  border-top: 1px solid rgb(var(--site-line));
+}
