@@ -383,6 +383,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       videoInterview={Boolean(session.video)}
       naturalVoice={naturalVoice}
       practiceLanguage={session.language}
+      answerLanguage={session.answer_language ?? session.language}
       {...(cameraCoach ? { cameraCoach } : {})}
       ratings={ratings}
       onInterviewerSpeaking={onInterviewerSpeaking}

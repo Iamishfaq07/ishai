@@ -76,6 +76,24 @@ export {
   saveResponseTiming,
   saveThinking,
 } from "./live/preferences";
+export {
+  ANSWER_LANGUAGE_HINT,
+  INTERVIEW_LANGUAGE_HINT,
+  LIVE_LANGUAGES,
+  answerLanguages,
+  interviewLanguages,
+  languageName,
+  loadAnswerLanguage,
+  loadInterviewLanguage,
+  offersLanguages,
+  saveLiveLanguages,
+  scriptLang,
+  sessionLanguageLabel,
+  readAloudLanguage,
+  reportLanguageNote,
+  tallScript,
+  type LiveLanguageOption,
+} from "./live/languages";
 export { SIZE_HINTS, resizeTarget } from "./live/answerSize";
 export { historyLabel, useAnswerHistory, type AnswerHistory } from "./live/useAnswerHistory";
 export { answerAsText } from "./components/AnswerCard";

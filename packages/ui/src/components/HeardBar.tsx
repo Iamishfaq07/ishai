@@ -1,3 +1,4 @@
+import { scriptLang } from "../live/languages";
 import { cx } from "./cx";
 
 /** The words of a live transcript that are settled, and the last few the recogniser may still change. */
@@ -24,7 +25,7 @@ export function HeardBar({ text, className }: { text: string; className?: string
       )}
     >
       <span className="mt-1.5 h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-500" aria-hidden="true" />
-      <p className="min-w-0 flex-1 leading-snug">
+      <p lang={scriptLang(text)} className="min-w-0 flex-1 leading-snug">
         <span className="sr-only">Orbit heard: </span>
         <span className="text-zinc-800 dark:text-zinc-100">{settled}</span>
         {settled && tail ? " " : null}

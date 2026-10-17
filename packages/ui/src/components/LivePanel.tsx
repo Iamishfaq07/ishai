@@ -19,6 +19,7 @@ import { useInterviewerVoice, voiceLanguage } from "../live/useInterviewerVoice"
 import type { NaturalVoiceSource } from "../live/naturalVoice";
 import { useKeyPointProgress } from "../live/useKeyPointProgress";
 import { useReadAloud } from "../live/useReadAloud";
+import { readAloudLanguage, scriptLang } from "../live/languages";
 import {
   selectAskAgain,
   selectDisplayedAnswer,
@@ -156,6 +157,9 @@ export interface LivePanelProps {
   naturalVoice?: NaturalVoiceSource | null;
   /** A mock's practice language ("en", "hi", "hinglish"): which device voice reads the questions. */
   practiceLanguage?: string;
+  /** What live answers are written in (the session's answer language, else its interview language): which device
+   *  voice reads them aloud. Absent: English. */
+  answerLanguage?: string;
   /** An AI video interview: the video-call room instead of the practice panel. */
   videoInterview?: boolean;
   /** The camera coach for mock rounds (web, when the server has it on). */
@@ -196,7 +200,7 @@ export function LivePanel(props: LivePanelProps) {
     lang: voiceLanguage(props.practiceLanguage),
   });
   const { onInterviewerSpeaking } = props;
-  const reader = useReadAloud();
+  const reader = useReadAloud(readAloudLanguage(props.answerLanguage, answer?.answer.direct_answer));
   const selfSpeaking = voice.speaking || reader.status === "playing";
   useEffect(() => onInterviewerSpeaking?.(selfSpeaking), [selfSpeaking, onInterviewerSpeaking]);
   // Barge-in: talking over the AI's voice stops it (speech synthesis can't be turned down mid-sentence), so the mic
@@ -858,7 +862,7 @@ function ChatLog({ live, onAsk }: { live: LiveViewState; onAsk?: (text: string) 
       {live.chat.map((entry) =>
         entry.kind === "user" ? (
           <li key={entry.id} className="ml-8">
-            <p className="rounded-2xl rounded-br-md bg-indigo-600 px-3.5 py-2 text-white">
+            <p lang={scriptLang(entry.text)} className="rounded-2xl rounded-br-md bg-indigo-600 px-3.5 py-2 text-white">
               {entry.text}
             </p>
             {entry.unanswered && (
@@ -869,7 +873,11 @@ function ChatLog({ live, onAsk }: { live: LiveViewState; onAsk?: (text: string) 
             )}
           </li>
         ) : (
-          <li key={entry.id} className="mr-4 rounded-2xl rounded-bl-md bg-zinc-100 px-3.5 py-2 ring-1 ring-zinc-200 dark:bg-white/[0.04] dark:ring-white/[0.06]">
+          <li
+            key={entry.id}
+            lang={scriptLang(live.answers[entry.answer_id]?.answer.direct_answer)}
+            className="mr-4 rounded-2xl rounded-bl-md bg-zinc-100 px-3.5 py-2 ring-1 ring-zinc-200 dark:bg-white/[0.04] dark:ring-white/[0.06]"
+          >
             <ChatAnswer answer={live.answers[entry.answer_id]} {...(onAsk ? { onAsk } : {})} />
           </li>
         ),

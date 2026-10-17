@@ -12,6 +12,9 @@
 const shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
 const scale = (name: string) => Object.fromEntries(shades.map((s) => [s, `rgb(var(--${name}-${s}) / <alpha-value>)`]));
 const stages = ["saved", "applied", "interviewing", "offer", "rejected"] as const;
+// Devanagari (Windows, macOS, Android/Linux), then Japanese: Yu Gothic/Meiryo/Hiragino/Noto, never a Chinese face.
+const SCRIPT_FALLBACKS = ["Nirmala UI", "Kohinoor Devanagari", "Noto Sans Devanagari", "Yu Gothic UI", "Meiryo UI",
+                          "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP"];
 
 export default {
   content: [],
@@ -29,8 +32,10 @@ export default {
       borderRadius: { xl: "0.5rem", "2xl": "0.75rem", "3xl": "1rem" },
       fontFamily: {
         // IBM Plex Sans for the product (text, numbers, and the app's headings: base.css). Inter stays as the fallback.
+        // After them, faces for the scripts Plex doesn't draw (live answers in Hindi and Japanese): a character only
+        // reaches them when every Latin face before lacks it, so English text renders exactly as before.
         sans: ["IBM Plex Sans Variable", "IBM Plex Sans", "Inter Variable", "Inter", "ui-sans-serif", "system-ui",
-               "-apple-system", "Segoe UI", "sans-serif"],
+               "-apple-system", "Segoe UI", ...SCRIPT_FALLBACKS, "sans-serif"],
         display: ["Space Grotesk Variable", "Space Grotesk", "Inter Variable", "ui-sans-serif", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono Variable", "JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },

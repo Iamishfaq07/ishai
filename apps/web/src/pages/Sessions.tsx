@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { SessionType } from "@orbit/types";
-import { Badge, ChevronRight, Clock, CosmicEmptyState, LoadGate, confirmDialog, cx, focusRing, HistoryIcon, MessageCircle } from "@orbit/ui";
+import { Badge, ChevronRight, Clock, CosmicEmptyState, LoadGate, confirmDialog, cx, focusRing, HistoryIcon, MessageCircle, sessionLanguageLabel } from "@orbit/ui";
 import { Button, Card, ErrorNote, PageHeader } from "../components/ui";
 import { PRODUCTS } from "../components/products";
 import { api } from "../lib/api";
@@ -95,6 +95,9 @@ export function SessionsPage() {
                             {formatDuration(s.duration_seconds)}
                           </Badge>
                         ) : null}
+                        {sessionLanguageLabel(s.language, s.answer_language) && (
+                          <Badge>{sessionLanguageLabel(s.language, s.answer_language)}</Badge>
+                        )}
                         <Badge className="tabular-nums">
                           <MessageCircle className="h-3 w-3" aria-hidden="true" />
                           {s.question_count} question{s.question_count === 1 ? "" : "s"}

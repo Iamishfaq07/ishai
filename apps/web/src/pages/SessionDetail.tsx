@@ -19,6 +19,9 @@ import {
   LoadGate,
   TabPanel,
   Tabs,
+  reportLanguageNote,
+  scriptLang,
+  sessionLanguageLabel,
 } from "@orbit/ui";
 import { BackLink } from "../components/BackLink";
 import { Button, Card, EmptyState, ErrorNote, Input, PageHeader } from "../components/ui";
@@ -120,6 +123,7 @@ export function SessionDetailPage() {
         subtitle={[
           SESSION_TYPE_LABEL[session.type],
           session.role,
+          sessionLanguageLabel(session.language, session.answer_language),
           formatDate(session.started_at ?? session.created_at),
           session.duration_seconds ? formatDuration(session.duration_seconds) : null,
         ]
@@ -250,10 +254,13 @@ function SummaryView({ summary }: { summary: SessionSummary | null }) {
     <div className="space-y-4">
       <Card>
         <h2 className="mb-2 text-sm font-semibold">Session summary</h2>
-        <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">{summary.summary}</p>
+        <p lang={scriptLang(summary.summary)} className="whitespace-pre-line text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+          {summary.summary}
+        </p>
         <p className="mt-3 text-xs text-zinc-500">
           {summary.questions_asked.length} question{summary.questions_asked.length === 1 ? "" : "s"} ·{" "}
           {summary.follow_up_count} follow-up{summary.follow_up_count === 1 ? "" : "s"}
+          {summary.language ? ` · ${reportLanguageNote(summary.language)}` : ""}
         </p>
       </Card>
       <div className="grid gap-4 md:grid-cols-2">

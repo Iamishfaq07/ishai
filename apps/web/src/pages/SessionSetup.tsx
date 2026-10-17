@@ -13,8 +13,16 @@ import type {
   Workspace,
 } from "@orbit/types";
 import {
+  ANSWER_LANGUAGE_HINT,
   ANSWER_STYLES,
   EXPERIENCE_LEVELS,
+  INTERVIEW_LANGUAGE_HINT,
+  answerLanguages,
+  interviewLanguages,
+  loadAnswerLanguage,
+  loadInterviewLanguage,
+  offersLanguages,
+  saveLiveLanguages,
   experienceLevels,
   RESPONSE_TIMINGS,
   THINKING_LEVELS,
@@ -187,6 +195,24 @@ export function SessionSetupPage() {
   const [thinking, setThinking] = useState<ThinkingLevel>(loadThinking);
   const [autoAnswer, setAutoAnswer] = useState(true);
   const [responseTiming, setResponseTiming] = useState<ResponseTiming>(loadResponseTiming);
+  // What the interviewer speaks and what answers are written in ("" = the same), when the server offers languages.
+  const offered = user?.live_languages;
+  const offeredKey = (offered ?? []).join(",");
+  const [language, setLanguage] = useState(() => loadInterviewLanguage(offered));
+  const [answerLanguage, setAnswerLanguage] = useState(() => loadAnswerLanguage(loadInterviewLanguage(offered), offered));
+  useEffect(() => {
+    // The account loads after the first render: apply the device's choice once the offered list is known.
+    const list = offeredKey ? offeredKey.split(",") : undefined;
+    const heard = loadInterviewLanguage(list);
+    setLanguage(heard);
+    setAnswerLanguage(loadAnswerLanguage(heard, list));
+  }, [offeredKey]);
+  const pickLanguages = (heard: string, answer: string) => {
+    const a = answer === heard ? "" : answer;
+    setLanguage(heard);
+    setAnswerLanguage(a);
+    saveLiveLanguages(heard, a);
+  };
   const [systemAudio, setSystemAudio] = useState(type !== "phone" && supportsDisplayAudio());
   const [selectedDocs, setSelectedDocs] = useState<Set<string> | null>(null);
   const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
@@ -225,6 +251,9 @@ export function SessionSetupPage() {
     if (SELECTABLE_TYPES.includes(ws.session_type)) setType(ws.session_type);
     updateContext({ role: ws.role?.trim() || role, company: ws.company?.trim() || context.company });
     setInstructions(ws.notes ?? "");
+    // The server only returns a language it offers (English otherwise).
+    setLanguage(ws.language);
+    setAnswerLanguage(ws.answer_language ?? "");
     setLength(ws.length);
     setStyle(ws.style);
     setAutoAnswer(ws.auto_answer);
@@ -280,7 +309,8 @@ export function SessionSetupPage() {
         title: title.trim() || `${SESSION_TYPE_LABEL[type]}${role.trim() ? ` — ${role.trim()}` : ""}`,
         type,
         ...(role.trim() ? { role: role.trim() } : {}),
-        language: "en",
+        language,
+        ...(answerLanguage ? { answer_language: answerLanguage } : {}),
         length,
         style,
         auto_answer: autoAnswer,
@@ -328,8 +358,8 @@ export function SessionSetupPage() {
             current={{
               role: role.trim() || null,
               session_type: type,
-              language: "en",
-              answer_language: null,
+              language,
+              answer_language: answerLanguage || null,
               length,
               style,
               auto_answer: autoAnswer,
@@ -358,6 +388,28 @@ export function SessionSetupPage() {
                 <Input id="company" value={context.company} onChange={(e) => updateContext({ company: e.target.value })} maxLength={120} placeholder="e.g. Acme" />
               </Field>
               <LoopMemoryNote company={context.company} className="sm:col-span-2" />
+              {offersLanguages(offered) && (
+                <>
+                  <Field label="Interview language" htmlFor="language" hint={INTERVIEW_LANGUAGE_HINT}>
+                    <Select id="language" value={language} onChange={(e) => pickLanguages(e.target.value, answerLanguage)}>
+                      {interviewLanguages(offered).map((l) => (
+                        <option key={l.value} value={l.value}>
+                          {l.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="Answer in" htmlFor="answer-language" hint={ANSWER_LANGUAGE_HINT}>
+                    <Select id="answer-language" value={answerLanguage} onChange={(e) => pickLanguages(language, e.target.value)}>
+                      {answerLanguages(language, offered).map((l) => (
+                        <option key={l.value} value={l.value}>
+                          {l.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                </>
+              )}
               <Field label="Answer style" htmlFor="style" hint={ANSWER_STYLES.find((s) => s.value === style)?.hint}>
                 <Select id="style" value={style} onChange={(e) => setStyle(e.target.value as AnswerStyle)}>
                   {ANSWER_STYLES.map((s) => (

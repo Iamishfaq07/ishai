@@ -7,6 +7,7 @@ import type {
 } from "@orbit/types";
 import { SIZE_HINTS } from "../live/answerSize";
 import type { KeyPointProgress } from "../live/coverage";
+import { scriptLang, tallScript } from "../live/languages";
 import { StreamingText } from "./StreamingText";
 import { splitPlaceholders } from "../live/placeholders";
 import { READ_ALOUD_RATES, speechText } from "../live/readAloud";
@@ -288,6 +289,8 @@ export const AnswerCard = memo(function AnswerCard({
 
   const a = answer.answer;
   const thinking = answer.status === "streaming" && !answer.has_content;
+  // An answer in Hindi, Japanese or Russian: tagged so the right face draws it (undefined for English and Latin text).
+  const lang = scriptLang(a.direct_answer || a.question);
   // Coding layout: what to SAY (the talk track) is kept apart from what to CODE.
   const coding = Boolean(a.code || a.problem || a.edge_cases?.length || a.tests?.length || a.trace?.steps.length);
   const design = a.design ?? [];
@@ -394,7 +397,7 @@ export const AnswerCard = memo(function AnswerCard({
 
       {reading && reader && <ReadAloudControls reader={reader} />}
 
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-2" tabIndex={0}>
+      <div ref={scrollRef} lang={lang} className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-2" tabIndex={0}>
         {a.grounding === "example" && answer.has_content && (
           <p
             className="mb-2 flex animate-fade-in items-start gap-1.5 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-800 dark:text-amber-200"
@@ -444,7 +447,10 @@ export const AnswerCard = memo(function AnswerCard({
         {structured && a.direct_answer && <SectionLabel block>Say</SectionLabel>}
 
         {a.direct_answer && (
-          <div className={cx("space-y-2.5", compact ? "text-[0.9375rem] leading-relaxed" : "text-base leading-relaxed")}>
+          <div
+            className={cx("space-y-2.5", compact ? "text-[0.9375rem]" : "text-base",
+              tallScript(lang) ? "leading-[1.85]" : "leading-relaxed")}
+          >
             {a.direct_answer.split(/\n{2,}/).map((para, i) => (
               // The opening sentence carries the answer, so it reads a touch stronger for a quick glance.
               <p

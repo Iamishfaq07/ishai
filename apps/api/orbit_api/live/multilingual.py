@@ -29,7 +29,7 @@ from orbit_api.live.events import AnswerSize, QuestionType, Speaker
 from orbit_api.live.language_cues import ALL, RawCues
 
 # Letters, digits and the Devanagari block's vowel signs and viramas (not its dandas, U+0964/5, which end sentences).
-_WORD = re.compile(r"(?:[^\W_]|[̀-ͯऀ-ॣ०-ॿ])+")
+_WORD = re.compile(r"(?:[^\W_]|[\u0300-\u036f\u0900-\u0963\u0966-\u097f])+")
 # A sentence ends at . ? ! … followed by a space, or at a Japanese or Devanagari full stop even without one.
 _SENTENCE = re.compile(r"(?<=[.?!…])\s+|(?<=[。？！।॥])\s*")
 _END_MARK = re.compile(r"[.?!…。？！।॥][\"'”’»」』)\]]*$")
@@ -62,16 +62,16 @@ def fold(text: str, keep: str = "") -> str:
         if ch in keep:
             out.append(ch)
             continue
-        if ch == "़":
+        if ch == "\u093c":
             continue
-        if ch == "ँ":
-            out.append("ं")
+        if ch == "\u0901":
+            out.append("\u0902")
             continue
         decomposed = unicodedata.normalize("NFD", ch)
         if len(decomposed) > 1 and decomposed[0].isascii():
             out.append(decomposed[0])  # é → e, ñ → n (but й, the Devanagari vowel signs, kana: as they are)
         else:
-            out.append(ch.replace("़", "") if len(decomposed) > 1 else ch)
+            out.append(ch.replace("\u093c", "") if len(decomposed) > 1 else ch)
     return "".join(out)
 
 
