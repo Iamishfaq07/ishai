@@ -337,7 +337,10 @@ plainly what Orbit is, shows the real product, and gets out of the way. Code: `a
   page itself. A built page opens with `<html class="site">`; when the app's copy takes over (lib/prerender.tsx) it
   keeps the class on a public page and drops it for anything else. A front-door component must render without the
   browser: no `window` or `document` at module scope or during render (effects are fine). Nothing is hydrated, so
-  the app's copy may differ (the visitor's own prices and country arrive then).
+  the app's copy may differ (the visitor's own prices and country arrive then). Until Plex arrives, front-door text
+  is drawn in "Plex Fallback" (site.css: local Arial size-adjusted to Plex, a touch wide on purpose), so the built
+  copy's first paint is never smaller than the app's copy of the same text, which would otherwise count as a later,
+  larger paint (the LCP) when the app takes over.
 - **Speed**: the public pages are lazy chunks; on an address with a public face its chunk starts with the session
   check, and a browser nobody has signed in on gets the page at once instead of a spinner. Pictures below the fold
   are lazy and sized; the front door loads one text face (Plex) and no font for the logo.

@@ -28,12 +28,14 @@
   screenshots at 1366 x 768 and 2560 x 1440), `ads/` (42 creatives: 4 products x 5 sizes x India and global, plus a
   1500 x 500 banner; prices only when passed at export).
 - **First paint**: on an address with a public face its chunk starts with the session check, and a browser nobody
-  has signed in on gets the page straight away instead of a spinner; the 404 is a lazy page. Measured on the front
-  page, production build over HTTP/2 with the API proxied (Lighthouse 13, median of 3): mobile (simulated slow 4G)
-  LCP 3.15 s to 2.70 s, score 92 to 94; mobile (real throttling) LCP 4.02 s to 3.75 s, total blocking time 418 to
-  128 ms, score 73 to 80; desktop LCP 0.62 s to 0.56 s, CLS 0.025 to 0. First-load JavaScript the same (182 to
-  183 KB), fonts 125 to 75 KB (Space Grotesk and JetBrains Mono no longer load), CSS 26 to 27 KB. The page weighs
-  more below the fold (the product screens, about 85 KB each, lazy): 335 to 370 KB on a phone, 600 KB on a desktop.
+  has signed in on gets the page straight away instead of a spinner; the 404 is a lazy page. Front-door text falls
+  back to a metric-matched local font until Plex arrives, so the built page's first paint stays the largest paint.
+  Measured on the front page against main (both built as HTML), production build over HTTP/2 with the API proxied
+  (Lighthouse 13, median of 3): mobile with real throttling LCP 3.02 s to 2.09 s (the first paint), score 91 to 96;
+  mobile simulated slow 4G LCP 2.40 s to 2.74 s (the built page is bigger: 19 KB of HTML instead of 14), score 95 to
+  93; desktop LCP 0.52 s to 0.57 s, CLS 0.022 to 0. First-load JavaScript the same (189 KB), fonts 85 to 75 KB (Space
+  Grotesk no longer loads), CSS 26 to 27 KB. Below the fold the product screens add weight, lazily: 315 to 355 KB on a
+  phone (their phone crops are 25-39 KB), 634 KB on a desktop.
 - **The interview guides** (/companies, /roles and every guide) sit in the same layout: the site's header and footer,
   the guides' own tabs (Companies, Roles, Free warm-up), the type scale and hairline cards. The header, its Products
   menu, the phone menu and the footer link the guides.
