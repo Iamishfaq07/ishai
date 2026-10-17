@@ -59,10 +59,9 @@ import type { DesktopLaunch } from "../launch";
 import { SignInAgain } from "../SignInAgain";
 import { WindowButtons } from "../TitleBar";
 import { setLiveSession } from "../updates";
-import { applyPanelMode, setAlwaysOnTop } from "../windowing";
+import { applyPanelMode, loadAlwaysOnTop, setAlwaysOnTop } from "../windowing";
 
 const MODE_KEY = "orbit.desktop.panelMode";
-const PIN_KEY = "orbit.desktop.alwaysOnTop";
 
 /** What's wrong with audio, kept per source: the interviewer's audio coming up must not clear the mic's warning. */
 type CaptureNotes = Partial<Record<"start" | "mic" | "system", string | null>>;
@@ -116,7 +115,7 @@ export function LiveScreen({
   onSignedInAgain: (user: User) => void;
 }) {
   const [mode, setMode] = useState<PanelMode>(() => (safeLocal.getItem(MODE_KEY) as PanelMode | null) ?? "compact");
-  const [onTop, setOnTop] = useState(() => safeLocal.getItem(PIN_KEY) !== "false");
+  const [onTop, setOnTop] = useState(loadAlwaysOnTop);
   const [hotkeys] = useState(loadHotkeys);
   const [captureNotes, setCaptureNotes] = useState<CaptureNotes>({});
   // Whether each source is actually heard (SourceChip), from the frames' levels on this device; its advice joins the
@@ -154,7 +153,6 @@ export function LiveScreen({
     void applyPanelMode(mode);
   }, [mode]);
   useEffect(() => {
-    safeLocal.setItem(PIN_KEY, String(onTop));
     void setAlwaysOnTop(onTop);
   }, [onTop]);
   // An update never installs (restarting Orbit) while this screen is open.

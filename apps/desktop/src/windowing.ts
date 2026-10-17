@@ -1,6 +1,6 @@
 import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
-import type { PanelMode } from "@orbit/ui";
+import { safeLocal, type PanelMode } from "@orbit/ui";
 
 const SIZES: Record<PanelMode, { width: number; height: number }> = {
   compact: { width: 380, height: 520 },
@@ -69,7 +69,16 @@ export async function applyPanelMode(mode: PanelMode): Promise<void> {
   await win.setSize(new PhysicalSize(fit.width, fit.height));
 }
 
+/** The "Always on top" pin (the live window's pin button): on unless the user turned it off. */
+const PIN_KEY = "orbit.desktop.alwaysOnTop";
+
+export function loadAlwaysOnTop(): boolean {
+  return safeLocal.getItem(PIN_KEY) !== "false";
+}
+
+/** Saves the pin and applies it to the window. */
 export async function setAlwaysOnTop(on: boolean): Promise<void> {
+  safeLocal.setItem(PIN_KEY, String(on));
   await getCurrentWindow().setAlwaysOnTop(on);
 }
 

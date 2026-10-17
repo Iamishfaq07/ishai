@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { fitWindow } from "./windowing";
+import { safeLocal } from "@orbit/ui";
+import { fitWindow, loadAlwaysOnTop } from "./windowing";
 
 // A 1366×768 laptop at 125 %: the work area above the taskbar, in physical pixels.
 const laptop = { x: 0, y: 0, width: 1366, height: 728 };
@@ -39,5 +40,16 @@ describe("fitting the window to the screen when it changes size", () => {
     const left = { x: -2560, y: 0, width: 2560, height: 1392 };
     const fit = fitWindow({ x: -600, y: 900, width: 380, height: 480 }, { width: 920, height: 680 }, left);
     expect(fit).toEqual({ x: -920, y: 712, width: 920, height: 680 });
+  });
+});
+
+describe("the always-on-top pin", () => {
+  it("is on until the user turns it off, and the choice is read back at launch", () => {
+    safeLocal.removeItem("orbit.desktop.alwaysOnTop");
+    expect(loadAlwaysOnTop()).toBe(true);
+    safeLocal.setItem("orbit.desktop.alwaysOnTop", "false");
+    expect(loadAlwaysOnTop()).toBe(false);
+    safeLocal.setItem("orbit.desktop.alwaysOnTop", "true");
+    expect(loadAlwaysOnTop()).toBe(true);
   });
 });
