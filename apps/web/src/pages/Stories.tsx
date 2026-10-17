@@ -324,7 +324,7 @@ function StoryCard({ story, onEdit, onDelete, onPractise, practising = false }: 
       )}
       {onPractise && (
         <div className="mt-auto pt-4">
-          <Button variant="secondary" size="sm" onClick={onPractise} disabled={practising} aria-label={`Practise telling “${story.title}” out loud`}>
+          <Button variant="secondary" size="sm" onClick={onPractise} disabled={practising} aria-label={`Practise telling it: “${story.title}”, out loud`}>
             <Target className="h-3.5 w-3.5" /> {practising ? "Starting…" : "Practise telling it"}
           </Button>
         </div>

@@ -635,7 +635,7 @@ function ResumeEditor() {
               type="button"
               onClick={() => setTab("score")}
               className={cx("relative flex items-center gap-2 rounded-xl px-3 py-1.5 ring-1", scoreTone(report.score), focusRing)}
-              aria-label={`ATS score ${report.score} out of 100, ${report.verdict}. Show details`}
+              aria-label={`${report.score} ATS score, ${report.verdict}, out of 100. Show details`}
             >
               <ScoreCount score={report.score} className="font-display text-xl font-semibold" />
               <span className="text-left text-xs leading-tight">
@@ -822,7 +822,11 @@ function ResumeEditor() {
           <div
             id="resume-preview"
             data-preview-scroll=""
-            className="sticky top-20 scroll-mt-20 space-y-3 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pb-4"
+            // It scrolls on its own on wide screens, so the keyboard can reach and scroll it too (WCAG 2.1.1).
+            tabIndex={0}
+            role="region"
+            aria-label="Resume preview"
+            className={cx("sticky top-20 scroll-mt-20 space-y-3 rounded-2xl lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pb-4", focusRing)}
           >
             {placeholders && tab !== "letter" && (
               <div role="status" className="flex items-start gap-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">

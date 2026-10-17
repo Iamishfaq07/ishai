@@ -20,7 +20,7 @@ const VARIANT: Record<ButtonVariant, string> = {
   secondary:
     "border border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50 dark:border-white/15 dark:bg-white/[0.04] dark:text-zinc-100 dark:hover:bg-white/[0.08]",
   ghost: "border border-transparent text-zinc-700 hover:bg-zinc-900/5 dark:text-zinc-300 dark:hover:bg-white/5",
-  danger: "border border-transparent text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10",
+  danger: "border border-transparent text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10",
 };
 
 /**
