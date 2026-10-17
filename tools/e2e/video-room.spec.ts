@@ -60,6 +60,8 @@ test("the video interview's controls all fit a 360 px phone", async ({ page, con
   await page.getByRole("button", { name: /^Transcript/ }).click();
   const transcript = page.getByRole("region", { name: "Interview transcript" });
   await expect(transcript.getByRole("log")).toContainText("Saba", { timeout: 15_000 });
+  // Measured where it rests, not while it rises in.
+  await transcript.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
   const drawer = (await transcript.boundingBox())!;
   const dock = (await page.locator("footer").boundingBox())!;
   expect(drawer.y + drawer.height, "the transcript covers the controls").toBeLessThanOrEqual(dock.y + 1);
