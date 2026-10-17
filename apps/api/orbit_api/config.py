@@ -203,6 +203,11 @@ class Settings(BaseSettings):
     # codes, comma-separated: one more call per board and country every 6 hours. The other boards send every
     # country's posts in one answer.
     jobs_board_countries: str = Field("US,GB,CA,DE,AU", validation_alias=AliasChoices("ORBIT_JOBS_BOARD_COUNTRIES"))
+    # The share of one CPU the job refresh's own work may take (reading posts and their skills, writing them), so
+    # requests stay quick next to it and, where CPU is billed by use, its cost stays small (job_portal/pace.py). 0.04
+    # leaves most of even a tenth of a CPU (the worst case measured) to requests. 0 = unpaced. Unset: 0.04, and
+    # unpaced in tests.
+    jobs_cpu_share: float | None = Field(None, ge=0, le=1, validation_alias=AliasChoices("ORBIT_JOBS_CPU_SHARE"))
     # Free AI per account per day (UTC): fit checks, and search profiles read from a resume. The admin has no cap.
     jobs_fit_daily: int = Field(15, ge=0, validation_alias=AliasChoices("ORBIT_JOBS_FIT_DAILY"))
     # Offer AI's negotiation plans a day, free (the admin has no cap).
@@ -373,6 +378,12 @@ class Settings(BaseSettings):
     @property
     def jobs_refresh_on(self) -> bool:
         return self.jobs_refresh if self.jobs_refresh is not None else self.env != "test"
+
+    @property
+    def jobs_pace(self) -> float:
+        if self.jobs_cpu_share is not None:
+            return self.jobs_cpu_share
+        return 0.0 if self.env == "test" else 0.04
 
     @property
     def approval_required(self) -> bool:

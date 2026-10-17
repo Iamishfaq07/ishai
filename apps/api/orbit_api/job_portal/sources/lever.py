@@ -8,6 +8,7 @@ from urllib.parse import quote
 
 from orbit_api.job_portal.companies import Board, boards
 from orbit_api.job_portal.http import FeedClient, SourceError
+from orbit_api.job_portal.pace import paced_map
 from orbit_api.job_portal.postings import (
     Posting,
     Workplace,
@@ -64,4 +65,4 @@ class Lever(Source):
         data = await http.get_json(f"https://api.lever.co/v0/postings/{quote(key, safe='')}", params={"mode": "json"})
         if not isinstance(data, list):
             raise SourceError("Lever sent an unexpected shape")
-        return await asyncio.to_thread(lambda: [p for j in data if (p := parse_job(j, board)) is not None])
+        return await asyncio.to_thread(paced_map, lambda j: parse_job(j, board), data)

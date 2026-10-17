@@ -10,6 +10,7 @@ from datetime import timedelta
 from typing import Any
 
 from orbit_api.job_portal.http import FeedClient, SourceError
+from orbit_api.job_portal.pace import paced_map
 from orbit_api.job_portal.postings import Level, Posting, employment_type_of, parse_time, salary_text, text_of
 from orbit_api.job_portal.sources.base import Attribution, SearchQuery, Source
 
@@ -37,7 +38,7 @@ def parse_job(j: Any, query_key: str, country: str = "IN") -> Posting | None:
 
 
 def _parse_all(jobs: list[Any], key: str, country: str = "IN") -> list[Posting]:
-    return [p for j in jobs if (p := parse_job(j, key, country)) is not None]
+    return paced_map(lambda j: parse_job(j, key, country), jobs)
 
 
 class Himalayas(Source):

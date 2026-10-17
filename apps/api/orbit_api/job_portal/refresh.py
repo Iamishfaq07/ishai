@@ -7,6 +7,10 @@
   lately, so an idle server doesn't keep calling the providers just because a cron keeps it awake.
 - Each board is fetched at most once per its source's `ttl` (4-6 hours for company boards, daily for feeds). A
   failure backs off (BACKOFF, or the provider's Retry-After on a 429) and leaves the cached listings as they were.
+- Gently, as a small background load wherever it runs (unpaced, a first refresh of every board starved requests on a
+  tenth of a CPU until health checks failed and the host restarted it, again and again): one board at a time, at most
+  BOARDS_PER_RUN of a source's due boards per run (the longest-waiting first, never-fetched in their listed order,
+  India's first) with RUN_GAP between runs, the CPU work paced (pace.py) and the writes made a chunk at a time.
 - A successful board fetch replaces that board's listings: posts no longer on it are gone. Searches only add.
   Posts older than 30 days are dropped, and searches nobody asked for in a week are forgotten.
 - Quota'd APIs (Adzuna, JSearch) take their calls from a shared count kept in the database, stopping at 90%.
@@ -30,6 +34,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api.config import get_settings
 from orbit_api.db import sessionmaker
 from orbit_api.job_portal.http import FeedClient, RateLimited, SourceError
+from orbit_api.job_portal.pace import Pace, breathe
 from orbit_api.job_portal.postings import MAX_AGE, Posting, listing_id, normalize
 from orbit_api.job_portal.skills import listing_keywords
 from orbit_api.job_portal.sources import Source, allowed_hosts, enabled_sources
@@ -39,9 +44,14 @@ from orbit_api.models import JobListing, JobSourceState
 log = logging.getLogger(__name__)
 
 POLITE_DELAY_S = 1.0  # between two boards of the same source
-# Boards fetched and parsed at once, across all sources. The biggest are ~10 MB of JSON, and the free Render
-# instance has 512 MB next to live sessions, so a first refresh of every source mustn't hold them all together.
-BOARD_SLOTS = 2
+# Boards fetched and parsed at once, across all sources. The biggest are ~10 MB of JSON, and the refresh should fit
+# next to live sessions on a small instance (measured against 512 MB and a tenth of a CPU): one at a time.
+BOARD_SLOTS = 1
+# A source's run takes at most this many of its due boards; the rest wait for a later run, RUN_GAP apart (the loop
+# comes round every REFRESH_EVERY_S). 12 a run every 15 minutes covers 288 boards per 6-hour TTL.
+BOARDS_PER_RUN = 12
+RUN_GAP = timedelta(minutes=10)
+STORE_CHUNK = 100  # rows written per transaction, with a pause after each
 BACKOFF = (timedelta(minutes=30), timedelta(hours=2), timedelta(hours=6))
 REFRESH_EVERY_S = 15 * 60
 ACTIVE_FOR = timedelta(hours=48)  # the loop refreshes only while the feed was used this recently
@@ -54,14 +64,26 @@ _pending: dict[str, dict[str, SearchQuery]] = defaultdict(dict)
 _minute_calls: dict[str, deque[float]] = defaultdict(deque)
 _last_feed_at: float | None = None
 _slots_by_loop: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Semaphore] = weakref.WeakKeyDictionary()
-# Bumped whenever listings change, so ranked feeds cached in memory (ranking.py) know to recompute.
+# Bumped whenever listings change, so ranked feeds cached in memory (ranking.py) know to recompute; feeds see it
+# through version(), which settles while a refresh runs.
 _version = 0
+_shown_version = 0
+_shown_at = float("-inf")
+SETTLE_S = 300.0
 # Tests swap in an httpx.MockTransport: no refresh ever reaches the network in the suite.
 transport: httpx.AsyncBaseTransport | None = None
 
 
 def version() -> int:
-    return _version
+    """The listings' version for ranked-feed caches. While a refresh is writing board after board it moves at most
+    every SETTLE_S: ranking thousands of posts again after each board kept every feed slow for the whole refresh on
+    a small server. With no refresh running it's always current."""
+    global _shown_version, _shown_at
+    if _shown_version != _version:
+        now = time.monotonic()
+        if not any(not t.done() for t in _tasks.values()) or now - _shown_at >= SETTLE_S:
+            _shown_version, _shown_at = _version, now
+    return _shown_version
 
 
 def _board_slots() -> asyncio.Semaphore:
@@ -126,6 +148,7 @@ def _prepare(postings: list[Posting], hashes: dict[str, str | None], now: dateti
     runs in a thread). `keywords` None means "unchanged, keep what's stored"."""
     rows = []
     seen: set[str] = set()
+    pace = Pace()
     for p in postings:
         row = normalize(p, now)
         if row is None or row["id"] in seen:
@@ -136,18 +159,35 @@ def _prepare(postings: list[Posting], hashes: dict[str, str | None], now: dateti
         row["keywords"] = None if unchanged or p.partial else listing_keywords(row["title"], row["description"],
                                                                                row["company"])
         rows.append(row)
+        pace.tick()
     return rows
 
 
 async def _store(source_id: str, board: str | None, rows: list[dict[str, Any]], now: datetime) -> int:
-    """Insert or update the rows; with `board`, also delete that board's listings that weren't in this fetch."""
+    """Insert or update the rows, STORE_CHUNK at a time, each chunk its own transaction with a pause after it (a
+    thousand new rows at once hold the event loop for seconds on a small server); with `board`, then delete that
+    board's listings that weren't in this fetch."""
     global _version
+    ids = [r["id"] for r in rows]
+    for start in range(0, len(rows), STORE_CHUNK):
+        cpu = time.thread_time()
+        await _store_chunk(rows[start:start + STORE_CHUNK], now)
+        await breathe(cpu)
+    if board is not None:
+        async with sessionmaker()() as db:
+            stale = delete(JobListing).where(JobListing.source == source_id, JobListing.board == board)
+            if ids:
+                stale = stale.where(JobListing.id.not_in(ids))
+            await db.execute(stale)
+            await db.commit()
+    _version += 1
+    return len(rows)
+
+
+async def _store_chunk(rows: list[dict[str, Any]], now: datetime) -> None:
     async with sessionmaker()() as db:
-        ids = [r["id"] for r in rows]
-        existing: dict[str, JobListing] = {}
-        for i in range(0, len(ids), 500):
-            for found in (await db.scalars(select(JobListing).where(JobListing.id.in_(ids[i:i + 500])))).all():
-                existing[found.id] = found
+        existing = {found.id: found for found in (await db.scalars(
+            select(JobListing).where(JobListing.id.in_([r["id"] for r in rows])))).all()}
         for r in rows:
             partial = r.pop("partial")
             keywords = r.pop("keywords")
@@ -164,14 +204,7 @@ async def _store(source_id: str, board: str | None, rows: list[dict[str, Any]], 
             if keywords is not None and not keep:
                 row.keywords = keywords
             row.fetched_at = now
-        if board is not None:
-            stale = delete(JobListing).where(JobListing.source == source_id, JobListing.board == board)
-            if ids:
-                stale = stale.where(JobListing.id.not_in(ids))
-            await db.execute(stale)
         await db.commit()
-    _version += 1
-    return len(rows)
 
 
 async def _ingest(source_id: str, board: str | None, postings: list[Posting]) -> int:
@@ -212,7 +245,7 @@ async def refresh_source(source: Source, *, keys: Iterable[str] | None = None, d
     async with sessionmaker()() as db:
         states = {s.key: s for s in (await db.scalars(select(JobSourceState)
                                                       .where(JobSourceState.source == source.id))).all()}
-    todo = list(keys) if keys is not None else [k for k in source.keys() if due(states.get(k), source.ttl, now)]
+    todo = list(keys) if keys is not None else _next_boards(source, states, now)
     written = 0
     async with FeedClient(allowed_hosts(), client_transport or transport) as http:
         for i, key in enumerate(todo):
@@ -221,6 +254,15 @@ async def refresh_source(source: Source, *, keys: Iterable[str] | None = None, d
             written += await _refresh_board(source, http, key)
     await purge()
     return written
+
+
+def _next_boards(source: Source, states: dict[str, JobSourceState], now: datetime) -> list[str]:
+    """This run's boards: the due ones waiting longest first (never fetched before any, in the order listed, so
+    India's come first), at most BOARDS_PER_RUN."""
+    never = datetime.min.replace(tzinfo=UTC)
+    waiting = [k for k in source.keys() if due(states.get(k), source.ttl, now)]
+    waiting.sort(key=lambda k: aware(states[k].last_success_at) or never if k in states else never)
+    return waiting[:BOARDS_PER_RUN]
 
 
 async def _refresh_board(source: Source, http: FeedClient, key: str) -> int:
@@ -355,6 +397,12 @@ async def ensure_fresh(db: AsyncSession, queries: list[SearchQuery]) -> None:
         return
     now = _now()
     states = {(s.source, s.key): s for s in (await db.scalars(select(JobSourceState))).all()}
+    # A board source rests RUN_GAP after its last run (its last board tried), so the rest of a big backlog waits.
+    tried: dict[str, datetime] = {}
+    for row in states.values():
+        at = aware(row.last_attempt_at)
+        if at is not None and (row.source not in tried or at > tried[row.source]):
+            tried[row.source] = at
     for source in enabled_sources():
         if source.kind == "search":
             for q in queries:
@@ -364,7 +412,8 @@ async def ensure_fresh(db: AsyncSession, queries: list[SearchQuery]) -> None:
                     _pending[source.id][q.key()] = q
             if _pending[source.id]:
                 _kick_searches(source)
-        elif any(due(states.get((source.id, k)), source.ttl, now) for k in source.keys()):
+        elif ((source.id not in tried or now - tried[source.id] >= RUN_GAP)
+              and any(due(states.get((source.id, k)), source.ttl, now) for k in source.keys())):
             _kick(source.id, lambda s=source: refresh_source(s))  # type: ignore[misc]
 
 

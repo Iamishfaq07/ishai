@@ -17,6 +17,7 @@ from urllib.parse import quote
 from orbit_api.config import get_settings
 from orbit_api.job_portal.companies import Board, boards
 from orbit_api.job_portal.http import FeedClient, SourceError
+from orbit_api.job_portal.pace import paced_map
 from orbit_api.job_portal.postings import Level, Posting, Workplace, employment_type_of, obj, parse_time, text_of
 from orbit_api.job_portal.sources.base import Source
 
@@ -110,5 +111,4 @@ class SmartRecruiters(Source):
                     pass  # listed without its text this time; the next refresh tries again
 
         await asyncio.gather(*(detail(str(x["id"])) for x in todo))
-        return await asyncio.to_thread(
-            lambda: [p for x in items if (p := parse_job(x, board, details.get(str(x["id"])), key)) is not None])
+        return await asyncio.to_thread(paced_map, lambda x: parse_job(x, board, details.get(str(x["id"])), key), items)

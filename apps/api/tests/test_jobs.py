@@ -11,6 +11,7 @@ import os
 import sqlite3
 import subprocess
 import sys
+import time
 import uuid
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
@@ -30,6 +31,7 @@ from orbit_api.job_portal import ranking, refresh
 from orbit_api.job_portal import routes as job_routes
 from orbit_api.job_portal.companies import Board, parse_boards
 from orbit_api.job_portal.http import FeedClient, RateLimited, SourceError
+from orbit_api.job_portal.pace import Pace, breathe
 from orbit_api.job_portal.portals import portal_links
 from orbit_api.job_portal.postings import (
     Posting,
@@ -353,7 +355,7 @@ def test_a_board_refresh_stores_its_posts_and_drops_the_ones_taken_down(jobs: Te
     assert [r.title for r in _stored(jobs, "greenhouse")] == ["Backend Engineer - Payments"]
 
 
-def test_boards_are_fetched_at_most_two_at_a_time_across_sources(jobs: TestClient) -> None:
+def test_boards_are_fetched_one_at_a_time_across_sources(jobs: TestClient) -> None:
     running = peak = 0
 
     class Slow:
@@ -374,7 +376,7 @@ def test_boards_are_fetched_at_most_two_at_a_time_across_sources(jobs: TestClien
                                    for s in ("greenhouse", "lever", "ashby", "smartrecruiters", "remoteok")))
 
     run(jobs, first_refresh_of_everything)
-    assert peak == refresh.BOARD_SLOTS == 2
+    assert peak == refresh.BOARD_SLOTS == 1
 
 
 def test_a_failed_or_rate_limited_fetch_backs_off_and_keeps_the_cache(jobs: TestClient,
@@ -475,6 +477,127 @@ def test_the_feed_never_waits_for_a_refresh_and_refreshes_each_source_once(jobs:
     boards = sorted(set(calls))
     assert boards == sorted(calls) and "greenhouse" in boards  # one background refresh per source, not three
     run(jobs, asyncio.sleep, 0.3)
+
+
+def test_a_run_takes_the_due_boards_never_fetched_first_then_the_longest_waiting_and_only_so_many(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    src = source_named("greenhouse")
+    assert src is not None
+    monkeypatch.setattr(src, "keys", lambda: ["a", "b", "c", "d", "e", "f", "g"])
+    monkeypatch.setattr(refresh, "BOARDS_PER_RUN", 3)
+    now = datetime.now(UTC)
+
+    def fetched(key: str, hours_ago: float) -> JobSourceState:
+        return JobSourceState(source="greenhouse", key=key, last_success_at=now - timedelta(hours=hours_ago))
+
+    states = {"a": fetched("a", 7), "b": fetched("b", 1), "d": fetched("d", 9), "f": fetched("f", 6.5),
+              "g": JobSourceState(source="greenhouse", key="g", failures=1, retry_after=now + timedelta(hours=1))}
+    # c and e were never fetched: first, in the order listed (India's boards are listed first). Then d, 9 hours
+    # ago, before a, 7. b is fresh (a 6-hour TTL) and g is backing off.
+    assert refresh._next_boards(src, states, now) == ["c", "e", "d"]
+    monkeypatch.setattr(refresh, "BOARDS_PER_RUN", 12)
+    assert refresh._next_boards(src, states, now) == ["c", "e", "d", "a", "f"]
+
+
+def test_a_board_source_rests_between_runs_so_the_rest_of_a_big_backlog_waits(jobs: TestClient,
+                                                                              monkeypatch: pytest.MonkeyPatch) -> None:
+    kicked: list[str] = []
+
+    def kick(source_id: str, work: Any) -> bool:
+        kicked.append(source_id)
+        return True
+
+    monkeypatch.setattr(get_settings(), "jobs_refresh", True)
+    monkeypatch.setattr(refresh, "_kick", kick)
+    src = source_named("greenhouse")
+    assert src is not None
+
+    async def tried(minutes_ago: float) -> list[str]:
+        """Greenhouse's last board tried `minutes_ago` (its other boards still due); the sources a feed kicks."""
+        at = datetime.now(UTC) - timedelta(minutes=minutes_ago)
+        async with sessionmaker()() as db:
+            await db.execute(delete(JobSourceState))
+            db.add(JobSourceState(source="greenhouse", key=src.keys()[0], last_attempt_at=at, last_success_at=at))
+            await db.commit()
+            kicked.clear()
+            await refresh.ensure_fresh(db, [])
+        return list(kicked)
+
+    assert refresh.RUN_GAP == timedelta(minutes=10)
+    soon = run(jobs, tried, 5)
+    assert "greenhouse" not in soon and "lever" in soon  # lever has never run
+    assert "greenhouse" in run(jobs, tried, 11)
+
+
+def test_ranked_feeds_see_new_listings_at_most_every_few_minutes_while_a_refresh_writes(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    class Running:
+        def done(self) -> bool:
+            return False
+
+    monkeypatch.setattr(refresh, "_tasks", {"greenhouse": Running()})
+    monkeypatch.setattr(refresh, "_version", 6)
+    monkeypatch.setattr(refresh, "_shown_version", 5)
+    monkeypatch.setattr(refresh, "_shown_at", time.monotonic())
+    assert refresh.version() == 5  # a board was just written: feeds keep their ranking for now
+    monkeypatch.setattr(refresh, "_shown_at", time.monotonic() - refresh.SETTLE_S)
+    assert refresh.version() == 6
+    monkeypatch.setattr(refresh, "_version", 7)
+    assert refresh.version() == 6
+    monkeypatch.setattr(refresh, "_tasks", {})
+    assert refresh.version() == 7  # no refresh running: always current
+
+
+def _spin(cpu_s: float) -> None:
+    start = time.thread_time()
+    while time.thread_time() - start < cpu_s:
+        pass
+
+
+def test_the_refresh_work_is_paced_to_its_share_of_a_cpu_and_unpaced_at_zero() -> None:
+    wall = time.monotonic()
+    pace = Pace(share=0.5)
+    _spin(0.05)
+    pace.tick()
+    assert time.monotonic() - wall >= 0.09  # 0.05 s of CPU at half of one CPU takes 0.1 s
+    unpaced = Pace(share=0)
+    _spin(0.02)
+    assert unpaced.ahead_s() == 0
+
+    async def chunk(share: float) -> float:
+        cpu = time.thread_time()
+        _spin(0.05)
+        start = time.monotonic()
+        await breathe(cpu, share=share)
+        return time.monotonic() - start
+
+    assert asyncio.run(chunk(0.5)) >= 0.04  # the loop rests about as long again
+    assert asyncio.run(chunk(0)) < 0.02
+
+
+def test_a_big_board_is_written_a_chunk_at_a_time_and_still_drops_whats_gone(jobs: TestClient,
+                                                                            monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(refresh, "STORE_CHUNK", 2)
+    chunks: list[int] = []
+    store_chunk = refresh._store_chunk
+
+    async def counted(rows: list[dict[str, Any]], now: datetime) -> None:
+        chunks.append(len(rows))
+        await store_chunk(rows, now)
+
+    monkeypatch.setattr(refresh, "_store_chunk", counted)
+
+    def post(i: int) -> Posting:
+        return Posting(source="greenhouse", external_id=str(i), board="groww", company="Groww",
+                       title=f"Backend Engineer {i}", url=f"https://boards.greenhouse.io/groww/jobs/{i}",
+                       apply_url=f"https://boards.greenhouse.io/groww/jobs/{i}#app", posted_at=fx.ago(hours=2),
+                       locations=["Bengaluru, India"], description="Build payment services in Go with Kafka.")
+
+    assert run(jobs, refresh._ingest, "greenhouse", "groww", [post(i) for i in range(5)]) == 5
+    assert chunks == [2, 2, 1]
+    assert sorted(r.external_id for r in _stored(jobs, "greenhouse")) == ["0", "1", "2", "3", "4"]
+    run(jobs, refresh._ingest, "greenhouse", "groww", [post(i) for i in range(3)])
+    assert sorted(r.external_id for r in _stored(jobs, "greenhouse")) == ["0", "1", "2"]  # 3 and 4 were taken down
 
 
 # ---- ranking ------------------------------------------------------------------------------------------------------

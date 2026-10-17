@@ -13,6 +13,7 @@ from typing import Any
 
 from orbit_api.config import get_settings
 from orbit_api.job_portal.http import FeedClient, SourceError
+from orbit_api.job_portal.pace import paced_map
 from orbit_api.job_portal.postings import Posting, employment_type_of, parse_time, salary_text, text_of
 from orbit_api.job_portal.sources.base import Attribution, Budget, SearchQuery, Source
 from orbit_api.region import country_name
@@ -77,4 +78,4 @@ class JSearch(Source):
         jobs = data.get("data") if isinstance(data, dict) else None
         if not isinstance(jobs, list):
             raise SourceError("JSearch sent an unexpected shape")
-        return await asyncio.to_thread(lambda: [p for j in jobs if (p := parse_job(j, query.key())) is not None])
+        return await asyncio.to_thread(paced_map, lambda j: parse_job(j, query.key()), jobs)

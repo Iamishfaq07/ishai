@@ -9,6 +9,7 @@ from urllib.parse import quote
 
 from orbit_api.job_portal.companies import Board, boards
 from orbit_api.job_portal.http import FeedClient, SourceError
+from orbit_api.job_portal.pace import paced_map
 from orbit_api.job_portal.postings import (
     Posting,
     employment_type_of,
@@ -86,4 +87,4 @@ class Greenhouse(Source):
         if not isinstance(jobs, list):
             raise SourceError("Greenhouse sent an unexpected shape")
         # Reading hundreds of posts' HTML is CPU work: off the event loop.
-        return await asyncio.to_thread(lambda: [p for j in jobs if (p := parse_job(j, board)) is not None])
+        return await asyncio.to_thread(paced_map, lambda j: parse_job(j, board), jobs)
