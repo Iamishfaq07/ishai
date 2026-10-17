@@ -1,5 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import update
 
@@ -96,3 +97,33 @@ def test_alerts_need_sign_in_and_a_known_frequency(jobs: TestClient) -> None:  #
     # No saved profile yet: turning alerts on saves the one the feed uses.
     assert jobs.put("/v1/jobs/alerts", headers=h, json={"frequency": "daily"}).status_code == 200
     assert jobs.get("/v1/jobs/profile", headers=h).json()["saved"] is True
+
+
+def test_weekly_alerts_not_due_dont_crowd_out_daily_ones(jobs: TestClient,  # noqa: F811
+                                                         monkeypatch: pytest.MonkeyPatch) -> None:
+    """A sweep takes BATCH profiles, oldest send first. Weekly ones sent 2-6 days ago aren't due, but they used to be
+    picked (only "a day ago" was asked), skipped, and picked again next sweep: with BATCH of them, no daily alert
+    was ever sent."""
+    monkeypatch.setattr(alerts, "BATCH", 3)
+
+    def subscriber(frequency: str, days: float) -> str:
+        h = _register(jobs)
+        uid = _me(jobs, h)["id"]
+        _verify(jobs, uid)
+        jobs.put("/v1/jobs/profile", headers=h, json={"prefs": PREFS})
+        jobs.put("/v1/jobs/alerts", headers=h, json={"frequency": frequency})
+        _backdate(jobs, uid, days)
+        return uid
+
+    for days in (3, 4, 5):
+        subscriber("weekly", days)
+    daily = subscriber("daily", 1.2)
+    _send(jobs)
+
+    async def sent_at() -> datetime:
+        async with sessionmaker()() as db:
+            row = await db.get(JobSearchProfile, daily)
+            assert row is not None and row.alert_sent_at is not None
+            return row.alert_sent_at.replace(tzinfo=UTC) if row.alert_sent_at.tzinfo is None else row.alert_sent_at
+
+    assert datetime.now(UTC) - run(jobs, sent_at) < timedelta(minutes=5)  # its turn came
