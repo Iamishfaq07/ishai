@@ -82,7 +82,7 @@ function SampleResume() {
         }}
       >
         <div aria-hidden="true" inert style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "max-content" }}>
-          <ResumePreview data={sample.data} design={sample.design} />
+          <ResumePreview data={sample.data} design={sample.design} decorative />
         </div>
       </div>
       {score > 0 && (

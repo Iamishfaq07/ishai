@@ -22,6 +22,12 @@ Key facts:
 - [Free interview warm-up](https://orbitanswer.com/warmup): practise common interview questions by speaking or typing, no account needed
 - [How Orbit works](https://orbitanswer.com/technical): measured live-answer latency, the answer pipeline, and how the desktop app protects sign-in and data
 
+## Interview guides
+
+- [Company interview guides](https://orbitanswer.com/companies): how 100 employers interview (TCS, Infosys, Wipro, Accenture, Amazon, Google and more): the rounds, what interviewers listen for, and practice questions with what a good answer covers
+- [Interview guides by role](https://orbitanswer.com/roles): what interviews for each kind of job usually test, from campus placements and software engineering to nursing and sales
+- Each guide is at https://orbitanswer.com/companies/<company> or https://orbitanswer.com/roles/<role>, for example [TCS](https://orbitanswer.com/companies/tcs) or [Data analyst](https://orbitanswer.com/roles/data-analyst)
+
 ## Help and policies
 
 - [Contact](https://orbitanswer.com/contact): questions, payments, technical problems
