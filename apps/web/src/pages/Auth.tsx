@@ -1,20 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
-import {
-  AudioLines,
-  Briefcase,
-  Eye,
-  EyeOff,
-  KeyRound,
-  OrbitWordmark,
-  PlanetHero,
-  ShieldCheck,
-  Sparkles,
-  buttonClass,
-  cx,
-  focusRing,
-  passkeysSupported,
-  type LucideIcon,
-} from "@orbit/ui";
+import { Check, Eye, EyeOff, KeyRound, LockKeyhole, ShieldCheck, cx, focusRing, passkeysSupported } from "@orbit/ui";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button, ErrorNote, Field, Input } from "../components/ui";
 import { api, API_URL } from "../lib/api";
@@ -23,27 +8,16 @@ import { clearAsyncCache } from "../lib/useAsync";
 import { errorText } from "../lib/format";
 import { useWelcomeGrant } from "../lib/welcome";
 import { Captcha, useCaptchaConfig } from "../components/Captcha";
-import { AiPill } from "../components/products";
-import { KashSecPromo, MoreToolChips } from "../components/Promos";
+import { useIndia } from "../lib/country";
+import { BrandLogo } from "../marketing/BrandLogo";
+import { PRODUCT_TILE, siteProducts } from "../marketing/catalog";
+import { GoogleButton, type GoogleLabel } from "../marketing/GoogleButton";
+import { IconTile } from "../marketing/primitives";
+import { useSiteScope } from "../marketing/useSiteScope";
+import { KASHSEC_URL } from "./learn/links";
 import { CONTACT_PAGE, PRIVACY_PAGE, REFUND_PAGE, TERMS_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
 import { storedRef } from "../lib/referral";
 import { InviteNote } from "../components/InviteNote";
-
-type Feature = { icon: LucideIcon; title: string; text: string; ai?: boolean };
-
-/**
- * What Orbit does, on the sign-in and sign-up screens (the side panel on wide screens, under the form on phones):
- * its three products first, then what comes with them. (Interview prep is part of Resume AI and Jobs AI now; two lines
- * here keep it all on a 1024 x 720 screen.)
- */
-const PRODUCTS: Feature[] = [
-  { icon: AudioLines, title: "Interview copilot", text: "Hears the question the moment it's asked and answers in your voice, from your resume." },
-  { icon: Sparkles, title: "Resume", ai: true, text: "ATS score out of 100, AI rewrites for every job, cover letters and interview prep." },
-  { icon: Briefcase, title: "Jobs", ai: true, text: "The latest jobs from companies' career pages, matched to your resume, and outreach to get referred." },
-];
-const FEATURES: Feature[] = [
-  { icon: ShieldCheck, title: "Private", text: "Your documents stay in your account. Delete them any time." },
-];
 
 /** "Free to start: 20 interview minutes + 1 Resume AI credit", from the server (it decides the welcome credits). */
 function useWelcome(): string | null {
@@ -56,152 +30,111 @@ function useWelcome(): string | null {
   return `Free to start: ${parts.join(" + ")}. No card needed.`;
 }
 
-/** "Resume AI" and "Jobs AI" as the nav shows them: the word and the AI pill. */
-function FeatureTitle({ title, ai }: Pick<Feature, "title" | "ai">) {
-  return ai ? (
-    <>
-      {title} <AiPill className="align-[1px]" />
-    </>
-  ) : (
-    <>{title}</>
-  );
-}
-
-function FeatureList({ compact = false }: { compact?: boolean }) {
+/**
+ * What one account gives you, on the sign-in and sign-up screens (the side panel on wide screens, under the form on
+ * phones): the four main products with their marks, then the other tools in a line, and the privacy promise.
+ */
+function ProductPanel({ compact = false }: { compact?: boolean }) {
+  const india = useIndia();
+  const products = siteProducts(india);
+  const main = products.filter((p) => p.main);
+  const more = products.filter((p) => !p.main);
   return (
-    <div className={compact ? "space-y-3" : "space-y-5"}>
-      <ul className={compact ? "grid gap-3 sm:grid-cols-2" : "grid gap-3"} aria-label="Orbit's three products">
-        {PRODUCTS.map(({ icon: Icon, title, text, ai }) => (
-          <li
-            key={title}
-            className={cx(
-              "flex items-start gap-3 rounded-2xl p-3 ring-1 [@media(min-height:800px)]:p-3.5",
-              compact ? "glass-panel ring-0" : "bg-white/[0.04] ring-white/10",
-            )}
-          >
-            <span
-              className={cx(
-                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
-                ai
-                  ? "bg-gradient-to-br from-indigo-500 to-aurora-500 text-white shadow-glow-sm"
-                  : compact
-                    ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"
-                    : "bg-white/10 text-indigo-200 ring-1 ring-white/10",
-              )}
-            >
-              <Icon className="h-[18px] w-[18px]" aria-hidden />
-            </span>
+    <div className={compact ? "space-y-5" : "space-y-7"}>
+      <ul className={cx("grid gap-4", compact && "sm:grid-cols-2")} aria-label="Orbit's products">
+        {main.map((p) => (
+          <li key={p.id} className="flex items-start gap-3.5">
+            <IconTile icon={p.icon} tone={PRODUCT_TILE[p.id]} size={compact ? "sm" : "md"} />
             <span className="min-w-0">
-              <span className={cx("block font-display text-[0.9375rem] font-semibold", compact ? "" : "text-white")}>
-                <FeatureTitle title={title} ai={ai} />
-              </span>
-              <span className={cx("mt-0.5 block text-xs", compact ? "text-zinc-500 dark:text-zinc-400" : "text-zinc-300")}>{text}</span>
+              <span className="block text-[0.9375rem] font-semibold text-zinc-950 dark:text-white">{p.name}</span>
+              <span className="mt-0.5 block text-sm leading-snug text-zinc-600 dark:text-zinc-400">{p.line}</span>
             </span>
           </li>
         ))}
       </ul>
-      <div className={cx("flex flex-wrap items-center gap-x-2 gap-y-1.5", !compact && "px-1")}>
-        <span className={cx("text-xs font-medium", compact ? "text-zinc-500 dark:text-zinc-400" : "text-zinc-300")}>More AI tools:</span>
-        <MoreToolChips dark={!compact} practice />
-      </div>
-      <KashSecPromo tone={compact ? "card" : "dark"} />
-      <ul className={compact ? "grid gap-3 sm:grid-cols-2" : "space-y-3.5 px-1"}>
-        {FEATURES.map(({ icon: Icon, title, text }) => (
-          <li key={title} className="flex items-start gap-3">
-            <span
-              className={cx(
-                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-                compact ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300" : "bg-white/10 text-indigo-200 ring-1 ring-white/10",
-              )}
-            >
-              <Icon className="h-4 w-4" aria-hidden />
-            </span>
-            <span className="min-w-0">
-              <span className={cx("block text-sm font-medium", compact ? "" : "text-white")}>{title}</span>
-              <span className={cx("block text-xs", compact ? "text-zinc-500 dark:text-zinc-400" : "text-zinc-300")}>{text}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <span className="font-medium text-zinc-800 dark:text-zinc-200">Also in your account:</span> {more.map((p) => p.name).join(", ")}, and free
+        cybersecurity lessons on{" "}
+        <a href={KASHSEC_URL} target="_blank" rel="noopener" className={cx("rounded font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
+          KashSec<span className="sr-only"> (opens in a new tab)</span>
+        </a>
+        .
+      </p>
+      <p className="flex items-start gap-2.5 text-sm text-zinc-600 dark:text-zinc-400">
+        <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500 dark:text-zinc-400" aria-hidden />
+        Your documents stay in your account, audio is never stored, and you can delete any of it at any time.
+      </p>
     </div>
   );
 }
 
+/**
+ * The sign-in and sign-up screens' frame, in the front door's look (html.site): the form on the white canvas, and on
+ * wide screens a quiet panel beside it saying what the account gives you. No sky, no glow.
+ */
 function AuthShell({ title, subtitle, children, features = false }: { title: string; subtitle: string; children: ReactNode; features?: boolean }) {
+  useSiteScope();
   const welcome = useWelcome();
   return (
-    <div className="grid min-h-full lg:grid-cols-2">
-      {/* Roomier on tall screens; tighter on short ones, so the three products and what comes with them fit a laptop
-          screen (1024 or 1280 x 720). */}
-      <aside className="dark relative hidden overflow-hidden border-r border-white/5 bg-zinc-950 p-10 text-white lg:flex lg:flex-col [@media(min-height:800px)]:p-12">
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute -left-24 top-1/3 h-96 w-96 rounded-full bg-indigo-600/30 blur-3xl"
-        />
-        {/* In the corner, so the three products and what comes with them fit a laptop screen. */}
-        <PlanetHero className="pointer-events-none absolute right-6 top-6 w-28 motion-safe:animate-float xl:right-10 xl:top-8 xl:w-44" />
-        <Link to="/" aria-label="Orbit: what it does" className={cx("relative w-fit rounded-lg", focusRing)}>
-          <OrbitWordmark size={30} />
-        </Link>
-        <div className="relative my-auto pt-6 [@media(min-height:800px)]:pt-8">
-          <h2 className="max-w-md text-balance font-display text-3xl font-semibold leading-tight tracking-tight [@media(min-height:800px)]:text-4xl">
-            Practise interviews, fix your resume, find jobs. One account.
-          </h2>
-          <div className="mt-5 max-w-md [@media(min-height:800px)]:mt-6">
-            <FeatureList />
+    <div className="grid min-h-full lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="flex min-h-full flex-col">
+        <header className="flex h-16 items-center px-5 sm:px-8">
+          <Link to="/" aria-label="Orbit: what it does" className={cx("-ml-1 rounded-lg p-1", focusRing)}>
+            <BrandLogo height={26} decorative />
+          </Link>
+        </header>
+        <main className="flex flex-1 items-start justify-center px-5 pb-12 pt-6 sm:px-8 sm:pt-12 lg:items-center lg:pt-0">
+          <div className="w-full max-w-[24rem] animate-fade-up">
+            <div className="mb-8">
+              <h1 className="mk-h2 text-zinc-950 dark:text-white">{title}</h1>
+              <p className="mt-3 text-[0.9375rem] text-zinc-600 dark:text-zinc-400">{subtitle}</p>
+            </div>
+            {children}
+            {features && (
+              <section aria-label="What Orbit does" className="mt-12 space-y-5 border-t mk-line pt-8 lg:hidden">
+                {welcome && <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">{welcome}</p>}
+                <ProductPanel compact />
+                <p className="flex items-start gap-2.5 text-xs text-zinc-600 dark:text-zinc-400">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden /> {USE_WHERE_ALLOWED}
+                </p>
+              </section>
+            )}
+            <nav aria-label="About Orbit" className="mt-10 flex flex-wrap gap-x-5 text-xs">
+              <Link to="/" className={smallLink}>
+                What Orbit does
+              </Link>
+              {TERMS_PAGE && (
+                <a href={TERMS_PAGE} className={smallLink}>
+                  Terms
+                </a>
+              )}
+              <a href={PRIVACY_PAGE} className={smallLink}>
+                Privacy
+              </a>
+              <Link to={CONTACT_PAGE} className={smallLink}>
+                Contact
+              </Link>
+            </nav>
+          </div>
+        </main>
+      </div>
+      <aside className="hidden border-l mk-line mk-band lg:flex lg:flex-col lg:justify-center lg:px-14 lg:py-16 xl:px-20">
+        <div className="max-w-md">
+          <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">One account</p>
+          <h2 className="mk-h2 mt-4 text-zinc-950 dark:text-white">Interview-ready, from resume to offer.</h2>
+          <div className="mt-10">
+            <ProductPanel />
           </div>
           {welcome && (
-            <p className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1 text-sm font-medium text-emerald-300 ring-1 ring-emerald-400/30">
-              <Sparkles className="h-4 w-4" aria-hidden /> {welcome}
+            <p className="mt-8 flex items-start gap-2 rounded-xl bg-emerald-500/10 px-3.5 py-2.5 text-sm font-medium text-emerald-800 ring-1 ring-inset ring-emerald-600/20 dark:text-emerald-200">
+              <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> {welcome}
             </p>
           )}
-          <p className="mt-5 flex max-w-md items-start gap-2 text-xs text-zinc-300">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden /> {USE_WHERE_ALLOWED}
+          <p className="mt-8 flex items-start gap-2.5 border-t mk-line pt-6 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden /> {USE_WHERE_ALLOWED}
           </p>
         </div>
       </aside>
-
-      <main className="flex items-center justify-center px-4 py-10 sm:px-6">
-        <div className="w-full max-w-sm animate-fade-up">
-          <div className="mb-8 text-center">
-            <Link to="/" aria-label="Orbit: what it does" className={cx("mx-auto mb-6 flex w-fit justify-center rounded-lg lg:hidden", focusRing)}>
-              <OrbitWordmark size={34} />
-            </Link>
-            <h1 className="font-display text-3xl font-semibold tracking-tight">{title}</h1>
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>
-          </div>
-          <div className="glass-panel rounded-2xl p-6 sm:p-7">{children}</div>
-          {features && (
-            <section aria-label="What Orbit does" className="mt-6 space-y-4 lg:hidden">
-              {welcome && (
-                <p className="rounded-xl bg-emerald-500/10 px-3 py-2 text-center text-sm font-medium text-emerald-800 ring-1 ring-emerald-500/25 dark:text-emerald-200">
-                  {welcome}
-                </p>
-              )}
-              <FeatureList compact />
-              <p className="flex items-start gap-2 text-xs text-zinc-600 dark:text-zinc-400">
-                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden /> {USE_WHERE_ALLOWED}
-              </p>
-            </section>
-          )}
-          <nav aria-label="About Orbit" className="mt-6 flex flex-wrap justify-center gap-x-4 text-xs">
-            <Link to="/" className={smallLink}>
-              What Orbit does
-            </Link>
-            {TERMS_PAGE && (
-              <a href={TERMS_PAGE} className={smallLink}>
-                Terms
-              </a>
-            )}
-            <a href={PRIVACY_PAGE} className={smallLink}>
-              Privacy
-            </a>
-            <Link to={CONTACT_PAGE} className={smallLink}>
-              Contact
-            </Link>
-          </nav>
-        </div>
-      </main>
     </div>
   );
 }
@@ -282,17 +215,6 @@ const GOOGLE_ERROR: Record<string, string> = {
   google_off: "Google sign-in isn't available right now. Sign in with your email instead.",
 };
 
-function GoogleMark() {
-  return (
-    <svg viewBox="0 0 18 18" className="h-4 w-4" aria-hidden>
-      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z" />
-      <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z" />
-      <path fill="#FBBC05" d="M3.97 10.72A5.4 5.4 0 0 1 3.68 9c0-.6.1-1.18.29-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.82.96 4.05l3.01-2.33z" />
-      <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z" />
-    </svg>
-  );
-}
-
 function useGoogleOn(): boolean {
   const [on, setOn] = useState(false);
   useEffect(() => {
@@ -301,8 +223,8 @@ function useGoogleOn(): boolean {
   return on;
 }
 
-/** Continues with Google when the server has it set up. Hidden otherwise. */
-function GoogleContinue({ next }: { next: string }) {
+/** Google sign-in or sign-up when the server has it set up (hidden otherwise), to Google's branding rules. */
+function GoogleContinue({ next, label }: { next: string; label: GoogleLabel }) {
   const on = useGoogleOn();
   if (!on) return null;
   // A link's invite or creator code rides through Google's page to the new account (lib/referral.ts).
@@ -310,9 +232,7 @@ function GoogleContinue({ next }: { next: string }) {
   const href = `${API_URL}/v1/auth/google/start?next=${encodeURIComponent(next || "/")}${ref ? `&ref=${encodeURIComponent(ref)}` : ""}`;
   return (
     <div className="mb-4 space-y-4">
-      <a href={href} className={buttonClass("secondary", "md", "w-full")}>
-        <GoogleMark /> Continue with Google
-      </a>
+      <GoogleButton href={href} label={label} className="w-full" />
       <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">
         By continuing you agree to the{" "}
         {TERMS_PAGE && <><a href={TERMS_PAGE} className="underline underline-offset-2">terms</a>, the </>}
@@ -320,10 +240,10 @@ function GoogleContinue({ next }: { next: string }) {
         {REFUND_PAGE && <> and the <a href={REFUND_PAGE} className="underline underline-offset-2">refund policy</a></>}
         .
       </p>
-      <div className="flex items-center gap-3 text-xs text-zinc-500">
-        <span className="h-px flex-1 bg-zinc-200 dark:bg-white/10" />
+      <div className="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
+        <span className="h-px flex-1 bg-[rgb(var(--site-line))]" />
         or use email
-        <span className="h-px flex-1 bg-zinc-200 dark:bg-white/10" />
+        <span className="h-px flex-1 bg-[rgb(var(--site-line))]" />
       </div>
     </div>
   );
@@ -419,7 +339,7 @@ export function LoginPage() {
         </form>
       ) : (
       <>
-      <GoogleContinue next={target} />
+      <GoogleContinue next={target} label="Sign in with Google" />
       <form onSubmit={(e) => void submit(e)} className="space-y-4">
         <Field label="Email" htmlFor="email">
           <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -521,7 +441,7 @@ export function RegisterPage() {
   return (
     <AuthShell title="Create your free account" subtitle="Takes about a minute. Interview copilot, Resume AI and Jobs AI, in one account." features>
       <InviteNote />
-      <GoogleContinue next={from ?? "/"} />
+      <GoogleContinue next={from ?? "/"} label="Sign up with Google" />
       <form onSubmit={(e) => void submit(e)} className="space-y-4">
         <Field label="Name" htmlFor="name">
           <Input id="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
