@@ -24,7 +24,7 @@ export function DefenseWorkspace({ api, sessionId, capture }: { api: Client; ses
     } catch (err) { setError(err instanceof Error ? err.message : "Couldn't critique this architecture."); }
     finally { setBusy(false); }
   };
-  return <details className="glass-panel max-h-[min(60vh,36rem)] overflow-auto rounded-2xl p-4">
+  return <details className="max-h-[min(60vh,36rem)] overflow-auto border-b border-zinc-200 px-4 py-3 dark:border-white/[0.06]">
     <summary className={`cursor-pointer font-display text-sm font-semibold ${focusRing}`}>Critique architecture / diagram</summary>
     <div className="mt-4 space-y-3">
       <p className="text-xs text-zinc-500">Get a Defense Card before you explain the design. Uses one analysis from your screenshot allowance; failed assessments are refunded.</p>

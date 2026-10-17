@@ -56,6 +56,11 @@ export function LivePage() {
   const location = useLocation();
   const launch = (location.state as LiveLaunchState | null) ?? { systemAudio: supportsDisplayAudio() };
   const detail = useAsync(() => api.getSession(sessionId), [sessionId]);
+  // The live session is the workbench too (base.css html.app-shell): one still canvas, opaque panels, no sky.
+  useEffect(() => {
+    document.documentElement.classList.add("app-shell");
+    return () => document.documentElement.classList.remove("app-shell");
+  }, []);
 
   if (detail.loading) {
     return (
@@ -440,7 +445,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       <div className={cx("min-h-0 flex-1 px-2 pb-2 sm:px-4 sm:pb-4", mode === "compact" && "flex items-start justify-center")}>
         <div
           className={cx(
-            "h-full overflow-hidden rounded-2xl border border-zinc-200 shadow-xl shadow-black/5 dark:border-white/[0.08] dark:shadow-[0_0_0_1px_rgb(var(--accent-500)/0.08),0_30px_80px_-30px_rgb(var(--accent-600)/0.45)]",
+            "h-full overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/[0.08]",
             mode === "compact" ? "w-[380px] max-h-[560px]" : "mx-auto max-w-6xl",
           )}
         >

@@ -97,7 +97,7 @@ export function MockPanel({ live, actions, voice, ended, onViewReport, muted = f
   return (
     <section aria-label="Mock interview" className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
       <div className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-        <span className="uppercase tracking-[0.12em]">
+        <span>
           {q.negotiation ? `Recruiter · turn ${q.index} of up to ${q.total}` : `Question ${q.index} of ${q.total}`}
         </span>
         {q.isFollowUp && <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-indigo-700 dark:text-indigo-300">Follow-up</span>}
@@ -192,7 +192,7 @@ export function MockPanel({ live, actions, voice, ended, onViewReport, muted = f
           />
           <Orb key={voice.speaking ? "speaking" : "listening"} state={voice.speaking ? "composing" : "listening"} size={64} className="relative" />
         </span>
-        <span className="text-xs font-medium uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+        <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
           {voice.speaking ? who : "Listening to you"}
         </span>
       </div>
@@ -342,7 +342,7 @@ function StructureHint({ q }: { q: NonNullable<LiveViewState["mock"]> }) {
         Stuck? Show a structure
       </summary>
       <div className="mt-2 rounded-xl border border-indigo-500/20 bg-indigo-500/[0.04] p-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.1em] text-indigo-700 dark:text-indigo-300">{hint.name}</p>
+        <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">{hint.name}</p>
         <ol className="mt-2 space-y-1.5">
           {hint.steps.map((step, i) => (
             <li key={step.label} className="flex gap-2">
@@ -385,7 +385,7 @@ function OneWayClock({ think, answer, onTimeUp }: { think: number; answer: numbe
   return (
     <div role="group" aria-label="Time for this prompt" className="max-w-md space-y-1.5">
       <div className="flex items-baseline justify-between gap-2 text-sm">
-        <span className={cx("text-xs font-semibold uppercase tracking-[0.12em]", thinking ? "text-sky-700 dark:text-sky-300" : "text-rose-700 dark:text-rose-300")}>
+        <span className={cx("text-xs font-semibold", thinking ? "text-sky-700 dark:text-sky-300" : "text-rose-700 dark:text-rose-300")}>
           {thinking ? "Thinking time" : p.phase === "answer" ? "Answer time" : "Time's up"}
         </span>
         <span className="font-display text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-50" aria-live="off">

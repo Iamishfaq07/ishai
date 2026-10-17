@@ -151,7 +151,7 @@ function KeyPoints({ progress, compact, onToggle }: {
   return (
     <section aria-label="Key points" className="mt-3 animate-fade-in rounded-lg border border-zinc-200/70 p-2.5 dark:border-zinc-800">
       <div className="mb-1 flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400">
+        <h3 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
           {done ? "All points covered" : "Key points"}
         </h3>
         <button type="button" onClick={toggle} className={cx("text-xs text-zinc-500 hover:underline", focusRing)}
@@ -247,7 +247,7 @@ function Label({ compact, children }: { compact: boolean; children: string }) {
 }
 
 function SectionLabel({ children, block = false }: { children: string; block?: boolean }) {
-  const cls = "text-xs font-semibold uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400";
+  const cls = "text-xs font-semibold text-zinc-500 dark:text-zinc-400";
   return block ? <h3 className={cx(cls, "mb-1")}>{children}</h3> : <span className={cls}>{children}</span>;
 }
 
@@ -302,7 +302,7 @@ export const AnswerCard = memo(function AnswerCard({
   return (
     <section aria-label="Suggested answer" className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-4 pt-3">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+        <h2 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
           {answer.source === "chat" ? "Reply" : answer.source === "screenshot" ? "Screenshot answer" : "Answer"}
           {answer.reasoning === "deep" && (
             <span className="ml-2 normal-case tracking-normal text-indigo-600 dark:text-indigo-300">in-depth</span>
@@ -504,7 +504,7 @@ export const AnswerCard = memo(function AnswerCard({
             <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
               {design.map((d) => (
                 <div key={d.title} className="min-w-0">
-                  <dt className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{d.title}</dt>
+                  <dt className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">{d.title}</dt>
                   <dd className="text-zinc-800 dark:text-zinc-200">{d.text}</dd>
                 </div>
               ))}

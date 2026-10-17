@@ -276,7 +276,7 @@ export function FollowUpCard({
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {DEBRIEF.filter((d) => data.debrief[d.key].length > 0).map((d) => (
           <div key={d.key}>
-            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-zinc-500">{d.title}</p>
+            <p className="text-xs font-semibold text-zinc-500">{d.title}</p>
             <ul className="mt-1 space-y-1 text-sm">
               {data.debrief[d.key].map((p) => (
                 <li key={p} className="flex gap-2">
@@ -289,7 +289,7 @@ export function FollowUpCard({
         ))}
       </div>
       <div className="mt-5 rounded-xl bg-zinc-500/5 p-4 ring-1 ring-zinc-200 dark:ring-white/[0.06]">
-        <p className="text-xs font-semibold uppercase tracking-[0.1em] text-zinc-500">Thank-you email</p>
+        <p className="text-xs font-semibold text-zinc-500">Thank-you email</p>
         <p className="mt-2 text-sm font-medium">{data.thank_you.subject}</p>
         <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
           {data.thank_you.body}

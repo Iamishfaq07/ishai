@@ -44,7 +44,7 @@ export const TranscriptView = memo(function TranscriptView({ turns, onCorrectSpe
               <div className="flex items-center gap-2">
                 <span
                   className={cx(
-                    "text-xs font-semibold uppercase tracking-wider",
+                    "text-xs font-semibold",
                     t.speaker === "candidate" ? "text-emerald-600 dark:text-emerald-400" : "text-indigo-600 dark:text-indigo-300",
                   )}
                 >
