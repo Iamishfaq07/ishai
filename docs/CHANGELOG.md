@@ -1,5 +1,38 @@
 # Implementation log
 
+## Search engines and AI assistants (2026-10-18)
+
+- **Real status codes** (DECISIONS D67): an address that isn't a page answers **404** with noindex instead of the app
+  with 200 (a "soft 404" to Google); the body is still the app, so visitors get its "This page isn't here", and
+  crawlers read static links to the main pages. The app's own pages (sign-in and every signed-in page) answer 200
+  with `X-Robots-Tag: noindex`; invite links `/r/<code>` too, with their canonical left at `/`. The Worker now runs
+  first for every page address (`run_worker_first: ["/*", "!/assets/*", …]`, `not_found_handling: "none"`), using
+  the route list in `apps/web/worker/routes.js`, which a test keeps in step with `App.tsx`.
+- **One address per page**: `http://` and `www.` go to `https://orbitanswer.com`, and trailing slashes, `.html`,
+  `/index.html`, doubled slashes, capitals in fixed addresses and the old resume/jobs addresses go to their page, all
+  in a single 301 (Cloudflare's own were 307s, which search engines don't treat as a move).
+- **robots.txt** (written by the Worker): every public page open, including the scripts, styles, favicon and preview
+  image pages need (the old allow-list blocked them, so Google rendered an empty page and X/LinkedIn couldn't load
+  the image); the API and signed-in pages closed, as exact paths; every search and AI crawler named; AI training
+  crawlers allowed by default (`AI_TRAINING_CRAWLERS=block` to opt out); previews and `*.workers.dev` closed and
+  noindex.
+- **Head tags**: each public page gets what it lacks: canonical, `hreflang` `en`/`x-default`, Open Graph and Twitter
+  tags, and structured data (Organization, WebSite, WebApplication, the Windows app, breadcrumbs: no ratings, prices
+  or FAQ markup); the front page gets the search engines' verification codes when they're set as `vars`
+  (`GOOGLE_SITE_VERIFICATION`, `BING_SITE_VERIFICATION`, `YANDEX_VERIFICATION`, `NAVER_SITE_VERIFICATION`,
+  `SEZNAM_VERIFICATION`). `/technical` now gets its own title and preview (it showed the front page's).
+- **New files**: `llms.txt` and `llms-full.txt` (what Orbit is, for AI assistants), `favicon.ico` (search results
+  don't take SVG), the IndexNow key, and `apps/web/scripts/indexnow.mjs` to tell Bing, Yandex, Naver, Seznam and
+  Yep about changed pages after a deploy (it checks the key file is live first; dry run unless `--send`).
+- **Sitemap and policies**: the sitemap lists `/privacy`, `/terms`, `/cookies` and `/refund` (the `.html` addresses
+  redirected, to addresses robots.txt blocked); the privacy policy has a description, and the policies' titles say
+  what they are ("Privacy policy | Orbit AI").
+- **Caching**: icons, the preview image and the camera coach's model are cached for a day (a week for the model)
+  instead of being revalidated on every visit.
+- Owner setup (Search Console, Bing, Cloudflare's AI-bot settings, IndexNow): docs/SEO.md. Tests:
+  `apps/web/worker/seo.test.js` (status codes, redirects, headers, robots.txt read as Google reads it, llms.txt,
+  sitemap, structured data, the route list against `App.tsx`) and `apps/web/scripts/indexnow.test.mjs`.
+
 ## Interview day: a tracked job, a prepared copilot, and a wrap-up (2026-10-18)
 
 - **Prepare for interview** on a tracked job (the tracker card while applied or interviewing, and the job's own page)

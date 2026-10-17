@@ -109,8 +109,14 @@ measured from the interviewer's actual speech.
 
 `apps/web/.env.production` bakes `VITE_API_URL`. Cloudflare Workers Builds deploys on every push to `main`.
 Manually: `pnpm --filter @orbit/web build`, then `wrangler deploy` from the repo root. That uploads `apps/web/dist`
-as static assets (SPA fallback) plus `apps/web/worker/index.js`, whose 10-minute cron pings `API_URL` at `/health`
+as static assets plus `apps/web/worker/index.js`, whose 10-minute cron pings `API_URL` at `/health`
 (Railway doesn't sleep; it's insurance against a host that does).
+
+**The Worker runs first for every page address** (not the built files under `/assets/`): it serves the app for the
+app's own addresses, a real 404 for anything else, one 301 to each page's canonical address, and robots.txt
+(DECISIONS D67). Search-engine verification codes and the AI-crawler setting are `vars` in `wrangler.jsonc`; after a
+deploy that changes public pages, tell Bing and the other IndexNow engines with `apps/web/scripts/indexnow.mjs`
+(docs/SEO.md).
 
 **The web app talks to the API through its own origin.** The Worker proxies `/api/*` to `API_URL` (in
 `wrangler.jsonc`), and the production build uses `VITE_API_URL=/api`. That makes the session cookie first-party: a
