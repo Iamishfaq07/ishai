@@ -42,6 +42,7 @@ CHALLENGE_TTL_S = 300
 CHALLENGE_COOKIE = "orbit_2fa"
 ISSUER = "Orbit"
 _wrong_codes = TokenBucket(rate_per_s=5 / 900, burst=5)  # 5 wrong codes per account per 15 min
+_wrong_setting_codes = TokenBucket(rate_per_s=5 / 900, burst=5)  # the same, to turn it off or get new codes
 settings_limit = Depends(limit_user("auth-2fa", rate_per_s=1, burst=10))
 
 
@@ -288,14 +289,25 @@ async def enable(body: CodeIn, request: Request, user: Annotated[User, Depends(c
     return CodesOut(recovery_codes=codes)
 
 
+async def _settings_code(db: AsyncSession, user: User, code: str) -> UserTwoFactor:
+    """The account's second step, once `code` checks out (it's used up). Wrong codes are throttled as at sign-in, so a
+    session left open can't guess its way to turning it off; counted apart from sign-in's, so it can't use those up
+    to block the owner either."""
+    if blocked(_wrong_setting_codes, user.id):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many wrong codes. Try again in 15 minutes.")
+    row = await db.get(UserTwoFactor, user.id)
+    if row is None or row.enabled_at is None or not await check_code(db, row, code):
+        failed(_wrong_setting_codes, user.id)
+        await db.commit()  # a used recovery code stays used
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That code didn't work.")
+    return row
+
+
 @router.post("/2fa/recovery-codes", response_model=CodesOut, dependencies=[settings_limit])
 async def regenerate(body: CodeIn, user: Annotated[User, Depends(current_user)],
                      db: Annotated[AsyncSession, Depends(get_db)]) -> CodesOut:
     """New recovery codes (the old ones stop working), with a current code."""
-    row = await db.get(UserTwoFactor, user.id)
-    if row is None or row.enabled_at is None or not await check_code(db, row, body.code):
-        await db.commit()
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That code didn't work.")
+    row = await _settings_code(db, user, body.code)
     codes = new_recovery_codes()
     row.recovery_hashes = [_hash(c) for c in codes]
     await db.commit()
@@ -308,10 +320,7 @@ async def disable(body: CodeIn, request: Request, user: Annotated[User, Depends(
     """Turn it off, with a current code or a recovery code."""
     from orbit_api.auth.routes import _ip
 
-    row = await db.get(UserTwoFactor, user.id)
-    if row is None or row.enabled_at is None or not await check_code(db, row, body.code):
-        await db.commit()
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That code didn't work.")
+    row = await _settings_code(db, user, body.code)
     await db.delete(row)
     db.add(AuditLog(user_id=user.id, action="auth.2fa_off", ip=_ip(request)))
     await db.commit()

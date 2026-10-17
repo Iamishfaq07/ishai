@@ -180,3 +180,21 @@ def test_a_google_only_account_needs_a_recent_sign_in_instead(google_client: Tes
         assert r.status_code == 403 and "sign in with Google again" in r.json()["detail"], path
     fresh = {"Authorization": "Bearer " + create_access_token(me["id"], ver)}
     assert google_client.post("/v1/auth/passkeys/options", headers=fresh, json={"password": ""}).status_code == 200
+
+
+def test_wrong_codes_to_turn_it_off_are_throttled_too(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Turning it off (or new recovery codes) takes a code too. Only the settings limit (1 a second) applied there,
+    so a session left open could guess its way through the 6 digits; now 5 wrong codes per 15 minutes, as at
+    sign-in (counted apart, so a session can't use them up to block its owner's sign-in)."""
+    monkeypatch.setattr(ratelimit, "ENFORCE_IN_TESTS", True)
+    ratelimit.reset_all()
+    email, h = _account(client)
+    secret, _ = _turn_on(client, h)
+    statuses = [client.post("/v1/auth/2fa/disable", headers=h, json={"code": "123456"}).status_code
+                for _ in range(5)]
+    blocked = client.post("/v1/auth/2fa/recovery-codes", headers=h, json={"code": _now_code(secret)})
+    assert statuses == [400] * 5 and blocked.status_code == 429
+    ch = client.post("/v1/auth/login", json={"email": email, "password": PW}).json()["challenge"]
+    client.cookies.clear()
+    assert client.post("/v1/auth/login/2fa", json={"challenge": ch, "code": _now_code(secret)}).status_code == 200
+    ratelimit.reset_all()
