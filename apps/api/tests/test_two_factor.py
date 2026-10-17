@@ -151,3 +151,32 @@ def test_an_account_with_a_password_still_needs_it(client: TestClient) -> None:
     assert client.post("/v1/auth/2fa/setup", headers=h, json={"password": "wrong password 1"}).status_code == 403
     assert client.post("/v1/auth/passkeys/options", headers=h, json={"password": ""}).status_code == 403
     assert client.post("/v1/auth/2fa/setup", headers=h, json={"password": PW}).status_code == 200
+
+
+def test_a_google_only_account_needs_a_recent_sign_in_instead(google_client: TestClient,  # noqa: F811
+                                                              monkeypatch: pytest.MonkeyPatch) -> None:
+    """With no password to ask for, a sign-in in the last 15 minutes stands in for it: a session left open (or
+    stolen) can't add a passkey (which skips this step and outlives "sign out everywhere") or lock the owner out."""
+    from orbit_api.auth.security import create_access_token
+
+    email = f"tf-old-{uuid.uuid4().hex[:8]}@gmail.com"
+    _sign_in_with_google(google_client, monkeypatch, email, f"sub-{email}")
+    me = google_client.get("/v1/auth/me").json()
+    google_client.cookies.clear()
+
+    async def version() -> int:
+        from orbit_api.db import sessionmaker
+        from orbit_api.models import User
+
+        async with sessionmaker()() as db:
+            user = await db.get(User, me["id"])
+            assert user is not None
+            return user.token_version
+
+    ver = google_client.portal.call(version)  # type: ignore[union-attr]
+    old = {"Authorization": "Bearer " + create_access_token(me["id"], ver, signed_in_at=int(time.time()) - 3600)}
+    for path in ("/v1/auth/2fa/setup", "/v1/auth/passkeys/options"):
+        r = google_client.post(path, headers=old, json={"password": ""})
+        assert r.status_code == 403 and "sign in with Google again" in r.json()["detail"], path
+    fresh = {"Authorization": "Bearer " + create_access_token(me["id"], ver)}
+    assert google_client.post("/v1/auth/passkeys/options", headers=fresh, json={"password": ""}).status_code == 200

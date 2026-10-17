@@ -27,7 +27,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orbit_api.auth.security import current_user, verify_password
+from orbit_api.auth.security import current_user, decode_claims, token_from_request, verify_password
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.models import AuditLog, User, UserTwoFactor
@@ -222,18 +222,30 @@ class SetupOut(BaseModel):
     otpauth_uri: str
 
 
-async def _confirm_password(user: User, password: str) -> None:
+RECENT_SIGN_IN_S = 15 * 60
+SIGN_IN_AGAIN = "For your security, sign out and sign in with Google again, then do this within 15 minutes."
+
+
+async def _confirm_password(request: Request, user: User, password: str) -> None:
     """The password again, for an account that has one. One made with Google has only a random hash nobody knows
-    (`has_password` false; the web app asks for nothing), so checking it refused every attempt."""
-    if user.has_password and not await verify_password(password, user.password_hash):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "That password isn't right.")
+    (`has_password` false; the web app asks for nothing), so a recent sign-in stands in for it: a session left open
+    or stolen can't add a way in (a passkey skips this step and outlives "sign out everywhere") or lock the owner
+    out with an authenticator they don't have."""
+    if user.has_password:
+        if not await verify_password(password, user.password_hash):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "That password isn't right.")
+        return
+    claims = decode_claims(token_from_request(request) or "") or {}
+    signed_in = int(claims.get("auth") or claims.get("iat") or 0)
+    if time.time() - signed_in > RECENT_SIGN_IN_S:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, SIGN_IN_AGAIN)
 
 
 @router.post("/2fa/setup", response_model=SetupOut, dependencies=[settings_limit])
-async def setup(body: SetupIn, user: Annotated[User, Depends(current_user)],
+async def setup(body: SetupIn, request: Request, user: Annotated[User, Depends(current_user)],
                 db: Annotated[AsyncSession, Depends(get_db)]) -> SetupOut:
     """Start (or restart) setting up: a new secret for the app, not on until a code from it is entered."""
-    await _confirm_password(user, body.password)
+    await _confirm_password(request, user, body.password)
     row = await db.get(UserTwoFactor, user.id)
     if row is not None and row.enabled_at is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Two-step sign-in is already on. Turn it off first.")
