@@ -1,5 +1,45 @@
 # Implementation log
 
+## Interview day: a tracked job, a prepared copilot, and a wrap-up (2026-10-18)
+
+- **Prepare for interview** on a tracked job (the tracker card while applied or interviewing, and the job's own page)
+  opens the Mission Room's new **Interview** tab (`?tab=interview`): the interview's date and time and its round (HR,
+  technical, managerial or final, and its number; saving a date offers to move the job to Interviewing), the job post
+  (its summary and links; a job added by hand takes a pasted post), **the resume version sent** (the newest frozen
+  version by default, or any other version or resume picked), the **likely questions** for this job (Resume AI's
+  interview prep, from that version and the post: "Uses 1 resume credit. You have N." is said beside the button
+  before anything is spent, and an empty wallet offers credits instead; they're kept on the job, so they're paid for
+  once, and Regenerate says it's another credit), the story-bank stories that fit the job's
+  requirements, the company guide (through `/v1/interview-styles`, so the bigger question bank shows up here too), and
+  the rounds so far with their scores.
+- **Practise this interview** starts a mock with the job's documents, the company's style and an interviewer for the
+  round type (a recruiter for HR, an engineer for technical…); with likely questions ticked, it drills those.
+- **Start copilot for this interview** opens setup (`/start?application=`) with the job loaded: role, company, the
+  round as the stage, the job's requirements, and exactly two documents ticked, the job post (saved to Documents once
+  and linked to the job, as Prepare does) and the version sent (one document per version, shared by every job it was
+  sent to). A banner says what was loaded. The desktop app's setup lists **Upcoming interviews** from the tracker and
+  fills itself the same way (needs a desktop release). No AI and no credit until the session starts.
+- **Documents Orbit saves itself don't use the plan's**: the Free plan's 3 documents stopped practice everywhere
+  after three rounds. Now a document Orbit saves from what the user already has in Orbit, to run a practice round or a
+  session, is marked `origin: "orbit"` and doesn't count: a job's Prepare and Full prep, Grill my resume, Resume
+  prep's "Practise N out loud", the video interview's job post, and an interview's job post and version sent. Up to 10
+  of those per account; past that Orbit refuses the next one with a message naming what to delete (nothing is deleted
+  for it), and an interview still starts, linked to the job, with the banner saying which document isn't loaded.
+  Uploads and pastes into Documents count exactly as before. Documents marks Orbit's "saved by Orbit, not counted in
+  your plan"; Plan & credits counts only the user's own.
+- **The grounding is checked**: a test drives a live session started this way on the mock provider and finds the
+  post's requirement, the sent resume's bullet, the company and its guide, the role and the round in the answer
+  prompt (`tests/test_interview_day.py`).
+- **After the round**: the session's page has a wrap-up for the job. "How did it go?" suggests a next round (its type
+  and date), or waiting to hear (a date to follow up), an offer, or not this time, and says what confirming does;
+  nothing moves until the user confirms. The thank-you note is the call's own follow-up (no credit) or Outreach (1
+  resume credit), both labelled. The tracker card links the latest round's summary and scorecard ("Last round · 4/5").
+- **Home** shows "Interview today" / "Interview tomorrow" for a tracked job dated then, with Prepare and Start copilot.
+- API: `GET/PUT /v1/jobs/tracker/{id}/interview`, `POST .../interview/questions`, `POST .../session-context`, `POST
+  .../wrap-up` (job_portal/interview.py); `application_id` on `POST /v1/sessions` (checked against the owner) and on
+  sessions; the tracker's `round_type`, `round_number` and `last_round`. A job's rounds are counted by that link
+  first, the company name only for sessions not started from another job. Migration `35a47e5f80ca`. DECISIONS D64.
+
 ## The live copilot in ten languages (2026-10-18)
 
 - **Setup → Interview language** (web and desktop): English (the default, unchanged), Auto-detect, हिन्दी (Hindi),

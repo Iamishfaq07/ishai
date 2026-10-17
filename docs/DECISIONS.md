@@ -591,3 +591,34 @@ Rejected: one detector for all languages driven by the model (a classifier call 
 answer started early on each); translating questions into English first (a model call before every answer, and the
 interviewer's words lost); full UI translation in the same change. Mock interviews keep their own Hindi and Hinglish
 (F-05, behind ORBIT_MULTILINGUAL).
+
+**D64 — Interview day links a session to its tracked job, grounds it in ordinary documents, and moves the job only
+when told.** The roadmap's first item (research 2026-10-17): Final Round's most-praised part is a copilot prepared
+per job, and LockedIn's users say their documents were ignored. A session now records the job it was started from
+(`sessions.application_id`, nullable, `ON DELETE SET NULL`, checked against the owner like every other id), and the
+tracker records the next round's type and number (set by the user) and which resume version interview prep uses (one
+of the job's frozen versions, "the linked resume as it is now", or by default the newest version sent). No new path
+into the prompt: the job post and the version sent become Documents the session ticks, the post saved once and
+linked to the job (as Prepare already did) and the version kept as one document whatever number of jobs it went to,
+so retrieval, citations and the server's source checks treat them like any upload. The company guide reaches answers
+through the company name, as it already did. A test drives a live session started this way on the mock provider
+and checks the post's requirement, the sent bullet, the company and its guide, the role and the round are in the
+prompt. Workspaces aren't used for this: they're saved setups, not a tracker, and the job's link already carries the
+context; a user can still save the setup as one. Likely questions reuse Resume AI's interview prep (one resume
+credit, said beside the button before it's spent, nothing spent without a version to prepare from) and are kept on
+the job (`job_applications.interview_questions`), so they're paid for once; Regenerate is another credit and says
+so, and questions made from another version than the one picked now say that too. The thank-you
+note is the call's own follow-up (no credit) or Outreach (one credit). Ending a round moves nothing: the wrap-up
+suggests a next round and the user confirms what happened. Rounds for a job are counted by the link first and by the
+company name only for sessions not started from another job, so two jobs at one company stop sharing rounds. The
+Free plan's three documents stopped practice after three rounds wherever Orbit saves a document on its own (Prepare,
+Full prep, Grill my resume, Resume prep's practice round, the video interview, and now an interview's post and
+version sent), so a document now says who made it (`documents.origin`, "user" or "orbit"): only the user's own uploads
+and pastes count against the plan, and Orbit's are capped on their own at 10 an account rather than being unlimited
+(the owner's call: "whatever is best"). Past 10 the next one is refused with a message naming what to delete, rather
+than deleting the oldest: an older one may be the post a tracked job, a saved setup or a past session reads, and
+deleting it would quietly take that away. An interview still starts then, linked to the job, and says which document
+isn't loaded. The web's practice paths say "orbit" when they save through `POST /v1/documents/text`; a client could
+claim it for a paste, but only up to the same 10. The desktop gets the
+same context through an "Upcoming interviews" list on its setup screen; an `orbit://` deep link was left out, since
+the app has no deep-link plugin and adding one would touch the single-instance guard.
