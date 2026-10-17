@@ -215,6 +215,7 @@ export function BillingPage() {
   const [bought, setBought] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const checkoutRef = useRef<HTMLDivElement>(null);
+  const messageRef = useRef<HTMLDivElement>(null);
   const country = useCountry();
   const [internationalPack, setInternationalPack] = useState<CreditPack | null>(null);
   // Referrals (when the server has them on): this account's first-purchase discount or a code box, and its invite link.
@@ -325,6 +326,15 @@ export function BillingPage() {
     return () => window.clearInterval(timer);
   }, [confirming]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // What a purchase said (added, still confirming, failed, back from PayPal) sits under the packs: far below a plan's
+  // button, and below every pack on a phone. Bring it into view, or the click looks like it did nothing; once the
+  // plans and packs above it are in, or they push it back down (back from PayPal, the page is still loading).
+  const said = buyError ?? bought ?? notice;
+  const laidOut = Boolean(packs.data && monthly.data);
+  useEffect(() => {
+    if (said && laidOut) messageRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [said, laidOut]);
+
   useEffect(() => {
     if (order) checkoutRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [order?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -378,16 +388,20 @@ export function BillingPage() {
             </div>
           )}
         </LoadGate>
-        {buyError && <ErrorNote>{buyError}</ErrorNote>}
-        {bought && (
-          <p role="status" className="rounded-xl bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-800 dark:text-emerald-200">
-            {bought}
-          </p>
-        )}
-        {notice && (
-          <p role="status" className="rounded-xl bg-zinc-500/10 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-200">
-            {notice}
-          </p>
+        {said && (
+          <div ref={messageRef} className="space-y-4">
+            {buyError && <ErrorNote>{buyError}</ErrorNote>}
+            {bought && (
+              <p role="status" className="rounded-xl bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                {bought}
+              </p>
+            )}
+            {notice && (
+              <p role="status" className="rounded-xl bg-zinc-500/10 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-200">
+                {notice}
+              </p>
+            )}
+          </div>
         )}
         {/* Room for three lines is kept, and nothing is said until the packs say how they're paid: the UPI
             wording swapping to Razorpay's moved the page (layout shift). */}
