@@ -202,6 +202,7 @@ export function App() {
             onResume={resume}
             onOpenDocuments={() => setScreen({ name: "documents" })}
             onOpenHistory={() => setScreen({ name: "history" })}
+            onOpenSession={(id) => setScreen({ name: "history", sessionId: id })}
             onOpenSettings={() => setScreen({ name: "settings" })}
             onSignOut={() => void signOut()}
           />

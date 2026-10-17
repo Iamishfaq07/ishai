@@ -41,6 +41,7 @@ export function HomeScreen({
   onResume,
   onOpenDocuments,
   onOpenHistory,
+  onOpenSession,
   onOpenSettings,
   onSignOut,
 }: {
@@ -51,6 +52,8 @@ export function HomeScreen({
   onResume: (session: OrbitSession) => void;
   onOpenDocuments: () => void;
   onOpenHistory: () => void;
+  /** One past session's review (History). */
+  onOpenSession: (id: string) => void;
   onOpenSettings: () => void;
   onSignOut: () => void;
 }) {
@@ -192,7 +195,7 @@ export function HomeScreen({
                             Rejoin
                           </Button>
                         ) : (
-                          <Button variant="ghost" size="sm" onClick={onOpenHistory}>
+                          <Button variant="ghost" size="sm" onClick={() => onOpenSession(s.id)}>
                             Open
                           </Button>
                         )}
