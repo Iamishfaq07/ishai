@@ -250,6 +250,12 @@ async def submit_utr(order_id: str, body: UtrIn, background: BackgroundTasks,
     p = await db.get(Payment, order_id)
     if p is None or p.user_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found.")
+    if (p.method or "upi") != "upi":
+        # Razorpay and PayPal confirm their own payments: a UTR would make the order "submitted", and the gateway's
+        # capture is then ignored (only open orders are credited) while the admin looks for a transfer that isn't there.
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            "This order isn't a UPI transfer, so there's no UTR to send: it's confirmed by "
+                            f"{'PayPal' if p.method == 'paypal' else 'Razorpay'} on its own.")
     if p.status == "approved":
         raise HTTPException(status.HTTP_409_CONFLICT, "This payment is already approved.")
     utr = upi.normalize_utr(body.utr)
