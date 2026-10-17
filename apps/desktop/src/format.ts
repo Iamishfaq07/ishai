@@ -22,6 +22,12 @@ export function sessionKindLine(s: { title: string; type: SessionType; role?: st
     .join(" · ");
 }
 
+/** A new session's title: its type, and the role when there is one ("Coding interview — SDE II"). */
+export function sessionTitle(type: SessionType, role: string): string {
+  const r = role.trim();
+  return r ? `${SESSION_TYPE_LABEL[type]} — ${r}` : SESSION_TYPE_LABEL[type];
+}
+
 export function errText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }

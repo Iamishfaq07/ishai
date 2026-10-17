@@ -79,6 +79,7 @@ import { roughDuration } from "../token";
 import { UpdateBanner } from "../UpdateBanner";
 import { confirmSessionDuringUpdate, useUpdatePhase } from "../updates";
 import { WorkspaceBar } from "../WorkspaceBar";
+import { sessionTitle } from "../format";
 import { MIC_KEY, OUTPUT_KEY, checkChosenApp, nextSource, usesSystemAudio, type DesktopLaunch } from "../launch";
 import { addSessionDocument, defaultSessionDocuments, sessionDocumentIds, toggleSessionDocument } from "../sessionDocs";
 
@@ -482,7 +483,8 @@ export function SetupScreen({
     setStartError(null);
     try {
       const session = await api.createSession({
-        title: `${TYPES.find((t) => t.value === type)?.label ?? "Session"}${role.trim() ? ` — ${role.trim()}` : ""}`,
+        // Not the picker's label: the mock's ("Mock interview — the AI asks, you practise") would title every round.
+        title: sessionTitle(type, role),
         type,
         ...(role.trim() ? { role: role.trim() } : {}),
         language: "en",
