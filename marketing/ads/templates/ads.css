@@ -1,0 +1,176 @@
+/* Orbit ad creatives: one stylesheet for every product, size and region (templates/ad.html, filled in by export.mjs).
+   The brand: IBM Plex Sans; one accent (violet #7048F5); ink neutrals; product colours on the product mark only;
+   the only shadow is the one under the floating product window. No glows, blobs, starfields or gradient text. */
+
+@font-face {
+  font-family: "Orbit Plex";
+  font-weight: 100 700;
+  src: url("../../../apps/web/node_modules/@fontsource-variable/ibm-plex-sans/files/ibm-plex-sans-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Orbit Plex";
+  font-weight: 100 700;
+  /* ₹ (U+20B9) lives in latin-ext. */
+  src: url("../../../apps/web/node_modules/@fontsource-variable/ibm-plex-sans/files/ibm-plex-sans-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  --accent: #7048f5;
+  --accent-ink: #5e38d6;
+  --ink: #14162d;
+  --ink-2: #54597a;
+  --line: #e4e7ec;
+  --canvas: #ffffff;
+  --band: #f7f8fa;
+  --chip: #ffffff;
+  --shadow: 0 2px 6px rgba(20, 22, 45, 0.06), 0 28px 70px -18px rgba(20, 22, 45, 0.3);
+  --window-line: rgba(20, 22, 45, 0.1);
+}
+.dark {
+  --accent-ink: #b9a6ff;
+  --ink: #f6f7fb;
+  --ink-2: #a7acc8;
+  --line: #232c3b;
+  --canvas: #0b0f17;
+  --band: #121826;
+  --chip: #141b27;
+  --shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 30px 80px -16px rgba(0, 0, 0, 0.7);
+  --window-line: rgba(255, 255, 255, 0.1);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  position: relative;
+  overflow: hidden;
+  width: var(--w);
+  height: var(--h);
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: "Orbit Plex", "IBM Plex Sans", system-ui, sans-serif;
+  font-feature-settings: "kern";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The band under the window: a quiet second surface, so the window sits on something. */
+.band { position: absolute; left: 0; right: 0; bottom: 0; background: var(--band); }
+
+.ad { position: absolute; inset: 0; }
+.copy { position: absolute; display: flex; flex-direction: column; }
+.top { position: absolute; display: flex; align-items: center; justify-content: space-between; }
+.wordmark { display: block; }
+.product {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  border: 1px solid var(--line);
+  background: var(--chip);
+  border-radius: 999px;
+  padding: 0.42em 0.95em 0.42em 0.75em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.product i { width: 0.62em; height: 0.62em; border-radius: 3px; background: var(--product); }
+
+h1 { margin: 0; font-weight: 600; letter-spacing: -0.03em; line-height: 1.04; text-wrap: balance; }
+.sub { margin: 0; color: var(--ink-2); line-height: 1.38; text-wrap: pretty; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.5em; margin: 0; padding: 0; list-style: none; }
+.chips li { display: inline-flex; align-items: center; gap: 0.4em; color: var(--ink); font-weight: 500; white-space: nowrap; }
+.chips svg { color: var(--product); flex: none; }
+.row { display: flex; align-items: center; flex-wrap: wrap; }
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  border-radius: 0.5em;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  padding: 0.62em 1.05em;
+  white-space: nowrap;
+}
+.price { font-weight: 600; color: var(--ink); }
+.foot { color: var(--ink-2); }
+.honest { display: flex; align-items: flex-start; gap: 0.45em; color: var(--ink-2); }
+.honest svg { flex: none; margin-top: 0.12em; color: #059669; }
+.dark .honest svg { color: #34d399; }
+
+.window {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid var(--window-line);
+  background-color: var(--canvas);
+  background-repeat: no-repeat;
+  box-shadow: var(--shadow);
+}
+
+/* ─── 1080 x 1080 (also 1200 x 1200: the same layout at 1.111x) ─────────────────────────────────────────────── */
+.f-square { --w: 1080px; --h: 1080px; }
+.f-square .top { left: 72px; right: 72px; top: 64px; font-size: 22px; }
+.f-square .wordmark { height: 46px; }
+.f-square .copy { left: 72px; right: 72px; top: 168px; gap: 22px; }
+.f-square h1 { font-size: 72px; max-width: 900px; }
+.f-square .sub { font-size: 27px; max-width: 880px; }
+.f-square .chips { font-size: 21px; gap: 10px 26px; }
+.f-square .row { gap: 14px 24px; margin-top: 6px; font-size: 24px; }
+.f-square .foot, .f-square .honest { font-size: 20px; }
+.f-square .band { height: 360px; }
+.f-square .window { left: 72px; top: var(--win-top, 640px); width: 1080px; height: 600px; }
+
+/* ─── 1080 x 1350 ───────────────────────────────────────────────────────────────────────────────────────────────── */
+.f-portrait { --w: 1080px; --h: 1350px; }
+.f-portrait .top { left: 72px; right: 72px; top: 68px; font-size: 22px; }
+.f-portrait .wordmark { height: 48px; }
+.f-portrait .copy { left: 72px; right: 72px; top: 180px; gap: 24px; }
+.f-portrait h1 { font-size: 80px; max-width: 920px; }
+.f-portrait .sub { font-size: 29px; max-width: 900px; }
+.f-portrait .chips { font-size: 22px; gap: 10px 28px; }
+.f-portrait .row { gap: 14px 24px; margin-top: 8px; font-size: 25px; }
+.f-portrait .foot, .f-portrait .honest { font-size: 21px; }
+.f-portrait .band { height: 520px; }
+.f-portrait .window { left: 72px; top: var(--win-top, 760px); width: 1100px; height: 720px; }
+
+/* ─── 1080 x 1920 (stories and reels covers: the top 270 px and bottom 340 px stay clear of the app's own UI) ───── */
+.f-story { --w: 1080px; --h: 1920px; }
+.f-story .top { left: 80px; right: 80px; top: 230px; font-size: 24px; }
+.f-story .wordmark { height: 52px; }
+.f-story .copy { left: 80px; right: 80px; top: 350px; gap: 28px; }
+.f-story .action { font-size: 30px; }
+.f-story h1 { font-size: 92px; max-width: 920px; }
+.f-story .sub { font-size: 33px; max-width: 900px; }
+.f-story .chips { font-size: 25px; gap: 12px 30px; }
+.f-story .bottom { position: absolute; left: 80px; right: 80px; bottom: 340px; display: flex; flex-direction: column; gap: 18px; font-size: 27px; }
+.f-story .foot, .f-story .honest { font-size: 23px; }
+.f-story .band { top: 1000px; bottom: 0; height: auto; }
+.f-story .window { left: 80px; top: var(--win-top, 1010px); width: 1160px; height: 480px; }
+
+/* ─── 1200 x 628 (link ads) ──────────────────────────────────────────────────────────────────────────────────── */
+.f-landscape { --w: 1200px; --h: 628px; }
+.f-landscape .top { left: 56px; top: 48px; font-size: 16px; gap: 18px; justify-content: flex-start; }
+.f-landscape .wordmark { height: 34px; }
+.f-landscape .copy { left: 56px; top: 116px; width: 520px; gap: 16px; }
+.f-landscape h1 { font-size: 50px; }
+.f-landscape .sub { font-size: 20px; }
+.f-landscape .chips { display: none; }
+.f-landscape .row { gap: 10px 18px; margin-top: 4px; font-size: 19px; }
+.f-landscape .foot, .f-landscape .honest { font-size: 15px; }
+.f-landscape .band { left: 610px; top: 0; height: auto; border-top: 0; border-left: 1px solid var(--line); }
+.f-landscape .window { left: 650px; top: 64px; width: 640px; height: 640px; }
+
+/* ─── 1500 x 500 (X and LinkedIn banners: the profile photo covers the bottom left, phones crop the top and bottom) */
+.f-banner { --w: 1500px; --h: 500px; }
+.f-banner .copy { left: 340px; top: 0; bottom: 0; width: 600px; justify-content: center; gap: 18px; }
+.f-banner .wordmark { height: 40px; }
+.f-banner h1 { font-size: 50px; }
+.f-banner .sub { font-size: 21px; color: var(--ink); font-weight: 500; }
+.f-banner .row { gap: 10px 18px; font-size: 18px; }
+.f-banner .foot, .f-banner .honest { font-size: 16px; }
+.f-banner .band { left: 980px; top: 0; height: auto; border-top: 0; border-left: 1px solid var(--line); }
+.f-banner .window { left: 1020px; top: 60px; width: 640px; height: 470px; }
+.f-banner .top { left: 340px; top: 70px; }
+.f-banner .copy { padding-top: 56px; }
+.foot, .honest { margin: 0; }

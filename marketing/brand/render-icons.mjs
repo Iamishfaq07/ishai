@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = join(here, "..", "..");
-const { chromium } = await import(process.env.PLAYWRIGHT_CORE ?? "playwright-core");
+const { chromium } = await import(process.env.PLAYWRIGHT ?? "@playwright/test");
 const mark = readFileSync(join(here, "orbit-mark-dark.svg"), "utf8").replace(/<!--[\s\S]*?-->/g, "");
 
 /** A tile `size` px square; the mark is `scale` of it; `radius` as a fraction (0 = square). */

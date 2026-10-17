@@ -1,0 +1,157 @@
+{
+  "_rules": [
+    "Every line here must stay true of the live product. No 'undetectable', 'stealth', 'invisible', 'guaranteed job/offer' or 'get hired fast'.",
+    "No invented numbers, ratings, user counts, testimonials or employer logos. Never name an AI vendor.",
+    "Headlines: sentence case, 7 words at most. India copy in Indian English (practise, freshers, placements, HR round, switch).",
+    "Prices never live here: {price} is filled in at export (README), and a creative without a price shows none."
+  ],
+  "regions": {
+    "in": {
+      "foot": "Free to start · No subscription · Pay by UPI",
+      "price": "From {price}, paid once. Nothing renews."
+    },
+    "global": {
+      "foot": "Free to start · No subscription · PayPal or card",
+      "price": "From {price}, paid once. Nothing renews."
+    }
+  },
+  "products": {
+    "copilot": {
+      "name": "Interview copilot",
+      "color": "#7048F5",
+      "theme": "dark",
+      "shot": "copilot-dark.png",
+      "crop": {
+        "x": 66,
+        "y": 47,
+        "w": 820,
+        "h": 540
+      },
+      "honest": "For practice and interviews where AI help is allowed.",
+      "in": {
+        "headline": "Answers from your own resume, live.",
+        "subline": "Orbit hears the interviewer's question and suggests an answer built from your resume, and shows the lines it used.",
+        "chips": [
+          "Chrome and Edge",
+          "Windows app (beta)",
+          "Coding and screenshots"
+        ]
+      },
+      "global": {
+        "headline": "Answers from your own resume, live.",
+        "subline": "Orbit hears the interviewer's question and suggests an answer built from your resume, and shows the lines it used.",
+        "chips": [
+          "Chrome and Edge",
+          "Windows app (beta)",
+          "Coding and screenshots"
+        ]
+      }
+    },
+    "practice": {
+      "name": "Practice",
+      "color": "#EA580C",
+      "theme": "light",
+      "shot": "practice-light.png",
+      "crop": {
+        "x": 250,
+        "y": 318,
+        "w": 1020,
+        "h": 480
+      },
+      "in": {
+        "headline": "Practise your HR round out loud.",
+        "subline": "An AI interviewer asks, you answer out loud, and a scorecard shows what to redo. From campus placements to your next switch.",
+        "chips": [
+          "HR and technical rounds",
+          "AI video interview",
+          "Scorecard per answer"
+        ]
+      },
+      "global": {
+        "headline": "Practise interviews out loud, with AI.",
+        "subline": "An AI interviewer asks the questions, you answer out loud, and a scorecard shows what to redo.",
+        "chips": [
+          "Behavioral and technical",
+          "AI video interview",
+          "Scorecard per answer"
+        ]
+      }
+    },
+    "resume": {
+      "name": "Resume AI",
+      "color": "#059669",
+      "theme": "light",
+      "shot": "resume-light.png",
+      "crop": {
+        "x": 250,
+        "y": 75,
+        "w": 1020,
+        "h": 725
+      },
+      "in": {
+        "headline": "See your ATS score out of 100.",
+        "subline": "Find what screening software misses, tailor a copy for each job and keep your own numbers. Built for freshers and experienced hires.",
+        "chips": [
+          "ATS score",
+          "Tailored per job",
+          "Word and PDF free"
+        ]
+      },
+      "global": {
+        "headline": "Know your resume's ATS score.",
+        "subline": "See what screening software misses, tailor a copy for every job and keep your own numbers. Editing and downloads are free.",
+        "chips": [
+          "ATS score",
+          "Tailored per job",
+          "Word and PDF free"
+        ]
+      }
+    },
+    "jobs": {
+      "name": "Jobs AI",
+      "color": "#0284C7",
+      "theme": "dark",
+      "shot": "jobs-dark.png",
+      "crop": {
+        "x": 250,
+        "y": 150,
+        "w": 1020,
+        "h": 600
+      },
+      "in": {
+        "headline": "Fresh jobs that fit your resume.",
+        "subline": "Openings from companies' own careers pages, ranked by how well you fit, with a tracker from saved to offer.",
+        "chips": [
+          "Freshers and experienced",
+          "Fit score per job",
+          "Free tracker"
+        ]
+      },
+      "global": {
+        "headline": "New jobs, ranked by your fit.",
+        "subline": "Openings from companies' own careers pages, scored against your resume, with a tracker from saved to offer.",
+        "chips": [
+          "From careers pages",
+          "Fit score per job",
+          "Free tracker"
+        ]
+      }
+    }
+  },
+  "banner": {
+    "theme": "dark",
+    "shots": [
+      "copilot-dark.png"
+    ],
+    "in": {
+      "headline": "Your whole job search, in one account.",
+      "subline": "Interview copilot · Practice · Resume AI · Jobs AI"
+    },
+    "global": {
+      "headline": "Your whole job search, in one account.",
+      "subline": "Interview copilot · Practice · Resume AI · Jobs AI"
+    },
+    "honest": "For practice and interviews where AI help is allowed."
+  },
+  "cta": "Start free at orbitanswer.com"
+}
