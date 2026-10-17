@@ -74,6 +74,15 @@ class User(TimestampMixin, Base):
     approved: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
     grant_plan: Mapped[str | None] = mapped_column(String(32))
     grant_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Where the running grant's allowance windows count from (30 days each): when it was bought or given, so use from
+    # before never counts against it (entitlements.allowance_window, D57). None: a grant from before this was kept.
+    grant_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The running grant was bought (billing/monthly.py), not given by the admin. A record of where it came from:
+    # either way each window has the plan's whole allowance.
+    grant_paid: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    # Grants waiting their turn behind the running one, next first (D57): a lower plan bought while a higher one runs,
+    # or what's left of the running one when a higher plan starts. [{"plan", "seconds", "paid", "anchor"}].
+    grant_queue: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON(none_as_null=True))
     # Suspended by the admin: can't sign in or use the API until unsuspended (auth/security.current_user). The reason
     # is shown to the account's owner when they try.
     suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

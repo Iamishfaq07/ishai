@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi.testclient import TestClient
 from sqlalchemy import update
 
@@ -75,3 +77,40 @@ def test_attempts_are_reviewed_tracked_and_private(client: TestClient) -> None:
     assert client.get("/v1/code/problems/nope", headers=h).status_code == 404
     assert client.post("/v1/code/problems/pair-sum/attempts", headers=h, json={
         "language": "javascript", "code": "x", "passed": 3, "total": 2}).status_code == 422
+
+
+def test_a_garbled_review_doesnt_use_one_of_the_days_reviews(client: TestClient, monkeypatch: Any) -> None:
+    """The day's free reviews were counted from the AI calls, so an answer that came back garbled (a 502, nothing
+    saved) used one up. They're counted from the reviews delivered now (the calls stay capped at twice that)."""
+    from orbit_api.job_portal import routes as portal
+    from orbit_api.providers.llm.base import LLMResponse, Usage
+
+    _register(client)  # the first account is the admin when this runs alone
+    h = _register(client)
+    _verify(client, h)
+
+    class Garbled:
+        name = "garbled"
+
+        async def generate(self, req: Any) -> LLMResponse:
+            return LLMResponse(text="not a review", model="garbled", usage=Usage())
+
+    real = portal.get_llm_provider
+    monkeypatch.setattr(portal, "get_llm_provider", lambda: Garbled())
+    attempt = {"language": "python", "code": "def ways_up(n): ...", "passed": 0, "total": 0}
+    assert client.post("/v1/code/problems/climb-stairs/attempts", headers=h, json=attempt).status_code == 502
+    assert client.get("/v1/code/problems", headers=h).json()["reviews_left"] == 15
+    monkeypatch.setattr(portal, "get_llm_provider", real)
+    assert client.post("/v1/code/problems/climb-stairs/attempts", headers=h, json=attempt).status_code == 201
+    assert client.get("/v1/code/problems?tz_offset=330", headers=h).json()["reviews_left"] == 14
+
+
+def test_the_days_reviews_come_back_at_the_persons_own_midnight() -> None:
+    from datetime import UTC, datetime
+
+    from orbit_api.code.routes import day_start
+
+    now = datetime(2026, 10, 20, 20, 0, tzinfo=UTC)  # 01:30 on the 21st in India
+    assert day_start(now, 0) == datetime(2026, 10, 20, 0, 0, tzinfo=UTC)
+    assert day_start(now, 330) == datetime(2026, 10, 20, 18, 30, tzinfo=UTC)  # midnight of the 21st there
+    assert day_start(now, -420) == datetime(2026, 10, 20, 7, 0, tzinfo=UTC)  # 13:00 on the 20th in California

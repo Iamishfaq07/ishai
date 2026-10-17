@@ -25,7 +25,7 @@ from orbit_api.billing.packs import pack_label as packs_label
 from orbit_api.billing.packs import packs, public_packs
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
-from orbit_api.entitlements import active_grant, plan_named
+from orbit_api.entitlements import current_grant, plan_named, running_until
 from orbit_api.models import AuditLog, ContactMessage, LaunchAccessClaim, Payment, PaymentEvent, PaymentRefund, User
 from orbit_api.providers.email import OutgoingEmail, send_safely
 from orbit_api.ratelimit import limit, limit_user
@@ -250,6 +250,12 @@ async def submit_utr(order_id: str, body: UtrIn, background: BackgroundTasks,
     p = await db.get(Payment, order_id)
     if p is None or p.user_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found.")
+    if (p.method or "upi") != "upi":
+        # Razorpay and PayPal confirm their own payments: a UTR would make the order "submitted", and the gateway's
+        # capture is then ignored (only open orders are credited) while the admin looks for a transfer that isn't there.
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            "This order isn't a UPI transfer, so there's no UTR to send: it's confirmed by "
+                            f"{'PayPal' if p.method == 'paypal' else 'Razorpay'} on its own.")
     if p.status == "approved":
         raise HTTPException(status.HTTP_409_CONFLICT, "This payment is already approved.")
     utr = upi.normalize_utr(body.utr)
@@ -636,10 +642,10 @@ async def _admin_payment(db: AsyncSession, p: Payment) -> AdminPayment:
     if u is None:
         return AdminPayment(**out.model_dump(exclude={"upi_id", "payee_name", "upi_uri"}), user_id=None,
                             email="(deleted account)", name=None, current_plan=None, current_until=None)
-    granted = active_grant(u)
+    running = current_grant(u)
     return AdminPayment(**out.model_dump(exclude={"upi_id", "payee_name", "upi_uri"}), user_id=u.id,
-                        email=u.email, name=u.name, current_plan=plan_named(granted).label if granted else None,
-                        current_until=upi.aware(u.grant_until) if granted and u.grant_until else None)
+                        email=u.email, name=u.name, current_plan=plan_named(running.plan).label if running else None,
+                        current_until=running_until(u))
 
 
 @router.get("/admin/payments", response_model=AdminPaymentsOut)

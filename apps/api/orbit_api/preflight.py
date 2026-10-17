@@ -28,6 +28,7 @@ from orbit_api.entitlements import (
     is_admin,
     minutes_remaining,
     plan_for,
+    usage_pool,
     usage_this_month,
 )
 from orbit_api.models import User
@@ -280,7 +281,7 @@ async def preflight(user: Annotated[User, Depends(current_user)], db: Annotated[
             detail = f"{left:.0f} of {plan.live_minutes} minutes left this month."
         checks.append(Check(id="minutes", label="Interview minutes", status=status, detail=detail, fix=fix))
     if plan.screenshots is not None:
-        used = int(await usage_this_month(db, user.id, "screenshots"))
+        used = int(await usage_this_month(db, user.id, "screenshots", usage_pool(plan)))
         left_shots = max(plan.screenshots - used, 0)
         checks.append(Check(id="screenshots", label="Screenshots", status="ok" if left_shots else "warn",
                             detail=f"{left_shots} of {plan.screenshots} left this month.",

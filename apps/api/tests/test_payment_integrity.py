@@ -112,3 +112,32 @@ def test_the_database_refuses_a_second_grant_for_one_payment(shop: Any) -> None:
             return p.status
 
     assert client.portal.call(status) == "submitted"
+
+
+def test_a_utr_is_only_for_a_manual_upi_order(client: TestClient) -> None:
+    """A UTR on a Razorpay or PayPal order used to make it "submitted": the gateway's own capture was then ignored
+    (only open orders are credited), and the admin was asked to find a bank transfer that never happened."""
+    from tests.test_api import _register
+
+    h = _register(client)
+    uid = client.get("/v1/auth/me", headers=h).json()["id"]
+
+    async def order(method: str) -> str:
+        async with sessionmaker()() as db:
+            p = Payment(user_id=uid, plan="starter", amount_inr=499, days=0, reference=f"T{uuid.uuid4().hex[:8]}",
+                        status="awaiting_payment", method=method, gateway_order_id=f"order_{uuid.uuid4().hex[:12]}")
+            db.add(p)
+            await db.commit()
+            return p.id
+
+    async def status(pid: str) -> tuple[str, str | None]:
+        async with sessionmaker()() as db:
+            p = await db.get(Payment, pid)
+            assert p is not None
+            return p.status, p.utr
+
+    for method in ("razorpay", "paypal"):
+        pid = client.portal.call(order, method)  # type: ignore[union-attr]
+        r = client.post(f"/v1/billing/upi/orders/{pid}/utr", headers=h, json={"utr": _utr()})
+        assert r.status_code == 409 and "UPI" in r.json()["detail"], (method, r.text)
+        assert client.portal.call(status, pid) == ("awaiting_payment", None)  # type: ignore[union-attr]

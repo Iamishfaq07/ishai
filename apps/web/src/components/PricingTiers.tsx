@@ -32,6 +32,13 @@ export function periodLabel(days: number): string {
   return `/ ${days} days`;
 }
 
+/** How long an allowance lasts, after "50 hours of live interview help": " a month", or for a plan shorter than a
+ * month its own days (it has the whole allowance for them, DECISIONS D57). */
+export function allowanceSpan(days: number): string {
+  if (days >= 30) return " a month";
+  return days === 7 ? ", to use in the week" : `, to use in the ${days} days`;
+}
+
 function n(value: number | null, unit = ""): string {
   return value === null ? "Unlimited" : `${value.toLocaleString("en-IN")}${unit}`;
 }
@@ -173,6 +180,7 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
       </Tier>
       {plans.map((m) => {
         const mine = current?.plan === m.plan && Boolean(current?.until);
+        const span = allowanceSpan(m.days);
         const cta: Cta = signedIn
           ? { label: mine ? `Extend · ${priceOf(m)}` : `Get ${m.label}`, onClick: () => onBuy?.(m), disabled: busy || !m.buyable, primary: m.id === popular || mine }
           : { label: `Get ${m.label}`, to: "/register", from: `/billing?pack=${m.id}`, primary: m.id === popular };
@@ -195,8 +203,8 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
             }
           >
             {m.resume_ai && <Feature><strong className="font-semibold">Unlimited Resume AI</strong>: fixes, rewrites, tailoring, cover letters</Feature>}
-            <Feature>{time(m.live_minutes)} of live interview help a month</Feature>
-            <Feature>{time(m.mock_minutes)} of mock and video interviews a month</Feature>
+            <Feature>{time(m.live_minutes)} of live interview help{span}</Feature>
+            <Feature>{time(m.mock_minutes)} of mock and video interviews{span}</Feature>
             <Feature>{n(m.screenshots)} screenshot answers</Feature>
             <Feature>{n(m.documents)} documents</Feature>
             <Feature>Sessions up to {m.max_session_minutes} minutes</Feature>
@@ -231,15 +239,17 @@ export function PlanComparison({ monthly }: { monthly: MonthlyPlan[] | null }) {
   const zero = useZero(plans);
   if (!plans.length) return null;
   const yes = <Check className="mx-auto h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-label="Included" />;
+  // A week's allowance is for its own days (D57), not a month's.
+  const per = (m: MonthlyPlan) => (m.days < 30 ? periodLabel(m.days) : "/ month");
   const rows: Array<[string, ReactNode, ...ReactNode[]]> = [
     ["Price", zero, ...plans.map((m) => `${priceOf(m)} ${periodLabel(m.days)}`), "Custom"],
     ["Per month", zero, ...plans.map((m) => (m.days < 30 ? "—" : (m.per_month_text ?? rupees(m.per_month_inr ?? m.price_inr)))), "Custom"],
     ["Resume editor, ATS score, downloads", yes, ...plans.map(() => yes), yes],
     ["Job matches, fit checks, tracker", yes, ...plans.map(() => yes), yes],
     ["Resume AI", "1 credit per action (a fix: 1/5)", ...plans.map((m) => (m.resume_ai ? "Unlimited" : "Credits")), "Unlimited"],
-    ["Live interview help", "From credits", ...plans.map((m) => `${time(m.live_minutes)} / month`), "Custom"],
-    ["Mock and video interviews", "From credits", ...plans.map((m) => `${time(m.mock_minutes)} / month`), "Custom"],
-    ["Screenshot answers", free ? `${n(free.screenshots)} / month` : "Limited", ...plans.map((m) => (m.screenshots === null ? "Unlimited" : `${n(m.screenshots)} / month`)), "Custom"],
+    ["Live interview help", "From credits", ...plans.map((m) => `${time(m.live_minutes)} ${per(m)}`), "Custom"],
+    ["Mock and video interviews", "From credits", ...plans.map((m) => `${time(m.mock_minutes)} ${per(m)}`), "Custom"],
+    ["Screenshot answers", free ? `${n(free.screenshots)} / month` : "Limited", ...plans.map((m) => (m.screenshots === null ? "Unlimited" : `${n(m.screenshots)} ${per(m)}`)), "Custom"],
     ["Documents", free ? n(free.documents) : "Limited", ...plans.map((m) => n(m.documents)), "Custom"],
     ["Longest session", free ? `${free.max_session_minutes} min` : "—", ...plans.map((m) => `${m.max_session_minutes} min`), "Custom"],
     ["Renewal", "—", ...plans.map(() => "Never automatic"), "Arranged with us"],

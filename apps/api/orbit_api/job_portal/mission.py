@@ -11,10 +11,10 @@ when the user picks it); every id is checked against the signed-in account.
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +29,8 @@ from orbit_api.resumes.schema import ResumeData, ResumeDesign
 
 router = APIRouter(prefix="/v1/jobs/tracker", tags=["jobs"])
 read_limit = Depends(limit_user("jobs-mission", rate_per_s=3, burst=60))
+# Minutes east of UTC (India is 330), as the prep plan takes it: "today" and "tomorrow" are the person's days.
+TzOffset = Annotated[int, Query(ge=-720, le=840)]
 MAX_SNAPSHOTS = 20
 
 Stage = Literal["discover", "prove", "prepare", "apply", "interview", "negotiate"]
@@ -182,7 +184,9 @@ def _offer_ref(o: JobOffer) -> OfferRef:
     return OfferRef(id=o.id, company=o.company, role=o.role, fixed=o.fixed, currency=o.currency, status=o.status)
 
 
-async def mission(db: AsyncSession, user: User, entry: JobApplication, now: datetime | None = None) -> MissionOut:
+async def mission(db: AsyncSession, user: User, entry: JobApplication, now: datetime | None = None,
+                  tz_offset: int = 0) -> MissionOut:
+    """`tz_offset`: minutes east of UTC, so "today" and "tomorrow" are the person's own days, as in the prep plan."""
     now = now or datetime.now(UTC)
     fit_row = (await db.scalars(select(JobFitCheck).where(JobFitCheck.user_id == user.id,
                                                           JobFitCheck.listing_id == entry.listing_id)
@@ -216,8 +220,10 @@ async def mission(db: AsyncSession, user: User, entry: JobApplication, now: date
     rounds = [e for e in events if e.kind == "round"]
     practice = sum(1 for e in rounds if e.title == "Practice round")
     upcoming = None
-    if entry.next_at and _aware(entry.next_at).date() >= now.date():
-        upcoming = (_aware(entry.next_at).date() - now.date()).days
+    shift = timedelta(minutes=tz_offset)
+    today = (now + shift).date()
+    if entry.next_at and (_aware(entry.next_at) + shift).date() >= today:
+        upcoming = ((_aware(entry.next_at) + shift).date() - today).days
 
     facts = Facts(status=entry.status, fit=fit is not None, resume=resume is not None, snapshot=bool(snaps),
                   applied=entry.applied_at is not None, practice_rounds=practice, live_rounds=len(rounds) - practice,
@@ -234,8 +240,8 @@ async def mission(db: AsyncSession, user: User, entry: JobApplication, now: date
 
 @router.get("/{entry_id}/mission", response_model=MissionOut, dependencies=[read_limit])
 async def get_mission(entry_id: str, user: Annotated[User, Depends(current_user)],
-                      db: Annotated[AsyncSession, Depends(get_db)]) -> MissionOut:
-    return await mission(db, user, await _entry(db, entry_id, user))
+                      db: Annotated[AsyncSession, Depends(get_db)], tz_offset: TzOffset = 0) -> MissionOut:
+    return await mission(db, user, await _entry(db, entry_id, user), tz_offset=tz_offset)
 
 
 class LinkResumeIn(BaseModel):
@@ -244,7 +250,7 @@ class LinkResumeIn(BaseModel):
 
 @router.put("/{entry_id}/mission/resume", response_model=MissionOut, dependencies=[read_limit])
 async def link_resume(entry_id: str, body: LinkResumeIn, user: Annotated[User, Depends(current_user)],
-                      db: Annotated[AsyncSession, Depends(get_db)]) -> MissionOut:
+                      db: Annotated[AsyncSession, Depends(get_db)], tz_offset: TzOffset = 0) -> MissionOut:
     """Link the resume for this job (or unlink with null). Only one of the account's own resumes."""
     entry = await _entry(db, entry_id, user)
     if body.resume_id is not None:
@@ -253,7 +259,7 @@ async def link_resume(entry_id: str, body: LinkResumeIn, user: Annotated[User, D
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Resume not found")
     entry.resume_id = body.resume_id
     await db.commit()
-    return await mission(db, user, entry)
+    return await mission(db, user, entry, tz_offset=tz_offset)
 
 
 class SnapshotIn(BaseModel):
@@ -263,7 +269,7 @@ class SnapshotIn(BaseModel):
 @router.post("/{entry_id}/mission/snapshots", response_model=MissionOut, status_code=status.HTTP_201_CREATED,
              dependencies=[read_limit])
 async def freeze_resume(entry_id: str, body: SnapshotIn, user: Annotated[User, Depends(current_user)],
-                        db: Annotated[AsyncSession, Depends(get_db)]) -> MissionOut:
+                        db: Annotated[AsyncSession, Depends(get_db)], tz_offset: TzOffset = 0) -> MissionOut:
     """Keep a copy of the linked resume as it is now: what was sent for this job."""
     entry = await _entry(db, entry_id, user)
     r = await db.get(Resume, entry.resume_id) if entry.resume_id else None
@@ -278,7 +284,7 @@ async def freeze_resume(entry_id: str, body: SnapshotIn, user: Annotated[User, D
                           data=dict(r.data or {}), design=dict(r.design or {}), job_text=r.job_text or "",
                           score=score, note=body.note.strip()))
     await db.commit()
-    return await mission(db, user, entry)
+    return await mission(db, user, entry, tz_offset=tz_offset)
 
 
 async def _snapshot(db: AsyncSession, entry: JobApplication, snapshot_id: str, user: User) -> ResumeSnapshot:
@@ -295,7 +301,7 @@ class RestoredOut(BaseModel):
 @router.post("/{entry_id}/mission/snapshots/{snapshot_id}/copy", response_model=RestoredOut,
              status_code=status.HTTP_201_CREATED, dependencies=[read_limit])
 async def copy_snapshot(entry_id: str, snapshot_id: str, user: Annotated[User, Depends(current_user)],
-                        db: Annotated[AsyncSession, Depends(get_db)]) -> RestoredOut:
+                        db: Annotated[AsyncSession, Depends(get_db)], tz_offset: TzOffset = 0) -> RestoredOut:
     """Open the sent version again as a new resume (the snapshot itself never changes)."""
     from orbit_api.resumes.routes import MAX_RESUMES
 
@@ -305,7 +311,7 @@ async def copy_snapshot(entry_id: str, snapshot_id: str, user: Annotated[User, D
     count = await db.scalar(select(func.count()).select_from(Resume).where(Resume.user_id == user.id))
     if (count or 0) >= MAX_RESUMES:
         raise HTTPException(status.HTTP_409_CONFLICT, f"You can keep up to {MAX_RESUMES} resumes. Delete one first.")
-    date = _aware(s.created_at).strftime("%d %b %Y")
+    date = (_aware(s.created_at) + timedelta(minutes=tz_offset)).strftime("%d %b %Y")  # their own day
     copy = Resume(user_id=user.id, title=f"{s.title} (sent {date})"[:160], data=dict(s.data or {}),
                   design=dict(s.design or {}), job_text=s.job_text or "")
     db.add(copy)
@@ -315,11 +321,11 @@ async def copy_snapshot(entry_id: str, snapshot_id: str, user: Annotated[User, D
 
 @router.delete("/{entry_id}/mission/snapshots/{snapshot_id}", response_model=MissionOut, dependencies=[read_limit])
 async def delete_snapshot(entry_id: str, snapshot_id: str, user: Annotated[User, Depends(current_user)],
-                          db: Annotated[AsyncSession, Depends(get_db)]) -> MissionOut:
+                          db: Annotated[AsyncSession, Depends(get_db)], tz_offset: TzOffset = 0) -> MissionOut:
     entry = await _entry(db, entry_id, user)
     await db.delete(await _snapshot(db, entry, snapshot_id, user))
     await db.commit()
-    return await mission(db, user, entry)
+    return await mission(db, user, entry, tz_offset=tz_offset)
 
 
 class LinkOfferIn(BaseModel):
@@ -328,7 +334,7 @@ class LinkOfferIn(BaseModel):
 
 @router.put("/{entry_id}/mission/offer", response_model=MissionOut, dependencies=[read_limit])
 async def link_offer(entry_id: str, body: LinkOfferIn, user: Annotated[User, Depends(current_user)],
-                     db: Annotated[AsyncSession, Depends(get_db)]) -> MissionOut:
+                     db: Annotated[AsyncSession, Depends(get_db)], tz_offset: TzOffset = 0) -> MissionOut:
     """Link one of the account's offers to this job (null unlinks). An offer belongs to one job at a time."""
     entry = await _entry(db, entry_id, user)
     current = (await db.scalars(select(JobOffer).where(JobOffer.user_id == user.id,
@@ -341,4 +347,4 @@ async def link_offer(entry_id: str, body: LinkOfferIn, user: Annotated[User, Dep
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Offer not found")
         offer.application_id = entry.id
     await db.commit()
-    return await mission(db, user, entry)
+    return await mission(db, user, entry, tz_offset=tz_offset)

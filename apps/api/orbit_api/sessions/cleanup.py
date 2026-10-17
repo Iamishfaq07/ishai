@@ -69,6 +69,7 @@ async def end_abandoned_sessions(now: datetime | None = None) -> int:
 async def sweeper(interval_s: float) -> None:
     from orbit_api.billing.settle import reconcile_now
     from orbit_api.contact.routes import purge_expired_messages
+    from orbit_api.entitlements import roll_due_grants
     from orbit_api.job_portal.alerts import send_due
     from orbit_api.support.routes import purge_idle_threads_now
 
@@ -108,6 +109,13 @@ async def sweeper(interval_s: float) -> None:
             raise
         except Exception:
             log.exception("job alerts sweep failed")
+        # A plan waiting its turn becomes the stored running one once the one before ends (entitlements.py, D57).
+        try:
+            await roll_due_grants()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("grant roll sweep failed")
         await asyncio.sleep(interval_s)
 
 

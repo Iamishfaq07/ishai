@@ -276,6 +276,8 @@ const GOOGLE_ERROR: Record<string, string> = {
   unverified: "That Google account doesn't have a confirmed email. Use another, or sign up with email.",
   taken: "An account with this email already exists. Sign in with your password, or Continue with Google.",
   server: "Something went wrong on our side while signing you in. Try again in a minute.",
+  busy: "Too many sign-in attempts from your network. Wait a minute, then try again.",
+  google_off: "Google sign-in isn't available right now. Sign in with your email instead.",
 };
 
 function GoogleMark() {

@@ -1,5 +1,27 @@
 # Implementation log
 
+## API follow-ups: plans on their own clock, atomic allowances (2026-10-18)
+
+- **Plans for a while** (paid months and admin grants, DECISIONS D57): allowances run in 30-day windows from when the
+  plan was bought or given, so use from before never counts, and every window (a week's too) has the plan's whole
+  allowance (Premium: 3,000 live and 1,500 mock minutes); and a new plan never cuts short time already given or paid:
+  the same plan bought again follows on with its own whole allowance (a week renewed early too), a higher one runs now
+  with the rest of the other waiting behind it, a lower one waits its turn. A paid week no longer ends an admin's
+  Unlimited. Migration `c6e8a0b2d4f6` adds `users.grant_started_at`, `grant_paid`, `grant_queue` and backfills the
+  start of running grants. The Weekly pricing card says its hours are "to use in the week" instead of "a month".
+- **Allowances checked atomically**: screenshot uploads at the same moment can't overrun the month's (answers being
+  written count), the natural voice's daily characters are taken before the provider is asked, and a Free account
+  counts only screenshots taken on Free.
+- **Credits and limits**: a cancelled resume AI request (the client went away) gives its credit back; a garbled code
+  review doesn't use one of the day's, and the day ends at the person's own midnight.
+- **Accounts**: a Google-only account sets a password only after a recent sign-in (as for two-step sign-in and
+  passkeys); Google sign-in's limit and "not set up" answers go back to the sign-in page instead of bare JSON.
+- **Smaller fixes**: a UTR is accepted only on a manual UPI order; the Jobs mission's "today/tomorrow" uses the
+  person's day (`tz_offset`); suggestions parked on a resume have bounded text; voice usage names only the caller's
+  own session; the live connect reads a session's metered time through the usage index.
+- The shared client sends `tz_offset` for the mission and code AI calls; the desktop app picks it up in its next
+  release (until then it's UTC, as before).
+
 ## The three switched-off features, checked before they're switched on (2026-10-18)
 
 - Hindi/Hinglish mocks (`ORBIT_MULTILINGUAL`), the camera coach (`ORBIT_VIDEO_MOCK`, in Practice and the AI video

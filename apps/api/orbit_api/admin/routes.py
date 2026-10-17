@@ -23,7 +23,16 @@ from orbit_api import credits
 from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
-from orbit_api.entitlements import GRANT_PLANS, active_grant, awaiting_approval, is_admin, plan_named
+from orbit_api.entitlements import (
+    GRANT_PLANS,
+    active_grant,
+    add_grant,
+    awaiting_approval,
+    clear_grants,
+    is_admin,
+    plan_named,
+    running_until,
+)
 from orbit_api.live.metrics import summarize
 from orbit_api.models import (
     AppConfig,
@@ -49,6 +58,7 @@ from orbit_api.runtime_config import (
     validate_value,
 )
 from orbit_api.sessions.feedback import FeedbackReport, feedback_report
+from orbit_api.transactions import lock_account
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
 
@@ -427,7 +437,7 @@ async def admin_rows(db: AsyncSession, users: Sequence[User]) -> list[AdminUser]
                  else "No access yet" if access == "pending" else "Free")
         out.append(AdminUser(
             id=u.id, email=u.email, name=u.name, created_at=u.created_at, email_verified=u.email_verified,
-            access=access, plan_label=label, grant_until=_aware(u.grant_until) if granted and u.grant_until else None,
+            access=access, plan_label=label, grant_until=running_until(u),
             live_minutes_this_month=round(float(used.get(u.id) or 0) / 60, 1),
             resume_credits=wallets.get(u.id, (0, 0.0))[0],
             interview_minutes_left=round(wallets.get(u.id, (0, 0.0))[1], 1), usage=usage[u.id],
@@ -585,7 +595,8 @@ async def user_activity(user_id: str, _: Annotated[User, Depends(require_admin)]
 
 
 class AccessIn(BaseModel):
-    # grant: a plan for `hours` (from now, or added on to a running grant of the same plan) · approve: Free for good
+    # grant: a plan for `hours` (from now; added on to a running grant of the same plan; never cutting another short,
+    # D57) · approve: Free for good
     # (or whatever they pay for) · revoke: back to waiting, grant cancelled
     action: Literal["grant", "approve", "revoke"]
     plan: Literal["pro", "unlimited"] = "unlimited"
@@ -612,19 +623,26 @@ async def set_access(user_id: str, body: AccessIn, background: BackgroundTasks,
     if body.action == "grant":
         if body.plan not in GRANT_PLANS:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Unknown plan")
-        running = active_grant(u, now) == body.plan and u.grant_until is not None
-        start = _aware(u.grant_until) if running and u.grant_until else now  # "2 more hours" extends
-        u.grant_plan, u.grant_until = body.plan, start + timedelta(hours=body.hours)
-        label, until = plan_named(body.plan).label, _until_text(u.grant_until)
-        mail = OutgoingEmail(to=u.email, subject=f"You have Orbit {label} until {until}",
-                             text=(f"Your Orbit account now has the {label} plan until {until}.\n\n"
-                                   f"Sign in and start a session: {web}/login"))
+        # Under the account lock, as a payment landing at the same moment takes it. Nothing running is cut short
+        # (D57): "2 more hours" of the same plan adds on; a paid month of a lower plan waits behind this grant.
+        await lock_account(db, u.id)
+        await db.refresh(u, ["grant_plan", "grant_until", "grant_started_at", "grant_paid", "grant_queue"])
+        given = add_grant(u, body.plan, timedelta(hours=body.hours), paid=False, now=now)
+        label, until = plan_named(body.plan).label, _until_text(given.until)
+        if given.start is not None and given.start > now:  # waits behind a higher plan that's running
+            subject = f"You have Orbit {label} from {_until_text(given.start)}"
+            when = f"from {_until_text(given.start)}, when the plan you have now ends, until {until}"
+        else:
+            subject, when = f"You have Orbit {label} until {until}", f"until {until}"
+        mail = OutgoingEmail(to=u.email, subject=subject, text=(f"Your Orbit account now has the {label} plan {when}."
+                                                                f"\n\nSign in and start a session: {web}/login"))
     elif body.action == "approve":
         u.approved = True
         mail = OutgoingEmail(to=u.email, subject="Your Orbit account is ready",
                              text=f"Your Orbit account has been approved. Sign in to get started: {web}/login")
     else:
-        u.approved, u.grant_plan, u.grant_until = False, None, None
+        u.approved = False
+        clear_grants(u)  # and anything waiting its turn
     db.add(AuditLog(user_id=admin.id, action=f"admin.access.{body.action}",
                     target=f"{u.id} {body.plan} {body.hours}h" if body.action == "grant" else u.id))
     await db.commit()

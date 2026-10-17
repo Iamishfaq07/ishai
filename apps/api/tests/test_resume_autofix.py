@@ -339,3 +339,33 @@ def test_a_specialists_own_verbs_count_as_action_verbs() -> None:
                                       "Fuzzed the PDF parser and found 6 memory-safety bugs"]
     data.experience[1].bullets[2] = "Red-teamed the identity platform with two engineers over a quarter"
     assert _check(data, "action_verbs").passed
+
+
+def test_a_cancelled_ai_request_gives_its_credit_back_once() -> None:
+    """A client that goes away cancels the request (Starlette's middleware cancels the handler, and keeps cancelling
+    every await inside it). `_spend` only refunded on an Exception, so the credit stayed spent with nothing delivered;
+    the refund now runs shielded, and runs once."""
+    import anyio
+
+    from orbit_api.resumes.routes import _spend
+
+    class Claimed:
+        def __init__(self) -> None:
+            self.refunds = 0
+
+        async def release(self) -> None:
+            await anyio.sleep(0.01)  # a database round trip: cancelled too, unless shielded
+            self.refunds += 1
+
+    async def scenario() -> int:
+        allowance = Claimed()
+
+        async def model_call() -> None:
+            await anyio.sleep(10)
+
+        with anyio.CancelScope() as scope:
+            scope.cancel()  # the client disconnected while the model was working
+            await _spend(allowance, model_call())  # type: ignore[arg-type]
+        return allowance.refunds
+
+    assert anyio.run(scenario) == 1

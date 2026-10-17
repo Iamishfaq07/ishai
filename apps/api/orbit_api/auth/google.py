@@ -245,10 +245,23 @@ def mount(router: APIRouter) -> None:
     # Imported here: this module is loaded at the bottom of routes, once auth_limit exists.
     from orbit_api.auth.routes import auth_limit
 
-    @router.get("/google/start", dependencies=[Depends(auth_limit)])
+    def over_limit(request: Request) -> RedirectResponse | None:
+        """The sign-in limit, answered as a trip back to the sign-in page: the browser is on the API's own address for
+        these two routes, so a 429 would leave it on bare JSON."""
+        try:
+            auth_limit(request)
+        except HTTPException:
+            response = RedirectResponse(_login_url("busy"), status_code=302)
+            _clear_state(response)
+            return response
+        return None
+
+    @router.get("/google/start")
     async def google_start(request: Request, next: str = "/") -> RedirectResponse:
-        if not get_settings().google_enabled:
-            raise HTTPException(404, "Google sign-in is not set up on this server.")
+        if (busy := over_limit(request)) is not None:
+            return busy
+        if not get_settings().google_enabled:  # a stale link or bookmark: the button isn't shown then
+            return RedirectResponse(_login_url("google_off"), status_code=302)
         state = secrets.token_urlsafe(24)
         verifier = secrets.token_urlsafe(64)
         uri = redirect_uri(request)
@@ -267,13 +280,15 @@ def mount(router: APIRouter) -> None:
         _set_state(response, _pack(state, verifier, nxt, uri))
         return response
 
-    @router.get("/google/callback", dependencies=[Depends(auth_limit)])
+    @router.get("/google/callback")
     async def google_callback(
         request: Request,
         db: Annotated[AsyncSession, Depends(get_db)],
         code: str = "",
         state: str = "",
     ) -> RedirectResponse:
+        if (busy := over_limit(request)) is not None:
+            return busy
         packed = _unpack(request.cookies.get(GOOGLE_COOKIE, ""))
         mismatch = packed is None or not secrets.compare_digest(packed["st"], state) or not code
         if packed is None or not get_settings().google_enabled or mismatch:

@@ -8,10 +8,10 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,7 +22,8 @@ from orbit_api.code import review as reviewmod
 from orbit_api.code.problems import BY_ID, PATTERNS, PROBLEMS, Problem
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
-from orbit_api.models import CodeAttempt, User
+from orbit_api.entitlements import is_admin
+from orbit_api.models import CodeAttempt, ProviderRequest, User
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError
 from orbit_api.ratelimit import limit, limit_user
@@ -75,20 +76,40 @@ def _attempt_out(a: CodeAttempt) -> AttemptOut:
                       created_at=a.created_at)
 
 
-async def _left(db: AsyncSession, user: User) -> int | None:
-    from orbit_api.job_portal.routes import _ai_left
+# Minutes east of UTC (India is 330): the day's reviews come back at the person's own midnight (UTC without).
+TzOffset = Annotated[int, Query(ge=-720, le=840)]
 
-    return await _ai_left(db, user, "code_review", get_settings().code_review_daily)
+
+def day_start(now: datetime, tz_offset: int) -> datetime:
+    """The start of `now`'s day where the person is, as a UTC time."""
+    shift = timedelta(minutes=tz_offset)
+    return (now + shift).replace(hour=0, minute=0, second=0, microsecond=0) - shift
+
+
+async def _left(db: AsyncSession, user: User, tz_offset: int = 0) -> int | None:
+    """Reviews left today: counted from the reviews delivered (a saved attempt), so an answer that came back garbled
+    doesn't use one. The AI calls behind them stay capped at twice the allowance, so a prompt that always garbles
+    can't make calls without end."""
+    if await is_admin(db, user):
+        return None
+    cap = get_settings().code_review_daily
+    since = day_start(datetime.now(UTC), tz_offset)
+    reviews = await db.scalar(select(func.count()).select_from(CodeAttempt).where(
+        CodeAttempt.user_id == user.id, CodeAttempt.created_at >= since))
+    calls = await db.scalar(select(func.count()).select_from(ProviderRequest).where(
+        ProviderRequest.user_id == user.id, ProviderRequest.request_type == "code_review",
+        ProviderRequest.created_at >= since))
+    return max(min(cap - int(reviews or 0), 2 * cap - int(calls or 0)), 0)
 
 
 @router.get("/problems", response_model=ProblemsOut, dependencies=[read_limit])
 async def list_problems(user: Annotated[User, Depends(current_user)],
-                        db: Annotated[AsyncSession, Depends(get_db)]) -> ProblemsOut:
+                        db: Annotated[AsyncSession, Depends(get_db)], tz_offset: TzOffset = 0) -> ProblemsOut:
     solved = func.max(case((CodeAttempt.solved, 1), else_=0))  # over 1/0: Postgres has no max(boolean)
     rows = (await db.execute(select(CodeAttempt.problem_id, func.count(), solved)
                              .where(CodeAttempt.user_id == user.id).group_by(CodeAttempt.problem_id))).all()
     seen = {pid: (int(n), bool(s)) for pid, n, s in rows}
-    return ProblemsOut(patterns=PATTERNS, reviews_left=await _left(db, user), problems=[
+    return ProblemsOut(patterns=PATTERNS, reviews_left=await _left(db, user, tz_offset), problems=[
         ProblemSummary(id=p.id, title=p.title, pattern=p.pattern, difficulty=p.difficulty,
                        attempts=seen.get(p.id, (0, False))[0], solved=seen.get(p.id, (0, False))[1])
         for p in PROBLEMS])
@@ -103,12 +124,13 @@ def _problem(problem_id: str) -> Problem:
 
 @router.get("/problems/{problem_id}", response_model=ProblemOut, dependencies=[read_limit])
 async def get_problem(problem_id: str, user: Annotated[User, Depends(current_user)],
-                      db: Annotated[AsyncSession, Depends(get_db)]) -> ProblemOut:
+                      db: Annotated[AsyncSession, Depends(get_db)], tz_offset: TzOffset = 0) -> ProblemOut:
     p = _problem(problem_id)
     rows = (await db.scalars(select(CodeAttempt).where(CodeAttempt.user_id == user.id,
                                                        CodeAttempt.problem_id == p.id)
                              .order_by(CodeAttempt.created_at.desc()).limit(10))).all()
-    return ProblemOut(problem=p, attempts=[_attempt_out(a) for a in rows], reviews_left=await _left(db, user))
+    return ProblemOut(problem=p, attempts=[_attempt_out(a) for a in rows],
+                      reviews_left=await _left(db, user, tz_offset))
 
 
 class AttemptIn(BaseModel):
@@ -126,7 +148,7 @@ _locks: dict[str, asyncio.Lock] = {}
 @router.post("/problems/{problem_id}/attempts", response_model=AttemptOut, status_code=status.HTTP_201_CREATED,
              dependencies=ai_limits)
 async def review_attempt(problem_id: str, body: AttemptIn, user: Annotated[User, Depends(require_verified_email)],
-                         db: Annotated[AsyncSession, Depends(get_db)]) -> AttemptOut:
+                         db: Annotated[AsyncSession, Depends(get_db)], tz_offset: TzOffset = 0) -> AttemptOut:
     """Save an attempt and have the AI interviewer review it: free, ORBIT_CODE_REVIEW_DAILY a day."""
     from orbit_api.job_portal.routes import _generate
 
@@ -137,7 +159,7 @@ async def review_attempt(problem_id: str, body: AttemptIn, user: Annotated[User,
     total = body.total if body.language == "javascript" and body.total == len(p.tests) else 0
     passed = body.passed if total else 0
     async with _locks.setdefault(user.id, asyncio.Lock()):
-        if await _left(db, user) == 0:
+        if await _left(db, user, tz_offset) == 0:
             raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, detail={
                 "code": "code_review_limit",
                 "message": f"You've used today's {get_settings().code_review_daily} free reviews. They're back "

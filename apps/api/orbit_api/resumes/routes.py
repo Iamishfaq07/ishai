@@ -21,6 +21,7 @@
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
@@ -28,8 +29,9 @@ from collections.abc import Awaitable
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
+import anyio
 from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
-from pydantic import BaseModel, Field, model_validator
+from pydantic import AfterValidator, BaseModel, Field, model_validator
 from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
@@ -66,6 +68,22 @@ list_limit = limit_user("resume-list", rate_per_s=1, burst=20)  # each call scor
 score_user_limit = limit_user("resume-score-user", rate_per_s=3, burst=40)
 
 
+# A suggestion the editor parks on the resume comes back on every load: its text is bounded, as the resume's own
+# fields are. Generous for what the AI writes (a summary is at most 1,500 characters).
+PENDING_TEXT_MAX = {"id": 64, "path": 200, "label": 200, "before": 4_000, "after": 4_000, "reason": 1_000,
+                    "confirm": 1_000}
+
+
+def _bounded(s: fixes.Suggestion) -> fixes.Suggestion:
+    for name, most in PENDING_TEXT_MAX.items():
+        if len(getattr(s, name) or "") > most:
+            raise ValueError(f"A suggestion's {name} is longer than {most} characters.")
+    return s
+
+
+PendingSuggestion = Annotated[fixes.Suggestion, AfterValidator(_bounded)]
+
+
 class ResumeIn(BaseModel):
     title: str = Field(min_length=1, max_length=160)
     data: ResumeData = Field(default_factory=ResumeData)
@@ -78,7 +96,7 @@ class ResumeIn(BaseModel):
     base_revision: int | None = Field(None, ge=0)
     client_id: str | None = Field(None, min_length=16, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
     client_revision: int | None = Field(None, ge=1, le=2_147_483_647)
-    pending_suggestions: list[fixes.Suggestion] | None = Field(None, max_length=40)
+    pending_suggestions: list[PendingSuggestion] | None = Field(None, max_length=40)
 
     @model_validator(mode="after")
     def _writer_pair(self) -> "ResumeIn":
@@ -266,11 +284,15 @@ async def account_allowance(request: Request, user: Annotated[User, Depends(requ
 
 
 async def _spend[T](allowance: Allowance, work: Awaitable[T]) -> T:
-    """Runs an AI request, giving the credit back if it fails: an outage or a garbled answer mustn't spend it."""
+    """Runs an AI request, giving the credit back if it fails: an outage or a garbled answer mustn't spend it, and
+    neither does a cancelled request (the client went away: Starlette's middleware cancels the handler and keeps
+    cancelling every await in it, so the refund is shielded). `release` is idempotent: a refund already made by
+    `_generate` isn't made twice."""
     try:
         return await work
-    except Exception:
-        await allowance.release()
+    except BaseException:
+        with anyio.CancelScope(shield=True), contextlib.suppress(Exception):
+            await allowance.release()
         raise
 
 

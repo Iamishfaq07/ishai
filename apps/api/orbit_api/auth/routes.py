@@ -29,7 +29,7 @@ from orbit_api.auth.security import (
     token_from_request,
     verify_password,
 )
-from orbit_api.auth.two_factor import TwoFactorChallenge, challenge_for
+from orbit_api.auth.two_factor import TwoFactorChallenge, challenge_for, require_recent_sign_in
 from orbit_api.auth.two_factor import enabled as two_factor_enabled
 from orbit_api.config import get_settings
 from orbit_api.csrf import token_for as csrf_token_for
@@ -663,6 +663,10 @@ async def change_password(body: PasswordChangeIn, request: Request, response: Re
         await _recheck_password(u, body.current_password)
         if body.new_password == body.current_password:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Pick a password you haven't used here.")
+    else:
+        # Made with Google: no password to re-enter, so a recent sign-in stands in for it, as for two-step sign-in
+        # and passkeys. Otherwise a session left open (or stolen) could set one and keep a way in after it ends.
+        require_recent_sign_in(request)
     _check_password(body.new_password, u.email)
     u.password_hash = await hash_password(body.new_password)
     u.has_password = True
