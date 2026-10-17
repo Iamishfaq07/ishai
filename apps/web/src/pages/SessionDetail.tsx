@@ -18,6 +18,7 @@ import {
   toast,
   LoadGate,
 } from "@orbit/ui";
+import { BackLink } from "../components/BackLink";
 import { Button, Card, ErrorNote, Input, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
 import { SESSION_TYPE_LABEL, downloadText, errorText, formatClock, formatDate, formatDuration } from "../lib/format";
@@ -111,17 +112,18 @@ export function SessionDetailPage() {
         ]
           .filter(Boolean)
           .join(" · ")}
+        back={<BackLink to="/sessions">All sessions</BackLink>}
         actions={
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={() => void exportMd()}>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => void exportMd()}>
               Export Markdown
             </Button>
             {detail.data.turns.length > 0 && (
-              <Button variant="secondary" size="sm" onClick={() => void removeTranscript()}>
+              <Button variant="secondary" onClick={() => void removeTranscript()}>
                 Delete transcript
               </Button>
             )}
-            <Button variant="danger" size="sm" onClick={() => void remove()}>
+            <Button variant="danger" onClick={() => void remove()}>
               Delete
             </Button>
           </div>
@@ -292,7 +294,7 @@ function TranscriptTimeline({ detail }: { detail: SessionDetail }) {
             <div>
               <p
                 className={cx(
-                  "text-xs font-semibold uppercase tracking-wider",
+                  "text-xs font-semibold",
                   t.speaker === "candidate" ? "text-emerald-600 dark:text-emerald-400" : "text-indigo-600 dark:text-indigo-300",
                 )}
               >

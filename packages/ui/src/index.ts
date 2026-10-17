@@ -107,6 +107,7 @@ export {
   EmptyState,
   ErrorNote,
   Field,
+  IconTile,
   Input,
   Meter,
   PageHeader,

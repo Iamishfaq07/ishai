@@ -88,32 +88,58 @@ export function Card({ children, className, interactive, id }: { children: React
   );
 }
 
+/**
+ * A page's head: its title, one line under it, and the page's actions at the end of the row (they wrap under the
+ * title on a phone). `back` (a link to the list a detail page came from) sits above the title. The icon tile is
+ * neutral and shows from `sm` up: on a phone the title gets the width.
+ */
 export function PageHeader({
   title,
   subtitle,
   actions,
   icon: Icon,
+  back,
 }: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
   icon?: ComponentType<{ className?: string }>;
+  back?: ReactNode;
 }) {
-  return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div className="flex min-w-0 items-center gap-3">
-        {Icon && (
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
-            <Icon className="h-5 w-5" />
-          </span>
-        )}
+  const head = (
+    <div className={cx("flex flex-wrap items-center justify-between gap-x-6 gap-y-3", !back && "mb-6")}>
+      <div className="flex min-w-0 flex-1 basis-[20rem] items-center gap-3">
+        {Icon && <IconTile icon={Icon} className="hidden sm:flex" />}
         <div className="min-w-0">
-          <h1 className="font-display text-2xl font-semibold tracking-tight">{title}</h1>
+          <h1 className="break-words font-display text-2xl font-semibold tracking-tight">{title}</h1>
           {subtitle && <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>}
         </div>
       </div>
       {actions}
     </div>
+  );
+  if (!back) return head;
+  return (
+    <div className="mb-6">
+      <div className="mb-3">{back}</div>
+      {head}
+    </div>
+  );
+}
+
+/** A neutral icon tile, for a page's, a section's or a card's heading. Decorative: the words beside it say it. */
+export function IconTile({ icon: Icon, size = "md", className }: { icon: ComponentType<{ className?: string }>; size?: "sm" | "md"; className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cx(
+        "flex shrink-0 items-center justify-center bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10",
+        size === "sm" ? "h-8 w-8 rounded-lg" : "h-10 w-10 rounded-xl",
+        className,
+      )}
+    >
+      <Icon className={size === "sm" ? "h-4 w-4" : "h-5 w-5"} />
+    </span>
   );
 }
 

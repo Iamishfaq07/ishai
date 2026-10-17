@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { JobMission, JobTrackerEntry, MissionFit, MissionNextStep } from "@orbit/types";
 import {
-  ArrowLeft,
   ArrowRight,
   ArrowUpRight,
   Check,
@@ -16,6 +15,7 @@ import {
   focusRing,
   toast,
 } from "@orbit/ui";
+import { BackLink } from "../../components/BackLink";
 import { Button, Card, ErrorNote, Input, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
@@ -76,9 +76,7 @@ export function JobMissionPage() {
 
   return (
     <div className="space-y-6">
-      <Link to={JOBS_TRACKER} className={cx("inline-flex items-center gap-1.5 rounded text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white", focusRing)}>
-        <ArrowLeft className="h-4 w-4" aria-hidden /> Tracker
-      </Link>
+      <BackLink to={JOBS_TRACKER}>Tracker</BackLink>
 
       {entry ? <Header entry={entry} /> : <Skeleton variant="line" count={2} label="Loading the job" />}
 
@@ -150,8 +148,8 @@ function Header({ entry }: { entry: JobTrackerEntry }) {
       <div className="flex min-w-0 items-center gap-3">
         <CompanyLogo company={entry.company} size="lg" />
         <div className="min-w-0">
-          <h1 className="truncate font-display text-2xl font-semibold tracking-tight">{entry.title}</h1>
-          <p className="truncate text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="break-words font-display text-xl font-semibold tracking-tight sm:text-2xl">{entry.title}</h1>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
             {[entry.company, entry.location, `added ${formatDate(entry.created_at)}`].filter(Boolean).join(" · ")}
           </p>
         </div>
@@ -531,7 +529,7 @@ function NextStepCard({
   const internal = step.to.startsWith("/");
   return (
     <section aria-labelledby="next-title" className="glass-panel gradient-border rounded-2xl p-5">
-      <p className="text-xs font-medium uppercase tracking-wider text-indigo-700 dark:text-indigo-300">Next step</p>
+      <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Next step</p>
       <h2 id="next-title" className="mt-1 font-display text-lg font-semibold">{step.title}</h2>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
         <span className="font-medium">Why: </span>
