@@ -9,7 +9,7 @@ export function CompanyGuide({ style, className, inMock = true }: { style: Compa
     <section aria-labelledby={`guide-${style.slug}`} className={className}>
       <Card className="animate-fade-up">
         <div className="flex items-start gap-3">
-          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 ring-1 ring-indigo-500/20 dark:text-indigo-300">
+          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
             <Building2 className="h-4 w-4" aria-hidden />
           </span>
           <div className="min-w-0">

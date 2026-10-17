@@ -42,7 +42,7 @@ export function AlertsSection({ onProfileSaved }: { onProfileSaved: () => void }
   return (
     <Card id="alerts" className="scroll-mt-24">
       <div className="mb-4 flex items-start gap-2.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
           <Mail className="h-4 w-4" aria-hidden />
         </span>
         <div className="min-w-0">

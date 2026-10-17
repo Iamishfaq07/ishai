@@ -158,7 +158,6 @@ export function AnswersPage() {
 
   return (
     <div>
-      <LibraryTabs />
       <PageHeader
         icon={MessageSquareQuote}
         title="My answers"
@@ -236,6 +235,7 @@ export function AnswersPage() {
         </section>
       )}
       </LoadGate>
+      <LibraryTabs />
     </div>
   );
 }

@@ -102,7 +102,6 @@ export function DocumentsPage() {
 
   return (
     <div>
-      <LibraryTabs />
       <PageHeader
         icon={FolderOpen}
         title="Documents"
@@ -180,7 +179,7 @@ export function DocumentsPage() {
                     <span
                       aria-hidden="true"
                       className={cx(
-                        "flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 ring-1 ring-indigo-500/20 transition-transform dark:text-indigo-300",
+                        "flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10 transition-transform",
                         dragging ? "motion-ok:-translate-y-1" : "motion-ok:group-hover:-translate-y-0.5",
                       )}
                     >
@@ -313,6 +312,7 @@ export function DocumentsPage() {
           }}
         />
       )}
+      <LibraryTabs />
     </div>
   );
 }
@@ -428,7 +428,7 @@ function EditModal({
 
 function StatusBadge({ doc }: { doc: OrbitDocument }) {
   if (doc.status === "ready")
-    return <span className="text-emerald-600 dark:text-emerald-400">Ready · {doc.chunk_count} sections</span>;
+    return <span className="text-emerald-600 dark:text-emerald-400">Ready · {doc.chunk_count} {doc.chunk_count === 1 ? "section" : "sections"}</span>;
   if (doc.status === "processing") return <span className="text-amber-600 dark:text-amber-400">Processing…</span>;
   return <span className="text-rose-600 dark:text-rose-400">Couldn’t read file</span>;
 }

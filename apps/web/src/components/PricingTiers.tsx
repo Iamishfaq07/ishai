@@ -212,7 +212,7 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
         );
       })}
       <li className="flex flex-col gap-4 rounded-2xl bg-white p-6 ring-1 ring-zinc-900/10 sm:col-span-2 md:flex-row md:items-center xl:col-span-full dark:bg-zinc-900/60 dark:ring-white/10">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-300" aria-hidden="true">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10" aria-hidden="true">
           <Building2 className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">

@@ -22,7 +22,7 @@ export function LearningPage() {
       <ul className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
         <li className="min-w-0">
           <Link to={CODE_HOME} className={cx(card, focusRing)}>
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
               <Code2 className="h-5 w-5" aria-hidden />
             </span>
             <h2 className="mt-4 font-display text-lg font-semibold">Code AI</h2>

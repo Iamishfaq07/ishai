@@ -31,7 +31,6 @@ import { api } from "../../lib/api";
 import { errorText, formatDate } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
 import { useCountry } from "../../lib/country";
-import { AiPill } from "../../components/products";
 import { JOBS_AI_HOME } from "../jobs/paths";
 import { AllowanceBanner, AllowanceContext, isUpgradeError, priceText, useResumeAllowance } from "./allowance";
 import { guestResume } from "./backend";
@@ -304,9 +303,7 @@ function FindJobs() {
       <span className="min-w-0 flex-1">
         <span className="block font-display font-semibold">Find jobs that match your resume</span>
         <span className="block text-sm text-zinc-500 dark:text-zinc-400">
-          <span className="font-medium text-zinc-700 dark:text-zinc-200">
-            Jobs <AiPill className="align-[1px]" />
-          </span>{" "}
+          <span className="font-medium text-zinc-700 dark:text-zinc-200">Jobs AI</span>{" "}
           shows the latest openings, ranked by how well they match you, with a free AI fit check and outreach for each job.
         </span>
       </span>
@@ -567,7 +564,7 @@ export function NewResume({ onClose, initial = null }: { onClose?: () => void; i
                   focusRing,
                 )}
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
                   <Icon className="h-4 w-4" />
                 </span>
                 <span>

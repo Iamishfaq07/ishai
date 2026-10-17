@@ -46,7 +46,6 @@ export function SessionsPage() {
         icon={HistoryIcon}
         title="Sessions"
         subtitle="Transcripts, detected questions, answers, and summaries from past sessions."
-        actions={<Button onClick={() => navigate("/start")}>New session</Button>}
       />
       <LoadGate loading={sessions.loading && !sessions.data} variant="session-row" count={4} label="Loading sessions">
       {sessions.error ? (
