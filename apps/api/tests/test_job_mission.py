@@ -151,3 +151,32 @@ def test_opening_a_sent_version_again_keeps_to_the_resume_limit(client: TestClie
     full = client.post(copy, headers=h)
     assert full.status_code == 409 and "Delete one first" in full.json()["detail"]
     assert len(client.get("/v1/resumes", headers=h).json()) == MAX_RESUMES
+
+
+def test_today_and_tomorrow_are_the_persons_own_days(client: TestClient) -> None:
+    """An interview on the 21st is saved as noon there (06:30 UTC in India). At 01:30 on the 21st in India it's still
+    the 20th in UTC, so the next step said "It's tomorrow" on the interview's own day."""
+    from datetime import UTC, datetime
+
+    from orbit_api.db import sessionmaker
+    from orbit_api.job_portal.mission import mission
+    from orbit_api.models import JobApplication, User
+
+    h = _register(client)
+    eid = _entry(client, h)
+
+    async def why(tz_offset: int) -> str:
+        async with sessionmaker()() as db:
+            entry = await db.get(JobApplication, eid)
+            assert entry is not None
+            entry.status, entry.next_at = "interviewing", datetime(2026, 10, 21, 6, 30, tzinfo=UTC)
+            await db.commit()
+            user = await db.get(User, entry.user_id)
+            assert user is not None
+            out = await mission(db, user, entry, now=datetime(2026, 10, 20, 20, 0, tzinfo=UTC), tz_offset=tz_offset)
+            return out.next.why
+
+    assert "It's tomorrow" in client.portal.call(why, 0)  # type: ignore[union-attr]
+    assert "It's today" in client.portal.call(why, 330)  # type: ignore[union-attr]
+    assert client.get(f"/v1/jobs/tracker/{eid}/mission?tz_offset=330", headers=h).status_code == 200
+    assert client.get(f"/v1/jobs/tracker/{eid}/mission?tz_offset=9999", headers=h).status_code == 422

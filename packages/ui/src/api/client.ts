@@ -231,6 +231,9 @@ export function queryString(params: Record<string, string | number | boolean | n
   return text ? `?${text}` : "";
 }
 
+/** This browser's offset as `?tz_offset=` (minutes east of UTC), so "today" and "tomorrow" are the person's own days. */
+const localDays = () => queryString({ tz_offset: -new Date().getTimezoneOffset() });
+
 /** How long a request may take before it gives up: a stalled phone connection otherwise leaves the screen waiting for
  * ever. Calls that run the AI or move big files say so with LONG_TIMEOUT_MS. */
 export const DEFAULT_TIMEOUT_MS = 30_000;
@@ -780,24 +783,24 @@ export function createApiClient(options: ApiClientOptions) {
       }),
 
     /** Job Mission Room: one tracked job as a workspace (stages, fit, resume, sent versions, offer, next step). */
-    jobMission: (id: string) => json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission`),
+    jobMission: (id: string) => json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission${localDays()}`),
     linkMissionResume: (id: string, resumeId: string | null) =>
-      json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/resume`, { method: "PUT", body: body({ resume_id: resumeId }) }),
+      json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/resume${localDays()}`, { method: "PUT", body: body({ resume_id: resumeId }) }),
     /** Keep a copy of the linked resume as it is now: what was sent for this job. */
     freezeMissionResume: (id: string, note = "") =>
-      json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/snapshots`, { method: "POST", body: body({ note }) }),
+      json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/snapshots${localDays()}`, { method: "POST", body: body({ note }) }),
     /** Open a sent version again as a new resume (the version itself never changes). */
     copyMissionSnapshot: (id: string, snapshotId: string) =>
       json<{ resume_id: string }>(
-        `/v1/jobs/tracker/${encodeURIComponent(id)}/mission/snapshots/${encodeURIComponent(snapshotId)}/copy`,
+        `/v1/jobs/tracker/${encodeURIComponent(id)}/mission/snapshots/${encodeURIComponent(snapshotId)}/copy${localDays()}`,
         { method: "POST" },
       ),
     deleteMissionSnapshot: (id: string, snapshotId: string) =>
-      json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/snapshots/${encodeURIComponent(snapshotId)}`, {
+      json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/snapshots/${encodeURIComponent(snapshotId)}${localDays()}`, {
         method: "DELETE",
       }),
     linkMissionOffer: (id: string, offerId: string | null) =>
-      json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/offer`, { method: "PUT", body: body({ offer_id: offerId }) }),
+      json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/offer${localDays()}`, { method: "PUT", body: body({ offer_id: offerId }) }),
     /** The interview prep plan for a tracked job (minutes east of UTC, so the days are the person's own). */
     prepPlan: (id: string, tzOffset = -new Date().getTimezoneOffset()) =>
       json<PrepPlan>(`/v1/jobs/tracker/${encodeURIComponent(id)}/plan${queryString({ tz_offset: tzOffset })}`),
