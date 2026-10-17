@@ -104,7 +104,7 @@ export function WorkspaceBar({
   return (
     <section
       aria-label="Saved setup"
-      className="space-y-2 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-aurora-400/5 p-3.5 ring-1 ring-indigo-500/20"
+      className="glass-panel space-y-2 rounded-2xl p-3.5"
     >
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs font-semibold">

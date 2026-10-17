@@ -842,8 +842,18 @@ html.app-shell.dark {
   --canvas: 13 18 28; /* #0D121C */
   --surface: 20 27 39; /* #141B27 */
   --line: 35 44 59; /* #232C3B */
+  /* Dark mode is one blue-grey family, the light theme's twin (DECISIONS D58). The ink's darkest steps are what
+     `dark:` classes paint panels with: zinc-950 (paired with bg-white everywhere: the bars, fields, dialogs, the live
+     panel) is the surface, zinc-900 a raised step above it, zinc-800 the line. Not the front door's violet night.
+     The lighter steps (text) keep their values. */
+  --ink-950: 20 27 39;
+  --ink-900: 27 35 50;
+  --ink-800: 35 44 59;
+  --ink-700: 54 64 84;
 }
-html.app-shell body {
+/* .dark twice outranks the body's own `dark:bg-zinc-950` utility, so the dark canvas is the canvas too. */
+html.app-shell body,
+html.app-shell.dark body {
   background-color: rgb(var(--canvas));
   background-image: none;
 }
@@ -868,3 +878,18 @@ html.app-shell .text-gradient {
 }
 html.app-shell .btn-sheen::after { display: none; }
 html.app-shell :is(.shadow-glow, .shadow-glow-sm, .hover\:shadow-glow:hover) { box-shadow: none; }
+/* A card that is a link (`lift`) darkens its border on hover in the workbench, like Card's `interactive`; it doesn't
+   rise. The press stays. */
+:root.app-shell:not([data-motion="reduced"]):not([data-motion="off"]) .lift:hover { transform: none; }
+:root.app-shell:not([data-motion="reduced"]):not([data-motion="off"]) .lift:active { transform: scale(0.99); }
+html.app-shell .lift:hover { border-color: rgb(var(--ink-300)); }
+html.app-shell.dark .lift:hover { border-color: rgb(255 255 255 / 0.2); }
+/* Small readouts (a timer, a capture pill) are figures, not code: the product face with tabular figures. */
+html.app-shell .telemetry { font-family: inherit; }
+/* SpotIllustration in the workbench: a hairline orbit, a solid accent planet with its icon and a small moon. No halo,
+   no lit sphere, no glow (it keeps them on the public pages and in the desktop app's sky). */
+html.app-shell :is(.spot-halo, .spot-rim, .spot-moon-glow) { display: none; }
+html.app-shell .spot-orb { fill: rgb(var(--accent-600)); }
+html.app-shell .spot-ring { stroke: rgb(var(--ink-300)); stroke-opacity: 1; }
+html.app-shell.dark .spot-ring { stroke: rgb(255 255 255 / 0.2); }
+html.app-shell .spot-moon { fill: rgb(var(--accent-400)); }

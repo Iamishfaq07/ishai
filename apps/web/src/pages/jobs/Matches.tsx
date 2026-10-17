@@ -604,7 +604,7 @@ function NoMatches({ feed, days, searching }: { feed: JobFeed; days: string; sea
         <FirstFetch />
       ) : down ? (
         <CosmicEmptyState
-          variant="jobs"
+          variant="offline"
           title="Orbit can't reach the job boards right now"
           body="They're usually back within the hour. Meanwhile, search the sites below: the links are filled in from your profile."
         />

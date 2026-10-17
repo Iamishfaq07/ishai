@@ -96,7 +96,8 @@ export function PlanetHero({ className }: { className?: string }) {
 
 /**
  * Small spot art for empty states and feature cards: an icon in a glowing orb, circled by a dashed orbit with a
- * satellite. Pass any lucide icon.
+ * satellite. Pass any lucide icon. In the signed-in web app (html.app-shell) the `spot-*` hooks draw it flat: a
+ * hairline orbit, a solid accent planet and a small moon (base.css).
  */
 export function SpotIllustration({
   icon: Icon,
@@ -121,13 +122,13 @@ export function SpotIllustration({
             <stop offset="1" stopColor="rgb(var(--accent-500))" stopOpacity="0" />
           </radialGradient>
         </defs>
-        <circle cx="56" cy="56" r="44" fill={`url(#${id}-halo)`} />
-        <circle cx="56" cy="56" r="46" fill="none" stroke="rgb(var(--accent-400))" strokeOpacity="0.35" strokeDasharray="3 6" />
-        <circle cx="56" cy="56" r="26" fill={`url(#${id}-orb)`} />
-        <circle cx="56" cy="56" r="26" fill="none" stroke="white" strokeOpacity="0.25" />
+        <circle cx="56" cy="56" r="44" fill={`url(#${id}-halo)`} className="spot-halo" />
+        <circle cx="56" cy="56" r="46" className="spot-ring" fill="none" stroke="rgb(var(--accent-400))" strokeOpacity="0.35" strokeDasharray="3 6" />
+        <circle cx="56" cy="56" r="26" className="spot-orb" fill={`url(#${id}-orb)`} />
+        <circle cx="56" cy="56" r="26" className="spot-rim" fill="none" stroke="white" strokeOpacity="0.25" />
         <g className="motion-ok:animate-orbit-calm" style={{ transformOrigin: "56px 56px" }}>
-          <circle cx="56" cy="10" r="4" fill="rgb(var(--aurora-300))" />
-          <circle cx="56" cy="10" r="8" fill="rgb(var(--aurora-300))" opacity="0.2" />
+          <circle cx="56" cy="10" r="4" className="spot-moon" fill="rgb(var(--aurora-300))" />
+          <circle cx="56" cy="10" r="8" className="spot-moon-glow" fill="rgb(var(--aurora-300))" opacity="0.2" />
         </g>
         <path d={SPARK(97, 22, 5)} className="fill-zinc-400 motion-ok:animate-twinkle dark:fill-white" />
         <circle cx="16" cy="88" r="1.8" className="fill-zinc-400 motion-ok:animate-twinkle [animation-delay:-1.4s] dark:fill-white" />

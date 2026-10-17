@@ -12,7 +12,6 @@ import {
   HistoryIcon,
   MOCK_INTERVIEW_ENABLED,
   Monitor,
-  Reveal,
   Skeleton,
   LoadGate,
   Target,
@@ -20,7 +19,6 @@ import {
   buttonClass,
   cx,
   focusRing,
-  spotlightMove,
   safeLocal,
 } from "@orbit/ui";
 import { Card, ErrorNote } from "../components/ui";
@@ -137,12 +135,12 @@ export function HomePage() {
         <h2 id="products-title" className="mb-3 font-display text-lg font-semibold tracking-tight">
           Your tools
         </h2>
-        <Reveal stagger className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
           <CopilotRow sessions={sessions.data} />
           {MOCK_INTERVIEW_ENABLED && <PracticeRow sessions={sessions.data} />}
           <ResumeRow resumes={resumes.data} />
           <JobsRow tracker={tracker.data} />
-        </Reveal>
+        </div>
         <KashSecPromo className="mt-4" />
       </section>
 
@@ -407,40 +405,17 @@ function SetUp({ items }: { items: ChecklistItem[] }) {
   );
 }
 
-// Each card's corner: the product's colour as a soft glow, with a hairline orbit and its planet (like the front page's
-// product stages), so the four read as one set. Literal classes so Tailwind keeps them.
-const CORNER: Record<ProductId, { glow: string; planet: string }> = {
-  interview: { glow: "from-indigo-500/[0.2] dark:from-indigo-400/[0.16]", planet: "fill-indigo-500 dark:fill-indigo-400" },
-  practice: { glow: "from-orange-500/[0.2] dark:from-orange-400/[0.16]", planet: "fill-orange-500 dark:fill-orange-400" },
-  resume: { glow: "from-emerald-500/[0.2] dark:from-emerald-400/[0.16]", planet: "fill-emerald-500 dark:fill-emerald-400" },
-  jobs: { glow: "from-sky-500/[0.2] dark:from-sky-400/[0.16]", planet: "fill-sky-500 dark:fill-sky-400" },
-};
-
-/** One product on Home: its mark and name, where you are with it in a line, and its way in. */
+/** One product on Home: its mark and name, where you are with it in a line, and its way in. A flat workbench card:
+ *  the product's colour is its mark only, no glow or decoration behind it. */
 function ProductRow({ product, status, children }: { product: ProductId; status: ReactNode; children: ReactNode }) {
   const { name } = PRODUCTS[product];
-  const { glow, planet } = CORNER[product];
   return (
-    <div onPointerMove={spotlightMove} className="orbit-card orbit-spotlight lift group relative isolate flex flex-col overflow-hidden rounded-2xl p-5">
-      <div
-        aria-hidden="true"
-        className={cx("absolute -right-12 -top-14 -z-10 h-56 w-56 rounded-full bg-[radial-gradient(closest-side,var(--tw-gradient-stops))] to-transparent", glow)}
-      />
-      <svg aria-hidden="true" viewBox="0 0 200 110" fill="none" className="absolute right-0 top-0 -z-10 h-[6.875rem] w-[12.5rem]">
-        <ellipse cx="120" cy="40" rx="80" ry="26" transform="rotate(-16 120 40)" className="stroke-zinc-300 dark:stroke-white/15" strokeDasharray="2 5" />
-        <ellipse cx="120" cy="40" rx="52" ry="16" transform="rotate(-16 120 40)" className="stroke-zinc-200 dark:stroke-white/[0.08]" />
-        <g className="origin-[120px_40px] motion-ok:transition-transform motion-ok:duration-700 motion-ok:ease-out motion-ok:group-hover:rotate-[10deg]">
-          <circle cx="75.4" cy="29.4" r="10" className={cx(planet, "opacity-20")} />
-          <circle cx="75.4" cy="29.4" r="5" className={planet} />
-        </g>
-        <circle cx="30" cy="16" r="1.3" className="fill-zinc-400/70 dark:fill-white/40" />
-        <circle cx="186" cy="92" r="1" className="fill-zinc-400/70 dark:fill-white/30" />
-      </svg>
-      <div className="flex items-center gap-3 sm:block">
-        <ProductMark product={product} size="lg" />
-        <h3 className="font-display text-base font-semibold sm:mt-4">{name}</h3>
+    <div className="glass-panel flex flex-col rounded-2xl p-5">
+      <div className="flex items-center gap-3">
+        <ProductMark product={product} />
+        <h3 className="font-display text-base font-semibold">{name}</h3>
       </div>
-      <div className="mt-2 text-sm text-zinc-600 sm:mt-1 dark:text-zinc-400">{status}</div>
+      <div className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">{status}</div>
       <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">{children}</div>
     </div>
   );

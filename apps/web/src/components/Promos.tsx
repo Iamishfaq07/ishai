@@ -54,7 +54,7 @@ export function KashSecPromo({ tone = "card", className }: { tone?: "dark" | "ca
       rel="noopener"
       className={cx(
         "group flex items-center gap-3 rounded-2xl",
-        dark ? "p-2.5 bg-emerald-400/10 ring-1 ring-emerald-300/20 hover:bg-emerald-400/15" : "orbit-card lift p-4",
+        dark ? "p-2.5 bg-emerald-400/10 ring-1 ring-emerald-300/20 hover:bg-emerald-400/15" : "orbit-card p-4 transition-colors duration-quick hover:!border-zinc-300 dark:hover:!border-white/20",
         focusRing,
         className,
       )}
@@ -65,7 +65,7 @@ export function KashSecPromo({ tone = "card", className }: { tone?: "dark" | "ca
       <span className="min-w-0 flex-1">
         <span className={cx("flex flex-wrap items-center gap-1.5 text-sm font-semibold", dark ? "text-white" : "")}>
           {dark ? "Learn cybersecurity and AI for free on KashSec" : "Learn cybersecurity for free"}
-          <span className={cx("rounded-full px-1.5 py-px text-[0.625rem] font-bold uppercase tracking-wide", dark ? "bg-emerald-300/20 text-emerald-100" : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300")}>Free</span>
+          <span className={cx("rounded-full px-1.5 py-px text-[0.625rem] font-bold", dark ? "bg-emerald-300/20 text-emerald-100" : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300")}>Free</span>
         </span>
         {!dark && <span className="block text-xs text-zinc-600 dark:text-zinc-400">KashSec: cybersecurity and AI lessons, free for everyone.</span>}
       </span>
