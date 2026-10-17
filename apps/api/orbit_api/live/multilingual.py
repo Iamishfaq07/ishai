@@ -45,6 +45,13 @@ _EN_MARKERS = frozenset((
 ).split())
 # Japanese words that contain a question word without asking anything ("どうぞ" has "どう", "いつも" has "いつ").
 _JA_FALSE_WH = ("どうしても", "どうぞ", "どうも", "いつも", "何でも", "なんでも", "どこでも", "いつでも", "誰でも")
+# "You", folded, in the languages that put it right after the verb or the question word.
+_YOU: dict[str, frozenset[str]] = {
+    "fr": frozenset({"vous", "tu"}), "de": frozenset({"sie", "du", "ihr"}),
+    "nl": frozenset({"u", "je", "jij", "jullie"}),
+    "es": frozenset({"usted", "ustedes", "tu", "vosotros"}), "pt": frozenset({"voce", "voces", "tu"}),
+    "it": frozenset({"lei", "tu", "voi"}), "ru": frozenset({"вы", "ты"}),
+}
 _TYPE_ORDER: tuple[QuestionType, ...] = (
     QuestionType.salary, QuestionType.clarification, QuestionType.coding, QuestionType.system_design,
     QuestionType.resume, QuestionType.behavioral, QuestionType.leadership, QuestionType.culture,
@@ -71,7 +78,7 @@ def fold(text: str, keep: str = "") -> str:
         if len(decomposed) > 1 and decomposed[0].isascii():
             out.append(decomposed[0])  # é → e, ñ → n (but й, the Devanagari vowel signs, kana: as they are)
         else:
-            out.append(ch.replace("\u093c", "") if len(decomposed) > 1 else ch)
+            out.append(ch)  # (NFKC already split the precomposed nukta letters, U+0958-095F)
     return "".join(out)
 
 
@@ -525,6 +532,11 @@ class MultiSpeech(Speech):
         elif wh:
             score += wh
             reasons.append("embedded_question_word")
+        # "Comment géreriez-vous…", "Wie würden Sie…": a question word and then "you" asks, as English's "how would
+        # you" does, also when no question mark was written.
+        if wh >= 0.4 and not c.sov and self._addressed(r, c):
+            score += 0.2
+            reasons.append("embedded_request")
         request = self._request(r, c)
         if request:
             score += request
@@ -577,6 +589,11 @@ class MultiSpeech(Speech):
         if c.at_clause_start(c.wh, r, within=3) and (r.qmark or not c.raw.wh_needs_mark):
             return 0.4
         return 0.2 if c.wh.contains(r.toks) and not c.raw.wh_needs_mark else 0.0
+
+    @staticmethod
+    def _addressed(r: _Read, c: Cues) -> bool:
+        you = _YOU.get(c.code, frozenset())
+        return any(t in you for clause in c.clauses(r.toks) for t in clause[1:4])
 
     def _yes_no(self, r: _Read, c: Cues) -> bool:
         if c.japanese:

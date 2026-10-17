@@ -101,6 +101,8 @@ class _Pending:
     endpoint_ms: int | None = None
     resumed_ms: int | None = None  # VAD heard the interviewer again after the endpoint
     speech: Speech = ENGLISH  # how the session's language is read (live/multilingual.py)
+    # Another language: this turn's words arrived after the candidate had started answering it (see on_transcript).
+    late: bool = False
 
     @property
     def full_text(self) -> str:
@@ -120,6 +122,7 @@ class QuestionFinalizer:
         # The last question the candidate's answer closed (whole, as it was held), for a manual "Answer" after they
         # started talking ("Okay, let me think…"): it used to get only the interviewer's last sentence.
         self._closed: tuple[str, int] | None = None
+        self._closed_turn: str | None = None  # the turn the candidate's answer last closed
 
     def on_transcript(
         self, turn_id: str, text: str, now_ms: int, *, is_final: bool, endpoint: bool = False
@@ -129,12 +132,18 @@ class QuestionFinalizer:
         early = self._settle_claim(now_ms)
         p = self._pending
         if p is None or p.turn_id != turn_id:
+            # Another language: Deepgram's multilingual finals can trail the speech by seconds (about 5 s measured
+            # for Hindi), so a turn's words may arrive after the candidate began answering it. That question is over:
+            # it fires at once and nothing later is stitched onto it (it used to swallow the next question). English
+            # finals come within a second; its path is unchanged.
+            late = not self._speech.english and p is None and turn_id == self._closed_turn
             # "Let's switch to system design. How would you design…" is a new question, however soon it comes.
-            held = "" if self._speech.starts_new_topic(text) else self._held_question(p, now_ms)
+            held = "" if late or self._speech.starts_new_topic(text) else self._held_question(p, now_ms)
             held_conf = self._confidence_of(p) if held and p is not None else 0.0
             answered = held if held and p is not None and p.fired_question == held else None
             p = self._pending = _Pending(turn_id=turn_id, text=text, last_speech_ms=now_ms, held_question=held,
-                                         held_confidence=held_conf, answered=answered, speech=self._speech)
+                                         held_confidence=held_conf, answered=answered, speech=self._speech,
+                                         late=late)
         else:
             if text != p.text:
                 p.last_speech_ms = now_ms
@@ -234,6 +243,7 @@ class QuestionFinalizer:
             fired = self._evaluate(now_ms)
         if self._speech.detect(p.full_text, "interviewer", self.context).is_question:
             self._closed = (p.full_text, now_ms)
+        self._closed_turn = p.turn_id
         self._pending = None
         return fired
 
@@ -260,7 +270,7 @@ class QuestionFinalizer:
         """If the interviewer is still going (no candidate answer in between, within the continuation window),
         what they said before: the new turn continues it. A question carries over whole; a non-question
         set-up ("Let's talk about image classification.") carries over as a cleaned lead-in."""
-        if p is None or not (p.endpointed or p.fired_text is not None):
+        if p is None or p.late or not (p.endpointed or p.fired_text is not None):
             return ""
         since = p.endpoint_ms if p.endpoint_ms is not None else p.last_speech_ms
         resumed = p.resumed_ms is not None and now_ms - p.resumed_ms <= RESUME_HOLD_MS
@@ -367,6 +377,8 @@ class QuestionFinalizer:
 
     def _holding(self, p: _Pending, now_ms: int) -> bool:
         """Still inside the patience window, or the interviewer resumed and their words aren't in yet."""
+        if p.late:
+            return False  # the candidate is already answering it
         if p.resumed_ms is not None and now_ms - p.resumed_ms < RESUME_HOLD_MS:
             return True
         return p.endpoint_ms is not None and now_ms - p.endpoint_ms < self.grace_ms

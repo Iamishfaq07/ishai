@@ -247,6 +247,34 @@ def test_a_hindi_backchannel_doesnt_end_the_question_but_an_answer_does() -> Non
     assert fired is not None and fired.detection.question_text.startswith("आप एक cache")
 
 
+def test_a_final_that_comes_after_the_candidate_answered_fires_alone() -> None:
+    # Measured with Deepgram's multilingual model: the Hindi final came ~5 s after the speech, after the candidate had
+    # started answering. It re-opened the question, and the interviewer's next one was stitched onto it.
+    f = QuestionFinalizer(provider_endpoints=True, grace_ms=1500, speech=speech_for("hi"))
+    q1, q2 = "अपने पिछले प्रोजेक्ट के बारे में बताइए।", "आप एक ऐसा सिस्टम कैसे डिज़ाइन करेंगे?"
+    assert f.on_transcript("t1", "अपने पिछले प्रोजेक्ट के बारे", 1000, is_final=False) is None
+    assert f.on_candidate_speech(4000, "जी, मेरे पिछले प्रोजेक्ट में मैंने पेमेंट सिस्टम पर काम किया") is None
+    assert f.tick(5600) is None  # the candidate's answer closed it (nothing to fire yet: no final)
+    fired = f.on_transcript("t1", q1, 6000, is_final=True, endpoint=True)
+    assert fired is not None and fired.detection.question_text == q1  # at once, no wait: they're answering it
+    f.on_speech_activity(6500)
+    assert f.on_transcript("t2", q2, 8000, is_final=True, endpoint=True) is None
+    second = f.tick(9600)
+    assert second is not None and second.detection.question_text == q2 and not second.continues
+    # English is unchanged: the same order of events still continues the question (its finals aren't late).
+    en = QuestionFinalizer(provider_endpoints=True, grace_ms=1500)
+    en.on_transcript("t1", "Tell me about your last", 1000, is_final=False)
+    en.on_candidate_speech(4000, "Sure, so at Acme I worked on payments")
+    en.tick(5600)
+    assert en.on_transcript("t1", "Tell me about your last project.", 6000, is_final=True, endpoint=True) is None
+
+
+def test_a_question_word_and_you_ask_without_a_question_mark() -> None:
+    assert speech_for("fr").detect("Comment géreriez-vous une panne en production", "interviewer").should_generate
+    assert speech_for("de").detect("Wie würden Sie das testen", "interviewer").should_generate
+    assert not speech_for("fr").detect("Merci, vous êtes très gentil.", "interviewer").should_generate
+
+
 def test_japanese_completeness() -> None:
     ja = speech_for("ja")
     assert not ja.is_complete("前の会社では、プロジェクトの設計を担当していて")

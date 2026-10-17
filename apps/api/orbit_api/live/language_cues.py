@@ -40,7 +40,9 @@ class RawCues:
     lead_fillers: str = ""  # words: dropped from the front before judging ("Bueno, ¿y la base de datos?")
     continuers: str = ""  # whole: "and then?", "why?" right after a question
     follow_up: str = ""  # contains: refers back to the previous answer
-    trailing: str = ""  # words: a sentence ending on one of these isn't finished
+    # words: a sentence ending on one of these isn't finished. Not the articles that double as pronouns after a
+    # verb ("Expliquez-le", "Explique-o") or lose their accent in the transcript ("en él" as "en el").
+    trailing: str = ""
     trailing_endings: str = ""  # Japanese: endings that mean it isn't finished ("けど")
     clause_breaks: str = ""  # words: where a turn's clauses split ("y", "also")
     openers: str = ""  # words: skipped at the start of a sentence
@@ -96,7 +98,7 @@ ES = RawCues(
               "qué harías diferente|qué harías distinto|qué cambiarías|y el|y la|y los|y las|y tu|y su|y qué|y cómo|"
               "y por qué|más detalle|más sobre eso|ese proyecto|esa decisión|ese enfoque|esa base de datos|"
               "el equipo|el resultado|el proyecto|mirando atrás|en retrospectiva|cómo fue|cómo lo",
-    trailing="y|o|pero|que|de|del|el|la|los|las|un|una|unos|unas|a|al|en|con|por|para|porque|como|sobre|mi|tu|su|"
+    trailing="y|o|pero|que|de|del|la|los|las|un|una|unos|unas|a|al|en|con|por|para|porque|como|sobre|su|"
              "nuestro|este|esta|ese|esa|cual|me|te|le|lo|se|sin|entre|hacia|desde|hasta|cuando|donde",
     clause_breaks="y|entonces|bueno|vale|ahora|pues|ok|okay|perfecto|genial",
     openers="entonces|bueno|vale|ok|okay|ahora|y|bien|pues|eh|este|mira|oye|perfecto|genial",
@@ -212,7 +214,7 @@ PT = RawCues(
               "o que você faria diferente|o que mudaria|e o|e a|e os|e as|e o seu|e a sua|e o que|e como|"
               "e por que|mais detalhe|mais sobre isso|esse projeto|essa decisão|essa abordagem|esse banco de dados|"
               "a equipe|o time|o resultado|o projeto|olhando para trás|em retrospecto|como foi",
-    trailing="e|ou|mas|que|de|do|da|dos|das|o|a|os|as|um|uma|uns|umas|em|no|na|nos|nas|com|por|pelo|pela|para|"
+    trailing="e|ou|mas|que|de|do|da|dos|das|um|uma|uns|umas|em|no|na|nos|nas|com|por|pelo|pela|para|"
              "pra|se|porque|como|sobre|meu|minha|seu|sua|nosso|nossa|esse|essa|este|esta|qual|me|te|lhe|sem|entre|"
              "até|desde|quando|onde",
     clause_breaks="e|então|bom|ok|agora|beleza|certo|ótimo|legal|perfeito",
@@ -328,7 +330,7 @@ FR = RawCues(
               "et ta|et que|et comment|et pourquoi|plus de détails|plus sur|ce projet|cette décision|"
               "cette approche|cette base de données|l équipe|le résultat|le projet|avec le recul|"
               "rétrospectivement",
-    trailing="et|ou|mais|donc|de|du|des|le|la|les|l|un|une|à|au|aux|pour|avec|sur|dans|par|que|qu|qui|si|parce|"
+    trailing="et|ou|mais|donc|de|du|des|un|une|à|au|aux|pour|avec|sur|dans|par|que|qu|qui|si|parce|"
              "comme|en|mon|ma|mes|ton|ta|votre|vos|notre|nos|ce|cette|ces|quel|quelle|d|sans|entre|vers|chez|quand",
     clause_breaks="et|alors|donc|bon|ok|okay|maintenant|parfait|super",
     openers="alors|donc|bon|ok|okay|maintenant|et|ben|euh|bien|voilà",
