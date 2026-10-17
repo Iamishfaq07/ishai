@@ -239,15 +239,17 @@ export function PlanComparison({ monthly }: { monthly: MonthlyPlan[] | null }) {
   const zero = useZero(plans);
   if (!plans.length) return null;
   const yes = <Check className="mx-auto h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-label="Included" />;
+  // A week's allowance is for its own days (D57), not a month's.
+  const per = (m: MonthlyPlan) => (m.days < 30 ? periodLabel(m.days) : "/ month");
   const rows: Array<[string, ReactNode, ...ReactNode[]]> = [
     ["Price", zero, ...plans.map((m) => `${priceOf(m)} ${periodLabel(m.days)}`), "Custom"],
     ["Per month", zero, ...plans.map((m) => (m.days < 30 ? "—" : (m.per_month_text ?? rupees(m.per_month_inr ?? m.price_inr)))), "Custom"],
     ["Resume editor, ATS score, downloads", yes, ...plans.map(() => yes), yes],
     ["Job matches, fit checks, tracker", yes, ...plans.map(() => yes), yes],
     ["Resume AI", "1 credit per action (a fix: 1/5)", ...plans.map((m) => (m.resume_ai ? "Unlimited" : "Credits")), "Unlimited"],
-    ["Live interview help", "From credits", ...plans.map((m) => `${time(m.live_minutes)} / month`), "Custom"],
-    ["Mock and video interviews", "From credits", ...plans.map((m) => `${time(m.mock_minutes)} / month`), "Custom"],
-    ["Screenshot answers", free ? `${n(free.screenshots)} / month` : "Limited", ...plans.map((m) => (m.screenshots === null ? "Unlimited" : `${n(m.screenshots)} / month`)), "Custom"],
+    ["Live interview help", "From credits", ...plans.map((m) => `${time(m.live_minutes)} ${per(m)}`), "Custom"],
+    ["Mock and video interviews", "From credits", ...plans.map((m) => `${time(m.mock_minutes)} ${per(m)}`), "Custom"],
+    ["Screenshot answers", free ? `${n(free.screenshots)} / month` : "Limited", ...plans.map((m) => (m.screenshots === null ? "Unlimited" : `${n(m.screenshots)} ${per(m)}`)), "Custom"],
     ["Documents", free ? n(free.documents) : "Limited", ...plans.map((m) => n(m.documents)), "Custom"],
     ["Longest session", free ? `${free.max_session_minutes} min` : "—", ...plans.map((m) => `${m.max_session_minutes} min`), "Custom"],
     ["Renewal", "—", ...plans.map(() => "Never automatic"), "Arranged with us"],
