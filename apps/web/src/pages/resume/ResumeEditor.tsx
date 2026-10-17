@@ -617,14 +617,17 @@ function ResumeEditor() {
           onChange={(e) => change((r) => ({ ...r, title: e.target.value }))}
           className="min-w-0 flex-1 basis-48 font-display text-lg font-semibold sm:max-w-[16rem]"
         />
-        <SaveState state={save.state} revision={saves.revision(resume.id)} error={save.error} onRetry={() => setSave({ state: "dirty" })} onLoadLatest={loadLatest} onKeepMine={keepMine} />
-        <div className="flex items-center">
-          <HistoryButton label="Undo" shortcut="Ctrl+Z" disabled={!steps.undo} onClick={() => step("undo")}>
-            <Undo2 className="h-4 w-4" />
-          </HistoryButton>
-          <HistoryButton label="Redo" shortcut="Ctrl+Shift+Z" disabled={!steps.redo} onClick={() => step("redo")}>
-            <Redo2 className="h-4 w-4" />
-          </HistoryButton>
+        {/* The save state and undo/redo wrap together, so a phone never strands undo on a line of its own. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <SaveState state={save.state} revision={saves.revision(resume.id)} error={save.error} onRetry={() => setSave({ state: "dirty" })} onLoadLatest={loadLatest} onKeepMine={keepMine} />
+          <div className="flex items-center">
+            <HistoryButton label="Undo" shortcut="Ctrl+Z" disabled={!steps.undo} onClick={() => step("undo")}>
+              <Undo2 className="h-4 w-4" />
+            </HistoryButton>
+            <HistoryButton label="Redo" shortcut="Ctrl+Shift+Z" disabled={!steps.redo} onClick={() => step("redo")}>
+              <Redo2 className="h-4 w-4" />
+            </HistoryButton>
+          </div>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {report && (
