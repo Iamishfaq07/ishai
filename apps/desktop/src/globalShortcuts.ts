@@ -148,37 +148,50 @@ export function useGlobalShortcuts(): void {
     let disposed = false;
     const registered: string[] = [];
     const failed = new Set<string>();
-    void (async () => {
+    inTurn(async () => {
+      if (disposed) return; // changed again before its turn: the next run registers
       // A page reload (e.g. after changing the server) leaves the previous page's registrations behind in the
       // native plugin, bound to handlers that no longer exist — every new register() would then fail as
       // "already registered". These are only ever Orbit's own shortcuts, so clear them first.
       await unregisterAll().catch(() => undefined);
-      if (disposed) return;
       if (!shortcutsEnabled()) {
         unavailable = new Set();
         return;
       }
       const map = loadShortcuts();
       for (const action of Object.keys(map) as GlobalAction[]) {
+        if (disposed) break;
         const acc = map[action];
         try {
           await register(acc, (event) => {
             if (event.state === "Pressed") window.dispatchEvent(new CustomEvent(SHORTCUT_EVENT, { detail: action }));
           });
-          if (disposed) await unregister(acc).catch(() => undefined);
-          else registered.push(acc);
+          registered.push(acc);
         } catch (err) {
           failed.add(acc);
           console.warn(`Global shortcut ${acc} unavailable`, err);
         }
       }
       if (!disposed) unavailable = failed;
-    })();
+    });
     return () => {
       disposed = true;
-      for (const acc of registered) void unregister(acc).catch(() => undefined);
+      inTurn(async () => {
+        for (const acc of registered) await unregister(acc).catch(() => undefined);
+      });
     };
   }, [version]);
+}
+
+let turns: Promise<void> = Promise.resolve();
+/**
+ * Runs registration work one task at a time, in order. Two runs at once (Settings' switch toggled twice in quick
+ * succession) interleaved: the older one, already replaced, unregistered a combo just after the newer one's
+ * register() had failed on it as "already registered", leaving that shortcut dead and marked "Taken by another app".
+ */
+export function inTurn(task: () => Promise<void>): Promise<void> {
+  turns = turns.then(task).catch((err: unknown) => console.warn("Global shortcuts:", err));
+  return turns;
 }
 
 /** Subscribe to global shortcut presses. */

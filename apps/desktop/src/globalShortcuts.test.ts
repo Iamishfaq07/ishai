@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GLOBAL_DEFAULTS, formatAccelerator, migrateShortcuts, type GlobalAction } from "./globalShortcuts";
+import { GLOBAL_DEFAULTS, formatAccelerator, inTurn, migrateShortcuts, type GlobalAction } from "./globalShortcuts";
 
 /** What Settings saved before: the full map, with whatever the user changed. */
 const OLD_SAVED: Record<GlobalAction, string> = {
@@ -53,5 +53,26 @@ describe("global shortcut defaults", () => {
     expect(effective({})).toEqual(GLOBAL_DEFAULTS);
     expect(formatAccelerator("CommandOrControl+Alt+PageUp")).toBe("Ctrl+Alt+PgUp");
     expect(formatAccelerator("CommandOrControl+Alt+Down")).toBe("Ctrl+Alt+↓");
+  });
+});
+
+describe("registration runs one change at a time", () => {
+  it("finishes a slow run before the next starts, even when one fails", async () => {
+    const log: string[] = [];
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const first = inTurn(async () => {
+      log.push("old: register A");
+      await wait(20);
+      log.push("old: register B");
+    });
+    const failing = inTurn(async () => {
+      log.push("cleanup");
+      throw new Error("unregister failed");
+    });
+    const next = inTurn(async () => {
+      log.push("new: register A");
+    });
+    await Promise.all([first, failing, next]);
+    expect(log).toEqual(["old: register A", "old: register B", "cleanup", "new: register A"]);
   });
 });
