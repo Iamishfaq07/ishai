@@ -91,7 +91,7 @@ async def test_thinking_gets_extra_first_token_headroom() -> None:
 
 @pytest.mark.parametrize("why", ["no backup", "plan without fallback", "backup down"])
 async def test_with_nowhere_to_fail_over_a_slow_first_token_is_waited_for(why: str) -> None:
-    """The budget is for failing over. Without a backup (render.yaml configures none) a first token at 11 s used to
+    """The budget is for failing over. Without a backup (production configures none) a first token at 11 s used to
     be cut off at 10 s, retried by the engine, cut off again: "That took too long" instead of a late answer."""
     primary = Scripted("deepseek", ["late ", "but here"], stall_s=0.3)
     backup = None if why == "no backup" else Scripted("backup", ["b"])

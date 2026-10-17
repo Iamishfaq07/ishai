@@ -134,10 +134,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def running_commit() -> str | None:
     """The deployed git commit (short), so a deploy can be confirmed from outside. Railway sets
-    RAILWAY_GIT_COMMIT_SHA and Render RENDER_GIT_COMMIT for every deploy from GitHub; ORBIT_GIT_COMMIT covers other
-    hosts."""
-    sha = (os.environ.get("RAILWAY_GIT_COMMIT_SHA") or os.environ.get("RENDER_GIT_COMMIT")
-           or os.environ.get("ORBIT_GIT_COMMIT"))
+    RAILWAY_GIT_COMMIT_SHA for every deploy from GitHub; ORBIT_GIT_COMMIT covers other hosts."""
+    sha = os.environ.get("RAILWAY_GIT_COMMIT_SHA") or os.environ.get("ORBIT_GIT_COMMIT")
     return sha[:7] if sha else None
 
 

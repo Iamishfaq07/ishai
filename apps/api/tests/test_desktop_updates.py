@@ -164,12 +164,13 @@ def test_github_unsigned_draft_or_failing_release_is_never_offered(client: TestC
 
 
 def test_health_reports_the_running_commit(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    for var in ("ORBIT_GIT_COMMIT", "RAILWAY_GIT_COMMIT_SHA"):
+    for var in ("ORBIT_GIT_COMMIT", "RAILWAY_GIT_COMMIT_SHA", "RENDER_GIT_COMMIT"):
         monkeypatch.delenv(var, raising=False)
-    monkeypatch.setenv("RENDER_GIT_COMMIT", "1ba8f00c0ffee1234567890")
-    assert client.get("/health").json()["commit"] == "1ba8f00"
-    monkeypatch.delenv("RENDER_GIT_COMMIT")
     assert client.get("/health").json()["commit"] is None
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "1ba8f00c0ffee1234567890")  # Render is retired: not read any more
+    assert client.get("/health").json()["commit"] is None
+    monkeypatch.setenv("ORBIT_GIT_COMMIT", "1ba8f00c0ffee1234567890")  # any other host
+    assert client.get("/health").json()["commit"] == "1ba8f00"
     monkeypatch.setenv("RAILWAY_GIT_COMMIT_SHA", "538fab8b1d0e02734b96df9e615452fd1cffc2ca")  # Railway's deploys
     assert client.get("/health").json()["commit"] == "538fab8"
 
@@ -180,9 +181,9 @@ def test_the_public_url_comes_from_the_setting_else_from_the_host(monkeypatch: p
     for var in ("ORBIT_API_PUBLIC_URL", "RENDER_EXTERNAL_URL", "RAILWAY_PUBLIC_DOMAIN"):
         monkeypatch.delenv(var, raising=False)
     railway = "orbit-api-sg-production.up.railway.app"
-    assert Settings(ORBIT_API_PUBLIC_URL="https://api.orbitanswer.com", RENDER_EXTERNAL_URL="https://x.onrender.com",
+    assert Settings(ORBIT_API_PUBLIC_URL="https://api.orbitanswer.com",
                     RAILWAY_PUBLIC_DOMAIN=railway).api_public_url == "https://api.orbitanswer.com"  # the setting wins
-    assert Settings(RENDER_EXTERNAL_URL="https://orbit-api-sg.onrender.com",
-                    RAILWAY_PUBLIC_DOMAIN=railway).api_public_url == "https://orbit-api-sg.onrender.com"
     assert Settings(RAILWAY_PUBLIC_DOMAIN=railway).api_public_url == f"https://{railway}"  # named bare
+    # Render is retired: its address variable isn't read any more
+    assert Settings(RENDER_EXTERNAL_URL="https://orbit-api-sg.onrender.com").api_public_url is None
     assert Settings().api_public_url is None

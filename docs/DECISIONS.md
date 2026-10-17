@@ -401,3 +401,14 @@ joining to the model and spends several screenshot credits for one question. On 
 overlapping parts about a screen high (live/shots.py), sent in order with a note on how to read them: a vision model
 shrinks one very tall image until its text blurs. Still one screenshot, one answer, one credit; nothing is stored.
 Windows only, like the rest of the desktop's capture; the web app keeps single screenshots.
+
+**D55 — Render is retired the day after the move, not two weeks later.** D53 planned to keep the old Render service
+running until desktop installs had updated past 0.1.40. The owner suspended it on 2026-10-17, once desktop 0.1.41
+(which talks to `api.orbitanswer.com`) was published and verified, and Railway (Hobby plan, Singapore) had taken all
+web traffic. The cost is accepted: a desktop app still on 0.1.40 or older calls Render directly, for sign-in and for
+its update check, so it stops working and can't update itself; its user reinstalls from orbitanswer.com. Installs
+that already updated are unaffected, and so is the website. Suspended rather than deleted at first, so it can be
+resumed if that turns out to matter. The code no longer reads Render's variables (`RENDER_GIT_COMMIT`,
+`RENDER_EXTERNAL_URL`), the Worker no longer keeps it warm, and `render.yaml` is gone. Payment webhooks name a host's
+own address, so they move to `https://api.orbitanswer.com/...` in Razorpay's and PayPal's dashboards; until they do,
+payments still settle through the checkout return and the reconciler.

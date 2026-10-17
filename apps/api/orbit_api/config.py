@@ -170,12 +170,10 @@ class Settings(BaseSettings):
     google_client_secret: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_GOOGLE_CLIENT_SECRET"))
     google_redirect_uri: str | None = Field(None, validation_alias=AliasChoices("ORBIT_GOOGLE_REDIRECT_URI"))
     # The API's own public base URL (https://api.orbitanswer.com in production). When known, links the API hands out
-    # (desktop installer downloads) are built from it instead of the request's Host header. Unset, the host's own
-    # address is used: Render's RENDER_EXTERNAL_URL, else Railway's RAILWAY_PUBLIC_DOMAIN (that may be the
-    # *.up.railway.app name rather than the custom domain, so production sets this explicitly).
-    api_public_url: str | None = Field(
-        None, validation_alias=AliasChoices("ORBIT_API_PUBLIC_URL", "RENDER_EXTERNAL_URL")
-    )
+    # (desktop installer downloads) are built from it instead of the request's Host header. Unset, Railway's
+    # RAILWAY_PUBLIC_DOMAIN is used (that may be the *.up.railway.app name rather than the custom domain, so
+    # production sets this explicitly).
+    api_public_url: str | None = Field(None, validation_alias=AliasChoices("ORBIT_API_PUBLIC_URL"))
     railway_public_domain: str | None = Field(None, validation_alias=AliasChoices("RAILWAY_PUBLIC_DOMAIN"))
     # SameSite for the session cookie. The web app reaches the API through its own /api proxy (same site), so Lax
     # works and blocks the cookie on cross-site requests. "none" only for a web app that calls the API cross-site.
