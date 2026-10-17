@@ -3,23 +3,30 @@ import {
   AnswersScene,
   Avatar,
   Badge,
+  BillingScene,
   Breadcrumbs,
   Button,
   ButtonGroup,
   Callout,
   Card,
+  CelebrationScene,
   Checkbox,
+  CodeScene,
   CopilotScene,
+  CosmicEmptyState,
   DialogActions,
   DocumentsScene,
-  EmptyState,
   EvidenceScene,
   Field,
   IconButton,
   IconTile,
+  InboxScene,
   Input,
+  InterviewDayScene,
   JobsScene,
   Kbd,
+  LearningScene,
+  LinkedInScene,
   MenuButton,
   NoResultsScene,
   OfferScene,
@@ -30,8 +37,10 @@ import {
   PracticeScene,
   ProgressBar,
   RadioGroup,
+  ReferralScene,
   ResumeScene,
   SearchInput,
+  SecurityScene,
   SegmentedControl,
   Select,
   Sheet,
@@ -53,7 +62,9 @@ import {
   Tooltip,
   Tr,
   TrackerScene,
+  VideoScene,
   WelcomeScene,
+  WorkingState,
   confirmDialog,
   toast,
   Download,
@@ -487,12 +498,30 @@ const SCENES: Array<[string, ReactNode]> = [
   ["Documents", <DocumentsScene key="d" />],
   ["No results", <NoResultsScene key="n" />],
   ["Offline", <OfflineScene key="f" />],
+  ["Nothing heard", <CopilotScene key="q" quiet />],
+  ["Success", <CelebrationScene key="cs" />],
+  ["LinkedIn AI", <LinkedInScene key="li" />],
+  ["Code AI", <CodeScene key="co" />],
+  ["Learning AI", <LearningScene key="le" />],
+  ["Video interview", <VideoScene key="v" />],
+  ["Plan & credits", <BillingScene key="b" />],
+  ["Security", <SecurityScene key="se" />],
+  ["People and referrals", <ReferralScene key="rf" />],
+  ["Inbox and support", <InboxScene key="in" />],
+  ["Interview day", <InterviewDayScene key="id" />],
 ];
 
 function Illustrations() {
+  // Remounting the scenes plays their entrance again (at Full motion; Gentle fades, Off shows the final frame).
+  const [take, setTake] = useState(0);
   return (
     <Section title="Illustrations and empty states">
-      <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <Row label="Scene motion">
+        <Button variant="secondary" onClick={() => setTake((t) => t + 1)}>
+          Play the scenes again
+        </Button>
+      </Row>
+      <ul key={take} className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {SCENES.map(([name, art]) => (
           <li key={name} className="glass-panel flex flex-col items-center gap-2 rounded-2xl p-4">
             <div className="w-full max-w-[12rem]">{art}</div>
@@ -500,12 +529,20 @@ function Illustrations() {
           </li>
         ))}
       </ul>
-      <EmptyState
-        art={<div className="w-44">{<TrackerScene />}</div>}
+      <CosmicEmptyState
+        variant="tracker"
         title="Nothing tracked yet"
         body="Save jobs from your matches, or add one you applied to elsewhere."
         action={<Button>Add a job</Button>}
       />
+      <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">AI waits over two seconds: reading, writing, matching (loops at Full motion only)</p>
+      <div key={take} className="grid gap-3 md:grid-cols-3">
+        <Card><WorkingState kind="reading" label="Reading your resume" /></Card>
+        <Card><WorkingState kind="writing" label="Writing your review" /></Card>
+        <Card><WorkingState kind="matching" label="Finding jobs that match your resume" /></Card>
+      </div>
+      <Card className="max-w-sm"><WorkingState compact kind="writing" label="Writing your letter" /></Card>
+      <PageHeader icon={LayoutGrid} title="A product page" subtitle="Its header can carry the product's scene from lg up." art={<CodeScene />} />
     </Section>
   );
 }

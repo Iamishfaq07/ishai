@@ -161,12 +161,16 @@ export function PageHeader({
   actions,
   icon: Icon,
   back,
+  art,
 }: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
   icon?: ComponentType<{ className?: string }>;
   back?: ReactNode;
+  /** A small Orbit scene at the row's end, from `lg` up: a product's main page (decorative). It overhangs the row a
+   *  little rather than making the header taller. */
+  art?: ReactNode;
 }) {
   const head = (
     <div className={cx("flex flex-wrap items-center justify-between gap-x-6 gap-y-3", !back && "mb-6")}>
@@ -177,6 +181,7 @@ export function PageHeader({
           {subtitle && <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>}
         </div>
       </div>
+      {art && <div aria-hidden="true" className="scene-host -my-4 hidden w-32 shrink-0 lg:block">{art}</div>}
       {actions}
     </div>
   );
