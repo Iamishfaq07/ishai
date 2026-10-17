@@ -1,5 +1,29 @@
 # Implementation log
 
+## Search, phase 2: guides, links, security.txt (2026-10-18)
+
+- **Orbit's own interview guides** at `/guides/<slug>` (`pages/guides/`): "Tell me about yourself" for freshers,
+  HR-round questions for freshers, and what happened to Google's Interview Warmup. Built to HTML like the company
+  guides, with an Article in the structured data, breadcrumbs and a "last reviewed" date. All three are drafts
+  (`published: false`): reachable at their address for the owner to read, but noindex, out of the sitemap and not
+  linked from the site until approved (DECISIONS D67). `/guides` lists the published ones and is noindex until there
+  are some.
+- **Company and role guides link to each other**: each company guide suggests role guides for the kinds of job it's
+  known for, and each role guide suggests company guides (`ROLES_FOR_COMPANIES`, `COMPANIES_FOR_ROLES`).
+- **Policies at their own address everywhere**: the app, the cookie notice and the policies link to `/privacy`,
+  `/terms`, `/cookies` and `/refund` (they went through a 301 from `.html`); the dev server and `vite preview` answer
+  those addresses too (`policyPages.ts`). The terms', cookies' and refund policy's descriptions say more (120–160
+  characters).
+- **`/.well-known/security.txt`** (RFC 9116): the contact form, an expiry date, the language and its canonical
+  address; `/security.txt` redirects there. No bounty is offered.
+- **The favicon** is made from the new app icon (marketing/brand/orbit-app-icon-1024.png).
+- **The resume sample on `/resume-ai`** no longer adds a second `<h1>` (its name is a paragraph there; the editor's
+  preview and the PDF keep the heading).
+- **Faster first paint**: the theme script is inline in the built page (`inlineTheme.ts`; the CSP allows it by hash),
+  one render-blocking request fewer.
+- The new preview images (`/og/*`), the sign-in font (`/fonts/*`) and the maskable icon are served without the Worker
+  and cached for a day; llms.txt and llms-full.txt list the company and role guides.
+
 ## Red team: account takeover paths closed (2026-10-18)
 
 An attacker's-eye pass over the API, web app, Worker, desktop app and extension (docs/SECURITY_REVIEW.md "Red team,
