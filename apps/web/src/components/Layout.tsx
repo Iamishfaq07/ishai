@@ -51,7 +51,7 @@ import { CONTACT_PAGE, POLICY_LINKS } from "../lib/contact";
 import { SHELL_EVENTS, isTypingTarget, openSupport } from "../lib/shell";
 import { CODE_HOME } from "../pages/code/paths";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
-import { KASHSEC_URL, LEARN_HOME } from "../pages/learn/links";
+import { LEARN_HOME, kashsecUrl } from "../pages/learn/links";
 import { OFFERS_HOME } from "../pages/offers/model";
 import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { prefetchRoute } from "../routes";
@@ -290,11 +290,13 @@ export function Layout() {
               label="Learning AI"
               sections={LEARN_SECTIONS}
               action={
-                <a href={KASHSEC_URL} target="_blank" rel="noopener" className={buttonClass("secondary", "md", "min-h-10")}>
-                  <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-300" aria-hidden /> KashSec: free security and AI lessons
-                  <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-                  <span className="sr-only">(opens in a new tab)</span>
-                </a>
+                pathname !== LEARN_HOME && (
+                  <a href={kashsecUrl("learning-tabs")} target="_blank" rel="noopener" className={buttonClass("secondary", "md", "min-h-10")}>
+                    <ShieldCheck className="h-4 w-4 text-teal-700 dark:text-teal-300" aria-hidden /> KashSec Academy: free cybersecurity
+                    <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                    <span className="sr-only">(opens KashSec in a new tab)</span>
+                  </a>
+                )
               }
             />
           )}

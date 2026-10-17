@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { JobMission, JobTrackerEntry, MissionFit, MissionNextStep } from "@orbit/types";
 import {
+  Spot,
   ArrowRight,
   ArrowUpRight,
   Check,
@@ -16,7 +17,9 @@ import {
   toast,
 } from "@orbit/ui";
 import { BackLink } from "../../components/BackLink";
+import { KashSecContext } from "../../components/KashSec";
 import { Button, Card, ErrorNote, IconButton, Input, Select } from "../../components/ui";
+import { isSecurityRole } from "../../lib/security";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { errorText, formatDate } from "../../lib/format";
@@ -147,6 +150,7 @@ export function JobMissionPage() {
                     mission.reload();
                   }}
                 />
+                {isSecurityRole(entry.title) && <KashSecContext placement="mission" />}
               </aside>
             </div>
           </>
@@ -236,7 +240,7 @@ function FitPanel({ fit, entry }: { fit: MissionFit | null; entry: JobTrackerEnt
   if (!fit) {
     return (
       <Card>
-        <h2 className="font-display text-base font-semibold">Not checked yet</h2>
+        <h2 className="flex items-center gap-3 font-display text-base font-semibold"><Spot kind="fit" />Not checked yet</h2>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           A fit check reads the job post against your resume, requirement by requirement, and quotes both.
         </p>
@@ -253,7 +257,7 @@ function FitPanel({ fit, entry }: { fit: MissionFit | null; entry: JobTrackerEnt
   return (
     <Card>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-display text-base font-semibold">{fit.verdict} fit</h2>
+        <h2 className="flex items-center gap-3 font-display text-base font-semibold"><Spot kind="fit" />{fit.verdict} fit</h2>
         <span className="text-xs text-zinc-500 dark:text-zinc-400">Checked {formatDate(fit.checked_at)}</span>
       </div>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{fit.summary}</p>
@@ -310,7 +314,7 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
   return (
     <div className="space-y-4">
       <Card>
-        <h2 className="font-display text-base font-semibold">The resume for this job</h2>
+        <h2 className="flex items-center gap-3 font-display text-base font-semibold"><Spot kind="resume" />The resume for this job</h2>
         {r ? (
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <span className={cx("inline-flex h-8 min-w-10 items-center justify-center rounded-lg px-1.5 text-sm font-semibold tabular-nums ring-1", scoreTone(r.score))}>{r.score}</span>
@@ -418,7 +422,7 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
 function PracticePanel({ mission, entry }: { mission: JobMission; entry: JobTrackerEntry }) {
   return (
     <Card>
-      <h2 className="font-display text-base font-semibold">Practice for {entry.company}</h2>
+      <h2 className="flex items-center gap-3 font-display text-base font-semibold"><Spot kind="mic" />Practice for {entry.company}</h2>
       <dl className="mt-3 grid grid-cols-2 gap-3 sm:max-w-sm">
         <div>
           <dt className="text-xs text-zinc-600 dark:text-zinc-400">Practice rounds</dt>
@@ -452,7 +456,7 @@ function OfferPanel({ mission, entry, onMission }: { mission: JobMission; entry:
   const o = mission.offer;
   return (
     <Card>
-      <h2 className="font-display text-base font-semibold">Offer</h2>
+      <h2 className="flex items-center gap-3 font-display text-base font-semibold"><Spot kind="offer" />Offer</h2>
       {o ? (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <div>

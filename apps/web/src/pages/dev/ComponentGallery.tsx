@@ -23,6 +23,7 @@ import {
   InboxScene,
   Input,
   InterviewDayScene,
+  KashSecScene,
   JobsScene,
   Kbd,
   LearningScene,
@@ -40,7 +41,9 @@ import {
   ReferralScene,
   ResumeScene,
   SearchInput,
+  SPOT_KINDS,
   SecurityScene,
+  Spot,
   SegmentedControl,
   Select,
   Sheet,
@@ -77,6 +80,7 @@ import {
 } from "@orbit/ui";
 import { TranscriptDemo } from "./TranscriptGallery";
 import { VoiceVisualizers } from "./VoiceGallery";
+import { KashSecContext, KashSecFeature, KashSecHomeCard } from "../../components/KashSec";
 
 /**
  * The component gallery (development builds only, at /dev/components): every shared primitive in its states, on the
@@ -513,6 +517,7 @@ const SCENES: Array<[string, ReactNode]> = [
   ["People and referrals", <ReferralScene key="rf" />],
   ["Inbox and support", <InboxScene key="in" />],
   ["Interview day", <InterviewDayScene key="id" />],
+  ["KashSec Academy", <KashSecScene key="ks" />],
 ];
 
 function Illustrations() {
@@ -546,6 +551,21 @@ function Illustrations() {
         <Card><WorkingState kind="matching" label="Finding jobs that match your resume" /></Card>
       </div>
       <Card className="max-w-sm"><WorkingState compact kind="writing" label="Writing your letter" /></Card>
+      <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Spot graphics: a section's or card's own picture, 40 px (56 for a card that leads with it), one per card</p>
+      <ul key={`spots-${take}`} className="grid grid-cols-3 gap-3 sm:grid-cols-6 lg:grid-cols-9">
+        {SPOT_KINDS.map((k) => (
+          <li key={k} className="flex flex-col items-center gap-1.5 rounded-xl border border-zinc-200 p-3 dark:border-white/10">
+            <Spot kind={k} />
+            <span className="text-[11px] text-zinc-600 dark:text-zinc-400">{k}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">KashSec Academy: the feature card, the contextual card (security roles), Home's "More from us"</p>
+      <KashSecFeature placement="gallery" />
+      <div className="grid gap-3 md:grid-cols-2">
+        <KashSecContext placement="gallery" />
+        <KashSecHomeCard />
+      </div>
       <PageHeader icon={LayoutGrid} title="A product page" subtitle="Its header can carry the product's scene from lg up." art={<CodeScene />} />
     </Section>
   );

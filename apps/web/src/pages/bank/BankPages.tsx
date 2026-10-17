@@ -15,7 +15,9 @@ import {
   cx,
   focusRing,
 } from "@orbit/ui";
+import { KashSecContext } from "../../components/KashSec";
 import { Input } from "../../components/ui";
+import { isSecurityRole } from "../../lib/security";
 import { inkButton } from "../../marketing/ProductPage";
 import { PublicLayout } from "../../marketing/PublicLayout";
 import { Container, Eyebrow, IconTile } from "../../marketing/primitives";
@@ -405,6 +407,8 @@ export function GuideView({ kind, entry }: { kind: BankKind; entry: BankCompany 
             ))}
           </ul>
         </section>
+
+        {isSecurityRole(name, ...entry.aliases) && <KashSecContext placement="role-guide" className="mt-10 max-w-3xl" />}
 
         <section aria-labelledby="practise-title" className="mt-14 rounded-3xl bg-zinc-950 p-6 text-white sm:p-10 dark:border dark:border-[rgb(var(--site-line))] dark:bg-[rgb(var(--site-surface))]">
           <h2 id="practise-title" className="mk-h2 text-white">
