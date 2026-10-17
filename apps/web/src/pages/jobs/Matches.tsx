@@ -11,13 +11,14 @@ import {
   X,
   CosmicEmptyState,
   LoadGate,
+  WorkingState,
   cx,
   isIndia,
   focusRing,
   regionWords,
   sampleCity,
 } from "@orbit/ui";
-import { Button, Card, ErrorNote, PageHeader, Select, Spinner } from "../../components/ui";
+import { Button, Card, ErrorNote, PageHeader, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useCountry } from "../../lib/country";
@@ -271,7 +272,7 @@ function Matches({ profile }: { profile: JobProfile }) {
         {!basis && <NoResume blank={Boolean(profile.resume)} />}
 
         {feed.loading && !data ? (
-          <Spinner big label={suggesting ? "Reading your resume" : "Finding jobs that match your resume"} state="searching" />
+          <WorkingState kind={suggesting ? "reading" : "matching"} label={suggesting ? "Reading your resume" : "Finding jobs that match your resume"} />
         ) : feed.error && !data ? (
           <div className="space-y-4">
             <ErrorNote onRetry={feed.reload}>{errorText(feed.error)}</ErrorNote>
@@ -638,7 +639,7 @@ export function firstFetch(feed: JobFeed): boolean {
 export function FirstFetch() {
   return (
     <Card className="text-center">
-      <Spinner big label="Fetching the latest jobs from company career pages and remote boards" state="searching" />
+      <WorkingState kind="matching" label="Fetching the latest jobs from company career pages and remote boards" />
       <p className="-mt-6 pb-4 text-sm text-zinc-500 dark:text-zinc-400">The first time takes a minute or two. They appear here by themselves.</p>
     </Card>
   );

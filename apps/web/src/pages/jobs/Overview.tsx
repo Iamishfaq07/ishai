@@ -10,10 +10,11 @@ import {
   SlidersHorizontal,
   Sparkles,
   LoadGate,
+  WorkingState,
   cx,
   focusRing,
 } from "@orbit/ui";
-import { Card, ErrorNote, Spinner } from "../../components/ui";
+import { Card, ErrorNote } from "../../components/ui";
 import { errorText } from "../../lib/format";
 import { ADD_JOB_PATH, FollowUps } from "./FollowUps";
 import { useJobFeed, useJobsAi } from "./JobsAi";
@@ -96,7 +97,7 @@ function Overview({ profile }: { profile: JobProfile }) {
         {!basis && <NoResume blank={Boolean(profile.resume)} />}
 
         {feed.loading && !data ? (
-          <Spinner big label={suggesting ? "Reading your resume" : "Finding jobs that match your resume"} state="searching" />
+          <WorkingState kind={suggesting ? "reading" : "matching"} label={suggesting ? "Reading your resume" : "Finding jobs that match your resume"} />
         ) : feed.error && !data ? (
           <ErrorNote onRetry={feed.reload}>{errorText(feed.error)}</ErrorNote>
         ) : data && data.total === 0 ? (

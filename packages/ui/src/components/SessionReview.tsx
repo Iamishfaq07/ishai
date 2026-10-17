@@ -1,9 +1,12 @@
 import { useState } from "react";
 import type { DepthDimension, DepthScores, ReviewItem, SessionReview as Review } from "@orbit/types";
-import { ArrowUpRight, Bookmark, BookmarkCheck, CircleCheck, MicOff, RotateCcw, Target, type LucideIcon } from "../icons";
+import { ArrowUpRight, Bookmark, BookmarkCheck, CircleCheck, RotateCcw, Target, type LucideIcon } from "../icons";
 import { clock, reviewLength } from "../live/answerPace";
 import { cx } from "./cx";
 import { useCountUp } from "./Reveal";
+import { CopilotScene } from "./scenes/CopilotScene";
+import { PracticeScene } from "./scenes/PracticeScene";
+import { WorkingScene } from "./scenes/WorkingScene";
 import { Button, Card, EmptyState, ErrorNote, Textarea } from "./ui";
 
 export interface SessionReviewProps {
@@ -51,8 +54,8 @@ export function SessionReview({ review, ended, empty = false, onGenerate, onDril
   if (!review && ended && empty) {
     return (
       <EmptyState
-        className="animate-fade-up"
-        icon={MicOff}
+        className="scene-host animate-fade-up"
+        art={<CopilotScene quiet className="w-44 sm:w-52" />}
         title="Nothing was captured"
         body="No speech was heard and no questions were asked in this session, so there's nothing to review. If audio was on, check your microphone and interviewer audio with the tests on the start screen next time."
       />
@@ -62,6 +65,8 @@ export function SessionReview({ review, ended, empty = false, onGenerate, onDril
   if (!review) {
     return (
       <Card className="animate-fade-up text-center">
+        {/* What a review gives you; while it's being written, the pen at work (the same size, so nothing moves). */}
+        {ended && (busy ? <WorkingScene kind="writing" className="mx-auto mb-3 w-36" /> : <PracticeScene className="mx-auto mb-3 w-36" />)}
         <p className="font-semibold">No review yet</p>
         <p className="mx-auto mt-1 max-w-md text-sm text-zinc-500 dark:text-zinc-400">
           {ended

@@ -24,8 +24,9 @@ import {
   questionText,
   skillGapText,
   storyFromQuestion,
+  WorkingState,
 } from "@orbit/ui";
-import { Button, Spinner } from "../../components/ui";
+import { Button } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import type { LiveLaunchState } from "../SessionSetup";
@@ -131,7 +132,7 @@ function QuestionsPanel({ resume, state, setState, hasJob, onShowJob }: {
         <AiCostNote className="mt-2" />
         {error && <AiErrorNote className="mt-2" error={error.text} upgrade={error.upgrade} />}
       </Panel>
-      {busy && <Spinner label="Reading your resume the way an interviewer does" state="searching" />}
+      {busy && <WorkingState compact kind="reading" label="Reading your resume the way an interviewer does" />}
       {result && !busy && <QuestionList resume={resume} result={result} state={state} setState={setState} />}
     </>
   );
@@ -463,7 +464,7 @@ function GapPanel({ resume, state, setState, hasJob, onShowJob }: {
           </div>
         )}
       </Panel>
-      {busy && <Spinner label="Comparing your resume with the job post" state="weaving" />}
+      {busy && <WorkingState compact kind="matching" label="Comparing your resume with the job post" />}
     </>
   );
 }

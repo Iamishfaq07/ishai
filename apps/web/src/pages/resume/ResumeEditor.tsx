@@ -41,6 +41,7 @@ import {
   splitPlaceholders,
   toast,
   useCountUp,
+  WorkingState,
 } from "@orbit/ui";
 import { Button, EmptyState, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -1320,7 +1321,7 @@ function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; o
         <AiCostNote className="mt-2" />
         {error && (upgrade ? <AiErrorNote className="mt-2" error={error} upgrade /> : <p className="mt-2 text-sm text-rose-600">{error}</p>)}
       </Panel>
-      {busy && <Spinner label="Writing your letter" state="composing" />}
+      {busy && <WorkingState compact kind="writing" label="Writing your letter" />}
       {(text || !busy) && (
         <Panel title="Your letter" action={fills.length > 0 ? <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">{fills.length} to fill in</span> : undefined}>
           <Textarea aria-label="Letter text" rows={18} maxLength={6000} value={text} onChange={(e) => onText(e.target.value)} placeholder="Write it yourself, or let the AI draft it above." />
@@ -1709,7 +1710,7 @@ function AiPanel({
         </div>
         <AiCostNote className="mt-2" />
       </Panel>
-      {busy && <Spinner label={busy} state={busyState(busy)} />}
+      {busy && <WorkingState compact kind={({ searching: "reading", weaving: "matching", composing: "writing" } as const)[busyState(busy)]} label={busy} />}
       {error && !busy && <AiErrorNote error={error} upgrade={upgrade} />}
       {safe > 0 && !busy && (
         <Button variant="secondary" onClick={onAcceptSafe}>
