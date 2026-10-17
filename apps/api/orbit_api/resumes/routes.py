@@ -21,6 +21,7 @@
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
@@ -28,6 +29,7 @@ from collections.abc import Awaitable
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
+import anyio
 from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import and_, func, or_, select, update
@@ -266,11 +268,15 @@ async def account_allowance(request: Request, user: Annotated[User, Depends(requ
 
 
 async def _spend[T](allowance: Allowance, work: Awaitable[T]) -> T:
-    """Runs an AI request, giving the credit back if it fails: an outage or a garbled answer mustn't spend it."""
+    """Runs an AI request, giving the credit back if it fails: an outage or a garbled answer mustn't spend it, and
+    neither does a cancelled request (the client went away: Starlette's middleware cancels the handler and keeps
+    cancelling every await in it, so the refund is shielded). `release` is idempotent: a refund already made by
+    `_generate` isn't made twice."""
     try:
         return await work
-    except Exception:
-        await allowance.release()
+    except BaseException:
+        with anyio.CancelScope(shield=True), contextlib.suppress(Exception):
+            await allowance.release()
         raise
 
 
