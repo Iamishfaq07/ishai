@@ -7,6 +7,7 @@ const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/warmup/, "Interview warm-up"],
   [/^\/companies(\/|$)/, "Company interview guides"],
   [/^\/roles(\/|$)/, "Interview guides by role"],
+  [/^\/guides(\/|$)/, "Interview guides"],
   [/^\/start/, "New session"],
   [/^\/sessions\/[^/]+/, "Session"],
   [/^\/sessions/, "Sessions"],

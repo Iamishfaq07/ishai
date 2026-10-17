@@ -13,7 +13,9 @@ import { ResumeAiPublicPage } from "../pages/resume/ResumeAiPublic";
 import { BankIndexView, GuideView } from "../pages/bank/BankPages";
 import { COMPANIES_PATH, ROLES_PATH, companyPath, rolePath } from "../pages/bank/content";
 import { loadCompany, loadRole } from "../pages/bank/docs";
-import { guideHead, indexHead, staticHead, type Head } from "./seo";
+import { ARTICLES, GUIDES_PATH, guidePath, publishedArticles } from "../pages/guides/articles";
+import { ArticleView, GuidesHubView } from "../pages/guides/GuidesPages";
+import { articleHead, guideHead, guidesHubHead, indexHead, staticHead, type Head } from "./seo";
 
 export type PageMeta = Record<string, { title: string; description: string }>;
 
@@ -94,6 +96,20 @@ export async function publicRoutes(pageMeta: PageMeta): Promise<PublicRoute[]> {
   });
   for (const r of roles) {
     routes.push({ path: rolePath(r.slug), file: `roles/${r.slug}.html`, head: guideHead("role", r), lastmod: r.reviewed, render: () => <GuideView kind="role" entry={r} /> });
+  }
+
+  // Orbit's articles (pages/guides/articles.ts): a draft is built too, so the owner can read it at its address, but
+  // it's noindex and the sitemap leaves it out (entry.tsx) until it's published.
+  const published = publishedArticles();
+  routes.push({
+    path: GUIDES_PATH,
+    file: "guides.html",
+    head: guidesHubHead(published.length),
+    lastmod: latest(published.map((a) => a.reviewed)) || undefined,
+    render: () => <GuidesHubView articles={published} />,
+  });
+  for (const a of ARTICLES) {
+    routes.push({ path: guidePath(a.slug), file: `guides/${a.slug}.html`, head: articleHead(a), lastmod: a.reviewed, render: () => <ArticleView article={a} /> });
   }
 
   routes.push(...POLICIES.map(({ path, lastmod }) => ({ path, lastmod })));

@@ -7,6 +7,7 @@
 // source for both the built pages and the head tags the Worker adds to the rest (DECISIONS D67).
 import { COMPANIES_PATH, ROLES_PATH, companyPath, rolePath, type BankKind } from "../pages/bank/content";
 import type { BankCard, BankCompany, BankRole } from "../pages/bank/types";
+import { GUIDES_PATH, guidePath, type GuideArticle } from "../pages/guides/articles";
 import { SITE, breadcrumbs, graph, organization, siteUrl, structuredDataFor, webPage as sitePage, website } from "../../worker/site.js";
 import { imageFor } from "../../worker/meta.js";
 
@@ -22,6 +23,9 @@ export interface Head {
   ogImage?: string;
   /** Structured data (JSON-LD), when there's something true to say. */
   jsonLd?: Record<string, unknown>;
+  /** Kept out of search results (a draft waiting for review): `<meta name="robots" content="noindex">`, and left
+   *  out of the sitemap. */
+  noindex?: boolean;
 }
 
 export const url = (path: string): string => siteUrl(path);
@@ -109,6 +113,49 @@ export function guideHead(kind: BankKind, entry: BankCompany | BankRole): Head {
       website(),
       breadcrumbs([["Home", "/"], [company ? "Companies" : "Roles", company ? COMPANIES_PATH : ROLES_PATH], [entry.name, path]]),
       webPage(path, title, description, { about, dateModified: entry.reviewed }),
+    ),
+  };
+}
+
+/** /guides: the articles' list. Out of search results until at least one article is published (a list of drafts). */
+export function guidesHubHead(published: number): Head {
+  const title = "Interview guides: answers, rounds and practice | Orbit";
+  const description =
+    "How to answer the questions most interviews ask, how companies interview and what interviews for each kind of job test, with free practice.";
+  return {
+    title,
+    description,
+    canonical: url(GUIDES_PATH),
+    noindex: published === 0,
+    jsonLd: graph(organization(), website(), breadcrumbs([["Home", "/"], ["Guides", GUIDES_PATH]]), webPage(GUIDES_PATH, title, description, { "@type": "CollectionPage" })),
+  };
+}
+
+/** One article: its own title and description, an Article in the structured data, noindex while it's a draft. */
+export function articleHead(article: GuideArticle): Head {
+  const path = guidePath(article.slug);
+  return {
+    title: article.title,
+    description: article.description,
+    canonical: url(path),
+    noindex: !article.published,
+    jsonLd: graph(
+      organization(),
+      website(),
+      breadcrumbs([["Home", "/"], ["Guides", GUIDES_PATH], [article.headline, path]]),
+      webPage(path, article.title, article.description),
+      {
+        "@type": "Article",
+        "@id": `${url(path)}#article`,
+        headline: article.headline,
+        description: article.description,
+        dateModified: article.reviewed,
+        inLanguage: "en",
+        isAccessibleForFree: true,
+        author: { "@id": `${SITE}/#organization` },
+        publisher: { "@id": `${SITE}/#organization` },
+        mainEntityOfPage: { "@id": url(path) },
+      },
     ),
   };
 }

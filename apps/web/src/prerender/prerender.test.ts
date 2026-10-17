@@ -8,6 +8,7 @@ import { routeKind } from "../../worker/routes.js";
 import { canonicalLocation, robotsTxt } from "../../worker/seo.js";
 import { BANK_DIR } from "../../questionBank";
 import type { BankCompany, BankRole } from "../pages/bank/types";
+import { ARTICLES } from "../pages/guides/articles";
 import { POLICIES, workerFile } from "./routes";
 
 const web = join(BANK_DIR, "..", "..", "..", "web");
@@ -162,5 +163,44 @@ describe("the built sitemap and robots.txt", () => {
   it("lets crawlers read every page in it, and nothing signed in", () => {
     for (const l of locs()) expect(allowedByRobots(new URL(l).pathname), l).toBe(true);
     for (const p of ["/_prerender/home", "/mock", "/sessions", "/jobs/matches", "/resume-ai/abc", "/api/v1/me"]) expect(allowedByRobots(p), p).toBe(false);
+  });
+});
+
+describe("the articles (/guides)", () => {
+  it("builds every article, a draft with noindex and out of the sitemap", () => {
+    const sitemap = files.get("sitemap.xml")!;
+    for (const a of ARTICLES) {
+      const html = files.get(`guides/${a.slug}.html`);
+      expect(html, a.slug).toBeDefined();
+      expect(html!.includes('<meta name="robots" content="noindex" />'), a.slug).toBe(!a.published);
+      expect(sitemap.includes(`/guides/${a.slug}<`), a.slug).toBe(a.published);
+      expect(text(html!), a.slug).toContain(squash(a.summary));
+      const types = jsonLd(html!)["@graph"].map((n) => n["@type"]);
+      expect(types, a.slug).toEqual(expect.arrayContaining(["Article", "BreadcrumbList", "Organization", "WebSite"]));
+    }
+    expect(files.has("guides.html")).toBe(true);
+    expect(files.get("guides.html")!.includes('content="noindex"')).toBe(ARTICLES.every((a) => !a.published));
+  });
+
+  it("gives each article a title within 60 characters and a description of 120 to 160", () => {
+    const titles = new Set<string>();
+    for (const a of ARTICLES) {
+      expect(a.title.length, a.slug).toBeLessThanOrEqual(60);
+      expect(a.title.endsWith(" | Orbit"), a.slug).toBe(true);
+      expect(a.description.length, a.slug).toBeGreaterThanOrEqual(120);
+      expect(a.description.length, a.slug).toBeLessThanOrEqual(160);
+      expect(a.reviewed, a.slug).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      titles.add(a.title);
+    }
+    expect(titles.size).toBe(ARTICLES.length);
+  });
+
+  it("links only to pages that exist", () => {
+    const paths = new Set([...files.keys()].filter((f) => f.endsWith(".html")).map((f) => `/${f.replace(/\.html$/, "")}`));
+    const exists = (p: string) => paths.has(p) || p === "/" || Object.keys(PAGE_META).includes(p) || routeKind(p) === "app";
+    for (const a of ARTICLES) {
+      const inline = JSON.stringify(a.sections).match(/\]\((\/[^)\s]*)\)/g)?.map((m) => m.slice(2, -1)) ?? [];
+      for (const p of [...inline, ...a.related.map((r) => r.to)]) expect(exists(p.split("?")[0]!), `${a.slug} -> ${p}`).toBe(true);
+    }
   });
 });
