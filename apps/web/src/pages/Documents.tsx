@@ -36,7 +36,9 @@ function KindMark({ kind }: { kind: DocumentKind }) {
   );
 }
 
-const MAX_MB = 10;
+// The API's limit (max_upload_bytes, at most 5 MB). A bigger file is turned away before it reaches the route,
+// without CORS headers, so the browser would only say "Can't reach Orbit" instead of "too large".
+const MAX_MB = 5;
 
 export function DocumentsPage() {
   const location = useLocation();
