@@ -3,6 +3,7 @@ import { createPortal, flushSync } from "react-dom";
 import { Link, useLocation, useParams } from "react-router-dom";
 import type { AtsReport, CoverLetterLength, EvidenceItem, CoverLetterTone, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeInput, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
 import {
+  Callout,
   ArrowLeft,
   ArrowUpRight,
   Briefcase,
@@ -664,26 +665,32 @@ function ResumeEditor() {
       <AllowanceBanner />
 
       {draft && (
-        <div role="alert" className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">
-          <span className="min-w-0 flex-1">
+        <div role="alert" className="mb-4">
+          <Callout
+            tone="warning"
+            title="Unsaved edits found"
+            action={
+              <>
+                <Button size="sm" variant="ghost" onClick={discardDraft}>
+                  Discard
+                </Button>
+                <Button size="sm" onClick={restoreDraft}>
+                  Restore them
+                </Button>
+              </>
+            }
+          >
             This browser kept edits to this resume from {new Date(draft.savedAt).toLocaleString()} that weren't saved.
             {draft.baseRevision !== undefined && draft.baseRevision !== resume.revision ? " It has been saved elsewhere since; restoring puts your edits over that." : ""}
-          </span>
-          <Button size="sm" onClick={restoreDraft}>
-            Restore them
-          </Button>
-          <Button size="sm" variant="ghost" onClick={discardDraft}>
-            Discard
-          </Button>
+          </Callout>
         </div>
       )}
       <ResumeCareerActions resume={resume} />
       {notice && (
-        <div role="status" className="mb-4 flex items-start gap-2 rounded-xl bg-indigo-500/10 p-3 text-sm text-indigo-900 dark:text-indigo-200">
-          <span className="flex-1">{notice}</span>
-          <button type="button" aria-label="Dismiss" onClick={() => setNotice(null)} className={cx("rounded p-0.5", focusRing)}>
-            <X className="h-4 w-4" />
-          </button>
+        <div role="status" className="mb-4">
+          <Callout tone="info" onDismiss={() => setNotice(null)}>
+            {notice}
+          </Callout>
         </div>
       )}
 

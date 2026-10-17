@@ -111,14 +111,18 @@ export function SearchInput({ className, ...rest }: Omit<InputHTMLAttributes<HTM
  */
 export function SegmentedControl<T extends string>({
   label,
+  labelledBy,
+  describedBy,
   options,
   value,
   onChange,
   size = "md",
   className,
 }: {
-  /** Names the group for screen readers (and is its visible label when the caller doesn't show one). */
-  label: string;
+  /** Names the group for screen readers, unless `labelledBy` points at a visible label. */
+  label?: string;
+  labelledBy?: string;
+  describedBy?: string;
   options: Array<{ value: T; label: ReactNode; disabled?: boolean }>;
   value: T;
   onChange: (value: T) => void;
@@ -145,7 +149,9 @@ export function SegmentedControl<T extends string>({
     <div
       ref={list}
       role="radiogroup"
-      aria-label={label}
+      aria-label={labelledBy ? undefined : label}
+      aria-labelledby={labelledBy}
+      aria-describedby={describedBy}
       onKeyDown={onKey}
       className={cx("relative inline-flex max-w-full rounded-xl bg-zinc-500/10 p-1", className)}
     >

@@ -17,6 +17,8 @@ import {
   confirmDialog,
   toast,
   LoadGate,
+  TabPanel,
+  Tabs,
 } from "@orbit/ui";
 import { BackLink } from "../components/BackLink";
 import { Button, Card, ErrorNote, Input, PageHeader } from "../components/ui";
@@ -148,8 +150,14 @@ export function SessionDetailPage() {
           </div>
         </nav>
       )}
-      <div role="tablist" className="mb-6 flex gap-0 border-b sm:gap-1 border-zinc-200 dark:border-zinc-800">
-        {(
+      {/* The shared tabs: a sliding underline, arrow keys between them, each panel named by its tab. */}
+      <Tabs
+        label="Session"
+        idBase="session"
+        value={tab}
+        onChange={setTab}
+        className="mb-6"
+        tabs={(
           [
             // [id, label, shorter label for phones]
             ["review", "Review", "Review"],
@@ -157,27 +165,19 @@ export function SessionDetailPage() {
             ["transcript", `Transcript (${detail.data.turns.length})`, "Transcript"],
             ["questions", `Questions & answers (${detail.data.questions.length})`, `Q&A (${detail.data.questions.length})`],
           ] as const
-        ).map(([id, label, short]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            onClick={() => setTab(id)}
-            className={cx(
-              "-mb-px whitespace-nowrap border-b-2 px-2 py-2 text-[13px] font-medium sm:px-3 sm:text-sm",
-              tab === id ? "border-indigo-500 text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200",
-              focusRing,
-            )}
-          >
-            <span className="sm:hidden">{short}</span>
-            <span className="hidden sm:inline">{label}</span>
-          </button>
-        ))}
-      </div>
+        ).map(([id, label, short]) => ({
+          value: id,
+          label: (
+            <>
+              <span className="sm:hidden">{short}</span>
+              <span className="hidden sm:inline">{label}</span>
+            </>
+          ),
+        }))}
+      />
 
       {tab === "review" && (
-        <div className="space-y-6">
+        <TabPanel idBase="session" value="review" className="space-y-6">
         <SessionReview
           review={detail.data.summary?.review}
           practiceQueue={!session.negotiation}
@@ -208,11 +208,11 @@ export function SessionDetailPage() {
         {session.status === "ended" && session.type !== "mock" && (detail.data.turns.length > 0 || detail.data.questions.length > 0) && (
           <FollowUpCard initial={detail.data.summary?.follow_up} load={(refresh) => api.followUp(session.id, refresh)} />
         )}
-        </div>
+        </TabPanel>
       )}
-      {tab === "summary" && <SummaryView summary={detail.data.summary} />}
-      {tab === "transcript" && <TranscriptTimeline detail={detail.data} />}
-      {tab === "questions" && <QuestionsView detail={detail.data} />}
+      {tab === "summary" && <TabPanel idBase="session" value="summary"><SummaryView summary={detail.data.summary} /></TabPanel>}
+      {tab === "transcript" && <TabPanel idBase="session" value="transcript"><TranscriptTimeline detail={detail.data} /></TabPanel>}
+      {tab === "questions" && <TabPanel idBase="session" value="questions"><QuestionsView detail={detail.data} /></TabPanel>}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
 import { useParams } from "react-router-dom";
 import type { CodeAttemptRecord, CodeLanguage, CodeProblem, CodeReview } from "@orbit/types";
-import { CircleAlert, CircleCheck, Lightbulb, Play, Sparkles, LoadGate, cx, focusRing } from "@orbit/ui";
+import { Badge, CircleAlert, CircleCheck, Lightbulb, Play, Sparkles, LoadGate, cx, focusRing } from "@orbit/ui";
 import { BackLink } from "../../components/BackLink";
 import { Button, Card, EmptyState, ErrorNote, Field, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -95,7 +95,7 @@ function Workspace({ problem: p, attempts, reviewsLeft, onReviewed }: { problem:
         <Card>
           <div className="mb-1 flex flex-wrap items-center gap-2">
             <h1 className="font-display text-xl font-semibold">{p.title}</h1>
-            <span className={cx("rounded-full px-2 py-0.5 text-xs font-medium capitalize", DIFFICULTY_TONE[p.difficulty])}>{p.difficulty}</span>
+            <Badge tone={DIFFICULTY_TONE[p.difficulty]} className="capitalize">{p.difficulty}</Badge>
           </div>
           <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">{p.pattern}</p>
           <p className="text-sm leading-relaxed">{p.statement}</p>

@@ -28,6 +28,7 @@ import {
   VerifyEmailBanner,
   ApprovalBanner,
   Avatar,
+  Kbd,
   floatingClass,
   menuItemClass,
   menuKeys,
@@ -237,7 +238,7 @@ export function Layout() {
             >
               <Search className="h-[18px] w-[18px] shrink-0" aria-hidden />
               <span className="hidden flex-1 text-left text-sm md:inline">Search or jump to…</span>
-              <kbd className="hidden rounded-md bg-zinc-500/10 px-1.5 py-0.5 font-sans text-xs text-zinc-600 md:inline dark:text-zinc-400">{shortcut}</kbd>
+              <Kbd className="hidden md:inline-flex">{shortcut}</Kbd>
             </button>
             <div className="flex shrink-0 items-center gap-1 md:ml-auto">
               <WaitingForAccess admin={admin} />

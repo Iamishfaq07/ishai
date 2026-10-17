@@ -10,6 +10,7 @@ import {
   Clock,
   Download,
   HistoryIcon,
+  Kbd,
   MOCK_INTERVIEW_ENABLED,
   Monitor,
   Skeleton,
@@ -153,7 +154,7 @@ export function HomePage() {
         <button type="button" onClick={openSupport} className={cx("font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
           Support
         </button>{" "}
-        or press <kbd className="rounded border border-zinc-300 px-1 font-sans text-xs dark:border-white/15">/</kbd> to search.
+        or press <Kbd>/</Kbd> to search.
       </p>
     </div>
   );

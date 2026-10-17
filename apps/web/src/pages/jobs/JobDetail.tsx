@@ -25,7 +25,7 @@ import {
   focusRing,
   isIndia,
 } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote, Select } from "../../components/ui";
+import { Button, Card, EmptyState, ErrorNote, IconButton, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useCountry } from "../../lib/country";
 import { errorText } from "../../lib/format";
@@ -398,12 +398,8 @@ function TrackerPanel({
               </option>
             ))}
           </Select>
-          <button type="button" onClick={() => setEditing(true)} aria-label="Notes and dates" title="Notes and dates" className={cx("rounded-md p-1.5 text-zinc-400 hover:bg-indigo-500/10 hover:text-indigo-600", focusRing)}>
-            <PenLine className="h-4 w-4" />
-          </button>
-          <button type="button" onClick={() => void remove()} aria-label="Remove from your tracker" title="Remove" className={cx("rounded-md p-1.5 text-zinc-400 hover:bg-rose-500/10 hover:text-rose-600", focusRing)}>
-            <Trash2 className="h-4 w-4" />
-          </button>
+          <IconButton size="sm" icon={PenLine} onClick={() => setEditing(true)} label="Notes and dates" className="text-zinc-500" />
+          <IconButton size="sm" icon={Trash2} onClick={() => void remove()} label="Remove from your tracker" title="Remove" className="text-zinc-500 hover:!bg-rose-500/10 hover:!text-rose-700 dark:hover:!text-rose-300" />
         </div>
       )}
       {error && (

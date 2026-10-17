@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { AdminUser, AdminUserFilter, AdminUserSort } from "@orbit/types";
-import { ArrowUpDown, Check, ChevronDown, Download, LoadGate, Plus, Search, Users, X, cx, focusRing } from "@orbit/ui";
+import { Callout, Check, ChevronDown, Download, LoadGate, Plus, Search, Th, Users, X, cx, focusRing } from "@orbit/ui";
 import { Button, EmptyState, ErrorNote, Input, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
 import { downloadText, errorText } from "../lib/format";
@@ -141,10 +141,10 @@ export function AdminUsersPage() {
       <AdminTabs paymentsWaiting={data?.totals?.payments_waiting} />
       <AdminOverview version={version} />
       {data && !data.approval_required && (
-        <p className="mb-4 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">
+        <Callout tone="warning" className="mb-4">
           Sign-up approval is off on this server, so new accounts start on the Free plan. Set <code>ORBIT_SIGNUP_APPROVAL=true</code> to hold them
           here until you give them access.
-        </p>
+        </Callout>
       )}
 
       <div className="mb-3 flex flex-wrap items-center gap-3">
@@ -205,11 +205,11 @@ export function AdminUsersPage() {
             {total.toLocaleString("en-IN")} account{total === 1 ? "" : "s"}
             {only !== "all" || q ? (total === 1 ? " matches" : " match") : ""} · showing {rows.length.toLocaleString("en-IN")}
           </p>
-          <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white/70 dark:border-white/10 dark:bg-white/[0.03]">
-            <table className="w-full table-fixed text-left text-sm">
-              <thead className="border-b border-zinc-200 text-xs text-zinc-500 dark:border-white/10 dark:text-zinc-400">
+          <div className="glass-panel overflow-hidden rounded-2xl">
+            <table aria-label="Accounts" className="w-full table-fixed text-left text-sm">
+              <thead className="border-b border-zinc-200 bg-zinc-50/80 text-xs text-zinc-500 dark:border-white/10 dark:bg-white/[0.02] dark:text-zinc-400">
                 <tr>
-                  <th className="w-10 py-2 pl-3">
+                  <th className="w-10 bg-zinc-50 py-2.5 pl-4 dark:bg-zinc-900">
                     <input
                       type="checkbox"
                       aria-label="Select every account shown"
@@ -226,7 +226,7 @@ export function AdminUsersPage() {
                   <SortHeader label="Joined" column="created" sort={sort} onSort={onSort} className="hidden w-28 lg:table-cell" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
+              <tbody>
                 {rows.map((u) => (
                   <UserRow key={u.id} user={u} selected={selected.has(u.id)} onToggle={() => toggle(u.id)} onOpen={() => update({ user: u.id })} />
                 ))}
@@ -265,17 +265,11 @@ function SortHeader({
   right?: boolean;
 }) {
   const current = sort.sort === column;
+  // The shared sortable header: aria-sort on the cell, the direction's arrow beside the name.
   return (
-    <th className={cx("py-2 pr-3 font-medium", right && "text-right", className)} aria-sort={current ? (sort.order === "asc" ? "ascending" : "descending") : "none"}>
-      <button
-        type="button"
-        onClick={() => onSort(nextSort(sort, column))}
-        className={cx("inline-flex items-center gap-1 rounded hover:text-zinc-900 dark:hover:text-white", current && "text-zinc-900 dark:text-white", focusRing)}
-      >
-        {label}
-        <ArrowUpDown className={cx("h-3 w-3", current ? "opacity-100" : "opacity-40")} aria-hidden />
-      </button>
-    </th>
+    <Th sort={current ? sort.order : null} onSort={() => onSort(nextSort(sort, column))} align={right ? "right" : "left"} className={cx("px-3", className)}>
+      {label}
+    </Th>
   );
 }
 
@@ -283,8 +277,15 @@ function UserRow({ user: u, selected, onToggle, onOpen }: { user: AdminUser; sel
   const used = (u.usage?.live_minutes_used ?? 0) + (u.usage?.mock_minutes_used ?? 0);
   const admin = u.access === "admin";
   return (
-    <tr className={cx("cursor-pointer hover:bg-zinc-500/5", selected && "bg-indigo-500/5")} onClick={onOpen}>
-      <td className="py-2.5 pl-3 align-top" onClick={(e) => e.stopPropagation()}>
+    <tr
+      aria-selected={selected || undefined}
+      className={cx(
+        "cursor-pointer border-b border-zinc-100 transition-colors last:border-0 hover:bg-zinc-50 dark:border-white/[0.06] dark:hover:bg-white/[0.03]",
+        selected && "bg-indigo-500/[0.06] hover:bg-indigo-500/[0.09] dark:bg-indigo-400/[0.08]",
+      )}
+      onClick={onOpen}
+    >
+      <td className="py-2.5 pl-4 align-top" onClick={(e) => e.stopPropagation()}>
         <input
           type="checkbox"
           aria-label={`Select ${u.email}`}

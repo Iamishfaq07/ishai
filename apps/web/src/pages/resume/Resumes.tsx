@@ -27,7 +27,7 @@ import {
   isIndia,
   regionWords,
 } from "@orbit/ui";
-import { Button, Card, ErrorNote, Field, Select, Textarea } from "../../components/ui";
+import { Button, Card, ErrorNote, Field, IconButton, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText, formatDate } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
@@ -251,24 +251,17 @@ export function ResumeAiHomePage() {
                   </div>
                 </Link>
                 <div className="absolute right-3 top-3 flex">
-                  <button
-                    type="button"
+                  <IconButton
+                    size="sm"
+                    icon={Copy}
                     onClick={() => void duplicate(r)}
                     disabled={copying !== null}
-                    aria-label={`Make a copy of ${r.title}`}
+                    loading={copying === r.id}
+                    label={`Make a copy of ${r.title}`}
                     title="Make a copy (to tailor for another job)"
-                    className={cx("rounded-md p-1.5 text-zinc-400 hover:bg-indigo-500/10 hover:text-indigo-600 disabled:opacity-40", focusRing)}
-                  >
-                    <Copy className={cx("h-4 w-4", copying === r.id && "animate-pulse")} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void remove(r)}
-                    aria-label={`Delete ${r.title}`}
-                    className={cx("rounded-md p-1.5 text-zinc-400 hover:bg-rose-500/10 hover:text-rose-600", focusRing)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                    className="text-zinc-500"
+                  />
+                  <IconButton size="sm" icon={Trash2} onClick={() => void remove(r)} label={`Delete ${r.title}`} className="text-zinc-500 hover:!bg-rose-500/10 hover:!text-rose-700 dark:hover:!text-rose-300" />
                 </div>
               </Card>
             </li>

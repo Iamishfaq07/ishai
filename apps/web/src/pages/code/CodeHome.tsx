@@ -1,16 +1,13 @@
 import { Link } from "react-router-dom";
-import { CircleCheck, Code2, LoadGate, cx, focusRing } from "@orbit/ui";
+import { Badge, CircleCheck, Code2, LoadGate, cx, focusRing } from "@orbit/ui";
 import { Card, ErrorNote, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
 import { codePath } from "./paths";
 
-export const DIFFICULTY_TONE = {
-  easy: "bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
-  medium: "bg-amber-500/10 text-amber-800 dark:text-amber-200",
-  hard: "bg-rose-500/10 text-rose-800 dark:text-rose-200",
-} as const;
+/** A problem's difficulty as the shared Badge's tone. */
+export const DIFFICULTY_TONE = { easy: "success", medium: "warning", hard: "danger" } as const;
 
 /**
  * Code AI: coding-round practice by pattern (the way the prep guides recommend: learn the patterns, not hundreds of
@@ -61,7 +58,7 @@ export function CodeHomePage() {
                           <Link to={codePath(p.id)} className={cx("flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-zinc-500/5", focusRing)}>
                             {p.solved ? <CircleCheck className="h-4 w-4 shrink-0 text-emerald-500" aria-label="Solved" /> : <span aria-hidden className="h-4 w-4 shrink-0 rounded-full border-2 border-zinc-300 dark:border-zinc-600" />}
                             <span className="min-w-0 flex-1 truncate">{p.title}</span>
-                            <span className={cx("rounded-full px-2 py-0.5 text-xs font-medium capitalize", DIFFICULTY_TONE[p.difficulty])}>{p.difficulty}</span>
+                            <Badge tone={DIFFICULTY_TONE[p.difficulty]} className="capitalize">{p.difficulty}</Badge>
                             {p.attempts > 0 && !p.solved && <span className="text-xs text-zinc-500">{p.attempts} tr{p.attempts === 1 ? "y" : "ies"}</span>}
                           </Link>
                         </li>

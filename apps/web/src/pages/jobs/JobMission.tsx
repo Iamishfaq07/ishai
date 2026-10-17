@@ -16,7 +16,7 @@ import {
   toast,
 } from "@orbit/ui";
 import { BackLink } from "../../components/BackLink";
-import { Button, Card, ErrorNote, Input, Select } from "../../components/ui";
+import { Button, Card, ErrorNote, IconButton, Input, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { errorText, formatDate } from "../../lib/format";
@@ -382,18 +382,16 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
                 >
                   Open as a copy
                 </Button>
-                <button
-                  type="button"
-                  aria-label={`Delete the version sent ${formatDate(s.created_at)}`}
+                <IconButton
+                  icon={Trash2}
+                  label={`Delete the version sent ${formatDate(s.created_at)}`}
                   disabled={busy}
                   onClick={async () => {
                     if (!(await confirmDialog({ title: "Delete this sent version?", body: "The resume itself stays.", confirmLabel: "Delete", danger: true }))) return;
                     void run(() => api.deleteMissionSnapshot(entry.id, s.id));
                   }}
-                  className={cx("flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-rose-500/10 hover:text-rose-700", focusRing)}
-                >
-                  <Trash2 className="h-4 w-4" aria-hidden />
-                </button>
+                  className="text-zinc-500 hover:!bg-rose-500/10 hover:!text-rose-700 dark:hover:!text-rose-300"
+                />
               </li>
             ))}
           </ul>

@@ -411,7 +411,8 @@ export function Tabs<T extends string>({
             role="tab"
             id={`${idBase}-tab-${t.value}`}
             aria-selected={on}
-            aria-controls={`${idBase}-panel-${t.value}`}
+            // Only the chosen tab's panel is in the page, so only it points at one.
+            aria-controls={on ? `${idBase}-panel-${t.value}` : undefined}
             tabIndex={on ? 0 : -1}
             onClick={() => onChange(t.value)}
             className={cx(tabClass(on), mark && "border-transparent dark:border-transparent")}

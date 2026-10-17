@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import type { JobOfferRecord, OfferInput } from "@orbit/types";
 import { Check, CircleAlert, Copy, Mic, PenLine, Sparkles, Trash2, LoadGate, confirmDialog, cx } from "@orbit/ui";
 import { BackLink } from "../../components/BackLink";
-import { Button, Card, EmptyState, ErrorNote } from "../../components/ui";
+import { Button, Card, EmptyState, ErrorNote, IconButton } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useCountry } from "../../lib/country";
 import { errorText } from "../../lib/format";
@@ -89,7 +89,7 @@ function Detail({ offer: o, onChange, onDeleted }: { offer: JobOfferRecord; onCh
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => setEditing(true)}><PenLine className="h-4 w-4" /> Edit</Button>
-          <Button variant="ghost" disabled={busy === "delete"} onClick={() => void remove()} aria-label="Delete this offer"><Trash2 className="h-4 w-4" /></Button>
+          <IconButton icon={Trash2} disabled={busy === "delete"} onClick={() => void remove()} label="Delete this offer" className="text-zinc-500 hover:!bg-rose-500/10 hover:!text-rose-700 dark:hover:!text-rose-300" />
         </div>
       </header>
       {error && errorAt !== "plan" && errorAt !== "practise" && <ErrorNote>{error}</ErrorNote>}

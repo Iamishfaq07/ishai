@@ -26,7 +26,7 @@ import {
   cx,
   focusRing,
 } from "@orbit/ui";
-import { Button, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Textarea } from "../../components/ui";
+import { Button, EmptyState, ErrorNote, Field, IconButton, Input, PageHeader, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { downloadText, errorText } from "../../lib/format";
 import type { AsyncState } from "../../lib/useAsync";
@@ -465,12 +465,8 @@ function TrackerCard({
               </option>
             ))}
           </Select>
-          <button type="button" onClick={() => setEditing(true)} aria-label={`Notes and dates for ${entry.title}`} title="Notes and dates" className={cx("rounded-md p-1.5 text-zinc-400 hover:bg-indigo-500/10 hover:text-indigo-600", compact && "ml-auto", focusRing)}>
-            <PenLine className="h-4 w-4" />
-          </button>
-          <button type="button" onClick={onRemove} aria-label={`Remove ${entry.title}`} title="Remove" className={cx("rounded-md p-1.5 text-zinc-400 hover:bg-rose-500/10 hover:text-rose-600", focusRing)}>
-            <Trash2 className="h-4 w-4" />
-          </button>
+          <IconButton size="sm" icon={PenLine} onClick={() => setEditing(true)} label={`Notes and dates for ${entry.title}`} title="Notes and dates" className={cx("text-zinc-500", compact && "ml-auto")} />
+          <IconButton size="sm" icon={Trash2} onClick={onRemove} label={`Remove ${entry.title}`} title="Remove" className="text-zinc-500 hover:!bg-rose-500/10 hover:!text-rose-700 dark:hover:!text-rose-300" />
         </div>
       )}
     </article>
