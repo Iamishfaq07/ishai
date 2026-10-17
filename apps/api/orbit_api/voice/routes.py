@@ -15,16 +15,17 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.entitlements import is_admin
-from orbit_api.models import UsageEvent, User
+from orbit_api.models import LiveSessionRow, UsageEvent, User
 from orbit_api.providers.tts import TTSError, get_tts_provider
 from orbit_api.ratelimit import limit_user
+from orbit_api.transactions import lock_account
 
 router = APIRouter(prefix="/v1/voice", tags=["voice"])
 speak_limit = Depends(limit_user("voice-speak", rate_per_s=1, burst=20))
@@ -89,17 +90,27 @@ async def speak(body: SpeakIn, user: Annotated[User, Depends(current_user)],
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "The natural voice isn't set up on this server.")
     voice = VOICES.get(body.voice) or VOICES[DEFAULT_VOICE]  # an older client's other choice: the one voice
     text = " ".join(body.text.split())
+    # Only a session of the caller's own is named on the usage row.
+    session = await db.get(LiveSessionRow, body.session_id) if body.session_id else None
+    session_id = session.id if session is not None and session.user_id == user.id else None
+    # The characters are taken before the provider is asked, under the account lock: two requests at once can't both
+    # pass the check with the same characters left. A provider that doesn't answer gives them back.
+    await lock_account(db, user.id)
     left = await chars_left(db, user)
     if left is not None and len(text) > left:
+        await db.rollback()
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
                             "Today's natural-voice allowance is used up. Your device's voice reads the questions now.")
+    spent = UsageEvent(user_id=user.id, session_id=session_id, metric=METRIC, quantity=float(len(text)))
+    db.add(spent)
+    await db.commit()
     chunks = provider.stream(text, voice.model)
     try:
         first = await anext(chunks)  # fail here (a JSON error the client can fall back on), not mid-stream
     except (TTSError, StopAsyncIteration, httpx.HTTPError, OSError) as err:
+        await db.execute(delete(UsageEvent).where(UsageEvent.id == spent.id))
+        await db.commit()
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, NO_ANSWER) from err
-    db.add(UsageEvent(user_id=user.id, session_id=body.session_id, metric=METRIC, quantity=float(len(text))))
-    await db.commit()
 
     async def audio() -> AsyncIterator[bytes]:
         yield first

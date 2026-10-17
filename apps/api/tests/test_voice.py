@@ -100,3 +100,77 @@ def test_provider_follows_the_key_and_the_switch(monkeypatch: pytest.MonkeyPatch
     assert isinstance(tts.get_tts_provider(), tts.DeepgramTTS)
     monkeypatch.setattr(get_settings(), "natural_voice", False)
     assert tts.get_tts_provider() is None
+
+
+def _uid(client: TestClient, h: dict[str, str]) -> str:
+    return str(client.get("/v1/auth/me", headers=h).json()["id"])
+
+
+def test_usage_names_only_a_session_of_the_callers_own(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from sqlalchemy import select
+
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import UsageEvent
+
+    a, b = _account(client), _account(client)
+    _deepgram(monkeypatch)
+    mine = client.post("/v1/sessions", headers=a, json={"title": "mine", "type": "mock"}).json()["id"]
+    theirs = client.post("/v1/sessions", headers=b, json={"title": "theirs", "type": "mock"}).json()["id"]
+    for sid in (mine, theirs):
+        assert client.post("/v1/voice/speak", headers=a, json={"text": "Hello", "session_id": sid}).status_code == 200
+
+    uid = _uid(client, a)
+
+    async def tagged() -> list[str | None]:
+        async with sessionmaker()() as db:
+            return list((await db.scalars(select(UsageEvent.session_id).where(
+                UsageEvent.user_id == uid, UsageEvent.metric == voice.METRIC)
+                .order_by(UsageEvent.created_at))).all())
+
+    assert client.portal.call(tagged) == [mine, None]  # type: ignore[union-attr]  # not someone else's session
+
+
+def test_two_requests_at_once_cant_both_spend_the_last_characters(client: TestClient,
+                                                                   monkeypatch: pytest.MonkeyPatch) -> None:
+    """The day's characters were checked, then the provider was asked, then the use was written: two requests at once
+    both passed the check. The characters are now taken under the account lock before the provider is asked."""
+    import asyncio
+
+    from fastapi import HTTPException
+
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import User
+
+    h = _account(client)
+    uid = _uid(client, h)
+    monkeypatch.setattr(get_settings(), "tts_daily_chars", 10)
+
+    async def race() -> list[int]:
+        gate = asyncio.Event()
+
+        class Slow:
+            def stream(self, text: str, model: str) -> Any:
+                async def audio() -> Any:
+                    await gate.wait()  # the provider takes a moment: both requests are in flight
+                    yield AUDIO
+
+                return audio()
+
+        monkeypatch.setattr(voice, "get_tts_provider", lambda: Slow())
+
+        async def one() -> int:
+            async with sessionmaker()() as db:
+                user = await db.get(User, uid)
+                assert user is not None
+                try:
+                    await voice.speak(voice.SpeakIn(text="12345678"), user, db)
+                except HTTPException as e:
+                    return e.status_code
+                return 200
+
+        tasks = [asyncio.create_task(one()) for _ in range(2)]
+        await asyncio.sleep(0.3)
+        gate.set()
+        return sorted(await asyncio.gather(*tasks))
+
+    assert client.portal.call(race) == [200, 429]  # type: ignore[union-attr]
