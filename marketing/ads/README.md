@@ -12,7 +12,7 @@ size is one layout in `templates/ads.css`.
 | `templates/ad.html` | The one template. Its double-brace placeholders are filled in by `export.mjs`. |
 | `templates/ads.css` | The brand (IBM Plex Sans, one violet accent, ink neutrals) and one layout per size. |
 | `export.mjs` | Fills the template for each creative and screenshots it in headless Chrome at the exact size. |
-| `out/<region>/<product>-<w>x<h>.png` | The exported creatives (42). |
+| `out/<region>/<product>-<w>x<h>.png` | The exported creatives (42). Not in git (`../.gitignore`): export them, then copy `out/in` and `out/global` to the owner's assets folder (`C:/Users/Ishfaq/Project/orbit-marketing-assets/ads`). |
 
 Product renders come from `../screens/src/*.png`: real screenshots of the app with made-up demo data (see
 `../screens/README.md`). The wordmark is `../brand/orbit-wordmark-{light,dark}.svg`.
@@ -50,7 +50,7 @@ differently at each size.
 ## Prices: filled in at export, never stored
 
 Prices change (the rupee prices are being cut right now), so no price is written into `copy.json` or the template,
-and the committed PNGs show none. "Free to start" is always true: new accounts get free interview minutes and an AI
+and the exported PNGs show none. "Free to start" is always true: new accounts get free interview minutes and an AI
 credit, and the free tier exists. To show a price, fill it in when you export, into a separate `--out` folder:
 
 ```sh

@@ -3,6 +3,8 @@
 Five screenshots of the app with made-up demo data, light theme, each at 1366 x 768 and 2560 x 1440 (both sizes the
 Store accepts for desktop apps). Plain full-window screenshots: no device frames, no captions baked in. The screens
 are the ones the Windows app shares with the web app (`packages/ui`), captured from the web app on a local stack.
+The PNGs aren't in git (`../.gitignore`): capture them, then copy them to the owner's assets folder
+(`C:/Users/Ishfaq/Project/orbit-marketing-assets/store`).
 
 | File | Screen | Alt text |
 | --- | --- | --- |

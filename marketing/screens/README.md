@@ -5,6 +5,9 @@ Microsoft Store listing (`../store/`). Everything in them is fictional: the pers
 resume, the employers (Juniper Logistics, Fernway Travel, Kestrel Pay, Lumen Analytics, Northwind Labs, Brightline
 Health, Cobalt Commerce, Tessellate, Quillbook, Parallel Grid, Harbourline) and the job posts.
 
+The raw captures in `src/` aren't in git (`../.gitignore`): run the capture first; the ads, the Store screenshots
+and the link previews (`apps/web/og/render.mjs`) are made from them.
+
 | File (`src/`, 2560 x 1600: a 1280 x 800 window at 2x) | What it shows |
 | --- | --- |
 | `copilot-{light,dark}.png` | A live session (`/live/:id`): the transcript, the detected question, a finished answer built from the resume with its key points ticking off as the candidate speaks, the likely follow-up and the resume line it used. |
