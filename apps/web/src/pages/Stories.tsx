@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { STORY_COMPETENCIES, type Story, type StoryCompetency, type StoryInput } from "@orbit/types";
 import {
+  Spot,
   ArrowRight,
   BookOpen,
   Check,
@@ -110,7 +111,7 @@ function Coverage({ stories, onPick }: { stories: Story[]; onPick: (c: StoryComp
     <Card className="mb-6">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 className="font-display text-lg font-semibold">Coverage</h2>
+          <h2 className="flex items-center gap-3 font-display text-lg font-semibold"><Spot kind="coverage" />Coverage</h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             What interviewers usually ask about. Tap a gap to write a story for it.
           </p>
@@ -507,7 +508,8 @@ export function StoriesPage() {
 
       {drafts.length > 0 && (
         <section aria-labelledby="drafts-title" className="mb-8">
-          <h2 id="drafts-title" className="font-display text-lg font-semibold">
+          <h2 id="drafts-title" className="flex items-center gap-3 font-display text-lg font-semibold">
+            <Spot kind="drafts" />
             Drafts to review
           </h2>
           <p className="mb-3 text-sm text-zinc-500 dark:text-zinc-400">
@@ -557,7 +559,8 @@ export function StoriesPage() {
           ) : (
             list.length > 0 && (
               <section aria-labelledby="saved-title">
-                <h2 id="saved-title" className="mb-3 font-display text-lg font-semibold">
+                <h2 id="saved-title" className="mb-3 flex items-center gap-3 font-display text-lg font-semibold">
+                  <Spot kind="story" />
                   Your stories <span className="font-sans text-sm font-normal text-zinc-500">({list.length})</span>
                 </h2>
                 {practiseError && (

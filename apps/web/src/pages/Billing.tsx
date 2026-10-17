@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { BillingScene, Callout, CountUp, CreditCard, Crown, LoadGate, Mic, Sparkles, cx, focusRing, type LucideIcon } from "@orbit/ui";
+import { BillingScene, Callout, Spot, CountUp, CreditCard, Crown, LoadGate, Mic, Sparkles, cx, focusRing, type LucideIcon } from "@orbit/ui";
 import type { CreditPack, Entitlements, MonthlyPlan, UpiOrder } from "@orbit/types";
 import { Button, Card, ErrorNote, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
@@ -147,7 +147,7 @@ function Payments({ orders, onOpen }: { orders: UpiOrder[]; onOpen: (o: UpiOrder
   if (!shown.length) return null;
   return (
     <Card>
-      <h2 className="mb-3 font-semibold">Your payments</h2>
+      <h2 className="mb-3 flex items-center gap-3 font-semibold"><Spot kind="receipt" />Your payments</h2>
       <ul className="divide-y divide-zinc-200 text-sm dark:divide-white/10">
         {shown.map((o) => (
           <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
@@ -357,7 +357,7 @@ export function BillingPage() {
       {months.length > 0 && (
         <section aria-labelledby="monthly-title" className="mb-10 space-y-4">
           <div>
-            <h2 id="monthly-title" className="font-semibold">Plans</h2>
+            <h2 id="monthly-title" className="flex items-center gap-3 font-semibold"><Spot kind="plan" />Plans</h2>
             <p className="text-sm text-zinc-500">
               Pay once for a week, a month or a year: a plan never renews by itself, and your credits stay for when it ends.
             </p>
@@ -373,7 +373,7 @@ export function BillingPage() {
       )}
       <section aria-labelledby="packs-title" className="mb-10 space-y-4">
         <div>
-          <h2 id="packs-title" className="font-semibold">Credits</h2>
+          <h2 id="packs-title" className="flex items-center gap-3 font-semibold"><Spot kind="credits" />Credits</h2>
           <p className="text-sm text-zinc-500">
             Pay as you go: 1 interview credit is 1 hour of live or mock interviews, and Resume AI credits come with
             every pack. Credits never expire and are used whenever you're not on a plan.
@@ -434,7 +434,7 @@ export function BillingPage() {
       </section>
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="self-start lg:col-span-1">
-          <h2 className="mb-1 font-semibold">{e?.credits ? "Your credits" : "This month"}</h2>
+          <h2 className="mb-1 flex items-center gap-3 font-semibold"><Spot kind="usage" />{e?.credits ? "Your credits" : "This month"}</h2>
           <p className="mb-4 text-sm text-zinc-500">
             {/* Packs add credits; they don't change the plan, so "Plan: Free" after buying one only confuses. */}
             {e?.credits ? "Pay as you go: buy a pack whenever you need more." : (

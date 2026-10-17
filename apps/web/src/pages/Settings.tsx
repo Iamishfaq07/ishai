@@ -21,15 +21,10 @@ import {
   ChevronRight,
   Inbox,
   IndianRupee,
-  Keyboard,
-  Palette,
-  ShieldCheck,
-  SlidersHorizontal,
-  UserRound,
+  Spot,
   Users,
-  type LucideIcon,
   CostDashboard,
-  Monitor,
+  type SpotKind,
   toast,
 } from "@orbit/ui";
 import { CountryField } from "../components/CountryField";
@@ -68,7 +63,7 @@ export function SettingsPage() {
           <ChevronRight className="h-4 w-4 text-zinc-400" />
         </Link>
         <Card id="appearance" className="scroll-mt-24">
-          <SectionTitle icon={Palette} className="mb-4">
+          <SectionTitle spot="appearance" className="mb-4">
             Appearance
           </SectionTitle>
           <div className="flex items-center justify-between gap-4">
@@ -102,15 +97,10 @@ export function SettingsPage() {
 }
 
 /** A settings card's heading: its icon in a small accent chip, then the name. */
-function SectionTitle({ icon: Icon, className, children }: { icon: LucideIcon; className?: string; children: string }) {
+function SectionTitle({ spot, className, children }: { spot: SpotKind; className?: string; children: string }) {
   return (
-    <h2 className={cx("flex items-center gap-2.5 font-semibold", className)}>
-      <span
-        aria-hidden="true"
-        className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10"
-      >
-        <Icon className="h-4 w-4" />
-      </span>
+    <h2 className={cx("flex items-center gap-3 font-semibold", className)}>
+      <Spot kind={spot} />
       {children}
     </h2>
   );
@@ -250,7 +240,7 @@ function AdvancedConfig() {
   return (
     <Card>
       <div className="mb-1 flex items-center justify-between">
-        <SectionTitle icon={SlidersHorizontal}>Advanced (admin)</SectionTitle>
+        <SectionTitle spot="admin">Advanced (admin)</SectionTitle>
         {saved && <span className="text-xs text-emerald-600 dark:text-emerald-400">Saved</span>}
       </div>
       <p className="mb-4 text-sm text-zinc-500">
@@ -404,7 +394,7 @@ function HotkeysCard() {
   return (
     <Card id="shortcuts" className="scroll-mt-24">
       <div className="mb-4 flex items-center justify-between">
-        <SectionTitle icon={Keyboard}>Keyboard shortcuts</SectionTitle>
+        <SectionTitle spot="keyboard">Keyboard shortcuts</SectionTitle>
         <Button variant="ghost" size="sm" onClick={() => update(DEFAULT_HOTKEYS)}>
           Reset to defaults
         </Button>
@@ -484,7 +474,7 @@ function AccountCard() {
 
   return (
     <Card id="account" className="scroll-mt-24">
-      <SectionTitle icon={UserRound} className="mb-1">
+      <SectionTitle spot="account" className="mb-1">
         Account
       </SectionTitle>
       <p className="mb-4 pl-[2.375rem] text-sm text-zinc-500">Signed in as {user.email}</p>
@@ -618,7 +608,7 @@ function DevicesCard() {
   };
   return (
     <Card id="devices" className="scroll-mt-24">
-      <SectionTitle icon={Monitor} className="mb-1">
+      <SectionTitle spot="devices" className="mb-1">
         Devices
       </SectionTitle>
       <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">Where your account is signed in. Don't recognise one? Sign it out, then change your password.</p>
@@ -700,7 +690,7 @@ function PrivacyCard() {
 
   return (
     <Card id="privacy" className="scroll-mt-24">
-      <SectionTitle icon={ShieldCheck} className="mb-4">
+      <SectionTitle spot="privacy" className="mb-4">
         Privacy
       </SectionTitle>
       <div className="space-y-4">

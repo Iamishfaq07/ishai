@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { SavedAnswer, SavedAnswerInput } from "@orbit/types";
-import { CosmicEmptyState, LoadGate, MessageSquareQuote, PenLine, Plus, Search, Target, Trash2, confirmDialog } from "@orbit/ui";
+import { Spot, CosmicEmptyState, LoadGate, MessageSquareQuote, PenLine, Plus, Search, Target, Trash2, confirmDialog } from "@orbit/ui";
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Textarea } from "../components/ui";
 import { answerPracticeSession } from "../lib/answerPractice";
 import { api } from "../lib/api";
@@ -199,7 +199,8 @@ export function AnswersPage() {
       ) : (
         <section aria-labelledby="answers-title">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 id="answers-title" className="font-display text-lg font-semibold">
+            <h2 id="answers-title" className="flex items-center gap-3 font-display text-lg font-semibold">
+              <Spot kind="answer" />
               Your answers <span className="font-sans text-sm font-normal text-zinc-500">({list.length})</span>
             </h2>
             {list.length >= SEARCH_FROM && (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { JobAlert, JobAlertFrequency } from "@orbit/types";
-import { Mail, cx, focusRing } from "@orbit/ui";
+import { Spot, cx, focusRing } from "@orbit/ui";
 import { Card, ErrorNote } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
@@ -41,10 +41,8 @@ export function AlertsSection({ onProfileSaved }: { onProfileSaved: () => void }
 
   return (
     <Card id="alerts" className="scroll-mt-24">
-      <div className="mb-4 flex items-start gap-2.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
-          <Mail className="h-4 w-4" aria-hidden />
-        </span>
+      <div className="mb-4 flex items-center gap-3">
+        <Spot kind="alert" />
         <div className="min-w-0">
           <h2 className="font-display text-base font-semibold">Email me new matches</h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">Jobs that are new since the last email and a good match for this profile. Nothing new, no email.</p>

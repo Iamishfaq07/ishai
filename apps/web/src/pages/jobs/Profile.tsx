@@ -1,7 +1,7 @@
 import { useEffect, useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { JobPrefs, JobProfile } from "@orbit/types";
-import { ArrowRight, Briefcase, Building2, Check, FileText, LoadGate, MapPin, Search, SlidersHorizontal, Sparkles, X, cx, focusRing, isIndia, type LucideIcon } from "@orbit/ui";
+import { Spot, type SpotKind, ArrowRight, Check, LoadGate, SlidersHorizontal, Sparkles, X, cx, focusRing, isIndia } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
@@ -122,7 +122,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
           </p>
         )}
 
-        <Section id="resume" icon={FileText} title="Your resume" hint="Jobs are matched to it: its titles, skills and experience.">
+        <Section id="resume" spot="resume" title="Your resume" hint="Jobs are matched to it: its titles, skills and experience.">
           {profile.resumes.length ? (
             <div className="space-y-3">
               <Field label="Match jobs to this resume" htmlFor="jp-resume">
@@ -160,7 +160,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
           )}
         </Section>
 
-        <Section id="looking-for" icon={Search} title="What you're looking for" hint="The roles and skills each job is scored against.">
+        <Section id="looking-for" spot="target" title="What you're looking for" hint="The roles and skills each job is scored against.">
           <div className="space-y-5">
             <ChipsField
               label="Job titles"
@@ -212,7 +212,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
           </div>
         </Section>
 
-        <Section id="where" icon={MapPin} title="Where" hint="The country you're applying in, cities, and how you'd like to work.">
+        <Section id="where" spot="place" title="Where" hint="The country you're applying in, cities, and how you'd like to work.">
           <div className="space-y-5">
             <div className="max-w-sm">
               <CountryField id="jobs-country" hint="Your matches, cities and job-site links follow it." onChanged={() => loaded.reload()} />
@@ -240,7 +240,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
           </div>
         </Section>
 
-        <Section id="which-jobs" icon={Briefcase} title="Which jobs" hint="The kind of job, how recent, and what to leave out.">
+        <Section id="which-jobs" spot="briefcase" title="Which jobs" hint="The kind of job, how recent, and what to leave out.">
           <div className="space-y-5">
             <fieldset>
               <legend className="mb-2 text-sm font-medium text-zinc-800 dark:text-zinc-200">Job types</legend>
@@ -297,7 +297,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
           </div>
         </Section>
 
-        <Section id="sources" icon={Building2} title="Where Orbit looks" hint="The job sources, and the big sites to search for you.">
+        <Section id="sources" spot="globe" title="Where Orbit looks" hint="The job sources, and the big sites to search for you.">
           <div className="space-y-5">
             <fieldset>
               <legend className="mb-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">Job sources</legend>
@@ -409,13 +409,11 @@ const PROFILE_SECTIONS: PageSection[] = [
   { id: "alerts", label: "Email alerts" },
 ];
 
-function Section({ id, title, hint, icon: Icon, children }: { id: string; title: string; hint: string; icon: LucideIcon; children: ReactNode }) {
+function Section({ id, title, hint, spot, children }: { id: string; title: string; hint: string; spot: SpotKind; children: ReactNode }) {
   return (
     <Card id={id} className="scroll-mt-24">
-      <div className="mb-4 flex items-start gap-2.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
-          <Icon className="h-4 w-4" aria-hidden />
-        </span>
+      <div className="mb-4 flex items-center gap-3">
+        <Spot kind={spot} />
         <div className="min-w-0">
           <h2 className="font-display text-base font-semibold">{title}</h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">{hint}</p>

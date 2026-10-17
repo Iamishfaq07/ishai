@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Copy, KeyRound, LoadGate, QrCode, SecurityScene, confirmDialog, toast } from "@orbit/ui";
+import { Copy, LoadGate, QrCode, Spot, confirmDialog, toast } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -83,10 +83,8 @@ export function TwoFactorCard() {
   const s = status.data;
   return (
     <Card id="two-step" className="scroll-mt-24">
-      <h2 className="mb-1 flex items-center gap-2.5 font-semibold">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
-          <KeyRound className="h-4 w-4" aria-hidden />
-        </span>
+      <h2 className="mb-1 flex items-center gap-3 font-semibold">
+        <Spot kind="security" />
         Two-step sign-in
       </h2>
       <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
@@ -157,12 +155,9 @@ export function TwoFactorCard() {
             <Button type="button" variant="ghost" onClick={() => setStep({ kind: "idle" })}>Cancel</Button>
           </form>
         ) : (
-          <div className="flex items-center justify-between gap-4">
-            <Button onClick={() => (hasPassword ? setStep({ kind: "password" }) : begin())} disabled={busy}>
-              Set up two-step sign-in
-            </Button>
-            <SecurityScene className="-my-3 hidden w-24 shrink-0 sm:block" />
-          </div>
+          <Button onClick={() => (hasPassword ? setStep({ kind: "password" }) : begin())} disabled={busy}>
+            Set up two-step sign-in
+          </Button>
         )}
         {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
       </LoadGate>

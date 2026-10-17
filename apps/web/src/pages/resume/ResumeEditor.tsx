@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { Link, useLocation, useParams } from "react-router-dom";
-import type { AtsReport, CoverLetterLength, EvidenceItem, CoverLetterTone, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeInput, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
+import type { AtsCheck, AtsReport, CoverLetterLength, EvidenceItem, CoverLetterTone, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeInput, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
 import {
   Callout,
   ArrowLeft,
@@ -43,7 +43,9 @@ import {
   useCountUp,
   WorkingState,
   CosmicEmptyState,
+  Spot,
   celebrate,
+  type SpotKind,
 } from "@orbit/ui";
 import { Button, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -103,6 +105,18 @@ const FIX_BUSY: Record<string, string> = {
 function busyState(label: string): "searching" | "weaving" | "composing" {
   return /read|find|match|scor|fix/i.test(label) ? "searching" : /tailor/i.test(label) ? "weaving" : "composing";
 }
+
+/** Each ATS check's category, drawn: the list of what to fix reads by kind at a glance. */
+const ATS_SPOT: Record<AtsCheck["category"], SpotKind> = {
+  contact: "contact",
+  sections: "sections",
+  summary: "summary",
+  experience: "briefcase",
+  skills: "skills",
+  readability: "readability",
+  layout: "design",
+  keywords: "keywords",
+};
 
 /** The resume editor, for a resume in the signed-in account. */
 export function ResumeEditorPage() {
@@ -1308,7 +1322,7 @@ function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; o
 
   return (
     <div className="space-y-4">
-      <Panel title="Cover letter">
+      <Panel title="Cover letter" spot="letter">
         <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-300">
           Written from your resume and the job post, ready to send. It never invents facts or numbers: it uses what your
           resume says. Edit it freely: it's saved with this resume.
@@ -1389,11 +1403,11 @@ function Highlighted({ text }: { text: string }) {
   );
 }
 
-function Panel({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
+function Panel({ title, children, action, spot }: { title: string; children: ReactNode; action?: ReactNode; spot?: SpotKind }) {
   return (
     <section className="rounded-2xl border border-zinc-200 bg-white/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="font-display text-base font-semibold">{title}</h3>
+        <h3 className="flex items-center gap-3 font-display text-base font-semibold">{spot && <Spot kind={spot} />}{title}</h3>
         {action}
       </div>
       {children}
@@ -1442,7 +1456,7 @@ function ScorePanel({
 
   return (
     <div className="space-y-4">
-      <Panel title="How ATS software reads it">
+      <Panel title="How ATS software reads it" spot="ats">
         <div className="flex items-center gap-4">
           <div className={cx("relative flex h-20 w-20 shrink-0 flex-col items-center justify-center rounded-2xl ring-1", scoreTone(report.score))}>
             <ScoreCount score={report.score} className="font-display text-3xl font-semibold" />
@@ -1467,7 +1481,7 @@ function ScorePanel({
         {!report.has_job && <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">Add the job post below to also check its keywords, which is a quarter of the score.</p>}
       </Panel>
 
-      <Panel title="Job post">
+      <Panel title="Job post" spot="jobpost">
         <Field label="Paste the job post to tailor the resume to it" htmlFor="job">
           <Textarea id="job" rows={5} maxLength={20_000} value={resume.job_text} onChange={(e) => onJob(e.target.value.slice(0, 20_000))} placeholder="Paste the job description…" />
         </Field>
@@ -1576,7 +1590,7 @@ function ScorePanel({
               className="rounded-xl border border-zinc-200 p-3 transition-colors hover:border-indigo-400/50 dark:border-white/10"
             >
               <div className="flex items-start gap-2">
-                <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                <Spot kind={ATS_SPOT[c.category]} />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">
                     {c.label} <span className="font-normal tabular-nums text-zinc-500 dark:text-zinc-400">+{Math.round((c.max_points - c.points) * 10) / 10} pts</span>
@@ -1634,7 +1648,7 @@ function AtsReadingPanel({ data }: { data: ResumeData }) {
     </li>
   );
   return (
-    <Panel title="How an ATS reads it">
+    <Panel title="How an ATS reads it" spot="readability">
       {!reading ? (
         <div className="space-y-2 text-sm">
           <p className="text-zinc-600 dark:text-zinc-300">
@@ -1701,7 +1715,7 @@ function AiPanel({
   const safe = queue.filter(isSafeFix).length;
   return (
     <div className="space-y-4">
-      <Panel title="Let the AI fix it">
+      <Panel title="Let the AI fix it" spot="rewrite">
         <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-300">
           It rewrites weak lines, adds the skills and bullets you're missing, makes the impact of each line clear and tidies dates, one change at a time: you accept or skip each. Every suggestion is finished, ready-to-use text. It never makes up numbers: it uses the ones in your resume, and where there are none it shows the impact in words. Anything it can't prove from your resume comes with a warning to check it's true.
         </p>
@@ -1877,7 +1891,7 @@ function DesignPanel({ design, setDesign }: { design: ResumeDesign; setDesign: (
   const [photoError, setPhotoError] = useState<string | null>(null);
   return (
     <div className="space-y-4">
-      <Panel title="Quick looks">
+      <Panel title="Quick looks" spot="design">
         <p className="-mt-1 mb-3 text-xs text-zinc-500 dark:text-zinc-400">One click sets the template, colour and font together. Fine-tune below.</p>
         <div className="flex flex-wrap gap-2">
           {looksFor(country).map((look) => {
@@ -1901,7 +1915,7 @@ function DesignPanel({ design, setDesign }: { design: ResumeDesign; setDesign: (
           })}
         </div>
       </Panel>
-      <Panel title="Template">
+      <Panel title="Template" spot="sections">
         <div className="grid grid-cols-2 gap-2">
           {templatesFor(country).map((t) => (
             <button
@@ -1922,7 +1936,7 @@ function DesignPanel({ design, setDesign }: { design: ResumeDesign; setDesign: (
           ))}
         </div>
       </Panel>
-      <Panel title="Colour & type">
+      <Panel title="Colour & type" spot="colour">
         <div className="space-y-4">
           <div>
             <p className="mb-1.5 text-sm font-medium">Accent colour</p>
@@ -1998,7 +2012,7 @@ function DesignPanel({ design, setDesign }: { design: ResumeDesign; setDesign: (
           </div>
         </div>
       </Panel>
-      <Panel title="Photo">
+      <Panel title="Photo" spot="photo">
         <div className="flex items-center gap-3">
           {design.photo ? <img src={design.photo} alt="Your photo" className="h-16 w-16 rounded-full object-cover" /> : <span className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-500/10 text-xs text-zinc-500">No photo</span>}
           <div className="flex flex-wrap gap-2">

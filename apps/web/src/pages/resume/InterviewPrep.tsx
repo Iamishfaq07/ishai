@@ -25,6 +25,8 @@ import {
   skillGapText,
   storyFromQuestion,
   WorkingState,
+  Spot,
+  type SpotKind,
 } from "@orbit/ui";
 import { Button } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -113,7 +115,7 @@ function QuestionsPanel({ resume, state, setState, hasJob, onShowJob }: {
 
   return (
     <>
-      <Panel title="Questions from my resume">
+      <Panel title="Questions from my resume" spot="questions">
         <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-300">
           The questions an interviewer is most likely to ask about this resume: 2 to 4 for each role and project
           {hasJob ? ", plus a few from the job post" : ""}. Each comes with an answer outline from your resume and where
@@ -390,7 +392,7 @@ function GapPanel({ resume, state, setState, hasJob, onShowJob }: {
 
   return (
     <>
-      <Panel title="Skill gap for this job" action={result?.gaps.length ? <CopyButton text={skillGapText(result.gaps)} label="Copy all" /> : undefined}>
+      <Panel title="Skill gap for this job" spot="gap" action={result?.gaps.length ? <CopyButton text={skillGapText(result.gaps)} label="Copy all" /> : undefined}>
         <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-300">
           For each skill or requirement the job post asks for that your resume doesn't show: whether you have related
           experience and how to say it, what to prepare, or what not to claim. It starts from the same missing keywords
@@ -489,11 +491,11 @@ function CopyButton({ text, label, small }: { text: string; label: string; small
 }
 
 /** The editor's panel (ResumeEditor.tsx), for the same look. */
-function Panel({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
+function Panel({ title, children, action, spot }: { title: string; children: ReactNode; action?: ReactNode; spot?: SpotKind }) {
   return (
     <section className="rounded-2xl border border-zinc-200 bg-white/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-display text-base font-semibold">{title}</h3>
+        <h3 className="flex items-center gap-3 font-display text-base font-semibold">{spot && <Spot kind={spot} />}{title}</h3>
         {action}
       </div>
       {children}
