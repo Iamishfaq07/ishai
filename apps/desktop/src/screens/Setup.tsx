@@ -126,6 +126,8 @@ const control =
   "block w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-sm dark:border-zinc-800 dark:bg-zinc-900";
 
 const WORKSPACE_KEY = "orbit.workspaceId";
+/** How often Setup looks for a microphone while it has none. */
+const MIC_RECHECK_MS = 3000;
 const savedOutput = () => safeLocal.getItem(OUTPUT_KEY) ?? "out:default";
 
 /** Session types where the other side of a call is the point: losing their audio silently is the costly mistake. */
@@ -223,18 +225,41 @@ export function SetupScreen({
     setSource((s) => nextSource(s, previous, list, appTouched.current, savedOutput()));
   };
 
+  const [error, setError] = useState<string | null>(null);
+  const micListError = useRef<string | null>(null);
+  const readMics = useCallback(() => {
+    listAudioDevices()
+      .then((list) => {
+        setDevices(list);
+        // a read that failed before (its message is showing) worked this time
+        setError((e) => (e !== null && e === micListError.current ? null : e));
+      })
+      .catch((err: unknown) => {
+        micListError.current = friendlyAudioError(`Couldn't list audio devices: ${String(err)}`);
+        setError(micListError.current);
+      });
+  }, []);
   // Stable (showApps only uses refs and state setters), so the focus listener below is added once.
   const refreshApps = useCallback(() => {
+    readMics();
+    if (IS_MAC) return;
     void listAudioApps().then(showApps);
     void listOutputDevices().then(setOutputs);
-  }, []);
-  // Back from the meeting app is when what's playing changes (the call started): read the list again.
+  }, [readMics]);
+  // Back from the meeting app is when what's playing changes (the call started): read the lists again. Back from
+  // Windows' sound settings, a microphone may be there now.
   useEffect(() => {
-    if (IS_MAC) return;
     window.addEventListener("focus", refreshApps);
     return () => window.removeEventListener("focus", refreshApps);
   }, [refreshApps]);
-  const [error, setError] = useState<string | null>(null);
+  // No microphone (or the list couldn't be read): look again every few seconds, so plugging a headset in clears the
+  // "No microphone found" check that holds Start back, without leaving this screen.
+  const noMic = devices.length === 0;
+  useEffect(() => {
+    if (!noMic) return;
+    const t = window.setInterval(readMics, MIC_RECHECK_MS);
+    return () => window.clearInterval(t);
+  }, [noMic, readMics]);
   // Why Start didn't work, shown by the Start button (the screen scrolls; the general error sits far above it).
   const [startError, setStartError] = useState<{ text: string; buy: boolean } | null>(null);
   const [starting, setStarting] = useState(false);
@@ -309,10 +334,7 @@ export function SetupScreen({
         setSelected(defaultSessionDocuments(list));
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : "Couldn’t load documents."));
-    if (!IS_MAC) refreshApps();
-    listAudioDevices()
-      .then(setDevices)
-      .catch((err: unknown) => setError(friendlyAudioError(`Couldn't list audio devices: ${String(err)}`)));
+    refreshApps();
   }, [refreshApps]);
 
   const refreshDocs = async (selectId?: string): Promise<void> => {
