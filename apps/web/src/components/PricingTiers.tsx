@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { CreditPack, MonthlyPlan, PlanInfo } from "@orbit/types";
-import { Building2, Check, CircleCheck, Minus, Sparkles, cx, focusRing } from "@orbit/ui";
+import { Building2, Check, CircleCheck, Minus, Sparkles, buttonClass, cx, focusRing } from "@orbit/ui";
 import { api } from "../lib/api";
 import { contactHref } from "../lib/contactForm";
 import { useIndia } from "../lib/country";
@@ -95,7 +95,7 @@ function CtaButton({ cta }: { cta: Cta }) {
   const cls = cx(
     "mt-6 inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition",
     cta.primary
-      ? "bg-indigo-600 text-white shadow-sm hover:bg-indigo-700"
+      ? "bg-indigo-600 text-white hover:bg-indigo-700"
       : "bg-zinc-900/5 text-zinc-900 ring-1 ring-zinc-900/10 hover:bg-zinc-900/10 dark:bg-white/5 dark:text-white dark:ring-white/10 dark:hover:bg-white/10",
     cta.disabled && "pointer-events-none opacity-50",
     focusRing,
@@ -116,7 +116,7 @@ function Tier({ name, price, per, tagline, badge, highlight, cta, note, children
     <li
       className={cx(
         "relative flex flex-col rounded-2xl bg-white p-6 ring-1 dark:bg-zinc-900/60",
-        highlight ? "ring-2 ring-indigo-500 shadow-xl shadow-indigo-500/10 dark:ring-indigo-400" : "ring-zinc-900/10 dark:ring-white/10",
+        highlight ? "ring-2 ring-indigo-500 dark:ring-indigo-400" : "ring-zinc-900/10 dark:ring-white/10",
       )}
     >
       {badge && (
@@ -224,7 +224,7 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
           </p>
         </div>
         <Link to={contactHref({ topic: "business", from: "/pricing" })}
-              className={cx("inline-flex shrink-0 items-center justify-center rounded-xl bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200", focusRing)}>
+              className={buttonClass("secondary", "md", "shrink-0")}>
           Contact us
         </Link>
       </li>
@@ -318,7 +318,7 @@ export function CreditPackGrid({ packs, onBuy, busy = false }: { packs: CreditPa
           return (
             <li key={p.id} className={cx("relative flex flex-col rounded-2xl bg-white p-6 ring-1 dark:bg-zinc-900/60", highlight ? "ring-2 ring-indigo-500 dark:ring-indigo-400" : "ring-zinc-900/10 dark:ring-white/10")}>
               {p.badge && (
-                <span className={cx("absolute -top-3 left-6 rounded-full px-2.5 py-0.5 text-xs font-semibold", highlight ? "bg-indigo-600 text-white" : "bg-amber-400 text-amber-950")}>
+                <span className="absolute -top-3 left-6 rounded-full bg-indigo-600 px-2.5 py-0.5 text-xs font-semibold text-white">
                   {p.badge}
                 </span>
               )}

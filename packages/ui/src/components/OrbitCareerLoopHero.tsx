@@ -14,11 +14,11 @@ export function OrbitCareerLoopHero({ links }: { links: CareerLinks }) {
   const id = useId().replace(/:/g, "");
   const motion = useMotion();
   return <section aria-label="Orbit career preparation loop" className="glass-panel overflow-hidden rounded-3xl px-2 py-4 sm:px-6">
-    <div className="px-4 pt-2"><p className="telemetry text-xs uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-300">Your next move</p>
+    <div className="px-4 pt-2"><p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Your next move</p>
       <h2 className="mt-1 font-display text-xl font-semibold">One job. A complete preparation loop.</h2></div>
     <div className="grid grid-cols-2 gap-3 px-3 py-5 sm:hidden">{nodes.map((node) => <a key={node.key}
       href={links[node.key]} className={`rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-3 ${focusRing}`}>
-      <span className="telemetry text-xs text-cyan-700 dark:text-cyan-300">{node.number}</span>
+      <span className="text-xs font-medium tabular-nums text-zinc-500 dark:text-zinc-400">{node.number}</span>
       <span className="mt-2 block text-sm font-semibold">{node.title}</span>
       <span className="mt-1 block text-xs text-zinc-500">{node.detail}</span>
     </a>)}</div>
@@ -34,7 +34,7 @@ export function OrbitCareerLoopHero({ links }: { links: CareerLinks }) {
         <path d={`M${node.x} ${node.y} L300 195`} stroke="currentColor" opacity="0.1" strokeDasharray="3 5" />
         <a href={links[node.key]} className={focusRing} aria-label={`${node.title}: ${node.detail}`}>
           <rect x={node.x - 97} y={node.y - 38} width="194" height="76" rx="18" className="fill-white dark:fill-[#0B101E]" stroke={`url(#${id}-gradient)`} strokeOpacity="0.4" />
-          <text x={node.x - 77} y={node.y - 15} fontSize="10" className="telemetry fill-cyan-700 dark:fill-cyan-300">{node.number}</text>
+          <text x={node.x - 77} y={node.y - 15} fontSize="10" className="fill-zinc-500 font-medium tabular-nums dark:fill-zinc-400">{node.number}</text>
           <text x={node.x} y={node.y + 1} textAnchor="middle" fontSize="14" fontWeight="600" className="fill-zinc-900 dark:fill-zinc-100">{node.title}</text>
           <text x={node.x} y={node.y + 22} textAnchor="middle" fontSize="11" className="fill-zinc-500 dark:fill-zinc-400">{node.detail}</text>
         </a>
