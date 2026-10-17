@@ -7,20 +7,33 @@ Shared by the web and desktop apps. Source of truth: `packages/ui/tailwind.prese
 
 - **The front door** (signed-out pages: the front page, the public product pages, sign-in) keeps the sky: the
   animated backdrop, glass, gradient headlines and the Orbit scenes. It's where Orbit introduces itself.
-- **The workbench** (everything signed in, `html.app-shell` from the web Layout) is where people run their job search
-  every day, so it reads as professional software: one still canvas (`--canvas`, #F5F6F8 / #0D121C), opaque surfaces
-  (`--surface`) with a hairline border (`--line`) and no shadow, headings in the product face, and no gradients,
-  glows, sheens or decorative blobs. Only things that float (a menu, a dialog, a toast) cast a shadow.
-- **One accent, used sparingly**: the main action, links, focus and the page you're on. Everything else is ink. Status
-  colours mean status only. Product colours mark a product's own content (its mark, its row on Home), not the nav.
+- **The workbench** (everything signed in: `html.app-shell`, set by the web Layout and by the live session page) is
+  where people run their job search every day, so it reads as professional software: one still canvas (`--canvas`,
+  #F5F6F8 / #0D121C), opaque surfaces (`--surface`) with a hairline border (`--line`) and no shadow, headings in the
+  product face, and no gradients, glows, sheens or decorative blobs. Only things that float (a menu, a dialog, a
+  toast) cast a shadow. The live session (`/live/:id`) is the workbench too: no sky behind the panel, no glow around
+  it.
+- **Dark mode is the light theme's twin** (D58): inside the workbench the ink's darkest steps are the same blue-grey
+  family as the canvas: `zinc-950` (what `dark:` pairs with `bg-white`: the bars, fields, dialogs, the live panel) is
+  the surface, `zinc-900` a raised step above it, `zinc-800` the line. The front door keeps its violet night.
+- **One accent, used sparingly**: the main action, links, focus and the page you're on. Everything else is ink: a
+  heading's icon, an icon tile, a label, a loading placeholder. Status colours mean status only. Product colours mark a
+  product's own content (its mark, its row on Home), not the nav.
 - **Corners say how a thing behaves**: controls 8 px (`rounded-xl`), cards 12 px (`rounded-2xl`), large panels 16 px
   (`rounded-3xl`).
 - **Buttons**: primary is the solid accent (white on accent-600 passes AA in every accent), secondary is bordered,
-  ghost is plain. Nothing on a button moves except the press.
-- **AI is named, not badged**: tools carry their name ("Resume AI", "Jobs AI") in the nav; there is no AI chip per
-  item.
+  ghost is plain, danger is rose-700 text. Nothing on a button moves except the press, and buttons cast no shadow.
+- **Fields and buttons are one height**: a text field, a select and a regular button are all 38 px (every button
+  variant carries a 1 px border, transparent unless it's bordered), so a field and its button line up in a row.
+  `sm` buttons are for dense rows and cards, not beside a field.
+- **Cards that are links** darken their border on hover (`Card interactive`, or `lift`, which the workbench keeps
+  still); they don't rise.
+- **AI is named, not badged**: tools carry their name ("Resume AI", "Jobs AI") in the nav and in text; there is no AI
+  chip in the workbench (the front door's product pages keep theirs).
+- **Labels are sentence case**: small labels, eyebrows and table headings are `text-xs font-medium` ink, never
+  tracked capitals (`uppercase tracking-*`). The resume templates keep their own type.
 - **No new gradients in the app.** A highlighted block (the Windows app, the video interview) is a solid ink panel
-  (`bg-zinc-900 text-white`); an icon tile is neutral (`bg-zinc-100 ring-zinc-200`) or the solid accent.
+  (`bg-zinc-900 text-white`); an icon tile is neutral (`IconTile`, `bg-zinc-100 ring-zinc-200`) or the solid accent.
 
 ## Colour
 
@@ -83,16 +96,22 @@ One definition, `apps/web/src/components/nav.ts`, feeds the desktop sidebar, the
 sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav does.
 - **Desktop sidebar**, grouped by the job to be done: Home; **Prepare** (Practice and Video interview while mock
   interviews are on, Resume AI, Learning AI); **Apply** (Jobs AI, LinkedIn AI); **Interview & offer** (Copilot AI,
-  Offer AI). Plan & credits, Settings, Admin (admins only) and Support sit at its foot. Every AI tool carries the AI
-  mark at its icon's top right. It collapses to icons; the choice is kept on the device (`orbit.sidebar`), and with
+  Offer AI). Plan & credits, Settings, Admin (admins only) and Support sit at its foot. Each tool is named in full
+  ("Resume AI"), one ink icon each, no AI mark. It collapses to icons; the choice is kept on the device (`orbit.sidebar`), and with
   none it starts collapsed under 1280 px.
 - **Top bar**: a wide "Search or jump to…" (Ctrl K, the command palette), a **New** menu (live session, mock
   interview, resume, job search, offer) and the account menu.
 - **Phones**: five destinations, Home, Jobs, Resume, Practice (the copilot when mock interviews are off) and
-  **Explore**, a sheet with the other tools as cards, then plan, settings, admin, support and sign out.
+  **Explore**, a sheet with the other tools as cards, then plan, settings, admin, support and sign out. The support
+  button keeps the bottom-right corner above the tab bar; a page's own floating button (Resume AI's Preview) sits
+  centred, clear of it.
 - **A product's own pages** sit under its item as `ProductTabs` (`components/products.tsx`): Jobs AI's Overview,
   Matches, Tracker and Profile. The tabs hide while a product has only one page. A product opens with a short
   header and one primary action, not a marketing banner.
+- **Page header** (`PageHeader`): the title, one line under it, and the page's actions at the row's end, beside
+  the title while there's room (a long line wraps under the title rather than pushing the actions down). A detail
+  page puts its way back above the title (`back={<BackLink to=… >All offers</BackLink>}`). The icon tile shows from
+  `sm` up, so a phone's title gets the width; a long title wraps, it isn't cut to one line. Actions are regular size.
 
 ## Motion
 
@@ -109,7 +128,7 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
   fades under Gentle on their own.
 - Utilities: `animate-fade-up` (page), `animate-rise` / `animate-fade-out` (panels, toasts), `stagger` (first 6
   children, 35 ms apart), `appear` (an item added later, `@starting-style`), `lift` (hover lift where there is hover,
-  press-in on touch), `btn-sheen` (primary buttons, hover devices), `animate-float`, `animate-orbit*`,
+  press-in on touch; the workbench keeps it still and darkens the border instead), `btn-sheen` (primary buttons, hover devices), `animate-float`, `animate-orbit*`,
   `animate-twinkle`, `animate-drift`, `animate-pulse-ring`, `animate-spark`.
 - **Scroll reveal:** `<Reveal>` rises content into place the first time it scrolls into view (`delay` in ms to stagger
   neighbours); `<Reveal stagger>` brings a list's children in one after another instead (cards in a grid). Gentle
@@ -140,9 +159,11 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
 - **Loading:** `Skeleton` (`line`, `card`, `job-card`, `resume-card`, `session-row`) with `useLoadPhase(loading)`.
   `LoadGate` is that timing around a list: nothing, then the skeleton, then the list.
   (shown after 150 ms, kept at least 300 ms). Buttons keep their label with `loading`. Spinners (`Spinner`, the
-  orb) are for small or unknown-shaped waits.
+  orb) are for small or unknown-shaped waits. In the workbench a placeholder is an ink tint, not the accent.
 - **Empty states:** `EmptyState` with `kind` `first-use` (with a `GhostPreview` of the filled screen), `no-results`,
-  `cleared` or `offline` (`onRetry`). A headline, one line, one imperative action.
+  `cleared` or `offline` (`onRetry`). A headline, one line, one imperative action. Its art is an Orbit scene
+  (`CosmicEmptyState` maps `jobs`, `offline`, `resume` and `practice` to them) or an `icon` in a `SpotIllustration`,
+  which the workbench draws flat: a hairline orbit, a solid accent planet, a small moon, no halo.
 - **Success moments:** `celebrate(milestone, { message, action })`, once per device, never in a live session; the
   burst plays at Full motion only.
 - **Plain words:** `<Term term="ats">ATS</Term>` (glossary: ats, jd, utr, star, fit-check, tailor) or `tip="…"`.

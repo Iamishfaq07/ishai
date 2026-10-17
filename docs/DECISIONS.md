@@ -449,3 +449,17 @@ so a paid week ended an admin's 60 days of Unlimited. Now:
   lists. The receipt and the admin's email say when a waiting plan starts.
 - **Existing grants** got their start from what made them (the latest approved paid month, or the admin's latest
   grant in the audit log). One with neither keeps counting its windows back from its end, as before.
+
+**D58 — The workbench's dark mode is one blue-grey family, so the ink's darkest steps are remapped there.** Round 2
+gave the workbench a blue-grey dark canvas, surface and line (#0D121C, #141B27, #232C3B), but the components paint
+their dark panels with the ink scale's `dark:bg-zinc-950` / `-900` and `dark:border-zinc-800`, and ink is the front
+door's violet night (#080918, #14162D). Worse, the body's own `dark:bg-zinc-950` utility outranked the canvas rule,
+so the dark workbench sat on violet black with blue-grey cards on it: two families of near-black on one screen. The
+options were to edit hundreds of `dark:` classes to name the canvas tokens, or to remap the ink's darkest steps inside
+`html.app-shell.dark`: `zinc-950` (which `dark:` pairs with `bg-white` throughout: bars, fields, dialogs, the live
+panel) becomes the surface, `zinc-900` a raised step above it, `zinc-800` the line and `zinc-700` the blue-grey
+between. The remap won: one place, every component follows, light mode and the front door (and the desktop app,
+which isn't `app-shell`) are untouched, and it makes dark mode the light theme's twin (chrome and fields on the
+surface, the canvas recessed). The cost is that inside the dark workbench `zinc-950` no longer means "darkest": a
+page that wants the canvas names `--canvas`. The live session page joins the workbench in the same change: it's
+where the copilot is used, so it gets the still canvas and opaque panels, not the sky.
