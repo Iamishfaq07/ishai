@@ -226,14 +226,15 @@ html.dark .mk-hero-detail {
 }
 
 /* "Sign in with Google", drawn to Google's branding rules: Google Sans Medium 14/20 (a subset of just the button's
-   words, OFL, see assets/google-sans-OFL.txt), 40 px tall, 12 px in from each side, 10 px between the G and the words,
+   words, OFL, see public/fonts/google-sans-OFL.txt; a file of its own, fetched only where the button shows, not
+   inlined into every page's stylesheet), 40 px tall, 12 px in from each side, 10 px between the G and the words,
    the standard G at 20 px; light, dark and neutral fills as specified. */
 @font-face {
   font-family: "Google Sans Signin";
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url(./assets/google-sans-medium-signin.woff2) format("woff2");
+  src: url(/fonts/google-sans-medium-signin.woff2) format("woff2");
 }
 .mk-google {
   display: inline-flex;
