@@ -22,6 +22,9 @@ Every screen driven on a local stack (mock AI), at 1440×900, 820×1180 and 390�
 - **Offer form**: the joining bonus is "In lakh", not "In lakh a year", and equity and other pay say their unit.
 - **My answers**: a short answer takes "a few seconds" to say, not "about 1 min".
 - **Admin payments**: the tab's count drops as soon as a payment is approved or rejected.
+- **Plans**: the Free card says "Your current plan" only on the free plan, not for the admin's Unlimited or a plan
+  given for a while. **Tracker numbers**: a job added straight in as interviewing no longer makes "Typical wait: 0
+  days" before any answer; a real answer within the day reads "Same day".
 - **Practice**: the preset a link points at (`/mock?preset=hr5`) is ringed again (the app shell's cards had
   dropped the box-shadow a ring is drawn with).
 - `tools/e2e/web-flow-sweep.spec.ts` covers the upload limit, the purchase message on a phone, the dollar note,
