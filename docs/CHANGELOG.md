@@ -1,5 +1,44 @@
 # Implementation log
 
+## The front door, enterprise and product-led (2026-10-18)
+
+- **One public layout** (DECISIONS D66; DESIGN.md "The front door"): every signed-out page sits in `PublicLayout`
+  (`apps/web/src/marketing/`): a sticky header with a Products menu of all eight tools, Pricing, Security, Contact,
+  Sign in and Start free; a full-screen phone menu (a dialog that keeps focus); a footer with the products, the
+  company's pages, the policies, the honest line and a theme switch. White canvas (`html.site`), dark mode the
+  workbench's blue-grey twin, IBM Plex Sans headings, one accent, no sky, glass, glows or gradient headlines. The
+  logo's wordmark is outlined (`BrandLogo`), so the front door loads no font for it.
+- **The front page**, redesigned: a hero that says what Orbit is, with the live session drawn in HTML and an answer
+  from the resume streaming in once (Full motion only); the four products as an index, then a section each with a
+  real screen of the app (light and dark WebP, lazy, sized); the other four tools with their own anchors; how it
+  works; why Orbit (factual, with a stage table); security and privacy (from the privacy policy); the server's own
+  plans and packs; the questions; one closing panel. A slim sticky Start free bar on phones and tablets after the
+  hero (waits for the cookie note, steps aside near the end, `×` hides it for good). No pop-ups, timers or scarcity.
+- **Product pages** (Resume AI, Jobs AI) on one template (`ProductPage.tsx`); Contact, How Orbit works, the warm-up
+  and the 404 in the shared layout; sign-in and sign-up with a quiet product panel instead of the dark planet one.
+- **Google sign-in** drawn to Google's branding rules (the standard G, Google Sans Medium 14/20 as a 2 KB subset in
+  `public/fonts`, 40 px, Google's light and dark fills), "Sign in with Google" / "Sign up with Google".
+- **Cookie note**: same words and button, a slim site card (bottom left on wide screens, opposite the support button).
+- **Link previews**: a card per public page (`apps/web/og/render.mjs` writes the SVGs and renders
+  `public/og/<page>.jpg`, 53 to 92 KB); `worker/meta.js` points each page at its own (`PAGE_IMAGES`).
+- **App icons**: the mark on a flat ink tile (web icons, a new maskable icon in the manifest, a 1024 px master for
+  the desktop's icons in `marketing/brand`).
+- **Marketing assets** (`marketing/`): `screens/` (seed a local stack with fictional demo data, capture the real
+  screens; the live session is fed scripted events through a WebSocket proxy), `store/` (5 Microsoft Store
+  screenshots at 1366 x 768 and 2560 x 1440), `ads/` (42 creatives: 4 products x 5 sizes x India and global, plus a
+  1500 x 500 banner; prices only when passed at export).
+- **First paint**: on an address with a public face its chunk starts with the session check, and a browser nobody
+  has signed in on gets the page straight away instead of a spinner; the 404 is a lazy page. Measured on the front
+  page, production build over HTTP/2 with the API proxied (Lighthouse 13, median of 3): mobile (simulated slow 4G)
+  LCP 3.15 s to 2.70 s, score 92 to 94; mobile (real throttling) LCP 4.02 s to 3.75 s, total blocking time 418 to
+  128 ms, score 73 to 80; desktop LCP 0.62 s to 0.56 s, CLS 0.025 to 0. First-load JavaScript the same (182 to
+  183 KB), fonts 125 to 75 KB (Space Grotesk and JetBrains Mono no longer load), CSS 26 to 27 KB. The page weighs
+  more below the fold (the product screens, about 85 KB each, lazy): 335 to 370 KB on a phone, 600 KB on a desktop.
+- **Accessibility**: `tools/e2e/public-pages.spec.ts` runs axe (WCAG 2.2 AA) on ten public pages, light and dark, at
+  1280 and 390 px, with a no-sideways-scroll check and the menus' keyboard behaviour: 0 violations. Fixed on the way:
+  the sample resume's preview is inert (focusable links inside an image), the sample match's "match" label meets AA,
+  the pipeline's stage buttons take their names from their words.
+
 ## Search engines and AI assistants (2026-10-18)
 
 - **Real status codes** (DECISIONS D67): an address that isn't a page answers **404** with noindex instead of the app
