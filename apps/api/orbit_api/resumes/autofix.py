@@ -366,9 +366,9 @@ async def fix_resume(body: FixIn, user: User, can_spend: Callable[[], Awaitable[
     calls = 0
 
     async def counted(req: LLMRequest) -> LLMResponse:
-        nonlocal used_ai, calls
+        nonlocal calls
         resp = await generate(req)
-        used_ai, calls = True, calls + 1
+        calls += 1
         return resp
 
     upgrade = False
@@ -377,11 +377,15 @@ async def fix_resume(body: FixIn, user: User, can_spend: Callable[[], Awaitable[
     if ai_ids and not await can_spend():
         upgrade, ai_ids = True, set()
     if ai_ids:
+        made = (len(fix.applied), len(fix.review), len(fix.asked))
         try:
             await fix.rewrite(ai_ids, get_llm_provider(), counted)
         except HTTPException as e:  # the AI is down, or the last credit went meanwhile: keep the free fixes
             upgrade = e.status_code == status.HTTP_402_PAYMENT_REQUIRED
             ai_error = None if upgrade else AI_DOWN
+        # Used means something the AI wrote is in the answer: a reply that came back garbled, or one the grounding
+        # checks threw out whole, gives the person only the free fixes, so the credit isn't spent on it.
+        used_ai = calls > 0 and (len(fix.applied), len(fix.review), len(fix.asked)) != made
     fix.openers(ids)
     fix.trim_length(ids)
     if "tech_names" in ids or used_ai:  # last, so lines the AI just wrote are spelled right too

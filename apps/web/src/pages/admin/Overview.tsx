@@ -17,6 +17,17 @@ export function AdminOverview({ version = 0 }: { version?: number }) {
   if (stats.error && !s) return <p className="mb-5 text-sm text-rose-600">Couldn't load the numbers: {errorText(stats.error)}</p>;
   return (
     <div className="mb-6 space-y-3">
+      {s?.warnings?.includes("database_read_only") && (
+        <div role="alert" className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-900 dark:text-rose-100">
+          <p className="font-semibold">The database is read-only</p>
+          <p className="mt-1">
+            It answers reads but refuses every write, so sign-ins, payments, sessions and saves fail, and new deploys fail their readiness check. In
+            Railway's Postgres console, <code>SHOW default_transaction_read_only;</code> says <code>on</code> (or the database is a standby). Turn it
+            off with <code>SET default_transaction_read_only = off;</code> then <code>ALTER DATABASE railway SET default_transaction_read_only = off;</code>{" "}
+            (use the database's real name), then restart the API: its open connections keep the old setting.
+          </p>
+        </div>
+      )}
       {s?.warnings?.includes("proxy_secret") && (
         <div role="alert" className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-900 dark:text-rose-100">
           <p className="font-semibold">Proxy secret missing</p>

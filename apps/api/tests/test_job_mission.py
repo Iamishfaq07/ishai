@@ -133,3 +133,21 @@ def test_export_has_the_sent_versions_and_deleting_the_job_removes_them(client: 
     assert len(export["job_search"]["sent_resume_versions"]) == 1
     assert client.delete(f"/v1/jobs/tracker/{eid}", headers=h).status_code == 204
     assert client.get("/v1/auth/me/export", headers=h).json()["job_search"]["sent_resume_versions"] == []
+
+
+def test_opening_a_sent_version_again_keeps_to_the_resume_limit(client: TestClient) -> None:
+    """Every other way of making a resume stops at MAX_RESUMES; copying a snapshot didn't, so a loop could make
+    thousands (each listed, scored and loaded by the Jobs AI profile on every request)."""
+    from orbit_api.resumes.routes import MAX_RESUMES
+
+    h = _register(client)
+    eid = _entry(client, h)
+    rid = _resume(client, h)
+    client.put(f"/v1/jobs/tracker/{eid}/mission/resume", headers=h, json={"resume_id": rid})
+    snap = client.post(f"/v1/jobs/tracker/{eid}/mission/snapshots", headers=h, json={}).json()["snapshots"][0]
+    copy = f"/v1/jobs/tracker/{eid}/mission/snapshots/{snap['id']}/copy"
+    for _ in range(MAX_RESUMES - 1):
+        assert client.post(copy, headers=h).status_code == 201
+    full = client.post(copy, headers=h)
+    assert full.status_code == 409 and "Delete one first" in full.json()["detail"]
+    assert len(client.get("/v1/resumes", headers=h).json()) == MAX_RESUMES

@@ -14,6 +14,8 @@ tracker with the new resume attached. One resume credit per item, the same as th
 the AI isn't used or fails; checked up front so a queue never runs past the credits there are.
 """
 
+import asyncio
+import contextlib
 import logging
 import uuid
 from datetime import UTC, datetime
@@ -231,44 +233,51 @@ async def run(payload: dict[str, Any]) -> None:
         design = ResumeDesign.model_validate(copy.design or {})
         body = autofix.FixIn(data=data.visible(), design=design, job_text=copy.job_text or "")
         try:
-            out, used_ai = await autofix.fix_resume(body, user, allowance.can_spend,
-                                                    lambda req: _generate(db, user, req, "tailor queue", allowance))
-        except HTTPException as e:
-            await allowance.release()
-            if e.status_code == status.HTTP_402_PAYMENT_REQUIRED:
-                await _save(item_id, error="Out of resume credits before this one ran.",
-                            result={"resume_id": copy.id, "title": copy.title})
+            try:
+                out, used_ai = await autofix.fix_resume(
+                    body, user, allowance.can_spend, lambda req: _generate(db, user, req, "tailor queue", allowance))
+            except HTTPException as e:
+                if e.status_code == status.HTTP_402_PAYMENT_REQUIRED:
+                    await allowance.release()
+                    await _save(item_id, error="Out of resume credits before this one ran.",
+                                result={"resume_id": copy.id, "title": copy.title})
+                    return
+                raise
+            if not used_ai:
+                await allowance.release()
+            fixed = data
+            for s in out.suggestions:
+                fixed = apply_suggestion(fixed, s)
+            if out.order:
+                rank = {rid: i for i, rid in enumerate(out.order)}
+                fixed = fixed.model_copy(update={"experience": sorted(fixed.experience,
+                                                                      key=lambda e: rank.get(e.id, 99))})
+            # Sections hidden in the editor were left out of the fix: they come back as they were.
+            merged = ResumeData.model_validate(copy.data or {})
+            hidden = set(merged.hidden or [])
+            basics = fixed.basics if "summary" not in hidden else fixed.basics.model_copy(
+                update={"summary": merged.basics.summary})
+            merged = merged.model_copy(update={"basics": basics, **{k: getattr(fixed, k) for k in (
+                "experience", "skills", "projects", "education") if k not in hidden}})
+            copy = await db.get(Resume, copy.id)
+            if copy is None:
+                await _save(item_id, error="The tailored copy was deleted while it was being made.")
                 return
+            copy.data = merged.model_dump(mode="json")
+            copy.design = design.model_copy(update=out.design).model_dump(mode="json")
+            copy.updated_at = datetime.now(UTC)
+            copy.revision = (copy.revision or 0) + 1  # an editor open on it sees a newer version, as after any save
+            await db.commit()
+            await _save(item_id, error=None if used_ai or not out.ai_error else out.ai_error, result={
+                "resume_id": copy.id, "title": copy.title, "score_before": out.score_before,
+                "score_after": out.score_after,
+                "changes": len(out.suggestions) + len(out.design) + (1 if out.order else 0),
+                "to_confirm": len(out.review), "questions": len(out.questions)})
+        except BaseException:
+            # Failed, or cut off (the job's timeout cancels it, so does a deploy): the worker runs it again from the
+            # start, and that run pays, so the credit this one took goes back. A cancellation isn't an Exception,
+            # and this task may be being cancelled: shielded, as jobs.py puts a cut-off job back.
+            with contextlib.suppress(Exception):
+                await asyncio.shield(allowance.release())
             raise
-        except Exception:
-            await allowance.release()
-            raise
-        if not used_ai:
-            await allowance.release()
-        fixed = data
-        for s in out.suggestions:
-            fixed = apply_suggestion(fixed, s)
-        if out.order:
-            rank = {rid: i for i, rid in enumerate(out.order)}
-            fixed = fixed.model_copy(update={"experience": sorted(fixed.experience, key=lambda e: rank.get(e.id, 99))})
-        # Sections hidden in the editor were left out of the fix: they come back as they were.
-        merged = ResumeData.model_validate(copy.data or {})
-        hidden = set(merged.hidden or [])
-        basics = fixed.basics if "summary" not in hidden else fixed.basics.model_copy(
-            update={"summary": merged.basics.summary})
-        merged = merged.model_copy(update={"basics": basics, **{k: getattr(fixed, k) for k in (
-            "experience", "skills", "projects", "education") if k not in hidden}})
-        copy = await db.get(Resume, copy.id)
-        if copy is None:
-            await _save(item_id, error="The tailored copy was deleted while it was being made.")
-            return
-        copy.data = merged.model_dump(mode="json")
-        copy.design = design.model_copy(update=out.design).model_dump(mode="json")
-        copy.updated_at = datetime.now(UTC)
-        copy.revision = (copy.revision or 0) + 1  # an editor open on it sees a newer version, as after any save
-        await db.commit()
-        await _save(item_id, error=None if used_ai or not out.ai_error else out.ai_error, result={
-            "resume_id": copy.id, "title": copy.title, "score_before": out.score_before, "score_after": out.score_after,
-            "changes": len(out.suggestions) + len(out.design) + (1 if out.order else 0), "to_confirm": len(out.review),
-            "questions": len(out.questions)})
         log.info("tailor queue item %s: %s -> %s", item_id, out.score_before, out.score_after)

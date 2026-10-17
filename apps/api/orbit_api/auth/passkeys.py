@@ -129,10 +129,11 @@ class OptionsOut(BaseModel):
 
 
 @router.post("/passkeys/options", response_model=OptionsOut, dependencies=[settings_limit])
-async def registration_options(body: SetupIn, user: Annotated[User, Depends(current_user)],
+async def registration_options(body: SetupIn, request: Request, user: Annotated[User, Depends(current_user)],
                                db: Annotated[AsyncSession, Depends(get_db)]) -> OptionsOut:
-    """Start adding a passkey: the password again (when the account has one), then what the browser asks for."""
-    await _confirm_password(user, body.password)
+    """Start adding a passkey: the password again (when the account has one; else a recent sign-in), then what the
+    browser asks for."""
+    await _confirm_password(request, user, body.password)
     existing = await _mine(db, user)
     if len(existing) >= MAX_PASSKEYS:
         raise HTTPException(status.HTTP_409_CONFLICT, f"You have {MAX_PASSKEYS} passkeys. Remove one first.")

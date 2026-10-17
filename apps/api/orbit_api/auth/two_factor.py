@@ -27,7 +27,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orbit_api.auth.security import current_user, verify_password
+from orbit_api.auth.security import current_user, decode_claims, token_from_request, verify_password
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.models import AuditLog, User, UserTwoFactor
@@ -42,6 +42,7 @@ CHALLENGE_TTL_S = 300
 CHALLENGE_COOKIE = "orbit_2fa"
 ISSUER = "Orbit"
 _wrong_codes = TokenBucket(rate_per_s=5 / 900, burst=5)  # 5 wrong codes per account per 15 min
+_wrong_setting_codes = TokenBucket(rate_per_s=5 / 900, burst=5)  # the same, to turn it off or get new codes
 settings_limit = Depends(limit_user("auth-2fa", rate_per_s=1, burst=10))
 
 
@@ -222,16 +223,30 @@ class SetupOut(BaseModel):
     otpauth_uri: str
 
 
-async def _confirm_password(user: User, password: str) -> None:
-    if user.password_hash and not await verify_password(password, user.password_hash):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "That password isn't right.")
+RECENT_SIGN_IN_S = 15 * 60
+SIGN_IN_AGAIN = "For your security, sign out and sign in with Google again, then do this within 15 minutes."
+
+
+async def _confirm_password(request: Request, user: User, password: str) -> None:
+    """The password again, for an account that has one. One made with Google has only a random hash nobody knows
+    (`has_password` false; the web app asks for nothing), so a recent sign-in stands in for it: a session left open
+    or stolen can't add a way in (a passkey skips this step and outlives "sign out everywhere") or lock the owner
+    out with an authenticator they don't have."""
+    if user.has_password:
+        if not await verify_password(password, user.password_hash):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "That password isn't right.")
+        return
+    claims = decode_claims(token_from_request(request) or "") or {}
+    signed_in = int(claims.get("auth") or claims.get("iat") or 0)
+    if time.time() - signed_in > RECENT_SIGN_IN_S:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, SIGN_IN_AGAIN)
 
 
 @router.post("/2fa/setup", response_model=SetupOut, dependencies=[settings_limit])
-async def setup(body: SetupIn, user: Annotated[User, Depends(current_user)],
+async def setup(body: SetupIn, request: Request, user: Annotated[User, Depends(current_user)],
                 db: Annotated[AsyncSession, Depends(get_db)]) -> SetupOut:
     """Start (or restart) setting up: a new secret for the app, not on until a code from it is entered."""
-    await _confirm_password(user, body.password)
+    await _confirm_password(request, user, body.password)
     row = await db.get(UserTwoFactor, user.id)
     if row is not None and row.enabled_at is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Two-step sign-in is already on. Turn it off first.")
@@ -274,14 +289,25 @@ async def enable(body: CodeIn, request: Request, user: Annotated[User, Depends(c
     return CodesOut(recovery_codes=codes)
 
 
+async def _settings_code(db: AsyncSession, user: User, code: str) -> UserTwoFactor:
+    """The account's second step, once `code` checks out (it's used up). Wrong codes are throttled as at sign-in, so a
+    session left open can't guess its way to turning it off; counted apart from sign-in's, so it can't use those up
+    to block the owner either."""
+    if blocked(_wrong_setting_codes, user.id):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many wrong codes. Try again in 15 minutes.")
+    row = await db.get(UserTwoFactor, user.id)
+    if row is None or row.enabled_at is None or not await check_code(db, row, code):
+        failed(_wrong_setting_codes, user.id)
+        await db.commit()  # a used recovery code stays used
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That code didn't work.")
+    return row
+
+
 @router.post("/2fa/recovery-codes", response_model=CodesOut, dependencies=[settings_limit])
 async def regenerate(body: CodeIn, user: Annotated[User, Depends(current_user)],
                      db: Annotated[AsyncSession, Depends(get_db)]) -> CodesOut:
     """New recovery codes (the old ones stop working), with a current code."""
-    row = await db.get(UserTwoFactor, user.id)
-    if row is None or row.enabled_at is None or not await check_code(db, row, body.code):
-        await db.commit()
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That code didn't work.")
+    row = await _settings_code(db, user, body.code)
     codes = new_recovery_codes()
     row.recovery_hashes = [_hash(c) for c in codes]
     await db.commit()
@@ -294,10 +320,7 @@ async def disable(body: CodeIn, request: Request, user: Annotated[User, Depends(
     """Turn it off, with a current code or a recovery code."""
     from orbit_api.auth.routes import _ip
 
-    row = await db.get(UserTwoFactor, user.id)
-    if row is None or row.enabled_at is None or not await check_code(db, row, body.code):
-        await db.commit()
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That code didn't work.")
+    row = await _settings_code(db, user, body.code)
     await db.delete(row)
     db.add(AuditLog(user_id=user.id, action="auth.2fa_off", ip=_ip(request)))
     await db.commit()

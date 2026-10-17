@@ -214,3 +214,10 @@ def redeem_ticket(ticket: str, session_id: str) -> str | None:
     if t is None or t.expires_at < time.monotonic() or t.session_id != session_id:
         return None
     return t.user_id
+
+
+def revoke_tickets(user_id: str) -> None:
+    """Every unspent live ticket of this account ("sign out everywhere", a password reset, a suspension): one minted
+    by a stolen session a moment before must not open a socket in its last minute."""
+    for k in [k for k, t in _tickets.items() if t.user_id == user_id]:
+        del _tickets[k]

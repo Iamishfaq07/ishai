@@ -4,7 +4,9 @@ No Google script on the page. The browser is sent to Google and comes back here.
 that already has an Orbit account is signed into that account (and linked), not given a second one.
 """
 
+import contextlib
 import hashlib
+import logging
 import re
 import secrets
 import time
@@ -34,6 +36,7 @@ from orbit_api.db import get_db
 from orbit_api.models import AuditLog, User
 from orbit_api.ratelimit import client_ip
 
+log = logging.getLogger(__name__)
 GOOGLE_COOKIE = "orbit_google"
 _AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 _TOKEN_URL = "https://oauth2.googleapis.com/token"  # noqa: S105 - Google's token endpoint, not a secret
@@ -280,28 +283,44 @@ def mount(router: APIRouter) -> None:
         try:
             ident = await fetch_identity(code, packed["cv"], packed["ru"])
             user, created, claimed = await _find_or_create(db, request, ident)
+            return await _signed_in(db, request, user, created, claimed, packed["nx"])
         except GoogleDenied as denied:
             response = RedirectResponse(_login_url(denied.code), status_code=302)
             _clear_state(response)
             return response
-        dest = "/welcome" if created else safe_next(packed["nx"])
-        if claimed:
-            dest += ("&" if "?" in dest else "?") + "google=claimed"
-        response = RedirectResponse(_home(dest), status_code=302)
-        from orbit_api.auth.devices import start_session
-        from orbit_api.auth.two_factor import CHALLENGE_COOKIE, CHALLENGE_TTL_S, challenge_for, enabled
-
-        if await enabled(db, user.id):
-            # Google proved who it is; the authenticator code still comes next. The challenge rides in a short
-            # httpOnly cookie, never in the URL, and the sign-in page asks for the code.
-            response = RedirectResponse(_home("/login?step=2fa"), status_code=302)
-            secure, samesite = cookie_policy()
-            response.set_cookie(CHALLENGE_COOKIE, challenge_for(user), max_age=CHALLENGE_TTL_S, httponly=True,
-                                secure=secure, samesite=samesite, path="/")
+        except Exception:
+            # The browser is on the API's own address here: a database error (or anything unexpected) must not
+            # leave it on a bare "Internal Server Error" page. What wasn't committed is rolled back (an account is
+            # created in one commit, so none is left half made) and the sign-in page says to try again.
+            log.exception("google sign-in failed")
+            with contextlib.suppress(Exception):
+                await db.rollback()
+            response = RedirectResponse(_login_url("server"), status_code=302)
             _clear_state(response)
             return response
-        sid = await start_session(db, user, request)
-        await db.commit()
-        set_session_cookie(response, create_access_token(user.id, user.token_version, idle=True, sid=sid))
+
+
+async def _signed_in(db: AsyncSession, request: Request, user: User, created: bool, claimed: bool,
+                     nxt: str) -> RedirectResponse:
+    """Where Google's sign-in lands: a session cookie and the page they were going to, or the authenticator step."""
+    from orbit_api.auth.devices import start_session
+    from orbit_api.auth.two_factor import CHALLENGE_COOKIE, CHALLENGE_TTL_S, challenge_for, enabled
+
+    dest = "/welcome" if created else safe_next(nxt)
+    if claimed:
+        dest += ("&" if "?" in dest else "?") + "google=claimed"
+    response = RedirectResponse(_home(dest), status_code=302)
+    if await enabled(db, user.id):
+        # Google proved who it is; the authenticator code still comes next. The challenge rides in a short
+        # httpOnly cookie, never in the URL, and the sign-in page asks for the code.
+        response = RedirectResponse(_home("/login?step=2fa"), status_code=302)
+        secure, samesite = cookie_policy()
+        response.set_cookie(CHALLENGE_COOKIE, challenge_for(user), max_age=CHALLENGE_TTL_S, httponly=True,
+                            secure=secure, samesite=samesite, path="/")
         _clear_state(response)
         return response
+    sid = await start_session(db, user, request)
+    await db.commit()
+    set_session_cookie(response, create_access_token(user.id, user.token_version, idle=True, sid=sid))
+    _clear_state(response)
+    return response

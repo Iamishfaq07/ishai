@@ -82,6 +82,18 @@ async def get_db() -> AsyncIterator[AsyncSession]:
         yield db
 
 
+async def refuses_writes(session: AsyncSession) -> bool:
+    """The database answers reads but refuses every write: a Postgres with `default_transaction_read_only = on`, or
+    a standby (in recovery). `SELECT 1` passes on both, so a readiness check that only reads says "ok" while every
+    sign-in, payment and session write fails (docs/DECISIONS.md D56). Always False on SQLite (dev and tests)."""
+    if session.get_bind().dialect.name != "postgresql":
+        return False
+    from sqlalchemy import text
+
+    return bool((await session.execute(text(
+        "SELECT current_setting('transaction_read_only') = 'on' OR pg_is_in_recovery()"))).scalar())
+
+
 async def create_all() -> None:
     """Dev/test convenience. Production schema is managed by Alembic."""
     from orbit_api import models  # noqa: F401  (register tables)

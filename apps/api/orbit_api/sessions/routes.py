@@ -32,7 +32,7 @@ from orbit_api import credits, jobs, practice_language
 from orbit_api.answers.routes import MAX_ANSWERS, answer_text
 from orbit_api.answers.routes import index_chunk as answer_chunk
 from orbit_api.auth.guards import require_verified_user
-from orbit_api.auth.security import TICKET_TTL_S, current_user, issue_ticket, redeem_ticket
+from orbit_api.auth.security import TICKET_TTL_S, current_user, issue_ticket, redeem_ticket, revoke_tickets
 from orbit_api.config import get_settings
 from orbit_api.csrf import websocket_origin_allowed
 from orbit_api.db import get_db, sessionmaker
@@ -381,6 +381,7 @@ async def get_session(session_id: str, user: Annotated[User, Depends(current_use
 async def stop_user_live(user_id: str) -> None:
     """Every live session this account is streaming, and any phone following one: after "sign out everywhere" or a
     password reset, a stolen session mustn't keep listening (and spending the owner's minutes)."""
+    revoke_tickets(user_id)  # and none minted a moment ago opens one
     for session_id in list(_live_sockets.get(user_id, {})):
         await stop_live(user_id, session_id)
     companion.stop_user_sharing(user_id)  # every code, including for sessions not live yet

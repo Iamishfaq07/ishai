@@ -135,3 +135,20 @@ def test_logout_all_revokes_every_token(client: TestClient) -> None:
     assert client.post("/v1/auth/logout-all", headers=a).status_code == 204
     assert client.get("/v1/auth/me", headers=a).status_code == 401
     assert client.get("/v1/auth/me", headers=b).status_code == 401
+
+
+def test_logout_all_also_voids_a_live_ticket_not_spent_yet(client: TestClient) -> None:
+    """A live ticket is good for a minute. Minted with a stolen session just before the owner signs out everywhere,
+    it used to still open the socket (streaming answers and spending the owner's minutes for the whole session)."""
+    from starlette.websockets import WebSocketDisconnect
+
+    _, h = _register(client)
+    sid = client.post("/v1/sessions", headers=h, json={"title": "stolen"}).json()["id"]
+    ticket = client.post(f"/v1/sessions/{sid}/live-ticket", headers=h).json()["ticket"]
+    assert client.post("/v1/auth/logout-all", headers=h).status_code == 204
+    try:
+        with client.websocket_connect(f"/v1/sessions/{sid}/live?ticket={ticket}") as ws:
+            ws.receive_text()
+        raise AssertionError("the socket opened after sign-out everywhere")
+    except WebSocketDisconnect as e:
+        assert e.code == 4001

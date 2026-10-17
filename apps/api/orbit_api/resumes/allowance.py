@@ -73,6 +73,10 @@ class Allowance:
         self.currency = currency or pricing.account_currency(user)
         self._claimed: list[str] = []  # the credit entries this request wrote
         self._fix = False  # a single fix: costs one fix, not a whole credit
+        # The model answered at least once in this request. A later call failing then doesn't give the credit back
+        # by itself: the request may still deliver the earlier answer. Whoever decides it delivered nothing (an
+        # error reaching `_spend`, or `used_ai` false) releases it.
+        self.answered = False
 
     def as_fix(self) -> "Allowance":
         """This request is one small fix (one ATS check, one section or line): it costs a fraction of a credit."""

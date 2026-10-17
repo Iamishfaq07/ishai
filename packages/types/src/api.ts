@@ -1189,7 +1189,8 @@ export interface AdminStats {
   payments_waiting: number;
   /** Server settings to fix, as codes: "proxy_secret" (ORBIT_PROXY_SECRET missing in production), "proxy_unsigned"
    * (the web Worker's requests arrive without it: no visitor country or IP), "api_cloudflare_proxied" (the API's own
-   * DNS record is proxied by Cloudflare: desktop users share limits by edge address). */
+   * DNS record is proxied by Cloudflare: desktop users share limits by edge address), "database_read_only" (the
+   * database answers reads but refuses writes). */
   warnings?: string[];
 }
 

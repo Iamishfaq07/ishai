@@ -16,7 +16,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user
@@ -149,11 +149,15 @@ async def send_due(now: datetime | None = None) -> int:
     now = now or datetime.now(UTC)
     sent = 0
     async with sessionmaker()() as db:
+        # Each frequency by its own period: weekly profiles a few days from due sort first (oldest send), so asking
+        # only "a day ago" filled the batch with ones skipped below and daily alerts waited behind them for good.
         due = (await db.execute(
             select(JobSearchProfile, User).join(User, User.id == JobSearchProfile.user_id)
             .where(JobSearchProfile.alert.in_(list(PERIOD)), User.email_verified.is_(True),
                    or_(JobSearchProfile.alert_sent_at.is_(None),
-                       JobSearchProfile.alert_sent_at <= now - PERIOD["daily"] + SLACK))
+                       *(and_(JobSearchProfile.alert == frequency,
+                              JobSearchProfile.alert_sent_at <= now - period + SLACK)
+                         for frequency, period in PERIOD.items())))
             .order_by(JobSearchProfile.alert_sent_at).limit(BATCH))).all()
         for row, user in due:
             last = _aware(row.alert_sent_at) if row.alert_sent_at else now - PERIOD[row.alert]

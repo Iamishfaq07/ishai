@@ -275,6 +275,7 @@ const GOOGLE_ERROR: Record<string, string> = {
   suspended: "This account is suspended.",
   unverified: "That Google account doesn't have a confirmed email. Use another, or sign up with email.",
   taken: "An account with this email already exists. Sign in with your password, or Continue with Google.",
+  server: "Something went wrong on our side while signing you in. Try again in a minute.",
 };
 
 function GoogleMark() {

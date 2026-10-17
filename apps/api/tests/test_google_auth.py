@@ -1,7 +1,9 @@
 """Continue with Google: the button stays hidden until it's configured, and a verified Google email signs in."""
 
 import re
+import uuid
 from collections.abc import Iterator
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -261,3 +263,56 @@ def test_a_new_google_account_is_for_the_country_it_signed_up_from(google_client
     # A country the Worker didn't vouch for is no guess at all.
     who = {"sub": "google-sub-xx", "email": "ada-unsure@gmail.com", "name": "Ada"}
     assert sign_in({"X-Orbit-Client-Country": "US"}) is None
+
+
+def test_a_database_error_lands_on_the_sign_in_page_not_a_bare_500(
+    google_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The browser is on the API's address during the callback: an error there used to show a plain-text "Internal
+    Server Error". Now it goes back to the sign-in page, and nothing half made is left behind."""
+    from sqlalchemy import select
+    from sqlalchemy.exc import OperationalError
+
+    from orbit_api import credits
+    from orbit_api.auth import devices
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import User
+
+    email = f"db-error-{uuid.uuid4().hex[:8]}@gmail.com"
+    refused = OperationalError("INSERT", {}, Exception("cannot execute INSERT in a read-only transaction"))
+    real_welcome, real_session = credits.grant_welcome, devices.start_session
+
+    async def broken(*_: object) -> Any:
+        raise refused
+
+    def callback() -> Any:
+        start = google_client.get("/v1/auth/google/start", follow_redirects=False)
+        return google_client.get(f"/v1/auth/google/callback?code=ok&state={_state(start.headers['location'])}",
+                                 follow_redirects=False)
+
+    async def account() -> Any:
+        async with sessionmaker()() as db:
+            return await db.scalar(select(User).where(User.email == email))
+
+    async def fake(code: str, verifier: str, uri: str) -> dict[str, str | None]:
+        return {"sub": f"sub-{email}", "email": email, "name": None}
+
+    monkeypatch.setattr(google, "fetch_identity", fake)
+    # The new account is flushed and nothing is committed yet when the welcome credits fail.
+    monkeypatch.setattr(credits, "grant_welcome", broken)
+    done = callback()
+    assert done.status_code == 302 and done.headers["location"].endswith("/login?error=server")
+    assert 'orbit_google=""' in done.headers["set-cookie"]
+    assert google_client.get("/v1/auth/me").status_code == 401
+    assert google_client.portal.call(account) is None  # type: ignore[union-attr]  # rolled back, not half made
+
+    # A failure after the account is made (its device row): the same page, and trying again signs in.
+    monkeypatch.setattr(credits, "grant_welcome", real_welcome)
+    monkeypatch.setattr(devices, "start_session", broken)
+    done = callback()
+    assert done.status_code == 302 and done.headers["location"].endswith("/login?error=server")
+    assert google_client.get("/v1/auth/me").status_code == 401
+    monkeypatch.setattr(devices, "start_session", real_session)
+    assert callback().status_code == 302
+    me = google_client.get("/v1/auth/me")
+    assert me.status_code == 200 and me.json()["email"] == email

@@ -271,7 +271,8 @@ def create_app() -> FastAPI:
 
     @app.get("/ready")
     async def ready(response: Response) -> dict[str, Any]:
-        # Readiness: can the app actually serve — DB reachable. Used to gate rollouts / load balancers.
+        # Readiness: can the app actually serve — DB reachable and taking writes. Used to gate rollouts / load
+        # balancers (Railway's deploy healthcheck).
         from sqlalchemy import text
 
         checks: dict[str, str] = {}
@@ -279,8 +280,13 @@ def create_app() -> FastAPI:
         try:
             async with db.sessionmaker()() as session:
                 await session.execute(text("SELECT 1"))
-            checks["database"] = "ok"
-            dependency_health.record("postgres", "database", True, int((time.monotonic() - started) * 1000))
+                read_only = await db.refuses_writes(session)
+            if read_only:  # reads work and every write fails (D56): not ready, and said plainly
+                checks["database"] = "read_only"
+                dependency_health.record("postgres", "database", False, error="read_only")
+            else:
+                checks["database"] = "ok"
+                dependency_health.record("postgres", "database", True, int((time.monotonic() - started) * 1000))
         except Exception as e:
             checks["database"] = f"error: {type(e).__name__}"
             dependency_health.record("postgres", "database", False, error=type(e).__name__)

@@ -576,8 +576,8 @@ export function createApiClient(options: ApiClientOptions) {
     deleteStory: (id: string) => json<void>(`/v1/stories/${encodeURIComponent(id)}`, { method: "DELETE" }),
     draftStories: (req: StoryDraftRequest) =>
       json<StoryDraftResponse>("/v1/stories/draft", { method: "POST", body: body(req) }),
-    /** Scores and speaking stats across ended sessions. */
-    progress: () => json<Progress>("/v1/progress"),
+    /** Scores and speaking stats across ended sessions (minutes east of UTC, so the streak counts the person's own days). */
+    progress: (tzOffset = -new Date().getTimezoneOffset()) => json<Progress>(`/v1/progress${queryString({ tz_offset: tzOffset })}`),
     // Resume maker
     listResumes: () => json<ResumeSummary[]>("/v1/resumes"),
     getResume: (id: string) => json<Resume>(`/v1/resumes/${encodeURIComponent(id)}`),
