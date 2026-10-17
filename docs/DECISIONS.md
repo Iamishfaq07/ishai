@@ -424,3 +424,23 @@ database takes writes again, and that is accepted: a deploy can't serve then any
 running. While a database refuses writes, the device "last used" touch on each signed-in request is skipped instead
 of failing the request, so reading what's already there keeps working, and Google's callback sends the browser back
 to `/login?error=server` instead of a bare 500 on the API's address.
+
+**D57 — Plans for a while run on their own clock, and nothing given or paid is cut short.** A paid month and the
+admin's grant are the same thing on the account: a plan until a time. Their allowances used to be 30-day periods
+counted back from the end, so a week of Premium reached 23 days into the past (usage from before the purchase counted
+against it) and two weeks back to back shared one 30-day allowance; and a new plan replaced a different one running,
+so a paid week ended an admin's 60 days of Unlimited. Now:
+- **Windows from the start.** Each grant keeps when it began (`users.grant_started_at`); its allowance runs in 30-day
+  windows from there, the last one ending with the grant. Use from before never counts against it.
+- **A paid window shorter than 30 days gets its share**, rounded up: a week of Premium is 700 live and 350 mock
+  minutes, a year's last 5 days 500. The admin's grants keep the whole allowance (`users.grant_paid` says which):
+  their length is the admin's call, and "Pro for 2 hours" isn't 2 minutes.
+- **Nothing is cut short.** The same plan again is added on where it ends (from now, if it already ended). A higher
+  plan (basic < pro < premium < unlimited) starts now, and what's left of the running one waits behind it with all its
+  time, its windows still counted from where they began. A lower plan waits until the running one ends. Grants waiting
+  their turn are `users.grant_queue`, best first; nothing is converted by price (an admin grant has none), so there's
+  no rate to argue about. Readers work the timeline out at any moment; writers (a payment landing, the admin's grant)
+  move it on under the account lock, and the sweep stores the next grant as running once one ends, for the admin's
+  lists. The receipt and the admin's email say when a waiting plan starts.
+- **Existing grants** got their start from what made them (the latest approved paid month, or the admin's latest
+  grant in the audit log). One with neither keeps counting its windows back from its end, as before.

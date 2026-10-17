@@ -20,6 +20,7 @@ earlier in the month don't shrink a Pro allowance.
 
 import json
 import logging
+import math
 import os
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime, timedelta
@@ -129,11 +130,126 @@ def _aware(d: datetime) -> datetime:
     return d if d.tzinfo else d.replace(tzinfo=UTC)
 
 
-def active_grant(user: User, now: datetime | None = None) -> str | None:
-    """The plan the admin granted this user for a while, if that time hasn't run out."""
-    if user.grant_plan and user.grant_until and _aware(user.grant_until) > (now or datetime.now(UTC)):
-        return user.grant_plan
-    return None
+# ---- plans for a while: the admin's grants and paid months (D57) ---------------------------------------------------
+#
+# The running grant is User.grant_plan until User.grant_until; grants waiting their turn are User.grant_queue, each
+# starting when the one before it ends. Nothing given or paid is ever cut short: the same plan again is added on;
+# a higher plan runs now and what's left of the running one waits behind it; a lower plan waits behind the running
+# one. Readers work the timeline out at any moment (`current_grant`); writers `roll` it forward first.
+
+
+@dataclass(frozen=True)
+class Grant:
+    plan: str
+    start: datetime | None  # when it runs from (None: an older grant, start not kept)
+    until: datetime
+    paid: bool  # bought: a window shorter than 30 days gets its share of the allowance
+    anchor: datetime | None  # where its 30-day allowance windows count from (None: an older grant)
+
+
+def tier(plan: str) -> int:
+    return GRANT_PLANS.index(plan) if plan in GRANT_PLANS else -1
+
+
+def _when(value: Any) -> datetime | None:
+    if isinstance(value, datetime):
+        return _aware(value)
+    return _aware(datetime.fromisoformat(value)) if isinstance(value, str) and value else None
+
+
+def grants(user: Any) -> list[Grant]:
+    """The account's grants in the order they run: the running (or last) one, then the queue. `user` may be any
+    object with the grant fields (tests use plain namespaces without the newer ones)."""
+    plan, until = getattr(user, "grant_plan", None), getattr(user, "grant_until", None)
+    if not plan or until is None:
+        return []
+    anchor = _when(getattr(user, "grant_started_at", None))
+    out = [Grant(plan, anchor, _aware(until), bool(getattr(user, "grant_paid", False)), anchor)]
+    for item in getattr(user, "grant_queue", None) or []:
+        start = out[-1].until
+        out.append(Grant(str(item["plan"]), start, start + timedelta(seconds=float(item["seconds"])),
+                         bool(item.get("paid")), _when(item.get("anchor")) or start))
+    return out
+
+
+def current_grant(user: Any, now: datetime | None = None) -> Grant | None:
+    """The grant in force at `now`, if any."""
+    now = now or datetime.now(UTC)
+    return next((g for g in grants(user) if g.until > now and (g.start is None or g.start <= now)), None)
+
+
+def active_grant(user: Any, now: datetime | None = None) -> str | None:
+    """The plan the admin granted, or that was bought, for a while, if one is running now."""
+    g = current_grant(user, now)
+    return g.plan if g else None
+
+
+def roll(user: User, now: datetime | None = None) -> None:
+    """Moves the stored timeline to `now`: grants that ended make way for the next in the queue (each starting when
+    the one before ended). Readers don't need it; anything that changes the grants calls it first."""
+    now = now or datetime.now(UTC)
+    queue = list(user.grant_queue or [])
+    while queue and user.grant_until is not None and _aware(user.grant_until) <= now:
+        item, queue = queue[0], queue[1:]
+        start = _aware(user.grant_until)
+        user.grant_plan, user.grant_until = str(item["plan"]), start + timedelta(seconds=float(item["seconds"]))
+        user.grant_started_at, user.grant_paid = _when(item.get("anchor")) or start, bool(item.get("paid"))
+    user.grant_queue = queue or None
+
+
+def add_grant(user: User, plan: str, length: timedelta, *, paid: bool, now: datetime | None = None) -> Grant:
+    """`plan` for `length` more, without cutting anything short (D57). Returns that plan's grant as it now stands
+    (running, or waiting its turn). The caller commits."""
+    now = now or datetime.now(UTC)
+    roll(user, now)
+    running = current_grant(user, now)
+    if running is None:  # nothing running (or only one that ended): it starts now
+        user.grant_plan, user.grant_until, user.grant_started_at, user.grant_paid = plan, now + length, now, paid
+        user.grant_queue = None
+    elif running.plan == plan:  # the same plan: added on where it ends
+        user.grant_until = running.until + length
+        user.grant_paid = user.grant_paid or paid
+    else:
+        queue = [dict(q) for q in user.grant_queue or []]
+        waiting = next((q for q in queue if q["plan"] == plan), None)
+        if waiting is not None:  # already waiting its turn: that wait gets longer
+            waiting["seconds"] = float(waiting["seconds"]) + length.total_seconds()
+            waiting["paid"] = bool(waiting.get("paid")) or paid
+        elif tier(plan) > tier(running.plan):  # the higher plan now; the rest of this one waits behind it
+            anchor = running.anchor.isoformat() if running.anchor else None
+            queue.insert(0, {"plan": running.plan, "seconds": (running.until - now).total_seconds(),
+                             "paid": running.paid, "anchor": anchor})
+            user.grant_plan, user.grant_until, user.grant_started_at, user.grant_paid = plan, now + length, now, paid
+        else:  # a lower plan waits until the running one ends
+            queue.append({"plan": plan, "seconds": length.total_seconds(), "paid": paid, "anchor": None})
+        queue.sort(key=lambda q: -tier(str(q["plan"])))  # the best of what's waiting runs next
+        user.grant_queue = queue or None
+    return next(g for g in grants(user) if g.plan == plan)
+
+
+def clear_grants(user: User) -> None:
+    user.grant_plan = user.grant_until = user.grant_started_at = None
+    user.grant_paid, user.grant_queue = False, None
+
+
+async def roll_due_grants(now: datetime | None = None) -> int:
+    """The sweeper's pass: accounts whose running grant ended with another waiting get that one stored as running, so
+    lists that filter on grant_until (the admin's) see it. Each under its account lock, as payments take it. Returns
+    how many moved on."""
+    from orbit_api.db import sessionmaker
+    from orbit_api.transactions import lock_account
+
+    now = now or datetime.now(UTC)
+    async with sessionmaker()() as db:
+        ids = list((await db.scalars(select(User.id).where(User.grant_queue.is_not(None), User.grant_until <= now)
+                                     .limit(500))).all())
+        for uid in ids:
+            await lock_account(db, uid)
+            user = await db.get(User, uid, populate_existing=True)
+            if user is not None:
+                roll(user, now)
+            await db.commit()
+    return len(ids)
 
 
 def awaiting_approval(user: User) -> bool:
@@ -167,7 +283,7 @@ async def plan_for(db: AsyncSession, user_id: str) -> Plan:
     if user is not None and await is_admin(db, user):
         return plans()["unlimited"]
     if user is not None and (granted := active_grant(user)):
-        return plan_named(granted)
+        return for_window(plan_named(granted), user)
     sub = await db.scalar(
         select(Subscription).where(Subscription.user_id == user_id, Subscription.status == "active")
         .order_by(Subscription.created_at.desc())
@@ -185,16 +301,46 @@ def _month_start() -> datetime:
 PERIOD = timedelta(days=30)
 
 
-def period_start(user: User | None, now: datetime | None = None) -> datetime:
-    """Where this allowance period began. A plan for a while (a paid month, or the admin's grant) runs in 30-day
-    periods counted back from its end, so a month bought on the 28th is one allowance, not two calendar months'.
-    Everything else: the calendar month (UTC)."""
+def allowance_window(user: Any, now: datetime | None = None) -> tuple[datetime, datetime, Grant] | None:
+    """The allowance window of the grant running now: 30 days at a time from when it was bought or given (so use from
+    before never counts, and a month bought on the 28th is one allowance, not two calendar months'), the last one
+    ending with the grant. An older grant with no start kept counts its windows back from its end, as before."""
     now = now or datetime.now(UTC)
-    if user is not None and active_grant(user, now) and user.grant_until is not None:
-        until = _aware(user.grant_until)
-        periods = -((now - until) // PERIOD)  # whole 30-day periods left, rounded up
-        return until - periods * PERIOD
+    g = current_grant(user, now)
+    if g is None:
+        return None
+    if g.anchor is None:
+        periods = -((now - g.until) // PERIOD)  # whole 30-day periods left, rounded up
+        start = g.until - periods * PERIOD
+    else:
+        start = g.anchor + ((now - g.anchor) // PERIOD) * PERIOD
+    return start, min(start + PERIOD, g.until), g
+
+
+def period_start(user: Any, now: datetime | None = None) -> datetime:
+    """Where this allowance period began: the window of a plan for a while (`allowance_window`); else the calendar
+    month (UTC)."""
+    now = now or datetime.now(UTC)
+    window = allowance_window(user, now) if user is not None else None
+    if window is not None:
+        return window[0]
     return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
+def _share(limit: int | None, part: float) -> int | None:
+    return None if limit is None else math.ceil(limit * part - 1e-9)
+
+
+def for_window(plan: Plan, user: Any, now: datetime | None = None) -> Plan:
+    """`plan`'s allowance for the window running now. A bought grant's window shorter than 30 days (a week, the last
+    days of a year) gets that share of the 30-day allowance, rounded up: a week of Premium is 700 live minutes, not
+    3,000. The admin's grants keep the whole allowance (their length is the admin's call)."""
+    window = allowance_window(user, now)
+    if window is None or not window[2].paid or window[1] - window[0] >= PERIOD:
+        return plan
+    part = (window[1] - window[0]) / PERIOD
+    return replace(plan, live_minutes=_share(plan.live_minutes, part), mock_minutes=_share(plan.mock_minutes, part),
+                   screenshots=_share(plan.screenshots, part))
 
 
 async def usage_this_month(db: AsyncSession, user_id: str, metric: str, pool: str | None = None) -> float:
@@ -243,7 +389,8 @@ async def for_user(db: AsyncSession, user: User) -> dict[str, Any]:
     s = get_settings()
     plan = await plan_for(db, user.id)
     docs = await db.scalar(select(func.count()).select_from(Document).where(Document.user_id == user.id))
-    grant_until = user.grant_until if active_grant(user) else None
+    running = current_grant(user)
+    grant_until = running.until if running else None
     limits: dict[str, Any] = {k: getattr(plan, k) for k in _INT_FIELDS}
     live_used = round(await usage_this_month(db, user.id, "live_seconds", usage_pool(plan)) / 60, 1)
     mock_used = round(await usage_this_month(db, user.id, "mock_seconds", usage_pool(plan)) / 60, 1)

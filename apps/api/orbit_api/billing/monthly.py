@@ -7,17 +7,22 @@ Defaults below; `ORBIT_MONTHLY_PLANS_JSON` replaces them, for example
 none). Invalid plans stop the API at boot.
 
 A paid month is a time-limited plan on the account (`User.grant_plan` until `User.grant_until`, the same as the
-admin's grants), and its allowance is metered per 30-day period of it (entitlements.period_start), not per calendar
-month, so a month bought on the 28th isn't two allowances.
+admin's grants), and its allowance is metered in 30-day windows from when it was bought (entitlements.
+allowance_window), not per calendar month, so a month bought on the 28th isn't two allowances and use from before it
+never counts. A week gets a week's share of the 30-day allowance. Buying while another plan runs never cuts either
+short (D57).
 """
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Any
 
 from orbit_api.config import get_settings
 from orbit_api.models import Payment, User
+
+if TYPE_CHECKING:
+    from orbit_api.entitlements import Grant
 
 PERIOD_DAYS = 30
 
@@ -91,21 +96,20 @@ def public_monthly() -> list[dict[str, Any]]:
     return out
 
 
-def _aware(d: datetime) -> datetime:
-    return d if d.tzinfo else d.replace(tzinfo=UTC)
-
-
-def apply(user: User, p: Payment, now: datetime | None = None) -> datetime:
-    """A paid month lands: the same plan still running is extended by its days; otherwise the plan starts now (it
-    replaces a different plan that was running). Returns the new end. The caller commits."""
-    now = now or datetime.now(UTC)
+def plan_of(p: Payment, fallback: str | None = None) -> str:
+    """The plan (entitlements.GRANT_PLANS) a paid month gives; an order for one no longer sold, `fallback`."""
     m = monthly_plans().get(p.plan)
-    plan = m.plan if m else str(user.grant_plan or "pro")
-    running = user.grant_until is not None and _aware(user.grant_until) > now and user.grant_plan == plan
-    start = _aware(user.grant_until) if running and user.grant_until is not None else now
-    user.grant_plan, user.grant_until = plan, start + timedelta(days=p.days)
+    return m.plan if m else str(fallback or "pro")
+
+
+def apply(user: User, p: Payment, now: datetime | None = None) -> "Grant":
+    """A paid month lands, and nothing already given or paid for is cut short (entitlements.add_grant, D57): the same
+    plan running is extended by its days; a higher plan starts now and the rest of the running one waits behind it;
+    a lower plan waits until the running one ends. Returns the bought plan's grant. The caller commits."""
+    from orbit_api.entitlements import add_grant
+
     user.approved = True
-    return user.grant_until
+    return add_grant(user, plan_of(p, user.grant_plan), timedelta(days=p.days), paid=True, now=now)
 
 
 def what(p: Payment) -> str:

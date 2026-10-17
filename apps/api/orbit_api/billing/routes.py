@@ -25,7 +25,7 @@ from orbit_api.billing.packs import pack_label as packs_label
 from orbit_api.billing.packs import packs, public_packs
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
-from orbit_api.entitlements import active_grant, plan_named
+from orbit_api.entitlements import current_grant, plan_named
 from orbit_api.models import AuditLog, ContactMessage, LaunchAccessClaim, Payment, PaymentEvent, PaymentRefund, User
 from orbit_api.providers.email import OutgoingEmail, send_safely
 from orbit_api.ratelimit import limit, limit_user
@@ -642,10 +642,10 @@ async def _admin_payment(db: AsyncSession, p: Payment) -> AdminPayment:
     if u is None:
         return AdminPayment(**out.model_dump(exclude={"upi_id", "payee_name", "upi_uri"}), user_id=None,
                             email="(deleted account)", name=None, current_plan=None, current_until=None)
-    granted = active_grant(u)
+    running = current_grant(u)
     return AdminPayment(**out.model_dump(exclude={"upi_id", "payee_name", "upi_uri"}), user_id=u.id,
-                        email=u.email, name=u.name, current_plan=plan_named(granted).label if granted else None,
-                        current_until=upi.aware(u.grant_until) if granted and u.grant_until else None)
+                        email=u.email, name=u.name, current_plan=plan_named(running.plan).label if running else None,
+                        current_until=running.until if running else None)
 
 
 @router.get("/admin/payments", response_model=AdminPaymentsOut)
