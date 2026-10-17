@@ -55,6 +55,7 @@ from orbit_api.job_portal.profile import (
     resume_hash,
     search_queries,
 )
+from orbit_api.job_portal.rounds import LastRound, RoundType, as_round_type, last_rounds
 from orbit_api.job_portal.search_parse import parse_search
 from orbit_api.job_portal.skills import SkillMatcher
 from orbit_api.job_portal.sources import enabled_sources, source_named
@@ -265,6 +266,11 @@ class TrackerOut(BaseModel):
     still_listed_at: datetime | None = None  # as JobOut's: seen on the company's own careers page then
     created_at: datetime
     updated_at: datetime
+    # The next interview round, as set in its interview prep (job_portal/interview.py), and the latest session
+    # started from this job (its page has the summary and the scorecard). The list fills `last_round` in.
+    round_type: RoundType | None = None
+    round_number: int | None = None
+    last_round: LastRound | None = None
 
 
 DetailOut.model_rebuild()
@@ -324,14 +330,17 @@ def _job_out(row: JobListing, match: ranking.Match | None = None, tracked: JobAp
         tracked=TrackedRef(id=tracked.id, status=tracked.status) if tracked else None)
 
 
-def _tracker_out(t: JobApplication, live: bool, still_listed_at: datetime | None = None) -> TrackerOut:
+def _tracker_out(t: JobApplication, live: bool, still_listed_at: datetime | None = None,
+                 last_round: LastRound | None = None) -> TrackerOut:
     return TrackerOut(
         id=t.id, listing_id=t.listing_id, source=t.source, company=t.company, title=t.title, location=t.location,
         url=t.url, apply_url=t.apply_url, posted_at=_aware(t.posted_at) if t.posted_at else None,
         status=t.status, notes=t.notes or "", applied_at=_aware(t.applied_at) if t.applied_at else None,
         next_at=_aware(t.next_at) if t.next_at else None, status_at=_aware(t.status_at),
         resume_id=t.resume_id, document_id=t.document_id, live=live, still_listed_at=still_listed_at,
-        created_at=_aware(t.created_at), updated_at=_aware(t.updated_at))
+        created_at=_aware(t.created_at), updated_at=_aware(t.updated_at),
+        round_type=as_round_type(t.round_type), round_number=t.round_number,
+        last_round=last_round)
 
 
 def _has_content(r: Resume) -> bool:
@@ -816,7 +825,7 @@ async def prepare(listing_id: str, user: Annotated[User, Depends(require_verifie
                   db: Annotated[AsyncSession, Depends(get_db)]) -> PrepareOut:
     """Save the job description to Documents (once per job), where Practice's interview prep and mock interview use
     the newest one by default."""
-    from orbit_api.documents.routes import _check_quota, _ingest  # the documents' own quota and chunking
+    from orbit_api.documents.routes import ORIGIN_ORBIT, _check_quota, _ingest  # the documents' quota, chunking
 
     row = await _listing(db, listing_id)
     entry = (await _tracked(db, user, [row.id])).get(row.id)
@@ -824,11 +833,11 @@ async def prepare(listing_id: str, user: Annotated[User, Depends(require_verifie
         doc = await db.get(Document, entry.document_id)
         if doc is not None and doc.user_id == user.id:
             return PrepareOut(document_id=doc.id, title=doc.title, reused=True, note=None, tracker_id=entry.id)
-    await _check_quota(db, user)
+    await _check_quota(db, user, ORIGIN_ORBIT)  # saved by Orbit from the job: outside the plan's documents
     text, note = await _full_text(db, row)
     body = _job_text(row, text)
     doc = Document(user_id=user.id, title=f"{row.title} — {row.company}"[:300], kind="job_description",
-                   size_bytes=len(body.encode()))
+                   size_bytes=len(body.encode()), origin=ORIGIN_ORBIT)
     db.add(doc)
     await db.flush()
     await _ingest(db, doc, body)
@@ -865,7 +874,8 @@ async def list_tracker(user: Annotated[User, Depends(current_user)],
     rows = list((await db.scalars(select(JobApplication).where(JobApplication.user_id == user.id)
                                   .order_by(JobApplication.status_at.desc()))).all())
     live = await _live(db, rows)
-    return [_tracker_out(r, r.listing_id in live, live.get(r.listing_id)) for r in rows]
+    rounds = await last_rounds(db, user.id, [r.id for r in rows])
+    return [_tracker_out(r, r.listing_id in live, live.get(r.listing_id), rounds.get(r.id)) for r in rows]
 
 
 class TrackIn(BaseModel):

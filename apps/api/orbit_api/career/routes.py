@@ -16,7 +16,7 @@ from orbit_api.career.schema import DIMENSIONS, CareerContext, DefenseCard, Retr
 from orbit_api.career.service import generate_json
 from orbit_api.db import get_db
 from orbit_api.documents.parsing import ParseError, detect_format, extract_text_isolated
-from orbit_api.documents.routes import _check_quota, _ingest
+from orbit_api.documents.routes import ORIGIN_ORBIT, _check_quota, _ingest
 from orbit_api.documents.uploads import MAX_UPLOAD_BYTES, sanitize_text, validate_image
 from orbit_api.entitlements import minutes_remaining, plan_for, usage_pool
 from orbit_api.job_portal.routes import _full_text, _job_text, _listing, _resume_for, _track
@@ -86,8 +86,8 @@ async def _document(db: AsyncSession, user: User, kind: str, title: str, text: s
                                                    Document.source_text == text, Document.status == "ready").limit(1))
     if found is not None:
         return found
-    await _check_quota(db, user)
-    doc = Document(user_id=user.id, kind=kind, title=title[:300], size_bytes=len(text.encode()))
+    await _check_quota(db, user, ORIGIN_ORBIT)  # saved by Orbit from the job and the resume: not the plan's
+    doc = Document(user_id=user.id, kind=kind, title=title[:300], size_bytes=len(text.encode()), origin=ORIGIN_ORBIT)
     db.add(doc)
     await db.flush()
     await _ingest(db, doc, text)

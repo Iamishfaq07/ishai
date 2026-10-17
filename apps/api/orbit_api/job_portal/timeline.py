@@ -65,11 +65,13 @@ async def timeline(db: AsyncSession, entry: JobApplication, now: datetime | None
     if entry.applied_at:
         events.append(TimelineEvent(kind="applied", at=entry.applied_at, title="Applied"))
 
-    # Rounds with this company: practice and live sessions since the job was saved (a session names its company).
+    # Rounds for this job: practice and live sessions started from it (job_portal/interview.py) and, since the job was
+    # saved, ones that name its company and weren't started from another job.
     sessions = (await db.scalars(select(LiveSessionRow).where(
         LiveSessionRow.user_id == entry.user_id, LiveSessionRow.created_at >= entry.created_at,
         LiveSessionRow.status != "created").order_by(LiveSessionRow.created_at.desc()).limit(80))).all()
-    rounds = [s for s in sessions if same_company(s.company, entry.company)][:MAX_ROUNDS]
+    rounds = [s for s in sessions if s.application_id == entry.id
+              or (s.application_id is None and same_company(s.company, entry.company))][:MAX_ROUNDS]
     for s in rounds:
         events.append(TimelineEvent(kind="round", at=s.started_at or s.created_at,
                                     title=ROUND_LABEL.get(s.type, "Session"), detail=s.title,
