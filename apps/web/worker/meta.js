@@ -4,7 +4,8 @@
 // og:url and og:image at the address it was asked for (so a custom domain previews correctly too). Streamed with
 // HTMLRewriter; anything unexpected (not HTML, no HTMLRewriter) returns the page untouched.
 //
-// Keep the titles in step with index.html (the "/" defaults) and the pages themselves.
+// Keep the titles in step with index.html (the "/" defaults) and the pages themselves. The same pages are built as
+// HTML with these titles (apps/web/src/prerender/routes.tsx); prerendered.js is how the Worker serves them.
 
 /** @type {Record<string, { title: string; description: string }>} */
 export const PAGE_META = {
@@ -24,9 +25,9 @@ export const PAGE_META = {
       "The latest openings from companies' careers pages, matched to your resume, with a tracker and free AI fit checks. Apply always opens the original post.",
   },
   "/warmup": {
-    title: "Free interview practice question | Orbit",
+    title: "Free interview warm-up: a Google Interview Warmup alternative | Orbit",
     description:
-      "Answer a common interview question by typing or speaking, and see what to improve straight away. Free, no account needed.",
+      "Practise interview questions out loud or by typing and get instant tips on length, structure and filler words. Free, no account needed.",
   },
   "/contact": {
     title: "Contact Orbit AI",

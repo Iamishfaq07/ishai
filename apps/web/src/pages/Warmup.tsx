@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -43,11 +43,17 @@ import { logWarmupAnswer } from "../lib/weeklyGoal";
  */
 export function WarmupPage() {
   const { user } = useAuth();
-  const [state, setState] = useState<RoundState | null>(loadRound);
+  // A link to one track (a company's or a role's guide: `?track=company:amazon`) starts it, unless its round is
+  // already under way in this tab.
+  const [params] = useSearchParams();
+  const [state, setState] = useState<RoundState | null>(() => {
+    const saved = loadRound();
+    const linked = trackById(params.get("track") ?? "");
+    return !linked || saved?.track === linked.id ? saved : newRound(linked);
+  });
   useEffect(() => saveRound(state), [state]);
 
-  const start = (track: Track, recent: string[] = []) =>
-    setState({ track: track.id, ids: pickRound(track, recent).map((q) => q.id), index: 0, answers: {}, spoken: {}, checked: {}, done: false });
+  const start = (track: Track, recent: string[] = []) => setState(newRound(track, recent));
 
   const country = useCountry();
   const track = state ? trackById(state.track, country) : undefined;
@@ -120,7 +126,7 @@ export default WarmupPage;
 // ---- the round, kept in this tab ---------------------------------------------------------------------------------
 
 interface RoundState {
-  track: TrackId;
+  track: Track["id"];
   ids: string[];
   index: number;
   answers: Record<string, string>;
@@ -132,6 +138,10 @@ interface RoundState {
 }
 
 const ROUND_KEY = "orbit.warmupRound";
+
+function newRound(track: Track, recent: string[] = []): RoundState {
+  return { track: track.id, ids: pickRound(track, recent).map((q) => q.id), index: 0, answers: {}, spoken: {}, checked: {}, done: false };
+}
 
 function loadRound(): RoundState | null {
   try {
@@ -193,6 +203,10 @@ function PickTrack({ onPick }: { onPick: (track: Track) => void }) {
             <CircleCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden /> About 10 minutes
           </li>
         </ul>
+        <p className="mt-4 max-w-xl text-sm text-zinc-600 dark:text-zinc-400">
+          Looking for an alternative to Google's Interview Warmup? This warm-up is free too: answer out loud or by typing,
+          in your browser, with no account. (Orbit isn't affiliated with Google.)
+        </p>
       </section>
 
       <section aria-labelledby="tracks-title">
@@ -221,6 +235,17 @@ function PickTrack({ onPick }: { onPick: (track: Track) => void }) {
             );
           })}
         </ul>
+        <p className="mt-5 text-sm text-zinc-600 dark:text-zinc-400">
+          Preparing for one company or one job? Warm up on its questions from the{" "}
+          <Link to="/companies" className={cx("font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
+            company guides
+          </Link>{" "}
+          or the{" "}
+          <Link to="/roles" className={cx("font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
+            role guides
+          </Link>
+          .
+        </p>
       </section>
     </>
   );

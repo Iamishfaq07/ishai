@@ -56,3 +56,16 @@ describe("the bank outside India", () => {
     for (const t of gb) expect(t.questions.length).toBeGreaterThanOrEqual(5);
   });
 });
+
+describe("a question-bank track (a guide's 'Warm up free on these questions')", () => {
+  it("is found by its id once added, the same in every country, and picked like any track", async () => {
+    const { addBankTrack } = await import("./bank");
+    expect(trackById("company:acme")).toBeUndefined();
+    const questions = Array.from({ length: 10 }, (_, i) => ({ id: `acme-${i + 1}`, text: `Question ${i + 1}?`, kind: i % 2 ? ("story" as const) : ("knowledge" as const), tip: "Cover: a; b." }));
+    addBankTrack({ id: "company:acme", name: "Acme", blurb: "Practice questions in the style of Acme's interviews.", questions });
+    expect(trackById("company:acme")?.name).toBe("Acme");
+    expect(trackById("company:acme", "US")?.questions).toHaveLength(10);
+    expect(pickRound(trackById("company:acme")!)).toHaveLength(ROUND);
+    expect(TRACKS.some((t) => (t.id as string) === "company:acme")).toBe(false); // never in the picker
+  });
+});

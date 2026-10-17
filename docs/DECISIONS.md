@@ -473,3 +473,42 @@ width (nothing beside it shifts; the name stays for screen readers), and the gal
 `/dev/components` in development builds only, behind `import.meta.env.DEV`, rather than a Storybook (no new
 dependency, and it renders inside the real Layout, tokens and themes). Primitives are presentational: none changed
 what a page does.
+
+**D63 — The question bank is reviewed JSON in the API, and the public pages are built as HTML from it.** The 25
+company guides were Python constants with four sample questions each, and every public page was an empty React root
+to a crawler that doesn't run JavaScript (most AI assistants' crawlers: a title and nothing else), with 10 URLs in
+the sitemap. Now:
+- **Content is data**, one file per entry: `apps/api/orbit_api/question_bank/companies/<slug>.json` (about 100) and
+  `roles/<slug>.json` (about 30). `schema.py` is the format and the honesty rules, enforced when the API starts, by
+  `uv run python -m orbit_api.question_bank` and by the tests: every guide has a hedged summary and rounds (never
+  "always"), what interviewers listen for (a company's published values where it has them), at least 10 questions
+  (behavioral, role and fit) each with what a good answer covers, tips, optional sources (the company's own pages,
+  each fetched when written) and the date it was reviewed. It refuses the claims we never make: "real", "actual",
+  "leaked" or "asked at" questions, question sites by name, pay figures and head counts, promises, the model
+  provider. The questions are Orbit's own wording; nothing is copied from question sites (their terms and copyright).
+  It lives in the API because the API's image only has `apps/api`; the web build reads the same files. The API keeps
+  its `CompanyStyle` records (`live/company_styles.py` reads the bank), so the mock interviewer, the copilot, Practice's
+  "What to expect" and the Mission Room's Company tab got the new guides without changes; role packs reach the mock
+  and the copilot through `live/role_packs.py` (a typed role, with its level words dropped). Not in the database:
+  the content changes by review and deploy, not by users, and a file diff is the review.
+- **Public pages are rendered at build time, not by the Worker.** `pnpm --filter @orbit/web build` builds the app,
+  then builds `src/prerender/entry.tsx` for Node (`vite build --ssr`) and `scripts/prerender.mjs` writes each public
+  page's HTML into `dist/`, drawn by the app's own components, signed out. **One registry**
+  (`src/prerender/routes.tsx`) lists every public page: its address, its file, its head (title, description,
+  canonical, optional preview image, optional JSON-LD) and its lastmod; the sitemap is generated from the same list.
+  Adding a public page is a registry entry. The question bank's pages are files the assets serve directly
+  (`/companies/amazon` → `companies/amazon.html`); the pages in the Worker's `PAGE_META` (/, /resume-ai, /jobs,
+  /warmup, /contact, /technical) go to `dist/_prerender/` and the Worker serves them (`worker/prerendered.js`), except
+  a signed-in visitor's own home at /, /resume-ai and /jobs (the session cookie is there), which stays the app.
+- **No hydration: a hand-over.** The built page sits in `<div id="prerender">` in front of the app's hidden `#root`;
+  when the app's copy of that page has rendered (its code loaded), it removes the built one in the same frame
+  (`lib/prerender.tsx`). Hydrating would have needed the server and the first client render to match exactly, which
+  this app's auth-loading and stored-preference rendering never do (React would throw the page away and redraw it).
+  The cost: a form typed into before the app loads starts again. A product page that fails to render at build time
+  is left to the app with a warning (its code changes often); a guide that fails stops the build; the tests require
+  all of them to render.
+- **Structured data says only what the page shows**: Organization, WebSite, WebPage, BreadcrumbList, and
+  CollectionPage/ItemList for the lists. No ratings, reviews, offers or FAQ markup. robots.txt keeps its allow-list
+  (search engines and AI crawlers alike, under `*`) and adds /companies and /roles.
+Rejected: rendering in the Worker (it would need the content and React in the Worker, and per-request CPU for pages
+that change only on deploy); a JSON API for the pages (crawlers would still see an empty root); hydration (above).

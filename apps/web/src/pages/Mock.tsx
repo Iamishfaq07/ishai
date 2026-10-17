@@ -221,6 +221,16 @@ function MockSetup() {
             )}
           </div>
           <LoopMemoryNote company={company} />
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            How a company interviews, or what a role is asked:{" "}
+            <Link to="/companies" className={cx("font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
+              company guides
+            </Link>{" "}
+            ·{" "}
+            <Link to="/roles" className={cx("font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
+              role guides
+            </Link>
+          </p>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {PRESETS.map((p) => {
               const Icon = p.id === "salary" && !isIndia(country) ? Banknote : PRESET_ICON[p.id];
@@ -269,6 +279,8 @@ function MockSetup() {
 
         <CustomMock
           knownRole={knownRole}
+          linkedType={params.get("type")}
+          linkedPersona={params.get("persona")}
           onRoleChange={(role) => updateContext({ role })}
           company={company}
           open={params.has("customise")}
@@ -294,9 +306,13 @@ function MockSetup() {
   );
 }
 
+const PERSONAS: MockPersona[] = ["recruiter", "hiring_manager", "engineer", "staff_engineer", "executive"];
+
 /** "Customise": every setting of a mock interview, for when a preset isn't it. The job post is the one picked above. */
 function CustomMock({
   knownRole,
+  linkedType,
+  linkedPersona,
   onRoleChange,
   company,
   open,
@@ -304,6 +320,9 @@ function CustomMock({
   onStart,
 }: {
   knownRole: string;
+  /** A role guide's "Practise" link sets the round (`?type=`, `?persona=`; pages/bank/content.ts roleMockLink). */
+  linkedType?: string | null;
+  linkedPersona?: string | null;
   onRoleChange: (role: string) => void;
   /** From the Company field above: the negotiation's recruiter works there; any other round asks in its style. */
   company: string;
@@ -317,10 +336,12 @@ function CustomMock({
   useEffect(() => {
     if (!editedRole.current && knownRole) setRole(knownRole);
   }, [knownRole]);
-  const [interviewType, setInterviewType] = useState<MockInterviewType>("mixed");
+  const [interviewType, setInterviewType] = useState<MockInterviewType>(
+    () => TYPES.find((t) => t.value === linkedType && t.value !== "negotiation")?.value ?? "mixed",
+  );
   const [difficulty, setDifficulty] = useState<MockDifficulty>("medium");
   const [duration, setDuration] = useState(20);
-  const [persona, setPersona] = useState<MockPersona>("hiring_manager");
+  const [persona, setPersona] = useState<MockPersona>(() => PERSONAS.find((p) => p === linkedPersona) ?? "hiring_manager");
   const [offer, setOffer] = useState("");
   const [target, setTarget] = useState("");
   const negotiation = interviewType === "negotiation";

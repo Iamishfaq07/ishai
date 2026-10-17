@@ -24,9 +24,11 @@ export interface WarmupQuestion {
 }
 
 export type TrackId = "campus_hr" | "intro" | "sde" | "data" | "support" | "sales" | "mba";
+/** A company's or a role's questions from the question bank (pages/bank: "Warm up free on these questions"). */
+export type BankTrackId = `company:${string}` | `role:${string}`;
 
 export interface Track {
-  id: TrackId;
+  id: TrackId | BankTrackId;
   name: string;
   /** Who it's for, in a line. */
   blurb: string;
@@ -38,7 +40,12 @@ const q = (id: string, kind: QuestionKind, text: string, tip: string, words?: [n
 
 const TMAY_TIP = "Who you are now, one or two things you've done (with a result), and why this job. About a minute.";
 
-export const TRACKS: Track[] = [
+/** One of the warm-up's own tracks (the picker's). */
+export interface FixedTrack extends Track {
+  id: TrackId;
+}
+
+export const TRACKS: FixedTrack[] = [
   {
     id: "campus_hr",
     name: "Campus HR round",
@@ -263,7 +270,7 @@ const QUESTION_WORLDWIDE: Record<string, Partial<Pick<WarmupQuestion, "text" | "
 };
 
 /** The tracks for the country the user applies in: India's as written, everywhere else's reworded. */
-export function tracksFor(country: string = "IN"): Track[] {
+export function tracksFor(country: string = "IN"): FixedTrack[] {
   if (country.toUpperCase() === "IN") return TRACKS;
   return TRACKS.map((t) => ({
     ...t,
@@ -276,8 +283,16 @@ export function tracksFor(country: string = "IN"): Track[] {
   }));
 }
 
+// The question bank's tracks opened in this page load (pages/bank/WarmupRoute.tsx adds one before the page shows).
+const bankTracks = new Map<string, Track>();
+
+/** Makes a question-bank track findable by `trackById` (the same questions everywhere: they aren't per country). */
+export function addBankTrack(track: Track & { id: BankTrackId }): void {
+  bankTracks.set(track.id, track);
+}
+
 export function trackById(id: string, country: string = "IN"): Track | undefined {
-  return tracksFor(country).find((t) => t.id === id);
+  return tracksFor(country).find((t) => t.id === id) ?? bankTracks.get(id);
 }
 
 /**

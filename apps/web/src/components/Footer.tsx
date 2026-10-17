@@ -55,6 +55,16 @@ export function Footer({ className }: { className?: string }) {
                 Free practice question
               </Link>
             </li>
+            <li>
+              <Link to="/companies" className={link}>
+                Company interview guides
+              </Link>
+            </li>
+            <li>
+              <Link to="/roles" className={link}>
+                Interview guides by role
+              </Link>
+            </li>
           </ul>
         </nav>
         <nav aria-label="Support">
