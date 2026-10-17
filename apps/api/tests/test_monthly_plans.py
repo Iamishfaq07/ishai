@@ -32,13 +32,13 @@ def test_monthly_plans_are_listed_with_what_a_month_includes(client: TestClient)
     plans = {p["id"]: p for p in client.get("/v1/billing/monthly").json()}
     assert list(plans) == ["premium_weekly", "premium_monthly", "premium_yearly"]
     week, month, year = plans.values()
-    assert (week["label"], week["price_inr"], week["days"]) == ("Weekly", 4799, 7)
+    assert (week["label"], week["price_inr"], week["days"]) == ("Weekly", 3499, 7)
     assert (month["label"], month["price_inr"], month["days"], month["plan"], month["badge"]) == (
-        "Monthly", 9199, 30, "premium", "Most popular")
-    assert (year["price_inr"], year["days"], year["per_month_inr"], year["badge"]) == (35999, 365, 2959, "Best value")
-    # About 30% under Parakeet AI's $78 / $149.90 / $599.90 (≈ ₹88 to the dollar), or more.
-    for plan, usd in ((week, 78), (month, 149.90), (year, 599.90)):
-        assert plan["price_inr"] <= usd * 88 * 0.7
+        "Monthly", 6599, 30, "premium", "Most popular")
+    assert (year["price_inr"], year["days"], year["per_month_inr"], year["badge"]) == (26499, 365, 2178, "Best value")
+    # About 30% under Parakeet AI's rupee prices, ₹4,980 / ₹9,470 / ₹37,900 (checked 2026-10-18: D60).
+    for plan, theirs in ((week, 4980), (month, 9470), (year, 37900)):
+        assert theirs * 0.69 <= plan["price_inr"] <= theirs * 0.71
     assert month["resume_ai"] is True and month["live_minutes"] == 3000 and month["screenshots"] is None
 
 
@@ -53,7 +53,7 @@ def test_buying_a_month_gives_the_plan_and_buying_more_extends_it(monkeypatch: p
 
         o = _pay(client, h, admin, "premium_monthly")
         assert (o["label"], o["amount_inr"], o["resume_credits"], o["interview_minutes"]) == (
-            "Monthly plan · 30 days", 9199, 0, 0)
+            "Monthly plan · 30 days", 6599, 0, 0)
         e = client.get("/v1/entitlements", headers=h).json()
         assert e["plan"] == "premium" and e["credits"] is None and e["features"]["resume_ai"] is True
         until = datetime.fromisoformat(e["until"])

@@ -512,3 +512,19 @@ the sitemap. Now:
   (search engines and AI crawlers alike, under `*`) and adds /companies and /roles.
 Rejected: rendering in the Worker (it would need the content and React in the Worker, and per-request CPU for pages
 that change only on deploy); a JSON API for the pages (crawlers would still see an empty root); hydration (above).
+
+**D60 — Rupee prices are cut to about 30% under Parakeet AI's rupee prices; dollar prices stay where they were.** The
+owner checked Parakeet AI's own rupee prices on 2026-10-18: 1 credit ₹2,360, 3 credits ₹3,690, 8 credits ₹7,380, 15
+credits ₹11,070 (1 credit = 60 interview minutes), Weekly ₹4,980, Monthly ₹9,470, Yearly ₹37,900. Orbit's rupee prices
+had been set about 30% under Parakeet's dollar prices converted at ≈ ₹88, which left them only a few percent under
+Parakeet's own rupee prices (₹2,299 against ₹2,360 for 1 credit). They are now about 30% under those: 1 credit ₹1,649, 3 credits ₹2,599, 8 credits
+₹5,199, 15 credits ₹7,749, Weekly ₹3,499, Monthly ₹6,599, Yearly ₹26,499 (AI credits stays ₹499). What each pack
+includes is unchanged. The cut is for India only: a dollar price used to be the rupee price converted, so cutting
+rupees would have cut dollars by 26-29% too, and the owner didn't choose that. Each default pack and plan now
+carries its own `price_usd_cents`, pinned at its dollar price from before the cut ($7.99, $33.99, $53.99, $106.99,
+$161.99; $70.99, $135.99, $531.99), and a test pins every one; the conversion is kept only for packs and plans set
+through `ORBIT_CREDIT_PACKS_JSON` / `ORBIT_MONTHLY_PLANS_JSON` without a `price_usd_cents`. Orders already made keep
+their stored amount: the checkout, the webhooks and the reconciler settle an order by what it was made for, so one
+opened at an old price and paid at that price is credited as before, and a payment of the new price against it is
+not a capture of it. No page claims "30% less than Parakeet" (re-check their prices before one does). The cost
+note in BILLING.md matters more now: the Monthly plan (₹6,599) barely covers a subscriber who uses all 75 hours.

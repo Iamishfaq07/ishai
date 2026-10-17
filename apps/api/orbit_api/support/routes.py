@@ -222,10 +222,10 @@ async def _account_answer(db: AsyncSession, user: User, kind: str, currency: str
     if payment is None:
         cheapest = min(packs().values(), key=lambda p: p.price_inr)
         return ("This account has no payment yet. Buy a pack on Plan & billing. Packs start at Mini "
-                f"{pricing.price(cheapest.price_inr, currency).text()}.")
+                f"{pricing.price_of(cheapest, currency).text()}.")
     pack = packs().get(payment.plan)
     name = pack.label if pack else payment.plan
-    money = pricing.payment_text(payment)  # in what was charged: "₹7,199", or "$106.99" through PayPal
+    money = pricing.payment_text(payment)  # in what was charged: "₹5,199", or "$106.99" through PayPal
     got = f"{payment.interview_minutes} interview minutes and {payment.resume_credits} Resume AI credits"
     if payment.status == "approved":
         how = _GATEWAY.get(payment.method or "", "UPI")

@@ -4,12 +4,15 @@ The country comes from the request: the web app's edge (Cloudflare) knows it and
 (`X-Orbit-Client-Country`), which the API believes only with the proxy secret, like the client IP (ratelimit.py).
 Without that header (the desktop app, a direct caller) it falls back to the account's own country, then to India.
 
-A dollar price is the rupee price at ORBIT_USD_INR rupees to the dollar, plus ORBIT_INTL_MARKUP (30%), rounded up
-to the next whole dollar less a cent ($135.99). Rupee prices stay exactly as configured (packs.py, monthly.py).
+A pack or plan with a fixed dollar price (`price_usd_cents`: every default one, so the rupee cut of D60 left the
+dollar prices where they were) sells at that. One without is the rupee price at ORBIT_USD_INR rupees to the dollar,
+plus ORBIT_INTL_MARKUP (30%), rounded up to the next whole dollar less a cent ($135.99). Rupee prices stay exactly as
+configured (packs.py, monthly.py).
 """
 
 import math
 from dataclasses import dataclass
+from typing import Protocol
 
 from starlette.requests import HTTPConnection
 
@@ -60,11 +63,26 @@ class Price:
         return money(self.currency, self.minor)
 
 
-def price(price_inr: int, currency: str) -> Price:
+def price(price_inr: int, currency: str, fixed_usd_cents: int | None = None) -> Price:
+    """The price in `currency`. Dollars: `fixed_usd_cents` when the item has one, else the rupee price converted."""
     if currency == USD:
-        cents = usd_cents(price_inr)
+        cents = fixed_usd_cents or usd_cents(price_inr)
         return Price(USD, cents, round(cents / 100 * get_settings().usd_inr_rate))
     return Price(INR, price_inr * 100, price_inr)
+
+
+class Priced(Protocol):
+    """A credit pack or a monthly plan (packs.CreditPack, monthly.MonthlyPlan)."""
+
+    @property
+    def price_inr(self) -> int: ...
+
+    @property
+    def price_usd_cents(self) -> int | None: ...
+
+
+def price_of(item: Priced, currency: str) -> Price:
+    return price(item.price_inr, currency, item.price_usd_cents)
 
 
 def money(currency: str, minor: int) -> str:

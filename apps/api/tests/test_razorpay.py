@@ -74,11 +74,11 @@ def test_a_paid_checkout_adds_the_pack_once(client: TestClient, rzp: list[httpx.
     r = client.post("/v1/billing/razorpay/orders", headers=h, json={"pack": "starter"})
     assert r.status_code == 201, r.text
     o = r.json()
-    assert o["key_id"] == "rzp_test_key" and o["amount_paise"] == 359_900 and o["currency"] == "INR"
+    assert o["key_id"] == "rzp_test_key" and o["amount_paise"] == 259_900 and o["currency"] == "INR"
     assert o["label"] == "3 interview credits" and o["order_id"].startswith("order_")
     sent = rzp[0]
     assert str(sent.url) == "https://api.razorpay.com/v1/orders" and sent.headers["authorization"].startswith("Basic ")
-    assert json.loads(sent.content)["amount"] == 359_900
+    assert json.loads(sent.content)["amount"] == 259_900
     # Not shown on the billing page until it's paid.
     assert client.get("/v1/billing/upi/orders", headers=h).json() == []
 
@@ -91,7 +91,7 @@ def test_a_paid_checkout_adds_the_pack_once(client: TestClient, rzp: list[httpx.
     after = _wallet(client, h)
     assert after["resume"] == before["resume"] + 30
     # The webhook arriving afterwards, and the checkout answering twice, add nothing more.
-    assert _hook(client, "payment.captured", o["order_id"], "pay_X1", 359_900).status_code == 200
+    assert _hook(client, "payment.captured", o["order_id"], "pay_X1", 259_900).status_code == 200
     again = client.post("/v1/billing/razorpay/verify", headers=h, json={
         "order_id": o["order_id"], "payment_id": "pay_X1", "signature": _sign(o["order_id"], "pay_X1")})
     assert again.status_code == 200 and _wallet(client, h) == after
@@ -105,7 +105,7 @@ def test_an_authorized_payment_does_not_add_credits(client: TestClient, rzp: lis
     o = client.post("/v1/billing/razorpay/orders", headers=h, json={"pack": "starter"}).json()
 
     def authorized(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"id": "pay_auth", "order_id": o["order_id"], "amount": 359_900,
+        return httpx.Response(200, json={"id": "pay_auth", "order_id": o["order_id"], "amount": 259_900,
                                          "currency": "INR", "status": "authorized"})
 
     monkeypatch.setattr(razorpay, "transport", httpx.MockTransport(authorized))
@@ -117,7 +117,7 @@ def test_an_authorized_payment_does_not_add_credits(client: TestClient, rzp: lis
     assert [x["status"] for x in client.get("/v1/billing/upi/orders", headers=h).json()] == ["processing"]
     # An authorized webhook must not grant either.
     body = json.dumps({"event": "payment.captured", "payload": {"payment": {"entity": {
-        "id": "pay_auth", "order_id": o["order_id"], "amount": 359_900, "currency": "INR",
+        "id": "pay_auth", "order_id": o["order_id"], "amount": 259_900, "currency": "INR",
         "status": "authorized"}}}}).encode()
     sig = hmac.new(HOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
     assert client.post("/v1/billing/webhook", content=body,
@@ -242,16 +242,19 @@ def test_outside_india_prices_and_charges_are_in_dollars_30_percent_higher(
     us = {"X-Orbit-Proxy-Secret": PROXY, "X-Orbit-Client-Country": "US"}
     india = {"X-Orbit-Proxy-Secret": PROXY, "X-Orbit-Client-Country": "IN"}
     starter_in = next(p for p in client.get("/v1/billing/packs", headers=india).json() if p["id"] == "starter")
-    assert (starter_in["currency"], starter_in["price_text"]) == ("INR", "₹3,599")
-    # ₹3,599 at ₹88 to the dollar is $40.90; 30% more is $53.17, shown as $53.99.
+    assert (starter_in["currency"], starter_in["price_text"]) == ("INR", "₹2,599")
+    # Its own dollar price, pinned at the rupee price from before the cut (D60): ₹3,599 at ₹88 to the dollar is
+    # $40.90; 30% more is $53.17, shown as $53.99.
     starter_us = next(p for p in client.get("/v1/billing/packs", headers=us).json() if p["id"] == "starter")
     assert (starter_us["currency"], starter_us["price"], starter_us["price_text"]) == ("USD", 53.99, "$53.99")
     assert starter_us["buyable"] is False  # dollars need Razorpay's international payments switched on
+    assert "price_usd_cents" not in starter_us  # said as `price`
     month = next(m for m in client.get("/v1/billing/monthly", headers=us).json() if m["id"] == "premium_monthly")
     assert month["price_text"] == "$135.99" and month["per_month_text"] == "$135.99"
     # A spoofed country without the proxy secret counts for nothing: rupees (the default).
     assert client.get("/v1/billing/packs", headers={"X-Orbit-Client-Country": "US"}).json()[0]["currency"] == "INR"
-    for inr in (499, 2299, 3599, 7199, 10899, 4799, 9199, 35999):
+    # The conversion, for a pack or plan without a dollar price of its own.
+    for inr in (499, 1649, 3599, 7749, 9199, 35999):
         cents = pricing.usd_cents(inr)
         assert cents % 100 == 99 and cents / 100 >= inr / 88 * 1.3
 
@@ -270,6 +273,59 @@ def test_outside_india_prices_and_charges_are_in_dollars_30_percent_higher(
     # UPI is rupees, for India only.
     upi = client.post("/v1/billing/upi/orders", headers=h, json={"pack": "starter"})
     assert upi.status_code in (409, 503)
+
+
+# Every pack's and plan's dollar price on 2026-10-18, before the rupee cut (D60). The cut is rupees only: these stay.
+USD_BEFORE_THE_RUPEE_CUT = {"mini": 799, "single": 3399, "starter": 5399, "plus": 10699, "pro": 16199,
+                            "premium_weekly": 7099, "premium_monthly": 13599, "premium_yearly": 53199}
+
+
+def test_dollar_prices_stay_where_they_were_before_the_rupee_cut(
+        client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from orbit_api.billing import pricing
+    from orbit_api.billing.monthly import monthly_plans
+    from orbit_api.billing.packs import packs
+    from tests.test_credits import PROXY
+
+    s = get_settings()
+    monkeypatch.setattr(s, "proxy_secret", SecretStr(PROXY))
+    us = {"X-Orbit-Proxy-Secret": PROXY, "X-Orbit-Client-Country": "US"}
+    listed = client.get("/v1/billing/packs", headers=us).json() + client.get("/v1/billing/monthly", headers=us).json()
+    assert {p["id"]: round(p["price"] * 100) for p in listed} == USD_BEFORE_THE_RUPEE_CUT
+    assert {p["id"]: p["price_text"] for p in listed} == {
+        "mini": "$7.99", "single": "$33.99", "starter": "$53.99", "plus": "$106.99", "pro": "$161.99",
+        "premium_weekly": "$70.99", "premium_monthly": "$135.99", "premium_yearly": "$531.99"}
+    items = {**packs(), **monthly_plans()}
+    for pid, item in items.items():
+        assert pricing.price_of(item, pricing.USD).minor == item.price_usd_cents == USD_BEFORE_THE_RUPEE_CUT[pid]
+        # Converted from the new rupee price, each (but Mini, whose rupees didn't change) would have dropped.
+        assert pricing.usd_cents(item.price_inr) <= item.price_usd_cents
+        assert (pricing.usd_cents(item.price_inr) < item.price_usd_cents) == (pid != "mini")
+    # A pinned price doesn't follow the exchange rate or the markup, and its rupee equivalent (for reports) does.
+    monkeypatch.setattr(s, "usd_inr_rate", 80.0)
+    monkeypatch.setattr(s, "intl_markup", 1.0)
+    starter = pricing.price_of(packs()["starter"], pricing.USD)
+    assert (starter.text(), starter.inr) == ("$53.99", 4319)
+    # ORBIT_CREDIT_PACKS_JSON / ORBIT_MONTHLY_PLANS_JSON can pin one too; without `price_usd_cents` it's converted.
+    monkeypatch.setattr(s, "credit_packs_json", json.dumps([
+        {"id": "a", "label": "A", "price_inr": 1000, "resume_credits": 5, "interview_minutes": 0,
+         "price_usd_cents": 1999},
+        {"id": "b", "label": "B", "price_inr": 1000, "resume_credits": 5, "interview_minutes": 0}]))
+    monkeypatch.setattr(s, "monthly_plans_json", json.dumps([
+        {"id": "m", "label": "M", "price_inr": 4000, "plan": "premium", "price_usd_cents": 4999}]))
+    assert [pricing.price_of(p, pricing.USD).text() for p in packs().values()] == ["$19.99", "$12.99"]
+    assert pricing.price_of(monthly_plans()["m"], pricing.USD).text() == "$49.99"
+    for bad in (0, -5, 19.99, "1999", True):
+        monkeypatch.setattr(s, "credit_packs_json", json.dumps([
+            {"id": "a", "label": "A", "price_inr": 1000, "resume_credits": 5, "interview_minutes": 0,
+             "price_usd_cents": bad}]))
+        with pytest.raises(ValueError, match="price_usd_cents"):
+            packs()
+        monkeypatch.setattr(s, "credit_packs_json", None)
+        monkeypatch.setattr(s, "monthly_plans_json", json.dumps([
+            {"id": "m", "label": "M", "price_inr": 4000, "plan": "premium", "price_usd_cents": bad}]))
+        with pytest.raises(ValueError, match="price_usd_cents"):
+            monthly_plans()
 
 
 def test_a_dollar_order_is_refused_until_international_cards_are_on(

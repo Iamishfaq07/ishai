@@ -36,27 +36,27 @@ interview minutes. Sign-up needs no approval or email check, so to stop throwawa
   no verification or approval, the API refuses to start if this is above 1000.
 
 ### Credit packs
-| Pack | Price | Interview minutes | Resume AI credits |
-|---|---|---|---|
-| Mini | ₹499 | 15 | 5 |
-| Starter | ₹1,999 | 60 | 15 |
-| Plus | ₹3,999 | 150 | 40 |
-| Pro | ₹7,999 | 360 | 100 |
+The packs on sale, their prices and what each includes are in the table under "Monthly plans" below.
 
 Replace them without a code change (validated at boot):
 ```bash
-ORBIT_CREDIT_PACKS_JSON='[{"id": "starter", "label": "Starter", "price_inr": 1999, "resume_credits": 15, "interview_minutes": 60}]'
+ORBIT_CREDIT_PACKS_JSON='[{"id": "starter", "label": "3 credits", "price_inr": 2599, "price_usd_cents": 5399, "resume_credits": 30, "interview_minutes": 180}]'
 ```
-An order keeps what the pack gave when it was bought, so changing packs never changes a paid order.
+`price_usd_cents` is optional (the dollar price; without it, the rupee price converted, below).
+An order keeps what the pack gave and what it cost when it was bought, so changing packs or prices never changes an
+order already made: an order opened at an old price is still paid and settled at that price (D60).
 
-## Prices outside India: US dollars, 30% higher
+## Prices outside India: US dollars
 `apps/api/orbit_api/billing/pricing.py`.
 - **Currency:** a buyer in India sees and pays rupees. Everyone else sees and pays **US dollars**.
-- **Formula:** rupee price ÷ `ORBIT_USD_INR` (default 88) × `ORBIT_INTL_MARKUP` (default 1.3), rounded up to the
-  next whole dollar less a cent. Examples:
-  - ₹3,599 → $53.99;
-  - ₹9,199 a month → $135.99;
-  - ₹35,999 a year → $531.99.
+- **Fixed dollar prices:** every default pack and plan has its own `price_usd_cents`, pinned on 2026-10-18 at what it
+  cost in dollars before the rupee prices were cut (D60). Changing the rupee price, `ORBIT_USD_INR` or
+  `ORBIT_INTL_MARKUP` doesn't move them; change a dollar price with `price_usd_cents` in
+  `ORBIT_CREDIT_PACKS_JSON` / `ORBIT_MONTHLY_PLANS_JSON`.
+- **Formula,** for a pack or plan from those variables without `price_usd_cents`: rupee price ÷ `ORBIT_USD_INR`
+  (default 88) × `ORBIT_INTL_MARKUP` (default 1.3), rounded up to the next whole dollar less a cent. For example
+  ₹3,599 → $53.99, ₹9,199 → $135.99, ₹35,999 → $531.99 (the old rupee prices, which is where the pinned dollar
+  prices come from). `ORBIT_USD_INR` also gives a dollar sale's rupee equivalent for reports.
 - **Where the country comes from:** the visitor's IP. The web app's Cloudflare Worker sends Cloudflare's country as
   `X-Orbit-Client-Country`.
   - The API believes it only with the proxy secret, like the client IP. The Worker sends both only when it has
@@ -83,17 +83,17 @@ UPI with the admin's check). Buy one with `POST /v1/billing/razorpay/orders` or 
 `{"pack": "<monthly id>"}`. `GET /v1/billing/monthly` lists them for the pricing pages.
 
 The structure copies Parakeet AI's: a free start, interview credits where 1 credit = 1 hour and bigger packs add free
-credits, and unlimited plans for a week, a month or a year. Each price is about 30% under Parakeet's in October 2026,
-taken at ≈ ₹88 to the dollar. Parakeet's own page couldn't be reached from the build environment; its prices come from
-third-party reviews. All three unlimited plans give the same `premium` plan.
+credits, and unlimited plans for a week, a month or a year. Each rupee price is about 30% under Parakeet's own rupee
+price, as the owner checked it on 2026-10-18 (D60). Dollar prices weren't cut: they stay where they were (above). All
+three unlimited plans give the same `premium` plan.
 
 **Unlimited (billing/monthly.py)**
 
-| Plan | Price | Parakeet AI |
-|---|---|---|
-| Weekly (`premium_weekly`) | ₹4,799 / 7 days | $78 |
-| Monthly (`premium_monthly`, "Most popular") | ₹9,199 / 30 days | $149.90 |
-| Yearly (`premium_yearly`, "Best value") | ₹35,999 / 365 days (≈ ₹2,959 a month) | $599.90 |
+| Plan | Price in India | Outside India | Parakeet AI (₹, 2026-10-18) |
+|---|---|---|---|
+| Weekly (`premium_weekly`) | ₹3,499 / 7 days | $70.99 | ₹4,980 |
+| Monthly (`premium_monthly`, "Most popular") | ₹6,599 / 30 days | $135.99 | ₹9,470 |
+| Yearly (`premium_yearly`, "Best value") | ₹26,499 / 365 days (≈ ₹2,178 a month) | $531.99 | ₹37,900 |
 
 Every 30 days the `premium` plan includes:
 - unlimited Resume AI;
@@ -104,13 +104,13 @@ Every 30 days the `premium` plan includes:
 **Credit packs (billing/packs.py).** 1 interview credit = 60 minutes of live or mock interviews. Each pack also includes
 10 Resume AI credits per hour.
 
-| Pack (id) | Price | Interview credits | Resume AI credits | Parakeet AI |
-|---|---|---|---|---|
-| AI credits (`mini`) | ₹499 | — | 25 | — (ours: Resume AI alone) |
-| 1 credit (`single`) | ₹2,299 | 1 | 10 | $38 |
-| 3 credits (`starter`) | ₹3,599 | 3 | 30 | $59 |
-| 8 credits (`plus`, "Most popular") | ₹7,199 | 6 + 2 free | 80 | $118 |
-| 15 credits (`pro`, "Best value") | ₹10,899 | 9 + 6 free | 150 | $177 |
+| Pack (id) | Price in India | Outside India | Interview credits | Resume AI credits | Parakeet AI (₹, 2026-10-18) |
+|---|---|---|---|---|---|
+| AI credits (`mini`) | ₹499 | $7.99 | — | 25 | — (ours: Resume AI alone) |
+| 1 credit (`single`) | ₹1,649 | $33.99 | 1 | 10 | ₹2,360 |
+| 3 credits (`starter`) | ₹2,599 | $53.99 | 3 | 30 | ₹3,690 |
+| 8 credits (`plus`, "Most popular") | ₹5,199 | $106.99 | 6 + 2 free | 80 | ₹7,380 |
+| 15 credits (`pro`, "Best value") | ₹7,749 | $161.99 | 9 + 6 free | 150 | ₹11,070 |
 
 - **Nothing renews.** A paid month sets `User.grant_plan` and `grant_until`, the same fields as the admin's
   time-limited grants. When it ends the account is back on Free, and the credits it had are still there.
@@ -123,6 +123,7 @@ Every 30 days the `premium` plan includes:
   while they run.
 - **Config:** `ORBIT_MONTHLY_PLANS_JSON` replaces the list, for example
   `[{"id": "pro_monthly", "label": "Pro", "price_inr": 3999, "plan": "pro", "days": 30}]`. `[]` sells none.
+  An optional `price_usd_cents` fixes the dollar price, as for packs.
   - `plan` is one of `basic`, `pro` or `unlimited`. Change a plan's allowance with `ORBIT_PLANS_JSON`.
   - A bad value stops the API at boot.
 - **Two months approved at the same moment** both add their days (the account row is locked while the end date is
@@ -130,10 +131,10 @@ Every 30 days the `premium` plan includes:
 - **OWNER ACTION REQUIRED:** check the prices against your costs (the table under "What it costs to run").
   - A subscriber who uses the whole 75 hours a month costs about ₹5,900 a month in speech-to-text at list price,
     before the model's cost.
-  - On the yearly plan (≈ ₹2,959 a month) that loses money for the heaviest users. Lower the `premium` plan's caps
-    with `ORBIT_PLANS_JSON` if needed.
-  - Competitors' prices were read from third-party pricing pages in October 2026; re-check them before you rely on
-    the "30% less" claim. The pricing pages also show an Enterprise tier with no price: its button opens the Contact form
+  - On the yearly plan (≈ ₹2,178 a month) that loses money for the heaviest users, and the Monthly plan (₹6,599)
+    barely covers them. Lower the `premium` plan's caps with `ORBIT_PLANS_JSON` if needed.
+  - Parakeet AI's rupee prices were checked by the owner on 2026-10-18; re-check them before you rely on a "30% less"
+    claim (no page says it today). The pricing pages also show an Enterprise tier with no price: its button opens the Contact form
   (topic "Business or partnership"), and you arrange group access by hand (an admin grant per account).
 
 ## Plans are server configuration

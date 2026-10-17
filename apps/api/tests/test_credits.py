@@ -212,10 +212,10 @@ def test_there_is_no_signed_out_resume_maker(client: TestClient) -> None:
 def test_packs_are_listed_and_need_a_upi_id(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(get_settings(), "upi_id", None)
     packs = {p["id"]: p for p in client.get("/v1/billing/packs").json()}
-    assert packs["starter"] == {"id": "starter", "label": "3 credits", "price_inr": 3599, "resume_credits": 30,
+    assert packs["starter"] == {"id": "starter", "label": "3 credits", "price_inr": 2599, "resume_credits": 30,
                                 "interview_minutes": 180, "bonus_minutes": 0, "total_minutes": 180, "badge": None,
                                 "buyable": False, "checkout": None, "international": False,
-                                "currency": "INR", "price": 3599.0, "price_text": "₹3,599"}
+                                "currency": "INR", "price": 2599.0, "price_text": "₹2,599"}
     assert packs["mini"] == {"id": "mini", "label": "AI credits", "price_inr": 499, "resume_credits": 25,
                              "interview_minutes": 0, "bonus_minutes": 0, "total_minutes": 0, "badge": None,
                              "buyable": False, "checkout": None, "international": False,
@@ -266,11 +266,11 @@ def test_buying_a_pack_over_upi(monkeypatch: pytest.MonkeyPatch) -> None:
         order = client.post("/v1/billing/upi/orders", headers=h, json={"pack": "starter"})
         assert order.status_code == 201
         o = order.json()
-        assert (o["amount_inr"], o["resume_credits"], o["interview_minutes"]) == (3599, 30, 180)
+        assert (o["amount_inr"], o["resume_credits"], o["interview_minutes"]) == (2599, 30, 180)
         assert o["label"] == "3 interview credits" and o["status"] == "awaiting_payment"
         assert o["reference"].startswith("ORB")
         assert o["upi_uri"].startswith("upi://pay?pa=owner%40okicici")
-        assert "am=3599.00" in o["upi_uri"]
+        assert "am=2599.00" in o["upi_uri"]
         assert o["reference"] in o["upi_uri"] and "pn=Ishfaq" in o["upi_uri"]
         # Opening the page again hands back the same order.
         assert client.post("/v1/billing/upi/orders", headers=h, json={"pack": "starter"}).json()["id"] == o["id"]
@@ -551,13 +551,14 @@ def test_existing_usage_is_given_the_grant_it_was_metered_on() -> None:
 
 
 def test_bigger_credit_packs_cost_less_an_hour_and_stay_30_percent_under_parakeet() -> None:
-    """1, 3, 6 + 2 free and 9 + 6 free credits (1 credit = 1 hour), each cheaper an hour than the one before, and
-    about 30% under Parakeet AI's $38 / $59 / $118 / $177 at ≈ ₹88 to the dollar."""
+    """1, 3, 6 + 2 free and 9 + 6 free credits (1 credit = 1 hour), each cheaper an hour than the one before (in
+    rupees and in dollars), and about 30% under Parakeet AI's ₹2,360 / ₹3,690 / ₹7,380 / ₹11,070 (2026-10-18: D60)."""
     interview = sorted((p for p in DEFAULT_PACKS if p.interview_minutes), key=lambda p: p.price_inr)
-    per_hour = [p.price_inr / (p.total_minutes / 60) for p in interview]
-    assert per_hour == sorted(per_hour, reverse=True) and len(set(per_hour)) == len(per_hour)
-    for p, usd in zip(interview, (38, 59, 118, 177), strict=True):
-        assert p.price_inr <= usd * 88 * 0.7
+    for price in (lambda p: p.price_inr, lambda p: p.price_usd_cents):
+        per_hour = [price(p) / (p.total_minutes / 60) for p in interview]
+        assert per_hour == sorted(per_hour, reverse=True) and len(set(per_hour)) == len(per_hour)
+    for p, theirs in zip(interview, (2360, 3690, 7380, 11070), strict=True):
+        assert theirs * 0.69 <= p.price_inr <= theirs * 0.71
     assert all(p.resume_credits == p.total_minutes // 6 for p in interview)  # 10 Resume AI credits an hour
 
 

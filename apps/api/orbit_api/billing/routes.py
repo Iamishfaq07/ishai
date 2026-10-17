@@ -91,8 +91,9 @@ def _priced(items: list[dict[str, Any]], currency: str) -> list[dict[str, Any]]:
     """Each item's price in the buyer's currency: `price` (major units), `price_text` and, for a long plan, the
     monthly equivalent. `price_inr` stays (the configured rupee price)."""
     out = []
-    for item in items:
-        cost = pricing.price(item["price_inr"], currency)
+    for given in items:
+        item = {k: v for k, v in given.items() if k != "price_usd_cents"}  # said as `price` in dollars instead
+        cost = pricing.price(item["price_inr"], currency, given.get("price_usd_cents"))
         extra: dict[str, Any] = {"currency": cost.currency, "price": cost.major, "price_text": cost.text()}
         if cost.currency != pricing.INR and paypal.configured():  # dollars: PayPal (an account, or a card)
             extra |= {"checkout": "paypal", "buyable": True, "international": True}
@@ -148,7 +149,7 @@ class UpiOrderOut(BaseModel):
     method: str = "upi"  # "upi" (a UTR the admin checks) or "razorpay" (confirmed by Razorpay)
     refunded_inr: int = 0  # refunds that went through (credits are kept: docs/BILLING.md, refund policy)
     refunded_text: str = ""  # the same, in the payment's currency: "₹500", "$10.00"
-    # What was charged, in its own currency: "₹3,599" or "$53.99" (amount_inr is the rupee equivalent abroad).
+    # What was charged, in its own currency: "₹2,599" or "$53.99" (amount_inr is the rupee equivalent abroad).
     currency: str = "INR"
     amount_text: str = ""
     # How to pay; only while there's still something to pay (not once it's submitted or approved). The app shows
@@ -189,15 +190,15 @@ class OrderIn(BaseModel):
     pack: str = Field(min_length=1, max_length=32)  # a credit pack's id, or a monthly plan's
 
 
-def _product(product_id: str) -> tuple[str, str, int, int, int, int]:
-    """What an order is for: (id, label, price, days, resume credits, interview minutes). A credit pack has no
-    days; a monthly plan has its days and no credits."""
+def _product(product_id: str) -> tuple[str, str, pricing.Priced, int, int, int]:
+    """What an order is for: (id, label, the pack or plan (its prices), days, resume credits, interview minutes). A
+    credit pack has no days; a monthly plan has its days and no credits."""
     pack = packs().get(product_id)
     if pack is not None:
-        return pack.id, packs_label(pack), pack.price_inr, 0, pack.resume_credits, pack.total_minutes
+        return pack.id, packs_label(pack), pack, 0, pack.resume_credits, pack.total_minutes
     month = monthly_plans().get(product_id)
     if month is not None:
-        return month.id, f"{month.label} plan · {month.days} days", month.price_inr, month.days, 0, 0
+        return month.id, f"{month.label} plan · {month.days} days", month, month.days, 0, 0
     raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That pack can't be bought.")
 
 
@@ -206,7 +207,8 @@ async def create_order(body: OrderIn, request: Request, user: Annotated[User, De
                        db: Annotated[AsyncSession, Depends(get_db)]) -> UpiOrderOut:
     """Start paying for a credit pack: the amount, reference and UPI link. An open order for the same pack from the
     last day is handed back instead of making another."""
-    pid, _, price, days, resume_credits, minutes = _product(body.pack)
+    pid, _, item, days, resume_credits, minutes = _product(body.pack)
+    price = item.price_inr
     if pricing.currency_for(request, user) != pricing.INR:
         raise HTTPException(status.HTTP_409_CONFLICT, "UPI is for payments from India. Pay by card instead.")
     if not get_settings().upi_id:
@@ -315,8 +317,8 @@ async def razorpay_order(body: OrderIn, request: Request, user: Annotated[User, 
                          db: Annotated[AsyncSession, Depends(get_db)]) -> CheckoutOut:
     """Start buying a pack through Razorpay: an order there for the pack's price (rupees in India, US dollars
     elsewhere: billing/pricing.py), kept here until it's paid."""
-    pid, label, price_inr, days, resume_credits, minutes = _product(body.pack)
-    cost = pricing.price(price_inr, pricing.currency_for(request, user))
+    pid, label, item, days, resume_credits, minutes = _product(body.pack)
+    cost = pricing.price_of(item, pricing.currency_for(request, user))
     key_id = get_settings().razorpay_key_id
     if not razorpay.configured() or not key_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Card payments aren't set up yet.")
@@ -508,10 +510,10 @@ async def paypal_order(body: OrderIn, request: Request, user: Annotated[User, De
                        db: Annotated[AsyncSession, Depends(get_db)]) -> PaypalCheckoutOut:
     """Start paying a dollar price through PayPal: an order there for it, kept here until it's captured. Buyers in
     India pay rupees through Razorpay (a PayPal India account can't take payments from India)."""
-    pid, label, price_inr, days, resume_credits, minutes = _product(body.pack)
+    pid, label, item, days, resume_credits, minutes = _product(body.pack)
     if not paypal.configured():
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "PayPal payments aren't set up yet.")
-    cost = pricing.price(price_inr, pricing.currency_for(request, user))
+    cost = pricing.price_of(item, pricing.currency_for(request, user))
     if cost.currency == pricing.INR:
         raise HTTPException(status.HTTP_409_CONFLICT,
                             "PayPal is for payments from outside India. Pay by UPI or card instead.")

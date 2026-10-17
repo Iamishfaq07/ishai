@@ -389,3 +389,35 @@ def test_a_capture_on_an_expired_order_is_still_credited(client: TestClient, gw:
     assert _post(client, _captured(gw, order, pay)).status_code == 200
     assert _payment(client, order).status == "approved"
     assert _wallet(client, h)["resume"] == before + MINI_CREDITS
+
+
+def test_an_order_opened_at_the_old_price_settles_after_a_price_cut(client: TestClient, gw: Gateway,
+                                                                    monkeypatch: pytest.MonkeyPatch) -> None:
+    """An order is settled by the amount stored on it, never by today's price list: one opened before the rupee cut
+    (D60) and paid at its old price is credited by the webhook or by the reconciler after the cut, once."""
+    from orbit_api.billing.packs import packs
+
+    old = [{"id": "starter", "label": "3 credits", "price_inr": 3599, "resume_credits": 30, "interview_minutes": 180}]
+    monkeypatch.setattr(get_settings(), "credit_packs_json", json.dumps(old))
+    h = _signup(client, _new_ip())
+    user_id = _me(client, h)
+    before = _wallet(client, h)
+    by_webhook, by_reconciler, underpaid = (_order(client, h, "starter") for _ in range(3))
+    assert gw.orders[by_webhook] == 359_900
+    monkeypatch.setattr(get_settings(), "credit_packs_json", None)  # the cut: the default packs, starter ₹2,599
+    assert packs()["starter"].price_inr == 2599
+    pay = gw.pay(by_webhook)  # paid at the price the order was made at
+    assert _post(client, _captured(gw, by_webhook, pay)).status_code == 200
+    gw.pay(by_reconciler)  # its checkout answer and webhook both lost
+    gw.pay(underpaid, amount=259_900)  # today's price against an old order is not a capture of it
+    counts = _reconcile(client)
+    assert counts["credited"] == 1
+    for order in (by_webhook, by_reconciler):
+        p = _payment(client, order)
+        assert (p.status, p.amount_inr, p.resume_credits, p.interview_minutes) == ("approved", 3599, 30, 180)
+    assert _payment(client, underpaid).status == "awaiting_payment"
+    after = _wallet(client, h)
+    assert after["resume"] == before["resume"] + 60
+    assert after["interview_minutes_left"] == before["interview_minutes_left"] + 360
+    assert _post(client, _captured(gw, by_webhook, pay)).status_code == 200  # a redelivery adds nothing
+    assert _purchases(client, user_id) == 2

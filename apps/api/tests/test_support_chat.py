@@ -161,11 +161,16 @@ def test_prices_and_payments_are_in_the_visitors_currency(client: TestClient,
     india, _chips = respond("", "prices")
     assert india == (
         "Start free: a new account gets 20 interview minutes and 1 Resume AI credit. Then either buy credits "
-        "(1 interview credit = 1 hour, they never expire): 1 credit ₹2,299, 3 credits ₹3,599, 8 credits ₹7,199, "
-        "15 credits ₹10,899, or AI credits ₹499 for Resume AI alone. Or go unlimited: ₹4,799 a week, "
-        "₹9,199 a month or ₹35,999 a year. Nothing renews automatically.")
+        "(1 interview credit = 1 hour, they never expire): 1 credit ₹1,649, 3 credits ₹2,599, 8 credits ₹5,199, "
+        "15 credits ₹7,749, or AI credits ₹499 for Resume AI alone. Or go unlimited: ₹3,499 a week, "
+        "₹6,599 a month or ₹26,499 a year. Nothing renews automatically.")
     usa, chips = respond("", "prices", "USD")
-    assert "₹" not in usa and "AI credits $7.99" in usa and "$135.99 a month" in usa and "$531.99 a year" in usa
+    # The dollar prices are the ones from before the rupee cut (D60).
+    assert usa == (
+        "Start free: a new account gets 20 interview minutes and 1 Resume AI credit. Then either buy credits "
+        "(1 interview credit = 1 hour, they never expire): 1 credit $33.99, 3 credits $53.99, 8 credits $106.99, "
+        "15 credits $161.99, or AI credits $7.99 for Resume AI alone. Or go unlimited: $70.99 a week, "
+        "$135.99 a month or $531.99 a year. Nothing renews automatically.")
     assert ("mini", "AI credits $7.99") in chips
     assert {"razorpay", "upi", "utr"} <= {i for i, _ in options_for("buy")}
     assert not {"razorpay", "upi", "utr"} & {i for i, _ in options_for("buy", "USD")}

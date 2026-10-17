@@ -727,7 +727,7 @@ def test_upi_order_and_utr_ignore_amount_status_and_credit_fields(world: World) 
         "utr": "123123123123", "decided_at": "2000-01-01T00:00:00Z"})
     assert order.status_code == 201, order.text
     o = order.json()
-    assert (o["amount_inr"], o["resume_credits"], o["interview_minutes"]) == (3599, 30, 180)
+    assert (o["amount_inr"], o["resume_credits"], o["interview_minutes"]) == (2599, 30, 180)
     assert o["status"] == "awaiting_payment" and o["utr"] is None and o["reference"] != "ORBHACK"
     assert o["decided_at"] is None
 
@@ -737,12 +737,12 @@ def test_upi_order_and_utr_ignore_amount_status_and_credit_fields(world: World) 
         "resume_credits": 9_999, "decided_at": "2000-01-01T00:00:00Z"})
     assert sent.status_code == 200, sent.text
     s = sent.json()
-    assert (s["status"], s["amount_inr"], s["note"], s["decided_at"], s["utr"]) == ("submitted", 3599, None, None, utr)
+    assert (s["status"], s["amount_inr"], s["note"], s["decided_at"], s["utr"]) == ("submitted", 2599, None, None, utr)
     after = world.get("/v1/admin/users?q=" + user["email"], admin)["users"][0]
     assert (after["resume_credits"], after["interview_minutes_left"]) == (before["resume_credits"],
                                                                           before["interview_minutes_left"])
     row = next(p for p in world.get("/v1/admin/payments", admin)["payments"] if p["id"] == o["id"])
-    assert row["user_id"] == user["id"] and row["amount_inr"] == 3599 and row["status"] == "submitted"
+    assert row["user_id"] == user["id"] and row["amount_inr"] == 2599 and row["status"] == "submitted"
     assert o["id"] not in json.dumps(world.get("/v1/billing/upi/orders", world.a))
 
 
