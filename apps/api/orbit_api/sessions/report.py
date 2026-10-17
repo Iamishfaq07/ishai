@@ -232,8 +232,8 @@ async def generate_report(session_id: str) -> dict[str, Any]:
                 user += ("\n\nEarlier questions (not scored; cover them in the summary and topics):\n"
                          "<reference_data source=\"earlier_questions\">\n"
                          f"{fence(earlier[:MAX_EARLIER_QUESTIONS_CHARS])}\n</reference_data>")
-            system = _SYSTEM + practice_language.report_instruction(
-                practice_language.normalize(row.language, row.type))
+            language = practice_language.normalize(row.language, row.type)
+            system = _SYSTEM + practice_language.report_instruction(language)
             negotiation = (row.mock_config or {}).get("negotiation") if row.type == "mock" else None
             if isinstance(negotiation, dict):
                 system += _NEGOTIATION_RUBRIC
@@ -247,7 +247,8 @@ async def generate_report(session_id: str) -> dict[str, Any]:
             llm = get_llm_provider()
             req = LLMRequest(
                 messages=[LLMMessage("system", system), LLMMessage("user", user)],
-                json_mode=llm.supports_structured_output(), max_tokens=700 + 160 * len(pairs),
+                json_mode=llm.supports_structured_output(),
+                max_tokens=practice_language.max_tokens(700 + 160 * len(pairs), language),
                 request_type="summary",
             )
             try:

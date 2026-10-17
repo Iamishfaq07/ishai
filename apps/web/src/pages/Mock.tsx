@@ -233,7 +233,7 @@ function MockSetup() {
                     }}
                     type="button"
                     disabled={starting !== null}
-                    onClick={() => void launch(presetSession(p.id, knownRole, contextDocs(), country), p.id)}
+                    onClick={() => void launch(presetSession(p.id, knownRole, contextDocs(), country, practiceLanguage), p.id)}
                     className={cx(
                       "glass-panel lift flex h-full w-full flex-col items-start gap-1.5 rounded-2xl p-3.5 text-left hover:border-indigo-400/40 disabled:cursor-wait disabled:opacity-70 sm:p-4 dark:hover:border-indigo-400/30",
                       highlighted === p.id && "ring-2 ring-indigo-500",

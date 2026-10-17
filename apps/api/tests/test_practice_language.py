@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from orbit_api import practice_language
 from orbit_api.config import get_settings
 from orbit_api.live.mock_interviewer import MockConfig, MockInterviewer
+from orbit_api.providers.llm.base import LLMRequest, LLMResponse
 from orbit_api.retrieval.index import SessionIndex
 from tests.test_api import _register
 from tests.test_company_styles import _noop, _Recording
@@ -100,3 +101,52 @@ def test_the_review_is_written_in_the_language(client: TestClient, monkeypatch: 
     client.portal.call(report.generate_report, sid)  # type: ignore[union-attr]
     system = llm.requests[-1].messages[0].content
     assert "The interview was in Hinglish" in system and "never marked down for its language" in system
+    assert llm.requests[-1].max_tokens == practice_language.max_tokens(700 + 160, "hinglish") > 700 + 160  # one pair
+
+
+async def test_a_drill_in_the_language_leads_in_it_and_names_the_company() -> None:
+    """Practice's one-tap HR round in Hindi or Hinglish is a drill of fixed questions written in that language: the
+    interviewer's lead line is in it too, and "हमारी कंपनी" / "hamari company" names the company like "our company"."""
+    from orbit_api.live.mock_interviewer import DrillItem, bare_question
+
+    said: list[str] = []
+
+    async def on_question(_qid: str, text: str, *_: Any) -> None:
+        said.append(text)
+
+    cases = (("hi", "आप हमारी कंपनी से क्यों जुड़ना चाहते हैं?", "आप Acme से क्यों जुड़ना चाहते हैं?"),
+             ("hinglish", "Aap hamari company kyun join karna chahte hain?", "Aap Acme kyun join karna chahte hain?"),
+             ("en", "Why do you want to join our company?", "Why do you want to join Acme?"))
+    for language, question, named in cases:
+        said.clear()
+        mi = MockInterviewer(MockConfig(drill=[DrillItem(question=question, kind="prep")], company="Acme"),
+                             llm=_Recording(), index=SessionIndex([]), role=None, send=_noop, on_question=on_question,
+                             on_finish=_noop, company="Acme", language=language)
+        await mi.start(0)
+        lead = practice_language.DRILL_LEAD.get(language, {}).get("first_prep",
+                                                                  "Let's practise the questions from your prep. ")
+        assert said == [lead + named], (language, said)
+        assert bare_question(said[0]) == named  # a drill of this round's review doesn't open with the lead twice
+
+
+async def test_output_budgets_grow_with_the_language() -> None:
+    """Hindi takes about twice English's tokens: the interviewer's and the review's budgets grow with it, or the
+    model's JSON is cut off (and a Hindi round gets no review: see test_the_review_is_written_in_the_language)."""
+    assert practice_language.max_tokens(240, "en") == 240
+    assert practice_language.max_tokens(240, "hi") == 600
+    assert practice_language.max_tokens(240, "hinglish") == 384
+    assert practice_language.max_tokens(4_000, "hi") == practice_language.MAX_OUTPUT_TOKENS
+
+    class Budgets(_Recording):
+        def __init__(self) -> None:
+            super().__init__()
+            self.budgets: list[int] = []
+
+        async def generate(self, request: LLMRequest) -> LLMResponse:
+            self.budgets.append(request.max_tokens)
+            return await super().generate(request)
+
+    english, hindi = Budgets(), Budgets()
+    await _interviewer(english, "en")._generate()
+    await _interviewer(hindi, "hi")._generate()
+    assert (english.budgets, hindi.budgets) == ([240], [600])

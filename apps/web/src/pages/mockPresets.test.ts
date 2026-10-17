@@ -100,3 +100,28 @@ describe("the first screen outside India", () => {
     expect(gb).toContain("Are you open to relocating if the role needs it?");
   });
 });
+
+describe("a one-tap round in a practice language (Hindi, Hinglish)", () => {
+  it("asks its fixed questions in that language, and says which language the session is in", () => {
+    const hi = presetSession("hr5", "", [], "IN", "hi");
+    expect(hi.language).toBe("hi");
+    const hiQuestions = hi.mock?.drill?.map((d) => d.question) ?? [];
+    expect(hiQuestions).toHaveLength(HR_QUESTIONS.length);
+    expect(hiQuestions.every((q) => /[ऀ-ॿ]/.test(q))).toBe(true); // Devanagari
+    expect(hiQuestions[1]).toContain("हमारी कंपनी"); // the server names the company here, as in "our company"
+    const hinglish = presetSession("tmay10", "", [], "IN", "hinglish").mock?.drill ?? [];
+    expect(hinglish.map((d) => d.question)).toEqual([
+      "Apne baare mein bataiye.",
+      expect.stringMatching(/^Apne resume se/),
+      "Apne baare mein bataiye.",
+    ]);
+    expect(hinglish.map((d) => d.kind)).toEqual(["prep", "prep", "concise"]);
+    expect(hinglish.every((d) => !/[ऀ-ॿ]/.test(d.question))).toBe(true); // Latin script
+  });
+
+  it("leaves English rounds and the free rounds as they were", () => {
+    expect(presetSession("hr5", "", []).language).toBe("en");
+    expect(presetSession("hr5", "", [], "IN", "en").mock?.drill?.map((d) => d.question)).toEqual(HR_QUESTIONS);
+    expect(presetSession("tech15", "", [], "IN", "hi").mock).toEqual(presetSession("tech15", "", [], "IN").mock);
+  });
+});

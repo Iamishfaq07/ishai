@@ -67,13 +67,45 @@ export const HR_QUESTIONS = [
   "Are you open to relocating, or to working in shifts if the role needs it?",
 ];
 
-/** The screen's questions for the country: India's as above; elsewhere shift work isn't a first-call question. */
-export function hrQuestions(country: string = INDIA): string[] {
+/**
+ * The fixed questions in a Hindi or Hinglish mock (Practice → Language, offered in India with ORBIT_MULTILINGUAL): the
+ * interviewer asks them as written, so they're written in the round's language (Hindi in Devanagari, Hinglish in Latin
+ * script), technical words in English. "हमारी कंपनी" / "hamari company" names the company, as "our company" does.
+ */
+const IN_LANGUAGE: Record<string, { hr: string[]; tmay: string; project: string }> = {
+  hi: {
+    hr: [
+      "अपने बारे में बताइए।",
+      "आप हमारी कंपनी से क्यों जुड़ना चाहते हैं?",
+      "आपकी strengths क्या हैं? और एक weakness, जिस पर आप काम कर रहे हैं?",
+      "क्या आप relocate करने के लिए, या ज़रूरत हो तो shifts में काम करने के लिए तैयार हैं?",
+    ],
+    tmay: "अपने बारे में बताइए।",
+    project: "अपने resume से किसी ऐसे project या internship के बारे में बताइए जिस पर आपको गर्व है।",
+  },
+  hinglish: {
+    hr: [
+      "Apne baare mein bataiye.",
+      "Aap hamari company kyun join karna chahte hain?",
+      "Aapki strengths kya hain? Aur ek weakness jis par aap kaam kar rahe hain?",
+      "Kya aap relocate karne ke liye, ya zaroorat ho toh shifts mein kaam karne ke liye ready hain?",
+    ],
+    tmay: "Apne baare mein bataiye.",
+    project: "Apne resume se kisi aise project ya internship ke baare mein bataiye jis par aapko proud feel hota hai.",
+  },
+};
+
+/** The screen's questions for the country: India's as above; elsewhere shift work isn't a first-call question. In a
+ *  practice language, India's in that language. */
+export function hrQuestions(country: string = INDIA, language = "en"): string[] {
+  const translated = IN_LANGUAGE[language];
+  if (translated) return translated.hr;
   if (isIndia(country)) return HR_QUESTIONS;
   return HR_QUESTIONS.map((q) => (q.startsWith("Are you open to relocating") ? "Are you open to relocating if the role needs it?" : q));
 }
 
-function mockFor(id: PresetId, country: string): MockConfig {
+function mockFor(id: PresetId, country: string, language: string): MockConfig {
+  const translated = IN_LANGUAGE[language];
   switch (id) {
     case "hr5":
       return {
@@ -81,9 +113,10 @@ function mockFor(id: PresetId, country: string): MockConfig {
         persona: "recruiter",
         difficulty: "easy",
         duration_minutes: 5,
-        drill: hrQuestions(country).map((question) => ({ question, kind: "prep" as const })),
+        drill: hrQuestions(country, language).map((question) => ({ question, kind: "prep" as const })),
       };
-    case "tmay10":
+    case "tmay10": {
+      const tmay = translated?.tmay ?? "Tell me about yourself.";
       return {
         interview_type: "behavioral",
         persona: "hiring_manager",
@@ -91,15 +124,16 @@ function mockFor(id: PresetId, country: string): MockConfig {
         duration_minutes: 10,
         drill: [
           {
-            question: "Tell me about yourself.",
+            question: tmay,
             kind: "prep",
             follow_up: true,
             feedback: "Check it covers who they are now, one or two things they did with a result, and why this role. Push on anything vague.",
           },
-          { question: "Walk me through one project or internship from your resume that you're proud of.", kind: "prep", follow_up: true },
-          { question: "Tell me about yourself.", kind: "concise" },
+          { question: translated?.project ?? "Walk me through one project or internship from your resume that you're proud of.", kind: "prep", follow_up: true },
+          { question: tmay, kind: "concise" },
         ],
       };
+    }
     case "tech15":
       return { interview_type: "technical", persona: "engineer", difficulty: "medium", duration_minutes: 15 };
     case "panel15":
@@ -142,8 +176,9 @@ export function roleForPractice(
   return "";
 }
 
-/** The session a preset starts: `role` from the profile (or a link), the documents Practice uses for context. */
-export function presetSession(id: PresetId, role: string, documentIds: string[], country: string = INDIA): CreateSessionRequest {
+/** The session a preset starts: `role` from the profile (or a link), the documents Practice uses for context, in the
+ *  practice language picked (English by default). */
+export function presetSession(id: PresetId, role: string, documentIds: string[], country: string = INDIA, language = "en"): CreateSessionRequest {
   const preset = PRESETS.find((p) => p.id === id)!;
   const r = role.trim();
   return {
@@ -157,12 +192,12 @@ export function presetSession(id: PresetId, role: string, documentIds: string[],
             : `Mock — ${presetTitle(preset, country)}`,
     type: "mock",
     ...(r ? { role: r } : {}),
-    language: "en",
+    language,
     length: "standard",
     style: "natural",
     auto_answer: false,
     document_ids: documentIds,
-    mock: mockFor(id, country),
+    mock: mockFor(id, country, language),
   };
 }
 

@@ -223,8 +223,10 @@ def bare_question(text: str) -> str:
     """A review's question without a drill's lead line ("Let's try this one again. …"): reports from before drill
     questions were recorded bare have it, and a drill of one would open with it twice."""
     q = text.strip()
+    leads = [*_DRILL_LEAD.values(),
+             *(lead for by_key in practice_language.DRILL_LEAD.values() for lead in by_key.values())]
     while True:
-        lead = next((lead for lead in _DRILL_LEAD.values() if lead and q.startswith(lead)), None)
+        lead = next((lead for lead in leads if lead and q.startswith(lead)), None)
         if lead is None or len(q) == len(lead):
             return q
         q = q[len(lead):].strip()
@@ -350,7 +352,8 @@ class _Asked:
     depth: int = 1
 
 
-_OUR_COMPANY = re.compile(r"\bour company\b", re.IGNORECASE)
+# "our company", and the same in a Hindi or Hinglish round's fixed question (Practice's one-tap HR round).
+_OUR_COMPANY = re.compile(r"\bour company\b|हमारी कंपनी|\bhamari company\b", re.IGNORECASE)
 
 _DRILL_LEAD = {
     "first": "Let's work on a few questions from your last session. ",
@@ -668,14 +671,18 @@ class MockInterviewer:
             item = plan[self._drill_next]
             self._drill_next += 1
             if not self.asked and len(plan) == 1 and item.kind == "retry":
-                lead = _DRILL_LEAD["retry"]  # one question again: not "a few questions"
+                lead = self._lead("retry")  # one question again: not "a few questions"
             elif not self.asked and item.kind in ("retry", "prep", "story", "answer"):
-                lead = _DRILL_LEAD[{"prep": "first_prep", "story": "first_story",
-                                    "answer": "first_answer"}.get(item.kind, "first")]
+                lead = self._lead({"prep": "first_prep", "story": "first_story",
+                                   "answer": "first_answer"}.get(item.kind, "first"))
             else:
-                lead = _DRILL_LEAD[item.kind]
+                lead = self._lead(item.kind)
             item = self._named(item)
             await self._put(lead + item.question, False, drill=item)
+
+    def _lead(self, key: str) -> str:
+        """A drill's lead line ("Let's try this one again."), in the round's language."""
+        return practice_language.DRILL_LEAD.get(self._language, {}).get(key, _DRILL_LEAD[key])
 
     def _named(self, item: DrillItem) -> DrillItem:
         """A fixed question that says "our company" (the HR round's "Why do you want to join our company?") names the
@@ -740,7 +747,8 @@ class MockInterviewer:
         call = self._transcript(label="Recruiter") or "(nothing yet)"
         user = f"<reference_data source=\"call_so_far\">\n{fence(call)}\n</reference_data>\n{steer}"
         request = LLMRequest(messages=[LLMMessage("system", system), LLMMessage("user", user)], json_mode=True,
-                             max_tokens=200, temperature=0.7, request_type="mock_question")
+                             max_tokens=practice_language.max_tokens(200, self._language), temperature=0.7,
+                             request_type="mock_question")
         started = asyncio.get_running_loop().time()
         try:
             resp = await asyncio.wait_for(self._llm.generate(request), timeout=QUESTION_TIMEOUT_S)
@@ -878,7 +886,8 @@ class MockInterviewer:
                 f"</reference_data>\n{topics}<reference_data source=\"interview_so_far\">\n"
                 f"{fence(self._transcript() or '(nothing yet)')}\n</reference_data>\n{steer}")
         request = LLMRequest(messages=[LLMMessage("system", system), LLMMessage("user", user)], json_mode=True,
-                             max_tokens=240, temperature=0.7, request_type="mock_question")
+                             max_tokens=practice_language.max_tokens(240, self._language), temperature=0.7,
+                             request_type="mock_question")
         started = asyncio.get_running_loop().time()
         try:
             resp = await asyncio.wait_for(self._llm.generate(request), timeout=QUESTION_TIMEOUT_S)
