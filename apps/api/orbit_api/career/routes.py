@@ -18,7 +18,7 @@ from orbit_api.db import get_db
 from orbit_api.documents.parsing import ParseError, detect_format, extract_text_isolated
 from orbit_api.documents.routes import _check_quota, _ingest
 from orbit_api.documents.uploads import MAX_UPLOAD_BYTES, sanitize_text, validate_image
-from orbit_api.entitlements import minutes_remaining, plan_for, usage_this_month
+from orbit_api.entitlements import minutes_remaining, plan_for, usage_pool
 from orbit_api.job_portal.routes import _full_text, _job_text, _listing, _resume_for, _track
 from orbit_api.live.events import SpokenWalkthrough
 from orbit_api.live.mock_interviewer import DrillItem, MockConfig
@@ -44,7 +44,7 @@ from orbit_api.resumes.ats import resume_text
 from orbit_api.resumes.routes import MAX_RESUMES, SuggestIn, _generate, _spend, _suggest
 from orbit_api.resumes.schema import ResumeData, ResumeDesign
 from orbit_api.sessions.report import pair_questions_with_answers
-from orbit_api.sessions.routes import SessionIn, SessionOut, _owned, create_session
+from orbit_api.sessions.routes import SessionIn, SessionOut, _owned, create_session, screenshot_lock, screenshots_taken
 from orbit_api.transactions import lock_account
 
 router = APIRouter(prefix="/v1", tags=["career studio"])
@@ -334,12 +334,15 @@ async def _defense(session_id: str, notes: str, images: list[LLMImage], user: Us
     plan = await plan_for(db, user.id)
     if not plan.has("vision"):
         raise HTTPException(403, "Architecture critique is unavailable on your plan.")
-    await lock_account(db, user.id)
-    if plan.screenshots is not None and await usage_this_month(db, user.id, "screenshots") >= plan.screenshots:
-        raise HTTPException(402, "You've used this month's analysis allowance.")
-    usage = UsageEvent(user_id=user.id, session_id=session_id, metric="screenshots", quantity=1)
-    db.add(usage)
-    await db.commit()
+    # The same allowance (and lock) as screenshot answers, counting the ones still being written.
+    async with screenshot_lock(user.id):
+        await lock_account(db, user.id)
+        if plan.screenshots is not None and await screenshots_taken(db, user.id, plan) >= plan.screenshots:
+            raise HTTPException(402, "You've used this month's analysis allowance.")
+        usage = UsageEvent(user_id=user.id, session_id=session_id, metric="screenshots", quantity=1,
+                           pool=usage_pool(plan))
+        db.add(usage)
+        await db.commit()
     usage_id = usage.id
     try:
         return await generate_json(db, user, "defense_critique",

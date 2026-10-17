@@ -271,7 +271,7 @@ async def for_user(db: AsyncSession, user: User) -> dict[str, Any]:
         "usage": {
             "live_minutes": live_used,
             "mock_minutes": mock_used,
-            "screenshots": int(await usage_this_month(db, user.id, "screenshots")),
+            "screenshots": int(await usage_this_month(db, user.id, "screenshots", usage_pool(plan))),
             "documents": int(docs or 0),
         },
         "features": {f: plan.has(f) for f in FEATURES},

@@ -121,6 +121,12 @@ _live_sockets: dict[str, dict[str, WebSocket]] = {}
 # The engine behind each live socket, so HTTP uploads (screenshots) can feed the running session.
 _live_engines: dict[str, LiveEngine] = {}
 MAX_SCREENSHOT_BYTES = MAX_UPLOAD_BYTES
+# Screenshot answers started but not charged yet (the engine charges one when it's delivered), per account:
+# question id -> when. Counted with the charges, so uploads at once can't all take the last screenshot left. One
+# still uncharged after SHOT_WRITING_S failed or was cancelled (those are free) and stops counting.
+SHOT_WRITING_S = 180.0
+_shots_writing: dict[str, dict[str, float]] = {}
+_shot_locks: dict[str, asyncio.Lock] = {}
 _teardowns: set[asyncio.Task[None]] = set()  # strong refs so an in-flight teardown isn't garbage-collected
 LOW_MINUTES_WARNING_S = 5 * 60
 METER_STOP_S = 5.0  # a closing connection waits this long for the minute meter's beat in progress
@@ -385,6 +391,28 @@ def metered_query(user_id: str, session_id: str) -> Select[tuple[float]]:
     return select(func.coalesce(func.sum(UsageEvent.quantity), 0.0)).where(
         UsageEvent.user_id == user_id, UsageEvent.metric.in_(("live_seconds", "mock_seconds")),
         UsageEvent.session_id == session_id)
+
+
+def screenshot_lock(user_id: str) -> asyncio.Lock:
+    """Held from a screenshot allowance check to the use being counted (one API instance: D12)."""
+    return _shot_locks.setdefault(user_id, asyncio.Lock())
+
+
+async def screenshots_taken(db: AsyncSession, user_id: str, plan: Plan) -> float:
+    """This period's screenshots on `plan`'s own balance (a lapsed paid plan's don't count against Free), plus the
+    answers started and not charged yet. Call under `screenshot_lock`."""
+    writing = _shots_writing.get(user_id, {})
+    now = time.monotonic()
+    for qid in [q for q, at in writing.items() if now - at > SHOT_WRITING_S]:
+        del writing[qid]
+    if writing:  # charged meanwhile: in the count below already
+        charged = set((await db.scalars(select(UsageEvent.idempotency_key).where(
+            UsageEvent.user_id == user_id, UsageEvent.idempotency_key.in_([f"shot:{q}" for q in writing])))).all())
+        for qid in [q for q in writing if f"shot:{q}" in charged]:
+            del writing[qid]
+    if not writing:
+        _shots_writing.pop(user_id, None)
+    return await usage_this_month(db, user_id, "screenshots", usage_pool(plan)) + len(writing)
 
 
 async def stop_user_live(user_id: str) -> None:
@@ -688,8 +716,6 @@ async def upload_screenshot(session_id: str, image: Annotated[UploadFile, File()
     if not plan.has("vision"):
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail={
             "code": "feature_unavailable", "message": "Screenshot answers aren't included in your plan."})
-    if plan.screenshots is not None and await usage_this_month(db, user.id, "screenshots") >= plan.screenshots:
-        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, "You've used this month's screenshots.")
     data = await image.read(MAX_SCREENSHOT_BYTES + 1)
     if len(data) > MAX_SCREENSHOT_BYTES:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Screenshot is too large (max 5 MB).")
@@ -697,14 +723,22 @@ async def upload_screenshot(session_id: str, image: Annotated[UploadFile, File()
         media_type = await asyncio.to_thread(validate_image, data, image.content_type)
     except ValueError as e:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, str(e)) from e
-    # Internal metric only: the user's screenshot credit ("screenshots") is spent by the engine when the
-    # answer is actually delivered.
-    db.add(UsageEvent(user_id=user.id, session_id=session_id, metric="screenshot_attempts", quantity=1))
-    await db.commit()
     # A scrolling capture (a long problem, several screens tall) goes to the model as readable parts: still one
     # screenshot, one answer, one credit.
     parts = await asyncio.to_thread(split_tall, LLMImage(data, media_type))
-    return {"screenshot_id": await engine.answer_screenshot(parts)}
+    # Checked and started under the account's screenshot lock, counting answers still being written: the charge only
+    # lands when one is delivered, so uploads at once all passed a check of the charges alone.
+    async with screenshot_lock(user.id):
+        if plan.screenshots is not None and await screenshots_taken(db, user.id, plan) >= plan.screenshots:
+            raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, "You've used this month's screenshots.")
+        # Internal metric only: the user's screenshot credit ("screenshots") is spent by the engine when the
+        # answer is actually delivered.
+        db.add(UsageEvent(user_id=user.id, session_id=session_id, metric="screenshot_attempts", quantity=1))
+        await db.commit()
+        qid = await engine.answer_screenshot(parts)
+        if plan.screenshots is not None:
+            _shots_writing.setdefault(user.id, {})[qid] = time.monotonic()
+    return {"screenshot_id": qid}
 
 
 @router.get("/usage")
@@ -723,7 +757,7 @@ async def usage(user: Annotated[User, Depends(current_user)],
         "plan": plan.name,
         "live_minutes_used": live_used,
         "live_minutes_limit": live_limit,
-        "screenshots_used": int(await usage_this_month(db, user.id, "screenshots")),
+        "screenshots_used": int(await usage_this_month(db, user.id, "screenshots", usage_pool(plan))),
         "screenshots_limit": plan.screenshots,
     }
 

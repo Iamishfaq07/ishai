@@ -369,8 +369,11 @@ class DbRecorder:
                                   ok=ok, created_at=now))
 
     async def usage(self, metric: str, quantity: float, key: str | None = None) -> None:
+        # A screenshot is charged to the plan in force (the pool the session's time draws on now), so a Free
+        # allowance counts only screenshots taken on Free, not a lapsed paid plan's.
+        pool = self.minutes.pool if metric == "screenshots" else None
         self._put(UsageEvent(user_id=self.user_id, session_id=self.session_id, metric=metric, quantity=quantity,
-                             idempotency_key=key, created_at=datetime.now(UTC)))
+                             idempotency_key=key, pool=pool, created_at=datetime.now(UTC)))
 
     async def detached(self, duration_s: int, stt_seconds: float, summary: str,
                        metrics: dict[str, list[int]] | None = None) -> None:
