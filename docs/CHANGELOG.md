@@ -4,15 +4,15 @@
 
 - **A question bank of 100 company guides and 32 role guides** (was 25 guides with about four questions each):
   1,934 practice questions (1,389 for companies, 545 for roles), each with what a good answer covers. Companies:
-  India's IT-services firms (TCS, Infosys, Wipro, HCLTech, Tech Mahindra, LTIMindtree, Cognizant, Capgemini,
-  Accenture…), Indian product companies (Flipkart, Swiggy, Zomato, Razorpay, Paytm, PhonePe, CRED, Meesho, Zoho,
-  Freshworks…), global tech, consulting and the Big Four, banks and payments, and industry and public-sector employers
-  in India, Europe, the UK and the US; 88 of them cite the company's own pages they were checked against (170 links).
-  Roles: campus placement, MBA placement, software, data, product, design, business, core engineering, teaching and
-  nursing.
-  Each guide: a hedged summary, the rounds candidates commonly report (an "Outside India" version where India's are
-  campus-specific), what interviewers listen for (the company's published values where it has them), questions by
-  section (behavioral, role and technical, fit), tips, the company's own pages it was checked against, and the date.
+  India's IT-services firms (TCS, Infosys, Wipro, HCLTech, Tech Mahindra, LTM (formerly LTIMindtree), Cognizant,
+  Capgemini, Accenture…), Indian product companies (Flipkart, Swiggy, Zomato, Razorpay, Paytm, PhonePe, CRED, Meesho,
+  Zoho, Freshworks…), global tech, consulting and the Big Four, banks and payments, and industry and public-sector
+  employers in India, Europe, the UK and the US; 88 of them cite the company's own pages they were checked against
+  (170 links). Roles: campus placement, MBA placement, software, data, product, design, business, core engineering,
+  teaching and nursing. Each guide: a hedged summary, the rounds candidates commonly report (an "Outside India"
+  version where India's are campus-specific), what interviewers listen for (the company's published values where it
+  has them), questions by section (behavioral, role and technical, fit), tips, the company's own pages it was checked
+  against, and the date.
 - **Written by Orbit and checked by the build** (DECISIONS D63): one JSON file per guide in
   `apps/api/orbit_api/question_bank/`, validated against `schema.py` when the API starts, by the tests and by
   `uv run python -m orbit_api.question_bank`. It refuses "real", "actual", "leaked" or "asked at" questions, question

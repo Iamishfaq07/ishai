@@ -1,10 +1,10 @@
 {
   "slug": "ltimindtree",
-  "name": "LTIMindtree",
-  "aliases": ["lti", "mindtree", "lti mindtree", "larsen and toubro infotech", "l&t infotech", "ltm"],
+  "name": "LTM (formerly LTIMindtree)",
+  "aliases": ["ltm", "ltimindtree", "lti", "mindtree", "lti mindtree", "larsen and toubro infotech", "l&t infotech"],
   "group": "it-services",
   "market": "india-first",
-  "summary": "LTIMindtree, the Larsen & Toubro group's technology services company, introduced the brand name LTM in 2026. It hires freshers mainly through campus and off-campus drives that candidates commonly describe as an online assessment of aptitude, reasoning and coding, then technical and HR interviews. It publishes four values: Driven by purpose, Act with compassion, Be future-ready and Deliver impact.",
+  "summary": "LTM, the Larsen & Toubro group's technology services company, was known as LTIMindtree until it introduced the LTM brand in February 2026. It hires freshers mainly through campus and off-campus drives that candidates commonly describe as an online assessment of aptitude, reasoning and coding, then technical and HR interviews. It publishes four values: Driven by purpose, Act with compassion, Be future-ready and Deliver impact.",
   "rounds": [
     "Campus drive, off-campus registration or online application",
     "Online assessment: aptitude, reasoning, English and coding (often)",
@@ -144,7 +144,7 @@
       ]
     },
     {
-      "text": "Why LTIMindtree, and what do you know about the industries it works in?",
+      "text": "Why LTM, and what do you know about the industries it works in?",
       "type": "fit",
       "kind": "motivation",
       "covers": [
