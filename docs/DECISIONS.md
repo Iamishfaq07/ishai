@@ -795,3 +795,22 @@ in a fallback), so a preload would only compete with the stylesheet on a slow ph
 `/.well-known/security.txt` (RFC 9116) names the contact form, not a personal email, and offers no bounty; its
 Expires date is fixed (renew it yearly; a test fails 30 days ahead as the reminder). The old `/security.txt` address
 redirects there.
+
+**D70 — Sections get spot graphics, and KashSec is promoted as a product of the team, honestly.** The owner asked for
+pictures in every tool and section, and for KashSec, the team's free cybersecurity school, to be advertised "in a
+good, enterprise way". Two choices. First, spots, not more scenes: D68's rule of one hero scene in a view stays, and
+what a section gets is a 40 px spot graphic (56 for a card that leads with it) drawn in the scenes' hand, with one
+accent part that draws in when first seen and lifts a hair on hover. Sixty-five hand-written kinds in one module,
+about 5 kB compressed (a lazy chunk), shared by the pages that use them, in place of the neutral lucide tiles on section headings
+(settings, billing, Offer AI, practice rounds, Code AI's patterns, Jobs AI's profile, Resume AI's panels and every
+ATS check by category, the banks, the copilot's setup, the Mission room). They label sections, so they never go on
+rows, fields or buttons, and never replace a status mark; one per card. Lucide stays the icon set for controls and
+inline marks. Second, KashSec: one component family (a feature card with its own animated scene, a contextual card,
+Home's dismissible "More from us") and one link builder, so it reads the same everywhere and every visit is
+attributable (`utm_campaign=<placement>`). It uses KashSec's own words and only what its site shows, no counts or
+ratings; its colour is teal, its brand's, kept to its own cards so Orbit's accent still means "Orbit's main action".
+Placement is where it helps: Learning AI (its band is that page's one scene, so Learning AI's header scene gave way),
+the front page and footer, Home until dismissed, and in context only for people preparing for security roles
+(matched from role names, a tracked job's title and the role guide's aliases), never more than one in a view. The old
+promo strip and the line saying KashSec teaches AI went. The alternatives were a banner on every page (noisy, and it
+would teach people to ignore it) and a sidebar item (KashSec isn't a tool inside Orbit, and it opens another site).
