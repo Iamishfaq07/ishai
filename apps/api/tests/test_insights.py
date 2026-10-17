@@ -163,3 +163,21 @@ def test_streak_counts_back_from_today_or_yesterday() -> None:
     assert streak({date(2026, 9, 25), date(2026, 9, 24), date(2026, 9, 22)}, today) == 2
     assert streak({date(2026, 9, 24), date(2026, 9, 23)}, today) == 2  # today not over yet
     assert streak({date(2026, 9, 22)}, today) == 0
+
+
+def test_the_streak_counts_the_persons_own_days(client: TestClient) -> None:
+    """The server is in UTC. Practice at 23:00 Sunday, 04:00 Monday and 20:00 Tuesday in India is three days in a
+    row there, but 17:30 and 22:30 Sunday and 14:30 Tuesday in UTC: a streak of 1 counted in UTC days."""
+    from datetime import UTC, datetime
+
+    from orbit_api.sessions.insights import local_streak
+
+    ist = 330
+    ended = [datetime(2026, 10, 18, 17, 30, tzinfo=UTC), datetime(2026, 10, 18, 22, 30, tzinfo=UTC),
+             datetime(2026, 10, 20, 14, 30, tzinfo=UTC)]
+    now = datetime(2026, 10, 20, 15, 0, tzinfo=UTC)  # 20:30 Tuesday in India
+    assert local_streak(ended, now, 0) == 1
+    assert local_streak(ended, now, ist) == 3
+    h = _register(client)
+    assert client.get(f"/v1/progress?tz_offset={ist}", headers=h).status_code == 200
+    assert client.get("/v1/progress?tz_offset=9999", headers=h).status_code == 422

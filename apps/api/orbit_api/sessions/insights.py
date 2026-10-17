@@ -13,7 +13,7 @@ import re
 from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -183,13 +183,21 @@ def streak(days: set[date], today: date) -> int:
     return n
 
 
+def local_streak(ended: list[datetime], now: datetime, tz_offset: int) -> int:
+    """`streak` in the person's own days (`tz_offset`: minutes east of UTC; India is 330), not the server's UTC ones."""
+    shift = timedelta(minutes=tz_offset)
+    return streak({(e + shift).date() for e in ended}, (now + shift).date())
+
+
 def _avg(xs: list[int]) -> float | None:
     return round(sum(xs) / len(xs), 1) if xs else None
 
 
 @router.get("/progress", response_model=ProgressOut)
 async def progress(user: Annotated[User, Depends(current_user)],
-                   db: Annotated[AsyncSession, Depends(get_db)]) -> ProgressOut:
+                   db: Annotated[AsyncSession, Depends(get_db)],
+                   tz_offset: Annotated[int, Query(ge=-720, le=840)] = 0) -> ProgressOut:
+    """`tz_offset`: minutes east of UTC, so the streak counts the person's own days (older clients: UTC)."""
     rows = (await db.execute(
         select(LiveSessionRow, SessionSummary.content)
         .outerjoin(SessionSummary, SessionSummary.session_id == LiveSessionRow.id)
@@ -216,7 +224,7 @@ async def progress(user: Annotated[User, Depends(current_user)],
     return ProgressOut(points=points, summary=ProgressSummary(
         sessions=len(points),
         this_week=sum(1 for e in ended if e > now - timedelta(days=7)),
-        streak_days=streak({e.date() for e in ended}, now.date()),
+        streak_days=local_streak(ended, now, tz_offset),
         average_score_recent=_avg(scores[-5:]),
         average_score_before=_avg(scores[-10:-5]),
         latest_tips=latest_tips,
