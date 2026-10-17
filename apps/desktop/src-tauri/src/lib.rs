@@ -2,6 +2,7 @@ mod audio;
 #[cfg(target_os = "windows")]
 mod process_loopback;
 mod screen;
+mod scroll_capture;
 mod secrets;
 mod updater;
 #[cfg(target_os = "windows")]
@@ -62,15 +63,26 @@ fn tray_quit(app: &tauri::AppHandle) {
 struct WindowPrivacy {
     shield: AtomicBool,
     hide_from_taskbar: AtomicBool,
+    /// A scrolling screenshot is running (screen.rs): Orbit's windows stay out of its captures meanwhile, whatever
+    /// `shield` says, or Orbit's own window over the problem would be joined in.
+    capturing: AtomicBool,
 }
 
 impl WindowPrivacy {
     fn get(&self) -> (bool, bool) {
         (
-            self.shield.load(Ordering::Relaxed),
+            self.shield.load(Ordering::Relaxed) || self.capturing.load(Ordering::Relaxed),
             self.hide_from_taskbar.load(Ordering::Relaxed),
         )
     }
+}
+
+/// Keeps Orbit's windows out of screen captures while `on` (they stay on screen), then back to the user's choice.
+pub(crate) fn set_capturing(app: &tauri::AppHandle, on: bool) {
+    app.state::<WindowPrivacy>()
+        .capturing
+        .store(on, Ordering::Relaxed);
+    protect_all(app);
 }
 
 fn protect_window(window: &tauri::WebviewWindow) {
@@ -194,6 +206,7 @@ pub fn run() {
             process_loopback::list_audio_apps,
             screen::capture_screen,
             screen::capture_region,
+            screen::capture_scrolling,
             screen::open_region_selector,
             secrets::save_token,
             secrets::load_token,

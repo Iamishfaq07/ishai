@@ -216,6 +216,15 @@ SCREENSHOT_PROMPT = (
     "means and the fix. A diagram or task: what it shows and the answer. If it isn't legible, say what you "
     "can read and what you'd need."
 )
+# A scrolling capture is one page many screens tall, sent as parts (live/shots.py).
+SCREENSHOT_PARTS_NOTE = (
+    " It's one long page, captured by scrolling and attached as {n} images from top to bottom that overlap a "
+    "little where they join: read them in order as one page, and don't count the overlapping lines twice."
+)
+
+
+def screenshot_prompt(parts: int) -> str:
+    return SCREENSHOT_PROMPT + (SCREENSHOT_PARTS_NOTE.format(n=parts) if parts > 1 else "")
 
 
 class NullRecorder:
@@ -351,7 +360,7 @@ class _Generation:
 
 @dataclass
 class _KeptShot:
-    image: LLMImage
+    images: list[LLMImage]
     at_ms: int
     reasks: int = 0
 
@@ -1155,12 +1164,12 @@ class LiveEngine:
             # rewriting an answer that had code, it stays a coding answer.
             q = self.memory.questions[-1]
             images: list[LLMImage] = []
-            if q == SCREENSHOT_PROMPT:
+            if q.startswith(SCREENSHOT_PROMPT):
                 # The question was the screenshot: without the image, the rewrite answered nothing it could see.
                 if (shot := self._kept_shot()) is None:
                     await self.send("error", {"code": "screenshot_expired", "message": _SHOT_GONE})
                     return
-                images = [shot]
+                images = shot
             qtype = QuestionType.coding if code_ask or q == self._coded_question else classify_type(normalize(q))
             await self._start_answer(None, q, qtype, True, "chat", instruction=text, images=images)
         else:
@@ -1175,28 +1184,29 @@ class LiveEngine:
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await gen.task
 
-    async def answer_screenshot(self, image: LLMImage) -> str:
-        """Answer whatever the captured screenshot shows (coding problem, MCQ, error, diagram…). Returns the
-        question id; the answer streams like any other."""
-        self._last_shot = _KeptShot(image, self.now_ms())
-        return await self._answer_shot(image)
+    async def answer_screenshot(self, image: LLMImage | list[LLMImage]) -> str:
+        """Answer whatever the captured screenshot shows (coding problem, MCQ, error, diagram…): one image, or a
+        long page's parts in order (live/shots.py). Returns the question id; the answer streams like any other."""
+        images = image if isinstance(image, list) else [image]
+        self._last_shot = _KeptShot(images, self.now_ms())
+        return await self._answer_shot(images)
 
-    def _kept_shot(self) -> LLMImage | None:
+    def _kept_shot(self) -> list[LLMImage] | None:
         """The last screenshot, for asking about it again ("Try again", "now in Java"): it isn't re-uploaded, and the
         question text alone ("📷 Screenshot") means nothing to the model. Kept a few minutes, a few re-asks."""
         shot = self._last_shot
         if shot is None or self.now_ms() - shot.at_ms > SHOT_KEEP_MS or shot.reasks >= SHOT_REASKS:
             return None
         shot.reasks += 1
-        return shot.image
+        return shot.images
 
-    async def _answer_shot(self, image: LLMImage) -> str:
+    async def _answer_shot(self, images: list[LLMImage]) -> str:
         qid = str(uuid.uuid4())
         qtype = QuestionType.coding if self.profile.session_type in ("coding", "assessment") else QuestionType.technical
         await self.send("question.detected", {"question_id": qid, "turn_id": None, "text": SCREENSHOT_LABEL,
                                               "type": qtype.value, "confidence": 1.0, "is_follow_up": False})
         await self._rec.question(qid, None, SCREENSHOT_LABEL, qtype.value, 1.0, False, "screenshot")
-        await self._start_answer(qid, SCREENSHOT_PROMPT, qtype, False, "screenshot", images=[image])
+        await self._start_answer(qid, screenshot_prompt(len(images)), qtype, False, "screenshot", images=images)
         return qid
 
     async def _sync_speculation(self) -> None:

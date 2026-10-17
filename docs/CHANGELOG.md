@@ -1,5 +1,26 @@
 # Implementation log
 
+## Screenshots of the whole problem, not its first screen (2026-10-17)
+
+- **"Scroll to the end"** on the desktop's screenshot screen (a switch, remembered; also a button on the preview of an
+  ordinary capture): drag over a coding problem longer than the screen and Orbit turns the mouse wheel over it, one
+  notch at a time, captures each screen once the scroll settles, and joins them where they overlap
+  (`apps/desktop/src-tauri/src/scroll_capture.rs`). Then it scrolls the problem back and puts the mouse where it
+  was. Moving the mouse stops it early; the preview says why a capture stopped ("the mouse moved", "the screens
+  stopped lining up", the length limit, or "that area didn't scroll").
+- **Joined cleanly**: a pane's tab bar and its Run/Submit bar come once, not between every screen; a sliver of the
+  editor dragged in beside the problem and the pane's scrollbar are cut off; a ticking timer or a hover highlight
+  doesn't stop the join. Orbit's own window floating over the problem is left out of the captures for those seconds
+  (still on screen; back to the user's Window privacy choice after), or it would have been joined in again and
+  again.
+- **Read whole by the model**: the server cuts a tall capture into overlapping parts about a screen high
+  (`apps/api/orbit_api/live/shots.py`, at most 8) and tells the model how to read them in order; still one
+  screenshot, one answer, one credit, nothing stored. "Try again" and "now in Java" send every part again.
+- Checked on a long practice problem rendered by Chrome at 100% and 150% scaling: every step lines up, and the joined
+  image is the whole problem, tabs and buttons once. Test builds compiled with `ORBIT_SCROLL_DEBUG_DIR` write each
+  capture and step there; `ORBIT_SCROLL_FRAMES=<dir> cargo test --lib joins_frames_from_a_folder -- --ignored`
+  joins saved frames offline. Windows only (DECISIONS D54); the web app keeps single screenshots. Needs a desktop
+  release.
 ## The API moves to Railway, behind api.orbitanswer.com (2026-10-17)
 
 - **One address for every client**: the web Worker's `API_URL`, the web app's live sockets and the desktop app

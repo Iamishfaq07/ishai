@@ -386,3 +386,18 @@ does); the Worker's cron keeps it warm meanwhile (`LEGACY_API_URL`). A saved sig
 retired Render address is ignored, so nobody stays behind on it. Still one instance (D12): Railway runs one replica,
 and while both hosts run, each holds only its own clients' live sessions. No `railway.json`: the service is set up
 in Railway's dashboard, which a config file in the repo would override on the next deploy.
+
+**D54 — A long problem is captured by scrolling it, on the desktop, with the user's say-so.** Coding problems are
+often longer than the screen, and a screenshot of the first screen answered half a question. Desktop screenshots now
+have "Scroll to the end" (a switch on the selection screen, remembered, plus a button on the preview): Orbit turns the
+mouse wheel over the selected area, waits for each scroll to settle, captures it, and joins the screens where their
+rows match (scroll_capture.rs), then scrolls the area back and puts the mouse where it was. It's the user's own
+action on their own screen, like the screenshot itself (spec §27): nothing scrolls unless they started it, and moving
+the mouse stops it. Joining compares row fingerprints in vertical strips rather than whole rows, so a scrollbar, a
+ticking timer or a hover highlight doesn't break it, and it learns from the first scroll which strips scroll (the
+result keeps only those: a sliver of the editor beside the problem is cut off) and which rows stay put (a pane's tab
+bar and a Run/Submit bar, kept once). The alternative, asking the user to take several screenshots, leaves the
+joining to the model and spends several screenshot credits for one question. On the server a tall image is cut into
+overlapping parts about a screen high (live/shots.py), sent in order with a note on how to read them: a vision model
+shrinks one very tall image until its text blurs. Still one screenshot, one answer, one credit; nothing is stored.
+Windows only, like the rest of the desktop's capture; the web app keeps single screenshots.

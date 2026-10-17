@@ -157,6 +157,19 @@ export function captureRegion(rect: { x: number; y: number; width: number; heigh
   return invoke<NativeCapture>("capture_region", rect);
 }
 
+export interface ScrollCapture extends NativeCapture {
+  /** Screens joined; 1 = the area didn't scroll. */
+  screens: number;
+  /** end = the bottom · limit = the length/size limit · mouse = the mouse moved · lost = the screens stopped lining up */
+  stop: "end" | "limit" | "mouse" | "lost";
+}
+
+/** Same rect as captureRegion: captures it while scrolling it to the bottom (the mouse wheel over it), joined into
+ *  one tall image, then scrolls it back. The overlay must be hidden first, or the wheel scrolls the overlay. */
+export function captureScrolling(rect: { x: number; y: number; width: number; height: number }): Promise<ScrollCapture> {
+  return invoke<ScrollCapture>("capture_scrolling", rect);
+}
+
 // Access token lives in the OS credential store (Keychain / Windows Credential Manager).
 export function saveToken(token: string): Promise<void> {
   return invoke<void>("save_token", { token });

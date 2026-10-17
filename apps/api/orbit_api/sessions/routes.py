@@ -59,6 +59,7 @@ from orbit_api.live.events import (
 )
 from orbit_api.live.keyterms import extract_keyterms
 from orbit_api.live.mock_interviewer import MockConfig, drill_plan, retry_plan
+from orbit_api.live.shots import split_tall
 from orbit_api.models import (
     Answer,
     AuditLog,
@@ -690,7 +691,10 @@ async def upload_screenshot(session_id: str, image: Annotated[UploadFile, File()
     # answer is actually delivered.
     db.add(UsageEvent(user_id=user.id, session_id=session_id, metric="screenshot_attempts", quantity=1))
     await db.commit()
-    return {"screenshot_id": await engine.answer_screenshot(LLMImage(data, media_type))}
+    # A scrolling capture (a long problem, several screens tall) goes to the model as readable parts: still one
+    # screenshot, one answer, one credit.
+    parts = await asyncio.to_thread(split_tall, LLMImage(data, media_type))
+    return {"screenshot_id": await engine.answer_screenshot(parts)}
 
 
 @router.get("/usage")
