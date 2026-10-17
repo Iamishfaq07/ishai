@@ -697,3 +697,27 @@ re-captured by script (capture.mjs, then the ads and Store sets) after such a ch
 the sources are in git; the ad and Store PNGs and the raw captures are exports, made again by those scripts and
 handed over outside the repository, so the repo doesn't grow by megabytes each time the screens change. The desktop
 app's icons are regenerated from the same 1024 px master and reach users with its next release.
+
+**D68 — Every feature gets its own scene, and scenes play one small touch the first time they're seen.** The owner
+asked for the kind of picture Offer AI's empty state has (its letter and balance) everywhere it fits, and for more
+motion. The set grows from fourteen to twenty-four line drawings in the same hand: LinkedIn AI, Code AI, Learning AI,
+the video interview, plan and credits, security, people and referrals, the admin inbox and support, interview day,
+and the AI at work (reading, writing, matching). They stay hand-written SVG components in `packages/ui` rather than
+images: they follow the theme and the user's accent through classes, weigh about a kilobyte compressed each, ship in
+the lazy chunk of the page that shows them (the main chunk grew about 1 kB of JS and 4 kB of CSS), and can't drift from
+the house style the way exported art would. No people's likenesses, no real names or brands, no raster or generated
+images. Where they go is limited on purpose, so the workbench stays calm: at most one scene in a view, never in a dense
+table or form; an empty state's art first, a small one in the page header only for a product page that has no empty
+state to carry it (LinkedIn, Code, Learning, video interview, billing), the AI-working scene in place of a big spinner
+for waits over two seconds, and the celebration scene only for "you're set up", bursting once per device. Motion is
+CSS keyed to the existing tokens and to `html[data-motion]`, started by an IntersectionObserver per scene (the
+`data-shown` attribute, the charts' pattern) so a scene below the fold doesn't finish before anyone sees it: Full
+draws strokes on, settles and slides parts in; Gentle fades the same parts; Off, print and no JavaScript show the
+final frame, because the hidden "before" state exists only in CSS behind `data-motion`. Only the AI-working scene
+loops, and only while the wait lasts, at Full. The alternatives were a Lottie-style animation library (a dependency,
+a runtime, files that can't take the accent) and animating from JS per scene (`useMotion` in every one); plain CSS on
+classes from `parts.tsx` keeps each scene a short file, and `scenes.test.ts` holds the rules (decorative, flat, final
+frame without CSS, one motion class per part). Two success moments that were defined but never used now fire once
+per device: the first offer (added in Offer AI, or a job moved to offer) and the first ATS score past 80; nothing else
+about what a page does changed. The
+interview-day scene is drawn and named (`interview-day`) for those screens when they land.

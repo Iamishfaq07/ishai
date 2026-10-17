@@ -149,7 +149,8 @@ class string; `/dev/components` (development builds) shows each in its states, i
   `Avatar` (initials, never photos), `ProgressBar`, `Stepper`, `Pagination`, `Breadcrumbs`, `Kbd`, `IconTile`.
 - `Tabs` + `TabPanel` (a sliding underline, arrow keys; only the chosen panel is in the page), or `tabClass` /
   `tabListClass` for a tab list that manages itself. `ProductTabs` for a product's own pages (links).
-- `PageHeader` (title, a line, actions, `back`), `BackLink`, `Card`, `EmptyState` / `CosmicEmptyState`, `Skeleton`.
+- `PageHeader` (title, a line, actions, `back`, `art`: a product page's scene), `BackLink`, `Card`, `EmptyState` /
+  `CosmicEmptyState` / `SceneArt`, `WorkingState` (an AI wait), `Skeleton`.
 
 **Do / don't**
 - Do reuse a primitive; extend it (a prop, a variant) rather than copying its classes. Don't hand-roll a button,
@@ -213,7 +214,8 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
   baseline one after another the first time it's in view, and a stacked bar fills from the left (`.chart`,
   `.chart-bar`, `.chart-fill`; a fade at Gentle); a score ring draws round as its number counts; the sidebar's "you
   are here" bar grows in on arrival (`.nav-mark`); a tracker card that changes stage wears a fading accent ring where
-  it lands (`.moved-flash`, opacity only, so Gentle keeps it).
+  it lands (`.moved-flash`, opacity only, so Gentle keeps it); a scene plays its one touch the first time it's in
+  view (see "Scenes").
 - **Bars stay solid:** the sticky header and the phone tab bar are opaque (no see-through, no backdrop blur: page
   text under the labels made them hard to read, and blur over the animated sky costs too much on a phone).
 - `scroll-padding` keeps a focused field clear of the sticky header and the phone tab bar.
@@ -232,12 +234,74 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
   (shown after 150 ms, kept at least 300 ms). A `loading` button keeps its name and width (a spinner takes the
   label's place; no "Saving…" swap needed). Spinners (`Spinner`, the
   orb) are for small or unknown-shaped waits. In the workbench a placeholder is an ink tint, not the accent.
+- **AI waits over two seconds** (reading a resume, writing a letter or a review, matching jobs): `WorkingState`
+  (`label`, `kind` `reading` / `writing` / `matching`; `compact` side by side, for a panel), the AI-working scene over
+  the same words, in place of a big spinner. A button's own "Reading…" label stays as it is.
 - **Empty states:** `EmptyState` with `kind` `first-use` (with a `GhostPreview` of the filled screen), `no-results`,
   `cleared` or `offline` (`onRetry`). A headline, one line, one imperative action. Its art is an Orbit scene
-  (`CosmicEmptyState` maps `jobs`, `offline`, `resume` and `practice` to them) or an `icon` in a `SpotIllustration`,
-  which the workbench draws flat: a hairline orbit, a solid accent planet, a small moon, no halo.
+  (`CosmicEmptyState variant=…`, see "Scenes") or an `icon` in a `SpotIllustration`, which the workbench draws flat:
+  a hairline orbit, a solid accent planet, a small moon, no halo.
 - **Success moments:** `celebrate(milestone, { message, action })`, once per device, never in a live session; the
-  burst plays at Full motion only.
+  burst plays at Full motion only. Wired: the first offer (added in Offer AI, or a job moved to offer on the
+  tracker) and the first edit that takes a resume's ATS score past 80. Home's "You're set up" shows the celebration
+  scene, its sparks bursting only the first time on a device (`CelebrationScene still`).
+
+## Scenes
+
+The feature pictures (D68): hand-drawn SVG line drawings in `packages/ui/src/components/scenes/`, one module each,
+shared pieces in `parts.tsx`. Offer AI's letter and balance is the reference.
+
+**Style.** A 240 × 160 frame. Thin ink strokes (`LINE`), paper surfaces (`PAPER`: white, or ink-900 in dark), text
+as bars (`BAR`), and **one** subject in the accent (`ACCENT`, `ACCENT_SOFT`); a few faint stars. Flat: no gradients,
+glows, shadows, filters or images, and nothing that needs its own dark version: the classes carry both themes and
+every accent. Status colours only where they mean status (Practice's scorecard). People are a badge (`Person`: a disc,
+a head, shoulders), never a face or a likeness; no real names, companies or brands. Decorative (`aria-hidden`)
+unless given a `title`. Under 3 KB of source each (WorkingScene holds three kinds in 3.4 KB).
+
+**Where they go.** At most one scene in a view, and never in a dense table or form.
+- An empty state's art: `CosmicEmptyState variant=…`; on its own, `SceneArt` (sized by its class).
+- A product's main page with no empty state to carry one: `PageHeader art={<CodeScene />}`, at the row's end from
+  `lg` up, 144 px, overhanging the row instead of making it taller.
+- An AI wait over two seconds: `WorkingState`. An onboarding step or Home's next step: the scene of what it's about.
+- A width in `className` (`w-24`, `sm:w-40`) sizes a scene; otherwise it fills its box up to 15rem.
+
+| Scene | Variant | Shows | Used on |
+| --- | --- | --- | --- |
+| `OfferScene` | `offers` | a letter with its seal; a balance that settles | Offer AI |
+| `CopilotScene` (`quiet`) | `copilot`, `quiet` | a headset, its waveform, the transcript | Copilot sessions, Home's next step, desktop Home and History; a review with nothing captured |
+| `PracticeScene` | `practice` | a microphone and its scorecard, ticks drawing in | Practice, Home's next step, a session before its review |
+| `ResumeScene` | `resume` | a page in orbit and its ATS ring | Resume AI, Home's next step |
+| `TrackerScene` | `tracker` | three columns, a card sliding into the last | the tracker, Home's next step |
+| `JobsScene` | `jobs` | a constellation of openings | (spare: its labels are Indian cities) |
+| `StoriesScene`, `AnswersScene`, `EvidenceScene`, `DocumentsScene` | same names | a STAR book, a kept answer, a quote under a shield, a fanned stack | the story bank, answers, evidence, documents (web and desktop) |
+| `LinkedInScene` | `linkedin` | a profile card, its headline rewritten, the search that finds it | LinkedIn AI's header |
+| `CodeScene` | `code` | a code window, a blinking cursor, tests ticking | Code AI's header |
+| `LearningScene` | `learning` | a path of lessons, the one you're on | Learning AI's header |
+| `VideoScene` | `video` | a call with the interviewer, her question, her voice | the video interview's header |
+| `BillingScene` | `billing` | a receipt, paid, and a credit landing | Plan & billing's header, admin payments |
+| `SecurityScene` | `security` | a shield closing with a tick, a key, a six-digit code | two-step sign-in while it's off |
+| `ReferralScene` | `people` | two people and the link between them | People (Jobs AI outreach) |
+| `InboxScene` | `inbox` | a letter into the tray, a chat waiting | admin inbox and support |
+| `InterviewDayScene` | `interview-day` | a calendar with the day ringed, its checklist | (for the interview-day screens) |
+| `NoResultsScene`, `OfflineScene` | `no-results`, `offline` | a telescope on empty sky; a dish losing its satellite | no matches; a job, offer or problem not found; boards down |
+| `WelcomeScene` | `support` | Orbit with a moon per product | the first welcome question |
+| `CelebrationScene` (`still`) | `success` | a ticked world, sparks thrown out | "You're set up" |
+| `WorkingScene` (`kind`) | — | reading (a band scans a page), writing (lines write in), matching (signals pass) | `WorkingState`: Jobs AI's matching, Resume AI's prep, letter and AI panel, outreach writing, a resume import, a review being written |
+
+**Motion** (base.css, "Every scene's one touch"). The first time a scene is in view (`Scene` sets `data-shown`), its
+parts play one small touch and rest on the final frame, done within about a second: strokes draw on (`DRAW`, with
+`pathLength={1}`), parts fade (`FADE`), come in from a few px (`IN`, `at(ms, { x, y })`), grow from their centre
+(`POP`) or swing and settle round a pivot (`SETTLE`, `at(ms, { o })`); `at(ms)` staggers them 100–250 ms apart. Small
+finite touches: a cursor blinks five times, a waveform pulses three, a ripple rings twice, the stars drift a hair
+twice. A part marked `NUDGE` lifts 3 px while the scene, or the empty state or header around it (`.scene-host`), is
+hovered. Only the AI-working scene loops (`scene-scan`, `scene-write`, `scene-travel`, `scene-breathe`), calmly and
+only for as long as the wait lasts.
+- **Full:** as drawn. **Gentle** (and the OS asking for less motion): the same parts only fade in, staggered;
+  nothing loops. **Off**, print and no JavaScript: the final frame from the start (the hidden "before" state exists
+  only in CSS, behind `data-motion`).
+- Only `opacity`, `transform` and `stroke-dashoffset` animate, inside an SVG of fixed size: nothing around a scene
+  moves. One motion class per element, never on an element with its own `transform` attribute (wrap it in a `<g>`).
+  `scenes.test.ts` checks these rules.
 - **Plain words:** `<Term term="ats">ATS</Term>` (glossary: ats, jd, utr, star, fit-check, tailor) or `tip="…"`.
 - **Links that look like buttons:** `buttonClass(variant, size)`, never a copied class string.
 
@@ -245,14 +309,8 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
 
 - `OrbitLogo` / `OrbitWordmark` — the mark (`busy` spins the ring; `animated` twinkles the spark).
 - `PlanetHero`, `SpotIllustration`, `PulseRings` — illustrations. `SpotIllustration` is for small spots only.
-- **Orbit scenes** (`components/scenes/`, one module each): `WelcomeScene` (a planet with a moon per product),
-  `ResumeScene` (a page in orbit with its ATS ring; `score`), `JobsScene` (a constellation of Bengaluru, Pune,
-  Hyderabad and remote), `PracticeScene` (a microphone and its scorecard), `TrackerScene` (three ghost columns),
-  `NoResultsScene` (a telescope on an empty patch of sky), `OfflineScene` (a dish losing its satellite) and
-  `CelebrationScene` (a burst). Line drawings like a star atlas: hairline orbits, paper surfaces and one subject in
-  the accent, so they hold in both themes and every accent; `title` makes one an image for screen readers, otherwise
-  decorative. One small motion each, at Full only. Pass them to `EmptyState` as `art`. A page gets one gradient
-  headline and one glow at most; secondary cards stay flat.
+- **Orbit scenes**: the feature pictures, one per product and moment; see "Scenes" above for the set, the style, where
+  they go and how they move. A page gets one gradient headline and one glow at most; secondary cards stay flat.
 - Icons: lucide only, re-exported from `packages/ui/src/icons.ts`.
 - Static copies of the mark: `apps/*/public/favicon.svg`, web `apple-touch-icon.png` / `icon-*.png` /
   `icon-maskable-512.png` (all from `marketing/brand/render-icons.mjs`: the mark on a flat ink tile), desktop
