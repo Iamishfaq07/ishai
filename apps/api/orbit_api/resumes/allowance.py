@@ -63,6 +63,12 @@ def upgrade_offer() -> UpgradeOffer | None:
                         buyable=bool(get_settings().upi_id))
 
 
+def offer_price_text(offer: UpgradeOffer, currency: str) -> str:
+    """The offer's price in the buyer's currency (its pack's own dollar price, outside India)."""
+    pack = packs().get(offer.pack)
+    return (pricing.price_of(pack, currency) if pack else pricing.price(offer.price_inr, currency)).text()
+
+
 class Allowance:
     """One request's view of the user's resume credits. `claim()` before each model call (repeat calls in the same
     request are free); `release()` when the request ends up giving the person nothing."""
@@ -101,7 +107,7 @@ class Allowance:
     def exhausted(self) -> HTTPException:
         offer = upgrade_offer()
         if offer is not None:
-            offer.price_text = pricing.price(offer.price_inr, self.currency).text()
+            offer.price_text = offer_price_text(offer, self.currency)
         more = (f" Packs start at {offer.price_text} for {offer.resume_credits} resume credits"
                 + (f" and {offer.interview_minutes} interview minutes." if offer.interview_minutes else ".")
                 if offer else "")

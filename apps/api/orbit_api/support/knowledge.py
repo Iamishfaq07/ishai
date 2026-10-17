@@ -65,7 +65,7 @@ _TOPICS: tuple[Topic, ...] = (
         "AI credits {mini}",
         "AI credits is {mini} for 25 Resume AI credits (a single AI fix uses a fifth of one). No interview time. They "
         "never expire and nothing renews.",
-        ("ai credits", "mini", "₹499", "499", "7.99"),
+        ("ai credits", "mini", "₹499", "7.99"),
         ("starter", "what_spends", "buy"),
     ),
     Topic(
@@ -73,7 +73,7 @@ _TOPICS: tuple[Topic, ...] = (
         "1 or 3 credits",
         "1 interview credit is 1 hour of live or mock interviews. 1 credit is {single} (with 10 Resume AI credits); 3 "
         "credits are {starter} (with 30 Resume AI credits). They never expire and nothing renews.",
-        ("starter", "3 credits", "1 credit", "₹3,599", "3599", "₹2,299", "2299", "33.99", "53.99"),
+        ("starter", "3 credits", "1 credit", "₹2,599", "2599", "₹1,649", "1649", "33.99", "53.99"),
         ("mini", "plus", "buy"),
     ),
     Topic(
@@ -81,7 +81,7 @@ _TOPICS: tuple[Topic, ...] = (
         "8 credits {plus}",
         "8 credits are {plus}: 6 interview credits plus 2 free, so 8 hours of interviews, and 80 Resume AI credits. "
         "They never expire and nothing renews.",
-        ("plus pack", "8 credits", "₹7,199", "7199", "7,199", "106.99"),
+        ("plus pack", "8 credits", "₹5,199", "5199", "5,199", "106.99"),
         ("starter", "pro", "buy"),
     ),
     Topic(
@@ -89,7 +89,7 @@ _TOPICS: tuple[Topic, ...] = (
         "15 credits {pro}",
         "15 credits are {pro}: 9 interview credits plus 6 free, so 15 hours of interviews, and 150 Resume AI "
         "credits. They never expire and nothing renews.",
-        ("pro pack", "15 credits", "₹10,899", "10899", "10,899", "161.99"),
+        ("pro pack", "15 credits", "₹7,749", "7749", "7,749", "161.99"),
         ("plus", "unlimited", "buy"),
     ),
     Topic(
@@ -98,7 +98,7 @@ _TOPICS: tuple[Topic, ...] = (
         "Unlimited is {week} for a week, {month} for a month or {year} for a year, paid once (it never renews by "
         "itself). It includes unlimited Resume AI and, every 30 days, up to 50 hours of live interview help and 25 "
         "hours of mock and video interviews (fair use), with unlimited screenshots and documents.",
-        ("unlimited", "weekly", "monthly", "yearly", "subscription", "₹9,199", "₹35,999", "₹4,799"),
+        ("unlimited", "weekly", "monthly", "yearly", "subscription", "₹6,599", "₹26,499", "₹3,499"),
         ("prices", "pro", "buy"),
     ),
     Topic(
@@ -271,23 +271,21 @@ def _hit(q: str, phrase: str) -> bool:
     return re.search(rf"\b{re.escape(phrase)}\b", q) is not None
 
 
-# `{name}` in an answer: a credit pack's id, or a plan by its length. The default rupee prices only stand in for a
-# pack or plan the server no longer sells, so an answer never shows a bare `{name}`.
+# `{name}` in an answer: a credit pack's id, or a plan by its length. The default packs and plans (packs.py,
+# monthly.py) only stand in for one the server no longer sells, so an answer never shows a bare `{name}`.
 _PLAN_KEYS = {"week": "premium_weekly", "month": "premium_monthly", "year": "premium_yearly"}
-_DEFAULT_INR = {"mini": 499, "single": 2299, "starter": 3599, "plus": 7199, "pro": 10899,
-                "week": 4799, "month": 9199, "year": 35999}
 
 
 def _prices(currency: str) -> dict[str, str]:
     from orbit_api.billing import pricing
-    from orbit_api.billing.monthly import monthly_plans
-    from orbit_api.billing.packs import packs
+    from orbit_api.billing.monthly import DEFAULT_MONTHLY, monthly_plans
+    from orbit_api.billing.packs import DEFAULT_PACKS, packs
 
-    inr = dict(_DEFAULT_INR)
-    inr |= {pid: p.price_inr for pid, p in packs().items()}
-    plans = monthly_plans()
-    inr |= {key: plans[pid].price_inr for key, pid in _PLAN_KEYS.items() if pid in plans}
-    return {key: pricing.price(value, currency).text() for key, value in inr.items()}
+    items: dict[str, pricing.Priced] = {p.id: p for p in DEFAULT_PACKS}
+    items |= packs()
+    for plans in ({m.id: m for m in DEFAULT_MONTHLY}, monthly_plans()):
+        items |= {key: plans[pid] for key, pid in _PLAN_KEYS.items() if pid in plans}
+    return {key: pricing.price_of(item, currency).text() for key, item in items.items()}
 
 
 def render(text: str, currency: str = INR) -> str:

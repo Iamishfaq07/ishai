@@ -47,7 +47,7 @@ from orbit_api.providers.llm.base import LLMError, LLMProvider, LLMRequest, LLMR
 from orbit_api.providers.llm.pricing import estimate_cost
 from orbit_api.ratelimit import limit, limit_user
 from orbit_api.resumes import ai, autofix, fixes, interview_prep, shorten
-from orbit_api.resumes.allowance import Allowance, AllowanceOut, allowance_for
+from orbit_api.resumes.allowance import Allowance, AllowanceOut, allowance_for, offer_price_text
 from orbit_api.resumes.ats import AtsReport, score_resume
 from orbit_api.resumes.claims import ground_import
 from orbit_api.resumes.docx_export import letter_docx, resume_docx
@@ -170,7 +170,7 @@ async def my_allowance(request: Request, user: Annotated[User, Depends(current_u
 
     out = await (await allowance_for(db, user)).status()
     if out.upgrade is not None:
-        out.upgrade.price_text = pricing.price(out.upgrade.price_inr, pricing.currency_for(request, user)).text()
+        out.upgrade.price_text = offer_price_text(out.upgrade, pricing.currency_for(request, user))
     return out
 
 

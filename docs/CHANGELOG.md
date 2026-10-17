@@ -1,5 +1,22 @@
 # Implementation log
 
+## Rupee prices cut, dollar prices unchanged (2026-10-18)
+
+- **India pays less** (DECISIONS D60): about 30% under Parakeet AI's own rupee prices, as the owner checked them today.
+  Credits: 1 credit ₹2,299 → ₹1,649, 3 credits ₹3,599 → ₹2,599, 8 credits ₹7,199 → ₹5,199, 15 credits ₹10,899 →
+  ₹7,749; AI credits stays ₹499. Unlimited: Weekly ₹4,799 → ₹3,499, Monthly ₹9,199 → ₹6,599, Yearly ₹35,999 →
+  ₹26,499 (≈ ₹2,178 a month). Minutes and credits in each pack are unchanged.
+- **Everyone else pays what they did**: each pack and plan has its own dollar price now (`price_usd_cents` in
+  `billing/packs.py` and `billing/monthly.py`, also accepted in `ORBIT_CREDIT_PACKS_JSON` / `ORBIT_MONTHLY_PLANS_JSON`),
+  pinned at $7.99 / $33.99 / $53.99 / $106.99 / $161.99 and $70.99 / $135.99 / $531.99. Before, a dollar price was
+  the rupee price converted, so the cut would have taken dollars down with it. A test pins every dollar price.
+- The pricing pages, Plan & billing, the out-of-credits offers and the support bot read the prices from the server,
+  so they show the new ones as they are. The support bot's typed-price matching knows the new rupee numbers.
+- An order opened before the cut is still settled at the price it was made for, by the checkout, the webhook or the
+  reconciler (test added); a payment of the new price against an old order isn't taken as paying it.
+- docs/BILLING.md: the price tables (with Parakeet's rupee prices and the dollar column), the dollar-pricing rules,
+  and the stale credit-pack table at the top replaced by a pointer.
+
 ## Company and role interview guides, readable without JavaScript (2026-10-18)
 
 - **A question bank of 100 company guides and 32 role guides** (was 25 guides with about four questions each):
