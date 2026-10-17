@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { UpiOrder } from "@orbit/types";
-import { Check, CircleCheck, Copy, IndianRupee, QrCode, Smartphone, X, cx, focusRing, toast } from "@orbit/ui";
+import { Check, CircleCheck, Copy, IndianRupee, QrCode, Smartphone, X, buttonClass, cx, focusRing, toast } from "@orbit/ui";
 import { Button, Card, Field, Input } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
@@ -112,7 +112,7 @@ export function UpiCheckout({ order: initial, onClose, onChanged }: { order: Upi
               {order.upi_uri && onPhone() && (
                 <a
                   href={order.upi_uri}
-                  className={cx("flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700", focusRing)}
+                  className={buttonClass("primary", "lg", "w-full")}
                 >
                   <Smartphone className="h-4 w-4" /> Pay ₹{order.amount_inr} with a UPI app
                 </a>

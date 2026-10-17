@@ -241,3 +241,15 @@ export function Sheet({
 
 /** The modal dialog: the same component as Sheet (a bottom sheet on phones, a centred dialog from sm up). */
 export const Dialog = Sheet;
+
+/**
+ * A dialog's footer buttons, in one order everywhere: the way out first, the main action last (rightmost from sm
+ * up). On a phone they stack full width with the main action on top, nearest the thumb.
+ */
+export function DialogActions({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cx("flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end [&>*]:w-full sm:[&>*]:w-auto", className)}>
+      {children}
+    </div>
+  );
+}

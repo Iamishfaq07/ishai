@@ -252,7 +252,7 @@ export { CosmicEmptyState, type CosmicEmptyVariant } from "./components/CosmicEm
 export { spotlightMove } from "./components/useSpotlight";
 export { ConceptDepthRadar, aggregateDepth } from "./components/ConceptDepthRadar";
 export { buttonClass, type ButtonSize, type ButtonVariant } from "./components/ui";
-export { Dialog, Sheet, type SheetSize } from "./components/Sheet";
+export { Dialog, DialogActions, Sheet, type SheetSize } from "./components/Sheet";
 export { ToastHost, dismissToast, toast, type ToastOptions, type ToastTone } from "./components/Toast";
 export {
   GhostPreview,

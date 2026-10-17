@@ -6,6 +6,7 @@ import type { LiveViewState } from "../live/reducer";
 import type { InterviewerVoice } from "../live/useInterviewerVoice";
 import { MOCK_ANSWER_CHARS, type LiveActions } from "../live/useLiveSession";
 import { cx, focusRing } from "./cx";
+import { buttonClass } from "./ui";
 import { Orb } from "./Orb";
 
 /** A panel interview: each panelist's colour, so who's asking reads at a glance. */
@@ -323,7 +324,7 @@ function TypedAnswer({ micDown, onSend }: { micDown: boolean; onSend: (text: str
       />
       <div className="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
         <button type="submit" disabled={!text.trim() || sent}
-                className={cx("rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40", focusRing)}>
+                className={buttonClass("primary", "sm")}>
           {sent ? "Sent" : "Send answer"}
         </button>
         <span>{sent ? "The interviewer is reading it…" : "Ctrl+Enter to send · the interviewer moves on after it"}</span>

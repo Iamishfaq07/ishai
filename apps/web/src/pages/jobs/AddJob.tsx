@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import type { JobLinkInfo, JobStatus, JobTrackerEntry } from "@orbit/types";
-import { ApiError, CircleAlert, Link2, cx, focusRing, isIndia, regionExamples, sampleCity, toast } from "@orbit/ui";
+import { ApiError, CircleAlert, DialogActions, Link2, cx, focusRing, isIndia, regionExamples, sampleCity, toast } from "@orbit/ui";
 import { Button, ErrorNote, Field, Input, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
@@ -164,14 +164,14 @@ export function AddJob({ open, onClose, onAdded }: { open: boolean; onClose: () 
       onClose={onClose}
       wide
       footer={
-        <div className="flex items-center gap-2">
+        <DialogActions>
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" form={formId} className="flex-1 sm:flex-none" disabled={busy || !ready || Boolean(info?.tracked)}>
+          <Button type="submit" form={formId} disabled={busy || !ready || Boolean(info?.tracked)}>
             {busy ? "Adding…" : "Add to tracker"}
           </Button>
-        </div>
+        </DialogActions>
       }
     >
       <form id={formId} onSubmit={(e) => void submit(e)} className="space-y-4">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Crown, buttonClass } from "@orbit/ui";
+import { Crown, DialogActions, buttonClass } from "@orbit/ui";
 import { onOutOfCredits, type OutOfCredits } from "../lib/outOfCredits";
 import { Sheet } from "./Sheet";
 
@@ -44,19 +44,19 @@ export function OutOfCreditsHost() {
       titleId="orbit-credits-title"
       size="md"
       footer={
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={close} className={buttonClass("ghost", "sm")}>
+        <DialogActions>
+          <button type="button" onClick={close} className={buttonClass("ghost")}>
             Not now
           </button>
           <Link
             to={`/billing${offer ? `?pack=${encodeURIComponent(offer.pack)}` : ""}`}
             onClick={close}
-            className={buttonClass("primary", "sm")}
+            className={buttonClass("primary")}
           >
             <Crown className="h-4 w-4" aria-hidden />
             {copy.action}
           </Link>
-        </div>
+        </DialogActions>
       }
     >
       <div id="orbit-credits-body" className="space-y-2 px-5 py-4 text-sm text-zinc-600 dark:text-zinc-300">
