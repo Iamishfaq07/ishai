@@ -1,5 +1,24 @@
 # Implementation log
 
+## API bug sweep after the read-only database incident (2026-10-18)
+
+- **A read-only database fails readiness** (DECISIONS D56): `/ready` asks Postgres whether writes are refused
+  (`transaction_read_only`, `pg_is_in_recovery()`) and answers 503 `"database": "read_only"`; the admin Overview
+  warns (`database_read_only`). The device "last used" touch no longer turns every signed-in read into a 500 when
+  the write is refused.
+- **Google sign-in never ends on a bare 500**: an unexpected error in the callback is logged, rolled back (no half
+  made account) and sent to `/login?error=server`, which the sign-in page explains.
+- **Two-step sign-in and passkeys work for accounts made with Google** (they were refused with "That password isn't
+  right"); with no password to ask for, a sign-in in the last 15 minutes stands in for it. Wrong codes to turn two-step
+  sign-in off or make new recovery codes are throttled like sign-in's (5 per 15 minutes).
+- **Resume credits match what was delivered**: "Fix with AI" no longer spends a credit when nothing the AI wrote could
+  be used, a later AI pass failing no longer refunds the earlier passes' delivered work, and a tailor-queue job cut
+  off by its timeout or a deploy gives its credit back before the retry pays.
+- **Sign out everywhere** also voids live-session tickets minted in the minute before it.
+- **Job alerts**: weekly profiles not yet due no longer fill every sweep and starve daily alerts.
+- **Jobs mission**: copying a sent version keeps to the 20-resume limit.
+- **Practice streak** counts the person's own days (`/v1/progress?tz_offset=`), not UTC ones.
+
 ## Render retired (2026-10-17)
 
 - The old Render service is suspended (DECISIONS D55): the API runs only on Railway, at `api.orbitanswer.com`.
