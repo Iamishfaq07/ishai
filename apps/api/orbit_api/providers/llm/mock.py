@@ -119,7 +119,7 @@ def _mock_resume_import(body: str) -> str:
 
 
 _LI_HEADINGS = ("Contact", "Top Skills", "Languages", "Certifications", "Honors-Awards", "Summary", "Experience",
-                "Education")
+                "Education", "Projects", "Featured", "Recommendations", "Activity")
 
 
 def _mock_linkedin_read(body: str) -> str:
@@ -155,10 +155,86 @@ def _mock_linkedin_read(body: str) -> str:
                       "description": " ".join(desc)})
     edu = sections.get("Education", [])
     url = next((ln.split(" ")[0] for ln in sections.get("Contact", []) if "linkedin.com/in/" in ln), "")
+    # A profile copied from the page may also have these (the PDF never does).
+    recs = next((int(m.group(1)) for ln in sections.get("Recommendations", [])
+                 if (m := re.search(r"Received \((\d+)\)", ln))), None)
+    activity = sections.get("Activity")
     return json.dumps({"name": name, "headline": headline, "location": location,
                        "about": " ".join(sections.get("Summary", [])), "url": url, "experience": roles,
                        "education": [{"school": edu[0], "degree": edu[1] if len(edu) > 1 else ""}] if edu else [],
-                       "skills": sections.get("Top Skills", []), "certifications": sections.get("Certifications", [])})
+                       "skills": sections.get("Top Skills", []), "certifications": sections.get("Certifications", []),
+                       "projects": sections.get("Projects", []),
+                       "featured": sections["Featured"] if "Featured" in sections else None,
+                       "recommendations_received": recs,
+                       "activity": None if activity is None else not any("haven't posted" in a for a in activity)})
+
+
+def _ref_object(body: str, source: str) -> dict[str, Any]:
+    m = re.search(rf'<reference_data source="{source}">\s*(\{{.*?\}})\s*</reference_data>', body, re.S)
+    try:
+        data = json.loads(m.group(1)) if m else {}
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _mock_linkedin_fix(request_type: str, body: str) -> str:
+    """LinkedIn AI's fixes put together from the profile and/or resume in the prompt, plus one figure no source gives
+    (in a role's bullets), so the server's grounding is exercised: it must come back as a placeholder."""
+    profile, resume = _ref_object(body, "linkedin_profile"), _ref_object(body, "resume")
+    roles = [r for r in profile.get("experience") or [] if isinstance(r, dict)] or [
+        {"title": r.get("title", ""), "company": r.get("company", ""), "description": " ".join(r.get("bullets") or [])}
+        for r in resume.get("experience") or [] if isinstance(r, dict)]
+    target = (m.group(1).strip() if (m := re.search(r"^Target role: (.+)$", body, re.M)) else "") or (
+        roles[0].get("title") if roles else "") or "Professional"
+    if target.startswith("the one their"):
+        target = roles[0].get("title") if roles else "Professional"
+    backed = [s.strip() for s in m.group(1).split(",")] if (
+        m := re.search(r"that they have \(use them where they fit\): (.+)$", body, re.M)) else []
+    skills = backed or [s for s in (profile.get("skills") or resume.get("skills") or []) if isinstance(s, str)]
+    first = roles[0] if roles else {}
+
+    def sentences(text: str) -> list[str]:
+        return [s.strip().rstrip(".") for s in re.split(r"(?<=[.!?])\s+", text or "") if len(s.strip()) > 12]
+
+    work = sentences(" ".join(str(r.get("description") or "") for r in roles))
+    if request_type == "linkedin_fix_headline":
+        result = next((s for s in work if re.search(r"\d", s)), work[0] if work else "my recent work")
+        return json.dumps({"options": [
+            {"style": "search", "text": " | ".join(x for x in (target, ", ".join(skills[:4])) if x)},
+            {"style": "result", "text": f"{target} | {result[:120]}"},
+            {"style": "focus", "text": f"{target} | (mock) {first.get('title') or target} work at "
+                                       f"{first.get('company') or 'my company'}"}]})
+    if request_type == "linkedin_fix_about":
+        lead = work[0] if work else f"I work as a {target.lower()}"
+        return json.dumps({"opening": f"(mock) {target} with {', '.join(skills[:3]) or 'a solid record'}. {lead}.",
+                           "rest": "\n\n".join([
+                               " ".join(f"{s}." for s in work[1:4]) or "(mock) More about the work on my roles.",
+                               f"(mock) The tools I use most: {', '.join(skills[:6]) or 'the ones on my profile'}.",
+                               f"(mock) I'm open to {target} roles. Message me here."])})
+    if request_type == "linkedin_fix_role":
+        named = re.search(r"rewrite the description of this role: (.+?)(?: \(|\.$)", body, re.M)
+        role = next((r for r in roles if named and f"{r.get('title')} at {r.get('company')}" == named.group(1)),
+                    first)
+        own = sentences(str(role.get("description") or "")) or [f"Worked as {role.get('title') or target}"]
+        return json.dumps({"bullets": [*(f"{s}." for s in own[:3]),
+                                       "(mock) Cut the team's review time by 35% with a clearer checklist.",
+                                       "(mock) Grew usage of the tools the role owned to [N users]."]})
+    if request_type == "linkedin_fix_featured":
+        titles = [str(x) for x in (profile.get("projects") or [])] + [
+            str(p.get("name")) for p in resume.get("projects") or [] if isinstance(p, dict) and p.get("name")]
+        certs = [str(x) for x in (profile.get("certifications") or resume.get("certifications") or [])]
+        ideas = [{"title": t[:60], "what": "(mock) A link or slides showing it, with one line on the result."}
+                 for t in titles[:3]] + [{"title": c[:60], "what": "(mock) The certificate itself."} for c in certs[:1]]
+        return json.dumps({"ideas": ideas or [{"title": f"{first.get('title') or target} work",
+                                               "what": "(mock) A post about your best result there."}]})
+    subject = re.search(r"about their work as (.+?)\.$", body, re.M)
+    about = subject.group(1) if subject else target
+    there = next((r for r in roles if f"{r.get('title')} at {r.get('company')}" == about), first)
+    own = sentences(str(there.get("description") or "")) or ["the work we did together"]
+    return json.dumps({"body": f"(mock) Would you write me a short recommendation about my work as {about}? We "
+                               "worked on this together for a good while.\n\n(mock) You could mention this: "
+                               f"{own[0]}. If you're busy, no worries at all, and thank you either way."})
 
 
 def _resume_ref(body: str) -> dict[str, Any]:
@@ -389,6 +465,8 @@ class MockLLMProvider(LLMProvider):
                 "edge_cases": ["[mock] An empty list"], "follow_up": "[mock] What if the input doesn't fit in memory?"})
         if request.request_type == "linkedin_read":
             return _mock_linkedin_read(request.messages[-1].content if request.messages else "")
+        if request.request_type.startswith("linkedin_fix_"):
+            return _mock_linkedin_fix(request.request_type, request.messages[-1].content if request.messages else "")
         if request.request_type == "offer_plan":
             return json.dumps({
                 "ask": 0, "ask_why": "[mock] Anchored on the top of the market range for this role.",

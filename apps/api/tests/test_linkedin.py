@@ -63,7 +63,7 @@ def test_a_thin_profile_scores_low_and_says_what_to_fix() -> None:
     a = audit(p, "Backend Engineer", KW)
     assert a.score < 40
     failed = {c.id for c in a.checks if not c.ok}
-    assert {"headline_length", "headline_keywords", "headline_strong", "about_set", "exp_latest_text",
+    assert {"headline_length", "headline_keywords", "headline_strong", "about_set", "exp_text_0",
             "skills_count", "education"} <= failed
     tip = next(c.tip for c in a.checks if c.id == "headline_keywords")
     assert "Go" in tip or "Kafka" in tip
