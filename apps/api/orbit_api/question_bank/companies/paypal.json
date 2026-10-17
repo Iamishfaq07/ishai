@@ -1,0 +1,174 @@
+{
+  "slug": "paypal",
+  "name": "PayPal",
+  "aliases": ["paypal india", "paypal holdings"],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "PayPal runs online payments and digital wallets for consumers and merchants, including Venmo and Braintree. Its careers site describes a recruiter call followed by interviews with team members, and suggests reviewing its core values and Leadership Principles before you interview. For engineering roles, candidates commonly report an online coding assessment, then coding, system design and behavioural interviews.",
+  "rounds": [
+    "Recruiter call about the role and your experience",
+    "Online coding assessment for many engineering and intern roles",
+    "Team interviews, often several: coding, system design for experienced roles, and behavioural",
+    "Hiring manager interview on your past work and the competencies for the role",
+    "Recruiter follow-up on next steps and any offer"
+  ],
+  "looks_for": [
+    "Inclusion",
+    "Innovation",
+    "Collaboration",
+    "Wellness",
+    "Put People First",
+    "Work Customer Back",
+    "Win Together",
+    "Care for security, reliability and correctness when money is involved"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you started from a customer's most pressing need and worked back to a solution.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you found out what the customer needed most",
+        "The options you considered and why you chose one",
+        "The result for the customer, with a number if you have one"
+      ]
+    },
+    {
+      "text": "Tell me about a time you took ownership of a problem that crossed team lines.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why nobody owned it and what it was costing",
+        "How you brought the teams together and agreed who does what",
+        "The outcome and how ownership was settled afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a time you helped a colleague grow or do their best work.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who they were and what was holding them back",
+        "What you did: feedback, coaching, giving them a chance to lead",
+        "How they grew, and what you learned about helping others"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to move fast without lowering quality.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The deadline and why speed mattered",
+        "What you simplified and what you refused to cut, such as tests or security checks",
+        "The result and anything you fixed afterwards"
+      ]
+    },
+    {
+      "text": "How would you make sure a customer is never charged twice if a payment request is retried?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "An idempotency key sent with each payment request",
+        "Storing the key with the result so a retry returns the same answer",
+        "Timeouts and partial failures between your service and the bank"
+      ]
+    },
+    {
+      "text": "How would you design a system that flags risky payments in real time without blocking good customers?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signals: device, location, amount, history, how fast payments arrive",
+        "Rules plus a scoring model, with a fast path and a review path",
+        "Measuring both missed fraud and wrongly blocked customers"
+      ]
+    },
+    {
+      "text": "Explain how you'd keep account balances correct when many transactions hit the same account at once.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Transactions and locking, or a ledger of entries rather than editing a balance",
+        "Avoiding race conditions and lost updates",
+        "Reconciling against the ledger to catch errors"
+      ]
+    },
+    {
+      "text": "Payment failures in one country are higher than usual this morning. How would you find out why?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Splitting failures by payment method, bank, app version and error code",
+        "Checking recent releases, partner outages and rule changes",
+        "Protecting customers first, then fixing and explaining the cause"
+      ]
+    },
+    {
+      "text": "What happens, step by step, when someone pays a merchant online with a card or a wallet?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Checkout, authorisation by the issuer, then capture",
+        "The parties involved: merchant, payment processor, card network, banks",
+        "Settlement later, plus refunds and disputes"
+      ]
+    },
+    {
+      "text": "Walk me through a service you built: how it handled failures, and how you'd make it more reliable.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "What the service did and who depended on it",
+        "A real failure and how the system or team responded",
+        "Changes you'd make: retries, timeouts, monitoring, graceful fallbacks"
+      ]
+    },
+    {
+      "text": "Why PayPal, and what do you think makes people trust a payments company?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason tied to PayPal's products or customers",
+        "What builds trust: security, reliability, fair handling of problems",
+        "How your work would add to that trust"
+      ]
+    },
+    {
+      "text": "Which PayPal value or Leadership Principle fits how you work, and why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One value or principle, named once",
+        "A short, specific example from your work",
+        "Why it matters to you"
+      ]
+    },
+    {
+      "text": "Where would you like to grow in the next few years, and how would this role help?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two specific skills or responsibilities",
+        "How this role builds them",
+        "What you'd contribute in return"
+      ]
+    }
+  ],
+  "tips": [
+    "PayPal's interviewing page suggests reviewing its company values, its Leadership Principles and the job description before you interview.",
+    "Give a specific, detailed example for each competency, and draw examples from more than one job or project, as PayPal's own checklist suggests.",
+    "For payments design questions, talk about retries, duplicate charges, fraud and audit trails, not only speed.",
+    "Interviews are usually by video; test your setup beforehand and keep your camera on, which PayPal says it prefers."
+  ],
+  "sources": [
+    {
+      "title": "PayPal mission, values and Leadership Principles (about.pypl.com)",
+      "url": "https://about.pypl.com/who-we-are/mission-vision-values/default.aspx"
+    },
+    {
+      "title": "How we recruit: interviewing (careers.pypl.com)",
+      "url": "https://careers.pypl.com/how-we-recruit/Interviewing/default.aspx"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

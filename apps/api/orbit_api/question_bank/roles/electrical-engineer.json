@@ -1,0 +1,207 @@
+{
+  "slug": "electrical-engineer",
+  "name": "Electrical engineer",
+  "aliases": ["electrical engineering", "electrical and electronics engineering", "eee", "electronics engineer", "electronics engineering", "electronics and communication engineering", "ece", "electrical design engineer", "electrical maintenance engineer", "electrical site engineer", "power systems engineer", "instrumentation engineer"],
+  "group": "core-engineering",
+  "summary": "Electrical and electronics engineering interviews usually test fundamentals you can apply: circuits, machines, power systems, electronics and protection, plus safety. Candidates commonly report questions on their project or internship, a technical test at many companies and, for experienced roles, questions on the equipment, panels or designs they've worked on. Electronics and communication roles lean more towards devices, digital logic and signals.",
+  "rounds": [
+    "Online or written test: aptitude and electrical or electronics subjects (at many companies and campus drives)",
+    "Technical interview on core subjects, your project and internships",
+    "Practical questions for some roles, such as reading a circuit or a single-line diagram",
+    "For experienced roles, a discussion of the equipment, panels, designs or sites you've worked on",
+    "HR round, often covering site work, shifts and relocation"
+  ],
+  "looks_for": [
+    "Fundamentals explained simply: Ohm's law, AC and DC, power factor, machines",
+    "Safety first: isolation, earthing, lock-out and permits",
+    "Fault-finding in a logical order",
+    "Reading circuit and single-line diagrams",
+    "Knowing protection devices and why they trip",
+    "Owning your project and internship work"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about your final-year project or internship. What did you build or test yourself?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and what the system did",
+        "Your own part: circuit design, components, coding or testing",
+        "The results, what failed along the way and what you'd change"
+      ]
+    },
+    {
+      "text": "Tell me about a time you found the cause of a fault that others had missed.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The symptom and what had already been tried",
+        "Your method: measurements, drawings, ruling things out",
+        "The cause, the fix and how you confirmed it"
+      ]
+    },
+    {
+      "text": "Describe a time you followed, or insisted on, a safety procedure when it slowed the work down.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The task and the risk",
+        "The procedure, such as isolation, lock-out or a permit, and any pressure to skip it",
+        "Why it mattered and how others responded"
+      ]
+    },
+    {
+      "text": "Tell me about a circuit or design of yours that didn't work at first. How did you debug it?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What went wrong",
+        "How you narrowed it down, step by step",
+        "The fix and the lesson you took into later work"
+      ]
+    },
+    {
+      "text": "Explain power factor in plain words. Why do factories try to improve it?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The share of current doing useful work, versus current that just flows back and forth",
+        "Low power factor means more current, bigger losses and often extra charges from the utility",
+        "Improving it with capacitor banks, without overcorrecting"
+      ]
+    },
+    {
+      "text": "A motor trips soon after it starts. What would you check?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Isolating it safely first",
+        "The supply: voltage, a missing phase, loose connections",
+        "The load and the motor: a jammed or overloaded machine, winding insulation, then the protection settings"
+      ]
+    },
+    {
+      "text": "What's the difference between a fuse, an MCB and an RCCB? When does each one operate?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A fuse melts on overcurrent and has to be replaced",
+        "An MCB trips on overload or short circuit and can be reset",
+        "An RCCB trips when current escapes to earth, protecting people from shock"
+      ]
+    },
+    {
+      "text": "Why is power transmitted at high voltage over long distances?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The same power at a higher voltage needs less current",
+        "Line losses grow with the square of the current, so they fall sharply",
+        "Transformers step voltage up for transmission and down for use"
+      ]
+    },
+    {
+      "text": "How does a transformer work, and why won't it work on DC?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A changing current in one winding makes a changing magnetic flux in the core",
+        "That flux induces a voltage in the other winding, scaled by the turns ratio",
+        "DC gives no change in flux, so nothing is induced and the winding just heats up"
+      ]
+    },
+    {
+      "text": "Why is earthing important, and what could happen if an earth connection is poor?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Earthing gives fault current a safe path so protection trips",
+        "A poor earth can leave metal parts live and protection may not operate",
+        "How earthing is tested and maintained"
+      ]
+    },
+    {
+      "text": "Explain how diodes and transistors are used in a simple circuit, such as a phone charger or a switch.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Diodes let current flow one way, so they turn AC into DC in a power supply",
+        "A transistor can act as a switch or an amplifier, controlled by a small input",
+        "An example from a project or lab"
+      ]
+    },
+    {
+      "text": "What's the difference between analogue and digital signals, and why do so many systems convert to digital?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Analogue varies continuously; digital uses discrete levels",
+        "Digital resists noise, is easy to store and process, and can be copied without loss",
+        "What conversion needs: sampling fast enough and enough resolution"
+      ]
+    },
+    {
+      "text": "Why are many industrial sensors wired as a 4–20 mA current loop rather than a voltage signal?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The current is the same all along the loop, so long cables don't distort the reading",
+        "The 4 mA 'live zero' shows a broken wire as a fault, not as a zero reading",
+        "Better resistance to electrical noise in plants"
+      ]
+    },
+    {
+      "text": "You're asked to choose a cable size for a new machine. What would you need to know?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The load current, voltage and how the machine starts",
+        "Length of run for voltage drop, how the cable is installed and the temperature around it",
+        "The protection device rating and the local standard you'd follow"
+      ]
+    },
+    {
+      "text": "Tell me about yourself and what you've built or worked on outside class.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your degree and strongest subjects",
+        "A project, internship or hobby build that shows hands-on interest",
+        "The kind of role you want next"
+      ]
+    },
+    {
+      "text": "Why electrical or electronics engineering, and which area do you want to work in?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you to the field, shown by an experience",
+        "An area such as power, design, maintenance, electronics or instrumentation",
+        "What you'd want to learn first"
+      ]
+    },
+    {
+      "text": "Are you comfortable with site work, shifts or travel?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with any limits stated clearly",
+        "Any site, plant or substation experience you have",
+        "How you'd handle on-call or shift work"
+      ]
+    }
+  ],
+  "tips": [
+    "Revise circuits, machines, power systems, power electronics and protection; for ECE, add devices, digital electronics and signals.",
+    "Explain concepts with everyday examples: a ceiling fan motor, a phone charger, a substation you've passed.",
+    "In fault-finding questions, start with safe isolation, then work from supply to load in a logical order.",
+    "Know your project in depth: the circuit, the components you chose and why, and the test results.",
+    "Some companies that hire EEE and ECE graduates for software roles also test programming basics; check what the role needs.",
+    "If you did an internship at a plant or substation, be ready to describe the equipment and the safety rules you followed."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "engineer"
+  },
+  "reviewed": "2026-10-18"
+}

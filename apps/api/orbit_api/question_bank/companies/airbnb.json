@@ -1,0 +1,172 @@
+{
+  "slug": "airbnb",
+  "name": "Airbnb",
+  "aliases": ["air bnb"],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Airbnb's interviews are known for pairing technical or craft rounds with interviews about its core values, which it publishes: Champion the Mission, Be a Host, Embrace the Adventure and Be a Cereal Entrepreneur. Candidates commonly report a recruiter call, a technical screen, and a final loop of coding or craft interviews plus one or two values interviews, often with people from outside the hiring team.",
+  "rounds": [
+    "Recruiter call",
+    "Technical or craft screen (for engineers, often a live coding interview)",
+    "Final loop: coding, system design for experienced roles, and a past-project deep dive",
+    "One or two core values interviews, often with someone from another team",
+    "For some roles, a test, a recorded video or an event, as Airbnb's careers FAQ notes"
+  ],
+  "looks_for": [
+    "Champion the Mission",
+    "Be a Host",
+    "Embrace the Adventure",
+    "Be a Cereal Entrepreneur",
+    "Understanding of hosts and guests and the trust between them",
+    "Clean, working code and clear communication"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you went out of your way to make someone feel welcome or supported at work.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who it was and what they needed",
+        "What you did, specifically",
+        "The difference it made to them and to the team"
+      ]
+    },
+    {
+      "text": "Tell me about a time you turned a bold idea into something real with limited resources.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The idea and why it seemed unlikely",
+        "How you got creative with little time, money or help",
+        "What you built and what happened next"
+      ]
+    },
+    {
+      "text": "Tell me about a setback you bounced back from. What did it teach you?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What went wrong and how it felt, honestly",
+        "What you did to recover",
+        "How it changed the way you work or think"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to build trust between two groups who wanted different things.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The two groups and what each wanted",
+        "How you understood both sides before proposing anything",
+        "The agreement you reached and how trust held up afterwards"
+      ]
+    },
+    {
+      "text": "How would you design search for stays, so guests can filter by place, dates and price and still get results quickly?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Location search, then checking availability for the dates",
+        "Indexes and caching, and which filters are costly",
+        "Ranking results and keeping availability accurate"
+      ]
+    },
+    {
+      "text": "How would you design a booking system that stops two guests reserving the same home for the same night?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Modelling availability by night for each listing",
+        "Locking or a database constraint, so only one booking wins",
+        "Handling payment failures, holds that expire, and hosts' calendars synced elsewhere"
+      ]
+    },
+    {
+      "text": "How would you help guests and hosts trust each other before a first booking? Talk me through product and technical ideas.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "What each side worries about",
+        "Ideas such as verification, reviews, clear rules and messaging",
+        "How you'd measure whether trust improved"
+      ]
+    },
+    {
+      "text": "After a release, prices for stays in one city look wrong. How would you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Confirming the scope and comparing with prices before the release",
+        "Checking currency, taxes, fees and city-specific rules in the change",
+        "Rolling back if guests are affected, then fixing and adding a test"
+      ]
+    },
+    {
+      "text": "How would you support many languages and currencies in one app?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Keeping text out of code, with translation files and right-to-left layouts",
+        "Storing money with its currency and converting only for display",
+        "Dates, number formats and testing in several locales"
+      ]
+    },
+    {
+      "text": "Walk me through a project you're proud of: the problem, your design and what you'd change.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The problem and who it was for",
+        "Your design and one hard trade-off",
+        "What you'd change now"
+      ]
+    },
+    {
+      "text": "Why Airbnb? Tell me about a trip or stay, yours or someone else's, that shaped how you see the product.",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A real, specific experience",
+        "What it showed you about guests, hosts or belonging",
+        "How it connects to the work you'd do"
+      ]
+    },
+    {
+      "text": "Which Airbnb core value is closest to how you work, and when have you shown it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One value, named once",
+        "A short, true story",
+        "Why that value matters to you"
+      ]
+    },
+    {
+      "text": "What does belonging mean to you, at work or when you travel?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A personal, specific answer rather than a definition",
+        "A moment you felt you belonged, or didn't",
+        "How you help others feel it"
+      ]
+    }
+  ],
+  "tips": [
+    "Prepare true, personal stories for the core values interviews; candidates commonly describe them as conversations about who you are, not only your work.",
+    "Use the product as a guest and read how hosting works, so you can talk about both sides of the marketplace.",
+    "In coding rounds, aim for code that runs and talk through edge cases as you go.",
+    "Read your interview invitation carefully: Airbnb's careers FAQ says some roles involve a test, a video or an event."
+  ],
+  "sources": [
+    {
+      "title": "Life at Airbnb: core values (careers.airbnb.com)",
+      "url": "https://careers.airbnb.com/life-at-airbnb/"
+    },
+    {
+      "title": "Airbnb careers FAQ (careers.airbnb.com)",
+      "url": "https://careers.airbnb.com/faq/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

@@ -1,11 +1,14 @@
-# Public pages may be indexed; signed-in pages and the API never.
+# Public pages may be indexed, by search engines and AI assistants alike; signed-in pages and the API never.
+# The sitemap is built with the site (apps/web/src/prerender) and lists every public page.
 User-agent: *
 Allow: /$
-Allow: /resume-ai
+Allow: /resume-ai$
 Allow: /jobs$
 Allow: /warmup
 Allow: /contact
 Allow: /technical
+Allow: /companies
+Allow: /roles
 Allow: /privacy.html
 Allow: /terms.html
 Allow: /cookies.html

@@ -1,0 +1,178 @@
+{
+  "slug": "atlassian",
+  "name": "Atlassian",
+  "aliases": [
+    "atlassian india",
+    "trello",
+    "jira"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Atlassian, which makes Jira, Confluence and Trello, publishes how it interviews engineers: a coding interview, a system design interview, a manager interview and a separate values interview, usually with someone from outside the team. Candidates commonly report that the values interview carries real weight, and Atlassian says a hiring committee reviews the interviewers' feedback before a decision.",
+  "rounds": [
+    "Recruiter screen",
+    "Technical interviews: coding and system design",
+    "A values interview",
+    "Hiring manager / management interview"
+  ],
+  "looks_for": [
+    "Open company, no nonsense",
+    "Build with heart and balance",
+    "Don't let the customer down",
+    "Play, as a team",
+    "Be the change you seek",
+    "Clear reasoning about trade-offs in code and design",
+    "How you collaborate and communicate, including with people outside engineering"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you shared bad news openly.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the news was and who needed to hear it",
+        "Why you shared it early and plainly instead of softening or delaying it",
+        "How people reacted and what was done about the problem"
+      ]
+    },
+    {
+      "text": "Tell me about a time you balanced speed with doing it right.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The deadline pressure and what doing it right meant in that case",
+        "What you shipped first and what you deliberately held back or fixed later",
+        "How it worked out, and whether you'd strike the same balance again"
+      ]
+    },
+    {
+      "text": "Tell me about something you changed for the better at work.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What wasn't working and who it affected",
+        "How you got others on board rather than changing it alone",
+        "What improved, with a number or a clear before-and-after"
+      ]
+    },
+    {
+      "text": "Tell me about a time a customer problem made you change your team's plans.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The customer, the problem and how you heard about it",
+        "What you dropped or delayed, and how you agreed that with your team",
+        "What the customer got and what you learned about planning"
+      ]
+    },
+    {
+      "text": "Tell me about a team success you're proud of. How did you help others do their best work?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and who was on the team",
+        "Credit to others, plus a clear account of your own part",
+        "How you supported teammates: reviews, unblocking, sharing knowledge"
+      ]
+    },
+    {
+      "text": "Tell me about working with teammates in other time zones. How did you keep work visible and decisions clear?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The setup: who was where and what you were building",
+        "Written habits you used: docs, tickets, decision notes, async updates",
+        "A moment it nearly went wrong and how you fixed it"
+      ]
+    },
+    {
+      "text": "How would you design notifications for an issue tracker like Jira, so people hear about changes that matter without being flooded?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying who gets notified and through which channels",
+        "Events flowing through a queue, with user preferences and batching or digests",
+        "Handling bursts such as bulk edits, and measuring whether people find it useful"
+      ]
+    },
+    {
+      "text": "Talk me through how you'd design a shared page editor where several people can edit the same page at once.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "How edits are sent and merged, and what happens when two people change the same text",
+        "Saving versions so changes can be undone or reviewed",
+        "Keeping it fast for large pages and working when a connection drops"
+      ]
+    },
+    {
+      "text": "Walk me through how you'd structure the code for a simple rate limiter so it's easy to change and test.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A clear interface first, then one algorithm such as a token bucket",
+        "Separating the limiting logic from storage and time, so it can be tested",
+        "Edge cases: bursts, many users, and running on more than one server"
+      ]
+    },
+    {
+      "text": "Walk me through a past project: who you worked with, the hardest technical problem and the business reason for the work.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "Why the business needed it, in a sentence",
+        "The hardest technical problem and the options you weighed",
+        "Who you worked with and how you'd do it differently now"
+      ]
+    },
+    {
+      "text": "A release you shipped has broken a feature for a large customer. What do you do in the first hour, and afterwards?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Limiting the damage first: roll back or switch off the change",
+        "Telling the customer and your team honestly what is happening",
+        "A blameless review afterwards and the fix that stops it recurring"
+      ]
+    },
+    {
+      "text": "Why Atlassian? Which of its products have you used, and what would you improve in one?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason linked to the team or product, not only the brand",
+        "A real experience with Jira, Confluence, Trello or another product",
+        "One specific improvement and who it would help"
+      ]
+    },
+    {
+      "text": "Which Atlassian value means most to you, and when have you acted on it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One value, named once",
+        "A short, true example from your own work",
+        "Why that way of working matters to you"
+      ]
+    }
+  ],
+  "tips": [
+    "The values interview carries real weight: prepare a story for each value.",
+    "Atlassian's engineering guide says interviewers care more about how you reason through trade-offs than about a missing line of code, so talk through your choices.",
+    "The coding interview covers code design as well as data structures: think about naming, structure and how you'd test what you write.",
+    "In system design, ask about users, reliability and cost before drawing boxes, and expect follow-ups that change the constraints.",
+    "Values interviewers often come from outside engineering, so keep stories free of jargon. Credit your team, then be clear about your own part.",
+    "In the manager interview, say so if you don't know something; Atlassian's own guide recommends it."
+  ],
+  "sources": [
+    {
+      "title": "Atlassian engineering interview handbook (atlassian.com)",
+      "url": "https://www.atlassian.com/company/careers/resources/interviewing/how-to-nail-your-engineering-interview"
+    },
+    {
+      "title": "Atlassian product interview handbook (atlassian.com)",
+      "url": "https://www.atlassian.com/company/careers/resources/career-growth/product-managers"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

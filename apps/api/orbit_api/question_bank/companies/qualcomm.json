@@ -1,0 +1,183 @@
+{
+  "slug": "qualcomm",
+  "name": "Qualcomm",
+  "aliases": [
+    "qualcomm india",
+    "qualcomm technologies"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Qualcomm hires mainly for wireless and semiconductor engineering: modem and 5G software, embedded and firmware work, chip design and verification, and camera, multimedia and AI work on its Snapdragon platforms. Candidates commonly report technical interviews that go deep into C, operating systems, digital design or communication theory depending on the team, alongside questions about projects and teamwork. Its Code of Business Conduct names four values, including Win together and Do the right thing.",
+  "rounds": [
+    "Online application; a recruiter may reach out to discuss the role",
+    "Online test for many campus roles: aptitude and technical questions in your stream, sometimes coding",
+    "Two or more technical interviews: C and embedded systems, OS concepts, digital design or wireless basics, depending on the team",
+    "Hiring manager interview on your projects and fit with the team",
+    "HR discussion"
+  ],
+  "looks_for": [
+    "Win together",
+    "Achieve excellence",
+    "Make the impossible inevitable",
+    "Do the right thing",
+    "Strong C programming and embedded fundamentals for software roles",
+    "Digital design, verification or physical design depth for hardware roles",
+    "Wireless and signal processing basics for modem and systems roles",
+    "Explaining how your projects work, down to the details"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you worked with a customer, partner or another team you didn't manage to fix a problem.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and what each side needed",
+        "How you built trust and shared information across the boundary",
+        "The fix and how the relationship was afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a time you were relentless about getting something to work.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What wasn't working and why it mattered",
+        "The approaches you tried and how you kept track of them",
+        "What finally worked and what you learned"
+      ]
+    },
+    {
+      "text": "Tell me about a time you turned a difficult problem into an opportunity to try something new.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and why the usual approach fell short",
+        "The new idea and how you tested it",
+        "The result and whether it was adopted more widely"
+      ]
+    },
+    {
+      "text": "Tell me about a time you raised a concern because something didn't seem right.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you noticed and why it worried you",
+        "Who you raised it with and how",
+        "What happened, and what you'd do the same again"
+      ]
+    },
+    {
+      "text": "Explain what the volatile keyword does in C and when you'd need it in embedded code.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "It stops the compiler assuming a value hasn't changed",
+        "Uses: hardware registers, variables shared with an interrupt handler",
+        "What it doesn't do: it doesn't make access atomic or thread-safe"
+      ]
+    },
+    {
+      "text": "What happens when an interrupt fires on a microcontroller, and what should an interrupt handler avoid doing?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Saving context, jumping through the vector table, running the handler, restoring",
+        "Keeping handlers short: no blocking calls, heavy work or long prints",
+        "Deferring work to a task or flag, and protecting shared data"
+      ]
+    },
+    {
+      "text": "Explain the difference between a mutex and a semaphore, with an example from an operating system or driver.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A mutex gives one owner exclusive access; a semaphore counts available resources or signals events",
+        "An example of each in a driver or RTOS",
+        "Pitfalls such as deadlock and priority inversion"
+      ]
+    },
+    {
+      "text": "A device occasionally reboots in the field but never on your desk. How would you debug it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Collecting evidence: crash logs, reset reasons, watchdog records",
+        "Recreating field conditions: temperature, power, network, long run times",
+        "Narrowing down to a cause, fixing it, and confirming with a long test run"
+      ]
+    },
+    {
+      "text": "Explain what OFDM is and why mobile networks use it.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Splitting data across many closely spaced subcarriers",
+        "Why it handles multipath and fading well, with a cyclic prefix",
+        "How it allows flexible sharing of spectrum between users"
+      ]
+    },
+    {
+      "text": "How would you reduce the power a phone's modem or camera pipeline uses without hurting the user experience?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Measuring where power goes first",
+        "Ideas: sleep states, batching work, moving work to dedicated hardware, lowering clocks",
+        "Checking the user-visible metrics, such as latency or image quality, don't get worse"
+      ]
+    },
+    {
+      "text": "Explain the difference between synchronous and asynchronous resets, and when you'd use each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Synchronous resets act on a clock edge; asynchronous resets act at once",
+        "Trade-offs in timing, area and glitch sensitivity",
+        "Why asynchronous assert with synchronous release is a common choice"
+      ]
+    },
+    {
+      "text": "Walk me through how an image goes from a phone's camera sensor to a saved photo.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Raw sensor data, demosaicing, white balance and exposure",
+        "Noise reduction, sharpening and tone mapping in the image signal processor",
+        "Compression and saving, and where software and hardware split the work"
+      ]
+    },
+    {
+      "text": "Tell me about yourself and the project you're most proud of.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your background in a few sentences",
+        "One project, your part in it and the hardest technical problem",
+        "How it connects to this role"
+      ]
+    },
+    {
+      "text": "Why Qualcomm, and which technology area (modems, Snapdragon, automotive or IoT) interests you most?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific area and what you know about it",
+        "A link to your coursework, projects or experience",
+        "What you want to learn there"
+      ]
+    }
+  ],
+  "tips": [
+    "Revise C thoroughly: pointers, memory layout, bit manipulation, volatile, structures and padding; these come up often for software roles.",
+    "Know your stream's core subjects well: for electronics roles, digital design, signals and systems, and communication basics.",
+    "Be ready to explain your project at the level of registers, interfaces or algorithms, not just the outcome.",
+    "Qualcomm's values include Win together and Do the right thing; prepare a story for each."
+  ],
+  "sources": [
+    {
+      "title": "The Qualcomm Way: Code of Business Conduct (2024), values",
+      "url": "https://www.qualcomm.com/content/dam/qcomm-martech/dm-assets/documents/COBC-2024.pdf"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

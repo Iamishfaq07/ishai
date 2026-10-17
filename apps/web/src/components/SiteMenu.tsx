@@ -7,6 +7,7 @@ const LINKS = [
   { to: "/resume-ai", label: "Resume AI" },
   { to: "/jobs", label: "Jobs AI" },
   { to: "/warmup", label: "Free practice" },
+  { to: "/companies", label: "Interview guides" },
   { to: "/#pricing", label: "Pricing" },
   { to: "/contact", label: "Contact" },
   { to: "/login", label: "Sign in" },

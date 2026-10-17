@@ -220,6 +220,8 @@ export interface CompanyStyle {
   looks_for: string[];
   questions: string[];
   tips: string[];
+  /** Where it's suggested for practice: only in India, India first (IT services that hire worldwide), or everywhere. */
+  market?: "india" | "india-first" | "global";
 }
 
 /** POST /v1/prep — likely interview questions from a job description, answered from the resume. */

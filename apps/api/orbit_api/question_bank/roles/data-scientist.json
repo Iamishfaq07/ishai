@@ -1,0 +1,207 @@
+{
+  "slug": "data-scientist",
+  "name": "Data scientist",
+  "aliases": ["data science", "junior data scientist", "applied data scientist", "decision scientist"],
+  "group": "data",
+  "summary": "Data scientist interviews usually test statistics, machine learning, SQL and Python, then how you'd use them on a business problem: choosing a metric, designing an experiment, or building a model and explaining its limits. Candidates commonly report a take-home or case study and a deep dive into a past project, and for product-focused roles, questions on A/B testing.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Online test or technical screen: SQL, Python and statistics",
+    "Take-home or live case: analyse data or build a simple model, then present it (often)",
+    "Machine learning and statistics interview, often built around your own projects",
+    "Product or business case on metrics and experiments (for product-focused roles)",
+    "Hiring manager and HR rounds"
+  ],
+  "looks_for": [
+    "Statistics you can explain: distributions, hypothesis tests, confidence intervals",
+    "Choosing a model and a metric that fit the problem, not the fashion",
+    "Careful validation: proper splits, overfitting, no information from the future in training data",
+    "SQL and Python for getting and cleaning data",
+    "Turning a vague business question into something you can test",
+    "Explaining results and uncertainty to people who aren't technical"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a model or analysis of yours that was used to make a decision.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem, the decision and who made it",
+        "Your approach and why you chose it over the alternatives",
+        "The impact, with a number, and how you checked it"
+      ]
+    },
+    {
+      "text": "Describe a project where the data turned out much messier than you expected.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was wrong: missing values, a biased sample, definitions that changed over time",
+        "How you found it and what you did about it",
+        "How it changed your conclusions or your timeline"
+      ]
+    },
+    {
+      "text": "Tell me about a time a model did worse once it was in use than it had in testing.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The gap between offline and live results",
+        "The cause: drift, mismatched data, or features that weren't available at prediction time",
+        "What you changed in how you validate models"
+      ]
+    },
+    {
+      "text": "Tell me about a time you chose a simpler approach over a more sophisticated one.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Both options and what each would have cost",
+        "Why simple was good enough: accuracy, explainability, time to deliver",
+        "How it worked out"
+      ]
+    },
+    {
+      "text": "Explain the bias-variance trade-off, and how you'd spot overfitting.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Too simple a model misses patterns; too complex a model learns noise",
+        "Spotting it by comparing training and validation scores, or with learning curves",
+        "Fixes: more data, regularisation, a simpler model, cross-validation"
+      ]
+    },
+    {
+      "text": "You're building a fraud detection model and only a tiny share of transactions are fraud. How do you evaluate it?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Why accuracy misleads when one class is rare",
+        "Precision, recall and precision-recall curves, and choosing a threshold from the cost of each error",
+        "Class weights or resampling, and testing on data with the real fraud rate"
+      ]
+    },
+    {
+      "text": "How would you design an A/B test for a new recommendation feature?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A hypothesis, one main metric and a few guardrail metrics",
+        "What gets randomised (users, sessions), the sample size and how long to run it",
+        "Reading the result: significance, practical size of the effect, novelty effects"
+      ]
+    },
+    {
+      "text": "Explain a confidence interval to a product manager.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A range of plausible values for the thing being estimated",
+        "Why a wider range means less certainty, and what narrows it",
+        "A plain example from a test result"
+      ]
+    },
+    {
+      "text": "What's the difference between correlation and causation, and how could you get closer to a causal answer without an experiment?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Confounders and reverse causation, with an example",
+        "Natural experiments, matching, or a before-and-after comparison with a control group",
+        "Being clear about what the analysis can't prove"
+      ]
+    },
+    {
+      "text": "How would you predict which customers are likely to cancel their subscription next month?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Defining cancellation and the prediction window precisely",
+        "Features from usage, payments and support, built only from data before the prediction date",
+        "A simple baseline first, the evaluation metric, and how the business would act on the scores"
+      ]
+    },
+    {
+      "text": "Compare logistic regression, random forests and gradient boosting. When would you pick each?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Interpretability versus accuracy on tabular data",
+        "Training time, tuning effort and sensitivity to noisy data",
+        "What you'd try first and why"
+      ]
+    },
+    {
+      "text": "How do you handle missing values, and when can that choice change your results?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Why the data is missing: at random, or for a reason that matters",
+        "Dropping rows, simple filling, model-based filling, or adding a 'was missing' flag",
+        "Checking how sensitive the results are to the choice"
+      ]
+    },
+    {
+      "text": "How would you use SQL to find each customer's first order, and whether they ordered again within 30 days? Talk me through it.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Finding the first order per customer with MIN or a window function",
+        "Finding the next order with LEAD or a join back to the orders table",
+        "Handling customers with one order, and two orders on the same day"
+      ]
+    },
+    {
+      "text": "How would you explain to a business team why the model made a particular prediction?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Overall feature importance versus the reasons for one prediction",
+        "Tools such as SHAP values or partial dependence plots, in plain words",
+        "The limit: a feature being important doesn't make it a cause"
+      ]
+    },
+    {
+      "text": "Your model's performance has been slowly dropping since launch. What could be happening, and what would you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Data drift, changes in what the target means, or changes in upstream data",
+        "Monitoring input distributions and live performance once labels arrive",
+        "When to retrain on fresh data and when to rethink the model"
+      ]
+    },
+    {
+      "text": "Why data science? How did you get into it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What got you started, and a project that hooked you",
+        "What you enjoy most: modelling, experiments, the business problem",
+        "What you're working to learn next"
+      ]
+    },
+    {
+      "text": "What kinds of problems would you want to work on here as a data scientist?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A grasp of the business and where data can help it",
+        "One or two specific problems you'd find interesting",
+        "How you'd measure success on them"
+      ]
+    }
+  ],
+  "tips": [
+    "Know two projects inside out: the data, the baseline, the metric, what failed and what you'd do next.",
+    "Say what a simple baseline would score before you mention any complex model.",
+    "Practise explaining one statistical idea (p-values, confidence intervals, overfitting) in two sentences without jargon.",
+    "In case questions, ask how the result will be used; it decides the metric and the threshold.",
+    "Expect to write SQL and Python while talking; many screens test them before any machine learning."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "hiring_manager"
+  },
+  "reviewed": "2026-10-18"
+}

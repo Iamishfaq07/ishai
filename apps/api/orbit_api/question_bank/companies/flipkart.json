@@ -1,0 +1,191 @@
+{
+  "slug": "flipkart",
+  "name": "Flipkart",
+  "aliases": [
+    "myntra",
+    "flipkart india",
+    "cleartrip"
+  ],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Flipkart's engineering interviews are known for a machine coding round, where candidates commonly report building a small working system in a set time, alongside problem-solving and, for experienced roles, system design. Its careers site says interviewers' feedback goes to an independent hiring committee, and it publishes five values: Audacity, Bias for Action, Customer First, Integrity and Inclusion.",
+  "rounds": [
+    "Online coding assessment",
+    "Machine coding round (build a small working system in 90–120 minutes)",
+    "Problem solving / data structures round",
+    "System design (for experienced roles)",
+    "Hiring manager round"
+  ],
+  "looks_for": [
+    "Clean, extensible, working code",
+    "Problem solving under time pressure",
+    "Ownership and bias for action",
+    "Customer-first thinking",
+    "Audacity",
+    "Bias for Action",
+    "Customer First",
+    "Integrity",
+    "Inclusion"
+  ],
+  "questions": [
+    {
+      "text": "Walk me through how you'd design a simple parking-lot or snake-and-ladder system in code.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The main classes and what each is responsible for, from the requirements",
+        "A working version first, then how a new rule (vehicle type, board size) fits without rewrites",
+        "Edge cases and how you'd test them, such as a full lot or a snake at the last square"
+      ]
+    },
+    {
+      "text": "Tell me about a time you owned a problem end to end.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why it was yours to own, and what would have happened if you hadn't",
+        "The steps you took yourself, from finding the cause to shipping the fix",
+        "The result, and what you set up so it stayed fixed"
+      ]
+    },
+    {
+      "text": "How would you design the cart and checkout flow for a big sale day?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying the load: peak orders per second and the few hot products everyone wants",
+        "Reserving stock at checkout without overselling, and releasing it if payment fails",
+        "Keeping the rest of the site up: caching, queues, rate limits and graceful fallbacks"
+      ]
+    },
+    {
+      "text": "Tell me about the boldest bet you've made on a project. What happened?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What made it bold: the risk, and what the safe option was",
+        "How you made the case and limited the downside",
+        "The outcome, including what you learned if it didn't work"
+      ]
+    },
+    {
+      "text": "Describe a time you moved fast to fix something urgent for customers. How did you avoid making it worse?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who was affected and why waiting wasn't an option",
+        "The quick fix and the safety checks around it, such as a flag or a rollback plan",
+        "The proper fix you made afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a time you pushed back on a shortcut because it wasn't right for customers or sellers.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The shortcut, and who it would have hurt",
+        "How you raised it and what you offered instead",
+        "What was decided, and how you kept your word on the alternative"
+      ]
+    },
+    {
+      "text": "Tell me about a risk you took that didn't work out. What did you take from it?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "Why the risk seemed worth taking at the time",
+        "How you found out it wasn't working, and how quickly you stopped or changed course",
+        "What you'd do the same and what you'd do differently"
+      ]
+    },
+    {
+      "text": "How would you design a flash sale where a limited stock of a popular phone goes on sale at noon?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Stock reservation that can't oversell: atomic counters or holds that expire",
+        "Absorbing the noon spike: a waiting queue, cached product pages and rate limits",
+        "Fairness and bots, and what shoppers see once stock runs out"
+      ]
+    },
+    {
+      "text": "Explain the SOLID principles with an example from code you've written. Which one do you find hardest to follow?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Each principle in a sentence, tied to a class you actually wrote",
+        "How following them made the code easier to extend or test",
+        "An honest example of where you broke one and why"
+      ]
+    },
+    {
+      "text": "How would you design product search with filters such as brand, price and rating for a very large catalogue?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A search index with facets for filters, and how it's kept in sync with the catalogue",
+        "Ranking: relevance, availability, price and popularity",
+        "Spelling mistakes and mixed-language queries, plus speed and caching"
+      ]
+    },
+    {
+      "text": "Delivery dates shown on product pages are wrong for some pin codes. How would you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Narrowing it down: which pin codes, sellers or warehouses, and since when",
+        "Checking each input: serviceability data, warehouse stock, courier timelines",
+        "The fix, and a check or alert that would catch it next time"
+      ]
+    },
+    {
+      "text": "How would you improve how many first-time shoppers from smaller towns complete their first order on the app?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Finding where they drop off in the funnel before proposing fixes",
+        "Likely barriers: trust, language, payment options such as cash on delivery",
+        "An experiment, with first-order conversion as the goal and returns as a guardrail"
+      ]
+    },
+    {
+      "text": "Why Flipkart? Which of its values do you connect with most, and when have you shown it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason tied to the team, product or customers, not only the brand",
+        "One value, named once, with a short example",
+        "Why that way of working suits you"
+      ]
+    },
+    {
+      "text": "What would you change about the Flipkart app, and how would you know your change worked?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A specific screen or flow, and the customer problem with it",
+        "The change you'd make and what you'd leave out",
+        "The metric that would tell you it worked"
+      ]
+    }
+  ],
+  "tips": [
+    "Practise machine coding: working code first, then clean classes and tests.",
+    "Talk about scale: Big Billion Days traffic is a favourite topic.",
+    "Flipkart's hiring page invites you to ask your recruiter how many rounds to expect; ask what each one covers so you can prepare.",
+    "Flipkart says each interviewer's feedback goes to an independent hiring committee, so give every round your full effort, including the last one.",
+    "Flipkart says it celebrates its biggest risk that didn't work out each year (its Chandrayaan Award), so have an honest failure story ready.",
+    "Its hiring page says you can have only one application under consideration at a time, so choose the role that fits you best."
+  ],
+  "sources": [
+    {
+      "title": "Flipkart Careers: About Us (values)",
+      "url": "https://www.flipkartcareers.com/aboutus"
+    },
+    {
+      "title": "Flipkart Careers: How We Hire",
+      "url": "https://www.flipkartcareers.com/howwehire"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

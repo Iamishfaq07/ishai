@@ -1,0 +1,187 @@
+{
+  "slug": "cisco",
+  "name": "Cisco",
+  "aliases": [
+    "cisco systems",
+    "cisco india",
+    "webex"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Cisco says its interview process varies by team and role, and that engineering roles typically include a behavioral interview and a technical assessment, such as a coding test. Candidates commonly report questions on networking fundamentals, operating systems and coding for software roles, and Cisco's careers site sets out how candidates may, and may not, use generative AI during hiring.",
+  "rounds": [
+    "Online application; recruiters check your résumé against the minimum qualifications",
+    "Recruiter conversation about the role and your background",
+    "Technical or pre-employment assessment for some positions, such as a coding test",
+    "Technical interviews: networking, coding, systems and your projects, depending on the role",
+    "Behavioral interview, often with the hiring manager"
+  ],
+  "looks_for": [
+    "Networking fundamentals: the TCP/IP and OSI models, routing, switching and common protocols",
+    "Collaboration, which Cisco's careers site calls how it gets things done",
+    "Initiative, curiosity and measurable impact",
+    "Your own thinking and experience, not scripted answers",
+    "Coding and problem solving for software roles",
+    "Security awareness in how you design and run systems"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you worked across teams to solve a customer's problem.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The customer's problem and which teams were involved",
+        "How you coordinated and kept the customer informed",
+        "The outcome, ideally with a measurable result"
+      ]
+    },
+    {
+      "text": "Tell me about something you taught yourself recently, such as a certification or a new tool, and why you chose it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you learned and what prompted it",
+        "How you learned it: labs, projects, study plan",
+        "Where you've already used it"
+      ]
+    },
+    {
+      "text": "Tell me about a time you took the initiative on something that wasn't assigned to you.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you noticed that others hadn't acted on",
+        "What you did and who you involved",
+        "The result and what it led to"
+      ]
+    },
+    {
+      "text": "Tell me about a time a change you made caused a problem. How did you handle it?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The change and the problem it caused",
+        "How you responded: rolled back, told people, fixed it",
+        "What you now do before making changes"
+      ]
+    },
+    {
+      "text": "Explain, layer by layer, what happens when one computer sends data to another on a different network.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Application data wrapped into TCP or UDP, then IP packets, then frames",
+        "ARP for the next hop, switching locally and routing between networks",
+        "DNS lookups and how the receiving side unwraps each layer"
+      ]
+    },
+    {
+      "text": "What's the difference between TCP and UDP, and when would you choose each?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Connection, ordering, reliability and congestion control in TCP",
+        "Low overhead and no delivery guarantees in UDP",
+        "Examples: file transfer and web pages versus live voice, video or DNS"
+      ]
+    },
+    {
+      "text": "How does a router decide where to send a packet, and how do static routes differ from protocols like OSPF or BGP?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The routing table and longest-prefix match",
+        "Static routes set by hand versus routes learned dynamically",
+        "OSPF inside an organisation versus BGP between networks"
+      ]
+    },
+    {
+      "text": "Users in one office can reach the internet but not an internal application. How would you troubleshoot it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Narrowing the scope: which users, since when, from where",
+        "Working through layers: DNS, routing, firewall rules, VPN or the application itself",
+        "Confirming the fix and recording what changed"
+      ]
+    },
+    {
+      "text": "What are VLANs, and why would a network team use them?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Logically separate networks on shared switches",
+        "Uses: security, smaller broadcast domains, organising by team or function",
+        "Trunk ports and routing between VLANs"
+      ]
+    },
+    {
+      "text": "How would you design a system that collects health data from thousands of network devices and alerts on problems?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Collecting metrics by streaming or polling, and storing them as time series",
+        "Alert rules that catch real problems without flooding people",
+        "Scaling the collectors and handling devices that go silent"
+      ]
+    },
+    {
+      "text": "How would you secure access to company systems for staff working from home?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Strong identity: multi-factor authentication and checking device health",
+        "Least-privilege access per application rather than open network access",
+        "Monitoring, logging, and a plan for lost or compromised devices"
+      ]
+    },
+    {
+      "text": "How would you improve video call quality for participants on poor connections?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Adapting video quality to available bandwidth and protecting audio first",
+        "Jitter buffers, error correction and choosing nearby media servers",
+        "Measuring quality from the user's side and testing on bad networks"
+      ]
+    },
+    {
+      "text": "Why Cisco, and which part of its business (networking, security, collaboration or observability) interests you most?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific area and what you know about it",
+        "A link to your skills, certifications or projects",
+        "What you want to learn there"
+      ]
+    },
+    {
+      "text": "What questions do you have for us about the team or the role?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Questions about the team's customers and current challenges",
+        "How success is measured in the first months",
+        "Learning and growth opportunities in the role"
+      ]
+    }
+  ],
+  "tips": [
+    "Cisco's recruiters suggest listing professional certifications on your résumé; be ready to explain what you learned from each.",
+    "Revise networking from the ground up: subnetting, the TCP handshake, DNS, DHCP, routing and switching.",
+    "Cisco's hiring page allows AI for things like readability checks and prep tips, but not for scripted answers, assessment responses or real-time coding or design solutions.",
+    "Prepare questions for your interviewers; Cisco's careers site encourages candidates to ask about the company, team and role.",
+    "Read Cisco customer stories and blogs for the area you're applying to; its early-careers page suggests this."
+  ],
+  "sources": [
+    {
+      "title": "Cisco Careers: how we hire",
+      "url": "https://careers.cisco.com/global/en/how-we-hire"
+    },
+    {
+      "title": "Cisco Careers: entry-level opportunities",
+      "url": "https://careers.cisco.com/global/en/entry-level-careers"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

@@ -1,0 +1,207 @@
+{
+  "slug": "teacher",
+  "name": "Teacher",
+  "aliases": ["school teacher", "primary teacher", "secondary teacher", "nursery teacher", "assistant teacher", "tgt", "pgt", "prt", "trained graduate teacher", "post graduate teacher", "lecturer", "teaching job"],
+  "group": "public-service",
+  "summary": "Teacher interviews usually centre on how you'd teach and manage a class: many schools ask for a short demo lesson, then ask about lesson planning, behaviour management, checking learning and working with parents. Questions on keeping children safe are common, particularly in countries such as the UK. Government and some private schools hold a written exam before the interview; this pack covers the interview and demo stages.",
+  "rounds": [
+    "Application or CV screen, with a written test for many government and some private schools",
+    "Demo lesson: a short class on a topic you're given or choose, sometimes with students present",
+    "Interview with the principal, head of department or a panel",
+    "Safeguarding and child-protection questions, plus reference checks (common in many countries)",
+    "Final discussion with the management on the role and joining"
+  ],
+  "looks_for": [
+    "A lesson that's clear, engaging and checks whether students understood",
+    "Calm, fair behaviour management",
+    "Planning for students who learn at different speeds",
+    "Putting children's safety and wellbeing first",
+    "Working well with parents and colleagues",
+    "Secure knowledge of the subject at the level you'd teach"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a lesson that went well and one that didn't. What made the difference?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "Both lessons in a sentence or two",
+        "What made the difference: planning, pace, the activity or the class's mood",
+        "What you now do because of it"
+      ]
+    },
+    {
+      "text": "Tell me about a student who was struggling and how you helped them.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you noticed, and what the difficulty was",
+        "What you tried, including working with parents or colleagues",
+        "The progress they made"
+      ]
+    },
+    {
+      "text": "Describe a difficult conversation you had with a parent.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The concern, described without blame",
+        "How you listened, explained and agreed next steps",
+        "How it ended and how you followed up"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with other teachers on something, such as an event, a scheme of work or a new idea.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and who was involved",
+        "Your part, and how you handled differing views",
+        "The result for students"
+      ]
+    },
+    {
+      "text": "You have ten minutes to teach us one topic from your subject. How would you plan that demo lesson?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "One clear learning goal for the ten minutes",
+        "A hook, a short explanation, an activity and a quick check of understanding",
+        "Questions that get students talking, not just listening"
+      ]
+    },
+    {
+      "text": "How would you manage a class where a few students keep disrupting the lesson?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Clear routines and expectations set early",
+        "Calm, consistent responses that start small and private",
+        "Following the school's behaviour policy and involving others when needed"
+      ]
+    },
+    {
+      "text": "How would you teach one topic to a class where some students are far ahead and others are behind?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Finding out where each group is, first",
+        "Tasks at different levels, extra support and stretch questions",
+        "Grouping, and checking every group's progress"
+      ]
+    },
+    {
+      "text": "How do you check whether students have understood during a lesson, not just in tests?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Quick checks: questioning many students, mini whiteboards, exit tickets",
+        "Watching for common mistakes as students work",
+        "Changing the plan when the checks show a gap"
+      ]
+    },
+    {
+      "text": "A child tells you something that makes you worried about their safety at home. What would you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Listening calmly, without asking leading questions or promising to keep it secret",
+        "Writing down what was said and reporting it promptly to the safeguarding lead or the head",
+        "Following the school's child-protection policy rather than investigating yourself"
+      ]
+    },
+    {
+      "text": "How do you plan a unit of lessons across a term?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Starting from the syllabus and what students should know by the end",
+        "Ordering topics so each builds on the last, with time for revision",
+        "Assessments along the way, and adjusting the plan"
+      ]
+    },
+    {
+      "text": "How would you use technology in your lessons, and when would you avoid it?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Examples where it helps: visuals, practice quizzes, simulations",
+        "When it distracts or isn't needed",
+        "A back-up plan if it fails in class"
+      ]
+    },
+    {
+      "text": "A parent emails angrily that their child's marks are unfair. How would you respond?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "A calm, prompt reply and an offer to meet",
+        "Rechecking the marking against the criteria before the meeting",
+        "Explaining with evidence, and correcting it if you made a mistake"
+      ]
+    },
+    {
+      "text": "You take over a class from another teacher in the middle of the year. What do you do in your first two weeks?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Learning what was covered and each student's needs from records and colleagues",
+        "Setting your routines and expectations early",
+        "Getting to know the students and keeping parents informed"
+      ]
+    },
+    {
+      "text": "Tell me about yourself and your teaching experience, including training or practice teaching.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your qualification and subject",
+        "Where you've taught, including practice teaching or tutoring",
+        "What you're like as a teacher, in a line"
+      ]
+    },
+    {
+      "text": "Why do you want to be a teacher?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A personal reason, shown by an experience",
+        "What you enjoy about helping students learn",
+        "The kind of teacher you want to be"
+      ]
+    },
+    {
+      "text": "Why our school? What do you know about it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Specific things about the school: its curriculum, values, activities or students",
+        "How you'd contribute, including outside the classroom",
+        "Why it suits you"
+      ]
+    },
+    {
+      "text": "How do you keep improving as a teacher?",
+      "type": "fit",
+      "kind": "reflection",
+      "covers": [
+        "Feedback you seek: observations, student responses, results",
+        "Training, reading or colleagues you learn from",
+        "One recent change you made to your teaching"
+      ]
+    }
+  ],
+  "tips": [
+    "Plan your demo lesson to the minute, with one learning goal, an activity and a quick check, and bring any materials you need.",
+    "Involve the panel or students during the demo; ask questions rather than lecturing the whole time.",
+    "Have examples ready of handling behaviour, helping a struggling student and talking to a parent.",
+    "Know the basics of safeguarding: listen, don't promise secrecy, record what was said and report to the right person.",
+    "Read the school's website (its board or curriculum, values and activities) and mention what fits you.",
+    "Freshers: use your practice teaching, internships, tuition or volunteering as examples."
+  ],
+  "mock": {
+    "interview_type": "behavioral",
+    "persona": "hiring_manager"
+  },
+  "reviewed": "2026-10-18"
+}

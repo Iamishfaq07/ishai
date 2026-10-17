@@ -1,0 +1,183 @@
+{
+  "slug": "sap",
+  "name": "SAP",
+  "aliases": ["sap labs", "sap labs india", "sap se"],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "SAP makes enterprise software, best known for ERP, that companies use to run finance, supply chain, procurement and HR. Its careers site says that, depending on the role, the process may include recruiter and hiring manager interviews and technical or behavioural assessments. For campus and early-career engineering roles, including at SAP Labs India, candidates commonly report an online coding and aptitude test followed by technical and HR interviews.",
+  "rounds": [
+    "Application review by the recruiting team",
+    "Online test for many campus and early-career roles: coding and aptitude",
+    "Technical interviews, often one or two: coding, computer science fundamentals and your projects",
+    "Hiring manager interview on your experience, motivation and fit with the team",
+    "HR discussion and offer"
+  ],
+  "looks_for": [
+    "Strong fundamentals: data structures, object-oriented design, databases and operating systems",
+    "Understanding of how businesses run: orders, invoices, stock, payroll",
+    "Building reliable, secure software for business customers",
+    "Working well across teams and countries",
+    "Curiosity and willingness to learn new tools, including cloud and AI",
+    "Honesty about what you know and don't know"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you had to understand how a business process worked before you could build software for it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The process and the people who used it",
+        "How you learned it: questions, shadowing users, reading data",
+        "How that understanding changed what you built"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with a teammate in another country or time zone. What made it work?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The task and how the work was split",
+        "What was hard: overlap hours, language, different habits",
+        "The habits that helped and the result"
+      ]
+    },
+    {
+      "text": "Tell me about a commitment to a teammate or customer that became hard to keep. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you promised and what changed",
+        "When and how you told the other person",
+        "What you delivered, and what you'd promise differently next time"
+      ]
+    },
+    {
+      "text": "Tell me about a piece of feedback that changed how you work.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The feedback and who gave it",
+        "Your first reaction, honestly",
+        "What you changed and how you know it helped"
+      ]
+    },
+    {
+      "text": "Explain what an ERP system does, using a company that sells and ships products as your example.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "One shared system for finance, sales, stock, buying and people",
+        "Following one order through: sale, stock, delivery, invoice, payment",
+        "Why one system beats many separate tools: one version of the truth"
+      ]
+    },
+    {
+      "text": "How would you design an order-to-cash flow, from a customer placing an order to the company receiving payment?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The main steps and the data each one needs",
+        "Where things go wrong: credit checks, partial deliveries, returns",
+        "How you'd keep the steps consistent and leave an audit trail"
+      ]
+    },
+    {
+      "text": "What's the difference between a process and a thread, and when would you use multiple threads?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Processes have their own memory; threads share their process's memory",
+        "Using threads for parallel or waiting work, such as handling many requests",
+        "The risks: race conditions and deadlocks, and how locks help"
+      ]
+    },
+    {
+      "text": "Explain how a database index speeds up queries, and what it costs.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "An index works like a book's index, often a B-tree, so lookups skip a full scan",
+        "The cost: extra storage and slower inserts and updates",
+        "Choosing columns to index from the queries you actually run"
+      ]
+    },
+    {
+      "text": "A customer says month-end reports in their finance system have become very slow. How would you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Scope first: which reports, since when, after what change",
+        "Checking data growth, slow queries and missing indexes",
+        "A quick relief for month-end and a lasting fix after"
+      ]
+    },
+    {
+      "text": "What changes when a company moves a large business application from its own servers to the cloud? Talk me through the main risks.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Gains: scaling, updates, less hardware to run",
+        "Risks: data migration, downtime, security and custom code that breaks",
+        "Moving in stages with testing and a way back"
+      ]
+    },
+    {
+      "text": "Walk me through your best project: what you built, the hardest bug and what you'd do differently.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The problem and your part in a few sentences",
+        "The hardest bug and how you tracked it down",
+        "What you'd change in the design now"
+      ]
+    },
+    {
+      "text": "Why SAP, and which of its products or business areas interests you most?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about SAP's software or customers",
+        "The area you chose and why it fits your skills",
+        "What you want to learn in your first year"
+      ]
+    },
+    {
+      "text": "SAP's customers are mostly businesses, not consumers. Why does building that kind of software appeal to you?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What's interesting about business software: scale, complexity, real impact",
+        "An example of a business problem software solved well",
+        "Why you'd enjoy working on it"
+      ]
+    },
+    {
+      "text": "Where do you see yourself in five years?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A realistic direction, technical or towards leading people",
+        "Skills you plan to build on the way",
+        "How this role fits that path"
+      ]
+    }
+  ],
+  "tips": [
+    "Learn how a business runs day to day: a sale, an invoice, a stock movement, a payslip. SAP's software is built around these flows.",
+    "Revise core subjects (data structures, OOP, databases, operating systems, networks); campus technical rounds commonly test them.",
+    "Know one project end to end, including design choices and how you tested it; interviewers often go deep on one project.",
+    "SAP's careers site prefers applications in English and lets you apply to several roles; pick the ones that genuinely match your skills.",
+    "If you're early in your career, look at the academies on SAP's careers site; each has its own focus, such as product and engineering or customer success."
+  ],
+  "sources": [
+    {
+      "title": "How we hire (jobs.sap.com)",
+      "url": "https://jobs.sap.com/content/Hiring-Process/?locale=en_US"
+    },
+    {
+      "title": "SAP academies for early-career professionals (jobs.sap.com)",
+      "url": "https://jobs.sap.com/en/students-and-graduates/academies/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

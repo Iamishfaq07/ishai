@@ -1,0 +1,194 @@
+{
+  "slug": "tata-motors",
+  "name": "Tata Motors",
+  "aliases": ["tata motors passenger vehicles", "tata motors commercial vehicles", "tata passenger electric mobility"],
+  "group": "industry",
+  "market": "india",
+  "summary": "Tata Motors makes commercial and passenger vehicles, including electric vehicles; since a demerger effective October 2025, the commercial and passenger vehicle businesses are separate companies that both carry the Tata Motors name. Its careers site lists an Early Career Program and earn-and-learn programmes, and for early-career hiring it describes an online test followed by interviews. Candidates commonly report technical questions on core engineering alongside HR questions on fit and mobility.",
+  "rounds": [
+    "Online application through the careers site, or campus shortlisting",
+    "Online test: for its early-career programme, the careers site lists aptitude and reasoning, basic maths, subject knowledge and general English",
+    "Technical interview on core engineering subjects, projects and internships",
+    "HR or managerial interview on fit, mobility and motivation",
+    "Background verification and a medical check-up before joining (listed for its early-career programme)",
+    "For experienced hires: technical and functional interviews with the hiring team"
+  ],
+  "looks_for": [
+    "Strong engineering fundamentals for design, manufacturing, quality and service roles",
+    "Interest in vehicles, electric mobility and connected technology",
+    "Shop-floor problem-solving on quality, cost and delivery",
+    "Safety-first thinking in plants",
+    "Customer focus, from fleet owners to car buyers",
+    "Integrity and teamwork"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you improved a process, even slightly, during an internship or project.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the process was and what was wrong with it",
+        "The change you suggested or made, and how you convinced others",
+        "The result in time, cost, quality or safety"
+      ]
+    },
+    {
+      "text": "Describe a time you had to find the root cause of a problem that kept coming back.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The symptom and why earlier fixes didn't last",
+        "The method you used: data, 5 whys, a fishbone diagram, trials",
+        "The root cause and how you confirmed the fix held"
+      ]
+    },
+    {
+      "text": "Tell me about a team project where members disagreed. How did you reach a decision?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The disagreement, stated fairly from each side",
+        "How you used data or a test to settle it",
+        "The decision and how the team moved on"
+      ]
+    },
+    {
+      "text": "Tell me about a time you took on something unfamiliar. How did you get up to speed?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was new and why you took it on",
+        "How you learned: people, manuals, hands-on practice",
+        "What you delivered"
+      ]
+    },
+    {
+      "text": "Explain how a battery electric vehicle's powertrain differs from a diesel truck's.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Battery, inverter and motor in place of engine, fuel system and most of the gearbox",
+        "Regenerative braking, and torque available from standstill",
+        "Practical differences: range, charging, weight and maintenance"
+      ]
+    },
+    {
+      "text": "What does a battery management system do, and why does thermal management matter in an EV?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Monitoring cell voltage, current and temperature, and balancing cells",
+        "Estimating state of charge and health, and protecting against misuse",
+        "Heat affects safety, battery life and charging speed, so cooling and heating matter"
+      ]
+    },
+    {
+      "text": "A defect keeps appearing at one station on an assembly line. How would you find the root cause and stop it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Containing it first so defective parts don't move on",
+        "Checking the four Ms: man, machine, method, material",
+        "A permanent fix such as mistake-proofing, then checking the data afterwards"
+      ]
+    },
+    {
+      "text": "What does lean manufacturing mean to you? Explain one tool you've used or studied, such as kaizen, 5S or poka-yoke.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Lean as removing waste and improving flow",
+        "One tool explained with how it works in practice",
+        "An example of where it helped, from a plant visit, internship or project"
+      ]
+    },
+    {
+      "text": "How would you reduce the total cost of owning a truck for a fleet owner?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "What makes up the cost: fuel, maintenance, downtime, financing, resale",
+        "Levers: fuel efficiency, service network, telematics, uptime guarantees",
+        "How you'd prove the saving to a customer with numbers"
+      ]
+    },
+    {
+      "text": "Walk me through how you'd design a bracket that carries a load, from requirements to testing.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Requirements: loads, space, environment, cost and volume",
+        "Material and shape choices, checked by hand calculation and simulation",
+        "Designing for manufacture, then prototype testing and validation"
+      ]
+    },
+    {
+      "text": "Sales of one car model are lower than expected in smaller towns. How would you investigate?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Whether it's demand or supply: enquiries, test drives, stock at dealers",
+        "Fit with local needs: price, financing, fuel type, service access",
+        "Talking to dealers and customers, and testing one change"
+      ]
+    },
+    {
+      "text": "How would you plan the public charging needed for electric car owners in a city like Pune?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Estimating EV numbers and how many owners can charge at home",
+        "Where to place chargers: highways, malls, offices, residential areas",
+        "Fast versus slow chargers, grid capacity and partnerships"
+      ]
+    },
+    {
+      "text": "Why Tata Motors, and are you more interested in the commercial or the passenger vehicle side?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about Tata Motors' products or engineering",
+        "A clear preference with a reason, plus openness to either",
+        "What you want to learn first"
+      ]
+    },
+    {
+      "text": "Are you willing to work at plants or in field roles in different parts of India?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer about location and shifts",
+        "Why plant or field exposure matters early in a career",
+        "Any experience of working away from home"
+      ]
+    },
+    {
+      "text": "Where do you see yourself five years from now?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A realistic direction in a function you care about",
+        "The skills you plan to build",
+        "How this role starts that path"
+      ]
+    }
+  ],
+  "tips": [
+    "Revise your branch's core subjects; for EV roles add batteries, motors and power electronics.",
+    "Prepare for the online test sections Tata Motors' careers site lists: aptitude and reasoning, basic maths, subject knowledge and English.",
+    "Know the difference between the commercial and passenger vehicle businesses after the demerger, and say which interests you.",
+    "Use shop-floor language in stories: quality, cost, delivery, safety, and the data you used.",
+    "Apply only through official channels; Tata Motors' careers page says it never asks candidates for any payment."
+  ],
+  "sources": [
+    {
+      "title": "Careers at Tata Motors",
+      "url": "https://www.tatamotors.com/careers/"
+    },
+    {
+      "title": "Early Career Program (Tata Motors Careers)",
+      "url": "https://www.tatamotors.com/careers/early-careers/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

@@ -1,0 +1,189 @@
+{
+  "slug": "maruti-suzuki",
+  "name": "Maruti Suzuki",
+  "aliases": ["maruti", "msil", "maruti suzuki india"],
+  "group": "industry",
+  "market": "india",
+  "summary": "Maruti Suzuki makes and sells passenger cars in India through its Arena and NEXA networks, and hires engineers for design, manufacturing, quality and supply chain alongside sales, service and corporate roles. Its careers site lists hiring tracks for freshers, all-India engineering hiring, experienced professionals and ITI workmen. For graduate roles, candidates commonly report a written or online test followed by technical and HR interviews.",
+  "rounds": [
+    "Online application on the careers site, or campus shortlisting",
+    "Written or online test on aptitude and core engineering (often, for graduate roles)",
+    "Technical interview on core subjects, projects and internships",
+    "HR interview on fit, mobility and expectations",
+    "For experienced hires: technical and functional interviews with the hiring department"
+  ],
+  "looks_for": [
+    "Strong fundamentals in your engineering discipline",
+    "Shop-floor problem-solving on quality, cost, delivery and safety",
+    "Customer focus, from the showroom to after-sales service",
+    "Discipline and teamwork in a manufacturing setting",
+    "Willingness to take on challenges and grow with responsibility",
+    "Openness and respect for every voice, which the careers site describes as part of its culture"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you found and fixed a small problem before it became a big one.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you spotted the early sign",
+        "What you did and who you told",
+        "What it would have cost if left alone"
+      ]
+    },
+    {
+      "text": "Describe a time you worked with people at different levels, such as technicians and managers, on one problem.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and who was involved",
+        "How you communicated with each group",
+        "The result and what you learned from the people on the floor"
+      ]
+    },
+    {
+      "text": "Tell me about a time you followed a process strictly even when a shortcut was tempting.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The shortcut and why it was tempting",
+        "Why you stuck to the process",
+        "What happened, and whether you later helped improve the process"
+      ]
+    },
+    {
+      "text": "Tell me about a time you received critical feedback. What did you change?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The feedback and who gave it",
+        "How you reacted at first and what you did next",
+        "A specific change and its result"
+      ]
+    },
+    {
+      "text": "Explain kaizen, and how you'd apply continuous improvement on an assembly line.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Kaizen as small, steady improvements suggested by the people doing the work",
+        "Going to the line, measuring, trying a change, and standardising it",
+        "An example such as cutting a wasted movement or a changeover time"
+      ]
+    },
+    {
+      "text": "Explain just-in-time inventory, and what can go wrong with it when a supplier is late.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Parts arrive close to when they're needed, which reduces stock and space",
+        "Risk: one late supplier can stop the line",
+        "Safeguards: nearby suppliers, buffer stock for critical parts, close tracking"
+      ]
+    },
+    {
+      "text": "Warranty claims for one part on a car model are rising. How would you investigate?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Analysing claims by build date, supplier batch, region and mileage",
+        "Inspecting failed parts to find the failure mode",
+        "Containment, a fix with the supplier or plant, and checking claims fall afterwards"
+      ]
+    },
+    {
+      "text": "How does a factory-fitted CNG car differ from a petrol one, and what are the key safety points?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A high-pressure cylinder, regulator and injectors alongside the petrol system",
+        "Engine and calibration changes for CNG, and the trade-off in power and boot space",
+        "Safety: cylinder testing, leak-proof fittings, shut-off valves"
+      ]
+    },
+    {
+      "text": "Customers at a service workshop complain about long waiting times. How would you improve their experience?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Measuring where time goes: check-in, diagnosis, parts, repair, billing",
+        "Fixes: appointments, express service bays, parts planning, updates to customers",
+        "Tracking turnaround time and satisfaction after the change"
+      ]
+    },
+    {
+      "text": "Explain the difference between spot welding and arc welding, and where each is used in making a car.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Spot welding joins overlapping sheets with current and pressure at points",
+        "Arc welding makes continuous joints with a filler, often for thicker parts",
+        "Why car body shops rely heavily on robotic spot welding"
+      ]
+    },
+    {
+      "text": "How would you increase car sales in rural areas where many buyers are first-time owners?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Understanding the buyer: income pattern, financing, trust, service access",
+        "Reaching them: local outreach, dealer presence, easy finance",
+        "Measuring enquiries, test drives and conversions by area"
+      ]
+    },
+    {
+      "text": "Walk me through your final-year project and what you'd do differently today.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The problem and your own contribution",
+        "Key technical decisions and results",
+        "Limits, and what you'd change now"
+      ]
+    },
+    {
+      "text": "Why Maruti Suzuki?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific: its manufacturing, products or reach across India",
+        "The function you want to join and why",
+        "What you hope to learn there"
+      ]
+    },
+    {
+      "text": "Are you comfortable working in a plant, including shift work, if the role needs it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer about shifts and location",
+        "Why time on the shop floor helps an engineer",
+        "Any plant or workshop experience"
+      ]
+    },
+    {
+      "text": "Where do you see yourself in five years?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A realistic direction in a function you care about",
+        "Skills you'll build along the way",
+        "Interest in growing with the company"
+      ]
+    }
+  ],
+  "tips": [
+    "Revise core subjects and basic automobile engineering: engines, transmissions, CNG systems and safety features.",
+    "Learn the vocabulary of Japanese-style manufacturing: kaizen, 5S, poka-yoke, just-in-time, gemba.",
+    "For sales or marketing roles, know the difference between the Arena and NEXA channels, and how after-sales service fits in.",
+    "Apply only through official channels; Maruti Suzuki's careers site carries a warning about fraudulent recruitment.",
+    "Bring examples of discipline and teamwork from projects, internships or sport."
+  ],
+  "sources": [
+    {
+      "title": "Careers at Maruti Suzuki",
+      "url": "https://www.marutisuzuki.com/corporate/careers"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

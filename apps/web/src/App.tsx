@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { FlagGate } from "./components/FlagGate";
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { NotFoundPage } from "./pages/NotFound";
@@ -10,6 +10,7 @@ import { Skeleton, toast } from "@orbit/ui";
 import { useAuth } from "./lib/auth";
 import { routeDescription, routeTitle } from "./lib/routeTitle";
 import { useDocumentTitle } from "./lib/useDocumentTitle";
+import { Prerendered, handOff, useHandOffElsewhere } from "./lib/prerender";
 import { JOBS_AI_HOME, movedJobsPath } from "./pages/jobs/paths";
 import { RESUME_AI_HOME, movedResumePath } from "./pages/resume/paths";
 import {
@@ -65,6 +66,10 @@ import {
   AdminSupportPage,
   ContactPage,
   TechnicalPage,
+  CompaniesPage,
+  CompanyPage,
+  RolesPage,
+  RolePage,
   prefetchLikelyRoutes,
   publicPageFor,
 } from "./routes";
@@ -96,22 +101,36 @@ function RequireAuth({ children, publicPage }: { children: ReactNode; publicPage
   if (!user) {
     const page = publicPage?.(location.pathname);
     if (page) return page;
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
   return <Signed>{children}</Signed>;
 }
 
-/** Signed in: warm the daily pages in the background so the next click doesn't wait for a download. */
+/** Signed in: warm the daily pages in the background so the next click doesn't wait for a download. A signed-in
+ *  page is never the built public copy of its address (the front page at "/"), so the app takes over at once. */
 function Signed({ children }: { children: ReactNode }) {
+  useLayoutEffect(handOff, []);
   useEffect(() => prefetchLikelyRoutes(), []);
   return <>{children}</>;
 }
 
 /** Signed out at "/", the front page; at /resume-ai or /jobs, what that product does, and "Start free". */
 const PUBLIC_PAGES: Record<NonNullable<ReturnType<typeof publicPageFor>>, ReactNode> = {
-  landing: <LandingPage />,
-  resumeAiPublic: <ResumeAiPublicPage />,
-  jobsAiPublic: <JobsAiPublicPage />,
+  landing: (
+    <Prerendered>
+      <LandingPage />
+    </Prerendered>
+  ),
+  resumeAiPublic: (
+    <Prerendered>
+      <ResumeAiPublicPage />
+    </Prerendered>
+  ),
+  jobsAiPublic: (
+    <Prerendered>
+      <JobsAiPublicPage />
+    </Prerendered>
+  ),
 };
 const publicProductPage = (pathname: string): ReactNode => {
   const key = publicPageFor(pathname);
@@ -134,6 +153,7 @@ function MovedJobs() {
 function useRouteTitle(): void {
   const { pathname } = useLocation();
   const { user, loading } = useAuth();
+  useHandOffElsewhere(pathname);
   useDocumentTitle(routeTitle(pathname, !loading && !user), routeDescription(pathname));
 }
 
@@ -179,11 +199,17 @@ export function App() {
       {/* Public: the scanned code is the credential, so the phone needn't sign in. */}
       <Route path="/companion" element={<CompanionPage />} />
       {/* Public: one practice question with instant feedback, no account needed (Workstream C's page). */}
-      <Route path="/warmup" element={<WarmupPage />} />
+      <Route path="/warmup" element={<Prerendered><WarmupPage /></Prerendered>} />
       {/* Public: the Contact page's form, signed in or out (its messages wait in the admin's Inbox). */}
-      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/contact" element={<Prerendered><ContactPage /></Prerendered>} />
       {/* Public: live latency, the answer pipeline, the desktop app's protections. */}
-      <Route path="/technical" element={<TechnicalPage />} />
+      <Route path="/technical" element={<Prerendered><TechnicalPage /></Prerendered>} />
+      {/* Public: the question bank, how companies interview and what interviews for a job test (pages/bank). Built
+          as HTML too (src/prerender), like the pages above, so it reads without JavaScript. */}
+      <Route path="/companies" element={<Prerendered><CompaniesPage /></Prerendered>} />
+      <Route path="/companies/:slug" element={<Prerendered><CompanyPage /></Prerendered>} />
+      <Route path="/roles" element={<Prerendered><RolesPage /></Prerendered>} />
+      <Route path="/roles/:slug" element={<Prerendered><RolePage /></Prerendered>} />
       {/* Right after sign-up: the three welcome questions, outside the nav so nothing competes with them. */}
       <Route
         path="/welcome"

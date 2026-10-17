@@ -1,0 +1,186 @@
+{
+  "slug": "jio",
+  "name": "Reliance Jio",
+  "aliases": ["jio", "jio platforms", "reliance jio infocomm", "rjil"],
+  "group": "industry",
+  "market": "india",
+  "summary": "Reliance Jio runs mobile, broadband and digital services across India and hires for sales, network engineering, IT and operations, as well as campus graduates. Its careers site describes three steps (application, assessment, selection), with an online aptitude test followed by functional or technical tests depending on the job, and says the process involves two rounds of interviews. It publishes six values: Customer Value, Respect, Integrity, Ownership Mindset, Excellence and One Team.",
+  "rounds": [
+    "Application through the careers site, or a campus process for students",
+    "Online aptitude test, then functional or technical tests depending on the job",
+    "Psychometric tests for leadership roles, according to Jio's careers site",
+    "Usually two rounds of interviews, covering your technical or functional knowledge and how you approach problems",
+    "Selection based on your resume, interview feedback and any tests or assignments, with final approval from senior management"
+  ],
+  "looks_for": [
+    "Customer Value",
+    "Respect",
+    "Integrity",
+    "Ownership Mindset",
+    "Excellence",
+    "One Team",
+    "High performers who deliver quality work and keep looking for ways to improve",
+    "Results you can quantify: the share of a target you achieved, and in what time",
+    "Leadership early in your career, such as leading a university team project"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a team project you led. How did you take responsibility for the outcome?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal, the team and why you were leading it",
+        "A difficult moment and how you handled it",
+        "The result, with a number where possible"
+      ]
+    },
+    {
+      "text": "Tell me about a target you were given and how you met it. Put numbers on it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The target and the time you had",
+        "Your plan and what you changed along the way",
+        "How much of it you achieved, and by when"
+      ]
+    },
+    {
+      "text": "Describe a time you solved a problem for a customer that wasn't strictly your job.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The customer's problem and why it fell between teams",
+        "What you did to fix it",
+        "The result for the customer, and any change to prevent a repeat"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with people from very different teams to get something done.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who was involved and what each team cared about",
+        "How you kept everyone working towards one goal",
+        "What you delivered together"
+      ]
+    },
+    {
+      "text": "Explain how a mobile data session reaches the internet, from the phone to the core network.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The phone connects by radio to a base station",
+        "Traffic goes over transport links (fibre or microwave) to the core network",
+        "The core handles authentication, sessions and the route out to the internet"
+      ]
+    },
+    {
+      "text": "What changes from 4G to 5G, and what does it mean for users and for the network team?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Higher speeds, lower latency and more connected devices",
+        "New spectrum bands, more sites and a more software-driven core",
+        "New uses (home broadband, industry) and new work for planning and operations"
+      ]
+    },
+    {
+      "text": "Customers in one area complain about slow mobile data every evening. How would you investigate?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Checking whether it's congestion at peak hours, using site and cell data",
+        "Ruling out faults: hardware, backhaul links, interference",
+        "Fixes in order of speed: re-tuning, adding capacity, new sites"
+      ]
+    },
+    {
+      "text": "How would you plan a fibre broadband rollout in a new residential area of Pune?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Estimating demand by building and household",
+        "Route planning, permissions and working with housing societies",
+        "Sequencing work to start earning sooner, and tracking installs and quality"
+      ]
+    },
+    {
+      "text": "How would you grow sales of a new prepaid plan in a small town where most people already have a SIM?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Who to target: switchers, second SIMs, first-time smartphone users",
+        "Working with retailers and local promotions",
+        "Measuring activations, recharges and how many customers stay"
+      ]
+    },
+    {
+      "text": "Explain the difference between TCP and UDP, and where each fits in a video call.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "TCP is reliable and ordered; UDP is faster with no delivery guarantee",
+        "Why live audio and video prefer UDP, accepting some loss",
+        "Where TCP still fits: signalling, chat, file transfer"
+      ]
+    },
+    {
+      "text": "A store's daily activations have dropped suddenly. What would you check first?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Whether it's a system issue: verification, devices, connectivity",
+        "Stock and staffing at the store",
+        "Local changes: a competitor offer or a nearby new outlet"
+      ]
+    },
+    {
+      "text": "Why Jio? Which of its six values do you relate to most, and when have you shown it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason tied to Jio's services or scale in India",
+        "One value with a short, real example",
+        "How the role fits your goals"
+      ]
+    },
+    {
+      "text": "Are you open to working in any city, or in field roles, if the business needs it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with any limits stated clearly",
+        "Why field exposure would help you grow",
+        "Any past experience of moving or field work"
+      ]
+    },
+    {
+      "text": "What would you like to ask us about the role or about Jio?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two questions that show you've read about the role",
+        "Questions about how success is measured or the first months",
+        "Nothing that's easily found on the careers site"
+      ]
+    }
+  ],
+  "tips": [
+    "Quantify results, as Jio's careers site suggests: the percentage of a target you achieved and in what time.",
+    "If you're a recent graduate, talk about university projects where you led the team; the careers site invites this.",
+    "Revise telecom basics for technical roles: spectrum, radio access and core network, fibre, latency and capacity.",
+    "Prepare for an aptitude test as well as interviews: practise basic maths and logical reasoning for speed.",
+    "Prepare thoughtful questions; Jio's How We Hire page says they show your understanding and interest."
+  ],
+  "sources": [
+    {
+      "title": "How We Hire (Jio Careers)",
+      "url": "https://careers.jio.com/howwehire.aspx"
+    },
+    {
+      "title": "Culture & Values (Jio Careers)",
+      "url": "https://careers.jio.com/culture-values.html"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

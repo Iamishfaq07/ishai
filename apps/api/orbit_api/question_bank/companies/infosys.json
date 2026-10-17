@@ -1,0 +1,196 @@
+{
+  "slug": "infosys",
+  "name": "Infosys",
+  "aliases": [
+    "infosys limited",
+    "infy",
+    "infosys bpm",
+    "hackwithinfy",
+    "infytq"
+  ],
+  "group": "it-services",
+  "market": "india-first",
+  "summary": "Infosys hires most freshers in India through campus and off-campus drives that start with an online test of aptitude, reasoning, verbal ability and pseudocode or coding, followed by technical and HR interviews that candidates often describe as short and resume-based. It also runs HackWithInfy, a coding competition for engineering students that can lead to pre-placement interviews, and it describes its values as C-LIFE.",
+  "rounds": [
+    "Online test (aptitude, reasoning, verbal, pseudocode or coding)",
+    "Technical interview",
+    "HR interview"
+  ],
+  "looks_for": [
+    "Programming and CS fundamentals",
+    "Your projects and internships",
+    "Communication",
+    "Learnability and flexibility",
+    "Client Value",
+    "Leadership by Example",
+    "Integrity and Transparency",
+    "Fairness",
+    "Excellence"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Education, your strongest skill and one project, in about a minute",
+        "What you did yourself in that project, with one result",
+        "Why this role is the next step for you"
+      ]
+    },
+    {
+      "text": "Which programming language are you most comfortable in, and why?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "One language and what you've actually built with it",
+        "A feature you like and a limitation you've run into",
+        "How you'd pick up a different language if a project needed it"
+      ]
+    },
+    {
+      "text": "Explain normalization in databases with an example.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Why normalise: less repeated data and fewer update, insert and delete problems",
+        "1NF, 2NF and 3NF in a line each, shown on a small table such as students and courses",
+        "When a team might denormalise on purpose, for example to speed up reports"
+      ]
+    },
+    {
+      "text": "Why Infosys?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Specific reasons: its training for new joiners, the range of clients, a service line you're interested in",
+        "A link between those reasons and your own skills or goals",
+        "Something recent you've read about its work, not just its size"
+      ]
+    },
+    {
+      "text": "Where do you see yourself in five years?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A realistic direction: deeper in a technology, or towards design or leading a small team",
+        "The skills you plan to build to get there",
+        "How growing inside the company fits that plan"
+      ]
+    },
+    {
+      "text": "Tell me about a time you took the lead in a group project without being asked.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was stuck or missing and why you stepped in",
+        "How you got others on board without a title, for example by doing the hard part first",
+        "The outcome for the project and what the team said"
+      ]
+    },
+    {
+      "text": "Tell me about a time you admitted a mistake even though it made you look bad.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The mistake, owned plainly in the first person",
+        "Who you told, how quickly, and what you offered to fix",
+        "What you do differently now"
+      ]
+    },
+    {
+      "text": "Tell me about a time you went beyond the brief because it helped the people who would use your work.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who the users were and what they actually needed",
+        "What extra you did and why it was worth the time",
+        "How you know it helped them"
+      ]
+    },
+    {
+      "text": "Tell me about a time work in a team wasn't shared fairly. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was uneven, described without blaming anyone",
+        "How you raised it or rebalanced the work",
+        "The result for the team and the deadline"
+      ]
+    },
+    {
+      "text": "What is the difference between a process and a thread?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A process has its own memory; threads inside a process share it",
+        "Why threads are cheaper to create but need care with shared data",
+        "An everyday example, such as a browser with tabs or a music player"
+      ]
+    },
+    {
+      "text": "What is the difference between WHERE and HAVING in SQL? Give an example.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "WHERE filters rows before grouping; HAVING filters groups after GROUP BY",
+        "An example such as departments with more than five employees",
+        "Why aggregate functions belong in HAVING, not WHERE"
+      ]
+    },
+    {
+      "text": "How would you design the database for a simple library management system?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Main tables: books, members, loans, maybe authors, with their keys",
+        "How a loan links a member and a book, and how returns and fines are recorded",
+        "One or two queries it must answer, such as overdue books"
+      ]
+    },
+    {
+      "text": "For experienced candidates: how did your team handle a change in client requirements halfway through a release?",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "What changed and why the client needed it",
+        "How the team assessed the impact on scope, effort and dates",
+        "What was agreed with the client and how it was delivered"
+      ]
+    },
+    {
+      "text": "Are you open to working on any technology the project needs, even if it isn't your first choice?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest yes, with a preference you can state politely",
+        "An example of learning something you didn't choose and doing it well",
+        "How you'd keep building your preferred skills alongside"
+      ]
+    }
+  ],
+  "tips": [
+    "Keep 'tell me about yourself' to a minute: education, project, skills, why this role.",
+    "Expect questions on whatever you wrote on your resume, so only list what you can explain.",
+    "Practise reading short pseudocode and predicting its output; the online test often includes it.",
+    "Go deep in one language rather than thin in several: the technical round often stays with the language you name.",
+    "Prepare a short story for a few of the C-LIFE values, such as leading by example or being transparent about a mistake.",
+    "If you've taken part in HackWithInfy, be ready to explain how you approached its problems."
+  ],
+  "sources": [],
+  "abroad": {
+    "rounds": [
+      "Online application and recruiter screen",
+      "Online assessment for some graduate roles",
+      "Technical interview on your skills and projects",
+      "Manager or HR interview"
+    ],
+    "tips": [
+      "Keep 'tell me about yourself' to a minute: education, project, skills, why this role.",
+      "Expect questions on whatever you wrote on your resume, so only list what you can explain.",
+      "Go deep in one language rather than thin in several: the technical round often stays with the language you name.",
+      "Prepare a short story for a few of the C-LIFE values, such as leading by example or being transparent about a mistake."
+    ]
+  },
+  "reviewed": "2026-10-18"
+}

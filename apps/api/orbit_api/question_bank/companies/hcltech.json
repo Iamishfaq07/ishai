@@ -1,0 +1,200 @@
+{
+  "slug": "hcltech",
+  "name": "HCLTech",
+  "aliases": ["hcl", "hcl technologies", "hcl tech"],
+  "group": "it-services",
+  "market": "india-first",
+  "summary": "HCLTech's careers site describes its process as an application, shortlisting, a business or technical interview whose questions may include out-of-the-box queries, puzzles and problems, and an HR interview. For engineering freshers in India, candidates commonly report an online assessment before the interviews, and technical rounds that stay close to programming basics, their projects and, for infrastructure roles, networking and operating-system fundamentals.",
+  "rounds": [
+    "Online application or campus registration, then shortlisting",
+    "Online assessment for many fresher drives: aptitude, reasoning, English and coding or technical questions",
+    "Technical interview on fundamentals and your projects; puzzles or problem-solving questions are possible",
+    "Managerial or client interview (for many experienced roles)",
+    "HR interview on goals, strengths and flexibility"
+  ],
+  "looks_for": [
+    "Integrity",
+    "Inclusion",
+    "Value Creation",
+    "People Centricity",
+    "Social Responsibility",
+    "Programming, database and networking basics, explained simply",
+    "Calm reasoning on puzzles and unfamiliar problems",
+    "Hands-on knowledge of everything on your resume",
+    "Willingness to learn new platforms, from cloud to infrastructure tools"
+  ],
+  "questions": [
+    {
+      "text": "Walk me through your background and why you applied to HCLTech.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your degree or experience and the skills you're strongest in",
+        "One project that shows how you solve problems, with your part in it",
+        "A specific reason for this role, in under two minutes"
+      ]
+    },
+    {
+      "text": "Tell me about a time you solved a problem nobody had shown you how to solve.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and why the usual answers didn't apply",
+        "How you broke it down, what you tried and what failed first",
+        "The solution and how you checked it worked"
+      ]
+    },
+    {
+      "text": "Tell me about a time you made sure everyone in a team was heard, including quieter members.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who was being left out and how you noticed",
+        "What you did, such as asking for their view directly or changing how work was shared",
+        "What their input changed for the team"
+      ]
+    },
+    {
+      "text": "Describe a time you chose to do the right thing when a shortcut was available.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The shortcut and why it was tempting",
+        "Why you didn't take it and what it cost you in time or effort",
+        "What happened as a result"
+      ]
+    },
+    {
+      "text": "Tell me about critical feedback you received on your work. What did you change?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The feedback in plain words and who gave it",
+        "Your first reaction, honestly, and what you did next",
+        "The change you made and how it shows in your work now"
+      ]
+    },
+    {
+      "text": "What is the difference between TCP and UDP, and where is each used?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "TCP: connection-based, ordered and reliable delivery with retries",
+        "UDP: no connection, faster, no delivery guarantee or ordering",
+        "Examples: web pages and email over TCP; video calls, gaming and DNS lookups over UDP"
+      ]
+    },
+    {
+      "text": "A server's disk is suddenly full and an application has stopped. How would you find what filled it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Restoring service safely first, without deleting anything you can't explain",
+        "Finding the largest folders and recently grown files, often logs",
+        "A lasting fix: log rotation, clean-up jobs and a disk-space alert"
+      ]
+    },
+    {
+      "text": "What is virtualisation, and how does it relate to cloud computing?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Running several virtual machines on one physical server through a hypervisor",
+        "How cloud providers build on it to rent computing on demand",
+        "How containers differ from virtual machines, briefly"
+      ]
+    },
+    {
+      "text": "Talk me through how you'd find duplicate records in a table using SQL.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Grouping by the columns that define a duplicate and keeping groups with COUNT above one",
+        "Using ROW_NUMBER to mark extra copies if you need to remove them",
+        "Checking what counts as a duplicate first, such as case or spaces in names"
+      ]
+    },
+    {
+      "text": "How would you estimate how many laptops an office of a large company in Bengaluru replaces each year?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A structure: number of staff, laptops per person, typical replacement cycle",
+        "Adjustments for new joiners, breakages and people leaving",
+        "A final estimate with a quick sanity check"
+      ]
+    },
+    {
+      "text": "A user says an application works on a colleague's laptop but not on theirs. How would you troubleshoot it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Comparing the two: versions, settings, permissions, network and the account used",
+        "Reproducing the error and reading its message or log",
+        "Fixing one difference at a time and confirming with the user"
+      ]
+    },
+    {
+      "text": "For experienced candidates: walk me through how an incident is handled on your project, from alert to closure.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "How it's detected and how priority is decided",
+        "Your role in fixing it and keeping the client informed",
+        "The review afterwards and one change it led to"
+      ]
+    },
+    {
+      "text": "Why HCLTech, and which part of its business interests you most?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Some knowledge of its businesses: IT and business services, engineering and R&D services, and software products",
+        "The part you'd like to work in and why",
+        "How it fits the skills you have or want to build"
+      ]
+    },
+    {
+      "text": "Are you comfortable with shift work or support roles at the start of your career?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with any real constraint stated clearly",
+        "What you'd learn from support work, such as how systems fail in practice",
+        "How you'd like your role to grow after that"
+      ]
+    },
+    {
+      "text": "What would you like to learn in your first year here?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two concrete skills or certifications linked to the role",
+        "How you plan to learn them, on the job and on your own",
+        "A question back about how the team supports new joiners"
+      ]
+    }
+  ],
+  "tips": [
+    "HCLTech's careers site says interview questions may include puzzles; think aloud, state your assumptions and check your answer.",
+    "Revise networking and operating-system basics as well as coding: many roles are in infrastructure and support.",
+    "Know every tool on your resume well enough to describe one task you did with it.",
+    "Have a clear, honest answer on shifts and the kind of work you're open to before the HR round.",
+    "Read about HCLTech's main businesses (IT and business services, engineering and R&D services, HCLSoftware) so 'why HCLTech' is specific."
+  ],
+  "sources": [
+    {
+      "title": "HCLTech careers and hiring process (careers.hcltech.com)",
+      "url": "https://careers.hcltech.com/"
+    }
+  ],
+  "abroad": {
+    "rounds": [
+      "Online application and recruiter screen",
+      "Technical interview with the team; puzzles or problem-solving questions are possible",
+      "Manager or client interview (for many roles)",
+      "HR interview"
+    ]
+  },
+  "reviewed": "2026-10-18"
+}

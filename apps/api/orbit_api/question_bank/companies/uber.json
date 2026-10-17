@@ -1,0 +1,170 @@
+{
+  "slug": "uber",
+  "name": "Uber",
+  "aliases": [
+    "uber technologies",
+    "uber eats"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Uber's careers site describes a talent-team conversation, a chat with the hiring manager, a technical interview for tech roles, a job-related exercise for some roles, and a team interview. Candidates commonly report design questions built around real-time, location-based systems, and Uber says how you approach a problem matters as much as the solution.",
+  "rounds": [
+    "Recruiter screen",
+    "Technical phone screen",
+    "Onsite loop: coding, system design and a collaboration / behavioral interview",
+    "Hiring manager interview"
+  ],
+  "looks_for": [
+    "Problem solving at scale",
+    "Ownership",
+    "Collaboration",
+    "Customer focus",
+    "Clear communication of trade-offs"
+  ],
+  "questions": [
+    {
+      "text": "How would you design the matching of riders to drivers in a busy city?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "What 'best match' means: pickup time, fairness to drivers, overall wait times",
+        "Finding nearby drivers fast with a geographic index, updated as drivers move",
+        "Handling peaks, drivers who decline, and two riders matched to one driver"
+      ]
+    },
+    {
+      "text": "Tell me about a time you owned a problem outside your role.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and why nobody else was fixing it",
+        "What you did, including who you brought in",
+        "The result and whether it stayed fixed"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to make a trade-off between speed and quality.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The deadline and the quality risk",
+        "How you chose, and what you did to limit the downside",
+        "What happened, and what you'd choose next time"
+      ]
+    },
+    {
+      "text": "Tell me about a time you used data to change someone's mind.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Their view and why it was reasonable",
+        "The data you gathered and how you checked it",
+        "How you presented it and what changed"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with operations, support or another non-engineering team to fix a customer problem.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The customer problem and what each team could see of it",
+        "How you worked together and kept everyone informed",
+        "The fix and how you knew customers were better off"
+      ]
+    },
+    {
+      "text": "Tell me about a launch that didn't go as planned. What did you change afterwards?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What went wrong and how quickly it was caught",
+        "Your part in the response",
+        "The process change that followed"
+      ]
+    },
+    {
+      "text": "How would you estimate a trip's arrival time, and how would you make the estimate better over time?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Routing on the road map with live and historical traffic",
+        "Learning from past trips: time of day, weather, pickup delays",
+        "Measuring error against actual arrival times and improving the worst cases"
+      ]
+    },
+    {
+      "text": "How would you design the live map that shows a rider where their driver is?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "How often the driver's app sends location, balancing accuracy with battery and data",
+        "Pushing updates to the rider over a persistent connection",
+        "Smoothing GPS jumps and handling dropped connections"
+      ]
+    },
+    {
+      "text": "How would you design a food-delivery order flow so the restaurant, courier and customer all see the same status?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "An order state machine with clear allowed transitions",
+        "Events published to each party, with retries and duplicate handling",
+        "What happens when a step fails: a restaurant doesn't confirm, a courier cancels"
+      ]
+    },
+    {
+      "text": "How would you store drivers' locations so you can quickly find the nearest available ones?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A spatial index, such as geohashes, a quadtree or hexagonal cells",
+        "Frequent updates kept in memory, partitioned by region",
+        "Filtering by availability and vehicle type, and expanding the search when none are close"
+      ]
+    },
+    {
+      "text": "Rider cancellations rose in one city last week. How would you find out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Checking the data first: a tracking change, a holiday, an app release",
+        "Breaking it down by time, area, wait time, rider versus driver cancellations",
+        "The most likely cause and how you'd confirm it"
+      ]
+    },
+    {
+      "text": "Why Uber, and which part of the business interests you most?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific area, such as mobility, delivery or freight, and why",
+        "A link to your skills or experience",
+        "The problem there you'd most like to work on"
+      ]
+    },
+    {
+      "text": "Which Uber product would you improve for riders, drivers or merchants, and how would you measure the result?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "One user group and a specific pain point",
+        "The change and the trade-off it brings for the other sides of the marketplace",
+        "A success metric and a guardrail"
+      ]
+    }
+  ],
+  "tips": [
+    "Real-time, location-based systems are favourite design topics.",
+    "Uber's hiring page suggests reading its newsroom for recent launches and priorities; mention one that connects to the team.",
+    "In design rounds, talk about failure: lost connections, GPS errors, retries and duplicate requests.",
+    "Prepare stories with numbers for the hiring manager chat, which goes deeper into your skills and decisions.",
+    "For some roles, expect a job-related exercise; if you present it in the team interview, explain your choices, not just the results."
+  ],
+  "sources": [
+    {
+      "title": "Uber Careers: how we hire",
+      "url": "https://jobs.uber.com/en/what-moves-us/how-we-hire/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

@@ -1,5 +1,43 @@
 # Implementation log
 
+## Company and role interview guides, readable without JavaScript (2026-10-18)
+
+- **A question bank of 100 company guides and 32 role guides** (was 25 guides with about four questions each):
+  1,934 practice questions (1,389 for companies, 545 for roles), each with what a good answer covers. Companies:
+  India's IT-services firms (TCS, Infosys, Wipro, HCLTech, Tech Mahindra, LTM (formerly LTIMindtree), Cognizant,
+  Capgemini, Accenture…), Indian product companies (Flipkart, Swiggy, Zomato, Razorpay, Paytm, PhonePe, CRED, Meesho,
+  Zoho, Freshworks…), global tech, consulting and the Big Four, banks and payments, and industry and public-sector
+  employers in India, Europe, the UK and the US; 88 of them cite the company's own pages they were checked against
+  (170 links). Roles: campus placement, MBA placement, software, data, product, design, business, core engineering,
+  teaching and nursing. Each guide: a hedged summary, the rounds candidates commonly report (an "Outside India"
+  version where India's are campus-specific), what interviewers listen for (the company's published values where it
+  has them), questions by section (behavioral, role and technical, fit), tips, the company's own pages it was checked
+  against, and the date.
+- **Written by Orbit and checked by the build** (DECISIONS D63): one JSON file per guide in
+  `apps/api/orbit_api/question_bank/`, validated against `schema.py` when the API starts, by the tests and by
+  `uv run python -m orbit_api.question_bank`. It refuses "real", "actual", "leaked" or "asked at" questions, question
+  sites by name, pay figures, head counts and promises, and a process stated as certain. The guides say they're
+  practice questions in the style of a company's interviews and that Orbit isn't affiliated with it.
+- **Public pages**: `/companies` and `/roles` (grouped, searchable) and a page per guide, with "Practise a mock
+  interview in its style" (Practice, with the company or the role and its round filled in) and "Warm up free on these
+  questions" (`/warmup?track=company:<slug>`: the free warm-up on that guide's questions, no account). Linked from
+  the public footer, the phone menu, Practice and the company card there ("The full guide").
+- **The mock interviewer and the copilot use them**: the 25 old guides' text is unchanged and every new company is
+  matched the same way (the Mission Room's Company tab and Practice's "What to expect" too); a typed role ("Senior Data
+  Analyst", "SDE-2") now finds its role guide, so a mock asks what that job's interviews test and the live copilot
+  knows what its interviewers check. `/v1/interview-styles` adds each company's `market`, so Practice suggests
+  India-only companies only in India.
+- **Readable by crawlers and assistants that don't run JavaScript**: the build renders the public pages to HTML with
+  the app's own components (`src/prerender`: one registry of public routes with title, description, canonical
+  address, preview image, structured data and date; the sitemap comes from it). The guide pages are files the assets
+  serve; the front page, Resume AI, Jobs AI, the warm-up, Contact and How Orbit works are served built by the Worker
+  (`worker/prerendered.js`), except a signed-in visitor's own home. The app takes over when it loads, in the same frame
+  (`lib/prerender.tsx`). Structured data is breadcrumbs, the page and who publishes it: no ratings, reviews or FAQ
+  markup. The sitemap has 144 addresses (was 10); robots.txt allows /companies and /roles.
+- **The warm-up** is titled as a free alternative to Google's Interview Warmup (saying Orbit isn't affiliated with
+  Google) and links to the guides.
+- Sign-in from a link with a query (`/mock?company=Amazon`) now comes back to it with the query.
+
 ## Design round 3: one workbench, in both themes and on phones (2026-10-18)
 
 - **Dark mode is the light theme's twin** (DECISIONS D58): the dark canvas finally applies (the body's own

@@ -1,0 +1,178 @@
+{
+  "slug": "de-shaw",
+  "name": "D. E. Shaw",
+  "aliases": ["de shaw", "d e shaw", "deshaw", "d. e. shaw india"],
+  "group": "finance",
+  "market": "global",
+  "summary": "D. E. Shaw's own interviewing guide describes a mix of behavioural questions, situational questions about scenarios you might face at work, and case studies, with questions from mathematics and computer science for quant and software roles. The firm says interviews for trading and fundamental analyst roles don't assume prior finance knowledge, and that compelling candidates tend to uphold high standards, analyse rigorously and communicate clearly and concisely.",
+  "rounds": [
+    "Application review, with a code or writing sample, case study or online test for some roles",
+    "Phone interview",
+    "Several virtual interviews: technical, case or situational, depending on the role",
+    "Reference conversations, then an offer"
+  ],
+  "looks_for": [
+    "Uphold high standards",
+    "Analyze rigorously",
+    "Communicate clearly and concisely",
+    "Thrive on collaboration",
+    "Demonstrate intellectual curiosity",
+    "Stating assumptions and checking your reasoning as you go",
+    "Sound fundamentals in mathematics or computer science for quant and software roles"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you held your work to a higher standard than anyone required.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the expected standard was and why you went further",
+        "The extra checks or improvements you made",
+        "What it prevented or made possible"
+      ]
+    },
+    {
+      "text": "Tell me about something you learnt purely out of curiosity, and how far you took it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What sparked the interest",
+        "How you went about learning it, with depth and specifics",
+        "What you built, wrote or understood as a result"
+      ]
+    },
+    {
+      "text": "Describe a time you explained a complex idea to someone outside your field.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who they were and what they needed to understand",
+        "How you simplified it without making it wrong",
+        "How you knew they understood, and what they did with it"
+      ]
+    },
+    {
+      "text": "Tell me about a time you got a better result by working closely with others than you would have alone.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The task and who was involved",
+        "What each person brought, including you",
+        "How the combined result was better, specifically"
+      ]
+    },
+    {
+      "text": "Explain expected value with an example, and how you'd use it to decide whether to take a bet.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The probability-weighted average of outcomes, with a simple worked example",
+        "Taking a bet when the expected value is positive, after costs",
+        "Why risk and the size of possible losses also matter, not only the average"
+      ]
+    },
+    {
+      "text": "Explain the difference between correlation and causation, with an example where confusing them would cost money.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Two things moving together doesn't mean one causes the other",
+        "A hidden third factor, or chance in a small sample, as common causes",
+        "A trading or business example, and how you'd test for a real effect"
+      ]
+    },
+    {
+      "text": "Explain how a hash table works and what happens to its performance as it fills up.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Hashing keys to slots for near constant-time lookups",
+        "Collisions and how they're handled, by chaining or probing",
+        "Why performance drops as it fills, and resizing to keep it fast"
+      ]
+    },
+    {
+      "text": "How would you design a system that collects market data from many sources and serves it to research teams with full history?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying data volume, sources, how fresh data must be and how it will be queried",
+        "Ingesting, checking and storing raw data unchanged, then cleaned versions",
+        "Handling corrections, gaps and time zones, and making past data easy to reproduce"
+      ]
+    },
+    {
+      "text": "A program that ran fine for months suddenly runs out of memory overnight. How would you track down the cause?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "What changed: code, input data size, configuration or a dependency",
+        "Measuring memory over time and taking snapshots to see what's growing",
+        "The fix, a test that would catch it, and an alert for next time"
+      ]
+    },
+    {
+      "text": "A subscription company's revenue is growing, but its number of customers is flat. What could explain it, and what would you check?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Higher prices, customers moving to bigger plans, or new add-ons",
+        "Checking revenue per customer and churn by group",
+        "Whether the growth will last, and the risk if new customers aren't coming in"
+      ]
+    },
+    {
+      "text": "Estimate how many food delivery orders are placed in Bengaluru on a weekday evening.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Starting from households or working adults, and the share who order online",
+        "How often they order and how many of those orders fall in the evening",
+        "A final figure, a sense check, and the assumption you're least sure of"
+      ]
+    },
+    {
+      "text": "Why D. E. Shaw, and what draws you to this kind of firm?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What you know about how the firm works, from its own materials or people",
+        "Why rigorous, analytical work suits you, with an example",
+        "What you hope to learn there"
+      ]
+    },
+    {
+      "text": "Which role at the firm interests you most, and what do you want to learn in it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific role and what you understand it to involve",
+        "The skills you'd bring and the ones you want to build",
+        "How it fits your longer-term goals"
+      ]
+    }
+  ],
+  "tips": [
+    "State your assumptions out loud and restate the problem before solving it; D. E. Shaw's interviewing guide suggests both.",
+    "If a question is unclear, ask; the firm's guide encourages you to confirm you've understood it.",
+    "Practise telling your story out loud, including why you made each choice in your studies or career.",
+    "For analyst roles, the firm says you don't need prior finance knowledge; show careful reasoning rather than jargon.",
+    "For software roles, revise data structures, algorithms and system basics, and talk through trade-offs as you code.",
+    "If you apply for more than one role, expect to speak with several groups; keep your reasons for each one clear."
+  ],
+  "sources": [
+    {
+      "title": "Interviewing at the D. E. Shaw group (deshaw.com)",
+      "url": "https://www.deshaw.com/careers/interviewing"
+    },
+    {
+      "title": "Preparing for an interview: D. E. Shaw interviewing guide (deshaw.com)",
+      "url": "https://www.deshaw.com/careers/interviewing-guide"
+    },
+    {
+      "title": "Interviewing at D. E. Shaw India (deshawindia.com)",
+      "url": "https://www.deshawindia.com/careers/interviewing"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

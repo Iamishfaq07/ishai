@@ -1,0 +1,207 @@
+{
+  "slug": "mobile-developer",
+  "name": "Mobile developer",
+  "aliases": ["android developer", "ios developer", "flutter developer", "react native developer", "app developer", "mobile app developer", "android engineer", "ios engineer", "mobile engineer", "kotlin developer", "swift developer"],
+  "group": "engineering",
+  "summary": "Mobile developer interviews usually go deep on one platform (Android with Kotlin, iOS with Swift, or a cross-platform framework such as Flutter or React Native) and on how apps behave on real devices: lifecycles, memory, offline use and slow networks. Candidates commonly report a coding round or a take-home building a small app, and for experienced roles, questions on app architecture and releasing through the app stores.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Coding test or take-home: often a small app that loads data from an API and shows it",
+    "Platform interview: lifecycle, UI, threading, storage and the platform's own tools",
+    "Coding or problem-solving interview, sometimes general rather than mobile-specific",
+    "App architecture or design discussion for experienced roles",
+    "Hiring manager or behavioural round"
+  ],
+  "looks_for": [
+    "Depth in one platform's lifecycle and UI toolkit",
+    "Keeping the main thread free so the app stays responsive",
+    "Handling offline use, poor networks and the app being restarted",
+    "A clear architecture that separates UI, state and data",
+    "Care with battery, memory and app size",
+    "Experience shipping and supporting an app in the stores"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a crash that reached users. How did you find the cause and fix it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you learned of it: crash reports, store reviews, support tickets",
+        "How you reproduced it: device, OS version, the exact steps",
+        "The fix, how you got it out quickly, and how you prevented similar crashes"
+      ]
+    },
+    {
+      "text": "Describe a time you had to support older devices or OS versions while adding a new feature.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The constraint and how many users it affected",
+        "How you handled it: fallbacks, version checks, raising the minimum version",
+        "The trade-off you agreed with the team"
+      ]
+    },
+    {
+      "text": "Tell me about a release that didn't go to plan, such as a store rejection or a broken update.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What went wrong and how you found out",
+        "What you did to recover, and how quickly",
+        "What you changed in your release process: checks, staged rollouts, feature flags"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with a designer to make an app feel right on its platform.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Where the design clashed with or followed the platform's conventions",
+        "How you agreed the changes",
+        "How users responded"
+      ]
+    },
+    {
+      "text": "Explain the lifecycle of an Android Activity or an iOS view controller, and a bug that comes from getting it wrong.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The main states, and when the system creates, pauses or destroys a screen",
+        "Saving and restoring state, such as on an Android rotation or when the system ends the app in the background",
+        "A bug example: work continuing after the screen has gone, or lost user input"
+      ]
+    },
+    {
+      "text": "Why must network and disk work stay off the main thread, and how do you do that on your platform?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The main thread draws the UI; blocking it causes freezes and 'not responding' errors",
+        "Coroutines, Swift concurrency, Dart futures or background queues",
+        "Returning results to the main thread safely, and cancelling work when a screen closes"
+      ]
+    },
+    {
+      "text": "How would you make an app work well offline and sync when the connection returns?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A local database as the source the UI reads from",
+        "Queueing changes made offline and sending them later",
+        "Handling conflicts when the same data changed on the server meanwhile"
+      ]
+    },
+    {
+      "text": "Your app's memory use keeps climbing as users move between screens. How would you find out why?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Using the platform's memory profiler to see which objects stay alive",
+        "Common causes: listeners never removed, references to closed screens, oversized images",
+        "Fixing it and checking the memory graph again"
+      ]
+    },
+    {
+      "text": "Compare architecture patterns such as MVVM and MVI. Which do you use, and why?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "What each separates: UI, state, logic and data",
+        "How the pattern makes testing and changes easier",
+        "An example from your own app, and the pattern's downsides"
+      ]
+    },
+    {
+      "text": "How would you show a long, scrolling list of images smoothly?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Lists that only build visible rows, such as RecyclerView, LazyColumn, UICollectionView or Flutter's ListView.builder",
+        "Loading and caching images at the right size, off the main thread",
+        "Placeholders, and cancelling loads for rows that scroll away"
+      ]
+    },
+    {
+      "text": "Native or cross-platform: how would you choose for a new app?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Team skills, time to market and the value of one codebase",
+        "Performance, access to platform features, and how native it must feel",
+        "Your own experience of the trade-offs"
+      ]
+    },
+    {
+      "text": "How would you store a user's login token securely on the device?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The Keychain on iOS and Keystore-backed storage on Android, not plain preferences",
+        "Short-lived tokens with refresh, cleared on logout",
+        "Never logging tokens or shipping secrets inside the app"
+      ]
+    },
+    {
+      "text": "Talk me through how you'd set up push notifications that open the right screen in the app.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Registering the device token with your server and keeping it current",
+        "Deep links, and handling the app being closed, in the background or open",
+        "Asking for permission at a sensible moment and not over-sending"
+      ]
+    },
+    {
+      "text": "Users say the app takes too long to open. How would you investigate and speed up start-up?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Measuring cold and warm start times on a mid-range device",
+        "Delaying work that the first screen doesn't need",
+        "A lighter first screen, fewer libraries set up at launch, and measuring again"
+      ]
+    },
+    {
+      "text": "How do you test a mobile app, and what do you test on physical devices rather than emulators?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Unit tests for logic and UI tests for the key flows",
+        "Physical devices for performance, camera, sensors, push and different screen sizes",
+        "Beta testing and staged rollouts before a full release"
+      ]
+    },
+    {
+      "text": "Why mobile development? Which app do you admire, and why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you to mobile: building for the device in people's hands, the craft, the platform",
+        "A specific app and one detail it gets right",
+        "Something you'd like to build"
+      ]
+    },
+    {
+      "text": "What would you improve first in our app, and how would you know it helped?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A specific issue you noticed while using the app",
+        "The change and what it would cost to build",
+        "A metric such as ratings, crash-free sessions or retention"
+      ]
+    }
+  ],
+  "tips": [
+    "Install and use the company's app before the interview; note one thing you like and one you'd improve.",
+    "Pick one platform and go deep; interviewers usually value real depth in Kotlin or Swift over a little of everything.",
+    "Keep an app you can demo on your phone or in the store, and know its architecture well.",
+    "When you describe any feature, mention what happens offline, on rotation or when the app is killed; those cases set strong answers apart.",
+    "Know your platform's profiling tools by name and what you've used them to find."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "engineer"
+  },
+  "reviewed": "2026-10-18"
+}

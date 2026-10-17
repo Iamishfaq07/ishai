@@ -1,0 +1,172 @@
+{
+  "slug": "citi",
+  "name": "Citi",
+  "aliases": ["citibank", "citigroup"],
+  "group": "finance",
+  "market": "global",
+  "summary": "Citi's student hiring, as its careers site describes it, usually runs from a skills evaluation (a coding assessment for technology programmes) to a one-on-one first interview on your background and goals, then a final stage of several interviews, an assessment or a case study. Interviews often reflect Citi's Leadership Principles: we take ownership, we deliver with pride and we succeed together.",
+  "rounds": [
+    "Online application",
+    "Skills evaluation: a coding assessment for technology programmes, or a skills survey for some others",
+    "First interview: one-on-one, on your background and how your goals fit Citi",
+    "Final stage: several interviews, an assessment or a case study, varying by programme and location"
+  ],
+  "looks_for": [
+    "We take ownership",
+    "We deliver with pride",
+    "We succeed together",
+    "Care with risk, controls and accuracy",
+    "Understanding clients' needs, including clients that work across countries",
+    "Clear problem solving in technical or case questions"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself and why you applied to this programme.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your background in a few lines, focused on what's relevant",
+        "One achievement that shows the skills the programme needs",
+        "How the programme fits what you want to do next"
+      ]
+    },
+    {
+      "text": "Tell me about a time you took ownership of a problem nobody else had picked up.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the problem was and why it had been left",
+        "What you did, step by step, and who you brought in",
+        "The result and how you made sure it stayed fixed"
+      ]
+    },
+    {
+      "text": "Tell me about a piece of work you were proud of because of how carefully it was done.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the work was and why care mattered",
+        "The checks and standards you set yourself",
+        "How it was received and what it led to"
+      ]
+    },
+    {
+      "text": "Describe a time you learnt something important from someone with a very different view.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How their view differed from yours",
+        "What you did to understand it rather than argue",
+        "How it changed the result or your thinking"
+      ]
+    },
+    {
+      "text": "Tell me about a time you spotted a risk early. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The risk and how you noticed it",
+        "Who you told and what you proposed",
+        "What was avoided, and what you learnt"
+      ]
+    },
+    {
+      "text": "What does a bank's treasury and trade services business do for a multinational company?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Managing cash across countries: collecting, paying and moving money",
+        "Trade finance, such as letters of credit, that helps companies buy and sell abroad",
+        "Why companies value it: visibility of cash, lower risk, less manual work"
+      ]
+    },
+    {
+      "text": "Explain foreign exchange risk to a company that sells abroad, and one way it can reduce it.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Revenue in another currency can be worth less when converted back",
+        "Hedging with forward contracts or options, or matching costs to the same currency",
+        "The trade-off: certainty against cost and giving up gains"
+      ]
+    },
+    {
+      "text": "Why do banks put so many controls on payments, and what could go wrong without them?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Controls such as approvals, limits, sanctions screening and reconciliations",
+        "Risks without them: fraud, errors, money laundering, regulatory penalties",
+        "Balancing strong controls with fast service for clients"
+      ]
+    },
+    {
+      "text": "How would you design a service that sends payments across countries and makes sure none is sent twice?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A unique ID for each payment so a retry can't create a second one",
+        "Recording each payment's state and confirming with the receiving side",
+        "Handling failures, timeouts and audits, and reconciling at the end of each day"
+      ]
+    },
+    {
+      "text": "Explain the difference between a REST API and a message queue, and when you'd use each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "REST: a caller asks and waits for an answer; a queue: messages are left for others to process",
+        "REST for lookups and immediate actions; queues for spikes, retries and decoupled systems",
+        "An example from a project you've worked on"
+      ]
+    },
+    {
+      "text": "A key report for regulators is late every month. How would you find out why and fix it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Mapping the steps, data sources and owners behind the report",
+        "Finding where time goes: late data, manual fixes, approvals",
+        "A fix with clear owners, and a check that the report is right as well as on time"
+      ]
+    },
+    {
+      "text": "Why Citi, and why this programme?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What the programme does and the clients it serves",
+        "Why that work fits your skills and interests",
+        "Something specific about Citi you learnt from its people or events"
+      ]
+    },
+    {
+      "text": "Where do you want to be in five years, and how would this role help you get there?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A realistic goal linked to the programme",
+        "The skills and experience you expect to build",
+        "Commitment to doing this role well first"
+      ]
+    }
+  ],
+  "tips": [
+    "Citi says its first interview goes into your background and how your aspirations align with Citi's; have a short, clear story linking the two.",
+    "Prepare an example for each Leadership Principle: taking ownership, delivering with pride and succeeding together.",
+    "Citi serves many clients that work across countries; be ready to discuss cross-border payments, trade and currency basics.",
+    "For technology programmes, practise coding problems under time limits and explain your code's complexity and how you'd test it.",
+    "If the final stage includes a case study, set out your structure, show the numbers you used, and end with a recommendation."
+  ],
+  "sources": [
+    {
+      "title": "About Citi: mission and Leadership Principles (citigroup.com)",
+      "url": "https://www.citigroup.com/global/about-us"
+    },
+    {
+      "title": "Citi early career programmes (jobs.citi.com)",
+      "url": "https://jobs.citi.com/early-career-programs"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

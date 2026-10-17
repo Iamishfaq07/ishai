@@ -1,0 +1,194 @@
+{
+  "slug": "hdfc-bank",
+  "name": "HDFC Bank",
+  "aliases": ["hdfc", "hdfc bank ltd"],
+  "group": "finance",
+  "market": "india",
+  "summary": "HDFC Bank hires for branch banking, sales and relationship-manager roles as well as technology, operations, credit and analytics. Candidates commonly report an online aptitude test or a screening interview, then one or two interviews on banking awareness, communication and sales ability, with customers and targets central for front-line roles. The bank publishes five core values: Customer Focus, Operational Excellence, Product Leadership, People and Sustainability.",
+  "rounds": [
+    "Application through the careers site, a campus drive or a recruitment programme for some roles",
+    "Online aptitude test for many entry-level and programme roles, often covering reasoning, numbers, English and banking awareness",
+    "Interview with the hiring manager or a panel on your background, banking awareness and communication",
+    "For sales and relationship roles, often a role play or questions on handling customers and targets",
+    "HR discussion on fit, location and joining",
+    "Document and background checks before joining"
+  ],
+  "looks_for": [
+    "Customer Focus",
+    "Operational Excellence",
+    "Product Leadership",
+    "People",
+    "Sustainability",
+    "Comfort with sales targets and building customer relationships",
+    "Basic banking awareness: accounts, loans, interest rates and the RBI's role",
+    "Accuracy, compliance and honesty when handling customers' money",
+    "Willingness to work in different branches or cities"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you convinced someone to try something new: a product, an idea or a change.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who they were and why they were hesitant",
+        "How you listened first, then made the case in their terms",
+        "The result, and what you learned about persuading people"
+      ]
+    },
+    {
+      "text": "Describe a time you handled an upset customer or member of the public.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What upset them, in their words",
+        "How you stayed calm, and what you did to solve the problem",
+        "How it ended and whether they came back"
+      ]
+    },
+    {
+      "text": "Tell me about a time you were at risk of missing a target or deadline. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The target and when you saw you were behind",
+        "What you changed: effort, approach or asking for help",
+        "The outcome, and how you plan differently now"
+      ]
+    },
+    {
+      "text": "Tell me about a time you caught an error in a document or calculation before it caused a problem.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you noticed it",
+        "How you checked it and who you told",
+        "What could have gone wrong, and the habit you keep because of it"
+      ]
+    },
+    {
+      "text": "A customer has a large balance in a savings account and no plan for it. How would you approach the conversation?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Asking about goals, time horizon, risk appetite and existing products",
+        "Options that suit them, such as fixed or recurring deposits, mutual funds or insurance, with risks explained",
+        "Not pushing an unsuitable product, and agreeing a follow-up"
+      ]
+    },
+    {
+      "text": "What is the repo rate, and how does a change in it affect a bank's loans and deposits?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The rate at which the RBI lends to banks",
+        "How changes pass through to loan rates and EMIs, especially loans linked to an external benchmark",
+        "Effects on deposit rates, demand for loans and the bank's margin"
+      ]
+    },
+    {
+      "text": "What is KYC, and why must a bank complete it before opening an account?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Verifying identity and address with valid documents, under RBI rules",
+        "Preventing fraud, money laundering and accounts in false names",
+        "Periodic updates and stricter checks for higher-risk customers"
+      ]
+    },
+    {
+      "text": "How would you offer a credit card to a customer who says they don't want any debt?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Listening and respecting the concern",
+        "Explaining responsible use, such as paying the full bill on time to avoid interest",
+        "Accepting a no gracefully, and noting their preference"
+      ]
+    },
+    {
+      "text": "What is a non-performing asset, and why do banks watch them closely?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A loan where interest or principal has been overdue beyond the RBI's limit, usually 90 days",
+        "Why it hurts: provisions reduce profit and tie up capital",
+        "How banks manage it: careful lending, early warning signs and collections"
+      ]
+    },
+    {
+      "text": "How many home-loan customers could one branch in a mid-sized city like Nagpur serve in a year? Talk me through an estimate.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Households in the branch's area and the share buying a home in a year",
+        "The share needing a loan and the branch's likely share of them",
+        "A check against how many applications staff can actually process"
+      ]
+    },
+    {
+      "text": "For a technology role: how would you keep a mobile banking app working during a festive-season traffic spike?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Forecasting load and load-testing before the season",
+        "Scaling the app layer, caching and queues to protect the core banking system",
+        "Monitoring, limiting less important features under strain, and telling customers if there's a problem"
+      ]
+    },
+    {
+      "text": "Explain how a UPI payment moves from one bank account to another.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The payer's app, the NPCI switch, the payer's bank and the payee's bank",
+        "The UPI ID and PIN, and the debit and credit steps",
+        "What happens when a payment is pending or fails, and how reversals work"
+      ]
+    },
+    {
+      "text": "Introduce yourself and tell me why you'd suit a customer-facing role in a bank.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Education and any work or internship in a few sentences",
+        "One example of working well with people",
+        "Why banking, and this role, is the next step"
+      ]
+    },
+    {
+      "text": "Why HDFC Bank, and why banking as a career?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about the bank: its products, reach or a value",
+        "What draws you to banking, shown by something you've done",
+        "Where you'd like to grow within the bank"
+      ]
+    },
+    {
+      "text": "Are you comfortable working to a sales target and being posted to any branch or city?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with any real constraint stated clearly",
+        "Evidence that you can handle targets, from study, work or a project",
+        "How you'd settle into a new place quickly"
+      ]
+    }
+  ],
+  "tips": [
+    "Learn the five core values and have one example ready for Customer Focus and one for Operational Excellence.",
+    "Revise banking basics: repo rate, CRR, KYC, NPAs, types of deposits and loans, and UPI.",
+    "For sales roles, be honest about targets: explain how you'd build a customer base rather than promising you'd never miss one.",
+    "Read the bank's recent press releases and RBI announcements so you can talk about current banking news.",
+    "Apply only through official channels; a request to pay money for an interview or offer letter is a warning sign of fraud.",
+    "Prepare a short, calm explanation for any gap year or change of stream."
+  ],
+  "sources": [
+    {
+      "title": "HDFC Bank: who we are (hdfc.bank.in)",
+      "url": "https://www.hdfc.bank.in/about-us/who-we-are"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

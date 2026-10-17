@@ -1,0 +1,184 @@
+{
+  "slug": "ola",
+  "name": "Ola",
+  "aliases": ["ani technologies", "ola cabs", "olacabs"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Candidates commonly report that Ola's engineering interviews include a coding test, problem-solving rounds, a design round and a hiring manager conversation, with design problems often drawn from ride-hailing: matching riders and drivers, pricing, arrival times and maps. Ola's careers page describes traits such as 'Impact oriented', 'Ambitious Goals' and 'Obsessively hyperlocal'. Ola Electric is a separate company that hires for its own teams, such as R&D, design and manufacturing; this guide focuses on mobility.",
+  "rounds": [
+    "Online coding test (for many engineering roles)",
+    "Problem-solving / data structures interviews",
+    "Low-level or system design round, often on a mobility problem",
+    "Hiring manager round",
+    "HR round"
+  ],
+  "looks_for": [
+    "Impact oriented",
+    "Passionate",
+    "Ambitious Goals",
+    "Obsessively hyperlocal",
+    "Infectious Energy",
+    "Enterprising",
+    "Designing real-time systems that work across a whole city",
+    "Caring about driver partners as well as riders"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a project where you set an ambitious goal. How close did you get?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and why it was ambitious",
+        "What you did differently to reach for it",
+        "How close you got, and what you learned from the gap"
+      ]
+    },
+    {
+      "text": "Describe a time you solved a problem that was specific to one city, area or group of users.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What made that place or group different",
+        "How you learned about it: data, visits, talking to users",
+        "The local fix and its result"
+      ]
+    },
+    {
+      "text": "Tell me about a time you tried something new without a clear playbook to follow.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why there was no playbook",
+        "How you set up a small experiment and judged it",
+        "What you kept, dropped or scaled"
+      ]
+    },
+    {
+      "text": "Tell me about a launch that didn't go as planned. What did you do in the first few hours?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What went wrong and how you found out",
+        "Your first steps: limiting the damage, telling people",
+        "What you changed in how you launch since"
+      ]
+    },
+    {
+      "text": "How would you design the system that matches a ride request to a nearby driver?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Live driver locations in a geo index, such as geohash cells",
+        "Choosing a driver by pickup time, likelihood of accepting and fairness",
+        "Never offering one driver two rides at once, plus timeouts and re-matching"
+      ]
+    },
+    {
+      "text": "How would you design pricing for rides when demand rises sharply, such as in heavy rain?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Measuring demand and supply per small area, minute by minute",
+        "Price rules with caps, shown clearly to riders before they book",
+        "The effect on drivers coming online, and how you'd test changes safely"
+      ]
+    },
+    {
+      "text": "How would you store and query driver locations that update every few seconds?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "An in-memory store, with old locations expiring",
+        "Handling heavy write traffic: splitting by city or region",
+        "Fast nearby searches, and what to do with stale points"
+      ]
+    },
+    {
+      "text": "How would you calculate the fare for an auto ride when GPS drops out halfway through the trip?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Detecting gaps, and snapping points to the road",
+        "Estimating the missing stretch from the likely route",
+        "Being fair to both rider and driver, and handling disputes"
+      ]
+    },
+    {
+      "text": "Riders in one city say drivers cancel after accepting. How would you investigate and reduce it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Splitting cancellations by area, time, pickup distance and trip type",
+        "The driver's side: pickup too far, destination, payment method, earnings",
+        "A fix tested in part of the city, with cancellation rate and wait time as metrics"
+      ]
+    },
+    {
+      "text": "How would you make a ride app work reliably when the network drops in and out during a trip?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Keeping trip state on the phone and syncing when back online",
+        "Safe retries so actions such as ending a trip happen once",
+        "Battery and data use, and resolving conflicts between phone and server"
+      ]
+    },
+    {
+      "text": "How would you increase the number of drivers available in one part of a city during the morning peak?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Finding the gap: where, when and how big",
+        "Options: targeted incentives, earnings-per-hour support, showing drivers where demand is",
+        "Cost per extra ride and whether drivers keep coming after incentives end"
+      ]
+    },
+    {
+      "text": "How would you design over-the-air software updates for connected vehicles so a bad update can't leave riders stranded?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signed updates and a staged rollout to a small group first",
+        "Installing only when safe, such as parked with enough battery",
+        "Keeping the old version to fall back to, and monitoring after each stage"
+      ]
+    },
+    {
+      "text": "Why Ola? Which part of its business interests you most?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific area, such as rides, maps or payments, and why",
+        "What you know about its riders and drivers",
+        "How your skills fit"
+      ]
+    },
+    {
+      "text": "Why do you want to build products for Indian cities, and which local problem would you most like to solve?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific problem you've seen yourself",
+        "Why it's hard and who it affects",
+        "How you'd start working on it"
+      ]
+    }
+  ],
+  "tips": [
+    "Expect design topics from ride-hailing (matching, pricing, arrival times, maps); practise one end to end with rough numbers.",
+    "Bring the driver partner into your answers: earnings, cancellations and how the app treats them decide how many drivers are online.",
+    "Ola's careers page stresses being hyperlocal; examples about specific cities, areas or traffic patterns make answers concrete.",
+    "Applying to Ola Electric? Check its own careers page for the team you want; its teams (R&D, design, manufacturing, supply chain) need domain preparation."
+  ],
+  "sources": [
+    {
+      "title": "Ola Careers",
+      "url": "https://www.olacabs.com/careers"
+    },
+    {
+      "title": "Ola Electric Careers",
+      "url": "https://www.olaelectric.com/careers"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

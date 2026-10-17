@@ -1,0 +1,207 @@
+{
+  "slug": "cybersecurity-analyst",
+  "name": "Cybersecurity analyst",
+  "aliases": ["security analyst", "cyber security analyst", "soc analyst", "information security analyst", "infosec analyst", "security operations analyst", "penetration tester", "ethical hacker", "vapt analyst"],
+  "group": "engineering",
+  "summary": "Cybersecurity analyst interviews usually test networking and operating-system basics, common attacks, and how you'd respond to an alert or incident. For SOC roles, candidates commonly report scenario questions on triaging alerts and reading logs; for penetration testing roles, expect more on web vulnerabilities and testing methods. Certifications and home labs often come up, and interviewers tend to check the hands-on understanding behind them.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Technical screen on networking, operating systems and security basics",
+    "Scenario round: triage an alert, read logs or walk through an incident",
+    "Practical task for some roles: analyse logs or a packet capture, or test a practice application",
+    "Hiring manager round on judgement, communication and ethics",
+    "HR round, sometimes followed by background checks"
+  ],
+  "looks_for": [
+    "Networking basics: TCP/IP, ports, DNS, HTTP and what normal traffic looks like",
+    "Knowing common attacks and how they show up in logs",
+    "A calm, ordered response to incidents: contain, investigate, recover, learn",
+    "Telling a true alert from a false positive, and explaining why",
+    "Clear written notes and knowing when to escalate",
+    "Integrity and care with sensitive data"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a security issue you investigated, whether at work, in a lab or in a capture-the-flag event.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you noticed first and why it looked suspicious",
+        "The evidence you gathered and the tools you used",
+        "What you concluded, and how you reported or fixed it"
+      ]
+    },
+    {
+      "text": "Describe a time you explained a security risk to someone non-technical so that they would act on it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The risk in their terms: money, customers, downtime",
+        "What you asked them to do and why it was reasonable",
+        "Whether they acted, and what you learned about persuading people"
+      ]
+    },
+    {
+      "text": "Tell me about a mistake you made while investigating or configuring something. What happened?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The mistake, owned plainly",
+        "How you found it and limited the damage",
+        "What you do differently now"
+      ]
+    },
+    {
+      "text": "Tell me about a time you faced many alerts or tasks at once. How did you decide what to handle first?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Ranking by risk: what's affected, how sensitive it is, whether it's spreading",
+        "What you escalated and what you parked",
+        "The outcome, and any tuning you did so it happened less often"
+      ]
+    },
+    {
+      "text": "Walk me through the TCP three-way handshake, and how a SYN flood abuses it.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "SYN, SYN-ACK, ACK, and why the server keeps state for half-open connections",
+        "How a flood of half-open connections uses up the server's resources",
+        "Defences such as SYN cookies, rate limiting and filtering upstream"
+      ]
+    },
+    {
+      "text": "Explain the CIA triad with an example of an attack on each part.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Confidentiality, integrity and availability in plain words",
+        "Examples: stolen data, altered records, a denial-of-service attack",
+        "A control that protects each"
+      ]
+    },
+    {
+      "text": "An employee reports a suspicious email with a link they may have clicked. What do you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Examining the headers, sender, link and any attachment safely",
+        "Finding who else received it and whether anyone entered a password",
+        "Containment: resetting passwords, blocking the domain, checking the device, then warning staff"
+      ]
+    },
+    {
+      "text": "You see many failed logins on an account, followed by a successful one. How do you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Where the attempts came from: IP addresses, locations, times, devices",
+        "Whether it looks like brute force or password spraying, and what the account did after logging in",
+        "Locking or resetting the account, enforcing MFA, and searching for the same pattern elsewhere"
+      ]
+    },
+    {
+      "text": "What's the difference between symmetric and asymmetric encryption, and where is each used?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "One shared key versus a public and private key pair",
+        "Asymmetric for exchanging keys and signatures; symmetric for bulk data",
+        "How HTTPS uses both"
+      ]
+    },
+    {
+      "text": "Explain SQL injection and cross-site scripting, and how developers should prevent them.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "How untrusted input ends up run as a query or a script",
+        "Parameterised queries, output encoding and input validation",
+        "How you'd test for each safely, and only with permission"
+      ]
+    },
+    {
+      "text": "What is a SIEM, and how would you write or tune a detection rule?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Collecting and correlating logs from many sources in one place",
+        "An example rule, such as logins to one account from two countries within minutes",
+        "Cutting false positives with context, and testing the rule against past data"
+      ]
+    },
+    {
+      "text": "Talk me through the stages of incident response.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Preparation, identification, containment, eradication, recovery and lessons learned",
+        "Preserving evidence and keeping notes as you go",
+        "Who to inform, and when"
+      ]
+    },
+    {
+      "text": "A server suddenly starts sending large amounts of traffic to an unknown external IP address. What would you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Checking the destination's reputation and which process is making the connection",
+        "Isolating the host without destroying evidence",
+        "Working out how it was compromised and checking other hosts for the same signs"
+      ]
+    },
+    {
+      "text": "Which ports and services would you expect on a typical web server, and what would worry you in a scan?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Common ports such as 22, 80 and 443 and what usually runs on them",
+        "Unexpected open services, outdated versions, or admin panels open to the internet",
+        "How you'd confirm and report what you found"
+      ]
+    },
+    {
+      "text": "What's the difference between a vulnerability assessment and a penetration test?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Finding and ranking weaknesses versus actively exploiting them to show impact",
+        "Scope, written permission and rules of engagement",
+        "How the results are reported and followed up"
+      ]
+    },
+    {
+      "text": "Why cybersecurity? What got you interested, and what have you done about it outside class or work?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A real starting point: a course, a CTF, an incident you read about",
+        "Hands-on work: a home lab, write-ups, certifications and what you learned from them",
+        "The area you want to grow in: SOC work, cloud security, testing"
+      ]
+    },
+    {
+      "text": "How do you keep up with new threats? Tell me about one you read about recently.",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Sources you use: vendor advisories, vulnerability feeds, security blogs or communities",
+        "One recent issue explained in plain words",
+        "What a defender should do about it"
+      ]
+    }
+  ],
+  "tips": [
+    "Build a small home lab (a few virtual machines and a free log or SIEM tool) and describe what you detected in it; it's strong evidence for freshers.",
+    "In scenario questions, say your steps in order and name the logs you'd check; interviewers want your process, not just a final answer.",
+    "Know the basics behind every certification you list; expect follow-ups on anything on your resume.",
+    "Mention evidence and escalation: when you'd hand an incident up, and what you'd write down.",
+    "Only describe testing you did with permission, in your own lab or in authorised programmes."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "hiring_manager"
+  },
+  "reviewed": "2026-10-18"
+}

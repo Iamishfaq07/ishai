@@ -1,0 +1,169 @@
+{
+  "slug": "freshworks",
+  "name": "Freshworks",
+  "aliases": ["freshdesk"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Candidates commonly report that Freshworks' engineering interviews include a coding test, problem-solving and design rounds, and a hiring manager conversation, with questions often grounded in building SaaS products such as Freshdesk and Freshservice for business customers. Freshworks publishes five values on its careers page, starting with 'We champion our customers', so for many roles the questions come back to the customer.",
+  "rounds": [
+    "Online coding test or recruiter screen",
+    "Problem-solving / data structures interviews",
+    "Low-level or system design round (for experienced roles)",
+    "Hiring manager round on past work and customer focus",
+    "HR round"
+  ],
+  "looks_for": [
+    "We champion our customers",
+    "We are empowered to make an impact",
+    "We set high standards",
+    "We make bold moves",
+    "We win as one team",
+    "Understanding how businesses use SaaS products day to day",
+    "Clear communication with customers and teammates"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you went out of your way to solve a problem for a customer.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The customer and what they needed",
+        "What you did beyond your usual work, and why",
+        "The result for them, and anything you changed in the product or process"
+      ]
+    },
+    {
+      "text": "Describe a time you held yourself or your team to a higher standard than anyone asked for.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The standard and why it mattered",
+        "How you got there without slowing everyone down",
+        "What it prevented or improved"
+      ]
+    },
+    {
+      "text": "Tell me about a time you put a team win ahead of getting credit yourself.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The situation and your contribution",
+        "Why you chose to put the team first",
+        "What the team achieved"
+      ]
+    },
+    {
+      "text": "Tell me about a bold change you proposed. How did you get people behind it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The change and the risk in it",
+        "How you built support: data, a small trial, allies",
+        "What happened, and what you'd do differently"
+      ]
+    },
+    {
+      "text": "How would you design a help desk system that routes each support ticket to the right agent?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Tickets arriving from email, chat and web, stored in one model",
+        "Routing by skill, language, current workload and priority",
+        "Escalation when a ticket waits too long, and reports for managers"
+      ]
+    },
+    {
+      "text": "What does multi-tenancy mean in a SaaS product, and how would you keep one customer's data safe from another's?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Shared database versus separate schemas or databases, with trade-offs",
+        "A tenant ID on every query, access checks and tests that prove isolation",
+        "Stopping one heavy customer from slowing the rest down"
+      ]
+    },
+    {
+      "text": "How would you build service-level timers for support tickets that pause outside business hours and on holidays?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Business calendars per customer, with time zones and holidays",
+        "Working out due times, and events that pause or restart the clock",
+        "Warnings before a breach, and edge cases such as a change in calendar"
+      ]
+    },
+    {
+      "text": "A large customer says your product became slow after the last release. What would you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Confirming it with metrics for that customer's account",
+        "Checking what changed in the release, and turning it off or rolling back if needed",
+        "Keeping the customer and their account team updated, then adding a performance test"
+      ]
+    },
+    {
+      "text": "How would you design public APIs and webhooks so customers can connect your product to their other tools?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Versioning, authentication and rate limits",
+        "Webhooks with retries and signatures",
+        "Clear documentation and not breaking existing integrations"
+      ]
+    },
+    {
+      "text": "A customer on a yearly plan uses only a small part of the product, and renewal is three months away. What would you do?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Understanding their goals and looking at usage data",
+        "An adoption plan: training, a champion inside their team, quick wins",
+        "Signs you'd watch to know whether renewal is at risk"
+      ]
+    },
+    {
+      "text": "How would you decide what to build next for small-business customers compared with large enterprises?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "How their needs differ: simplicity and price versus control, security and compliance",
+        "Evidence: feature requests, reasons customers leave, revenue at stake",
+        "How you'd explain the trade-off on the roadmap"
+      ]
+    },
+    {
+      "text": "Why Freshworks? Which of its products would you most like to work on, and why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific product and who uses it",
+        "What interests you about building software for businesses",
+        "How your experience fits"
+      ]
+    },
+    {
+      "text": "Which Freshworks value do you relate to most, and when have you lived it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One value, named once",
+        "A short, specific example",
+        "Why that way of working matters to you"
+      ]
+    }
+  ],
+  "tips": [
+    "Freshworks' first value is 'We champion our customers'; bring stories where you listened to a customer and changed something because of it.",
+    "Explore Freshdesk or Freshservice before the interview so you can talk about real screens and flows.",
+    "In design rounds, think in tenants: which data belongs to which customer, and how one heavy customer can't slow down the rest.",
+    "For sales and customer success roles, practise explaining a product's value in the customer's words, not as a list of features."
+  ],
+  "sources": [
+    {
+      "title": "Freshworks Careers (values)",
+      "url": "https://www.freshworks.com/company/careers/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

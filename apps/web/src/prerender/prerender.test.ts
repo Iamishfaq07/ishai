@@ -1,0 +1,145 @@
+// The public pages built as HTML (entry.tsx): what a crawler that doesn't run JavaScript gets.
+import "./shim"; // first: the pages read browser globals as their modules load
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { beforeAll, describe, expect, it } from "vitest";
+import { PAGE_META } from "../../worker/meta.js";
+import { BANK_DIR } from "../../questionBank";
+import type { BankCompany, BankRole } from "../pages/bank/types";
+import { workerFile } from "./routes";
+
+const web = join(BANK_DIR, "..", "..", "..", "web");
+const template = readFileSync(join(web, "index.html"), "utf8");
+const robots = readFileSync(join(web, "public", "robots.txt"), "utf8");
+const companies = readdirSync(join(BANK_DIR, "companies")).map((f) => JSON.parse(readFileSync(join(BANK_DIR, "companies", f), "utf8")) as BankCompany);
+const roles = readdirSync(join(BANK_DIR, "roles")).map((f) => JSON.parse(readFileSync(join(BANK_DIR, "roles", f), "utf8")) as BankRole);
+
+let files = new Map<string, string>();
+const warnings: string[] = [];
+
+beforeAll(async () => {
+  const { buildSite } = await import("./entry");
+  files = new Map((await buildSite(template, PAGE_META, (m) => warnings.push(m))).map((f) => [f.file, f.contents]));
+}, 120_000);
+
+/** The page's words, as a crawler reads them: the built copy's text, tags and entities gone. */
+function text(html: string): string {
+  const page = html.slice(html.indexOf('<div id="prerender"'), html.indexOf('<div id="root">'));
+  return page
+    .replace(/<script[\s\S]*?<\/script>/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ");
+}
+const tag = (html: string, re: RegExp) => re.exec(html)?.[1] ?? "";
+const jsonLd = (html: string) => JSON.parse(tag(html, /<script type="application\/ld\+json">([\s\S]*?)<\/script>/)) as { "@graph": Array<Record<string, unknown>> };
+const squash = (s: string) => s.replace(/\s+/g, " ");
+
+/** robots.txt's verdict for a path: the longest matching rule wins, Allow on a tie; `$` ends a rule. */
+function allowedByRobots(path: string): boolean {
+  let best = { length: -1, allow: true };
+  for (const line of robots.split("\n")) {
+    const m = /^(allow|disallow):\s*(\S*)/i.exec(line.trim());
+    if (!m || !m[2]) continue;
+    const rule = m[2];
+    const re = new RegExp(`^${rule.replace(/[.+?^{}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}`);
+    const allow = m[1]!.toLowerCase() === "allow";
+    if (re.test(path) && (rule.length > best.length || (rule.length === best.length && allow))) best = { length: rule.length, allow };
+  }
+  return best.allow;
+}
+
+describe("the built public pages", () => {
+  it("renders every page the Worker names and every guide, with no page left to the app", () => {
+    expect(warnings).toEqual([]);
+    for (const path of Object.keys(PAGE_META)) expect(files.has(workerFile(path)), path).toBe(true);
+    for (const c of companies) expect(files.has(`companies/${c.slug}.html`), c.slug).toBe(true);
+    for (const r of roles) expect(files.has(`roles/${r.slug}.html`), r.slug).toBe(true);
+    expect(files.has("companies.html") && files.has("roles.html") && files.has("sitemap.xml")).toBe(true);
+  });
+
+  it("puts a company's whole guide in the HTML: heading, rounds, values, every question and what it covers", () => {
+    for (const c of companies) {
+      const html = files.get(`companies/${c.slug}.html`)!;
+      const words = text(html);
+      expect(squash(tag(html, /<h1[^>]*>([\s\S]*?)<\/h1>/).replace(/<[^>]+>/g, "").replace(/&#x27;/g, "'").replace(/&amp;/g, "&")), c.slug).toBe(
+        `${c.name} interview process and practice questions`,
+      );
+      for (const s of [c.summary, ...c.rounds, ...c.looks_for, ...c.tips]) expect(words, c.slug).toContain(squash(s));
+      for (const q of c.questions) {
+        expect(words, c.slug).toContain(squash(q.text));
+        for (const point of q.covers) expect(words, q.text).toContain(squash(point));
+      }
+      // Practise it: the mock in its style and the free warm-up on these questions.
+      expect(html).toContain(`href="/warmup?track=company%3A${c.slug}"`);
+      expect(words).toContain(`not questions taken from them`);
+    }
+  });
+
+  it("puts a role's guide in the HTML too", () => {
+    for (const r of roles) {
+      const words = text(files.get(`roles/${r.slug}.html`)!);
+      expect(words).toContain(`${r.name} interview questions and what to expect`);
+      for (const q of r.questions) expect(words, r.slug).toContain(squash(q.text));
+    }
+  });
+
+  it("lists and links every guide from the two list pages", () => {
+    const list = files.get("companies.html")!;
+    for (const c of companies) expect(list, c.slug).toContain(`href="/companies/${c.slug}"`);
+    const roleList = files.get("roles.html")!;
+    for (const r of roles) expect(roleList, r.slug).toContain(`href="/roles/${r.slug}"`);
+    expect(text(list)).toContain("Company interview guides");
+  });
+
+  it("gives each page its own title, description, canonical address and honest structured data", () => {
+    for (const [file, html] of files) {
+      if (!file.endsWith(".html")) continue;
+      const title = tag(html, /<title>([^<]*)<\/title>/);
+      const description = tag(html, /<meta name="description" content="([^"]*)"/);
+      const canonical = tag(html, /<link rel="canonical" href="([^"]*)"/);
+      expect(title.length, file).toBeGreaterThan(10);
+      expect(title.length, file).toBeLessThanOrEqual(80);
+      expect(description.length, file).toBeLessThanOrEqual(200);
+      expect(canonical, file).toMatch(/^https:\/\/orbitanswer\.com\//);
+      expect(tag(html, /<meta property="og:url" content="([^"]*)"/), file).toBe(canonical);
+      const data = JSON.stringify(jsonLd(html));
+      expect(data, file).not.toMatch(/aggregateRating|"Review"|FAQPage|"offers"/); // nothing we can't stand behind
+      expect(html.indexOf('<div id="prerender"'), file).toBeLessThan(html.indexOf('<div id="root"></div>'));
+    }
+    const amazon = files.get("companies/amazon.html")!;
+    expect(tag(amazon, /<link rel="canonical" href="([^"]*)"/)).toBe("https://orbitanswer.com/companies/amazon");
+    const crumbs = jsonLd(amazon)["@graph"].find((n) => n["@type"] === "BreadcrumbList") as { itemListElement: Array<{ name: string; item: string }> };
+    expect(crumbs.itemListElement.map((i) => i.name)).toEqual(["Home", "Companies", "Amazon"]);
+    expect(files.get("_prerender/warmup.html")).toContain("Interview Warmup");
+  });
+
+  it("keeps each guide page light", () => {
+    for (const [file, html] of files) if (file.startsWith("companies/") || file.startsWith("roles/")) expect(html.length, file).toBeLessThan(110_000);
+  });
+});
+
+describe("the built sitemap and robots.txt", () => {
+  const locs = () => [...files.get("sitemap.xml")!.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]!);
+
+  it("lists every public page once, at the site's own address", () => {
+    const all = locs();
+    expect(new Set(all).size).toBe(all.length);
+    expect(all.every((l) => l.startsWith("https://orbitanswer.com/"))).toBe(true);
+    expect(all.length).toBe(Object.keys(PAGE_META).length + 2 + companies.length + roles.length + 4);
+    for (const path of ["/", "/warmup", "/companies", "/roles", "/companies/tcs", "/roles/nurse", "/privacy.html"]) {
+      expect(all).toContain(`https://orbitanswer.com${path}`);
+    }
+    expect(all.some((l) => l.includes("_prerender"))).toBe(false);
+    expect(files.get("sitemap.xml")).toMatch(/<loc>https:\/\/orbitanswer\.com\/companies\/amazon<\/loc><lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/);
+  });
+
+  it("lets crawlers read every page in it, and nothing signed in", () => {
+    for (const l of locs()) expect(allowedByRobots(new URL(l).pathname), l).toBe(true);
+    for (const p of ["/_prerender/home", "/mock", "/sessions", "/jobs/matches", "/resume-ai/abc", "/api/v1/me"]) expect(allowedByRobots(p), p).toBe(false);
+  });
+});

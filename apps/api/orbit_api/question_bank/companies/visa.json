@@ -1,0 +1,194 @@
+{
+  "slug": "visa",
+  "name": "Visa",
+  "aliases": ["visa inc"],
+  "group": "finance",
+  "market": "global",
+  "summary": "Visa's interviews commonly mix questions on your skills for the role with behavioural questions linked to its published Leadership Principles, grouped as Lead courageously, Obsess about customers, Collaborate as one Visa and Execute with excellence. Technology candidates usually report coding and system design discussions, often about scale, reliability and security in payments. Visa says its consulting and analytics candidates should expect case studies with limited data.",
+  "rounds": [
+    "Online application; some early-careers and technology roles include an online coding or skills assessment",
+    "Recruiter screen on your background and interest in payments",
+    "Interview with the hiring manager on your experience",
+    "Panel or series of interviews, usually mixing technical or functional depth with Leadership Principles questions",
+    "Case study for consulting and analytics roles, reasoning through a problem with limited data"
+  ],
+  "looks_for": [
+    "Lead courageously",
+    "Act like an owner",
+    "Think big and challenge the status quo",
+    "Hold ourselves and each other accountable",
+    "Obsess about customers",
+    "Listen and learn from customers",
+    "Collaborate as one Visa",
+    "Encourage constructive debate",
+    "Execute with excellence",
+    "Decide quickly and move fast",
+    "Learn from our mistakes",
+    "Understanding how card payments work and why security and reliability matter"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you treated a piece of work as if it were your own business.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you took on beyond your brief, and why",
+        "Decisions you made as an owner would, about cost, risk or the long term",
+        "The result for the team or the customer"
+      ]
+    },
+    {
+      "text": "Tell me about a time you challenged the usual way something was done.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the usual way was and what it cost",
+        "How you made the case for change and handled resistance",
+        "What changed, and what you'd do differently"
+      ]
+    },
+    {
+      "text": "Describe a time you disagreed with a colleague openly and respectfully. How was it resolved?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Both views, stated fairly",
+        "How you argued with facts while keeping the relationship",
+        "The decision, and how you supported it afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a time you made a call quickly with incomplete information.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why waiting would have cost more",
+        "The information you had and the risk you accepted",
+        "How you checked the decision later and adjusted"
+      ]
+    },
+    {
+      "text": "Tell me about a mistake you made at work and what you did about it.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The mistake, owned plainly",
+        "How you fixed it and who you told",
+        "What you changed so it wouldn't recur"
+      ]
+    },
+    {
+      "text": "Walk me through what happens, step by step, when someone taps a card to pay in a shop.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Terminal to the merchant's bank (acquirer), across the card network to the card issuer",
+        "The issuer's checks and approval or decline, returned in a moment",
+        "Clearing and settlement later, and where fraud checks fit"
+      ]
+    },
+    {
+      "text": "How would you design a payment authorisation service that keeps working even if a whole data centre goes down?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Running in more than one region with traffic able to fail over",
+        "Strict time limits, timeouts, and a fallback if the issuer can't respond",
+        "No duplicate approvals, and regular testing of failure"
+      ]
+    },
+    {
+      "text": "What is tokenisation in payments, and how does it protect cardholders?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Replacing the card number with a token tied to a device or merchant",
+        "Why a stolen token is far less useful than a stolen card number",
+        "Where it's used: mobile wallets and cards saved by online shops"
+      ]
+    },
+    {
+      "text": "Fraud losses at a group of online merchants rose sharply last month. How would you investigate?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Confirming the data and the definition of a fraud loss",
+        "Splitting by merchant type, channel, country, card range and time",
+        "Likely patterns, such as card-testing attacks, and the action and monitoring you'd suggest"
+      ]
+    },
+    {
+      "text": "A bank client wants its cardholders to use their cards more. How would you approach the problem?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying the goal and which customers matter most",
+        "Data on inactive and active users and where they spend",
+        "Levers such as onboarding, rewards, digital wallets and merchant offers, tested against a control group"
+      ]
+    },
+    {
+      "text": "How would you explain to a non-technical colleague the trade-off between catching more fraud and declining fewer good purchases?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "False alarms and missed fraud, in plain words",
+        "The cost of each: lost sales and annoyed customers versus fraud losses",
+        "How thresholds and extra checks move the balance, and the metric to agree on"
+      ]
+    },
+    {
+      "text": "Why Visa, and why this team?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What interests you about payments and Visa's place in them",
+        "How the team's work matches your skills",
+        "Something you've learned about Visa beyond the brand"
+      ]
+    },
+    {
+      "text": "Which of Visa's Leadership Principles do you find hardest to live by, and why?",
+      "type": "fit",
+      "kind": "reflection",
+      "covers": [
+        "One principle, named accurately",
+        "An honest reason, with a small example",
+        "What you're doing to improve"
+      ]
+    },
+    {
+      "text": "What do you think will change most about how people pay in the next few years, and what would it mean for Visa?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "One clear trend, explained simply",
+        "Its effect on consumers, merchants or banks",
+        "What it could mean for Visa's products or the team you're joining"
+      ]
+    }
+  ],
+  "tips": [
+    "Read Visa's Leadership Principles and prepare at least one story for each of the four groups.",
+    "Know the basic flow of a card payment (merchant, acquirer, network, issuer) and be able to sketch it.",
+    "For engineering roles, expect follow-ups on reliability, latency and security; in payments a request can't simply be retried blindly.",
+    "For consulting and analytics roles, practise case studies with limited data, and learn what drives revenue and costs in a card portfolio.",
+    "Visa's early-careers advice suggests learning its purpose and business and tailoring your CV to each role.",
+    "For a virtual interview, prepare in advance: check your setup and keep answers focused on what you did."
+  ],
+  "sources": [
+    {
+      "title": "Visa Leadership Principles (visa.com)",
+      "url": "https://corporate.visa.com/en/about-visa/leadership-principles.html"
+    },
+    {
+      "title": "Visa students and early careers (visa.com)",
+      "url": "https://corporate.visa.com/en/careers/early-careers.html"
+    },
+    {
+      "title": "Visa Consulting and Analytics careers (visa.com)",
+      "url": "https://corporate.visa.com/en/careers/teams/advisory-services.html"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

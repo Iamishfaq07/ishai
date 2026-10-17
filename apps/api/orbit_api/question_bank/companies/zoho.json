@@ -1,0 +1,188 @@
+{
+  "slug": "zoho",
+  "name": "Zoho",
+  "aliases": ["zoho corporation", "zoho corp", "manageengine", "zoho schools of learning"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Zoho is known for hiring on skills rather than credentials: its careers page says it thinks 'beyond the system of credentialism', and Zoho Schools of Learning offers high school graduates a two-year training programme that includes an internship at Zoho. Candidates commonly report that developer hiring leans heavily on hands-on programming, with a written test followed by coding rounds and technical and HR interviews.",
+  "rounds": [
+    "Written or online test of aptitude and programming (for campus and off-campus drives)",
+    "Hands-on programming round, solving problems on a computer",
+    "A longer programming task: build a small working application in a few hours (for many developer roles)",
+    "Technical interview on your code, projects and fundamentals",
+    "HR round"
+  ],
+  "looks_for": [
+    "Strength in variety",
+    "Personalized professionalism",
+    "Redefining capital",
+    "The long-term approach",
+    "Putting customers first",
+    "Programming skill shown in working code, whatever your degree or grades",
+    "A willingness to learn"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about something you taught yourself without a course or a teacher. How did you go about it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you learned and why",
+        "How you learned it: what you read, built and got stuck on",
+        "Something you made with it"
+      ]
+    },
+    {
+      "text": "Tell me about a time you stuck with a hard problem for a long time before you solved it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why it was hard and what you tried first",
+        "How you kept going and when you asked for help",
+        "The solution and what it taught you"
+      ]
+    },
+    {
+      "text": "Describe a time you helped a user or customer who was struggling with something you built or supported.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Their problem in their words",
+        "How you understood it and fixed it or worked around it",
+        "What you changed in the product or your work afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a bug in your code that someone else found. What did you do?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What the bug was, owned plainly",
+        "How you fixed it and thanked the person who found it",
+        "What you now do to catch such bugs yourself"
+      ]
+    },
+    {
+      "text": "How would you build a simple invoicing app for small businesses? What would you build first, and how would you store the data?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Core entities: customer, item, invoice, payment, and how they relate",
+        "The first version: create, send and record payment, before reports and extras",
+        "Details that matter: tax such as GST, invoice numbering, rounding"
+      ]
+    },
+    {
+      "text": "Explain object-oriented programming using an example you would build, such as a bank account or library system.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Classes and objects, encapsulation, inheritance and polymorphism, shown in the example",
+        "Why each helps in that example",
+        "When you'd avoid inheritance and use composition instead"
+      ]
+    },
+    {
+      "text": "You have a few hours to build a small console application, such as appointment booking for a clinic. How would you plan your time?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Listing the features and deciding the order to build them",
+        "Choosing classes and data structures before coding",
+        "Getting the main flow working first, then edge cases such as full slots and cancellations"
+      ]
+    },
+    {
+      "text": "How does a web app keep a user logged in? Explain sessions, cookies and tokens.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Session IDs stored on the server versus signed tokens the client holds",
+        "Where cookies fit, and settings that protect them",
+        "Logging out, expiry, and what happens if a token is stolen"
+      ]
+    },
+    {
+      "text": "How would you design search for a business email product so it's fast and keeps each customer's data separate?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "An index per mailbox or per customer, updated as mail arrives",
+        "Access checks on every query so no one sees another customer's mail",
+        "Ranking, speed for large mailboxes, and encryption"
+      ]
+    },
+    {
+      "text": "A customer says a report in your product shows the wrong totals. How would you handle it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Acknowledging it quickly and reproducing it with their data",
+        "Likely causes: time zones, rounding, filters, duplicate records",
+        "The fix, an update to the customer, and a test that would catch it again"
+      ]
+    },
+    {
+      "text": "Explain database normalisation. When might you choose to denormalise?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Removing duplicated data so each fact lives in one place",
+        "The normal forms in plain words, with an example table",
+        "Denormalising for read speed, and the cost of keeping copies in sync"
+      ]
+    },
+    {
+      "text": "Why Zoho? What do you know about the products it builds and the customers who use them?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A few Zoho products and the kind of businesses that use them",
+        "What draws you to building software products",
+        "Something about how Zoho says it works that suits you"
+      ]
+    },
+    {
+      "text": "Are you open to relocating to wherever the team you join is based, even if it's a smaller town?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with any limits stated clearly",
+        "What you'd value about working there",
+        "How you'd settle in and keep learning"
+      ]
+    },
+    {
+      "text": "Where do you want your skills to be in five years?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A realistic picture of the work you want to be doing",
+        "The skills you plan to build to get there",
+        "How a long stay at a product company fits that plan"
+      ]
+    }
+  ],
+  "tips": [
+    "Zoho's careers page says it looks beyond credentials; let your code and projects do the talking, whatever your degree or college.",
+    "Practise writing complete, working programs from scratch in one language you know well; the programming rounds reward fluent basics.",
+    "In a longer build task, get the core flow working first and add features one at a time; a working small app beats a half-finished big one.",
+    "Learn what a few Zoho products do (for example CRM, Books, Desk and Mail) so you can connect your answers to real customers.",
+    "If you're finishing school, Zoho Schools of Learning is a separate route from graduate hiring; check its official page for current eligibility."
+  ],
+  "sources": [
+    {
+      "title": "Careers at Zoho",
+      "url": "https://www.zoho.com/careers/"
+    },
+    {
+      "title": "Zoho at 25: People (Zoho Schools of Learning)",
+      "url": "https://www.zoho.com/25/people/"
+    },
+    {
+      "title": "Zoho Schools of Learning celebrates its 20th anniversary (Zoho)",
+      "url": "https://www.zoho.com/news/zoho-schools-of-learning-celebrates-its-20th-anniversary.html"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

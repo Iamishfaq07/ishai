@@ -1,0 +1,180 @@
+{
+  "slug": "paytm",
+  "name": "Paytm",
+  "aliases": ["one97", "one97 communications"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Candidates commonly report that Paytm's engineering interviews include an online coding test, two or more technical rounds on problem-solving, design and past projects, and a final round with a hiring manager or HR. Questions often draw on its payments and merchant business, such as QR payments, payment speakers for shops and transaction reliability. Paytm describes a culture of entrepreneurship, executing with speed and thinking big.",
+  "rounds": [
+    "Online coding and aptitude test (for many engineering and campus roles)",
+    "Technical interviews on data structures, problem-solving and core subjects, often two or more",
+    "Design round on a system or a past project (for experienced roles)",
+    "Hiring manager round",
+    "HR round"
+  ],
+  "looks_for": [
+    "An Entrepreneurial Mindset",
+    "Executing with Speed",
+    "Thinking BIG",
+    "Transparency",
+    "Innovation at its Core",
+    "Correctness and reliability when money is involved",
+    "Understanding merchants, including small shopkeepers"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you made a big decision quickly and then owned the result.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why the decision couldn't wait",
+        "What you knew, what you didn't, and the risk you accepted",
+        "How it turned out, and what you did when parts of it went wrong"
+      ]
+    },
+    {
+      "text": "Tell me about an idea you suggested or built outside your assigned work. What happened to it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem you noticed and why it mattered",
+        "How you built or pitched it alongside your main work",
+        "Who used it or what happened next, even if it didn't go ahead"
+      ]
+    },
+    {
+      "text": "Describe a time you worked with a non-engineering team, such as sales or operations, to solve a customer problem.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The customer problem and what each team saw of it",
+        "How you understood their side and agreed on a fix",
+        "The result for the customer"
+      ]
+    },
+    {
+      "text": "Tell me about something you built that failed in production. What did you learn?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What failed and who it affected, owned plainly",
+        "How you found the cause and fixed it",
+        "What you now do differently when building or testing"
+      ]
+    },
+    {
+      "text": "How would you design the backend for a shop's payment speaker that announces each payment as it arrives?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The event flow from payment success to the device, over a lasting connection",
+        "Devices that go offline, and making sure a payment is announced once, not missed or repeated",
+        "Security: only real payments trigger it, and each device is authenticated"
+      ]
+    },
+    {
+      "text": "Walk me through a QR code payment at a small shop, from scan to the shopkeeper seeing it. What can go wrong?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Static versus dynamic QR codes, and the path through the payer's app, UPI and the banks",
+        "Pending payments, timeouts and refunds",
+        "How the shopkeeper is told, and how their records are reconciled"
+      ]
+    },
+    {
+      "text": "Explain database transactions and isolation levels. Where could a weak isolation level hurt a wallet balance?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "What ACID means, in plain words",
+        "The common isolation levels and what each allows",
+        "A lost update or double spend, and how locks or version checks prevent it"
+      ]
+    },
+    {
+      "text": "A customer's money was debited but their order shows as failed. How would you design the system to sort out cases like this?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A clear pending state, and checking the final status with the bank",
+        "Automatic completion or refund within a set time, without doing both",
+        "Telling the customer what is happening, and an audit trail of every step"
+      ]
+    },
+    {
+      "text": "How would you protect a payments API from abuse, such as stolen logins or repeated failed attempts?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Rate limits, device binding and a second factor such as an OTP",
+        "Rules or models that flag unusual behaviour",
+        "Logging and alerts, and error messages that don't help an attacker"
+      ]
+    },
+    {
+      "text": "How would you get more small shopkeepers in a town to accept digital payments, and how would you measure it?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Their barriers: trust, fees, set-up effort, waiting for settlement",
+        "How you'd reach them: field teams, simple onboarding, a device that confirms payments",
+        "Metrics: active merchants, payments per merchant, and how many are still using it later"
+      ]
+    },
+    {
+      "text": "Explain the difference between a process and a thread, with an example from an app you've built.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Processes have separate memory; threads share memory within one process",
+        "Why that makes threads cheaper but brings race conditions",
+        "A real example: a background job, a web server or a mobile app's main thread"
+      ]
+    },
+    {
+      "text": "Why Paytm? Which part of its business would you like to work on?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific: consumer payments, merchant products or financial services",
+        "What you know of its users and their problems",
+        "How your skills fit that area"
+      ]
+    },
+    {
+      "text": "Are you comfortable in a fast-moving team where priorities can change from week to week?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest yes, with a past example of priorities changing",
+        "How you keep track of what matters most when they change",
+        "What you need from a manager to work well that way"
+      ]
+    },
+    {
+      "text": "What would you want to have learned or built after your first six months here?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two concrete goals tied to the role",
+        "The skills you want to build",
+        "How you'd know you were on track"
+      ]
+    }
+  ],
+  "tips": [
+    "Use Paytm before the interview as a customer and look at what a merchant sees, such as payment confirmations; product examples help.",
+    "Payments questions reward care: cover pending states, duplicate requests, refunds and reconciliation, not only the happy path.",
+    "For campus roles, revise core subjects (operating systems, databases, networks) as well as data structures; they often come up.",
+    "Paytm says ideas can come from anyone and that some of its features began as weekend projects; a side project you can explain in depth is worth bringing up.",
+    "When you talk about speed, show how you also protect customers' money: tests, gradual rollouts and quick rollbacks."
+  ],
+  "sources": [
+    {
+      "title": "Inside Paytm's work ethos (Paytm blog)",
+      "url": "https://paytm.com/blog/workplace/inside-paytms-work-ethos-how-we-innovate-and-empower-employees/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

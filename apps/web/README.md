@@ -23,6 +23,13 @@ pnpm --filter @orbit/web typecheck
 pnpm --filter @orbit/web build
 ```
 
+`build` also renders the public pages to HTML for crawlers that don't run JavaScript (DECISIONS D63): after the app,
+it builds `src/prerender/entry.tsx` for Node and `scripts/prerender.mjs` writes each page in the registry
+(`src/prerender/routes.tsx`) plus `sitemap.xml` into `dist/`. The company and role guides come from the question
+bank's files in `apps/api/orbit_api/question_bank` (through `questionBank.ts`, a Vite plugin). To see the built site
+the way production serves it, run the Worker over `dist/` locally: `pnpm dlx wrangler@4 dev --local --var
+API_URL:http://localhost:8000` from the repo root (never `wrangler deploy`).
+
 ## Audio in the browser
 
 | Source | How | Channel |

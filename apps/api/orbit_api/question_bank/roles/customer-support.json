@@ -1,0 +1,207 @@
+{
+  "slug": "customer-support",
+  "name": "Customer support",
+  "aliases": ["customer service", "bpo", "call centre", "call center", "customer care executive", "customer support executive", "customer service representative", "technical support", "tech support", "voice process", "non-voice process", "chat support"],
+  "group": "business",
+  "summary": "Customer support interviews, including BPO and call-centre hiring, usually focus on how you communicate and how you treat an upset customer. Candidates commonly report a short HR screen, a spoken-English, voice or typing test depending on whether the job is on calls, chat or email, and an operations round with role-plays of difficult conversations. Technical support roles add basic troubleshooting questions.",
+  "rounds": [
+    "HR screen on your background, availability and communication",
+    "Communication test: spoken English or a voice test for call roles, typing or writing for chat and email roles (often online)",
+    "Operations or team-leader round with role-plays of customer calls or chats",
+    "For technical support, questions on basic troubleshooting of devices, apps or networks",
+    "Final HR discussion on shifts, location and joining (for many roles)"
+  ],
+  "looks_for": [
+    "Clear, polite and calm speech or writing",
+    "Listening fully before answering, and checking you've understood",
+    "Empathy that leads to a solution, not just an apology",
+    "Following the process while still owning the customer's problem",
+    "Comfort with targets such as handling time, resolution rate and satisfaction scores",
+    "Reliability: shifts, attendance and staying steady when it's busy"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you helped someone who was angry or upset. What did you say?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why they were upset, in a sentence",
+        "What you said and did to calm things and fix the problem",
+        "How it ended and what you learned"
+      ]
+    },
+    {
+      "text": "Tell me about a time you couldn't give someone what they wanted. How did you handle it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What they asked for and why you couldn't do it",
+        "How you explained it kindly and what you offered instead",
+        "How they reacted in the end"
+      ]
+    },
+    {
+      "text": "Describe a time you went out of your way to solve a problem for someone, at work, college or home.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and why it mattered to them",
+        "The extra step you took",
+        "The result for them"
+      ]
+    },
+    {
+      "text": "Tell me about feedback you've had on how you communicate. What did you change?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The feedback, stated honestly",
+        "What you changed, such as pace, clarity or tone",
+        "A sign that it worked"
+      ]
+    },
+    {
+      "text": "A customer calls, shouting that their order is late for the third time. Walk me through how you'd handle the call.",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Letting them finish, then acknowledging the problem in your own words",
+        "Checking the facts and saying clearly what you can do and by when",
+        "Following up as promised and noting the case so they don't have to repeat it"
+      ]
+    },
+    {
+      "text": "Let's role-play: I'm a customer whose refund hasn't arrived. Start the call.",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "A proper greeting and checking who the customer is",
+        "Questions to find the order and the problem",
+        "A clear next step, a timeline and a polite close"
+      ]
+    },
+    {
+      "text": "What are first-contact resolution and average handling time, and what goes wrong if you chase only one of them?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Resolution: solving it in one contact; handling time: how long each contact takes",
+        "Rushing calls to cut time makes customers call back",
+        "Balancing both, with quality as the aim"
+      ]
+    },
+    {
+      "text": "A customer asks for something that's against company policy. What would you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Explaining the policy simply, without blaming anyone",
+        "Offering what you can do instead",
+        "Escalating to a senior if the case is unusual"
+      ]
+    },
+    {
+      "text": "A customer keeps asking to speak to a supervisor. How would you handle it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Trying once more to understand and solve the problem yourself",
+        "Escalating politely if they still want it, following the process",
+        "Passing on the details so the customer doesn't start again"
+      ]
+    },
+    {
+      "text": "Your queue is long and calls are back to back. How do you stay accurate and calm?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Treating each customer as the only one on that call",
+        "Using notes, templates and the knowledge base to avoid mistakes",
+        "Short resets between calls and asking for help when needed"
+      ]
+    },
+    {
+      "text": "How would you explain a simple fix, like restarting a router or updating an app, to someone who isn't comfortable with technology?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "One step at a time, in plain words, without jargon",
+        "Checking after each step that it worked",
+        "Patience, and offering another way if they get stuck"
+      ]
+    },
+    {
+      "text": "A user says their laptop has become very slow. Which questions would you ask first?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "When it started and whether anything changed, such as an update or new software",
+        "Basic checks: a restart, free storage, programs running in the background",
+        "When you'd escalate to a higher level of support"
+      ]
+    },
+    {
+      "text": "How do you write a good reply to a complaint on chat or email?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Acknowledging the problem and using the customer's name",
+        "A clear answer or next step in short sentences",
+        "Checking tone and spelling, and that you answered every point"
+      ]
+    },
+    {
+      "text": "Tell me about yourself.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your education or work in two lines",
+        "Something that shows you communicate well or like helping people",
+        "Why this job now"
+      ]
+    },
+    {
+      "text": "What does good customer service mean to you?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Solving the problem, not just being polite",
+        "An example of good service you received or gave",
+        "How you'd bring that to this job"
+      ]
+    },
+    {
+      "text": "Are you comfortable working night shifts, rotational shifts or weekends?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer about your situation",
+        "How you'd manage sleep, travel and health on shifts",
+        "Any limits, stated clearly and early"
+      ]
+    },
+    {
+      "text": "Where do you see yourself in two or three years if you join us?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Growing in this job first: quality, scores, trust",
+        "A next step such as team leader, trainer, quality or a specialist queue",
+        "What you'd learn on the way"
+      ]
+    }
+  ],
+  "tips": [
+    "Speak slowly and clearly; in a voice test, being easy to understand matters more than your accent.",
+    "In a role-play, use the customer's name, repeat their problem back and end with a clear next step.",
+    "Never blame another team or the customer; say what you can do.",
+    "Be honest about shifts, travel and location at the HR round; it saves trouble for both sides later.",
+    "For technical support, revise the basics: restarting, checking connections and settings, updates, and when to escalate.",
+    "For chat or email roles, practise typing short, correct replies quickly."
+  ],
+  "mock": {
+    "interview_type": "behavioral",
+    "persona": "recruiter"
+  },
+  "reviewed": "2026-10-18"
+}

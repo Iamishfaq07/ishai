@@ -1,0 +1,207 @@
+{
+  "slug": "business-analyst",
+  "name": "Business analyst",
+  "aliases": ["ba", "it business analyst", "business systems analyst", "requirements analyst", "functional analyst"],
+  "group": "business",
+  "summary": "Business analyst interviews usually test how you turn a vague business need into clear requirements, and how you work between business teams and developers. Candidates commonly report questions on gathering and documenting requirements, process mapping, user stories and acceptance criteria, plus SQL or Excel for some roles and a case on improving a process.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Aptitude, Excel or SQL test for some roles, often in campus hiring",
+    "Functional interview: requirements, documentation, process mapping and methods",
+    "Case or scenario round: analyse a business problem or improve a process",
+    "Hiring manager round on past projects and work with stakeholders",
+    "HR round"
+  ],
+  "looks_for": [
+    "Asking good questions to find the real need behind a request",
+    "Clear requirements: user stories, acceptance criteria and process flows",
+    "Bridging business and technical teams without losing detail",
+    "Using data to back recommendations",
+    "Handling stakeholders who want different things",
+    "Attention to detail and edge cases"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you found that what a stakeholder asked for wasn't what they needed.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The original request",
+        "The questions or analysis that showed the underlying need",
+        "What was built instead, and how it helped"
+      ]
+    },
+    {
+      "text": "Describe a time requirements changed late in a project. How did you handle it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What changed, and why",
+        "How you assessed the impact with the team",
+        "How the change was agreed and documented"
+      ]
+    },
+    {
+      "text": "Tell me about a time developers built something different from what the business expected.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "Where the gap came from, including your own part in it",
+        "How you resolved it",
+        "What you changed in how you write or review requirements"
+      ]
+    },
+    {
+      "text": "Tell me about a recommendation you made that was backed by data.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and the data you used",
+        "Your analysis and what you recommended",
+        "What was decided, and the result"
+      ]
+    },
+    {
+      "text": "How do you gather requirements for a new system? Talk me through your approach.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Identifying stakeholders and the people who'll use the system",
+        "Interviews, workshops, watching people work, reviewing existing documents",
+        "Confirming and prioritising requirements, for example with MoSCoW"
+      ]
+    },
+    {
+      "text": "Talk me through a user story, with acceptance criteria, for a customer resetting a forgotten password.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The 'As a…, I want…, so that…' form",
+        "Acceptance criteria in given-when-then form, including an unknown email and an expired link",
+        "Non-functional points such as how long the link lasts and security checks"
+      ]
+    },
+    {
+      "text": "What's the difference between functional and non-functional requirements? Give examples.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "What the system does versus how well it does it",
+        "Examples: create an invoice, versus load a page within two seconds",
+        "Why non-functional requirements are often missed, and how you catch them"
+      ]
+    },
+    {
+      "text": "How would you map and improve a slow, manual approval process?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Mapping the current process with the people who actually do it",
+        "Finding delays, rework and steps that add nothing",
+        "Designing the new process, its benefits, and how you'd measure them"
+      ]
+    },
+    {
+      "text": "What documents does a business analyst produce, and when would you write a BRD rather than user stories?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "BRDs, functional specs, process maps, use cases and user stories",
+        "Formal documents for Waterfall or regulated work; user stories for Agile teams",
+        "Keeping documents short enough that people read them"
+      ]
+    },
+    {
+      "text": "What is a gap analysis, and how would you carry one out?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The current state, the desired state and the gap between them",
+        "How you gather evidence for each",
+        "Turning the gaps into prioritised actions"
+      ]
+    },
+    {
+      "text": "Two departments want opposite changes to the same screen. What do you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Understanding each side's goal and the cost of each option",
+        "Bringing data or user evidence into the discussion",
+        "Escalating with a clear recommendation if they still can't agree"
+      ]
+    },
+    {
+      "text": "How would you use SQL or Excel to check whether a new process actually saved time?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Defining the measure, such as time from request to approval",
+        "Comparing before and after, and filtering out unusual cases",
+        "A pivot table or a GROUP BY query, and presenting the result simply"
+      ]
+    },
+    {
+      "text": "What is user acceptance testing, and what is the business analyst's role in it?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Business users checking the system meets their needs before release",
+        "Preparing test scenarios from the acceptance criteria",
+        "Tracking issues to closure and getting sign-off"
+      ]
+    },
+    {
+      "text": "The sales team says the new CRM is 'too slow to use'. How would you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Clarifying what slow means: the system's speed, or too many steps",
+        "Watching people use it and checking usage data",
+        "Proposing fixes and agreeing priorities with the team"
+      ]
+    },
+    {
+      "text": "Explain a use case diagram and a swimlane process diagram, and when you'd use each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Use case diagrams: the people or systems involved and what they do with the system",
+        "Swimlanes: process steps by role, showing hand-offs",
+        "Choosing the one that answers your audience's question"
+      ]
+    },
+    {
+      "text": "Why do you want to be a business analyst?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What you enjoy: solving problems, working with people, connecting teams",
+        "An example from your studies or work",
+        "The domain you'd like to work in"
+      ]
+    },
+    {
+      "text": "Which industry interests you most, and what do you know about how it works?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An industry such as banking, retail or healthcare, with a reason",
+        "A basic picture of how it makes money and its main processes",
+        "How your skills apply there"
+      ]
+    }
+  ],
+  "tips": [
+    "Ask clarifying questions before answering any scenario; for a business analyst, the questions are part of the answer.",
+    "Bring a sample user story or process map you've written (with nothing confidential) and explain your choices.",
+    "Learn basic SQL and Excel pivot tables; many analyst roles test them even when the job title doesn't say so.",
+    "Use one industry consistently in your examples; it shows depth.",
+    "In stakeholder stories, show how you kept the relationship working, not only whose view won."
+  ],
+  "mock": {
+    "interview_type": "mixed",
+    "persona": "hiring_manager"
+  },
+  "reviewed": "2026-10-18"
+}

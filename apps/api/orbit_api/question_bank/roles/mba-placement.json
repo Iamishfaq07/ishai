@@ -1,0 +1,207 @@
+{
+  "slug": "mba-placement",
+  "name": "MBA placement",
+  "aliases": ["mba", "mba fresher", "mba interview", "mba final placement", "mba summer placement", "mba internship", "summer internship", "pgdm", "b-school placement", "management trainee"],
+  "group": "early-career",
+  "summary": "MBA placement interviews, for both summer internships and final roles, commonly start from your CV: interviewers pick a line and go deep, ask why you chose an MBA and the function, and test business sense with a guesstimate or a short case. Some companies add a group discussion or a short presentation, and the questions shift with the function, such as marketing, finance, consulting or operations.",
+  "rounds": [
+    "CV shortlisting, sometimes with an online test",
+    "Group discussion or group case for some companies",
+    "One or more personal interviews on your CV, why an MBA, the function and your past work",
+    "A guesstimate, case or functional questions, often within the interviews",
+    "Final round with senior leaders or HR, sometimes on the same day"
+  ],
+  "looks_for": [
+    "A clear, believable story: past work or studies, why an MBA, why this function",
+    "Depth on every line of your CV",
+    "Structured thinking in guesstimates and cases",
+    "Functional basics for the role: marketing, finance, operations or HR",
+    "Awareness of the industry and the company",
+    "Maturity, leadership and teamwork from college or work"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you led a team during your MBA, such as a club, a live project or a competition.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and the team",
+        "What you did yourself, including one hard call",
+        "The result and what you learned about leading peers"
+      ]
+    },
+    {
+      "text": "Tell me about a disagreement in a group project and how it was resolved.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Both sides of the disagreement, stated fairly",
+        "What you did to move things forward",
+        "The outcome and how the group worked afterwards"
+      ]
+    },
+    {
+      "text": "What was your biggest achievement before your MBA, and what exactly was your part in it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why it was hard and why it mattered",
+        "Your own actions, separated from the team's",
+        "A measurable result"
+      ]
+    },
+    {
+      "text": "Tell me about a setback, such as a competition you lost, a poor grade or a job that didn't work out.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What happened, owned honestly",
+        "What you took from it",
+        "How it shaped a later decision"
+      ]
+    },
+    {
+      "text": "Estimate the number of cars sold in Bengaluru in a year.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "An approach: households and car ownership, then new buyers plus replacements",
+        "Clear, rounded assumptions said out loud",
+        "A sense-check, and which assumption matters most"
+      ]
+    },
+    {
+      "text": "Walk me through your summer internship project: the problem, what you did and what changed.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The business problem and why the company cared",
+        "Your approach, data and one key insight",
+        "Your recommendation and what the company did with it"
+      ]
+    },
+    {
+      "text": "A biscuit brand is losing market share in small towns. How would you work out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Splitting by region, channel and pack size, and checking distribution first",
+        "Price, competitors and changing tastes",
+        "A recommendation and how you'd test it"
+      ]
+    },
+    {
+      "text": "For a marketing role: how would you launch a new shampoo aimed at college students?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The target customer, the positioning and how it differs from what's on the shelf",
+        "Price, pack size, channels and promotion",
+        "How you'd judge the launch in the first three months"
+      ]
+    },
+    {
+      "text": "For a finance role: which three numbers would you look at first to judge a company's health, and why?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Choices such as revenue growth, operating margin, cash flow and debt levels",
+        "Why each one matters and what it can hide",
+        "Comparing with past years and with competitors"
+      ]
+    },
+    {
+      "text": "For an operations role: how would you cut delivery times for an online grocery business?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Mapping the order journey from order to doorstep and timing each step",
+        "Ideas such as stores closer to customers, faster picking and better routing",
+        "The cost of each idea and how you'd test it"
+      ]
+    },
+    {
+      "text": "What's the difference between a brand manager's job and a sales manager's job?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Brand: the product's positioning, pricing, communication and growth over time",
+        "Sales: getting the product to customers and channels and hitting targets",
+        "How the two work together, with an example"
+      ]
+    },
+    {
+      "text": "Tell me about a business development you've followed recently. What would you have done in that company's place?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The development, summarised in two sentences",
+        "Your view of why the company acted as it did",
+        "What you'd have done, and the risk in your choice"
+      ]
+    },
+    {
+      "text": "Group discussion: 'Will online shopping replace local shops?' What would you say first, and how would you handle someone who dominates?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "A clear opening view with one fact or example",
+        "Bringing in quieter people and steering back to the topic politely",
+        "A summary that pulls the group's points together"
+      ]
+    },
+    {
+      "text": "Walk me through your CV and why you chose an MBA.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "A short, ordered story of your studies and work",
+        "The reason for the MBA, linked to what came before",
+        "The role you want now and why"
+      ]
+    },
+    {
+      "text": "Why this function, and why our company?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you to the function, shown by your internship or projects",
+        "Something specific about the company: its brands, markets or way of working",
+        "What you'd bring in your first year"
+      ]
+    },
+    {
+      "text": "Why are you moving from your earlier field, such as engineering or IT, to a business role?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What in your earlier work pulled you towards business",
+        "Skills that carry over, such as analysis or working with clients",
+        "How you've been filling the gaps"
+      ]
+    },
+    {
+      "text": "Where do you see yourself five years after your MBA?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A realistic path in this function",
+        "The skills and responsibility you want to build",
+        "How this company fits into that"
+      ]
+    }
+  ],
+  "tips": [
+    "Know every line of your CV well enough to talk about it for two minutes; interviewers commonly pick lines at random.",
+    "Have one clear, honest answer to 'why MBA' that links your past, the course and the role you want.",
+    "For guesstimates, state your approach first, round the numbers and sense-check the answer.",
+    "Read business news daily in the weeks before placements, focusing on the sectors you're applying to.",
+    "Prepare a short version of your summer project that someone from a different function would follow.",
+    "In a group discussion, a clear structure and a good summary often count for more than talking the most."
+  ],
+  "mock": {
+    "interview_type": "mixed",
+    "persona": "hiring_manager"
+  },
+  "reviewed": "2026-10-18"
+}

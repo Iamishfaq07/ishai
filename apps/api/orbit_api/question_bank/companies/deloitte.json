@@ -1,0 +1,193 @@
+{
+  "slug": "deloitte",
+  "name": "Deloitte",
+  "aliases": [
+    "deloitte india",
+    "deloitte usi",
+    "deloitte consulting"
+  ],
+  "group": "consulting",
+  "market": "global",
+  "summary": "Deloitte's interviews usually mix behavioural questions with a case or technical problem for the business you've applied to (audit, tax, consulting or advisory), and many roles end with a conversation with a partner or director. For campus hiring, candidates commonly report an online assessment first and, in India, a group discussion for some roles. Deloitte publishes five Shared Values, including 'Serve with integrity' and 'Take care of each other'.",
+  "rounds": [
+    "Online assessment",
+    "Group discussion (some campus roles)",
+    "Technical or case interview",
+    "Partner / HR interview"
+  ],
+  "looks_for": [
+    "Structured thinking",
+    "Client-facing communication",
+    "Business awareness",
+    "Teamwork and integrity",
+    "Lead the way",
+    "Serve with integrity",
+    "Take care of each other",
+    "Foster inclusion",
+    "Collaborate for measurable impact"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your studies or current role in two or three lines, starting with what's most relevant to this job",
+        "One or two achievements that show analytical, technical or client-facing skills",
+        "Why you're applying to this business at Deloitte, as a bridge to the rest of the interview"
+      ]
+    },
+    {
+      "text": "A client's sales dropped 20% this quarter. How would you find out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying questions first: which products, regions and channels, and whether the whole market fell",
+        "A clear structure: price versus volume, then customers, competitors and changes inside the company",
+        "The most likely cause, the data you'd use to test it, and a first recommendation"
+      ]
+    },
+    {
+      "text": "Tell me about a time you persuaded someone who disagreed with you.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What they believed and why it was reasonable from their side",
+        "How you made your case: evidence, a small trial, or finding common ground",
+        "The outcome, and what you learnt about persuading people"
+      ]
+    },
+    {
+      "text": "Why consulting, and why Deloitte?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you to client work, shown by something you've done (a project, an internship, a competition)",
+        "Something specific about Deloitte: a business, a service line or a kind of project you want to work on",
+        "How your skills fit the role you've applied for"
+      ]
+    },
+    {
+      "text": "Tell me about a time a teammate wasn't doing their share. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was slipping and how it affected the team's deadline",
+        "How you raised it with them privately and found out why",
+        "What changed, and how you kept the working relationship good"
+      ]
+    },
+    {
+      "text": "Describe a time you noticed something that didn't look right and raised it, even though it was awkward.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you noticed and how you checked it before speaking up",
+        "Who you told, and how you put it without blaming anyone",
+        "What happened next and why raising it was the right call"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to learn a new tool or subject quickly to deliver on time.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why you needed it and how little time you had",
+        "How you learnt it: what you read, built or asked",
+        "What you delivered, and how well it held up"
+      ]
+    },
+    {
+      "text": "A client wants to move its finance systems to the cloud. What would you ask in the first meeting?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The business reason: cost, speed, ageing systems or growth",
+        "What exists today: systems, data, integrations, users and any regulatory limits",
+        "Risks and timing: data migration, security, downtime, training, and how success will be measured"
+      ]
+    },
+    {
+      "text": "Walk me through how you'd estimate the number of cups of coffee sold in Bengaluru on a weekday.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A clear starting point, such as population or number of cafés and offices",
+        "Splitting by who drinks coffee and how often, with round numbers you say out loud",
+        "A final figure, a quick sense check, and which assumption matters most"
+      ]
+    },
+    {
+      "text": "Explain what an external auditor does and why investors rely on audited financial statements.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "An independent check that the statements give a true and fair view, under the accounting rules that apply",
+        "How auditors gather evidence: testing samples, confirming balances, understanding controls",
+        "Why independence and professional scepticism matter to investors and lenders"
+      ]
+    },
+    {
+      "text": "Explain the difference between a relational database and a NoSQL database, and when you'd choose each for a client project.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Relational: tables, fixed schema, joins and transactions; NoSQL: flexible documents or key-value data at scale",
+        "A client example for each, such as finance ledgers versus product catalogues or event logs",
+        "The trade-offs you'd explain to the client: consistency, scaling, skills and cost"
+      ]
+    },
+    {
+      "text": "You're implementing a new system and the client's team keeps resisting it. How would you get them on board?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Finding out why: fear of extra work, lost control, or real gaps in the system",
+        "Involving key users early, showing quick wins and training them in their own processes",
+        "Keeping the client's sponsor informed and agreeing what success looks like"
+      ]
+    },
+    {
+      "text": "Which of Deloitte's businesses do you want to work in, for example audit, tax, consulting or advisory, and why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A clear choice, linked to your studies, skills or experience",
+        "What you know about the work people at your level do there",
+        "What you hope to learn in your first two years"
+      ]
+    },
+    {
+      "text": "What questions do you have for us?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two specific questions about the team's clients, projects or training",
+        "A question that shows you've listened during the interview",
+        "Nothing you could have found on the careers site in a minute"
+      ]
+    }
+  ],
+  "tips": [
+    "Structure answers out loud: 'I'd look at three things…'.",
+    "For case questions, ask clarifying questions before you answer.",
+    "Know which business and service line you've applied to; audit, tax, technology consulting and risk interviews ask quite different technical questions.",
+    "Bring one project you can explain end to end: the problem, your part, the tools you used and what the client or user got.",
+    "In a partner round, expect broader questions on business news and why you want client work; read up on one or two industries you'd like to serve.",
+    "Prepare a short story for each Shared Value, especially integrity and teamwork; behavioural questions often map to them."
+  ],
+  "sources": [
+    {
+      "title": "Deloitte's Purpose and Shared Values (deloitte.com)",
+      "url": "https://www.deloitte.com/global/en/about/story/purpose-values.html"
+    }
+  ],
+  "abroad": {
+    "rounds": [
+      "Online application, with an assessment for some roles",
+      "First-round interview: behavioral questions and a case or technical problem",
+      "Final round with a partner or director"
+    ]
+  },
+  "reviewed": "2026-10-18"
+}

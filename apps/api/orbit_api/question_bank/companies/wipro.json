@@ -1,0 +1,202 @@
+{
+  "slug": "wipro",
+  "name": "Wipro",
+  "aliases": [
+    "wipro limited",
+    "wipro elite",
+    "wipro nlth",
+    "wipro turbo"
+  ],
+  "group": "it-services",
+  "market": "india-first",
+  "summary": "Wipro hires many engineering freshers in India through Elite, its national talent hunt for new graduates, which candidates commonly describe as an online assessment (aptitude, a written communication essay and coding) followed by technical and HR interviews. Interviews usually focus on programming basics, your projects and how clearly you communicate. Wipro publishes its values as the Spirit of Wipro, alongside its Five Habits.",
+  "rounds": [
+    "Online assessment (aptitude, written communication essay, coding)",
+    "Technical interview",
+    "HR interview"
+  ],
+  "looks_for": [
+    "Fundamentals and coding basics",
+    "Written and spoken communication",
+    "Flexibility on location and shifts",
+    "Integrity and teamwork",
+    "Be passionate about clients' success",
+    "Treat each person with respect",
+    "Be global and responsible",
+    "Unyielding integrity in everything we do",
+    "The Five Habits: being respectful, being responsive, always communicating, demonstrating stewardship, building trust"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your degree and the skills you're strongest in, briefly",
+        "One project or internship and what you did in it",
+        "What you want from your first role, in under two minutes"
+      ]
+    },
+    {
+      "text": "Explain the four pillars of object-oriented programming.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Encapsulation, abstraction, inheritance and polymorphism, one plain line each",
+        "One small example that shows all four, such as a bank account or vehicle class",
+        "Overloading versus overriding as the two common kinds of polymorphism"
+      ]
+    },
+    {
+      "text": "Tell me about a challenge you faced in a team project.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The challenge: a deadline, a technical block or a team problem",
+        "What you did about it yourself, not just what the team did",
+        "The result and what you'd do differently next time"
+      ]
+    },
+    {
+      "text": "Why should we hire you?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Two or three strengths that match the role, each with quick proof",
+        "Something that sets you apart, such as a project, certification or responsibility",
+        "Your willingness to learn whatever the project needs"
+      ]
+    },
+    {
+      "text": "Tell me about a time you kept a promise to someone even when it became hard to deliver.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you'd promised and what made it hard",
+        "How you kept them informed while you worked on it",
+        "Whether you delivered, and how it affected their trust in you"
+      ]
+    },
+    {
+      "text": "Tell me about a time someone needed your help quickly. How did you respond?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who needed help and why it was urgent",
+        "How you balanced it with your own work",
+        "What happened, and what you learned about being responsive"
+      ]
+    },
+    {
+      "text": "Tell me about a misunderstanding that happened because something wasn't communicated. What did you change?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What went unsaid and what it caused",
+        "Your own part in it, owned plainly",
+        "The habit you've built since, such as written summaries or quick check-ins"
+      ]
+    },
+    {
+      "text": "What is the difference between a stack and a queue, and where would you use each?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Stack: last in, first out; queue: first in, first out",
+        "Uses: undo, function calls and bracket matching for stacks; print jobs and task scheduling for queues",
+        "How each can be built with an array or a linked list"
+      ]
+    },
+    {
+      "text": "Explain what a deadlock is and one way to prevent it.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Two or more processes each waiting for a resource another holds",
+        "The four conditions: mutual exclusion, hold and wait, no pre-emption, circular wait",
+        "A prevention method, such as always taking locks in the same order"
+      ]
+    },
+    {
+      "text": "Walk me through how you would test a login page. Which cases would you check?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Valid and invalid logins, empty fields, wrong password limits",
+        "Security checks: password masking, account lockout, SQL injection attempts",
+        "Usability and other cases: forgotten password, different browsers, slow networks"
+      ]
+    },
+    {
+      "text": "For experienced candidates: tell me about a defect or support ticket you resolved and how you found the root cause.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The symptom the user reported and why the first guess was wrong",
+        "The logs, data or steps you used to reproduce it",
+        "The fix, how you tested it and what stopped it coming back"
+      ]
+    },
+    {
+      "text": "Are you comfortable working on any technology or shift the project needs?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with any real constraint stated clearly",
+        "An example of adapting to something you didn't choose",
+        "What you'd still like to learn over time"
+      ]
+    },
+    {
+      "text": "What do you know about Wipro and the work it does for clients?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Its main kinds of work, such as consulting, cloud, digital and running clients' IT",
+        "One recent piece of news or a client story you read",
+        "Why that work interests you"
+      ]
+    },
+    {
+      "text": "Do you have any questions for us?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two thoughtful questions about training, the first project or the team",
+        "Nothing that's already answered on the careers site",
+        "A brief thank-you"
+      ]
+    }
+  ],
+  "tips": [
+    "Practise a short essay: the written test checks grammar and structure.",
+    "Have a clear two-minute walkthrough of your best project.",
+    "In the essay, take one clear position, give two reasons with an example, and leave a minute to check spelling.",
+    "Revise OOP, data structures, DBMS and one language; the technical round usually starts from your resume.",
+    "Read Wipro's Five Habits and prepare a short example for two or three of them; they make good material for HR answers."
+  ],
+  "sources": [
+    {
+      "title": "Spirit of Wipro and the Five Habits (wipro.com)",
+      "url": "https://www.wipro.com/about-us/"
+    },
+    {
+      "title": "Early careers at Wipro (careers.wipro.com)",
+      "url": "https://careers.wipro.com/content/Early-Careers/?locale=en_US"
+    }
+  ],
+  "abroad": {
+    "rounds": [
+      "Online application and recruiter screen",
+      "Online assessment for some graduate roles",
+      "Technical interview on your skills and projects",
+      "Manager or HR interview"
+    ],
+    "tips": [
+      "Have a clear two-minute walkthrough of your best project.",
+      "Revise OOP, data structures, databases and one language; the technical round usually starts from your resume.",
+      "Read Wipro's Five Habits and prepare a short example for two or three of them; they make good material for HR answers."
+    ]
+  },
+  "reviewed": "2026-10-18"
+}

@@ -1,0 +1,172 @@
+{
+  "slug": "booking-com",
+  "name": "Booking.com",
+  "aliases": ["booking", "booking com", "booking holdings"],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Booking.com runs an online travel platform for stays, flights and other trips, and its careers site describes the process: a recruiter call, then several 'business' interviews with your future manager and teammates, with technical tests or coding interviews for technical roles. It publishes five values, such as Think customer first and Own it, and its graduate tracks have included online assessments and an assessment centre.",
+  "rounds": [
+    "Recruiter or sourcer call on your background and motivation",
+    "Coding or technical test for many technical roles",
+    "Business interviews, often several, with your future manager, teammates and colleagues",
+    "For graduate programmes, online assessments and an assessment centre with interviews and a group exercise (in some years)",
+    "Feedback from the recruiter"
+  ],
+  "looks_for": [
+    "Think customer first",
+    "Succeed together",
+    "Own it",
+    "Learn forever",
+    "Do the right thing",
+    "Comfort with experiments and data when deciding what to change"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you put the customer first even though it made your work harder.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The customer need and the easier option you passed on",
+        "The extra work and how you justified it",
+        "The result for customers"
+      ]
+    },
+    {
+      "text": "Tell me about something you owned from start to finish. What would have gone wrong without you?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you owned and why it was yours",
+        "The moments you stepped in when things slipped",
+        "The outcome and what you handed over afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a time an experiment or test proved your idea wrong. What did you do next?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The idea and what you expected",
+        "What the data showed and how you checked it",
+        "How you accepted it and what you tried next"
+      ]
+    },
+    {
+      "text": "Tell me about a time you learned something new because your team needed it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The gap in the team and why it mattered",
+        "How you learned it quickly",
+        "How you shared it with others"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with colleagues from different countries or cultures. What did you learn?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The team and the goal",
+        "A difference in how people worked or communicated",
+        "What you changed in your own style"
+      ]
+    },
+    {
+      "text": "How would you design an A/B test for a change to the hotel search results page, and decide whether to ship it?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A hypothesis and a main metric, such as bookings per visitor, plus guardrails",
+        "Random assignment, sample size and running long enough",
+        "Reading the result honestly, including no effect or harm"
+      ]
+    },
+    {
+      "text": "How would you design a system that shows live room availability from thousands of properties?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Getting updates from property systems and partners",
+        "Caching for fast search, with a final check before booking",
+        "Handling overbooking risk and properties that go offline"
+      ]
+    },
+    {
+      "text": "Booking confirmation emails are reaching some customers hours late. How would you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Who is affected: certain regions, email providers, booking types",
+        "Checking queues, retries and the email provider's status",
+        "Making sure travellers have their booking details while it's fixed"
+      ]
+    },
+    {
+      "text": "How would you make a website fast for travellers on slow connections around the world?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Smaller pages: compressed images, less JavaScript, lazy loading",
+        "CDNs and caching close to users",
+        "Measuring real users' load times by region and device"
+      ]
+    },
+    {
+      "text": "Before you write any code, how do you make sure you understand the problem? Walk me through your questions.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Restating the problem and the goal in your own words",
+        "Inputs, outputs, scale and edge cases",
+        "Checking a simple example before choosing an approach"
+      ]
+    },
+    {
+      "text": "A property cancels a traveller's booking at the last minute. How should the product and the systems handle it?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Telling the traveller fast and offering alternatives",
+        "Refunds, rebooking and support, and who pays for what",
+        "Tracking the property's reliability to prevent repeats"
+      ]
+    },
+    {
+      "text": "Why Booking.com, and which of its values do you relate to most?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason tied to travel, the product or the way the company works",
+        "One value, named once, with a short example",
+        "What you'd bring to the team"
+      ]
+    },
+    {
+      "text": "What does a great travel experience look like to you, and how could technology make it better?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific trip or moment",
+        "A pain point in planning or travelling",
+        "One idea and how you'd test it"
+      ]
+    }
+  ],
+  "tips": [
+    "Booking.com's careers site says interviewers care about your reasoning as much as the answer; start technical problems by restating what you're solving.",
+    "Have your CV and the job posting to hand for the recruiter call, with an example ready for each main skill.",
+    "Expect questions about experiments and data; think about how you'd measure whether a change helped travellers.",
+    "For a graduate assessment centre, be constructive in the group exercise: build on others' ideas and help the group reach a decision."
+  ],
+  "sources": [
+    {
+      "title": "Start your journey: interview process and values (careers.booking.com)",
+      "url": "https://careers.booking.com/start-your-journey/"
+    },
+    {
+      "title": "The graduate software engineering interview process (careers.booking.com)",
+      "url": "https://careers.booking.com/blog/the-graduate-software-engineering-bootcamp-patricia-nicole-experience/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

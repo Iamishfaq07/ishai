@@ -1,0 +1,207 @@
+{
+  "slug": "project-manager",
+  "name": "Project manager",
+  "aliases": ["scrum master", "delivery manager", "program manager", "programme manager", "technical program manager", "it project manager", "agile project manager", "project coordinator"],
+  "group": "product-design",
+  "summary": "Project manager interviews usually focus on how you plan work, handle risk and keep people aligned when things change. Candidates commonly report behavioural questions about delays, scope changes and difficult stakeholders, alongside questions on methods such as Agile, Scrum and Waterfall. For IT projects, expect some questions on the software development life cycle; certifications such as PMP or a Scrum certification may come up.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Hiring manager interview on past projects: their size, your role and the results",
+    "Scenario or behavioural round: delays, scope changes, conflicts and risks",
+    "Methods discussion: Agile, Scrum, Waterfall, estimation and tracking tools",
+    "Panel or stakeholder round with team leads (for some roles)",
+    "HR round"
+  ],
+  "looks_for": [
+    "Clear planning: scope, milestones, dependencies and owners",
+    "Spotting risks early and acting on them",
+    "Sharing bad news early and honestly",
+    "Handling scope changes without losing control of time and cost",
+    "Getting people across teams to agree and commit",
+    "Knowing when to use Agile, Waterfall or a mix"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a project that was running late. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you spotted it, and how far behind it was",
+        "The options you weighed: scope, people, deadline",
+        "What you told stakeholders, and how it ended"
+      ]
+    },
+    {
+      "text": "Describe a time two stakeholders wanted conflicting things from your project.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Each side's goal, and why it mattered to them",
+        "How you got them to agree, or escalated with clear options",
+        "The decision, and how you kept both sides on board"
+      ]
+    },
+    {
+      "text": "Tell me about a project that missed its goals. What would you do differently?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What happened, owned honestly",
+        "The warning signs you missed",
+        "What you do differently in projects now"
+      ]
+    },
+    {
+      "text": "Tell me about a time someone on your team wasn't delivering. How did you handle it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What wasn't working, and how you found out",
+        "The conversation you had and the support you offered",
+        "The outcome for the person and for the project"
+      ]
+    },
+    {
+      "text": "Tell me about a risk you spotted early that turned out to matter.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you identified it",
+        "What you did to reduce it, and who you told",
+        "What would have happened otherwise"
+      ]
+    },
+    {
+      "text": "Walk me through how you'd plan a new project from kick-off to the first milestone.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Goals, scope and stakeholders agreed in writing",
+        "Breaking the work down, estimating it and finding dependencies",
+        "A schedule, a risk list, and how you'll report progress"
+      ]
+    },
+    {
+      "text": "When would you use Agile and when Waterfall? Give an example of each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Agile for changing requirements and frequent feedback",
+        "Waterfall for fixed scope, regulated work, or projects with heavy hardware or construction parts",
+        "Hybrid approaches you've seen work"
+      ]
+    },
+    {
+      "text": "What does a Scrum Master do in each of the Scrum events?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Sprint planning, the daily scrum, the sprint review and the retrospective, and what each is for",
+        "Removing blockers and protecting the team's focus",
+        "Coaching the team rather than directing it"
+      ]
+    },
+    {
+      "text": "Halfway through a project, the client asks for a major new feature without moving the deadline. How do you respond?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Understanding why they want it and what it's worth",
+        "Showing the impact on time, cost and quality",
+        "Options such as swapping scope or adding a phase, agreed through change control and in writing"
+      ]
+    },
+    {
+      "text": "How do you estimate effort for work your team hasn't done before?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Breaking it into smaller pieces and estimating with the people who'll do the work",
+        "Ranges, comparisons with past work, and story points where the team uses them",
+        "A buffer for unknowns, and re-estimating as you learn"
+      ]
+    },
+    {
+      "text": "How do you track whether a project is on schedule and within budget?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Milestones, burn-down or burn-up charts, and planned versus actual",
+        "Earned value in plain words, for larger projects",
+        "Status reports that flag problems early"
+      ]
+    },
+    {
+      "text": "Explain the critical path and why it matters.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The longest chain of dependent tasks, which sets the end date",
+        "Why a delay on it delays the whole project",
+        "Ways to shorten it, and their cost"
+      ]
+    },
+    {
+      "text": "A key team member resigns two months before launch. What do you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Handover and knowledge transfer while they're still there",
+        "Re-planning: sharing out work, bringing in help, adjusting scope",
+        "Telling stakeholders about the risk early"
+      ]
+    },
+    {
+      "text": "How do you run a status meeting that doesn't waste people's time?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A clear agenda focused on blockers and decisions",
+        "Routine updates shared in writing beforehand",
+        "Ending with owners and dates for each action"
+      ]
+    },
+    {
+      "text": "How would you run a project with a team spread across several time zones?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Overlap hours for key meetings and written updates for everything else",
+        "Clear ownership and decisions recorded where everyone can find them",
+        "Sharing inconvenient meeting times fairly"
+      ]
+    },
+    {
+      "text": "Why project management? What do you enjoy about it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What you enjoy: bringing order, delivering, working with people",
+        "An example of a project you enjoyed running",
+        "The kind of projects you want to run next"
+      ]
+    },
+    {
+      "text": "Which tools and certifications have helped you most, and what are you learning now?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Tools you use day to day, such as Jira or a planning tool, and what for",
+        "Certifications you hold and what you actually use from them",
+        "What you're learning next"
+      ]
+    }
+  ],
+  "tips": [
+    "Prepare stories with numbers: team size, budget or duration, how late things were, and what you recovered.",
+    "Show that you raise bad news early; interviewers listen for whether you hid problems or surfaced them.",
+    "Know the Scrum events and roles well, even for roles that aren't purely Agile; questions on them are common.",
+    "Separate your own decisions from the team's; answers that only say 'we' can hide what you did.",
+    "If you're moving into project management from another role, use projects you coordinated informally as evidence."
+  ],
+  "mock": {
+    "interview_type": "mixed",
+    "persona": "hiring_manager"
+  },
+  "reviewed": "2026-10-18"
+}

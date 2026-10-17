@@ -1,0 +1,208 @@
+{
+  "slug": "product-manager",
+  "name": "Product manager",
+  "aliases": ["pm", "associate product manager", "apm", "product owner", "technical product manager", "senior product manager", "growth product manager", "product management"],
+  "group": "product-design",
+  "summary": "Product manager interviews usually test product sense (designing or improving a product for a group of users), analytical thinking (metrics, estimates and diagnosing a change in a number) and how you work with engineers, designers and leaders. Candidates commonly report case-style questions alongside behavioural ones, and for some roles a written exercise or presentation; associate PM interviews often weigh structured thinking more than past experience.",
+  "rounds": [
+    "Recruiter screen",
+    "Product sense round: design or improve a product for a group of users",
+    "Analytical round: metrics, estimates and diagnosing a drop in a number",
+    "Execution or technical round: prioritising, trade-offs and working with engineers",
+    "Behavioural or leadership round, often with a senior product leader",
+    "Written exercise or presentation for some roles"
+  ],
+  "looks_for": [
+    "Starting from users and their problems before features",
+    "Structured thinking that's easy to follow",
+    "Metrics that reflect real value, with guardrails",
+    "Prioritising with clear reasons, and saying no",
+    "Influencing engineering, design and business without formal authority",
+    "Comfort with data, and enough technical understanding to discuss trade-offs"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a product or feature you launched. How did you decide what to build?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The user problem, and how you knew it was worth solving",
+        "How you chose the solution and what you left out",
+        "The result against the metric you set beforehand"
+      ]
+    },
+    {
+      "text": "Describe a time you had to say no to a senior stakeholder's request.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The request, and why it didn't fit the priorities",
+        "How you explained it with data or user evidence",
+        "What you offered instead, and how the relationship held up"
+      ]
+    },
+    {
+      "text": "Tell me about a launch that didn't go as planned.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What you expected and what actually happened",
+        "How you responded in the first few days",
+        "What you changed about how you plan or test launches"
+      ]
+    },
+    {
+      "text": "Tell me about a time engineering and design disagreed about a feature. How did you help them decide?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The two views and the trade-off behind them",
+        "How you brought the discussion back to users and goals",
+        "The decision, and how you kept everyone committed to it"
+      ]
+    },
+    {
+      "text": "Pick an app you use every day. Who is it for, and what one change would you make?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Its main user groups, and the one you'd focus on",
+        "A specific problem, how you know it exists, and your change",
+        "How you'd measure whether the change worked"
+      ]
+    },
+    {
+      "text": "Design a product that helps older people manage their medicines.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying who exactly: the person, a carer, a family member, a pharmacist",
+        "The key problems: remembering doses, refills, mixing up medicines",
+        "A simple first version, what you'd leave out, and how you'd test it"
+      ]
+    },
+    {
+      "text": "Weekly active users of a feature dropped 10% this week. How would you find out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Ruling out tracking bugs, releases, holidays and seasonality first",
+        "Splitting the drop by platform, region, user type and step in the flow",
+        "The most likely cause, how you'd confirm it, and what you'd do next"
+      ]
+    },
+    {
+      "text": "How would you measure the success of a new messaging feature in a social app?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The goal of the feature, then one main metric tied to it",
+        "Supporting and guardrail metrics, such as spam reports or replies per conversation",
+        "How you'd notice if it helped one group of users and hurt another"
+      ]
+    },
+    {
+      "text": "Estimate how many people in Bengaluru use a ride-hailing app on a typical weekday. Talk me through your reasoning.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A clear structure: population, share who travel daily, share using ride-hailing",
+        "Stated, sensible assumptions with round numbers",
+        "A quick sanity check on the final figure"
+      ]
+    },
+    {
+      "text": "You have five requested features and capacity for two this quarter. How do you choose?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Tying each feature to goals and to user impact",
+        "Estimating effort and risk with engineering",
+        "A simple framework such as impact versus effort or RICE, and explaining the choice to those who lose out"
+      ]
+    },
+    {
+      "text": "What goes into a good product requirements document for a new feature?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The problem, the users and the goals",
+        "Scope, what's explicitly out of scope, and success metrics",
+        "Open questions and risks, and how design and engineering shape the document"
+      ]
+    },
+    {
+      "text": "How do you decide whether to run an A/B test or simply launch a change?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Risk, how easy it is to reverse, and whether there are enough users for a test",
+        "What you'd measure and for how long",
+        "When user research or a staged rollout is enough"
+      ]
+    },
+    {
+      "text": "Users say the app feels slow. How would you work with engineers to understand and fix it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "A basic picture of where time goes: device, network, server, database",
+        "Asking for measurements and agreeing a target",
+        "Weighing speed work against features, with user impact as the reason"
+      ]
+    },
+    {
+      "text": "A competitor has just launched a feature our users keep asking for. What do you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Understanding why users want it, and how many",
+        "Whether it fits your strategy, rather than copying by reflex",
+        "Options: build it, build something different, or not build it, and how you'd test the choice"
+      ]
+    },
+    {
+      "text": "How would you talk to users to decide what to build next?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Finding the right users and asking about past behaviour, not wishes about the future",
+        "Avoiding leading questions",
+        "Combining what they say with what usage data shows"
+      ]
+    },
+    {
+      "text": "Why product management, and why now?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Experiences that drew you to it: a project, a launch, a problem you owned",
+        "Skills you bring from your background",
+        "What you most want to learn as a PM"
+      ]
+    },
+    {
+      "text": "Which part of our product do you think could be better, and what would you change first?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "Evidence that you've used the product properly",
+        "A specific problem and a focused change",
+        "The metric that would tell you it worked"
+      ]
+    }
+  ],
+  "tips": [
+    "In product questions, say who the user is and what problem you're solving before naming any feature.",
+    "State your structure at the start (users, problems, solutions, metrics) so the interviewer can follow and redirect you.",
+    "Finish with a clear recommendation; a balanced list with no choice is a common weak spot.",
+    "Use the company's product properly before the interview and note specific details, not general impressions.",
+    "For associate PM roles, show product thinking through college projects, internships or things you've built yourself.",
+    "Keep estimates simple: round numbers, stated assumptions and a quick sanity check."
+  ],
+  "mock": {
+    "interview_type": "mixed",
+    "persona": "hiring_manager"
+  },
+  "reviewed": "2026-10-18"
+}

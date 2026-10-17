@@ -1,0 +1,207 @@
+{
+  "slug": "backend-developer",
+  "name": "Backend developer",
+  "aliases": ["back end developer", "backend engineer", "back end engineer", "java developer", "python developer", "node developer", "node js developer", "golang developer", "dot net developer", "php developer", "api developer", "server side developer"],
+  "group": "engineering",
+  "summary": "Backend developer interviews usually focus on APIs, databases and how a service behaves under load or failure, alongside coding in the role's main language (often Java, Python, Node.js, Go or C#). Candidates commonly report questions on SQL and indexing, caching, concurrency and authentication, and for experienced roles, a system design round and stories about production incidents.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Online coding test or take-home: often a coding problem or a small API to build",
+    "Coding interview in the role's main language",
+    "Backend fundamentals: databases, APIs, caching, concurrency and your framework",
+    "System design for experienced roles: design a service and discuss scale and failure",
+    "Hiring manager or behavioural round"
+  ],
+  "looks_for": [
+    "Clean API design: resources, status codes, versioning and errors",
+    "Database judgement: schema design, indexes, transactions and query cost",
+    "Knowing what happens under load: caching, queues, timeouts and retries",
+    "Security basics: authentication, authorisation and validating input",
+    "Debugging from logs and metrics, and owning production issues",
+    "Real depth in one language and framework"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a production incident you were part of. What was your role in fixing it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What users saw and how the team found out",
+        "What you checked and how you narrowed down the cause",
+        "The fix and the follow-up: alerts, tests or design changes"
+      ]
+    },
+    {
+      "text": "Describe a time you sped up a slow API or query. How did you find the problem?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How slow it was and who it affected",
+        "How you found the cause: query plans, profiling, tracing",
+        "What you changed, with before-and-after numbers"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to change a database schema or API that other teams depended on.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why the change was needed",
+        "How you kept things working during the change: versioning, backward compatibility, migrating in steps",
+        "How you told the other teams, and what you'd do differently"
+      ]
+    },
+    {
+      "text": "Tell me about a technical shortcut you took to meet a deadline. Did you go back and fix it?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The shortcut and why it seemed worth it at the time",
+        "What it cost later, honestly",
+        "How you paid it back, or how you'd decide differently now"
+      ]
+    },
+    {
+      "text": "What makes a REST API well designed? Talk me through one you've built.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Clear resource names, the right HTTP methods and status codes",
+        "Consistent error responses, pagination and versioning",
+        "Authentication, rate limits and documentation"
+      ]
+    },
+    {
+      "text": "Explain database indexes. How do they speed up reads, and what do they cost?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "An index as a sorted structure (often a B-tree) that avoids scanning every row",
+        "Composite indexes and why column order matters",
+        "The cost on writes and storage, and checking a query plan to confirm an index is used"
+      ]
+    },
+    {
+      "text": "What are transactions and ACID, and when might you accept a weaker isolation level?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Atomicity, consistency, isolation and durability in plain words",
+        "Problems isolation prevents, such as dirty reads and lost updates",
+        "The trade-off between strict isolation and throughput, with an example"
+      ]
+    },
+    {
+      "text": "When would you choose a relational database, and when a NoSQL store?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Relational for structured data, joins and strong consistency",
+        "Document, key-value or wide-column stores for flexible shapes or very high write rates",
+        "Letting the access patterns decide, with an example from your work"
+      ]
+    },
+    {
+      "text": "How would you add caching to a read-heavy service, and how do you stop it serving stale data?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "What to cache and where: in memory, a shared cache such as Redis, a CDN",
+        "Expiry times, clearing entries on writes, and cache-aside versus write-through",
+        "What happens if the cache goes down or many requests miss at once"
+      ]
+    },
+    {
+      "text": "Explain the difference between authentication and authorisation, and how token-based login works.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Who you are versus what you're allowed to do",
+        "Issuing a signed token, sending it with each request and verifying it on the server",
+        "Expiry and refresh tokens, and storing passwords with a slow, salted hash"
+      ]
+    },
+    {
+      "text": "Your service calls a payment provider that sometimes times out. How do you make this safe?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Timeouts, and retries with backoff rather than retrying blindly",
+        "Idempotency keys so a retry can't charge the customer twice",
+        "Recording each payment's state and reconciling uncertain ones later"
+      ]
+    },
+    {
+      "text": "Talk me through how you'd design a notification service that sends email, SMS and push messages.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Requirements: volume, priority, user preferences and quiet hours",
+        "A queue between the API and the senders, with retries and a dead-letter queue",
+        "Rate limits per provider, avoiding duplicates, and tracking delivery"
+      ]
+    },
+    {
+      "text": "Two requests update the same record at the same moment and one change is lost. Why, and how would you prevent it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "The read-modify-write race and why it happens",
+        "Fixes: row locks, optimistic locking with a version number, single atomic updates",
+        "How you'd reproduce it in a test"
+      ]
+    },
+    {
+      "text": "When would you put a message queue between two services instead of a direct API call?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Moving slow or unreliable work out of the user's request",
+        "Absorbing spikes and retrying failures",
+        "The costs: delayed consistency, duplicate messages, harder debugging"
+      ]
+    },
+    {
+      "text": "Explain how your main framework handles a request, from reaching the server to sending the response.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Routing, middleware, the handler and the response",
+        "Where validation, authentication and error handling sit",
+        "How it serves many requests at once: threads, an event loop or worker processes"
+      ]
+    },
+    {
+      "text": "Why backend development rather than frontend or full-stack work?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What you enjoy: data, reliability, scale, the logic behind the product",
+        "An example from your work or projects that shows it",
+        "What you'd like to learn next"
+      ]
+    },
+    {
+      "text": "What would you want to know about our systems and team before your first week?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Questions about the stack, on-call, and how code is reviewed and shipped",
+        "A question that shows you've looked at the product",
+        "What a good first three months looks like to them"
+      ]
+    }
+  ],
+  "tips": [
+    "Know your main language deeply: its concurrency model, how memory is managed, and the usual libraries for web work.",
+    "In any design question, ask about traffic, data size and how stale data is allowed to be before drawing boxes.",
+    "Bring up failure without being asked: timeouts, retries, duplicates and what happens when a dependency is down.",
+    "Practise reading a query plan and explaining why an index is or isn't being used.",
+    "Have one incident story ready with a timeline, your part in it and what changed afterwards."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "engineer"
+  },
+  "reviewed": "2026-10-18"
+}

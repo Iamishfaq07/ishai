@@ -1,0 +1,192 @@
+{
+  "slug": "ltimindtree",
+  "name": "LTM (formerly LTIMindtree)",
+  "aliases": ["ltm", "ltimindtree", "lti", "mindtree", "lti mindtree", "larsen and toubro infotech", "l&t infotech"],
+  "group": "it-services",
+  "market": "india-first",
+  "summary": "LTM, the Larsen & Toubro group's technology services company, was known as LTIMindtree until it introduced the LTM brand in February 2026. It hires freshers mainly through campus and off-campus drives that candidates commonly describe as an online assessment of aptitude, reasoning and coding, then technical and HR interviews. It publishes four values: Driven by purpose, Act with compassion, Be future-ready and Deliver impact.",
+  "rounds": [
+    "Campus drive, off-campus registration or online application",
+    "Online assessment: aptitude, reasoning, English and coding (often)",
+    "Technical interview on fundamentals, your coding approach and your projects",
+    "For experienced roles: one or two technical rounds, then a manager discussion",
+    "HR interview"
+  ],
+  "looks_for": [
+    "Driven by purpose",
+    "Act with compassion",
+    "Be future-ready",
+    "Deliver impact",
+    "Coding fundamentals and clear logic",
+    "Data, cloud or AI basics for newer roles",
+    "A clear explanation of your own projects",
+    "Teamwork and steady learning"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself and the project you're proudest of.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your degree or experience and your strongest skills, briefly",
+        "The project: the problem, your part and one result",
+        "Why this role is the right next step"
+      ]
+    },
+    {
+      "text": "Tell me about a time you kept going on something because you believed in why it mattered.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the goal was and why it mattered to you or others",
+        "The setback that could have made you stop",
+        "What kept you going and what you achieved"
+      ]
+    },
+    {
+      "text": "Tell me about a time you noticed someone on your team was having a hard time. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you noticed and how you raised it kindly",
+        "The practical help you gave, without taking over",
+        "How it changed things for them and the team"
+      ]
+    },
+    {
+      "text": "Tell me about something new you taught yourself because you expected to need it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why you saw the need coming",
+        "How you learned it and how you practised",
+        "Where you've used it since"
+      ]
+    },
+    {
+      "text": "Tell me about a result you delivered that someone else could measure.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and who cared about it",
+        "What you did to get there",
+        "The result as a number or a clear before-and-after"
+      ]
+    },
+    {
+      "text": "Explain the difference between an array and a linked list, and when you'd choose each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Array: items side by side in memory, fast access by index, costly inserts in the middle",
+        "Linked list: nodes with pointers, cheap inserts and deletes, slow access by position",
+        "A use case for each"
+      ]
+    },
+    {
+      "text": "What is an index in a database, and when can adding one make things slower?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "An index works like a book's index: finding rows without reading the whole table",
+        "It speeds up reads and filters on the indexed columns",
+        "It slows down inserts and updates and takes space, so too many hurt"
+      ]
+    },
+    {
+      "text": "How would you design a simple link-shortening service: what would you store, and how would lookups work?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying scale and features, such as custom links or expiry",
+        "Storing short code to long URL, and how codes are generated without clashes",
+        "Fast redirects using an index or cache, and counting clicks"
+      ]
+    },
+    {
+      "text": "What is the difference between Git merge and rebase, and why do teams use pull requests?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Merge joins histories with a merge commit; rebase replays your commits on top of another branch",
+        "Why not to rebase shared branches",
+        "Pull requests for review, tests and a record of changes"
+      ]
+    },
+    {
+      "text": "What does a REST API do, and what do the common HTTP methods mean?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "An API that exposes resources at URLs and exchanges data, often JSON",
+        "GET, POST, PUT or PATCH and DELETE, each in a line",
+        "Status codes such as 200, 201, 400, 404 and 500"
+      ]
+    },
+    {
+      "text": "Your code passes on your machine but fails in the build pipeline. What do you check?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Differences in versions, environment variables or missing files",
+        "Tests that depend on order, time or local data",
+        "Reading the pipeline log carefully and reproducing it in a clean setup"
+      ]
+    },
+    {
+      "text": "For experienced candidates: tell me about a time you improved the performance of something in production. How did you measure it?",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The slow part and how users or the business felt it",
+        "How you found the bottleneck, with the numbers before and after",
+        "Any trade-off the fix brought"
+      ]
+    },
+    {
+      "text": "Why LTM, and what do you know about the industries it works in?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific you've read on its site or in recent news",
+        "One industry or service line that interests you and why",
+        "How it fits your skills and plans"
+      ]
+    },
+    {
+      "text": "What would you like to be working on two years from now?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A realistic direction, such as a technology, a domain or a bigger role in a team",
+        "The skills you'll build to get there",
+        "How this role starts you on that path"
+      ]
+    }
+  ],
+  "tips": [
+    "The company introduced the brand LTM in 2026, so you may see both names on job posts and emails; either is fine in an interview.",
+    "Practise coding in timed conditions in one language, and explain your approach before you write code.",
+    "Prepare a short story for each published value; 'Be future-ready' and 'Deliver impact' suit learning and project stories.",
+    "Read a recent case study or press release in an industry you like, so 'why us' sounds specific."
+  ],
+  "sources": [
+    {
+      "title": "About LTM, with its values (ltm.com)",
+      "url": "https://www.ltm.com/about-us"
+    },
+    {
+      "title": "LTIMindtree introduces new brand identity as LTM (ltm.com)",
+      "url": "https://www.ltm.com/news-events/press-releases/2026/ltimindtree-introduces-new-brand-identity-and-positioning--ltm--"
+    }
+  ],
+  "abroad": {
+    "rounds": [
+      "Online application and recruiter screen",
+      "Technical interviews with the team",
+      "Manager or client interview (for many roles)",
+      "HR discussion"
+    ]
+  },
+  "reviewed": "2026-10-18"
+}

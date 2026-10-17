@@ -1,5 +1,6 @@
 import type { CompanyStyle } from "@orbit/types";
-import { Building2, cx, focusRing } from "@orbit/ui";
+import { Link } from "react-router-dom";
+import { ArrowRight, Building2, cx, focusRing } from "@orbit/ui";
 import { Card } from "../components/ui";
 
 /** "What to expect at Amazon": the rounds, what its interviewers listen for, tips and questions in its style
@@ -64,6 +65,12 @@ export function CompanyGuide({ style, className, inMock = true }: { style: Compa
             ))}
           </ul>
         </details>
+        <Link
+          to={`/companies/${style.slug}`}
+          className={cx("mt-3 inline-flex items-center gap-1 rounded text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}
+        >
+          The full guide: what a good answer covers, and tips <ArrowRight className="h-3 w-3" aria-hidden />
+        </Link>
     </Card>
     </section>
   );

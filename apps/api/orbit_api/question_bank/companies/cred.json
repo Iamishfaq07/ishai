@@ -1,0 +1,170 @@
+{
+  "slug": "cred",
+  "name": "CRED",
+  "aliases": ["dreamplug", "dreamplug technologies", "cred club"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Candidates commonly report that CRED's engineering interviews include problem-solving and machine coding or design rounds, followed by conversations about how they work and why they want to join. CRED publishes its values on its careers site, including play to win, fast & right, high agency and making members win. Members use it to pay credit card bills and more, so questions often touch on trust, security and the quality of the app experience.",
+  "rounds": [
+    "Recruiter or hiring team screen",
+    "Problem-solving / data structures round",
+    "Machine coding or low-level design round (for many engineering roles)",
+    "System design (for experienced roles)",
+    "Hiring manager and culture conversation"
+  ],
+  "looks_for": [
+    "play to win",
+    "fast & right",
+    "trustworthy",
+    "compounding",
+    "high agency",
+    "making members win",
+    "frugal",
+    "Care for detail in code and in the member's experience"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you moved fast and still got it right. What did you check before shipping?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why speed mattered",
+        "The checks you kept: tests, review, a gradual rollout",
+        "The result, and whether the decision held up later"
+      ]
+    },
+    {
+      "text": "Tell me about something you started without being asked and saw through to the end.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you noticed and why you took it on",
+        "The obstacles and how you got past them without waiting for permission",
+        "The finished result and its impact"
+      ]
+    },
+    {
+      "text": "Describe a time you gave candid feedback to a colleague or manager. How did it land?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you said and why it needed saying",
+        "How you said it so it could be heard",
+        "What changed, for them and for your working relationship"
+      ]
+    },
+    {
+      "text": "Tell me about a time you got more done with fewer resources: fewer people, a smaller budget or less time.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The constraint and what the expensive option was",
+        "What you cut, reused or simplified",
+        "What you delivered and what it saved"
+      ]
+    },
+    {
+      "text": "Tell me about a bet that didn't pay off. What did you learn, and what did you do next?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "Why the bet looked worth it",
+        "When you saw it wasn't working and how you decided to stop or change",
+        "The lesson, and how you used it on the next thing"
+      ]
+    },
+    {
+      "text": "How would you design reminders that tell members a credit card bill is due, without annoying them?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Where due dates come from and how they're kept up to date",
+        "Scheduling at scale: timing, channels, and stopping once the bill is paid",
+        "Frequency limits and preferences, measured by on-time payments and opt-outs"
+      ]
+    },
+    {
+      "text": "How would you design a rewards system where members earn points on payments and spend them on offers?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A ledger of earn and spend entries, written once per payment",
+        "Abuse: rewards on payments later refunded, many accounts for one person",
+        "Expiry, accurate balances and a full audit trail"
+      ]
+    },
+    {
+      "text": "How would you keep sensitive financial data safe in a mobile app and its backend?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Encryption in transit and at rest, and storing tokens instead of card numbers",
+        "Least-privilege access, audit logs and proper handling of secrets",
+        "On the phone: no sensitive data in logs or screenshots, secure local storage"
+      ]
+    },
+    {
+      "text": "A screen in your app feels slow on older Android phones. How would you find and fix the cause?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Profiling first: dropped frames, work on the main thread, slow network calls",
+        "Fixes such as smaller images, lazy loading and caching",
+        "Measuring before and after on a low-end device"
+      ]
+    },
+    {
+      "text": "How would you decide whether a new feature makes members' lives better or just adds clutter?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The member problem it solves, checked with research before building",
+        "Metrics: repeat use, effect on core flows, support tickets",
+        "A clear rule for removing it if it doesn't earn its place"
+      ]
+    },
+    {
+      "text": "How would you safely roll out a risky change to a payment flow?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A feature flag and a small first rollout",
+        "The metrics you'd watch and the point at which you'd roll back automatically",
+        "Telling support and other teams before it goes out"
+      ]
+    },
+    {
+      "text": "Why CRED? Which of its values do you see in your own work?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason tied to the product, its members or the craft, not only the brand",
+        "One value with a short example",
+        "What you want to build or learn here"
+      ]
+    },
+    {
+      "text": "What would you change in the CRED app, and how would you know members liked it?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A specific flow and the member problem with it",
+        "Your change, and what you'd keep because it already works well",
+        "The metric and the feedback you'd look at"
+      ]
+    }
+  ],
+  "tips": [
+    "CRED's values are short phrases (fast & right, high agency, frugal); prepare a story for each that shows the behaviour without naming it.",
+    "Use the app before the interview and form a view on one flow you'd improve and one you admire.",
+    "In design rounds, raise trust and security early: how data is protected and how members know what is happening with their money.",
+    "For machine coding, care about naming, structure and edge cases; a clean, readable solution matters as much as a working one."
+  ],
+  "sources": [
+    {
+      "title": "CRED Careers: Values",
+      "url": "https://careers.cred.club/values"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

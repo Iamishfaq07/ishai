@@ -1,0 +1,217 @@
+{
+  "slug": "mechanical-engineer",
+  "name": "Mechanical engineer",
+  "aliases": ["mechanical engineering", "mechanical fresher", "design engineer", "mechanical design engineer", "cad engineer", "production engineer", "manufacturing engineer", "maintenance engineer", "hvac engineer", "automobile engineer"],
+  "group": "core-engineering",
+  "summary": "Mechanical engineering interviews usually test whether you understand the fundamentals well enough to use them: strength of materials, thermodynamics, manufacturing processes, machine design and drawings, applied to practical problems. Candidates commonly report questions on their final-year project or internship, a written or online technical test at many companies and, for experienced roles, deeper questions on the machines, processes or designs they've owned.",
+  "rounds": [
+    "Online or written test: aptitude and mechanical subjects (at many companies and campus drives)",
+    "Technical interview on core subjects, your project and internships",
+    "Practical or drawing questions for some roles, such as reading a drawing or a short CAD task",
+    "For experienced roles, a discussion with the plant, design or maintenance manager on past work",
+    "HR round, often covering relocation and shift or site work"
+  ],
+  "looks_for": [
+    "Fundamentals you can explain in plain words and apply",
+    "Practical sense: how parts are made, how they fail and how they're maintained",
+    "Reading drawings, tolerances and fits, especially for design roles",
+    "Safety awareness on the shop floor",
+    "Problem-solving with root-cause methods",
+    "Owning your project and internship work"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about your final-year project or internship. What was your part, and what problem did you solve?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and why it mattered",
+        "Your own work: calculations, design, fabrication or testing",
+        "The result, its limits and what you'd change"
+      ]
+    },
+    {
+      "text": "Tell me about a time something you designed or built didn't work the first time.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What went wrong and how you found out",
+        "How you worked out the cause",
+        "The fix and what you'd check earlier next time"
+      ]
+    },
+    {
+      "text": "Describe a time you worked with technicians or operators to solve a problem.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and what they knew that you didn't",
+        "How you listened and shared the work",
+        "The fix and what you learned from them"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to learn a new tool or software quickly, such as a CAD package.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why you needed it and how little time you had",
+        "How you learned it",
+        "What you produced with it"
+      ]
+    },
+    {
+      "text": "A shaft in a machine keeps breaking after a few months of use. How would you work out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Looking at the break: where it happened, such as a keyway or a step, and what the surface shows",
+        "Checking loads, alignment, material and whether repeated stress is causing fatigue",
+        "Fixes such as a larger fillet radius, a better material or alignment, and how you'd confirm them"
+      ]
+    },
+    {
+      "text": "What does a stress-strain curve tell you about a material, and how does that help when choosing one?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The elastic region, yield point, ultimate strength and fracture",
+        "The difference between ductile and brittle behaviour",
+        "Choosing a material and safety margin for the expected load"
+      ]
+    },
+    {
+      "text": "Why does an engine or electric motor need cooling, and how does heat leave it?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Heat from combustion or losses raises temperatures that damage parts and lubricants",
+        "Conduction through metal, convection to coolant or air, and radiation from hot surfaces",
+        "Signs that cooling is failing and what you'd check"
+      ]
+    },
+    {
+      "text": "Compare casting, forging and machining. When would you choose each for a part?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Casting for complex or large shapes; forging for strength under heavy load",
+        "Machining for accurate features and finishes, often after casting or forging",
+        "How volume, cost and required strength drive the choice, with an example part"
+      ]
+    },
+    {
+      "text": "Why do drawings carry tolerances and fits? Give me an example of a clearance fit and an interference fit.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "No part is made exactly to size; tolerances say what's acceptable",
+        "Clearance: a shaft that must turn freely in a bush; interference: a bearing or gear pressed onto a shaft",
+        "Tighter tolerances cost more, so use them only where the function needs them"
+      ]
+    },
+    {
+      "text": "A pump's output has dropped and it has become noisy. What would you check?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "The suction side: blockages, low liquid level, air getting in, signs of cavitation",
+        "Wear and alignment: impeller, seals, bearings and coupling to the motor",
+        "Isolating it safely before inspection, and testing performance after the fix"
+      ]
+    },
+    {
+      "text": "What's the difference between breakdown, preventive and predictive maintenance?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Breakdown: fix after failure; preventive: service on a schedule",
+        "Predictive: act on condition data such as vibration, temperature or oil analysis",
+        "Choosing by how critical the machine is and what a failure would cost"
+      ]
+    },
+    {
+      "text": "Explain how a refrigerator or air conditioner moves heat, in simple words.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The refrigerant absorbs heat as it evaporates in the evaporator inside",
+        "The compressor raises its pressure and temperature; the condenser gives that heat off outside",
+        "The expansion valve drops the pressure so the cycle can repeat"
+      ]
+    },
+    {
+      "text": "A production line is rejecting too many parts. How would you bring the rejection rate down?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Data first: which defect, and on which machine, shift or batch",
+        "Root-cause tools such as a fishbone diagram or the 5 Whys",
+        "Fixing the cause and checking with data that the fix holds"
+      ]
+    },
+    {
+      "text": "How would you choose a material for a bracket that must be light but strong?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The loads, environment, temperature and how many parts are needed",
+        "Options such as aluminium alloys, steel or plastics, compared on strength for their weight and cost",
+        "How the manufacturing method and corrosion affect the choice"
+      ]
+    },
+    {
+      "text": "Which CAD or analysis software have you used, and what did you make with it?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The tools and how well you know each",
+        "A part, assembly or analysis you made",
+        "How you checked the result made sense"
+      ]
+    },
+    {
+      "text": "Tell me about yourself and why you want a core engineering role.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your degree and the subjects you're strongest in",
+        "A project, internship or plant visit that shaped your interest",
+        "The kind of mechanical work you want to do"
+      ]
+    },
+    {
+      "text": "Which area of mechanical engineering do you want to work in: design, production, maintenance or something else? Why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One area, chosen honestly",
+        "An experience that drew you to it",
+        "What you'd want to learn in your first year"
+      ]
+    },
+    {
+      "text": "Are you comfortable working on a plant floor or site, in shifts, or in another city?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with any limits stated clearly",
+        "Any shop-floor or site experience you already have",
+        "Why hands-on work matters early in a mechanical career"
+      ]
+    }
+  ],
+  "tips": [
+    "Revise the subjects most interviews touch: strength of materials, thermodynamics, manufacturing, machine design, fluid mechanics and engineering drawing.",
+    "Link each concept to a machine or part you've seen; interviewers commonly ask where it applies.",
+    "Know your project in depth: the calculations, the material and why you chose it, and what failed.",
+    "If you visited a plant or did an internship, be ready to describe the processes and the safety rules you saw.",
+    "For design roles, brush up on drawings and a CAD tool; for maintenance roles, on bearings, pumps, lubrication and root-cause analysis.",
+    "Say your assumptions out loud when you estimate or calculate."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "engineer"
+  },
+  "reviewed": "2026-10-18"
+}

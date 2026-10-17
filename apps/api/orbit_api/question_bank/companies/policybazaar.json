@@ -1,0 +1,174 @@
+{
+  "slug": "policybazaar",
+  "name": "Policybazaar",
+  "aliases": ["pb fintech", "paisabazaar", "policy bazaar", "pb partners"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Policybazaar, part of PB Fintech along with Paisabazaar, is an online marketplace where people compare and buy insurance; Paisabazaar does the same for loans and credit cards. Candidates commonly report coding and design rounds for engineering and data roles, and for its many sales and advisory roles, conversations or role-plays that test communication, persuasion and how honestly you explain products.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Communication round or sales role-play for sales and advisory roles (often)",
+    "Coding and problem-solving rounds for engineering, plus system design for experienced roles",
+    "Case, SQL or analytics exercise for product and data roles (often)",
+    "Hiring manager round",
+    "HR round on fit and expectations"
+  ],
+  "looks_for": [
+    "Putting the customer first: recommending what suits them, not just what sells",
+    "Clear, honest explanations of insurance and credit products",
+    "Ownership of targets and outcomes",
+    "Resilience across many customer conversations a day",
+    "Comfort with data, funnels and conversion",
+    "Integrity and transparency"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you persuaded someone who was hesitant. What made them change their mind?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why they hesitated, in their words",
+        "How you listened and answered the real concern",
+        "The outcome, and whether it was right for them"
+      ]
+    },
+    {
+      "text": "Describe a time you told a customer something that cost you a sale.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you told them and why it mattered",
+        "The pressure you felt to stay quiet",
+        "What happened afterwards, including any trust it built"
+      ]
+    },
+    {
+      "text": "Tell me about a time you faced a lot of rejection or pressure and kept going.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The situation and how long it lasted",
+        "What you did to stay steady and improve",
+        "The result"
+      ]
+    },
+    {
+      "text": "Tell me about a target you missed. What did you learn?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The target and how far off you were",
+        "The real reasons, without blaming others",
+        "What you changed and how the next period went"
+      ]
+    },
+    {
+      "text": "Explain the difference between term insurance and a savings-linked life insurance policy to a 25-year-old.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Term pays only on death within the term; savings plans add a maturity payout",
+        "Why term gives much more cover for the same premium",
+        "Who might prefer each, explained without pressure"
+      ]
+    },
+    {
+      "text": "Explain a waiting period and a co-payment in health insurance, in plain words.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Waiting period: a time after buying before some conditions are covered",
+        "Co-payment: the share of a claim the customer pays themselves",
+        "An everyday example of how each affects a claim"
+      ]
+    },
+    {
+      "text": "How would you design a comparison page that shows quotes from many insurers quickly and fairly?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Calling insurer systems in parallel with timeouts and short-lived caching",
+        "Comparing like with like: cover, exclusions and claim terms, not just price",
+        "Neutral ranking and clear labels, and re-checking the premium before payment"
+      ]
+    },
+    {
+      "text": "Many users get a quote but don't buy. How would you find out why, and what would you try?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Funnel steps after the quote: details, medical questions, payment",
+        "Splitting by product, age group, device and source",
+        "Ideas to test, such as advisor callbacks or clearer comparisons, with a success metric"
+      ]
+    },
+    {
+      "text": "A customer's claim was rejected and they're angry on the phone. How would you handle the call?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Listening fully and acknowledging how they feel",
+        "Finding the stated reason and checking it against the policy",
+        "Explaining next steps honestly: appeal, documents, timelines"
+      ]
+    },
+    {
+      "text": "How would you design a system that routes incoming leads to the right advisor at the right time?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Matching on product, language, location and advisor skill",
+        "Speed: calling back quickly while the customer is interested",
+        "Fair load across advisors and measuring conversion and satisfaction"
+      ]
+    },
+    {
+      "text": "How would you check whether a credit card recommendation feature is actually helping users, not just getting clicks?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Outcomes: approvals, cards actually used, user satisfaction",
+        "Comparing against a control group",
+        "Guardrails: rejections and complaints from poor matches"
+      ]
+    },
+    {
+      "text": "Sell me a health insurance policy as if I'm buying one for the first time.",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Asking questions first: age, family, existing cover, budget, health",
+        "Recommending a fit and explaining key terms, including exclusions",
+        "Handling an objection without overpromising"
+      ]
+    },
+    {
+      "text": "Why Policybazaar, and why insurance or fintech?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What interests you about helping people buy financial products",
+        "Something specific about how Policybazaar works",
+        "What you'd want to build or achieve in the role"
+      ]
+    },
+    {
+      "text": "Are you comfortable with a target-based role? What keeps you motivated on a hard day?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest view of targets and pressure",
+        "A real habit or source of motivation",
+        "Any past experience with targets"
+      ]
+    }
+  ],
+  "tips": [
+    "Learn insurance basics: term versus savings plans, health cover terms (sum insured, waiting period, co-pay, claim settlement) and riders.",
+    "In sales role-plays, ask questions first (age, family, existing cover, budget), then recommend.",
+    "Never overpromise in a role-play; explaining exclusions shows the honesty a good interviewer listens for.",
+    "For tech and product roles, think about comparing many insurer quotes quickly and keeping prices accurate."
+  ],
+  "sources": [],
+  "reviewed": "2026-10-18"
+}

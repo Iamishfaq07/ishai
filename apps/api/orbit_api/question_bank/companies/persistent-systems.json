@@ -1,0 +1,206 @@
+{
+  "slug": "persistent-systems",
+  "name": "Persistent Systems",
+  "aliases": ["persistent"],
+  "group": "it-services",
+  "market": "india-first",
+  "summary": "Persistent Systems describes itself as having a product-engineering background, and candidates commonly describe its interviews as coding-focused: an online test of aptitude, computer-science basics and coding, one or two technical interviews, and an HR round. It runs Train and Hire, a self-learning programme that prepares students for its campus hiring drive, and publishes four values: Ingenious, Confident, Responsible and Persistent.",
+  "rounds": [
+    "Campus drive or online application",
+    "Online assessment: aptitude, computer-science basics and coding",
+    "Technical interview: coding approach, data structures and your projects",
+    "For some roles: an advanced coding or second technical round",
+    "HR interview"
+  ],
+  "looks_for": [
+    "Ingenious",
+    "Confident",
+    "Responsible",
+    "Persistent",
+    "Data structures and algorithms explained aloud",
+    "Working code and how you'd test it",
+    "Depth on your own project: design choices and trade-offs"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself and the most technical thing you've built.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your degree or experience, briefly",
+        "The thing you built: the problem, the tech, your part",
+        "Why that kind of work is what you want to do here"
+      ]
+    },
+    {
+      "text": "Tell me about a problem you kept working on after others had given up.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and why others stopped",
+        "What you tried, in order, and what finally worked",
+        "What the result made possible"
+      ]
+    },
+    {
+      "text": "Tell me about a time you found a clever, cheaper way to get something done.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The usual, costly way",
+        "Your idea and how you tested it",
+        "What it saved in time, money or effort"
+      ]
+    },
+    {
+      "text": "Tell me about a commitment you made on a project and how you made sure you kept it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you promised and to whom",
+        "How you planned and tracked it",
+        "What you did when something threatened it"
+      ]
+    },
+    {
+      "text": "Tell me about a technical choice you got wrong. How did you find out?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The choice and why it seemed right at the time",
+        "The sign that it was wrong",
+        "How you fixed it and what you check now before deciding"
+      ]
+    },
+    {
+      "text": "How does a hash map work inside, and what happens when two keys collide?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A hash function turns a key into a bucket index",
+        "Collisions handled by chaining or open addressing",
+        "Resizing when it gets full, and why average lookup is fast but the worst case isn't"
+      ]
+    },
+    {
+      "text": "Talk me through how you'd detect a loop in a linked list, and the time and memory it takes.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A simple approach: store visited nodes in a set, using extra memory",
+        "The two-pointer approach: a slow and a fast pointer meet if there's a loop",
+        "Time and memory for each, and how you'd test with edge cases"
+      ]
+    },
+    {
+      "text": "What is the difference between a process and a thread, and why do threads need locks?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Processes have separate memory; threads share their process's memory",
+        "Shared data can be corrupted when two threads change it at once",
+        "Locks or other tools prevent that, with the risk of deadlocks"
+      ]
+    },
+    {
+      "text": "How would you design the back end of a simple chat app for a few thousand users?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying needs: one-to-one or groups, history, online status",
+        "Main parts: a connection service (such as WebSockets), a message store, user service",
+        "Delivery to offline users and what you'd change if users grew a lot"
+      ]
+    },
+    {
+      "text": "Explain Big O notation using a search you've written or used.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "What Big O describes: how time or memory grows with input size",
+        "Linear search is O(n); binary search on sorted data is O(log n)",
+        "Why the constant factors and real data sizes still matter"
+      ]
+    },
+    {
+      "text": "Your service's response time doubled after a release. How would you find the cause?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Comparing before and after: which endpoints, which users, which servers",
+        "Looking at what the release changed and at profiling or query timings",
+        "Rolling back if users are hurting, then fixing and adding a performance check"
+      ]
+    },
+    {
+      "text": "For experienced candidates: tell me about code you reviewed and the problems you found.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "What the change did and what you looked for",
+        "The issues you raised: bugs, design, tests, readability",
+        "How you gave the feedback and what changed"
+      ]
+    },
+    {
+      "text": "Why Persistent?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific: its product-engineering focus, a technology area or recent work",
+        "How that matches what you've built or want to build",
+        "What you'd like to learn first"
+      ]
+    },
+    {
+      "text": "Which area do you most want to grow in: cloud, data, AI or product engineering? Why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One choice, with something you've already done in it",
+        "What draws you to it",
+        "How you're building skills there now"
+      ]
+    },
+    {
+      "text": "Do you have any questions for us?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two thoughtful questions about the team, the tech or the first project",
+        "Nothing already answered on the careers site",
+        "A brief thank-you"
+      ]
+    }
+  ],
+  "tips": [
+    "Practise solving coding problems aloud: say your approach and its time and memory cost before you write code.",
+    "Revise data structures properly (arrays, linked lists, stacks, trees, hash maps); technical rounds often go beyond definitions.",
+    "If your college offers Persistent's Train and Hire programme, finish its modules before the drive.",
+    "Have one project you can go deep on: design choices, what broke, and how you'd scale it."
+  ],
+  "sources": [
+    {
+      "title": "Culture at Persistent, with its values (persistent.com)",
+      "url": "https://www.persistent.com/careers/culture/"
+    },
+    {
+      "title": "Persistent early careers and campus programmes (persistent.com)",
+      "url": "https://www.persistent.com/careers/early-careers-campus-program/"
+    }
+  ],
+  "abroad": {
+    "rounds": [
+      "Online application and recruiter screen",
+      "Technical interviews with the team, often including coding",
+      "Manager or client interview (for many roles)",
+      "HR discussion"
+    ],
+    "tips": [
+      "Practise solving coding problems aloud: say your approach and its time and memory cost before you write code.",
+      "Revise data structures properly (arrays, linked lists, stacks, trees, hash maps); technical rounds often go beyond definitions.",
+      "Have one project you can go deep on: design choices, what broke, and how you'd scale it."
+    ]
+  },
+  "reviewed": "2026-10-18"
+}

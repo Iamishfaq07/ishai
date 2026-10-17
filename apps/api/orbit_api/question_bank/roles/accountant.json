@@ -1,0 +1,207 @@
+{
+  "slug": "accountant",
+  "name": "Accountant",
+  "aliases": ["accounts executive", "accounts assistant", "accounts manager", "staff accountant", "chartered accountant", "ca", "article assistant", "audit associate", "tax associate", "bookkeeper", "acca", "cma"],
+  "group": "business",
+  "summary": "Accountant interviews usually check your fundamentals (journal entries, reconciliations, the month-end close and the basics of tax) and how careful you are with detail. Candidates commonly report questions on the software they've used and, for some roles, a practical test in Excel or an accounting package; audit and tax roles add questions on standards, compliance and working with clients.",
+  "rounds": [
+    "HR or recruiter screen",
+    "Technical interview on accounting basics, reconciliations, month-end close and tax",
+    "Practical test in Excel or accounting software (for some roles)",
+    "Interview with the finance, audit or tax manager on past work and judgement",
+    "Final HR round"
+  ],
+  "looks_for": [
+    "Sound basics: double entry, accruals, depreciation, reconciliations",
+    "Attention to detail and checking your own work",
+    "Knowing the compliance deadlines and rules the role involves",
+    "Comfort with Excel and accounting software",
+    "Integrity: raising problems rather than hiding them",
+    "Explaining numbers clearly to people outside accounts"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you found an error in the accounts. How did you trace it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you noticed something was wrong",
+        "The steps you took to trace it to the source",
+        "How you corrected it and what you put in place so it didn't recur"
+      ]
+    },
+    {
+      "text": "Tell me about a month-end or year-end close you worked on. What was your part, and what went wrong?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Your tasks and the deadline",
+        "One problem that came up and how you solved it",
+        "What you'd do earlier next time"
+      ]
+    },
+    {
+      "text": "Describe a time you were asked to record something in a way you weren't comfortable with.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you were asked to do and why it concerned you",
+        "How you raised it, with the rule or evidence behind your concern",
+        "What happened, and what you'd do if pushed again"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to get documents or answers from a difficult client or colleague on time.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you needed and why it was late",
+        "How you followed up and made it easy for them to respond",
+        "The outcome and how you kept the relationship good"
+      ]
+    },
+    {
+      "text": "Explain accrual accounting, and give me an example of an accrued expense.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Recording income and expenses in the period they belong to, not when cash moves",
+        "An example such as electricity used this month but billed next month",
+        "The journal entry, and reversing it when the bill arrives"
+      ]
+    },
+    {
+      "text": "Walk me through a bank reconciliation. What causes the differences, and how do you clear them?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Matching the bank statement against the cash book",
+        "Timing items like uncleared cheques and deposits in transit, plus bank charges and errors",
+        "Investigating old unmatched items rather than carrying them forward"
+      ]
+    },
+    {
+      "text": "What's the difference between a provision and a reserve?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A provision is charged against profit for a known liability or loss of uncertain amount, such as warranties",
+        "A reserve is profit set aside within equity, such as a general reserve",
+        "Provisions reduce profit; reserves are set aside out of profit"
+      ]
+    },
+    {
+      "text": "How would you tell capital expenditure from revenue expenditure? Give me an example of each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Capital spending creates or improves an asset that lasts beyond the year",
+        "Revenue spending keeps the business running day to day",
+        "An example pair, such as buying a machine versus repairing it"
+      ]
+    },
+    {
+      "text": "The trial balance doesn't tally. What would you check, and in what order?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Totals and balances carried forward correctly",
+        "Entries posted to one side only, wrong amounts or swapped digits",
+        "The suspense account, and the largest or most recent entries first"
+      ]
+    },
+    {
+      "text": "In simple terms, how does input tax credit work under GST or VAT?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Tax paid on purchases can be set against tax collected on sales",
+        "Conditions such as a valid invoice and the supplier reporting the sale correctly",
+        "Why mismatches between your books and the tax returns matter"
+      ]
+    },
+    {
+      "text": "Explain tax deducted at source, or withholding tax, and what the accounts team has to do about it.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Deducting tax when paying certain bills or salaries",
+        "Depositing it and filing returns on time",
+        "Issuing certificates and reconciling with the tax records"
+      ]
+    },
+    {
+      "text": "How would you speed up the month-end close without losing accuracy?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A checklist with owners and deadlines",
+        "Reconciling key accounts during the month, not only at the end",
+        "Automating repeat entries and reviewing the biggest risks first"
+      ]
+    },
+    {
+      "text": "As an auditor, how would you test whether a client's recorded sales really happened?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Picking a sample from recorded sales and tracing it to orders, delivery proof and receipts",
+        "Checking sales around the year end were recorded in the right period",
+        "Looking for unusual patterns, such as large credit notes just after the year end"
+      ]
+    },
+    {
+      "text": "Which accounting software and Excel functions have you used, and for what?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The packages you've used and the tasks you did in them",
+        "Excel: lookups, pivot tables and reconciliation work",
+        "How you'd pick up a new system quickly"
+      ]
+    },
+    {
+      "text": "Tell me about yourself, and where you are with any professional qualification.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your education and experience in two or three lines",
+        "Your qualification status, stated honestly",
+        "The kind of accounting work you want next"
+      ]
+    },
+    {
+      "text": "Why accounting, and are you aiming for audit, tax or finance in a company?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What you like about the work, shown by an example",
+        "The path you prefer and why",
+        "How this job fits that path"
+      ]
+    },
+    {
+      "text": "Year-end and audit season can mean long days. How do you handle that kind of pressure?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer about your availability",
+        "An example of a busy period you managed well",
+        "How you keep accuracy up when you're tired"
+      ]
+    }
+  ],
+  "tips": [
+    "Revise the everyday basics: journal entries, depreciation methods, reconciliations, accruals and prepayments.",
+    "Know the tax and compliance basics for the country of the job, and their filing cycles, at the level the role needs.",
+    "If you've done articleship or an internship, prepare two stories from it: an audit finding and something you improved.",
+    "Some roles include a practical test; practise pivot tables, lookups and a quick reconciliation in Excel.",
+    "When you're unsure of a rule, say how you'd check it, such as the standard or a senior, rather than guessing.",
+    "Be exact about your qualification status and dates; interviewers commonly ask."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "hiring_manager"
+  },
+  "reviewed": "2026-10-18"
+}

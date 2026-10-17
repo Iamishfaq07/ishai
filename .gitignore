@@ -20,6 +20,10 @@ uploads/
 # node
 node_modules/
 dist/
+# The web build's server render of the public pages (apps/web/src/prerender), run once into dist/.
+.prerender/
+# `wrangler dev`'s local state (the Worker run over dist/ on this machine).
+.wrangler/
 .turbo/
 *.tsbuildinfo
 playwright-report/

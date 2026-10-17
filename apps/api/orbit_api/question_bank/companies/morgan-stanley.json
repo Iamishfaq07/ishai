@@ -1,0 +1,180 @@
+{
+  "slug": "morgan-stanley",
+  "name": "Morgan Stanley",
+  "aliases": [],
+  "group": "finance",
+  "market": "global",
+  "summary": "Morgan Stanley's interviews usually mix competency and strengths-based questions with technical questions for the division, and its own interview guidance says interviewers want to see how you work through a scenario, not only whether you get the right answer. Candidates commonly report online assessments (coding tests for technology), a first interview that is often by video, then a final round of several interviews with the team.",
+  "rounds": [
+    "Online application, with online assessments for many roles (coding tests for technology)",
+    "First-round interview, often by video (recorded for some roles)",
+    "Final round: several interviews with the team, competency-based and technical"
+  ],
+  "looks_for": [
+    "Do the Right Thing",
+    "Put Clients First",
+    "Lead with Exceptional Ideas",
+    "Commit to Diversity & Inclusion",
+    "Give Back",
+    "A clear reason for the industry, the firm and the division",
+    "Working through a problem out loud, even without a perfect answer",
+    "Knowing your CV and telling your story clearly"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself, without looking at your CV.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "A clear path through your studies and experience, with the reason for each step",
+        "The one or two things you're best at, with evidence",
+        "Why this division at Morgan Stanley is the next step"
+      ]
+    },
+    {
+      "text": "Tell me about a time you made an ethical call that wasn't the easy option.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The situation and what made the easy option tempting",
+        "How you decided and who you involved",
+        "The outcome and what you'd do again"
+      ]
+    },
+    {
+      "text": "Tell me about a time you put a client's or user's interests ahead of your own convenience.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who they were and what they needed",
+        "What it cost you and why you did it anyway",
+        "The difference it made for them"
+      ]
+    },
+    {
+      "text": "Tell me about an idea of yours that changed how a team or project worked.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem the idea solved",
+        "How you got others to try it",
+        "What changed, measured if you can"
+      ]
+    },
+    {
+      "text": "What are you particularly good at, and when did it make the biggest difference?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "One strength, named plainly",
+        "A specific example where it changed the result",
+        "How it would help in this role"
+      ]
+    },
+    {
+      "text": "Explain what a wealth manager does for a client, and how the firm earns money from it.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Understanding the client's goals and risk, then planning and investing for them",
+        "Ongoing advice: rebalancing, tax-aware choices, planning for life events",
+        "How fees work in general terms: a share of assets managed, or charges per service"
+      ]
+    },
+    {
+      "text": "Walk me through a discounted cash flow valuation in plain words.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Forecasting the cash the business will generate",
+        "Discounting it back at a rate that reflects risk, plus a value for the years beyond",
+        "The assumptions that move the answer most, and a sense check against market multiples"
+      ]
+    },
+    {
+      "text": "If a company issues new shares, what happens to its existing shareholders?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Their ownership share falls (dilution)",
+        "Whether value per share falls depends on the price and what the money is used for",
+        "Why companies do it anyway: growth, paying down debt, an acquisition"
+      ]
+    },
+    {
+      "text": "Pick one area of the markets you follow. What's happening there now, and why?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A specific, current topic described accurately",
+        "The main drivers in plain words",
+        "What it means for the firm's clients and what you'd watch next"
+      ]
+    },
+    {
+      "text": "How would you design a system that records every trade and can rebuild any account's position at a past point in time?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Storing trades as an append-only log of events, never overwritten",
+        "Rebuilding positions by replaying events, with snapshots to keep it fast",
+        "Audit needs: correctness, corrections as new events, and access control"
+      ]
+    },
+    {
+      "text": "A nightly batch job that used to take one hour now takes four. How would you find out why?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "What changed: data volume, code releases, infrastructure, other jobs running at once",
+        "Timing each step to find the slow one, using logs and metrics",
+        "The fix, and monitoring so you hear about it before users do"
+      ]
+    },
+    {
+      "text": "Explain the difference between a stack and a queue, and where you'd use each in a real system.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Stack: last in, first out; queue: first in, first out",
+        "Examples: undo history or call stacks; processing orders or messages in arrival order",
+        "What happens to performance and fairness if you pick the wrong one"
+      ]
+    },
+    {
+      "text": "Why this industry, why Morgan Stanley, and why this division?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason for finance or financial technology, shown by something you've done",
+        "Something specific about Morgan Stanley: its businesses, values or people you've met",
+        "What the division does, and why it fits your strengths"
+      ]
+    },
+    {
+      "text": "What questions would you like to ask us about the programme or the team?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Specific questions about the work, training or team",
+        "A question that shows you've researched how the firm is organised",
+        "Nothing as general as 'What does Morgan Stanley do?'"
+      ]
+    }
+  ],
+  "tips": [
+    "Know your CV well enough to talk through every line without reading it.",
+    "Have a reason for the industry, the firm and the division; Morgan Stanley's own interview guidance asks for all three.",
+    "Pick one or two areas of the markets you can discuss with knowledge and conviction, rather than trying to cover everything.",
+    "Learn how the firm is organised and its five core values, and ask specific questions rather than general ones.",
+    "If you don't know an answer, reason through it out loud; the firm's guidance says it's interested in how you work through a scenario.",
+    "For technology roles, practise coding and design questions while explaining your trade-offs as you go."
+  ],
+  "sources": [
+    {
+      "title": "Morgan Stanley's core values",
+      "url": "https://www.morganstanley.com/about-us/morgan-stanley-core-values"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

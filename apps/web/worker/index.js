@@ -10,6 +10,7 @@
 // app. /health never touches the DB, so pinging it keeps the API process warm without keeping the (separately
 // metered) Neon compute awake.
 import { metaFor, withPageMeta } from "./meta.js";
+import { pageRequest } from "./prerendered.js";
 
 const API_PREFIX = "/api";
 
@@ -47,10 +48,11 @@ export default {
     if (url.pathname === API_PREFIX || url.pathname.startsWith(`${API_PREFIX}/`)) {
       return proxyToApi(request, env, url);
     }
-    // The public pages people share get their own link preview (meta.js). Should rewriting ever fail, the page is
-    // served as it is.
-    if (request.method === "GET" && metaFor(url.pathname)) {
-      const page = await env.ASSETS.fetch(request);
+    // The public pages people share get their own link preview (meta.js) and their built HTML (prerendered.js), so
+    // crawlers that don't run JavaScript read them. Should rewriting ever fail, the page is served as it is.
+    const meta = request.method === "GET" ? metaFor(url.pathname) : null;
+    if (meta) {
+      const page = await env.ASSETS.fetch(pageRequest(meta.path, request, url));
       try {
         return withPageMeta(page, url);
       } catch {

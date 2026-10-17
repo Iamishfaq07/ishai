@@ -1,0 +1,193 @@
+{
+  "slug": "zerodha",
+  "name": "Zerodha",
+  "aliases": ["zerodha broking", "zerodha tech"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Zerodha is the Indian discount broker behind Kite, Coin, Console and the Varsity learning modules. It says it hires people with good skills who learn quickly and work well in a team, and values that over years of experience. Candidates commonly describe a less standardised process than at many firms, built around conversations about their own work, and the steps vary by team.",
+  "rounds": [
+    "Application through Zerodha's careers site, often with links to your work: projects, code or writing",
+    "A screening conversation about your background and why Zerodha",
+    "One or more technical or functional discussions, often going deep into one project you built",
+    "A practical task or work sample for some roles",
+    "A final conversation on fit, expectations and long-term intent, often with a senior team member"
+  ],
+  "looks_for": [
+    "Good skills and the ability to learn quickly, valued over years of experience",
+    "Being a team player who keeps learning and does what needs doing (Zerodha calls this non-negotiable)",
+    "Being in it for the long haul, with expectations set right from the start",
+    "Proof of real work: projects, code or writing you can show and explain",
+    "Simple, lean solutions over elaborate ones",
+    "Care for investors' interests and clear, honest communication"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a project you built on your own time. Why did you build it, and what did you learn?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem that made you start it, ideally your own or a friend's",
+        "Key choices you made and the ones you'd now undo",
+        "Who used it, what broke, and what it taught you"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to learn a new tool or domain quickly to get something working.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why it was needed and how little time you had",
+        "How you learned: docs, source code, small experiments, people you asked",
+        "What you shipped and how well you understand it now"
+      ]
+    },
+    {
+      "text": "Describe a time you simplified a system or process instead of adding to it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was complicated and what it cost: time, money, errors",
+        "What you removed or replaced, and why that was safe",
+        "The result after the change, with a number if you have one"
+      ]
+    },
+    {
+      "text": "Tell me about a time you did work outside your job description because it needed doing.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The gap you noticed and why nobody owned it",
+        "What you did and how you kept your own work on track",
+        "What changed for the team or customers"
+      ]
+    },
+    {
+      "text": "Tell me about a mistake you made that affected other people. How did you handle it?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The mistake, owned plainly and early in the answer",
+        "Who you told, how quickly, and how you limited the damage",
+        "The habit or check you added so it doesn't happen again"
+      ]
+    },
+    {
+      "text": "At market open, orders and logins arrive in a burst within seconds. How would you design a trading backend to stay stable through it?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Separating the critical order path from everything else, such as reports and charts",
+        "Queues, back-pressure and rate limits so a burst doesn't topple the system",
+        "Load testing against the opening burst, and what you'd degrade first if needed"
+      ]
+    },
+    {
+      "text": "How would you stream live prices for thousands of instruments to a very large number of users at once? Talk me through your approach.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Persistent connections (such as WebSockets) and sending only subscribed instruments",
+        "Compact message formats and throttling updates per client",
+        "Fan-out with pub/sub, and what happens when a client is slow or reconnects"
+      ]
+    },
+    {
+      "text": "A customer says an order showed as placed in the app but never reached the exchange. How would you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Tracing the order by its ID and timestamps through each system it passed",
+        "Checking for a gap: a timeout, a rejected request, a status shown too early",
+        "Keeping the customer informed, and fixing the root cause, not just this order"
+      ]
+    },
+    {
+      "text": "Explain the difference between a stock and a mutual fund, and between delivery and intraday trades, to a first-time investor.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A stock is a share in one company; a fund pools money across many holdings",
+        "Delivery means holding shares in your demat account; intraday closes the same day",
+        "The extra risk of intraday trading, said plainly and without jargon"
+      ]
+    },
+    {
+      "text": "When would you choose a simple self-hosted tool over a managed cloud service? Give an example from your work.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Cost, control, data ownership and how well the team can run it",
+        "The operational work self-hosting adds: upgrades, backups, monitoring",
+        "A real example and whether you'd make the same choice again"
+      ]
+    },
+    {
+      "text": "How would you write an explainer that helps a beginner understand what a futures contract is, and its risks?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Starting from an everyday example before any jargon",
+        "Leverage and margin explained with a simple worked example",
+        "Being honest about losses and who the product isn't suited for"
+      ]
+    },
+    {
+      "text": "A new regulatory rule means a feature must change within weeks. How would you plan the work and tell customers?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Reading the rule closely and agreeing what exactly must change",
+        "A plan with a buffer, testing, and a fallback if the date is at risk",
+        "Telling customers early, in plain words, what changes for them"
+      ]
+    },
+    {
+      "text": "Why Zerodha, and what do you see yourself working on here over the long term?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason tied to its products or way of working, not just the brand",
+        "What you'd like to own over several years",
+        "Expectations you're setting honestly: learning, responsibility, pace"
+      ]
+    },
+    {
+      "text": "Zerodha says it has no conventional titles or career ladder. How do you think about growth in a place like that?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Growth as more responsibility and harder problems, not a new title",
+        "How you'd measure your own progress",
+        "An example of growing in a role without a promotion"
+      ]
+    },
+    {
+      "text": "Which part of Kite, Coin, Console or Varsity have you used, and what would you improve?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "Specific use: what you did with it and when",
+        "One concrete improvement and who it would help",
+        "What you'd leave out to keep the product simple"
+      ]
+    }
+  ],
+  "tips": [
+    "Bring proof of work: a repository, a deployed project, a write-up or an article you can walk through in detail.",
+    "Use Kite, Coin and Console before the interview, and read a few Varsity modules if you're applying for a non-tech role.",
+    "Expect depth over breadth: be ready to explain every decision in one project, including what you'd remove.",
+    "Zerodha's tech blog writes openly about how it builds; reading a few posts gives you good questions to ask.",
+    "Be clear about why you want to stay long term; Zerodha says it hires people who are in it for the long haul."
+  ],
+  "sources": [
+    {
+      "title": "On Growth, Hiring, and Thinking Long Term (Zerodha Z-Connect)",
+      "url": "https://zerodha.com/z-connect/rainmatter/rainmatter-fintech-catch-up"
+    },
+    {
+      "title": "About Zerodha",
+      "url": "https://zerodha.com/about/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

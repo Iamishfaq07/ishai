@@ -193,13 +193,17 @@ export function scamReport(code: string | null | undefined): ScamReport | null {
 }
 
 // Companies in the interview-style guides that hire almost only in India: suggested there, not elsewhere (they still
-// match when typed). India's large IT-services firms hire worldwide, so outside India they come after the rest.
+// match when typed). India's large IT-services firms hire worldwide, so outside India they come after the rest. Each
+// guide says which it is (`market`, from the question bank); these lists cover a server that doesn't send it yet.
 const INDIA_ONLY_COMPANIES = new Set(["flipkart", "razorpay", "swiggy", "zomato"]);
 const INDIA_SERVICES = new Set(["tcs", "infosys", "wipro", "cognizant"]);
 
+type Market = "india" | "india-first" | "global";
+const marketOf = (s: { slug: string; market?: Market }): Market =>
+  s.market ?? (INDIA_ONLY_COMPANIES.has(s.slug) ? "india" : INDIA_SERVICES.has(s.slug) ? "india-first" : "global");
+
 /** The companies to suggest for interview practice, for the country: India's list as it is, elsewhere reordered. */
-export function companiesFor<T extends { slug: string }>(styles: readonly T[], code: string | null | undefined): T[] {
+export function companiesFor<T extends { slug: string; market?: Market }>(styles: readonly T[], code: string | null | undefined): T[] {
   if (isIndia(code)) return [...styles];
-  const global = styles.filter((s) => !INDIA_ONLY_COMPANIES.has(s.slug) && !INDIA_SERVICES.has(s.slug));
-  return [...global, ...styles.filter((s) => INDIA_SERVICES.has(s.slug))];
+  return [...styles.filter((s) => marketOf(s) === "global"), ...styles.filter((s) => marketOf(s) === "india-first")];
 }

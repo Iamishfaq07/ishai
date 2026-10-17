@@ -1,0 +1,207 @@
+{
+  "slug": "full-stack-developer",
+  "name": "Full-stack developer",
+  "aliases": ["fullstack developer", "full stack engineer", "fullstack engineer", "mern developer", "mern stack developer", "mean stack developer", "web developer", "full stack web developer"],
+  "group": "engineering",
+  "summary": "Full-stack developer interviews usually check that you can build a feature end to end: a working interface, the API behind it and the database underneath. Candidates commonly report a take-home or live exercise building a small app, then questions on JavaScript or the role's main language, databases and deployment; experienced candidates are often asked to design a whole feature.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Take-home or online test: often a small app with a frontend, an API and a database",
+    "Technical interview: walk through your code, then extend or fix it live",
+    "Fundamentals across the stack: JavaScript, a framework, APIs, databases and deployment",
+    "Feature or system design for experienced roles",
+    "Hiring manager or behavioural round"
+  ],
+  "looks_for": [
+    "Building something that works end to end, not just one layer",
+    "Knowing where logic belongs: browser, server or database",
+    "Sound data modelling and API design",
+    "Security basics on both sides: validation, authentication and secrets",
+    "Getting code deployed and running, not only working locally",
+    "Pragmatism: choosing simple tools and shipping"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you delivered a feature on your own across frontend and backend under a deadline.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The scope, and what you cut to make the deadline",
+        "How you split the work between screens, API and data",
+        "What shipped and what you cleaned up afterwards"
+      ]
+    },
+    {
+      "text": "Describe a bug that turned out to be in a different layer from where you first looked.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The symptom and where you first looked",
+        "How you traced it across the browser, network, server and database",
+        "The real cause and what it taught you about debugging"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to learn a new framework or tool quickly for a project.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why it was needed and how much time you had",
+        "How you learned: the docs, a small prototype, someone experienced",
+        "What you built, and what you'd do differently"
+      ]
+    },
+    {
+      "text": "Tell me about a time you pushed back on a feature request or suggested a simpler way to do it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The request and the cost you saw in it",
+        "The simpler option and how you made the case",
+        "The outcome for users and the team"
+      ]
+    },
+    {
+      "text": "Walk me through an app you've built: the stack, how data flows from a click to the database, and why you chose each part.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "A short picture of the frontend, API, database and hosting",
+        "One request traced from the click to the database and back",
+        "A choice you'd make differently now, and why"
+      ]
+    },
+    {
+      "text": "Talk me through how you'd build a simple notes app with login, from the database tables up to the screens.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Tables or collections for users and notes, with each note tied to its owner",
+        "API endpoints that check the user is logged in and owns the note on every request",
+        "Screens with loading and error states, and how it gets deployed"
+      ]
+    },
+    {
+      "text": "Where should input validation happen: in the browser, on the server, or both? Why?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The browser for quick feedback to users",
+        "The server because anything sent from a client can be changed",
+        "Database constraints as a last line of defence"
+      ]
+    },
+    {
+      "text": "How does a login session work across the frontend and backend? Compare cookies and tokens.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Server-side sessions with a cookie versus self-contained signed tokens",
+        "Where tokens are stored and the risks of each: cross-site scripting, CSRF",
+        "Expiry, logout and refreshing a session"
+      ]
+    },
+    {
+      "text": "What is CORS, and why might a request work from Postman or curl but fail from the browser?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The browser's same-origin rule, and what CORS headers allow",
+        "Preflight requests for some methods and headers",
+        "Fixing it on the server by allowing the right origins, not a wildcard everywhere"
+      ]
+    },
+    {
+      "text": "In a MERN-style app, when would you use MongoDB, and when would a relational database be the better choice?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Documents suit nested data that's read together; relational suits many relationships and joins",
+        "Consistency needs, such as orders and payments",
+        "Explaining the choice you made in your own project"
+      ]
+    },
+    {
+      "text": "How do you deploy a full-stack app, and how do you keep secrets such as API keys out of the code?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A build step, hosting for the frontend and the API, and a managed database",
+        "Environment variables or a secrets manager, never committed to Git",
+        "Separate settings for development, staging and production"
+      ]
+    },
+    {
+      "text": "A list page gets slow once there are thousands of records. What would you change across the stack?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Pagination or infinite scroll instead of loading everything",
+        "An index for the query, and returning only the fields the page needs",
+        "Caching, and a loading state so the page feels responsive"
+      ]
+    },
+    {
+      "text": "How would you add live updates, such as chat messages or order status, to an existing web app?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Polling, server-sent events and WebSockets, and when each fits",
+        "Reconnecting, and messages that arrive late or out of order",
+        "Making it work with more than one server"
+      ]
+    },
+    {
+      "text": "When an API changes, how do you keep the frontend and backend in step?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Shared types or an API schema, and versioning",
+        "Tests that check the API contract",
+        "Changing in steps so older clients keep working"
+      ]
+    },
+    {
+      "text": "Talk me through how you'd let users upload and display a profile photo safely.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Checking file type and size on the server, not just in the browser",
+        "Storing files in object storage rather than the database, and serving them through a CDN",
+        "Resizing images, and controlling who can see them"
+      ]
+    },
+    {
+      "text": "Do you see yourself leaning more towards frontend or backend over time? Why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with an example of work you enjoyed",
+        "Why knowing the whole stack still helps in that direction",
+        "What you're learning now"
+      ]
+    },
+    {
+      "text": "Why do you want to work here as a full-stack developer?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about the product or its users",
+        "How your experience fits the stack the team uses",
+        "What you'd hope to own in your first year"
+      ]
+    }
+  ],
+  "tips": [
+    "Treat a take-home like work you'd ship: a README, clear setup steps, a few tests and a note on what you'd do with more time.",
+    "Expect to change your take-home live; know your own code well enough to extend it without searching.",
+    "Have a deployed project with a live link; it shows you can get past 'works on my machine'.",
+    "Say which layer you're talking about as you answer; full-stack answers get muddled quickly otherwise.",
+    "Don't list every technology you've touched; pick the stack you know best and be ready to go deep on it."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "engineer"
+  },
+  "reviewed": "2026-10-18"
+}

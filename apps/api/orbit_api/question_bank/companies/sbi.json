@@ -1,0 +1,198 @@
+{
+  "slug": "sbi",
+  "name": "State Bank of India",
+  "aliases": ["sbi", "state bank"],
+  "group": "finance",
+  "market": "india",
+  "summary": "State Bank of India recruits Probationary Officers and Junior Associates (clerks) through public exams announced in official notifications on its careers page. Recent officer notifications describe a preliminary exam, a main exam, then a psychometric test, a group exercise and an interview; clerk recruitment is mainly through preliminary and main exams, with a local-language test for some candidates. Specialist Cadre Officer roles, such as IT, risk and law, are advertised separately.",
+  "rounds": [
+    "Online application against an official notification on SBI's careers page",
+    "Phase I: an online preliminary exam (objective), used to shortlist for the main exam",
+    "Phase II: an online main exam; for officers it usually includes objective and descriptive tests",
+    "Officers, Phase III: usually a psychometric test, a group exercise and a personal interview",
+    "Clerks: a test of the chosen local language for candidates who didn't study it at school, as the notification sets out",
+    "Document verification and a medical check before joining",
+    "Specialist Cadre Officers: separate notifications by post; selection varies, often shortlisting and an interview"
+  ],
+  "looks_for": [
+    "Service",
+    "Transparency",
+    "Ethics",
+    "Politeness",
+    "Sustainability",
+    "In the interview: clear communication, awareness of banking and the economy, and a sound reason for choosing SBI",
+    "In the group exercise: contributing ideas, listening and helping the group reach a conclusion",
+    "Willingness to work in any branch, including rural and semi-urban ones"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you helped someone who was unfamiliar with a process, such as filling in a form or using an app.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who they were and what they found hard",
+        "How you explained it patiently, in their language and at their pace",
+        "What they could do afterwards on their own"
+      ]
+    },
+    {
+      "text": "Describe a time you led a group without being formally in charge.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The group's goal and why someone needed to step up",
+        "What you did to organise people and settle disagreements",
+        "The result and what the others would say about your role"
+      ]
+    },
+    {
+      "text": "Tell me about a time you stayed polite with someone who was being rude or unreasonable.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What happened and why they were upset",
+        "How you kept calm and still solved the problem",
+        "How it ended, and what you'd do the same way again"
+      ]
+    },
+    {
+      "text": "Tell me about a time you chose honesty even though it was the harder option.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The situation and the easier, less honest option",
+        "What you did and who you told",
+        "What it cost or gained you, and why you'd do it again"
+      ]
+    },
+    {
+      "text": "What is financial inclusion, and how does a bank like SBI support it?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Access to basic accounts, credit, insurance and pensions for people who lack them",
+        "Government schemes, business correspondents and digital banking as ways to reach them",
+        "The challenges that remain, and what a branch officer can do"
+      ]
+    },
+    {
+      "text": "Explain the repo rate and the cash reserve ratio, and how changes in them affect lending.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Repo rate: what the RBI charges banks to borrow; CRR: the share of deposits banks must keep with the RBI",
+        "A higher repo rate or CRR usually makes loans dearer or reduces money to lend",
+        "Why the RBI uses them: inflation and growth"
+      ]
+    },
+    {
+      "text": "A farmer in your branch area is struggling to repay a crop loan after a poor monsoon. What would you consider?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Understanding the situation: crop loss, other income, the loan's history",
+        "Options within the rules, such as restructuring, crop insurance claims or relief schemes",
+        "Being fair to the farmer and to the bank, and documenting the decision"
+      ]
+    },
+    {
+      "text": "How would you increase the use of digital banking among older customers at a rural branch?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The barriers: trust, language, phones and fear of fraud",
+        "Practical steps: assisted demonstrations, local-language help, safety tips",
+        "How you'd measure progress and keep a branch option for those who need it"
+      ]
+    },
+    {
+      "text": "A customer says they shared an OTP on a phone call and money has left their account. What would you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Blocking the card or account access and recording the complaint at once",
+        "Guiding them to report it through the bank's process and the national cybercrime helpline",
+        "Explaining next steps calmly, and how to spot such calls in future"
+      ]
+    },
+    {
+      "text": "What is a non-performing asset, and why does it matter to a public-sector bank?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A loan overdue beyond the RBI's limit, usually 90 days",
+        "Its effect on profits, capital and the bank's ability to lend",
+        "How banks reduce it: careful lending, monitoring and recovery"
+      ]
+    },
+    {
+      "text": "Group exercise practice: should India move towards a fully cashless economy? Give your view and a counterpoint.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A clear position with two reasons",
+        "A fair counterpoint: access, connectivity, fraud, the informal economy",
+        "How you would help the group reach a shared conclusion"
+      ]
+    },
+    {
+      "text": "Explain one recent RBI or government step in banking and what it means for ordinary customers.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The step, described accurately and briefly",
+        "Who it affects and how",
+        "One benefit and one challenge in putting it into practice"
+      ]
+    },
+    {
+      "text": "Tell me about yourself and why you want to join SBI.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your background in a few sentences: home town, education, any work",
+        "What draws you to SBI and to banking",
+        "A quality that would make you a good officer or associate"
+      ]
+    },
+    {
+      "text": "Why a public-sector bank rather than a private bank?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Reasons about the work: reach, public service, variety of postings",
+        "Something specific about SBI",
+        "A respectful answer that doesn't criticise private banks"
+      ]
+    },
+    {
+      "text": "You may be posted to a remote rural branch far from home. How do you feel about that?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest, positive answer",
+        "What you'd learn there that a city branch wouldn't teach",
+        "How you would adapt: language, community, living arrangements"
+      ]
+    }
+  ],
+  "tips": [
+    "Read the official notification for your cycle on SBI's careers page: stages, eligibility and dates change, and the notification is the authority.",
+    "SBI says it informs shortlisted candidates individually and publishes only roll or registration numbers; ignore any message asking for money.",
+    "For the interview, prepare to talk about your own background (home district, degree subjects, hobbies), as panels often start there.",
+    "In the group exercise, make a clear point early, build on others' points, help the group summarise, and don't talk over people.",
+    "Know SBI's core values (Service, Transparency, Ethics, Politeness, Sustainability) and have one example for each from your life.",
+    "Follow banking and economy news daily: RBI policy, government schemes, digital payments and financial inclusion."
+  ],
+  "sources": [
+    {
+      "title": "State Bank of India: about us, vision and core values (sbi.bank.in)",
+      "url": "https://sbi.bank.in/web/about-us"
+    },
+    {
+      "title": "SBI careers: current openings (sbi.bank.in)",
+      "url": "https://sbi.bank.in/web/careers/current-openings"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

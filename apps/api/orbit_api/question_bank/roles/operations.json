@@ -1,0 +1,208 @@
+{
+  "slug": "operations",
+  "name": "Operations and supply chain",
+  "aliases": ["operations manager", "operations executive", "operations analyst", "supply chain", "supply chain manager", "supply chain analyst", "logistics manager", "logistics executive", "warehouse manager", "procurement", "procurement executive", "purchase executive"],
+  "group": "business",
+  "summary": "Operations and supply chain interviews usually test how you keep things running and make them better: managing stock, suppliers, deliveries, people and costs, and solving problems when something breaks. Candidates commonly report scenario questions about delays or shortages, questions on the metrics they've owned and, for analyst and planning roles, some Excel or data work.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Functional interview with an operations or supply chain manager on your experience and metrics",
+    "Scenario or case questions, such as a stock-out, a late supplier or a process to improve (often)",
+    "Excel or data exercise for analyst and planning roles (for some roles)",
+    "For some roles, a site visit or a meeting with the plant, warehouse or regional head",
+    "Final HR round"
+  ],
+  "looks_for": [
+    "Knowing the metrics you've owned: on-time delivery, fill rate, inventory turns, cost per order",
+    "Calm, practical problem-solving when plans break",
+    "Process thinking: finding the bottleneck and fixing the cause",
+    "Managing suppliers, vendors and teams on the ground",
+    "Balancing cost, speed and quality",
+    "Safety and compliance where goods, sites or people are involved"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a process you improved. How did you measure the improvement?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The process and what was wrong with it",
+        "What you changed and how you got people to follow it",
+        "The before-and-after numbers"
+      ]
+    },
+    {
+      "text": "Tell me about a time a shipment, supplier or delivery let you down at the last minute. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What failed and who it affected",
+        "The quick fix you found and who you kept informed",
+        "What you changed so it was less likely to happen again"
+      ]
+    },
+    {
+      "text": "Describe a time you had to manage a team or vendor that wasn't meeting expectations.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The gap, with facts rather than opinions",
+        "How you raised it and agreed what would change",
+        "The result, including any tough decision you made"
+      ]
+    },
+    {
+      "text": "Tell me about a decision where you had to trade off cost against speed or service.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The options and what each would cost or save",
+        "How you decided and who you consulted",
+        "How it turned out and whether you'd choose the same again"
+      ]
+    },
+    {
+      "text": "A key product is out of stock in several cities and customers are complaining. Walk me through your first day.",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Containing it: what stock exists, where, and what can be moved quickly",
+        "Telling sales and support what to say to customers",
+        "Finding the cause: forecast, supplier, transport or system, and fixing it"
+      ]
+    },
+    {
+      "text": "How would you decide how much safety stock to hold for an item?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "How much demand varies and how long resupply takes",
+        "The service level the business wants against the cost of holding stock",
+        "Reviewing it as demand or lead times change"
+      ]
+    },
+    {
+      "text": "Explain the difference between push and pull in a supply chain, with an example of each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Push: making or moving stock based on a forecast",
+        "Pull: making or moving stock in response to actual orders",
+        "Where each fits, and how many businesses mix the two"
+      ]
+    },
+    {
+      "text": "A warehouse keeps missing its same-day dispatch target. How would you find the bottleneck?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Mapping the steps: receiving, storing, picking, packing, dispatch",
+        "Measuring time and volume at each step to see where work piles up",
+        "Fixes such as layout, shift timing or batch picking, and checking that they worked"
+      ]
+    },
+    {
+      "text": "How would you evaluate two suppliers for the same part and choose between them?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Total cost, not just unit price: freight, quality failures, payment terms",
+        "Reliability, capacity, quality records and references",
+        "Risk: depending on one supplier, and a back-up plan"
+      ]
+    },
+    {
+      "text": "What does inventory turnover tell you, and what would you do if it's falling?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "How many times stock is sold and replaced in a period",
+        "Falling turns can mean slow-moving stock, over-ordering or weaker demand",
+        "Actions: clearing old stock, better forecasts, smaller and more frequent orders"
+      ]
+    },
+    {
+      "text": "How would you cut the cost per delivery for a local delivery network without making deliveries slower?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Where the cost goes: riders or drivers, vehicles, failed deliveries, idle time",
+        "Ideas such as better routing, batching orders and fewer failed attempts",
+        "Measuring cost and delivery time together during a trial"
+      ]
+    },
+    {
+      "text": "What do lean ideas such as cutting waste or 5S look like in practice on a shop floor or in a warehouse?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Waste in plain words: waiting, extra movement, overproduction, defects",
+        "5S as sort, set in order, shine, standardise and sustain, with an example",
+        "Keeping it going after the first clean-up"
+      ]
+    },
+    {
+      "text": "How would you forecast demand for a new product with no sales history?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Using similar products, market data and early orders",
+        "A simple forecast with a range, not a single number",
+        "Updating it quickly as sales come in"
+      ]
+    },
+    {
+      "text": "Which systems have you used, such as an ERP, a warehouse system or Excel, and what did you do in them?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The systems and the tasks you did in each",
+        "One report or analysis you built and how it was used",
+        "How you'd learn a new system quickly"
+      ]
+    },
+    {
+      "text": "Tell me about yourself and the operations work you've done so far.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your background in two or three lines",
+        "The operations work you've done, with one result",
+        "Why this role is the next step"
+      ]
+    },
+    {
+      "text": "Why operations? What do you enjoy about the work?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you to it: solving problems, seeing results, working with people",
+        "An example that shows it",
+        "The area you want to grow in: planning, procurement, logistics or plant operations"
+      ]
+    },
+    {
+      "text": "Operations roles can involve shifts, site visits and peak-season pressure. How do you feel about that?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer about your availability",
+        "An example of handling a busy or unpredictable period",
+        "How you stay organised when things change quickly"
+      ]
+    }
+  ],
+  "tips": [
+    "Have numbers ready for what you've owned: on-time rates, cost savings, stock levels, error rates.",
+    "In scenarios, separate the short-term fix (keep customers served) from the fix for the root cause.",
+    "Freshers: an internship, a college event you ran or a family business can give you strong operations stories.",
+    "Learn the basics of an ERP and Excel (lookups, pivot tables); many operations roles use them every day.",
+    "Mention safety where it applies; on sites and in warehouses it matters as much as speed.",
+    "For procurement roles, prepare a negotiation story: what you asked for, what you gave up and the saving."
+  ],
+  "mock": {
+    "interview_type": "mixed",
+    "persona": "hiring_manager"
+  },
+  "reviewed": "2026-10-18"
+}

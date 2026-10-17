@@ -1,0 +1,175 @@
+{
+  "slug": "intuit",
+  "name": "Intuit",
+  "aliases": ["intuit india"],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Intuit makes TurboTax, QuickBooks, Credit Karma and Mailchimp, and its careers site describes final interviews built around a 'craft demonstration': you present a solution or case to members of the hiring team, then meet assessors, a team member and a manager. Intuit publishes five operating values, such as Customer Obsession and Courage, and candidates commonly report interviewers listening for them.",
+  "rounds": [
+    "Recruiter screen",
+    "Online coding assessment or technical screen for many engineering roles",
+    "Interview set-up: engineers often get time to work on a technical problem before presenting it",
+    "Craft demonstration: present your solution or case to several members of the hiring team",
+    "Assessors interview that digs into your skills and your case",
+    "Team member interview on values and the environments where you do your best work",
+    "Manager interview on motivation, successes and lessons"
+  ],
+  "looks_for": [
+    "Integrity Without Compromise",
+    "Customer Obsession",
+    "Stronger Together",
+    "Courage",
+    "We Care And Give Back",
+    "Clear problem solving that you can present and defend"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you fell in love with a customer's problem rather than your first solution.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you learned what the customer really struggled with",
+        "The first idea you let go of, and why",
+        "What you built instead and how it helped them"
+      ]
+    },
+    {
+      "text": "Tell me about a bold decision you made at work. How did it turn out?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why it was bold: the risk and who doubted it",
+        "How you reduced the risk and moved quickly",
+        "The result, good or bad, and what you learned"
+      ]
+    },
+    {
+      "text": "Tell me about a time you did the right thing when it would have been easier not to.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The situation and the easier option",
+        "What you did and what it cost you",
+        "Why trust mattered more, and how it turned out"
+      ]
+    },
+    {
+      "text": "Tell me about a time a teammate's different view changed your decision.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Your original view and theirs",
+        "How you listened and tested their point",
+        "The better decision and what it taught you about diverse views"
+      ]
+    },
+    {
+      "text": "How would you present a technical solution to a panel: framing the problem, showing your work and handling questions?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Starting with the problem and your approach before the details",
+        "Showing the key part of the code or design, not all of it",
+        "Naming trade-offs and what you'd do with more time, then inviting questions"
+      ]
+    },
+    {
+      "text": "How would you design a system that imports a small business's bank transactions each day and sorts them into categories?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Connecting securely to banks and handling missing or late data",
+        "Categorising with rules first, then learning from the user's corrections",
+        "Avoiding duplicate transactions and keeping a clear audit trail"
+      ]
+    },
+    {
+      "text": "Traffic to a tax-filing product spikes sharply before a filing deadline. How would you prepare the service?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Estimating the peak from past seasons and load testing early",
+        "Scaling the busy parts and protecting the critical path, such as submitting a return",
+        "Freezing risky changes before the peak and having a rollback plan"
+      ]
+    },
+    {
+      "text": "How would you protect customers' financial data in an app, from sign-in to storage?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Strong sign-in: multi-factor authentication and secure sessions",
+        "Encryption in transit and at rest, and least-privilege access",
+        "Logging, monitoring and a plan for responding to a breach"
+      ]
+    },
+    {
+      "text": "A customer says their invoice totals don't match their own records. How would you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Getting a specific example and reproducing it",
+        "Checking rounding, taxes, currency and edits made after sending",
+        "Fixing it for the customer and checking whether others are affected"
+      ]
+    },
+    {
+      "text": "How would you test whether a new onboarding flow helps small businesses get started faster?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Defining 'started': the first invoice sent or the first account connected",
+        "An A/B test with guardrails such as support contacts or drop-offs",
+        "How long to run it and what result would change the decision"
+      ]
+    },
+    {
+      "text": "Why Intuit? Which of its products have you used, and what would you improve?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason tied to Intuit's customers or products",
+        "A real experience with a product, or a close look at one",
+        "One improvement and who it would help"
+      ]
+    },
+    {
+      "text": "Which of Intuit's values do you relate to most, and when have you acted on it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One value, named once",
+        "A short example from your own work",
+        "Why it matters to you"
+      ]
+    },
+    {
+      "text": "What kind of team environment helps you do your best work?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Specific conditions: feedback, ownership, pace, collaboration",
+        "An example of when you did your best work and why",
+        "How you help create that environment for others"
+      ]
+    }
+  ],
+  "tips": [
+    "Treat the craft demonstration as a short presentation: a brief intro about you, the problem, your approach, the trade-offs and what you'd do next.",
+    "If you get set-up time before the demo, get your tools working first, then solve the core of the problem before polishing it.",
+    "Expect the assessors to follow up on your case; know why you chose each approach and what you'd change with more time.",
+    "Learn Intuit's five operating values and prepare a short story for each.",
+    "Bring questions about the team and career growth to the manager interview."
+  ],
+  "sources": [
+    {
+      "title": "Intuit's hiring process (intuit.com)",
+      "url": "https://www.intuit.com/careers/hiring-process/"
+    },
+    {
+      "title": "Intuit's operating values (intuit.com)",
+      "url": "https://www.intuit.com/in/company/operating-values/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

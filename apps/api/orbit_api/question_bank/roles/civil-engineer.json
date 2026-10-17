@@ -1,0 +1,207 @@
+{
+  "slug": "civil-engineer",
+  "name": "Civil engineer",
+  "aliases": ["civil engineering", "civil fresher", "site engineer", "civil site engineer", "construction engineer", "structural engineer", "structural design engineer", "billing engineer", "quantity surveyor", "highway engineer", "geotechnical engineer"],
+  "group": "core-engineering",
+  "summary": "Civil engineering interviews usually mix fundamentals (concrete, soils, structures, surveying and estimation) with practical site sense: how work is checked, kept safe and kept on schedule. Candidates commonly report questions on their project or site internship; site roles lean towards quality checks, quantities and managing contractors, while design roles go deeper into analysis, design codes and software.",
+  "rounds": [
+    "Online or written test: aptitude and civil subjects (at many companies and campus drives)",
+    "Technical interview on core subjects, your project and any site experience",
+    "For design roles, questions on analysis, design codes and software",
+    "For site roles, questions on execution, quality checks, quantities and safety",
+    "HR round, often covering site postings and relocation"
+  ],
+  "looks_for": [
+    "Fundamentals explained with site examples",
+    "Quality checks on materials and work, such as concrete and steel",
+    "Safety on site",
+    "Reading drawings and estimating quantities",
+    "Planning work and managing contractors and labour",
+    "Knowing the design codes used where you'd work, at the level the role needs"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about your final-year project or site internship. What did you do yourself?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The project or site and what it involved",
+        "Your own work: design, testing, surveying or supervision",
+        "What you learned that a textbook didn't teach you"
+      ]
+    },
+    {
+      "text": "Tell me about a time work on a site or project didn't go to plan. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What went wrong and its effect on time, cost or quality",
+        "What you did and who you involved",
+        "The outcome and what you'd plan differently"
+      ]
+    },
+    {
+      "text": "Describe a time you had to get a contractor or team to redo work that wasn't up to standard.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was wrong and how you knew, against the drawing or specification",
+        "How you raised it firmly but respectfully",
+        "The result, and how you prevented a repeat"
+      ]
+    },
+    {
+      "text": "Tell me about a time you spotted a safety risk and acted on it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The risk and who it could have hurt",
+        "What you did straight away and who you told",
+        "The lasting fix, such as a barrier, a permit or a briefing"
+      ]
+    },
+    {
+      "text": "Concrete cubes from a recent pour have failed the strength test. What would you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Checking the test itself: sampling, cube curing and the lab",
+        "Reviewing the mix, any water added on site and how the structure was cured",
+        "Further tests on the structure, such as cores or non-destructive tests, and involving the designer"
+      ]
+    },
+    {
+      "text": "Why is curing important for concrete, and what happens if it's done badly?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Cement needs moisture over time to keep gaining strength",
+        "Poor curing leads to cracks, lower strength and a weak surface",
+        "Common methods: ponding, wet coverings and curing compounds"
+      ]
+    },
+    {
+      "text": "What would you check before allowing a slab to be concreted?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Formwork: levels, strength, props and sealed joints",
+        "Reinforcement: bar sizes, spacing, cover blocks and laps, as per the drawing",
+        "Readiness: embedded services, access, materials, weather and a pour plan"
+      ]
+    },
+    {
+      "text": "Explain the difference between a one-way and a two-way slab.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "It depends on how the slab is supported and the ratio of its spans",
+        "As a rough guide, when the long span is more than about twice the short one, it acts mainly one-way",
+        "How that changes where the main reinforcement goes"
+      ]
+    },
+    {
+      "text": "How would you estimate the concrete and steel needed for a simple beam or column?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Concrete volume from the drawing dimensions",
+        "Steel from bar lengths, laps and the weight per metre of each bar size",
+        "Allowing for wastage and checking against the bill of quantities"
+      ]
+    },
+    {
+      "text": "You find a crack in a newly built wall. How would you judge whether it's serious?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Its width, length, direction and whether it's growing, marked and monitored",
+        "Likely causes: shrinkage, settlement, temperature movement or overload",
+        "When you'd call in the structural engineer"
+      ]
+    },
+    {
+      "text": "Why do soil tests matter before designing a foundation, and what would you want to learn from them?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "How much load the soil can carry and how much it may settle",
+        "Groundwater level and soil type, such as clays that swell and shrink",
+        "How the results lead to shallow or deep foundations"
+      ]
+    },
+    {
+      "text": "Damp patches appear on basement walls after rain. What would you check?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Where the water gets in: joints, cracks or pipe entries",
+        "The waterproofing and drainage around the basement",
+        "A short-term fix and a lasting repair"
+      ]
+    },
+    {
+      "text": "Your project is two weeks behind schedule. How would you help recover the time on site?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Finding which activities on the critical path are late and why",
+        "Options: more crews or shifts, changing the sequence, working on areas in parallel",
+        "The cost and safety of each option, and agreeing a revised plan"
+      ]
+    },
+    {
+      "text": "Which software have you used, such as AutoCAD, a structural analysis package or a planning tool, and for what?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The tools and what you did in each",
+        "One drawing, model or schedule you produced",
+        "How you checked the software's results by hand"
+      ]
+    },
+    {
+      "text": "Tell me about yourself and the kind of projects you want to work on.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your degree and strongest subjects",
+        "A project, internship or site visit that shaped your interest",
+        "The kind of work you want: buildings, roads, bridges, water or something else"
+      ]
+    },
+    {
+      "text": "Why civil engineering, and do you prefer site work or design work?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you to the field, shown by an experience",
+        "Your preference, chosen honestly",
+        "Why some site experience helps either way"
+      ]
+    },
+    {
+      "text": "Are you comfortable with site postings, travel and working outdoors?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with any limits stated clearly",
+        "Any site experience you already have",
+        "How you'd manage remote postings or long site days"
+      ]
+    }
+  ],
+  "tips": [
+    "Revise concrete technology, reinforcement detailing, soil basics, surveying and estimation; they commonly come up in fresher interviews.",
+    "Use site examples wherever you can, even from a short internship or a site visit.",
+    "Practise talking through a drawing: grid lines, levels, sections and reinforcement details.",
+    "Know the main design codes used where you're applying (for example IS codes in India) and what they cover, without reciting clause numbers.",
+    "Mention safety in site answers: protective equipment, edge protection, permits and toolbox talks.",
+    "For site roles, show you can work with people: contractors, labour and other trades."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "engineer"
+  },
+  "reviewed": "2026-10-18"
+}

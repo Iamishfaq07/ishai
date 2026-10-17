@@ -90,6 +90,16 @@ describe("companies to practise for", () => {
   it("leaves India-only companies out elsewhere and puts the IT-services firms last", () => {
     expect(companiesFor(styles, "US").map((s) => s.slug)).toEqual(["amazon", "google", "stripe", "tcs", "infosys", "wipro", "cognizant"]);
   });
+
+  it("follows each guide's own market when the server sends it", () => {
+    const withMarket = [
+      { slug: "meesho", market: "india" as const },
+      { slug: "hcltech", market: "india-first" as const },
+      { slug: "sap", market: "global" as const },
+      { slug: "flipkart", market: "global" as const },
+    ];
+    expect(companiesFor(withMarket, "GB").map((s) => s.slug)).toEqual(["sap", "flipkart", "hcltech"]);
+  });
 });
 
 describe("the copilot's experience levels", () => {

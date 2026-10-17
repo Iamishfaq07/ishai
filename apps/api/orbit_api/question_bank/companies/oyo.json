@@ -1,0 +1,163 @@
+{
+  "slug": "oyo",
+  "name": "OYO",
+  "aliases": ["oyo rooms", "oravel stays", "oyo hotels"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Candidates commonly report that OYO's engineering interviews include problem-solving, design and hiring manager rounds, while business and operations roles lean on case questions about hotels, pricing and growth. OYO describes its mission as empowering small and medium hotel and homeowners to grow their businesses, so questions often involve property partners as well as guests.",
+  "rounds": [
+    "Online coding test or recruiter screen",
+    "Problem-solving / data structures round (engineering roles)",
+    "Design round on a system or past project (for experienced engineers)",
+    "Case or problem-solving round (for business and operations roles)",
+    "Hiring manager round",
+    "HR round"
+  ],
+  "looks_for": [
+    "Owning a business or technical problem end to end",
+    "Understanding hotel partners' economics as well as guests' needs",
+    "Data-driven decisions on pricing and demand",
+    "Speed, and comfort with changing priorities",
+    "Clear communication with field teams and partners"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you owned a business or technical problem end to end and moved a number.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and the number that mattered",
+        "What you did yourself, step by step",
+        "How much the number moved, and how you knew it was your work"
+      ]
+    },
+    {
+      "text": "Describe a time you had to convince a partner or client to change how they worked.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What needed to change and why they resisted",
+        "How you made it worth their while, with evidence",
+        "What changed and how the relationship held up"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to deliver while priorities kept changing.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What kept changing and why",
+        "How you decided what to keep, pause or drop",
+        "What you delivered in the end"
+      ]
+    },
+    {
+      "text": "Tell me about a decision that turned out wrong. How did you notice, and what did you do?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The decision and the reasoning at the time",
+        "The signal that showed it was wrong",
+        "How you corrected it and what you'd do differently"
+      ]
+    },
+    {
+      "text": "How would you design a hotel booking system so two guests can't book the last room at the same time?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Room inventory per hotel per night as the source of truth",
+        "An atomic hold during payment that expires if payment fails",
+        "Handling rooms sold through other channels, and what the guest sees if it fails"
+      ]
+    },
+    {
+      "text": "How would you set room prices for a small hotel in Jaipur for next weekend?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Demand signals: season, local events, day of the week, bookings so far",
+        "Nearby hotels' prices and the owner's minimum price",
+        "Adjusting as the weekend approaches, and the metric you'd judge it by"
+      ]
+    },
+    {
+      "text": "How would you keep room availability in sync when the same hotel sells rooms on several booking sites?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "One source of truth, with updates pushed to each site",
+        "Delays, failed updates and two sites selling the same room",
+        "Regular reconciliation, and keeping a small buffer of rooms where it helps"
+      ]
+    },
+    {
+      "text": "Guests are rating some partner hotels poorly for cleanliness. How would you use data and operations to fix it?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Finding which hotels and what exactly guests complain about",
+        "Working with partners: checklists, training, photo checks, audits",
+        "Measuring ratings, repeat bookings and whether partners stay"
+      ]
+    },
+    {
+      "text": "A guest arrives and the hotel says it has no record of the booking. What should the system and the team do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Right now: find the guest a room, here or nearby, and support that takes ownership",
+        "Afterwards: find where the booking was lost, such as a failed sync",
+        "Preventing it: confirmations the hotel must acknowledge, and alerts on mismatches"
+      ]
+    },
+    {
+      "text": "Bookings from the app fell in one city last week. How would you find out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Checking the data first, then splitting by area, hotel type and platform",
+        "Supply side: hotels removed, prices changed; demand side: season, competition, app bugs",
+        "The most likely cause and how you'd confirm it"
+      ]
+    },
+    {
+      "text": "How would you rank hotel search results, balancing price, location, rating and what the guest has booked before?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Filtering first by dates, availability and location",
+        "Scoring with a few clear signals, and personalising for returning guests",
+        "Testing changes against bookings and cancellations, not just clicks"
+      ]
+    },
+    {
+      "text": "Why OYO? What do you understand about the hotels and homeowners it works with?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Who the partners are and what they need to grow",
+        "Why that problem interests you",
+        "How your skills fit the role"
+      ]
+    },
+    {
+      "text": "If the role needs it, are you comfortable travelling or doing field work to meet hotel partners?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with any limits stated clearly",
+        "Why time with partners would make you better at the job",
+        "Any past field or customer-facing experience"
+      ]
+    }
+  ],
+  "tips": [
+    "For business roles, practise hotel maths: occupancy, average room rate and revenue per available room, and how each one moves.",
+    "Bring the hotel partner into your answers: what they earn, what they worry about and why they'd stay on the platform.",
+    "In engineering design rounds, practise explaining room inventory, holds and double bookings simply.",
+    "End every case with a recommendation and the one number you'd watch to know it's working."
+  ],
+  "sources": [],
+  "reviewed": "2026-10-18"
+}

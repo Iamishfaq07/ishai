@@ -1,0 +1,200 @@
+{
+  "slug": "hsbc",
+  "name": "HSBC",
+  "aliases": ["hsbc india", "hsbc technology india", "hsbc bank"],
+  "group": "finance",
+  "market": "global",
+  "summary": "HSBC's interviews are commonly described as structured and competency-based: interviewers ask about specific occasions when you showed an ability, and why you want HSBC, banking and the business area. The bank publishes four values (we value difference, we succeed together, we take responsibility, we get it done). For graduate and technology programmes, candidates usually report online assessments before an interview or assessment centre.",
+  "rounds": [
+    "Short online application with eligibility questions and, for some roles, a CV",
+    "Online assessments of cognitive and behavioural skills; technology programmes add a coding assessment",
+    "Video interview for some roles, live or recorded without an interviewer",
+    "Interview or assessment centre (a 'Super Day' in the US), often around three hours with exercises and team interviews",
+    "For experienced hires, usually a recruiter screen, then one or more interviews of roughly 30–60 minutes with the hiring team"
+  ],
+  "looks_for": [
+    "We value difference",
+    "We succeed together",
+    "We take responsibility",
+    "We get it done",
+    "A clear reason for choosing HSBC, the industry and the business area",
+    "Specific examples: the situation, your task, what you did and the result",
+    "Care for customers and for doing things the right way in a regulated business"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you looked for a view very different from your own and it changed your approach.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Whose view you sought out and why you thought you needed it",
+        "What it showed you that you had missed",
+        "What you did differently and how the result changed"
+      ]
+    },
+    {
+      "text": "Describe a time you worked with people in another team, country or time zone to deliver something.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the work needed from each side",
+        "How you handled distance, hand-offs or different ways of working",
+        "The result, and what you would set up earlier next time"
+      ]
+    },
+    {
+      "text": "Tell me about a time you owned a mistake before anyone else noticed it.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What went wrong and how you spotted it",
+        "Who you told and how quickly",
+        "The fix, and the check you added so it didn't happen again"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to move fast and still get the details right.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why speed mattered and what was at stake if you got it wrong",
+        "What you checked carefully and what you decided could wait",
+        "The outcome, ideally with a time or error figure"
+      ]
+    },
+    {
+      "text": "Tell me about a time you raised a concern about something that didn't feel right.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you noticed and why it mattered: a customer, a rule or a risk",
+        "How you raised it, and with whom",
+        "What happened next and whether you would handle it the same way"
+      ]
+    },
+    {
+      "text": "A customer's international payment hasn't arrived after several days. How would you find out why and explain it to them?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Checks first: the details entered, cut-off times, intermediary banks, compliance holds",
+        "Explaining the position plainly, without blaming the customer or guessing",
+        "A clear next step, a time to call back, and logging the case"
+      ]
+    },
+    {
+      "text": "What are know-your-customer checks and anti-money-laundering screening, and why do they matter to a global bank?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Verifying who a customer is, what their business does and where their money comes from",
+        "Sanctions screening and monitoring transactions for unusual patterns",
+        "Why it matters: harm from financial crime, regulatory penalties and loss of trust",
+        "Balancing thorough checks with a smooth experience for honest customers"
+      ]
+    },
+    {
+      "text": "How would you design a service that shows customers the status of an international payment as it moves?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying questions: volume, channels, who can see what",
+        "Status events from payment processing into a store the app can read quickly",
+        "Handling out-of-order or repeated events, privacy and an audit trail"
+      ]
+    },
+    {
+      "text": "An overnight batch job that posts transactions to accounts failed halfway. How would you handle it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Impact first: which accounts and customers, and what deadline you face",
+        "Re-running safely without posting anything twice, then reconciling",
+        "Telling the right people, finding the root cause and preventing a repeat"
+      ]
+    },
+    {
+      "text": "A customer has savings sitting in a current account and asks what to do with them. How would you approach the conversation?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Understanding goals, time horizon, attitude to risk and what they already hold",
+        "Recommending only what suits them, with the risks and charges explained",
+        "Writing it down and agreeing a follow-up"
+      ]
+    },
+    {
+      "text": "Explain the difference between credit risk and market risk to someone new to banking.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Credit risk: a borrower or counterparty fails to pay",
+        "Market risk: losses from moves in interest rates, currencies or prices",
+        "An example of each and one way a bank limits it"
+      ]
+    },
+    {
+      "text": "Sign-ups to a bank's mobile app fell sharply in one market last month. How would you find out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Checking the data and tracking first",
+        "Breaking the drop down by step in the sign-up journey, device and channel",
+        "Likely causes, such as a new release, an extra identity check or a campaign ending, and how you'd confirm one"
+      ]
+    },
+    {
+      "text": "Why HSBC, and why this business area?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about HSBC: its international network, the business or the programme",
+        "Why this area fits your skills and interests",
+        "What you have done to learn about it"
+      ]
+    },
+    {
+      "text": "Which of HSBC's four values matters most to you, and when have you shown it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One value, named once",
+        "A short example with your own actions and the result",
+        "Why that way of working suits you"
+      ]
+    },
+    {
+      "text": "What would you like to ask the team you'd be joining?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A question about the work itself or a current project",
+        "How success is judged in the first few months",
+        "Something you couldn't have found on the website"
+      ]
+    }
+  ],
+  "tips": [
+    "Use HSBC's Practice Zone before the online assessments, and take them somewhere quiet without interruptions.",
+    "Prepare three 'why' answers: why HSBC, why banking or financial services, and why this business area.",
+    "Read the feedback report HSBC emails after the assessments; it shows where you did well and what to work on before the next stage.",
+    "For technology programmes, expect a coding assessment even if you didn't study computing; practise explaining your code as you write it.",
+    "Know HSBC's purpose, 'Opening up a world of opportunity', and have one example ready for each of the four values.",
+    "HSBC's guidance allows AI tools for preparing, such as practising answers, but not for generating responses during live or recorded interviews."
+  ],
+  "sources": [
+    {
+      "title": "HSBC purpose, values and strategy (hsbc.com)",
+      "url": "https://www.hsbc.com/who-we-are/purpose-values-and-strategy"
+    },
+    {
+      "title": "HSBC application guide for students and graduates (hsbc.com)",
+      "url": "https://www.hsbc.com/careers/students-and-graduates/application-guide"
+    },
+    {
+      "title": "HSBC application hints and tips (hsbc.com)",
+      "url": "https://www.hsbc.com/careers/application-hints-and-tips"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { questionBank } from "./questionBank.js";
 
 const TURNSTILE = "https://challenges.cloudflare.com";
 const RAZORPAY_SCRIPTS = "https://checkout.razorpay.com";
@@ -113,7 +114,13 @@ function mediapipeWasm(): Plugin {
   };
 }
 
-export default defineConfig(({ mode }) => ({
-  plugins: [react(), securityHeaders(mode), mediapipeWasm()],
+export default defineConfig(({ mode, isSsrBuild }) => ({
+  plugins: [react(), questionBank(), ...(isSsrBuild ? [] : [securityHeaders(mode), mediapipeWasm()])],
   server: { port: 5173, strictPort: true },
+  // `vite build --ssr src/prerender/entry.tsx`: the public pages' build-time render (scripts/prerender.mjs runs it).
+  // Everything is bundled into one Node file, so it runs from .prerender/ without resolving packages there.
+  ssr: { noExternal: true },
+  ...(isSsrBuild
+    ? { build: { outDir: ".prerender", emptyOutDir: true, copyPublicDir: false, rolldownOptions: { output: { entryFileNames: "[name].mjs" } } } }
+    : {}),
 }));

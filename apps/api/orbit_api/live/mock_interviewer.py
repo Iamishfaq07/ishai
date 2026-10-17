@@ -21,7 +21,7 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, Field, model_validator
 
 from orbit_api import practice_language
-from orbit_api.live import company_styles
+from orbit_api.live import company_styles, role_packs
 from orbit_api.live.carryover import MockProgress
 from orbit_api.live.context_builder import fence
 from orbit_api.live.question_detector import classify_type, normalize
@@ -798,6 +798,10 @@ class MockInterviewer:
         style = company_styles.for_country(style, self._country) if style is not None else None
         if style is not None and not cfg.drill:
             system += "\n" + company_styles.interviewer_brief(style)
+        # A known job (question_bank/roles): the questions cover what interviews for it usually test.
+        pack = role_packs.match(self._role) if not cfg.is_negotiation else None
+        if pack is not None and not cfg.drill:
+            system += "\n" + role_packs.interviewer_brief(pack)
         if lang_rule := practice_language.interviewer_instruction(self._language):
             system += "\n" + lang_rule
         if cfg.video and not panel:
@@ -910,8 +914,12 @@ class MockInterviewer:
             english = "Can you make that more concrete? What exactly did you do, and what was the result?"
             return practice_language.FALLBACK_FOLLOW_UP.get(self._language, english), True
         asked = {a.text for a in self.asked}
-        # A company's own questions are in English: used for an English round only.
+        # A company's and a role's own questions are in English: used for an English round only.
         own = list(style.questions) if style is not None and not cfg.drill and self._language == "en" else []
         pool = practice_language.FALLBACK_QUESTIONS.get(self._language, _FALLBACK)
+        if pack is not None and not cfg.drill and self._language == "en":
+            # The usual opener first (a company's own list starts with its own), then the role's questions.
+            kind = "behavioral" if cfg.interview_type == "behavioral" else "role"
+            own += [*([] if own else pool[:1]), *(q.text for q in pack.questions if q.type == kind)]
         fallback = next((q for q in [*own, *pool] if q not in asked), pool[-1])
         return fallback, False

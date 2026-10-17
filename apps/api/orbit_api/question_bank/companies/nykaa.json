@@ -1,0 +1,171 @@
+{
+  "slug": "nykaa",
+  "name": "Nykaa",
+  "aliases": ["fsn e-commerce", "fsn e-commerce ventures", "nykaa fashion"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Candidates commonly report that Nykaa's interviews depend on the role: engineering roles include coding, problem-solving and design rounds, while category, brand, marketing and analytics roles lean on case questions about beauty and fashion shoppers, brands and pricing. Nykaa lists six values on its careers page, such as 'Be the customer's champion' and 'One Nykaa'.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Coding and problem-solving rounds (engineering roles)",
+    "Design round (for experienced engineers)",
+    "Case or functional round for business roles: category, brand, marketing or analytics",
+    "Hiring manager round",
+    "Final HR conversation"
+  ],
+  "looks_for": [
+    "Be bold and be good",
+    "Be better everyday",
+    "Be the customer's champion",
+    "One Nykaa",
+    "A culture of belonging",
+    "Sustainability in every action",
+    "Understanding beauty and fashion shoppers and the brands they trust",
+    "Decisions backed by data in category and marketing roles"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you stood up for a customer's need when it was inconvenient for your team.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The customer need and why it was inconvenient",
+        "How you made the case inside the team",
+        "What changed for customers"
+      ]
+    },
+    {
+      "text": "Describe something you improved a little at a time until it was much better.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Where it started and how you measured it",
+        "The small changes, and how you kept them going",
+        "Where it ended up"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked across teams, such as tech, marketing and supply chain, to deliver one result.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and what each team needed",
+        "How you kept everyone aligned when priorities clashed",
+        "The result, and what you'd do differently"
+      ]
+    },
+    {
+      "text": "Tell me about a bold idea you pushed for. How did you make sure it was also the right thing to do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The idea and the risk in it",
+        "How you checked it was right for customers and the business",
+        "The outcome"
+      ]
+    },
+    {
+      "text": "How would you recommend products to a beauty shopper who has bought a few items before?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signals: past purchases, browsing, any skin or hair details they chose to share",
+        "Items that go together, and reminders when a product is likely to run out",
+        "Leaving out unavailable or unsuitable items, and measuring orders, not just clicks"
+      ]
+    },
+    {
+      "text": "How would you make sure product pages show accurate shades, sizes and ingredients across a large catalogue?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Getting data from brands in a set format, with checks on upload",
+        "Spotting errors from returns, reviews and support tickets",
+        "Who fixes errors, and how fast"
+      ]
+    },
+    {
+      "text": "How would you design stock management that serves both the website and physical stores?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "One view of stock across warehouses and stores",
+        "Options such as shipping from a store or collecting in store",
+        "Reserving stock, syncing delays and handling returns in either channel"
+      ]
+    },
+    {
+      "text": "Conversion on product pages dropped after a redesign. How would you find out why?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Checking tracking first, then splitting by device, category and new versus returning shoppers",
+        "Comparing the old and new page, element by element",
+        "Rolling back or testing a fix, and what you'd measure"
+      ]
+    },
+    {
+      "text": "You manage a skincare category. How would you decide which new brands to add?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Demand signals: searches with poor results, trends, gaps in price ranges",
+        "Brand quality, margins and whether it takes sales from existing brands",
+        "A trial with clear targets before a full launch"
+      ]
+    },
+    {
+      "text": "How would you plan a campaign for a festive sale, and how would you know whether it worked?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Who it's for, which channels, and which offers you can afford",
+        "Extra orders and new customers compared with a group that didn't see it",
+        "Margins and returns after the sale, not only revenue during it"
+      ]
+    },
+    {
+      "text": "How would you measure whether a creator's beauty content actually drove sales?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Tracking links or codes, and their limits",
+        "Comparing sales with a baseline, or with areas or groups that didn't see it",
+        "Being honest about what the data can't prove"
+      ]
+    },
+    {
+      "text": "Why Nykaa? Do you shop on it, and what would you change?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Your own experience as a shopper, or what you learned by trying it",
+        "One specific improvement and why",
+        "Why this role is where you can help"
+      ]
+    },
+    {
+      "text": "Which part of Nykaa interests you most: beauty, fashion, its own brands or its stores?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A clear pick and why",
+        "What you understand about that part's customers",
+        "How your skills fit it"
+      ]
+    }
+  ],
+  "tips": [
+    "Know how Nykaa's beauty and fashion businesses differ, and be ready to talk about one in depth.",
+    "For category and brand roles, practise the maths: selling price, discount, margin and how many days of stock you hold.",
+    "Nykaa lists its values on its careers page; a story about working across teams fits 'One Nykaa' well.",
+    "Shop the app before the interview and note one search, review or checkout moment you'd improve."
+  ],
+  "sources": [
+    {
+      "title": "Nykaa Careers: Who are We (values)",
+      "url": "https://www.nykaa.com/careers"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

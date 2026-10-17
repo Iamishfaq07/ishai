@@ -7,8 +7,13 @@
 @layer base {
   html,
   body,
-  #root {
+  #root,
+  #prerender {
     height: 100%;
+  }
+  /* A public page built as HTML (src/prerender) shows until the app's own copy is ready (lib/prerender.tsx). */
+  #prerender + #root {
+    display: none;
   }
   /* A wide child must not drag the whole page sideways on a phone. */
   html,

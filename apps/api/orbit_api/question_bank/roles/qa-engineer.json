@@ -1,0 +1,206 @@
+{
+  "slug": "qa-engineer",
+  "name": "QA engineer",
+  "aliases": ["software tester", "test engineer", "software test engineer", "sdet", "automation tester", "automation test engineer", "test automation engineer", "manual tester", "qa tester", "qa analyst", "quality assurance", "quality assurance engineer"],
+  "group": "engineering",
+  "summary": "QA and test engineer interviews usually test how you think about what could go wrong: writing test cases for an everyday feature, reporting a bug clearly and deciding what to test first. Candidates commonly report questions on testing types and the bug life cycle, and for automation and SDET roles, coding in a language such as Java or Python plus tools like Selenium, Playwright or API testing frameworks.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Online test or written exercise: test cases for a feature, testing concepts, sometimes basic coding",
+    "Technical round on testing types, test design and the bug life cycle",
+    "Automation round for automation and SDET roles: write a test or discuss a framework",
+    "Hiring manager or behavioural round"
+  ],
+  "looks_for": [
+    "Thinking beyond the happy path: edge cases, errors and odd inputs",
+    "Clear bug reports a developer can act on straight away",
+    "Prioritising tests by risk when time is short",
+    "Automation that is reliable and maintainable, not just recorded",
+    "Checking APIs and data, not only the user interface",
+    "Working with developers as partners on quality"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about the most important bug you've found. How did you find it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What made you look there",
+        "How you reproduced it and narrowed down the conditions",
+        "Its impact, and what happened after you reported it"
+      ]
+    },
+    {
+      "text": "Describe a time a developer said a bug you reported wasn't a bug.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The disagreement, and what the requirement actually said",
+        "How you showed the evidence calmly",
+        "How it was settled, and what you'd clarify earlier next time"
+      ]
+    },
+    {
+      "text": "Tell me about a release where testing time was cut. What did you test, and what did you leave out?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you ranked areas by risk and by how much they're used",
+        "What you told the team about what wasn't tested",
+        "What happened after the release"
+      ]
+    },
+    {
+      "text": "Tell me about a bug that reached production despite your testing. What did you learn?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "Why the tests missed it, honestly",
+        "How it was found and fixed",
+        "The change you made to your tests or process"
+      ]
+    },
+    {
+      "text": "How would you test a login page? Talk me through the cases you'd cover.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Valid and invalid logins, empty fields, case sensitivity, very long inputs",
+        "Security: locking after repeated failures, a hidden password field, injection attempts",
+        "Usability, accessibility, and different browsers and devices"
+      ]
+    },
+    {
+      "text": "Explain verification versus validation, and functional versus non-functional testing.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Verification: was it built right? Validation: was the right thing built?",
+        "Functional tests check what it does; non-functional tests check speed, security and usability",
+        "An example of each from a project"
+      ]
+    },
+    {
+      "text": "What's the difference between severity and priority? Give an example where they differ.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Severity is the impact; priority is how soon it should be fixed",
+        "A high-severity, low-priority bug, and the reverse",
+        "Who usually decides each"
+      ]
+    },
+    {
+      "text": "Walk me through the life of a bug, from when you find it to when it's closed.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A report with steps, expected and actual results, evidence and environment",
+        "Statuses such as new, assigned, fixed, retest, closed or reopened",
+        "Retesting the fix and running regression tests around it"
+      ]
+    },
+    {
+      "text": "What's the difference between smoke, sanity and regression testing?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Smoke: is the build stable enough to test at all?",
+        "Sanity: a focused check after a small fix or change",
+        "Regression: making sure existing features still work, and why it suits automation"
+      ]
+    },
+    {
+      "text": "How would you decide which tests to automate and which to keep manual?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Automating stable, repetitive, high-value checks such as regression",
+        "Keeping exploratory, one-off and fast-changing areas manual",
+        "Weighing the cost of maintaining a test against the time it saves"
+      ]
+    },
+    {
+      "text": "Your automated UI tests pass sometimes and fail other times with no code change. What would you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Finding the pattern: timing, test data, test order, environment",
+        "Fixes: proper waits instead of fixed sleeps, independent test data, stable locators",
+        "Separating flaky tests so they don't hide genuine failures"
+      ]
+    },
+    {
+      "text": "How would you structure a test automation framework so it stays easy to maintain?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Page objects or similar layers that keep locators in one place",
+        "Test data and configuration kept out of the test code",
+        "Running in CI with clear reports and screenshots on failure"
+      ]
+    },
+    {
+      "text": "How would you test a REST API, for example one that creates an order?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Status codes, the response body, and the order saved correctly",
+        "Invalid input, missing fields, authentication and permissions",
+        "Tools such as Postman or code-based tests, and checking the database where needed"
+      ]
+    },
+    {
+      "text": "Explain equivalence partitioning and boundary value analysis, using an age field that accepts 18 to 60.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Grouping inputs that should behave the same and testing one from each group",
+        "Testing just below, at and just above each boundary: 17, 18, 60 and 61",
+        "Why this finds bugs with fewer test cases"
+      ]
+    },
+    {
+      "text": "How would you approach performance testing for a ticket-booking site before a big sale?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Expected load, the shape of the peak, and the key user journeys",
+        "Load and stress tests with a tool such as JMeter or k6, watching response times and errors",
+        "Finding the bottleneck with developers and testing again after fixes"
+      ]
+    },
+    {
+      "text": "Why do you want a career in testing rather than development?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What you enjoy about finding problems and protecting users",
+        "An example that shows that mindset",
+        "Where you want to grow: automation, performance, security testing"
+      ]
+    },
+    {
+      "text": "How do you keep learning new testing tools, and what are you learning right now?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific tool or skill you're learning, and why",
+        "How you practise it: a side project, a course, tasks at work",
+        "How it would help in this role"
+      ]
+    }
+  ],
+  "tips": [
+    "When asked to test anything, first ask what it's for and who uses it, then list cases in groups: functional, edge, negative and non-functional.",
+    "Bring a sample bug report you've written (with nothing confidential in it) and be ready to explain why it's clear.",
+    "For automation roles, expect to write code live; practise basic programming in your test language, not only tool commands.",
+    "Be honest about which tools you've used and which you've only read about; follow-up questions find the difference quickly.",
+    "Mention API and database checks; testing only through the screen is a common gap."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "engineer"
+  },
+  "reviewed": "2026-10-18"
+}

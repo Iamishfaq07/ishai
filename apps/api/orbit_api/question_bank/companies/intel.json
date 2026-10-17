@@ -1,0 +1,196 @@
+{
+  "slug": "intel",
+  "name": "Intel",
+  "aliases": [
+    "intel india",
+    "intel technology india"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Intel hires for hardware roles such as chip design, verification, validation and manufacturing, and for software close to the hardware: drivers, firmware, compilers and performance tools. Candidates commonly report a recruiter screen followed by technical interviews that go deep into digital design, computer architecture or systems programming, with behavioral questions along the way. Intel publishes its values, including Customer First, Fearless Innovation and One Intel.",
+  "rounds": [
+    "Online application, sometimes with prescreening questions",
+    "Recruiter or hiring manager phone screen",
+    "Online technical test for some campus roles: digital electronics, aptitude or coding",
+    "Several technical interviews, often with a panel: digital design, architecture, verification or programming, depending on the role",
+    "Behavioral questions on teamwork, problem solving and results, often within the technical rounds",
+    "Hiring manager discussion"
+  ],
+  "looks_for": [
+    "Customer First",
+    "Fearless Innovation",
+    "Results Driven",
+    "One Intel",
+    "Inclusion",
+    "Quality",
+    "Integrity",
+    "Depth in your track: digital logic, computer architecture, verification or systems programming",
+    "Careful debugging and a methodical approach to validation"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you found a serious bug late in a project. How did you handle it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you found it and how serious it was",
+        "Who you told, how quickly, and the options you laid out",
+        "The decision, the fix, and what you changed so it would be caught earlier"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with a team in another location or time zone to deliver something.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and how the work was split",
+        "How you kept everyone aligned: handovers, documents, overlap hours",
+        "What was delivered and what you'd do differently"
+      ]
+    },
+    {
+      "text": "Tell me about a time you took a calculated risk on a new approach.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why the usual approach wasn't good enough",
+        "How you limited the risk: a prototype, a fallback, data",
+        "The result and what you learned"
+      ]
+    },
+    {
+      "text": "Tell me about a deadline you missed or nearly missed. What did you change afterwards?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What happened and your share of the cause",
+        "How you raised it and what you did to recover",
+        "The change in how you plan or estimate since"
+      ]
+    },
+    {
+      "text": "Explain setup and hold time, and what you'd do if a design fails timing.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Clear definitions and what happens when each is violated, including metastability",
+        "How static timing analysis reports the failing paths",
+        "Fixes such as restructuring logic, pipelining, resizing cells, or adding delay for hold"
+      ]
+    },
+    {
+      "text": "What is the difference between blocking and non-blocking assignments in Verilog, and why does it matter?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Blocking updates at once; non-blocking updates at the end of the time step",
+        "Why non-blocking suits sequential logic and blocking suits combinational logic",
+        "The simulation and synthesis mismatches that mixing them can cause"
+      ]
+    },
+    {
+      "text": "How would you verify a FIFO design? Talk me through your test plan.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Features to cover: full, empty, simultaneous read and write, reset",
+        "Constrained random stimulus with a reference model and checks",
+        "Assertions and coverage goals that tell you when you're done"
+      ]
+    },
+    {
+      "text": "Explain how a CPU cache works and what happens on a cache miss.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Locality, cache lines, and the levels of the hierarchy",
+        "Associativity, replacement and write policies",
+        "The cost of a miss and how software can reduce misses"
+      ]
+    },
+    {
+      "text": "What is pipelining in a processor, and what are the hazards it creates?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Splitting instructions into stages to raise throughput",
+        "Data, control and structural hazards",
+        "Fixes such as forwarding, stalls and branch prediction"
+      ]
+    },
+    {
+      "text": "How would you debug a driver or firmware issue that only appears on some hardware configurations?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Finding what the failing setups share: chipset, firmware version, memory, settings",
+        "Reproducing it reliably, then narrowing down with logs, traces or a debugger",
+        "Fixing the cause and adding that configuration to testing"
+      ]
+    },
+    {
+      "text": "How would you speed up a compute-heavy loop on a modern CPU? Talk through what you'd look at.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Profiling first to confirm where the time goes",
+        "Cache-friendly data layout, vectorisation and fewer branches",
+        "Using several cores, and checking the result is still correct"
+      ]
+    },
+    {
+      "text": "Explain clock domain crossing and how you'd safely pass a signal between two clocks.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Why crossing clocks risks metastability and lost data",
+        "Two-flop synchronisers for single bits, and handshakes or async FIFOs for buses",
+        "How CDC checks and verification catch problems"
+      ]
+    },
+    {
+      "text": "A batch of chips shows lower yield than expected. How would you start investigating?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Breaking yield down by wafer, lot, tool and test",
+        "Looking for patterns, such as defects at the wafer edge or after a process change",
+        "Forming a hypothesis and confirming it with the process and test teams"
+      ]
+    },
+    {
+      "text": "Tell me about yourself and what drew you to hardware or systems work.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your background in a few sentences",
+        "The moment or project that got you interested in this area",
+        "The kind of work you want to do next"
+      ]
+    },
+    {
+      "text": "Why Intel, and which part of its work (design, manufacturing or software) interests you most?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific area and what you know about it",
+        "A link to your coursework, projects or experience",
+        "What you want to learn there"
+      ]
+    }
+  ],
+  "tips": [
+    "Revise the fundamentals for your track: digital logic and timing for design, SystemVerilog and UVM for verification, C and OS internals for software.",
+    "Bring one project you can explain end to end: the specification, your design choices, how you tested it and what you'd change.",
+    "Expect follow-ups that go a level deeper each time; say what you know, and reason out loud about what you don't.",
+    "Intel publishes its values, such as Customer First, Quality and One Intel; have a story about teamwork across sites and one about quality.",
+    "Read recent news about the business group you're interviewing with, so you can ask informed questions."
+  ],
+  "sources": [
+    {
+      "title": "Intel: purpose and values",
+      "url": "https://www.intel.com/content/www/us/en/support/articles/000015119/programs.html"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

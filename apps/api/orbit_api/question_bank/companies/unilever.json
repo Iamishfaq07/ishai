@@ -1,0 +1,187 @@
+{
+  "slug": "unilever",
+  "name": "Unilever",
+  "aliases": ["hindustan unilever", "hul", "unilever india"],
+  "group": "industry",
+  "market": "global",
+  "summary": "Unilever makes everyday brands in personal care, beauty, home care and food, and in India it operates as Hindustan Unilever (HUL). Its graduate route, the Unilever Future Leaders Programme (UFLP), commonly runs through an online application, personality and ability assessments, a recorded digital interview with a business case, and a final assessment day, which the UK calls the Discovery Centre. For other roles its careers site describes an online assessment, a recruiter call and a hiring manager interview.",
+  "rounds": [
+    "Online application, usually to one function",
+    "Online assessments of personality and ability, often game-based",
+    "Recorded digital interview: short questions and a business case",
+    "Line manager interview in some countries",
+    "Final assessment day (the Discovery Centre in the UK): business challenges, team work and an interview"
+  ],
+  "looks_for": [
+    "Focus on what matters most",
+    "Care and make a difference",
+    "Think ahead",
+    "Follow through with excellence",
+    "Business sense about consumers, brands and retailers",
+    "Clear, structured thinking with a few personal examples"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you had too much to do. How did you decide what mattered most?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Everything on your plate and the deadline",
+        "How you ranked tasks by impact, and what you dropped or delegated",
+        "The result and how you told people about the trade-offs"
+      ]
+    },
+    {
+      "text": "Tell me about a time you made a real difference for someone: a customer, a community or a teammate.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who it was and what they needed",
+        "What you did beyond the minimum",
+        "The difference it made, in their words if possible"
+      ]
+    },
+    {
+      "text": "Tell me about a time you saw a problem coming and acted before it hit.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The early sign you noticed and others missed",
+        "What you did and who you brought in",
+        "What was avoided as a result"
+      ]
+    },
+    {
+      "text": "Tell me about something you saw through to the end when it would have been easy to stop.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and the point where stopping was tempting",
+        "What kept you going and how you kept quality up",
+        "The finished result"
+      ]
+    },
+    {
+      "text": "Tell me about a time you led a group without being formally in charge.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The group, the goal and why someone had to lead",
+        "How you got people to follow: listening, a clear plan, sharing work",
+        "The outcome and what you learned about leading"
+      ]
+    },
+    {
+      "text": "A shampoo brand is losing share to a cheaper rival. How would you work out why, and what would you do?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Diagnosing first: which consumers, channels and regions, and since when",
+        "Options beyond cutting price: smaller packs, a clearer benefit, better shelf presence",
+        "The plan you'd pick, its cost and how you'd measure it"
+      ]
+    },
+    {
+      "text": "How would you convince a store owner to give more shelf space to one of our brands?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Understanding the store's goals: sales, margin, footfall",
+        "Evidence: how fast the brand sells and what it adds to the category",
+        "An offer that suits both sides, and how you'd follow up"
+      ]
+    },
+    {
+      "text": "A factory can't keep up with demand for a fast-growing product. What options would you look at?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Short term: extra shifts, removing bottlenecks, prioritising the best-selling packs",
+        "Longer term: new capacity, other plants or a contract manufacturer",
+        "Cost, quality and service trade-offs, and what you'd do first"
+      ]
+    },
+    {
+      "text": "Estimate how many tubes of toothpaste are sold in Bengaluru in a month. Talk me through your logic.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A clear structure: population, households, users, usage per day",
+        "Sensible round numbers, stated as assumptions",
+        "A final answer and a quick sense check"
+      ]
+    },
+    {
+      "text": "How would you launch a product that uses less plastic packaging, and how would you know it worked?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "What consumers and retailers need to believe and see",
+        "Trade-offs: cost, shelf life, how convenient it is to use",
+        "Measures: sales, repeat purchases and plastic saved"
+      ]
+    },
+    {
+      "text": "Which consumer trend will most change how people shop for everyday products, and how should a brand respond?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "One trend, explained with evidence or examples",
+        "What it means for products, prices or channels",
+        "A specific response for a real brand"
+      ]
+    },
+    {
+      "text": "Why Unilever, and why the function you've chosen?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about Unilever's brands or way of working",
+        "Why this function suits your strengths, with an example",
+        "What you want to learn in it"
+      ]
+    },
+    {
+      "text": "Which Unilever brand do you admire, and what would you change about it?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A brand you know as a consumer, and why it works",
+        "One problem or opportunity",
+        "Your idea and how you'd test it"
+      ]
+    },
+    {
+      "text": "A graduate programme often means rotating across roles and places. How do you feel about that?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest, positive answer",
+        "What you'd gain from each rotation",
+        "Any limits, stated clearly"
+      ]
+    }
+  ],
+  "tips": [
+    "Apply to the one function you most want; the UFLP usually lets you apply to only one, so be ready to explain why it fits you.",
+    "In the digital interview, structure each answer: your point, a short example, the result. Unilever says a real person reviews it.",
+    "For business cases, think like a brand owner: the consumer, the retailer, the cost and how you'd measure success.",
+    "Unilever's recruiters say there's no single right answer; clear thinking, structure and a few personal examples matter more than length.",
+    "In India, HUL's early-career routes include internships and Foundation School as well as the UFLP; check the India careers page for each route's steps."
+  ],
+  "sources": [
+    {
+      "title": "Unilever Future Leaders Programme, UK and Ireland (careers.unilever.com)",
+      "url": "https://careers.unilever.com/en/uk-and-ireland-unilever-future-leaders-programme-2026"
+    },
+    {
+      "title": "Unilever India early careers (careers.unilever.com)",
+      "url": "https://careers.unilever.com/en/early-careers-india-2026"
+    },
+    {
+      "title": "Unilever interview tips (careers.unilever.com)",
+      "url": "https://careers.unilever.com/en/career-tips-interview"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

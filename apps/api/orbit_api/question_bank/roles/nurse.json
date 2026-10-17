@@ -1,0 +1,219 @@
+{
+  "slug": "nurse",
+  "name": "Nurse",
+  "aliases": ["staff nurse", "registered nurse", "rn", "nursing officer", "nursing", "gnm", "bsc nursing", "b.sc nursing", "icu nurse", "ward nurse", "nursing job", "nursing abroad"],
+  "group": "public-service",
+  "summary": "Nurse interviews usually test clinical judgement and patient safety as much as knowledge: candidates commonly report scenario questions on a patient who is getting worse, medication safety, prioritising a busy shift and escalating concerns, plus questions on teamwork and communicating with patients and families. For nursing jobs abroad, values-based interviews are common with many employers, for example in the UK.",
+  "rounds": [
+    "Application and document check: qualifications, experience and registration",
+    "Written or skills test on nursing basics at some hospitals",
+    "Interview with the nursing superintendent, ward manager or a panel: clinical scenarios and experience",
+    "Values-based interview, common for many jobs abroad",
+    "Practical skills check for some roles",
+    "HR round on shifts, joining and documents"
+  ],
+  "looks_for": [
+    "Patient safety first: identity checks, medication safety, infection control",
+    "Recognising a deteriorating patient and escalating promptly",
+    "Prioritising care when several patients need you at once",
+    "Clear, kind communication with patients and families",
+    "Teamwork and safe handovers",
+    "Honesty about mistakes and working within your scope of practice",
+    "Compassion, dignity and respect"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you noticed a patient getting worse. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you noticed: observations, behaviour, what the patient said",
+        "Who you told, how quickly, and how you passed on the facts clearly",
+        "What happened next and what you learned"
+      ]
+    },
+    {
+      "text": "Tell me about a time you made or spotted a mistake in patient care. How was it handled?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The mistake in plain words, owned honestly",
+        "Making the patient safe and reporting it the way your hospital requires",
+        "What changed so it wouldn't happen again"
+      ]
+    },
+    {
+      "text": "Describe a time you supported a distressed patient or family member.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was upsetting them",
+        "How you listened, explained and comforted them",
+        "Any help you brought in, such as a doctor or counsellor"
+      ]
+    },
+    {
+      "text": "Tell me about a time you disagreed with a colleague or doctor about a patient's care.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Your concern and why it mattered for the patient",
+        "How you raised it respectfully, and escalated if needed",
+        "The outcome and how you worked together afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a very busy shift. How did you decide what to do first?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What made it busy",
+        "How you prioritised and who you asked for help",
+        "What you'd do the same or differently"
+      ]
+    },
+    {
+      "text": "You're caring for several patients and two need you at the same moment. How do you decide who comes first?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Assessing who is most at risk, with airway, breathing and circulation first",
+        "Asking for help or handing over tasks others can do safely",
+        "Telling the waiting patient, and documenting what you did"
+      ]
+    },
+    {
+      "text": "What checks do you make before giving any medication?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Confirming the patient's identity and allergies",
+        "Checking the prescription: drug, dose, route, time and that it's due",
+        "Stopping to clarify anything unclear, and documenting after giving it"
+      ]
+    },
+    {
+      "text": "How do you help prevent infection spreading on a ward?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Hand hygiene at the right moments",
+        "Protective equipment and isolation when needed",
+        "Cleaning, safe disposal of sharps and waste, and following local policy"
+      ]
+    },
+    {
+      "text": "What would you include in a handover at the end of your shift?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A structured format such as SBAR: situation, background, assessment, recommendation",
+        "Changes, pending tasks, risks and anything the next nurse must watch",
+        "Checking the other nurse has understood"
+      ]
+    },
+    {
+      "text": "A patient refuses a treatment the doctor has prescribed. What would you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Finding out why, and explaining the treatment in simple words",
+        "Respecting their right to decide when they are able to make the decision",
+        "Informing the doctor and documenting the conversation"
+      ]
+    },
+    {
+      "text": "A relative is angry about how long their family member has been waiting. How would you handle it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Listening calmly and acknowledging their worry",
+        "Explaining what's happening, honestly, and checking on the patient",
+        "Involving the nurse in charge if it escalates"
+      ]
+    },
+    {
+      "text": "How would you care for a patient who doesn't speak your language?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Using a trained interpreter or approved service, rather than relying on family where possible",
+        "Simple words, pictures and checking understanding",
+        "Respecting their culture and documenting how you communicated"
+      ]
+    },
+    {
+      "text": "You think a colleague has come to work in a state where they can't care for patients safely. What would you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Putting patient safety first",
+        "Raising it promptly with the nurse in charge or your manager",
+        "Following the hospital's policy rather than ignoring it or handling it alone"
+      ]
+    },
+    {
+      "text": "What does dignity in care mean to you, and how do you show it during routine tasks?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Privacy, consent and explaining before you act",
+        "Involving patients in decisions about their care",
+        "A specific example, such as personal care or a ward round"
+      ]
+    },
+    {
+      "text": "Tell me about yourself and your clinical experience.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your qualification and registration status",
+        "The wards, units or postings you've worked in",
+        "What kind of nursing you want to do next"
+      ]
+    },
+    {
+      "text": "Why did you choose nursing?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A personal reason, shown by an experience",
+        "What you value in the work",
+        "How that shows in the way you care for patients"
+      ]
+    },
+    {
+      "text": "Why this hospital or unit? If you're applying abroad, why that country?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Specific things about the hospital, unit or employer, such as its specialities or published values",
+        "How your experience fits",
+        "For abroad: realistic reasons and preparation for working there"
+      ]
+    },
+    {
+      "text": "How do you look after yourself after a hard shift?",
+      "type": "fit",
+      "kind": "reflection",
+      "covers": [
+        "Honest, healthy ways you recover",
+        "Using support from colleagues or supervisors after difficult events",
+        "Why it matters for patient care"
+      ]
+    }
+  ],
+  "tips": [
+    "Answer clinical scenarios in order: keep the patient safe, assess, escalate to the right person, then document.",
+    "Name the structured approaches you were taught, such as ABCDE assessment or SBAR handover, and explain them in plain words.",
+    "Freshers: prepare examples from your clinical postings and internship.",
+    "For jobs abroad, read the employer's published values and prepare a short example for each; values-based interviews commonly ask for them.",
+    "Never guess a drug dose or clinical fact in an interview; say how you'd check it, such as with the prescriber, a pharmacist or a protocol.",
+    "Keep your registration, certificates and experience letters in order; some employers check them early."
+  ],
+  "mock": {
+    "interview_type": "behavioral",
+    "persona": "hiring_manager"
+  },
+  "reviewed": "2026-10-18"
+}

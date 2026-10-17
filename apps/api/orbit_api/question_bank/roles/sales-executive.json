@@ -1,0 +1,207 @@
+{
+  "slug": "sales-executive",
+  "name": "Sales and business development",
+  "aliases": ["sales executive", "business development executive", "bde", "business development manager", "bdm", "inside sales", "inside sales executive", "account executive", "key account manager", "sales manager", "sales representative", "field sales executive"],
+  "group": "business",
+  "summary": "Sales and business development interviews usually test whether you can sell, not just talk about selling: expect questions on your targets and how you met them, how you handle objections and rejection, and often a role-play where you pitch a product or deal with a tough customer. For experienced roles, interviewers commonly dig into your pipeline, your numbers and the deals you won or lost.",
+  "rounds": [
+    "Recruiter or HR screen on your background, targets and expectations",
+    "Interview with the hiring or sales manager on your track record and how you sell",
+    "Role-play for many roles: a cold call, a product pitch or handling an objection",
+    "For senior roles, often a presentation such as a territory or account plan",
+    "Final round with a senior leader or HR"
+  ],
+  "looks_for": [
+    "Results you can state clearly: the target, what you achieved and how",
+    "Listening and asking questions before pitching",
+    "Handling objections calmly and honestly",
+    "Bouncing back from rejection and keeping up a steady routine of follow-ups",
+    "Pipeline discipline: tracking leads, stages and next steps",
+    "Integrity: not overpromising to close a deal"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a deal you're proud of closing. How did it come together?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The customer, what they needed and who made the decision",
+        "The steps from first contact to close, including one setback",
+        "Your own part in it and the result"
+      ]
+    },
+    {
+      "text": "Tell me about a month or quarter when you missed your target. What happened?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The size of the gap, stated honestly",
+        "What caused it and which parts were in your control",
+        "What you changed and how the next period went"
+      ]
+    },
+    {
+      "text": "Describe a deal you lost that you expected to win.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "Why you thought it was going well",
+        "What you later learned about why they chose someone else",
+        "How it changed the way you qualify or follow up"
+      ]
+    },
+    {
+      "text": "Tell me about a time you turned an unhappy customer into a repeat buyer.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What went wrong for them and how you found out",
+        "What you did to fix it, including help from other teams",
+        "The business that came back and why"
+      ]
+    },
+    {
+      "text": "Tell me about a time you needed operations, finance or delivery to help you keep a promise to a customer.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you had promised and why it needed their help",
+        "How you asked, and what you offered them in return",
+        "Whether the customer got what they were promised"
+      ]
+    },
+    {
+      "text": "Pick something on the desk, or your phone, and sell it to me in two minutes.",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Asking one or two questions about my needs before pitching",
+        "Benefits linked to what I told you, not a list of features",
+        "A clear ask or next step at the end"
+      ]
+    },
+    {
+      "text": "A prospect says, 'Your price is too high.' How would you respond?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Finding out what they're comparing it with",
+        "Restating the value in terms of their problem",
+        "Knowing when a smaller package, better terms or walking away is right"
+      ]
+    },
+    {
+      "text": "How would you qualify a lead? What tells you it's worth your time?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Need, budget, who decides and timing, or a similar checklist",
+        "The questions you'd ask on the first call",
+        "When you'd stop chasing a lead"
+      ]
+    },
+    {
+      "text": "Walk me through how you'd open a cold call to a business that has never heard of us.",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "A short, specific reason for calling them in particular",
+        "A question that gets them talking about their problem",
+        "A small next step to ask for, such as a meeting or a demo"
+      ]
+    },
+    {
+      "text": "How do you plan a week of prospecting and follow-ups?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Blocking time for new outreach, follow-ups and meetings",
+        "Prioritising by deal size and how close each lead is to buying",
+        "Tracking activity so you can see what actually turns into sales"
+      ]
+    },
+    {
+      "text": "A large customer goes silent after a promising meeting. What would you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Following up with something useful, not just 'checking in'",
+        "Trying another contact in the company carefully",
+        "Deciding when to step back and how you'd keep the door open"
+      ]
+    },
+    {
+      "text": "Which numbers would you track to know whether your pipeline is healthy?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Leads at each stage, conversion between stages, average deal size and sales cycle length",
+        "Pipeline value compared with your target",
+        "What you'd do if one stage is weak"
+      ]
+    },
+    {
+      "text": "How would you start selling in a new city or industry where we have no customers yet?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Researching who buys, why and who they buy from today",
+        "A first list of target accounts and a way in, such as referrals or events",
+        "Early signs you'd watch to know whether it's working"
+      ]
+    },
+    {
+      "text": "How have you used a CRM, and what do you record after a sales call?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The tool you used and how often you updated it",
+        "What you record: needs, objections, decision-makers, next step and date",
+        "How good records helped you or a colleague close a deal"
+      ]
+    },
+    {
+      "text": "Tell me about yourself in a way that would make me want to keep listening.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "A short, confident opening about who you are",
+        "One result or experience that shows you can sell",
+        "Why this role is the next step for you"
+      ]
+    },
+    {
+      "text": "Why sales? What do you enjoy about it, and what do you find hardest?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you to selling, shown by something you've done",
+        "An honest hard part, such as rejection or long sales cycles",
+        "How you deal with that hard part"
+      ]
+    },
+    {
+      "text": "This role has targets and part of the pay depends on results. How would you handle a slow month?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Comfort with targets and incentive-based pay, stated honestly",
+        "What you'd do differently in a slow month: more outreach, better leads, asking for help",
+        "How you keep your energy up when results lag"
+      ]
+    }
+  ],
+  "tips": [
+    "Know your numbers well: targets, achievement, deal sizes and conversion rates. Interviewers commonly ask for them and follow up.",
+    "In a role-play, ask two or three questions before you pitch; jumping straight to features is an easy mistake to avoid.",
+    "Freshers: college fest sponsorships, part-time jobs, internships or a small business of your own all make good sales stories.",
+    "Talk about what you do when a customer says no, not only when they say yes.",
+    "Never claim a number you can't explain; a follow-up question will usually expose it.",
+    "Learn the company's product and customers well enough to pitch it in one minute if asked."
+  ],
+  "mock": {
+    "interview_type": "behavioral",
+    "persona": "hiring_manager"
+  },
+  "reviewed": "2026-10-18"
+}

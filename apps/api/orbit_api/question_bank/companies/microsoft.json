@@ -1,0 +1,186 @@
+{
+  "slug": "microsoft",
+  "name": "Microsoft",
+  "aliases": [
+    "msft",
+    "microsoft india",
+    "microsoft idc",
+    "linkedin",
+    "github"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Microsoft's careers site says interviewers look at how you think, not only what you know, and that some roles add coding exercises, portfolio reviews or presentations. Candidates commonly report a loop that mixes coding, design and behavioral questions, often ending with an 'as appropriate' interview, and Microsoft suggests answering with its STAR(R) model: situation, task, action, result and reflection.",
+  "rounds": [
+    "Recruiter screen",
+    "Online assessment or phone screen",
+    "Loop of 3–4 interviews mixing coding, design and behavioral questions",
+    "Final 'as appropriate' interview with a senior leader"
+  ],
+  "looks_for": [
+    "Growth mindset: learning from mistakes and feedback",
+    "Collaboration across teams",
+    "Customer focus",
+    "Problem solving and clear communication",
+    "Inclusive behaviour",
+    "Customer obsession: using customers' perspectives to shape your work",
+    "One Microsoft: collaborating across differences and supporting others' success",
+    "Respect, integrity and accountability"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you got critical feedback. What did you change?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The feedback, stated plainly, and your honest first reaction",
+        "What you changed and how you checked it was working",
+        "The reflection: what it taught you about how you learn"
+      ]
+    },
+    {
+      "text": "Describe a time you learned something new quickly to deliver a project.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you didn't know and how little time you had",
+        "How you learned it: docs, small experiments, asking people who knew",
+        "What you delivered, and what you'd do differently next time"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with a team that disagreed on the approach.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The options on the table and who backed which",
+        "How you helped the team decide: data, a prototype, agreed criteria",
+        "The outcome, and how the team worked together afterwards"
+      ]
+    },
+    {
+      "text": "Design a parking-lot system. Where would you start?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying questions: size, vehicle types, payment, entry and exit gates",
+        "The main objects and how they relate: levels, spots, tickets, payments",
+        "Edge cases: a full lot, a lost ticket, many gates updating at once"
+      ]
+    },
+    {
+      "text": "Tell me about a time you helped another team succeed, even though it wasn't your goal.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the other team needed and why it mattered to the wider organisation",
+        "What you gave up or took on to help",
+        "The result for them, and what it did for the working relationship"
+      ]
+    },
+    {
+      "text": "Tell me about a mistake you made at work or in a project. What did you do next?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "A real mistake, owned in the first person",
+        "How you fixed the damage and who you told",
+        "What you now do differently because of it"
+      ]
+    },
+    {
+      "text": "How would you design a file-sync service that keeps a user's files up to date across their devices?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Splitting files into chunks and uploading only what changed",
+        "Handling conflicts when two devices edit the same file offline",
+        "The metadata service, storage and change notifications, and how they scale"
+      ]
+    },
+    {
+      "text": "Explain the difference between a process and a thread, and when you'd use each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Separate memory for processes, shared memory for threads in one process",
+        "The costs: creation, context switching, communication and safety",
+        "An example, such as separate processes for isolation and threads for parallel work"
+      ]
+    },
+    {
+      "text": "Users say an app became slow after the latest release. How would you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Reproducing it and comparing against the previous release",
+        "Profiling and telemetry to find where the time now goes",
+        "Rolling back or switching the change off if users are badly hit, then fixing the cause"
+      ]
+    },
+    {
+      "text": "What happens when you type a web address into a browser and press Enter? Go as deep as you can.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "DNS lookup, then a TCP connection and TLS handshake",
+        "The HTTP request, the server's work and the response",
+        "How the browser parses, fetches extra resources and renders the page"
+      ]
+    },
+    {
+      "text": "How would you improve online meetings for a team spread across very different time zones?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The real pain points: little overlap, missed decisions, meeting fatigue",
+        "Ideas such as recordings with summaries, async updates or smarter scheduling, prioritised",
+        "A success metric and a guardrail, such as privacy or meeting length"
+      ]
+    },
+    {
+      "text": "Why Microsoft, and which of its products or teams interests you most?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific product or team and the customers it serves",
+        "A link to something you've built, used or studied",
+        "What you want to learn there"
+      ]
+    },
+    {
+      "text": "How do you keep learning outside work or study, and what are you learning right now?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific thing you're learning and why you chose it",
+        "How you learn: courses, side projects, reading, mentors",
+        "Something you've already applied from it"
+      ]
+    },
+    {
+      "text": "What would you like to know about the team or the role?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Two or three questions about the team's work, customers or challenges",
+        "A question about how success is measured in the first months",
+        "Questions that show you researched the team, not only the company"
+      ]
+    }
+  ],
+  "tips": [
+    "Show how you learn: what you tried, what failed, what you'd do now.",
+    "Expect a design question even in coding rounds; clarify requirements first.",
+    "Use Microsoft's STAR(R) model for stories: situation, task, action, result, and a reflection on what you learned.",
+    "Microsoft's own interview tips ask you to start with clarifying questions, state your assumptions and explain your approach out loud.",
+    "Match your examples to the job description, and keep one ready about how you handled feedback."
+  ],
+  "sources": [
+    {
+      "title": "Microsoft Careers: interview tips",
+      "url": "https://careers.microsoft.com/v2/global/en/hiring-tips/interview-tips.html"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

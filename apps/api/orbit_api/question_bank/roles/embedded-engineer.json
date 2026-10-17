@@ -1,0 +1,207 @@
+{
+  "slug": "embedded-engineer",
+  "name": "Embedded engineer",
+  "aliases": ["embedded systems engineer", "embedded software engineer", "embedded developer", "embedded c developer", "firmware engineer", "firmware developer", "vlsi engineer", "vlsi design engineer"],
+  "group": "engineering",
+  "summary": "Embedded engineer interviews usually go deep on C, microcontroller basics and how software meets hardware: interrupts, memory, timing and communication protocols. Candidates commonly report questions on pointers and bit manipulation, debugging with hardware tools, and a discussion of a board or project they've built. For VLSI and chip-design roles, expect digital electronics, timing and HDL questions in place of most firmware ones.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Written or online test on C, digital electronics and aptitude (common in campus hiring)",
+    "Technical interview on C, microcontrollers, interrupts and protocols",
+    "Project deep dive: a board, a sensor system or a final-year project",
+    "For VLSI roles: digital design, timing and Verilog or VHDL questions",
+    "Hiring manager or HR round"
+  ],
+  "looks_for": [
+    "Strong C: pointers, memory layout, volatile and bit operations",
+    "How microcontrollers work: registers, clocks, timers, interrupts and peripherals",
+    "Communication protocols such as UART, I2C, SPI and CAN, and when to use each",
+    "Working within tight memory, power and timing limits",
+    "Debugging on hardware with debuggers, oscilloscopes and logic analysers",
+    "Digital logic basics for VLSI roles: flip-flops, timing and state machines"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a hardware or firmware bug that took a long time to find.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The symptom, and why it was intermittent or hard to see",
+        "The tools you used: a debugger, an oscilloscope, a logic analyser, logs over UART",
+        "The cause (timing, power, a race with an interrupt) and the fix"
+      ]
+    },
+    {
+      "text": "Describe a project where you had to fit within tight memory or power limits.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The limit, and how far over it you started",
+        "What you changed: data types, buffer sizes, sleep modes, dropping features",
+        "The final numbers"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with hardware engineers on a problem that crossed both sides.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How the problem looked from each side",
+        "How you showed where the fault really was",
+        "What was fixed in hardware, in firmware, or in both"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to learn a new microcontroller or toolchain quickly.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The datasheet, reference manual and example code you relied on",
+        "A small first test, such as blinking an LED or printing over UART",
+        "What you delivered, and how long it took"
+      ]
+    },
+    {
+      "text": "What does the volatile keyword do in C, and where does embedded code need it?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "It tells the compiler a value can change outside the normal flow of the program",
+        "Hardware registers, variables changed inside interrupts, and memory written by DMA",
+        "What it doesn't do: make an access atomic or replace proper locking"
+      ]
+    },
+    {
+      "text": "What should an interrupt service routine do, and what should it avoid?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Staying short: set a flag or move data into a buffer",
+        "Avoiding blocking calls, long loops and printing",
+        "Protecting data shared with the main loop"
+      ]
+    },
+    {
+      "text": "Compare UART, I2C and SPI. How would you choose one for connecting a sensor?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Number of wires, speed, addressing, and full or half duplex",
+        "I2C for several slower devices on two wires, SPI for speed, UART for simple point-to-point links",
+        "Pull-up resistors, clock modes, and checking the bus with a logic analyser"
+      ]
+    },
+    {
+      "text": "How would you set, clear and toggle a single bit in a register, and why use masks?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "OR to set, AND with an inverted mask to clear, XOR to toggle",
+        "Named masks and shifts so the code is readable",
+        "The read-modify-write risk when an interrupt touches the same register"
+      ]
+    },
+    {
+      "text": "Explain the stack and the heap, and why many embedded projects avoid dynamic memory allocation.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Automatic local storage versus memory allocated while the program runs",
+        "Fragmentation and unpredictable timing with malloc on small systems",
+        "Static allocation or memory pools instead, and watching for stack overflow"
+      ]
+    },
+    {
+      "text": "When would you use an RTOS instead of a simple super-loop?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A super-loop for simple, predictable work",
+        "An RTOS when many tasks have different timing needs",
+        "The new problems it brings: priority inversion, deadlocks, sizing each task's stack"
+      ]
+    },
+    {
+      "text": "Your device resets randomly in the field every few days. How would you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Reading the reset-cause register and keeping logs that survive a reset",
+        "Suspects: the watchdog, stack overflow, power dips, a rare interrupt race",
+        "Reproducing it with stress tests, and fixing the root cause rather than the symptom"
+      ]
+    },
+    {
+      "text": "How would you read a noisy push button reliably?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "What contact bounce is and why it causes several presses",
+        "Debouncing in hardware with an RC filter, or in software with timed sampling",
+        "Interrupts versus polling for the button, and the trade-off"
+      ]
+    },
+    {
+      "text": "How would you design over-the-air firmware updates so a failed update can't leave the device unusable?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Two image slots, or a bootloader with a fallback image",
+        "Checking the image's integrity and signature before switching to it",
+        "Rolling back automatically if the new image fails to start"
+      ]
+    },
+    {
+      "text": "For chip-design roles: explain setup and hold time, and what happens when they're violated.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Data must be stable for a time before and after the clock edge",
+        "A violation can give a wrong or metastable output",
+        "Fixing setup problems by shortening logic paths or pipelining, and hold problems by adding delay"
+      ]
+    },
+    {
+      "text": "Talk me through designing a simple traffic-light controller as a finite state machine.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The states, inputs and transitions, listed or sketched",
+        "Moore versus Mealy, and which you'd pick here",
+        "How you'd write it in C, or in Verilog"
+      ]
+    },
+    {
+      "text": "Why embedded systems? Tell me about a board or device you've built or programmed.",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you: working close to the hardware, building physical devices",
+        "A project, with the microcontroller and parts you used",
+        "The area you'd like to work in: automotive, IoT, medical or consumer devices"
+      ]
+    },
+    {
+      "text": "Where do you see yourself in five years: deeper in firmware, in hardware design, or in system architecture?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A direction based on what you've enjoyed so far",
+        "Skills you plan to build: protocols, RTOS, safety standards, hardware design",
+        "How this role helps you get there"
+      ]
+    }
+  ],
+  "tips": [
+    "Revise C carefully: pointers, structs, bit operations, storage classes, and what the compiler may optimise away.",
+    "Bring a project you can sketch on paper: the block diagram, the microcontroller, the protocols, and one problem you solved.",
+    "Read the datasheet of a microcontroller you've used; interviewers sometimes ask about its peripherals or clock setup.",
+    "For VLSI roles, revise combinational and sequential logic and timing, and practise writing small Verilog modules by hand.",
+    "When you talk about debugging, say which tool you'd reach for (a debugger, an oscilloscope, a logic analyser) and what you'd look for."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "engineer"
+  },
+  "reviewed": "2026-10-18"
+}

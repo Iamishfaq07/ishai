@@ -1,0 +1,185 @@
+{
+  "slug": "coforge",
+  "name": "Coforge",
+  "aliases": ["niit technologies"],
+  "group": "it-services",
+  "market": "india-first",
+  "summary": "Coforge, known as NIIT Technologies until 2020, organises its work around industries such as banking and financial services, insurance and travel, and its interviews often touch on that domain focus. Candidates commonly report an online assessment for fresher drives, technical interviews on fundamentals and projects, and an HR round; experienced candidates usually describe technical rounds with the team and a manager discussion.",
+  "rounds": [
+    "Campus drive, online application or referral",
+    "Online assessment for many fresher drives: aptitude, English and coding",
+    "Technical interview on fundamentals, SQL and your projects",
+    "For experienced roles: a second technical round or a manager discussion",
+    "HR interview"
+  ],
+  "looks_for": [
+    "Programming, SQL and testing fundamentals",
+    "Interest in its main industries, such as banking, insurance and travel",
+    "Interest in emerging technology (its stated vision is 'Engage with the Emerging')",
+    "A clear explanation of your projects and your own part",
+    "Reliability and teamwork on client work"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your degree or experience and the technologies you know best",
+        "One project with your part in it and a result",
+        "Why this role, in under two minutes"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to learn a new subject area quickly, such as finance or travel, to do a piece of work.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why you needed it and how little you knew at the start",
+        "How you learned: reading, asking an expert, working through examples",
+        "What you delivered and how the new knowledge showed in it"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with someone whose working style was very different from yours.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The difference, described fairly",
+        "How you adjusted and what you agreed together",
+        "What you achieved and what you learned from their style"
+      ]
+    },
+    {
+      "text": "Tell me about a time you caught a mistake before it reached a user or client.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the mistake was and how you spotted it",
+        "What you did and who you told",
+        "What it would have cost, and the check you added afterwards"
+      ]
+    },
+    {
+      "text": "What's the hardest feedback you've received, and what did you do with it?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The feedback and why it was hard to hear",
+        "What you changed in practice",
+        "How you know it worked"
+      ]
+    },
+    {
+      "text": "How would a flight booking system stop two people from booking the same seat?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The risk: two requests read the seat as free at the same moment",
+        "Holding a seat for a short time, with a lock or a conditional update in the database",
+        "Releasing held seats if payment fails, and what the user sees"
+      ]
+    },
+    {
+      "text": "For domain-facing roles: explain the main steps of an insurance claim, and where software helps most.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The steps: report the claim, check the policy, assess, approve or reject, pay",
+        "Where software helps: online forms, document upload, rules checks, fraud flags",
+        "What a customer cares about: speed, clear updates, fairness"
+      ]
+    },
+    {
+      "text": "Explain the difference between unit, integration and regression testing.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Unit tests check one small piece in isolation",
+        "Integration tests check parts working together, such as code and a database",
+        "Regression tests check that old features still work after a change"
+      ]
+    },
+    {
+      "text": "What is a stored procedure, and when would you use one instead of application code?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Saved SQL logic that runs inside the database",
+        "Good for heavy data work close to the data, or shared rules",
+        "Downsides: harder to test, version and move between databases"
+      ]
+    },
+    {
+      "text": "What does a message queue do, and why might a payments system use one?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "It lets one part of a system send work to another without waiting",
+        "Benefits: absorbing spikes, retrying failures, keeping parts independent",
+        "Care needed: processing each payment once, ordering and dead-letter handling"
+      ]
+    },
+    {
+      "text": "For experienced candidates: tell me about an integration with an outside system that failed in production. How was it fixed?",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The integration and what failed",
+        "How the team found the cause: logs, the partner's side, data formats",
+        "The fix, and what was added afterwards, such as retries, alerts or contract tests"
+      ]
+    },
+    {
+      "text": "Why Coforge?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific: one of its industries, a technology focus or recent news",
+        "How that fits your interests or skills",
+        "What you'd like to learn first"
+      ]
+    },
+    {
+      "text": "Which of the industries Coforge works in interests you most, and why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One industry, such as banking, insurance or travel, and what draws you",
+        "Something you already know about how it works",
+        "A problem in that industry you'd like to help solve"
+      ]
+    },
+    {
+      "text": "Do you have any questions for us?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two thoughtful questions about the team, the client domain or the first project",
+        "Nothing already answered on the careers site",
+        "A brief thank-you"
+      ]
+    }
+  ],
+  "tips": [
+    "Pick one of Coforge's main industries (banking, insurance or travel) and learn its basic terms and a typical customer journey.",
+    "Revise SQL and testing basics; they come up across development and support roles.",
+    "If you mention a technology, be ready to describe one thing you built or fixed with it.",
+    "Read a recent Coforge press release or case study so 'why Coforge' is specific."
+  ],
+  "sources": [
+    {
+      "title": "Who we are: Coforge's industries, vision and mission (coforge.com)",
+      "url": "https://www.coforge.com/en/who-we-are"
+    }
+  ],
+  "abroad": {
+    "rounds": [
+      "Online application and recruiter screen",
+      "Technical interviews with the team",
+      "Manager or client interview (for many roles)",
+      "HR discussion"
+    ]
+  },
+  "reviewed": "2026-10-18"
+}

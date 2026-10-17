@@ -1,0 +1,204 @@
+{
+  "slug": "bosch",
+  "name": "Bosch",
+  "aliases": ["robert bosch", "bosch global software technologies", "bgsw", "bosch india", "rbei", "robert bosch engineering and business solutions"],
+  "group": "industry",
+  "market": "global",
+  "summary": "Bosch works in mobility, industrial technology, consumer goods, and energy and building technology, and has a large software and engineering arm, Bosch Global Software Technologies. Its FAQ describes an online application, a review of documents and one or more interviews by video or on site, with tests or case studies for some roles. Its Indian campus programmes list a written test followed by technical and personal or HR interviews.",
+  "rounds": [
+    "Online application and document review",
+    "Written test for campus programmes, often aptitude and technical questions",
+    "Group discussion or presentation for some programmes",
+    "Psychometric or aptitude assessment for some programmes",
+    "Technical interview on your discipline and projects",
+    "Personal or HR interview, then final selection"
+  ],
+  "looks_for": [
+    "Future and result focus",
+    "Responsibility and sustainability",
+    "Initiative and determination",
+    "Openness and trust",
+    "Fairness and respect",
+    "Reliability, credibility, legality",
+    "Diversity, equity, inclusion",
+    "Strong engineering fundamentals and hands-on project work"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you took the initiative to fix something nobody had asked you to.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was wrong and why nobody had acted",
+        "What you did and who you involved",
+        "The result and how it was kept going"
+      ]
+    },
+    {
+      "text": "Tell me about a time you promised only what you could deliver, even when you were pushed to promise more.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The pressure and who it came from",
+        "How you explained what was realistic",
+        "What you delivered and how it affected trust"
+      ]
+    },
+    {
+      "text": "Tell me about a time you disagreed with a teammate. How did you keep it open and respectful?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The disagreement, fairly stated from both sides",
+        "How you discussed it and what evidence you used",
+        "The decision and how you worked together afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a project where you had to balance cost, quality and deadlines.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The constraints and which one mattered most",
+        "The trade-off you made and why",
+        "The result and what you'd do differently"
+      ]
+    },
+    {
+      "text": "Explain what an ECU does in a car and how it communicates with other parts of the vehicle.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "An ECU reads sensors, runs control software and drives actuators",
+        "Communicating over in-vehicle networks such as CAN",
+        "An example, such as engine or braking control"
+      ]
+    },
+    {
+      "text": "What is embedded software, and how is writing it different from writing a web application?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Software running on dedicated hardware with limited memory and power",
+        "Real-time deadlines, direct hardware access, often C or C++",
+        "Testing on real hardware, and why safety and reliability matter more"
+      ]
+    },
+    {
+      "text": "A batch of parts is failing quality checks at the end of the line. How would you find the root cause?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Containing the problem first so bad parts don't ship",
+        "Tracing back: materials, machines, settings, shifts, recent changes",
+        "A root-cause method such as 5 Whys or a fishbone diagram, then a lasting fix"
+      ]
+    },
+    {
+      "text": "How would you test a safety-critical feature, such as automatic emergency braking, before it reaches customers?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Requirements and the risks if it fails, either braking wrongly or not braking",
+        "Testing in layers: simulation, test benches, test tracks, road trials",
+        "Edge cases such as weather and sensor faults, and tracing tests back to requirements"
+      ]
+    },
+    {
+      "text": "What is predictive maintenance, and how would you use sensor data to plan it for a machine?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Fixing machines based on their condition, not a fixed schedule",
+        "Signals such as vibration, temperature and current, and spotting trends",
+        "The benefit: less unplanned downtime, and the cost of false alarms"
+      ]
+    },
+    {
+      "text": "Walk me through your final-year project: why you chose it, what you built and what you'd do better.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The problem and why it interested you",
+        "Your own part and the key technical decisions",
+        "Results and what you'd improve"
+      ]
+    },
+    {
+      "text": "How would you persuade a workshop owner to switch to a new range of power tools?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Questions first: what they use now and what frustrates them",
+        "Benefits in their terms: time saved, durability, service",
+        "Handling price objections and offering a trial or demonstration"
+      ]
+    },
+    {
+      "text": "Tell me about yourself and why you chose your branch of engineering.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "A short background: studies, projects, internships",
+        "What drew you to your branch, with a real example",
+        "How it leads to this role at Bosch"
+      ]
+    },
+    {
+      "text": "Why Bosch? Which of its businesses would you like to work in?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about Bosch's products or technology",
+        "The business area and how your skills fit",
+        "What you hope to learn there"
+      ]
+    },
+    {
+      "text": "Bosch's purpose is 'Invented for life'. What does that mean to you in your field?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A plain reading: technology that improves people's lives",
+        "An example from your field, such as safer cars or saving energy",
+        "How you'd like your own work to contribute"
+      ]
+    }
+  ],
+  "abroad": {
+    "rounds": [
+      "Online application and document review",
+      "Online tests, assessments or a case study for some roles",
+      "One or more interviews by video or on site, covering technical skills and fit",
+      "Final decision and offer"
+    ],
+    "tips": [
+      "Revise the core of your discipline; technical interviewers commonly go back to fundamentals and your projects.",
+      "Read Bosch's published values and prepare a short story for initiative, openness and reliability.",
+      "Know Bosch's main business areas and one product in your field, such as a vehicle system or a power tool.",
+      "Bosch's FAQ says some roles include tests or case studies; check the job posting and your invitation for what to expect."
+    ]
+  },
+  "tips": [
+    "Revise your core subjects; campus technical interviews commonly start from your coursework and your projects.",
+    "Read Bosch's published values and prepare a short story for initiative, openness and reliability.",
+    "Know Bosch's main business areas and one product in your field, such as a vehicle system or a power tool.",
+    "In a group discussion, make one or two clear points, build on others' ideas and help the group reach a conclusion.",
+    "On campus, check which programme you're being considered for, such as the Technical Management Trainee Program or the Graduate Apprentice programme; their selection steps differ."
+  ],
+  "sources": [
+    {
+      "title": "Bosch company values (bosch.com)",
+      "url": "https://www.bosch.com/company/"
+    },
+    {
+      "title": "Bosch FAQ: applying and interviews (bosch.com)",
+      "url": "https://www.bosch.com/faq/"
+    },
+    {
+      "title": "Technical Management Trainee Program (bosch.in)",
+      "url": "https://www.bosch.in/careers/students-and-graduates/technical-management-trainee-program/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

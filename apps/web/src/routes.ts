@@ -11,7 +11,10 @@ const loaders = {
   home: () => import("./pages/Home"),
   landing: () => import("./pages/Landing"),
   welcome: () => import("./pages/Welcome"),
-  warmup: () => import("./pages/Warmup"),
+  // The warm-up, which can also open a company's or a role's questions (pages/bank/WarmupRoute.tsx).
+  warmup: () => import("./pages/bank/WarmupRoute"),
+  // The question bank's public pages: /companies, /roles and a guide per company and role.
+  bank: () => import("./pages/bank/BankPages"),
   contact: () => import("./pages/Contact"),
   technical: () => import("./pages/Technical"),
   setup: () => import("./pages/SessionSetup"),
@@ -51,7 +54,11 @@ function page<M>(load: () => Promise<M>, pick: (m: M) => ComponentType) {
 export const HomePage = page(loaders.home, (m) => m.HomePage);
 export const LandingPage = page(loaders.landing, (m) => m.LandingPage);
 export const WelcomePage = page(loaders.welcome, (m) => m.WelcomePage);
-export const WarmupPage = page(loaders.warmup, (m) => m.WarmupPage);
+export const WarmupPage = page(loaders.warmup, (m) => m.WarmupRoute);
+export const CompaniesPage = page(loaders.bank, (m) => m.CompaniesPage);
+export const CompanyPage = page(loaders.bank, (m) => m.CompanyPage);
+export const RolesPage = page(loaders.bank, (m) => m.RolesPage);
+export const RolePage = page(loaders.bank, (m) => m.RolePage);
 export const ContactPage = page(loaders.contact, (m) => m.ContactPage);
 export const TechnicalPage = page(loaders.technical, (m) => m.TechnicalPage);
 export const SessionSetupPage = page(loaders.setup, (m) => m.SessionSetupPage);
@@ -98,6 +105,7 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/$/, "home"],
   [/^\/welcome\/?$/, "welcome"],
   [/^\/warmup\/?$/, "warmup"],
+  [/^\/(companies|roles)(\/|$)/, "bank"],
   [/^\/contact\/?$/, "contact"],
   [/^\/technical\/?$/, "technical"],
   [/^\/start/, "setup"],

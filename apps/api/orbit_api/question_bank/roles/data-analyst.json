@@ -1,0 +1,174 @@
+{
+  "slug": "data-analyst",
+  "name": "Data analyst",
+  "aliases": ["data analytics", "business intelligence analyst", "bi analyst", "mis analyst", "reporting analyst", "analytics associate"],
+  "group": "data",
+  "summary": "Data analyst interviews usually test three things: whether you can get the right numbers out of data (SQL and spreadsheets), whether you can reason about what those numbers mean for the business, and whether you can explain a finding to someone who isn't technical. Many companies add a take-home or live exercise on a small dataset.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Online test or live exercise: SQL, spreadsheet work and basic statistics",
+    "Case or take-home: analyse a small dataset and present what you found (often)",
+    "Hiring manager interview on past projects and business sense",
+    "Final or HR round"
+  ],
+  "looks_for": [
+    "Accurate SQL: joins, grouping, window functions, handling nulls and duplicates",
+    "Turning a vague business question into a metric you can measure",
+    "Checking data before trusting it",
+    "Clear charts and a one-line takeaway",
+    "Explaining limits and uncertainty honestly"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about an analysis you did that changed a decision.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The decision at stake and who was making it",
+        "What you analysed and the one finding that mattered",
+        "What changed because of it, with a number if you have one"
+      ]
+    },
+    {
+      "text": "Tell me about a time you found a mistake in a report or dataset others were relying on.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you noticed something was off",
+        "How you confirmed it before raising it",
+        "How you told people and what you fixed so it didn't recur"
+      ]
+    },
+    {
+      "text": "Describe a time a stakeholder disagreed with what your data showed.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Their view and why it was reasonable to them",
+        "How you checked your own numbers again",
+        "How you reached a shared answer, or agreed what to test next"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to deliver an analysis with a very tight deadline.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you cut and what you kept",
+        "How you made the limits of a quick answer clear",
+        "What you followed up with afterwards"
+      ]
+    },
+    {
+      "text": "Daily orders dropped 15% yesterday. How would you find out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Checking the data first: a tracking or pipeline problem, a holiday, a one-off",
+        "Breaking the drop down by city, platform, channel and new versus returning users",
+        "Stating the most likely cause and how you'd confirm it"
+      ]
+    },
+    {
+      "text": "How would you find the top three products by revenue in each category using SQL? Talk me through it.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Aggregating revenue per product, then ranking within each category",
+        "A window function such as ROW_NUMBER or DENSE_RANK, and how ties are treated",
+        "Filtering to the top three after ranking, not before"
+      ]
+    },
+    {
+      "text": "What's the difference between an inner join and a left join, and when has the choice mattered in your work?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Inner keeps only matches; left keeps every row of the left table",
+        "How a left join shows missing data as nulls and can multiply rows",
+        "A real example where the wrong join gave a wrong total"
+      ]
+    },
+    {
+      "text": "How would you measure whether a new checkout design is working?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "One main metric (such as checkout conversion) plus guardrails like refunds or support tickets",
+        "Comparing fairly: an A/B test, or a before-and-after with care",
+        "How long to run it and what result would change the decision"
+      ]
+    },
+    {
+      "text": "Explain a p-value, or statistical significance, to a manager who isn't technical.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A plain-words version: how likely a difference this big is by chance alone",
+        "What it doesn't say: how big or important the effect is",
+        "An everyday example"
+      ]
+    },
+    {
+      "text": "You're given a messy spreadsheet of customer records. What would you check before analysing it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Duplicates, missing values, inconsistent formats and impossible values",
+        "Where the data came from and what each column really means",
+        "Writing down what you cleaned, so others can repeat it"
+      ]
+    },
+    {
+      "text": "Walk me through a dashboard you built. Who used it, and what did you leave out?",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "Who it was for and the decision it supported",
+        "The few metrics on it and why those",
+        "What you removed to keep it readable, and how you knew people used it"
+      ]
+    },
+    {
+      "text": "Which tools do you use for analysis, and how do you choose between a spreadsheet, SQL and Python?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Spreadsheets for small, quick or shared work",
+        "SQL where the data lives in a database",
+        "Python or R for repeatable, larger or statistical work, with an example"
+      ]
+    },
+    {
+      "text": "Why do you want to work as a data analyst?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What you enjoy about the work, shown by something you've done",
+        "The kind of business problems you want to work on",
+        "Where you want to grow next"
+      ]
+    },
+    {
+      "text": "What do you know about our business, and which metrics would you want to look at first?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "How the company makes money, in a sentence",
+        "Two or three metrics that follow from that",
+        "A question you'd want answered in your first month"
+      ]
+    }
+  ],
+  "tips": [
+    "Practise writing SQL out loud: say what each step does before you write it.",
+    "In a case question, ask what decision the analysis is for before you start.",
+    "End every answer with the takeaway in one sentence, then the caveat.",
+    "Bring one project you can talk about for ten minutes: the question, the data, the mess, the result."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "hiring_manager"
+  },
+  "reviewed": "2026-10-18"
+}

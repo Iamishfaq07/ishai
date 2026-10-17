@@ -1,0 +1,183 @@
+{
+  "slug": "siemens",
+  "name": "Siemens",
+  "aliases": ["siemens ag", "siemens india"],
+  "group": "industry",
+  "market": "global",
+  "summary": "Siemens is a technology company working in industrial automation and software, smart infrastructure and mobility. Its careers site describes applying online and then being invited to interview, and its Siemens Graduate Program uses CV screening, an initial interview and an assessment centre, with some variation by country. Candidates commonly report technical interviews on their engineering discipline and projects, plus a behavioural or HR conversation.",
+  "rounds": [
+    "Online application and CV screening",
+    "Online test or recorded video interview for some roles and graduate schemes",
+    "Technical interview on your discipline, projects and problem solving",
+    "Behavioural or HR interview on motivation, teamwork and fit",
+    "Assessment centre for graduate programmes, with several exercises",
+    "Final discussion and offer"
+  ],
+  "looks_for": [
+    "Solid fundamentals in your field: electrical, mechanical, software or automation",
+    "A practical, structured approach to solving problems",
+    "Responsibility for safety, quality and ethical conduct",
+    "Understanding of why the technology matters to the customer",
+    "Working well in diverse, international teams",
+    "Curiosity about digitalisation and sustainability"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a technical problem you solved in a project, lab or internship. How did you find the cause?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and what made it hard",
+        "The steps you took to narrow it down: tests, measurements, data",
+        "The fix and how you confirmed it worked"
+      ]
+    },
+    {
+      "text": "Tell me about a time you noticed a quality or safety risk. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you noticed and why it mattered",
+        "Who you told and how you made the case",
+        "What changed as a result"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked in a team with people from different disciplines or backgrounds.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The team, the goal and your role",
+        "A difference in approach and how you bridged it",
+        "What the team delivered and what you learned"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to learn a new tool or technology quickly.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why you needed it and how little time you had",
+        "How you learned it",
+        "What you delivered with it"
+      ]
+    },
+    {
+      "text": "What's a weakness you're working on, and how are you improving it?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "A real weakness that matters at work, not a disguised strength",
+        "An example of when it showed",
+        "Concrete steps you're taking and progress so far"
+      ]
+    },
+    {
+      "text": "Explain what a PLC does in a factory, and how it differs from an ordinary computer.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Reading inputs from sensors and controlling outputs such as motors and valves",
+        "Built for harsh conditions and reliable real-time cycles",
+        "A simple example, such as a conveyor that stops when a sensor trips"
+      ]
+    },
+    {
+      "text": "What is a digital twin, and how could a manufacturer use one?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A virtual model of a product, machine or plant, kept up to date with real data",
+        "Uses: testing changes before making them, predicting failures, saving energy",
+        "What it needs: good data, sensors and a model you can trust"
+      ]
+    },
+    {
+      "text": "A production line keeps stopping at the same station. How would you find out why?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Gathering data: when it stops, error codes, shifts, recent changes",
+        "Checking the station's mechanics, sensors, controls and materials",
+        "Fixing the root cause and checking it stays fixed"
+      ]
+    },
+    {
+      "text": "How would you reduce the energy a large building uses, with sensors and controls?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Measuring first: where energy goes and when",
+        "Controls for heating, cooling and lighting based on occupancy and schedules",
+        "Estimating savings and checking them after the change"
+      ]
+    },
+    {
+      "text": "Explain how a three-phase induction motor works, as you would to a first-year student.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A rotating magnetic field created by three-phase current in the stator",
+        "Current induced in the rotor, which follows the field a little slower (slip)",
+        "Why industry uses them, and how speed is controlled with a drive"
+      ]
+    },
+    {
+      "text": "Walk me through your final-year project: the goal, your design choices and the results.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The goal and why you chose it",
+        "Your design choices and the alternatives you rejected",
+        "Results, limits and what you'd improve"
+      ]
+    },
+    {
+      "text": "Why Siemens, and which of its businesses interests you most?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about Siemens' technology or customers",
+        "The business you chose and how your skills fit",
+        "What you'd like to learn there"
+      ]
+    },
+    {
+      "text": "Siemens works on digitalisation and sustainability. Which of these interests you most for your career, and why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One theme, with a concrete example from industry",
+        "How it connects to your studies or work",
+        "What you'd like to contribute"
+      ]
+    },
+    {
+      "text": "Are you open to working on customer sites or travelling for projects?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer about what you can do",
+        "Why site work helps you learn",
+        "Any limits, stated clearly and positively"
+      ]
+    }
+  ],
+  "tips": [
+    "Revise the core of your discipline; technical interviewers commonly go back to fundamentals from your degree.",
+    "Know one or two Siemens businesses relevant to your field and the problems they solve for customers.",
+    "Siemens' careers site welcomes AI for preparing, but not during live interviews or assessments; practise answering on your own.",
+    "For a graduate assessment centre, expect several exercises as well as interviews, and treat each as a fresh start."
+  ],
+  "sources": [
+    {
+      "title": "How to apply (siemens.com)",
+      "url": "https://www.siemens.com/en-us/company/jobs/how-to-apply/"
+    },
+    {
+      "title": "Siemens Graduate Program (siemens.com)",
+      "url": "https://www.siemens.com/en-us/company/jobs/growth-careers/siemens-graduate-program/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

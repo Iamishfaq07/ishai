@@ -1,0 +1,179 @@
+{
+  "slug": "ibm",
+  "name": "IBM",
+  "aliases": [
+    "ibm india",
+    "international business machines",
+    "red hat"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "IBM hires for consulting, software, infrastructure and research roles, and its careers site describes the usual steps: application, screening, one or two online assessments depending on the role (such as a coding test, a recorded video interview or an English test), interviews and a decision. IBM says it uses structured or behavioural interviews, and for entry-level developers candidates commonly report a technical interview followed by a behavioural round with management.",
+  "rounds": [
+    "Online assessment (cognitive and coding tests)",
+    "Technical interview",
+    "Manager / HR interview"
+  ],
+  "looks_for": [
+    "Dedication to every client's success",
+    "Innovation that matters",
+    "Trust and personal responsibility",
+    "Learning and adaptability",
+    "Trust and personal responsibility in all relationships",
+    "Explaining your reasoning, not just the final answer"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your background in two or three sentences: studies or current role",
+        "One or two things you've built or achieved that fit this role",
+        "Why you're interested in IBM and this team now"
+      ]
+    },
+    {
+      "text": "Tell me about a time you learned a new technology for a project.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why the project needed it and how much time you had",
+        "How you learned it: docs, small experiments, asking others",
+        "What you delivered with it and what you'd learn differently now"
+      ]
+    },
+    {
+      "text": "How would you explain a technical idea to a client who isn't technical?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Starting from what the client cares about: cost, risk, time",
+        "An everyday comparison instead of jargon, with an example",
+        "Checking they understood and inviting questions"
+      ]
+    },
+    {
+      "text": "Tell me about a time you put a client's or user's success ahead of the easier option for you.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the easy option was and why it fell short for them",
+        "What the extra effort involved",
+        "The outcome for the client or user"
+      ]
+    },
+    {
+      "text": "Tell me about a mistake you made that affected others. How did you take responsibility?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The mistake and who it affected, stated plainly",
+        "How quickly you told people and what you did to fix it",
+        "What you changed so it wouldn't happen again"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with people from another team or country to deliver something.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and who was involved",
+        "A difficulty, such as time zones or different priorities, and how you handled it",
+        "What was delivered and what you learned about working across teams"
+      ]
+    },
+    {
+      "text": "Explain the difference between public, private and hybrid cloud, and why a company might choose hybrid.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Public: shared provider infrastructure; private: dedicated to one organisation",
+        "Hybrid: both, working together",
+        "Reasons for hybrid: regulation, existing systems, cost, keeping some data in-house"
+      ]
+    },
+    {
+      "text": "What is a container, and how does a platform like Kubernetes help run containers at scale?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A container packages an app with what it needs to run the same way anywhere",
+        "How it differs from a virtual machine",
+        "What Kubernetes adds: scheduling, scaling, restarts and rolling updates"
+      ]
+    },
+    {
+      "text": "Walk me through your final-year project or a recent project: the problem, your part and what you'd improve.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The problem and why it mattered",
+        "Your own part, the technology and one hard decision",
+        "Results, and what you'd improve with more time"
+      ]
+    },
+    {
+      "text": "A client wants to use AI to answer its customers' questions. What would you ask before recommending an approach?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The business goal and how success will be measured",
+        "The data available, privacy rules and what must never go wrong",
+        "Starting small with a pilot, with people checking answers"
+      ]
+    },
+    {
+      "text": "What does ACID mean for a database, and why does it matter for a bank's transactions?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Atomicity, consistency, isolation and durability, each in a plain line",
+        "A money transfer as the example: both sides happen or neither does",
+        "What could go wrong without these guarantees"
+      ]
+    },
+    {
+      "text": "Why IBM, and which part of its business interests you most: consulting, software or infrastructure?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific you know about IBM's work",
+        "The area you chose and why it suits your skills",
+        "What you hope to learn there"
+      ]
+    },
+    {
+      "text": "Where do you see yourself in five years, and how would IBM help you get there?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A realistic direction, such as deeper technical skill or client leadership",
+        "Steps you'd take, including learning and certifications",
+        "How this role is the right first step"
+      ]
+    }
+  ],
+  "tips": [
+    "IBM's careers site says the online stage may include a coding test, a recorded video interview or an English test, depending on the role; check your invite for which ones apply.",
+    "For a work-style questionnaire, answer as you really are and go with your first instinct, as IBM's assessment FAQ suggests.",
+    "Explain your reasoning in assessments and interviews, not just the final answer; IBM's own advice for entry-level developers says this.",
+    "In the technical interview, be honest about gaps and say how you'd learn the topic.",
+    "Prepare questions about client work, learning and career growth for the end of the interview."
+  ],
+  "sources": [
+    {
+      "title": "IBM culture and values (ibm.com)",
+      "url": "https://www.ibm.com/careers/culture"
+    },
+    {
+      "title": "IBM application steps and tips (ibm.com)",
+      "url": "https://www.ibm.com/careers/application-process"
+    },
+    {
+      "title": "Entry level developer: becoming a successful candidate (ibm.com)",
+      "url": "https://www.ibm.com/careers/blog/entry-level-developer-the-secrets-to-becoming-a-successful-candidate"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

@@ -1,0 +1,358 @@
+{
+  "slug": "cognizant",
+  "name": "Cognizant",
+  "aliases": [
+    "cts",
+    "cognizant technology solutions",
+    "genc",
+    "genc next",
+    "genc elevate"
+  ],
+  "group": "it-services",
+  "market": "india-first",
+  "summary": "Cognizant hires most freshers in India through GenC (Generation Cognizant), which it describes as its hiring and development programme for emerging talent, via campus and off-campus drives. It says its assessments evaluate communication skills, aptitude and/or technical skills depending on the role, and candidates commonly report a technical and an HR interview after them, centred on fundamentals, SQL and their own projects.",
+  "rounds": [
+    "Online assessment (aptitude and coding)",
+    "Technical interview",
+    "HR interview"
+  ],
+  "looks_for": [
+    "Fundamentals: OOP, DBMS, SQL, a language",
+    "Your projects",
+    "Communication",
+    "Willingness to learn and relocate",
+    "Work as one",
+    "Raise the bar",
+    "Dare to innovate",
+    "Do the right thing",
+    "Own it"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your degree and the technologies you know best",
+        "One project and your part in it, with a result",
+        "Why you're applying for this role, in under two minutes"
+      ]
+    },
+    {
+      "text": "Write a SQL query to find the second-highest salary.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A subquery: the highest salary that is below MAX(salary)",
+        "Or DENSE_RANK in a window function, which also handles ties and the Nth highest",
+        "What happens with duplicate salaries, nulls, or fewer than two rows"
+      ]
+    },
+    {
+      "text": "Explain your project's architecture.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The layers: front end, back end, database and any outside services",
+        "How one request flows through them, using a single feature as the example",
+        "Why you chose that design and what you'd change now"
+      ]
+    },
+    {
+      "text": "Are you comfortable relocating?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A clear, honest answer, with any real constraint stated politely",
+        "Why you're open to it, such as the projects and learning it brings",
+        "Anything that shows you've adapted before, like studying away from home"
+      ]
+    },
+    {
+      "text": "Tell me about a time your team succeeded because people relied on each other's strengths.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who did what, and why the split suited each person",
+        "How you helped someone or asked for help yourself",
+        "What the team achieved that one person couldn't have"
+      ]
+    },
+    {
+      "text": "Tell me about a time you took ownership of a problem that wasn't strictly yours.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and why nobody had picked it up",
+        "What you did and who you kept informed",
+        "The outcome, and whether you'd step in the same way again"
+      ]
+    },
+    {
+      "text": "Tell me about a time you tried a new approach instead of the usual one. Did it work?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The usual way and what was wrong with it",
+        "The new approach and how you tested it safely",
+        "The result, including what didn't work"
+      ]
+    },
+    {
+      "text": "What's a piece of feedback that changed how you work?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The feedback, who gave it and why it stung or surprised you",
+        "What you changed in practice",
+        "How you know the change is working"
+      ]
+    },
+    {
+      "text": "Explain the difference between DELETE, TRUNCATE and DROP in SQL.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "DELETE removes chosen rows and can be filtered with WHERE",
+        "TRUNCATE empties the whole table quickly but keeps its structure",
+        "DROP removes the table itself; how rollback and triggers differ between them"
+      ]
+    },
+    {
+      "text": "What is the difference between method overloading and method overriding? Give an example.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Overloading: same name, different parameters, chosen at compile time",
+        "Overriding: a subclass replaces a parent method, chosen at run time",
+        "A short example, such as area() for shapes or a payment's process() method"
+      ]
+    },
+    {
+      "text": "A page in your project takes ten seconds to load. How would you find out why?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Measuring first: browser network tools, server logs, query times",
+        "Common causes: slow database queries, large images or scripts, too many calls",
+        "One fix, and how you'd check it actually helped"
+      ]
+    },
+    {
+      "text": "For experienced candidates: how have you handled a client who changed requirements late in a release?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Understanding why the change mattered to the client",
+        "Showing the impact on scope, dates and risk clearly",
+        "The agreement reached and how the team delivered it"
+      ]
+    },
+    {
+      "text": "Why Cognizant, and what kind of work would you like to do here?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific: the GenC training path, a practice area, or recent work you read about",
+        "The kind of projects or technologies you'd like to start with",
+        "How that fits your longer-term plan"
+      ]
+    },
+    {
+      "text": "Do you have any questions for us?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two thoughtful questions about training, the first project or the team",
+        "Nothing already answered on the careers site",
+        "A brief thank-you"
+      ]
+    }
+  ],
+  "tips": [
+    "Revise SQL joins and simple queries.",
+    "Be ready to explain every technology on your resume.",
+    "Read the GenC page for the track you're applying to; the role decides whether assessments lean on aptitude, coding or communication.",
+    "Practise explaining a SQL query out loud: what each clause does and the order it runs in.",
+    "Keep a short story ready for a few of Cognizant's values, such as owning a problem or trying a new approach.",
+    "Keep your resume and academic certificates ready; Cognizant asks for them during hiring."
+  ],
+  "sources": [
+    {
+      "title": "Generation Cognizant (GenC) programme (careers.cognizant.com)",
+      "url": "https://careers.cognizant.com/india-en/pathways-to-cognizant/genc-program/"
+    },
+    {
+      "title": "Cognizant's core values (careers.cognizant.com)",
+      "url": "https://careers.cognizant.com/global/en/our-core-values"
+    }
+  ],
+  "abroad": {
+    "rounds": [
+      "Recruiter screen",
+      "Technical interview with the team",
+      "Manager or client interview (some roles)",
+      "HR interview"
+    ],
+    "looks_for": [
+      "Fundamentals: OOP, databases and SQL, a language",
+      "Your projects",
+      "Communication",
+      "Working with clients and learning what their work needs",
+      "Work as one",
+      "Raise the bar",
+      "Dare to innovate",
+      "Do the right thing",
+      "Own it"
+    ],
+    "questions": [
+      {
+        "text": "Tell me about yourself.",
+        "type": "fit",
+        "kind": "intro",
+        "covers": [
+          "Your studies or work so far and the technologies you know best",
+          "One project and your part in it, with a result",
+          "Why you're applying for this role, in under two minutes"
+        ]
+      },
+      {
+        "text": "Write a SQL query to find the second-highest salary.",
+        "type": "role",
+        "kind": "knowledge",
+        "covers": [
+          "A subquery: the highest salary that is below MAX(salary)",
+          "Or DENSE_RANK in a window function, which also handles ties and the Nth highest",
+          "What happens with duplicate salaries, nulls, or fewer than two rows"
+        ]
+      },
+      {
+        "text": "Explain your project's architecture.",
+        "type": "role",
+        "kind": "story",
+        "covers": [
+          "The layers: front end, back end, database and any outside services",
+          "How one request flows through them, using a single feature as the example",
+          "Why you chose that design and what you'd change now"
+        ]
+      },
+      {
+        "text": "Tell me about a time you worked directly with a client.",
+        "type": "behavioral",
+        "kind": "story",
+        "covers": [
+          "Who the client was and what they needed from you",
+          "How you kept them informed and handled a difficult moment",
+          "The outcome for the client, ideally with a number"
+        ]
+      },
+      {
+        "text": "Tell me about a time your team succeeded because people relied on each other's strengths.",
+        "type": "behavioral",
+        "kind": "story",
+        "covers": [
+          "Who did what, and why the split suited each person",
+          "How you helped someone or asked for help yourself",
+          "What the team achieved that one person couldn't have"
+        ]
+      },
+      {
+        "text": "Tell me about a time you took ownership of a problem that wasn't strictly yours.",
+        "type": "behavioral",
+        "kind": "story",
+        "covers": [
+          "The problem and why nobody had picked it up",
+          "What you did and who you kept informed",
+          "The outcome, and whether you'd step in the same way again"
+        ]
+      },
+      {
+        "text": "Tell me about a time you tried a new approach instead of the usual one. Did it work?",
+        "type": "behavioral",
+        "kind": "story",
+        "covers": [
+          "The usual way and what was wrong with it",
+          "The new approach and how you tested it safely",
+          "The result, including what didn't work"
+        ]
+      },
+      {
+        "text": "What's a piece of feedback that changed how you work?",
+        "type": "behavioral",
+        "kind": "reflection",
+        "covers": [
+          "The feedback, who gave it and why it stung or surprised you",
+          "What you changed in practice",
+          "How you know the change is working"
+        ]
+      },
+      {
+        "text": "Explain the difference between DELETE, TRUNCATE and DROP in SQL.",
+        "type": "role",
+        "kind": "knowledge",
+        "covers": [
+          "DELETE removes chosen rows and can be filtered with WHERE",
+          "TRUNCATE empties the whole table quickly but keeps its structure",
+          "DROP removes the table itself; how rollback and triggers differ between them"
+        ]
+      },
+      {
+        "text": "What is the difference between method overloading and method overriding? Give an example.",
+        "type": "role",
+        "kind": "knowledge",
+        "covers": [
+          "Overloading: same name, different parameters, chosen at compile time",
+          "Overriding: a subclass replaces a parent method, chosen at run time",
+          "A short example, such as area() for shapes or a payment's process() method"
+        ]
+      },
+      {
+        "text": "A page in your project takes ten seconds to load. How would you find out why?",
+        "type": "role",
+        "kind": "situational",
+        "covers": [
+          "Measuring first: browser network tools, server logs, query times",
+          "Common causes: slow database queries, large images or scripts, too many calls",
+          "One fix, and how you'd check it actually helped"
+        ]
+      },
+      {
+        "text": "For experienced candidates: how have you handled a client who changed requirements late in a release?",
+        "type": "role",
+        "kind": "situational",
+        "covers": [
+          "Understanding why the change mattered to the client",
+          "Showing the impact on scope, dates and risk clearly",
+          "The agreement reached and how the team delivered it"
+        ]
+      },
+      {
+        "text": "Why Cognizant, and what kind of work would you like to do here?",
+        "type": "fit",
+        "kind": "motivation",
+        "covers": [
+          "Something specific: a practice area, an industry it serves, or recent work you read about",
+          "The kind of projects or technologies you'd like to work on",
+          "How that fits your longer-term plan"
+        ]
+      },
+      {
+        "text": "Do you have any questions for us?",
+        "type": "fit",
+        "kind": "closing",
+        "covers": [
+          "One or two thoughtful questions about the team, the client or the first project",
+          "Nothing already answered on the careers site",
+          "A brief thank-you"
+        ]
+      }
+    ],
+    "tips": [
+      "Revise SQL joins and simple queries.",
+      "Be ready to explain every technology on your resume.",
+      "Prepare a story about working with a client or customer: what they needed and how you kept them informed.",
+      "Keep a short story ready for a few of Cognizant's values, such as owning a problem or trying a new approach."
+    ]
+  },
+  "reviewed": "2026-10-18"
+}

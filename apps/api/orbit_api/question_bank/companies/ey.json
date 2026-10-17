@@ -1,0 +1,187 @@
+{
+  "slug": "ey",
+  "name": "EY",
+  "aliases": ["ernst and young", "ernst & young", "ey gds"],
+  "group": "consulting",
+  "market": "global",
+  "summary": "EY's interviews lean on behavioural questions, which EY says on its careers site it relies on heavily, alongside technical questions for the service line you've applied to, such as assurance, tax, consulting or strategy and transactions. For campus roles, including at EY Global Delivery Services (GDS), candidates commonly report an aptitude or written test followed by one or more interviews; the steps vary by country, service line and role.",
+  "rounds": [
+    "Online application, with an aptitude or written assessment for many roles",
+    "Technical interview for the service line: accounting, tax, technology or analytics",
+    "Behavioural interview with a manager, often built on 'give an example of' questions",
+    "Final discussion with a senior manager, director or partner (for many roles)",
+    "HR conversation on fit, preferences and start date (for some roles)"
+  ],
+  "looks_for": [
+    "People who demonstrate integrity, respect, teaming and inclusiveness",
+    "People with energy, enthusiasm and the courage to lead",
+    "People who build relationships based on doing the right thing",
+    "Mindset as much as skill set: how you approach challenges and learning",
+    "Strong communication and teamwork",
+    "Specific examples: the situation, the action you took and the result"
+  ],
+  "questions": [
+    {
+      "text": "Give an example of a time you worked in a team that disagreed on the approach. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The disagreement and what each side wanted",
+        "Your part in getting the team to a decision, in the first person",
+        "The result and how the team worked together afterwards"
+      ]
+    },
+    {
+      "text": "Describe a situation when you took the lead without being asked.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What needed doing and why nobody had picked it up",
+        "What you did first and how you brought others along",
+        "The outcome, with something concrete"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to produce accurate work against a tight deadline.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The deadline and why accuracy mattered",
+        "How you planned, checked your work and asked for help where needed",
+        "What you delivered, and anything you'd do differently"
+      ]
+    },
+    {
+      "text": "Describe a time you pushed back because something wasn't right.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was wrong and how you were sure",
+        "How you raised it respectfully and with evidence",
+        "What changed, and how the relationship held up"
+      ]
+    },
+    {
+      "text": "What is the purpose of an external audit, and what does an auditor's opinion tell an investor?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "An independent check that financial statements are free of material misstatement",
+        "What a clean opinion means, and what a qualified or adverse one signals",
+        "That an audit gives reasonable, not absolute, assurance"
+      ]
+    },
+    {
+      "text": "How would you check whether a company's reported revenue is genuine? Name a few tests you'd do.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Matching sales to orders, delivery records and cash received",
+        "Cut-off testing around the year end, and confirmations from customers",
+        "Looking for unusual patterns such as big sales just before year end or many credit notes after"
+      ]
+    },
+    {
+      "text": "Walk me through how depreciation affects the three financial statements.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "It's an expense that lowers profit, and so tax",
+        "It reduces the asset's value on the balance sheet",
+        "It's added back in the cash flow statement because no cash leaves"
+      ]
+    },
+    {
+      "text": "Explain the difference between direct and indirect taxes, with an example of each from a country you know.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Direct taxes are paid by the person or company taxed, such as income tax",
+        "Indirect taxes are collected through prices, such as GST or VAT",
+        "Why a business cares about both: cost, compliance and cash flow"
+      ]
+    },
+    {
+      "text": "A client's month-end financial close takes too long. How would you find out what's slowing it down?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Mapping the steps, owners and hand-offs in the close",
+        "Finding delays with data: late inputs, manual reconciliations, rework",
+        "Quick fixes and longer-term automation, with how you'd measure the gain"
+      ]
+    },
+    {
+      "text": "How would you explain the benefits and risks of moving to the cloud to a client's finance head?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Benefits in their terms: cost, flexibility, faster reporting",
+        "Risks: data security, migration effort, ongoing costs, depending on one provider",
+        "A sensible first step, such as a small pilot with clear success measures"
+      ]
+    },
+    {
+      "text": "Tell me about a project where you used data to find something others had missed.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The question and the data you worked with",
+        "The tools and methods you used (Excel, SQL, Python or others)",
+        "What you found and what changed because of it"
+      ]
+    },
+    {
+      "text": "Why EY, and why this service line?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What the service line does and who its clients are",
+        "Why the work fits your studies, skills or experience",
+        "Something specific about EY you learnt from its people or work"
+      ]
+    },
+    {
+      "text": "EY's purpose is 'Building a better working world'. What could that mean in the role you've applied for?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A plain reading of the purpose, linked to the role",
+        "An example: trustworthy numbers, a fairer tax process, or a client system that works better",
+        "Why that kind of impact matters to you"
+      ]
+    },
+    {
+      "text": "What questions do you have for us?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Specific questions about the team's clients, the first year or training",
+        "A question that shows you've thought about the role",
+        "Nothing you could have found on the careers site in a minute"
+      ]
+    }
+  ],
+  "tips": [
+    "EY's careers pages describe behavioural interviewing: prepare stories on teamwork, deadlines, conflict, a mistake and leadership, and end each on the result.",
+    "Revise your service line's basics: audit and accounting for assurance, tax principles for tax, a tool or process for technology consulting.",
+    "Match one example to each skill listed in the role description before the interview.",
+    "EY describes interviews as two-way; prepare two specific questions about the team's clients or the work you'd do in your first year.",
+    "For GDS and other campus roles, be ready to talk in detail about your projects, internships and the tools you list, such as Excel, SQL or a programming language."
+  ],
+  "sources": [
+    {
+      "title": "About EY: purpose and values (ey.com)",
+      "url": "https://www.ey.com/en_gl/about-us"
+    },
+    {
+      "title": "EY interview tips (ey.com, India)",
+      "url": "https://www.ey.com/en_in/careers/interview-tips"
+    },
+    {
+      "title": "Early career opportunities at EY GDS (ey.com)",
+      "url": "https://www.ey.com/en_in/careers/global-delivery-services/early-career-opportunities-with-ey-gds"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

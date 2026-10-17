@@ -1,0 +1,197 @@
+{
+  "slug": "genpact",
+  "name": "Genpact",
+  "aliases": ["genpact india"],
+  "group": "it-services",
+  "market": "india-first",
+  "summary": "Genpact hires for business-process roles (finance and accounting, customer and supply-chain operations) as well as analytics and technology roles. Candidates commonly report an online assessment for many entry-level roles, an HR or recruiter interview and an interview with the operations or technical team, with SQL, Excel or coding rounds for analytics and technology jobs. Genpact publishes its core values as courage, curiosity, incisiveness and integrity.",
+  "rounds": [
+    "Online application, walk-in or campus drive",
+    "Online assessment for many entry-level roles: aptitude and English, with domain or typing questions for some",
+    "HR or recruiter interview",
+    "Operations, functional or technical interview with the hiring team",
+    "For analytics and technology roles: a technical round on SQL, Excel or coding",
+    "Final discussion with a manager (some roles)"
+  ],
+  "looks_for": [
+    "Courage",
+    "Curiosity",
+    "Incisiveness",
+    "Integrity",
+    "Accuracy and attention to detail with numbers and processes",
+    "Clear written and spoken English with clients",
+    "Excel and basic accounting for finance roles; SQL for analytics roles",
+    "Comfort with process discipline, deadlines and service levels"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your degree or experience and the skills that fit this role, such as accounting, Excel or SQL",
+        "One example that shows accuracy or problem-solving",
+        "Why this role, in under two minutes"
+      ]
+    },
+    {
+      "text": "Tell me about a time you asked 'why' and found a better way to do a routine task.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The routine task and what bothered you about it",
+        "What you questioned and what you found",
+        "The improvement, with time or errors saved"
+      ]
+    },
+    {
+      "text": "Tell me about a time you spoke up about a problem when it would have been easier to stay quiet.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and why staying quiet was tempting",
+        "How and to whom you raised it",
+        "What changed because you did"
+      ]
+    },
+    {
+      "text": "Tell me about a time you cut through a lot of information to find the one thing that mattered.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The mass of data, emails or documents you faced",
+        "How you sorted and filtered it",
+        "The key finding and the decision it led to"
+      ]
+    },
+    {
+      "text": "Tell me about a time you made an error with numbers or data. How did you catch it and fix it?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The error, owned plainly",
+        "How it was caught and who you told",
+        "The check you now use so it doesn't happen again"
+      ]
+    },
+    {
+      "text": "Explain the difference between accounts payable and accounts receivable.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Payable: money the company owes its suppliers",
+        "Receivable: money customers owe the company",
+        "Where each sits on the balance sheet and why tracking them matters for cash"
+      ]
+    },
+    {
+      "text": "What does a lookup function such as VLOOKUP or XLOOKUP do, and when would a pivot table be better?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A lookup pulls a matching value from another table by a key",
+        "Common traps: exact match, duplicates, columns moving",
+        "A pivot table for summarising and grouping, such as totals by month and region"
+      ]
+    },
+    {
+      "text": "You find an invoice that doesn't match its purchase order. What do you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Checking what differs: amount, quantity, price, tax or supplier details",
+        "Holding payment and following the process for raising a query",
+        "Recording it so the cause can be fixed, not just this invoice"
+      ]
+    },
+    {
+      "text": "A process your team runs misses its turnaround target most Mondays. How would you find out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Measuring Monday volume, staffing and handling time against other days",
+        "Finding where work waits in the process",
+        "A fix, such as shifting staff or clearing backlog earlier, and how you'd track it"
+      ]
+    },
+    {
+      "text": "For analytics roles: how would you find customers who haven't ordered in the last 90 days using SQL? Talk me through it.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Finding each customer's latest order date with GROUP BY and MAX",
+        "Keeping those whose latest date is older than 90 days",
+        "Including customers who never ordered, with a left join"
+      ]
+    },
+    {
+      "text": "A client emails angrily about a delayed report. How would you reply?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Acknowledging the delay and its impact without excuses",
+        "A clear new time and what you're doing to meet it",
+        "Following up once it's sent, and preventing a repeat"
+      ]
+    },
+    {
+      "text": "For experienced candidates: tell me about a process you improved. How did you measure the result?",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The process and its problem, with a starting number",
+        "What you changed and who you had to convince",
+        "The result in numbers, such as time, errors or cost"
+      ]
+    },
+    {
+      "text": "Why Genpact, and why this kind of role?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about Genpact's work in this area",
+        "What you enjoy about process, finance or analytics work, shown by an example",
+        "Where you'd like the role to lead"
+      ]
+    },
+    {
+      "text": "Are you comfortable working night shifts or hours that follow a client's time zone?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with any real constraint stated clearly",
+        "How you'd manage it: sleep, travel, routine",
+        "Your understanding of why clients need cover in their own hours"
+      ]
+    },
+    {
+      "text": "Do you have any questions for us?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two thoughtful questions about training, the team or the process you'd work on",
+        "Nothing already answered on the careers site",
+        "A brief thank-you"
+      ]
+    }
+  ],
+  "tips": [
+    "For finance roles, revise basic accounting: debits and credits, journal entries, reconciliation, payables and receivables.",
+    "Practise the Excel functions you may be asked to explain: lookups, pivot tables, IF and SUMIFS.",
+    "Genpact publishes its values as courage, curiosity, incisiveness and integrity; prepare one short story for each.",
+    "In the English assessment and the HR round, answer in short, complete sentences and check you've understood the question first.",
+    "For process roles, show you care about accuracy and deadlines with an example that has a number.",
+    "Recent graduates in India may also see Genpact's apprenticeship programme: it's a training scheme, and a full-time role afterwards depends on business needs."
+  ],
+  "sources": [
+    {
+      "title": "Genpact Code of Conduct, with its core values (genpact.com)",
+      "url": "https://www.genpact.com/about-us/governance/code-of-conduct"
+    },
+    {
+      "title": "Genpact Apprenticeship Program, India (genpact.com)",
+      "url": "https://www.genpact.com/careers/apprenticeship-program-india"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}
