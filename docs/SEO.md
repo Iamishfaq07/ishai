@@ -11,7 +11,8 @@ for every address except the built files (`wrangler.jsonc` → `run_worker_first
 
 | Address | Answer |
 |---|---|
-| A public page (`/`, `/resume-ai`, `/jobs`, `/warmup`, `/contact`, `/technical`, the policies, `/companies/*`, `/roles/*` once built) | 200, with any head tags it lacks added: canonical, `hreflang` `en` + `x-default`, Open Graph/Twitter tags, JSON-LD, verification codes (front page) |
+| A public page (`/`, `/resume-ai`, `/jobs`, `/warmup`, `/contact`, `/technical`, the policies, `/companies`, `/roles` and each guide) | 200, its built HTML (src/prerender), with any head tags it lacks added: canonical, `hreflang` `en` + `x-default`, Open Graph/Twitter tags, JSON-LD, verification codes (front page) |
+| `/companies/<unknown>`, `/roles/<unknown>`, `/_prerender/*` | **404** (the built copies are served only at their own pages' addresses) |
 | One of the app's own pages (sign-in, the signed-in pages; list in `routes.js`) | 200 (the app), `X-Robots-Tag: noindex`, no canonical |
 | An invite link `/r/<code>` | 200, noindex, canonical `/` |
 | Anything else | **404**, noindex. The body is still the app, so people see its "This page isn't here" with links; crawlers read static links |
@@ -19,14 +20,22 @@ for every address except the built files (`wrangler.jsonc` → `run_worker_first
 | `/robots.txt` | written by the Worker from the route list (below) |
 | Any other host (a preview, `*.workers.dev`) | everything noindex, and robots.txt `Disallow: /` |
 
-Files in `apps/web/public/`: `sitemap.xml` (the question-bank branch generates it at build time instead),
+The sitemap is built with the site from the page registry (`apps/web/src/prerender/routes.tsx`), with each page's
+real `lastmod` where it's known (a guide's review date, a policy's "Last updated" date). Files in `apps/web/public/`:
 `llms.txt` and `llms-full.txt` (what Orbit is, for AI assistants: keep them true when products or pricing rules
 change), `favicon.ico` (search results take ICO/PNG, not SVG), and `<32 hex>.txt`, the IndexNow key.
 
-**Adding a public page:** add its path to `PUBLIC_APP_PAGES` in `routes.js` (and its title/description to
-`PAGE_META` in `meta.js`, and to `sitemap.xml`). Pages built by the prerender under `/companies` or `/roles` need
-nothing. A new signed-in page: add it to `APP_ROUTES` (the test `seo.test.js` fails if `App.tsx` has a route
-`routes.js` doesn't know), and to `ROBOTS_DISALLOW_EXACT` if crawlers should stay out.
+Structured data has one source, `apps/web/worker/site.js`: the build uses it for the prerendered pages and the
+Worker for any public page without its own. Titles stay within 60 characters and descriptions within 160. Signed
+out, the app keeps a public page's own title and description after it loads (`src/lib/servedHead.ts`), so Google,
+which reads pages after their scripts run, sees the same head as crawlers that don't.
+
+**Adding a public page:** register it in `src/prerender/routes.tsx` (title, description, canonical, structured data,
+`lastmod`), and add its path to `PUBLIC_APP_PAGES` in `routes.js` (plus `PAGE_META` in `meta.js` if the Worker should
+serve its built copy). Guides under `/companies` or `/roles` need nothing more. A new signed-in page: add it to
+`APP_ROUTES` (the test `seo.test.js` fails if `App.tsx` has a route `routes.js` doesn't know), and to
+`ROBOTS_DISALLOW_EXACT` if crawlers should stay out. After a merge, run `npx vitest run worker src/prerender` in
+`apps/web` (the GitHub CI can't run).
 
 **AI crawlers.** Search, answer and user-triggered crawlers are always allowed. Training crawlers (GPTBot, ClaudeBot,
 Google-Extended, Applebot-Extended, CCBot, meta-externalagent, Amazonbot, MistralAI-Training) are allowed by default;

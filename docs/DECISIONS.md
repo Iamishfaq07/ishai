@@ -664,3 +664,12 @@ only says `en` and `x-default` point at the page itself. llms.txt and llms-full.
 assistants; no vendor has said it reads them, and they cost nothing. IndexNow (Bing, Yandex, Naver, Seznam, Yep) is
 pinged after a deploy by `apps/web/scripts/indexnow.mjs`, which checks the key file is live first; Google reads the
 sitemap instead.
+
+With the question bank's built pages (D63), structured data has one source, `worker/site.js`, used by the build for
+those pages and by the Worker for any public page without its own, so the two can't describe Orbit differently. The
+app no longer replaces a public page's title and description with its short tab titles when it loads signed out
+(`src/lib/servedHead.ts`): Google reads pages after their scripts run, so it would have indexed "Resume AI · Orbit"
+instead of the page's own title. The Worker running first for every page address means each page load (not each
+click inside the app) is a Worker request on top of the API calls already proxied; static files stay free. On the
+Workers Free plan (100,000 requests a day) a busy day would take the whole site down with 429s until midnight UTC,
+not just the API, so the owner moves to Workers Paid before daily requests near 50,000 (DEPLOY.md).

@@ -152,3 +152,11 @@ Free tiers sleep when idle (the first request after idle is a cold start); Railw
 by use and doesn't sleep it unless its serverless setting is on. DeepSeek/Deepgram usage bills your
 own accounts; per-request cost estimates are in `provider_requests.estimated_cost_usd` (`NULL` = model has no
 configured price).
+
+**The web Worker's requests.** Every `/api/*` call and every page load (each full page request, not each click
+inside the app) invokes the Worker; the built files under `/assets/`, the icons, the camera model and the theme
+script are served without it, free and unlimited. Cloudflare's Workers Free plan allows 100,000 Worker requests a
+day (reset at midnight UTC, 10 ms CPU each); past that, every address the Worker runs first for answers 429 until the
+reset, so the whole site (pages and API) would be down, not just the API. The API calls are most of the count (a
+signed-in visit makes dozens; a page load adds one, a crawler's fetch one). Watch Workers & Pages → orbit → Metrics,
+and move to Workers Paid ($5 a month, 10 million requests included) before daily requests pass about 50,000.

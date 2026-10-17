@@ -24,9 +24,16 @@
 - **New files**: `llms.txt` and `llms-full.txt` (what Orbit is, for AI assistants), `favicon.ico` (search results
   don't take SVG), the IndexNow key, and `apps/web/scripts/indexnow.mjs` to tell Bing, Yandex, Naver, Seznam and
   Yep about changed pages after a deploy (it checks the key file is live first; dry run unless `--send`).
-- **Sitemap and policies**: the sitemap lists `/privacy`, `/terms`, `/cookies` and `/refund` (the `.html` addresses
-  redirected, to addresses robots.txt blocked); the privacy policy has a description, and the policies' titles say
-  what they are ("Privacy policy | Orbit AI").
+- **Sitemap and policies**: the built sitemap (src/prerender) lists `/privacy`, `/terms`, `/cookies` and `/refund`
+  with the date each page shows (the `.html` addresses redirected, to addresses robots.txt blocked); the privacy
+  policy has a description, and the policies' titles say what they are ("Privacy policy | Orbit AI").
+- **With the question bank's built pages**: one source of structured data (`worker/site.js`) for the built pages and
+  the Worker; unknown guides (`/companies/xyz`) and the built copies' own addresses (`/_prerender/*`) answer 404;
+  titles fit in 60 characters (guides fall back to shorter wordings, the product pages' titles were tightened) and
+  guide descriptions in 160. Signed out, the app keeps a public page's served title and description once it loads
+  (`src/lib/servedHead.ts`): it used to swap in its tab titles ("Resume AI · Orbit", "Uber interview guide · Orbit"),
+  which is what Google, reading pages after their scripts run, would have indexed. `/technical`'s tab title moved
+  into the route titles.
 - **Caching**: icons, the preview image and the camera coach's model are cached for a day (a week for the model)
   instead of being revalidated on every visit.
 - Owner setup (Search Console, Bing, Cloudflare's AI-bot settings, IndexNow): docs/SEO.md. Tests:
