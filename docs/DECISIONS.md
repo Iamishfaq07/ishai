@@ -528,3 +528,26 @@ their stored amount: the checkout, the webhooks and the reconciler settle an ord
 opened at an old price and paid at that price is credited as before, and a payment of the new price against it is
 not a capture of it. No page claims "30% less than Parakeet" (re-check their prices before one does). The cost
 note in BILLING.md matters more now: the Monthly plan (₹6,599) barely covers a subscriber who uses all 75 hours.
+
+**D61 — Referrals: invite links and creator/campus codes, rewarded on the first payment, off until switched on.**
+The owner wants growth from people who already use Orbit (a friend's invite) and from creators and campuses (a code
+of their own), without a payout system. One mechanism serves both: a code (`referral_codes`: an account's own
+"invite" code, or a "creator"/"campus" code the admin makes) and one attribution per account (`referrals`), set at
+sign-up from a link (`/r/<code>`, `?ref=`; kept first-party in localStorage and a cookie, carried through Google's
+sign-in in the signed state) or entered at checkout before the first purchase. The invited account's first purchase
+is 10% off (a creator or campus code has its own percent), taken off the order on the server in rupees and dollars
+alike; the inviter gets 30 interview minutes when that first payment lands, at most 10 rewards a month. The reward is
+paid inside `settle.grant`, so it rides the transaction and the once-only update that approve the payment, whichever
+of the checkout, the webhook, the reconciler or the admin's UPI approval gets there first; a separate job or a
+second ledger would have been a second chance to pay twice. Minutes rather than money: they cost Orbit speech-to-text
+and model time only when used, and they need no payouts or tax handling. Self-referral is checked against what Orbit
+already keeps: the account, the welcome's keyed inbox hash (so Gmail dots and +tags don't make a new person), the
+inviter's sign-up and sign-in networks, and pairs inviting each other. There's no device fingerprint to compare, and
+adding one for this wasn't worth the privacy cost. Same-network invites are refused even though a family or a hostel
+shares Wi-Fi: campus codes, which have no inviter, are the way for those. A refund or chargeback takes back only the
+reward minutes the inviter hasn't used (what's used can't be taken back) and flags it for the admin. Commissions on
+creator and campus codes are reported (revenue per currency, never added together, net of refunds) and paid by hand.
+Everything is behind `ORBIT_REFERRALS`, off by default, so the owner can review the values
+(`ORBIT_REFERRAL_REWARD_MINUTES`, `ORBIT_REFERRAL_DISCOUNT_PERCENT`, `ORBIT_REFERRAL_MONTHLY_CAP`) before turning it
+on; the admin's codes and report work while it's off. One migration (`467956f519dd`, after `b4d6f8a0c2e4`), new tables
+and two nullable payment columns only.

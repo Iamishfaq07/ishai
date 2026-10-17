@@ -25,7 +25,14 @@ import type {
   AdminConfigUpdate,
   AdminPayment,
   AdminPayments,
+  AdminReferralCode,
+  AdminReferralCodeCreate,
+  AdminReferralCodePatch,
+  AdminReferrals,
   ReconcileResult,
+  ReferralCodeInfo,
+  ReferralInvite,
+  ReferralOffer,
   AdminStats,
   AdminUser,
   AdminUserDetail,
@@ -781,6 +788,12 @@ export function createApiClient(options: ApiClientOptions) {
         method: "POST",
         body: body({ utr }),
       }),
+    /** Invite friends: the account's link (made the first time), what a friend gets, and how it's gone. */
+    myInvite: () => json<ReferralInvite>("/v1/referrals/me"),
+    /** A code entered at checkout, before the first payment: its discount comes off the next order. */
+    redeemCode: (code: string) => json<ReferralOffer>("/v1/referrals/redeem", { method: "POST", body: body({ code }) }),
+    /** Public: what a link's code gives, for the sign-up page (404 when it can't be used). */
+    referralCode: (code: string) => json<ReferralCodeInfo>(`/v1/referrals/codes/${encodeURIComponent(code)}`),
 
     /** Job Mission Room: one tracked job as a workspace (stages, fit, resume, sent versions, offer, next step). */
     jobMission: (id: string) => json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission${localDays()}`),
@@ -934,6 +947,14 @@ export function createApiClient(options: ApiClientOptions) {
       json<AdminPayments>(`/v1/admin/payments?only=${only}`),
     /** Admin: ask Razorpay now about open orders (the server also does this on its own every few minutes). */
     adminReconcile: () => json<ReconcileResult>("/v1/admin/payments/reconcile", { method: "POST", body: body({}) }),
+    /** Admin: creator and campus codes (and every invite link together), sign-ups to commission, and what to review. */
+    adminReferrals: () => json<AdminReferrals>("/v1/admin/referrals"),
+    createReferralCode: (req: AdminReferralCodeCreate) =>
+      json<AdminReferralCode>("/v1/admin/referrals/codes", { method: "POST", body: body(req) }),
+    updateReferralCode: (codeId: string, patch: AdminReferralCodePatch) =>
+      json<AdminReferralCode>(`/v1/admin/referrals/codes/${encodeURIComponent(codeId)}`, { method: "PATCH", body: body(patch) }),
+    /** Admin: the referral report as a CSV file (₹ and $ in their own columns). */
+    adminReferralsCsv: async () => (await raw("/v1/admin/referrals/export")).blob(),
     /** `utr`: the one you checked against the bank statement; if the payer changed it since, nothing is decided. */
     decidePayment: (paymentId: string, action: "approve" | "reject", note?: string, utr?: string | null) =>
       json<AdminPayment>(`/v1/admin/payments/${encodeURIComponent(paymentId)}`, {

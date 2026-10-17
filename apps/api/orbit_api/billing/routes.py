@@ -1,7 +1,9 @@
 """Plans and entitlements over HTTP, and buying credit packs (billing/packs.py): through Razorpay's checkout when it's
 set up (billing/razorpay.py, confirmed by Razorpay's signature), else over UPI (billing/upi.py, approved by the
 admin). Outside India, dollar prices are paid through PayPal when it's set up (billing/paypal.py, confirmed by
-PayPal's capture). Limits and features never come from clients; a payment changes nothing until it's confirmed."""
+PayPal's capture). Limits and features never come from clients; a payment changes nothing until it's confirmed.
+A referred account's first-purchase discount (billing/referrals.py) comes off the order's amount here, never in the
+browser."""
 
 import hashlib
 import json
@@ -19,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api import entitlements
 from orbit_api.admin.routes import require_admin
 from orbit_api.auth.security import current_user, optional_user
-from orbit_api.billing import paypal, pricing, razorpay, settle, upi
+from orbit_api.billing import paypal, pricing, razorpay, referrals, settle, upi
 from orbit_api.billing.monthly import monthly_plans, public_monthly
 from orbit_api.billing.packs import pack_label as packs_label
 from orbit_api.billing.packs import packs, public_packs
@@ -87,37 +89,46 @@ async def list_plans() -> list[dict[str, Any]]:
     return entitlements.public_plans()
 
 
-def _priced(items: list[dict[str, Any]], currency: str) -> list[dict[str, Any]]:
+def _priced(items: list[dict[str, Any]], currency: str,
+            offer: referrals.Offer | None = None) -> list[dict[str, Any]]:
     """Each item's price in the buyer's currency: `price` (major units), `price_text` and, for a long plan, the
-    monthly equivalent. `price_inr` stays (the configured rupee price)."""
+    monthly equivalent. `price_inr` stays (the configured rupee price). With a first-purchase discount (`offer`,
+    billing/referrals.py) also `offer_price`, `offer_price_text` and `offer_percent`: what an order costs now (and the
+    monthly equivalent is of that)."""
     out = []
     for given in items:
         item = {k: v for k, v in given.items() if k != "price_usd_cents"}  # said as `price` in dollars instead
         cost = pricing.price(item["price_inr"], currency, given.get("price_usd_cents"))
         extra: dict[str, Any] = {"currency": cost.currency, "price": cost.major, "price_text": cost.text()}
+        paid = cost
+        if offer is not None and offer.percent > 0:
+            paid, _ = referrals.discounted(cost, offer.percent)
+            extra |= {"offer_price": paid.major, "offer_price_text": paid.text(), "offer_percent": offer.percent}
         if cost.currency != pricing.INR and paypal.configured():  # dollars: PayPal (an account, or a card)
             extra |= {"checkout": "paypal", "buyable": True, "international": True}
         elif cost.currency != pricing.INR:  # or by card through Razorpay, once it takes cards from abroad
             extra["buyable"] = bool(item.get("buyable") and item.get("checkout") == "razorpay"
                                     and item.get("international"))
         if "days" in item:
-            per = round(cost.minor * 30 / item["days"])
+            per = round(paid.minor * 30 / item["days"])
             extra |= {"per_month": per / 100, "per_month_text": pricing.money(cost.currency, per)}
         out.append({**item, **extra})
     return out
 
 
 @router.get("/billing/monthly")
-async def list_monthly(request: Request, user: Annotated[User | None, Depends(optional_user)]) -> list[dict[str, Any]]:
+async def list_monthly(request: Request, user: Annotated[User | None, Depends(optional_user)],
+                       db: Annotated[AsyncSession, Depends(get_db)]) -> list[dict[str, Any]]:
     """The monthly plans for sale (public): a plan for 30 days, paid once; nothing renews. Priced in rupees in
     India and US dollars elsewhere (billing/pricing.py)."""
-    return _priced(public_monthly(), pricing.currency_for(request, user))
+    return _priced(public_monthly(), pricing.currency_for(request, user), await referrals.offer_for(db, user))
 
 
 @router.get("/billing/packs")
-async def list_packs(request: Request, user: Annotated[User | None, Depends(optional_user)]) -> list[dict[str, Any]]:
+async def list_packs(request: Request, user: Annotated[User | None, Depends(optional_user)],
+                     db: Annotated[AsyncSession, Depends(get_db)]) -> list[dict[str, Any]]:
     """Public: the credit packs for sale, and whether they can be bought right now (a UPI ID is set)."""
-    return _priced(public_packs(), pricing.currency_for(request, user))
+    return _priced(public_packs(), pricing.currency_for(request, user), await referrals.offer_for(db, user))
 
 
 @router.get("/entitlements")
@@ -202,6 +213,16 @@ def _product(product_id: str) -> tuple[str, str, pricing.Priced, int, int, int]:
     raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That pack can't be bought.")
 
 
+async def _offered(db: AsyncSession, user: User, cost: pricing.Price) -> tuple[pricing.Price, dict[str, Any]]:
+    """`cost` less the account's first-purchase discount, if it has one (billing/referrals.py), and what the order
+    keeps of it: the code and how much came off."""
+    offer = await referrals.offer_for(db, user)
+    if offer is None or offer.percent <= 0:
+        return cost, {}
+    less, off = referrals.discounted(cost, offer.percent)
+    return less, {"referral_code_id": offer.code_id, "discount_minor": off}
+
+
 @router.post("/billing/upi/orders", response_model=UpiOrderOut, status_code=201, dependencies=[Depends(order_limit)])
 async def create_order(body: OrderIn, request: Request, user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> UpiOrderOut:
@@ -213,6 +234,8 @@ async def create_order(body: OrderIn, request: Request, user: Annotated[User, De
         raise HTTPException(status.HTTP_409_CONFLICT, "UPI is for payments from India. Pay by card instead.")
     if not get_settings().upi_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "UPI payments aren't set up yet.")
+    cost, discount = await _offered(db, user, pricing.price(price, pricing.INR))
+    price = cost.inr
     since = datetime.now(UTC) - upi.OPEN_ORDER_REUSE
     open_order = await db.scalar(
         select(Payment).where(Payment.user_id == user.id, Payment.plan == pid,
@@ -222,7 +245,7 @@ async def create_order(body: OrderIn, request: Request, user: Annotated[User, De
     if open_order is not None:
         return _order_out(open_order)
     p = Payment(user_id=user.id, plan=pid, amount_inr=price, days=days, resume_credits=resume_credits,
-                interview_minutes=minutes, reference=upi.new_reference(), status="awaiting_payment")
+                interview_minutes=minutes, reference=upi.new_reference(), status="awaiting_payment", **discount)
     db.add(p)
     await db.commit()
     await db.refresh(p)
@@ -326,6 +349,7 @@ async def razorpay_order(body: OrderIn, request: Request, user: Annotated[User, 
         # The pages show dollar prices with Buy off until then (_priced); a direct call mustn't open a checkout
         # Razorpay would refuse.
         raise HTTPException(status.HTTP_409_CONFLICT, "Card payments from outside India aren't switched on yet.")
+    cost, discount = await _offered(db, user, cost)
     reference = upi.new_reference()
     try:
         order_id = await razorpay.create_order(cost.minor, reference, {"pack": pid, "orbit_ref": reference},
@@ -337,7 +361,7 @@ async def razorpay_order(body: OrderIn, request: Request, user: Annotated[User, 
     p = Payment(user_id=user.id, plan=pid, amount_inr=cost.inr, days=days, resume_credits=resume_credits,
                 interview_minutes=minutes, reference=reference, status="awaiting_payment",
                 method="razorpay", gateway_order_id=order_id, currency=cost.currency,
-                amount_minor=cost.minor if cost.currency != pricing.INR else None)
+                amount_minor=cost.minor if cost.currency != pricing.INR else None, **discount)
     db.add(p)
     await db.commit()
     return CheckoutOut(payment_id=p.id, order_id=order_id, key_id=key_id, amount_paise=cost.minor,
@@ -517,6 +541,7 @@ async def paypal_order(body: OrderIn, request: Request, user: Annotated[User, De
     if cost.currency == pricing.INR:
         raise HTTPException(status.HTTP_409_CONFLICT,
                             "PayPal is for payments from outside India. Pay by UPI or card instead.")
+    cost, discount = await _offered(db, user, cost)
     reference = upi.new_reference()
     try:
         order_id, approve = await paypal.create_order(cost.minor, cost.currency, reference, label,
@@ -527,7 +552,7 @@ async def paypal_order(body: OrderIn, request: Request, user: Annotated[User, De
                             "PayPal isn't reachable right now. Try again in a minute.") from e
     p = Payment(user_id=user.id, plan=pid, amount_inr=cost.inr, days=days, resume_credits=resume_credits,
                 interview_minutes=minutes, reference=reference, status="awaiting_payment", method="paypal",
-                gateway_order_id=order_id, currency=cost.currency, amount_minor=cost.minor)
+                gateway_order_id=order_id, currency=cost.currency, amount_minor=cost.minor, **discount)
     db.add(p)
     await db.commit()
     return PaypalCheckoutOut(payment_id=p.id, order_id=order_id, approve_url=approve)

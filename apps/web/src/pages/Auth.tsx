@@ -26,6 +26,8 @@ import { Captcha, useCaptchaConfig } from "../components/Captcha";
 import { AiPill } from "../components/products";
 import { KashSecPromo, MoreToolChips } from "../components/Promos";
 import { CONTACT_PAGE, PRIVACY_PAGE, REFUND_PAGE, TERMS_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
+import { storedRef } from "../lib/referral";
+import { InviteNote } from "../components/InviteNote";
 
 type Feature = { icon: LucideIcon; title: string; text: string; ai?: boolean };
 
@@ -303,7 +305,9 @@ function useGoogleOn(): boolean {
 function GoogleContinue({ next }: { next: string }) {
   const on = useGoogleOn();
   if (!on) return null;
-  const href = `${API_URL}/v1/auth/google/start?next=${encodeURIComponent(next || "/")}`;
+  // A link's invite or creator code rides through Google's page to the new account (lib/referral.ts).
+  const ref = storedRef();
+  const href = `${API_URL}/v1/auth/google/start?next=${encodeURIComponent(next || "/")}${ref ? `&ref=${encodeURIComponent(ref)}` : ""}`;
   return (
     <div className="mb-4 space-y-4">
       <a href={href} className={buttonClass("secondary", "md", "w-full")}>
@@ -516,6 +520,7 @@ export function RegisterPage() {
 
   return (
     <AuthShell title="Create your free account" subtitle="Takes about a minute. Interview copilot, Resume AI and Jobs AI, in one account." features>
+      <InviteNote />
       <GoogleContinue next={from ?? "/"} />
       <form onSubmit={(e) => void submit(e)} className="space-y-4">
         <Field label="Name" htmlFor="name">

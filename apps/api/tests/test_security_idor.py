@@ -447,6 +447,9 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/v1/jobs/alerts/off"),
     # Google sign-in: the redirect out and back, before anyone is signed in (the state cookie guards the return).
     ("GET", "/v1/auth/google/start"), ("GET", "/v1/auth/google/callback"),
+    # What an invite link's code gives, for the sign-up page (a creator's or campus's label at most, never an
+    # inviter's name).
+    ("GET", "/v1/referrals/codes/{code}"),
     # The support chat works signed out: the thread's 256-bit token (in the body) is the credential.
     ("POST", "/v1/support/threads"), ("GET", "/v1/support/threads/{thread_id}"),
     ("POST", "/v1/support/threads/{thread_id}/messages"), ("POST", "/v1/support/threads/{thread_id}/handoff"),
@@ -559,6 +562,10 @@ ADMIN_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("POST", "/v1/admin/support/{target_thread}/close", {}),
     ("DELETE", "/v1/admin/support/{target_thread}", {}),
     ("POST", "/v1/admin/payments/reconcile", {}),
+    ("GET", "/v1/admin/referrals", {}),
+    ("GET", "/v1/admin/referrals/export", {}),
+    ("POST", "/v1/admin/referrals/codes", {"json": {"code": "I{target_code_tag}", "label": "x", "kind": "campus"}}),
+    ("PATCH", "/v1/admin/referrals/codes/{target_code}", {"json": {"active": False}}),
 ]
 ADMIN_IDS = [f"{m} {p} {json.dumps(k.get('json', ''))[:40]}" for m, p, k in ADMIN_ROUTES]
 
@@ -567,7 +574,7 @@ def test_admin_route_inventory_is_complete() -> None:
     admin = {p for _, p in ROUTES if p.startswith("/v1/admin/")} - {"/v1/admin/status"}
     covered = {p.split("?", 1)[0].replace("{target}", "{user_id}").replace("{target_order}", "{payment_id}")
                .replace("{target_message}", "{message_id}").replace("{target_thread}", "{thread_id}")
-               for _, p, _ in ADMIN_ROUTES}
+               .replace("{target_code}", "{code_id}") for _, p, _ in ADMIN_ROUTES}
     assert admin <= covered, f"admin routes missing from the matrix: {sorted(admin - covered)}"
 
 
@@ -605,11 +612,15 @@ def test_admin_routes_work_for_the_admin(world: World, method: str, path: str, k
     message = c.get("/v1/admin/inbox", headers=world.admin, params={"q": sent.json()["reference"],
                                                                     "status": "all"}).json()["items"][0]["id"]
     thread = _created(c.post("/v1/support/threads", headers=h))
+    tag = uuid.uuid4().hex[:8].upper()
+    code = _created(c.post("/v1/admin/referrals/codes", headers=world.admin,
+                           json={"code": f"T{tag}", "label": "target", "kind": "creator"}))
     ids = {"target": user["id"], "target_email": user["email"], "target_order": order, "target_message": message,
-           "target_thread": thread}
+           "target_thread": thread, "target_code": code, "target_code_tag": tag}
     c.cookies.clear()
     r = c.request(method, _fill(path, ids), headers=world.admin, **_fill(kw, ids))
-    assert r.status_code in (200, 202, 204), r.text  # 202: an email on its way · 204: deleted
+    # 201: a code made · 202: an email on its way · 204: deleted
+    assert r.status_code in (200, 201, 202, 204), r.text
 
 
 def test_admin_status_says_who_is_admin_without_a_403(world: World) -> None:

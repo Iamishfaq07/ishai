@@ -86,6 +86,17 @@ class Settings(BaseSettings):
     paypal_client_secret: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_PAYPAL_CLIENT_SECRET"))
     paypal_webhook_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_PAYPAL_WEBHOOK_ID"))
     paypal_env: Literal["sandbox", "live"] = Field("sandbox", validation_alias=AliasChoices("ORBIT_PAYPAL_ENV"))
+    # Referrals (billing/referrals.py, docs/BILLING.md "Referrals"): invite links, and the admin's creator and campus
+    # codes. Off until the owner has reviewed the values below; while off nothing is attributed, discounted or
+    # rewarded. The inviter gets `referral_reward_minutes` interview minutes when an invited account's first payment
+    # lands, at most `referral_monthly_cap` rewards a calendar month; the invited account's first purchase is
+    # `referral_discount_percent` off (a creator or campus code has its own).
+    referrals: bool = Field(False, validation_alias=AliasChoices("ORBIT_REFERRALS"))
+    referral_reward_minutes: int = Field(30, ge=0, le=600, validation_alias=AliasChoices(
+        "ORBIT_REFERRAL_REWARD_MINUTES"))
+    referral_discount_percent: int = Field(10, ge=0, le=50, validation_alias=AliasChoices(
+        "ORBIT_REFERRAL_DISCOUNT_PERCENT"))
+    referral_monthly_cap: int = Field(10, ge=0, le=1000, validation_alias=AliasChoices("ORBIT_REFERRAL_MONTHLY_CAP"))
     # Career Evidence Vault (evidence/routes.py): off until switched on; while off its API answers 404 and live
     # sessions don't read it.
     evidence_vault: bool = Field(False, validation_alias=AliasChoices("ORBIT_EVIDENCE_VAULT"))

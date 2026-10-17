@@ -6,10 +6,13 @@ import { App } from "./App";
 import { AppError } from "./components/AppError";
 import { OutOfCreditsHost } from "./components/OutOfCreditsDialog";
 import { AuthProvider } from "./lib/auth";
+import { captureRefFromUrl } from "./lib/referral";
 import { reloadForNewBuild } from "./lib/staleBuild";
 import "./index.css";
 
 initDesign();
+// An invite or creator code in the address (?ref=): kept for the sign-up (lib/referral.ts).
+captureRefFromUrl();
 
 // A tab opened before a deploy asks for page files that no longer exist: load the new build once (lib/staleBuild.ts).
 window.addEventListener("vite:preloadError", (event) => {

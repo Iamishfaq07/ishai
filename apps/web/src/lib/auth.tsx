@@ -14,6 +14,7 @@ import { ApiError, detectCountry, getPasskey, passkeyErrorText, safeLocal } from
 import { api, setUnauthorizedHandler } from "./api";
 import { clearAsyncCache } from "./useAsync";
 import { clearPrepContext } from "./prepContext";
+import { clearRef, storedRef } from "./referral";
 import { visitorCountryWithin } from "./visitorCountry";
 
 export type RegisterOutcome = "signed_in" | "verify_email";
@@ -134,13 +135,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /** "signed_in", or "verify_email" when the server wants the inbox proven first (nobody is signed in then). */
   const register = useCallback(async (req: RegisterRequest): Promise<RegisterOutcome> => {
-    // The country they apply in: where the web app's edge saw the visit come from, else the browser's guess.
-    const res = await api.register({ country: (await visitorCountryWithin(1500)) ?? detectCountry(), ...req });
+    // The country they apply in: where the web app's edge saw the visit come from, else the browser's guess. The
+    // invite or creator code of a link they followed goes with it (lib/referral.ts); the account is made either way.
+    const ref = storedRef();
+    const res = await api.register({ country: (await visitorCountryWithin(1500)) ?? detectCountry(), ...(ref ? { ref } : {}), ...req });
+    clearRef();
     if ("status" in res && res.status === "verify_email") return "verify_email";
     forgetAccount();
     setUser(acceptAccount(await confirmSession()));
     return "signed_in";
   }, []);
+
+  // Signed in (a sign-up through Google lands here too): a link's code has done its job, or isn't for this account.
+  useEffect(() => {
+    if (user) clearRef();
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // An account without a country (from before there was one) gets the visitor's country (or the browser's guess),
   // once; Settings changes it.

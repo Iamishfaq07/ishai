@@ -55,9 +55,10 @@ function money(v: number, currency: string = "INR"): string {
   return rupees(v);
 }
 
-/** A pack's or plan's price as the server wrote it for this buyer (rupees from older servers). */
-function priceOf(p: { price_text?: string; price_inr: number }): string {
-  return p.price_text ?? rupees(p.price_inr);
+/** A pack's or plan's price as the server wrote it for this buyer (rupees from older servers): with the account's
+ *  first-purchase discount when it has one, which is what an order costs. */
+function priceOf(p: { price_text?: string; price_inr: number; offer_price_text?: string }): string {
+  return p.offer_price_text ?? p.price_text ?? rupees(p.price_inr);
 }
 
 function rupees(v: number): string {
@@ -309,7 +310,7 @@ export function CreditPackGrid({ packs, onBuy, busy = false }: { packs: CreditPa
           const paid = hours(p.interview_minutes);
           const free = hours(p.bonus_minutes ?? 0);
           const cur = p.currency ?? "INR";
-          const perHourValue = (p.price ?? p.price_inr) / (total / 60);
+          const perHourValue = (p.offer_price ?? p.price ?? p.price_inr) / (total / 60);
           const perHour = money(cur === "USD" ? Math.round(perHourValue * 100) / 100 : Math.round(perHourValue), cur);
           const highlight = p.badge === "Most popular";
           const cta: Cta = onBuy
@@ -329,7 +330,10 @@ export function CreditPackGrid({ packs, onBuy, busy = false }: { packs: CreditPa
               <p className="mt-1 h-5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
                 {free > 0 ? `${paid} credits + ${free} free` : ""}
               </p>
-              <p className="mt-3 font-display text-2xl font-semibold tabular-nums">{priceOf(p)}</p>
+              <p className="mt-3 flex items-baseline gap-2">
+                <span className="font-display text-2xl font-semibold tabular-nums">{priceOf(p)}</span>
+                {p.offer_price_text && <s className="text-sm text-zinc-500 tabular-nums"><span className="sr-only">was </span>{p.price_text}</s>}
+              </p>
               <p className="text-xs text-zinc-500">{perHour} an hour · paid once</p>
               <CtaButton cta={cta} />
               <ul className="mt-5 space-y-2 border-t border-zinc-900/5 pt-5 text-sm text-zinc-700 dark:border-white/5 dark:text-zinc-300">

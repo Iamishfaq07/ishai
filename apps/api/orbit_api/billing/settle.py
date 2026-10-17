@@ -13,6 +13,9 @@ answer, Razorpay's webhook, or the reconciler asking Razorpay about an order sti
 - PayPal (billing/paypal.py) settles the same way: `paypal_complete` captures an approved order (or reads a capture
   already taken) and credits a COMPLETED capture of exactly the order's amount; the reconciler asks PayPal about
   open PayPal orders too, and PayPal refunds are recorded like Razorpay's.
+- Referrals (billing/referrals.py): a referred account's first approved payment pays its inviter's reward inside
+  `grant`, in the transaction that approves the payment (so once, whichever way the news came); a refund of that
+  payment takes back the reward minutes not used yet, in the one that records the refund.
 """
 
 import logging
@@ -24,7 +27,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits
-from orbit_api.billing import monthly, paypal, pricing, razorpay
+from orbit_api.billing import monthly, paypal, pricing, razorpay, referrals
 from orbit_api.config import get_settings
 from orbit_api.db import sessionmaker
 from orbit_api.entitlements import current_grant, grants, running_until
@@ -144,12 +147,13 @@ async def grant(db: AsyncSession, u: User, p: Payment) -> None:
         await lock_account(db, u.id)
         await db.refresh(u, ["grant_plan", "grant_until", "grant_started_at", "grant_paid", "grant_queue"])
         monthly.apply(u, p)
-        return
-    if p.resume_credits:
-        credits.add(db, u.id, "resume", p.resume_credits, "purchase", payment_id=p.id)
-    if p.interview_minutes:
-        credits.add(db, u.id, "interview_seconds", p.interview_minutes * 60, "purchase", payment_id=p.id)
-    u.approved = True
+    else:
+        if p.resume_credits:
+            credits.add(db, u.id, "resume", p.resume_credits, "purchase", payment_id=p.id)
+        if p.interview_minutes:
+            credits.add(db, u.id, "interview_seconds", p.interview_minutes * 60, "purchase", payment_id=p.id)
+        u.approved = True
+    await referrals.on_paid(db, u, p)
 
 
 def receipt(u: User, p: Payment, paid_by: str) -> OutgoingEmail:
@@ -207,6 +211,7 @@ async def _refresh_refunded(db: AsyncSession, p: Payment) -> None:
         via = "PayPal" if p.method == "paypal" else "Razorpay"
         p.note = (f"{via} refunded {refunded}{'' if whole else f' of {pricing.payment_text(p)}'} "
                   f"({ids}). Credits were not removed.")[:300]
+        await referrals.on_refund(db, p)
 
 
 async def link_refunds(db: AsyncSession, p: Payment) -> int:
