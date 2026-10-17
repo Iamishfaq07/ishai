@@ -414,3 +414,17 @@ def test_job_keywords_skip_fragments_perks_and_lookalike_words() -> None:
     assert {"grpc", "postgresql"} <= got
     assert not got & {"rpc", "rails", "remote", "hybrid", "pto"}  # "gRPC" isn't "g"+"RPC"; "rails" isn't Ruby on Rails
     assert "ruby on rails" in {k.lower() for k in extract_keywords("We use Ruby on Rails and PostgreSQL daily.")}
+
+
+def test_suggestions_kept_on_a_resume_have_bounded_text(client: TestClient) -> None:
+    """The suggestions waiting on a resume come back on every load. Their count was capped (40) but not their text,
+    so one autosave could park megabytes on the row."""
+    h = _register(client)
+    rid = client.post("/v1/resumes", headers=h, json={"title": "CV"}).json()["id"]
+    one = {"id": "s1", "path": "basics.summary", "label": "Summary", "before": "", "after": "Builds payment APIs.",
+           "reason": "Clearer.", "kind": "rewrite"}
+    assert client.put(f"/v1/resumes/{rid}", headers=h,
+                      json={"title": "CV", "pending_suggestions": [one]}).status_code == 200
+    huge = {**one, "after": "x" * 100_000}
+    assert client.put(f"/v1/resumes/{rid}", headers=h,
+                      json={"title": "CV", "pending_suggestions": [huge]}).status_code == 422
