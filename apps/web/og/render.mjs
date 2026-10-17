@@ -16,7 +16,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const OG = dirname(fileURLToPath(import.meta.url));
 const WEB = join(OG, "..");
 const REPO = join(WEB, "..", "..");
-const { chromium } = await import(process.env.PLAYWRIGHT_CORE ?? "playwright-core");
+const { chromium } = await import(process.env.PLAYWRIGHT ?? "@playwright/test");
 
 // Brand: the front door's dark canvas and ink, one accent, product colours for the small mark only.
 const INK = { canvas: "#0B0F17", surface: "#141B27", line: "#232C3B", text: "#F6F7FB", soft: "#A3A9C6" };

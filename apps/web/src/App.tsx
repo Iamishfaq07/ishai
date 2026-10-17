@@ -1,7 +1,6 @@
 import { Suspense, lazy, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { FlagGate } from "./components/FlagGate";
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
-import { NotFoundPage } from "./pages/NotFound";
 import { InviteLinkPage } from "./pages/InviteLink";
 import { Layout } from "./components/Layout";
 import { CookieNotice } from "./components/CookieNotice";
@@ -68,6 +67,7 @@ import {
   AdminSupportPage,
   AdminReferralsPage,
   ContactPage,
+  NotFoundPage,
   TechnicalPage,
   CompaniesPage,
   CompanyPage,

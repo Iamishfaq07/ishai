@@ -121,7 +121,9 @@ function AuthShell({ title, subtitle, children, features = false }: { title: str
       <aside className="hidden border-l mk-line mk-band lg:flex lg:flex-col lg:justify-center lg:px-14 lg:py-16 xl:px-20">
         <div className="max-w-md">
           <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">One account</p>
-          <h2 className="mk-h2 mt-4 text-zinc-950 dark:text-white">Interview-ready, from resume to offer.</h2>
+          <h2 className="mk-h2 mt-4 text-zinc-950 dark:text-white">
+            <span className="whitespace-nowrap">Interview-ready,</span> from resume to offer.
+          </h2>
           <div className="mt-10">
             <ProductPanel />
           </div>

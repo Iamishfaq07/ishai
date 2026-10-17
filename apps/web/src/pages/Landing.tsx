@@ -93,7 +93,8 @@ function Hero({ freeLine, ctas }: { freeLine: string; ctas: RefObject<HTMLDivEle
             <ArrowRight className="h-3.5 w-3.5 text-zinc-400 transition-transform duration-quick motion-ok:group-hover:translate-x-0.5" aria-hidden="true" />
           </Link>
           <h1 id="hero-title" className="mk-display mt-6 text-zinc-950 dark:text-white">
-            Interview‑ready, from resume to offer.
+            {/* Kept on one line (a plain hyphen: IBM Plex has no non-breaking hyphen, which would pull in a fallback font). */}
+            <span className="whitespace-nowrap">Interview-ready,</span> from resume to offer.
           </h1>
           <p className="mk-lead mt-6 max-w-xl text-zinc-600 dark:text-zinc-300">
             Orbit is one account for your whole job search. Practise with an AI interviewer, get your resume past
