@@ -81,7 +81,7 @@ function SampleResume() {
           WebkitMaskImage: "linear-gradient(to bottom, #000 58%, transparent 96%)",
         }}
       >
-        <div aria-hidden="true" style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "max-content" }}>
+        <div aria-hidden="true" inert style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "max-content" }}>
           <ResumePreview data={sample.data} design={sample.design} />
         </div>
       </div>

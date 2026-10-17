@@ -101,7 +101,7 @@ function SampleMatch() {
           </div>
           <span className="absolute right-5 top-12 flex h-14 w-14 flex-col items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/25 dark:text-emerald-300">
             <span className="font-display text-xl font-semibold leading-none tabular-nums">88%</span>
-            <span className="text-[0.625rem] leading-none opacity-80">match</span>
+            <span className="text-[0.625rem] leading-none">match</span>
           </span>
           <ul className="mt-4 flex flex-wrap gap-1.5 text-xs">
             {["Python", "Go", "Kubernetes", "PostgreSQL"].map((s) => (

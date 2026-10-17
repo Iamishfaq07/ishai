@@ -97,7 +97,6 @@ export function ArchitecturePipeline() {
               role="button"
               tabIndex={0}
               aria-pressed={on}
-              aria-label={s.title}
               onMouseEnter={() => setActive(s.id)}
               onFocus={() => setActive(s.id)}
               onClick={() => setActive(s.id)}
