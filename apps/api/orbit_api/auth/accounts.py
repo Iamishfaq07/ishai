@@ -18,8 +18,20 @@ from orbit_api.models import (
     SupportMessage,
     SupportThread,
     User,
+    UserPasskey,
+    UserTwoFactor,
 )
 from orbit_api.sessions.routes import stop_live, stop_user_live
+
+
+async def forget_unproven_sign_ins(db: AsyncSession, user_id: str) -> int:
+    """Passkeys and two-step sign-in set up on the account before its inbox was ever proven. Called when the inbox is
+    proven for the first time by someone who didn't know the password (a reset link, or Google claiming the address):
+    whoever registered the address before them could otherwise keep a passkey (which signs in without the password)
+    or an authenticator (which would lock the real owner out). Caller commits. Returns how many were removed."""
+    passkeys = await db.execute(delete(UserPasskey).where(UserPasskey.user_id == user_id))
+    second = await db.execute(delete(UserTwoFactor).where(UserTwoFactor.user_id == user_id))
+    return int(getattr(passkeys, "rowcount", 0) or 0) + int(getattr(second, "rowcount", 0) or 0)
 
 
 async def stop_account_live(db: AsyncSession, user_id: str) -> None:

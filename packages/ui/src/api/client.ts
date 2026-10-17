@@ -517,8 +517,13 @@ export function createApiClient(options: ApiClientOptions) {
         method: "POST",
         body: body(captchaToken ? { email, captcha_token: captchaToken } : { email }),
       }),
+    /** Sets the new password. With two-step sign-in on, nobody is signed in yet: the authenticator code comes next
+     * (the challenge is also in a short httpOnly cookie, as after Google). */
     confirmPasswordReset: (token: string, password: string) =>
-      json<AuthResponse>("/v1/auth/password-reset/confirm", { method: "POST", body: body({ token, password }) }),
+      json<AuthResponse | TwoFactorChallenge>("/v1/auth/password-reset/confirm", {
+        method: "POST",
+        body: body({ token, password }),
+      }),
 
     // Documents
     listDocuments: () => json<OrbitDocument[]>("/v1/documents"),

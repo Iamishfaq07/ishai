@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api import credits, live_language, practice_language
 from orbit_api.auth import email_tokens
 from orbit_api.auth.accounts import delete_account as delete_account_and_data
+from orbit_api.auth.accounts import forget_unproven_sign_ins
 from orbit_api.auth.accounts import sign_out_everywhere as _sign_out_everywhere
 from orbit_api.auth.captcha import public_config as captcha_config
 from orbit_api.auth.captcha import require_captcha
@@ -29,7 +30,13 @@ from orbit_api.auth.security import (
     token_from_request,
     verify_password,
 )
-from orbit_api.auth.two_factor import TwoFactorChallenge, challenge_for, require_recent_sign_in
+from orbit_api.auth.two_factor import (
+    CHALLENGE_COOKIE,
+    CHALLENGE_TTL_S,
+    TwoFactorChallenge,
+    challenge_for,
+    require_recent_sign_in,
+)
 from orbit_api.auth.two_factor import enabled as two_factor_enabled
 from orbit_api.config import get_settings
 from orbit_api.csrf import token_for as csrf_token_for
@@ -37,7 +44,7 @@ from orbit_api.db import get_db
 from orbit_api.entitlements import awaiting_approval
 from orbit_api.models import AuditLog, User
 from orbit_api.providers.email import OutgoingEmail, can_deliver, send_safely
-from orbit_api.ratelimit import TokenBucket, blocked, check, client_ip, client_network, failed, limit
+from orbit_api.ratelimit import TokenBucket, attempt, check, client_ip, client_network, limit, succeeded
 from orbit_api.region import country_code
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
@@ -88,11 +95,11 @@ _password_fail_by_user = TokenBucket(rate_per_s=5 / 3600, burst=5)
 
 
 async def _recheck_password(user: User, password: str) -> None:
-    if blocked(_password_fail_by_user, user.id):
+    if not attempt(_password_fail_by_user, user.id):
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many wrong passwords. Try again later.")
     if not await verify_password(password, user.password_hash):
-        failed(_password_fail_by_user, user.id)
         raise HTTPException(status.HTTP_403_FORBIDDEN, "That password isn't right.")
+    succeeded(_password_fail_by_user, user.id)
 
 
 class RegisterIn(BaseModel):
@@ -291,14 +298,20 @@ async def login(body: LoginIn, request: Request, response: Response,
                 db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut | TwoFactorChallenge:
     email = body.email.lower()
     here = f"{email}|{client_network(request)}"
-    if blocked(_login_fail_here, here) or blocked(_login_fail_anywhere, email):
+    # A token is taken from both throttles before the (slow, awaited) password check and given back when the password
+    # is right: guesses sent all at once can't each pass a check made before the first wrong one is counted.
+    if not attempt(_login_fail_here, here):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
+                            "Too many wrong passwords for this account — try again in a few minutes.")
+    if not attempt(_login_fail_anywhere, email):
+        succeeded(_login_fail_here, here)
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
                             "Too many wrong passwords for this account — try again in a few minutes.")
     user = await db.scalar(select(User).where(User.email == email))
     if not await verify_password(body.password, user.password_hash if user else None) or user is None:
-        failed(_login_fail_here, here)
-        failed(_login_fail_anywhere, email)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password.")
+    succeeded(_login_fail_here, here)
+    succeeded(_login_fail_anywhere, email)
     if not get_settings().email_allowed(user.email):
         raise HTTPException(status.HTTP_403_FORBIDDEN, NOT_ALLOWED)
     if user.suspended_at is not None:  # said only to someone who knows the password: no account enumeration
@@ -531,10 +544,11 @@ async def request_password_reset(body: ResetRequestIn, request: Request, backgro
     return {"status": "If an account exists for that email, a reset link is on its way."}
 
 
-@router.post("/password-reset/confirm", response_model=AuthOut, dependencies=[Depends(auth_limit)])
+@router.post("/password-reset/confirm", response_model=AuthOut | TwoFactorChallenge,
+             dependencies=[Depends(auth_limit)])
 async def confirm_password_reset(body: ResetConfirmIn, request: Request, response: Response,
                                  background: BackgroundTasks,
-                                 db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut:
+                                 db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut | TwoFactorChallenge:
     user_id = await email_tokens.consume(db, body.token, "reset_password")
     user = await db.get(User, user_id) if user_id else None
     if user is None:
@@ -547,10 +561,22 @@ async def confirm_password_reset(body: ResetConfirmIn, request: Request, respons
     user.has_password = True  # a reset is a password, including for an account that only had Google before
     await _sign_out_everywhere(db, user)  # every session, live socket and unused link
     user.email_verified = True  # they just proved control of the inbox
+    if newly_verified:
+        # The inbox was never proven before, so whoever set up a passkey or an authenticator on this account was
+        # whoever registered the address, not necessarily the person holding the inbox now (pre-account takeover).
+        await forget_unproven_sign_ins(db, user.id)
     db.add(AuditLog(user_id=user.id, action="auth.password_reset", ip=_ip(request)))
     await db.commit()
     if newly_verified:  # the reset proved the inbox first: the admin hears about the sign-up now
         _alert_admin_if_waiting(user, background)
+    if await two_factor_enabled(db, user.id):
+        # A reset link proves the inbox, not the second factor: the new password is set, and signing in still asks
+        # for the authenticator code (the challenge rides in the same short httpOnly cookie as after Google).
+        challenge = challenge_for(user)
+        secure, samesite = cookie_policy()
+        response.set_cookie(CHALLENGE_COOKIE, challenge, max_age=CHALLENGE_TTL_S, httponly=True, secure=secure,
+                            samesite=samesite, path="/")
+        return TwoFactorChallenge(challenge=challenge)
     return await _auth_out(request, response, user, db)
 
 
