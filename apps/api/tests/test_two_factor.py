@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from orbit_api import ratelimit
 from orbit_api.auth import two_factor
 from orbit_api.auth.two_factor import code_at, matching_step
+from tests.test_google_auth import _sign_in_with_google, google_client  # noqa: F401  (fixture)
 
 PW = "correct horse battery"
 RFC_SECRET = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"  # "12345678901234567890" in base32 (RFC 6238 appendix B)
@@ -125,3 +126,28 @@ def test_a_challenge_from_before_a_sign_out_everywhere_is_dead(client: TestClien
     assert client.post("/v1/auth/logout-all", headers=h).status_code == 204
     assert client.post("/v1/auth/login/2fa", json={"challenge": ch, "code": _now_code(secret)}).status_code == 401
     assert two_factor.read_challenge("not a token") is None
+
+
+def test_a_google_only_account_can_turn_it_on_and_add_a_passkey(google_client: TestClient,  # noqa: F811
+                                                                 monkeypatch: pytest.MonkeyPatch) -> None:
+    """An account made with Google has no password to type (the web app asks for none), so none is checked: its
+    stored hash is a random one nobody knows, which used to refuse every attempt with "That password isn't right"."""
+    email = f"tf-google-{uuid.uuid4().hex[:8]}@gmail.com"
+    _sign_in_with_google(google_client, monkeypatch, email, f"sub-{email}")
+    me = google_client.get("/v1/auth/me").json()
+    assert me["has_password"] is False
+    h = {"X-CSRF-Token": me["csrf_token"]}
+    setup = google_client.post("/v1/auth/2fa/setup", headers=h, json={"password": ""})
+    assert setup.status_code == 200, setup.text
+    on = google_client.post("/v1/auth/2fa/enable", headers=h, json={"code": _now_code(setup.json()["secret"])})
+    assert on.status_code == 200, on.text
+    options = google_client.post("/v1/auth/passkeys/options", headers=h, json={"password": ""})
+    assert options.status_code == 200, options.text
+
+
+def test_an_account_with_a_password_still_needs_it(client: TestClient) -> None:
+    _, h = _account(client)
+    assert client.post("/v1/auth/2fa/setup", headers=h, json={"password": ""}).status_code == 403
+    assert client.post("/v1/auth/2fa/setup", headers=h, json={"password": "wrong password 1"}).status_code == 403
+    assert client.post("/v1/auth/passkeys/options", headers=h, json={"password": ""}).status_code == 403
+    assert client.post("/v1/auth/2fa/setup", headers=h, json={"password": PW}).status_code == 200

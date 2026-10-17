@@ -223,7 +223,9 @@ class SetupOut(BaseModel):
 
 
 async def _confirm_password(user: User, password: str) -> None:
-    if user.password_hash and not await verify_password(password, user.password_hash):
+    """The password again, for an account that has one. One made with Google has only a random hash nobody knows
+    (`has_password` false; the web app asks for nothing), so checking it refused every attempt."""
+    if user.has_password and not await verify_password(password, user.password_hash):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "That password isn't right.")
 
 
