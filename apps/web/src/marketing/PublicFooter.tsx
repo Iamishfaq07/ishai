@@ -84,7 +84,7 @@ export function PublicFooter({ className }: { className?: string }) {
             )}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 md:col-span-8">
+        <div className="grid grid-cols-2 gap-8 sm:grid-cols-4 md:col-span-8">
           <Column title="Products">
             {products.map((p) => (
               <li key={p.id}>
@@ -94,15 +94,27 @@ export function PublicFooter({ className }: { className?: string }) {
               </li>
             ))}
           </Column>
-          <Column title="Orbit">
+          <Column title="Interview guides">
             <li>
-              <Link to={SITE_LINKS.pricing} className={link}>
-                Pricing
+              <Link to={SITE_LINKS.companies} className={link}>
+                Company interview guides
+              </Link>
+            </li>
+            <li>
+              <Link to={SITE_LINKS.roles} className={link}>
+                Interview guides by role
               </Link>
             </li>
             <li>
               <Link to={SITE_LINKS.warmup} className={link}>
                 Free practice question
+              </Link>
+            </li>
+          </Column>
+          <Column title="Orbit">
+            <li>
+              <Link to={SITE_LINKS.pricing} className={link}>
+                Pricing
               </Link>
             </li>
             <li>

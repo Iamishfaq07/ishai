@@ -68,4 +68,7 @@ export const SITE_LINKS = {
   faq: "/#faq",
   howItWorks: "/technical",
   warmup: "/warmup",
+  /** The question bank's guides (pages/bank): how companies interview, and what interviews for a job test. */
+  companies: "/companies",
+  roles: "/roles",
 };

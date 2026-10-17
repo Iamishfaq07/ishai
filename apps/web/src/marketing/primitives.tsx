@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Check, cx, focusRing } from "@orbit/ui";
+import { ArrowRight, Check, IconTile as NeutralTile, cx, focusRing } from "@orbit/ui";
 
 /**
  * The front door's building blocks: one container width, one section rhythm, one way to introduce a section. Pages
@@ -126,10 +126,11 @@ export function CheckList({ items, className }: { items: ReactNode[]; className?
 }
 
 /**
- * The site's icon style: a lucide icon (1.75 stroke) on a 40 px tile with a hairline ring, ink by default or a
- * product's own tint. Decorative: the words beside it say what it is.
+ * The site's icon style: a lucide icon on a 40 px tile with a hairline ring: the app's own neutral IconTile
+ * (@orbit/ui), or, with `tone`, a main product's tint (1.75 stroke). Decorative: the words beside it say what it is.
  */
 export function IconTile({ icon: Icon, tone, size = "md", className }: { icon: ComponentType<{ className?: string; strokeWidth?: number }>; tone?: string; size?: "sm" | "md"; className?: string }) {
+  if (!tone) return <NeutralTile icon={Icon} size={size} className={className} />;
   return (
     <span
       aria-hidden="true"

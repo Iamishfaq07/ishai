@@ -1,7 +1,7 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
-import { ArrowRight, ChevronDown, Menu, X, buttonClass, cx, focusRing, useFocusTrap } from "@orbit/ui";
+import { ArrowRight, ChevronDown, Menu, X, buttonClass, cx, floatingClass, focusRing, useDismiss, useFocusTrap } from "@orbit/ui";
 import { useAuth } from "../lib/auth";
 import { useIndia } from "../lib/country";
 import { BrandLogo } from "./BrandLogo";
@@ -61,6 +61,9 @@ export function PublicHeader({ authState, context, actions }: { authState?: { fr
         )}
         <nav aria-label="Main" className="ml-6 hidden items-center gap-0.5 text-sm md:flex">
           <ProductsMenu />
+          <NavLink to={SITE_LINKS.companies} also={/^\/roles(\/|$)/} className="hidden lg:inline-flex">
+            Interview guides
+          </NavLink>
           <NavLink to={SITE_LINKS.pricing}>Pricing</NavLink>
           <NavLink to={SITE_LINKS.security} className="hidden lg:inline-flex">
             Security
@@ -76,12 +79,17 @@ export function PublicHeader({ authState, context, actions }: { authState?: { fr
   );
 }
 
-function NavLink({ to, children, className }: { to: string; children: ReactNode; className?: string }) {
+/** A section of the site: current (aria-current, ink) on its own pages; `also` adds addresses that count too. */
+function NavLink({ to, children, className, also }: { to: string; children: ReactNode; className?: string; also?: RegExp }) {
+  const { pathname } = useLocation();
+  const current = !to.includes("#") && (pathname === to || pathname.startsWith(`${to}/`) || Boolean(also?.test(pathname)));
   return (
     <Link
       to={to}
+      aria-current={current ? "page" : undefined}
       className={cx(
-        "inline-flex min-h-10 items-center rounded-lg px-3 font-medium text-zinc-600 transition-colors duration-quick hover:bg-zinc-900/[0.04] hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white",
+        "inline-flex min-h-10 items-center rounded-lg px-3 font-medium transition-colors duration-quick hover:bg-zinc-900/[0.04] hover:text-zinc-950 dark:hover:bg-white/5 dark:hover:text-white",
+        current ? "text-zinc-950 dark:text-white" : "text-zinc-600 dark:text-zinc-300",
         focusRing,
         className,
       )}
@@ -121,36 +129,20 @@ function ProductsMenu() {
   const india = useIndia();
   const { pathname, hash } = useLocation();
   const button = useRef<HTMLButtonElement>(null);
-  const panel = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLDivElement>(null);
   const id = useId();
+  const close = useCallback(() => setOpen(false), []);
   useEffect(() => setOpen(false), [pathname, hash]);
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      const t = e.target as Node;
-      if (!panel.current?.contains(t) && !button.current?.contains(t)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setOpen(false);
-        button.current?.focus();
-      }
-    };
-    document.addEventListener("pointerdown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  // The shared menus' behaviour (@orbit/ui Menu): a click outside or Escape closes it, Escape returns focus.
+  useDismiss(open, close, root, button);
 
   const products = siteProducts(india);
   const main = products.filter((p) => p.main);
   const more = products.filter((p) => !p.main);
   return (
-    // Tabbing out of the menu closes it; a click elsewhere is the pointerdown above (a click on the panel's own empty
-    // space blurs with no relatedTarget and must leave it open).
-    <div className="relative" onBlur={(e) => e.relatedTarget && !e.currentTarget.contains(e.relatedTarget as Node) && setOpen(false)}>
+    // Tabbing out of the menu closes it too (a click on the panel's own empty space blurs with no relatedTarget and
+    // must leave it open).
+    <div ref={root} className="relative" onBlur={(e) => e.relatedTarget && !e.currentTarget.contains(e.relatedTarget as Node) && setOpen(false)}>
       <button
         ref={button}
         type="button"
@@ -168,9 +160,8 @@ function ProductsMenu() {
       </button>
       {open && (
         <div
-          ref={panel}
           id={id}
-          className="mk-popover mk-menu-shadow absolute left-0 top-full z-40 mt-2 w-[min(24rem,calc(100vw-2rem))] max-h-[calc(100dvh-5rem)] overflow-y-auto rounded-2xl border mk-line mk-surface p-3 lg:w-[46rem]"
+          className={cx(floatingClass("popover"), "mk-popover absolute left-0 top-full mt-2 w-[min(24rem,calc(100vw-2rem))] max-h-[calc(100dvh-5rem)] overflow-y-auto rounded-2xl p-3 lg:w-[46rem]")}
         >
           <div className="grid gap-x-4 gap-y-1 lg:grid-cols-2">
             <div>
@@ -194,10 +185,20 @@ function ProductsMenu() {
               </ul>
             </div>
           </div>
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl mk-band px-3.5 py-3 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-300">Not sure where to start? Answer one interview question, free.</span>
-            <Link to={SITE_LINKS.warmup} onClick={() => setOpen(false)} className={cx("inline-flex items-center gap-1 rounded font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
-              Try a practice question <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          <div className="mt-2 grid gap-x-6 gap-y-2 rounded-xl mk-band px-3.5 py-3 text-sm lg:grid-cols-2">
+            <p className="text-zinc-600 dark:text-zinc-300">
+              Interview guides:{" "}
+              <Link to={SITE_LINKS.companies} onClick={() => setOpen(false)} className={cx("rounded font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
+                by company
+              </Link>{" "}
+              and{" "}
+              <Link to={SITE_LINKS.roles} onClick={() => setOpen(false)} className={cx("rounded font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
+                by role
+              </Link>
+              , free to read.
+            </p>
+            <Link to={SITE_LINKS.warmup} onClick={() => setOpen(false)} className={cx("inline-flex items-center gap-1 rounded font-medium text-indigo-700 hover:underline lg:justify-self-end dark:text-indigo-300", focusRing)}>
+              Try a practice question, free <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </div>
         </div>
@@ -262,6 +263,8 @@ export function MobileMenu({ authState, className }: { authState?: { from: strin
               <ul className="grid gap-0.5">
                 {[
                   [SITE_LINKS.warmup, "Free practice question"],
+                  [SITE_LINKS.companies, "Interview guides by company"],
+                  [SITE_LINKS.roles, "Interview guides by role"],
                   [SITE_LINKS.pricing, "Pricing"],
                   [SITE_LINKS.security, "Security and privacy"],
                   [SITE_LINKS.howItWorks, "How Orbit works"],
