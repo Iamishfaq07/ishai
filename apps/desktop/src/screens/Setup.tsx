@@ -52,6 +52,7 @@ import {
   type Verdict,
   StoryBankNote,
   ResumeMakerNote,
+  MAX_SESSION_DOCUMENTS,
   safeLocal,
 } from "@orbit/ui";
 import { getVersion } from "@tauri-apps/api/app";
@@ -79,6 +80,7 @@ import { UpdateBanner } from "../UpdateBanner";
 import { confirmSessionDuringUpdate, useUpdatePhase } from "../updates";
 import { WorkspaceBar } from "../WorkspaceBar";
 import { MIC_KEY, OUTPUT_KEY, checkChosenApp, nextSource, usesSystemAudio, type DesktopLaunch } from "../launch";
+import { addSessionDocument, defaultSessionDocuments, sessionDocumentIds, toggleSessionDocument } from "../sessionDocs";
 
 const TYPES: Array<{ value: SessionType; label: string }> = [
   { value: "interview", label: "Interview" },
@@ -304,9 +306,7 @@ export function SetupScreen({
       .listDocuments()
       .then((list) => {
         setDocs(list);
-        setSelected(
-          new Set(list.filter((d) => d.status === "ready" && (d.kind === "resume" || d.kind === "job_description")).map((d) => d.id)),
-        );
+        setSelected(defaultSessionDocuments(list));
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : "Couldn’t load documents."));
     if (!IS_MAC) refreshApps();
@@ -318,7 +318,7 @@ export function SetupScreen({
   const refreshDocs = async (selectId?: string): Promise<void> => {
     const list = await api.listDocuments();
     setDocs(list);
-    if (selectId) setSelected((prev) => new Set(prev).add(selectId));
+    if (selectId) setSelected((prev) => addSessionDocument(prev, selectId));
   };
 
   const onFilePicked = async (e: ChangeEvent<HTMLInputElement>): Promise<void> => {
@@ -377,15 +377,11 @@ export function SetupScreen({
     }
   };
 
-  const toggleDoc = (id: string): void =>
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const toggleDoc = (id: string): void => setSelected((prev) => toggleSessionDocument(prev, id));
 
   const selectedDocs = (docs ?? []).filter((d) => selected.has(d.id));
+  // As many ticked as a session can take: the others can't be ticked (the API refuses more).
+  const docsFull = selected.size >= MAX_SESSION_DOCUMENTS;
   const micDevice = micId ? devices.find((d) => d.id === micId) : undefined;
   const outputName = (id: string | undefined) =>
     id === "communications"
@@ -467,7 +463,7 @@ export function SetupScreen({
         length,
         style,
         auto_answer: isMock ? false : autoAnswer,
-        document_ids: [...selected],
+        document_ids: sessionDocumentIds(selected, docs),
         ...(workspaceId ? { workspace_id: workspaceId } : {}),
         ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
         ...(isMock
@@ -547,7 +543,7 @@ export function SetupScreen({
               style,
               auto_answer: autoAnswer,
               notes: instructions.trim() || null,
-              document_ids: [...selected],
+              document_ids: sessionDocumentIds(selected, docs),
             }}
           />
 
@@ -703,11 +699,16 @@ export function SetupScreen({
               <p className="text-xs text-zinc-500">No documents yet — upload your resume above.</p>
             ) : (
               <ul className="space-y-1">
+                {docsFull && docs.some((d) => d.status === "ready" && !selected.has(d.id)) && (
+                  <li role="status" className="text-xs text-amber-700 dark:text-amber-300">
+                    A session can use up to {MAX_SESSION_DOCUMENTS} documents. Untick one to use another.
+                  </li>
+                )}
                 {docs.map((d) => (
                   <li key={d.id} className="flex items-center gap-2 text-xs">
                     <input
                       type="checkbox"
-                      disabled={d.status !== "ready"}
+                      disabled={d.status !== "ready" || (docsFull && !selected.has(d.id))}
                       checked={selected.has(d.id)}
                       onChange={() => toggleDoc(d.id)}
                       aria-label={`Use ${d.title}`}
