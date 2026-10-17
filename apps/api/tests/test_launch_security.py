@@ -198,6 +198,12 @@ def test_cors_allows_put_and_csrf_header() -> None:
         assert r.status_code == 200
         assert "PUT" in r.headers["access-control-allow-methods"]
         assert "x-csrf-token" in r.headers["access-control-allow-headers"].lower()
+        # the support chat polls its thread with its token in a header, from the web app on another origin
+        r = c.options("/v1/support/threads/abc", headers={
+            "Origin": "http://tauri.localhost", "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "x-orbit-support-token"})
+        assert r.status_code == 200
+        assert "x-orbit-support-token" in r.headers["access-control-allow-headers"].lower()
 
 
 # ---- abuse limits & CAPTCHA -----------------------------------------------------------------------------
