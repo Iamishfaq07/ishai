@@ -16,6 +16,7 @@ import {
   useReportPolling,
   confirmDialog,
   toast,
+  CosmicEmptyState,
   LoadGate,
   TabPanel,
   Tabs,
@@ -24,7 +25,7 @@ import {
   sessionLanguageLabel,
 } from "@orbit/ui";
 import { BackLink } from "../components/BackLink";
-import { Button, Card, EmptyState, ErrorNote, Input, PageHeader } from "../components/ui";
+import { Button, Card, ErrorNote, Input, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
 import { SESSION_TYPE_LABEL, downloadText, errorText, formatClock, formatDate, formatDuration, isNotFound } from "../lib/format";
 import { SESSION_TYPE_ICON } from "../lib/sessionIcons";
@@ -59,7 +60,8 @@ export function SessionDetailPage() {
   if (detail.error || !detail.data) {
     if (!detail.error || isNotFound(detail.error)) {
       return (
-        <EmptyState
+        <CosmicEmptyState
+          variant="no-results"
           title="That session isn't here"
           body="It may have been deleted."
           action={<Link to="/sessions" className="text-indigo-600 underline dark:text-indigo-400">See your sessions</Link>}

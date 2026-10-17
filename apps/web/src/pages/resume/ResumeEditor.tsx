@@ -42,9 +42,10 @@ import {
   toast,
   useCountUp,
   WorkingState,
+  CosmicEmptyState,
   celebrate,
 } from "@orbit/ui";
-import { Button, EmptyState, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
+import { Button, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
 import { api } from "../../lib/api";
 import { downloadText, errorText, isNotFound } from "../../lib/format";
 import { announceOutOfCredits } from "../../lib/outOfCredits";
@@ -604,7 +605,8 @@ function ResumeEditor() {
   if (loadError) {
     // A deleted resume (or an old link) gets a way back, not just the error.
     return loadError.missing ? (
-      <EmptyState
+      <CosmicEmptyState
+        variant="no-results"
         title="That resume isn't here"
         body="It may have been deleted."
         action={<Link to={RESUME_AI_HOME} className="text-indigo-600 underline dark:text-indigo-400">See your resumes</Link>}
