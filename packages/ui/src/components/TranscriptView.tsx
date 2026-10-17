@@ -1,6 +1,7 @@
 import { memo } from "react";
 import type { Speaker } from "@orbit/types";
 import { useStickyScroll } from "../hooks/useStickyScroll";
+import { scriptLang } from "../live/languages";
 import type { TurnView } from "../live/reducer";
 import { cx, focusRing } from "./cx";
 
@@ -66,7 +67,7 @@ export const TranscriptView = memo(function TranscriptView({ turns, onCorrectSpe
                   </button>
                 )}
               </div>
-              <p className={cx("leading-snug", t.final ? "text-zinc-800 dark:text-zinc-200" : "text-zinc-500 italic")}>
+              <p lang={scriptLang(t.text)} className={cx("leading-snug", t.final ? "text-zinc-800 dark:text-zinc-200" : "text-zinc-500 italic")}>
                 {t.text}
               </p>
             </li>

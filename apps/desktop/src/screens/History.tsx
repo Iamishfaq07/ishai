@@ -19,7 +19,8 @@ import {
   DeliveryCard,
   FollowUpCard,
   Spinner,
-  useReportPolling, confirmDialog, ChevronRight, Clock, MessageCircle } from "@orbit/ui";
+  useReportPolling, confirmDialog, ChevronRight, Clock, MessageCircle, reportLanguageNote, scriptLang,
+  sessionLanguageLabel } from "@orbit/ui";
 import type { SessionType } from "@orbit/types";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { api } from "../api";
@@ -122,6 +123,11 @@ function SessionList({ onOpen, onResume }: { onOpen: (id: string) => void; onRes
                         {formatDuration(s.duration_seconds)}
                       </span>
                     ) : null}
+                    {sessionLanguageLabel(s.language, s.answer_language) && (
+                      <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-zinc-600 dark:text-zinc-300">
+                        {sessionLanguageLabel(s.language, s.answer_language)}
+                      </span>
+                    )}
                     <span
                       className={cx(
                         "inline-flex items-center gap-1 rounded-full px-2 py-0.5 tabular-nums",
@@ -228,6 +234,7 @@ function SessionDetailView({ id, onDeleted, onDrill }: {
         subtitle={sessionLine([
           SESSION_TYPE_LABEL[session.type],
           session.role,
+          sessionLanguageLabel(session.language, session.answer_language),
           formatDate(session.started_at ?? session.created_at),
           session.duration_seconds ? formatDuration(session.duration_seconds) : null,
         ])}
@@ -335,10 +342,13 @@ function SummaryView({ summary }: { summary: SessionSummary | null }) {
     <div className="space-y-4">
       <Card>
         <h2 className="mb-2 text-sm font-semibold">Session summary</h2>
-        <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">{summary.summary}</p>
+        <p lang={scriptLang(summary.summary)} className="whitespace-pre-line text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+          {summary.summary}
+        </p>
         <p className="mt-3 text-xs text-zinc-500">
           {summary.questions_asked.length} question{summary.questions_asked.length === 1 ? "" : "s"} ·{" "}
           {summary.follow_up_count} follow-up{summary.follow_up_count === 1 ? "" : "s"}
+          {summary.language ? ` · ${reportLanguageNote(summary.language)}` : ""}
         </p>
       </Card>
       <div className="grid gap-4 md:grid-cols-2">

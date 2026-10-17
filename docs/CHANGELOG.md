@@ -1,5 +1,43 @@
 # Implementation log
 
+## The live copilot in ten languages (2026-10-18)
+
+- **Setup → Interview language** (web and desktop): English (the default, unchanged), Auto-detect, हिन्दी (Hindi),
+  Hinglish, Español, Français, Deutsch, Português, Italiano, Nederlands, 日本語, Русский: the ten languages Deepgram's
+  Nova-3 streams in multilingual mode, plus Hinglish. **Answer in**: "Same as the interview" by default, or any other
+  (hear Hindi, answer in English). Remembered on the device, saved with a setup, shown on the session list and page.
+  `ORBIT_LIVE_LANGUAGES=false` hides them and makes every live session English again (DECISIONS D62).
+- **Transcription**: `language=multi` for Hindi, Hinglish and Auto; Nova-3's own model for the others; English timings
+  and keyterms in every language; filler words on the mic in English only.
+- **Question detection**: each line is read in its own language (`live/multilingual.py`, cue tables in
+  `live/language_cues.py`): question words, requests, yes/no openers and Japanese か endings, fillers, check-ins,
+  follow-ups, unfinished endings, question types and size cues, scored like English; English lines (also inside a
+  Spanish or Hindi session) go to the English detector as they are. Words in every script (Devanagari vowel signs
+  kept; Japanese by script runs). Fixed on the way: two Hindi questions read as one duplicate, Hindi backchannels or a
+  real answer by the candidate weren't seen, and a Hindi final that Deepgram delivered after the candidate had started
+  answering swallowed the next question.
+- **Answers** in the answer language and its interview register (tú/usted, vous, Sie, です・ます, आप), code and the
+  format's labels in English, length targets that keep their speaking time (Japanese counted in characters), token
+  budgets grown for the script. The classifier, the review, the follow-up email and the rolling summary know the
+  language; the report says what it's written in (`language`); speaking stats count words in any script without the
+  English pace and filler tips. Read aloud uses a voice in the answer language.
+- **Rendering**: non-Latin text in the answer card, question card, transcript and chat is tagged with its language so
+  the right face draws it (system Devanagari and Japanese faces after IBM Plex in the shared stack; Plex Cyrillic on
+  the web, fetched only for Russian), with taller lines for Hindi and Japanese. Key points tick in any script.
+- **English is unchanged**: a golden comparison against main of detection (every field) over 70 English lines, turn
+  clean-up, sizing, the Deepgram URL, the classifier request, nine answer prompts, the report prompt, the parser, the
+  finalizer and a whole engine run is byte-identical; Auto-detect reads that English corpus exactly as English does.
+- **Measured with real providers** on synthetic interviewer audio (Edge neural voices, a statement then two
+  questions per language, a candidate answering after each; 15 Deepgram streams, 9 DeepSeek calls): character
+  accuracy of Deepgram's transcript fr 100%, nl 100%, pt 98%, it 97%, de 96%, es 94%, Hinglish 94%, ru 92%, ja 89%
+  (one product name misheard), Auto 88%, Hindi 64% (Deepgram writes the English loanwords in Latin script, which is
+  right for spoken Hindi but scores low against an all-Devanagari script; one word dropped). Every question fired in
+  every language (Auto 3/3), no statement did, 1.8–3.0 s after the speech ended on Balanced timing. Answers came back
+  in the right language and script in all eight answer checks, first words in 0.7–1.0 s.
+- API: `GET /v1/auth/me` `live_languages`; `POST /v1/sessions` and saved setups keep `language` / `answer_language`
+  (PROTOCOL.md). No migration. Tests: `tests/test_live_languages.py` (102), `packages/ui/src/live/languages.test.ts`
+  (9); `tests/test_english_only.py` now runs with the flag off. Needs a desktop release for the desktop pickers.
+
 ## Web flow sweep: what a click got wrong (2026-10-18)
 
 Every screen driven on a local stack (mock AI), at 1440×900, 820×1180 and 390×844, light and dark. Fixed:

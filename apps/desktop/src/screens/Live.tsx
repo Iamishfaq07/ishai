@@ -428,6 +428,7 @@ export function LiveScreen({
       videoInterview={Boolean(session.video)}
       naturalVoice={naturalVoice}
       practiceLanguage={session.language}
+      answerLanguage={session.answer_language ?? session.language}
       ratings={ratings}
       onInterviewerSpeaking={onInterviewerSpeaking}
       live={live}

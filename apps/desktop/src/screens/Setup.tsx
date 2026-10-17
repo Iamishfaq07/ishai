@@ -29,11 +29,19 @@ import {
   SettingsIcon,
   RefreshCw,
   Trash2,
+  ANSWER_LANGUAGE_HINT,
   ANSWER_STYLES,
   EXPERIENCE_LEVELS,
+  INTERVIEW_LANGUAGE_HINT,
   RESPONSE_TIMINGS,
   THINKING_LEVELS,
+  answerLanguages,
   cx,
+  interviewLanguages,
+  loadAnswerLanguage,
+  loadInterviewLanguage,
+  offersLanguages,
+  saveLiveLanguages,
   experienceLevels,
   focusRing,
   sampleOffer,
@@ -181,6 +189,24 @@ export function SetupScreen({
   const [thinking, setThinking] = useState<ThinkingLevel>(loadThinking);
   const [autoAnswer, setAutoAnswer] = useState(true);
   const [responseTiming, setResponseTiming] = useState<ResponseTiming>(loadResponseTiming);
+  // What the interviewer speaks and what answers are written in ("" = the same), when the server offers languages.
+  const offered = user?.live_languages;
+  const offeredKey = (offered ?? []).join(",");
+  const [language, setLanguage] = useState(() => loadInterviewLanguage(offered));
+  const [answerLanguage, setAnswerLanguage] = useState(() => loadAnswerLanguage(loadInterviewLanguage(offered), offered));
+  useEffect(() => {
+    // The account loads after the first render: apply the device's choice once the offered list is known.
+    const list = offeredKey ? offeredKey.split(",") : undefined;
+    const heard = loadInterviewLanguage(list);
+    setLanguage(heard);
+    setAnswerLanguage(loadAnswerLanguage(heard, list));
+  }, [offeredKey]);
+  const pickLanguages = (heard: string, answer: string) => {
+    const a = answer === heard ? "" : answer;
+    setLanguage(heard);
+    setAnswerLanguage(a);
+    saveLiveLanguages(heard, a);
+  };
   const [docs, setDocs] = useState<OrbitDocument[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [uploadKind, setUploadKind] = useState<DocumentKind>("resume");
@@ -311,6 +337,11 @@ export function SetupScreen({
     setType(ws.session_type);
     setRole(ws.role ?? "");
     setInstructions(ws.notes ?? "");
+    if (ws.session_type !== "mock") {
+      // The server only returns a language it offers (English otherwise).
+      setLanguage(ws.language);
+      setAnswerLanguage(ws.answer_language ?? "");
+    }
     setLength(ws.length);
     setStyle(ws.style);
     setAutoAnswer(ws.auto_answer);
@@ -487,7 +518,9 @@ export function SetupScreen({
         title: sessionTitle(type, role),
         type,
         ...(role.trim() ? { role: role.trim() } : {}),
-        language: "en",
+        // A mock interview's language is the practice one (the web Practice page); the copilot's is picked here.
+        language: isMock ? "en" : language,
+        ...(!isMock && answerLanguage ? { answer_language: answerLanguage } : {}),
         length,
         style,
         auto_answer: isMock ? false : autoAnswer,
@@ -566,7 +599,8 @@ export function SetupScreen({
             current={{
               role: role.trim() || null,
               session_type: type,
-              language: "en",
+              language: isMock ? "en" : language,
+              answer_language: isMock ? null : answerLanguage || null,
               length,
               style,
               auto_answer: autoAnswer,
@@ -635,6 +669,34 @@ export function SetupScreen({
             <span className="text-xs font-medium">Role / goal</span>
             <input value={role} maxLength={200} onChange={(e) => setRole(e.target.value)} placeholder="Senior Security Engineer" className={cx(control, focusRing)} />
           </label>
+
+          {!isMock && offersLanguages(offered) && (
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block space-y-1">
+                <span className="text-xs font-medium">Interview language</span>
+                <select value={language} onChange={(e) => pickLanguages(e.target.value, answerLanguage)} className={cx(control, focusRing)}>
+                  {interviewLanguages(offered).map((l) => (
+                    <option key={l.value} value={l.value}>
+                      {l.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-medium">Answer in</span>
+                <select value={answerLanguage} onChange={(e) => pickLanguages(language, e.target.value)} className={cx(control, focusRing)}>
+                  {answerLanguages(language, offered).map((l) => (
+                    <option key={l.value} value={l.value}>
+                      {l.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span className="col-span-2 block text-[11px] text-zinc-500 dark:text-zinc-400">
+                {INTERVIEW_LANGUAGE_HINT} {ANSWER_LANGUAGE_HINT}
+              </span>
+            </div>
+          )}
 
           {!isMock && (
             <label className="block space-y-1">

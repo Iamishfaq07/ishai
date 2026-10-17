@@ -20,7 +20,8 @@ Status: built 16 Oct 2026, **off by default** (`ORBIT_MULTILINGUAL=false`). Engl
   tokenizer), so the interviewer's and the review's output budgets grow with the language.
 
 ## Scope
-- Only mock interviews change language. The live copilot, saved setups and the rest of the UI stay English.
+- This is the mock interview's language. Live sessions have their own (interview and answer language, DECISIONS
+  D62); saved setups keep a live language, and the rest of the UI stays English.
 - The app's own labels and buttons are not translated (no i18n framework yet).
 - Delivery stats still work: pace, pauses and talk time. Filler-word detection only knows English fillers.
 

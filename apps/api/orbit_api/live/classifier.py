@@ -14,6 +14,7 @@ import logging
 from dataclasses import dataclass
 from typing import Literal
 
+from orbit_api import live_language
 from orbit_api.live.context_builder import fence
 from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMProvider, LLMRequest, LLMResponse
 
@@ -43,7 +44,9 @@ class Classification:
     response: LLMResponse | None = None  # for cost accounting
 
 
-def build_request(utterance: str, previous_question: str | None, recent: list[str]) -> LLMRequest:
+def build_request(utterance: str, previous_question: str | None, recent: list[str],
+                  language: str | None = None) -> LLMRequest:
+    """`language`: the interview language when it isn't English (the English request is unchanged)."""
     convo = "\n".join(recent[-4:])
     user = (
         f"Previous question:\n<reference_data source=\"previous_question\">\n{fence(previous_question or '(none)')}\n"
@@ -51,8 +54,11 @@ def build_request(utterance: str, previous_question: str | None, recent: list[st
         f"Recent conversation:\n<reference_data source=\"transcript\">\n{fence(convo or '(none)')}\n</reference_data>\n"
         f"UTTERANCE:\n<reference_data source=\"utterance\">\n{fence(utterance)}\n</reference_data>"
     )
-    return LLMRequest(messages=[LLMMessage("system", _SYSTEM), LLMMessage("user", user)], json_mode=True,
-                      max_tokens=120, temperature=0.0, request_type="classify")
+    system = _SYSTEM + live_language.classifier_note(language) if language else _SYSTEM
+    # Room for the rewritten question in another script: cut short, the JSON didn't parse and nothing was answered.
+    tokens = int(120 * live_language.token_factor(language)) if language else 120
+    return LLMRequest(messages=[LLMMessage("system", system), LLMMessage("user", user)], json_mode=True,
+                      max_tokens=tokens, temperature=0.0, request_type="classify")
 
 
 def parse(text: str, utterance: str) -> Classification | None:
@@ -70,10 +76,10 @@ def parse(text: str, utterance: str) -> Classification | None:
 
 
 async def classify(llm: LLMProvider, utterance: str, previous_question: str | None,
-                   recent: list[str]) -> Classification | None:
+                   recent: list[str], language: str | None = None) -> Classification | None:
     """None when the classifier is unavailable (timeout / provider error / garbage): the caller then does what
     the heuristic alone would do, which for this band is not auto-answering (the user can still press Answer)."""
-    request = build_request(utterance, previous_question, recent)
+    request = build_request(utterance, previous_question, recent, language)
     try:
         resp = await asyncio.wait_for(llm.generate(request), timeout=TIMEOUT_S)
     except (TimeoutError, LLMError) as e:

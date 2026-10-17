@@ -30,16 +30,8 @@ import re
 from collections import deque
 from dataclasses import dataclass, replace
 
-from orbit_api.live.question_detector import (
-    Detection,
-    DetectorContext,
-    continue_question,
-    detect,
-    is_complete,
-    lead_in,
-    starts_new_topic,
-    tokens,
-)
+from orbit_api.live.multilingual import ENGLISH, Speech
+from orbit_api.live.question_detector import Detection, DetectorContext, tokens
 
 QUESTION_MARK_SILENCE_MS = 250
 COMPLETE_SILENCE_MS = 650
@@ -108,16 +100,21 @@ class _Pending:
     answered: str | None = None  # the held part as it already fired: the stitched question refires only on real growth
     endpoint_ms: int | None = None
     resumed_ms: int | None = None  # VAD heard the interviewer again after the endpoint
+    speech: Speech = ENGLISH  # how the session's language is read (live/multilingual.py)
+    # Another language: this turn's words arrived after the candidate had started answering it (see on_transcript).
+    late: bool = False
 
     @property
     def full_text(self) -> str:
-        return continue_question(self.held_question, self.text) if self.held_question else self.text
+        return self.speech.continue_question(self.held_question, self.text) if self.held_question else self.text
 
 
 class QuestionFinalizer:
-    def __init__(self, *, provider_endpoints: bool = False, grace_ms: int = 0) -> None:
+    def __init__(self, *, provider_endpoints: bool = False, grace_ms: int = 0, speech: Speech = ENGLISH) -> None:
         self.provider_endpoints = provider_endpoints
         self.grace_ms = grace_ms
+        # English: question_detector itself; another language: its own cue words (live/multilingual.py).
+        self._speech = speech
         self._pending: _Pending | None = None
         self.context = DetectorContext()
         self._claim: tuple[int, str] | None = None  # candidate speech that may be the start of their answer
@@ -125,6 +122,7 @@ class QuestionFinalizer:
         # The last question the candidate's answer closed (whole, as it was held), for a manual "Answer" after they
         # started talking ("Okay, let me think…"): it used to get only the interviewer's last sentence.
         self._closed: tuple[str, int] | None = None
+        self._closed_turn: str | None = None  # the turn the candidate's answer last closed
 
     def on_transcript(
         self, turn_id: str, text: str, now_ms: int, *, is_final: bool, endpoint: bool = False
@@ -134,18 +132,24 @@ class QuestionFinalizer:
         early = self._settle_claim(now_ms)
         p = self._pending
         if p is None or p.turn_id != turn_id:
+            # Another language: Deepgram's multilingual finals can trail the speech by seconds (about 5 s measured
+            # for Hindi), so a turn's words may arrive after the candidate began answering it. That question is over:
+            # it fires at once and nothing later is stitched onto it (it used to swallow the next question). English
+            # finals come within a second; its path is unchanged.
+            late = not self._speech.english and p is None and turn_id == self._closed_turn
             # "Let's switch to system design. How would you design…" is a new question, however soon it comes.
-            held = "" if starts_new_topic(text) else self._held_question(p, now_ms)
+            held = "" if late or self._speech.starts_new_topic(text) else self._held_question(p, now_ms)
             held_conf = self._confidence_of(p) if held and p is not None else 0.0
             answered = held if held and p is not None and p.fired_question == held else None
             p = self._pending = _Pending(turn_id=turn_id, text=text, last_speech_ms=now_ms, held_question=held,
-                                         held_confidence=held_conf, answered=answered)
+                                         held_confidence=held_conf, answered=answered, speech=self._speech,
+                                         late=late)
         else:
             if text != p.text:
                 p.last_speech_ms = now_ms
                 p.resumed_ms = None
             p.text = text
-            if p.held_question and starts_new_topic(text):
+            if p.held_question and self._speech.starts_new_topic(text):
                 # The turn's first words ("Let's") didn't say it yet; now it's clear the interviewer moved on.
                 p.held_question, p.held_confidence, p.answered = "", 0.0, None
                 p.fired_text = p.fired_question = None
@@ -174,7 +178,7 @@ class QuestionFinalizer:
         leaking into the mic) ends the interviewer's question: stop holding it (fire if complete) and never
         stitch later interviewer words onto it. Confirmed after ECHO_CONFIRM_MS (see tick)."""
         p = self._pending
-        if p is None or len(answer_words(text)) < CANDIDATE_ANSWER_MIN_WORDS:
+        if p is None or len(self._answer_words(text)) < CANDIDATE_ANSWER_MIN_WORDS:
             return self._settle_claim(now_ms)
         if self._is_echo(text):
             return None
@@ -188,25 +192,32 @@ class QuestionFinalizer:
         self._claim = (self._claim[0] if self._claim else now_ms, text)
         return self._settle_claim(now_ms)
 
+    def _answer_words(self, text: str) -> list[str]:
+        if self._speech.english:
+            return answer_words(text)
+        # Another language: its own backchannels out first ("sí, claro", "はい、なるほど"), then English's.
+        n = _BACKCHANNEL_PHRASES.sub(" ", " ".join(self._speech.answer_words(text)))
+        return [w for w in n.split() if w not in _BACKCHANNEL_WORDS]
+
     def _remember(self, text: str, now_ms: int) -> None:
-        self._recent.append((now_ms, tokens(text)))
+        self._recent.append((now_ms, self._speech.tokens(text)))
         while self._recent and now_ms - self._recent[0][0] > RECENT_INTERVIEWER_MS:
             self._recent.popleft()
 
     def _is_echo(self, text: str) -> bool:
-        words = tokens(text)
+        words = self._speech.tokens(text)
         return bool(words) and self._overlap(words) >= ECHO_OVERLAP
 
     def interviewer_overlap(self, text: str) -> float:
         """The share of these (candidate) words the interviewer just said: near 1 for their voice heard by the mic.
         0 for under three words: "Yes." / "Okay, sure." match anything."""
-        words = tokens(text)
+        words = self._speech.tokens(text)
         return self._overlap(words) if len(words) >= 3 else 0.0
 
     def _overlap(self, words: list[str]) -> float:
         heard = {w for _, ws in self._recent for w in ws}
         if self._pending is not None:
-            heard |= set(tokens(self._pending.full_text))
+            heard |= set(self._speech.tokens(self._pending.full_text))
         return sum(w in heard for w in words) / len(words) if words else 0.0
 
     def _settle_claim(self, now_ms: int) -> FinalizedQuestion | None:
@@ -230,8 +241,9 @@ class QuestionFinalizer:
             p.resumed_ms = None
             p.endpoint_ms = now_ms - self.grace_ms
             fired = self._evaluate(now_ms)
-        if detect(p.full_text, "interviewer", self.context).is_question:
+        if self._speech.detect(p.full_text, "interviewer", self.context).is_question:
             self._closed = (p.full_text, now_ms)
+        self._closed_turn = p.turn_id
         self._pending = None
         return fired
 
@@ -240,7 +252,7 @@ class QuestionFinalizer:
         before a pause — whether or not it already auto-fired. If there's none (the candidate started answering, or
         the interviewer only said "Okay." since), the question their answer closed, for CLOSED_QUESTION_MS."""
         p = self._pending
-        if p is not None and detect(p.full_text, "interviewer", self.context).is_question:
+        if p is not None and self._speech.detect(p.full_text, "interviewer", self.context).is_question:
             return p.full_text
         if self._closed is not None and (now_ms is None or now_ms - self._closed[1] <= CLOSED_QUESTION_MS):
             return self._closed[0]
@@ -258,7 +270,7 @@ class QuestionFinalizer:
         """If the interviewer is still going (no candidate answer in between, within the continuation window),
         what they said before: the new turn continues it. A question carries over whole; a non-question
         set-up ("Let's talk about image classification.") carries over as a cleaned lead-in."""
-        if p is None or not (p.endpointed or p.fired_text is not None):
+        if p is None or p.late or not (p.endpointed or p.fired_text is not None):
             return ""
         since = p.endpoint_ms if p.endpoint_ms is not None else p.last_speech_ms
         resumed = p.resumed_ms is not None and now_ms - p.resumed_ms <= RESUME_HOLD_MS
@@ -268,14 +280,14 @@ class QuestionFinalizer:
         # extension of it); anything else is cleaned of fillers and bare acknowledgements.
         if p.fired_question and p.fired_text == p.full_text:
             return p.fired_question
-        return lead_in(p.full_text, MAX_STITCHED_WORDS)
+        return self._speech.lead_in(p.full_text, MAX_STITCHED_WORDS)
 
     def _confidence_of(self, p: _Pending) -> float:
         """How surely `p` (with everything stitched into it) is a question. The detector scores only the last
         question sentence, so a stitched question keeps the best score of its parts; one that already fired
         was a confirmed question."""
-        conf = max(p.held_confidence, detect(p.full_text, "interviewer", self.context).confidence,
-                   detect(p.text, "interviewer", self.context).confidence)
+        conf = max(p.held_confidence, self._speech.detect(p.full_text, "interviewer", self.context).confidence,
+                   self._speech.detect(p.text, "interviewer", self.context).confidence)
         return max(conf, 0.6) if p.fired_text is not None else conf
 
     def tick(self, now_ms: int) -> FinalizedQuestion | None:
@@ -343,27 +355,30 @@ class QuestionFinalizer:
 
     def _detection(self, p: _Pending) -> Detection:
         full = p.full_text
-        d = detect(full, "interviewer", self.context)
+        d = self._speech.detect(full, "interviewer", self.context)
         if p.held_question:
             # extract_question keeps only the last question sentence; a stitched question keeps both parts,
             # and is at least as much a question as the part we were already holding.
-            complete = is_complete(full)
+            complete = self._speech.is_complete(full)
             conf = max(d.confidence, p.held_confidence)
             d = replace(d, question_text=full, is_complete=complete, confidence=conf, is_question=conf >= 0.5,
                         should_generate=conf >= 0.6 and complete, needs_llm=0.35 <= conf < 0.6 and complete)
         return d
 
     def _grew_enough(self, fired: str, full: str) -> bool:
-        grown = len(tokens(full)) - len(tokens(fired))
+        grown = len(self._speech.tokens(full)) - len(self._speech.tokens(fired))
         if grown <= 0:
             return False
         if grown >= REFIRE_EXTRA_WORDS:
             return True
         added = full[len(fired):].strip() if full.startswith(fired) else full
-        return added.endswith("?") or detect(added, "interviewer", self.context).is_question
+        asks = added.endswith("?") or (not self._speech.english and added.endswith("？"))
+        return asks or self._speech.detect(added, "interviewer", self.context).is_question
 
     def _holding(self, p: _Pending, now_ms: int) -> bool:
         """Still inside the patience window, or the interviewer resumed and their words aren't in yet."""
+        if p.late:
+            return False  # the candidate is already answering it
         if p.resumed_ms is not None and now_ms - p.resumed_ms < RESUME_HOLD_MS:
             return True
         return p.endpoint_ms is not None and now_ms - p.endpoint_ms < self.grace_ms

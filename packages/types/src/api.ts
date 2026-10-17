@@ -31,6 +31,11 @@ export interface User {
   evidence_vault?: boolean;
   /** Mock-interview languages this server offers: ["en"], or with Hindi and Hinglish when it has them on. */
   practice_languages?: string[];
+  /**
+   * Live-session interview languages this server offers, in picker order ("en" first, then "auto" and the rest);
+   * ["en"] when it has them off. Servers from before it leave it out (English only).
+   */
+  live_languages?: string[];
   /** The camera coach in mock interviews is on for this server. */
   video_mock?: boolean;
   /** Invite links and checkout codes are on for this server (ORBIT_REFERRALS). */
@@ -512,6 +517,9 @@ export interface SessionSummary {
   follow_up?: FollowUp | null;
   /** Salary practice only: the counter-offer email to send the recruiter, from what was said on the call. */
   counter_offer_email?: { subject: string; body: string } | null;
+  /** A live session in another language: what this report is written in ("es", "hi", "auto" for the interview's
+   *  own); absent for English. */
+  language?: string;
 }
 
 export interface DeliveryStats {

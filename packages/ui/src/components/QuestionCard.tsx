@@ -1,4 +1,5 @@
 import type { QuestionType } from "@orbit/types";
+import { scriptLang } from "../live/languages";
 import type { QuestionView, TurnView } from "../live/reducer";
 import { cx } from "./cx";
 
@@ -43,7 +44,10 @@ export function QuestionCard({ question, liveTurn, compact = false }: QuestionCa
         </div>
       )}
       {question ? (
-        <p className={cx("font-medium leading-snug text-zinc-900 dark:text-zinc-50", compact ? "text-[0.9375rem]" : "text-[1.0625rem]")}>
+        <p
+          lang={scriptLang(question.text)}
+          className={cx("font-medium leading-snug text-zinc-900 dark:text-zinc-50", compact ? "text-[0.9375rem]" : "text-[1.0625rem]")}
+        >
           {chat && compact && <span className="font-normal text-zinc-500 dark:text-zinc-400">You asked: </span>}
           {/* The phone companion doesn't see what was typed, only that it's a chat reply. */}
           {question.text || (chat ? "A reply to your chat message" : "")}
@@ -53,7 +57,7 @@ export function QuestionCard({ question, liveTurn, compact = false }: QuestionCa
       ) : null}
       {showLive && liveTurn && (
         // Partial text is visually secondary and never reflows the finalized question above it.
-        <p className="mt-1 line-clamp-2 text-sm italic text-zinc-500 dark:text-zinc-400" aria-live="off">
+        <p lang={scriptLang(liveTurn.text)} className="mt-1 line-clamp-2 text-sm italic text-zinc-500 dark:text-zinc-400" aria-live="off">
           {liveTurn.text}
         </p>
       )}

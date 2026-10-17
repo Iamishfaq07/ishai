@@ -11,7 +11,8 @@ Built from scratch in this repo, starting 2026-09-23 (it held only a generated R
 | Documents (resume / JD / notes: upload, parse, chunk, embed) and **workspaces** (saved setups per job: role, documents, settings) | ✅ tested |
 | Live engine: per-channel STT → turns → question detector (+ AI classifier for the ambiguous band) → finalizer → dedup → retrieval → streamed answer | ✅ tested + real providers |
 | DeepSeek provider: SSE streaming, cache-hit usage, error mapping, thinking levels, **vision** (DeepSeek-V4.1-Flash) | ✅ tested + real API |
-| Deepgram nova-3 streaming STT: reconnect with timestamp continuity, keepalive, backlog, keyterms, `language=multi` for auto | ✅ tested + real API |
+| Deepgram nova-3 streaming STT: reconnect with timestamp continuity, keepalive, backlog, keyterms, `language=multi` for auto, Hindi and Hinglish, Nova-3's own model for the other languages | ✅ tested + real API |
+| **Live sessions in ten languages** (+ Hinglish, Auto-detect): interview and answer language at setup, per-language question cues beside the unchanged English detector, answers / reviews / follow-ups in the answer language, script-aware fonts (D62) | ✅ tested + real providers (synthetic audio) |
 | Answers: spoken first-person prose, **sized to each question** (auto length: a sentence or two for "Have you used Docker?", two minutes for a design) and pitched at the candidate's level, **key points** (ticked off as the candidate covers them, or by hand), the jargon used with its plain meaning, **Read aloud** (local voices; audio isn't sent while it plays), grounding label (*Suggested details*), coding sections (problem / code / complexity / edge cases / tests) in a chosen language | ✅ tested |
 | Screenshot → vision answer (analysed and discarded; credit spent only on success) | ✅ tested + real desktop build |
 | **Mock interviewer**: persona / type / difficulty / duration, follow-ups, spoken questions (browser TTS), review | ✅ tested + real voice path |
@@ -81,7 +82,13 @@ Separate channels (mic → candidate, system → interviewer) instead of diariza
   specific output device, or one app's audio (process loopback). Capture is supervised: when a device is unplugged or
   the default changes, it reopens and follows, and fills silence so timestamps stay continuous.
 - **Deepgram** runs with `interim_results`, `endpointing=300`, `utterance_end_ms=1000` and `vad_events`, with
-  resume/JD skills sent as `keyterm`s.
+  resume/JD skills sent as `keyterm`s, in the session's language (`live_language.stt_language`: `multi` for Auto,
+  Hindi and Hinglish, the language's own Nova-3 model otherwise, the same timings in all; `filler_words` on the mic
+  in English only).
+- **Languages:** the finalizer, the deduplicator and the engine read speech through the session's `Speech`
+  (`live/multilingual.py`): English is question_detector itself; another language reads each line in its own
+  language, English lines with question_detector and the rest with that language's cue tables
+  (`live/language_cues.py`).
 - **Partials** are accumulated per turn, and the UI replaces them by `turn_id`.
 - **The finalizer**, with Deepgram, fires on Deepgram's endpoint for a complete question. If that endpoint event is
   lost (noisy audio, a dropped message), it falls back after 2.5 s of silence.

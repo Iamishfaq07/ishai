@@ -723,7 +723,9 @@ def test_session_create_ignores_server_side_fields(world: World) -> None:
     s = r.json()
     assert r.status_code == 201 and s["id"] != "attacker-chosen-id"
     assert (s["status"], s["duration_seconds"], s["started_at"], s["ended_at"]) == ("created", 0, None, None)
-    assert (s["question_count"], s["report_status"], s["language"], s["answer_language"]) == (0, None, "en", None)
+    # The interview language is the client's own choice (live_language.py); an answer language that's the same is
+    # stored as none ("same as the interview").
+    assert (s["question_count"], s["report_status"], s["language"], s["answer_language"]) == (0, None, "fr", None)
     assert s["id"] not in json.dumps(world.get("/v1/sessions", world.a))
     world.call("DELETE", f"/v1/sessions/{s['id']}", world.b)
 

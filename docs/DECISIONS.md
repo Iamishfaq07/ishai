@@ -551,3 +551,43 @@ Everything is behind `ORBIT_REFERRALS`, off by default, so the owner can review 
 (`ORBIT_REFERRAL_REWARD_MINUTES`, `ORBIT_REFERRAL_DISCOUNT_PERCENT`, `ORBIT_REFERRAL_MONTHLY_CAP`) before turning it
 on; the admin's codes and report work while it's off. One migration (`467956f519dd`, after `b4d6f8a0c2e4`), new tables
 and two nullable payment columns only.
+
+**D62 — The live copilot works in ten languages, and English reads exactly as before.** Users who interview in Hindi,
+Spanish, Japanese or another language got English answers to questions Orbit often didn't even notice: the detector's
+cue words are English, and its tokenizer saw no words at all in Devanagari, Japanese or Cyrillic (every Hindi question
+looked like a duplicate of the first). The English-only change of 2026-09-26 removed the pickers instead.
+Live sessions now take an interview language (English by default; Auto-detect; Hindi, Hinglish, Spanish, French,
+German, Portuguese, Italian, Dutch, Japanese, Russian: the ten Deepgram's Nova-3 streams in its multilingual
+code-switching mode, plus Hinglish as its own choice) and an answer language ("same as the interview" by default, so
+"hear Hindi, answer in English" works). Choices made, and why:
+- **Transcription**: Hindi, Hinglish and Auto use `language=multi` (code-switching: the English words in an Indian
+  interview come out as English); the others use Nova-3's own model for that language (one language is spoken;
+  `multi` is for switching between them). Endpointing stays at 300 ms and utterance end at 1 s in every language,
+  though Deepgram suggests 100 ms for code-switching: the finalizer, the grace window and question stitching are tuned
+  to these timings, and a shorter endpoint falls inside the pauses people make mid-question. Filler words stay
+  English-only (a Deepgram English feature). Keyterms go to every language (Nova-3 takes them in both modes).
+- **Reading the interviewer**: small per-language cue tables (question words, requests, yes/no openers and Japanese
+  か endings, fillers, check-ins, continuers, trailing words, types, size cues: `live/language_cues.py`) scored the way
+  the English detector scores, rather than one English regex set silently failing. Each line is read in its own
+  language (a Spanish session still hears "Tell me about yourself." as English), English lines go to question_detector
+  untouched, and what the cues can't call but still looks like a question lands in the classifier band as in English.
+  Words are Unicode-aware (Devanagari vowel signs kept), and Japanese, with no spaces, is counted by script runs and
+  matched as substrings. An English session's reader *is* question_detector (`multilingual.ENGLISH`), so its behaviour
+  can't drift: a golden comparison of detection, clean-up, sizing, the Deepgram URL, the classifier request, prompts,
+  the parser, the finalizer and a whole engine run is byte-identical to main.
+- **Answers**: the prompt says the language, the register (tú/usted, vous, Sie, です・ます, आप) and that code, its
+  identifiers and the format's labels stay in English while everything said is in the answer language. Length targets
+  keep their speaking time: the word counts are English words, so the prompt says how they translate (about two
+  Japanese characters per word), and the token budget grows by the script's share of extra tokens (1.6 for Latin
+  scripts, 1.8 Japanese, 2.2 Russian, 2.6 Devanagari), or a full-length answer was cut off mid-sentence. The review
+  and the follow-up are written in the answer language and the report says which; speaking stats count words in any
+  script and drop the English pace and filler tips.
+- **UI**: the app's own words stay English (no i18n yet). Text in a script IBM Plex doesn't draw is tagged with its
+  language, so the browser picks a proper face (Japanese kanji are never drawn from a Chinese font), with system faces
+  for Devanagari and Japanese after the Latin ones and Plex's Cyrillic subset fetched only when Russian is on screen.
+- **Switch**: `ORBIT_LIVE_LANGUAGES` (on). Off, the pickers disappear and every new or reopened live session is
+  English again. No migration: sessions and saved setups already had `language` and `answer_language`.
+Rejected: one detector for all languages driven by the model (a classifier call on every interviewer line, with an
+answer started early on each); translating questions into English first (a model call before every answer, and the
+interviewer's words lost); full UI translation in the same change. Mock interviews keep their own Hindi and Hinglish
+(F-05, behind ORBIT_MULTILINGUAL).

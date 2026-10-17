@@ -20,7 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orbit_api import jobs, practice_language
+from orbit_api import jobs, live_language, practice_language
 from orbit_api.career.schema import DIMENSIONS
 from orbit_api.db import sessionmaker
 from orbit_api.live.context_builder import fence
@@ -195,6 +195,11 @@ async def generate_report(session_id: str) -> dict[str, Any]:
                                       .order_by(Question.created_at))).all()
         turns = (await db.scalars(select(SessionTurn).where(SessionTurn.session_id == session_id)
                                   .order_by(SessionTurn.created_at, SessionTurn.start_ms))).all()
+        # A live session in another language (live_language.py): the review is written in its answer language and says
+        # so (`language`). English, and a mock interview (practice_language.py), as before.
+        interview = "en" if row.type == "mock" else live_language.normalize(row.language)
+        written = live_language.answer_code(live_language.normalize_answer(row.answer_language, interview), interview)
+        english = live_language.is_english(interview, written)
 
         report: dict[str, Any] = {
             "questions_asked": [q.text for q in questions],
@@ -208,8 +213,11 @@ async def generate_report(session_id: str) -> dict[str, Any]:
             "review": None,
             "generated_by": None,
             # Pace, fillers, talk time: arithmetic on the transcript (sessions/delivery.py), no model call.
-            "delivery": delivery_stats(turns, [p.answer for p in pair_questions_with_answers(questions, turns)]),
+            "delivery": delivery_stats(turns, [p.answer for p in pair_questions_with_answers(questions, turns)],
+                                       english=english),
         }
+        if not english:
+            report["language"] = written
 
         narrative_failed = False
         if questions or turns:
@@ -232,8 +240,11 @@ async def generate_report(session_id: str) -> dict[str, Any]:
                 user += ("\n\nEarlier questions (not scored; cover them in the summary and topics):\n"
                          "<reference_data source=\"earlier_questions\">\n"
                          f"{fence(earlier[:MAX_EARLIER_QUESTIONS_CHARS])}\n</reference_data>")
+            # A live session in another language: its own rule and budget (live_language.py); English and a mock
+            # interview (its practice language, practice_language.py) as on main.
             language = practice_language.normalize(row.language, row.type)
-            system = _SYSTEM + practice_language.report_instruction(language)
+            system = _SYSTEM + (practice_language.report_instruction(language) if english
+                                else live_language.report_rule(written, interview))
             negotiation = (row.mock_config or {}).get("negotiation") if row.type == "mock" else None
             if isinstance(negotiation, dict):
                 system += _NEGOTIATION_RUBRIC
@@ -248,7 +259,10 @@ async def generate_report(session_id: str) -> dict[str, Any]:
             req = LLMRequest(
                 messages=[LLMMessage("system", system), LLMMessage("user", user)],
                 json_mode=llm.supports_structured_output(),
-                max_tokens=practice_language.max_tokens(700 + 160 * len(pairs), language),
+                # Another language takes more tokens for the same review: cut short, its JSON wouldn't parse.
+                max_tokens=practice_language.max_tokens(700 + 160 * len(pairs), language) if english else min(
+                    practice_language.MAX_OUTPUT_TOKENS,
+                    int((700 + 160 * len(pairs)) * live_language.token_factor(written))),
                 request_type="summary",
             )
             try:

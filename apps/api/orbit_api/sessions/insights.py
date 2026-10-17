@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from orbit_api import live_language
 from orbit_api.auth.guards import require_verified_user
 from orbit_api.auth.security import current_user
 from orbit_api.db import get_db
@@ -117,10 +118,16 @@ async def follow_up(session_id: str, user: Annotated[User, Depends(require_verif
     user_msg = (f"Session: {row.title}. Type: {row.type}. Role: {row.role or 'n/a'}.\n"
                 f"Candidate's name: {user.name or '[Your name]'}\n"
                 f"<reference_data source=\"transcript\">\n{fence(convo)}\n</reference_data>")
+    # A session in another language: the debrief in its answer language, the email in the interviewer's.
+    interview = live_language.normalize(row.language)
+    written = live_language.answer_code(live_language.normalize_answer(row.answer_language, interview), interview)
+    english = live_language.is_english(interview, written)
+    system = _SYSTEM if english else _SYSTEM + live_language.follow_up_rule(written, interview)
     llm = get_llm_provider()
-    req = LLMRequest(messages=[LLMMessage("system", _SYSTEM), LLMMessage("user", user_msg)],
-                     json_mode=llm.supports_structured_output(), max_tokens=700, temperature=0.4,
-                     request_type="follow_up")
+    req = LLMRequest(messages=[LLMMessage("system", system), LLMMessage("user", user_msg)],
+                     json_mode=llm.supports_structured_output(),
+                     max_tokens=700 if english else int(700 * live_language.token_factor(live_language.AUTO)),
+                     temperature=0.4, request_type="follow_up")
     try:
         resp = await llm.generate(req)
     except LLMError as e:

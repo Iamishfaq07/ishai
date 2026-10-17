@@ -39,8 +39,19 @@ const ALIASES: Record<string, string[][]> = {
   qa: [["quality", "assurance"]],
 };
 
+// Scripts English's letters can't see (a live answer in Hindi, Russian or Japanese).
+const OTHER_SCRIPT = /[\p{Script=Cyrillic}\p{Script=Devanagari}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u;
+const CJK = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u;
+
 function words(text: string): string[] {
-  return text.toLowerCase().match(/[a-z0-9+#]+/g) ?? [];
+  if (!OTHER_SCRIPT.test(text)) return text.toLowerCase().match(/[a-z0-9+#]+/g) ?? [];
+  // Words in any script, vowel signs kept; Japanese, written without spaces, as overlapping pairs of characters.
+  const out: string[] = [];
+  for (const w of text.toLowerCase().normalize("NFC").match(/[\p{L}\p{M}\p{N}+#]+/gu) ?? []) {
+    if (!CJK.test(w) || w.length < 3) out.push(w);
+    else for (let i = 0; i + 1 < w.length; i++) out.push(w.slice(i, i + 2));
+  }
+  return out;
 }
 
 export function contentWords(text: string): Set<string> {
@@ -79,7 +90,8 @@ function labelHits(label: Set<string>, text: Said): number {
 }
 
 function sentences(text: string): string[] {
-  return text.split(/(?<=[.!?])\s+|\n+/).map((s) => s.trim()).filter(Boolean);
+  // A Devanagari danda or a Japanese full stop ends a sentence too (with no space after it in Japanese).
+  return text.split(/(?<=[.!?])\s+|(?<=[\u0964\u3002\uff1f\uff01])\s*|\n+/).map((s) => s.trim()).filter(Boolean);
 }
 
 function overlap(a: Set<string>, b: Set<string>): number {

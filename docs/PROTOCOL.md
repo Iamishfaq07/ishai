@@ -102,6 +102,15 @@ Answers are spoken first-person prose (`direct_answer`, paragraphs separated by 
 
 `coding_language` fixes the language of code in coding answers (unset: the model picks, usually Python).
 
+**Session languages** (DECISIONS D62) are set when the session is created, not live: `POST /v1/sessions` (and saved
+setups) take `language`, the interview language (`"en"` by default, `"auto"`, `"hi"`, `"hinglish"`, `"es"`, `"fr"`,
+`"de"`, `"pt"`, `"it"`, `"nl"`, `"ja"`, `"ru"`: what `GET /v1/auth/me` lists as `live_languages`), and
+`answer_language`, what answers, key points and the review are written in (`null`: the same as the interview; on
+`"auto"`, each question's own). A language the server doesn't offer is stored as English, and so is anything while
+`ORBIT_LIVE_LANGUAGES` is off; a mock interview takes its practice language instead and never an answer language.
+`LiveSettings.answer_language` is still ignored. Transcripts, questions and answers then carry text in that language
+and script; the protocol is unchanged. A report in another language has `language` (the answer language).
+
 `response_timing` is how long a detected question is held after the interviewer stops before it auto-fires (quick ≈ 0, balanced ≈ 1.5 s default, patient ≈ 3 s). Until the candidate actually starts answering (3+ words), anything the interviewer says within 8 s of their last pause continues the same question — even after it fired: the combined question is re-sent as `question.updated` and the answer regenerated. `answer.request` without `question_text` answers that whole (stitched) question.
 
 ## Server → client

@@ -12,6 +12,8 @@ from collections.abc import Sequence
 from itertools import pairwise
 from typing import Any, Protocol
 
+from orbit_api.live.multilingual import fold, words
+
 # Multi-word fillers first so "you know" isn't also counted as two words of something else.
 FILLER_PHRASES = ("you know", "i mean", "sort of", "kind of")
 FILLER_WORDS = ("um", "umm", "uh", "uhm", "erm", "er", "ah", "hmm", "basically", "literally")
@@ -45,14 +47,18 @@ def _seconds(t: TurnLike) -> float:
     return max(0, t.end_ms - t.start_ms) / 1000
 
 
-def delivery_stats(turns: Sequence[TurnLike], answers: Sequence[str] = ()) -> dict[str, Any] | None:
-    """`answers`: the candidate's answer to each question (for answer length), if paired. None = too little speech."""
+def delivery_stats(turns: Sequence[TurnLike], answers: Sequence[str] = (), *,
+                   english: bool = True) -> dict[str, Any] | None:
+    """`answers`: the candidate's answer to each question (for answer length), if paired. None = too little speech.
+    `english=False` (a live session in another language): words are counted in any script, and the pace and filler
+    tips, whose thresholds and filler words are English, are left out."""
+    count = _count_words if english else _count_any
     mine = [t for t in turns if t.speaker == "candidate" and t.text.strip()]
     others = [t for t in turns if t.speaker != "candidate" and t.text.strip()]
     speaking_s = sum(_seconds(t) for t in mine)
     if speaking_s < MIN_SPEAKING_S:
         return None
-    words = sum(len(_WORDS.findall(t.text)) for t in mine)
+    words = sum(count(t.text) for t in mine)
     fillers: Counter[str] = Counter()
     for t in mine:
         fillers.update(count_fillers(t.text))
@@ -63,14 +69,15 @@ def delivery_stats(turns: Sequence[TurnLike], answers: Sequence[str] = ()) -> di
     others_s = sum(_seconds(t) for t in others)
     talk_share = round(speaking_s / (speaking_s + others_s), 2) if speaking_s + others_s else None
     pauses, starts = _pauses_and_starts(turns)
-    answer_words = [len(_WORDS.findall(a)) for a in answers if a.strip()]
+    answer_words = [count(a) for a in answers if a.strip()]
 
     tips: list[str] = []
-    if wpm > FAST_WPM:
+    # Pace and filler tips only in English: their thresholds and filler words are English ones.
+    if english and wpm > FAST_WPM:
         tips.append(f"You spoke at about {wpm} words a minute — slow down a little and pause between points.")
-    elif wpm < SLOW_WPM:
+    elif english and wpm < SLOW_WPM:
         tips.append(f"About {wpm} words a minute is on the slow side — shorter sentences keep the listener with you.")
-    if fillers_per_min > MANY_FILLERS_PER_MIN:
+    if english and fillers_per_min > MANY_FILLERS_PER_MIN:
         top = ", ".join(f"“{w}”" for w, _ in fillers.most_common(2))
         tips.append(f"{fillers_per_min} filler words a minute (mostly {top}) — a short silent pause works better.")
     if answer_words and max(answer_words) > LONG_ANSWER_WORDS:
@@ -96,6 +103,14 @@ def delivery_stats(turns: Sequence[TurnLike], answers: Sequence[str] = ()) -> di
         "longest_answer_words": max(answer_words) if answer_words else None,
         "tips": tips,
     }
+
+
+def _count_words(text: str) -> int:
+    return len(_WORDS.findall(text))
+
+
+def _count_any(text: str) -> int:
+    return len(words(fold(text)))
 
 
 def _median(values: list[float]) -> float | None:

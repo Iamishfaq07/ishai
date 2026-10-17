@@ -114,6 +114,17 @@ def humanize(text: str) -> str:
     return out
 
 
+def humanize_in(text: str, language: str) -> str:
+    """humanize() for an answer in `language`. Only the dash rule holds in every language (a Japanese one becomes
+    "、"); the stiff-word swaps and "Great question." are English ("utilise" is plain French)."""
+    if language == "en":
+        return humanize(text)
+    if not text:
+        return text
+    out = _DASH.sub("、" if language == "ja" else ", ", text)
+    return _DOUBLED.sub(r"\1", out) if language != "ja" else out
+
+
 def _keep_case(plain: str) -> Callable[[re.Match[str]], str]:
     """"Utilize" → "Use", "utilize" → "use": the replacement keeps a sentence's opening capital."""
     return lambda m: plain[:1].upper() + plain[1:] if m.group(0)[:1].isupper() else plain
@@ -121,7 +132,9 @@ def _keep_case(plain: str) -> Callable[[re.Match[str]], str]:
 
 class AnswerStreamParser:
     def __init__(self, question: str, qtype: QuestionType, context_used: list[str], *,
-                 max_points: int | None = None, facts: dict[str, FactSource] | None = None) -> None:
+                 max_points: int | None = None, facts: dict[str, FactSource] | None = None,
+                 language: str = "en") -> None:
+        self._language = language  # the answer language (live_language.py): "en" as always, or another
         self._facts = facts or {}  # "F1" → the fact as numbered in the prompt
         self._buf = ""
         self._max_points = max_points  # hard cap for the chosen answer length; prompts alone don't enforce it
@@ -241,11 +254,12 @@ class AnswerStreamParser:
                 elif section in ("INTUITION", "COMMENTARY", "DEFENSE"):
                     ans.walkthrough = ans.walkthrough or SpokenWalkthrough()
                     if section == "INTUITION":
-                        ans.walkthrough.intuition = humanize(value)[:500]
+                        ans.walkthrough.intuition = humanize_in(value, self._language)[:500]
                     elif section == "DEFENSE":
-                        ans.walkthrough.complexity_defense = humanize(value)[:600]
+                        ans.walkthrough.complexity_defense = humanize_in(value, self._language)[:600]
                     else:
-                        ans.walkthrough.commentary = [humanize(s.strip())[:400] for s in value.split("|")
+                        ans.walkthrough.commentary = [humanize_in(s.strip(), self._language)[:400]
+                                                      for s in value.split("|")
                                                      if s.strip()][:3]
                     if section != "COMMENTARY" or value:
                         section = None
@@ -300,7 +314,7 @@ class AnswerStreamParser:
             if section == "COMMENTARY" and line.strip() and ans.walkthrough:
                 value = bullet.group(1).strip() if bullet else line.strip()
                 if len(ans.walkthrough.commentary) < 3:
-                    ans.walkthrough.commentary.append(humanize(value)[:400])
+                    ans.walkthrough.commentary.append(humanize_in(value, self._language)[:400])
                 continue
             if bullet and section in (None, "ANSWER"):
                 point = bullet.group(1).strip()
@@ -327,12 +341,12 @@ class AnswerStreamParser:
 
         if stray and not ans.direct_answer:
             ans.direct_answer = " ".join(stray).replace(" \n\n", "\n\n")
-        ans.direct_answer = humanize(ans.direct_answer)
+        ans.direct_answer = humanize_in(ans.direct_answer, self._language)
         # Only the jargon the answer actually says: a glossary of words the user won't say is noise.
         spoken = ans.direct_answer.lower()
-        ans.terms = [t for t in terms if _says(spoken, t.term)][:MAX_TERMS]
+        ans.terms = [t for t in terms if _says(spoken, t.term, loose=self._language != "en")][:MAX_TERMS]
         if ans.example:
-            ans.example = humanize(ans.example)
+            ans.example = humanize_in(ans.example, self._language)
         if (ans.grounding is None and ans.direct_answer and self._qtype in _PERSONAL
                 and not any(c.startswith("resume") for c in self._context_used)):
             # Model skipped the label on a question about the user's own past with no verified facts to draw
@@ -373,21 +387,28 @@ def _terms(value: str) -> list[Term]:
     return out[:MAX_TERMS * 2]  # filtered down to what the answer says once it's complete
 
 
-def _says(spoken: str, term: str) -> bool:
-    """The answer uses the term ("Kubernetes", "pods" for "pod", "CI/CD")."""
+def _says(spoken: str, term: str, *, loose: bool = False) -> bool:
+    """The answer uses the term ("Kubernetes", "pods" for "pod", "CI/CD"). `loose`, for an answer in another
+    language: the word before it may be a letter of another script ("このAPIは"), and a term in a script without
+    spaces is found anywhere."""
     key = term.lower()
     stem = key[:-1] if key.endswith("s") and len(key) > 3 else key
+    if loose:
+        if stem[:1].isascii():
+            return re.search(r"(?<![A-Za-z0-9_])" + re.escape(stem), spoken) is not None
+        return stem in spoken
     return re.search(r"(?<![\w])" + re.escape(stem), spoken) is not None
 
 
-_SENTENCE_END = re.compile(r"[.!?…][\"')\]]*(?=\s|$)")
+# Japanese and Devanagari full stops end a sentence with no space after them.
+_SENTENCE_END = re.compile(r"[.!?…][\"')\]]*(?=\s|$)|[。！？।॥][」』\"')\]]*")
 
 
 def trim_cut_off(answer: LiveAnswer) -> LiveAnswer:
     """An answer that hit its token cap stops mid-sentence: end it at its last complete sentence instead, so the user
     never reads (or says) half a thought."""
     text = answer.direct_answer.rstrip()
-    if not text or re.search(r"[.!?…][\"')\]]*$", text):
+    if not text or re.search(r"[.!?…。！？।॥][」』\"')\]]*$", text):
         return answer
     ends = list(_SENTENCE_END.finditer(text))
     if not ends:
