@@ -103,3 +103,36 @@ def test_a_saved_job_goes_on_the_tracker_with_its_tailored_resume(jobs: TestClie
     assert tracked[lid]["resume_id"] == item["result"]["resume_id"]
     made = jobs.get(f"/v1/resumes/{item['result']['resume_id']}", headers=h).json()
     assert "Freshworks" in made["job_text"]
+
+
+def test_a_tailoring_cut_off_midway_gives_its_credit_back_for_the_retry(client: TestClient, welcome: None,  # noqa: F811
+                                                                         monkeypatch: Any) -> None:
+    """The worker cuts a job off at its timeout (or a deploy does) and runs it again from the start. The credit
+    claimed before the cut used to stay spent (a cancellation isn't an Exception), so the retry charged another."""
+    import asyncio
+
+    from orbit_api.resumes import autofix, tailor_queue
+
+    h = _signup(client, _new_ip())  # one welcome credit
+    rid = _resume(client, h)
+    uid = client.get("/v1/auth/me", headers=h).json()["id"]
+    real = autofix.fix_resume
+
+    async def cut_off(body: Any, user: Any, can_spend: Any, generate: Any) -> Any:
+        async def then_cut(req: Any) -> Any:
+            await generate(req)  # the credit is claimed and the model answers
+            raise asyncio.CancelledError
+
+        return await real(body, user, can_spend, then_cut)
+
+    monkeypatch.setattr(autofix, "fix_resume", cut_off)
+
+    async def go() -> bool:
+        try:
+            await tailor_queue.run({"item": "not-queued", "user_id": uid, "source_id": rid})
+        except asyncio.CancelledError:
+            return True
+        return False
+
+    assert client.portal.call(go)  # type: ignore[union-attr]
+    assert client.get("/v1/resumes/allowance", headers=h).json()["credits_left"] == 1
