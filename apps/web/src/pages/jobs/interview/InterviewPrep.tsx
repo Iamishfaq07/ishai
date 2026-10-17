@@ -15,6 +15,7 @@ import {
   BookOpen,
   CalendarIcon,
   FileText,
+  InterviewDayScene,
   ListChecks,
   LoadGate,
   MOCK_INTERVIEW_ENABLED,
@@ -134,6 +135,7 @@ function WhenCard({ view, onSave }: { view: InterviewPrepView; onSave: (p: Inter
             {view.round.at ? interviewWhen(view.round.at) : "No date yet. Add it so Home and your prep plan count down to it."}
           </p>
         </div>
+        {!view.round.at && <InterviewDayScene className="-my-4 ml-auto hidden w-28 shrink-0 sm:block" />}
         {!editing && (
           <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
             Change

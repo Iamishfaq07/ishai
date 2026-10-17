@@ -1,5 +1,25 @@
 # Implementation log
 
+## Scenes for every feature, and a touch of motion (2026-10-18)
+
+- **Nine new scenes** in the house style (DECISIONS D68; DESIGN.md "Scenes"): LinkedIn AI, Code AI, Learning AI,
+  the video interview, plan and credits, security, people and referrals, the admin inbox and support, interview day;
+  and `WorkingScene`, the AI reading, writing or matching. Hand-written SVG in `packages/ui/src/components/scenes/`,
+  ink and one accent, flat, light and dark, decorative.
+- **Where they show**: CosmicEmptyState variants for each; a small scene in the page header of LinkedIn AI, Code AI,
+  Learning AI, the video interview and Plan & billing (lg up); People, the admin inbox, support and payments,
+  two-step sign-in while it's off, and a job, offer or problem that isn't there; the session review (nothing
+  captured, and the scorecard before a review exists); Home's next step and "You're set up"; the first welcome
+  question; the Interview tab without a date and Home's interview card; desktop Home, History and Documents. One
+  scene in a view, never in dense tables or forms.
+- **AI waits over two seconds** show `WorkingState` instead of a big spinner: matching jobs, reading or importing a
+  resume, Resume AI's prep tabs, letter and AI panel, outreach writing, a review being written.
+- **Motion**: each scene plays one small touch the first time it's in view (strokes draw on, the offer balance
+  settles, a card slides into its column, ticks draw in) and rests; Gentle fades, Off shows the final frame; only the
+  AI-working scene loops, at Full, while the wait lasts. `scenes.test.ts` holds the rules.
+- **Success moments** now fire once per device: the first offer (Offer AI or the tracker) and the first ATS score
+  past 80.
+
 ## The front door, enterprise and product-led (2026-10-18)
 
 - **One public layout** (DECISIONS D66; DESIGN.md "The front door"): every signed-out page sits in `PublicLayout`

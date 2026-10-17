@@ -720,4 +720,5 @@ classes from `parts.tsx` keeps each scene a short file, and `scenes.test.ts` hol
 frame without CSS, one motion class per part). Two success moments that were defined but never used now fire once
 per device: the first offer (added in Offer AI, or a job moved to offer) and the first ATS score past 80; nothing else
 about what a page does changed. The
-interview-day scene is drawn and named (`interview-day`) for those screens when they land.
+interview-day scene marks the Mission room's Interview tab while it has no date, and Home's interview card on the
+day before and the day itself (the next-step card then drops its own, keeping one scene in view).

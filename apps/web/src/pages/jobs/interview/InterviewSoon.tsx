@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import type { JobTrackerEntry } from "@orbit/types";
-import { CalendarIcon, CompanyLogo, Rocket, interviewWhen, interviewsSoon, roundLabel } from "@orbit/ui";
+import { CalendarIcon, CompanyLogo, InterviewDayScene, Rocket, interviewWhen, interviewsSoon, roundLabel } from "@orbit/ui";
 import type { AsyncState } from "../../../lib/useAsync";
 import { linkButton } from "../links";
 import { copilotPath, interviewPrepPath } from "./links";
@@ -16,7 +16,8 @@ export function InterviewSoon({ tracker }: { tracker: AsyncState<JobTrackerEntry
   const tomorrow = soon.some((x) => x.days === 1);
   const title = today && tomorrow ? "Interviews today and tomorrow" : today ? `Interview${soon.length > 1 ? "s" : ""} today` : `Interview${soon.length > 1 ? "s" : ""} tomorrow`;
   return (
-    <section aria-labelledby="interview-soon" className="glass-panel gradient-border rounded-2xl p-5">
+    <section aria-labelledby="interview-soon" className="glass-panel gradient-border scene-host relative rounded-2xl p-5 xl:pr-52">
+      <InterviewDayScene className="absolute right-6 top-1/2 hidden w-40 -translate-y-1/2 xl:block" />
       <h2 id="interview-soon" className="flex items-center gap-2 font-display text-lg font-semibold">
         <CalendarIcon className="h-4 w-4 text-sky-500" aria-hidden /> {title}
       </h2>

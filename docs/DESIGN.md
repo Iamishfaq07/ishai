@@ -282,7 +282,7 @@ unless given a `title`. Under 3 KB of source each (WorkingScene holds three kind
 | `SecurityScene` | `security` | a shield closing with a tick, a key, a six-digit code | two-step sign-in while it's off |
 | `ReferralScene` | `people` | two people and the link between them | People (Jobs AI outreach) |
 | `InboxScene` | `inbox` | a letter into the tray, a chat waiting | admin inbox and support |
-| `InterviewDayScene` | `interview-day` | a calendar with the day ringed, its checklist | (for the interview-day screens) |
+| `InterviewDayScene` | `interview-day` | a calendar with the day ringed, its checklist | the Mission room's Interview tab while it has no date; Home's "Interview today/tomorrow" card from xl up (the next step then drops its scene) |
 | `NoResultsScene`, `OfflineScene` | `no-results`, `offline` | a telescope on empty sky; a dish losing its satellite | no matches; a job, offer or problem not found; boards down |
 | `WelcomeScene` | `support` | Orbit with a moon per product | the first welcome question |
 | `CelebrationScene` (`still`) | `success` | a ticked world, sparks thrown out | "You're set up" |

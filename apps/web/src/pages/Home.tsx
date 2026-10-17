@@ -27,6 +27,7 @@ import {
   cx,
   focusRing,
   hasCelebrated,
+  interviewsSoon,
   safeLocal,
 } from "@orbit/ui";
 import { Card, ErrorNote } from "../components/ui";
@@ -104,6 +105,8 @@ export function HomePage() {
   const steps = facts ? nextSteps(answers, facts) : null;
   const firstName = user?.name?.split(" ")[0];
   const isNew = facts !== null && facts.resumes + facts.resumeDocs + facts.mocks + facts.lives + facts.tracker.length === 0;
+  // One scene in view: on an interview's eve the interview card below draws it, so the next step doesn't.
+  const interviewSoon = interviewsSoon(tracker.data ?? []).length > 0;
 
   return (
     <div className="space-y-6">
@@ -120,7 +123,7 @@ export function HomePage() {
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="min-w-0 space-y-6">
-          <NextStep steps={steps} welcomed={welcomed} askWelcome={!answers && isNew} />
+          <NextStep steps={steps} welcomed={welcomed} askWelcome={!answers && isNew} art={!interviewSoon} />
           <InterviewSoon tracker={tracker} />
           <DueToday />
           <FollowUps tracker={tracker} hideWhenEmpty />
@@ -178,7 +181,7 @@ const STEP_ART: Record<ProductId, () => ReactNode> = {
 };
 
 /** The one thing to do now, big, with the two after it as quiet links. */
-function NextStep({ steps, welcomed, askWelcome }: { steps: Step[] | null; welcomed: boolean; askWelcome: boolean }) {
+function NextStep({ steps, welcomed, askWelcome, art = true }: { steps: Step[] | null; welcomed: boolean; askWelcome: boolean; art?: boolean }) {
   if (steps === null) {
     // The height the card has when it arrives (measured: 493 px on a phone, 423 px from sm up), so nothing below it
     // jumps when the lists answer.
@@ -214,7 +217,7 @@ function NextStep({ steps, welcomed, askWelcome }: { steps: Step[] | null; welco
               )}
             </div>
           </div>
-          <div className="scene-host hidden w-44 shrink-0 self-center xl:block">{STEP_ART[step.product]()}</div>
+          {art && <div className="scene-host hidden w-44 shrink-0 self-center xl:block">{STEP_ART[step.product]()}</div>}
         </div>
         {(rest.length > 0 || askWelcome) && (
           <div className="mt-6 border-t border-zinc-200/70 pt-4 dark:border-white/10">
