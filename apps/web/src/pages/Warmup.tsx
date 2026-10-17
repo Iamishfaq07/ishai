@@ -12,7 +12,6 @@ import {
   Headphones,
   Info,
   Mic,
-  OrbitWordmark,
   Redo2,
   Sparkles,
   Square,
@@ -27,7 +26,7 @@ import {
   safeSession,
 } from "@orbit/ui";
 import { Button, Card, Textarea } from "../components/ui";
-import { SiteMenu } from "../components/SiteMenu";
+import { PublicLayout } from "../marketing/PublicLayout";
 import { useAuth } from "../lib/auth";
 import { pickRound, trackById, tracksFor, type Track, type TrackId, type WarmupQuestion } from "../lib/warmup/bank";
 import { useCountry } from "../lib/country";
@@ -60,33 +59,18 @@ export function WarmupPage() {
   const questions = track && state ? state.ids.map((id) => track.questions.find((q) => q.id === id)).filter((q): q is WarmupQuestion => Boolean(q)) : [];
 
   return (
-    <div className="min-h-full overflow-x-clip">
-      <header className="relative mx-auto flex max-w-3xl items-center gap-3 px-4 py-4 sm:px-6">
-        <Link to="/" className={cx("rounded-lg", focusRing)} aria-label="Orbit">
-          <OrbitWordmark size={26} />
-        </Link>
-        <span className="hidden h-5 w-px bg-zinc-300 sm:block dark:bg-white/15" aria-hidden="true" />
-        <span className="hidden font-display text-sm font-semibold sm:inline">Interview warm-up</span>
-        <nav aria-label="Account" className="ml-auto flex items-center gap-2">
-          <SiteMenu />
-          {user ? (
-            <Link to="/mock" className={cx(navButton("secondary"))}>
-              Back to Practice
-            </Link>
-          ) : (
-            <>
-              <Link to="/login" state={{ from: "/mock" }} className={cx(navButton("secondary"), "hidden sm:inline-flex")}>
-                Sign in
-              </Link>
-              <Link to="/register" state={{ from: "/mock" }} className={navButton("primary")}>
-                Start free
-              </Link>
-            </>
-          )}
-        </nav>
-      </header>
-
-      <main id="main" className="mx-auto max-w-3xl px-4 pb-16 sm:px-6">
+    <PublicLayout
+      authState={{ from: "/mock" }}
+      context="Interview warm-up"
+      actions={
+        user ? (
+          <Link to="/mock" className={navButton("secondary")}>
+            Back to Practice
+          </Link>
+        ) : undefined
+      }
+    >
+      <div className="mx-auto max-w-3xl px-5 pb-20 pt-10 sm:px-8 sm:pt-14">
         {!state || !track || questions.length === 0 ? (
           <PickTrack onPick={(t) => start(t)} />
         ) : state.done ? (
@@ -116,8 +100,8 @@ export function WarmupPage() {
             Privacy
           </a>
         </p>
-      </main>
-    </div>
+      </div>
+    </PublicLayout>
   );
 }
 

@@ -12,7 +12,6 @@ import {
   Clock,
   FileUp,
   MapPin,
-  OrbitWordmark,
   Search,
   Sparkles,
   cx,
@@ -20,15 +19,15 @@ import {
   isIndia,
   sampleCity,
   focusRing,
-  Reveal,
+  buttonClass,
 } from "@orbit/ui";
-import { AiPill } from "../../components/products";
-import { Footer } from "../../components/Footer";
-import { SiteMenu } from "../../components/SiteMenu";
+import { CtaBand, FeatureGrid, ProductHero, inkButton } from "../../marketing/ProductPage";
+import { PublicLayout } from "../../marketing/PublicLayout";
+import { Container, IconTile, Section, SectionIntro } from "../../marketing/primitives";
 import { api } from "../../lib/api";
 import { useCountry } from "../../lib/country";
 import { RESUME_AI_HOME } from "../resume/paths";
-import { linkButton, textLink } from "./links";
+import { linkButton } from "./links";
 import { postedAgo } from "./model";
 import { JOBS_AI_HOME } from "./paths";
 import { jobsAiFeatures } from "./product";
@@ -71,14 +70,13 @@ function FreeNote({ stats, className }: { stats: JobStats | null; className?: st
  *  in a city where the visitor applies (remote where there's no example city). */
 function SampleMatch() {
   const city = sampleCity(useCountry());
-  // Solid, not glass: the page's glow would show through.
-  const solid = "rounded-2xl bg-white shadow-xl ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-white/10";
+  // Solid surfaces that float: the card and the fit check beside it.
+  const solid = "mk-float rounded-2xl mk-surface";
   return (
     <figure className="relative mx-auto w-full min-w-0 max-w-[30rem] lg:mr-0">
-      <span aria-hidden="true" className="pointer-events-none absolute -inset-8 rounded-[3rem] bg-gradient-to-br from-indigo-500/25 via-aurora-400/10 to-transparent blur-3xl" />
       <div role="img" aria-label="An example job match in Jobs AI" className="relative pb-24 sm:pb-28">
         <div aria-hidden="true" className={cx(solid, "relative p-5")}>
-          <span className="absolute right-3 top-3 rounded-full bg-zinc-500/10 px-2 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide text-zinc-500">
+          <span className="absolute right-3 top-3 rounded-full bg-zinc-500/10 px-2 py-0.5 text-[0.6875rem] font-medium text-zinc-600 dark:text-zinc-300">
             Example
           </span>
           <div className="flex items-start gap-3 pr-14">
@@ -153,7 +151,8 @@ function SampleMatch() {
 /**
  * Jobs AI for signed-out visitors (at /jobs, where a signed-in person gets their overview): what it does, an example
  * match, where the jobs come from, and "Start free", which signs up and comes back here. The only call is the public
- * numbers (GET /v1/jobs/stats): nothing here needs a session or calls the AI.
+ * numbers (GET /v1/jobs/stats): nothing here needs a session or calls the AI. The public site's product page template
+ * (marketing/ProductPage.tsx) inside the shared layout.
  */
 export function JobsAiPublicPage() {
   const country = useCountry();
@@ -161,60 +160,35 @@ export function JobsAiPublicPage() {
   const stats = useJobStats();
   const counts = stats && stats.jobs >= SHOW_COUNTS_FROM ? stats : null;
   const feeds = stats?.feeds.length ? stats.feeds : ["Himalayas", "Remote OK", "Jobicy"];
+  const steps = [
+    { icon: FileUp, title: "Add your resume", text: "Import the one you have (PDF, Word or LinkedIn's PDF), or make one in Resume AI." },
+    { icon: Sparkles, title: "See your matches", text: "The AI reads it into a search profile you can change, and every new job is scored against it." },
+    { icon: BookmarkCheck, title: "Apply and keep track", text: "Check your fit, ask for a referral, apply on the company's site, and move each application along your tracker." },
+  ];
   return (
-    <div className="min-h-full overflow-x-clip">
-      <header className="relative mx-auto flex max-w-6xl items-center gap-3 px-4 py-4 sm:px-6">
-        <Link to="/" className={cx("rounded-lg", focusRing)} aria-label="Orbit home">
-          <OrbitWordmark size={26} />
-        </Link>
-        <span className="hidden h-5 w-px bg-zinc-300 sm:block dark:bg-white/15" aria-hidden="true" />
-        <span className="hidden items-center gap-1 font-display text-sm font-semibold sm:inline-flex">
-          Jobs <AiPill />
-        </span>
-        <nav aria-label="Account" className="ml-auto flex items-center gap-2">
-          <SiteMenu />
-          <Link to="/login" state={BACK_HERE} className={cx(linkButton("secondary"), "hidden sm:inline-flex")}>
-            Sign in
-          </Link>
-          <Link to="/register" state={BACK_HERE} className={linkButton("primary")}>
-            Start free
-          </Link>
-        </nav>
-      </header>
+    <PublicLayout authState={BACK_HERE} context="Jobs AI">
+      <ProductHero
+        product={{ id: "jobs", name: "Jobs AI", icon: Briefcase }}
+        title="Find jobs that fit your resume."
+        lead="The latest openings from companies' own career pages and remote job boards, ranked by how well they match you, with a free AI fit check for each one."
+        detail="Orbit reads your resume once, works out the roles, skills and cities to look for, and scores every new post against it. You apply on the company's own site."
+        actions={
+          <>
+            <Link to="/register" state={BACK_HERE} className={buttonClass("primary", "lg", "min-h-12 px-6")}>
+              Start free <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+            <Link to="/login" state={BACK_HERE} className={buttonClass("secondary", "lg", "min-h-12 px-6")}>
+              I have an account
+            </Link>
+          </>
+        }
+        note={<FreeNote stats={stats} />}
+        visual={<SampleMatch />}
+      />
 
-      <main id="main" className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
-        <section aria-labelledby="hero-title" className="grid grid-cols-[minmax(0,1fr)] items-center gap-12 pb-12 pt-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:pb-20 lg:pt-12">
-          <div className="animate-fade-up">
-            <p className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-200">
-              <Briefcase className="h-3.5 w-3.5" aria-hidden />
-              Orbit Jobs AI
-            </p>
-            <h1 id="hero-title" className="mt-5 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
-              Find jobs that <span className="text-gradient">fit your resume.</span>
-            </h1>
-            <p className="mt-5 max-w-xl text-lg text-zinc-600 dark:text-zinc-300">
-              The latest openings from companies' own career pages and remote job boards, ranked by how well they match you, with a free AI fit
-              check for each one.
-            </p>
-            <p className="mt-3 max-w-xl text-sm text-zinc-500 dark:text-zinc-400">
-              Orbit reads your resume once, works out the roles, skills and cities to look for, and scores every new post against it. You apply on
-              the company's own site.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/register" state={BACK_HERE} className={linkButton("primary", "lg")}>
-                Start free <ArrowRight className="h-4 w-4" aria-hidden />
-              </Link>
-              <Link to="/login" state={BACK_HERE} className={linkButton("secondary", "lg")}>
-                I have an account
-              </Link>
-            </div>
-            <FreeNote stats={stats} className="mt-5 max-w-xl" />
-          </div>
-          <SampleMatch />
-        </section>
-
-        {counts && (
-          <section aria-label="Jobs AI today" className="mb-12 grid grid-cols-3 gap-2 sm:gap-3">
+      {counts && (
+        <section aria-label="Jobs AI today" className="border-t mk-line">
+          <Container className="grid grid-cols-3 divide-x mk-line">
             <Stat value={formatNumber(counts.jobs, country)} label={`jobs posted in the last ${counts.days} days`} />
             <Stat value={formatNumber(counts.companies, country)} label={india ? "companies hiring in India or remotely" : "companies hiring"} />
             <Stat
@@ -222,110 +196,92 @@ export function JobsAiPublicPage() {
               label="free AI fit checks a day"
               note={counts.updated_at ? `Jobs updated ${postedAgo(counts.updated_at).toLowerCase()}` : undefined}
             />
-          </section>
-        )}
-
-        <section aria-labelledby="features-title" className="border-t border-zinc-200/70 pt-12 dark:border-white/5">
-          <h2 id="features-title" className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-            What Jobs AI does
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400">
-            You stay in charge: you apply on the original site, and nothing is sent to an employer for you.
-          </p>
-          <Reveal as="ul" stagger className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {jobsAiFeatures(country).map(({ icon: Icon, title, text }) => (
-              <li key={title} className="glass-panel rounded-2xl p-5">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-aurora-400/10 text-indigo-600 ring-1 ring-indigo-500/20 dark:text-indigo-300">
-                  <Icon className="h-5 w-5" aria-hidden />
-                </span>
-                <h3 className="mt-4 font-display text-base font-semibold">{title}</h3>
-                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{text}</p>
-              </li>
-            ))}
-          </Reveal>
+          </Container>
         </section>
+      )}
 
-        <section aria-labelledby="how-title" className="mt-14 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-10">
-          <div>
-            <h2 id="how-title" className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-              How it works
-            </h2>
-            <ol className="mt-6 space-y-4">
-              {[
-                { icon: FileUp, title: "Add your resume", text: "Import the one you have (PDF, Word or LinkedIn's PDF), or make one in Resume AI." },
-                { icon: Sparkles, title: "See your matches", text: "The AI reads it into a search profile you can change, and every new job is scored against it." },
-                { icon: BookmarkCheck, title: "Apply and keep track", text: "Check your fit, ask for a referral, apply on the company's site, and move each application along your tracker." },
-              ].map(({ icon: Icon, title, text }, i) => (
+      <FeatureGrid
+        id="features-title"
+        eyebrow="What Jobs AI does"
+        title="You stay in charge of every application."
+        lead="You apply on the original site, and nothing is sent to an employer for you."
+        features={jobsAiFeatures(country).map(({ icon, title, text }) => ({ icon, title, text }))}
+        band
+      />
+
+      <Section labelledBy="how-title">
+        <div className="grid gap-14 lg:grid-cols-12 lg:gap-16">
+          <div className="lg:col-span-5">
+            <SectionIntro id="how-title" eyebrow="How it works" title="From resume to matches in a minute or two." />
+            <ol className="mt-10 space-y-8">
+              {steps.map(({ icon, title, text }, i) => (
                 <li key={title} className="flex gap-4">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-aurora-500 text-white shadow-glow-sm">
-                    <Icon className="h-5 w-5" aria-hidden />
-                  </span>
+                  <IconTile icon={icon} />
                   <span className="min-w-0">
-                    <span className="block font-display font-semibold">
+                    <span className="block text-base font-semibold text-zinc-950 dark:text-white">
                       <span className="sr-only">Step {i + 1}: </span>
                       {title}
                     </span>
-                    <span className="block text-sm text-zinc-500 dark:text-zinc-400">{text}</span>
+                    <span className="mt-1 block text-[0.9375rem] leading-relaxed text-zinc-600 dark:text-zinc-400">{text}</span>
                   </span>
                 </li>
               ))}
             </ol>
           </div>
-          <div className="glass-panel rounded-3xl p-6 sm:p-8">
-            <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
-              <Building2 className="h-5 w-5 text-indigo-500" aria-hidden /> Where the jobs come from
+          <div className="rounded-2xl border mk-line mk-surface p-6 sm:p-8 lg:col-span-7">
+            <h2 className="flex items-center gap-3 text-lg font-semibold text-zinc-950 dark:text-white">
+              <IconTile icon={Building2} size="sm" /> Where the jobs come from
             </h2>
-            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+            <p className="mt-4 text-[0.9375rem] leading-relaxed text-zinc-600 dark:text-zinc-300">
               Companies' own career pages (their Greenhouse, Lever, Ashby and SmartRecruiters job boards), so Apply goes straight to the employer,
               and remote job boards that allow it: {feeds.join(", ")}. Every job says where it came from and links to the original post.
             </p>
-            <h3 className="mt-5 flex items-center gap-2 font-display text-base font-semibold">
-              <Search className="h-4 w-4 text-indigo-500" aria-hidden /> And the big sites
+            <h3 className="mt-8 flex items-center gap-3 text-base font-semibold text-zinc-950 dark:text-white">
+              <IconTile icon={Search} size="sm" /> And the big sites
             </h3>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+            <p className="mt-4 text-[0.9375rem] leading-relaxed text-zinc-600 dark:text-zinc-300">
               {india ? "LinkedIn, Naukri" : "LinkedIn, Indeed"} and the other large sites don't allow their listings to be copied, so Orbit doesn't. It opens their own search
               instead, filled in from your profile:
             </p>
-            <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Sites Jobs AI searches for you">
+            <ul className="mt-4 flex flex-wrap gap-1.5" aria-label="Sites Jobs AI searches for you">
               {(india ? PORTALS : WORLD_PORTALS).map((p) => (
-                <li key={p} className="rounded-full border border-zinc-200 bg-white/70 px-2.5 py-0.5 text-xs font-medium text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300">
+                <li key={p} className="rounded-full border mk-line px-2.5 py-0.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
                   {p}
                 </li>
               ))}
             </ul>
           </div>
-        </section>
+        </div>
+      </Section>
 
-        <section className="glass-panel gradient-border relative mt-14 overflow-hidden rounded-3xl p-6 text-center sm:p-10">
-          <span aria-hidden="true" className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[36rem] -translate-x-1/2 rounded-full bg-indigo-500/15 blur-3xl" />
-          <h2 className="relative font-display text-2xl font-semibold tracking-tight sm:text-3xl">See the jobs that fit you</h2>
-          <p className="relative mx-auto mt-2 max-w-xl text-sm text-zinc-600 dark:text-zinc-300">
-            Create a free Orbit account and add your resume: your matches are ready in a minute or two. The same account has Resume AI and Orbit's
-            interview copilot for when the interviews come.
-          </p>
-          <Link to="/register" state={BACK_HERE} className={cx(linkButton("primary", "lg"), "relative mt-6")}>
+      <CtaBand
+        id="cta-title"
+        title="See the jobs that fit you."
+        text="Create a free Orbit account and add your resume: your matches are ready in a minute or two. The same account has Resume AI and Orbit's interview copilot for when the interviews come."
+        actions={
+          <Link to="/register" state={BACK_HERE} className={inkButton.primary}>
             Start free <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>
-          <p className="relative mt-5 text-xs text-zinc-500 dark:text-zinc-400">
+        }
+        footnote={
+          <>
             Resume not ready yet?{" "}
-            <Link to={RESUME_AI_HOME} className={textLink}>
+            <Link to={RESUME_AI_HOME} className={cx("rounded font-medium text-white underline underline-offset-2", focusRing)}>
               Resume AI
             </Link>{" "}
             scores it the way screening software reads it, and helps you fix it.
-          </p>
-        </section>
-      </main>
-
-      <Footer />
-    </div>
+          </>
+        }
+      />
+    </PublicLayout>
   );
 }
 
 function Stat({ value, label, note }: { value: string; label: string; note?: string }) {
   return (
-    <div className="glass-panel min-w-0 rounded-2xl px-3 py-3 sm:px-5 sm:py-4">
-      <p className="font-display text-2xl font-semibold tabular-nums tracking-tight sm:text-3xl">{value}</p>
-      <p className="mt-0.5 text-xs text-zinc-600 sm:text-sm dark:text-zinc-300">{label}</p>
+    <div className="min-w-0 px-3 py-8 first:pl-0 sm:px-8 sm:py-10">
+      <p className="stat-value text-2xl font-semibold tabular-nums tracking-tight text-zinc-950 sm:text-4xl dark:text-white">{value}</p>
+      <p className="mt-1 text-xs text-zinc-600 sm:text-sm dark:text-zinc-400">{label}</p>
       {note && <p className="mt-1 hidden text-xs text-zinc-500 sm:block dark:text-zinc-400">{note}</p>}
     </div>
   );
