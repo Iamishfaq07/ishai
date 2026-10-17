@@ -16,7 +16,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user
@@ -297,8 +297,14 @@ class RestoredOut(BaseModel):
 async def copy_snapshot(entry_id: str, snapshot_id: str, user: Annotated[User, Depends(current_user)],
                         db: Annotated[AsyncSession, Depends(get_db)]) -> RestoredOut:
     """Open the sent version again as a new resume (the snapshot itself never changes)."""
+    from orbit_api.resumes.routes import MAX_RESUMES
+
     entry = await _entry(db, entry_id, user)
     s = await _snapshot(db, entry, snapshot_id, user)
+    # A new resume like any other: the same cap as making one in Resume AI.
+    count = await db.scalar(select(func.count()).select_from(Resume).where(Resume.user_id == user.id))
+    if (count or 0) >= MAX_RESUMES:
+        raise HTTPException(status.HTTP_409_CONFLICT, f"You can keep up to {MAX_RESUMES} resumes. Delete one first.")
     date = _aware(s.created_at).strftime("%d %b %Y")
     copy = Resume(user_id=user.id, title=f"{s.title} (sent {date})"[:160], data=dict(s.data or {}),
                   design=dict(s.design or {}), job_text=s.job_text or "")
