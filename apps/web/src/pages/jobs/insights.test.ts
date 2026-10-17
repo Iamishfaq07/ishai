@@ -47,6 +47,14 @@ describe("searchInsights", () => {
     expect(s.weeks.reduce((n, w) => n + w.count, 0)).toBe(5);
   });
 
+  it("measures no wait for a job added straight in as interviewing", () => {
+    const at = ago(2);
+    const s = searchInsights([e("m", { status: "interviewing", applied_at: at, status_at: at, source: "manual" })], NOW);
+    expect([s.applied, s.heardBack, s.medianDaysToHear]).toEqual([1, 1, null]);
+    const sameDay = searchInsights([e("n", { status: "rejected", applied_at: ago(2), status_at: ago(1.8) })], NOW);
+    expect(sameDay.medianDaysToHear).toBe(0); // a real answer within the day
+  });
+
   it("has no rates before anything is applied to", () => {
     const s = searchInsights([e("x", {})], NOW);
     expect([s.applied, s.responseRate, s.medianDaysToHear]).toEqual([0, null, null]);
