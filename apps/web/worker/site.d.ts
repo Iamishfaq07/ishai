@@ -1,0 +1,20 @@
+// Types for site.js, so the web app's TypeScript (the build-time prerender and its tests) can import it.
+type Node = Record<string, unknown>;
+export const SITE: string;
+export const SITE_NAME: string;
+export const ALTERNATE_NAMES: string[];
+export const SAME_AS: string[];
+export const DESKTOP_DOWNLOAD_URL: string;
+export const ORGANIZATION_ID: string;
+export const WEBSITE_ID: string;
+export function siteUrl(path?: string): string;
+export function organization(): Node;
+export function website(): Node;
+export function desktopApp(): Node;
+export function webApp(app: { id?: string; name: string; path: string; description: string; category?: string }): Node;
+export function webPage(page: { path: string; name: string; description?: string; type?: string; extra?: Node }): Node;
+export function breadcrumbs(items: Array<[string, string]>): Node;
+export function faqPage(path: string, items: Array<[string, string]>): Node;
+export function graph(...nodes: Array<Node | null | undefined | false>): { "@context": string; "@graph": Node[] };
+export function jsonLdText(doc: unknown): string;
+export function structuredDataFor(path: string, page?: { title?: string | null; description?: string | null }): { "@context": string; "@graph": Node[] } | null;

@@ -164,8 +164,11 @@ describe("routeKind (which addresses are pages)", () => {
     expect(jobsChildren).toContain("matches");
     const paths = routePaths(app).filter((p) => !jobsChildren.includes(p) || p === "*");
     let checked = 0;
+    // Routes that exist only in development builds (`{DevOnly && <Route …>}`, e.g. the component gallery): a 404 in
+    // production is right for them.
+    const devOnly = new Set([...app.matchAll(/\{\s*\w+\s*&&\s*<Route\s+path="([^"]+)"/g)].map((m) => m[1]));
     for (const raw of [...paths, ...jobsChildren.filter((p) => p !== "*").map((p) => `jobs/${p}`)]) {
-      if (raw === "*" || raw === "jobs") continue;
+      if (raw === "*" || raw === "jobs" || devOnly.has(raw)) continue;
       const path = `/${raw.replace(/^\//, "").replace(/:[A-Za-z]+/g, "sample1").replace(/\/\*$/, "")}`;
       const kind = routeKind(path);
       const moved = movedPath(path);
@@ -385,7 +388,8 @@ describe("structured data (site.js)", () => {
 
 // ---------------------------------------------------------------- the public files crawlers read
 
-describe("llms.txt, llms-full.txt and sitemap.xml", () => {
+// The sitemap is built with the site now: src/prerender/prerender.test.ts checks it against routeKind and canonicalLocation.
+describe("llms.txt and llms-full.txt", () => {
   for (const file of ["llms.txt", "llms-full.txt"]) {
     it(`${file} follows the llms.txt format and links only to public pages`, () => {
       const text = read(`../public/${file}`);
@@ -401,18 +405,4 @@ describe("llms.txt, llms-full.txt and sitemap.xml", () => {
       expect(text).not.toMatch(/deepseek|undetectable|stealth|invisible/i);
     });
   }
-
-  it("sitemap.xml lists only public pages, once each, at their canonical address", () => {
-    const xml = read("../public/sitemap.xml");
-    expect(xml).toMatch(/^<\?xml version="1.0" encoding="UTF-8"\?>\s*<urlset xmlns="http:\/\/www.sitemaps.org\/schemas\/sitemap\/0.9">/);
-    expect(xml.trim().endsWith("</urlset>")).toBe(true);
-    const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
-    expect(new Set(locs).size).toBe(locs.length);
-    for (const loc of locs) {
-      const u = new URL(loc);
-      expect(u.origin).toBe(SITE);
-      expect(routeKind(u.pathname), loc).toBe("public");
-      expect(canonicalLocation(u, {}), loc).toBeNull();
-    }
-  });
 });

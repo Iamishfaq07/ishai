@@ -177,8 +177,9 @@ const OTHER_PAGES = {
 };
 
 /**
- * The structured data for one public page, or null for a page that has nothing true to add. `title` and
- * `description` are the page's own (what its <head> says), so the markup never disagrees with the page.
+ * The structured data for one public page, or null for a page that has nothing true to add. Every graph carries the
+ * Organization and WebSite nodes the page's nodes point at (by @id), so each page's markup stands on its own.
+ * `title` and `description` are the page's own (what its <head> says), so the markup never disagrees with the page.
  */
 export function structuredDataFor(path, { title, description } = {}) {
   if (path === "/") {
@@ -198,6 +199,8 @@ export function structuredDataFor(path, { title, description } = {}) {
   const product = PRODUCT_PAGES[path];
   if (product) {
     return graph(
+      organization(),
+      website(),
       webPage({ path, name: title || product.app.name, description, extra: { mainEntity: { "@id": `${siteUrl(path)}#app-${product.app.id}` } } }),
       webApp({ ...product.app, path }),
       breadcrumbs([["Home", "/"], [product.crumb, path]]),
@@ -205,7 +208,12 @@ export function structuredDataFor(path, { title, description } = {}) {
   }
   const other = OTHER_PAGES[path];
   if (other) {
-    return graph(webPage({ path, name: title || other.crumb, description, type: other.type }), breadcrumbs([["Home", "/"], [other.crumb, path]]));
+    return graph(
+      organization(),
+      website(),
+      webPage({ path, name: title || other.crumb, description, type: other.type }),
+      breadcrumbs([["Home", "/"], [other.crumb, path]]),
+    );
   }
   return null;
 }

@@ -4,13 +4,16 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { PAGE_META } from "../../worker/meta.js";
+import { routeKind } from "../../worker/routes.js";
+import { canonicalLocation, robotsTxt } from "../../worker/seo.js";
 import { BANK_DIR } from "../../questionBank";
 import type { BankCompany, BankRole } from "../pages/bank/types";
-import { workerFile } from "./routes";
+import { POLICIES, workerFile } from "./routes";
 
 const web = join(BANK_DIR, "..", "..", "..", "web");
 const template = readFileSync(join(web, "index.html"), "utf8");
-const robots = readFileSync(join(web, "public", "robots.txt"), "utf8");
+// robots.txt as the Worker writes it for the site's own address (worker/seo.js).
+const robots = robotsTxt({}, new URL("https://orbitanswer.com/robots.txt"));
 const companies = readdirSync(join(BANK_DIR, "companies")).map((f) => JSON.parse(readFileSync(join(BANK_DIR, "companies", f), "utf8")) as BankCompany);
 const roles = readdirSync(join(BANK_DIR, "roles")).map((f) => JSON.parse(readFileSync(join(BANK_DIR, "roles", f), "utf8")) as BankRole);
 
@@ -131,11 +134,29 @@ describe("the built sitemap and robots.txt", () => {
     expect(new Set(all).size).toBe(all.length);
     expect(all.every((l) => l.startsWith("https://orbitanswer.com/"))).toBe(true);
     expect(all.length).toBe(Object.keys(PAGE_META).length + 2 + companies.length + roles.length + 4);
-    for (const path of ["/", "/warmup", "/companies", "/roles", "/companies/tcs", "/roles/nurse", "/privacy.html"]) {
+    for (const path of ["/", "/warmup", "/companies", "/roles", "/companies/tcs", "/roles/nurse", "/privacy"]) {
       expect(all).toContain(`https://orbitanswer.com${path}`);
     }
-    expect(all.some((l) => l.includes("_prerender"))).toBe(false);
+    expect(all.some((l) => l.includes("_prerender") || l.endsWith(".html"))).toBe(false);
     expect(files.get("sitemap.xml")).toMatch(/<loc>https:\/\/orbitanswer\.com\/companies\/amazon<\/loc><lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/);
+    expect(files.get("sitemap.xml")).toContain("<loc>https://orbitanswer.com/privacy</loc><lastmod>");
+  });
+
+  it("names each page at the address the Worker serves it from, as a public page (no redirect, no 404)", () => {
+    for (const l of locs()) {
+      expect(routeKind(new URL(l).pathname), l).toBe("public");
+      expect(canonicalLocation(new URL(l)), l).toBeNull();
+    }
+  });
+
+  it("dates each policy as the page itself does", () => {
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    for (const p of POLICIES) {
+      const m = /Last updated (\d{1,2}) ([A-Z][a-z]+) (\d{4})/.exec(readFileSync(join(web, "public", p.file), "utf8"));
+      expect(m, p.file).not.toBeNull();
+      const shown = `${m![3]}-${String(months.indexOf(m![2]!) + 1).padStart(2, "0")}-${m![1]!.padStart(2, "0")}`;
+      expect(p.lastmod, p.file).toBe(shown);
+    }
   });
 
   it("lets crawlers read every page in it, and nothing signed in", () => {
