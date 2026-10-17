@@ -169,9 +169,14 @@ class Settings(BaseSettings):
     google_client_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_GOOGLE_CLIENT_ID"))
     google_client_secret: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_GOOGLE_CLIENT_SECRET"))
     google_redirect_uri: str | None = Field(None, validation_alias=AliasChoices("ORBIT_GOOGLE_REDIRECT_URI"))
-    # The API's own public base URL (e.g. https://orbit-api.onrender.com). When set, links the API hands out (desktop
-    # installer downloads) are built from it instead of the request's Host header.
-    api_public_url: str | None = Field(None, validation_alias=AliasChoices("ORBIT_API_PUBLIC_URL"))
+    # The API's own public base URL (https://api.orbitanswer.com in production). When known, links the API hands out
+    # (desktop installer downloads) are built from it instead of the request's Host header. Unset, the host's own
+    # address is used: Render's RENDER_EXTERNAL_URL, else Railway's RAILWAY_PUBLIC_DOMAIN (that may be the
+    # *.up.railway.app name rather than the custom domain, so production sets this explicitly).
+    api_public_url: str | None = Field(
+        None, validation_alias=AliasChoices("ORBIT_API_PUBLIC_URL", "RENDER_EXTERNAL_URL")
+    )
+    railway_public_domain: str | None = Field(None, validation_alias=AliasChoices("RAILWAY_PUBLIC_DOMAIN"))
     # SameSite for the session cookie. The web app reaches the API through its own /api proxy (same site), so Lax
     # works and blocks the cookie on cross-site requests. "none" only for a web app that calls the API cross-site.
     cookie_samesite: Literal["lax", "strict", "none"] = Field(
@@ -309,6 +314,14 @@ class Settings(BaseSettings):
     @classmethod
     def _blank_price_is_unknown(cls, v: object) -> object:
         return None if isinstance(v, str) and not v.strip() else v
+
+    @model_validator(mode="after")
+    def _public_url_from_the_host(self) -> "Settings":
+        # Railway names the domain bare (orbit-api-sg-production.up.railway.app), always served over https.
+        domain = (self.railway_public_domain or "").strip().strip("/")
+        if not (self.api_public_url or "").strip() and domain:
+            self.api_public_url = f"https://{domain}"
+        return self
 
     @model_validator(mode="after")
     def _reject_insecure_production(self) -> "Settings":

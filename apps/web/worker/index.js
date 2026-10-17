@@ -2,13 +2,14 @@
 //
 // /api/* is proxied to the API so the browser sees it as the web app's own origin. The session cookie is then
 // first-party: Safari (and every iOS browser, all WebKit) and other browsers that block third-party cookies drop a
-// cookie set by a different site (Render), so signing in "worked" but the very next request came back 401 and the
-// app bounced to the login page. Live-session WebSockets don't need the cookie (single-use ticket in the URL), so
+// cookie set by a different site (the API's host), so signing in "worked" but the very next request came back 401 and
+// the app bounced to the login page. Live-session WebSockets don't need the cookie (single-use ticket in the URL), so
 // they still go straight to the API.
 //
-// The cron below: Render's free tier sleeps after 15 min without traffic, and the 30–60 s cold start then lands on
-// whoever opens the app. /health never touches the DB, so pinging it keeps the API process warm without keeping the
-// (separately metered) Neon compute awake.
+// The cron below: a free-tier host (Render's) sleeps after 15 min without traffic, and the 30–60 s cold start then
+// lands on whoever opens the app. /health never touches the DB, so pinging it keeps the API process warm without
+// keeping the (separately metered) Neon compute awake. LEGACY_API_URL, while set, is the old host that older desktop
+// apps still call directly (wrangler.jsonc): it's kept warm too.
 import { metaFor, withPageMeta } from "./meta.js";
 
 const API_PREFIX = "/api";
@@ -60,6 +61,8 @@ export default {
     return env.ASSETS.fetch(request);
   },
   async scheduled(_event, env, ctx) {
-    ctx.waitUntil(fetch(`${env.API_URL}/health`, { headers: { "user-agent": "orbit-keep-warm" } }));
+    for (const api of [env.API_URL, env.LEGACY_API_URL]) {
+      if (api) ctx.waitUntil(fetch(`${api}/health`, { headers: { "user-agent": "orbit-keep-warm" } }));
+    }
   },
 };

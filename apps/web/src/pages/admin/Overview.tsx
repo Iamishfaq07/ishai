@@ -22,7 +22,7 @@ export function AdminOverview({ version = 0 }: { version?: number }) {
           <p className="font-semibold">Proxy secret missing</p>
           <p className="mt-1">
             ORBIT_PROXY_SECRET isn't set on the API (or is too weak), so per-network limits can be dodged. Welcome credits are on hold and
-            new deploys fail their readiness check until it's set. Set the same 32+ character value in Render (ORBIT_PROXY_SECRET) and in
+            new deploys fail their readiness check until it's set. Set the same 32+ character value on the API host (ORBIT_PROXY_SECRET, in Railway) and in
             Cloudflare (<code>wrangler secret put PROXY_SECRET</code>).
           </p>
         </div>
@@ -32,8 +32,17 @@ export function AdminOverview({ version = 0 }: { version?: number }) {
           <p className="font-semibold">The website isn't sending the proxy secret</p>
           <p className="mt-1">
             Requests from the Cloudflare Worker reach the API without ORBIT_PROXY_SECRET, so the API can't see visitors' countries or IPs:
-            everyone is priced in rupees as if in India, and web visitors share rate limits. Give the Worker the same value as Render's
+            everyone is priced in rupees as if in India, and web visitors share rate limits. Give the Worker the same value as the API host's
             ORBIT_PROXY_SECRET (<code>wrangler secret put PROXY_SECRET --name orbit</code>).
+          </p>
+        </div>
+      )}
+      {s?.warnings?.includes("api_cloudflare_proxied") && (
+        <div role="alert" className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-900 dark:text-rose-100">
+          <p className="font-semibold">The API's address goes through Cloudflare's proxy</p>
+          <p className="mt-1">
+            Desktop requests reach the API through a Cloudflare edge, so the API sees that edge's address instead of the user's: everyone near
+            one edge shares sign-in limits and welcome credits. In Cloudflare DNS, set the <code>api</code> record to DNS only (grey cloud).
           </p>
         </div>
       )}

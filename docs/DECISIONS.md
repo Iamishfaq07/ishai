@@ -371,3 +371,18 @@ country lists in about 4 hours, inside their 6-hour TTL, so a first pass is slow
 freshness. Rejected: a separate worker process (one more service to run and pay for, for work that's light once
 paced) and
 fewer boards (the posts abroad are the point). Unpaced in tests, so the suite doesn't wait.
+
+**D53 — The API runs on Railway behind its own name, api.orbitanswer.com.** The owner moved the API from Render to
+Railway (Singapore, next to Neon). Clients now reach it as `https://api.orbitanswer.com`, a `CNAME` to the Railway
+service, instead of a hosting provider's own name: the desktop app bakes its API address into each release, so the
+last move (Ohio → Singapore) stranded installs of 0.1.31 and older, and this one would strand 0.1.40 and older the
+day Render is deleted. With our own name, a future move is a DNS change that installed apps, update checks included,
+follow with no release. The record is DNS only, not proxied by Cloudflare: the API keys callers without the web
+Worker's proxy secret (the desktop app) on the right-most `X-Forwarded-For` hop, which behind Cloudflare's proxy is
+a Cloudflare edge shared by everyone near it; the admin Overview warns (`api_cloudflare_proxied`) when direct callers
+arrive with Cloudflare's `CF-Ray`. Render keeps running
+until desktop installs have updated past 0.1.40 (Render serves them the update from GitHub Releases, as Railway
+does); the Worker's cron keeps it warm meanwhile (`LEGACY_API_URL`). A saved sign-in-screen override that names a
+retired Render address is ignored, so nobody stays behind on it. Still one instance (D12): Railway runs one replica,
+and while both hosts run, each holds only its own clients' live sessions. No `railway.json`: the service is set up
+in Railway's dashboard, which a config file in the repo would override on the next deploy.
