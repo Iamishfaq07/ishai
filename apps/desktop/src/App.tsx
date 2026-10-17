@@ -15,7 +15,7 @@ import { LoginScreen } from "./screens/Login";
 import { SettingsScreen } from "./screens/Settings";
 import { IS_MAC, SetupScreen } from "./screens/Setup";
 import { confirmSessionDuringUpdate, useUpdateChecks } from "./updates";
-import { applyPanelMode, toggleMainWindow } from "./windowing";
+import { applyPanelMode, loadAlwaysOnTop, setAlwaysOnTop, toggleMainWindow } from "./windowing";
 
 function onAppShortcut(action: GlobalAction): void {
   if (action === "toggleWindow") void toggleMainWindow();
@@ -135,6 +135,12 @@ export function App() {
     };
   }, [signedInOffline, reloadUser]);
 
+  // The window opens always on top (tauri.conf.json); someone who unpinned it in a session gets it unpinned at launch
+  // too, not only once the next session opens.
+  useEffect(() => {
+    if (!loadAlwaysOnTop()) void setAlwaysOnTop(false).catch(() => undefined);
+  }, []);
+
   // Sign-in, the hub and the management screens get room; the session config/overlay stay compact. Live sizes itself.
   useEffect(() => {
     if (["login", "home", "documents", "settings", "history"].includes(screen.name)) {
@@ -202,6 +208,7 @@ export function App() {
             onResume={resume}
             onOpenDocuments={() => setScreen({ name: "documents" })}
             onOpenHistory={() => setScreen({ name: "history" })}
+            onOpenSession={(id) => setScreen({ name: "history", sessionId: id })}
             onOpenSettings={() => setScreen({ name: "settings" })}
             onSignOut={() => void signOut()}
           />

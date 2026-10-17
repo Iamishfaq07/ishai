@@ -52,6 +52,7 @@ import {
   type Verdict,
   StoryBankNote,
   ResumeMakerNote,
+  MAX_SESSION_DOCUMENTS,
   safeLocal,
 } from "@orbit/ui";
 import { getVersion } from "@tauri-apps/api/app";
@@ -78,7 +79,9 @@ import { roughDuration } from "../token";
 import { UpdateBanner } from "../UpdateBanner";
 import { confirmSessionDuringUpdate, useUpdatePhase } from "../updates";
 import { WorkspaceBar } from "../WorkspaceBar";
+import { sessionTitle } from "../format";
 import { MIC_KEY, OUTPUT_KEY, checkChosenApp, nextSource, usesSystemAudio, type DesktopLaunch } from "../launch";
+import { addSessionDocument, defaultSessionDocuments, sessionDocumentIds, toggleSessionDocument } from "../sessionDocs";
 
 const TYPES: Array<{ value: SessionType; label: string }> = [
   { value: "interview", label: "Interview" },
@@ -124,6 +127,8 @@ const control =
   "block w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-sm dark:border-zinc-800 dark:bg-zinc-900";
 
 const WORKSPACE_KEY = "orbit.workspaceId";
+/** How often Setup looks for a microphone while it has none. */
+const MIC_RECHECK_MS = 3000;
 const savedOutput = () => safeLocal.getItem(OUTPUT_KEY) ?? "out:default";
 
 /** Session types where the other side of a call is the point: losing their audio silently is the costly mistake. */
@@ -221,18 +226,41 @@ export function SetupScreen({
     setSource((s) => nextSource(s, previous, list, appTouched.current, savedOutput()));
   };
 
+  const [error, setError] = useState<string | null>(null);
+  const micListError = useRef<string | null>(null);
+  const readMics = useCallback(() => {
+    listAudioDevices()
+      .then((list) => {
+        setDevices(list);
+        // a read that failed before (its message is showing) worked this time
+        setError((e) => (e !== null && e === micListError.current ? null : e));
+      })
+      .catch((err: unknown) => {
+        micListError.current = friendlyAudioError(`Couldn't list audio devices: ${String(err)}`);
+        setError(micListError.current);
+      });
+  }, []);
   // Stable (showApps only uses refs and state setters), so the focus listener below is added once.
   const refreshApps = useCallback(() => {
+    readMics();
+    if (IS_MAC) return;
     void listAudioApps().then(showApps);
     void listOutputDevices().then(setOutputs);
-  }, []);
-  // Back from the meeting app is when what's playing changes (the call started): read the list again.
+  }, [readMics]);
+  // Back from the meeting app is when what's playing changes (the call started): read the lists again. Back from
+  // Windows' sound settings, a microphone may be there now.
   useEffect(() => {
-    if (IS_MAC) return;
     window.addEventListener("focus", refreshApps);
     return () => window.removeEventListener("focus", refreshApps);
   }, [refreshApps]);
-  const [error, setError] = useState<string | null>(null);
+  // No microphone (or the list couldn't be read): look again every few seconds, so plugging a headset in clears the
+  // "No microphone found" check that holds Start back, without leaving this screen.
+  const noMic = devices.length === 0;
+  useEffect(() => {
+    if (!noMic) return;
+    const t = window.setInterval(readMics, MIC_RECHECK_MS);
+    return () => window.clearInterval(t);
+  }, [noMic, readMics]);
   // Why Start didn't work, shown by the Start button (the screen scrolls; the general error sits far above it).
   const [startError, setStartError] = useState<{ text: string; buy: boolean } | null>(null);
   const [starting, setStarting] = useState(false);
@@ -288,37 +316,36 @@ export function SetupScreen({
     setAutoAnswer(ws.auto_answer);
     setSelected(new Set(ws.document_ids));
   };
-  // Restore the last-used setup once documents are loaded (its document ids replace the default selection).
+  // Restore the last-used setup once documents are loaded (its document ids replace the default selection). Opened
+  // from one of Home's quick starts ("Coding"…), the type is the one clicked, whatever the last setup's was.
   const restored = useRef(false);
   useEffect(() => {
     if (restored.current || docs === null || !workspaceId) return;
     restored.current = true;
     api
       .listWorkspaces()
-      .then((list) => applyWorkspace(list.find((w) => w.id === workspaceId) ?? null))
+      .then((list) => {
+        applyWorkspace(list.find((w) => w.id === workspaceId) ?? null);
+        if (initialType) setType(initialType);
+      })
       .catch(() => undefined);
-  }, [docs, workspaceId]);
+  }, [docs, workspaceId, initialType]);
 
   useEffect(() => {
     api
       .listDocuments()
       .then((list) => {
         setDocs(list);
-        setSelected(
-          new Set(list.filter((d) => d.status === "ready" && (d.kind === "resume" || d.kind === "job_description")).map((d) => d.id)),
-        );
+        setSelected(defaultSessionDocuments(list));
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : "Couldn’t load documents."));
-    if (!IS_MAC) refreshApps();
-    listAudioDevices()
-      .then(setDevices)
-      .catch((err: unknown) => setError(friendlyAudioError(`Couldn't list audio devices: ${String(err)}`)));
+    refreshApps();
   }, [refreshApps]);
 
   const refreshDocs = async (selectId?: string): Promise<void> => {
     const list = await api.listDocuments();
     setDocs(list);
-    if (selectId) setSelected((prev) => new Set(prev).add(selectId));
+    if (selectId) setSelected((prev) => addSessionDocument(prev, selectId));
   };
 
   const onFilePicked = async (e: ChangeEvent<HTMLInputElement>): Promise<void> => {
@@ -377,15 +404,11 @@ export function SetupScreen({
     }
   };
 
-  const toggleDoc = (id: string): void =>
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const toggleDoc = (id: string): void => setSelected((prev) => toggleSessionDocument(prev, id));
 
   const selectedDocs = (docs ?? []).filter((d) => selected.has(d.id));
+  // As many ticked as a session can take: the others can't be ticked (the API refuses more).
+  const docsFull = selected.size >= MAX_SESSION_DOCUMENTS;
   const micDevice = micId ? devices.find((d) => d.id === micId) : undefined;
   const outputName = (id: string | undefined) =>
     id === "communications"
@@ -460,14 +483,15 @@ export function SetupScreen({
     setStartError(null);
     try {
       const session = await api.createSession({
-        title: `${TYPES.find((t) => t.value === type)?.label ?? "Session"}${role.trim() ? ` — ${role.trim()}` : ""}`,
+        // Not the picker's label: the mock's ("Mock interview — the AI asks, you practise") would title every round.
+        title: sessionTitle(type, role),
         type,
         ...(role.trim() ? { role: role.trim() } : {}),
         language: "en",
         length,
         style,
         auto_answer: isMock ? false : autoAnswer,
-        document_ids: [...selected],
+        document_ids: sessionDocumentIds(selected, docs),
         ...(workspaceId ? { workspace_id: workspaceId } : {}),
         ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
         ...(isMock
@@ -547,7 +571,7 @@ export function SetupScreen({
               style,
               auto_answer: autoAnswer,
               notes: instructions.trim() || null,
-              document_ids: [...selected],
+              document_ids: sessionDocumentIds(selected, docs),
             }}
           />
 
@@ -703,11 +727,16 @@ export function SetupScreen({
               <p className="text-xs text-zinc-500">No documents yet — upload your resume above.</p>
             ) : (
               <ul className="space-y-1">
+                {docsFull && docs.some((d) => d.status === "ready" && !selected.has(d.id)) && (
+                  <li role="status" className="text-xs text-amber-700 dark:text-amber-300">
+                    A session can use up to {MAX_SESSION_DOCUMENTS} documents. Untick one to use another.
+                  </li>
+                )}
                 {docs.map((d) => (
                   <li key={d.id} className="flex items-center gap-2 text-xs">
                     <input
                       type="checkbox"
-                      disabled={d.status !== "ready"}
+                      disabled={d.status !== "ready" || (docsFull && !selected.has(d.id))}
                       checked={selected.has(d.id)}
                       onChange={() => toggleDoc(d.id)}
                       aria-label={`Use ${d.title}`}
