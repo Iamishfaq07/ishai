@@ -256,8 +256,9 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
 - Icons: lucide only, re-exported from `packages/ui/src/icons.ts`.
 - Static copies of the mark: `apps/*/public/favicon.svg`, web `apple-touch-icon.png` / `icon-*.png` /
   `icon-maskable-512.png` (all from `marketing/brand/render-icons.mjs`: the mark on a flat ink tile), desktop
-  `src-tauri/icons/*` (regenerate with `pnpm --filter @orbit/desktop exec tauri icon
-  marketing/brand/orbit-app-icon-1024.png`; the desktop still has the older starry tile until then).
+  `src-tauri/icons/*` (from the same master: `pnpm --filter @orbit/desktop tauri icon
+  <repo>/marketing/brand/orbit-app-icon-1024.png`, then keep only `src-tauri/icons/*`, not the android/ios folders it
+  also writes).
 
 ## The front door
 
@@ -265,12 +266,16 @@ The public site: everything a visitor sees before signing in (D66). The model is
 plainly what Orbit is, shows the real product, and gets out of the way. Code: `apps/web/src/marketing/`.
 
 - **One frame**: `PublicLayout` (skip link, `PublicHeader`, the page, `PublicFooter`, and `html.site` while it's
-  mounted). Every public page uses it; a new one (/companies, /roles) just puts its sections inside. Props:
-  `authState` (where sign-in and sign-up come back to), `context` (a short label after the logo), `actions`
-  (replaces Sign in / Start free). `components/Footer` and `SiteMenu` render the same footer and phone menu.
+  mounted). Every public page uses it, the interview guides (/companies, /roles, pages/bank) included: a page just
+  puts its sections inside. Props: `authState` (where sign-in and sign-up come back to), `context` (a short label
+  after the logo), `actions` (replaces Sign in / Start free). `components/Footer` and `SiteMenu` render the same
+  footer and phone menu. A section with pages of its own gets tabs under the header (the guides' Companies, Roles,
+  Free warm-up).
 - **Header**: the logo, a **Products** menu (all eight tools from `marketing/catalog.ts`, grouped "Interview,
-  prepare, apply" / "More in your account", with the free question at its foot), Pricing, Security, Contact, then
-  Sign in (ghost) and Start free (primary); "Open Orbit" when signed in. Sticky, opaque, a hairline once scrolled.
+  prepare, apply" / "More in your account", with the guides and the free question at its foot), Interview guides,
+  Pricing, Security, Contact (the current section in ink), then Sign in (ghost) and Start free (primary); "Open
+  Orbit" when signed in. Sticky, opaque, a hairline once scrolled. The menu is the shared one's behaviour and look
+  (`useDismiss`, `floatingClass` from @orbit/ui).
   Phones: the logo, Start free and a menu button that opens the whole site as one full-screen sheet (a dialog: focus
   stays inside, Escape closes, the page behind doesn't scroll). No menu item ends on a sign-in wall: the four tools
   without a page of their own have anchors in the front page's "More in your account".
@@ -292,12 +297,15 @@ plainly what Orbit is, shows the real product, and gets out of the way. Code: `a
 - **Elevation**: flat. Only floating things cast a shadow: the product windows (`mk-float`), menus and the sticky bar
   (`mk-menu-shadow`). Cards are a surface with a hairline, often in a hairline grid (`gap-px` over the line colour).
 - **Pictures are the product**: the hero is the live session drawn in HTML (`LiveAnswerDemo`: crisp, both themes,
-  every accent); each product section shows a real screen (`ProductShot`: WebP 1600 x 1000 per theme, only the
-  current theme's fetched, lazily, its size reserved). Screens come from a local stack with fictional demo data
+  every accent); each product section shows a real screen (`ProductShot`: WebP 1600 x 1000 per theme and a 1200 x 900
+  crop for phones, plain markup: both themes' pictures are in the page and CSS hides the other one, so only the shown
+  one is fetched, lazily, its size reserved, and the built HTML is the same). Screens come from a local stack with
+  fictional demo data
   (`marketing/screens`: `seed.py`, then `capture.mjs`, `--webp` for the site, `--store` for the Store); re-capture
   them when those screens change. No stock photos, no people, no logos of companies that aren't customers. Sample
   data is labelled as such.
-- **Icons**: lucide at 1.75 stroke on a 40 px tile with a hairline ring (`IconTile`): ink, or a main product's tint.
+- **Icons**: lucide on a 40 px tile with a hairline ring (`IconTile`): the app's own neutral IconTile, or a main
+  product's tint at 1.75 stroke.
   Line drawings (the 404's probe) use the line colour and one accent, no fills or glows.
 - **Buttons**: `buttonClass` (primary solid accent, secondary bordered, ghost). On the closing ink panel
   (`CtaBand`), `inkButton.primary` (white) and `.secondary` (white outline). Google sign-in is `GoogleButton`, drawn
@@ -317,9 +325,19 @@ plainly what Orbit is, shows the real product, and gets out of the way. Code: `a
 - **Brand files** (`marketing/brand`): the wordmark and mark outlined (`orbit-wordmark-{light,dark}.svg`,
   `orbit-mark-*.svg`), the app icons (`render-icons.mjs`: the mark on a flat ink tile, web icons, a maskable icon and
   the 1024 px master for the desktop's `tauri icon`). Link previews: `apps/web/og/render.mjs` writes each public
-  page's SVG and renders it to `public/og/<page>.jpg` (1200 x 630, under 300 KB); `worker/meta.js` `PAGE_IMAGES`
-  points each page at its card. Ads: `marketing/ads` (one template, `copy.json`, `export.mjs`; prices filled in at
-  export only).
+  page's SVG and renders it to `public/og/<page>.jpg` (1200 x 630, under 300 KB). `PAGE_IMAGES` in
+  `worker/meta.js` is the one list of which page shows which card: the Worker reads it, and so does the build's
+  `<head>` for every built page (src/prerender/seo.ts; a company or role guide shows its list's card). Ads:
+  `marketing/ads` (one template, `copy.json`, `export.mjs`; prices filled in at export only).
+- **What's in git**: the sources (templates, copy, the seed, capture and export scripts, the brand SVGs, the 1024 px
+  icon master) and what the site serves (the WebP screens, the link-preview JPGs, the icons). Exports that the
+  scripts make again (the ad PNGs, the Store PNGs, the raw captures) are ignored (`marketing/.gitignore`) and handed
+  over outside the repo.
+- **Built as HTML**: the public pages are also rendered at build time (src/prerender, D63), so the first paint is the
+  page itself. A built page opens with `<html class="site">`; when the app's copy takes over (lib/prerender.tsx) it
+  keeps the class on a public page and drops it for anything else. A front-door component must render without the
+  browser: no `window` or `document` at module scope or during render (effects are fine). Nothing is hydrated, so
+  the app's copy may differ (the visitor's own prices and country arrive then).
 - **Speed**: the public pages are lazy chunks; on an address with a public face its chunk starts with the session
   check, and a browser nobody has signed in on gets the page at once instead of a spinner. Pictures below the fold
   are lazy and sized; the front door loads one text face (Plex) and no font for the logo.

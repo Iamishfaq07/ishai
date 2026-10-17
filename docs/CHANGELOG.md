@@ -34,8 +34,24 @@
   128 ms, score 73 to 80; desktop LCP 0.62 s to 0.56 s, CLS 0.025 to 0. First-load JavaScript the same (182 to
   183 KB), fonts 125 to 75 KB (Space Grotesk and JetBrains Mono no longer load), CSS 26 to 27 KB. The page weighs
   more below the fold (the product screens, about 85 KB each, lazy): 335 to 370 KB on a phone, 600 KB on a desktop.
-- **Accessibility**: `tools/e2e/public-pages.spec.ts` runs axe (WCAG 2.2 AA) on ten public pages, light and dark, at
-  1280 and 390 px, with a no-sideways-scroll check and the menus' keyboard behaviour: 0 violations. Fixed on the way:
+- **The interview guides** (/companies, /roles and every guide) sit in the same layout: the site's header and footer,
+  the guides' own tabs (Companies, Roles, Free warm-up), the type scale and hairline cards. The header, its Products
+  menu, the phone menu and the footer link the guides.
+- **Built as HTML, in the right look**: every prerendered page opens with `<html class="site">`, so its first paint is
+  the front door's (no sky behind the built copy); the app keeps the class on a public page and drops it when it hands
+  over to anything else. The product screens are plain markup (both themes' pictures, CSS shows one), so the built
+  HTML carries them, sized, and only the shown one is fetched.
+- **One list of link-preview cards**: `PAGE_IMAGES` (worker/meta.js) feeds the Worker and the build's `<head>`; new
+  cards for /companies and /roles, which every company and role guide shows.
+- **The desktop app's icons** come from the same 1024 px master (the mark on the flat ink tile); users get them with
+  the next desktop release.
+- **Contact**: "Who runs Orbit" names both currencies (rupees in India, US dollars elsewhere), so the page built for
+  India doesn't tell anyone abroad they pay in rupees.
+- **Marketing exports out of git**: the ad PNGs, the Store PNGs and the raw captures are made again by their scripts
+  (`marketing/.gitignore`) and delivered outside the repository; the sources and what the site serves stay.
+- **Accessibility**: `tools/e2e/public-pages.spec.ts` runs axe (WCAG 2.2 AA) on thirteen public pages (guides
+  included), light and dark, at 1280 and 390 px, with a no-sideways-scroll check and the menus' keyboard behaviour:
+  0 violations. Fixed on the way:
   the sample resume's preview is inert (focusable links inside an image), the sample match's "match" label meets AA,
   the pipeline's stage buttons take their names from their words.
 

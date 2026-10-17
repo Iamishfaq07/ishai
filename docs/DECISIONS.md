@@ -690,6 +690,10 @@ while the hero, where the first paint matters, is drawn. Everything shares one l
 header with a Products menu of all eight tools, the phone sheet, the footer), so new public pages (/companies,
 /roles) match by default. Conversion stays honest: one dismissible sticky bar on phones after the hero, no exit-intent
 pop-ups, timers or scarcity, and sign-up stays a page (it needs the captcha, the terms box and a way back), not a
-modal. Prices and counts come only from the server. The cost: the product screens go stale when the workbench
-changes, so they're re-captured by script (capture.mjs, then the ads and Store sets) after such a change; and the
-desktop app keeps its starry icon until its icons are regenerated from the new 1024 px master.
+modal. Prices and counts come only from the server. The public pages are built as HTML too (D63), in the same look
+from the first byte (`<html class="site">`), and their link-preview cards come from one list (`PAGE_IMAGES`) for the
+Worker and the build alike. The cost: the product screens go stale when the workbench changes, so they're
+re-captured by script (capture.mjs, then the ads and Store sets) after such a change. Only what the site serves and
+the sources are in git; the ad and Store PNGs and the raw captures are exports, made again by those scripts and
+handed over outside the repository, so the repo doesn't grow by megabytes each time the screens change. The desktop
+app's icons are regenerated from the same 1024 px master and reach users with its next release.
