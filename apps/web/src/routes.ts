@@ -151,6 +151,16 @@ export function publicPageFor(pathname: string): "landing" | "resumeAiPublic" | 
   return null;
 }
 
+/**
+ * At startup, on an address with a public face: start its page's code at once, alongside the session check, rather
+ * than after it (the front page's first paint waits on that chunk). Harmless for someone signed in: it's small and
+ * cached.
+ */
+export function preloadPublicPage(pathname: string): void {
+  const key = publicPageFor(pathname);
+  if (key) void loaders[key]().catch(() => undefined);
+}
+
 /** Start downloading a page's code (no-op once loaded; the browser caches the module). */
 export function prefetchRoute(path: string): void {
   const key = pageFor(path);
