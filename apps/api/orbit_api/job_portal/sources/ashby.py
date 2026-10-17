@@ -9,6 +9,7 @@ from urllib.parse import quote
 
 from orbit_api.job_portal.companies import Board, boards
 from orbit_api.job_portal.http import FeedClient, SourceError
+from orbit_api.job_portal.pace import paced_map
 from orbit_api.job_portal.postings import (
     EmploymentType,
     Posting,
@@ -75,4 +76,4 @@ class Ashby(Source):
         jobs = data.get("jobs") if isinstance(data, dict) else None
         if not isinstance(jobs, list):
             raise SourceError("Ashby sent an unexpected shape")
-        return await asyncio.to_thread(lambda: [p for j in jobs if (p := parse_job(j, board)) is not None])
+        return await asyncio.to_thread(paced_map, lambda j: parse_job(j, board), jobs)

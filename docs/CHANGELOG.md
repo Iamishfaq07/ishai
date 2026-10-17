@@ -1,5 +1,56 @@
 # Implementation log
 
+## Jobs AI outside India: 117 more company boards, SmartRecruiters per country, pay from Greenhouse, a gentle refresh (2026-10-17)
+
+The company boards were chosen for India. Outside it, a feed had the global companies' posts (Stripe, Databricks,
+Okta…) and little else: SmartRecruiters was asked for India's posts only, and Offer AI's pay ranges had almost
+nothing outside the US. Now:
+
+- **117 more boards** hiring in the US, the UK, Canada, Germany and the rest of Europe, and Australia, each checked
+  live with the feed's own parsers (`companies.py` goes from 147 to 264): 69 on Greenhouse (Anthropic, Airbnb,
+  Datadog, Waymo, DoorDash, Robinhood, Deliveroo, Monzo, HelloFresh, GetYourGuide, Adyen, Culture Amp…), 5 on Lever
+  (Spotify, Zoox…), 39 on Ashby (Notion, Ramp, Plaid, Harvey, Cohere, Wealthsimple, Wayve, ElevenLabs, Enpal…) and
+  4 on SmartRecruiters (Ubisoft, Canva, Western Digital, Delivery Hero). Left out: boards over the 30 MB answer cap
+  (Anduril, SpaceX), with plain-http job links (Block, Squarespace), or mostly gym or catering jobs (Equinox, Sodexo).
+- **SmartRecruiters is asked one country at a time**: India as before (the same calls, first), then each of
+  `ORBIT_JOBS_BOARD_COUNTRIES` (default US, GB, CA, DE, AU) for the boards that aren't India-first. Swiggy, PhonePe and
+  ixigo stay India only.
+- **Pay from Greenhouse**: the pay range a post publishes (`pay_transparency`, required in most of the US and Canada)
+  is its salary, so Offer AI's market has Greenhouse boards' ranges too. A post that's also open in India shows only a
+  rupee range (a dollar one is the US pay).
+- **India**: its boards, their order and SmartRecruiters' India calls are unchanged; every post an India user could be
+  shown before still is, with the same card. The new boards' own posts in India or open to it are listed too (84 in
+  this run: Supabase, Ubisoft in Pune, ZoomInfo, ElevenLabs, Anthropic…).
+- Posts listed by country, from a real first refresh of every keyless source (local, real network): US 1,757 → 6,222,
+  UK 269 → 1,331, Germany 113 → 1,186, Canada 255 → 744, Australia 89 → 220, India 2,187 → 2,243 (5,943 → 14,207 in
+  all). With a pay range: US 449 → 3,092, Canada 72 → 319, UK 11 → 75.
+- The cost, the same machine and network back to back: a first refresh of an empty cache takes 382 s → 1,132 s
+  (SmartRecruiters' 183 country lists and ~2,000 text calls, a second apart; every other source is done by 502 s)
+  and 108 → 236 s of CPU, nearly all of it reading skills from new posts. A refresh 6 hours later takes 204 s → 893 s
+  and 25 → 53 s of CPU (for the first day it also fetches the text of SmartRecruiters' posts still without it, 40 per
+  board and country a run). Peak memory over both is about the same (190 → 198 MB working set; measured unpaced, two
+  boards at a time). The cache grows from 46 to 103 MB (SQLite; 33 → 74 million characters of post text).
+- **Gently**: this first went out as #355, and its first refresh crash-looped the API on its free instance (a tenth of
+  one CPU): reading skills from thousands of new posts took all of it, health checks waited seconds, the host
+  restarted the server, and the restart started the refresh again. #357 reverted it. Now the refresh stays a small
+  background load wherever the API runs ([DECISIONS.md](DECISIONS.md) D52): its own CPU work is kept to
+  `ORBIT_JOBS_CPU_SHARE` of one CPU (0.04 by default, `job_portal/pace.py`); it reads one board at a time across
+  sources (was two) and at most 12 of a source's due boards a run (never fetched first, India's first, then the
+  longest waiting), with 10 minutes' rest between a source's runs; it writes 100 rows a transaction with a pause after
+  each; and ranked feeds re-rank at most every 5 minutes while it writes, not after every board. A first pass of every
+  board now takes several runs (SmartRecruiters' 183 lists about 4 hours, inside their 6-hour TTL). Where CPU is
+  billed by use, the pacing also caps what the refresh costs.
+- Measured under a 0.1-CPU, 512 MB cap (the worst case: a Windows job object around a local API, an empty cache, the
+  real network, `/ready` every 2 s and the feed every 30 s until the refresh went idle):
+
+  | | `/ready` over 5 s | slowest `/ready` | slowest feed | peak memory | server CPU |
+  | --- | --- | --- | --- | --- | --- |
+  | before #355 (India's boards, unpaced) | 21 of 160, 15 s in a row at worst | timed out | 35.6 s | 163 MB | 41 s in 8.2 min |
+  | now (every board, paced) | 0 of 461 | 0.30 s | 1.5 s | 157 MB | 31 s in 15.3 min |
+
+  The paced run is each source's first run (12 boards each of Greenhouse, Lever, Ashby and SmartRecruiters, and the
+  feeds): 1,992 posts (India 1,084, US 431, Canada 93, UK 59, Australia 28); the rest arrive in the later runs.
+
 ## Orbit for the US, the UK and everywhere else, with India kept as it is (2026-10-17)
 
 - **Prices and payment text in the visitor's currency everywhere**: the support bot's prices and payment answers

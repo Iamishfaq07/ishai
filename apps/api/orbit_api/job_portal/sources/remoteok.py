@@ -11,6 +11,7 @@ from datetime import timedelta
 from typing import Any
 
 from orbit_api.job_portal.http import FeedClient, SourceError
+from orbit_api.job_portal.pace import paced_map
 from orbit_api.job_portal.postings import Posting, parse_time, salary_text, text_of
 from orbit_api.job_portal.sources.base import Attribution, Source
 
@@ -67,4 +68,4 @@ class RemoteOK(Source):
         if not isinstance(data, list):
             raise SourceError("Remote OK sent an unexpected shape")
         # The first item is the legal notice. Reading the posts' HTML is CPU work: off the event loop.
-        return await asyncio.to_thread(lambda: [p for j in data[1:] if (p := parse_job(j)) is not None])
+        return await asyncio.to_thread(paced_map, parse_job, data[1:])

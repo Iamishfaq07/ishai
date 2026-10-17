@@ -352,3 +352,22 @@ is enough. Webhooks are verified by PayPal's own verify-webhook-signature endpoi
 reconciler still settle every order. No migration: `payments` already had a method, currency, cents and gateway ids.
 A half-configured PayPal logs a warning and stays off instead of refusing to start (refusing took production down
 twice before).
+
+**D52 — The job refresh is paced to a share of one CPU, and big backlogs are spread over runs.** The job refresh
+should be a small background load wherever the API runs. The first refresh of the worldwide boards (#355) showed what
+happens when it isn't: on the then-host's free instance, a tenth of one CPU, reading skills from thousands of new
+posts took all of it, so health checks waited seconds, the host restarted the server, and the restart started the
+refresh again (reverted in #357). Memory was never the problem (a local run under the same 0.1-CPU, 512 MB cap
+peaked at 163 MB). A tenth of a CPU stays the worst case it's measured against; where CPU is billed by use (the API
+is moving to Railway), pacing also caps what the refresh costs. So the refresh now keeps its own CPU work to
+`ORBIT_JOBS_CPU_SHARE` of one CPU (0.04 by default):
+a worker thread sleeps whenever its own CPU time runs ahead of that share of the wall clock, and the event loop rests
+after each 100-row write in proportion to what the write took (`job_portal/pace.py`). Its own CPU time, not a fixed
+sleep, so it adapts to the machine. It also does less at once: one board at a time across sources (was two), at most
+12 of a source's due boards a run, never-fetched ones first in their listed order (India's first) and then the
+longest waiting, with 10 minutes' rest between a source's runs; ranked feeds re-rank at most every 5 minutes while a
+refresh writes, instead of after every board. 12 boards every 15 minutes covers SmartRecruiters' 183 board-and-
+country lists in about 4 hours, inside their 6-hour TTL, so a first pass is slower but steady state is the same
+freshness. Rejected: a separate worker process (one more service to run and pay for, for work that's light once
+paced) and
+fewer boards (the posts abroad are the point). Unpaced in tests, so the suite doesn't wait.
