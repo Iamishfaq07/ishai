@@ -4,7 +4,7 @@ import {
   ArrowLeft,
   Button,
   Card,
-  EmptyState,
+  CosmicEmptyState,
   ErrorNote,
   Field,
   Input,
@@ -264,7 +264,7 @@ export function DocumentsScreen({ onBack }: { onBack: () => void }) {
             <Spinner />
           )
         ) : docs.length === 0 ? (
-          <EmptyState title="No documents yet" body="Upload your resume and paste the job description so answers are specific to you." />
+          <CosmicEmptyState variant="documents" title="No documents yet" body="Upload your resume and paste the job description so answers are specific to you." />
         ) : (
           <Card className="p-0">
             <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">

@@ -7,7 +7,7 @@ import {
   AnswerRatingButtons,
   CodeBlock,
   cx,
-  EmptyState,
+  CosmicEmptyState,
   ErrorNote,
   focusRing,
   useAnswerRatings,
@@ -89,7 +89,7 @@ function SessionList({ onOpen, onResume }: { onOpen: (id: string) => void; onRes
           <Spinner />
         )
       ) : sessions.length === 0 ? (
-        <EmptyState title="No sessions yet" body="When you end a live session, its transcript and summary are saved here." />
+        <CosmicEmptyState variant="copilot" title="No sessions yet" body="When you end a live session, its transcript and summary are saved here." />
       ) : (
         <Card className="p-0">
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
