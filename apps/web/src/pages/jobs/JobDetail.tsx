@@ -145,8 +145,7 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
 
   return (
     <article aria-labelledby="job-title" className="space-y-6">
-      <header className="glass-panel gradient-border relative overflow-hidden rounded-3xl p-5 sm:p-8">
-        <span aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-aurora-400/10 blur-3xl" />
+      <header className="glass-panel relative overflow-hidden rounded-3xl p-5 sm:p-8">
         <div className="relative flex items-start gap-4">
           <div className="min-w-0 flex-1">
             <SourceCredit job={job} />
@@ -347,7 +346,7 @@ function TrackerPanel({
     return (
       <Card>
         <h2 className="flex items-center gap-2 font-display text-base font-semibold">
-          <BookmarkCheck className="h-4 w-4 text-indigo-500" aria-hidden /> Your tracker
+          <BookmarkCheck className="h-4 w-4 text-zinc-500 dark:text-zinc-400" aria-hidden /> Your tracker
         </h2>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Save it to keep it in view, then move it along as you apply and interview.</p>
         <Button variant="secondary" size="sm" className="mt-3" disabled={busy} onClick={onSave}>
@@ -363,7 +362,7 @@ function TrackerPanel({
   return (
     <Card>
       <h2 className="flex items-center gap-2 font-display text-base font-semibold">
-        <BookmarkCheck className="h-4 w-4 text-indigo-500" aria-hidden /> On your tracker
+        <BookmarkCheck className="h-4 w-4 text-zinc-500 dark:text-zinc-400" aria-hidden /> On your tracker
         <StagePill status={shown.status} className="ml-auto" />
       </h2>
       <p className="mt-2 flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">

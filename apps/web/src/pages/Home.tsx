@@ -511,7 +511,7 @@ function RecentSessions({ sessions }: { sessions: AsyncState<OrbitSession[]> }) 
     <Card>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="flex items-center gap-2 font-display font-semibold">
-          <HistoryIcon className="h-4 w-4 text-indigo-500" aria-hidden />
+          <HistoryIcon className="h-4 w-4 text-zinc-500 dark:text-zinc-400" aria-hidden />
           Recent sessions
         </h2>
         <Link to="/sessions" className={cx("rounded text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>

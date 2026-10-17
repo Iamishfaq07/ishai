@@ -151,7 +151,7 @@ function Compare({ offers }: { offers: JobOfferRecord[] }) {
   return (
     <Card>
       <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold">
-        <Scale className="h-5 w-5 text-indigo-500" aria-hidden /> Side by side
+        <Scale className="h-5 w-5 text-zinc-500 dark:text-zinc-400" aria-hidden /> Side by side
       </h2>
       {currencies.size > 1 && <p className="mb-2 text-sm text-amber-800 dark:text-amber-200">These offers are in different currencies, so the best on each row isn't marked.</p>}
       <div className="overflow-x-auto">
@@ -208,7 +208,7 @@ function PayCheck() {
   return (
     <Card className="mt-8">
       <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
-        <Search className="h-5 w-5 text-indigo-500" aria-hidden /> What does a role pay?
+        <Search className="h-5 w-5 text-zinc-500 dark:text-zinc-400" aria-hidden /> What does a role pay?
       </h2>
       <p className="mb-3 text-sm text-zinc-500 dark:text-zinc-400">From the pay ranges in recent job posts Orbit has read. Posts that don't show pay aren't counted.</p>
       <form onSubmit={(e) => void check(e)} className="grid gap-3 sm:grid-cols-[1fr_12rem_auto] sm:items-end">

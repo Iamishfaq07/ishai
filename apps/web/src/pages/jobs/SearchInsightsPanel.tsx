@@ -49,7 +49,7 @@ export function SearchInsightsPanel({ entries }: { entries: JobTrackerEntry[] })
   return (
     <Card className="mb-5">
       <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold">
-        <ChartColumn className="h-5 w-5 text-indigo-500" aria-hidden /> Your search, in numbers
+        <ChartColumn className="h-5 w-5 text-zinc-500 dark:text-zinc-400" aria-hidden /> Your search, in numbers
       </h2>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Tile label="Applied" value={s.applied} format={String} detail="from your tracker" />

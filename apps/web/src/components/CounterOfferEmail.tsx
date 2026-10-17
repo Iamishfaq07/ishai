@@ -18,7 +18,7 @@ export function CounterOfferEmail({ email }: { email: { subject: string; body: s
   return (
     <Card>
       <h2 className="flex items-center gap-2 font-display font-semibold">
-        <Mail className="h-4 w-4 text-indigo-500" aria-hidden /> Your counter-offer email
+        <Mail className="h-4 w-4 text-zinc-500 dark:text-zinc-400" aria-hidden /> Your counter-offer email
       </h2>
       <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
         Put your counter in writing after the call. It uses only the numbers from the offer, your target and what you
