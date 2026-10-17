@@ -1,26 +1,52 @@
-import type {
-  ButtonHTMLAttributes,
-  ComponentType,
-  InputHTMLAttributes,
-  ReactNode,
-  SelectHTMLAttributes,
-  TextareaHTMLAttributes,
+import {
+  cloneElement,
+  isValidElement,
+  type ComponentProps,
+  type ComponentType,
+  type ReactNode,
 } from "react";
+import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from "../icons";
 import { cx, focusRing } from "./cx";
 import { Orb, type OrbState } from "./Orb";
 import { SPARK, SpotIllustration } from "./Illustrations";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+/**
+ * The one button system (DESIGN.md, "Buttons"):
+ * - `primary`: the page's main action, the solid accent (white on accent-600 is over 5:1 in every accent). One per view.
+ * - `secondary`: bordered, for the other actions beside it.
+ * - `ghost`: plain, for quiet actions in toolbars, rows and menus.
+ * - `danger`: quiet rose text, for a destructive action that asks first (Delete in a header).
+ * - `destructive`: solid rose, for the button that does the destructive thing (inside a confirm).
+ * - `link`: an inline text action in the accent, no box.
+ * Sizes: `sm` 30 px (dense rows and cards), `md` 38 px (the default, the same height as a field), `lg` 46 px. Every
+ * variant carries a 1 px border (transparent unless bordered), so mixed buttons line up. No gradients, glows, sheens
+ * or shadows: a button says what it does, it doesn't perform. Only the press moves, at Full motion.
+ */
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "destructive" | "link";
 export type ButtonSize = "sm" | "md" | "lg";
 
-// One solid accent for the main action (white on accent-600 is over 5:1 in every accent), a bordered secondary, and
-// quiet ghost and danger. No gradients, glows or sheens: a button says what it does, it doesn't perform.
 const VARIANT: Record<ButtonVariant, string> = {
-  primary: "border border-transparent bg-indigo-600 text-white hover:bg-indigo-700",
+  primary: "border border-transparent bg-indigo-600 text-white hover:bg-indigo-700 aria-pressed:bg-indigo-800",
   secondary:
-    "border border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50 dark:border-white/15 dark:bg-white/[0.04] dark:text-zinc-100 dark:hover:bg-white/[0.08]",
-  ghost: "border border-transparent text-zinc-700 hover:bg-zinc-900/5 dark:text-zinc-300 dark:hover:bg-white/5",
+    "border border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50 aria-pressed:border-zinc-400 aria-pressed:bg-zinc-100 dark:border-white/15 dark:bg-white/[0.04] dark:text-zinc-100 dark:hover:bg-white/[0.08] dark:aria-pressed:border-white/30 dark:aria-pressed:bg-white/[0.12]",
+  ghost:
+    "border border-transparent text-zinc-700 hover:bg-zinc-900/5 aria-pressed:bg-zinc-900/[0.08] aria-pressed:text-zinc-900 dark:text-zinc-300 dark:hover:bg-white/5 dark:aria-pressed:bg-white/10 dark:aria-pressed:text-white",
   danger: "border border-transparent text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10",
+  destructive: "border border-transparent bg-rose-600 text-white hover:bg-rose-700",
+  link: "border border-transparent text-indigo-700 underline-offset-4 hover:underline dark:text-indigo-300",
+};
+
+const SIZE: Record<ButtonSize, string> = {
+  sm: "px-2.5 py-1.5 text-xs",
+  md: "px-3.5 py-2 text-sm",
+  lg: "px-5 py-2.5 text-base",
+};
+
+/** An icon-only button's square, the same height as its size's text button. */
+const SQUARE: Record<ButtonSize, string> = {
+  sm: "h-[30px] w-[30px]",
+  md: "h-[38px] w-[38px]",
+  lg: "h-[46px] w-[46px]",
 };
 
 /**
@@ -30,31 +56,27 @@ const VARIANT: Record<ButtonVariant, string> = {
 export function buttonClass(variant: ButtonVariant = "primary", size: ButtonSize = "md", className?: string): string {
   return cx(
     // Pressed feedback on touch and click, at Full motion only (buttons get theirs from base.css).
-    "inline-flex select-none items-center justify-center gap-2 rounded-xl font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-quick ease-standard motion-ok:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50",
-    size === "sm" && "px-2.5 py-1.5 text-xs",
-    size === "md" && "px-3.5 py-2 text-sm",
-    size === "lg" && "px-5 py-2.5 text-base",
+    "inline-flex select-none items-center justify-center gap-2 rounded-xl font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-quick ease-standard motion-ok:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed",
+    variant === "link" ? (size === "sm" ? "text-xs" : size === "lg" ? "text-base" : "text-sm") : SIZE[size],
     VARIANT[variant],
     focusRing,
     className,
   );
 }
 
-export function Button({
-  variant = "primary",
-  size = "md",
-  loading = false,
-  className,
-  children,
-  onClick,
-  ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
+type ButtonProps = ComponentProps<"button"> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
-  /** Busy: keeps its label (no "Starting…" swap), shows a small orb before it and ignores presses. Unlike
-   *  `disabled` it keeps keyboard focus where it was. */
+  /** Busy: a spinner takes the label's place at the same width (nothing shifts), presses are ignored and screen
+   *  readers hear it's busy (aria-busy). Unlike `disabled` it keeps keyboard focus where it was. */
   loading?: boolean;
-}) {
+  /** Full width on a phone, its own width from `sm` up (a form's or a sheet's main action, in thumb reach). */
+  block?: boolean;
+};
+
+export function Button({ variant = "primary", size = "md", loading = false, block = false, className, children, onClick, ...rest }: ButtonProps) {
+  // The spinner sits over the label, so the button needs a position (unless the caller already placed it).
+  const positioned = /(^|\s)(absolute|fixed|sticky)(\s|$)/.test(className ?? "");
   return (
     <button
       type="button"
@@ -63,11 +85,51 @@ export function Button({
       aria-disabled={loading || rest["aria-disabled"] || undefined}
       // preventDefault also stops a busy submit button from sending its form again.
       onClick={loading ? (e) => e.preventDefault() : onClick}
-      className={buttonClass(variant, size, cx(loading && "cursor-progress", className))}
+      className={buttonClass(variant, size, cx(block && "w-full sm:w-auto", loading && "cursor-progress", loading && !positioned && "relative", className))}
     >
-      {loading && <Orb size={20} theme={variant === "primary" ? "dark" : "auto"} className={size === "sm" ? "-my-1" : undefined} />}
-      {children}
+      {/* `contents`: the label lays out exactly as if unwrapped; while loading it's hidden but keeps its width. */}
+      <span className={cx("contents", loading && "invisible")}>{children}</span>
+      {loading && (
+        <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
+          <Orb size={20} theme={variant === "primary" || variant === "destructive" ? "dark" : "auto"} className={size === "sm" ? "scale-75" : undefined} />
+        </span>
+      )}
     </button>
+  );
+}
+
+/**
+ * An icon-only button: a square of its size, named for screen readers by `label` (also its hover title). The icon is
+ * decorative. Default `ghost` (toolbars, rows, a dialog's close).
+ */
+export function IconButton({
+  label,
+  icon: Icon,
+  variant = "ghost",
+  size = "md",
+  className,
+  ...rest
+}: Omit<ButtonProps, "children" | "block"> & { label: string; icon: ComponentType<{ className?: string }> }) {
+  return (
+    <Button {...rest} variant={variant} size={size} aria-label={label} title={rest.title ?? label} className={cx(SQUARE[size], "!p-0", className)}>
+      <Icon className={size === "sm" ? "h-4 w-4" : size === "lg" ? "h-5 w-5" : "h-[18px] w-[18px]"} aria-hidden />
+    </Button>
+  );
+}
+
+/** Buttons that belong together, joined into one bar (a view switch, Back/Next). `label` names the group. */
+export function ButtonGroup({ label, children, className }: { label?: string; children: ReactNode; className?: string }) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className={cx(
+        "inline-flex items-stretch [&>*:first-child]:rounded-l-xl [&>*:last-child]:rounded-r-xl [&>*:not(:first-child)]:-ml-px [&>*:not(:first-child)]:rounded-l-none [&>*:not(:last-child)]:rounded-r-none [&>*:focus-visible]:z-10",
+        className,
+      )}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -143,15 +205,72 @@ export function IconTile({ icon: Icon, size = "md", className }: { icon: Compone
   );
 }
 
-export function Field({ label, hint, children, htmlFor }: { label: string; hint?: string; children: ReactNode; htmlFor?: string }) {
+/**
+ * A form field: its label, the control, then one line under it: the error when there is one (what to do, said
+ * plainly: "Add a company name"), else the hint. `required` marks the label (and tells screen readers); `counter`
+ * shows how much of a limit is used, turning amber in the last tenth. With `htmlFor`, the control is wired to its
+ * hint and error (aria-describedby) and marked invalid while there's an error. Show an error after the person leaves
+ * the field or submits, not while they type.
+ */
+export function Field({
+  label,
+  hint,
+  children,
+  htmlFor,
+  required,
+  error,
+  counter,
+}: {
+  label: string;
+  hint?: string;
+  children: ReactNode;
+  htmlFor?: string;
+  required?: boolean;
+  error?: string | null;
+  counter?: { value: number; max: number };
+}) {
+  const noteId = htmlFor ? `${htmlFor}-note` : undefined;
+  const note = error || hint;
+  const control =
+    htmlFor && note && isValidElement<Record<string, unknown>>(children)
+      ? cloneElement(children, {
+          "aria-describedby": cx(children.props["aria-describedby"] as string | undefined, noteId) || undefined,
+          ...(error ? { "aria-invalid": true } : {}),
+        })
+      : children;
   return (
     // min-w-0: a select sizes to its longest option; without this it stretches a grid column past a phone's width.
     <div className="min-w-0 space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-sm font-medium text-zinc-800 dark:text-zinc-200">
-        {label}
-      </label>
-      {children}
-      {hint && <p className="text-xs text-zinc-500 dark:text-zinc-400">{hint}</p>}
+      <div className="flex items-baseline justify-between gap-3">
+        <label htmlFor={htmlFor} className="block text-sm font-medium text-zinc-800 dark:text-zinc-200">
+          {label}
+          {required && (
+            <>
+              <span aria-hidden="true" className="ml-0.5 text-rose-700 dark:text-rose-400">*</span>
+              <span className="sr-only"> (required)</span>
+            </>
+          )}
+        </label>
+        {counter && (
+          <span
+            className={cx(
+              "text-xs tabular-nums",
+              counter.value > counter.max * 0.9 ? "text-amber-700 dark:text-amber-300" : "text-zinc-500 dark:text-zinc-400",
+            )}
+          >
+            {counter.value.toLocaleString()} / {counter.max.toLocaleString()}
+          </span>
+        )}
+      </div>
+      {control}
+      {error ? (
+        <p id={noteId} className="flex items-start gap-1.5 text-xs font-medium text-rose-700 dark:text-rose-300">
+          <CircleAlert className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+          {error}
+        </p>
+      ) : (
+        hint && <p id={noteId} className="text-xs text-zinc-500 dark:text-zinc-400">{hint}</p>
+      )}
     </div>
   );
 }
@@ -159,15 +278,15 @@ export function Field({ label, hint, children, htmlFor }: { label: string; hint?
 const control =
   "block w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 transition-colors hover:border-zinc-300 focus:border-indigo-500 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:hover:border-white/20 dark:focus:border-indigo-400";
 
-export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
+export function Input(props: ComponentProps<"input">) {
   return <input {...props} className={cx(control, focusRing, props.className)} />;
 }
 
-export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function Textarea(props: ComponentProps<"textarea">) {
   return <textarea {...props} className={cx(control, focusRing, props.className)} />;
 }
 
-export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
+export function Select(props: ComponentProps<"select">) {
   return <select {...props} className={cx(control, focusRing, props.className)} />;
 }
 
@@ -232,20 +351,140 @@ export function Spinner({ label = "Loading", state = "working", big = false }: {
   );
 }
 
+/** An error the person must act on, inline where it happened: the error Callout, with Retry when there's one. */
 export function ErrorNote({ children, onRetry }: { children: ReactNode; onRetry?: () => void }) {
   return (
-    <div
-      role="alert"
-      className="flex items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-800 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200"
+    <Callout
+      tone="error"
+      action={
+        onRetry && (
+          // Padded to a 24 px target (WCAG 2.5.8) without moving the text.
+          <button type="button" onClick={onRetry} className={cx("-my-1 rounded px-1 py-1 font-medium underline", focusRing)}>
+            Retry
+          </button>
+        )
+      }
     >
-      <span className="flex-1">{children}</span>
-      {onRetry && (
-        // Padded to a 24 px target (WCAG 2.5.8) without moving the text.
-        <button type="button" onClick={onRetry} className={cx("-my-1 rounded px-1 py-1 font-medium underline", focusRing)}>
-          Retry
+      {children}
+    </Callout>
+  );
+}
+
+export type CalloutTone = "info" | "success" | "warning" | "error";
+
+const CALLOUT: Record<CalloutTone, { box: string; icon: ComponentType<{ className?: string }>; mark: string }> = {
+  info: {
+    box: "border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-200",
+    icon: Info,
+    mark: "text-zinc-500 dark:text-zinc-400",
+  },
+  success: {
+    box: "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100",
+    icon: CircleCheck,
+    mark: "text-emerald-700 dark:text-emerald-300",
+  },
+  warning: {
+    box: "border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-100",
+    icon: TriangleAlert,
+    mark: "text-amber-700 dark:text-amber-300",
+  },
+  error: {
+    box: "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200",
+    icon: CircleAlert,
+    mark: "text-rose-700 dark:text-rose-300",
+  },
+};
+
+/**
+ * An inline banner in the page's flow: `info` (ink, a note), `success`, `warning` (amber: something to check), `error`
+ * (rose: something failed; announced). A bold `title` is optional; `action` sits at the end (a button or link);
+ * `onDismiss` adds a close. Not for transient confirmations (toast) or questions (confirmDialog).
+ */
+export function Callout({
+  tone = "info",
+  title,
+  children,
+  action,
+  onDismiss,
+  icon,
+  className,
+}: {
+  tone?: CalloutTone;
+  title?: ReactNode;
+  children?: ReactNode;
+  action?: ReactNode;
+  onDismiss?: () => void;
+  /** Replaces the tone's icon; `false` for none. */
+  icon?: ReactNode | false;
+  className?: string;
+}) {
+  const t = CALLOUT[tone];
+  const Icon = t.icon;
+  return (
+    <div
+      role={tone === "error" ? "alert" : undefined}
+      className={cx("flex items-start gap-3 rounded-xl border px-3.5 py-2.5 text-sm", t.box, className)}
+    >
+      {icon !== false && (
+        <span aria-hidden="true" className={cx("mt-0.5 flex shrink-0", t.mark)}>
+          {icon ?? <Icon className="h-4 w-4" />}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        {title && <p className="font-semibold">{title}</p>}
+        {children && <div className={title ? "mt-0.5" : undefined}>{children}</div>}
+      </div>
+      {action && <div className="flex shrink-0 items-center gap-2 self-center">{action}</div>}
+      {onDismiss && (
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Dismiss"
+          className={cx("-my-1 -mr-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg opacity-70 hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10", focusRing)}
+        >
+          <X className="h-4 w-4" aria-hidden />
         </button>
       )}
     </div>
+  );
+}
+
+export type BadgeTone = "neutral" | "accent" | "success" | "warning" | "danger" | "info";
+
+const BADGE: Record<BadgeTone, string> = {
+  neutral: "bg-zinc-100 text-zinc-700 ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10",
+  accent: "bg-indigo-500/10 text-indigo-700 ring-indigo-500/20 dark:text-indigo-200 dark:ring-indigo-400/25",
+  success: "bg-emerald-500/10 text-emerald-800 ring-emerald-600/20 dark:text-emerald-200 dark:ring-emerald-400/25",
+  warning: "bg-amber-500/10 text-amber-900 ring-amber-500/25 dark:text-amber-200 dark:ring-amber-400/25",
+  danger: "bg-rose-500/10 text-rose-800 ring-rose-500/20 dark:text-rose-200 dark:ring-rose-400/25",
+  info: "bg-sky-500/10 text-sky-800 ring-sky-500/20 dark:text-sky-200 dark:ring-sky-400/25",
+};
+
+/**
+ * A small label for a state: `success` (done, ready, live), `warning` (waiting, needs a look), `danger` (failed,
+ * suspended), `info`, `accent` (new, selected), `neutral` (a count, a kind). Colour means status only, so a badge
+ * always says its state in words; `dot` adds a leading dot in the same colour.
+ */
+export function Badge({ tone = "neutral", dot = false, children, className }: { tone?: BadgeTone; dot?: boolean; children: ReactNode; className?: string }) {
+  return (
+    <span className={cx("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset", BADGE[tone], className)}>
+      {dot && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />}
+      {children}
+    </span>
+  );
+}
+
+/** A keyboard key, for shortcut hints ("Ctrl K", "/"). */
+export function Kbd({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <kbd
+      className={cx(
+        "inline-flex min-w-[1.25rem] items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 px-1.5 py-px font-sans text-[11px] font-medium leading-4 text-zinc-600 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300",
+        className,
+      )}
+    >
+      {children}
+    </kbd>
   );
 }
 

@@ -69,12 +69,23 @@
   --stage-offer: 5 150 105; /* #059669 */
   --stage-rejected: 161 161 170; /* #A1A1AA */
 
+  /* Elevation (Tailwind shadow-menu / -popover / -dialog / -toast): floating things only, softer and wider the higher
+     they sit. Each pairs with a hairline border, so an edge holds where a shadow can't be seen (dark mode). */
+  --shadow-menu: 0 1px 2px rgb(var(--ink-900) / 0.06), 0 8px 24px -8px rgb(var(--ink-900) / 0.18);
+  --shadow-popover: 0 2px 4px rgb(var(--ink-900) / 0.06), 0 12px 32px -10px rgb(var(--ink-900) / 0.22);
+  --shadow-dialog: 0 4px 10px rgb(var(--ink-900) / 0.08), 0 28px 64px -20px rgb(var(--ink-900) / 0.35);
+  --shadow-toast: 0 4px 10px rgb(var(--ink-900) / 0.08), 0 16px 40px -14px rgb(var(--ink-900) / 0.35);
+
   color-scheme: light;
   /* A focused field is never hidden under the sticky header (WCAG 2.4.11)… */
   scroll-padding-top: 5rem;
 }
 .dark {
   color-scheme: dark;
+  --shadow-menu: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 28px -8px rgb(0 0 0 / 0.6);
+  --shadow-popover: 0 2px 4px rgb(0 0 0 / 0.4), 0 14px 36px -10px rgb(0 0 0 / 0.65);
+  --shadow-dialog: 0 4px 12px rgb(0 0 0 / 0.45), 0 32px 72px -20px rgb(0 0 0 / 0.75);
+  --shadow-toast: 0 4px 12px rgb(0 0 0 / 0.45), 0 18px 44px -14px rgb(0 0 0 / 0.7);
   /* Dark mode's own steps: lighter means further along against the dark surface. */
   --stage-saved: 94 56 214; /* #5E38D6 */
   --stage-applied: 134 102 255; /* #8666FF */
@@ -585,7 +596,7 @@ button:not(:disabled) {
   transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow !important;
   scroll-behavior: auto !important;
 }
-:root[data-motion="reduced"] :is(.animate-fade-in, .animate-fade-up, .animate-scale-in, .animate-rise, .stagger > *, .motion-fade, .reveal-stagger[data-shown] > *) {
+:root[data-motion="reduced"] :is(.animate-fade-in, .animate-fade-up, .animate-scale-in, .animate-rise, .animate-dialog-in, .animate-sheet-up, .animate-menu-in, .animate-panel-in, .stagger > *, .motion-fade, .reveal-stagger[data-shown] > *) {
   animation-name: orbit-fade !important;
   animation-duration: var(--dur-quick) !important;
 }
@@ -908,3 +919,67 @@ html.app-shell .spot-orb { fill: rgb(var(--accent-600)); }
 html.app-shell .spot-ring { stroke: rgb(var(--ink-300)); stroke-opacity: 1; }
 html.app-shell.dark .spot-ring { stroke: rgb(255 255 255 / 0.2); }
 html.app-shell .spot-moon { fill: rgb(var(--accent-400)); }
+/* The panel's cyan light sweep is the front door's; the workbench's dialogs simply appear. */
+html.app-shell .sheet-sweep { display: none; }
+
+/* ---- Component system (round 3) ------------------------------------------------------------------------------- */
+
+/* A table that becomes a list of cards on a phone (Table `stack`): each cell shows its column's name (data-label)
+   before its value, and the header row is kept for screen readers only. */
+@media (max-width: 639.98px) {
+  .table-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .table-stack,
+  .table-stack tbody,
+  .table-stack tr,
+  .table-stack td {
+    display: block;
+    width: 100%;
+  }
+  .table-stack tr {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgb(var(--ink-200));
+  }
+  .dark .table-stack tr {
+    border-bottom-color: rgb(255 255 255 / 0.08);
+  }
+  .table-stack tr:last-child {
+    border-bottom: 0;
+  }
+  .table-stack td {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.25rem 0 !important;
+    text-align: right;
+  }
+  .table-stack td[data-label]::before {
+    content: attr(data-label);
+    flex: none;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgb(84 89 122);
+  }
+  .dark .table-stack td[data-label]::before {
+    color: rgb(var(--ink-400));
+  }
+  .table-stack td[data-primary] {
+    justify-content: flex-start;
+    text-align: left;
+  }
+}
+
+/* The sliding indicator under a segmented control or a tab list (SegmentedControl, Tabs): it glides to the chosen
+   item at Full motion and simply moves at Gentle and Off (the motion levels above drop the transform transition). */
+.indicator {
+  transition:
+    transform var(--dur-panel) var(--ease-standard),
+    width var(--dur-panel) var(--ease-standard);
+}

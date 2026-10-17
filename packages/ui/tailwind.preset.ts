@@ -38,7 +38,16 @@ export default {
         glow: "0 0 0 1px rgb(var(--accent-400) / 0.25), 0 8px 32px -8px rgb(var(--accent-500) / 0.55)",
         "glow-sm": "0 0 0 1px rgb(var(--accent-400) / 0.2), 0 4px 16px -6px rgb(var(--accent-500) / 0.5)",
         panel: "0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 20px 50px -24px rgb(0 0 0 / 0.6)",
+        // Elevation: only things that float cast a shadow, and the higher they sit the softer and wider it is (menu <
+        // popover < dialog < toast). Tokens in base.css (--shadow-*), so dark mode has its own.
+        menu: "var(--shadow-menu)",
+        popover: "var(--shadow-popover)",
+        dialog: "var(--shadow-dialog)",
+        toast: "var(--shadow-toast)",
       },
+      // The stacking order, low to high: sticky bars, the sidebar, menus and popovers, a dialog, a confirm over it,
+      // toasts over everything (feedback must stay visible).
+      zIndex: { bar: "20", sidebar: "30", menu: "40", popover: "40", dialog: "50", confirm: "60", toast: "70" },
       // press 100 ms (press, toggle) · quick 160 (hover, small fades) · panel 240 (popover, toast) · page 280 (route
       // change, card expand) · moment 700 (one-off celebrations only). Exits use ease-exit and run shorter.
       transitionDuration: {
@@ -75,6 +84,11 @@ export default {
           "100%": { transform: "scale(1.9)", opacity: "0" },
         },
         sheen: { from: { transform: "translateX(-120%) skewX(-20deg)" }, to: { transform: "translateX(220%) skewX(-20deg)" } },
+        // Overlays: a dialog fades in from a touch smaller; a phone sheet and a toast rise; a menu drops from its button.
+        "dialog-in": { from: { opacity: "0", transform: "scale(0.97)" }, to: { opacity: "1", transform: "none" } },
+        "sheet-up": { from: { transform: "translateY(16%)", opacity: "0" }, to: { transform: "none", opacity: "1" } },
+        "menu-in": { from: { opacity: "0", transform: "translateY(-4px) scale(0.98)" }, to: { opacity: "1", transform: "none" } },
+        "panel-in": { from: { opacity: "0", transform: "translateX(24px)" }, to: { opacity: "1", transform: "none" } },
       },
       animation: {
         // Entrances. Under Gentle motion base.css turns each into a plain fade.
@@ -104,6 +118,11 @@ export default {
         drift: "drift 22s steps(88) infinite",
         "pulse-ring": "pulse-ring 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite",
         sheen: "sheen 0.9s ease-out",
+        // Overlay entrances (Gentle turns each into a fade, Off into nothing: base.css).
+        "dialog-in": "dialog-in var(--dur-panel) var(--ease-enter) both",
+        "sheet-up": "sheet-up var(--dur-page) var(--ease-enter) both",
+        "menu-in": "menu-in var(--dur-quick) var(--ease-enter) both",
+        "panel-in": "panel-in var(--dur-page) var(--ease-enter) both",
       },
     },
   },

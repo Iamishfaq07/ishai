@@ -158,3 +158,6 @@ export { Compass, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 // The AI video interview room's call controls.
 export { Captions, CaptionsOff, PhoneOff, ScanFace, VideoOff, VolumeX } from "lucide-react";
+
+// The component system (round 3): callouts, sortable table headers, menus.
+export { ArrowDown, ArrowUp, ChevronUp, ChevronsUpDown, Ellipsis, TriangleAlert } from "lucide-react";
