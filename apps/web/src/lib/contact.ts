@@ -35,10 +35,10 @@ export const CONTACT_PAGE = "/contact";
 export const LEGAL_PAGES_PUBLISHED = true;
 
 /** Static pages, outside the app (full page loads, not router links). */
-export const PRIVACY_PAGE = "/privacy.html";
-export const COOKIE_PAGE = "/cookies.html";
-export const TERMS_PAGE: string | null = LEGAL_PAGES_PUBLISHED ? "/terms.html" : null;
-export const REFUND_PAGE: string | null = LEGAL_PAGES_PUBLISHED ? "/refund.html" : null;
+export const PRIVACY_PAGE = "/privacy";
+export const COOKIE_PAGE = "/cookies";
+export const TERMS_PAGE: string | null = LEGAL_PAGES_PUBLISHED ? "/terms" : null;
+export const REFUND_PAGE: string | null = LEGAL_PAGES_PUBLISHED ? "/refund" : null;
 /** The static policy pages, for `<a href>`. Contact isn't one: it's a router link to CONTACT_PAGE. */
 export const POLICY_LINKS: Array<{ href: string; label: string }> = [
   ...(TERMS_PAGE ? [{ href: TERMS_PAGE, label: "Terms" }] : []),

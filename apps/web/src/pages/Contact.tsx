@@ -350,7 +350,7 @@ export function ContactPage() {
                   </Button>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     We keep your message to answer it.{" "}
-                    <a href="/privacy.html" className={cx("underline underline-offset-2", focusRing)}>
+                    <a href="/privacy" className={cx("underline underline-offset-2", focusRing)}>
                       Privacy
                     </a>
                   </p>

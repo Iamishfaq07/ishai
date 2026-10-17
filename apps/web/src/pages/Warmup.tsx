@@ -96,7 +96,7 @@ export function WarmupPage() {
         )}
         <p className="mt-12 text-center text-xs text-zinc-500 dark:text-zinc-400">
           For practice. In a real interview, use notes or AI help only where it's allowed.{" "}
-          <a href="/privacy.html" className={cx("underline-offset-2 hover:underline", focusRing)}>
+          <a href="/privacy" className={cx("underline-offset-2 hover:underline", focusRing)}>
             Privacy
           </a>
         </p>
