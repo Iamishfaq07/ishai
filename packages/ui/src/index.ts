@@ -319,6 +319,8 @@ export { ReferralScene } from "./components/scenes/ReferralScene";
 export { InboxScene } from "./components/scenes/InboxScene";
 export { InterviewDayScene } from "./components/scenes/InterviewDayScene";
 export { WorkingScene, type WorkingKind } from "./components/scenes/WorkingScene";
+export { KashSecScene } from "./components/scenes/KashSecScene";
+export { SPOT_KINDS, Spot, type SpotKind } from "./components/scenes/spots";
 export { useViewTransitionOk, viewTransitionOk, withViewTransition } from "./hooks/useMotion";
 export {
   COUNTRIES,

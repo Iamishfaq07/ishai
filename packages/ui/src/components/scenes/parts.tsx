@@ -1,6 +1,5 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { cx } from "../cx";
-import { useInView } from "../Reveal";
 
 export { SPARK } from "../Illustrations";
 
@@ -8,6 +7,36 @@ export interface SceneProps {
   className?: string;
   /** What it shows, for screen readers. Without it the scene is decorative and hidden from them. */
   title?: string;
+}
+
+/**
+ * In view for the first time: `shown` turns true once (a scene's or a spot's cue to play its touch). Hydration-safe:
+ * the server and the first client render agree (not shown), then an effect starts watching, so a scene can sit on a
+ * prerendered public page.
+ */
+export function useShown<T extends Element>(): [RefObject<T | null>, boolean] {
+  const ref = useRef<T>(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || shown) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setShown(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setShown(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.12 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [shown]);
+  return [ref, shown];
 }
 
 /**
@@ -19,7 +48,7 @@ export interface SceneProps {
  * marked NUDGE lifts a little on hover. Only the AI-working scenes (WorkingScene) loop, calmly, at Full only.
  */
 export function Scene({ className = "", title, children }: SceneProps & { children: ReactNode }) {
-  const [ref, shown] = useInView<SVGSVGElement>("0px");
+  const [ref, shown] = useShown<SVGSVGElement>();
   // A width in `className` ("w-24", "sm:w-40") sizes the scene; otherwise it fills its box, up to 15rem.
   const sized = /(?:^|\s)(?:[a-z0-9-]+:)*w-/.test(className);
   return (
