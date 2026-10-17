@@ -1,5 +1,26 @@
 # Implementation log
 
+## Desktop sweep: Setup, the window and shortcuts (2026-10-18)
+
+- **Start works with many saved documents**: New session ticked every ready resume and job description. Jobs AI
+  saves a job description for every job prepared, so an account past 20 couldn't start any session ("List should
+  have at most 20 items after validation, not 22"). The default is capped at the session limit and keeps the newest
+  resume and job description; a 21st tick is refused with a note (`apps/desktop/src/sessionDocs.ts`).
+- **Quick starts keep their type**: Home's "Coding" or "Meeting" no longer lands on the last saved setup's type (the
+  saved setup still fills in the role, documents and notes).
+- **A microphone plugged in during New session** clears "No microphone found", which held Start back until the
+  screen was left: the list is read again on focus, on the refresh button, and every 3 s while there's none.
+- **The window stays on the screen**: the expanded panel (Home, History, Settings, a session opened expanded) is never
+  bigger than the screen's work area, and a window inside it moves up or left as it grows, so a small laptop's
+  taskbar no longer hides a session's Answer / Pause / End bar. A window put partly off-screen stays where it is.
+- **An unpinned window stays unpinned** at the next launch (the live window's pin applied only once a session opened).
+- **"Open" on Home** opens that session's review, not the History list.
+- **Mock rounds are titled "Mock interview — role"**, not "Mock interview — the AI asks, you practise — role".
+- **Global shortcuts register one change at a time**: two quick changes in Settings could leave a shortcut dead and
+  marked "Taken by another app".
+- Checked on an isolated test build against a local mock API, with the audio and screen capture commands stubbed in
+  the webview. Needs a desktop release.
+
 ## API bug sweep after the read-only database incident (2026-10-18)
 
 - **A read-only database fails readiness** (DECISIONS D56): `/ready` asks Postgres whether writes are refused
