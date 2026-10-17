@@ -1,9 +1,9 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
 import { useParams } from "react-router-dom";
 import type { CodeAttemptRecord, CodeLanguage, CodeProblem, CodeReview } from "@orbit/types";
-import { Badge, CircleAlert, CircleCheck, Lightbulb, Play, Sparkles, LoadGate, cx, focusRing } from "@orbit/ui";
+import { Badge, CircleAlert, CircleCheck, CosmicEmptyState, Lightbulb, Play, Sparkles, LoadGate, cx, focusRing } from "@orbit/ui";
 import { BackLink } from "../../components/BackLink";
-import { Button, Card, EmptyState, ErrorNote, Field, Select, Textarea } from "../../components/ui";
+import { Button, Card, ErrorNote, Field, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText, isNotFound } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
@@ -36,7 +36,7 @@ export function CodeProblemPage() {
           <Workspace key={problemId} problem={data.data.problem} attempts={data.data.attempts} reviewsLeft={data.data.reviews_left}
                      onReviewed={(a) => data.setData((prev) => prev && { ...prev, attempts: [a, ...prev.attempts], reviews_left: prev.reviews_left === null ? null : Math.max(prev.reviews_left - 1, 0) })} />
         ) : (
-          <EmptyState title="That problem isn't here" body="Pick one from the list." />
+          <CosmicEmptyState variant="no-results" title="That problem isn't here" body="Pick one from the list." />
         )}
       </LoadGate>
     </>

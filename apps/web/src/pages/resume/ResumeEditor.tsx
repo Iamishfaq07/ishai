@@ -41,8 +41,11 @@ import {
   splitPlaceholders,
   toast,
   useCountUp,
+  WorkingState,
+  CosmicEmptyState,
+  celebrate,
 } from "@orbit/ui";
-import { Button, EmptyState, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
+import { Button, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
 import { api } from "../../lib/api";
 import { downloadText, errorText, isNotFound } from "../../lib/format";
 import { announceOutOfCredits } from "../../lib/outOfCredits";
@@ -114,6 +117,13 @@ function ResumeEditor() {
   const [loadError, setLoadError] = useState<{ text: string; missing: boolean } | null>(null);
   const [tab, setTab] = useState<Tab>("content");
   const [report, setReport] = useState<AtsReport | null>(null);
+  // The first time an edit takes the score past 80 on this device: a success moment (celebrate shows it once).
+  const lastScore = useRef<number | null>(null);
+  useEffect(() => {
+    const now = report?.score ?? null;
+    if (now !== null && lastScore.current !== null && lastScore.current < 80 && now >= 80) celebrate("first-ats-80", { message: `Your resume scores ${now}. Ready to apply?` });
+    lastScore.current = now; // null between resumes, so opening another doesn't count as a rise
+  }, [report?.score]);
   // The resume the report scored: a line's writing issues show only while that line still reads the same.
   const [scored, setScored] = useState<ResumeData | null>(null);
   const [save, setSave] = useState<{ state: SaveStatus; error?: string; retry?: boolean }>({
@@ -595,7 +605,8 @@ function ResumeEditor() {
   if (loadError) {
     // A deleted resume (or an old link) gets a way back, not just the error.
     return loadError.missing ? (
-      <EmptyState
+      <CosmicEmptyState
+        variant="no-results"
         title="That resume isn't here"
         body="It may have been deleted."
         action={<Link to={RESUME_AI_HOME} className="text-indigo-600 underline dark:text-indigo-400">See your resumes</Link>}
@@ -1320,7 +1331,7 @@ function LetterPanel({ resume, onText, onShowJob, onPrint }: { resume: Resume; o
         <AiCostNote className="mt-2" />
         {error && (upgrade ? <AiErrorNote className="mt-2" error={error} upgrade /> : <p className="mt-2 text-sm text-rose-600">{error}</p>)}
       </Panel>
-      {busy && <Spinner label="Writing your letter" state="composing" />}
+      {busy && <WorkingState compact kind="writing" label="Writing your letter" />}
       {(text || !busy) && (
         <Panel title="Your letter" action={fills.length > 0 ? <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">{fills.length} to fill in</span> : undefined}>
           <Textarea aria-label="Letter text" rows={18} maxLength={6000} value={text} onChange={(e) => onText(e.target.value)} placeholder="Write it yourself, or let the AI draft it above." />
@@ -1709,7 +1720,7 @@ function AiPanel({
         </div>
         <AiCostNote className="mt-2" />
       </Panel>
-      {busy && <Spinner label={busy} state={busyState(busy)} />}
+      {busy && <WorkingState compact kind={({ searching: "reading", weaving: "matching", composing: "writing" } as const)[busyState(busy)]} label={busy} />}
       {error && !busy && <AiErrorNote error={error} upgrade={upgrade} />}
       {safe > 0 && !busy && (
         <Button variant="secondary" onClick={onAcceptSafe}>

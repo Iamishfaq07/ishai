@@ -1,4 +1,4 @@
-import { ACCENT, ACCENT_FILL, ACCENT_SOFT, BAR, LABEL, LINE, PAPER, Scene, Stars, type SceneProps } from "./parts";
+import { ACCENT, ACCENT_FILL, ACCENT_SOFT, BAR, FADE, IN, LABEL, LINE, PAPER, Scene, Stars, at, type SceneProps } from "./parts";
 
 const STAR = ["S", "T", "A", "R"];
 
@@ -12,7 +12,9 @@ export function StoriesScene(props: SceneProps) {
       <path d="M120 40c22-12 52-14 78-6v96c-26-8-56-6-78 6z" className={PAPER} />
       <path d="M120 40v96" className={LINE} />
       {/* Its ribbon. */}
-      <path d="M168 31v34l6-5 6 5V32" className={`${ACCENT_SOFT} ${ACCENT}`} strokeWidth="1.5" />
+      <g className={IN} style={at(500, { y: -10 })}>
+        <path d="M168 31v34l6-5 6 5V32" className={`${ACCENT_SOFT} ${ACCENT}`} strokeWidth="1.5" />
+      </g>
       {/* The left page: a story's lines. */}
       <rect x="54" y="52" width="40" height="4" rx="2" className={ACCENT_FILL} />
       <rect x="54" y="64" width="54" height="3" rx="1.5" className={BAR} />
@@ -25,7 +27,7 @@ export function StoriesScene(props: SceneProps) {
         const y = 56 + i * 18;
         const done = i < 3;
         return (
-          <g key={letter}>
+          <g key={letter} className={FADE} style={at(150 + i * 120)}>
             <circle cx="138" cy={y} r="6" className={done ? `${ACCENT_SOFT} ${ACCENT}` : LINE} />
             <text x="138" y={y + 3} textAnchor="middle" className={LABEL}>
               {letter}

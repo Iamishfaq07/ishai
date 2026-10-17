@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { LinkedInProfile, LinkedInState, ResumeSummary } from "@orbit/types";
-import { Check, CircleAlert, CircleCheck, Copy, FileText, IdCard, Sparkles, Trash2, Upload, LoadGate, confirmDialog, cx, focusRing, safeLocal, useCountUp, useInView } from "@orbit/ui";
+import { Check, CircleAlert, CircleCheck, Copy, FileText, IdCard, LinkedInScene, Sparkles, Trash2, Upload, LoadGate, confirmDialog, cx, focusRing, safeLocal, useCountUp, useInView } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
@@ -22,7 +22,7 @@ export function LinkedInPage() {
   const set = (next: LinkedInState) => state.setData(() => next);
   return (
     <>
-      <PageHeader icon={IdCard} title="LinkedIn AI" subtitle="How your LinkedIn profile looks to a recruiter searching for your next role, and what to fix first." />
+      <PageHeader icon={IdCard} title="LinkedIn AI" subtitle="How your LinkedIn profile looks to a recruiter searching for your next role, and what to fix first." art={<LinkedInScene />} />
       <LoadGate loading={state.loading && !s} variant="card" count={3} label="Getting your LinkedIn check">
         {state.error && !s ? (
           <ErrorNote onRetry={state.reload}>{errorText(state.error)}</ErrorNote>

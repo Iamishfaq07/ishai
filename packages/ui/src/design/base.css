@@ -497,6 +497,206 @@ button:not(:disabled) {
     stroke-dashoffset: var(--len);
   }
 }
+/* Every scene's one touch (scenes/parts.tsx; DESIGN.md "Scenes", D68). The first time a scene is in view (Scene sets
+   data-shown) its parts play once and rest on the final frame: at Full a stroke draws itself on (.scene-draw, with
+   pathLength=1), a part fades (.scene-fade), comes in from a few px away (.scene-in; --x, --y), grows from its
+   centre (.scene-pop) or swings and settles round its pivot (.scene-settle; --o); --d delays it. A cursor blinks a
+   few times, a waveform pulses three times, a ripple rings twice, the stars drift a hair twice. At Gentle each part
+   only fades in. At Off, in print and without JavaScript (no data-motion) nothing is hidden or moved: the final
+   frame from the start. Only opacity, transform and stroke-dashoffset animate, inside an SVG of fixed size, so nothing
+   around a scene moves. */
+.scene :is(.scene-pop, .scene-pulse, .scene-ring) {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.scene .scene-settle {
+  transform-box: view-box;
+  transform-origin: var(--o, center);
+}
+.scene .scene-ring {
+  opacity: 0;
+}
+:root:is([data-motion="full"], [data-motion="reduced"]) .scene:not([data-shown]) :is(.scene-draw, .scene-fade, .scene-in, .scene-pop, .scene-settle) {
+  opacity: 0;
+}
+:root[data-motion="full"] .scene[data-shown] .scene-draw {
+  animation: scene-draw var(--dur-moment) var(--ease-standard) var(--d, 0ms) both;
+}
+:root[data-motion="full"] .scene[data-shown] .scene-fade {
+  animation: orbit-fade var(--dur-page) var(--ease-standard) var(--d, 0ms) both;
+}
+:root[data-motion="full"] .scene[data-shown] .scene-in {
+  animation: scene-in var(--dur-moment) var(--ease-enter) var(--d, 0ms) both;
+}
+:root[data-motion="full"] .scene[data-shown] .scene-pop {
+  animation: scene-pop 420ms var(--ease-enter) var(--d, 0ms) both;
+}
+:root[data-motion="full"] .scene[data-shown] .scene-settle {
+  animation: scene-settle 1200ms var(--ease-standard) var(--d, 0ms) both;
+}
+:root[data-motion="full"] .scene[data-shown] .scene-drift {
+  animation: scene-drift 7s ease-in-out 600ms 2;
+}
+:root[data-motion="full"] .scene[data-shown] .scene-blink {
+  animation: scene-blink 1s steps(1) var(--d, 0ms) 5;
+}
+:root[data-motion="full"] .scene[data-shown] .scene-pulse {
+  animation: scene-pulse 900ms ease-in-out var(--d, 0ms) 3;
+}
+:root[data-motion="full"] .scene[data-shown] .scene-ring {
+  animation: scene-ring 1400ms var(--ease-standard) var(--d, 0ms) 2 both;
+}
+:root[data-motion="reduced"] .scene[data-shown] :is(.scene-draw, .scene-fade, .scene-in, .scene-pop, .scene-settle) {
+  animation: orbit-fade var(--dur-panel) var(--ease-standard) var(--d, 0ms) both;
+  animation-duration: var(--dur-panel) !important;
+}
+/* The AI-working scenes (WorkingScene): while Orbit reads, writes or compares, a calm loop at Full only (the one kind
+   of scene motion that repeats, and only for as long as the wait). Gentle and Off show it still. */
+:root[data-motion="full"] .scene .scene-scan {
+  animation: scene-scan 3.2s ease-in-out infinite;
+}
+:root[data-motion="full"] .scene .scene-write {
+  animation: scene-write 4.2s var(--ease-standard) var(--d, 0ms) infinite both;
+}
+:root[data-motion="full"] .scene .scene-travel {
+  animation: scene-travel 2.4s var(--ease-standard) var(--d, 0ms) infinite both;
+}
+:root[data-motion="full"] .scene .scene-breathe {
+  animation: scene-breathe 2.4s ease-in-out infinite;
+}
+/* Hover nudge: the scene's subject lifts a hair while the scene or its empty state (.scene-host) is hovered. */
+@media (hover: hover) {
+  :root[data-motion="full"] .scene .scene-nudge {
+    transition: translate var(--dur-panel) var(--ease-standard);
+  }
+  :root[data-motion="full"] :is(.scene, .scene-host):hover .scene-nudge {
+    translate: 0 -3px;
+  }
+}
+@media print {
+  .scene :is(.scene-draw, .scene-fade, .scene-in, .scene-pop, .scene-settle) {
+    opacity: 1 !important;
+    animation: none !important;
+  }
+}
+@keyframes scene-draw {
+  from {
+    stroke-dasharray: 1 2;
+    stroke-dashoffset: 1.05;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  to {
+    stroke-dasharray: 1 2;
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+@keyframes scene-in {
+  from {
+    opacity: 0;
+    transform: translate(var(--x, 0px), var(--y, 6px));
+  }
+}
+@keyframes scene-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes scene-settle {
+  from {
+    opacity: 0;
+    transform: rotate(-7deg);
+  }
+  15% {
+    opacity: 1;
+  }
+  45% {
+    transform: rotate(3deg);
+  }
+  72% {
+    transform: rotate(-1deg);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes scene-drift {
+  50% {
+    transform: translate(1.5px, -1.5px);
+  }
+}
+@keyframes scene-blink {
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes scene-pulse {
+  50% {
+    transform: scaleY(0.45);
+  }
+}
+@keyframes scene-ring {
+  from {
+    opacity: 0.6;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+@keyframes scene-scan {
+  50% {
+    transform: translateY(var(--y, 60px));
+  }
+}
+@keyframes scene-write {
+  from {
+    stroke-dasharray: 1 2;
+    stroke-dashoffset: 1.05;
+  }
+  35%,
+  85% {
+    stroke-dasharray: 1 2;
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  to {
+    stroke-dasharray: 1 2;
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+@keyframes scene-travel {
+  from {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  20%,
+  80% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(var(--x, 40px));
+  }
+}
+@keyframes scene-breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
 
 /* Page transitions (same-document View Transitions: withViewTransition(), or React Router's `viewTransition`). The
    page crossfades quickly; an element given a view-transition-name morphs into its new place. Gentle keeps the

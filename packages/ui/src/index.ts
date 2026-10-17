@@ -266,7 +266,8 @@ export { Dropzone, ProgressRing } from "./components/Dropzone";
 export { CompanyLogo, monogram } from "./components/CompanyLogo";
 export { SourceChip, useSourceTracker, type SourceTracker } from "./components/SourceChip";
 export { SILENT_AFTER_MS, sourceState, sourceText, type SourceChannel, type SourceState } from "./live/sourceActivity";
-export { CosmicEmptyState, type CosmicEmptyVariant } from "./components/CosmicEmptyState";
+export { CosmicEmptyState, SceneArt, type CosmicEmptyVariant } from "./components/CosmicEmptyState";
+export { WorkingState } from "./components/WorkingState";
 export { spotlightMove } from "./components/useSpotlight";
 export { ConceptDepthRadar, aggregateDepth } from "./components/ConceptDepthRadar";
 export { buttonClass, type ButtonSize, type ButtonVariant } from "./components/ui";
@@ -303,6 +304,16 @@ export { StoriesScene } from "./components/scenes/StoriesScene";
 export { AnswersScene } from "./components/scenes/AnswersScene";
 export { EvidenceScene } from "./components/scenes/EvidenceScene";
 export { DocumentsScene } from "./components/scenes/DocumentsScene";
+export { LinkedInScene } from "./components/scenes/LinkedInScene";
+export { CodeScene } from "./components/scenes/CodeScene";
+export { LearningScene } from "./components/scenes/LearningScene";
+export { VideoScene } from "./components/scenes/VideoScene";
+export { BillingScene } from "./components/scenes/BillingScene";
+export { SecurityScene } from "./components/scenes/SecurityScene";
+export { ReferralScene } from "./components/scenes/ReferralScene";
+export { InboxScene } from "./components/scenes/InboxScene";
+export { InterviewDayScene } from "./components/scenes/InterviewDayScene";
+export { WorkingScene, type WorkingKind } from "./components/scenes/WorkingScene";
 export { useViewTransitionOk, viewTransitionOk, withViewTransition } from "./hooks/useMotion";
 export {
   COUNTRIES,

@@ -3,8 +3,9 @@ import { ACCENT, ACCENT_FILL, SPARK, Scene, Stars, type SceneProps } from "./par
 
 const SPARKS = Array.from({ length: 8 }, (_, i) => i * 45 + 22.5);
 
-/** All done: a ticked world with Orbit's sparks thrown around it. At Full motion they burst out once. */
-export function CelebrationScene(props: SceneProps) {
+/** All done: a ticked world with Orbit's sparks thrown around it. At Full motion they burst out once (`still`: they
+ *  rest where they are, for a moment already celebrated). */
+export function CelebrationScene({ still = false, ...props }: SceneProps & { still?: boolean }) {
   return (
     <Scene {...props}>
       <Stars at={[[22, 30, 1], [214, 24, 1], [30, 128, 0.8], [220, 134, 1.2], [64, 80, 0.8], [180, 84, 0.8]]} />
@@ -21,7 +22,7 @@ export function CelebrationScene(props: SceneProps) {
               d={SPARK(0, 0, i % 2 ? 3.5 : 5)}
               // Where each spark rests; the burst flies it there from the centre (base.css orbit-burst-in).
               style={{ "--a": `${a}deg`, "--r": `-${r}px`, transform: `rotate(${a}deg) translateY(-${r}px)` } as CSSProperties}
-              className={`${i % 2 ? "fill-aurora-400" : ACCENT_FILL} motion-ok:animate-[orbit-burst-in_var(--dur-moment)_var(--ease-enter)_both]`}
+              className={`${i % 2 ? "fill-aurora-400" : ACCENT_FILL} ${still ? "" : "motion-ok:animate-[orbit-burst-in_var(--dur-moment)_var(--ease-enter)_both]"}`}
             />
           );
         })}

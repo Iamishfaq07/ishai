@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { ContactTopic, InboxFilter, InboxItem, InboxMessage } from "@orbit/types";
-import { Briefcase, ChevronDown, Inbox, LoadGate, Reply, Search, UserRound, cx, focusRing } from "@orbit/ui";
-import { Button, EmptyState, ErrorNote, Input, PageHeader, Select } from "../components/ui";
+import { Briefcase, ChevronDown, CosmicEmptyState, Inbox, LoadGate, Reply, Search, UserRound, cx, focusRing } from "@orbit/ui";
+import { Button, ErrorNote, Input, PageHeader, Select } from "../components/ui";
 import { api } from "../lib/api";
 import { CONTACT_TOPICS } from "../lib/contactForm";
 import { errorText } from "../lib/format";
@@ -135,8 +135,8 @@ export function AdminInboxPage() {
 
       <LoadGate loading={!data} variant="session-row" count={6} label="Loading the inbox">
       {!items.length ? (
-        <EmptyState
-          icon={Inbox}
+        <CosmicEmptyState
+          variant={q || topic ? "no-results" : "inbox"}
           kind={q || topic ? "no-results" : status === "todo" ? "cleared" : "first-use"}
           title={q || topic ? "No message matches" : EMPTY[status].title}
           body={q || topic ? "Try another topic or search, or the All tab." : EMPTY[status].body}

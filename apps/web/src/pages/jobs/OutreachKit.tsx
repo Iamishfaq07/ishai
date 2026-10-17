@@ -16,9 +16,10 @@ import {
   shownFirst,
   skillList,
   toast,
+  WorkingState,
   type MessageKit,
 } from "@orbit/ui";
-import { Button, Field, Input, Spinner, Textarea } from "../../components/ui";
+import { Button, Field, Input, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useCountry } from "../../lib/country";
 import { errorText } from "../../lib/format";
@@ -149,7 +150,7 @@ export function NaukriPart({ resume, value, onChange }: { resume: Resume; value:
         <AiCostNote className="mt-2" />
         {error && <AiErrorNote className="mt-2" error={error.text} upgrade={error.upgrade} />}
       </Box>
-      {busy && <Spinner label="Writing your Naukri profile" state="composing" />}
+      {busy && <WorkingState compact kind="writing" label="Writing your Naukri profile" />}
       {value && !busy && (
         <Box title="Copy these into Naukri">
           <div className="space-y-4">
@@ -179,7 +180,7 @@ export function LinkedInPart({ resume, value, onChange }: { resume: Resume; valu
         <AiCostNote className="mt-2" />
         {error && <AiErrorNote className="mt-2" error={error.text} upgrade={error.upgrade} />}
       </Box>
-      {busy && <Spinner label="Writing your LinkedIn profile" state="composing" />}
+      {busy && <WorkingState compact kind="writing" label="Writing your LinkedIn profile" />}
       {value && !busy && (
         <Box title="Copy these into LinkedIn">
           <div className="space-y-4">
@@ -279,7 +280,7 @@ export function MessagesPart({
         <AiCostNote className="mt-2" />
         {error && <AiErrorNote className="mt-2" error={error.text} upgrade={error.upgrade} />}
       </Box>
-      {busy && <Spinner label="Writing your message" state="composing" />}
+      {busy && <WorkingState compact kind="writing" label="Writing your message" />}
       {current && !busy && (
         <Box title={meta.label}>
           <div className="space-y-4">

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { JobOfferRecord, OfferInput } from "@orbit/types";
-import { Check, CircleAlert, Copy, Mic, PenLine, Sparkles, Trash2, LoadGate, confirmDialog, cx } from "@orbit/ui";
+import { Check, CircleAlert, Copy, CosmicEmptyState, Mic, PenLine, Sparkles, Trash2, LoadGate, confirmDialog, cx } from "@orbit/ui";
 import { BackLink } from "../../components/BackLink";
-import { Button, Card, EmptyState, ErrorNote, IconButton } from "../../components/ui";
+import { Button, Card, ErrorNote, IconButton } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useCountry } from "../../lib/country";
 import { errorText } from "../../lib/format";
@@ -29,7 +29,7 @@ export function OfferDetailPage() {
         ) : offer ? (
           <Detail offer={offer} onChange={replace} onDeleted={() => offers.setData((prev) => (prev ?? []).filter((o) => o.id !== offer.id))} />
         ) : (
-          <EmptyState title="That offer isn't here" body="It may have been deleted." action={<Link to={OFFERS_HOME} className="text-indigo-600 underline">See your offers</Link>} />
+          <CosmicEmptyState variant="no-results" title="That offer isn't here" body="It may have been deleted." action={<Link to={OFFERS_HOME} className="text-indigo-600 underline">See your offers</Link>} />
         )}
       </LoadGate>
     </>

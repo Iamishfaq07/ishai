@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Copy, KeyRound, LoadGate, QrCode, confirmDialog, toast } from "@orbit/ui";
+import { Copy, KeyRound, LoadGate, QrCode, SecurityScene, confirmDialog, toast } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -157,9 +157,12 @@ export function TwoFactorCard() {
             <Button type="button" variant="ghost" onClick={() => setStep({ kind: "idle" })}>Cancel</Button>
           </form>
         ) : (
-          <Button onClick={() => (hasPassword ? setStep({ kind: "password" }) : begin())} disabled={busy}>
-            Set up two-step sign-in
-          </Button>
+          <div className="flex items-center justify-between gap-4">
+            <Button onClick={() => (hasPassword ? setStep({ kind: "password" }) : begin())} disabled={busy}>
+              Set up two-step sign-in
+            </Button>
+            <SecurityScene className="-my-3 hidden w-24 shrink-0 sm:block" />
+          </div>
         )}
         {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
       </LoadGate>

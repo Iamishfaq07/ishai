@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Briefcase,
   Code2,
+  CopilotScene,
   CreditCard,
   FolderOpen,
   HistoryIcon,
@@ -12,7 +13,6 @@ import {
   SettingsIcon,
   Sparkles,
   Spinner,
-  SpotIllustration,
   Users,
   Button,
   cx,
@@ -159,7 +159,7 @@ export function HomeScreen({
                 </div>
               ) : recent.length === 0 ? (
                 <div className="flex flex-col items-center px-5 py-6 text-center">
-                  <SpotIllustration icon={HistoryIcon} size={72} />
+                  <CopilotScene className="w-40" />
                   <p className="mt-2 text-sm font-medium">No sessions yet</p>
                   <p className="mt-0.5 text-xs text-zinc-500">Your transcripts and summaries will appear here.</p>
                 </div>

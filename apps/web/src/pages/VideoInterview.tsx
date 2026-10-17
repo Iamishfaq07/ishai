@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { CreateSessionRequest, MockDifficulty, OrbitDocument } from "@orbit/types";
-import { INTERVIEWER_NAME, LoadGate, Video, cx, focusRing, warmVoiceStatus } from "@orbit/ui";
+import { INTERVIEWER_NAME, LoadGate, Video, VideoScene, cx, focusRing, warmVoiceStatus } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Textarea } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
@@ -175,6 +175,7 @@ export function VideoInterviewPage() {
         icon={Video}
         title="AI video interview"
         subtitle={`A face-to-face practice interview with ${INTERVIEWER_NAME}, an AI interviewer who asks from the job, your resume or a topic, and follows up on what you say.`}
+        art={<VideoScene />}
       />
       {step === "setup" ? (
         <Card className="space-y-5">
