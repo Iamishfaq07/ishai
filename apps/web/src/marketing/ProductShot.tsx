@@ -3,7 +3,7 @@ import { cx } from "@orbit/ui";
 /**
  * A real screen of the app, captured from a local stack with demo data (marketing/screens/: seed + capture scripts),
  * as WebP in both themes (`shots/<name>-light.webp`, `-dark.webp`, 1600 x 1000), and for phones a 4:3 crop of the
- * screen's working area (`-phone.webp`, 1200 x 900) so it stays legible on a small screen.
+ * screen's working area (`-phone.webp`, 800 x 600) so it stays legible on a small screen.
  *
  * Plain markup, no JavaScript decides anything: the light and the dark picture are both in the page, the one for the
  * other theme hidden by CSS (`dark:`), and both are lazy, so the browser only ever fetches the one it shows, at the
@@ -26,7 +26,7 @@ function Picture({ name, dark, alt, priority, className }: { name: ShotName; dar
   if (!src) return null;
   return (
     <picture className={className}>
-      {phone && <source media="(max-width: 639px)" srcSet={phone} width={1200} height={900} />}
+      {phone && <source media="(max-width: 639px)" srcSet={phone} width={800} height={600} />}
       <img src={src} alt={alt} width={1600} height={1000} loading={priority ? "eager" : "lazy"} decoding="async" className="block h-auto w-full" />
     </picture>
   );

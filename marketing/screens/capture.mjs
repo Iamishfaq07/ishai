@@ -296,13 +296,14 @@ if (flag("webp")) {
     if (existsSync(src) && want(n)) files.push([src, join(HERE, "..", "..", "apps", "web", "src", "marketing", "shots", `${n}-${t}.webp`)]);
   }
   await toWebp(files, 1600, 1000, Number(opt("quality", "0.8")));
-  // Phones get a 4:3 crop of each screen's working area (ProductShot's <source> under 640 px), so it stays legible.
+  // Phones get a 4:3 crop of each screen's working area (ProductShot's <source> under 640 px), so it stays legible:
+  // 800 x 600 is 2x a phone's column, and light enough not to slow the page around it.
   const PHONE_CROP = { copilot: [130, 80, 1580, 1185], practice: [500, 300, 1600, 1200], resume: [500, 180, 1600, 1200], jobs: [500, 300, 1600, 1200], mission: [500, 300, 1600, 1200] };
   const phone = files.map(([src, dest]) => {
     const n = SITE.find((x) => dest.includes(`${x}-`));
     return [src, dest.replace(/.webp$/, "-phone.webp"), PHONE_CROP[n]];
   });
-  await toWebp(phone, 1200, 900, Number(opt("quality", "0.8")));
+  await toWebp(phone, 800, 600, Number(opt("quality", "0.78")));
 } else if (flag("store")) {
   const out = join(HERE, "..", "store");
   for (const [w, h, scale] of [[1366, 768, 1], [1280, 720, 2]]) {

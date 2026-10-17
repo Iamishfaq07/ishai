@@ -297,7 +297,7 @@ plainly what Orbit is, shows the real product, and gets out of the way. Code: `a
 - **Elevation**: flat. Only floating things cast a shadow: the product windows (`mk-float`), menus and the sticky bar
   (`mk-menu-shadow`). Cards are a surface with a hairline, often in a hairline grid (`gap-px` over the line colour).
 - **Pictures are the product**: the hero is the live session drawn in HTML (`LiveAnswerDemo`: crisp, both themes,
-  every accent); each product section shows a real screen (`ProductShot`: WebP 1600 x 1000 per theme and a 1200 x 900
+  every accent); each product section shows a real screen (`ProductShot`: WebP 1600 x 1000 per theme and an 800 x 600
   crop for phones, plain markup: both themes' pictures are in the page and CSS hides the other one, so only the shown
   one is fetched, lazily, its size reserved, and the built HTML is the same). Screens come from a local stack with
   fictional demo data

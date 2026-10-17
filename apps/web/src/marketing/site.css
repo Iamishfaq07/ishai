@@ -60,7 +60,7 @@ html.site :is(.shadow-glow, .shadow-glow-sm) {
 
 /* Type: IBM Plex Sans everywhere, headings included (Space Grotesk stays only inside the logo, outlined). */
 html.site :is(h1, h2, h3, h4, .font-display) {
-  font-family: "IBM Plex Sans Variable", "IBM Plex Sans", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  font-family: "IBM Plex Sans Variable", "Plex Fallback", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   letter-spacing: -0.012em;
 }
 /* The scale (DESIGN.md "Front door"): display 36-60 px, section 28-40 px, card 20 px; a lead paragraph 18-20 px. */
@@ -274,4 +274,19 @@ html.dark .mk-google:hover {
 /* Hairlines between rows (tables, the FAQ list): the site's line colour. */
 .mk-divide > :not(:first-child) {
   border-top: 1px solid rgb(var(--site-line));
+}
+
+/* Until IBM Plex Sans arrives, text is drawn in a local fallback set to Plex's metrics (Arial size-adjusted, measured
+   from the font files), so a built page's text takes the same room before and after the swap: nothing reflows, and
+   the swap doesn't count as a later, larger paint. */
+@font-face {
+  font-family: "Plex Fallback";
+  src: local("Arial"), local("Helvetica"), local("Liberation Sans");
+  size-adjust: 101.8%;
+  ascent-override: 100.69%;
+  descent-override: 27.01%;
+  line-gap-override: 0%;
+}
+html.site {
+  font-family: "IBM Plex Sans Variable", "Plex Fallback", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
 }
