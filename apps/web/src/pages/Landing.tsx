@@ -290,7 +290,7 @@ function WhyOrbit({ india }: { india: boolean }) {
   const reasons: Array<[typeof Layers, string, string]> = [
     [Layers, "One resume, every tool", "Add it once. Your practice answers, live answers, ATS score and job matches all work from the same resume, so nothing is typed twice."],
     [BadgeCheck, "Answers that show their sources", "A live answer lists the resume lines it used, and marks details that aren't in your documents so you check them before you say them."],
-    [ShieldCheck, "Honest about where it's allowed", "Built for practice, and for interviews and calls where notes or AI help are allowed. Orbit doesn't hide from anyone and doesn't claim to be undetectable."],
+    [ShieldCheck, "Honest about where it's allowed", "Built for practice, and for interviews and calls where notes or AI help are allowed. Orbit doesn't claim to be undetectable, and isn't hidden from Task Manager or anyone who can see your screen."],
     [CalendarCheck, "Nothing to cancel", "Plans are paid once and never renew on their own. Credits never expire. If an AI action fails, its credit comes back."],
     [Wallet, "Priced for where you are", india ? "Prices in rupees, paid with UPI, a card or netbanking. Outside India, prices are in US dollars through PayPal." : "Prices in US dollars, paid through PayPal or a card where PayPal offers it. In India, prices are in rupees with UPI."],
     [MonitorSmartphone, "On your laptop and your phone", "Resume AI, Jobs AI and practice work in any browser. Live help works in Chrome and Edge, or in any call app with the Windows app (beta)."],
@@ -357,7 +357,7 @@ function Security() {
     [MicOff, "Audio is never stored", "It's streamed for live transcription and never written to disk. Screenshots are answered, then discarded."],
     [EyeOff, "Your content stays out of analytics", "Transcripts, documents and answers are never sent to analytics or crash reporting. You can turn off transcript storage."],
     [KeyRound, "Sign-in you control", "Two-step sign-in with an authenticator app, passkeys, and sign out of every device at once."],
-    [LockKeyhole, "Payments by Razorpay and PayPal", "Orbit never receives your full card number. It keeps a payment's id, amount and status, nothing more."],
+    [LockKeyhole, "Payments by Razorpay and PayPal", "Card details go to Razorpay (India) or PayPal (elsewhere). Orbit never receives your full card number."],
     [Database, "Your data, your call", "Download everything as one file, or delete a session, a document or the whole account at any time."],
     [Cookie, "No advertising", "One sign-in cookie, no advertising cookies, and your data is never sold or used for ads."],
     [Laptop, "A careful desktop app", "Your sign-in stays in the Windows Credential Manager, updates are checked against Orbit's signing key before they install, and no AI keys live on your computer."],
