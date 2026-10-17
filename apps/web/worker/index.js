@@ -34,6 +34,9 @@ async function proxyToApi(request, env, url) {
   proxied.headers.delete("x-orbit-proxy-secret");
   proxied.headers.delete("x-orbit-client-ip");
   proxied.headers.delete("x-orbit-client-country");
+  // The API trusts its host's forwarding headers (uvicorn --forwarded-allow-ips): a visitor's own copies of them
+  // (another scheme, host or client address) never reach it through here; the API's host adds its own.
+  for (const name of FORWARDING_HEADERS) proxied.headers.delete(name);
   if (env.PROXY_SECRET && clientIp) {
     proxied.headers.set("x-orbit-proxy-secret", env.PROXY_SECRET);
     proxied.headers.set("x-orbit-client-ip", clientIp);
@@ -41,8 +44,13 @@ async function proxyToApi(request, env, url) {
     const country = request.cf?.country || request.headers.get("cf-ipcountry");
     if (country && country !== "XX" && country !== "T1") proxied.headers.set("x-orbit-client-country", country);
   }
-  return fetch(proxied);
+  // Never follow the API's redirects here (Google sign-in, installer downloads): the browser must get them, and a
+  // followed one would carry the proxy secret to whatever host it points at.
+  return fetch(proxied, { redirect: "manual" });
 }
+
+const FORWARDING_HEADERS = ["forwarded", "x-forwarded-host", "x-forwarded-proto", "x-forwarded-port",
+  "x-forwarded-scheme", "x-real-ip", "true-client-ip", "x-original-url", "x-rewrite-url"];
 
 const handlers = {
   async fetch(request, env) {
