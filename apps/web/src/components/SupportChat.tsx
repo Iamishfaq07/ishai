@@ -445,7 +445,8 @@ export function SupportChat() {
                 className="w-full"
               />
             </label>
-            <button type="submit" disabled={busy || !text.trim()} aria-label="Send" className={buttonClass("primary", "md", "grid h-11 w-11 shrink-0 place-items-center p-0")}>
+            {/* Off until the chat is open: a message sent before then was dropped without a word. */}
+            <button type="submit" disabled={busy || !text.trim() || !saved} aria-label="Send" className={buttonClass("primary", "md", "grid h-11 w-11 shrink-0 place-items-center p-0")}>
               <Send className="h-4 w-4" />
             </button>
           </form>
