@@ -21,9 +21,9 @@ import {
   Tabs,
 } from "@orbit/ui";
 import { BackLink } from "../components/BackLink";
-import { Button, Card, ErrorNote, Input, PageHeader } from "../components/ui";
+import { Button, Card, EmptyState, ErrorNote, Input, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
-import { SESSION_TYPE_LABEL, downloadText, errorText, formatClock, formatDate, formatDuration } from "../lib/format";
+import { SESSION_TYPE_LABEL, downloadText, errorText, formatClock, formatDate, formatDuration, isNotFound } from "../lib/format";
 import { SESSION_TYPE_ICON } from "../lib/sessionIcons";
 import { useAsync } from "../lib/useAsync";
 import type { LiveLaunchState } from "./SessionSetup";
@@ -52,7 +52,16 @@ export function SessionDetailPage() {
 
   if (detail.loading && !detail.data) return <LoadGate loading variant="card" count={2} label="Opening the session">{null}</LoadGate>;
   if (detail.error || !detail.data) {
-    return <ErrorNote onRetry={detail.reload}>{errorText(detail.error ?? new Error("Session not found."))}</ErrorNote>;
+    if (!detail.error || isNotFound(detail.error)) {
+      return (
+        <EmptyState
+          title="That session isn't here"
+          body="It may have been deleted."
+          action={<Link to="/sessions" className="text-indigo-600 underline dark:text-indigo-400">See your sessions</Link>}
+        />
+      );
+    }
+    return <ErrorNote onRetry={detail.reload}>{errorText(detail.error)}</ErrorNote>;
   }
   const { session } = detail.data;
 
