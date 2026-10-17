@@ -184,6 +184,62 @@ class Payment(TimestampMixin, Base):
     # The reconciler's checks with Razorpay of an order still open (billing/reconcile.py): how many, and the last.
     reconcile_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # A first-purchase discount (billing/referrals.py): the code it came with, and how much came off, in the order's
+    # minor unit. The amounts above are what was charged. No foreign key: the order's record outlives the code.
+    referral_code_id: Mapped[str | None] = mapped_column(String(36), index=True, nullable=True)
+    discount_minor: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class ReferralCode(TimestampMixin, Base):
+    """A code that brings people to Orbit (billing/referrals.py). "invite": an account's own invite link, one per
+    account (it goes with the account). "creator" / "campus": made by the admin, with a label, its own discount, a
+    commission for the report (paid by hand), and optionally an expiry and a cap on paying accounts. `code` is stored
+    in upper case and matched without regard to case."""
+
+    __tablename__ = "referral_codes"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    code: Mapped[str] = mapped_column(String(32), unique=True)
+    kind: Mapped[str] = mapped_column(String(10))  # invite | creator | campus
+    owner_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True,
+                                                      nullable=True)
+    label: Mapped[str | None] = mapped_column(String(120))
+    # Off the first purchase. None (an invite code): ORBIT_REFERRAL_DISCOUNT_PERCENT.
+    discount_percent: Mapped[int | None] = mapped_column(Integer)
+    commission_percent: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    max_uses: Mapped[int | None] = mapped_column(Integer)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+    created_by: Mapped[str | None] = mapped_column(String(36))
+
+
+class Referral(TimestampMixin, Base):
+    """Which code brought an account: one row per account, for good (billing/referrals.py). `status`: joined →
+    rewarded (an invite: the inviter got their minutes) | capped (past the inviter's monthly cap) | paid (a creator or
+    campus code) when its first payment lands; or blocked (an invite to the inviter's own account, inbox or network).
+    No foreign keys on the accounts: the row outlives a deleted account, so the same inbox can't be invited again;
+    it holds keyed hashes, never the address or the IP."""
+
+    __tablename__ = "referrals"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), unique=True)
+    code_id: Mapped[str | None] = mapped_column(ForeignKey("referral_codes.id", ondelete="SET NULL"), index=True,
+                                                nullable=True)
+    kind: Mapped[str] = mapped_column(String(10))  # the code's, kept if the code goes
+    referrer_user_id: Mapped[str | None] = mapped_column(String(36))  # an invite's inviter
+    status: Mapped[str] = mapped_column(String(10), default="joined")
+    # Why it's blocked (own_code, same_inbox, same_network, mutual) or wasn't rewarded (paid_before).
+    reason: Mapped[str | None] = mapped_column(String(20))
+    via: Mapped[str] = mapped_column(String(10), default="signup")  # signup | checkout
+    email_hash: Mapped[str] = mapped_column(String(64), index=True)  # credits.email_hash: one inbox, one referral
+    ip_hash: Mapped[str | None] = mapped_column(String(64))  # the network it signed up (or entered the code) from
+    first_payment_id: Mapped[str | None] = mapped_column(String(36), unique=True)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reward_seconds: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    # A refund or chargeback of the first payment: when it was handled, the reward taken back, and a note for the admin.
+    clawed_back_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    clawback_seconds: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    flag: Mapped[str | None] = mapped_column(String(200))
+    __table_args__ = (Index("ix_referrals_referrer_status_paid", "referrer_user_id", "status", "paid_at"),)
 
 
 class PaymentRefund(TimestampMixin, Base):

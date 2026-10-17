@@ -27,6 +27,7 @@ from orbit_api.auth.routes import router as auth_router
 from orbit_api.auth.two_factor import router as two_factor_router
 from orbit_api.billing.monthly import monthly_plans as configured_monthly
 from orbit_api.billing.packs import packs as configured_packs
+from orbit_api.billing.referral_routes import router as referrals_router
 from orbit_api.billing.routes import router as billing_router
 from orbit_api.career.routes import router as career_router
 from orbit_api.code.routes import router as code_router
@@ -312,6 +313,7 @@ def create_app() -> FastAPI:
     app.include_router(workspaces_router)
     app.include_router(preflight_router)
     app.include_router(billing_router)
+    app.include_router(referrals_router)
     app.include_router(prep_router)
     app.include_router(company_guides_router)
     app.include_router(insights_router)

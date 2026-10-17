@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useLayoutEffect, useRef, type ReactNode } fr
 import { FlagGate } from "./components/FlagGate";
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { NotFoundPage } from "./pages/NotFound";
+import { InviteLinkPage } from "./pages/InviteLink";
 import { Layout } from "./components/Layout";
 import { CookieNotice } from "./components/CookieNotice";
 import { SupportChat } from "./components/SupportChat";
@@ -64,6 +65,7 @@ import {
   AdminAuditPage,
   AdminInboxPage,
   AdminSupportPage,
+  AdminReferralsPage,
   ContactPage,
   TechnicalPage,
   CompaniesPage,
@@ -190,6 +192,8 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      {/* Public: an invite (or creator, campus) link. Its code is kept for the sign-up, then on to it. */}
+      <Route path="/r/:code" element={<InviteLinkPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
@@ -279,6 +283,7 @@ export function App() {
         <Route path="admin/audit" element={<AdminAuditPage />} />
         <Route path="admin/inbox" element={<AdminInboxPage />} />
         <Route path="admin/support" element={<AdminSupportPage />} />
+        <Route path="admin/referrals" element={<AdminReferralsPage />} />
         {ComponentGalleryPage && <Route path="dev/components" element={<ComponentGalleryPage />} />}
       </Route>
       <Route path="*" element={<NotFoundPage />} />

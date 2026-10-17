@@ -93,13 +93,14 @@ def _home(path: str) -> str:
     return f"{get_settings().web_url.rstrip('/')}{path}"
 
 
-def _pack(state: str, verifier: str, nxt: str, uri: str) -> str:
+def _pack(state: str, verifier: str, nxt: str, uri: str, ref: str | None = None) -> str:
+    """The signed state cookie. `ref`: the invite or creator code of the link they came from (billing/referrals.py),
+    carried through Google's page to the new account."""
     secret = get_settings().jwt_secret.get_secret_value()
-    return jwt.encode(
-        {"st": state, "cv": verifier, "nx": nxt, "ru": uri, "exp": int(time.time()) + 600},
-        secret,
-        algorithm="HS256",
-    )
+    claims: dict[str, Any] = {"st": state, "cv": verifier, "nx": nxt, "ru": uri, "exp": int(time.time()) + 600}
+    if ref:
+        claims["rf"] = ref
+    return jwt.encode(claims, secret, algorithm="HS256")
 
 
 def _unpack(token: str) -> dict[str, Any] | None:
@@ -168,9 +169,11 @@ async def fetch_identity(code: str, verifier: str, uri: str) -> dict[str, Any]:
     return {"sub": sub[:255], "email": email, "name": name}
 
 
-async def _find_or_create(db: AsyncSession, request: Request, ident: dict[str, Any]) -> tuple[User, bool, bool]:
+async def _find_or_create(db: AsyncSession, request: Request, ident: dict[str, Any],
+                          ref: str | None = None) -> tuple[User, bool, bool]:
     """(user, created, claimed). `claimed` is an existing password account whose email was never confirmed:
-    Google just proved the inbox, so the old password and every session of it stop working."""
+    Google just proved the inbox, so the old password and every session of it stop working. `ref`: a new account's
+    invite or creator code (billing/referrals.py)."""
     s = get_settings()
     if not s.email_allowed(ident["email"]):
         raise GoogleDenied("private")
@@ -207,6 +210,9 @@ async def _find_or_create(db: AsyncSession, request: Request, ident: dict[str, A
             db.add(AuditLog(user_id=user.id, action="auth.google_register", ip=_ip(request)))
             if not s.is_admin_email(ident["email"]):
                 await credits.grant_welcome(db, user, client_ip(request))
+                from orbit_api.billing import referrals
+
+                await referrals.attribute_signup(db, user, ref, _ip(request))
     if user.suspended_at is not None:
         db.add(AuditLog(user_id=user.id, action="auth.login_suspended", ip=_ip(request)))
         await db.commit()
@@ -257,7 +263,9 @@ def mount(router: APIRouter) -> None:
         return None
 
     @router.get("/google/start")
-    async def google_start(request: Request, next: str = "/") -> RedirectResponse:
+    async def google_start(request: Request, next: str = "/", ref: str | None = None) -> RedirectResponse:
+        from orbit_api.billing import referrals
+
         if (busy := over_limit(request)) is not None:
             return busy
         if not get_settings().google_enabled:  # a stale link or bookmark: the button isn't shown then
@@ -277,7 +285,9 @@ def mount(router: APIRouter) -> None:
             "prompt": "select_account",
         })
         response = RedirectResponse(f"{_AUTH_URL}?{query}", status_code=302)
-        _set_state(response, _pack(state, verifier, nxt, uri))
+        # A link's code: the web app sends it along (else its first-party cookie); a sign-up through Google keeps it.
+        code = referrals.normalize(ref or request.cookies.get(referrals.REF_COOKIE))
+        _set_state(response, _pack(state, verifier, nxt, uri, code))
         return response
 
     @router.get("/google/callback")
@@ -297,7 +307,10 @@ def mount(router: APIRouter) -> None:
             return response
         try:
             ident = await fetch_identity(code, packed["cv"], packed["ru"])
-            user, created, claimed = await _find_or_create(db, request, ident)
+            from orbit_api.billing.referrals import REF_COOKIE
+
+            ref = packed.get("rf") if isinstance(packed.get("rf"), str) else request.cookies.get(REF_COOKIE)
+            user, created, claimed = await _find_or_create(db, request, ident, ref)
             return await _signed_in(db, request, user, created, claimed, packed["nx"])
         except GoogleDenied as denied:
             response = RedirectResponse(_login_url(denied.code), status_code=302)

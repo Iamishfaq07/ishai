@@ -12,6 +12,8 @@ import { UpiCheckout } from "./UpiCheckout";
 import { InternationalPaymentError, payWithRazorpay } from "../lib/razorpay";
 import { InternationalCheckout } from "../components/InternationalCheckout";
 import { CreditPackGrid, PlanComparison, PricingTiers } from "../components/PricingTiers";
+import { CodeEntry, InviteFriends } from "../components/Referrals";
+import { useAuth } from "../lib/auth";
 import { useCountry } from "../lib/country";
 
 function Bar({ used, limit }: { used: number; limit: number | null }) {
@@ -215,6 +217,18 @@ export function BillingPage() {
   const checkoutRef = useRef<HTMLDivElement>(null);
   const country = useCountry();
   const [internationalPack, setInternationalPack] = useState<CreditPack | null>(null);
+  // Referrals (when the server has them on): this account's first-purchase discount or a code box, and its invite link.
+  const { user } = useAuth();
+  const invite = useAsync(() => (user?.referrals ? api.myInvite() : Promise.resolve(null)), [user?.referrals], "referral-invite");
+  const [codeFromLink] = useState(() => params.get("code")); // /r/<code> followed while signed in
+  const paidBefore = (orders.data ?? []).some((o) => o.status === "approved");
+  // The first payment just landed: the discount is spent, so the prices go back to what they are.
+  useEffect(() => {
+    if (!paidBefore || !invite.data?.offer) return;
+    invite.reload();
+    packs.reload();
+    monthly.reload();
+  }, [paidBefore]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const buy = async (p: CreditPack | MonthlyPlan, domestic = false) => {
     const isPack = !("days" in p);
@@ -324,6 +338,12 @@ export function BillingPage() {
       <PageHeader icon={CreditCard} title="Plan & billing" subtitle="Unlimited for a week, a month or a year, or credits that never expire. Nothing renews automatically." />
       {internationalPack && <InternationalCheckout pack={internationalPack} country={country} onClose={() => setInternationalPack(null)}
         onDomestic={() => { const p = internationalPack; setInternationalPack(null); void buy(p, true); }} />}
+      {invite.data && orders.data && (
+        <div className="mb-8">
+          <CodeEntry offer={invite.data.offer} canEnter={!paidBefore} prefill={codeFromLink}
+                     onApplied={() => { invite.reload(); packs.reload(); monthly.reload(); }} />
+        </div>
+      )}
       {months.length > 0 && (
         <section aria-labelledby="monthly-title" className="mb-10 space-y-4">
           <div>
@@ -423,6 +443,7 @@ export function BillingPage() {
             )}
           </div>
           <Payments orders={orders.data ?? []} onOpen={setOrder} />
+          {invite.data && <InviteFriends invite={invite.data} />}
         </div>
       </div>
     </div>

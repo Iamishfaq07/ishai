@@ -33,6 +33,8 @@ export interface User {
   practice_languages?: string[];
   /** The camera coach in mock interviews is on for this server. */
   video_mock?: boolean;
+  /** Invite links and checkout codes are on for this server (ORBIT_REFERRALS). */
+  referrals?: boolean;
   /** Auth responses only: browser clients echo it as X-CSRF-Token on state-changing requests. */
   csrf_token?: string | null;
 }
@@ -58,6 +60,8 @@ export interface RegisterRequest {
   captcha_token?: string;
   /** The browser's guess at the country they're applying in (ISO 3166-1 alpha-2). */
   country?: string;
+  /** The invite or creator code of the link they came from (one that can't be used is ignored). */
+  ref?: string;
 }
 
 /**
@@ -777,6 +781,10 @@ export interface MonthlyPlan {
   price_text?: string;
   per_month?: number;
   per_month_text?: string;
+  /** The account's first-purchase discount, when it has one: what an order costs now (see ReferralOffer). */
+  offer_price?: number;
+  offer_price_text?: string;
+  offer_percent?: number;
   /** What each 30 days includes (null = unlimited). */
   live_minutes: number | null;
   mock_minutes: number | null;
@@ -809,6 +817,10 @@ export interface CreditPack {
   currency?: "INR" | "USD";
   price?: number;
   price_text?: string;
+  /** The account's first-purchase discount, when it has one: what an order costs now (see ReferralOffer). */
+  offer_price?: number;
+  offer_price_text?: string;
+  offer_percent?: number;
   /** Can be bought right now (Razorpay, PayPal or a UPI ID is set up). */
   buyable: boolean;
   /** How: Razorpay's checkout (cards, UPI, netbanking), PayPal (outside India), UPI with a UTR, or not at all. */
@@ -901,6 +913,120 @@ export interface AdminPayments {
   events_to_review?: number;
   /** Refunds whose payment isn't known here yet. */
   unlinked_refunds?: number;
+}
+
+/** A first-purchase discount: from an invite link or a creator's or campus's code (POST /v1/referrals/redeem). */
+export interface ReferralOffer {
+  code: string;
+  kind: "invite" | "creator" | "campus";
+  /** A creator's or campus's name; never an inviter's. */
+  label: string | null;
+  percent: number;
+  /** "10% off your first purchase". */
+  text: string;
+}
+
+/** GET /v1/referrals/me: Invite friends. */
+export interface ReferralInvite {
+  code: string;
+  link: string;
+  /** What Share and WhatsApp send. */
+  share_text: string;
+  /** What a friend gets off their first purchase, and what the inviter gets when they pay. */
+  discount_percent: number;
+  reward_minutes: number;
+  monthly_cap: number;
+  joined: number;
+  paid: number;
+  minutes_earned: number;
+  rewards_this_month: number;
+  /** This account's own first-purchase discount, if it has one. */
+  offer: ReferralOffer | null;
+}
+
+/** GET /v1/referrals/codes/{code} (public): what a link's code gives, for the sign-up page. */
+export interface ReferralCodeInfo {
+  code: string;
+  kind: "invite" | "creator" | "campus";
+  label: string | null;
+  percent: number;
+}
+
+/** One line of the admin's referral report: a creator or campus code, or every invite link together (id null). */
+export interface AdminReferralCode {
+  id: string | null;
+  code: string;
+  kind: "invite" | "creator" | "campus";
+  label: string | null;
+  discount_percent: number;
+  commission_percent: number;
+  active: boolean;
+  expires_at: string | null;
+  max_uses: number | null;
+  created_at: string | null;
+  /** Why it can't be used right now (expired, used up, switched off), or null. */
+  problem: string | null;
+  signups: number;
+  paying: number;
+  blocked: number;
+  /** Approved payments less refunds, in paise and in cents: never added together. */
+  revenue_inr: number;
+  revenue_usd: number;
+  revenue_inr_text: string;
+  revenue_usd_text: string;
+  commission_inr: number;
+  commission_usd: number;
+  commission_inr_text: string;
+  commission_usd_text: string;
+  minutes_rewarded: number;
+}
+
+/** A referral for the admin to look at: an invite refused as the inviter's own, or a first payment refunded. */
+export interface AdminReferralReview {
+  id: string;
+  created_at: string;
+  email: string;
+  inviter_email: string | null;
+  code: string | null;
+  kind: string;
+  status: string;
+  reason: string | null;
+  flag: string | null;
+}
+
+/** GET /v1/admin/referrals */
+export interface AdminReferrals {
+  /** ORBIT_REFERRALS: off, nothing is attributed, discounted or rewarded. */
+  enabled: boolean;
+  reward_minutes: number;
+  discount_percent: number;
+  monthly_cap: number;
+  codes: AdminReferralCode[];
+  invites: AdminReferralCode;
+  review: AdminReferralReview[];
+}
+
+/** POST /v1/admin/referrals/codes */
+export interface AdminReferralCodeCreate {
+  code: string;
+  label: string;
+  kind: "creator" | "campus";
+  discount_percent?: number;
+  commission_percent?: number;
+  expires_at?: string | null;
+  max_uses?: number | null;
+}
+
+/** PATCH /v1/admin/referrals/codes/{id}: null leaves a field as it is; `clear_*` removes the expiry or the cap. */
+export interface AdminReferralCodePatch {
+  label?: string;
+  discount_percent?: number;
+  commission_percent?: number;
+  active?: boolean;
+  expires_at?: string | null;
+  max_uses?: number | null;
+  clear_expiry?: boolean;
+  clear_max_uses?: boolean;
 }
 
 /** POST /v1/admin/payments/reconcile: what asking Razorpay about open orders did. */

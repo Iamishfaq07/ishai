@@ -102,6 +102,8 @@ class RegisterIn(BaseModel):
     captcha_token: str | None = Field(None, max_length=4096)
     # The country they're applying in, as the browser guesses it (ISO 3166-1 alpha-2); a bad one is ignored.
     country: str | None = Field(None, max_length=8)
+    # The invite or creator code of the link they came from (billing/referrals.py); one that can't be used is ignored.
+    ref: str | None = Field(None, max_length=64)
 
 
 class LoginIn(BaseModel):
@@ -133,6 +135,8 @@ class UserOut(BaseModel):
     practice_languages: list[str] = ["en"]
     # The camera coach in mock interviews is on for this server (ORBIT_VIDEO_MOCK).
     video_mock: bool = False
+    # Invite links and checkout codes are on for this server (ORBIT_REFERRALS).
+    referrals: bool = False
 
 
 class AuthOut(BaseModel):
@@ -148,7 +152,7 @@ def _user_out(u: User, *, with_csrf: bool = False) -> UserOut:
                    approval_pending=awaiting_approval(u), store_transcripts=u.store_transcripts, country=u.country,
                    csrf_token=csrf_token_for(u.id, u.token_version) if with_csrf else None,
                    evidence_vault=get_settings().evidence_vault, practice_languages=practice_language.available(),
-                   video_mock=get_settings().video_mock)
+                   video_mock=get_settings().video_mock, referrals=get_settings().referrals)
 
 
 def _origin(url: str) -> str:
@@ -264,6 +268,11 @@ async def _create_user(db: AsyncSession, request: Request, email: str, body: Reg
     # The welcome credits (1 resume-AI credit, 20 interview minutes): one account per network, capped a day.
     if not s.is_admin_email(email):
         await credits.grant_welcome(db, user, client_ip(request))
+        # The invite or creator code of the link they came from (billing/referrals.py): sent with the sign-up, else
+        # the first-party cookie the web app keeps it in. Staged; committed with the sign-up.
+        from orbit_api.billing import referrals
+
+        await referrals.attribute_signup(db, user, body.ref or request.cookies.get(referrals.REF_COOKIE), _ip(request))
     return user
 
 

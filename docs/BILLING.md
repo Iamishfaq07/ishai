@@ -137,6 +137,54 @@ Every 30 days the `premium` plan includes:
     claim (no page says it today). The pricing pages also show an Enterprise tier with no price: its button opens the Contact form
   (topic "Business or partnership"), and you arrange group access by hand (an admin grant per account).
 
+## Referrals: invite links, creator and campus codes
+`apps/api/orbit_api/billing/referrals.py` (the rules), `billing/referral_routes.py` (HTTP), DECISIONS D61.
+**Off until you switch it on** (`ORBIT_REFERRALS=true` on Railway): while it's off nothing is attributed, discounted
+or rewarded, Invite friends and the code box don't show, and the user endpoints answer 404. Admin → Referrals works
+either way, so codes can be made and the values below checked first.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `ORBIT_REFERRALS` | `false` | The whole feature. |
+| `ORBIT_REFERRAL_REWARD_MINUTES` | `30` | Interview minutes the inviter gets when an invited friend's first payment lands. |
+| `ORBIT_REFERRAL_DISCOUNT_PERCENT` | `10` | Off an invited friend's first purchase (rupees and dollars alike). |
+| `ORBIT_REFERRAL_MONTHLY_CAP` | `10` | Rewards per inviter per calendar month (UTC); friends past it still get their discount. |
+
+- **Invite links.** Every account has one code (made the first time it opens Plan & billing → Invite friends) and a
+  link, `https://orbitanswer.com/r/<code>`; `?ref=<code>` on any page works too. The web app keeps the code
+  first-party for 30 days (localStorage and an `orbit_ref` cookie) and sends it with the sign-up; a sign-up through
+  Google carries it in the signed state cookie (and the API reads the `orbit_ref` cookie as a fallback). The new
+  account is attributed to it: one referral per account, for good.
+- **The discount** comes off the order's amount on the server (Razorpay, PayPal and UPI orders alike), rounded down to
+  the whole rupee or cent, for orders made before the account's first payment lands. The order keeps the code
+  (`payments.referral_code_id`) and how much came off (`payments.discount_minor`); what was charged is the order's
+  amount as always, and settling compares the gateway's amount with it.
+- **The reward** is paid inside the approval of the friend's first payment (`settle.grant`: the checkout's answer,
+  the webhook, the reconciler or your UPI approval), in the same transaction and under the same once-only update, so
+  it's paid exactly once whichever way the payment is confirmed. Later payments add nothing.
+- **Abuse rules.**
+  - No invite to the inviter's own account, inbox (the same keyed inbox hash as the welcome credits, so
+    `a.sha+1@gmail.com` is `asha@gmail.com`) or network (the networks they signed up or signed in from, and their
+    welcome's), and no two accounts inviting each other. At sign-up such a referral is kept as **blocked** (no
+    discount, no reward; it shows under "To look at"); at checkout the code is refused.
+  - One referral per account and per inbox: the row has no foreign key, so it outlives a deleted account and the
+    same inbox can't be invited again. Orbit records no device fingerprint, so none is compared.
+  - A Razorpay or PayPal **refund or chargeback** of the rewarded payment takes back the reward minutes the inviter
+    hasn't used yet (a `referral_back` ledger entry), once, and flags the referral under "To look at" with what was
+    taken back. A UPI payment refunded by hand isn't seen: take the minutes back yourself (Users → Remove credits).
+    Any refund of a creator or campus code's first payment is flagged too, and revenue in the report is net of
+    refunds.
+- **Creator and campus codes** (Admin → Referrals): a code (3 to 32 letters or digits, matched without regard to case
+  or spaces), a label buyers see, the type, the buyer's discount (default 10%), a commission % for the report, and
+  optionally an expiry and a cap on paying accounts. A buyer enters one on Plan & billing ("Have a code?") before
+  their first purchase; it becomes their referral. A cap counts accounts that have paid, so a few checkouts open at
+  the same moment can go one or two over. You can switch a code off, change its discount, commission, expiry or cap;
+  the code and its type stay.
+- **The report** (Admin → Referrals, and its CSV): per code, sign-ups → paying accounts → revenue (every approved
+  payment of the accounts that came with it, less refunds) → commission owed, with rupees and dollars in their own
+  columns, never added together. Every account's invite link adds up on one line. Commissions are paid by hand; the
+  report only says what's owed. A deleted account's payments drop out of it (they're kept without the account).
+
 ## Plans are server configuration
 `apps/api/orbit_api/entitlements.py` holds the plan table. Clients never decide limits: they render `GET /v1/plans`,
 `GET /v1/billing/packs` (both public) and `GET /v1/entitlements` (signed in; `credits` holds a Free account's

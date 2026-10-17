@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { AdminUser } from "@orbit/types";
-import { Badge, Headphones, Inbox, IndianRupee, ScrollText, Users, cx } from "@orbit/ui";
+import { Badge, Headphones, Inbox, IndianRupee, Megaphone, ScrollText, Users, cx } from "@orbit/ui";
 import { ProductTabs } from "../../components/products";
 import { api } from "../../lib/api";
 import { useAsync } from "../../lib/useAsync";
@@ -34,7 +34,8 @@ export function useInboxUnread(known?: number): number | undefined {
   return known ?? fetched.data ?? undefined;
 }
 
-/** Users · Payments · Inbox · Audit log, under each admin page's header. The Inbox tab counts unread messages. */
+/** Users · Payments · Inbox · Support · Referrals · Audit log, under each admin page's header. The Inbox tab counts unread
+ *  messages. */
 export function AdminTabs({ paymentsWaiting, inboxUnread }: { paymentsWaiting?: number; inboxUnread?: number }) {
   const unread = useInboxUnread(inboxUnread);
   return (
@@ -45,6 +46,7 @@ export function AdminTabs({ paymentsWaiting, inboxUnread }: { paymentsWaiting?: 
         { to: "/admin/payments", label: "Payments", icon: IndianRupee, ...(paymentsWaiting ? { count: paymentsWaiting } : {}) },
         { to: "/admin/inbox", label: "Inbox", icon: Inbox, ...(unread ? { count: unread } : {}) },
         { to: "/admin/support", label: "Support", icon: Headphones },
+        { to: "/admin/referrals", label: "Referrals", icon: Megaphone },
         { to: "/admin/audit", label: "Audit log", icon: ScrollText },
       ]}
     />

@@ -1,5 +1,24 @@
 # Implementation log
 
+## Referrals: invite links, creator and campus codes (2026-10-18)
+
+- **Off until switched on** (`ORBIT_REFERRALS`, DECISIONS D61). Defaults to review first: a friend gets 10% off their
+  first purchase (`ORBIT_REFERRAL_DISCOUNT_PERCENT`), the inviter 30 interview minutes when that payment lands
+  (`ORBIT_REFERRAL_REWARD_MINUTES`), at most 10 a month (`ORBIT_REFERRAL_MONTHLY_CAP`). docs/BILLING.md "Referrals".
+- **Invite friends** on Plan & billing: the account's link (`/r/<code>`), Copy, Share and WhatsApp, and how many
+  joined, paid and the minutes earned. A link's code is kept first-party for 30 days and sent with the sign-up, with
+  a password or with Google; the sign-up page says what it gives.
+- **Have a code?** on Plan & billing, before the first purchase: a creator's, a campus's or a friend's. Its discount
+  comes off the order on the server (Razorpay, PayPal and UPI, ₹ and $), the prices on the page show it, and the order
+  keeps the code and what came off.
+- **The reward is paid once**, inside the approval of the friend's first payment, whichever of the checkout, the
+  webhook, the reconciler or a UPI approval confirms it. Self-invites (same account, inbox or network, or two accounts
+  inviting each other) are blocked; a refund or chargeback takes back the reward minutes not used yet and flags it.
+- **Admin → Referrals**: make creator and campus codes (label, discount, commission, expiry, max paying accounts),
+  switch them off, and see sign-ups → paying → revenue (₹ and $ apart) → commission owed per code, with a CSV export
+  and a list of blocked and refunded referrals to look at.
+- Migration `467956f519dd`: `referral_codes`, `referrals`, `payments.referral_code_id` and `payments.discount_minor`.
+
 ## Rupee prices cut, dollar prices unchanged (2026-10-18)
 
 - **India pays less** (DECISIONS D60): about 30% under Parakeet AI's own rupee prices, as the owner checked them today.
