@@ -406,7 +406,20 @@ export function BillingPage() {
         {/* Room for three lines is kept, and nothing is said until the packs say how they're paid: the UPI
             wording swapping to Razorpay's moved the page (layout shift). */}
         <p className="min-h-[3.75rem] text-xs text-zinc-500 sm:min-h-[2.5rem]">
-          {!packs.data ? null : list[0]?.checkout === "paypal"
+          {!packs.data ? null : list.length > 0 && list[0]?.currency !== "INR" && !list.some((p) => p.buyable) ? (
+            // Dollar prices while no dollar checkout is on: the UPI or rupee-card wording below doesn't apply, and
+            // every Buy button is off, so say so instead of how to pay.
+            <>
+              Prices outside India are in US dollars. Paying in dollars isn't open yet.{" "}
+              <Link
+                to={contactHref({ topic: "payment", from: "/billing" })}
+                className={cx("font-medium text-indigo-700 underline-offset-2 hover:underline dark:text-indigo-300", focusRing)}
+              >
+                Tell us what you'd like to buy
+              </Link>{" "}
+              and we'll help.
+            </>
+          ) : list[0]?.checkout === "paypal"
             ? "Prices outside India are in US dollars, paid through PayPal: with your PayPal account, or a card where PayPal offers it. Nothing renews, and what you bought is added as soon as PayPal confirms the payment, usually within seconds."
             : list[0]?.checkout === "razorpay"
             ? `Pay once by card, UPI, netbanking or wallet, through Razorpay. ${
