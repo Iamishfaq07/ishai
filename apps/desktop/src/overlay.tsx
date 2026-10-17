@@ -2,12 +2,24 @@
  * Region selector: a transparent, always-on-top window covering the current monitor.
  * Drag a rectangle → the overlay hides itself → Rust captures and crops the monitor →
  * preview with Analyze / Retake / Cancel. Nothing leaves the machine until Analyze.
+ * With "Scroll to the end" on, Rust scrolls the area under the selection to the bottom and joins the screens, so
+ * a problem longer than the screen arrives whole; it scrolls it back afterwards.
  */
 import { StrictMode, useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { emitTo } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { REGION_CAPTURED_EVENT, captureRegion, captureScreen, type NativeCapture, type RegionCapturedPayload } from "./native";
+import { safeLocal } from "@orbit/ui";
+import {
+  REGION_CAPTURED_EVENT,
+  captureRegion,
+  captureScreen,
+  captureScrolling,
+  type NativeCapture,
+  type RegionCapturedPayload,
+  type ScrollCapture,
+} from "./native";
+import { isScrolled, scrollNote } from "./scrollNote";
 import "./index.css";
 
 interface Rect {
@@ -25,13 +37,25 @@ function normalize(ax: number, ay: number, bx: number, by: number): Rect {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+const SCROLL_PREF = "orbit.scrollCapture";
+const loadScrollPref = () => safeLocal.getItem(SCROLL_PREF) === "1";
+
 function Overlay() {
   const win = getCurrentWindow();
   const start = useRef<{ x: number; y: number } | null>(null);
   const [rect, setRect] = useState<Rect | null>(null);
-  const [capture, setCapture] = useState<NativeCapture | null>(null);
+  const [capture, setCapture] = useState<NativeCapture | ScrollCapture | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scroll, setScroll] = useState(loadScrollPref);
+  /** The last selection, for "Scroll to the end" from the preview. */
+  const lastRect = useRef<Rect | null>(null);
+
+  const toggleScroll = () => {
+    const on = !scroll;
+    setScroll(on);
+    safeLocal.setItem(SCROLL_PREF, on ? "1" : "0");
+  };
 
   const close = useCallback(() => void win.close(), [win]);
 
@@ -77,7 +101,15 @@ function Overlay() {
       setRect(null);
       return;
     }
-    void grab(() => captureRegion(r));
+    lastRect.current = r;
+    void grab(() => (scroll ? captureScrolling(r) : captureRegion(r)));
+  };
+
+  const scrollLast = () => {
+    const r = lastRect.current;
+    if (!r) return;
+    setCapture(null);
+    void grab(() => captureScrolling(r));
   };
 
   const analyze = async () => {
@@ -93,19 +125,43 @@ function Overlay() {
   };
 
   if (capture) {
+    const scrolled = isScrolled(capture);
+    const note = scrolled ? scrollNote(capture) : null;
+    // A joined capture is tall: shown at full width and scrolled in the preview, not shrunk to a sliver.
+    const tall = capture.height > capture.width * 1.6;
     return (
       <div className="flex h-full items-center justify-center bg-black/60 p-8">
-        <div className="flex max-h-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-950 text-zinc-100 shadow-2xl">
-          <div className="min-h-0 flex-1 overflow-auto p-3">
-            <img src={`data:image/png;base64,${capture.pngBase64}`} alt="Selected area" className="mx-auto max-h-[70vh] rounded-lg" />
+        <div className="flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-950 text-zinc-100 shadow-2xl">
+          <div className="max-h-[70vh] min-h-0 flex-1 overflow-auto p-3">
+            <img
+              src={`data:image/png;base64,${capture.pngBase64}`}
+              alt="Selected area"
+              className={tall ? "mx-auto w-full max-w-[640px] rounded-lg" : "mx-auto max-h-[70vh] rounded-lg"}
+            />
           </div>
+          {note && (
+            <p role="status" className="border-t border-zinc-800 px-3 py-2 text-xs text-amber-200">
+              {note}
+            </p>
+          )}
           <div className="flex items-center gap-2 border-t border-zinc-800 p-3 text-xs">
             <span className="text-zinc-500">
+              {scrolled && capture.screens > 1 ? `${capture.screens} screens joined · ` : ""}
               {capture.width}×{capture.height}
             </span>
             <button type="button" onClick={() => void analyze()} className="ml-auto rounded-lg bg-indigo-600 px-3 py-1.5 font-medium hover:bg-indigo-500">
               Analyze
             </button>
+            {!scrolled && lastRect.current && (
+              <button
+                type="button"
+                onClick={scrollLast}
+                title="Scroll this area to the end and capture all of it"
+                className="rounded-lg px-3 py-1.5 hover:bg-zinc-800"
+              >
+                Scroll to the end
+              </button>
+            )}
             <button type="button" onClick={retake} className="rounded-lg px-3 py-1.5 hover:bg-zinc-800">
               Retake
             </button>
@@ -127,14 +183,30 @@ function Overlay() {
     >
       {!rect && (
         <div className="pointer-events-none absolute left-1/2 top-8 -translate-x-1/2 rounded-full bg-zinc-950/90 px-4 py-2 text-sm text-zinc-100 shadow-lg">
-          Drag to select an area · Esc to cancel
+          {scroll
+            ? "Drag over the problem: Orbit scrolls it to the end and joins it · keep the mouse still · Esc to cancel"
+            : "Drag to select an area · Esc to cancel"}
         </div>
       )}
       <div className="absolute right-6 top-6 flex gap-2" onPointerDown={(e) => e.stopPropagation()}>
         <button
           type="button"
+          role="switch"
+          aria-checked={scroll}
           disabled={busy}
-          onClick={() => void grab(captureScreen)}
+          onClick={toggleScroll}
+          title="For problems longer than the screen: Orbit scrolls the selected area to the end and captures all of it"
+          className={`rounded-lg px-3 py-1.5 text-xs ${scroll ? "bg-indigo-600 text-white hover:bg-indigo-500" : "bg-zinc-950/90 text-zinc-100 hover:bg-zinc-800"}`}
+        >
+          Scroll to the end: {scroll ? "On" : "Off"}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            lastRect.current = null; // nothing to scroll: the preview offers no "Scroll to the end"
+            void grab(captureScreen);
+          }}
           className="rounded-lg bg-zinc-950/90 px-3 py-1.5 text-xs text-zinc-100 hover:bg-zinc-800"
         >
           Capture full screen
