@@ -267,6 +267,8 @@ export function DocumentsPage() {
                     <KindMark kind={d.kind} />
                     <div className="min-w-0">
                       <div className="max-w-[11rem] truncate sm:max-w-[16rem]">{d.title}</div>
+                      {/* Saved by Orbit for a practice round or an interview: outside the plan's documents. */}
+                      {d.origin === "orbit" && <div className="text-xs font-normal text-zinc-500 dark:text-zinc-400">Saved by Orbit, not counted in your plan</div>}
                       {/* Phones: type and status fold under the title instead of their own columns. */}
                       <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs font-normal text-zinc-500 sm:hidden">
                         <span>{KIND_LABEL[d.kind]}</span>

@@ -115,7 +115,13 @@ export function VideoInterviewPage() {
     try {
       let jobDoc = source === "job" && !pasting ? jdId : null;
       if (source === "job" && pasting) {
-        const doc = await api.createTextDocument({ title: `Job post${role ? `: ${role}` : ""}${company ? ` at ${company}` : ""}`.slice(0, 120), kind: "job_description", text: jdText.trim() });
+        // Saved by Orbit so the interviewer reads it (outside the plan's documents, which would stop practice).
+        const doc = await api.createTextDocument({
+          title: `Job post${role ? `: ${role}` : ""}${company ? ` at ${company}` : ""}`.slice(0, 120),
+          kind: "job_description",
+          text: jdText.trim(),
+          origin: "orbit",
+        });
         jobDoc = doc.id;
       }
       const about = source === "topic" ? topic.trim() : role.trim() || (source === "job" ? "the job" : "my experience");

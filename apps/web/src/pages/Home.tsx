@@ -40,6 +40,7 @@ import { KashSecPromo } from "../components/Promos";
 import { summaryLine } from "./home/dashboard";
 import { AtAGlance, Pipeline, Upcoming } from "./home/Mission";
 import { FollowUps } from "./jobs/FollowUps";
+import { InterviewSoon } from "./jobs/interview/InterviewSoon";
 import { STATUS_LABEL, byStatus } from "./jobs/model";
 import { JOBS_AI_HOME, JOBS_MATCHES, JOBS_TRACKER } from "./jobs/paths";
 import { RESUME_AI_HOME, resumePath } from "./resume/paths";
@@ -113,6 +114,7 @@ export function HomePage() {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="min-w-0 space-y-6">
           <NextStep steps={steps} welcomed={welcomed} askWelcome={!answers && isNew} />
+          <InterviewSoon tracker={tracker} />
           <DueToday />
           <FollowUps tracker={tracker} hideWhenEmpty />
           <Pipeline tracker={tracker} />

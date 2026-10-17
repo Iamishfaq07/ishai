@@ -47,6 +47,7 @@ import {
   cx,
   focusRing,
   safeLocal,
+  contextDocumentIds,
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, Meter, PageHeader, Select, Textarea, Toggle } from "../components/ui";
 import { API_URL, api } from "../lib/api";
@@ -70,6 +71,7 @@ import { usePrepContext } from "../lib/prepContext";
 import { defaultSessionDocuments, restoredSessionDocuments, sessionDocumentIds, toggleSessionDocument } from "../lib/sessionDocs";
 import { LoopMemoryNote } from "../components/LoopMemoryNote";
 import { ShareMirror } from "../components/ShareMirror";
+import { FromTrackerBanner, useTrackerContext } from "./jobs/interview/FromTracker";
 
 const LENGTHS: Array<{ value: AnswerLength; label: string; hint?: string }> = [
   { value: "auto", label: "Auto (fits each question)", hint: "A sentence or two for a quick question, a full answer for a deep one" },
@@ -180,6 +182,9 @@ export function SessionSetupPage() {
   const country = useCountry();
   const [params, setParams] = useSearchParams();
   const [context, updateContext] = usePrepContext(params, setParams, user?.id);
+  // `?application=`: started from a tracked job's interview prep, so the job's context fills the form (FromTracker).
+  const applicationId = params.get("application");
+  const fromJob = useTrackerContext(applicationId);
   // Where a tab's audio can't be shared (phones, Safari, Firefox), listen through the microphone by default.
   const initialType = (params.get("type") as SessionType | null) ?? (supportsDisplayAudio() ? "interview" : "phone");
   const docs = useAsync(() => api.listDocuments(), [], "documents");
@@ -222,7 +227,7 @@ export function SessionSetupPage() {
   const micPermission = useMicPermission();
   const workspaceKey = user ? `${WORKSPACE_KEY}.${user.id}` : "";
   const [workspaceId, setWorkspaceId] = useState<string | null>(() => {
-    if (!workspaceKey) return null;
+    if (!workspaceKey || applicationId) return null; // a job's setup isn't a saved one
     try {
       return safeLocal.getItem(workspaceKey);
     } catch {
@@ -269,6 +274,28 @@ export function SessionSetupPage() {
       .then((list) => applyWorkspace(list.find((w) => w.id === workspaceId) ?? null))
       .catch(() => undefined);
   }, [docs.data, workspaceId]);
+
+  // From a tracked job: its role, company, round and requirements, then (once the documents list has the ones the
+  // server just saved) exactly its documents.
+  const jobApplied = useRef<string | null>(null);
+  const jobSelected = useRef<string | null>(null);
+  const { reload: reloadDocs } = docs;
+  useEffect(() => {
+    const ctx = fromJob.ctx;
+    if (!ctx || jobApplied.current === ctx.application_id) return;
+    jobApplied.current = ctx.application_id;
+    updateContext({ role: ctx.role, company: ctx.company, interview_stage: ctx.interview_stage, key_requirements: ctx.key_requirements, tech_stack: ctx.tech_stack });
+    setTitle((t) => t || ctx.title);
+    reloadDocs();
+  }, [fromJob.ctx, updateContext, reloadDocs]);
+  useEffect(() => {
+    const ctx = fromJob.ctx;
+    const list = docs.data;
+    if (!ctx || !list || jobSelected.current === ctx.application_id) return;
+    if (!ctx.document_ids.every((id) => list.some((d) => d.id === id))) return;
+    jobSelected.current = ctx.application_id;
+    setSelectedDocs(new Set(contextDocumentIds(ctx, list)));
+  }, [fromJob.ctx, docs.data]);
 
   // Default selection: the ready resumes + JDs (spec §23 — not every document), newest first, as many as a session
   // can take (Jobs AI saves a JD per job, and past the limit Start was refused).
@@ -317,6 +344,7 @@ export function SessionSetupPage() {
         document_ids: sessionDocumentIds(selectedDocs ?? new Set(), docs.data ?? null),
         ...(workspaceId ? { workspace_id: workspaceId } : {}),
         ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
+        ...(fromJob.ctx ? { application_id: fromJob.ctx.application_id } : {}),
       });
       const launch: LiveLaunchState = { systemAudio: systemAudio && supportsDisplayAudio(), ...(micId ? { micDeviceId: micId } : {}) };
       navigate(`/live/${session.id}`, { state: launch });
@@ -351,6 +379,7 @@ export function SessionSetupPage() {
         className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]"
       >
         <div className="space-y-6">
+          {applicationId && <FromTrackerBanner state={fromJob} />}
           <WorkspaceBar
             api={api}
             selectedId={workspaceId}

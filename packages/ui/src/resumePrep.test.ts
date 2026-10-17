@@ -112,7 +112,7 @@ describe("the documents a practice round reads", () => {
       calls,
       listDocuments: async () => docs,
       createTextDocument: async (req: CreateTextDocumentRequest) => {
-        calls.push(`create ${req.kind} ${req.title}`);
+        calls.push(`create ${req.kind} ${req.title}${req.origin ? ` (${req.origin})` : ""}`);
         return doc(`new${++n}`, req.kind, req.title);
       },
       getDocumentText: async (id: string) => ({ id, title: "", kind: "resume" as const, editable: texts[id]?.editable ?? true, text: texts[id]?.text ?? "" }),
@@ -124,10 +124,10 @@ describe("the documents a practice round reads", () => {
   };
   const job = "Senior Backend Engineer. Python, PostgreSQL and Kafka on AWS.";
 
-  it("makes the resume and the job post documents the first time, job post first", async () => {
+  it("makes the resume and the job post documents the first time, job post first, as Orbit's (outside the plan)", async () => {
     const api = fake([], {});
     expect(await practiceDocuments(api, { title: "Sam's CV", resumeText: "SAM LEE\nEXPERIENCE", jobText: job })).toEqual(["new2", "new1"]);
-    expect(api.calls).toEqual(["create resume Sam's CV", `create job_description ${jobPostTitle("Sam's CV")}`]);
+    expect(api.calls).toEqual(["create resume Sam's CV (orbit)", `create job_description ${jobPostTitle("Sam's CV")} (orbit)`]);
   });
 
   it("brings the documents it made before up to date instead of copying them", async () => {
@@ -140,6 +140,6 @@ describe("the documents a practice round reads", () => {
   it("leaves a document it can't edit alone, and skips a job post too short to use", async () => {
     const api = fake([doc("cv", "resume", "Sam's CV")], { cv: { text: "", editable: false } });
     expect(await practiceDocuments(api, { title: "Sam's CV", resumeText: "text", jobText: "Engineer" })).toEqual(["new1"]);
-    expect(api.calls).toEqual(["create resume Sam's CV"]);
+    expect(api.calls).toEqual(["create resume Sam's CV (orbit)"]);
   });
 });

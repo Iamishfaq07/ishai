@@ -143,6 +143,8 @@ export interface OrbitDocument {
   status: DocumentStatus;
   chunk_count: number;
   created_at: string;
+  /** "orbit": saved by Orbit itself for a practice round or a session (not counted in the plan's documents). */
+  origin?: DocumentOrigin;
 }
 
 export interface CreateTextDocumentRequest {
@@ -151,7 +153,12 @@ export interface CreateTextDocumentRequest {
   text: string;
   /** A new version of this document (if it's still yours): updated in place instead of copied. */
   replace_id?: string;
+  /** "orbit": saved on the user's behalf to run a practice round, not a paste into Documents (capped apart). */
+  origin?: DocumentOrigin;
 }
+
+/** Who made a document: the user (an upload or a paste), or Orbit for a practice round or a session. */
+export type DocumentOrigin = "user" | "orbit";
 
 export interface DocumentText {
   id: string;
@@ -294,6 +301,8 @@ export interface CreateSessionRequest {
   workspace_id?: string;
   /** Standing instructions for every answer ("mention I'm relocating"); from the saved setup's notes if omitted. */
   instructions?: string;
+  /** Started from a tracked job (its interview prep): the round shows on that job. */
+  application_id?: string;
 }
 
 /** A saved interview setup ("Google — Senior Security Engineer"). */
@@ -364,6 +373,8 @@ export interface OrbitSession {
   negotiation?: boolean;
   /** An AI video interview (opened in the video-call room). */
   video?: boolean;
+  /** The tracked job it was started from. */
+  application_id?: string | null;
 }
 
 export interface SessionTurn {
@@ -2256,6 +2267,11 @@ export interface JobTrackerEntry {
   still_listed_at?: string | null;
   created_at: string;
   updated_at: string;
+  /** The next interview round, as set in its interview prep. */
+  round_type?: InterviewRoundType | null;
+  round_number?: number | null;
+  /** The latest session started from this job (the tracker list fills it in). */
+  last_round?: JobLastRound | null;
 }
 
 export interface JobTrackerUpdate {
@@ -2658,4 +2674,145 @@ export interface SignedInDevice {
   last_seen_at: string;
   /** The device this request came from. */
   current: boolean;
+}
+
+// ---- Interview day: a tracked job prepared for its interview, the copilot started with it, the wrap-up
+// (apps/api/orbit_api/job_portal/interview.py, docs/DECISIONS.md D64) --------------------------------------------
+
+export type InterviewRoundType = "hr" | "technical" | "managerial" | "final";
+
+/** The next interview round of a tracked job: set by the user; `at` is the tracker's next date (with its time). */
+export interface InterviewRound {
+  type: InterviewRoundType | null;
+  number: number | null;
+  /** "Round 2 · Technical round"; "" when neither is set. */
+  label: string;
+  at: string | null;
+}
+
+/** The latest ended session started from a tracked job (its page has the summary and the scorecard). */
+export interface JobLastRound {
+  id: string;
+  at: string;
+  /** A mock interview for the job, not the real round. */
+  practice: boolean;
+  /** The review's overall score, 1–5. */
+  score: number | null;
+}
+
+export interface InterviewJobPost {
+  listing_id: string;
+  /** Added by hand: there's no post in Orbit's feed. */
+  manual: boolean;
+  /** Its page in Jobs AI is still there. */
+  live: boolean;
+  url: string;
+  /** The feed's summary; the whole post stays on the original site. */
+  snippet: string;
+  /** Orbit has the post's text to prepare from. */
+  has_text: boolean;
+  /** The post saved to Documents for this job: what the copilot grounds on. */
+  document_id: string | null;
+  document_title: string | null;
+}
+
+/** A resume version for an interview: one frozen as sent, or the linked resume as it is now. */
+export interface InterviewVersion {
+  kind: "snapshot" | "resume";
+  id: string;
+  title: string;
+  score: number;
+  /** When it was sent (frozen), or last edited. */
+  at: string;
+  note: string;
+}
+
+export interface InterviewStoryMatch {
+  id: string;
+  title: string;
+  /** The job's requirement it fits. */
+  requirement: string;
+}
+
+export interface InterviewRoundRef {
+  id: string;
+  type: SessionType;
+  title: string;
+  status: SessionStatus;
+  at: string;
+  practice: boolean;
+  stage: string | null;
+  score: number | null;
+}
+
+/** GET /v1/jobs/tracker/{id}/interview: a tracked job's interview prep. No AI call. */
+export interface InterviewPrepView {
+  entry_id: string;
+  status: JobStatus;
+  company: string;
+  title: string;
+  round: InterviewRound;
+  job: InterviewJobPost;
+  /** What interview prep and the copilot use. */
+  version: InterviewVersion | null;
+  /** To pick from: the versions sent (newest first), then the linked resume. */
+  versions: InterviewVersion[];
+  resume_missing: boolean;
+  requirements: string[];
+  stories: InterviewStoryMatch[];
+  stories_total: number;
+  /** Sessions started from this job, newest first. */
+  rounds: InterviewRoundRef[];
+  /** The company guide's name, when Orbit has one. */
+  guide: string | null;
+  /** The likely questions last generated for this job (paid for once); `stale`: made from another version. */
+  questions?: { result: ResumeQuestionsResponse; generated_at: string; stale: boolean } | null;
+}
+
+/** PUT /v1/jobs/tracker/{id}/interview: only the fields sent change (null clears). */
+export interface InterviewPrepUpdate {
+  at?: string | null;
+  round_type?: InterviewRoundType | null;
+  round_number?: number | null;
+  status?: JobStatus;
+  /** A version sent (its id), "resume" (the linked resume as it is now), or null for the default. */
+  version?: string | null;
+  /** Link this resume to the job and use it. */
+  resume_id?: string;
+  /** The job post: one of the account's job description documents. */
+  document_id?: string;
+  /** Or the post pasted (40 characters at least). */
+  job_text?: string;
+}
+
+/** POST /v1/jobs/tracker/{id}/session-context: what a session for this interview starts with (no AI, no credit). */
+export interface InterviewSessionContext {
+  application_id: string;
+  title: string;
+  role: string;
+  company: string;
+  interview_stage: string;
+  key_requirements: string[];
+  tech_stack: string[];
+  /** The job post first, then the resume version. */
+  document_ids: string[];
+  documents: Array<{ id: string; kind: DocumentKind; title: string }>;
+  /** False: no resume is linked to the job, so setup keeps the resumes it would pick anyway. */
+  resume_included: boolean;
+  version: InterviewVersion | null;
+  round: InterviewRound;
+  guide: string | null;
+  /** What's missing, in words. */
+  notes: string[];
+}
+
+export type InterviewOutcome = "next_round" | "waiting" | "offer" | "rejected";
+
+/** POST /v1/jobs/tracker/{id}/wrap-up: what the user confirmed after a round started from the job. */
+export interface InterviewWrapUp {
+  session_id: string;
+  outcome: InterviewOutcome;
+  round_type?: InterviewRoundType | null;
+  /** The next round's date and time, or when to follow up. */
+  at?: string | null;
 }

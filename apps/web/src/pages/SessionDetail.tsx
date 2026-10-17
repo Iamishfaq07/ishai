@@ -34,6 +34,7 @@ import type { LiveLaunchState } from "./SessionSetup";
 import { JOBS_MATCHES } from "./jobs/paths";
 import { RESUME_AI_HOME } from "./resume/paths";
 import { CounterOfferEmail } from "../components/CounterOfferEmail";
+import { JobWrapUp } from "./jobs/interview/WrapUp";
 
 type Tab = "review" | "summary" | "transcript" | "questions";
 
@@ -153,6 +154,9 @@ export function SessionDetailPage() {
       )}
 
       <ReportStatusNote status={session.report_status} onRetry={() => void retryReport()} />
+      {session.status === "ended" && session.application_id && (
+        <JobWrapUp session={session} followUp={session.type !== "mock" && (detail.data.turns.length > 0 || detail.data.questions.length > 0)} />
+      )}
       {session.status === "ended" && (
         <nav aria-label="What to do next" className="mb-6 flex flex-col gap-3 rounded-2xl border border-zinc-200/80 bg-zinc-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-white/10 dark:bg-white/[0.03]">
           <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">Keep going</p>
@@ -221,7 +225,9 @@ export function SessionDetailPage() {
         <CameraCard camera={detail.data.camera} />
         {session.status === "ended" && <DebriefStudio api={api} sessionId={session.id} refreshOn={detail.data.summary?.review} />}
         {session.status === "ended" && session.type !== "mock" && (detail.data.turns.length > 0 || detail.data.questions.length > 0) && (
-          <FollowUpCard initial={detail.data.summary?.follow_up} load={(refresh) => api.followUp(session.id, refresh)} />
+          <div id="follow-up" className="scroll-mt-24">
+            <FollowUpCard initial={detail.data.summary?.follow_up} load={(refresh) => api.followUp(session.id, refresh)} />
+          </div>
         )}
         </TabPanel>
       )}
