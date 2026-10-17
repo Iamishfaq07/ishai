@@ -6,7 +6,7 @@ import { Button, Card, EmptyState, ErrorNote, Input, PageHeader, Select } from "
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
-import { sourceLabel, suggestNote } from "../lib/evidence";
+import { actionLabel, sourceLabel, suggestNote } from "../lib/evidence";
 import { LibraryTabs } from "./Stories";
 
 const MAX_CLAIM = 300;
@@ -132,15 +132,15 @@ export function EvidencePage() {
             {!isEditing && (
               <span className="ml-auto flex gap-1">
                 {item.status === "suggested" && (
-                  <Button size="sm" onClick={() => void confirm(item)} disabled={working} aria-label={`Confirm “${item.claim}”`}>
+                  <Button size="sm" onClick={() => void confirm(item)} disabled={working} aria-label={actionLabel("confirm", item)}>
                     <Check className="h-3.5 w-3.5" /> It's true
                   </Button>
                 )}
-                <Button size="sm" variant="ghost" onClick={() => setEditing({ id: item.id, text: item.claim })} aria-label={`Edit “${item.claim}”`}>
+                <Button size="sm" variant="ghost" onClick={() => setEditing({ id: item.id, text: item.claim })} aria-label={actionLabel("edit", item)}>
                   <PenLine className="h-3.5 w-3.5" /> Edit
                 </Button>
                 <Button size="sm" variant="danger" onClick={() => void remove(item)} disabled={working}
-                        aria-label={`${item.status === "suggested" ? "Discard" : "Delete"} “${item.claim}”`}>
+                        aria-label={actionLabel("delete", item)}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </span>
