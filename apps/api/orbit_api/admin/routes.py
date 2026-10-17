@@ -29,9 +29,9 @@ from orbit_api.entitlements import (
     add_grant,
     awaiting_approval,
     clear_grants,
-    current_grant,
     is_admin,
     plan_named,
+    running_until,
 )
 from orbit_api.live.metrics import summarize
 from orbit_api.models import (
@@ -437,7 +437,7 @@ async def admin_rows(db: AsyncSession, users: Sequence[User]) -> list[AdminUser]
                  else "No access yet" if access == "pending" else "Free")
         out.append(AdminUser(
             id=u.id, email=u.email, name=u.name, created_at=u.created_at, email_verified=u.email_verified,
-            access=access, plan_label=label, grant_until=running.until if (running := current_grant(u)) else None,
+            access=access, plan_label=label, grant_until=running_until(u),
             live_minutes_this_month=round(float(used.get(u.id) or 0) / 60, 1),
             resume_credits=wallets.get(u.id, (0, 0.0))[0],
             interview_minutes_left=round(wallets.get(u.id, (0, 0.0))[1], 1), usage=usage[u.id],

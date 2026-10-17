@@ -32,6 +32,13 @@ export function periodLabel(days: number): string {
   return `/ ${days} days`;
 }
 
+/** How long an allowance lasts, after "50 hours of live interview help": " a month", or for a plan shorter than a
+ * month its own days (it has the whole allowance for them, DECISIONS D57). */
+export function allowanceSpan(days: number): string {
+  if (days >= 30) return " a month";
+  return days === 7 ? ", to use in the week" : `, to use in the ${days} days`;
+}
+
 function n(value: number | null, unit = ""): string {
   return value === null ? "Unlimited" : `${value.toLocaleString("en-IN")}${unit}`;
 }
@@ -173,6 +180,7 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
       </Tier>
       {plans.map((m) => {
         const mine = current?.plan === m.plan && Boolean(current?.until);
+        const span = allowanceSpan(m.days);
         const cta: Cta = signedIn
           ? { label: mine ? `Extend · ${priceOf(m)}` : `Get ${m.label}`, onClick: () => onBuy?.(m), disabled: busy || !m.buyable, primary: m.id === popular || mine }
           : { label: `Get ${m.label}`, to: "/register", from: `/billing?pack=${m.id}`, primary: m.id === popular };
@@ -195,8 +203,8 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
             }
           >
             {m.resume_ai && <Feature><strong className="font-semibold">Unlimited Resume AI</strong>: fixes, rewrites, tailoring, cover letters</Feature>}
-            <Feature>{time(m.live_minutes)} of live interview help a month</Feature>
-            <Feature>{time(m.mock_minutes)} of mock and video interviews a month</Feature>
+            <Feature>{time(m.live_minutes)} of live interview help{span}</Feature>
+            <Feature>{time(m.mock_minutes)} of mock and video interviews{span}</Feature>
             <Feature>{n(m.screenshots)} screenshot answers</Feature>
             <Feature>{n(m.documents)} documents</Feature>
             <Feature>Sessions up to {m.max_session_minutes} minutes</Feature>

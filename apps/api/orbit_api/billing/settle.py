@@ -27,7 +27,7 @@ from orbit_api import credits
 from orbit_api.billing import monthly, paypal, pricing, razorpay
 from orbit_api.config import get_settings
 from orbit_api.db import sessionmaker
-from orbit_api.entitlements import grants
+from orbit_api.entitlements import current_grant, grants, running_until
 from orbit_api.models import AuditLog, Payment, PaymentRefund, User
 from orbit_api.providers.email import OutgoingEmail, send_safely
 from orbit_api.transactions import lock_account
@@ -155,11 +155,16 @@ async def grant(db: AsyncSession, u: User, p: Payment) -> None:
 def receipt(u: User, p: Payment, paid_by: str) -> OutgoingEmail:
     web = get_settings().web_url.rstrip("/")
     if p.days:
-        # The bought plan's own dates: it may wait its turn behind a higher plan that's running (D57).
-        bought = next((g for g in grants(u) if g.plan == monthly.plan_of(p, u.grant_plan)), None)
+        # The bought plan's own dates: it may wait its turn behind a higher plan that's running (D57). A renewal of
+        # the plan running now follows on from it: the plan just runs longer.
+        plan = monthly.plan_of(p, u.grant_plan)
+        bought = next((g for g in reversed(grants(u)) if g.plan == plan), None)
         now = datetime.now(UTC)
+        running = current_grant(u, now)
         if bought is None:
             ends = ""
+        elif running is not None and running.plan == plan:
+            ends = f" It runs until {running_until(u, now):%d %b %Y}."
         elif bought.start is not None and bought.start > now:
             ends = (f" It starts on {bought.start:%d %b %Y}, when the plan you have now ends, and runs until "
                     f"{bought.until:%d %b %Y}: none of either is lost.")

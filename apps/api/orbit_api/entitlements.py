@@ -20,7 +20,6 @@ earlier in the month don't shrink a Pro allowance.
 
 import json
 import logging
-import math
 import os
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime, timedelta
@@ -143,7 +142,7 @@ class Grant:
     plan: str
     start: datetime | None  # when it runs from (None: an older grant, start not kept)
     until: datetime
-    paid: bool  # bought: a window shorter than 30 days gets its share of the allowance
+    paid: bool  # bought (a paid month), not given by the admin: for the record; both get the whole allowance
     anchor: datetime | None  # where its 30-day allowance windows count from (None: an older grant)
 
 
@@ -198,33 +197,50 @@ def roll(user: User, now: datetime | None = None) -> None:
 
 
 def add_grant(user: User, plan: str, length: timedelta, *, paid: bool, now: datetime | None = None) -> Grant:
-    """`plan` for `length` more, without cutting anything short (D57). Returns that plan's grant as it now stands
-    (running, or waiting its turn). The caller commits."""
+    """`plan` for `length` more, without cutting anything short (D57). Returns that grant as it now stands (running,
+    or waiting its turn). The caller commits.
+
+    A paid one is a grant of its own even when the same plan runs: it starts where that one ends, with windows (and
+    a whole allowance) of its own, so a week renewed early doesn't share the first week's. The admin's "more of the
+    same" adds on to the grant running (or waiting)."""
     now = now or datetime.now(UTC)
     roll(user, now)
     running = current_grant(user, now)
     if running is None:  # nothing running (or only one that ended): it starts now
         user.grant_plan, user.grant_until, user.grant_started_at, user.grant_paid = plan, now + length, now, paid
         user.grant_queue = None
-    elif running.plan == plan:  # the same plan: added on where it ends
+    elif running.plan == plan and not paid:  # the admin's "2 more hours": added on where it ends
         user.grant_until = running.until + length
-        user.grant_paid = user.grant_paid or paid
     else:
         queue = [dict(q) for q in user.grant_queue or []]
-        waiting = next((q for q in queue if q["plan"] == plan), None)
-        if waiting is not None:  # already waiting its turn: that wait gets longer
+        waiting = None if paid else next((q for q in queue if q["plan"] == plan), None)
+        if waiting is not None:  # the admin's time for a plan already waiting its turn: that wait gets longer
             waiting["seconds"] = float(waiting["seconds"]) + length.total_seconds()
-            waiting["paid"] = bool(waiting.get("paid")) or paid
-        elif tier(plan) > tier(running.plan):  # the higher plan now; the rest of this one waits behind it
+        elif running.plan != plan and tier(plan) > tier(running.plan):  # higher: now; the rest waits behind it
             anchor = running.anchor.isoformat() if running.anchor else None
             queue.insert(0, {"plan": running.plan, "seconds": (running.until - now).total_seconds(),
                              "paid": running.paid, "anchor": anchor})
             user.grant_plan, user.grant_until, user.grant_started_at, user.grant_paid = plan, now + length, now, paid
-        else:  # a lower plan waits until the running one ends
+        else:  # a lower plan, or a paid renewal of this one: it waits until what's ahead of it ends
             queue.append({"plan": plan, "seconds": length.total_seconds(), "paid": paid, "anchor": None})
-        queue.sort(key=lambda q: -tier(str(q["plan"])))  # the best of what's waiting runs next
+        queue.sort(key=lambda q: -tier(str(q["plan"])))  # the best of what's waiting runs next (stable: in order)
         user.grant_queue = queue or None
-    return next(g for g in grants(user) if g.plan == plan)
+    return [g for g in grants(user) if g.plan == plan][-1]
+
+
+def running_until(user: Any, now: datetime | None = None) -> datetime | None:
+    """When the plan in force now stops: the end of its grant and of any of the same plan right after it (a renewal
+    bought early is a grant of its own, but the plan doesn't stop in between)."""
+    timeline = grants(user)
+    g = current_grant(user, now)
+    if g is None:
+        return None
+    end = g.until
+    for later in timeline[timeline.index(g) + 1:]:
+        if later.plan != g.plan or later.start != end:
+            break
+        end = later.until
+    return end
 
 
 def clear_grants(user: User) -> None:
@@ -283,7 +299,7 @@ async def plan_for(db: AsyncSession, user_id: str) -> Plan:
     if user is not None and await is_admin(db, user):
         return plans()["unlimited"]
     if user is not None and (granted := active_grant(user)):
-        return for_window(plan_named(granted), user)
+        return plan_named(granted)
     sub = await db.scalar(
         select(Subscription).where(Subscription.user_id == user_id, Subscription.status == "active")
         .order_by(Subscription.created_at.desc())
@@ -304,7 +320,9 @@ PERIOD = timedelta(days=30)
 def allowance_window(user: Any, now: datetime | None = None) -> tuple[datetime, datetime, Grant] | None:
     """The allowance window of the grant running now: 30 days at a time from when it was bought or given (so use from
     before never counts, and a month bought on the 28th is one allowance, not two calendar months'), the last one
-    ending with the grant. An older grant with no start kept counts its windows back from its end, as before."""
+    ending with the grant. Every window has the plan's whole allowance, a week's or a year's last few days included:
+    it's a fair-use cap, and the pricing promises it ("50 hours of live interview help"). An older grant with no
+    start kept counts its windows back from its end, as before."""
     now = now or datetime.now(UTC)
     g = current_grant(user, now)
     if g is None:
@@ -325,22 +343,6 @@ def period_start(user: Any, now: datetime | None = None) -> datetime:
     if window is not None:
         return window[0]
     return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-
-
-def _share(limit: int | None, part: float) -> int | None:
-    return None if limit is None else math.ceil(limit * part - 1e-9)
-
-
-def for_window(plan: Plan, user: Any, now: datetime | None = None) -> Plan:
-    """`plan`'s allowance for the window running now. A bought grant's window shorter than 30 days (a week, the last
-    days of a year) gets that share of the 30-day allowance, rounded up: a week of Premium is 700 live minutes, not
-    3,000. The admin's grants keep the whole allowance (their length is the admin's call)."""
-    window = allowance_window(user, now)
-    if window is None or not window[2].paid or window[1] - window[0] >= PERIOD:
-        return plan
-    part = (window[1] - window[0]) / PERIOD
-    return replace(plan, live_minutes=_share(plan.live_minutes, part), mock_minutes=_share(plan.mock_minutes, part),
-                   screenshots=_share(plan.screenshots, part))
 
 
 async def usage_this_month(db: AsyncSession, user_id: str, metric: str, pool: str | None = None) -> float:
@@ -389,8 +391,7 @@ async def for_user(db: AsyncSession, user: User) -> dict[str, Any]:
     s = get_settings()
     plan = await plan_for(db, user.id)
     docs = await db.scalar(select(func.count()).select_from(Document).where(Document.user_id == user.id))
-    running = current_grant(user)
-    grant_until = running.until if running else None
+    grant_until = running_until(user)
     limits: dict[str, Any] = {k: getattr(plan, k) for k in _INT_FIELDS}
     live_used = round(await usage_this_month(db, user.id, "live_seconds", usage_pool(plan)) / 60, 1)
     mock_used = round(await usage_this_month(db, user.id, "mock_seconds", usage_pool(plan)) / 60, 1)

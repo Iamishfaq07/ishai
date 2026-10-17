@@ -9,8 +9,8 @@ none). Invalid plans stop the API at boot.
 A paid month is a time-limited plan on the account (`User.grant_plan` until `User.grant_until`, the same as the
 admin's grants), and its allowance is metered in 30-day windows from when it was bought (entitlements.
 allowance_window), not per calendar month, so a month bought on the 28th isn't two allowances and use from before it
-never counts. A week gets a week's share of the 30-day allowance. Buying while another plan runs never cuts either
-short (D57).
+never counts. Every window, a week's included, has the plan's whole allowance. Buying while another plan runs never
+cuts either short (D57).
 """
 
 import json

@@ -432,10 +432,15 @@ against it) and two weeks back to back shared one 30-day allowance; and a new pl
 so a paid week ended an admin's 60 days of Unlimited. Now:
 - **Windows from the start.** Each grant keeps when it began (`users.grant_started_at`); its allowance runs in 30-day
   windows from there, the last one ending with the grant. Use from before never counts against it.
-- **A paid window shorter than 30 days gets its share**, rounded up: a week of Premium is 700 live and 350 mock
-  minutes, a year's last 5 days 500. The admin's grants keep the whole allowance (`users.grant_paid` says which):
-  their length is the admin's call, and "Pro for 2 hours" isn't 2 minutes.
-- **Nothing is cut short.** The same plan again is added on where it ends (from now, if it already ended). A higher
+- **Every window has the plan's whole allowance**, a week's single 7-day window and a year's last few days included
+  (Premium: 3,000 live and 1,500 mock minutes). The allowance is a fair-use cap, not a metered product, and the pricing
+  promises it to every Premium plan ("50 hours of live interview help"); a week cut to its share (700) would break
+  what weekly buyers were sold, and be worse than the "unlimited" weeks elsewhere. The Weekly card says the hours
+  are "to use in the week". `users.grant_paid` records whether a grant was bought or given; it changes no limit.
+- **Nothing is cut short.** The same plan bought again follows on where the running one ends (from now, if it already
+  ended) as a grant of its own, with its own windows: a week renewed early has its whole allowance instead of sharing
+  the first week's. The plan doesn't stop in between, and "until" shows the end of the run. The admin's "2 more hours"
+  of the same plan just extends the running grant. A higher
   plan (basic < pro < premium < unlimited) starts now, and what's left of the running one waits behind it with all its
   time, its windows still counted from where they began. A lower plan waits until the running one ends. Grants waiting
   their turn are `users.grant_queue`, best first; nothing is converted by price (an admin grant has none), so there's

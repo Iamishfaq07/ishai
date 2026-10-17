@@ -1,6 +1,7 @@
 """Plans for a while (paid months and the admin's grants, entitlements.py, DECISIONS D57): each one's allowance runs in
-30-day windows from when it began, so use from before never counts against it; a paid week gets a week's share; and
-a new plan never cuts short time already given or paid for."""
+30-day windows from when it began, so use from before never counts against it; every window has the plan's whole
+allowance (a week's too: it's a fair-use cap the pricing promises); and a new plan never cuts short time already given
+or paid for."""
 
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -14,11 +15,10 @@ from orbit_api.entitlements import (
     add_grant,
     clear_grants,
     current_grant,
-    for_window,
     grants,
     period_start,
-    plan_named,
     roll,
+    running_until,
 )
 from orbit_api.models import User
 
@@ -30,41 +30,44 @@ def _user() -> User:
     return User(email=f"g-{uuid.uuid4().hex[:8]}@example.com", password_hash="x", grant_paid=False)
 
 
-def test_a_week_gets_a_weeks_share_counted_from_when_it_was_bought() -> None:
+def test_a_weeks_window_starts_when_it_was_bought() -> None:
     u = _user()
     add_grant(u, "premium", 7 * DAY, paid=True, now=T0)
-    now = T0 + 2 * DAY
-    assert period_start(u, now) == T0  # it used to reach back 23 days before the purchase
-    week = for_window(plan_named("premium"), u, now)
-    assert (week.live_minutes, week.mock_minutes) == (700, 350)  # 3,000 and 1,500 for 7 of 30 days
-    assert week.screenshots is None and week.max_session_minutes == plan_named("premium").max_session_minutes
+    assert period_start(u, T0 + 2 * DAY) == T0  # it used to reach back 23 days before the purchase
 
 
 def test_a_year_runs_in_30_day_windows_from_its_start() -> None:
     u = _user()
     add_grant(u, "premium", 365 * DAY, paid=True, now=T0)
     assert period_start(u, T0 + 45 * DAY) == T0 + 30 * DAY
-    assert for_window(plan_named("premium"), u, T0 + 45 * DAY).live_minutes == 3000
-    tail = T0 + 362 * DAY  # the last window is the year's last 5 days
-    assert period_start(u, tail) == T0 + 360 * DAY
-    assert for_window(plan_named("premium"), u, tail).live_minutes == 500
+    assert period_start(u, T0 + 362 * DAY) == T0 + 360 * DAY  # the last window: the year's last 5 days
 
 
-def test_the_admins_grants_keep_the_whole_allowance() -> None:
-    """Their length is the admin's call: Pro for 2 hours isn't 2 minutes."""
+def test_an_admin_grants_window_starts_when_it_was_given() -> None:
     u = _user()
     add_grant(u, "pro", timedelta(hours=2), paid=False, now=T0)
-    assert for_window(plan_named("pro"), u, T0 + timedelta(minutes=5)).live_minutes == 600
+    assert period_start(u, T0 + timedelta(minutes=5)) == T0
 
 
-def test_the_same_plan_again_adds_on_from_where_it_ends() -> None:
+def test_a_week_renewed_early_follows_on_with_its_own_whole_allowance() -> None:
+    """Bought again while it runs, the second week starts where the first ends, with a window of its own: it used to
+    join the first in one window, so a week renewed after the first's hours were used started with none."""
     u = _user()
     add_grant(u, "premium", 7 * DAY, paid=True, now=T0)
-    add_grant(u, "premium", 7 * DAY, paid=True, now=T0 + 3 * DAY)  # bought again while it runs
-    assert current_grant(u, T0 + 4 * DAY).until == T0 + 14 * DAY  # type: ignore[union-attr]
-    assert for_window(plan_named("premium"), u, T0 + 4 * DAY).live_minutes == 1400  # one 14-day window
+    second = add_grant(u, "premium", 7 * DAY, paid=True, now=T0 + 3 * DAY)
+    assert (second.start, second.until) == (T0 + 7 * DAY, T0 + 14 * DAY)
+    assert running_until(u, T0 + 4 * DAY) == T0 + 14 * DAY  # the plan doesn't stop in between
+    assert period_start(u, T0 + 4 * DAY) == T0 and period_start(u, T0 + 8 * DAY) == T0 + 7 * DAY
     add_grant(u, "premium", 7 * DAY, paid=True, now=T0 + 20 * DAY)  # after it ended: from now, a fresh window
     assert period_start(u, T0 + 21 * DAY) == T0 + 20 * DAY
+
+
+def test_the_admins_more_of_the_same_adds_on_in_place() -> None:
+    u = _user()
+    add_grant(u, "unlimited", timedelta(hours=2), paid=False, now=T0)
+    add_grant(u, "unlimited", timedelta(hours=2), paid=False, now=T0 + timedelta(hours=1))
+    assert (u.grant_until, u.grant_queue) == (T0 + timedelta(hours=4), None)
+
 
 
 def test_a_paid_week_never_cuts_an_admin_unlimited_grant_short() -> None:
@@ -113,8 +116,9 @@ def _db(client: TestClient, fn: Any) -> Any:
     return client.portal.call(go)  # type: ignore[union-attr]
 
 
-def test_use_from_before_a_purchase_never_counts_against_it(client: TestClient) -> None:
-    """3,000 minutes used on a Premium week that ended ten days ago: a new week starts with its whole 700."""
+def test_a_week_gets_the_full_allowance_from_its_start(client: TestClient) -> None:
+    """3,000 minutes used on a Premium week that ended ten days ago: a new week starts with the plan's whole 3,000 (and
+    1,500 mock), as the pricing promises; only its own use counts."""
     from orbit_api.entitlements import minutes_remaining
     from orbit_api.models import UsageEvent
     from tests.test_api import _register
@@ -124,17 +128,23 @@ def test_use_from_before_a_purchase_never_counts_against_it(client: TestClient) 
     uid = client.get("/v1/auth/me", headers=h).json()["id"]
     now = datetime.now(UTC)
 
-    async def buy(db: Any) -> float | None:
-        db.add(UsageEvent(user_id=uid, metric="live_seconds", quantity=3000 * 60, pool="premium",
-                          created_at=now - 10 * DAY))
-        user = await db.get(User, uid)
-        add_grant(user, "premium", 7 * DAY, paid=True, now=now)
-        await db.commit()
-        return await minutes_remaining(db, uid, "interview")
+    def used(minutes: int, ago: timedelta) -> UsageEvent:
+        return UsageEvent(user_id=uid, metric="live_seconds", quantity=minutes * 60, pool="premium",
+                          created_at=now - ago)
 
-    assert _db(client, buy) == 700
+    async def buy(db: Any) -> tuple[float | None, float | None]:
+        db.add(used(3000, 10 * DAY))  # the earlier week's
+        user = await db.get(User, uid)
+        add_grant(user, "premium", 7 * DAY, paid=True, now=now - timedelta(hours=1))
+        await db.commit()
+        fresh = await minutes_remaining(db, uid, "interview")
+        db.add(used(100, timedelta(minutes=5)))  # this week's
+        await db.commit()
+        return fresh, await minutes_remaining(db, uid, "interview")
+
+    assert _db(client, buy) == (3000, 2900)
     e = client.get("/v1/entitlements", headers=h).json()
-    assert e["plan"] == "premium" and e["limits"]["live_minutes"] == 700
+    assert e["plan"] == "premium" and (e["limits"]["live_minutes"], e["limits"]["mock_minutes"]) == (3000, 1500)
 
 
 def test_buying_while_the_admins_unlimited_runs_keeps_both(monkeypatch: pytest.MonkeyPatch) -> None:

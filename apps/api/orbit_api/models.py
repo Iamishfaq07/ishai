@@ -77,8 +77,8 @@ class User(TimestampMixin, Base):
     # Where the running grant's allowance windows count from (30 days each): when it was bought or given, so use from
     # before never counts against it (entitlements.allowance_window, D57). None: a grant from before this was kept.
     grant_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # The running grant was bought (billing/monthly.py), not given by the admin: a window shorter than 30 days (a
-    # week, a year's last days) gets its share of the 30-day allowance.
+    # The running grant was bought (billing/monthly.py), not given by the admin. A record of where it came from:
+    # either way each window has the plan's whole allowance.
     grant_paid: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     # Grants waiting their turn behind the running one, next first (D57): a lower plan bought while a higher one runs,
     # or what's left of the running one when a higher plan starts. [{"plan", "seconds", "paid", "anchor"}].

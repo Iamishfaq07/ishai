@@ -3,11 +3,12 @@
 ## API follow-ups: plans on their own clock, atomic allowances (2026-10-18)
 
 - **Plans for a while** (paid months and admin grants, DECISIONS D57): allowances run in 30-day windows from when the
-  plan was bought or given, so use from before never counts; a paid week gets a week's share (Premium: 700 live
-  minutes); and a new plan never cuts short time already given or paid: the same plan adds on, a higher one runs now
+  plan was bought or given, so use from before never counts, and every window (a week's too) has the plan's whole
+  allowance (Premium: 3,000 live and 1,500 mock minutes); and a new plan never cuts short time already given or paid:
+  the same plan bought again follows on with its own whole allowance (a week renewed early too), a higher one runs now
   with the rest of the other waiting behind it, a lower one waits its turn. A paid week no longer ends an admin's
   Unlimited. Migration `c6e8a0b2d4f6` adds `users.grant_started_at`, `grant_paid`, `grant_queue` and backfills the
-  start of running grants.
+  start of running grants. The Weekly pricing card says its hours are "to use in the week" instead of "a month".
 - **Allowances checked atomically**: screenshot uploads at the same moment can't overrun the month's (answers being
   written count), the natural voice's daily characters are taken before the provider is asked, and a Free account
   counts only screenshots taken on Free.
