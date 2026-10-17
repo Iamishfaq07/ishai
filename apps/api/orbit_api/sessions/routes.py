@@ -23,7 +23,7 @@ from fastapi import (
 )
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field, field_validator, model_validator
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import Select, delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
@@ -376,6 +376,15 @@ async def get_session(session_id: str, user: Annotated[User, Depends(current_use
         summary=summary.content if summary else None,
         camera=await camera_for(db, row),
     )
+
+
+def metered_query(user_id: str, session_id: str) -> Select[tuple[float]]:
+    """The interview seconds a session has metered so far (every connection's heartbeat rows). The owner's id makes
+    it a range of the (user_id, metric, created_at) index: session_id alone has none, and read the whole table on
+    every live connect."""
+    return select(func.coalesce(func.sum(UsageEvent.quantity), 0.0)).where(
+        UsageEvent.user_id == user_id, UsageEvent.metric.in_(("live_seconds", "mock_seconds")),
+        UsageEvent.session_id == session_id)
 
 
 async def stop_user_live(user_id: str) -> None:
@@ -956,8 +965,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
         plan = await plan_for(db, user_id)
         # Time this session already had, from the usage every connection commits each heartbeat (not only the
         # duration a closed connection adds at teardown): reopening it in a second window can't reset the cap.
-        metered_s = await db.scalar(select(func.coalesce(func.sum(UsageEvent.quantity), 0.0)).where(
-            UsageEvent.session_id == session_id, UsageEvent.metric.in_(("live_seconds", "mock_seconds"))))
+        metered_s = await db.scalar(metered_query(user_id, session_id))
         prior_session_s = max(row.duration_s or 0, int(metered_s or 0))
         if (remaining is not None and remaining <= 0) or prior_session_s >= plan.max_session_minutes * 60:
             await ws.close(code=4003, reason="live minutes exhausted" if remaining is not None and remaining <= 0

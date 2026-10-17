@@ -444,3 +444,21 @@ def test_abandoned_sessions_are_ended_and_reported(client: TestClient, monkeypat
     assert detail["session"]["status"] == "ended" and detail["session"]["ended_at"] is not None
     assert detail["session"]["report_status"] == "ready"
     assert client.post(f"/v1/sessions/{sid}/live-ticket", headers=h).status_code == 409
+
+
+def test_a_sessions_metered_time_is_read_through_the_usage_index(client: TestClient) -> None:
+    """Every live connect sums the session's metered time. Filtered on session_id alone (no index) that read the
+    whole usage table; with the owner's id it's a range of the (user_id, metric, created_at) index."""
+    from sqlalchemy import text
+
+    from orbit_api.db import sessionmaker
+    from orbit_api.sessions.routes import metered_query
+
+    async def plan() -> str:
+        async with sessionmaker()() as db:
+            compiled = metered_query("u", "s").compile(db.get_bind(), compile_kwargs={"literal_binds": True})
+            rows = (await db.execute(text(f"EXPLAIN QUERY PLAN {compiled}"))).all()
+            return " ".join(str(r[-1]) for r in rows)
+
+    used = client.portal.call(plan)  # type: ignore[union-attr]
+    assert "ix_usage_user_metric_created" in used and "SCAN usage" not in used, used
