@@ -722,3 +722,26 @@ per device: the first offer (added in Offer AI, or a job moved to offer) and the
 about what a page does changed. The
 interview-day scene marks the Mission room's Interview tab while it has no date, and Home's interview card on the
 day before and the day itself (the next-step card then drops its own, keeping one scene in view).
+
+**D71 — A sign-in factor is only as trusted as the inbox behind it, and a reset proves the inbox, nothing more.**
+The red team of 18 October 2026 found two account-takeover paths built on the same assumption: that whoever holds an
+account's credentials also holds its inbox. First, a password reset signed straight in, so the inbox alone opened an
+account with two-step sign-in on. Second, someone could register another person's address, never verify it, sign in
+anyway (sign-in doesn't wait for verification) and add a passkey. When the owner later proved the inbox with a reset,
+that passkey still opened the account. The policy now:
+- A reset link sets the password and proves the inbox. With 2FA on, signing in still needs the code: the reset answers
+  with a challenge, as the password step does, never with a session.
+- Long-lived sign-in factors (passkeys, an authenticator) can only be added to an account whose inbox is proven
+  (`require_verified_email`; a no-op where verification is off).
+- The first proof of an inbox by someone who didn't need the password (a reset link, or Google claiming an unverified
+  address) removes passkeys and 2FA set up before it, along with the password and every session, which already went.
+  A reset of an inbox that was already proven keeps them: they're the owner's.
+- Throttles that count only failures take their token before the check and give it back on success, so concurrent
+  guesses can't all pass a peek.
+
+Rejected: removing passkeys on every reset. Recovery is exactly when a person most needs the passkey they still have,
+and an attacker who once had a session could only have added one with the password (or a fresh Google sign-in), which
+the reset now invalidates. Also rejected: forcing 2FA off after a reset. That would turn the inbox back into the only
+factor. A user who has lost both their phone and their recovery codes has no way back on their own today, and
+the admin console can't turn 2FA off either. That's a follow-up (SECURITY_REVIEW.md): an admin action, taken after
+checking who's asking, and audited.

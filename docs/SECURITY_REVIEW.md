@@ -144,3 +144,121 @@ pnpm audit --audit-level high                         # npm SCA
 cd apps/desktop/src-tauri && cargo audit              # Rust SCA
 ```
 The regression tests for this review are in `apps/api/tests/test_security_review.py`.
+
+# Red team (18 October 2026)
+
+An attacker's-eye pass over everything that landed since the September review: referrals, interview day, languages,
+the SEO Worker, the redesign and scenes. It also re-checked the older surface. Every finding below was reproduced on a
+local stack (mock providers, fresh SQLite) before it was fixed, and each fix has a test that fails on the old code.
+Production was only read: headers, TLS, `/docs`, `/ready` and the public update manifest.
+
+## Attack surface
+- **API:** 248 HTTP routes and 2 WebSockets.
+  - Public:
+    - health and ready;
+    - auth config;
+    - plans, packs and monthly plans;
+    - region;
+    - job stats;
+    - interview styles;
+    - engineering telemetry;
+    - desktop update and download;
+    - referral code lookup.
+  - Everything else needs a session. Paid-provider routes also need a verified email, and 39 admin routes need
+    `require_admin`.
+  - Webhooks carry their own signatures. The companion code and the support thread token are their own credentials.
+- **Worker:** the `/api/*` proxy (fixed upstream, client IP and country only with the proxy secret), canonical 301s,
+  `robots.txt`, prerendered pages, the SPA shell and static files.
+- **Desktop:**
+  - 17 Tauri commands;
+  - no remote URLs in the capabilities;
+  - no fs, shell or http plugins;
+  - an https-only updater with a minisign key.
+- **Extension:** no message handlers besides the connect page's `postMessage`. Scripts are injected only on a click
+  (activeTab).
+- **Outbound fetches from user input:** only `prep/job_link.py`, which pins a public IP and re-checks every
+  redirect. Job sources call fixed hosts.
+- **Code execution:** none. Code AI only reviews code with the model, and the browser runs code in a Web Worker.
+
+## Findings fixed
+
+| ID | Severity | Class | Where | What an attacker could do | Test |
+|---|---|---|---|---|---|
+| RT-01 | High | 2FA bypass | `POST /v1/auth/password-reset/confirm` | With the inbox alone, reset the password and get a full session on an account with two-step sign-in on. | `test_a_password_reset_still_asks_for_the_authenticator_code` |
+| RT-02 | High | Pre-account takeover | passkey and 2FA setup, reset, Google claim | Register the victim's address without verifying it, sign in, add a passkey. After the victim resets and uses the account, sign in with that passkey. | `test_an_unproven_inbox_cannot_add_…`, `test_proving_the_inbox_by_reset_drops_…`, `test_google_claiming_…` |
+| RT-03 | Medium | Throttle race | `ratelimit.blocked`/`failed` (login, `/login/2fa`, 2FA settings, password re-checks) | Send guesses at once: they all pass the check before any failure is counted (locally, 8 of 60 2FA codes got checked against a limit of 5). `/login/2fa` also had no per-network limit. | `test_wrong_codes_sent_at_once_…`, `test_attempt_takes_the_token_…` |
+| RT-D1 | Medium | Update downgrade | `tauri.conf.json` updater | Serve a manifest that pairs "9.9.9" with an old genuine installer and its signature, rolling the app back. | `the_release_config_refuses_a_downgrade_…` |
+| RT-04 | Low | Paid-provider abuse | `POST /v1/voice/speak` | From an unverified account, turn any text into speech on Orbit's TTS account. | `test_an_unproven_inbox_cannot_spend_the_natural_voice` |
+| RT-W | Low | Header trust | Worker `/api` proxy | Send your own `Forwarded`, `X-Forwarded-Host` or `-Proto` to an API that trusts them. Redirect mode was only implicit. | `worker/index.test.js` |
+| RT-D3 | Low | Least privilege | desktop capabilities | `opener:default` allowed reveal-in-folder for any path; a UNC path leaks the NTLM hash. | `the_windows_can_open_links_but_not_reveal_files` |
+| RT-D5 | Low | Token scoping | desktop server switch | Get a keychain token sent to a newly typed server on the next launch. | `api.test.ts` "switching server" |
+| RT-E2 | Low | Data exfiltration | extension Fill | A job page reads the profile back from fields nobody can see. | `fields.test.ts` "which fields are on show" |
+| SCA | Low | Dependencies | desktop | rustls 0.23.45 (RUSTSEC-2026-0346..0349) and zip 4.6.1 (-0367..0369), not reachable as used. rustls is updated and zip is dropped. | `cargo audit`: 0 vulnerabilities |
+
+## Not fixed: decisions or settings for the owner
+- **First-purchase discount on several open orders (Low/Medium, business).**
+  - The discount applies to every order made before the first payment lands, so a buyer with a 50% creator code can
+    open several checkouts and pay them all.
+  - Recommended: one discounted order at a time. Reuse the open one, and expire older open discounted orders when a
+    new one is made. A payment that arrives later for an expired order is still credited.
+- **Rupee prices through a direct API call (Low, business).**
+  - Requests that don't come through the Worker fall back to `user.country`, which the user sets, and only the web
+    app creates orders.
+  - Recommended: in production, price checkout only from the Worker's signed country, and answer 409 "Buy on
+    orbitanswer.com" without it.
+  - A VPN still works, as with any geo-pricing.
+- **Desktop capability split (Low).**
+  - Give the region overlay its own capability, and add an app-command ACL (`tauri_build::try_build` with
+    `AppManifest::commands`).
+  - This needs a run of the app to confirm what the overlay uses.
+- **Desktop release CSP `connect-src https: wss:` (accepted, as in September).** It keeps the custom-server option.
+  Narrow it to the Orbit API in release builds if that option goes.
+- **Extension token handoff (Low).**
+  - The connect page passes the scoped token with `window.postMessage`. Recommended: `externally_connectable` limited
+    to `<web>/extension/connect*`, with `chrome.runtime.sendMessage` to the two extension IDs.
+  - Build the extension with `ORBIT_API_URL=https://api.orbitanswer.com`, so its host permissions don't include the
+    web origin.
+- **Worker-built responses (Low).**
+  - The 301s, `robots.txt` and plain-text 404s carry no HSTS, frame or referrer headers. Pages and `/api` do
+    (checked on production).
+  - HSTS `preload` is the owner's call, since it's hard to undo.
+- **Branch previews (Info).** In wrangler.jsonc, set `"workers_dev": false, "preview_urls": false`, or point
+  previews at a staging API. Keep `ORBIT_CORS_ORIGINS` free of preview origins.
+- **Cloudflare minimum TLS (Info).** Set SSL/TLS → Edge Certificates → Minimum TLS Version to 1.2. A Windows
+  (Schannel) probe of the web host answered over TLS 1.1; the API host refuses it.
+- **Job-link fetcher (Low, robustness).** Decode a page only as one of a short list of common text encodings
+  (anything else as UTF-8 with replacement), and do it in the parsing thread.
+- **Detection (Low).**
+  - Email the owner when a passkey or two-step sign-in is added, or the password is reset.
+  - Recovery for a lost authenticator plus lost recovery codes should be an audited admin action (D71).
+- **Info:**
+  - three `href`s in Jobs AI take server URLs without `safeUrl` (the server and React already block
+    `javascript:`);
+  - ids read from query strings are path-encoded but can be `..` (GET only; nothing harmful found);
+  - the Razorpay event id header isn't signed (redeliveries stay idempotent by order status);
+  - `/v1/extension/connect` adds a device row each time (rate limited);
+  - prompt injection in a job post or document only steers that user's own answers: the support bot uses no model,
+    and no model output reaches another account or the admin.
+
+## Checked and fine
+- **IDOR:** every route that takes an object id, including the new interview-day, mission, plan, offers, contacts,
+  evidence, tailor-queue and passkey routes.
+- **Admin:** only `ORBIT_ADMIN_EMAIL` with a verified inbox. Email change and Google can't take that address.
+- **CSRF and CORS:** foreign and `null` Origins are refused.
+- **JWT:** HS256 only. Challenges and state tokens can't pass as sessions.
+- **WebSockets:** Origin is checked, and tickets are single-use.
+- **SQL:** no raw SQL built from strings.
+- **Downloads:** no headers built from user data.
+- **Uploads:** size and pixel caps, magic bytes, the isolated parser.
+- **Payments:** gateway signatures, matching amount, currency and order, applied once.
+- **Rendering:** the SPA and desktop have no HTML sinks.
+- **Worker:** no open proxy and no open redirect. JSON-LD and meta are escaped.
+- **Production:**
+  - `/docs`, `/openapi.json` and `/redoc` are 404;
+  - `/ready` shows the proxy secret is set;
+  - HSTS, CSP, `nosniff`, `DENY` and `no-referrer` are on pages and the API.
+- **Secrets:** gitleaks 8.30.1 scanned 698 commits and the working tree. It found only test fixtures (an RFC 6238
+  vector and fake test keys) and untracked local files (the dev outbox, `.venv`, `target/`). No real secret is
+  committed.
+- **Dependencies:** pip-audit, `pnpm audit` and `cargo audit` report 0 known vulnerabilities after the fixes, and
+  bandit is clean at medium.
