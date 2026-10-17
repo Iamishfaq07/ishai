@@ -205,3 +205,24 @@ def test_wrong_codes_sent_at_once_are_checked_no_more_than_the_limit(client: Tes
     checked = sum(1 for s in statuses if s in (200, 401))
     assert checked <= 5, f"{checked} codes were checked (limit 5): {sorted(statuses)}"
     assert statuses.count(429) >= 25
+
+
+# ---- RT-04: the paid natural voice needs a proven inbox, like every other provider-cost route ------------------------
+
+
+def test_an_unproven_inbox_cannot_spend_the_natural_voice(verifying_client: TestClient,
+                                                          monkeypatch: pytest.MonkeyPatch) -> None:
+    from tests.test_voice import _deepgram
+
+    client = verifying_client
+    seen: list[object] = []
+    _deepgram(monkeypatch, seen=seen)
+    email = f"tts-{uuid.uuid4().hex[:8]}@example.com"
+    assert client.post("/v1/auth/register", json={"email": email, "password": PW}).status_code == 202
+    client.cookies.clear()
+    token = client.post("/v1/auth/login", json={"email": email, "password": PW}).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    client.cookies.clear()
+    r = client.post("/v1/voice/speak", headers=h, json={"text": "Read anything I like, on Orbit's account."})
+    assert r.status_code == 403 and r.json()["detail"]["code"] == "email_unverified"
+    assert seen == []  # the provider was never called

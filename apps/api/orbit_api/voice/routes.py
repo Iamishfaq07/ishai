@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
@@ -83,7 +84,7 @@ class SpeakIn(BaseModel):
 
 
 @router.post("/speak", dependencies=[speak_limit])
-async def speak(body: SpeakIn, user: Annotated[User, Depends(current_user)],
+async def speak(body: SpeakIn, user: Annotated[User, Depends(require_verified_email)],
                 db: Annotated[AsyncSession, Depends(get_db)]) -> StreamingResponse:
     provider = get_tts_provider()
     if provider is None:
