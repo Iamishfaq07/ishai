@@ -1,4 +1,4 @@
-import { classifyField, type ProfileKey } from "../lib/fields";
+import { boxOnPage, classifyField, type ProfileKey } from "../lib/fields";
 
 export type Profile = Record<ProfileKey, string>;
 
@@ -14,6 +14,18 @@ function labelFor(el: HTMLInputElement | HTMLTextAreaElement): string {
     .map((id) => (id ? document.getElementById(id)?.textContent ?? "" : ""))
     .join(" ");
   return [byFor, wrapping, aria, labelledBy].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+}
+
+/** On show to the person: rendered, not see-through or hidden (this element or a parent), and its box on the page.
+ * Hidden fields are where a job page would collect what the person never reviewed. */
+function onShow(el: HTMLInputElement | HTMLTextAreaElement): boolean {
+  if (el.offsetParent === null) return false;
+  if (!el.checkVisibility({ opacityProperty: true, visibilityProperty: true, contentVisibilityAuto: true })) {
+    return false;
+  }
+  const r = el.getBoundingClientRect();
+  return boxOnPage({ width: r.width, height: r.height, right: r.right, bottom: r.bottom, scrollX: window.scrollX,
+    scrollY: window.scrollY });
 }
 
 /** Sets a value the way typing would, so React and other frameworks see it. */
@@ -54,7 +66,7 @@ export function fillForm(profile: Profile): { filled: string[] } {
   const filled: string[] = [];
   const fields = document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea");
   for (const el of fields) {
-    if (el.disabled || el.readOnly || el.value.trim() || el.offsetParent === null) continue;
+    if (el.disabled || el.readOnly || el.value.trim() || !onShow(el)) continue;
     const key = classifyField({
       name: el.name ?? "",
       id: el.id ?? "",
