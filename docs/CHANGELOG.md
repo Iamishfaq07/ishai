@@ -13,7 +13,8 @@ Every screen driven on a local stack (mock AI), at 1440×900, 820×1180 and 390�
 - **Live session setup** ticks at most 20 documents (the API's limit), the newest resume and job post first, the
   same rules as the desktop's Setup: past 20 saved documents Start was refused ("at most 20 items").
 - **Support chat**: `X-Orbit-Support-Token` is allowed through CORS, so a reopened chat reads its thread when the
-  API is on another origin (local dev, e2e; production web goes through the same-origin proxy).
+  API is on another origin (local dev, e2e; production web goes through the same-origin proxy). Send waits for
+  the chat to open, instead of dropping a message sent while it was opening.
 - **Session Q&A** lists answers no detected question carries: chat answers, and every answer after "Delete
   transcript" (which keeps them, as it says).
 - **Not found**: a deleted resume, session or coding problem says "That … isn't here" with a link back, instead of
