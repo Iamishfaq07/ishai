@@ -10,6 +10,7 @@ import { Spinner } from "./components/ui";
 import { Skeleton, toast } from "@orbit/ui";
 import { useAuth } from "./lib/auth";
 import { routeDescription, routeTitle } from "./lib/routeTitle";
+import { servedHeadFor } from "./lib/servedHead";
 import { useDocumentTitle } from "./lib/useDocumentTitle";
 import { Prerendered, handOff, useHandOffElsewhere } from "./lib/prerender";
 import { JOBS_AI_HOME, movedJobsPath } from "./pages/jobs/paths";
@@ -156,7 +157,9 @@ function useRouteTitle(): void {
   const { pathname } = useLocation();
   const { user, loading } = useAuth();
   useHandOffElsewhere(pathname);
-  useDocumentTitle(routeTitle(pathname, !loading && !user), routeDescription(pathname));
+  // Signed out on the page the document was served as, its own served title and description stay (lib/servedHead.ts).
+  const served = user ? null : servedHeadFor(pathname);
+  useDocumentTitle(served?.title ?? routeTitle(pathname, !loading && !user), served ? served.description : routeDescription(pathname), !!served);
 }
 
 /** Continue with Google took an unconfirmed password account: say so once, then drop the query. */

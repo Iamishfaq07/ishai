@@ -15,22 +15,22 @@ export const PAGE_META = {
       "Interview practice and live help, a resume checker with an ATS score, and new jobs that fit you. One free account. No subscription.",
   },
   "/resume-ai": {
-    title: "Orbit Resume AI: see your resume the way screening software does",
+    title: "Orbit Resume AI: free ATS resume checker and builder",
     description:
       "An ATS score out of 100, what's missing for the job you want, and AI rewrites that keep your own numbers. Editing, the score and downloads are free.",
   },
   "/jobs": {
-    title: "Orbit Jobs AI: new jobs that fit you, from companies' own careers pages",
+    title: "Orbit Jobs AI: jobs that fit your resume, from careers pages",
     description:
       "The latest openings from companies' careers pages, matched to your resume, with a tracker and free AI fit checks. Apply always opens the original post.",
   },
   "/warmup": {
-    title: "Free interview warm-up: a Google Interview Warmup alternative | Orbit",
+    title: "Free Google Interview Warmup alternative | Orbit",
     description:
       "Practise interview questions out loud or by typing and get instant tips on length, structure and filler words. Free, no account needed.",
   },
   "/contact": {
-    title: "Contact Orbit AI",
+    title: "Contact Orbit AI: support, payments and feedback",
     description:
       "Questions, payments, a technical problem or a job that looks wrong: send the Orbit team a message and we'll reply by email.",
   },

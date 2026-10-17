@@ -109,8 +109,14 @@ measured from the interviewer's actual speech.
 
 `apps/web/.env.production` bakes `VITE_API_URL`. Cloudflare Workers Builds deploys on every push to `main`.
 Manually: `pnpm --filter @orbit/web build`, then `wrangler deploy` from the repo root. That uploads `apps/web/dist`
-as static assets (SPA fallback) plus `apps/web/worker/index.js`, whose 10-minute cron pings `API_URL` at `/health`
+as static assets plus `apps/web/worker/index.js`, whose 10-minute cron pings `API_URL` at `/health`
 (Railway doesn't sleep; it's insurance against a host that does).
+
+**The Worker runs first for every page address** (not the built files under `/assets/`): it serves the app for the
+app's own addresses, a real 404 for anything else, one 301 to each page's canonical address, and robots.txt
+(DECISIONS D67). Search-engine verification codes and the AI-crawler setting are `vars` in `wrangler.jsonc`; after a
+deploy that changes public pages, tell Bing and the other IndexNow engines with `apps/web/scripts/indexnow.mjs`
+(docs/SEO.md).
 
 **The web app talks to the API through its own origin.** The Worker proxies `/api/*` to `API_URL` (in
 `wrangler.jsonc`), and the production build uses `VITE_API_URL=/api`. That makes the session cookie first-party: a
@@ -146,3 +152,11 @@ Free tiers sleep when idle (the first request after idle is a cold start); Railw
 by use and doesn't sleep it unless its serverless setting is on. DeepSeek/Deepgram usage bills your
 own accounts; per-request cost estimates are in `provider_requests.estimated_cost_usd` (`NULL` = model has no
 configured price).
+
+**The web Worker's requests.** Every `/api/*` call and every page load (each full page request, not each click
+inside the app) invokes the Worker; the built files under `/assets/`, the icons, the camera model and the theme
+script are served without it, free and unlimited. Cloudflare's Workers Free plan allows 100,000 Worker requests a
+day (reset at midnight UTC, 10 ms CPU each); past that, every address the Worker runs first for answers 429 until the
+reset, so the whole site (pages and API) would be down, not just the API. The API calls are most of the count (a
+signed-in visit makes dozens; a page load adds one, a crawler's fetch one). Watch Workers & Pages → orbit → Metrics,
+and move to Workers Paid ($5 a month, 10 million requests included) before daily requests pass about 50,000.

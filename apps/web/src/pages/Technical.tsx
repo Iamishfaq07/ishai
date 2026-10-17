@@ -6,7 +6,6 @@ import { ArchitecturePipeline } from "../components/ArchitecturePipeline";
 import { Footer } from "../components/Footer";
 import { SiteMenu } from "../components/SiteMenu";
 import { api } from "../lib/api";
-import { useDocumentTitle } from "../lib/useDocumentTitle";
 
 /** The desktop app's protections, each one something the shipped app does (apps/desktop/src-tauri). */
 const DESKTOP = [
@@ -28,7 +27,6 @@ function seconds(ms: number): string {
 
 /** /technical: how Orbit is built, with live latency from the last 7 days and the desktop app's protections. */
 export function TechnicalPage() {
-  useDocumentTitle("How Orbit works", "Live latency, the answer pipeline, and how the desktop app keeps your data safe.");
   const [t, setT] = useState<EngineeringTelemetry | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {

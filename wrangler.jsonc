@@ -1,7 +1,8 @@
 // Cloudflare deploy config for the Orbit web app (a static SPA served from Cloudflare's edge).
 // The build command (`pnpm --filter @orbit/web build`) emits apps/web/dist; `wrangler deploy`
-// uploads that directory as static assets. `single-page-application` routes unknown paths to
-// index.html so client-side routing (React Router) works on refresh/deep links.
+// uploads that directory as static assets. The Worker runs first for every address except the built files below, and
+// decides what each one is (apps/web/worker/seo.js, routes.js; DECISIONS D67): one of the app's pages gets index.html
+// (so React Router works on refresh and deep links), anything else a real 404, never index.html with a 200.
 {
   "name": "orbit",
   "compatibility_date": "2026-09-01",
@@ -9,18 +10,40 @@
   "assets": {
     "directory": "apps/web/dist",
     "binding": "ASSETS",
-    "not_found_handling": "single-page-application",
-    // /api/* is proxied to the API by the Worker (first-party session cookie — see apps/web/worker/index.js).
-    // Run the Worker first there so the SPA fallback never answers an API call with index.html. The public pages
-    // people share also go through it, for their own link previews and their built HTML (apps/web/worker/meta.js).
-    // The question bank's pages (/companies, /roles and each guide) are built files the assets serve directly.
-    "run_worker_first": ["/api", "/api/*", "/", "/resume-ai", "/jobs", "/warmup", "/contact", "/technical"]
+    // A missing file is a 404 (the Worker serves index.html itself for the app's own pages), and an address is never
+    // given a trailing slash: "/jobs/" is redirected to "/jobs", the one form search engines see.
+    "not_found_handling": "none",
+    "html_handling": "drop-trailing-slash",
+    // The Worker first, everywhere but the built files that never need it (each request through it is billed):
+    //   /api/* is proxied to the API (first-party session cookie — see apps/web/worker/index.js);
+    //   the public pages people share get their own link previews and their built HTML (meta.js, prerendered.js);
+    //   the question bank's guides (/companies, /roles) are built files it fetches from the assets as they are;
+    //   every address gets its status code, redirects and robots headers (apps/web/worker/seo.js).
+    "run_worker_first": [
+      "/*",
+      "!/assets/*",
+      "!/mediapipe/*",
+      "!/theme-init.js",
+      "!/pcm16-worklet.js",
+      "!/favicon.svg",
+      "!/favicon.ico",
+      "!/apple-touch-icon.png",
+      "!/icon-192.png",
+      "!/icon-512.png",
+      "!/og-image.jpg",
+      "!/og-image.svg",
+      "!/manifest.webmanifest"
+    ]
   },
   // Pings the API's /health so a host that sleeps when idle never makes a visitor wait for its cold start
   // (apps/web/worker/index.js). Railway's service doesn't sleep; the ping is cheap insurance.
   "triggers": { "crons": ["*/10 * * * *"] },
   // The API on Railway (Singapore, next to Neon's aws-ap-southeast-1) behind its own name, so a host move is a DNS
   // change (DECISIONS D53). The old Render service is retired (D55).
+  // Search engines' site-verification codes go here too, once the owner has them (docs/SEO.md):
+  //   "GOOGLE_SITE_VERIFICATION", "BING_SITE_VERIFICATION", "YANDEX_VERIFICATION", "NAVER_SITE_VERIFICATION",
+  //   "SEZNAM_VERIFICATION" (each the code alone, not the whole tag). AI_TRAINING_CRAWLERS: "allow" (the default) or
+  //   "block" (DECISIONS D67).
   "vars": { "API_URL": "https://api.orbitanswer.com" },
   // Builds of branches other than main run `wrangler preview` (Cloudflare's non-production deploy command), which
   // needs its own vars. Previews talk to the same API: the web app holds no data of its own, and without the

@@ -622,3 +622,54 @@ isn't loaded. The web's practice paths say "orbit" when they save through `POST 
 claim it for a paste, but only up to the same 10. The desktop gets the
 same context through an "Upcoming interviews" list on its setup screen; an `orbit://` deep link was left out, since
 the app has no deep-link plugin and adding one would touch the single-instance guard.
+
+**D67 — Search engines and AI assistants get real status codes, one address per page, and an open door to the
+public pages; AI training crawlers are welcome by default.** On 2026-10-18 every unknown address answered 200 with the
+app (a soft 404 for Google), robots.txt was `Disallow: /` with an allow-list that also blocked the scripts, styles,
+favicon and preview image a page needs (so Google rendered an empty page and X/LinkedIn couldn't fetch the image),
+the legal pages in the sitemap redirected (307) to addresses robots.txt blocked, `www.` and `http://` served a
+duplicate site, and a crawler that doesn't run JavaScript read only a title. Now the Worker runs first for every
+address except the built files that never need it (`run_worker_first: ["/*", "!/assets/*", …]`,
+`not_found_handling: "none"`), and `apps/web/worker/seo.js` decides, from the route list in `routes.js` (kept in step
+with `App.tsx` by a test): a public page is served with any head tags it lacks (canonical, `en` + `x-default`
+hreflang, link-preview tags, structured data, verification codes); one of the app's own pages gets `index.html` with
+200 and `X-Robots-Tag: noindex` (an invite link `/r/<code>` keeps its canonical to `/`); anything else is a real 404
+whose body is still the app (so the app draws its own "not found", and a wrong guess in the route list never breaks a
+page) plus static links for crawlers. One 301 fixes `http`, `www.`, trailing slashes, `.html`, doubled slashes, case
+(fixed addresses only, never an id) and the moved resume/jobs addresses. Previews and `*.workers.dev` are noindex with
+a `Disallow: /` robots.txt. Nothing depends on who is asking: crawlers and people get the same page (no cloaking).
+
+robots.txt is written by the Worker (so the disallowed paths come from the same route list): everything open except
+the API and the signed-in pages, as exact paths (`/mock$`, `/mock?`), so a future `/mock-interview` guide is never
+blocked; sign-in pages and invite links stay crawlable so their noindex is seen; the few public API reads the
+public pages draw from (prices, job counts, latency figures) stay open so Google's renderer sees what a person sees.
+Every search, answer and user-triggered crawler is named and allowed (Googlebot, Bingbot, OAI-SearchBot,
+ChatGPT-User, Claude-SearchBot, Claude-User, PerplexityBot, Perplexity-User, Applebot, DuckAssistBot, YandexBot and
+others). **Training crawlers
+(GPTBot, ClaudeBot, Google-Extended, Applebot-Extended, CCBot, meta-externalagent, Amazonbot, MistralAI-Training) are
+allowed too, as the default the owner can flip with one var, `AI_TRAINING_CRAWLERS=block`.** Why allow: the public
+pages are marketing and guides meant to be repeated; Google-Extended also governs grounding in Gemini apps, so
+blocking it removes Orbit from those answers; and a model that has read Orbit's pages can name it. The cost is that
+the pages' wording can end up in training data, which matters little for public marketing copy. Bytespider stays
+blocked (no published documentation, disputed compliance, no answer engine of its own). Cloudflare's own AI-bot
+blocking (dashboard) overrides all of this at the edge, so the owner checks it is off (docs/SEO.md).
+
+Structured data (`site.js`) states only what the pages show: Organization, WebSite (the site name "Orbit AI"),
+WebPage/ContactPage, BreadcrumbList, WebApplication for the web app and its products, SoftwareApplication for the
+Windows app. No ratings or reviews (there are none to show), no prices (they differ by country, change with D60, and
+Google's software rich result needs ratings anyway, so offers would add nothing), and no FAQ markup until a page
+carries the same visible FAQ (Google stopped showing FAQ results in 2026). One English site serves India and the
+world, with prices following the visitor's country on the same address, so there are no language variants: hreflang
+only says `en` and `x-default` point at the page itself. llms.txt and llms-full.txt describe the products for AI
+assistants; no vendor has said it reads them, and they cost nothing. IndexNow (Bing, Yandex, Naver, Seznam, Yep) is
+pinged after a deploy by `apps/web/scripts/indexnow.mjs`, which checks the key file is live first; Google reads the
+sitemap instead.
+
+With the question bank's built pages (D63), structured data has one source, `worker/site.js`, used by the build for
+those pages and by the Worker for any public page without its own, so the two can't describe Orbit differently. The
+app no longer replaces a public page's title and description with its short tab titles when it loads signed out
+(`src/lib/servedHead.ts`): Google reads pages after their scripts run, so it would have indexed "Resume AI · Orbit"
+instead of the page's own title. The Worker running first for every page address means each page load (not each
+click inside the app) is a Worker request on top of the API calls already proxied; static files stay free. On the
+Workers Free plan (100,000 requests a day) a busy day would take the whole site down with 429s until midnight UTC,
+not just the API, so the owner moves to Workers Paid before daily requests near 50,000 (DEPLOY.md).

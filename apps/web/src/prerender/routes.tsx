@@ -20,8 +20,8 @@ export type PageMeta = Record<string, { title: string; description: string }>;
 export interface PublicRoute {
   /** The address ("/companies/amazon"). */
   path: string;
-  /** Under dist/, where its built copy goes; none for a page that's already a file (public/privacy.html), which is
-   *  only listed in the sitemap. */
+  /** Under dist/, where its built copy goes; none for a page that's already a file (public/privacy.html, at
+   *  /privacy), which is only listed in the sitemap. */
   file?: string;
   head?: Head;
   /** ISO date it last changed, where we know it (the sitemap's lastmod). */
@@ -46,8 +46,16 @@ const WORKER_PAGES: Record<string, () => ReactNode> = {
 /** Where the Worker finds a PAGE_META page's built copy (worker/prerendered.js `prerenderedAsset`). */
 export const workerFile = (path: string): string => `_prerender/${path === "/" ? "home" : path.slice(1)}.html`;
 
-/** The policies: plain HTML files in public/. */
-const POLICY_FILES = ["/privacy.html", "/terms.html", "/cookies.html", "/refund.html"];
+/**
+ * The policies: plain HTML files in public/, served at their address without ".html" (the Worker redirects the
+ * ".html" one), with the "Last updated" date each one shows (prerender.test.ts checks the two agree).
+ */
+export const POLICIES: ReadonlyArray<{ path: string; file: string; lastmod: string }> = [
+  { path: "/privacy", file: "privacy.html", lastmod: "2026-10-18" },
+  { path: "/terms", file: "terms.html", lastmod: "2026-10-17" },
+  { path: "/cookies", file: "cookies.html", lastmod: "2026-10-17" },
+  { path: "/refund", file: "refund.html", lastmod: "2026-10-17" },
+];
 
 const latest = (dates: string[]) => dates.reduce((a, b) => (b > a ? b : a), "");
 
@@ -88,6 +96,6 @@ export async function publicRoutes(pageMeta: PageMeta): Promise<PublicRoute[]> {
     routes.push({ path: rolePath(r.slug), file: `roles/${r.slug}.html`, head: guideHead("role", r), lastmod: r.reviewed, render: () => <GuideView kind="role" entry={r} /> });
   }
 
-  routes.push(...POLICY_FILES.map((path) => ({ path })));
+  routes.push(...POLICIES.map(({ path, lastmod }) => ({ path, lastmod })));
   return routes;
 }

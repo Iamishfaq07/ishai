@@ -1,4 +1,5 @@
-// Edge entry for the Orbit web app. Static assets (the SPA) are served by Cloudflare before this runs.
+// Edge entry for the Orbit web app. It runs first for every page address; the built files under /assets/ (and the
+// few listed in wrangler.jsonc) are served by Cloudflare without it.
 //
 // /api/* is proxied to the API so the browser sees it as the web app's own origin. The session cookie is then
 // first-party: Safari (and every iOS browser, all WebKit) and other browsers that block third-party cookies drop a
@@ -11,6 +12,7 @@
 // metered) Neon compute awake.
 import { metaFor, withPageMeta } from "./meta.js";
 import { pageRequest } from "./prerendered.js";
+import { withSeo } from "./seo.js";
 
 const API_PREFIX = "/api";
 
@@ -42,7 +44,7 @@ async function proxyToApi(request, env, url) {
   return fetch(proxied);
 }
 
-export default {
+const handlers = {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === API_PREFIX || url.pathname.startsWith(`${API_PREFIX}/`)) {
@@ -64,4 +66,11 @@ export default {
   async scheduled(_event, env, ctx) {
     ctx.waitUntil(fetch(`${env.API_URL}/health`, { headers: { "user-agent": "orbit-keep-warm" } }));
   },
+};
+
+// Around every page: one address per page, real 404s, noindex for the app's own pages, robots.txt and the head tags
+// search engines read (seo.js, DECISIONS D67). The API proxy passes straight through.
+export default {
+  fetch: (request, env) => withSeo(request, env, new URL(request.url), (req) => handlers.fetch(req, env)),
+  scheduled: (event, env, ctx) => handlers.scheduled(event, env, ctx),
 };
