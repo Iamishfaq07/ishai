@@ -15,15 +15,17 @@
     // people share also go through it, for their own link previews (apps/web/worker/meta.js).
     "run_worker_first": ["/api", "/api/*", "/", "/resume-ai", "/jobs", "/warmup", "/contact"]
   },
-  // Keep the Render free-tier API from sleeping (see apps/web/worker/index.js). One always-on free
-  // service uses ~744 of Render's 750 free instance-hours a month, so keep it the only running free service.
+  // Pings the API's /health so a sleeping host never makes a visitor wait for its cold start (apps/web/worker/index.js).
   "triggers": { "crons": ["*/10 * * * *"] },
-  // Singapore (Render + Neon aws-ap-southeast-1): ~90 ms from India, vs ~280 ms to the old Ohio service.
-  "vars": { "API_URL": "https://orbit-api-sg.onrender.com" },
+  // The API on Railway (Singapore, next to Neon's aws-ap-southeast-1) behind its own name, so a host move is a DNS
+  // change (DECISIONS D53). LEGACY_API_URL: the old Render service, which desktop 0.1.40 and older still call
+  // directly; the cron keeps it warm (its free tier sleeps) until those installs have updated. Remove it, then the
+  // Render service, once they have (docs/DEPLOY.md, "Moving the API").
+  "vars": { "API_URL": "https://api.orbitanswer.com", "LEGACY_API_URL": "https://orbit-api-sg.onrender.com" },
   // Builds of branches other than main run `wrangler preview` (Cloudflare's non-production deploy command), which
   // needs its own vars. Previews talk to the same API: the web app holds no data of its own, and without the
   // PROXY_SECRET secret (production only) the API treats a preview like any outside caller for rate limits.
-  "previews": { "vars": { "API_URL": "https://orbit-api-sg.onrender.com" } }
+  "previews": { "vars": { "API_URL": "https://api.orbitanswer.com" } }
   // Secret (not a var): `wrangler secret put PROXY_SECRET` with the API's ORBIT_PROXY_SECRET, so the API can trust
   // the client IP this Worker forwards (apps/web/worker/index.js).
 }

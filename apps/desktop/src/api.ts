@@ -15,8 +15,18 @@ export function normalizeApiUrl(value: string | null | undefined): string | null
   return check.ok ? check.url : null;
 }
 
+/** Hosts the hosted API had before it moved behind api.orbitanswer.com (DECISIONS D53). Saved on the sign-in screen,
+ * one would keep the app on a host that's going away: it counts as no override. */
+const RETIRED_API_URLS = new Set(["https://orbit-api-sg.onrender.com", "https://orbit-api-5kcx.onrender.com"]);
+
+/** A saved server override that's still worth using: valid, and not one of the retired hosted addresses. */
+export function savedApiUrl(value: string | null | undefined): string | null {
+  const url = normalizeApiUrl(value);
+  return url && !RETIRED_API_URLS.has(url) ? url : null;
+}
+
 /** Server URL: a user override saved on the sign-in screen, else the build default. */
-export const API_URL: string = normalizeApiUrl(safeLocal.getItem(API_URL_KEY)) ?? DEFAULT_API_URL;
+export const API_URL: string = savedApiUrl(safeLocal.getItem(API_URL_KEY)) ?? DEFAULT_API_URL;
 
 /** Persist (or clear, with null) the server override. The API client is created once, so reload. */
 export function setApiUrl(url: string | null): void {

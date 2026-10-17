@@ -1,5 +1,20 @@
 # Implementation log
 
+## The API moves to Railway, behind api.orbitanswer.com (2026-10-17)
+
+- **One address for every client**: the web Worker's `API_URL`, the web app's live sockets and the desktop app
+  (from 0.1.41) use `https://api.orbitanswer.com`, a DNS-only `CNAME` to the Railway service (Singapore). A future
+  host move is a DNS change; installed apps follow it with no release (DECISIONS D53).
+- **Railway-aware API**: `/health` reports the commit from `RAILWAY_GIT_COMMIT_SHA` (Render's `RENDER_GIT_COMMIT`
+  still works); download links use `ORBIT_API_PUBLIC_URL`, else the host's own address (`RENDER_EXTERNAL_URL`, then
+  `RAILWAY_PUBLIC_DOMAIN`).
+- **The move, gently**: Render keeps serving desktop 0.1.40 and older (and offers them the update) until they've
+  moved on; the Worker's cron keeps it warm meanwhile (`LEGACY_API_URL`, to be removed with the Render service). A
+  saved server override naming a retired Render address is ignored by the desktop app.
+- **A warning for a proxied API record**: the admin Overview says so when desktop calls arrive through Cloudflare's
+  proxy (`api_cloudflare_proxied`), where every user near one edge would share sign-in limits and welcome credits.
+- Docs: DEPLOY.md's Railway section and the cutover steps; `render.yaml` marked legacy.
+
 ## Jobs AI outside India: 117 more company boards, SmartRecruiters per country, pay from Greenhouse, a gentle refresh (2026-10-17)
 
 The company boards were chosen for India. Outside it, a feed had the global companies' posts (Stripe, Databricks,

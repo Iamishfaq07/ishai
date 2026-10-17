@@ -612,8 +612,8 @@ def test_the_admin_is_told_when_the_web_worker_sends_no_proxy_secret(client: Tes
     from orbit_api import ratelimit
     from orbit_api.admin.overview import setup_warnings
 
-    monkeypatch.setattr(ratelimit, "_last_signed", 0)
-    monkeypatch.setattr(ratelimit, "_last_unsigned_site", 0)
+    for name in ("_last_signed", "_last_unsigned_site", "_last_direct_cf", "_last_direct_plain"):
+        monkeypatch.setattr(ratelimit, name, 0)
     monkeypatch.setattr(get_settings(), "env", "production")
     monkeypatch.setattr(get_settings(), "proxy_secret", SecretStr(PROXY))
     monkeypatch.setattr(get_settings(), "web_url", "https://orbitanswer.com")
@@ -631,3 +631,32 @@ def test_the_admin_is_told_when_the_web_worker_sends_no_proxy_secret(client: Tes
     assert packs({**worker, "X-Orbit-Proxy-Secret": PROXY}) == "USD" and setup_warnings() == []
     # A branch preview runs on workers.dev without the secret by design: not a warning.
     assert packs({**worker, "CF-Worker": "ishfaq.workers.dev"}) == "INR" and setup_warnings() == []
+
+
+def test_the_admin_is_told_when_the_apis_own_address_goes_through_cloudflares_proxy(
+        client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from orbit_api import ratelimit
+    from orbit_api.admin.overview import setup_warnings
+
+    for name in ("_last_signed", "_last_unsigned_site", "_last_direct_cf", "_last_direct_plain"):
+        monkeypatch.setattr(ratelimit, name, 0)
+    monkeypatch.setattr(get_settings(), "env", "production")
+    monkeypatch.setattr(get_settings(), "proxy_secret", SecretStr(PROXY))
+    monkeypatch.setattr(get_settings(), "web_url", "https://orbitanswer.com")
+    proxied = {"CF-Ray": "8f1c2d3e4f5a6b7c-SIN", "CF-Connecting-IP": "203.0.113.9"}
+
+    def call(headers: dict[str, str]) -> None:
+        assert client.get("/v1/billing/packs", headers=headers).status_code == 200
+
+    call({})  # the desktop app straight to the host: fine
+    assert setup_warnings() == []
+    # The api record turned orange: desktop calls arrive through a Cloudflare edge, whose address they'd share.
+    call(proxied)
+    assert setup_warnings() == ["api_cloudflare_proxied"]
+    # The site's own Worker (signed or not) and previews don't count: they're Workers, not the record.
+    call({**proxied, "CF-Worker": "orbitanswer.com", "X-Orbit-Proxy-Secret": PROXY})
+    call({**proxied, "CF-Worker": "ishfaq.workers.dev"})
+    assert setup_warnings() == ["api_cloudflare_proxied"]
+    # Back to DNS only: the next direct call clears it, without a restart.
+    call({})
+    assert setup_warnings() == []

@@ -120,10 +120,15 @@ class SlidingWindow(TokenBucket):
 PROXY_SECRET_HEADER = "x-orbit-proxy-secret"  # noqa: S105 - a header name, not a secret
 CLIENT_IP_HEADER = "x-orbit-client-ip"
 WORKER_HEADER = "cf-worker"  # Cloudflare stamps it on every request a Worker makes: the zone that owns the Worker
+CF_RAY_HEADER = "cf-ray"  # Cloudflare's proxy adds it to every request it passes on to an origin
 # Which came last: a request with the secret, or one from our site's Worker without it (an ever-rising count).
 _order = itertools.count(1)
 _last_signed = 0
 _last_unsigned_site = 0
+# Which came last among direct callers (the desktop app; no Worker, no secret): one through Cloudflare's proxy, or one
+# straight to the host.
+_last_direct_cf = 0
+_last_direct_plain = 0
 
 
 def _from_our_site(request: HTTPConnection) -> bool:
@@ -135,7 +140,7 @@ def _from_our_site(request: HTTPConnection) -> bool:
 
 def proxy_signed(request: HTTPConnection) -> bool:
     """The request carries the web Worker's proxy secret, so its client IP and country can be believed."""
-    global _last_signed, _last_unsigned_site
+    global _last_signed, _last_unsigned_site, _last_direct_cf, _last_direct_plain
     secret = get_settings().proxy_secret
     if secret is None:
         return False
@@ -145,6 +150,11 @@ def proxy_signed(request: HTTPConnection) -> bool:
         return True
     if _from_our_site(request):
         _last_unsigned_site = next(_order)
+    elif not request.headers.get(WORKER_HEADER):
+        if request.headers.get(CF_RAY_HEADER):
+            _last_direct_cf = next(_order)
+        else:
+            _last_direct_plain = next(_order)
     return False
 
 
@@ -152,6 +162,13 @@ def site_worker_unsigned() -> bool:
     """The web Worker's latest request came without the proxy secret: it has no PROXY_SECRET (or a different one),
     so visitors' IPs and countries are unknown here (admin/overview.py warns)."""
     return _last_unsigned_site > _last_signed
+
+
+def api_behind_cloudflare() -> bool:
+    """The latest direct caller came through Cloudflare's proxy: the API's DNS record is proxied (orange cloud), so
+    the right-most X-Forwarded-For hop client_ip() keys on is a Cloudflare edge, shared by every desktop user near it
+    (sign-in limits, welcome credits per network). The record must be DNS only (admin/overview.py warns)."""
+    return _last_direct_cf > _last_direct_plain
 
 
 def _valid_ip(value: str | None) -> str | None:

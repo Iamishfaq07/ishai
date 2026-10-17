@@ -63,7 +63,8 @@ class StatsOut(BaseModel):
     # Server settings the admin must fix, as short codes: "proxy_secret" (ORBIT_PROXY_SECRET missing or weak in
     # production, so per-IP limits key on a spoofable address and welcome credits are held); "proxy_unsigned"
     # (the web Worker's requests arrive without that secret, so every visitor is priced as in India and web users
-    # share rate limits by Cloudflare's address).
+    # share rate limits by Cloudflare's address); "api_cloudflare_proxied" (the API's own DNS record goes through
+    # Cloudflare's proxy, so desktop users share limits by Cloudflare's edge address).
     warnings: list[str] = []
 
 
@@ -73,7 +74,12 @@ def setup_warnings() -> list[str]:
         return []
     if s.proxy_secret is None:
         return ["proxy_secret"]
-    return ["proxy_unsigned"] if ratelimit.site_worker_unsigned() else []
+    out = []
+    if ratelimit.site_worker_unsigned():
+        out.append("proxy_unsigned")
+    if ratelimit.api_behind_cloudflare():
+        out.append("api_cloudflare_proxied")
+    return out
 
 
 @router.get("/stats", response_model=StatsOut)
