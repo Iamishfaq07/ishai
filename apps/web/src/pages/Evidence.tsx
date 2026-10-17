@@ -154,7 +154,6 @@ export function EvidencePage() {
   const storyList = stories.data ?? [];
   return (
     <div>
-      <LibraryTabs />
       <PageHeader
         icon={ShieldCheck}
         title="Evidence vault"
@@ -182,8 +181,8 @@ export function EvidencePage() {
         </form>
         <div className="flex flex-col gap-2 border-t border-zinc-200/70 pt-4 sm:flex-row sm:flex-wrap sm:items-center dark:border-white/10">
           <span className="text-sm text-zinc-600 dark:text-zinc-300">Find evidence in</span>
-          <Button variant="secondary" size="sm" onClick={() => void suggest("resume")} disabled={busy !== null}>
-            <Sparkles className="h-3.5 w-3.5" /> {busy === "suggest-resume" ? "Reading…" : "My resume"}
+          <Button variant="secondary" onClick={() => void suggest("resume")} disabled={busy !== null}>
+            <Sparkles className="h-4 w-4" /> {busy === "suggest-resume" ? "Reading…" : "My resume"}
           </Button>
           {storyList.length > 0 && (
             <span className="flex gap-2">
@@ -195,8 +194,8 @@ export function EvidencePage() {
                   </option>
                 ))}
               </Select>
-              <Button variant="secondary" size="sm" className="shrink-0 whitespace-nowrap" onClick={() => void suggest("story")} disabled={busy !== null || !storyId}>
-                <Sparkles className="h-3.5 w-3.5" /> {busy === "suggest-story" ? "Reading…" : "This story"}
+              <Button variant="secondary" className="shrink-0 whitespace-nowrap" onClick={() => void suggest("story")} disabled={busy !== null || !storyId}>
+                <Sparkles className="h-4 w-4" /> {busy === "suggest-story" ? "Reading…" : "This story"}
               </Button>
             </span>
           )}
@@ -272,6 +271,7 @@ export function EvidencePage() {
           </div>
         )}
       </LoadGate>
+      <LibraryTabs />
     </div>
   );
 }
