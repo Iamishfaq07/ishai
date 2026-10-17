@@ -170,6 +170,8 @@ export { ScreenshotPreview, type ScreenshotPreviewProps } from "./components/Scr
 export { StatusPill, type StatusPillProps } from "./components/StatusPill";
 export { Teleprompter, type TeleprompterProps } from "./components/Teleprompter";
 export { TranscriptView, type TranscriptViewProps } from "./components/TranscriptView";
+export { TranscriptLog, groupLines, transcriptText, type TranscriptLine } from "./components/TranscriptLog";
+export { VideoRoomTranscript } from "./components/VideoRoomTranscript";
 export { checkServerUrl, trimTrailingSlashes, type ServerUrlCheck } from "./serverUrl";
 export { MAX_SESSION_DOCUMENTS, practiceDocumentIds } from "./sessionDocuments";
 export {
@@ -242,6 +244,9 @@ export {
 } from "./live/naturalVoice";
 export { MockPanel, type CameraCoach } from "./components/MockPanel";
 export { VideoInterviewRoom, INTERVIEWER_NAME } from "./components/VideoInterviewRoom";
+export { VoiceVisualizer, type VoiceMood, type VoiceMotion } from "./components/VoiceVisualizer";
+export { SpeechEnvelope, VoiceTap, analyserActivity, type VoiceActivity, type VoiceSource, type WordSpan } from "./live/voiceActivity";
+export { useMicActivity } from "./hooks/useAudioLevel";
 export { ConfirmHost, confirmDialog, type ConfirmOptions } from "./components/ConfirmDialog";
 export * from "./icons";
 

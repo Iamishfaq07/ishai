@@ -51,13 +51,17 @@ function isAbort(err: unknown): boolean {
  * Plays an MP3 response once it has all arrived (an interviewer's question is a second or two of audio), in its own
  * new <audio> element. A fresh element every time: reusing one and loading a new source while it was still starting
  * is what made browsers throw "The play() request was interrupted by a new load request". Resolves when it ends or
- * `signal` stops it; rejects only when it can't play (the caller then uses the device's voice).
+ * `signal` stops it; rejects only when it can't play (the caller then uses the device's voice). `onAudio` sees the
+ * element (and its audio) before it plays, so the video room can follow the voice; it returns what to undo after.
  */
-export async function playResponse(res: Response, signal: AbortSignal): Promise<void> {
+export type OnVoiceAudio = (audio: HTMLAudioElement, blob: Blob) => (() => void) | undefined;
+
+export async function playResponse(res: Response, signal: AbortSignal, onAudio?: OnVoiceAudio): Promise<void> {
   const blob = await res.blob();
   if (signal.aborted) return;
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
+  const detach = onAudio?.(audio, blob);
   const stop = () => audio.pause();
   signal.addEventListener("abort", stop);
   try {
@@ -70,6 +74,7 @@ export async function playResponse(res: Response, signal: AbortSignal): Promise<
   } finally {
     signal.removeEventListener("abort", stop);
     audio.pause();
+    detach?.();
     audio.removeAttribute("src");
     URL.revokeObjectURL(url);
   }
@@ -106,6 +111,7 @@ export async function speakNatural(
   speak: (text: string, voice: string, signal: AbortSignal) => Promise<Response>,
   voice: string,
   signal: AbortSignal,
+  onAudio?: OnVoiceAudio,
 ): Promise<void> {
   const chunks = voiceChunks(text);
   const requests = chunks.map((c) => speak(c, voice, signal));
@@ -113,7 +119,7 @@ export async function speakNatural(
   for (let i = 0; i < chunks.length; i++) {
     if (signal.aborted) return;
     try {
-      await playResponse(await requests[i]!, signal);
+      await playResponse(await requests[i]!, signal, onAudio);
     } catch (err) {
       if (signal.aborted || isAbort(err)) return;
       throw new NaturalVoiceError(err, chunks.slice(i).join(" "));

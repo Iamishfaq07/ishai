@@ -403,6 +403,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       screenshotUnavailableReason={!VISION_ENABLED ? "Screenshot analysis isn’t enabled yet." : "This browser can’t capture the screen."}
       hotkeys={hotkeys}
       title={session.title}
+      {...(session.video && (session.role || session.company) ? { subtitle: [session.role, session.company].filter(Boolean).join(" · ") } : {})}
       headerEnd={<CompanionShare api={api} sessionId={session.id} webUrl={window.location.origin} disabled={live.state === "ended"} />}
       loadWalkthrough={(answerId) => api.spokenWalkthrough(session.id, answerId)}
       notice={<>{notice}{session.type !== "mock" && <DefenseWorkspace api={api} sessionId={session.id} {...(supportsScreenCapture() ? { capture: captureScreenFrame } : {})} />}</>}

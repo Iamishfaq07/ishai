@@ -977,6 +977,108 @@ html:not(.dark) .cosmic-dots { background-image: radial-gradient(rgba(35, 38, 66
 /* The listening ring: the user started talking over the AI (barge-in). */
 .listen-ring { box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.85), 0 0 18px 2px rgba(16, 185, 129, 0.35); transition: box-shadow 100ms ease-out; }
 
+/* The AI video interview room (VideoInterviewRoom, DECISIONS D69). A dark panel in either theme, in the workbench's
+   dark blue-grey family (D58) whatever the page's theme, so it looks the same in light mode. Saba's voice is the
+   canvas (VoiceVisualizer); what's here is the room around it. */
+.video-room {
+  --ink-950: 20 27 39;
+  --ink-900: 27 35 50;
+  --ink-800: 35 44 59;
+  --ink-700: 54 64 84;
+}
+/* Light mode deepens secondary text for white pages; the room is dark, so it keeps the light steps (AA on it). */
+html:not(.dark) .video-room :is(.text-zinc-400, .text-zinc-500) { color: rgb(var(--ink-400)); }
+/* "Live": a ring opens from the dot and fades, every 2.4 s. At Gentle the dot only fades; at Off it's still. The
+   "thinking" dot beside Saba's name fades the same way while she works. */
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: inherit;
+  animation: live-ring 2.4s var(--ease-standard) infinite;
+}
+.mood-dot-busy,
+.coach-scan { animation: live-fade 1.4s var(--ease-standard) infinite; }
+@keyframes live-ring {
+  0% { transform: scale(1); opacity: 0.7; }
+  70%, 100% { transform: scale(3.2); opacity: 0; }
+}
+@keyframes live-fade {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+:root[data-motion="reduced"] .live-dot { animation: live-fade 2.4s var(--ease-standard) infinite !important; }
+:root[data-motion="reduced"] .live-dot::after { display: none; }
+:root[data-motion="reduced"] :is(.mood-dot-busy, .coach-scan) {
+  animation-duration: 1.8s !important;
+  animation-iteration-count: infinite !important;
+}
+/* A question's segment fills as it arrives: it grows in from the left at Full, fades in at Gentle (transform drops
+   out of Gentle's transitions), and is simply there at Off. */
+.progress-fill {
+  transform-origin: left center;
+  transition: transform var(--dur-page) var(--ease-enter), opacity var(--dur-panel) var(--ease-standard);
+}
+/* Captions: a new question's words come in one after another (24 ms apart, the first 40); at Gentle the card fades
+   in as one. The word being said, while the device's voice reports word timing, wears an accent tint. */
+.caption-word {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  border-radius: 4px;
+  animation: caption-in var(--dur-panel) var(--ease-enter) both;
+  animation-delay: calc(var(--i, 0) * 24ms);
+  transition: color var(--dur-quick) var(--ease-standard), background-color var(--dur-quick) var(--ease-standard), box-shadow var(--dur-quick) var(--ease-standard);
+}
+@keyframes caption-in {
+  from { opacity: 0; transform: translateY(4px); }
+}
+:root[data-motion="reduced"] .caption-word { animation: none; }
+.caption-now {
+  color: #fff;
+  background-color: rgb(var(--accent-400) / 0.3);
+  box-shadow: 0 0 0 2px rgb(var(--accent-400) / 0.3);
+}
+/* Your camera tile's speaking ring, drawn inside its edge from your voice's level (--level, set by useMicActivity):
+   thicker and brighter as you speak at Full, brighter only at Gentle, and simply on while you talk at Off. */
+.speak-ring {
+  box-shadow: inset 0 0 0 calc(1px + var(--level, 0) * 3px) rgb(var(--ink-100) / calc(var(--level, 0) * 0.9));
+}
+:root[data-motion="reduced"] .speak-ring { box-shadow: inset 0 0 0 2px rgb(var(--ink-100) / calc(var(--level, 0) * 0.9)); }
+:root[data-motion="off"] .speak-ring { box-shadow: none; }
+:root[data-motion="off"] [data-talking] > .speak-ring { box-shadow: inset 0 0 0 2px rgb(var(--ink-100) / 0.85); }
+@media (prefers-reduced-motion: reduce) {
+  .speak-ring { box-shadow: none !important; }
+  [data-talking] > .speak-ring { box-shadow: inset 0 0 0 2px rgb(var(--ink-100) / 0.85) !important; }
+}
+/* Transcripts (TranscriptLog: the video room's and the copilot's): the top edge fades once there's more above, and a
+   line still being heard ends in a soft caret. */
+.transcript-scroll[data-faded] {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 28px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 28px);
+}
+.transcript-room { scrollbar-color: rgb(var(--ink-600)) transparent; }
+.interim-caret {
+  display: inline-block;
+  width: 2px;
+  height: 0.95em;
+  margin-left: 3px;
+  vertical-align: -0.1em;
+  border-radius: 1px;
+  background: currentColor;
+}
+/* The end of the interview: the summary comes in piece by piece, calmer than a list (90 ms apart); fades at Gentle. */
+.end-moment > * { animation: fade-up var(--dur-page) var(--ease-enter) both; }
+.end-moment > :nth-child(2) { animation-delay: 90ms; }
+.end-moment > :nth-child(3) { animation-delay: 180ms; }
+.end-moment > :nth-child(4) { animation-delay: 270ms; }
+.end-moment > :nth-child(n + 5) { animation-delay: 360ms; }
+:root[data-motion="reduced"] .end-moment > * {
+  animation-name: orbit-fade !important;
+  animation-duration: var(--dur-panel) !important;
+}
+
 /* Dropzone corner brackets: they draw in toward the middle while a file is dragged over. */
 .drop-bracket { transition: transform var(--dur-panel) var(--ease-enter), opacity var(--dur-quick); }
 [data-dragging] .drop-bracket--tl { transform: translate(6px, 6px); }

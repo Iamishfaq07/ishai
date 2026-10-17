@@ -1,16 +1,7 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import type { Speaker } from "@orbit/types";
-import { useStickyScroll } from "../hooks/useStickyScroll";
-import { scriptLang } from "../live/languages";
 import type { TurnView } from "../live/reducer";
-import { cx, focusRing } from "./cx";
-
-const SPEAKER_LABEL: Record<Speaker, string> = {
-  interviewer: "Interviewer",
-  candidate: "You",
-  other: "Other",
-  unknown: "Speaker",
-};
+import { TranscriptLog, type TranscriptLine } from "./TranscriptLog";
 
 export interface TranscriptViewProps {
   turns: TurnView[];
@@ -18,74 +9,15 @@ export interface TranscriptViewProps {
   onCorrectSpeaker?: (turnId: string, speaker: Speaker) => void;
 }
 
-/** Memoized: it only changes when the turns do, not on every other live update (an answer streaming in). */
+/**
+ * The live copilot's transcript (its Transcript tab): the conversation as it's heard, following the newest line while
+ * you're at the bottom and staying put while you read back (TranscriptLog). Memoized: it only changes when the turns
+ * do, not on every other live update (an answer streaming in).
+ */
 export const TranscriptView = memo(function TranscriptView({ turns, onCorrectSpeaker }: TranscriptViewProps) {
-  const last = turns[turns.length - 1];
-  const { ref, atBottom, jumpToLatest, onScroll } = useStickyScroll<HTMLDivElement>(
-    `${turns.length}:${last?.text.length ?? 0}`,
+  const lines = useMemo<TranscriptLine[]>(
+    () => turns.map((t) => ({ id: t.turn_id, speaker: t.speaker, text: t.text, final: t.final, at: t.start_ms != null ? t.start_ms / 1000 : null })),
+    [turns],
   );
-
-  if (turns.length === 0) {
-    return <p className="px-4 py-6 text-center text-sm text-zinc-500">The transcript appears here as people speak.</p>;
-  }
-
-  return (
-    <div className="relative min-h-0 flex-1">
-      <div
-        ref={ref}
-        onScroll={onScroll}
-        className="h-full overflow-y-auto px-4 py-3"
-        role="log"
-        aria-label="Live transcript"
-        tabIndex={0}
-      >
-        <ol className="space-y-2.5">
-          {turns.map((t) => (
-            <li key={t.turn_id} className="group text-sm">
-              <div className="flex items-center gap-2">
-                <span
-                  className={cx(
-                    "text-xs font-semibold",
-                    t.speaker === "candidate" ? "text-emerald-600 dark:text-emerald-400" : "text-indigo-600 dark:text-indigo-300",
-                  )}
-                >
-                  {SPEAKER_LABEL[t.speaker]}
-                </span>
-                {onCorrectSpeaker && t.final && (
-                  <button
-                    type="button"
-                    onClick={() => onCorrectSpeaker(t.turn_id, t.speaker === "candidate" ? "interviewer" : "candidate")}
-                    // Where there's hover, only on the line under the pointer (or when tabbed to), so a long transcript
-                    // doesn't repeat "swap" on every line; on touch screens it stays visible.
-                    className={cx(
-                      "text-xs text-zinc-400 hover:text-zinc-700 group-hover:opacity-100 focus-visible:opacity-100 dark:hover:text-zinc-200 [@media(hover:hover)]:opacity-0",
-                      focusRing,
-                    )}
-                    title="Wrong speaker? Swap it"
-                  >
-                    swap
-                  </button>
-                )}
-              </div>
-              <p lang={scriptLang(t.text)} className={cx("leading-snug", t.final ? "text-zinc-800 dark:text-zinc-200" : "text-zinc-500 italic")}>
-                {t.text}
-              </p>
-            </li>
-          ))}
-        </ol>
-      </div>
-      {!atBottom && (
-        <button
-          type="button"
-          onClick={jumpToLatest}
-          className={cx(
-            "absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-zinc-900/90 px-3 py-1 text-xs text-white shadow dark:bg-white/90 dark:text-zinc-900",
-            focusRing,
-          )}
-        >
-          Jump to latest
-        </button>
-      )}
-    </div>
-  );
+  return <TranscriptLog lines={lines} tone="panel" {...(onCorrectSpeaker ? { onCorrectSpeaker } : {})} />;
 });

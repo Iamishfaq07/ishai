@@ -1,10 +1,14 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
+import { useMicActivity } from "../hooks/useAudioLevel";
+import { useMediaQuery } from "../hooks/useMediaQuery";
+import { useMotion } from "../hooks/useMotion";
 import {
   Captions,
   CaptionsOff,
   Check,
   Mic,
   MicOff,
+  PanelRightOpen,
   PhoneOff,
   RotateCcw,
   ScanFace,
@@ -13,16 +17,25 @@ import {
   Volume2,
   VolumeX,
 } from "../icons";
-import type { LiveViewState } from "../live/reducer";
+import { formatHotkey, type HotkeyMap } from "../live/hotkeys";
+import type { LiveViewState, TurnView } from "../live/reducer";
 import type { InterviewerVoice } from "../live/useInterviewerVoice";
 import type { LiveActions } from "../live/useLiveSession";
+import type { VoiceActivity } from "../live/voiceActivity";
+import { safeLocal } from "../storage";
 import { cx, focusRing } from "./cx";
+import { Tooltip } from "./Menu";
 import type { CameraCoach } from "./MockPanel";
+import type { TranscriptLine } from "./TranscriptLog";
+import { Button, Kbd } from "./ui";
+import { JoiningArt, WrapUpArt } from "./VideoRoomArt";
+import { VideoRoomTranscript } from "./VideoRoomTranscript";
+import { VoiceVisualizer, type VoiceMood } from "./VoiceVisualizer";
 
 /** The AI interviewer's name in the video room (the server's greeting says the same: live/mock_interviewer.py). */
 export const INTERVIEWER_NAME = "Saba";
 
-type Mood = "joining" | "speaking" | "listening" | "hearing" | "thinking" | "paused";
+type Mood = VoiceMood;
 
 const MOOD_LABEL: Record<Mood, string> = {
   joining: "joining the call…",
@@ -33,103 +46,66 @@ const MOOD_LABEL: Record<Mood, string> = {
   paused: "your mic is paused",
 };
 
+/** What a screen reader hears when the mood changes. Your own talking isn't announced: it would talk over you. */
+const MOOD_ANNOUNCED: Record<Mood, string> = {
+  joining: `${INTERVIEWER_NAME} is joining the call`,
+  speaking: `${INTERVIEWER_NAME} is speaking`,
+  listening: `${INTERVIEWER_NAME} is listening`,
+  hearing: `${INTERVIEWER_NAME} is listening`,
+  thinking: `${INTERVIEWER_NAME} is thinking`,
+  paused: "Your mic is paused",
+};
+
+/** The transcript beside the call on wide screens: open or not, kept on this device. */
+const TRANSCRIPT_KEY = "orbit.videoTranscript";
+/** The join moment lasts at least this long, so it reads as a moment and not a flicker. */
+const INTRO_MS = 900;
+
 function clock(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-/**
- * Saba's presence on the call: a soft living orb (no fake human face). It breathes while she listens, swells with
- * rings and a voice wave while she speaks, and turns slowly while she thinks.
- */
-function SabaOrb({ mood, size = "lg" }: { mood: Mood; size?: "lg" | "sm" }) {
-  const speaking = mood === "speaking";
-  const thinking = mood === "thinking" || mood === "joining";
-  return (
-    <div
-      className={cx("relative flex items-center justify-center", size === "lg" ? "h-44 w-44 sm:h-56 sm:w-56" : "h-24 w-24")}
-      aria-hidden="true"
-    >
-      {speaking && (
-        <>
-          <span className="absolute inset-4 rounded-full border border-fuchsia-300/40 motion-safe:animate-pulse-ring" />
-          <span className="absolute inset-4 rounded-full border border-indigo-300/40 motion-safe:animate-pulse-ring [animation-delay:600ms]" />
-        </>
-      )}
-      <span
-        className={cx(
-          "absolute inset-6 rounded-full bg-[conic-gradient(from_0deg,#818cf8,#c084fc,#f472b6,#38bdf8,#818cf8)] opacity-70 blur-2xl",
-          thinking ? "motion-safe:animate-orbit-fast" : "motion-safe:animate-orbit",
-        )}
-      />
-      <span
-        className={cx(
-          "absolute inset-8 overflow-hidden rounded-full bg-[radial-gradient(circle_at_30%_25%,#e0e7ff_0%,#a78bfa_28%,#6366f1_55%,#1e1b4b_100%)] shadow-[0_0_80px_-12px_rgba(167,139,250,0.9),inset_0_-12px_30px_rgba(15,10,60,0.6)] transition-transform duration-500 ease-out",
-          speaking ? "scale-110" : mood === "listening" || mood === "hearing" ? "motion-safe:animate-[float_4s_ease-in-out_infinite]" : "scale-100",
-        )}
-      >
-        <span className="absolute -left-1/4 top-1/4 h-1/2 w-[150%] rotate-12 bg-white/10 blur-md" />
-      </span>
-      {speaking && (
-        <span className="absolute -bottom-1 flex h-6 items-end gap-1">
-          {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-            <span
-              key={i}
-              className="w-1 origin-bottom rounded-full bg-white/90 motion-safe:animate-wave"
-              style={{ height: `${10 + ((i * 5) % 14)}px`, animationDelay: `${(i % 4) * 110}ms` }}
-            />
-          ))}
-        </span>
-      )}
-    </div>
-  );
+/** Keeps something on screen for a moment after it goes, so it can fade out instead of vanishing. */
+function useLeaving<T>(value: T | null, ms = 160): { shown: T | null; leaving: boolean } {
+  const [kept, setKept] = useState<T | null>(value);
+  useEffect(() => {
+    if (value !== null) {
+      setKept(value);
+      return;
+    }
+    const t = window.setTimeout(() => setKept(null), ms);
+    return () => window.clearTimeout(t);
+  }, [value, ms]);
+  return { shown: value ?? kept, leaving: value === null && kept !== null };
 }
 
-/** A small live meter of your own voice (the mic's analyser), drawn without re-rendering React. */
-function useMicLevel(analyser: AnalyserNode | undefined, el: React.RefObject<HTMLElement | null>) {
-  useEffect(() => {
-    if (!analyser || !el.current) return;
-    const node = el.current;
-    const data = new Uint8Array(analyser.fftSize);
-    let raf = 0;
-    let last = 0;
-    const draw = (t: number) => {
-      raf = requestAnimationFrame(draw);
-      if (t - last < 66) return; // ~15 a second is plenty for a meter
-      last = t;
-      analyser.getByteTimeDomainData(data);
-      let peak = 0;
-      for (let i = 0; i < data.length; i += 4) peak = Math.max(peak, Math.abs(data[i]! - 128));
-      node.style.setProperty("--level", String(Math.min(1, peak / 48)));
-    };
-    raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
-  }, [analyser, el]);
-}
+type CoachState = "starting" | "on" | "failed";
+const COACH_LABEL: Record<CoachState, string> = { starting: "Coach starting…", on: "Coach on", failed: "Coach couldn't start" };
 
 /** Your own camera, mirrored, on this device only: never recorded or sent. The camera coach (when on) measures it. */
 function SelfTile({
   on,
   coach,
   coaching,
-  analyser,
+  onCoachFailed,
   micOn,
-  speaking,
+  levelRef,
   className,
 }: {
   on: boolean;
   coach?: CameraCoach;
   coaching: boolean;
-  analyser?: AnalyserNode;
+  onCoachFailed: () => void;
   micOn: boolean;
-  speaking: boolean;
+  /** Where the room's mic follower writes your voice's --level (the speaking ring, the chip's meter). */
+  levelRef: RefObject<HTMLDivElement | null>;
   className?: string;
 }) {
   const video = useRef<HTMLVideoElement | null>(null);
-  const tile = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
-  useMicLevel(micOn ? analyser : undefined, tile);
+  const [coachState, setCoachState] = useState<CoachState | null>(null);
   useEffect(() => {
     if (!on) return;
     let stream: MediaStream | null = null;
@@ -150,28 +126,43 @@ function SelfTile({
     };
   }, [on]);
   useEffect(() => {
-    if (!on || !coaching || !coach || !video.current) return;
+    if (!on || !coaching || !coach || !video.current) {
+      setCoachState((s) => (s === "failed" ? s : null));
+      return;
+    }
     let stop: (() => void) | null = null;
     let cancelled = false;
     const el = video.current;
+    setCoachState("starting");
     void coach.start(el).then(
-      (s) => (cancelled ? s() : (stop = s)),
-      () => undefined,
+      (s) => {
+        if (cancelled) return s();
+        stop = s;
+        setCoachState("on");
+      },
+      () => {
+        if (cancelled) return;
+        setCoachState("failed");
+        onCoachFailed();
+      },
     );
     return () => {
       cancelled = true;
       stop?.();
     };
-  }, [on, coaching, coach]);
+  }, [on, coaching, coach, onCoachFailed]);
+  // "Couldn't start" says so for a few seconds, then goes.
+  useEffect(() => {
+    if (coachState !== "failed") return;
+    const t = window.setTimeout(() => setCoachState(null), 6000);
+    return () => window.clearTimeout(t);
+  }, [coachState]);
+  const chip = useLeaving(coachState);
   return (
     <div
-      ref={tile}
+      ref={levelRef}
       style={{ "--level": "0" } as React.CSSProperties}
-      className={cx(
-        "relative overflow-hidden rounded-3xl bg-zinc-900 ring-1 ring-white/10 transition-shadow duration-200",
-        speaking && micOn && "shadow-[0_0_0_calc(2px+var(--level)*4px)_rgba(52,211,153,0.75)]",
-        className,
-      )}
+      className={cx("relative overflow-hidden rounded-3xl bg-zinc-900 ring-1 ring-white/10", className)}
     >
       {on && !error ? (
         <>
@@ -182,21 +173,38 @@ function SelfTile({
             playsInline
             onLoadedData={() => setReady(true)}
             aria-label="Your camera (only on this device, not recorded)"
-            className={cx("h-full w-full -scale-x-100 object-cover transition-opacity duration-500", ready ? "opacity-100" : "opacity-0")}
+            className={cx("h-full w-full -scale-x-100 object-cover transition-opacity duration-page", ready ? "opacity-100" : "opacity-0")}
           />
-          {!ready && <div className="absolute inset-0 animate-shimmer bg-[linear-gradient(110deg,#18181b_30%,#27272a_50%,#18181b_70%)] bg-[length:200%_100%]" />}
+          {!ready && <div className="absolute inset-0 animate-shimmer bg-[linear-gradient(110deg,rgb(var(--ink-900))_30%,rgb(var(--ink-800))_50%,rgb(var(--ink-900))_70%)] bg-[length:200%_100%]" />}
         </>
       ) : (
         <div className="flex h-full flex-col items-center justify-center gap-2 px-3 text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-700 text-lg font-semibold text-white">You</span>
-          <span className="text-xs text-zinc-400">{error ?? "Camera off"}</span>
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.06] ring-1 ring-inset ring-white/15 sm:h-14 sm:w-14">
+            <VideoOff className="h-5 w-5 text-zinc-300" aria-hidden />
+          </span>
+          <span className="text-xs text-zinc-300">{error ?? "Camera off"}</span>
         </div>
       )}
-      <span className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium text-white backdrop-blur">
+      <span className="speak-ring pointer-events-none absolute inset-0 rounded-3xl" aria-hidden="true" />
+      {chip.shown && (
+        <span
+          key={chip.shown}
+          role="status"
+          className={cx(
+            "absolute left-2 top-2 flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium",
+            chip.shown === "failed" ? "text-amber-200" : "text-white",
+            chip.leaving ? "animate-fade-out" : "animate-scale-in",
+          )}
+        >
+          <ScanFace className={cx("h-3.5 w-3.5 shrink-0", chip.shown === "starting" && "coach-scan")} aria-hidden />
+          <span className="truncate">{COACH_LABEL[chip.shown]}</span>
+        </span>
+      )}
+      <span className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white">
         {micOn ? (
           <span className="flex h-3 items-end gap-[2px]" aria-hidden="true">
             {[0.6, 1, 0.75].map((k, i) => (
-              <span key={i} className="w-[3px] rounded-full bg-emerald-400 transition-[height] duration-75" style={{ height: `calc(3px + var(--level) * ${k * 9}px)` }} />
+              <span key={i} className="level-bar w-[3px] rounded-full bg-zinc-100" style={{ height: `calc(3px + var(--level) * ${k * 9}px)` }} />
             ))}
           </span>
         ) : (
@@ -208,25 +216,52 @@ function SelfTile({
   );
 }
 
-function RoundButton({
+const CALL_TONE = {
+  // A device that's on, or a plain action.
+  default: "bg-white/[0.08] text-zinc-100 ring-1 ring-inset ring-white/10 hover:bg-white/[0.15]",
+  // Something you turned off (mic, camera, Saba's voice): crossed out and toned, so it reads at a glance.
+  off: "bg-rose-500/[0.18] text-rose-100 ring-1 ring-inset ring-rose-400/40 hover:bg-rose-500/[0.26]",
+  // Something you turned on (the camera coach).
+  active: "bg-indigo-500/25 text-indigo-50 ring-1 ring-inset ring-indigo-300/40 hover:bg-indigo-500/35",
+  danger: "bg-rose-600 text-white ring-1 ring-inset ring-rose-400/40 hover:bg-rose-500",
+} as const;
+
+/**
+ * A call control: a round icon button (40 px on a phone, then 48 and 52), named by its label, with a tooltip that
+ * adds its keyboard shortcut where there is one. `wide` turns it into a pill with that text from 440 px up (End).
+ */
+function CallButton({
   label,
+  shortcut,
   onClick,
-  active,
-  danger,
-  disabled,
+  tone = "default",
   pressed,
+  disabled,
+  wide,
   children,
 }: {
   label: string;
+  shortcut?: string | undefined;
   onClick: () => void;
-  active?: boolean;
-  danger?: boolean;
-  disabled?: boolean;
+  tone?: keyof typeof CALL_TONE;
   pressed?: boolean;
+  disabled?: boolean;
+  wide?: string;
   children: ReactNode;
 }) {
   return (
-    <span className="group relative flex flex-col items-center">
+    <Tooltip
+      content={
+        shortcut ? (
+          <span className="flex items-center gap-2">
+            {label}
+            <Kbd>{shortcut}</Kbd>
+          </span>
+        ) : (
+          label
+        )
+      }
+    >
       <button
         type="button"
         onClick={onClick}
@@ -234,33 +269,143 @@ function RoundButton({
         aria-label={label}
         {...(pressed !== undefined ? { "aria-pressed": pressed } : {})}
         className={cx(
-          "flex h-10 w-10 items-center justify-center rounded-full transition-all duration-150 active:scale-95 disabled:opacity-35 min-[440px]:h-12 min-[440px]:w-12 sm:h-14 sm:w-14",
-          danger
-            ? "bg-rose-600 text-white hover:bg-rose-500"
-            : active
-              ? "bg-white text-zinc-900 hover:bg-zinc-200"
-              : "bg-white/10 text-white hover:bg-white/20",
+          "flex h-10 min-w-10 items-center justify-center gap-2 rounded-full transition-[background-color,color,box-shadow,transform] duration-quick ease-standard motion-ok:active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-40 min-[440px]:h-12 min-[440px]:min-w-12 sm:h-[52px] sm:min-w-[52px]",
+          wide && "min-[440px]:px-5",
+          CALL_TONE[tone],
           focusRing,
         )}
       >
         {children}
+        {wide && <span className="hidden text-sm font-semibold min-[440px]:inline">{wide}</span>}
       </button>
-      <span className="pointer-events-none absolute -top-9 whitespace-nowrap rounded-md bg-zinc-800 px-2 py-1 text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-        {label}
-      </span>
+    </Tooltip>
+  );
+}
+
+/** "Live" with a calm pulse while the call runs (a fade at Gentle, still at Off); "Ended" after. */
+function LiveBadge({ done }: { done: boolean }) {
+  return (
+    <span className={cx("flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold", done ? "bg-white/[0.06] text-zinc-300" : "bg-rose-500/15 text-rose-200")}>
+      <span className={cx("relative h-1.5 w-1.5 rounded-full", done ? "bg-zinc-400" : "live-dot bg-rose-400")} aria-hidden="true" />
+      {done ? "Ended" : "Live"}
     </span>
   );
 }
 
 /**
- * The AI video interview: a full-screen video call with Saba, the AI interviewer. Her tile (with captions of what
- * she asks) and your camera side by side, call controls in a dock. Under it, the same live mock interview: an
- * opening introduction, questions from the job description, the resume or the chosen topic, follow-ups on what you
- * said, then a graded report. Nothing is recorded: the camera stays on this device, and only the transcript (if you
- * keep transcripts) and the review are saved.
+ * Where the round is: one segment per question, each filling as its question arrives (it grows in at Full, fades in at
+ * Gentle), and the number rolling over. Follow-ups don't add a segment: they're part of their question.
+ */
+function QuestionProgress({ index, total, followUp, className }: { index: number; total: number; followUp: boolean; className?: string }) {
+  const segments = total > 0 && total <= 12;
+  return (
+    <span className={cx("flex items-center gap-2 text-xs text-zinc-300", className)}>
+      <span className="tabular-nums">
+        Question{" "}
+        <span key={index} className="inline-block animate-fade-up">
+          {index}
+        </span>{" "}
+        of {total}
+        {followUp ? " · follow-up" : ""}
+      </span>
+      <span className="flex items-center gap-1" aria-hidden="true">
+        {segments ? (
+          Array.from({ length: total }, (_, i) => (
+            <span key={i} className="h-1 w-5 overflow-hidden rounded-full bg-white/10">
+              <span className={cx("progress-fill block h-full rounded-full bg-indigo-400", i < index ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0")} />
+            </span>
+          ))
+        ) : (
+          <span className="h-1 w-24 overflow-hidden rounded-full bg-white/10">
+            <span className="progress-fill block h-full rounded-full bg-indigo-400" style={{ transform: `scaleX(${Math.min(1, index / Math.max(1, total))})` }} />
+          </span>
+        )}
+      </span>
+    </span>
+  );
+}
+
+type Token = { text: string; start: number; end: number; word: number } | { space: string };
+
+/** The question split into words with their offsets (and the spaces between, kept as they are). */
+function tokenize(text: string): Token[] {
+  const out: Token[] = [];
+  const re = /(\s+)|(\S+)/g;
+  let m: RegExpExecArray | null;
+  let word = 0;
+  while ((m = re.exec(text))) {
+    if (m[1]) out.push({ space: m[1] });
+    else out.push({ text: m[2]!, start: m.index, end: m.index + m[2]!.length, word: word++ });
+  }
+  return out;
+}
+
+/**
+ * What Saba asks, as captions. A new question's words come in one after another (at Full; the card fades in at
+ * Gentle); while the device's voice reports word timing, the word she's saying is marked, with what she's said in white
+ * and what's still to come in light grey. Without word timing (the natural voice) the whole question is white.
+ */
+function QuestionCaption({ text, activity, dimmed, header }: { text: string; activity: VoiceActivity; dimmed: boolean; header: ReactNode }) {
+  const tokens = useMemo(() => tokenize(text), [text]);
+  const subscribe = useCallback((listener: () => void) => activity.subscribe(listener), [activity]);
+  const current = useSyncExternalStore(subscribe, () => activity.word(), () => null);
+  return (
+    <div className="animate-rise">
+      <div className={cx("rounded-2xl bg-black/50 px-4 py-3 transition-opacity duration-page sm:px-5 sm:py-4", dimmed && "opacity-60")}>
+        <p className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-indigo-200">{header}</p>
+        <p className={cx("max-h-48 overflow-y-auto font-medium leading-relaxed text-white", text.length > 220 ? "text-sm sm:text-base" : "text-base sm:text-lg")}>
+          {tokens.map((t, i) =>
+            "space" in t ? (
+              t.space
+            ) : (
+              <span
+                key={i}
+                style={{ "--i": Math.min(t.word, 40) } as React.CSSProperties}
+                className={cx(
+                  "caption-word",
+                  current && (t.end <= current.start ? "text-white" : t.start >= current.end ? "text-zinc-300" : "caption-now"),
+                )}
+              >
+                {t.text}
+              </span>
+            ),
+          )}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The conversation so far, for the transcript: the server's turns, Saba's questions among them (it records each one
+ * as the interviewer's line), without the interviewer's voice picked up by the mic. Times are when each line first
+ * appeared here, on the interview's own clock.
+ */
+function useRoomTranscript(live: LiveViewState): TranscriptLine[] {
+  const firstSeen = useRef(new Map<string, number>());
+  const started = live.startedAt;
+  return useMemo(() => {
+    const out: TranscriptLine[] = [];
+    for (const id of live.turnOrder) {
+      const t: TurnView | undefined = live.turns[id];
+      if (!t || t.echo || !t.text.trim()) continue;
+      if (!firstSeen.current.has(id)) firstSeen.current.set(id, started ? Math.max(0, (Date.now() - started) / 1000) : 0);
+      out.push({ id, speaker: t.speaker, text: t.text, final: t.final, at: firstSeen.current.get(id) ?? null });
+    }
+    return out;
+  }, [live.turnOrder, live.turns, started]);
+}
+
+/**
+ * The AI video interview: a full-screen video call with Saba, the AI interviewer. Her tile (her voice, drawn as it
+ * rises and falls, and captions of what she asks), your camera, the transcript, and call controls in a dock. Under it,
+ * the same live mock interview: an opening introduction, questions from the job description, the resume or the chosen
+ * topic, follow-ups on what you said, then a graded report. Nothing is recorded: the camera stays on this device, and
+ * only the transcript (if you keep transcripts) and the review are saved.
  */
 export function VideoInterviewRoom({
   title,
+  subtitle,
   live,
   actions,
   voice,
@@ -271,11 +416,14 @@ export function VideoInterviewRoom({
   candidateText,
   cameraCoach,
   analyser,
+  hotkeys,
   banners,
   onEnd,
   onViewReport,
 }: {
   title?: string;
+  /** Under the title: the role and company it's for. */
+  subtitle?: string;
   live: LiveViewState;
   actions: LiveActions;
   voice: InterviewerVoice;
@@ -286,8 +434,10 @@ export function VideoInterviewRoom({
   /** What you're saying, while it's being transcribed. */
   candidateText: string;
   cameraCoach?: CameraCoach;
-  /** The mic's analyser: your voice meter. */
+  /** The mic's analyser: your voice meter, and Saba's bars while she hears you. */
   analyser?: AnalyserNode;
+  /** The live panel's shortcuts (shown in the controls' tooltips). */
+  hotkeys?: HotkeyMap;
   banners?: ReactNode;
   onEnd: () => void;
   onViewReport?: () => void;
@@ -299,15 +449,33 @@ export function VideoInterviewRoom({
   const [now, setNow] = useState(() => Date.now());
   // "I'm done answering" was pressed: Saba is writing the next question until it arrives.
   const [waitingAfter, setWaitingAfter] = useState<string | null>(null);
+  const [introDone, setIntroDone] = useState(false);
+  const wide = useMediaQuery("(min-width: 1024px)");
+  const [sideOpen, setSideOpen] = useState(() => safeLocal.getItem(TRANSCRIPT_KEY) !== "closed");
+  const [drawerOpen, setDrawerOpen] = useState(false);
   useEffect(() => {
     if (ended) return;
     const t = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(t);
   }, [ended]);
   useEffect(() => setWaitingAfter(null), [q?.questionId]);
+  useEffect(() => {
+    const t = window.setTimeout(() => setIntroDone(true), INTRO_MS);
+    return () => window.clearTimeout(t);
+  }, []);
+  // The shared voice context, asked for as the room opens, so the first tap anywhere unlocks it (mobile Safari).
+  useEffect(() => voice.activity.prepare?.(), [voice.activity]);
 
+  const motion = useMotion();
+  const osReduce = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const short = useMediaQuery("(max-height: 560px)");
+  const still = motion === "off" || osReduce;
   const elapsed = live.startedAt ? (now - live.startedAt) / 1000 : 0;
   const done = ended || live.mockCompleted;
+  const selfTile = useRef<HTMLDivElement | null>(null);
+  // Your voice on the mic: the camera tile's ring, and "listening to you" the moment you speak (the transcript lags).
+  // Not while Saba speaks: the mic hears her through the speakers then.
+  const talking = useMicActivity(analyser, { enabled: !paused && !voice.speaking && !done, levelRef: selfTile, every: still ? 160 : undefined });
   const mood: Mood = !q
     ? "joining"
     : voice.speaking
@@ -316,10 +484,18 @@ export function VideoInterviewRoom({
         ? "thinking"
         : paused
           ? "paused"
-          : candidateText
+          : candidateText || talking
             ? "hearing"
             : "listening";
-  const progress = q && q.total ? Math.min(1, q.index / q.total) : 0;
+  const onCoachFailed = useCallback(() => setCoaching(false), []);
+  const lines = useRoomTranscript(live);
+  const transcriptShown = wide ? sideOpen : drawerOpen;
+  const setSide = (open: boolean) => {
+    setSideOpen(open);
+    safeLocal.setItem(TRANSCRIPT_KEY, open ? "open" : "closed");
+  };
+  const shortcut = (combo: string | undefined) => (combo ? formatHotkey(combo) : undefined);
+  const intro = !introDone || !q;
 
   const finishAnswer = () => {
     if (!q) return;
@@ -329,164 +505,228 @@ export function VideoInterviewRoom({
   };
 
   return (
-    <div className="dark relative flex h-full min-h-0 flex-col overflow-hidden bg-[#07070c] text-zinc-100">
+    <div className="video-room dark relative flex h-full min-h-0 flex-col overflow-hidden bg-zinc-950 text-zinc-100">
       <header className="relative flex shrink-0 items-center gap-3 px-4 py-3 sm:px-6">
-        <span className="flex items-center gap-1.5 rounded-full bg-rose-500/15 px-2.5 py-1 text-[11px] font-semibold text-rose-300">
-          <span className="h-1.5 w-1.5 rounded-full bg-rose-400 motion-safe:animate-pulse" aria-hidden="true" />
-          {done ? "Ended" : "Live"}
-        </span>
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-200">{title || "AI video interview"}</span>
-        {q && !done && (
-          <span className="hidden items-center gap-2 text-xs text-zinc-400 sm:flex">
-            Question {q.index} of {q.total}
-            {q.isFollowUp ? " · follow-up" : ""}
-            <span className="h-1 w-24 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
-              <span className="block h-full rounded-full bg-indigo-400 transition-[width] duration-700" style={{ width: `${progress * 100}%` }} />
-            </span>
-          </span>
-        )}
+        <LiveBadge done={done} />
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-sm font-medium text-zinc-100">{title || "AI video interview"}</h1>
+          {subtitle && <p className="truncate text-xs text-zinc-400">{subtitle}</p>}
+        </div>
+        {q && !done && <QuestionProgress index={q.index} total={q.total} followUp={q.isFollowUp} className="hidden sm:flex" />}
         <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-medium tabular-nums text-zinc-300" aria-label="Time in the interview">
           {clock(elapsed)}
         </span>
+        {wide && !done && !sideOpen && (
+          <Tooltip content="Show the transcript">
+            <button
+              type="button"
+              onClick={() => setSide(true)}
+              aria-label="Show the transcript"
+              aria-expanded={false}
+              className={cx(
+                "flex h-8 items-center gap-1.5 rounded-full bg-white/[0.06] px-3 text-xs font-medium text-zinc-200 transition-[background-color,transform] duration-quick hover:bg-white/[0.12] motion-ok:active:scale-[0.96]",
+                focusRing,
+              )}
+            >
+              <PanelRightOpen className="h-4 w-4" aria-hidden />
+              Transcript
+            </button>
+          </Tooltip>
+        )}
+        {/* Phones: the round's progress as a hairline under the header (the caption card says which question). */}
+        {q && !done && (
+          <span className="absolute inset-x-4 bottom-0 h-0.5 overflow-hidden rounded-full bg-white/[0.06] sm:hidden" aria-hidden="true">
+            <span className="progress-fill block h-full rounded-full bg-indigo-400" style={{ transform: `scaleX(${Math.min(1, q.index / Math.max(1, q.total))})` }} />
+          </span>
+        )}
       </header>
       <div className="relative">{banners}</div>
 
       {done ? (
-        <div className="relative flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center motion-safe:animate-fade-up">
-          <SabaOrb mood="listening" />
-          <h2 className="mt-2 font-display text-2xl font-semibold sm:text-3xl">Thanks, that's the end of the interview</h2>
-          {live.mockSummary && live.mockSummary.answered !== undefined && (
-            <p className="text-sm text-zinc-300">
-              {live.mockSummary.answered} of {live.mockSummary.questions} answered
-              {live.mockSummary.follow_ups ? ` · ${live.mockSummary.follow_ups} follow-up${live.mockSummary.follow_ups === 1 ? "" : "s"}` : ""}
-              {elapsed > 0 ? ` · ${clock(elapsed)}` : ""}
+        <div className="end-moment relative flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+          <WrapUpArt className="w-44 sm:w-52" />
+          <h2 className="mt-1 font-display text-2xl font-semibold sm:text-3xl">Thanks, that's the end of the interview</h2>
+          {live.mockSummary && live.mockSummary.answered !== undefined ? (
+            <p className="flex flex-wrap items-center justify-center gap-2 text-sm text-zinc-200">
+              <span className="rounded-full bg-white/[0.06] px-3 py-1 tabular-nums">
+                {live.mockSummary.answered} of {live.mockSummary.questions} answered
+              </span>
+              {live.mockSummary.follow_ups ? (
+                <span className="rounded-full bg-white/[0.06] px-3 py-1 tabular-nums">
+                  {live.mockSummary.follow_ups} follow-up{live.mockSummary.follow_ups === 1 ? "" : "s"}
+                </span>
+              ) : null}
+              {elapsed > 0 ? <span className="rounded-full bg-white/[0.06] px-3 py-1 tabular-nums">{clock(elapsed)}</span> : null}
             </p>
-          )}
-          <p className="max-w-md text-sm text-zinc-400">
+          ) : null}
+          <p className="max-w-md text-sm text-zinc-300">
             {INTERVIEWER_NAME} is writing your review: each answer graded against the job, with a stronger way to say it.
           </p>
-          {onViewReport && (
+          {onViewReport ? (
             <button
               type="button"
               onClick={onViewReport}
-              className={cx("mt-3 rounded-full bg-white px-6 py-3 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-200", focusRing)}
+              className={cx(
+                "mt-3 rounded-full bg-white px-6 py-3 text-sm font-semibold text-zinc-900 transition-[background-color,transform] duration-quick hover:bg-zinc-200 motion-ok:active:scale-[0.96]",
+                focusRing,
+              )}
             >
               View my report
             </button>
-          )}
+          ) : null}
         </div>
       ) : (
-        <main className="relative grid min-h-0 flex-1 gap-3 px-3 pb-2 md:grid-cols-2 sm:px-6">
-          <section
-            aria-label={`${INTERVIEWER_NAME}, AI interviewer`}
-            className={cx(
-              "relative flex min-h-0 flex-col overflow-hidden rounded-3xl bg-[#100f22] ring-1 transition-shadow duration-300",
-              mood === "speaking" ? "ring-2 ring-indigo-400/70" : "ring-white/10",
-            )}
-          >
-            <span className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-xs text-zinc-200 backdrop-blur" role="status">
-              <span
-                className={cx(
-                  "h-1.5 w-1.5 rounded-full",
-                  mood === "speaking" ? "bg-indigo-300" : mood === "hearing" ? "bg-emerald-400" : mood === "paused" ? "bg-amber-400" : "bg-zinc-400",
-                  (mood === "thinking" || mood === "joining") && "motion-safe:animate-pulse",
-                )}
-                aria-hidden="true"
-              />
-              {INTERVIEWER_NAME} · {MOOD_LABEL[mood]}
-            </span>
-            <div className="flex flex-1 items-center justify-center pt-8">
-              <SabaOrb mood={mood} />
-            </div>
-            {captions && q && (
-              <div className="px-3 pb-3 sm:px-5 sm:pb-5" aria-live="polite">
-                <div key={q.questionId} className="rounded-2xl bg-black/45 px-4 py-3 backdrop-blur-md motion-safe:animate-fade-up sm:px-5 sm:py-4">
-                  <p className="mb-1 text-[11px] font-semibold text-indigo-300">{INTERVIEWER_NAME}</p>
-                  <p className={cx("max-h-48 overflow-y-auto font-medium leading-relaxed text-white", q.text.length > 220 ? "text-sm sm:text-base" : "text-base sm:text-lg")}>{q.text}</p>
-                </div>
-              </div>
-            )}
-          </section>
-
-          <div className="pointer-events-none absolute right-5 top-3 z-20 w-28 sm:w-36 md:pointer-events-auto md:static md:w-auto">
-            <div className="pointer-events-auto relative flex h-full flex-col">
-              <SelfTile
-                on={cameraOn}
-                coaching={coaching}
-                micOn={!paused}
-                speaking={Boolean(candidateText)}
-                className="aspect-[3/4] shadow-2xl md:aspect-auto md:h-full md:shadow-none"
-                {...(cameraCoach ? { coach: cameraCoach } : {})}
-                {...(analyser ? { analyser } : {})}
-              />
-              {captions && candidateText && (
-                <p className="absolute inset-x-3 bottom-12 hidden rounded-xl bg-black/50 px-3 py-2 text-sm text-emerald-100 backdrop-blur md:line-clamp-2">
-                  {candidateText}
-                </p>
+        <main className="relative flex min-h-0 flex-1 gap-3 px-3 pb-2 sm:px-6">
+          <div className="relative grid min-h-0 min-w-0 flex-1 gap-3 md:grid-cols-2">
+            <section
+              aria-label={`${INTERVIEWER_NAME}, AI interviewer`}
+              className={cx(
+                "relative flex min-h-0 flex-col overflow-hidden rounded-3xl bg-zinc-900 ring-1 transition-shadow duration-panel",
+                mood === "speaking" ? "ring-indigo-400/50" : "ring-white/10",
               )}
+            >
+              <span aria-hidden="true" data-mood-label="" className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-xs text-zinc-200">
+                <span
+                  className={cx(
+                    "h-1.5 w-1.5 rounded-full transition-colors duration-quick",
+                    mood === "speaking" ? "bg-indigo-300" : mood === "hearing" ? "bg-zinc-100" : mood === "paused" ? "bg-amber-400" : "bg-zinc-400",
+                    (mood === "thinking" || mood === "joining") && "mood-dot-busy",
+                  )}
+                />
+                <span key={mood} className="animate-fade-in">
+                  {INTERVIEWER_NAME} · {MOOD_LABEL[mood]}
+                </span>
+              </span>
+              <span className="sr-only" role="status" aria-live="polite">
+                {MOOD_ANNOUNCED[mood]}
+              </span>
+              <div className="flex flex-1 items-center justify-center pt-8">
+                {intro ? (
+                  <div className="flex flex-col items-center gap-2 px-6 text-center animate-scale-in">
+                    <JoiningArt className="w-40 sm:w-52" />
+                    <p className="text-sm font-medium text-zinc-100">Connecting you with {INTERVIEWER_NAME}…</p>
+                    <p className="text-xs text-zinc-400">Your camera stays on this device.</p>
+                  </div>
+                ) : (
+                  <VoiceVisualizer
+                    mood={mood}
+                    voice={voice.activity}
+                    mic={analyser}
+                    size={short || (!wide && drawerOpen) ? "sm" : "lg"}
+                    className="animate-scale-in"
+                  />
+                )}
+              </div>
+              {captions && q && !(!wide && drawerOpen) && (
+                <div className="px-3 pb-3 sm:px-5 sm:pb-5" aria-live="polite">
+                  <QuestionCaption
+                    key={q.questionId}
+                    text={q.text}
+                    activity={voice.activity}
+                    dimmed={mood === "thinking"}
+                    header={
+                      <>
+                        {INTERVIEWER_NAME}
+                        <span className="font-normal text-zinc-300 sm:hidden">
+                          · Question {q.index} of {q.total}
+                          {q.isFollowUp ? " · follow-up" : ""}
+                        </span>
+                      </>
+                    }
+                  />
+                </div>
+              )}
+            </section>
+
+            <div className="pointer-events-none absolute right-2 top-2 z-20 w-28 sm:w-36 md:pointer-events-auto md:static md:w-auto">
+              <div className="pointer-events-auto relative flex h-full flex-col">
+                <SelfTile
+                  on={cameraOn}
+                  coaching={coaching}
+                  onCoachFailed={onCoachFailed}
+                  micOn={!paused}
+                  levelRef={selfTile}
+                  className="aspect-[3/4] shadow-dialog md:aspect-auto md:h-full md:shadow-none"
+                  {...(cameraCoach ? { coach: cameraCoach } : {})}
+                />
+                {captions && candidateText && !transcriptShown && (
+                  <p className="absolute inset-x-3 bottom-12 hidden rounded-xl bg-black/60 px-3 py-2 text-sm text-zinc-100 animate-fade-in md:line-clamp-2">
+                    {candidateText}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
+          {wide && sideOpen && (
+            <VideoRoomTranscript
+              lines={lines}
+              interviewer={INTERVIEWER_NAME}
+              variant="side"
+              open
+              onOpenChange={setSide}
+              className="w-[22rem] shrink-0 xl:w-[24rem]"
+            />
+          )}
         </main>
+      )}
+
+      {!done && !wide && (
+        <div className="relative shrink-0 px-3 pb-1 sm:px-6">
+          <VideoRoomTranscript lines={lines} interviewer={INTERVIEWER_NAME} variant="drawer" open={drawerOpen} onOpenChange={setDrawerOpen} />
+        </div>
       )}
 
       {!done && (
         <footer className="relative flex shrink-0 flex-col items-center gap-2 px-3 pb-3 pt-2 sm:pb-4">
           {q && (
-            <button
-              type="button"
-              onClick={finishAnswer}
-              disabled={mood === "thinking"}
-              className={cx(
-                "flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 motion-ok:active:scale-[0.98] disabled:opacity-60",
-                focusRing,
-              )}
-            >
-              <Check className="h-4 w-4" aria-hidden />
-              {mood === "thinking" ? `${INTERVIEWER_NAME} is thinking…` : "I'm done answering"}
-            </button>
+            <Tooltip content={hotkeys?.answer ? <span className="flex items-center gap-2">I'm done answering<Kbd>{formatHotkey(hotkeys.answer)}</Kbd></span> : "I'm done answering"}>
+              <Button onClick={finishAnswer} disabled={mood === "thinking"} className="!rounded-full px-5">
+                <Check className="h-4 w-4" aria-hidden />
+                {mood === "thinking" ? `${INTERVIEWER_NAME} is thinking…` : "I'm done answering"}
+              </Button>
+            </Tooltip>
           )}
-          {/* Six round buttons (seven with the camera coach): a size smaller below 440 px, so End stays on screen on a 360 px
-              phone. */}
-          <div className="flex items-center gap-1 rounded-full bg-white/[0.04] p-1.5 ring-1 ring-white/10 backdrop-blur min-[440px]:gap-2 min-[440px]:p-2 sm:gap-3">
-            <RoundButton label={paused ? "Unmute mic" : "Mute mic"} onClick={actions.togglePause} active={paused} pressed={paused}>
+          {/* Six round buttons (seven with the camera coach): 40 px below 440 px, so End stays on screen on a 360 px phone;
+              End is a pill with its name from 440 px up. */}
+          <div className="flex items-center gap-1 rounded-full bg-white/[0.04] p-1.5 ring-1 ring-white/10 min-[440px]:gap-2 min-[440px]:p-2 sm:gap-2.5">
+            <CallButton label={paused ? "Unmute mic" : "Mute mic"} shortcut={shortcut(hotkeys?.toggleListening)} onClick={actions.togglePause} tone={paused ? "off" : "default"} pressed={paused}>
               {paused ? <MicOff className="h-5 w-5" aria-hidden /> : <Mic className="h-5 w-5" aria-hidden />}
-            </RoundButton>
-            <RoundButton label={cameraOn ? "Turn camera off" : "Turn camera on"} onClick={() => setCameraOn(!cameraOn)} active={!cameraOn} pressed={!cameraOn}>
+            </CallButton>
+            <CallButton label={cameraOn ? "Turn camera off" : "Turn camera on"} onClick={() => setCameraOn(!cameraOn)} tone={cameraOn ? "default" : "off"} pressed={!cameraOn}>
               {cameraOn ? <Video className="h-5 w-5" aria-hidden /> : <VideoOff className="h-5 w-5" aria-hidden />}
-            </RoundButton>
-            <RoundButton label={captions ? "Hide captions" : "Show captions"} onClick={() => setCaptions(!captions)} pressed={captions}>
+            </CallButton>
+            <CallButton label={captions ? "Hide captions" : "Show captions"} onClick={() => setCaptions(!captions)} pressed={captions}>
               {captions ? <Captions className="h-5 w-5" aria-hidden /> : <CaptionsOff className="h-5 w-5" aria-hidden />}
-            </RoundButton>
-            <RoundButton
+            </CallButton>
+            <CallButton
               label={muted ? `Unmute ${INTERVIEWER_NAME}` : `Mute ${INTERVIEWER_NAME}`}
               onClick={() => {
                 if (!muted) voice.stop();
                 onMutedChange(!muted);
               }}
-              active={muted}
+              tone={muted ? "off" : "default"}
               pressed={muted}
             >
               {muted ? <VolumeX className="h-5 w-5" aria-hidden /> : <Volume2 className="h-5 w-5" aria-hidden />}
-            </RoundButton>
+            </CallButton>
             {q && (
-              <RoundButton label={voice.speaking ? "Skip" : "Repeat the question"} onClick={voice.speaking ? voice.stop : voice.repeat} disabled={!voice.supported || muted}>
+              <CallButton label={voice.speaking ? "Skip" : "Repeat the question"} onClick={voice.speaking ? voice.stop : voice.repeat} disabled={!voice.supported || muted}>
                 <RotateCcw className="h-5 w-5" aria-hidden />
-              </RoundButton>
+              </CallButton>
             )}
             {cameraCoach && (
-              <RoundButton label={coaching ? "Camera coach on (this device)" : "Camera coach (this device)"} onClick={() => setCoaching(!coaching)} active={coaching} pressed={coaching}>
+              <CallButton label={coaching ? "Camera coach on (this device)" : "Camera coach (this device)"} onClick={() => setCoaching(!coaching)} tone={coaching ? "active" : "default"} pressed={coaching}>
                 <ScanFace className="h-5 w-5" aria-hidden />
-              </RoundButton>
+              </CallButton>
             )}
             <span className="mx-0.5 h-8 w-px bg-white/10" aria-hidden="true" />
-            <RoundButton label="End interview" onClick={onEnd} danger>
+            <CallButton label="End interview" onClick={onEnd} tone="danger" wide="End">
               <PhoneOff className="h-5 w-5" aria-hidden />
-            </RoundButton>
+            </CallButton>
           </div>
-          <p className="text-center text-[11px] text-zinc-500">Your camera is never recorded or sent. Practice only: use it where AI practice is allowed.</p>
+          <p className="text-center text-[11px] text-zinc-400">Your camera is never recorded or sent. Practice only: use it where AI practice is allowed.</p>
         </footer>
       )}
-
     </div>
   );
 }

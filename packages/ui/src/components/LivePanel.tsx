@@ -134,6 +134,8 @@ export interface LivePanelProps {
   loadWalkthrough?: (answerId: string) => Promise<NonNullable<import("@orbit/types").LiveAnswer["walkthrough"]>>;
   hotkeys?: HotkeyMap;
   title?: string;
+  /** Under the title in the video room: the role and company it's for. */
+  subtitle?: string;
   /** Desktop: mark the header as the window drag handle. */
   dragRegion?: boolean;
   /** Extra header controls (e.g. desktop "always on top" toggle). */
@@ -377,6 +379,8 @@ export function LivePanel(props: LivePanelProps) {
     return (
       <VideoInterviewRoom
         {...(props.title ? { title: props.title } : {})}
+        {...(props.subtitle ? { subtitle: props.subtitle } : {})}
+        hotkeys={hotkeys}
         live={live}
         actions={actions}
         voice={voice}
