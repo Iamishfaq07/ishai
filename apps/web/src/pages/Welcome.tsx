@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Globe, MapPin, Orb, OrbitWordmark, buttonClass, cx, focusRing, isIndia, regionExamples } from "@orbit/ui";
+import { ArrowLeft, ArrowRight, Globe, MapPin, OrbitWordmark, WelcomeScene, buttonClass, cx, focusRing, isIndia, regionExamples } from "@orbit/ui";
 import { ProductMark } from "../components/products";
 import { Input } from "../components/ui";
 import { api } from "../lib/api";
@@ -203,7 +203,7 @@ export function WelcomePage() {
         )}
 
         <div key={step} className="animate-fade-up">
-          {step === 0 && <Orb state="breathing" size={64} className="mt-8" />}
+          {step === 0 && <WelcomeScene className="mt-6 w-44" />}
           <h1 ref={heading} tabIndex={-1} className="mt-6 text-balance font-display text-3xl font-semibold leading-tight tracking-tight outline-none sm:text-4xl">
             {titles[step]}
           </h1>

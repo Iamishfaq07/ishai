@@ -42,6 +42,7 @@ import {
   toast,
   useCountUp,
   WorkingState,
+  celebrate,
 } from "@orbit/ui";
 import { Button, EmptyState, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -115,6 +116,13 @@ function ResumeEditor() {
   const [loadError, setLoadError] = useState<{ text: string; missing: boolean } | null>(null);
   const [tab, setTab] = useState<Tab>("content");
   const [report, setReport] = useState<AtsReport | null>(null);
+  // The first time an edit takes the score past 80 on this device: a success moment (celebrate shows it once).
+  const lastScore = useRef<number | null>(null);
+  useEffect(() => {
+    const now = report?.score ?? null;
+    if (now !== null && lastScore.current !== null && lastScore.current < 80 && now >= 80) celebrate("first-ats-80", { message: `Your resume scores ${now}. Ready to apply?` });
+    lastScore.current = now; // null between resumes, so opening another doesn't count as a rise
+  }, [report?.score]);
   // The resume the report scored: a line's writing issues show only while that line still reads the same.
   const [scored, setScored] = useState<ResumeData | null>(null);
   const [save, setSave] = useState<{ state: SaveStatus; error?: string; retry?: boolean }>({

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { JobOfferRecord, OfferInput, OfferMarket } from "@orbit/types";
-import { ArrowRight, BadgeIndianRupee, CosmicEmptyState, Banknote, Plus, Scale, Search, LoadGate, currencyFor, cx, focusRing, isIndia } from "@orbit/ui";
+import { ArrowRight, BadgeIndianRupee, CosmicEmptyState, Banknote, Plus, Scale, Search, LoadGate, celebrate, currencyFor, cx, focusRing, isIndia } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
@@ -41,6 +41,7 @@ export function OffersPage() {
       const made = await api.addOffer(o);
       offers.setData((prev) => [made, ...(prev ?? [])]);
       setAdding(false);
+      if (!list.length) celebrate("first-offer", { message: "Your first offer is in. Open it to see what it's worth and what to ask for." });
     } catch (err) {
       setError(errorText(err));
     } finally {

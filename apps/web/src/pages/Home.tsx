@@ -1,25 +1,32 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { JobTrackerEntry, OrbitSession } from "@orbit/types";
 import {
   ArrowRight,
   AudioLines,
+  CelebrationScene,
   Check,
   ChevronDown,
   ChevronRight,
   Clock,
+  CopilotScene,
   Download,
   HistoryIcon,
   Kbd,
   MOCK_INTERVIEW_ENABLED,
   Monitor,
+  PracticeScene,
+  ResumeScene,
   Skeleton,
   LoadGate,
   Target,
+  TrackerScene,
   X,
   buttonClass,
+  claimMilestone,
   cx,
   focusRing,
+  hasCelebrated,
   safeLocal,
 } from "@orbit/ui";
 import { Card, ErrorNote } from "../components/ui";
@@ -162,6 +169,14 @@ export function HomePage() {
   );
 }
 
+/** Each product, drawn: beside the next step, from xl up. */
+const STEP_ART: Record<ProductId, () => ReactNode> = {
+  interview: () => <CopilotScene />,
+  practice: () => <PracticeScene />,
+  resume: () => <ResumeScene />,
+  jobs: () => <TrackerScene />,
+};
+
 /** The one thing to do now, big, with the two after it as quiet links. */
 function NextStep({ steps, welcomed, askWelcome }: { steps: Step[] | null; welcomed: boolean; askWelcome: boolean }) {
   if (steps === null) {
@@ -199,6 +214,7 @@ function NextStep({ steps, welcomed, askWelcome }: { steps: Step[] | null; welco
               )}
             </div>
           </div>
+          <div className="scene-host hidden w-44 shrink-0 self-center xl:block">{STEP_ART[step.product]()}</div>
         </div>
         {(rest.length > 0 || askWelcome) && (
           <div className="mt-6 border-t border-zinc-200/70 pt-4 dark:border-white/10">
@@ -238,8 +254,12 @@ function NextStep({ steps, welcomed, askWelcome }: { steps: Step[] | null; welco
 }
 
 function AllSet() {
+  // The sparks burst the first time this device sees everything set up; after that they rest.
+  const [first] = useState(() => !hasCelebrated("all-set"));
+  useEffect(() => void claimMilestone("all-set"), []);
   return (
-    <section aria-labelledby="next-step-title" className="glass-panel rounded-3xl p-5 sm:p-8">
+    <section aria-labelledby="next-step-title" className="glass-panel relative rounded-3xl p-5 sm:p-8 xl:pr-56">
+      <CelebrationScene still={!first} className="absolute right-8 top-1/2 hidden w-40 -translate-y-1/2 xl:block" />
       <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">You're set up</p>
       <h2 id="next-step-title" className="mt-1 font-display text-2xl font-semibold tracking-tight">
         Everything's ready for your next interview.

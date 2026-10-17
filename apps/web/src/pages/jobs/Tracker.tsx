@@ -27,6 +27,7 @@ import {
   focusRing,
   CosmicEmptyState,
   roundLabel,
+  celebrate,
 } from "@orbit/ui";
 import { Button, ErrorNote, Field, IconButton, Input, PageHeader, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -157,6 +158,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
     try {
       const saved = await api.updateTrackedJob(entry.id, patch);
       tracker.setData((prev) => prev?.map((e) => (e.id === entry.id ? saved : e)) ?? null);
+      if (patch.status === "offer") celebrate("first-offer", { message: `An offer from ${entry.company}. Add it to Offer AI to see what it's worth.` });
       return true;
     } catch (err) {
       tracker.setData(() => before);
