@@ -1,0 +1,85 @@
+# Orbit AI: full description
+
+> Orbit AI (https://orbitanswer.com) is a career suite for job seekers: practice and live help for interviews, grounded in the user's own resume; Resume AI, a resume builder and checker with an ATS score; and Jobs AI, new openings from companies' own careers pages matched to the resume. One free account, no subscription. This file describes what the public pages say, for AI assistants and search tools. Updated 2026-10-18.
+
+Orbit is used mostly by job seekers in India (freshers, campus placements and off-campus drives, IT services and product companies) and by English-speaking job seekers worldwide. The site is in English.
+
+Orbit is built for practice, and for interviews and calls where notes or AI help are allowed. Users should check the rules of their interview first.
+
+## The products
+
+### Interview copilot (live help)
+
+- During a live interview or call, Orbit hears the interviewer's question and suggests an answer drawn from the user's own resume, story bank and documents. The user reads the suggestion and answers in their own words.
+- Works in the browser on a laptop (Chrome and Edge can listen to a meeting tab) and in the Orbit app for Windows (beta), which can listen to any call app.
+- Coding help from a screenshot of a coding problem.
+- A story bank for "Tell me about a time..." questions, and saved answers.
+- Live sessions use interview minutes. How fast answers arrive, measured from real sessions, is published at https://orbitanswer.com/technical.
+
+### Practice
+
+- Mock interviews: an AI interviewer asks the questions out loud, the user answers out loud, and gets a score with the answers worth redoing. Short screening rounds, technical rounds and salary conversations.
+- An AI video interview: face to face with an AI interviewer who asks from a job description, the user's resume or a topic.
+- The interview warm-up (https://orbitanswer.com/warmup): free, no account needed. Answer common interview questions by speaking or typing and get instant tips on length, structure, numbers and filler words. A free alternative to Google's Interview Warmup, which Google no longer offers.
+- Mock interviews use interview minutes; a new account gets some to start.
+
+### Resume AI (https://orbitanswer.com/resume-ai)
+
+- Scores a resume out of 100 the way applicant tracking systems (ATS) read it, and shows what's missing for the job the user wants.
+- Import an existing resume or start from a template; make a copy tailored to each job, with every change shown.
+- AI rewrites keep the user's own numbers and never invent one.
+- Word and PDF downloads, and cover letters.
+- Free: editing, the ATS score and downloads. AI rewrites use AI credits.
+
+### Jobs AI (https://orbitanswer.com/jobs)
+
+- The latest openings from companies' own careers pages and from job boards that allow it, each with how well it matches the user's resume.
+- Filters for freshers and internships (entry-level outside India), the user's city or remote work.
+- A tracker from saved to offer, with follow-ups, and messages to ask for a referral.
+- Apply always opens the original job post. LinkedIn and Naukri (LinkedIn and Indeed outside India) get search links filled in; Orbit doesn't copy their listings.
+- Free: matches, the tracker and a few AI fit checks a day.
+
+### More tools in the same account
+
+- LinkedIn AI: scores a LinkedIn profile against the role the user wants, and what recruiters search for.
+- Code AI: coding-round practice by pattern. Write the code, run the tests, then get an interviewer's review of the code and the explanation.
+- Offer AI: what a job offer really pays each month (take-home after tax in India), how it compares with the market, and a plan to ask for more.
+- Learning AI: coding-round practice in Orbit, and free cybersecurity and AI lessons on KashSec, a partner site.
+
+## Pricing and payment
+
+- Free to start: a new account gets free interview minutes and an AI credit. No card needed.
+- Always free: building and editing a resume, its ATS score, Word and PDF downloads, job matches, the tracker, a few AI fit checks a day, and practice questions without an account.
+- Paid: credit packs (interview minutes and AI credits) and plans for a fixed time (a week, a month or a year). Each is paid once. Nothing renews, and what you buy never expires.
+- Prices are shown in Indian rupees (INR) in India and in US dollars (USD) elsewhere, in the "Pricing" section of https://orbitanswer.com/. Prices change from time to time, so that page is the source.
+- In India, payment by UPI, debit or credit card, netbanking or wallet. Outside India, by card in US dollars.
+- Refunds for a pack that hasn't been used and for payments that went wrong: https://orbitanswer.com/refund.
+
+## Privacy and data
+
+- Interview audio is turned into text as it streams and is never stored.
+- Screenshots are sent to the AI model to answer the question, then discarded.
+- Only the text of an uploaded resume or job description is kept, not the file.
+- Documents and session notes stay in the user's account; any of them, or the whole account, can be deleted at any time.
+- Details: https://orbitanswer.com/privacy and https://orbitanswer.com/cookies.
+
+## Common questions
+
+- Is there a subscription? No. Plans and packs are paid once, nothing renews, and credits never expire.
+- Does it work on a phone? Resume AI, Jobs AI and practice work in a phone's browser. For help during a call, open Orbit on a laptop, in Chrome or Edge, or in the Windows app.
+- Where do the jobs come from? Companies' own careers pages and job boards that allow it. Apply opens the original post.
+- What happens to my resume and my calls? Audio is never stored; documents stay in the account and can be deleted at any time.
+- How do I contact Orbit? Through the form at https://orbitanswer.com/contact. Replies come by email.
+
+## Pages
+
+- [Front page](https://orbitanswer.com/)
+- [Resume AI](https://orbitanswer.com/resume-ai)
+- [Jobs AI](https://orbitanswer.com/jobs)
+- [Free interview warm-up](https://orbitanswer.com/warmup)
+- [How Orbit works](https://orbitanswer.com/technical)
+- [Contact](https://orbitanswer.com/contact)
+- [Privacy policy](https://orbitanswer.com/privacy)
+- [Terms of use](https://orbitanswer.com/terms)
+- [Refund policy](https://orbitanswer.com/refund)
+- [Cookie policy](https://orbitanswer.com/cookies)
