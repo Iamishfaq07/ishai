@@ -78,7 +78,7 @@ function SessionClock({ startedAt, running, dragRegion }: { startedAt: number | 
   return (
     <span
       data-tauri-drag-region={dragRegion ? "" : undefined}
-      className="ml-auto shrink-0 font-mono text-xs tabular-nums text-zinc-500"
+      className="ml-auto shrink-0 text-xs font-medium tabular-nums text-zinc-500"
       aria-label="Session time"
     >
       {formatElapsed(elapsed)}
@@ -510,7 +510,7 @@ export function LivePanel(props: LivePanelProps) {
           ) : (
           <>
           <QuestionCard question={question} liveTurn={liveInterviewerTurn} compact={compact} />
-          <div className="mx-4 h-px bg-gradient-to-r from-transparent via-zinc-200 to-transparent dark:via-white/10" />
+          <div className="mx-4 h-px bg-zinc-200 dark:bg-white/10" />
           {answerHistory.liveIndex > 0 && !live.pinnedAnswerId && <HistoryNav nav={answerHistory} />}
           <AnswerCard
             answer={answer}
@@ -858,7 +858,7 @@ function ChatLog({ live, onAsk }: { live: LiveViewState; onAsk?: (text: string) 
       {live.chat.map((entry) =>
         entry.kind === "user" ? (
           <li key={entry.id} className="ml-8">
-            <p className="rounded-2xl rounded-br-md bg-gradient-to-br from-indigo-500 to-indigo-700 px-3.5 py-2 text-white shadow-glow-sm">
+            <p className="rounded-2xl rounded-br-md bg-indigo-600 px-3.5 py-2 text-white">
               {entry.text}
             </p>
             {entry.unanswered && (

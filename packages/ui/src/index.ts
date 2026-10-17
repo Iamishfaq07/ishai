@@ -102,19 +102,50 @@ export { CodeBlock } from "./components/CodeBlock";
 export { ControlBar, type ControlBarProps } from "./components/ControlBar";
 export { cx, focusRing } from "./components/cx";
 export {
+  Badge,
   Button,
+  ButtonGroup,
+  Callout,
   Card,
   EmptyState,
   ErrorNote,
   Field,
+  IconButton,
+  IconTile,
   Input,
+  Kbd,
   Meter,
   PageHeader,
   Select,
   Spinner,
   Textarea,
   Toggle,
+  type BadgeTone,
+  type CalloutTone,
 } from "./components/ui";
+// The component system (round 3): forms, data display, menus and tooltips. DESIGN.md has the inventory.
+export { Checkbox, RadioGroup, SearchInput, SegmentedControl, Slider } from "./components/forms";
+export {
+  Avatar,
+  Breadcrumbs,
+  Pagination,
+  ProgressBar,
+  StatTile,
+  Stepper,
+  TabPanel,
+  Table,
+  TableEmpty,
+  TableLoading,
+  Tabs,
+  Td,
+  THead,
+  Th,
+  Tr,
+  tabClass,
+  tabListClass,
+  type SortDirection,
+} from "./components/data";
+export { MenuButton, Popover, SplitButton, Tooltip, floatingClass, menuItemClass, menuKeys, useDismiss, type MenuItem } from "./components/Menu";
 export { LivePanel, type LivePanelProps, type PanelMode } from "./components/LivePanel";
 export { QuestionCard, type QuestionCardProps } from "./components/QuestionCard";
 export { ScreenshotPreview, type ScreenshotPreviewProps } from "./components/ScreenshotPreview";
@@ -221,7 +252,7 @@ export { CosmicEmptyState, type CosmicEmptyVariant } from "./components/CosmicEm
 export { spotlightMove } from "./components/useSpotlight";
 export { ConceptDepthRadar, aggregateDepth } from "./components/ConceptDepthRadar";
 export { buttonClass, type ButtonSize, type ButtonVariant } from "./components/ui";
-export { Sheet, type SheetSize } from "./components/Sheet";
+export { Dialog, DialogActions, Sheet, type SheetSize } from "./components/Sheet";
 export { ToastHost, dismissToast, toast, type ToastOptions, type ToastTone } from "./components/Toast";
 export {
   GhostPreview,
@@ -248,6 +279,12 @@ export { TrackerScene } from "./components/scenes/TrackerScene";
 export { NoResultsScene } from "./components/scenes/NoResultsScene";
 export { OfflineScene } from "./components/scenes/OfflineScene";
 export { CelebrationScene } from "./components/scenes/CelebrationScene";
+export { CopilotScene } from "./components/scenes/CopilotScene";
+export { OfferScene } from "./components/scenes/OfferScene";
+export { StoriesScene } from "./components/scenes/StoriesScene";
+export { AnswersScene } from "./components/scenes/AnswersScene";
+export { EvidenceScene } from "./components/scenes/EvidenceScene";
+export { DocumentsScene } from "./components/scenes/DocumentsScene";
 export { useViewTransitionOk, viewTransitionOk, withViewTransition } from "./hooks/useMotion";
 export {
   COUNTRIES,

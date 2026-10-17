@@ -32,7 +32,7 @@ export function QuestionCard({ question, liveTurn, compact = false }: QuestionCa
     <section aria-label={chat ? "Your chat message" : "Interviewer question"} className={cx("px-4", compact ? "py-2.5" : "py-3")}>
       {!compact && (
         <div className="mb-1 flex items-center gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+          <h2 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
             {chat ? "You asked in chat" : "Interviewer"}
           </h2>
           {typeLabel && (

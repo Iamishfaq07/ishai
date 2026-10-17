@@ -89,12 +89,12 @@ function ReadProfile({ state, onRead }: { state: LinkedInState; onRead: (s: Link
     >
     <Card>
       <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
-        <Upload className="h-5 w-5 text-indigo-500" aria-hidden /> {has ? "Read your profile again" : "Start with your LinkedIn profile"}
+        <Upload className="h-5 w-5 text-zinc-500 dark:text-zinc-400" aria-hidden /> {has ? "Read your profile again" : "Start with your LinkedIn profile"}
       </h2>
-      <form onSubmit={useLink} className="mt-3 flex flex-wrap items-end gap-2">
+      <form onSubmit={useLink} className="mt-3 grid items-end gap-2 sm:grid-cols-[minmax(0,28rem)_auto] sm:justify-start">
         <Field label="Your LinkedIn profile link" htmlFor="li-link">
           <Input id="li-link" type="text" inputMode="url" autoComplete="url" placeholder="https://www.linkedin.com/in/your-name" value={link}
-                 onChange={(e) => { setLink(e.target.value); setLinkSet(false); }} className="w-80 max-w-full" />
+                 onChange={(e) => { setLink(e.target.value); setLinkSet(false); }} />
         </Field>
         <Button type="submit" variant="secondary" disabled={!url}>Use this link</Button>
       </form>
@@ -300,7 +300,7 @@ function Rewrite({ role, keywords }: { role: string; keywords: string[] }) {
   return (
     <Card>
       <h2 className="flex items-center gap-2 font-display text-base font-semibold">
-        <Sparkles className="h-4 w-4 text-indigo-500" aria-hidden /> Rewrite it from your resume
+        <Sparkles className="h-4 w-4 text-zinc-500 dark:text-zinc-400" aria-hidden /> Rewrite it from your resume
       </h2>
       <p className="mb-3 text-sm text-zinc-500 dark:text-zinc-400">A new headline, About and skills for "{role}", using the skills above that your resume shows. Nothing your resume doesn't say. Uses 1 resume credit.</p>
       {list.length === 0 && !resumes.loading ? (

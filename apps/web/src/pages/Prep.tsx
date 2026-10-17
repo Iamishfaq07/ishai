@@ -437,7 +437,7 @@ export function PrepSection({
                     <div className="animate-fade-in space-y-3 border-t border-zinc-200 px-4 pb-4 pt-3 text-sm dark:border-white/[0.06]">
                       {q.talking_points.length > 0 && (
                         <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-500">Talking points</p>
+                          <p className="text-xs font-semibold text-zinc-500">Talking points</p>
                           <ul className="mt-1 space-y-0.5">
                             {q.talking_points.map((t) => (
                               <li key={t} className="flex gap-2">
@@ -449,7 +449,7 @@ export function PrepSection({
                         </div>
                       )}
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-500">Suggested answer</p>
+                        <p className="text-xs font-semibold text-zinc-500">Suggested answer</p>
                         <p className="mt-1 leading-relaxed text-zinc-800 dark:text-zinc-200">
                           <Spoken text={q.suggested_answer} />
                         </p>

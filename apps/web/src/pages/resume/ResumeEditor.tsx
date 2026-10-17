@@ -3,6 +3,7 @@ import { createPortal, flushSync } from "react-dom";
 import { Link, useLocation, useParams } from "react-router-dom";
 import type { AtsReport, CoverLetterLength, EvidenceItem, CoverLetterTone, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeInput, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
 import {
+  Callout,
   ArrowLeft,
   ArrowUpRight,
   Briefcase,
@@ -615,16 +616,19 @@ function ResumeEditor() {
           value={resume.title}
           maxLength={160}
           onChange={(e) => change((r) => ({ ...r, title: e.target.value }))}
-          className="max-w-xs font-display text-lg font-semibold"
+          className="min-w-0 flex-1 basis-48 font-display text-lg font-semibold sm:max-w-[16rem]"
         />
-        <SaveState state={save.state} revision={saves.revision(resume.id)} error={save.error} onRetry={() => setSave({ state: "dirty" })} onLoadLatest={loadLatest} onKeepMine={keepMine} />
-        <div className="flex items-center">
-          <HistoryButton label="Undo" shortcut="Ctrl+Z" disabled={!steps.undo} onClick={() => step("undo")}>
-            <Undo2 className="h-4 w-4" />
-          </HistoryButton>
-          <HistoryButton label="Redo" shortcut="Ctrl+Shift+Z" disabled={!steps.redo} onClick={() => step("redo")}>
-            <Redo2 className="h-4 w-4" />
-          </HistoryButton>
+        {/* The save state and undo/redo wrap together, so a phone never strands undo on a line of its own. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <SaveState state={save.state} revision={saves.revision(resume.id)} error={save.error} onRetry={() => setSave({ state: "dirty" })} onLoadLatest={loadLatest} onKeepMine={keepMine} />
+          <div className="flex items-center">
+            <HistoryButton label="Undo" shortcut="Ctrl+Z" disabled={!steps.undo} onClick={() => step("undo")}>
+              <Undo2 className="h-4 w-4" />
+            </HistoryButton>
+            <HistoryButton label="Redo" shortcut="Ctrl+Shift+Z" disabled={!steps.redo} onClick={() => step("redo")}>
+              <Redo2 className="h-4 w-4" />
+            </HistoryButton>
+          </div>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {report && (
@@ -632,11 +636,11 @@ function ResumeEditor() {
               type="button"
               onClick={() => setTab("score")}
               className={cx("relative flex items-center gap-2 rounded-xl px-3 py-1.5 ring-1", scoreTone(report.score), focusRing)}
-              aria-label={`ATS score ${report.score} out of 100, ${report.verdict}. Show details`}
+              aria-label={`${report.score} ATS score, ${report.verdict}, out of 100. Show details`}
             >
-              <ScoreCount score={report.score} className="font-display text-xl font-semibold" />
+              <ScoreCount score={report.score} className="font-display text-xl font-semibold" />{" "}
               <span className="text-left text-xs leading-tight">
-                ATS score
+                ATS score{" "}
                 <br />
                 {report.verdict}
               </span>
@@ -661,32 +665,38 @@ function ResumeEditor() {
       <AllowanceBanner />
 
       {draft && (
-        <div role="alert" className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">
-          <span className="min-w-0 flex-1">
+        <div role="alert" className="mb-4">
+          <Callout
+            tone="warning"
+            title="Unsaved edits found"
+            action={
+              <>
+                <Button size="sm" variant="ghost" onClick={discardDraft}>
+                  Discard
+                </Button>
+                <Button size="sm" onClick={restoreDraft}>
+                  Restore them
+                </Button>
+              </>
+            }
+          >
             This browser kept edits to this resume from {new Date(draft.savedAt).toLocaleString()} that weren't saved.
             {draft.baseRevision !== undefined && draft.baseRevision !== resume.revision ? " It has been saved elsewhere since; restoring puts your edits over that." : ""}
-          </span>
-          <Button size="sm" onClick={restoreDraft}>
-            Restore them
-          </Button>
-          <Button size="sm" variant="ghost" onClick={discardDraft}>
-            Discard
-          </Button>
+          </Callout>
         </div>
       )}
       <ResumeCareerActions resume={resume} />
       {notice && (
-        <div role="status" className="mb-4 flex items-start gap-2 rounded-xl bg-indigo-500/10 p-3 text-sm text-indigo-900 dark:text-indigo-200">
-          <span className="flex-1">{notice}</span>
-          <button type="button" aria-label="Dismiss" onClick={() => setNotice(null)} className={cx("rounded p-0.5", focusRing)}>
-            <X className="h-4 w-4" />
-          </button>
+        <div role="status" className="mb-4">
+          <Callout tone="info" onDismiss={() => setNotice(null)}>
+            {notice}
+          </Callout>
         </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <div className="min-w-0">
-          <div className="sticky top-16 z-10 mb-4 flex gap-1 rounded-xl bg-zinc-100/90 p-1 backdrop-blur-sm dark:bg-zinc-900/90">
+          <div className="sticky top-16 z-10 mb-4 flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
             <div role="tablist" aria-label="Resume editor" className="flex min-w-0 flex-1 flex-wrap gap-1">
               {TABS.map(({ id, label, short, icon: Icon }) => (
                 <button
@@ -819,7 +829,11 @@ function ResumeEditor() {
           <div
             id="resume-preview"
             data-preview-scroll=""
-            className="sticky top-20 scroll-mt-20 space-y-3 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pb-4"
+            // It scrolls on its own on wide screens, so the keyboard can reach and scroll it too (WCAG 2.1.1).
+            tabIndex={0}
+            role="region"
+            aria-label="Resume preview"
+            className={cx("sticky top-20 scroll-mt-20 space-y-3 rounded-2xl lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pb-4", focusRing)}
           >
             {placeholders && tab !== "letter" && (
               <div role="status" className="flex items-start gap-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-900 ring-1 ring-amber-500/25 dark:text-amber-200">
@@ -1708,7 +1722,7 @@ function SuggestionCard({ s, total, onAccept, onSkip }: { s: ResumeSuggestion; t
     });
   return (
     <Panel title={`Suggestion 1 of ${total}`}>
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{s.label}</p>
+      <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{s.label}</p>
       {kind === "add_skill" ? (
         <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Skills to add">
           {skills.map((skill) => (
@@ -2024,7 +2038,7 @@ function PreviewJump({ letter }: { letter: boolean }) {
       type="button"
       onClick={() => document.getElementById("resume-preview")?.scrollIntoView({ behavior: "smooth", block: "start" })}
       className={cx(
-        "fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-20 inline-flex items-center gap-2 rounded-full bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-lg ring-1 ring-black/10 motion-ok:animate-fade-up md:bottom-6 lg:hidden dark:bg-white dark:text-zinc-900",
+        "fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 mx-auto inline-flex w-fit items-center gap-2 rounded-full bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-popover ring-1 ring-black/10 motion-ok:animate-fade-up md:bottom-6 lg:hidden dark:bg-white dark:text-zinc-900",
         focusRing,
       )}
     >

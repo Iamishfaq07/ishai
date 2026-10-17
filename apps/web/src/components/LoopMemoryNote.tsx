@@ -35,7 +35,7 @@ export function LoopMemoryNote({ company, className }: { company: string; classN
       </p>
       {memory.stories.length > 0 && (
         <div className="mt-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Stories already told</p>
+          <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Stories already told</p>
           <ul className="mt-1 flex flex-wrap gap-1.5">
             {memory.stories.map((s) => (
               <li key={s} className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-medium text-amber-900 dark:text-amber-200">
@@ -47,7 +47,7 @@ export function LoopMemoryNote({ company, className }: { company: string; classN
       )}
       {memory.questions.length > 0 && (
         <details className="mt-3">
-          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          <summary className="cursor-pointer text-xs font-semibold text-zinc-500 dark:text-zinc-400">
             Already asked ({memory.questions.length})
           </summary>
           <ul className="mt-1 list-disc space-y-0.5 pl-5 text-zinc-600 dark:text-zinc-300">

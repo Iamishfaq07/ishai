@@ -7,7 +7,9 @@ import { currentMotion } from "../hooks/useMotion";
  * from anywhere; mount <ToastHost /> once near the app root. Not for errors the user must act on (ErrorNote) or
  * questions (confirmDialog).
  */
-export type ToastTone = "neutral" | "success" | "error";
+/** `neutral` (and `info`, the same) for a plain confirmation, `success` when something finished, `warning` when it
+ *  half-worked, `error` when it failed (with what to do in `detail`). */
+export type ToastTone = "neutral" | "info" | "success" | "warning" | "error";
 
 export interface ToastOptions {
   /** What happened, in a few words, using the action's own name: "Saved to tracker", "Story deleted". */
@@ -178,7 +180,7 @@ export function ToastHost() {
   return (
     <section
       aria-label="Notifications"
-      className="pointer-events-none fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[60] md:inset-x-auto md:bottom-6 md:right-6"
+      className="pointer-events-none fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-toast md:inset-x-auto md:bottom-6 md:right-6"
     >
       <ol
         ref={list}

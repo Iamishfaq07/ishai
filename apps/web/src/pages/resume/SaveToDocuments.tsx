@@ -57,7 +57,7 @@ export function SaveToDocuments({ resume }: { resume: Resume }) {
         {state === "busy" ? "Saving…" : state === "done" ? (updated ? "Updated in Documents" : "Saved to Documents") : linked ? "Update in Orbit" : "Use in Orbit"}
       </Button>
       {error && (
-        <div role="alert" className="absolute left-1/2 top-full z-20 mt-2 w-72 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl bg-white p-3 text-sm text-zinc-700 shadow-lg ring-1 ring-rose-500/30 dark:bg-zinc-900 dark:text-zinc-200">
+        <div role="alert" className="absolute left-1/2 top-full z-20 mt-2 w-72 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl bg-white p-3 text-sm text-zinc-700 shadow-popover ring-1 ring-rose-500/30 dark:bg-zinc-900 dark:text-zinc-200">
           <div className="flex items-start gap-2">
             <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" aria-hidden />
             <p className="flex-1">

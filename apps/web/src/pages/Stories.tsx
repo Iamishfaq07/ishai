@@ -15,8 +15,9 @@ import {
   cx,
   focusRing,
   splitPlaceholders,
+  CosmicEmptyState,
 } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Textarea } from "../components/ui";
+import { Button, Card, ErrorNote, Field, Input, PageHeader, Textarea } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import { storyPracticeSession } from "../lib/storyPractice";
@@ -27,20 +28,21 @@ import type { LiveLaunchState } from "./SessionSetup";
 /**
  * Documents and Story bank are one "your materials" area: both feed every session. The tabs between them are the
  * interview copilot's tabs (Layout); making a resume is Resume AI's (it used to be a tab here), so there's a pointer
- * to it.
+ * to it, as a quiet line at the foot of each page (between the tabs and the page's title it read as a stray link).
  */
 export function LibraryTabs() {
   return (
-    <div className="mb-6 flex flex-wrap items-center justify-end gap-x-4 gap-y-3">
+    <p className="mt-10 flex flex-wrap items-center gap-x-1.5 border-t border-zinc-200 pt-4 text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-400">
+      <Sparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
+      Making or improving a resume?
       <Link
         to={RESUME_AI_HOME}
-        className={cx("group inline-flex items-center gap-1.5 rounded-lg text-sm font-medium text-indigo-600 dark:text-indigo-300", focusRing)}
+        className={cx("group inline-flex items-center gap-1 rounded font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}
       >
-        <Sparkles className="h-4 w-4" aria-hidden="true" />
-        <span className="group-hover:underline">Build or improve your resume in Resume AI</span>
+        Open Resume AI
         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
       </Link>
-    </div>
+    </p>
   );
 }
 
@@ -312,7 +314,7 @@ function StoryCard({ story, onEdit, onDelete, onPractise, practising = false }: 
           <dl className="mt-2 space-y-2">
             {parts.map(({ key, label }) => (
               <div key={key}>
-                <dt className="text-xs font-semibold uppercase tracking-[0.1em] text-zinc-500">{label}</dt>
+                <dt className="text-xs font-semibold text-zinc-500">{label}</dt>
                 <dd className="whitespace-pre-line text-zinc-700 dark:text-zinc-300">
                   <WithPrompts text={story[key]} />
                 </dd>
@@ -323,7 +325,7 @@ function StoryCard({ story, onEdit, onDelete, onPractise, practising = false }: 
       )}
       {onPractise && (
         <div className="mt-auto pt-4">
-          <Button variant="secondary" size="sm" onClick={onPractise} disabled={practising} aria-label={`Practise telling “${story.title}” out loud`}>
+          <Button variant="secondary" size="sm" onClick={onPractise} disabled={practising} aria-label={`Practise telling it: “${story.title}”, out loud`}>
             <Target className="h-3.5 w-3.5" /> {practising ? "Starting…" : "Practise telling it"}
           </Button>
         </div>
@@ -449,7 +451,6 @@ export function StoriesPage() {
 
   return (
     <div>
-      <LibraryTabs />
       <PageHeader
         icon={BookOpen}
         title="Story bank"
@@ -543,8 +544,8 @@ export function StoriesPage() {
         <>
           <Coverage stories={list} onPick={startNew} />
           {list.length === 0 && drafts.length === 0 && !editing ? (
-            <EmptyState
-              icon={BookOpen}
+            <CosmicEmptyState
+              variant="stories"
               title="Build your story bank"
               body="Save five to eight real examples — a conflict, a failure, a win. Draft them from your resume in one click, then make them yours."
               action={
@@ -587,6 +588,7 @@ export function StoriesPage() {
         </>
       )}
       </LoadGate>
+      <LibraryTabs />
     </div>
   );
 }

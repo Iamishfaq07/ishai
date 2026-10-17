@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { DOCUMENT_ACCEPT, type DocumentKind, type OrbitDocument } from "@orbit/types";
-import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../components/ui";
-import { Briefcase, LoadGate, Skeleton, confirmDialog, cx, FileIcon, FileText, FileUp, FolderOpen, NotebookPen, type LucideIcon } from "@orbit/ui";
+import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../components/ui";
+import { Badge, Briefcase, CosmicEmptyState, DialogActions, LoadGate, Skeleton, THead, Table, Td, Th, Tr, confirmDialog, cx, FileIcon, FileText, FileUp, FolderOpen, NotebookPen, type LucideIcon } from "@orbit/ui";
 import { PRODUCTS } from "../components/products";
 import { Sheet } from "../components/Sheet";
 import { api } from "../lib/api";
@@ -102,7 +102,6 @@ export function DocumentsPage() {
 
   return (
     <div>
-      <LibraryTabs />
       <PageHeader
         icon={FolderOpen}
         title="Documents"
@@ -180,7 +179,7 @@ export function DocumentsPage() {
                     <span
                       aria-hidden="true"
                       className={cx(
-                        "flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 ring-1 ring-indigo-500/20 transition-transform dark:text-indigo-300",
+                        "flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10 transition-transform",
                         dragging ? "motion-ok:-translate-y-1" : "motion-ok:group-hover:-translate-y-0.5",
                       )}
                     >
@@ -243,59 +242,57 @@ export function DocumentsPage() {
       ) : docs.error ? (
         <ErrorNote onRetry={docs.reload}>{errorText(docs.error)}</ErrorNote>
       ) : (docs.data ?? []).length === 0 ? (
-        <EmptyState icon={FileUp} title="No documents yet" body="Uploaded documents are parsed into facts Orbit can cite during a session." />
+        <CosmicEmptyState variant="documents" title="No documents yet" body="Uploaded documents are parsed into facts Orbit can cite during a session." />
       ) : (
-        <Card className="overflow-x-auto p-0">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-zinc-200 text-xs uppercase tracking-wider text-zinc-500 dark:border-white/5">
-              <tr>
-                <th className="px-5 py-3 font-medium">Title</th>
-                <th className="hidden px-5 py-3 font-medium sm:table-cell">Type</th>
-                <th className="hidden px-5 py-3 font-medium sm:table-cell">Size</th>
-                <th className="hidden px-5 py-3 font-medium sm:table-cell">Status</th>
-                <th className="hidden px-5 py-3 font-medium md:table-cell">Added</th>
-                <th className="px-5 py-3">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
-              {(docs.data ?? []).map((d) => (
-                <tr key={d.id}>
-                  <td className="px-5 py-3" title={d.filename ?? d.title}>
-                    <div className="flex items-center gap-3">
-                      <KindMark kind={d.kind} />
-                      <div className="min-w-0">
-                        <div className="max-w-[11rem] truncate font-medium sm:max-w-[16rem]">{d.title}</div>
-                        {/* Phones: type and status fold under the title instead of their own columns. */}
-                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-zinc-500 sm:hidden">
-                          <span>{KIND_LABEL[d.kind]}</span>
-                          <StatusBadge doc={d} />
-                        </div>
+        <Table label="Your documents">
+          <THead>
+            <tr>
+              <Th>Title</Th>
+              <Th className="hidden sm:table-cell">Type</Th>
+              <Th className="hidden sm:table-cell" align="right">Size</Th>
+              <Th className="hidden sm:table-cell">Status</Th>
+              <Th className="hidden md:table-cell">Added</Th>
+              <Th>
+                <span className="sr-only">Actions</span>
+              </Th>
+            </tr>
+          </THead>
+          <tbody>
+            {(docs.data ?? []).map((d) => (
+              <Tr key={d.id}>
+                <Td primary title={d.filename ?? d.title}>
+                  <div className="flex items-center gap-3">
+                    <KindMark kind={d.kind} />
+                    <div className="min-w-0">
+                      <div className="max-w-[11rem] truncate sm:max-w-[16rem]">{d.title}</div>
+                      {/* Phones: type and status fold under the title instead of their own columns. */}
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs font-normal text-zinc-500 sm:hidden">
+                        <span>{KIND_LABEL[d.kind]}</span>
+                        <StatusBadge doc={d} />
                       </div>
                     </div>
-                  </td>
-                  <td className="hidden px-5 py-3 text-zinc-500 sm:table-cell">{KIND_LABEL[d.kind]}</td>
-                  <td className="hidden px-5 py-3 text-zinc-500 sm:table-cell">{formatBytes(d.size_bytes)}</td>
-                  <td className="hidden px-5 py-3 sm:table-cell">
-                    <StatusBadge doc={d} />
-                  </td>
-                  <td className="hidden px-5 py-3 text-zinc-500 md:table-cell">{formatDate(d.created_at)}</td>
-                  <td className="px-5 py-3 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setEditing(d)}>
-                        Edit
-                      </Button>
-                      <Button variant="danger" size="sm" onClick={() => void remove(d)}>
-                        Delete
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+                  </div>
+                </Td>
+                <Td className="hidden sm:table-cell">{KIND_LABEL[d.kind]}</Td>
+                <Td className="hidden sm:table-cell" align="right">{formatBytes(d.size_bytes)}</Td>
+                <Td className="hidden sm:table-cell">
+                  <StatusBadge doc={d} />
+                </Td>
+                <Td className="hidden whitespace-nowrap md:table-cell">{formatDate(d.created_at)}</Td>
+                <Td align="right">
+                  <div className="flex justify-end gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => setEditing(d)}>
+                      Edit
+                    </Button>
+                    <Button variant="danger" size="sm" onClick={() => void remove(d)}>
+                      Delete
+                    </Button>
+                  </div>
+                </Td>
+              </Tr>
+            ))}
+          </tbody>
+        </Table>
       )}
       <div className="mt-3 text-right">
         <Button variant="ghost" size="sm" onClick={docs.reload}>
@@ -313,6 +310,7 @@ export function DocumentsPage() {
           }}
         />
       )}
+      <LibraryTabs />
     </div>
   );
 }
@@ -376,14 +374,14 @@ function EditModal({
       size="2xl"
       footer={
         !loaded.loading && !loaded.error ? (
-          <div className="flex justify-end gap-2">
+          <DialogActions>
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" form="edit-document" disabled={saving}>
               {saving ? "Saving…" : "Save changes"}
             </Button>
-          </div>
+          </DialogActions>
         ) : undefined
       }
     >
@@ -426,9 +424,10 @@ function EditModal({
   );
 }
 
+/** A document's state as a status badge (the words say it; the colour agrees). */
 function StatusBadge({ doc }: { doc: OrbitDocument }) {
   if (doc.status === "ready")
-    return <span className="text-emerald-600 dark:text-emerald-400">Ready · {doc.chunk_count} sections</span>;
-  if (doc.status === "processing") return <span className="text-amber-600 dark:text-amber-400">Processing…</span>;
-  return <span className="text-rose-600 dark:text-rose-400">Couldn’t read file</span>;
+    return <Badge tone="success" dot>Ready · {doc.chunk_count} {doc.chunk_count === 1 ? "section" : "sections"}</Badge>;
+  if (doc.status === "processing") return <Badge tone="warning" dot>Processing…</Badge>;
+  return <Badge tone="danger" dot>Couldn’t read file</Badge>;
 }

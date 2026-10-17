@@ -1,5 +1,51 @@
 # Implementation log
 
+## Design round 3: one workbench, in both themes and on phones (2026-10-18)
+
+- **Dark mode is the light theme's twin** (DECISIONS D58): the dark canvas finally applies (the body's own
+  `dark:bg-zinc-950` had outranked it), and inside the workbench the ink's darkest steps are the canvas/surface/line
+  family, so bars, fields, dialogs and cards are one blue-grey, not violet black under blue-grey cards.
+- **The live session is part of the workbench**: a still canvas and opaque panels instead of the sky, no glow around
+  the panel; Answer, the auto-answer switch and the chat bubble are the solid accent; the timer and capture pill use
+  the product face; the architecture critique is a strip, not a card in a card. The video interview room loses its
+  gradients and backdrop wash.
+- **No glow left in the app**: empty states show the Orbit scenes (`CosmicEmptyState`) or a flat `SpotIllustration`;
+  Home's tool cards lose their colour glow, spotlight and corner orbits; Practice's picture is the PracticeScene; Resume
+  AI's first visit drops its blurred blobs and gradient stage; the saved-setup panel, the job page header and the
+  pricing cards are flat. Cards that are links darken their border instead of rising; loading placeholders are ink.
+- **Consistent pages**: `PageHeader` keeps its actions beside a long subtitle, takes a `back` link (`BackLink`: All
+  sessions, All offers, All problems, Tracker) and shows its icon from `sm` up; session and offer detail actions are
+  regular size; the copilot's Sessions page has one way to start a session; the Resume AI pointer is a quiet line at
+  the foot of the copilot's library pages.
+- **Rows line up**: fields and regular buttons are all 38 px (every button variant has a 1 px border), so a field
+  and its button sit level (Offer AI's pay check, LinkedIn AI's link, Settings, the Evidence finder). Buttons cast no
+  shadow; danger text is rose-700.
+- **Accent only where it means something**: section icon tiles are the neutral `IconTile`, heading icons and the
+  mission's "Next step" are ink, the Resume AI page's Jobs AI card has no AI chip, "Get credits" is bordered while
+  credits are left (amber when they're out), and every pricing badge is the accent pill.
+- **Sentence case**: small labels and table headings across the app and the live components drop tracked capitals;
+  the front page's loop labels drop cyan mono.
+- **Phones**: a long mission title wraps instead of being cut; Resume AI's Preview button sits centred, clear of the
+  support button; the editor's toolbar fits one row on desktop and wraps cleanly on a phone; the LinkedIn link field
+  has a real width. No page scrolls sideways at 390 px.
+- **Accessibility**: a fuller axe sweep (every page, detail pages included, both themes) found three issues the old
+  route list missed (names that didn't include the visible words, a scrolling preview the keyboard couldn't reach,
+  Delete at 4.3:1); all fixed, 0 violations.
+- **One component system** (`packages/ui`, shared with the desktop app; DESIGN.md "Components"): elevation tokens
+  (menu < popover < dialog < toast) and a z-index scale; overlay motion (dialogs fade in from 97%, phone sheets rise,
+  menus drop, side panels slide; fades at Gentle). Button gains `destructive` and `link`, a spinner that keeps the
+  width, pressed styling and `block`; IconButton, ButtonGroup, MenuButton, SplitButton, Popover, Tooltip, Callout,
+  Badge, Kbd, Checkbox, RadioGroup, Slider, SearchInput, SegmentedControl, Table (sortable header, phone card view),
+  StatTile, Avatar, ProgressBar, Stepper, Pagination, Breadcrumbs, Tabs, DialogActions; Field gains `required`,
+  `error` (wired to the control) and `counter`. Adopted across the app: the confirm dialog, the New and account
+  menus, the command palette, toasts (info and warning tones), Documents and admin tables, status pills, the tracker's
+  numbers, a session's tabs, Settings' appearance switches, banners, shortcut hints, icon actions and dialog footers.
+- **An illustration per product**: six new Orbit scenes (copilot, offer, stories, answers, evidence, documents) join
+  the set, and every product's empty screen shows its own.
+- **`/dev/components`**: a gallery of every component in its states, in development builds only.
+- Docs: DESIGN.md (dark twin, live session, field heights, sentence case, page header, empty-state art, the component
+  inventory with tokens and do/don't), D58.
+
 ## API follow-ups: plans on their own clock, atomic allowances (2026-10-18)
 
 - **Plans for a while** (paid months and admin grants, DECISIONS D57): allowances run in 30-day windows from when the

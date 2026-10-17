@@ -330,12 +330,8 @@ export function VideoInterviewRoom({
 
   return (
     <div className="dark relative flex h-full min-h-0 flex-col overflow-hidden bg-[#07070c] text-zinc-100">
-      <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_25%_20%,rgba(99,102,241,0.18),transparent),radial-gradient(50%_40%_at_80%_90%,rgba(236,72,153,0.10),transparent)]"
-        aria-hidden="true"
-      />
       <header className="relative flex shrink-0 items-center gap-3 px-4 py-3 sm:px-6">
-        <span className="flex items-center gap-1.5 rounded-full bg-rose-500/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-rose-300">
+        <span className="flex items-center gap-1.5 rounded-full bg-rose-500/15 px-2.5 py-1 text-[11px] font-semibold text-rose-300">
           <span className="h-1.5 w-1.5 rounded-full bg-rose-400 motion-safe:animate-pulse" aria-hidden="true" />
           {done ? "Ended" : "Live"}
         </span>
@@ -345,11 +341,11 @@ export function VideoInterviewRoom({
             Question {q.index} of {q.total}
             {q.isFollowUp ? " · follow-up" : ""}
             <span className="h-1 w-24 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
-              <span className="block h-full rounded-full bg-gradient-to-r from-indigo-400 to-fuchsia-400 transition-[width] duration-700" style={{ width: `${progress * 100}%` }} />
+              <span className="block h-full rounded-full bg-indigo-400 transition-[width] duration-700" style={{ width: `${progress * 100}%` }} />
             </span>
           </span>
         )}
-        <span className="rounded-full bg-white/[0.06] px-2.5 py-1 font-mono text-xs tabular-nums text-zinc-300" aria-label="Time in the interview">
+        <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-medium tabular-nums text-zinc-300" aria-label="Time in the interview">
           {clock(elapsed)}
         </span>
       </header>
@@ -384,8 +380,8 @@ export function VideoInterviewRoom({
           <section
             aria-label={`${INTERVIEWER_NAME}, AI interviewer`}
             className={cx(
-              "relative flex min-h-0 flex-col overflow-hidden rounded-3xl bg-gradient-to-b from-[#14122b] to-[#0b0a17] ring-1 transition-shadow duration-300",
-              mood === "speaking" ? "ring-indigo-400/60 shadow-[0_0_60px_-20px_rgba(129,140,248,0.7)]" : "ring-white/10",
+              "relative flex min-h-0 flex-col overflow-hidden rounded-3xl bg-[#100f22] ring-1 transition-shadow duration-300",
+              mood === "speaking" ? "ring-2 ring-indigo-400/70" : "ring-white/10",
             )}
           >
             <span className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-xs text-zinc-200 backdrop-blur" role="status">
@@ -405,7 +401,7 @@ export function VideoInterviewRoom({
             {captions && q && (
               <div className="px-3 pb-3 sm:px-5 sm:pb-5" aria-live="polite">
                 <div key={q.questionId} className="rounded-2xl bg-black/45 px-4 py-3 backdrop-blur-md motion-safe:animate-fade-up sm:px-5 sm:py-4">
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-indigo-300">{INTERVIEWER_NAME}</p>
+                  <p className="mb-1 text-[11px] font-semibold text-indigo-300">{INTERVIEWER_NAME}</p>
                   <p className={cx("max-h-48 overflow-y-auto font-medium leading-relaxed text-white", q.text.length > 220 ? "text-sm sm:text-base" : "text-base sm:text-lg")}>{q.text}</p>
                 </div>
               </div>
@@ -441,7 +437,7 @@ export function VideoInterviewRoom({
               onClick={finishAnswer}
               disabled={mood === "thinking"}
               className={cx(
-                "flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60",
+                "flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 motion-ok:active:scale-[0.98] disabled:opacity-60",
                 focusRing,
               )}
             >

@@ -96,7 +96,7 @@ export function PeopleSection() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="people-title" className="flex items-center gap-2 font-display text-lg font-semibold">
-            <Users className="h-5 w-5 text-indigo-500" aria-hidden />
+            <Users className="h-5 w-5 text-zinc-500 dark:text-zinc-400" aria-hidden />
             People
             {due > 0 && (
               <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">

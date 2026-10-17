@@ -25,8 +25,9 @@ import {
   confirmDialog,
   cx,
   focusRing,
+  CosmicEmptyState,
 } from "@orbit/ui";
-import { Button, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Textarea } from "../../components/ui";
+import { Button, ErrorNote, Field, IconButton, Input, PageHeader, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { downloadText, errorText } from "../../lib/format";
 import type { AsyncState } from "../../lib/useAsync";
@@ -181,8 +182,8 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
   if (tracker.error && !tracker.data) return <ErrorNote onRetry={tracker.reload}>{errorText(tracker.error)}</ErrorNote>;
   if (!entries.length) {
     return (
-      <EmptyState
-        icon={BookmarkCheck}
+      <CosmicEmptyState
+        variant="tracker"
         title="Nothing tracked yet"
         body={`Save jobs from your matches, or add one you applied to on ${india ? "Naukri, LinkedIn or a campus portal" : "LinkedIn, Indeed or a company's site"}. Then move each one along: applied, interviewing, offer.`}
         action={
@@ -255,7 +256,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
       </div>
 
       {pickedEntries.length > 0 && (
-        <div role="region" aria-label="Compare jobs" className="sticky bottom-20 z-20 mx-auto flex w-fit max-w-full flex-wrap items-center gap-3 rounded-2xl border border-indigo-500/25 bg-white/95 px-4 py-2.5 shadow-lg backdrop-blur sm:bottom-6 dark:bg-zinc-950/90">
+        <div role="region" aria-label="Compare jobs" className="sticky bottom-20 z-20 mx-auto flex w-fit max-w-full flex-wrap items-center gap-3 rounded-2xl border border-indigo-500/25 bg-white/95 px-4 py-2.5 shadow-popover backdrop-blur sm:bottom-6 dark:bg-zinc-950/90">
           <span className="text-sm">
             {pickedEntries.length === 1 ? "Pick one or two more to compare" : `${pickedEntries.length} jobs picked`}
           </span>
@@ -465,12 +466,8 @@ function TrackerCard({
               </option>
             ))}
           </Select>
-          <button type="button" onClick={() => setEditing(true)} aria-label={`Notes and dates for ${entry.title}`} title="Notes and dates" className={cx("rounded-md p-1.5 text-zinc-400 hover:bg-indigo-500/10 hover:text-indigo-600", compact && "ml-auto", focusRing)}>
-            <PenLine className="h-4 w-4" />
-          </button>
-          <button type="button" onClick={onRemove} aria-label={`Remove ${entry.title}`} title="Remove" className={cx("rounded-md p-1.5 text-zinc-400 hover:bg-rose-500/10 hover:text-rose-600", focusRing)}>
-            <Trash2 className="h-4 w-4" />
-          </button>
+          <IconButton size="sm" icon={PenLine} onClick={() => setEditing(true)} label={`Notes and dates for ${entry.title}`} title="Notes and dates" className={cx("text-zinc-500", compact && "ml-auto")} />
+          <IconButton size="sm" icon={Trash2} onClick={onRemove} label={`Remove ${entry.title}`} title="Remove" className="text-zinc-500 hover:!bg-rose-500/10 hover:!text-rose-700 dark:hover:!text-rose-300" />
         </div>
       )}
     </article>

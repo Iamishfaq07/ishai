@@ -201,7 +201,7 @@ function Changes({ result, data, onRevert, onPoint }: {
               onMouseLeave={() => onPoint([])}
               className={cx("rounded-lg bg-white/60 p-2 dark:bg-white/[0.03]", !kept && "opacity-70")}
             >
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{s.label}</p>
+              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{s.label}</p>
               {s.kind === "add_bullet" ? (
                 <p className="mt-1 text-zinc-800 dark:text-zinc-200">
                   <span className="text-emerald-700 dark:text-emerald-300">Added: </span>
@@ -340,7 +340,7 @@ function ReviewItem({ s, onKeep, onSkip, onPoint }: {
       onMouseLeave={() => onPoint([])}
       className="rounded-lg bg-white/60 p-2 text-sm dark:bg-white/[0.03]"
     >
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{s.label}</p>
+      <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{s.label}</p>
       {s.kind === "add_skill" ? (
         <div className="mt-1.5 flex flex-wrap gap-1.5" role="group" aria-label="Skills to add">
           {skills.map((skill) => (

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, Code2, GraduationCap, ShieldCheck, cx, focusRing } from "@orbit/ui";
+import { ArrowRight, ArrowUpRight, Badge, Code2, GraduationCap, ShieldCheck, cx, focusRing } from "@orbit/ui";
 import { PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useAsync } from "../../lib/useAsync";
@@ -22,7 +22,7 @@ export function LearningPage() {
       <ul className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
         <li className="min-w-0">
           <Link to={CODE_HOME} className={cx(card, focusRing)}>
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
               <Code2 className="h-5 w-5" aria-hidden />
             </span>
             <h2 className="mt-4 font-display text-lg font-semibold">Code AI</h2>
@@ -51,7 +51,7 @@ export function LearningPage() {
               <ShieldCheck className="h-5 w-5" aria-hidden />
             </span>
             <h2 className="mt-4 flex items-center gap-2 font-display text-lg font-semibold">
-              KashSec <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">Free</span>
+              KashSec <Badge tone="success">Free</Badge>
             </h2>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
               Learn cybersecurity and AI for free: lessons and guides from Orbit's founder, for beginners and for anyone heading into security roles.

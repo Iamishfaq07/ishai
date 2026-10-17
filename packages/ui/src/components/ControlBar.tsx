@@ -96,7 +96,7 @@ export function ControlBar(props: ControlBarProps) {
           title={`Answer now (${formatHotkey(hotkeys.answer)})`}
           className={cx(
             btn,
-            "bg-gradient-to-b from-indigo-500 to-indigo-600 px-3 text-white shadow-glow-sm hover:from-indigo-400 hover:to-indigo-500",
+            "bg-indigo-600 px-3 text-white hover:bg-indigo-700",
             focusRing,
           )}
         >
@@ -341,7 +341,7 @@ function ActionButton({
 function Setting({ label, labelId, children }: { label: string; labelId: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <span id={labelId} className="text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400">
+      <span id={labelId} className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
         {label}
       </span>
       {children}
@@ -495,7 +495,7 @@ function AutoSwitch({
         aria-hidden="true"
         className={cx(
           "relative inline-block h-4 w-7 shrink-0 rounded-full transition-colors",
-          on ? "bg-gradient-to-r from-indigo-500 to-indigo-600" : "bg-zinc-300 dark:bg-zinc-700",
+          on ? "bg-indigo-600" : "bg-zinc-300 dark:bg-zinc-700",
         )}
       >
         <span

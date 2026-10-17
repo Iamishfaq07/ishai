@@ -127,7 +127,7 @@ export default function CommandPalette({ onClose, onHelp, onSignOut }: { onClose
   let index = -1;
   return (
     <div
-      className="fixed inset-0 z-50 flex animate-fade-in items-start justify-center bg-black/45 p-3 pt-[8vh] sm:pt-[12vh]"
+      className="fixed inset-0 z-dialog flex animate-fade-in items-start justify-center bg-zinc-950/50 p-3 pt-[8vh] sm:pt-[12vh]"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
@@ -135,7 +135,7 @@ export default function CommandPalette({ onClose, onHelp, onSignOut }: { onClose
         role="dialog"
         aria-modal="true"
         aria-label="Search Orbit"
-        className="flex max-h-[min(36rem,80vh)] w-full max-w-xl animate-scale-in flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-white/10 dark:bg-zinc-950"
+        className="flex max-h-[min(36rem,80vh)] w-full max-w-xl animate-dialog-in flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-dialog dark:border-white/10 dark:bg-zinc-950"
       >
         <div className="flex items-center gap-3 border-b border-zinc-200/80 px-4 dark:border-white/10">
           <Search className="h-5 w-5 shrink-0 text-zinc-500" aria-hidden />

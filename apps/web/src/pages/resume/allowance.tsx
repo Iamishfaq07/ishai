@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { ResumeAiAllowance } from "@orbit/types";
-import { ApiError, Crown, Sparkles, cx, focusRing } from "@orbit/ui";
+import { ApiError, Crown, Sparkles, buttonClass, cx, focusRing } from "@orbit/ui";
 import { useBackend } from "./backend";
 
 /**
@@ -40,18 +40,23 @@ export function priceText(price: number | null | undefined): string {
 }
 
 /** Where buying credits starts: Plan & billing, with the cheapest pack that has resume credits opened. */
-export function UpgradeLink({ className, children }: { className?: string; children?: ReactNode }) {
+/** Get credits. `quiet` (while credits are left) is a bordered button: amber is for being out of them. */
+export function UpgradeLink({ className, children, quiet = false }: { className?: string; children?: ReactNode; quiet?: boolean }) {
   const { allowance } = useAllowance();
   const offer = allowance?.upgrade;
   return (
     <Link
       to={`/billing?pack=${offer?.pack ?? ""}`}
-      className={cx(
-        // Dark text on amber: white on amber-500 is 2.1:1, amber-950 on amber-400 is 9:1.
-        "inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-3 py-1.5 text-sm font-medium text-amber-950 shadow-sm hover:bg-amber-300",
-        focusRing,
-        className,
-      )}
+      className={
+        quiet
+          ? buttonClass("secondary", "sm", className)
+          : cx(
+              // Dark text on amber: white on amber-500 is 2.1:1, amber-950 on amber-400 is 9:1.
+              "inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-3 py-1.5 text-sm font-medium text-amber-950 hover:bg-amber-300",
+              focusRing,
+              className,
+            )
+      }
     >
       <Crown className="h-4 w-4" />
       {children ?? (offer ? `Get credits · from ${(offer.price_text ?? priceText(offer.price_inr))}` : "Get credits")}
@@ -94,7 +99,7 @@ export function AllowanceBanner() {
     // whole explanation from 640 px up. Out of credits, the full amber note below.
     return (
       <div role="note" className="mb-4 flex items-center gap-3 rounded-xl bg-zinc-500/5 px-3 py-2 text-sm text-zinc-700 ring-1 ring-zinc-500/15 dark:text-zinc-300">
-        <Sparkles className="h-4 w-4 shrink-0 text-indigo-500 dark:text-indigo-300" aria-hidden />
+        <Sparkles className="h-4 w-4 shrink-0 text-zinc-500 dark:text-zinc-400" aria-hidden />
         <span className="min-w-0 flex-1">
           <strong>{`${left} resume credit${left === 1 ? "" : "s"} left.`}</strong>
           <span className="sm:hidden"> AI actions use one; the rest is free.</span>
@@ -105,7 +110,7 @@ export function AllowanceBanner() {
             {offer && ` The ${offer.label} pack adds ${offer.resume_credits} credits${offer.interview_minutes ? ` and ${offer.interview_minutes} interview minutes` : ""} for ${(offer.price_text ?? priceText(offer.price_inr))}, and they never expire.`}
           </span>
         </span>
-        <UpgradeLink className="shrink-0 !px-2.5 !py-1 !text-xs sm:!px-3 sm:!py-1.5 sm:!text-sm">
+        <UpgradeLink quiet className="shrink-0">
           <span className="sm:hidden">Get credits</span>
           <span className="hidden sm:inline">{offer ? `Get credits · from ${(offer.price_text ?? priceText(offer.price_inr))}` : "Get credits"}</span>
         </UpgradeLink>

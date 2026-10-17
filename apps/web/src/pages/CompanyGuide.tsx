@@ -9,7 +9,7 @@ export function CompanyGuide({ style, className, inMock = true }: { style: Compa
     <section aria-labelledby={`guide-${style.slug}`} className={className}>
       <Card className="animate-fade-up">
         <div className="flex items-start gap-3">
-          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 ring-1 ring-indigo-500/20 dark:text-indigo-300">
+          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
             <Building2 className="h-4 w-4" aria-hidden />
           </span>
           <div className="min-w-0">
@@ -23,7 +23,7 @@ export function CompanyGuide({ style, className, inMock = true }: { style: Compa
         </div>
         <div className="mt-4 grid gap-5 md:grid-cols-2">
           <div>
-            <h4 className="text-xs font-semibold uppercase tracking-[0.1em] text-zinc-500">The rounds</h4>
+            <h4 className="text-xs font-semibold text-zinc-500">The rounds</h4>
             <ol className="mt-2 space-y-1.5 text-sm text-zinc-700 dark:text-zinc-300">
               {style.rounds.map((r, i) => (
                 <li key={r} className="flex gap-2">
@@ -36,7 +36,7 @@ export function CompanyGuide({ style, className, inMock = true }: { style: Compa
             </ol>
           </div>
           <div>
-            <h4 className="text-xs font-semibold uppercase tracking-[0.1em] text-zinc-500">They listen for</h4>
+            <h4 className="text-xs font-semibold text-zinc-500">They listen for</h4>
             <ul className="mt-2 flex flex-wrap gap-1.5">
               {style.looks_for.map((v) => (
                 <li key={v} className="rounded-full bg-indigo-500/10 px-2.5 py-1 text-xs font-medium text-indigo-800 ring-1 ring-indigo-500/20 dark:text-indigo-200">
@@ -44,7 +44,7 @@ export function CompanyGuide({ style, className, inMock = true }: { style: Compa
                 </li>
               ))}
             </ul>
-            <h4 className="mt-4 text-xs font-semibold uppercase tracking-[0.1em] text-zinc-500">Tips</h4>
+            <h4 className="mt-4 text-xs font-semibold text-zinc-500">Tips</h4>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-700 marker:text-zinc-400 dark:text-zinc-300">
               {style.tips.map((t) => (
                 <li key={t}>{t}</li>

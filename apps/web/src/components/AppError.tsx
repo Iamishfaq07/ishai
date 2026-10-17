@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { cx, focusRing } from "@orbit/ui";
+import { buttonClass } from "@orbit/ui";
 import { isStaleBuildError, reloadForNewBuild } from "../lib/staleBuild";
 
 /**
@@ -27,12 +27,12 @@ export function AppError({ error, reset }: { error: Error; reset: () => void }) 
       {!reloading && (
         <div className="flex gap-2">
           {!stale && (
-            <button type="button" onClick={reset} className={cx("rounded-lg border border-zinc-200 px-3 py-1.5 text-sm dark:border-zinc-800", focusRing)}>
+            <button type="button" onClick={reset} className={buttonClass("secondary")}>
               Try again
             </button>
           )}
           <button type="button" onClick={() => window.location.reload()}
-                  className={cx("rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500", focusRing)}>
+                  className={buttonClass("primary")}>
             Reload
           </button>
         </div>

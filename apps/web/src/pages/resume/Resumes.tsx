@@ -13,6 +13,7 @@ import {
   GraduationCap,
   Plus,
   ScanText,
+  ResumeScene,
   Sparkles,
   Trash2,
   UserRound,
@@ -26,19 +27,17 @@ import {
   isIndia,
   regionWords,
 } from "@orbit/ui";
-import { Button, Card, ErrorNote, Field, Select, Textarea } from "../../components/ui";
+import { Button, Card, ErrorNote, Field, IconButton, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText, formatDate } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
 import { useCountry } from "../../lib/country";
-import { AiPill } from "../../components/products";
 import { JOBS_AI_HOME } from "../jobs/paths";
 import { AllowanceBanner, AllowanceContext, isUpgradeError, priceText, useResumeAllowance } from "./allowance";
 import { guestResume } from "./backend";
 import { fresherResume, newId, newResume } from "./model";
 import { resumePath } from "./paths";
 import { ResumeAiTabs, resumeAiFeatures, scoreTone } from "./product";
-import { ResumeMock } from "../../components/productArt";
 import { fromJsonResume } from "./jsonResume";
 import { TailorQueue } from "./TailorQueue";
 export { scoreTone };
@@ -113,13 +112,11 @@ export function ResumeAiHomePage() {
       {/* The full introduction is for someone starting out; once there are resumes (or while they load) a compact
           header with the two ways to start puts the list straight under it, where a returning visit is headed. */}
       {intro ? (
-        <section aria-labelledby="resume-ai-title" className="glass-panel gradient-border relative mb-6 overflow-hidden rounded-3xl p-5 sm:p-8">
-          <span aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-aurora-400/15 blur-3xl" />
-          <span aria-hidden="true" className="pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl" />
+        <section aria-labelledby="resume-ai-title" className="glass-panel relative mb-6 overflow-hidden rounded-3xl p-5 sm:p-8">
           <div className="relative grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_19rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
             <div>
-              <p className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-200">
-                <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              <p className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-600 dark:text-zinc-300">
+                <Sparkles className="h-4 w-4" aria-hidden />
                 Orbit Resume AI
               </p>
               <h1 id="resume-ai-title" className="mt-4 max-w-2xl font-display text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
@@ -142,14 +139,14 @@ export function ResumeAiHomePage() {
                     key={short}
                     className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-xs font-medium text-zinc-700 ring-1 ring-zinc-500/15 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10"
                   >
-                    <Icon className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-300" aria-hidden />
+                    <Icon className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" aria-hidden />
                     {short}
                   </li>
                 ))}
               </ul>
             </div>
             <div className="hidden lg:block">
-              <ResumeMock />
+              <ResumeScene className="mx-auto max-w-[18rem]" />
             </div>
           </div>
         </section>
@@ -254,24 +251,17 @@ export function ResumeAiHomePage() {
                   </div>
                 </Link>
                 <div className="absolute right-3 top-3 flex">
-                  <button
-                    type="button"
+                  <IconButton
+                    size="sm"
+                    icon={Copy}
                     onClick={() => void duplicate(r)}
                     disabled={copying !== null}
-                    aria-label={`Make a copy of ${r.title}`}
+                    loading={copying === r.id}
+                    label={`Make a copy of ${r.title}`}
                     title="Make a copy (to tailor for another job)"
-                    className={cx("rounded-md p-1.5 text-zinc-400 hover:bg-indigo-500/10 hover:text-indigo-600 disabled:opacity-40", focusRing)}
-                  >
-                    <Copy className={cx("h-4 w-4", copying === r.id && "animate-pulse")} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void remove(r)}
-                    aria-label={`Delete ${r.title}`}
-                    className={cx("rounded-md p-1.5 text-zinc-400 hover:bg-rose-500/10 hover:text-rose-600", focusRing)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                    className="text-zinc-500"
+                  />
+                  <IconButton size="sm" icon={Trash2} onClick={() => void remove(r)} label={`Delete ${r.title}`} className="text-zinc-500 hover:!bg-rose-500/10 hover:!text-rose-700 dark:hover:!text-rose-300" />
                 </div>
               </Card>
             </li>
@@ -304,9 +294,7 @@ function FindJobs() {
       <span className="min-w-0 flex-1">
         <span className="block font-display font-semibold">Find jobs that match your resume</span>
         <span className="block text-sm text-zinc-500 dark:text-zinc-400">
-          <span className="font-medium text-zinc-700 dark:text-zinc-200">
-            Jobs <AiPill className="align-[1px]" />
-          </span>{" "}
+          <span className="font-medium text-zinc-700 dark:text-zinc-200">Jobs AI</span>{" "}
           shows the latest openings, ranked by how well they match you, with a free AI fit check and outreach for each job.
         </span>
       </span>
@@ -567,7 +555,7 @@ export function NewResume({ onClose, initial = null }: { onClose?: () => void; i
                   focusRing,
                 )}
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
                   <Icon className="h-4 w-4" />
                 </span>
                 <span>

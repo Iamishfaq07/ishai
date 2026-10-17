@@ -69,12 +69,23 @@
   --stage-offer: 5 150 105; /* #059669 */
   --stage-rejected: 161 161 170; /* #A1A1AA */
 
+  /* Elevation (Tailwind shadow-menu / -popover / -dialog / -toast): floating things only, softer and wider the higher
+     they sit. Each pairs with a hairline border, so an edge holds where a shadow can't be seen (dark mode). */
+  --shadow-menu: 0 1px 2px rgb(var(--ink-900) / 0.06), 0 8px 24px -8px rgb(var(--ink-900) / 0.18);
+  --shadow-popover: 0 2px 4px rgb(var(--ink-900) / 0.06), 0 12px 32px -10px rgb(var(--ink-900) / 0.22);
+  --shadow-dialog: 0 4px 10px rgb(var(--ink-900) / 0.08), 0 28px 64px -20px rgb(var(--ink-900) / 0.35);
+  --shadow-toast: 0 4px 10px rgb(var(--ink-900) / 0.08), 0 16px 40px -14px rgb(var(--ink-900) / 0.35);
+
   color-scheme: light;
   /* A focused field is never hidden under the sticky header (WCAG 2.4.11)… */
   scroll-padding-top: 5rem;
 }
 .dark {
   color-scheme: dark;
+  --shadow-menu: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 28px -8px rgb(0 0 0 / 0.6);
+  --shadow-popover: 0 2px 4px rgb(0 0 0 / 0.4), 0 14px 36px -10px rgb(0 0 0 / 0.65);
+  --shadow-dialog: 0 4px 12px rgb(0 0 0 / 0.45), 0 32px 72px -20px rgb(0 0 0 / 0.75);
+  --shadow-toast: 0 4px 12px rgb(0 0 0 / 0.45), 0 18px 44px -14px rgb(0 0 0 / 0.7);
   /* Dark mode's own steps: lighter means further along against the dark surface. */
   --stage-saved: 94 56 214; /* #5E38D6 */
   --stage-applied: 134 102 255; /* #8666FF */
@@ -585,7 +596,7 @@ button:not(:disabled) {
   transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow !important;
   scroll-behavior: auto !important;
 }
-:root[data-motion="reduced"] :is(.animate-fade-in, .animate-fade-up, .animate-scale-in, .animate-rise, .stagger > *, .motion-fade, .reveal-stagger[data-shown] > *) {
+:root[data-motion="reduced"] :is(.animate-fade-in, .animate-fade-up, .animate-scale-in, .animate-rise, .animate-dialog-in, .animate-sheet-up, .animate-menu-in, .animate-panel-in, .stagger > *, .motion-fade, .reveal-stagger[data-shown] > *) {
   animation-name: orbit-fade !important;
   animation-duration: var(--dur-quick) !important;
 }
@@ -633,6 +644,10 @@ html:not(.dark) .text-emerald-600 {
 }
 html:not(.dark) .text-amber-600 {
   color: rgb(180 83 9);
+}
+/* …and rose-600 (4.3:1 on the workbench canvas) draws in -700 (6.0:1), so a small Delete or error line passes too. */
+html:not(.dark) .text-rose-600 {
+  color: rgb(190 18 60);
 }
 
 /* ---- Deep Space 2.0 ----------------------------------------------------------------------------------------------
@@ -842,8 +857,18 @@ html.app-shell.dark {
   --canvas: 13 18 28; /* #0D121C */
   --surface: 20 27 39; /* #141B27 */
   --line: 35 44 59; /* #232C3B */
+  /* Dark mode is one blue-grey family, the light theme's twin (DECISIONS D58). The ink's darkest steps are what
+     `dark:` classes paint panels with: zinc-950 (paired with bg-white everywhere: the bars, fields, dialogs, the live
+     panel) is the surface, zinc-900 a raised step above it, zinc-800 the line. Not the front door's violet night.
+     The lighter steps (text) keep their values. */
+  --ink-950: 20 27 39;
+  --ink-900: 27 35 50;
+  --ink-800: 35 44 59;
+  --ink-700: 54 64 84;
 }
-html.app-shell body {
+/* .dark twice outranks the body's own `dark:bg-zinc-950` utility, so the dark canvas is the canvas too. */
+html.app-shell body,
+html.app-shell.dark body {
   background-color: rgb(var(--canvas));
   background-image: none;
 }
@@ -868,3 +893,97 @@ html.app-shell .text-gradient {
 }
 html.app-shell .btn-sheen::after { display: none; }
 html.app-shell :is(.shadow-glow, .shadow-glow-sm, .hover\:shadow-glow:hover) { box-shadow: none; }
+/* A card that is a link (`lift`) darkens its border on hover in the workbench, like Card's `interactive`; it doesn't
+   rise. The press stays. */
+:root.app-shell:not([data-motion="reduced"]):not([data-motion="off"]) .lift:hover { transform: none; }
+:root.app-shell:not([data-motion="reduced"]):not([data-motion="off"]) .lift:active { transform: scale(0.99); }
+html.app-shell .lift:hover { border-color: rgb(var(--ink-300)); }
+html.app-shell.dark .lift:hover { border-color: rgb(255 255 255 / 0.2); }
+/* Loading placeholders are ink in the workbench, not the accent: a screen that's loading shouldn't look selected. */
+html.app-shell .skeleton-line {
+  background-image: linear-gradient(90deg, rgb(var(--ink-500) / 0.1) 0%, rgb(var(--ink-500) / 0.2) 50%, rgb(var(--ink-500) / 0.1) 100%);
+}
+html.app-shell:is([data-motion="reduced"], [data-motion="off"]) .skeleton-line,
+html.app-shell .skeleton-line.skeleton-still {
+  background: rgb(var(--ink-500) / 0.14);
+}
+html.app-shell.dark .skeleton-line {
+  background-image: linear-gradient(90deg, rgb(255 255 255 / 0.05) 0%, rgb(255 255 255 / 0.1) 50%, rgb(255 255 255 / 0.05) 100%);
+}
+html.app-shell.dark:is([data-motion="reduced"], [data-motion="off"]) .skeleton-line,
+html.app-shell.dark .skeleton-line.skeleton-still {
+  background: rgb(255 255 255 / 0.07);
+}
+/* Small readouts (a timer, a capture pill) are figures, not code: the product face with tabular figures. */
+html.app-shell .telemetry { font-family: inherit; }
+/* SpotIllustration in the workbench: a hairline orbit, a solid accent planet with its icon and a small moon. No halo,
+   no lit sphere, no glow (it keeps them on the public pages and in the desktop app's sky). */
+html.app-shell :is(.spot-halo, .spot-rim, .spot-moon-glow) { display: none; }
+html.app-shell .spot-orb { fill: rgb(var(--accent-600)); }
+html.app-shell .spot-ring { stroke: rgb(var(--ink-300)); stroke-opacity: 1; }
+html.app-shell.dark .spot-ring { stroke: rgb(255 255 255 / 0.2); }
+html.app-shell .spot-moon { fill: rgb(var(--accent-400)); }
+/* The panel's cyan light sweep is the front door's; the workbench's dialogs simply appear. */
+html.app-shell .sheet-sweep { display: none; }
+
+/* ---- Component system (round 3) ------------------------------------------------------------------------------- */
+
+/* A table that becomes a list of cards on a phone (Table `stack`): each cell shows its column's name (data-label)
+   before its value, and the header row is kept for screen readers only. */
+@media (max-width: 639.98px) {
+  .table-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .table-stack,
+  .table-stack tbody,
+  .table-stack tr,
+  .table-stack td {
+    display: block;
+    width: 100%;
+  }
+  .table-stack tr {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgb(var(--ink-200));
+  }
+  .dark .table-stack tr {
+    border-bottom-color: rgb(255 255 255 / 0.08);
+  }
+  .table-stack tr:last-child {
+    border-bottom: 0;
+  }
+  .table-stack td {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.25rem 0 !important;
+    text-align: right;
+  }
+  .table-stack td[data-label]::before {
+    content: attr(data-label);
+    flex: none;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgb(84 89 122);
+  }
+  .dark .table-stack td[data-label]::before {
+    color: rgb(var(--ink-400));
+  }
+  .table-stack td[data-primary] {
+    justify-content: flex-start;
+    text-align: left;
+  }
+}
+
+/* The sliding indicator under a segmented control or a tab list (SegmentedControl, Tabs): it glides to the chosen
+   item at Full motion and simply moves at Gentle and Off (the motion levels above drop the transform transition). */
+.indicator {
+  transition:
+    transform var(--dur-panel) var(--ease-standard),
+    width var(--dur-panel) var(--ease-standard);
+}

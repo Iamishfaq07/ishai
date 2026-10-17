@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { SessionType } from "@orbit/types";
-import { ChevronRight, Clock, CosmicEmptyState, LoadGate, confirmDialog, cx, focusRing, HistoryIcon, MessageCircle } from "@orbit/ui";
+import { Badge, ChevronRight, Clock, CosmicEmptyState, LoadGate, confirmDialog, cx, focusRing, HistoryIcon, MessageCircle } from "@orbit/ui";
 import { Button, Card, ErrorNote, PageHeader } from "../components/ui";
 import { PRODUCTS } from "../components/products";
 import { api } from "../lib/api";
@@ -46,13 +46,12 @@ export function SessionsPage() {
         icon={HistoryIcon}
         title="Sessions"
         subtitle="Transcripts, detected questions, answers, and summaries from past sessions."
-        actions={<Button onClick={() => navigate("/start")}>New session</Button>}
       />
       <LoadGate loading={sessions.loading && !sessions.data} variant="session-row" count={4} label="Loading sessions">
       {sessions.error ? (
         <ErrorNote onRetry={sessions.reload}>{errorText(sessions.error)}</ErrorNote>
       ) : (sessions.data ?? []).length === 0 ? (
-        <CosmicEmptyState variant="practice" title="No sessions yet" body="When a session ends, its transcript and summary are saved here. Sessions left open end on their own after an hour." />
+        <CosmicEmptyState variant="copilot" title="No sessions yet" body="When a session ends, its transcript and summary are saved here. Sessions left open end on their own after an hour." />
       ) : (
         <>
           {endError && (
@@ -79,9 +78,9 @@ export function SessionsPage() {
                         <p className="truncate font-medium">
                           {s.title}
                           {open && (
-                            <span className="ml-2 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
+                            <Badge tone="warning" className="ml-2">
                               {s.status === "live" ? "Unfinished" : "Not started"}
-                            </span>
+                            </Badge>
                           )}
                         </p>
                         <p className="truncate text-xs text-zinc-500">
@@ -91,22 +90,15 @@ export function SessionsPage() {
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500 sm:justify-end">
                         <span>{formatDate(s.started_at ?? s.created_at)}</span>
                         {s.duration_seconds ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/10 px-2 py-0.5 tabular-nums text-zinc-600 dark:text-zinc-300">
+                          <Badge className="tabular-nums">
                             <Clock className="h-3 w-3" aria-hidden="true" />
                             {formatDuration(s.duration_seconds)}
-                          </span>
+                          </Badge>
                         ) : null}
-                        <span
-                          className={cx(
-                            "inline-flex items-center gap-1 rounded-full px-2 py-0.5 tabular-nums",
-                            s.question_count > 0
-                              ? "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
-                              : "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",
-                          )}
-                        >
+                        <Badge className="tabular-nums">
                           <MessageCircle className="h-3 w-3" aria-hidden="true" />
                           {s.question_count} question{s.question_count === 1 ? "" : "s"}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
                     {!open && (

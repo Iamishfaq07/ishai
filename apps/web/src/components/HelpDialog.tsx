@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, Keyboard, Mail, MessageCircle, Send, buttonClass, cx, focusRing, isMacPlatform } from "@orbit/ui";
+import { ChevronDown, Kbd, Keyboard, Mail, MessageCircle, Send, buttonClass, cx, focusRing, isMacPlatform } from "@orbit/ui";
 import { api } from "../lib/api";
 import { displayAudioHelp } from "../lib/audio";
 import { CONTACT_PAGE, POLICY_LINKS, SUPPORT_EMAIL, USE_WHERE_ALLOWED, mailLink, whatsappLink } from "../lib/contact";
@@ -185,8 +185,8 @@ export default function HelpDialog({ open, onClose, onSearch }: { open: boolean;
             <Keyboard className="h-4 w-4 text-zinc-500" aria-hidden /> Shortcuts
           </h3>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
-            <kbd className="rounded-md border border-zinc-300 px-1.5 py-0.5 font-mono text-xs dark:border-white/15">{mod} K</kbd> or{" "}
-            <kbd className="rounded-md border border-zinc-300 px-1.5 py-0.5 font-mono text-xs dark:border-white/15">/</kbd> opens search,
+            <Kbd>{mod} K</Kbd> or{" "}
+            <Kbd>/</Kbd> opens search,
             from any page.{" "}
             {onSearch && (
               <button type="button" onClick={onSearch} className={cx("font-medium text-indigo-700 underline dark:text-indigo-300", focusRing)}>

@@ -3,6 +3,7 @@ import { ACCENTS, MOTION_LEVELS, TEXT_SIZES, type AccentName, type DesignPrefs, 
 import { useMotion } from "../hooks/useMotion";
 import { cx, focusRing } from "./cx";
 import { Check } from "../icons";
+import { SegmentedControl } from "./forms";
 
 export interface AppearanceControlsProps {
   prefs: DesignPrefs;
@@ -27,12 +28,6 @@ const MOTION_HINTS: Record<MotionLevel, string> = {
   reduced: "Fades only. Nothing moves across the screen.",
   off: "No animation at all.",
 };
-const segment = (on: boolean) =>
-  cx(
-    "rounded-md px-3 py-1 font-medium",
-    on ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-600 dark:text-white" : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200",
-    focusRing,
-  );
 
 /** Accent colour swatches, text size and the motion level — shared by the web and desktop Settings. */
 export function AppearanceControls({ prefs, onChange }: AppearanceControlsProps) {
@@ -79,30 +74,15 @@ export function AppearanceControls({ prefs, onChange }: AppearanceControlsProps)
         <span className="text-sm font-medium" id="text-size-label">
           Text size
         </span>
-        <div
-          role="radiogroup"
-          aria-labelledby="text-size-label"
-          className="flex rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800"
-          onKeyDown={radioKeys(
-            TEXT_SIZES.map((t) => t.value),
-            prefs.textSize,
-            (textSize) => onChange({ textSize }),
-          )}
-        >
-          {TEXT_SIZES.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              role="radio"
-              aria-checked={prefs.textSize === t.value}
-              tabIndex={prefs.textSize === t.value ? 0 : -1}
-              onClick={() => onChange({ textSize: t.value })}
-              className={cx(segment(prefs.textSize === t.value), t.value === "sm" ? "text-xs" : t.value === "lg" ? "text-base" : "text-sm")}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          labelledBy="text-size-label"
+          value={prefs.textSize}
+          onChange={(textSize) => onChange({ textSize })}
+          options={TEXT_SIZES.map((t) => ({
+            value: t.value,
+            label: <span className={t.value === "sm" ? "text-xs" : t.value === "lg" ? "text-base" : "text-sm"}>{t.label}</span>,
+          }))}
+        />
       </div>
 
       <div className="space-y-1.5">
@@ -110,31 +90,13 @@ export function AppearanceControls({ prefs, onChange }: AppearanceControlsProps)
           <span className="text-sm font-medium" id="motion-label">
             Animations
           </span>
-          <div
-            role="radiogroup"
-            aria-labelledby="motion-label"
-            aria-describedby="motion-hint"
-            className="flex rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800"
-            onKeyDown={radioKeys(
-              MOTION_LEVELS.map((m) => m.value),
-              prefs.motion,
-              (motion) => onChange({ motion }),
-            )}
-          >
-            {MOTION_LEVELS.map((m) => (
-              <button
-                key={m.value}
-                type="button"
-                role="radio"
-                aria-checked={prefs.motion === m.value}
-                tabIndex={prefs.motion === m.value ? 0 : -1}
-                onClick={() => onChange({ motion: m.value })}
-                className={cx(segment(prefs.motion === m.value), "text-sm")}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            labelledBy="motion-label"
+            describedBy="motion-hint"
+            value={prefs.motion}
+            onChange={(motion) => onChange({ motion })}
+            options={MOTION_LEVELS.map((m) => ({ value: m.value, label: m.label }))}
+          />
         </div>
         <p id="motion-hint" className="text-xs text-zinc-500 dark:text-zinc-400">
           {MOTION_HINTS[prefs.motion]}

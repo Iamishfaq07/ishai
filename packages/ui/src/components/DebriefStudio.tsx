@@ -53,9 +53,9 @@ export function DebriefStudio({ api, sessionId, refreshOn }: { api: Client; sess
       </li>)}</ol>
       {item && <div className="glass-panel space-y-5 rounded-2xl p-5">
         <h3 className="font-semibold">{item.question}</h3>
-        <div><h4 className="telemetry text-xs uppercase text-zinc-500">Your transcript / submitted answer</h4>
+        <div><h4 className="telemetry text-xs text-zinc-500">Your transcript / submitted answer</h4>
           <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{item.transcript || "No candidate answer was recorded for this question."}</p></div>
-        {item.ideal_answer && <div><h4 className="telemetry text-xs uppercase text-cyan-700 dark:text-cyan-300">Orbit ideal answer</h4>
+        {item.ideal_answer && <div><h4 className="telemetry text-xs text-cyan-700 dark:text-cyan-300">Orbit ideal answer</h4>
           <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{item.ideal_answer}</p>
           {item.ideal_code && <pre className="mt-3 max-h-64 overflow-auto rounded-lg bg-zinc-500/5 p-3 text-xs"><code>{item.ideal_code}</code></pre>}
         </div>}

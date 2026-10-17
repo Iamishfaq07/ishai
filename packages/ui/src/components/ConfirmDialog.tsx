@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useFocusTrap } from "../hooks/useFocusTrap";
-import { cx, focusRing } from "./cx";
+import { Button, Input } from "./ui";
 
 /**
  * In-app confirmation dialog replacing window.confirm / window.prompt (which look foreign, can't be styled or
@@ -57,7 +57,7 @@ export function ConfirmHost() {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex animate-fade-in items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-confirm flex animate-fade-in items-end justify-center bg-zinc-950/50 p-4 sm:items-center"
       onMouseDown={(e) => e.target === e.currentTarget && close(false)}
     >
       <div
@@ -66,53 +66,40 @@ export function ConfirmHost() {
         aria-modal="true"
         aria-labelledby="orbit-confirm-title"
         aria-describedby={pending.body ? "orbit-confirm-body" : undefined}
-        className="w-full max-w-sm animate-fade-up rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950"
+        className="w-full max-w-md animate-sheet-up rounded-2xl border border-zinc-200 bg-white p-5 shadow-dialog sm:animate-dialog-in dark:border-white/10 dark:bg-zinc-950"
       >
-        <h2 id="orbit-confirm-title" className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+        <h2 id="orbit-confirm-title" className="font-display text-base font-semibold text-zinc-900 dark:text-zinc-50">
           {pending.title}
         </h2>
         {pending.body && (
-          <p id="orbit-confirm-body" className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+          <p id="orbit-confirm-body" className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-300">
             {pending.body}
           </p>
         )}
         {pending.typeToConfirm && (
-          <label className="mt-3 block text-sm">
-            <span className="text-zinc-600 dark:text-zinc-300">
-              Type <span className="font-mono font-semibold">{pending.typeToConfirm}</span> to confirm
-            </span>
-            <input
+          <div className="mt-4 space-y-1.5">
+            <label htmlFor="orbit-confirm-typed" className="block text-sm text-zinc-700 dark:text-zinc-300">
+              Type <strong className="font-semibold text-zinc-900 dark:text-white">{pending.typeToConfirm}</strong> to confirm
+            </label>
+            <Input
+              id="orbit-confirm-typed"
               ref={inputRef}
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && canConfirm && close(true)}
-              className={cx("mt-1 block w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 font-mono text-sm dark:border-zinc-700 dark:bg-zinc-900", focusRing)}
               autoComplete="off"
               spellCheck={false}
             />
-          </label>
+          </div>
         )}
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => close(false)}
-            className={cx("rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800", focusRing)}
-          >
+        {/* Phones: full-width buttons, the confirming one nearest the thumb. From sm: right-aligned, confirm last. */}
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="secondary" block onClick={() => close(false)}>
             {pending.cancelLabel ?? "Cancel"}
-          </button>
-          <button
-            ref={confirmRef}
-            type="button"
-            disabled={!canConfirm}
-            onClick={() => close(true)}
-            className={cx(
-              "rounded-lg px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40",
-              pending.danger ? "bg-rose-600 hover:bg-rose-500" : "bg-indigo-600 hover:bg-indigo-500",
-              focusRing,
-            )}
-          >
+          </Button>
+          <Button ref={confirmRef} variant={pending.danger ? "destructive" : "primary"} block disabled={!canConfirm} onClick={() => close(true)}>
             {pending.confirmLabel ?? "Confirm"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

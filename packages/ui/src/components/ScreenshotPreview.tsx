@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { cx, focusRing } from "./cx";
+import { buttonClass } from "./ui";
 
 export interface ScreenshotPreviewProps {
   image: Blob;
@@ -51,11 +52,11 @@ export function ScreenshotPreview({ image, onAnalyze, onRetake, onCancel }: Scre
           type="button"
           onClick={() => void analyze()}
           disabled={busy}
-          className={cx("rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50", focusRing)}
+          className={buttonClass("primary", "sm")}
         >
           {busy ? "Sending…" : "Analyze"}
         </button>
-        <button type="button" onClick={onRetake} disabled={busy} className={cx("rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800", focusRing)}>
+        <button type="button" onClick={onRetake} disabled={busy} className={buttonClass("ghost", "sm")}>
           Retake
         </button>
         <button type="button" onClick={onCancel} disabled={busy} className={cx("ml-auto rounded-lg px-3 py-1.5 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800", focusRing)}>

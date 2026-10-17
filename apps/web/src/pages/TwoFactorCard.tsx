@@ -84,7 +84,7 @@ export function TwoFactorCard() {
   return (
     <Card id="two-step" className="scroll-mt-24">
       <h2 className="mb-1 flex items-center gap-2.5 font-semibold">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
           <KeyRound className="h-4 w-4" aria-hidden />
         </span>
         Two-step sign-in

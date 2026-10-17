@@ -155,7 +155,7 @@ export function CompanionShare({
           id={popId}
           role="dialog"
           aria-label="Follow on your phone"
-          className="glass-panel absolute right-2 top-12 z-40 w-72 max-w-[calc(100%-1rem)] animate-fade-up rounded-2xl p-4 text-left text-zinc-900 shadow-2xl dark:text-zinc-100"
+          className="glass-panel absolute right-2 top-12 z-40 w-72 max-w-[calc(100%-1rem)] animate-fade-up rounded-2xl p-4 text-left text-zinc-900 shadow-popover dark:text-zinc-100"
         >
           <div className="flex items-start justify-between gap-2">
             <div>

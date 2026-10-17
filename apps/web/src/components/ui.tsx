@@ -5,6 +5,8 @@ export {
   EmptyState,
   ErrorNote,
   Field,
+  IconButton,
+  IconTile,
   Input,
   Meter,
   PageHeader,

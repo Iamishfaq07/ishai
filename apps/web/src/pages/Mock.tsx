@@ -8,6 +8,7 @@ import {
   Banknote,
   IndianRupee,
   MOCK_INTERVIEW_ENABLED,
+  PracticeScene,
   Sparkles,
   Target,
   UserRound,
@@ -40,7 +41,6 @@ import { PrepSection } from "./Prep";
 import { PracticeQueueCard } from "./PracticeQueue";
 import { ProgressSection } from "./Progress";
 import type { LiveLaunchState } from "./SessionSetup";
-import { PracticeMock } from "../components/productArt";
 import { usePrepContext } from "../lib/prepContext";
 
 const NO_JD = "none";
@@ -282,7 +282,9 @@ function MockSetup() {
       {/* Wide screens: what a round ends with, beside the ways to start one. */}
       <aside className="hidden xl:block" aria-label="What you get after a round">
         <div className="sticky top-24 space-y-3 pt-24">
-          <PracticeMock />
+          <div className="glass-panel rounded-2xl px-5 py-6">
+            <PracticeScene className="mx-auto" />
+          </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
             After each round: a score out of 10, what worked, and the answers worth redoing.
           </p>

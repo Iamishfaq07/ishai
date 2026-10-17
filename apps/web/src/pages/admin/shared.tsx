@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { AdminUser } from "@orbit/types";
-import { Headphones, Inbox, IndianRupee, ScrollText, Users, cx } from "@orbit/ui";
+import { Badge, Headphones, Inbox, IndianRupee, ScrollText, Users, cx } from "@orbit/ui";
 import { ProductTabs } from "../../components/products";
 import { api } from "../../lib/api";
 import { useAsync } from "../../lib/useAsync";
@@ -51,15 +51,9 @@ export function AdminTabs({ paymentsWaiting, inboxUnread }: { paymentsWaiting?: 
   );
 }
 
-const PILL = "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ring-1";
-
+// The admin's status pills are the shared Badge: amber waiting, accent on a grant, emerald approved, rose suspended.
 export function AccessBadge({ user }: { user: AdminUser }) {
-  const tone =
-    user.access === "pending"
-      ? "bg-amber-500/10 text-amber-900 ring-amber-500/25 dark:text-amber-200"
-      : user.access === "granted"
-        ? "bg-indigo-500/10 text-indigo-800 ring-indigo-500/25 dark:text-indigo-200"
-        : "bg-emerald-500/10 text-emerald-800 ring-emerald-500/25 dark:text-emerald-300";
+  const tone = user.access === "pending" ? "warning" : user.access === "granted" ? "accent" : "success";
   const text =
     user.access === "pending"
       ? "Waiting for access"
@@ -68,18 +62,18 @@ export function AccessBadge({ user }: { user: AdminUser }) {
         : user.access === "admin"
           ? "Admin · Unlimited"
           : `Approved · ${user.plan_label}`;
-  return <span className={cx(PILL, tone)}>{text}</span>;
+  return <Badge tone={tone}>{text}</Badge>;
 }
 
 export function SuspendedBadge() {
-  return <span className={cx(PILL, "bg-rose-500/10 text-rose-800 ring-rose-500/25 dark:text-rose-300")}>Suspended</span>;
+  return <Badge tone="danger">Suspended</Badge>;
 }
 
 /** A small neutral tag ("You", "Note"). */
 export function Tag({ children, title }: { children: string; title?: string }) {
   return (
-    <span title={title} className={cx(PILL, "bg-zinc-500/10 text-zinc-700 ring-zinc-500/20 dark:text-zinc-300")}>
-      {children}
+    <span title={title}>
+      <Badge>{children}</Badge>
     </span>
   );
 }

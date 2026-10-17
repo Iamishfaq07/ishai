@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { CountUp, CreditCard, Crown, LoadGate, Mic, Sparkles, cx, focusRing, type LucideIcon } from "@orbit/ui";
+import { Callout, CountUp, CreditCard, Crown, LoadGate, Mic, Sparkles, cx, focusRing, type LucideIcon } from "@orbit/ui";
 import type { CreditPack, Entitlements, MonthlyPlan, UpiOrder } from "@orbit/types";
 import { Button, Card, ErrorNote, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
@@ -74,8 +74,8 @@ function CreditRows({ e, wide = false }: { e: Entitlements; wide?: boolean }) {
         </Balance>
       </div>
       {empty && c.welcome_missed && (
-        <p className="rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-3.5 py-2.5 text-sm text-amber-900 dark:text-amber-100">
-          <span className="font-medium">No free credits on this account.</span> The free starter credits go to one new
+        <Callout tone="warning" title="No free credits on this account">
+          The free starter credits go to one new
           account per network each month (Wi-Fi and mobile data are often shared) and one per inbox, so this one didn't
           get them. A pack adds credits right away.{" "}
           <Link
@@ -84,7 +84,7 @@ function CreditRows({ e, wide = false }: { e: Entitlements; wide?: boolean }) {
           >
             Think that's wrong? Tell us
           </Link>
-        </p>
+        </Callout>
       )}
       {empty && wide && (
         <Link to="/billing" className={cx("inline-flex items-center gap-1.5 text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>

@@ -294,7 +294,7 @@ function QuestionCard({ q, startOpen, picked, canPick, onPick }: { q: ResumeInte
         <div className="animate-fade-in space-y-3 border-t border-zinc-200 px-3 pb-3 pt-2.5 text-sm dark:border-white/[0.06]">
           {q.outline.length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-500">Answer outline, from your resume</p>
+              <p className="text-xs font-semibold text-zinc-500">Answer outline, from your resume</p>
               <ul className="mt-1 space-y-1">
                 {q.outline.map((p, i) => (
                   <li key={i} className="flex gap-2">
@@ -311,7 +311,7 @@ function QuestionCard({ q, startOpen, picked, canPick, onPick }: { q: ResumeInte
           )}
           {q.missing.length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-500">Only you can add</p>
+              <p className="text-xs font-semibold text-zinc-500">Only you can add</p>
               <ul className="mt-1 space-y-1 text-amber-900 dark:text-amber-200">
                 {q.missing.map((m) => (
                   <li key={m} className="flex gap-2">

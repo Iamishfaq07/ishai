@@ -29,7 +29,7 @@ export function OnThisPage({ sections, label, className }: { sections: PageSecti
   }, [sections]);
   return (
     <nav aria-label={label} className={className}>
-      <p className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-zinc-500">On this page</p>
+      <p className="mb-2 px-3 text-xs font-medium text-zinc-500">On this page</p>
       <ul className="space-y-0.5 border-l border-zinc-200 dark:border-white/10">
         {sections.map(({ id, label: text }) => (
           <li key={id}>

@@ -58,7 +58,7 @@ export function SettingsPage() {
             focusRing,
           )}
         >
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
             <CreditCard className="h-5 w-5" />
           </span>
           <span className="flex-1">
@@ -107,7 +107,7 @@ function SectionTitle({ icon: Icon, className, children }: { icon: LucideIcon; c
     <h2 className={cx("flex items-center gap-2.5 font-semibold", className)}>
       <span
         aria-hidden="true"
-        className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-300"
+        className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10"
       >
         <Icon className="h-4 w-4" />
       </span>
@@ -143,7 +143,7 @@ function AdvancedSettingsCard() {
   return (
     <>
       <Link to="/admin/users" className={cx("glass-panel lift flex items-center gap-4 rounded-2xl p-5 hover:border-indigo-400/40", focusRing)}>
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
           <Users className="h-5 w-5" />
         </span>
         <span className="flex-1">

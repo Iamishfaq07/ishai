@@ -96,7 +96,7 @@ export function TailorQueue({ resumes, onMade }: { resumes: ResumeSummary[]; onM
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="tailor-queue-title" className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight">
-            <Layers className="h-5 w-5 text-indigo-500" aria-hidden /> Tailor to several jobs
+            <Layers className="h-5 w-5 text-zinc-500 dark:text-zinc-400" aria-hidden /> Tailor to several jobs
           </h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             One resume, a tailored copy for each job, made in the background. You can leave this page.

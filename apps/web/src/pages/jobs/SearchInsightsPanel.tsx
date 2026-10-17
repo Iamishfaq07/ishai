@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import type { JobTrackerEntry } from "@orbit/types";
-import { ChartColumn, CountUp, cx, focusRing } from "@orbit/ui";
+import { ChartColumn, CountUp, StatTile, cx, focusRing } from "@orbit/ui";
 import { ColumnChart } from "../../components/ColumnChart";
 import { Card } from "../../components/ui";
 import { QUIET_DAYS, searchInsights, type SearchInsights } from "./insights";
@@ -13,11 +13,7 @@ const weekLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateStri
 /** One headline number (counted up once it's in view), with what it's out of. `value` null: nothing yet, a dash. */
 function Tile({ label, value, format, detail }: { label: string; value: number | null; format: (n: number) => string; detail: string }) {
   return (
-    <div className="rounded-xl bg-zinc-500/[0.05] p-3 dark:bg-white/[0.03]">
-      <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{label}</p>
-      <p className="stat-value mt-1 font-display text-2xl font-semibold text-zinc-900 dark:text-zinc-50">{value === null ? "–" : <CountUp to={value} format={format} />}</p>
-      <p className="text-xs text-zinc-500 dark:text-zinc-400">{detail}</p>
-    </div>
+    <StatTile label={label} value={value === null ? "–" : <CountUp to={value} format={format} />} detail={detail} />
   );
 }
 
@@ -49,7 +45,7 @@ export function SearchInsightsPanel({ entries }: { entries: JobTrackerEntry[] })
   return (
     <Card className="mb-5">
       <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold">
-        <ChartColumn className="h-5 w-5 text-indigo-500" aria-hidden /> Your search, in numbers
+        <ChartColumn className="h-5 w-5 text-zinc-500 dark:text-zinc-400" aria-hidden /> Your search, in numbers
       </h2>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Tile label="Applied" value={s.applied} format={String} detail="from your tracker" />

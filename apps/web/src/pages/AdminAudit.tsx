@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { AdminAuditItem } from "@orbit/types";
-import { ChevronDown, LoadGate, ScrollText, Search, X, cx, focusRing } from "@orbit/ui";
+import { ChevronDown, LoadGate, ScrollText, Search, THead, Table, Th, Tr, X, cx, focusRing } from "@orbit/ui";
 import { Button, EmptyState, ErrorNote, Input, PageHeader, Select } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
@@ -104,24 +104,22 @@ export function AdminAuditPage() {
           <p className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">
             {(data?.total ?? 0).toLocaleString("en-IN")} entr{data?.total === 1 ? "y" : "ies"} · showing {items.length.toLocaleString("en-IN")}
           </p>
-          <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white/70 dark:border-white/10 dark:bg-white/[0.03]">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-zinc-200 text-xs text-zinc-500 dark:border-white/10 dark:text-zinc-400">
-                <tr>
-                  <th className="py-2 pl-3 pr-3 font-medium">When</th>
-                  <th className="py-2 pr-3 font-medium">What</th>
-                  <th className="py-2 pr-3 font-medium">Account</th>
-                  <th className="hidden py-2 pr-3 font-medium md:table-cell">Details</th>
-                  <th className="hidden py-2 pr-3 font-medium sm:table-cell">By / IP</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
-                {items.map((i) => (
-                  <AuditRow key={i.id} item={i} />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table label="Audit log" dense>
+            <THead>
+              <tr>
+                <Th>When</Th>
+                <Th>What</Th>
+                <Th>Account</Th>
+                <Th className="hidden md:table-cell">Details</Th>
+                <Th className="hidden sm:table-cell">By / IP</Th>
+              </tr>
+            </THead>
+            <tbody>
+              {items.map((i) => (
+                <AuditRow key={i.id} item={i} />
+              ))}
+            </tbody>
+          </Table>
           {hasMore && (
             <Button
               size="sm"
@@ -154,9 +152,9 @@ function AuditRow({ item: i }: { item: AdminAuditItem }) {
   const accountEmail = admin ? i.subject_email : i.actor_email;
   const detail = auditDetail(i.target, i.subject_id);
   return (
-    <tr className="align-top">
-      <td className="whitespace-nowrap py-2 pl-3 pr-3 text-zinc-500 tabular-nums dark:text-zinc-400">{when(i.at)}</td>
-      <td className="py-2 pr-3">
+    <Tr className="align-top">
+      <td className="whitespace-nowrap px-4 py-2 text-zinc-500 tabular-nums dark:text-zinc-400">{when(i.at)}</td>
+      <td className="px-4 py-2">
         {actionLabel(i.action)}
         {/* An Inbox action: its target starts with the message's id. */}
         {i.action.startsWith("admin.contact.") && i.action !== "admin.contact.delete" && i.target && (
@@ -169,7 +167,7 @@ function AuditRow({ item: i }: { item: AdminAuditItem }) {
         )}
         {detail && <p className="text-xs text-zinc-500 md:hidden">{detail}</p>}
       </td>
-      <td className="max-w-[16rem] py-2 pr-3">
+      <td className="max-w-[16rem] px-4 py-2">
         {accountId && accountEmail ? (
           <Link to={`/admin/users?user=${encodeURIComponent(accountId)}`} className={cx("break-all text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}>
             {accountEmail}
@@ -180,10 +178,10 @@ function AuditRow({ item: i }: { item: AdminAuditItem }) {
           <span className="text-zinc-400">—</span>
         )}
       </td>
-      <td className="hidden max-w-[22rem] break-words py-2 pr-3 text-xs text-zinc-600 md:table-cell dark:text-zinc-300">{detail || "—"}</td>
-      <td className="hidden py-2 pr-3 text-xs sm:table-cell">
+      <td className="hidden max-w-[22rem] break-words px-4 py-2 text-xs text-zinc-600 md:table-cell dark:text-zinc-300">{detail || "—"}</td>
+      <td className="hidden px-4 py-2 text-xs sm:table-cell">
         {admin ? i.actor_email ?? "—" : i.ip ? <span className="font-mono">{i.ip}</span> : "—"}
       </td>
-    </tr>
+    </Tr>
   );
 }

@@ -147,7 +147,7 @@ export function ColumnChart({
         {shown && active !== null && (
           <div
             className={cx(
-              "pointer-events-none absolute -top-2 z-10 -translate-y-full whitespace-nowrap rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs shadow-lg dark:border-white/10 dark:bg-zinc-900",
+              "pointer-events-none absolute -top-2 z-10 -translate-y-full whitespace-nowrap rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs shadow-popover dark:border-white/10 dark:bg-zinc-900",
               tip === "mid" && "-translate-x-1/2",
             )}
             style={tip === "start" ? { left: 0 } : tip === "end" ? { right: 0 } : { left: (active + 0.5) * slot }}

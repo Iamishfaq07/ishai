@@ -7,20 +7,34 @@ Shared by the web and desktop apps. Source of truth: `packages/ui/tailwind.prese
 
 - **The front door** (signed-out pages: the front page, the public product pages, sign-in) keeps the sky: the
   animated backdrop, glass, gradient headlines and the Orbit scenes. It's where Orbit introduces itself.
-- **The workbench** (everything signed in, `html.app-shell` from the web Layout) is where people run their job search
-  every day, so it reads as professional software: one still canvas (`--canvas`, #F5F6F8 / #0D121C), opaque surfaces
-  (`--surface`) with a hairline border (`--line`) and no shadow, headings in the product face, and no gradients,
-  glows, sheens or decorative blobs. Only things that float (a menu, a dialog, a toast) cast a shadow.
-- **One accent, used sparingly**: the main action, links, focus and the page you're on. Everything else is ink. Status
-  colours mean status only. Product colours mark a product's own content (its mark, its row on Home), not the nav.
+- **The workbench** (everything signed in: `html.app-shell`, set by the web Layout and by the live session page) is
+  where people run their job search every day, so it reads as professional software: one still canvas (`--canvas`,
+  #F5F6F8 / #0D121C), opaque surfaces (`--surface`) with a hairline border (`--line`) and no shadow, headings in the
+  product face, and no gradients, glows, sheens or decorative blobs. Only things that float (a menu, a dialog, a
+  toast) cast a shadow. The live session (`/live/:id`) is the workbench too: no sky behind the panel, no glow around
+  it.
+- **Dark mode is the light theme's twin** (D58): inside the workbench the ink's darkest steps are the same blue-grey
+  family as the canvas: `zinc-950` (what `dark:` pairs with `bg-white`: the bars, fields, dialogs, the live panel) is
+  the surface, `zinc-900` a raised step above it, `zinc-800` the line. The front door keeps its violet night.
+- **One accent, used sparingly**: the main action, links, focus and the page you're on. Everything else is ink: a
+  heading's icon, an icon tile, a label, a loading placeholder. Status colours mean status only. Product colours mark a
+  product's own content (its mark, its row on Home), not the nav.
 - **Corners say how a thing behaves**: controls 8 px (`rounded-xl`), cards 12 px (`rounded-2xl`), large panels 16 px
   (`rounded-3xl`).
 - **Buttons**: primary is the solid accent (white on accent-600 passes AA in every accent), secondary is bordered,
-  ghost is plain. Nothing on a button moves except the press.
-- **AI is named, not badged**: tools carry their name ("Resume AI", "Jobs AI") in the nav; there is no AI chip per
-  item.
+  ghost is plain, danger is rose-700 text, destructive is solid rose (inside a confirm), link is inline text. Nothing
+  on a button moves except the press, and buttons cast no shadow.
+- **Fields and buttons are one height**: a text field, a select and a regular button are all 38 px (every button
+  variant carries a 1 px border, transparent unless it's bordered), so a field and its button line up in a row.
+  `sm` buttons are for dense rows and cards, not beside a field.
+- **Cards that are links** darken their border on hover (`Card interactive`, or `lift`, which the workbench keeps
+  still); they don't rise.
+- **AI is named, not badged**: tools carry their name ("Resume AI", "Jobs AI") in the nav and in text; there is no AI
+  chip in the workbench (the front door's product pages keep theirs).
+- **Labels are sentence case**: small labels, eyebrows and table headings are `text-xs font-medium` ink, never
+  tracked capitals (`uppercase tracking-*`). The resume templates keep their own type.
 - **No new gradients in the app.** A highlighted block (the Windows app, the video interview) is a solid ink panel
-  (`bg-zinc-900 text-white`); an icon tile is neutral (`bg-zinc-100 ring-zinc-200`) or the solid accent.
+  (`bg-zinc-900 text-white`); an icon tile is neutral (`IconTile`, `bg-zinc-100 ring-zinc-200`) or the solid accent.
 
 ## Colour
 
@@ -66,10 +80,11 @@ for code only, never for small data labels. Self-hosted via Fontsource (`apps/we
 
 - `glass-panel` — frosted card (the `Card` primitive). In see-through desktop windows it drops its blur and follows
   the window's transparency.
-- `Sheet` — the one modal. A sheet from the bottom on a phone, a centred dialog from `sm` up, portaled to `body` so
-  the tab bar cannot cover it. `placement="end"` is the full-height panel from the right (an account or a message).
-  Focus is trapped, Escape and the backdrop close it, and the page behind does not scroll. A `footer` stays pinned
-  while the body scrolls. A confirm sits above it.
+- `Sheet` (also exported as `Dialog`) — the one modal. A sheet that rises from the bottom on a phone, a centred dialog
+  that fades in from a touch smaller from `sm` up (sizes `sm`–`2xl`), portaled to `body` so the tab bar cannot cover
+  it. `placement="end"` is the full-height panel from the right (an account or a message). Focus moves in, is
+  trapped, and returns on close; Escape and the backdrop close it, and the page behind does not scroll. A `footer`
+  (use `DialogActions`) stays pinned while the body scrolls. A confirm sits above it.
 - `gradient-border` — 1 px accent → aurora hairline around hero cards.
 - `text-gradient` — accent → aurora headline text.
 - `SpaceBackdrop` — the animated sky, mounted once per app.
@@ -77,22 +92,92 @@ for code only, never for small data labels. Self-hosted via Fontsource (`apps/we
   grid and light orbs, and `glass-panel` / `orbit-card` / `orbit-panel` turn opaque there, so nothing shows through
   text while people work. The cinematic sky is for public pages and empty states.
 
+## Components (the inventory)
+
+One system, in `packages/ui` (shared with the desktop app), exported from `@orbit/ui`. Use these before writing a
+class string; `/dev/components` (development builds) shows each in its states, in both themes. D58 says why.
+
+**Tokens**
+- Radius: controls 8 px (`rounded-xl`), cards 12 px (`rounded-2xl`), large panels 16 px (`rounded-3xl`).
+- Height: `sm` 30 px, `md` 38 px (fields and regular buttons), `lg` 46 px.
+- Spacing: page sections `space-y-6`/`8`; a card's padding `p-5` (`p-4` dense); a page head `mb-6`; gaps 2/3/4.
+- Elevation, floating things only, lowest to highest: `shadow-menu` (menus) < `shadow-popover` (popovers, tooltips,
+  sticky action bars) < `shadow-dialog` (dialogs, side panels, the command palette) < `shadow-toast`; each with a
+  hairline border, and its own dark value. Z order: `z-bar` 20 < `z-sidebar` 30 < `z-menu`/`z-popover` 40 <
+  `z-dialog` 50 < `z-confirm` 60 < `z-toast` 70.
+- Motion: `duration-press/quick/panel/page` (100/160/240/280 ms), `ease-standard/enter/exit`; overlay entrances
+  `animate-dialog-in`, `animate-sheet-up`, `animate-menu-in`, `animate-panel-in`; the `.indicator` slide. Gentle turns
+  each into a fade, Off into nothing.
+
+**Actions**
+- `Button` — `primary` (one per view), `secondary`, `ghost`, `danger` (quiet rose: a Delete that asks first),
+  `destructive` (solid rose: the button that deletes, inside a confirm), `link`. `loading` swaps the label for a
+  spinner at the same width (aria-busy); `aria-pressed` styles a toggle; `block` is full width on phones.
+- `IconButton` (icon only, named by `label`, which is also its tooltip), `ButtonGroup`, `MenuButton`, `SplitButton`,
+  `buttonClass(variant, size)` for links that look like buttons.
+
+**Overlays**
+- `Dialog`/`Sheet` + `DialogActions` (the way out first, the main action last; stacked, main on top, on phones).
+- `confirmDialog({ title, body, confirmLabel, danger, typeToConfirm })` — `danger` uses the destructive button;
+  `typeToConfirm` ("DELETE") for what can't be undone (an account).
+- `MenuButton` / hand-built menus with `useDismiss`, `menuKeys`, `floatingClass`, `menuItemClass` (arrows, Home/End,
+  first letters, Escape back to the button, a press outside closes). `Popover` for small forms and filters.
+- `Tooltip` — on hover after 400 ms and on focus at once, aria-describedby, Escape hides. It only repeats or adds:
+  never put information people need only in a tooltip (phones can't hover).
+- `toast()` — `neutral`/`info`, `success`, `warning`, `error`; one action (Undo); stacks three; polite live region;
+  above dialogs. `Callout` — inline banners: `info` (ink), `success`, `warning`, `error` (announced); optional title,
+  action, dismiss. `ErrorNote` is the error callout with Retry.
+
+**Forms**
+- `Field` (label; `required` marker; `hint`; `error`, wired with aria-describedby and aria-invalid; `counter`, amber in
+  the last tenth), `Input`, `Textarea`, `Select` (date fields are `Input type="date"`), `SearchInput`, `Checkbox`,
+  `RadioGroup`, `Toggle` (a switch), `Slider`, `SegmentedControl` (a few exclusive options; a radio group with a
+  sliding indicator), `Dropzone`.
+- Errors say what to do ("Add a company name"), appear when the person leaves the field or submits, never while
+  they type.
+
+**Data**
+- `Table`, `THead`, `Th` (sortable: `sort` + `onSort`, aria-sort, the direction's arrow), `Tr` (hover, `selected`),
+  `Td` (`label` for the phone's card view with `stack`, `primary` for the row's title, `align="right"` for figures),
+  `TableEmpty`, `TableLoading`. Wide tables scroll inside their card, never the page.
+- `StatTile`, `Badge` (status only, always in words: `success`, `warning`, `danger`, `info`, `accent`, `neutral`),
+  `Avatar` (initials, never photos), `ProgressBar`, `Stepper`, `Pagination`, `Breadcrumbs`, `Kbd`, `IconTile`.
+- `Tabs` + `TabPanel` (a sliding underline, arrow keys; only the chosen panel is in the page), or `tabClass` /
+  `tabListClass` for a tab list that manages itself. `ProductTabs` for a product's own pages (links).
+- `PageHeader` (title, a line, actions, `back`), `BackLink`, `Card`, `EmptyState` / `CosmicEmptyState`, `Skeleton`.
+
+**Do / don't**
+- Do reuse a primitive; extend it (a prop, a variant) rather than copying its classes. Don't hand-roll a button,
+  badge, table header or menu.
+- Do give every icon-only control a name (`IconButton label`). Don't show colour without words.
+- Do use `shadow-*` tokens for things that float, and nothing else. Don't put a shadow, a gradient or a glow on a
+  card.
+- Do prefer Undo (a toast's action) to a confirm where the code can restore what was removed; keep the confirm for
+  what can't come back.
+- Do keep a phone's main action in thumb reach (`block`, `DialogActions`, the sheet's footer).
+
 ## Navigation (web)
 
 One definition, `apps/web/src/components/nav.ts`, feeds the desktop sidebar, the phone tab bar and the phone's Explore
 sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav does.
 - **Desktop sidebar**, grouped by the job to be done: Home; **Prepare** (Practice and Video interview while mock
   interviews are on, Resume AI, Learning AI); **Apply** (Jobs AI, LinkedIn AI); **Interview & offer** (Copilot AI,
-  Offer AI). Plan & credits, Settings, Admin (admins only) and Support sit at its foot. Every AI tool carries the AI
-  mark at its icon's top right. It collapses to icons; the choice is kept on the device (`orbit.sidebar`), and with
+  Offer AI). Plan & credits, Settings, Admin (admins only) and Support sit at its foot. Each tool is named in full
+  ("Resume AI"), one ink icon each, no AI mark. It collapses to icons; the choice is kept on the device (`orbit.sidebar`), and with
   none it starts collapsed under 1280 px.
 - **Top bar**: a wide "Search or jump to…" (Ctrl K, the command palette), a **New** menu (live session, mock
   interview, resume, job search, offer) and the account menu.
 - **Phones**: five destinations, Home, Jobs, Resume, Practice (the copilot when mock interviews are off) and
-  **Explore**, a sheet with the other tools as cards, then plan, settings, admin, support and sign out.
+  **Explore**, a sheet with the other tools as cards, then plan, settings, admin, support and sign out. The support
+  button keeps the bottom-right corner above the tab bar; a page's own floating button (Resume AI's Preview) sits
+  centred, clear of it.
 - **A product's own pages** sit under its item as `ProductTabs` (`components/products.tsx`): Jobs AI's Overview,
   Matches, Tracker and Profile. The tabs hide while a product has only one page. A product opens with a short
   header and one primary action, not a marketing banner.
+- **Page header** (`PageHeader`): the title, one line under it, and the page's actions at the row's end, beside
+  the title while there's room (a long line wraps under the title rather than pushing the actions down). A detail
+  page puts its way back above the title (`back={<BackLink to=… >All offers</BackLink>}`). The icon tile shows from
+  `sm` up, so a phone's title gets the width; a long title wraps, it isn't cut to one line. Actions are regular size.
 
 ## Motion
 
@@ -109,7 +194,7 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
   fades under Gentle on their own.
 - Utilities: `animate-fade-up` (page), `animate-rise` / `animate-fade-out` (panels, toasts), `stagger` (first 6
   children, 35 ms apart), `appear` (an item added later, `@starting-style`), `lift` (hover lift where there is hover,
-  press-in on touch), `btn-sheen` (primary buttons, hover devices), `animate-float`, `animate-orbit*`,
+  press-in on touch; the workbench keeps it still and darkens the border instead), `btn-sheen` (primary buttons, hover devices), `animate-float`, `animate-orbit*`,
   `animate-twinkle`, `animate-drift`, `animate-pulse-ring`, `animate-spark`.
 - **Scroll reveal:** `<Reveal>` rises content into place the first time it scrolls into view (`delay` in ms to stagger
   neighbours); `<Reveal stagger>` brings a list's children in one after another instead (cards in a grid). Gentle
@@ -139,10 +224,13 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
   tracker"). Not for errors that need action (`ErrorNote`) or questions (`confirmDialog`).
 - **Loading:** `Skeleton` (`line`, `card`, `job-card`, `resume-card`, `session-row`) with `useLoadPhase(loading)`.
   `LoadGate` is that timing around a list: nothing, then the skeleton, then the list.
-  (shown after 150 ms, kept at least 300 ms). Buttons keep their label with `loading`. Spinners (`Spinner`, the
-  orb) are for small or unknown-shaped waits.
+  (shown after 150 ms, kept at least 300 ms). A `loading` button keeps its name and width (a spinner takes the
+  label's place; no "Saving…" swap needed). Spinners (`Spinner`, the
+  orb) are for small or unknown-shaped waits. In the workbench a placeholder is an ink tint, not the accent.
 - **Empty states:** `EmptyState` with `kind` `first-use` (with a `GhostPreview` of the filled screen), `no-results`,
-  `cleared` or `offline` (`onRetry`). A headline, one line, one imperative action.
+  `cleared` or `offline` (`onRetry`). A headline, one line, one imperative action. Its art is an Orbit scene
+  (`CosmicEmptyState` maps `jobs`, `offline`, `resume` and `practice` to them) or an `icon` in a `SpotIllustration`,
+  which the workbench draws flat: a hairline orbit, a solid accent planet, a small moon, no halo.
 - **Success moments:** `celebrate(milestone, { message, action })`, once per device, never in a live session; the
   burst plays at Full motion only.
 - **Plain words:** `<Term term="ats">ATS</Term>` (glossary: ats, jd, utr, star, fit-check, tailor) or `tip="…"`.

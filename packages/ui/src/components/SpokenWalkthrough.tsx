@@ -30,9 +30,9 @@ export function SpokenWalkthrough({ walkthrough, code, load, complete = false }:
     <div id={`${id}-code`} role="tabpanel" aria-labelledby={`${id}-code-tab`} hidden={tab !== "code"}>{code}</div>
     <div id={`${id}-spoken`} role="tabpanel" aria-labelledby={`${id}-spoken-tab`} hidden={tab !== "spoken"} className="space-y-4 p-4 text-sm leading-relaxed">
       {explanation ? <>
-        <div><h4 className="telemetry mb-1 text-xs uppercase text-cyan-700 dark:text-cyan-300">Before typing</h4><p>{explanation.intuition}</p></div>
-        <div><h4 className="telemetry mb-1 text-xs uppercase text-cyan-700 dark:text-cyan-300">While writing</h4><ol className="list-decimal space-y-2 pl-5">{explanation.commentary.map((s, i) => <li key={i}>{s}</li>)}</ol></div>
-        <div><h4 className="telemetry mb-1 text-xs uppercase text-cyan-700 dark:text-cyan-300">Complexity defense</h4><p>{explanation.complexity_defense}</p></div>
+        <div><h4 className="telemetry mb-1 text-xs text-cyan-700 dark:text-cyan-300">Before typing</h4><p>{explanation.intuition}</p></div>
+        <div><h4 className="telemetry mb-1 text-xs text-cyan-700 dark:text-cyan-300">While writing</h4><ol className="list-decimal space-y-2 pl-5">{explanation.commentary.map((s, i) => <li key={i}>{s}</li>)}</ol></div>
+        <div><h4 className="telemetry mb-1 text-xs text-cyan-700 dark:text-cyan-300">Complexity defense</h4><p>{explanation.complexity_defense}</p></div>
       </> : error ? <div role="alert">{error}<button onClick={() => open("spoken")} className={cx("ml-2 underline", focusRing)}>Retry</button></div>
         : <p role="status" className="text-zinc-500">{busy ? "Preparing a walkthrough of this solution…" : complete ? "This saved answer has no spoken walkthrough." : "The spoken walkthrough appears as Orbit finishes this coding answer."}</p>}
     </div>

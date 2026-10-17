@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { JobOfferRecord, OfferInput } from "@orbit/types";
-import { ArrowLeft, Check, CircleAlert, Copy, Mic, PenLine, Sparkles, Trash2, LoadGate, confirmDialog, cx, focusRing } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote } from "../../components/ui";
+import { Check, CircleAlert, Copy, Mic, PenLine, Sparkles, Trash2, LoadGate, confirmDialog, cx } from "@orbit/ui";
+import { BackLink } from "../../components/BackLink";
+import { Button, Card, EmptyState, ErrorNote, IconButton } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useCountry } from "../../lib/country";
 import { errorText } from "../../lib/format";
@@ -21,9 +22,7 @@ export function OfferDetailPage() {
   const replace = (next: JobOfferRecord) => offers.setData((prev) => (prev ?? []).map((o) => (o.id === next.id ? next : o)));
   return (
     <>
-      <Link to={OFFERS_HOME} className={cx("mb-4 inline-flex items-center gap-1 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white", focusRing)}>
-        <ArrowLeft className="h-4 w-4" aria-hidden /> All offers
-      </Link>
+      <BackLink to={OFFERS_HOME} className="mb-4">All offers</BackLink>
       <LoadGate loading={offers.loading && !offers.data} variant="card" count={3} label="Getting the offer">
         {offers.error && !offers.data ? (
           <ErrorNote onRetry={offers.reload}>{errorText(offers.error)}</ErrorNote>
@@ -89,8 +88,8 @@ function Detail({ offer: o, onChange, onDeleted }: { offer: JobOfferRecord; onCh
           <p className="text-zinc-500 dark:text-zinc-400">{[o.role, o.city].filter(Boolean).join(" · ")}{o.deadline ? ` · decide by ${new Date(o.deadline).toLocaleDateString(undefined, { day: "numeric", month: "short" })}` : ""}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}><PenLine className="h-4 w-4" /> Edit</Button>
-          <Button variant="ghost" size="sm" disabled={busy === "delete"} onClick={() => void remove()} aria-label="Delete this offer"><Trash2 className="h-4 w-4" /></Button>
+          <Button variant="secondary" onClick={() => setEditing(true)}><PenLine className="h-4 w-4" /> Edit</Button>
+          <IconButton icon={Trash2} disabled={busy === "delete"} onClick={() => void remove()} label="Delete this offer" className="text-zinc-500 hover:!bg-rose-500/10 hover:!text-rose-700 dark:hover:!text-rose-300" />
         </div>
       </header>
       {error && errorAt !== "plan" && errorAt !== "practise" && <ErrorNote>{error}</ErrorNote>}

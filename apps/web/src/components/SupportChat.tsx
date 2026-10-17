@@ -319,7 +319,7 @@ export function SupportChat() {
       {open && (
         <section
           aria-label="Support chat"
-          className="pointer-events-auto flex h-[min(32rem,70vh)] w-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-white/10 dark:bg-zinc-950"
+          className="pointer-events-auto flex h-[min(32rem,70vh)] w-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-dialog dark:border-white/10 dark:bg-zinc-950"
         >
           <header className="flex items-center gap-2 border-b border-zinc-200 px-4 py-3 dark:border-white/10">
             <MessageCircle className="h-4 w-4 text-indigo-500" aria-hidden />
@@ -371,7 +371,7 @@ export function SupportChat() {
                       : "bg-zinc-100 text-zinc-800 dark:bg-white/10 dark:text-zinc-100",
                 )}
               >
-                {m.role === "human" && <span className="mb-0.5 block text-[11px] font-medium uppercase tracking-wide">Orbit</span>}
+                {m.role === "human" && <span className="mb-0.5 block text-[11px] font-medium">Orbit</span>}
                 {m.text}
               </p>
             ))}
@@ -460,7 +460,7 @@ export function SupportChat() {
         aria-expanded={open}
         aria-label={unread ? "Support chat, new reply" : open ? "Close support chat" : "Chat with support"}
         className={cx(
-          "pointer-events-auto relative grid h-12 w-12 place-items-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-950/30 hover:bg-indigo-500",
+          "pointer-events-auto relative grid h-12 w-12 place-items-center rounded-full bg-indigo-600 text-white shadow-popover hover:bg-indigo-500",
           focusRing,
         )}
       >

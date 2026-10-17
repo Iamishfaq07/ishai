@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { AudioLines, Briefcase, FileText, Target, cx, focusRing, type LucideIcon } from "@orbit/ui";
 import type { ProductId } from "../lib/onboarding";
@@ -108,10 +108,21 @@ export function isCurrent(pathname: string, to: string, end = false): boolean {
  */
 export function ProductTabs({ label, sections, action }: { label: string; sections: ProductSection[]; action?: ReactNode }) {
   const { pathname } = useLocation();
+  const strip = useRef<HTMLElement>(null);
+  // A phone too narrow for every tab scrolls the strip; the page you're on is always scrolled fully into view
+  // (centred when it was cut off), so the fifth tab is never clipped on its own page.
+  useLayoutEffect(() => {
+    const nav = strip.current;
+    const tab = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!nav || !tab) return;
+    const n = nav.getBoundingClientRect();
+    const t = tab.getBoundingClientRect();
+    if (t.left < n.left || t.right > n.right) nav.scrollLeft += t.left - n.left - (n.width - t.width) / 2;
+  }, [pathname, sections.length]);
   if (sections.length < 2) return null;
   const tabs = (
     // Scrolls sideways rather than wrapping if a phone is ever too narrow for every tab.
-    <nav aria-label={label} className={cx("edge-fade-x -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0", action ? "min-w-0" : "mb-6")}>
+    <nav ref={strip} aria-label={label} className={cx("edge-fade-x -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0", action ? "min-w-0" : "mb-6")}>
       <div className="inline-flex gap-0.5 rounded-xl bg-zinc-500/10 p-1 sm:gap-1">
         {sections.map(({ to, label: name, icon: Icon, end, also, count }) => {
           const current = isCurrent(pathname, to, end) || Boolean(also?.test(pathname));

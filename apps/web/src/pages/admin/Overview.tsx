@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { AdminConfig, AdminStats } from "@orbit/types";
-import { ChevronDown, CountUp, Megaphone, cx, focusRing } from "@orbit/ui";
+import { Callout, ChevronDown, CountUp, Megaphone, buttonClass, cx, focusRing } from "@orbit/ui";
 import { ColumnChart } from "../../components/ColumnChart";
 import { Button, Input, Select } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -18,55 +18,53 @@ export function AdminOverview({ version = 0 }: { version?: number }) {
   return (
     <div className="mb-6 space-y-3">
       {s?.warnings?.includes("database_read_only") && (
-        <div role="alert" className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-900 dark:text-rose-100">
-          <p className="font-semibold">The database is read-only</p>
-          <p className="mt-1">
+        <Callout tone="error" title="The database is read-only">
+          <p>
             It answers reads but refuses every write, so sign-ins, payments, sessions and saves fail, and new deploys fail their readiness check. In
             Railway's Postgres console, <code>SHOW default_transaction_read_only;</code> says <code>on</code> (or the database is a standby). Turn it
             off with <code>SET default_transaction_read_only = off;</code> then <code>ALTER DATABASE railway SET default_transaction_read_only = off;</code>{" "}
             (use the database's real name), then restart the API: its open connections keep the old setting.
           </p>
-        </div>
+        </Callout>
       )}
       {s?.warnings?.includes("proxy_secret") && (
-        <div role="alert" className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-900 dark:text-rose-100">
-          <p className="font-semibold">Proxy secret missing</p>
-          <p className="mt-1">
+        <Callout tone="error" title="Proxy secret missing">
+          <p>
             ORBIT_PROXY_SECRET isn't set on the API (or is too weak), so per-network limits can be dodged. Welcome credits are on hold and
             new deploys fail their readiness check until it's set. Set the same 32+ character value on the API host (ORBIT_PROXY_SECRET, in Railway) and in
             Cloudflare (<code>wrangler secret put PROXY_SECRET</code>).
           </p>
-        </div>
+        </Callout>
       )}
       {s?.warnings?.includes("proxy_unsigned") && (
-        <div role="alert" className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-900 dark:text-rose-100">
-          <p className="font-semibold">The website isn't sending the proxy secret</p>
-          <p className="mt-1">
+        <Callout tone="error" title="The website isn't sending the proxy secret">
+          <p>
             Requests from the Cloudflare Worker reach the API without ORBIT_PROXY_SECRET, so the API can't see visitors' countries or IPs:
             everyone is priced in rupees as if in India, and web visitors share rate limits. Give the Worker the same value as the API host's
             ORBIT_PROXY_SECRET (<code>wrangler secret put PROXY_SECRET --name orbit</code>).
           </p>
-        </div>
+        </Callout>
       )}
       {s?.warnings?.includes("api_cloudflare_proxied") && (
-        <div role="alert" className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-900 dark:text-rose-100">
-          <p className="font-semibold">The API's address goes through Cloudflare's proxy</p>
-          <p className="mt-1">
+        <Callout tone="error" title="The API's address goes through Cloudflare's proxy">
+          <p>
             Desktop requests reach the API through a Cloudflare edge, so the API sees that edge's address instead of the user's: everyone near
             one edge shares sign-in limits and welcome credits. In Cloudflare DNS, set the <code>api</code> record to DNS only (grey cloud).
           </p>
-        </div>
+        </Callout>
       )}
       {s?.warnings?.includes("admin_two_factor") && (
-        <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
-          <p>
-            <span className="font-semibold">Turn on two-step sign-in for this account.</span> It can approve payments and change other accounts, so a
-            stolen password shouldn't be enough to get in.
-          </p>
-          <Link to="/settings#two-step" className={cx("shrink-0 rounded font-medium underline", focusRing)}>
-            Set it up
-          </Link>
-        </div>
+        <Callout
+          tone="warning"
+          title="Turn on two-step sign-in for this account"
+          action={
+            <Link to="/settings#two-step" className={buttonClass("secondary", "sm")}>
+              Set it up
+            </Link>
+          }
+        >
+          It can approve payments and change other accounts, so a stolen password shouldn't be enough to get in.
+        </Callout>
       )}
       <StatTiles s={s} />
       <div className="grid gap-3 md:grid-cols-2">
@@ -132,17 +130,17 @@ function StatTiles({ s }: { s: AdminStats | null }) {
             {tile.note && <p className="text-xs text-zinc-500 dark:text-zinc-400">{tile.note}</p>}
           </>
         );
-        const box = "rounded-2xl border bg-white/70 p-3 dark:bg-white/[0.03]";
+        const box = "glass-panel rounded-2xl p-3";
         return tile.to ? (
           <Link
             key={tile.label}
             to={tile.to}
-            className={cx(box, tile.alert ? "border-amber-400/60" : "border-zinc-200 dark:border-white/10", "hover:border-indigo-400/50", focusRing)}
+            className={cx(box, "transition-colors", tile.alert ? "!border-amber-400/70" : "hover:!border-zinc-300 dark:hover:!border-white/20", focusRing)}
           >
             {body}
           </Link>
         ) : (
-          <div key={tile.label} className={cx(box, "border-zinc-200 dark:border-white/10")}>
+          <div key={tile.label} className={box}>
             {body}
           </div>
         );
