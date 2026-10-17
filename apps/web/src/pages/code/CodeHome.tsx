@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Badge, CircleCheck, Code2, LoadGate, cx, focusRing } from "@orbit/ui";
+import { Badge, CircleCheck, Code2, CodeScene, LoadGate, cx, focusRing } from "@orbit/ui";
 import { Card, ErrorNote, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
@@ -20,7 +20,7 @@ export function CodeHomePage() {
   const solved = d?.problems.filter((p) => p.solved).length ?? 0;
   return (
     <>
-      <PageHeader icon={Code2} title="Code AI" subtitle="Coding-round practice by pattern: write it, run the tests, then get an interviewer's review of your code and your explanation." />
+      <PageHeader icon={Code2} title="Code AI" subtitle="Coding-round practice by pattern: write it, run the tests, then get an interviewer's review of your code and your explanation." art={<CodeScene />} />
       <LoadGate loading={data.loading && !d} variant="card" count={3} label="Getting the problems">
         {data.error && !d ? (
           <ErrorNote onRetry={data.reload}>{errorText(data.error)}</ErrorNote>

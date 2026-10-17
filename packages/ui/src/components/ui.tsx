@@ -181,7 +181,7 @@ export function PageHeader({
           {subtitle && <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>}
         </div>
       </div>
-      {art && <div aria-hidden="true" className="scene-host -my-4 hidden w-32 shrink-0 lg:block">{art}</div>}
+      {art && <div aria-hidden="true" className="scene-host -my-5 hidden w-36 shrink-0 lg:block">{art}</div>}
       {actions}
     </div>
   );

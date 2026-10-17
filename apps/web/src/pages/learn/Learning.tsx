@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, Badge, Code2, GraduationCap, ShieldCheck, cx, focusRing } from "@orbit/ui";
+import { ArrowRight, ArrowUpRight, Badge, Code2, GraduationCap, LearningScene, ShieldCheck, cx, focusRing } from "@orbit/ui";
 import { PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useAsync } from "../../lib/useAsync";
@@ -18,7 +18,7 @@ export function LearningPage() {
   const total = code.data?.problems.length ?? 0;
   return (
     <>
-      <PageHeader icon={GraduationCap} title="Learning AI" subtitle="Learn the skills interviews test: coding rounds here in Orbit, and cybersecurity and AI for free on KashSec." />
+      <PageHeader icon={GraduationCap} title="Learning AI" subtitle="Learn the skills interviews test: coding rounds here in Orbit, and cybersecurity and AI for free on KashSec." art={<LearningScene />} />
       <ul className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
         <li className="min-w-0">
           <Link to={CODE_HOME} className={cx(card, focusRing)}>
