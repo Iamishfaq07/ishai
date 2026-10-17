@@ -1,0 +1,172 @@
+{
+  "slug": "walmart-global-tech",
+  "name": "Walmart Global Tech",
+  "aliases": ["walmart", "walmart labs", "walmart global tech india"],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Walmart Global Tech builds the software behind Walmart's stores, e-commerce, supply chain and payments, with tech teams in the US, India (including Bengaluru and Chennai) and elsewhere. Candidates commonly report an online coding test, two or three technical interviews on data structures, design and past projects, and a hiring manager round. Walmart publishes four values, starting with Respect the Individual.",
+  "rounds": [
+    "Online coding assessment for many campus and early-career roles",
+    "Technical interviews, often two or three: data structures, problem solving and your projects",
+    "System design interview for experienced roles",
+    "Hiring manager interview on past work, ownership and teamwork",
+    "HR discussion and offer"
+  ],
+  "looks_for": [
+    "Respect the Individual",
+    "Act with Integrity",
+    "Serve Our Customers and Members",
+    "Strive for Excellence",
+    "Building for very large scale: many stores, orders and shoppers at once",
+    "Explaining trade-offs clearly"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you listened to an idea from someone junior or outside your team, and it changed your work.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who suggested it and why it was easy to overlook",
+        "How you tested the idea",
+        "What changed, and how you credited them"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to be honest about a mistake or a delay, even though it was uncomfortable.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What went wrong and who it affected",
+        "When and how you told them",
+        "What you did to fix it and to rebuild trust"
+      ]
+    },
+    {
+      "text": "Tell me about a time you moved quickly but still paid close attention to detail.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why speed mattered",
+        "The details you checked and how",
+        "The result and any problem you caught early"
+      ]
+    },
+    {
+      "text": "Tell me about a time you used data to work out what a customer really needed.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The question and the data you used",
+        "What surprised you",
+        "The decision it led to and the result for customers"
+      ]
+    },
+    {
+      "text": "How would you design a system that shows each store's stock online in near real time?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Stock events from tills, deliveries and returns flowing into one service",
+        "Caching for fast reads, and how fresh the numbers need to be",
+        "Showing 'low stock' safely when data lags, so shoppers aren't let down"
+      ]
+    },
+    {
+      "text": "How would you design a service that picks the best store or warehouse to fulfil an online order?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Inputs: stock, distance, delivery promise, cost, capacity",
+        "Splitting orders across locations, and the trade-offs it brings",
+        "Re-routing when a location turns out not to have the item"
+      ]
+    },
+    {
+      "text": "During a big sale, checkout errors suddenly jump. Walk me through how you'd find and fix the problem.",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Dashboards first: which step, which service, since when",
+        "Recent changes and load on payments, inventory or the database",
+        "Quick relief such as rolling back or shedding load, then the real fix"
+      ]
+    },
+    {
+      "text": "Explain the difference between SQL and NoSQL databases, and which you'd choose for a product catalogue.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "SQL: fixed schema, joins, strong consistency; NoSQL: flexible schema, easy to scale out",
+        "A catalogue's varied product attributes and heavy reads",
+        "A reasoned choice, or a mix, with the trade-offs"
+      ]
+    },
+    {
+      "text": "How does caching help a busy shopping website, and what can go wrong with it?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Where caches sit: browser, CDN, application, database",
+        "Stale data such as old prices or stock, and how to expire it",
+        "Many requests hitting the database at once when a cache entry expires"
+      ]
+    },
+    {
+      "text": "Walk me through a project you built: the design, a hard bug and how you tested it.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The problem and your part",
+        "The bug: how you found it and the fix",
+        "How you tested it, and what you'd add now"
+      ]
+    },
+    {
+      "text": "Why Walmart Global Tech? What interests you about technology for retail?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about retail tech: scale, supply chain, stores and online together",
+        "How your skills fit the team",
+        "What you want to learn"
+      ]
+    },
+    {
+      "text": "Which of Walmart's values do you connect with most, and why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One value, named once",
+        "A short example from your work or studies",
+        "How it would show in this role"
+      ]
+    },
+    {
+      "text": "What would you like to learn in your first year here?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Specific skills or systems you want to understand",
+        "How you'd go about learning them",
+        "How that learning would help the team"
+      ]
+    }
+  ],
+  "tips": [
+    "Practise talking through data structures and design out loud; interviewers commonly follow your reasoning, not just the answer.",
+    "Think at retail scale: many stores, peaks during sales and stock that changes every minute. Bring that into design answers.",
+    "Prepare a story for each of Walmart's four values; they're published on its corporate site.",
+    "Know your projects deeply; candidates commonly report detailed follow-ups on design choices and testing."
+  ],
+  "sources": [
+    {
+      "title": "Walmart's core values (corporate.walmart.com)",
+      "url": "https://corporate.walmart.com/purpose/ethics-integrity"
+    },
+    {
+      "title": "Careers at Walmart Global Tech (tech.walmart.com)",
+      "url": "https://tech.walmart.com/content/walmart-global-tech/en_us/careers.html"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

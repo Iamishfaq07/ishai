@@ -1,0 +1,195 @@
+{
+  "slug": "meta",
+  "name": "Meta",
+  "aliases": [
+    "facebook",
+    "instagram",
+    "whatsapp",
+    "meta platforms"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Meta publishes six core values, such as Move fast and Be direct and respect your colleagues, and its interview prep describes a full loop of coding, design (systems or product, depending on your background) and behavioral interviews. Candidates commonly report fast-paced coding rounds, and Meta's hiring page says select roles now include an authorised AI assistant inside CoderPad during technical interviews.",
+  "rounds": [
+    "Recruiter call",
+    "Technical screen (two coding problems)",
+    "Onsite loop: coding, system or product design, and a behavioral interview"
+  ],
+  "looks_for": [
+    "Moving fast with good judgement",
+    "Impact: what changed because of your work",
+    "Handling conflict directly and respectfully",
+    "Growing others and yourself",
+    "Move fast",
+    "Build awesome things",
+    "Be direct and respect your colleagues",
+    "Focus on long-term impact",
+    "Live in the future",
+    "Meta, Metamates, me"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about the project with the most impact you've worked on. How did you measure it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and why it mattered to users or the business",
+        "Your own part, separate from the team's",
+        "The metric you used, the before-and-after numbers, and how you knew the change caused it"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had a conflict with a coworker. How did you resolve it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the conflict was about, described fairly from both sides",
+        "How you raised it directly and listened",
+        "How it was resolved and how you worked together afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to move fast and cut scope. What did you leave out and why?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The deadline or pressure and what was at stake",
+        "How you decided what to cut: user impact, risk, effort",
+        "What shipped, what you added later, and what you'd cut differently"
+      ]
+    },
+    {
+      "text": "Tell me about a project that failed or missed its goal. What did you learn?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What the goal was and how far short it fell",
+        "Your honest share of the reasons",
+        "What you changed afterwards, with an example of using the lesson"
+      ]
+    },
+    {
+      "text": "Tell me about a time you gave a peer direct feedback they didn't want to hear.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why the feedback mattered enough to give",
+        "How you said it: specific, private, respectful",
+        "How they took it and what changed"
+      ]
+    },
+    {
+      "text": "Tell me about a time you helped someone on your team grow.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who they were and what they wanted to get better at",
+        "What you did: pairing, reviews, giving them a stretch task",
+        "How they grew, shown by something they did afterwards"
+      ]
+    },
+    {
+      "text": "How would you design a news feed that shows each person recent posts from the friends and pages they follow?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Fan-out on write versus on read, and when each fits",
+        "Ranking: the signals, freshness, and keeping it fast",
+        "Accounts with huge followings, caching, and what happens when a service fails"
+      ]
+    },
+    {
+      "text": "How would you design a system to store and serve billions of photos quickly to people around the world?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Separating photo metadata from the image files",
+        "CDNs and caching for popular photos, with several sizes per image",
+        "Replication for durability, and cheaper storage for photos rarely viewed"
+      ]
+    },
+    {
+      "text": "How would you decide whether short-form video on Instagram is succeeding? Which metric would you lead with?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The goal for viewers and for creators, stated first",
+        "One lead metric and why, plus guardrails such as time well spent or creator retention",
+        "How you'd tell a real change from noise or seasonality"
+      ]
+    },
+    {
+      "text": "Design a feature that helps people in a WhatsApp group plan an event together.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Who plans events in groups and where it goes wrong today",
+        "A simple first version, such as polls for dates and an RSVP list, and what you'd leave out",
+        "Privacy in group chats and how you'd measure whether it helped"
+      ]
+    },
+    {
+      "text": "A new app release has increased crashes on older Android phones. What would you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Limiting harm first: pausing the rollout or switching the feature off remotely",
+        "Finding the cause from crash reports, device and OS breakdowns, and the code changes",
+        "Preventing repeats: testing on low-end devices and staged rollouts"
+      ]
+    },
+    {
+      "text": "Once you have a working solution to a coding problem, how do you make it faster? What do you look at first?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Stating the current time and space complexity and finding the slow step",
+        "Better data structures, such as hash maps or heaps, or avoiding repeated work",
+        "The trade-off with memory and readability, and testing that it's still correct"
+      ]
+    },
+    {
+      "text": "Why Meta, and which of its apps or technologies would you most like to work on?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific app, product area or technology and why it interests you",
+        "A link to your own work or experience",
+        "The impact you'd want to have there"
+      ]
+    },
+    {
+      "text": "Which of Meta's core values do you relate to most, and when have you shown it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One value, named once",
+        "A short example where you acted on it",
+        "Why that way of working suits you"
+      ]
+    }
+  ],
+  "tips": [
+    "Lead with impact and numbers.",
+    "Coding rounds are fast: two problems in about 40 minutes.",
+    "Meta's prep material asks you to get familiar with its six core values; have stories for Move fast and Be direct and respect your colleagues.",
+    "In coding rounds, say your approach before you type and test with an example; working code beats an unfinished perfect idea.",
+    "For select roles, Meta's hiring page says technical interviews include an authorised AI assistant in CoderPad that you're expected to use, and outside AI tools aren't allowed. Ask your recruiter which format you'll get.",
+    "In design rounds, start with requirements and scale, then spend your time on the hardest parts rather than drawing every box."
+  ],
+  "sources": [
+    {
+      "title": "Meta Careers: our culture and values",
+      "url": "https://www.metacareers.com/culture/"
+    },
+    {
+      "title": "Meta Careers: hiring process",
+      "url": "https://www.metacareers.com/hiring-process/"
+    },
+    {
+      "title": "Meta Careers: preparing for your software engineering interview",
+      "url": "https://www.metacareers.com/blog/preparing-for-your-software-engineering-interview-at-meta/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

@@ -14,7 +14,7 @@ from typing import Any
 from orbit_api.answers.match import DOC_KIND as ANSWER_KIND
 from orbit_api.answers.match import chunk_question, same_question
 from orbit_api.documents.uploads import sanitize_text
-from orbit_api.live import company_styles
+from orbit_api.live import company_styles, role_packs
 from orbit_api.live.events import (
     AnswerLength,
     AnswerSize,
@@ -421,6 +421,9 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
             f"Company: {inputs.company}" if inputs.company else "",
             company_styles.copilot_hint(company_styles.for_country(style, inputs.country))
             if (style := company_styles.match(inputs.company)) else "",
+            # A known job (question_bank/roles), in an interview: what its interviewers usually check.
+            role_packs.copilot_hint(pack)
+            if inputs.session_type in ("interview", "mock") and (pack := role_packs.match(inputs.role)) else "",
             _SIZE_RULES[inputs.size] if inputs.size else _LENGTH_RULES.get(inputs.length, _LENGTH_RULES["standard"]),
             _STYLE_RULES[inputs.style] if inputs.qtype != QuestionType.coding else "",
             f"Answer language: {(inputs.answer_language or '').strip() or 'English'}",

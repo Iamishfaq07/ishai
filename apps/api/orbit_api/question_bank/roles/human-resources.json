@@ -1,0 +1,207 @@
+{
+  "slug": "human-resources",
+  "name": "Human resources (HR)",
+  "aliases": ["hr", "hr executive", "hr generalist", "hr manager", "hr business partner", "hrbp", "hr operations", "recruiter", "hr recruiter", "talent acquisition", "talent acquisition specialist", "people operations"],
+  "group": "business",
+  "summary": "HR interviews usually test judgement with people as much as knowledge of HR processes: expect questions on hiring, handling employee concerns, confidentiality and fairness, plus the basics of policy, payroll and employment law for the country you'd work in. Recruiter and talent acquisition roles commonly focus on sourcing, screening and working with hiring managers; generalist and HR business partner roles go deeper into employee relations and performance.",
+  "rounds": [
+    "Recruiter or HR screen on your background and the HR areas you've worked in",
+    "Functional interview with an HR manager: recruitment, onboarding, policies, employee relations",
+    "Scenario questions or a short case, such as a grievance, an exit or a hiring plan (often)",
+    "For HR business partner roles, an interview with a business leader you'd support",
+    "Final HR or leadership round"
+  ],
+  "looks_for": [
+    "Fair, consistent judgement in people situations",
+    "Confidentiality and discretion",
+    "Knowing the employee lifecycle: hiring, onboarding, performance, pay, exits",
+    "Awareness of employment law and policy, and knowing when to take expert advice",
+    "Partnering with managers while treating employees fairly",
+    "Using data: time to hire, attrition, offer acceptance"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a hire you're proud of. How did you find and win that candidate?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The role and why it was hard to fill",
+        "Where you found the person and how you assessed them",
+        "How you closed the offer and how the hire worked out"
+      ]
+    },
+    {
+      "text": "Tell me about a sensitive employee issue you handled. What did you do, and what did you keep confidential?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The issue in general terms, without names or private details",
+        "The steps you took and the policy you followed",
+        "How you protected confidentiality and how it ended"
+      ]
+    },
+    {
+      "text": "Describe a time you disagreed with a manager about a people decision.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The decision and why you had concerns: fairness, policy or risk",
+        "How you made your case, with facts",
+        "The outcome and how you worked with that manager afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a hire or an HR process you ran that didn't go well. What did you learn?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What went wrong, owned honestly",
+        "What you'd missed and when you realised",
+        "What you changed in your process afterwards"
+      ]
+    },
+    {
+      "text": "A hiring manager wants a hard-to-fill role closed in two weeks. What would you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Agreeing must-haves versus nice-to-haves with the manager",
+        "Sourcing: referrals, job boards, direct search, past applicants",
+        "Setting honest expectations on timing and trade-offs"
+      ]
+    },
+    {
+      "text": "An employee tells you their manager is treating them unfairly. Walk me through how you'd handle it.",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Listening, taking notes and explaining what happens next",
+        "Following the grievance policy and staying neutral while you look into it",
+        "Confidentiality and fairness to both people, escalating where policy or law requires"
+      ]
+    },
+    {
+      "text": "What does a good onboarding process look like for a new joiner's first month?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Before day one: paperwork, equipment, access and a welcome",
+        "First weeks: introductions, a buddy, clear goals and training",
+        "Check-ins at set points and asking the joiner for feedback"
+      ]
+    },
+    {
+      "text": "Attrition in one team has risen sharply this year. How would you find out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Looking at the data: who is leaving, when, under which manager or role",
+        "Exit interviews and conversations with people who've stayed",
+        "Two or three fixes you'd try and how you'd measure them"
+      ]
+    },
+    {
+      "text": "How do you screen a CV and run a first-round phone screen?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Checking against the must-haves agreed with the hiring manager",
+        "A short, consistent set of screening questions, including expectations and notice period",
+        "Clear notes and a quick, polite update to the candidate either way"
+      ]
+    },
+    {
+      "text": "What's the difference between a performance improvement plan and disciplinary action, and when is each used?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A performance plan supports someone to improve against clear goals over a set time",
+        "Disciplinary action follows misconduct or a policy breach, through a set, fair process",
+        "Documenting both carefully and following company policy and local law"
+      ]
+    },
+    {
+      "text": "Which HR metrics would you track, and what would each one tell you?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Hiring: time to hire, offer acceptance, quality of hire",
+        "People: attrition, especially early attrition, absence and engagement",
+        "Which one you'd act on first and why"
+      ]
+    },
+    {
+      "text": "A strong candidate turns down your offer at the last minute. What would you do now, and what would you change next time?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Finding out the real reason, politely",
+        "Moving quickly to your back-up candidates",
+        "Earlier checks on expectations and staying in touch until joining day"
+      ]
+    },
+    {
+      "text": "How would you make a hiring process fairer and reduce bias?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Structured interviews with the same questions and a scoring guide",
+        "Clear criteria agreed before interviews, and mixed panels",
+        "Checking data on who drops out at each stage"
+      ]
+    },
+    {
+      "text": "Which areas of employment law and compliance should an HR person know, and how do you keep up to date?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Areas like contracts, working hours, leave, wages, statutory benefits, harassment at work and data privacy",
+        "How you stay current: official updates, legal advisers, HR networks",
+        "Knowing when to involve a legal expert"
+      ]
+    },
+    {
+      "text": "Tell me about yourself and how you came to HR.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your background in two or three lines",
+        "The experience that drew you to HR",
+        "The part of HR you want to grow in"
+      ]
+    },
+    {
+      "text": "Why HR, and which part of it do you want to specialise in?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What you enjoy about the work, shown by an example",
+        "An area such as recruitment, employee relations, learning or rewards",
+        "Why that area suits you"
+      ]
+    },
+    {
+      "text": "What would you want to learn or achieve in your first three months here?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Understanding the business, the people and the current HR processes",
+        "Building trust with managers and employees",
+        "One early improvement you'd look for"
+      ]
+    }
+  ],
+  "tips": [
+    "Pick stories that show judgement and discretion, and leave out names and private details when you tell them.",
+    "Recruiter roles: know your numbers, such as roles closed, time to fill and offer-to-joining rate, and the sourcing that worked.",
+    "For generalist roles in India, revise the basics of PF, ESI, gratuity, leave rules and the POSH Act; abroad, learn the main employment rules of that country.",
+    "In scenario questions, say what you'd do first, which policy you'd follow and when you'd escalate.",
+    "Show you understand the business: HR decisions affect cost, hiring speed and how people work.",
+    "Freshers: an HR internship, placement-cell work or organising a college event can give you hiring and people stories."
+  ],
+  "mock": {
+    "interview_type": "mixed",
+    "persona": "hiring_manager"
+  },
+  "reviewed": "2026-10-18"
+}

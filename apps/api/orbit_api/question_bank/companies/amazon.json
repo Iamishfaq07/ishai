@@ -1,0 +1,176 @@
+{
+  "slug": "amazon",
+  "name": "Amazon",
+  "aliases": ["aws", "amazon web services", "amazon india", "amazon development centre"],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Amazon's interviews are built around its 16 Leadership Principles, which it publishes on amazon.jobs. Candidates commonly report that each interview in the loop pairs questions about their work with two or three behavioral questions on those principles, and that interviewers dig into every story with several follow-ups.",
+  "rounds": [
+    "Online assessment (coding and work-style questions)",
+    "Phone screen",
+    "Loop of 4–5 interviews, each covering technical work and two or three Leadership Principles",
+    "A 'Bar Raiser' from another team in the loop"
+  ],
+  "looks_for": [
+    "Customer Obsession",
+    "Ownership",
+    "Dive Deep",
+    "Bias for Action",
+    "Deliver Results",
+    "Earn Trust",
+    "Are Right, A Lot",
+    "Insist on the Highest Standards",
+    "Have Backbone; Disagree and Commit",
+    "Invent and Simplify",
+    "Learn and Be Curious"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you went well beyond what a customer asked for.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who the customer was and what they actually needed, not just what they asked",
+        "What you did beyond the request, and why it was worth the extra effort",
+        "A measurable result for the customer"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to make a decision quickly without all the data.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why waiting would have cost more than deciding",
+        "The data you did have and the risk you accepted",
+        "How you checked the decision afterwards and what you'd change"
+      ]
+    },
+    {
+      "text": "Tell me about a time you disagreed with your manager. What happened?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The disagreement, stated fairly from both sides",
+        "How you made your case, with data, and to whom",
+        "What you did once the decision was made, even if it went against you"
+      ]
+    },
+    {
+      "text": "Describe a time you dug into the details to find the root cause of a problem.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The symptom everyone saw and why the obvious explanation was wrong",
+        "The data, logs or metrics you went through yourself",
+        "The root cause, the fix, and what stopped it happening again"
+      ]
+    },
+    {
+      "text": "Tell me about a commitment you failed to deliver. What did you learn?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "A real miss, owned in the first person",
+        "When you saw it coming and who you told",
+        "What you changed in how you plan or commit since"
+      ]
+    },
+    {
+      "text": "Tell me about a time you made something simpler for your team or your users.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was complicated and who it slowed down",
+        "The simpler approach and how you got others to adopt it",
+        "Time, errors or cost saved afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a time you refused to ship something because it wasn't good enough.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The standard it fell short of and how you knew",
+        "How you handled the pressure to ship anyway",
+        "What the extra work prevented, ideally with a number"
+      ]
+    },
+    {
+      "text": "Walk me through a system you built or designed. What would break first if its traffic grew ten times?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A short picture of the system: its main parts and how data flows",
+        "The bottleneck at ten times the load, with a rough estimate",
+        "What you'd change first and the trade-off it brings"
+      ]
+    },
+    {
+      "text": "How would you design a service that tells customers when an out-of-stock item is back?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying questions: scale, channels (email, app), how fast it must be",
+        "Storing subscriptions and reacting to stock changes without polling everything",
+        "Not notifying the same person twice, and what happens under a sudden spike"
+      ]
+    },
+    {
+      "text": "A feature you launched is getting worse reviews than expected. How would you find out why?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Reading the reviews and the metrics before guessing",
+        "Splitting the problem: who is unhappy, since when, on which platform",
+        "A quick fix for customers now, and the deeper fix after"
+      ]
+    },
+    {
+      "text": "Tell me about a time you learned a new technology or domain quickly to deliver something.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "Why you needed it and how little time you had",
+        "How you learned it: what you read, built or asked",
+        "What you delivered with it"
+      ]
+    },
+    {
+      "text": "Why Amazon? Which Leadership Principle do you relate to most, and when have you lived it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason tied to the team or product, not only the brand",
+        "One principle, named once, with a short example",
+        "Why that way of working suits you"
+      ]
+    },
+    {
+      "text": "Which Amazon product or service would you improve, and how would you know your change helped customers?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A specific product and a real customer problem with it",
+        "The change you'd make and what you'd leave out",
+        "The metric that would tell you it worked"
+      ]
+    }
+  ],
+  "tips": [
+    "Prepare two stories per Leadership Principle; one story can't cover the whole loop.",
+    "Expect several follow-ups on one story: your exact part, the data, what you'd do differently.",
+    "Say \"I\", give numbers, and end each story on the result.",
+    "Don't name the principle you think is being tested; let the story show it."
+  ],
+  "sources": [
+    {
+      "title": "Amazon's Leadership Principles (amazon.jobs)",
+      "url": "https://www.amazon.jobs/content/en/our-workplace/leadership-principles"
+    },
+    {
+      "title": "Amazon's interview loop (amazon.jobs)",
+      "url": "https://www.amazon.jobs/content/en/how-we-hire/interview-loop"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

@@ -1,0 +1,207 @@
+{
+  "slug": "data-engineer",
+  "name": "Data engineer",
+  "aliases": ["etl developer", "etl engineer", "big data engineer", "data pipeline engineer", "data warehouse engineer", "analytics engineer", "spark developer"],
+  "group": "data",
+  "summary": "Data engineer interviews usually focus on SQL, data modelling and building reliable pipelines that move and transform data at scale. Candidates commonly report hands-on SQL and Python or Scala questions, a discussion of tools such as Spark, Airflow, Kafka and cloud warehouses, and for experienced roles, a design round on building a pipeline or warehouse end to end.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "SQL and coding screen: often advanced SQL plus Python",
+    "Data modelling and pipeline design: schemas, batch and streaming",
+    "Tools discussion: Spark, orchestration, warehouses and the cloud platform you've used",
+    "Project deep dive with the hiring manager",
+    "HR round"
+  ],
+  "looks_for": [
+    "Strong SQL, including window functions and query performance",
+    "Data modelling: facts, dimensions, and when to denormalise",
+    "Pipelines that can be rerun safely, are monitored, and recover cleanly",
+    "Data quality checks and clear ownership of data",
+    "How distributed processing and partitioning work",
+    "Awareness of what cloud data work costs"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a pipeline that failed in production. How did you find and fix the problem?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How it failed, and who noticed first",
+        "How you traced the cause: logs, data checks, changes upstream",
+        "The fix, the backfill, and the monitoring you added"
+      ]
+    },
+    {
+      "text": "Describe a time people using your data found a problem in it before you did.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What was wrong and how it affected them",
+        "How you corrected the data and kept them informed",
+        "The check you added so you'd catch it first next time"
+      ]
+    },
+    {
+      "text": "Tell me about a time you made a pipeline much faster or cheaper to run.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The starting runtime or cost",
+        "What you changed: partitioning, file formats, incremental loads, rewriting queries",
+        "The result in numbers"
+      ]
+    },
+    {
+      "text": "Tell me about a time different teams defined the same metric differently. How did you sort it out?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The metric and each team's version of it",
+        "How you reached one definition and documented it",
+        "How the change was rolled out to reports and users"
+      ]
+    },
+    {
+      "text": "Explain the difference between ETL and ELT, and why many teams now load data first and transform it later.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Transforming before loading versus transforming inside the warehouse",
+        "How scalable cloud warehouses changed the trade-off",
+        "When ETL still makes sense: sensitive data, heavy cleaning before storage"
+      ]
+    },
+    {
+      "text": "How would you design a star schema for an online shop's sales reporting?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A sales fact table at a clear grain, such as one row per order line",
+        "Dimensions for product, customer, date and channel",
+        "What happens when a dimension changes, such as a customer moving city"
+      ]
+    },
+    {
+      "text": "What are slowly changing dimensions? Explain type 1 and type 2.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Type 1 overwrites the old value; type 2 keeps history by adding new rows",
+        "Effective dates and a current-row flag",
+        "When the business actually needs the history"
+      ]
+    },
+    {
+      "text": "What does it mean for a pipeline to be idempotent, and how do you make a daily job safe to rerun?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The same result no matter how many times it runs",
+        "Overwriting partitions or merging on keys instead of blindly appending",
+        "Handling late-arriving data and backfills"
+      ]
+    },
+    {
+      "text": "Batch or streaming: how would you decide for a new data feed?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "How fresh the data needs to be, and what it's used for",
+        "The extra cost and complexity of streaming tools such as Kafka and stream processors",
+        "Late, out-of-order and duplicate events"
+      ]
+    },
+    {
+      "text": "A Spark job that used to take ten minutes now takes two hours. How would you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Checking data volume and recent code or configuration changes",
+        "Using the Spark UI to look for skewed partitions, large shuffles and spills to disk",
+        "Fixes: repartitioning, broadcast joins, filtering early, sensible file sizes"
+      ]
+    },
+    {
+      "text": "Explain partitioning, and why columnar file formats such as Parquet matter for analytics.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Partitions let queries skip data they don't need",
+        "Columnar formats read only the needed columns and compress well",
+        "The problem of too many small files"
+      ]
+    },
+    {
+      "text": "Talk me through building a pipeline that pulls data from a third-party API every hour.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Scheduling with an orchestrator such as Airflow, with retries",
+        "Rate limits, pagination and pulling only what's new",
+        "Landing raw data first, then validating and transforming, with alerts on failure"
+      ]
+    },
+    {
+      "text": "What data quality checks would you put on an important table?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Row counts, nulls, uniqueness, valid ranges and freshness",
+        "Comparing totals between source and target",
+        "What happens when a check fails: stop the pipeline, alert, or set the bad rows aside"
+      ]
+    },
+    {
+      "text": "Talk me through a SQL approach to remove duplicate records and keep only the latest one for each customer.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "ROW_NUMBER partitioned by customer and ordered by update time, newest first",
+        "Keeping only row number one",
+        "How ties and missing timestamps are handled"
+      ]
+    },
+    {
+      "text": "How would you handle personal data such as email addresses and phone numbers on a data platform?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Role-based access, and masking or hashing sensitive columns",
+        "Keeping only what's needed, and only for as long as needed",
+        "Supporting deletion requests and logging who accessed what"
+      ]
+    },
+    {
+      "text": "Why data engineering rather than analytics or data science?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Enjoying building the foundations other people rely on",
+        "An example project that shows it",
+        "What you want to learn next: streaming, cloud platforms, modelling"
+      ]
+    },
+    {
+      "text": "What would you want to understand about our data platform in your first month?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "The main sources, pipelines and who uses the data",
+        "Known pain points: cost, reliability, data quality",
+        "How data work is prioritised between teams"
+      ]
+    }
+  ],
+  "tips": [
+    "Practise SQL until window functions, CTEs and joins feel routine; most loops test them early.",
+    "Be able to draw one of your pipelines from source to dashboard, with its data volumes, schedule and failure handling.",
+    "Mention reruns, backfills and monitoring in any design answer; they separate working pipelines from demos.",
+    "Know why you chose each tool on your resume, and one weakness of each.",
+    "Talk about cost: cloud data work is often judged on what it costs to run as well as how fast it is."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "engineer"
+  },
+  "reviewed": "2026-10-18"
+}

@@ -1,0 +1,190 @@
+{
+  "slug": "barclays",
+  "name": "Barclays",
+  "aliases": ["barclays bank", "barclays india"],
+  "group": "finance",
+  "market": "global",
+  "summary": "Barclays' interviews usually explore why you want the role and how your past examples show its five published Values: Respect, Integrity, Service, Excellence and Stewardship. For early careers, Barclays describes short interactive online assessments, then an assessment centre that includes a motivational interview with a leader. Experienced hires usually have an online assessment or short phone interview before the main interview, and some roles add a case study, role play or presentation.",
+  "rounds": [
+    "Online application and CV",
+    "Early careers: two short interactive online assessments, plus a technical skills test for technical programmes",
+    "Experienced hires: online assessments or a short phone interview on your experience and skills",
+    "Assessment centre or interview, in person or virtual; for early careers it often has two or three stages, including a motivational interview with a leader",
+    "Some roles add a role play, case study or presentation",
+    "Screening checks after a successful interview, which depend on location"
+  ],
+  "looks_for": [
+    "Respect",
+    "Integrity",
+    "Service",
+    "Excellence",
+    "Stewardship",
+    "A specific, well-researched reason for wanting this role at Barclays",
+    "Examples from your own experience that show the skills and behaviours in the job description"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you made sure everyone in a group felt able to contribute.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who was being left out and how you noticed",
+        "What you changed in how the group worked",
+        "How the work or the decision improved as a result"
+      ]
+    },
+    {
+      "text": "Tell me about a time doing the right thing took courage or cost you something.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The situation and the pressure to take the easier route",
+        "What you did, and who you told",
+        "The outcome, and whether you would do it the same way again"
+      ]
+    },
+    {
+      "text": "Describe a time you went out of your way to help a customer or colleague when it wasn't strictly your job.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What they needed and why nobody else was picking it up",
+        "What you did, showing empathy rather than just following a script",
+        "The difference it made to them"
+      ]
+    },
+    {
+      "text": "Tell me about something you left in better shape than you found it: a process, a project or a team.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What state it was in when you took it on",
+        "The changes you made and how you got others on board",
+        "How it held up after you moved on"
+      ]
+    },
+    {
+      "text": "Tell me about a time you set yourself a high standard and fell short. What did you change?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The standard and why it mattered to you",
+        "Where and why you fell short, owned honestly",
+        "What you do differently now"
+      ]
+    },
+    {
+      "text": "A customer calls because their card payment was declined while they were travelling. How would you help them?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Verifying who they are without asking for their full PIN or passwords",
+        "Likely reasons in plain words: a fraud check, a limit, funds or wrong details",
+        "Fixing what you can on the call and explaining what happens next"
+      ]
+    },
+    {
+      "text": "What does an investment bank do, and how is it different from a retail bank?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Investment banking: advising on deals, helping companies raise money, trading for institutional clients",
+        "Retail banking: accounts, cards, loans and mortgages for individuals and small businesses",
+        "How the risks and sources of income differ, and where the role you want sits"
+      ]
+    },
+    {
+      "text": "How would you design a system that flags possibly fraudulent card transactions within a second?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Inputs: transaction details, device, location and the customer's usual pattern",
+        "Rules plus a scoring model, and the time budget for each step",
+        "Balancing false alarms against missed fraud, and learning from confirmed cases"
+      ]
+    },
+    {
+      "text": "A report you own shows totals that don't match the finance team's figures. How would you work out which is right?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Comparing definitions, data sources and cut-off times first",
+        "Reconciling a small sample line by line to find where they split",
+        "Agreeing the fix with finance and writing down the definition"
+      ]
+    },
+    {
+      "text": "If a central bank raises its policy rate, what usually happens to savings rates, loan rates and a bank's customers?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Banks' funding costs rise; variable loan and mortgage rates usually follow",
+        "Savings rates often rise too, sometimes more slowly",
+        "Effects on borrowing demand, customers who struggle to repay and the bank's margin"
+      ]
+    },
+    {
+      "text": "How would you make sure a change to a banking app doesn't break payments for existing customers?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Testing at several levels, including the payment journeys that matter most",
+        "Releasing gradually behind a switch, with monitoring and a quick way back",
+        "Keeping a record of the change for audit and incident review"
+      ]
+    },
+    {
+      "text": "Why Barclays, and why this programme or team?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about Barclays' business or the programme, not only its size",
+        "How the role matches what you've done and want to learn",
+        "What you've done to find out about it: events, people, reading"
+      ]
+    },
+    {
+      "text": "Barclays' purpose is 'Working together for a better financial future'. What could that mean in the role you're applying for?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "The purpose in your own words",
+        "A concrete link to the day-to-day work of the role",
+        "A short example of something similar you have done"
+      ]
+    },
+    {
+      "text": "Where would you like to be a few years after joining this programme?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A realistic next step within the business",
+        "The skills you want to build to get there",
+        "Why Barclays is the right place to build them"
+      ]
+    }
+  ],
+  "tips": [
+    "Learn the five Values and prepare two examples for each; Barclays says assessors look for alignment with its Values and ways of working.",
+    "Use the practice tests on Barclays' assessment platform before the online assessments; you can take them on a phone or tablet.",
+    "Prepare hard for the motivational interview: why Barclays, why this business area, and what you've done to learn about it.",
+    "Read the job description for the skills and behaviours it lists, and map one example from your experience to each.",
+    "Barclays says third-party AI tools, including transcription bots and meeting assistants, aren't permitted in its interviews, and using one gets the application withdrawn.",
+    "Ask your recruiter early if you need adjustments, such as extra time; Barclays offers them through the process."
+  ],
+  "sources": [
+    {
+      "title": "Barclays purpose and values (home.barclays)",
+      "url": "https://home.barclays/who-we-are/our-strategy/purpose-and-values/"
+    },
+    {
+      "title": "Barclays early careers application process (search.jobs.barclays)",
+      "url": "https://search.jobs.barclays/internship-graduate-application"
+    },
+    {
+      "title": "Barclays experienced hire application journey (search.jobs.barclays)",
+      "url": "https://search.jobs.barclays/experienced-hire-applications"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

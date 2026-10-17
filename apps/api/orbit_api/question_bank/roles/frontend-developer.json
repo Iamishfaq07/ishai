@@ -1,0 +1,207 @@
+{
+  "slug": "frontend-developer",
+  "name": "Frontend developer",
+  "aliases": ["front end developer", "frontend engineer", "front end engineer", "react developer", "react js developer", "ui developer", "angular developer", "vue developer", "javascript developer"],
+  "group": "engineering",
+  "summary": "Frontend developer interviews usually test JavaScript, HTML and CSS fundamentals, then a framework such as React, often through a live exercise building or fixing a small component. Candidates commonly report questions on how the browser works, performance and accessibility, and for experienced roles, how they'd structure a larger app.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Online test or take-home: JavaScript questions or a small interface to build (often)",
+    "Live coding: build or debug a component, sometimes in plain JavaScript",
+    "Frontend fundamentals and framework discussion: the browser, CSS, state and performance",
+    "Frontend system design for experienced roles: structuring a larger app or feature",
+    "Hiring manager or behavioural round"
+  ],
+  "looks_for": [
+    "Solid JavaScript: scope, closures, the event loop, promises and async/await",
+    "Semantic HTML and CSS layout you can explain, not just copy",
+    "Thinking in components: state, props and where data should live",
+    "Care for users: accessibility, loading states, errors and slow networks",
+    "Knowing what makes a page slow and how to measure it",
+    "Working well with designers and backend developers"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time a design you were given was hard to build as drawn. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What made it hard: a layout, an animation, small screens, an accessibility problem",
+        "How you raised it with the designer and what you proposed",
+        "What shipped, and whether users or the team noticed a difference"
+      ]
+    },
+    {
+      "text": "Describe a UI bug that only some users saw. How did you find and fix it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How it was reported and why it didn't show on your machine",
+        "How you reproduced it: browser, device, network speed, user data",
+        "The cause, the fix and how you stopped it recurring"
+      ]
+    },
+    {
+      "text": "Tell me about a time you made a page or app noticeably faster.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you measured it before and after",
+        "What was slow: large bundles, heavy images, too many re-renders, slow API calls",
+        "The result in numbers, such as load time or a performance score"
+      ]
+    },
+    {
+      "text": "Tell me about a time you and a backend developer had to agree on what an API should return.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the screen needed and what the API offered at first",
+        "How you agreed the shape of the data, errors and loading behaviour",
+        "What you'd settle earlier next time"
+      ]
+    },
+    {
+      "text": "Explain closures in JavaScript with an example of where you've used one.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A function keeping access to variables from the place it was created",
+        "A practical use: event handlers, private state, a debounce function",
+        "A common pitfall, such as stale values inside a React effect or a loop"
+      ]
+    },
+    {
+      "text": "How does the JavaScript event loop work, and why doesn't a slow network call freeze the page?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "One main thread, a call stack, and queues of waiting callbacks",
+        "Promise callbacks (microtasks) running before timers and other tasks",
+        "Why heavy computation does freeze the page, and what you'd do about it"
+      ]
+    },
+    {
+      "text": "What's the difference between let, const and var, and between == and ===?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Block scope versus function scope, and hoisting",
+        "const stops reassignment but doesn't make an object unchangeable",
+        "== converts types before comparing and === doesn't, and why most teams prefer ==="
+      ]
+    },
+    {
+      "text": "How would you centre an element, and build a layout that works on both mobile and desktop?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Flexbox or grid, and when you'd pick each",
+        "Mobile-first styles with media queries and relative units",
+        "Testing on real devices, not only by resizing the browser window"
+      ]
+    },
+    {
+      "text": "In React, when does a component re-render, and how would you stop unnecessary re-renders?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "State or props changing, or a parent re-rendering",
+        "Measuring with the profiler before optimising",
+        "Memoisation, stable callbacks and splitting state, and the cost of overusing them"
+      ]
+    },
+    {
+      "text": "Where would you keep state in a mid-sized app: inside components, in context, in a store, or in a server cache? How do you decide?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Keeping state as close as possible to where it's used",
+        "Treating server data differently from UI state, and tools that cache server data",
+        "When a shared store is worth its extra complexity"
+      ]
+    },
+    {
+      "text": "What would you check to make a form usable for someone with a screen reader or only a keyboard?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Labels tied to inputs, semantic elements and a sensible tab order",
+        "Error messages that are announced and not shown only in red",
+        "Testing with a keyboard and a screen reader yourself"
+      ]
+    },
+    {
+      "text": "A page takes several seconds to load on a mid-range phone. How would you find out why and speed it up?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Measuring with browser dev tools and a performance audit on a throttled connection",
+        "Common causes: large JavaScript bundles, unoptimised images, render-blocking scripts, slow APIs",
+        "Fixes such as code splitting, lazy loading, compression and caching, in order of impact"
+      ]
+    },
+    {
+      "text": "Talk me through how you'd build a search box that shows suggestions as the user types.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Debouncing input, and cancelling or ignoring out-of-date responses",
+        "Loading, empty and error states, and moving through suggestions with the keyboard",
+        "Caching recent results and keeping it accessible"
+      ]
+    },
+    {
+      "text": "How does the browser turn HTML, CSS and JavaScript into pixels, and what makes that slow?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Building the DOM and CSSOM, then style, layout, paint and compositing",
+        "What forces extra layout work, such as reading sizes straight after changing styles",
+        "Why scripts can block rendering, and how defer or async helps"
+      ]
+    },
+    {
+      "text": "What are the main security risks in frontend code, and how do you guard against them?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Cross-site scripting from inserting untrusted HTML, and how frameworks escape output",
+        "Keeping secrets out of frontend code and being careful where tokens are stored",
+        "CSRF and CORS in plain words, and what the backend must still check"
+      ]
+    },
+    {
+      "text": "Why frontend? What do you enjoy about building interfaces?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something you built that people used, and what you learned from watching them",
+        "The part you enjoy most: visual craft, performance, accessibility, design systems",
+        "What you want to get better at next"
+      ]
+    },
+    {
+      "text": "Which website or app has an interface you admire, and what would you improve about ours?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A specific example and what makes it work for its users",
+        "One concrete improvement to the company's product, with the reason",
+        "How you'd check the change helped"
+      ]
+    }
+  ],
+  "tips": [
+    "Practise building a small component from scratch without a framework; some live rounds use plain JavaScript.",
+    "Mention the states as you build: loading, empty, error and success. Interviewers notice when you handle them unprompted.",
+    "Keep one project with a live link ready, and be able to explain its folder structure and where its state lives.",
+    "When asked about performance, say how you'd measure first; numbers from dev tools beat guesses.",
+    "Revise accessibility basics; many candidates skip them, so a good answer stands out."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "engineer"
+  },
+  "reviewed": "2026-10-18"
+}

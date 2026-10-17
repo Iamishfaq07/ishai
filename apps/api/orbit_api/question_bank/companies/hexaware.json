@@ -1,0 +1,192 @@
+{
+  "slug": "hexaware",
+  "name": "Hexaware",
+  "aliases": ["hexaware technologies"],
+  "group": "it-services",
+  "market": "india-first",
+  "summary": "Hexaware hires freshers through campus and off-campus drives and trains new graduates through Mavericks, the graduate talent programme within its HexaVarsity learning framework. Candidates commonly report an online assessment of aptitude, English and coding, followed by technical and HR interviews; experienced candidates usually describe technical rounds with the team and a manager or HR discussion.",
+  "rounds": [
+    "Campus drive, off-campus registration or online application",
+    "Online assessment for many fresher drives: aptitude, English and coding",
+    "Technical interview on fundamentals, testing or cloud basics, and your projects",
+    "For experienced roles: a second technical or managerial round",
+    "HR interview"
+  ],
+  "looks_for": [
+    "Put People First",
+    "Create Customer Value",
+    "Innovate Relentlessly",
+    "Be Sustainable",
+    "Come On In",
+    "Programming, SQL and testing basics",
+    "Interest in automation and cloud work",
+    "Communication and teamwork"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your degree or experience and the technologies you know best",
+        "One project with your part in it and a result",
+        "Why this role, in under two minutes"
+      ]
+    },
+    {
+      "text": "Tell me about a time you put a teammate's needs ahead of your own plan.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What they needed and what you gave up",
+        "How you made the trade-off without dropping your own work",
+        "What it meant for them and for the team"
+      ]
+    },
+    {
+      "text": "Tell me about a time you automated or simplified a repetitive task.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The task, who did it and how long it took",
+        "What you built or changed: a script, macro, test or template",
+        "Time or errors saved, ideally with a number"
+      ]
+    },
+    {
+      "text": "Tell me about a time you made someone new feel welcome in a team or group.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who they were and what made joining hard",
+        "What you did in the first days",
+        "How quickly they settled in and contributed"
+      ]
+    },
+    {
+      "text": "Tell me about a time you missed a deadline. What did you change afterwards?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The deadline and why you missed it, owned plainly",
+        "When you told people and how you limited the damage",
+        "The planning habit you changed since"
+      ]
+    },
+    {
+      "text": "What is the difference between manual and automated testing, and when is automation worth it?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Manual: a person runs the steps; automated: scripts run them",
+        "Automation pays off for repeated regression checks, not one-off or fast-changing screens",
+        "Tools you know, such as Selenium or a unit-test framework"
+      ]
+    },
+    {
+      "text": "Explain the difference between IaaS, PaaS and SaaS, with an example of each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "IaaS: rented servers and storage you manage yourself",
+        "PaaS: a platform where you deploy code without managing servers",
+        "SaaS: ready software used over the web, such as email or a CRM"
+      ]
+    },
+    {
+      "text": "What is a join in SQL? Explain inner, left and right joins with a small example.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Inner join keeps only matching rows",
+        "Left and right joins keep every row from one side, with nulls where there's no match",
+        "An example such as customers and orders, and how a join can repeat rows"
+      ]
+    },
+    {
+      "text": "How would you automate a daily report that someone currently builds by hand in a spreadsheet?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Understanding the steps, data sources and who uses the report",
+        "A tool choice: SQL plus a scheduled script, or a reporting tool",
+        "Checks so the automated version is trusted, and what happens when data is missing"
+      ]
+    },
+    {
+      "text": "A scheduled job that ran fine for months failed last night. How would you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Reading the job's logs and the exact error",
+        "Checking what changed: data volume, credentials, a release, a server",
+        "Rerunning safely, fixing the cause and adding an alert"
+      ]
+    },
+    {
+      "text": "For experienced candidates: tell me about a cloud migration you were part of. What was hardest?",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "What moved, from where to where, and why",
+        "Your part and the hardest problem",
+        "How it was solved and what you'd plan differently"
+      ]
+    },
+    {
+      "text": "Why Hexaware?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific: its graduate training, its automation and cloud work, or its values",
+        "How that fits your skills or plans",
+        "What you'd like to learn first"
+      ]
+    },
+    {
+      "text": "What do you expect from a graduate training programme, and how will you make the most of it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Realistic expectations: structured learning, mentoring, project exposure",
+        "What you'll put in: practice outside sessions, asking questions, certifications",
+        "How you'll show you're ready for a project"
+      ]
+    },
+    {
+      "text": "Do you have any questions for us?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two thoughtful questions about training, the first project or the team",
+        "Nothing already answered on the careers site",
+        "A brief thank-you"
+      ]
+    }
+  ],
+  "tips": [
+    "Hexaware lists its values as Put People First, Create Customer Value, Innovate Relentlessly, Be Sustainable and Come On In; have a short story for two or three.",
+    "If you've automated anything (a script, a macro, a test), bring it up; it fits the work many teams do.",
+    "Revise SQL joins and basic testing terms; they come up across development and testing roles.",
+    "Read about the Mavericks graduate programme before the HR round so you can say what you want from it."
+  ],
+  "sources": [
+    {
+      "title": "Join Hexaware, with its values (hexaware.com)",
+      "url": "https://hexaware.com/about-us/join-hexaware/"
+    },
+    {
+      "title": "HexaVarsity programmes and learning (hexaware.com)",
+      "url": "https://hexaware.com/about-us/programs-learning/"
+    }
+  ],
+  "abroad": {
+    "rounds": [
+      "Online application and recruiter screen",
+      "Technical interviews with the team",
+      "Manager or client interview (for many roles)",
+      "HR discussion"
+    ]
+  },
+  "reviewed": "2026-10-18"
+}

@@ -1,0 +1,186 @@
+{
+  "slug": "browserstack",
+  "name": "BrowserStack",
+  "aliases": ["browser stack"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "BrowserStack runs a cloud testing platform that lets teams test websites and apps on real browsers and devices, and it describes itself as remote-first. Candidates commonly report coding and problem-solving rounds, a design or project deep dive for experienced engineers, and questions that reflect its published values, such as Think Big, Sense of Urgency and Solve Problems for Scale.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Online or live coding round for engineering roles (often)",
+    "Problem-solving or machine coding round",
+    "System design or project deep dive for experienced roles",
+    "Hiring manager round",
+    "Culture or values conversation"
+  ],
+  "looks_for": [
+    "Think Big",
+    "Sense of Urgency",
+    "Solve Problems for Scale",
+    "Stay Hungry, Stay Foolish",
+    "Stack, Stackmates and Me",
+    "Passion for Work",
+    "Embrace Constraints",
+    "Understanding of testing: automation, flaky tests, real devices and CI pipelines",
+    "Working well in a remote-first team"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you had to move fast on something urgent without cutting the corners that mattered.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why it was urgent and what waiting would have cost",
+        "What you skipped and what you refused to skip",
+        "The result, and any clean-up you did afterwards"
+      ]
+    },
+    {
+      "text": "Describe something you built that kept working as usage grew, without a redesign.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The early design choices that allowed it to grow",
+        "How usage grew and what you watched",
+        "What you would design differently with hindsight"
+      ]
+    },
+    {
+      "text": "Tell me about a time you were wrong about something technical. How did you find out?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What you believed and why it seemed right",
+        "The evidence or person that showed you otherwise",
+        "How you changed your view and what you learned"
+      ]
+    },
+    {
+      "text": "Tell me about a time you put the team's goal ahead of your own work.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The team goal and the conflict with your own task",
+        "What you did and how you communicated it",
+        "The outcome for the team and for your own work"
+      ]
+    },
+    {
+      "text": "Describe a time a constraint pushed you to a better idea.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The constraint: time, cost, hardware, a rule",
+        "The idea it forced, and why it was better",
+        "Proof it worked"
+      ]
+    },
+    {
+      "text": "How would you design a service that gives a user a real mobile device in the cloud for a testing session?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A device pool: allocation, queueing when busy and health checks",
+        "Streaming the screen and input with low delay",
+        "Wiping and resetting each device after a session, for privacy and reliability"
+      ]
+    },
+    {
+      "text": "What makes automated UI tests flaky, and how would you reduce flakiness in a large test suite?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Causes: timing and waits, shared test data, test order, unstable environments",
+        "Fixes: explicit waits, isolated data, retries only with tracking",
+        "Measuring flakiness per test and quarantining the worst offenders"
+      ]
+    },
+    {
+      "text": "How would you run thousands of browser tests in parallel for one customer and report results quickly?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Splitting the suite and scheduling it across many browser instances",
+        "Fair sharing between customers, and limits per plan",
+        "Collecting logs, screenshots and videos so failures are easy to debug"
+      ]
+    },
+    {
+      "text": "A customer says their tests pass locally but fail on our platform. How would you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Comparing environments: browser version, screen size, network, time zone",
+        "Using the session's logs and video to find the first difference",
+        "Fixing our side or guiding the customer, and documenting the cause"
+      ]
+    },
+    {
+      "text": "Explain at a high level how a tool like Selenium or Playwright controls a browser.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The test script sends commands through a driver or browser protocol",
+        "How elements are found and actions carried out",
+        "Why waits and synchronisation matter"
+      ]
+    },
+    {
+      "text": "What's the difference between unit, integration and end-to-end tests, and how would you balance them for a web app?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "What each level checks and how fast and stable it is",
+        "Many fast unit tests, fewer integration tests, a small set of end-to-end flows",
+        "An example of a bug only one level would catch"
+      ]
+    },
+    {
+      "text": "How would you help an enterprise customer's QA team move from mostly manual testing to automation?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Understanding their app, team skills and release process first",
+        "Starting with a few high-value, stable flows and their CI pipeline",
+        "Showing progress: time saved, bugs caught earlier, release confidence"
+      ]
+    },
+    {
+      "text": "Why BrowserStack? What appeals to you about building tools for developers and testers?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Any real experience testing across browsers or devices",
+        "What you find interesting in the problem: scale, devices, developer experience",
+        "What you'd like to work on first"
+      ]
+    },
+    {
+      "text": "BrowserStack is remote-first. How do you keep your work visible and stay connected with a team you rarely meet?",
+      "type": "fit",
+      "kind": "situational",
+      "covers": [
+        "Habits: written updates, clear handovers, asking for help early",
+        "How you handle time zones and overlapping hours",
+        "An example from remote or hybrid work"
+      ]
+    }
+  ],
+  "tips": [
+    "If you can, try the product yourself: run a site on a few real browsers and devices so you can speak as a user.",
+    "Know the testing landscape: Selenium, Playwright, Cypress, Appium, CI pipelines and why tests become flaky.",
+    "Show a sense of urgency in your stories, but pair it with how you protected quality.",
+    "For remote-first work, give concrete habits rather than saying you're self-motivated."
+  ],
+  "sources": [
+    {
+      "title": "Careers at BrowserStack (values)",
+      "url": "https://www.browserstack.com/careers"
+    },
+    {
+      "title": "About BrowserStack",
+      "url": "https://www.browserstack.com/company"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

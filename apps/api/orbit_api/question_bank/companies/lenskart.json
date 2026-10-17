@@ -1,0 +1,173 @@
+{
+  "slug": "lenskart",
+  "name": "Lenskart",
+  "aliases": ["lenskart.com", "lenskart solutions"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Lenskart sells eyeglasses, sunglasses and contact lenses online and through its own stores, and it runs its own lens and frame manufacturing. Candidates commonly report coding and design rounds for technology roles, and case, analytics or role-play rounds for retail, store and business roles, often about connecting the online and in-store experience.",
+  "rounds": [
+    "Recruiter screen or campus shortlisting",
+    "Coding or problem-solving round for technology roles",
+    "System design or project deep dive for experienced engineers",
+    "Case, analytics or role-play round for business, retail and store roles (often)",
+    "Hiring manager round",
+    "HR round"
+  ],
+  "looks_for": [
+    "Speed and a willingness to experiment",
+    "Learning quickly from experiments that fail",
+    "Founder-like ownership of results",
+    "Care for the customer across the app, website and stores",
+    "Comfort with retail data: footfall, conversion, returns, repeat purchase"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about an experiment you ran that failed. What did you learn, and what did you do next?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What you tested and what you expected",
+        "How you knew it failed, and how quickly",
+        "What you tried next because of what you learned"
+      ]
+    },
+    {
+      "text": "Describe a time you moved quickly to ship something. How did you keep the quality acceptable?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why speed mattered",
+        "What you checked and what you consciously left for later",
+        "The result and the follow-up work"
+      ]
+    },
+    {
+      "text": "Tell me about a time you took ownership of a result that wasn't formally yours.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The result at risk and why you stepped in",
+        "What you did and how you worked with the actual owner",
+        "The outcome"
+      ]
+    },
+    {
+      "text": "Tell me about a time you handled a difficult customer face to face.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the customer was upset about",
+        "How you listened and what you offered",
+        "How it ended, and what you'd do the same next time"
+      ]
+    },
+    {
+      "text": "How would you design a virtual try-on feature that shows frames on a customer's face through the phone camera?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Face tracking to place a 3D frame model correctly as the head moves",
+        "Running smoothly on low-cost phones, with a fallback using photos",
+        "Privacy: what's processed on the phone and what's stored"
+      ]
+    },
+    {
+      "text": "A customer orders glasses online with a prescription. Walk me through the systems needed to make and deliver them.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Capturing and checking the prescription and lens choices",
+        "Routing the order to manufacturing, quality checks and packing",
+        "Shipping, tracking and handling a remake if something is wrong"
+      ]
+    },
+    {
+      "text": "Store sales in one city are flat while online sales there keep growing. How would you investigate?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Footfall versus conversion versus order value in stores",
+        "Whether online is taking sales from stores or growing the market",
+        "Store-level differences: staff, stock, location, local competition"
+      ]
+    },
+    {
+      "text": "How would you decide where to open the next few stores in a city?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Demand signals: online orders by area, footfall, income levels",
+        "Rent, visibility and distance from existing stores",
+        "Starting with a few, measuring and adjusting the plan"
+      ]
+    },
+    {
+      "text": "How would you reduce returns from customers whose glasses don't fit or don't suit them?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Finding the main return reasons from data and customer comments",
+        "Fixes before purchase: try-on, size guidance, better photos",
+        "Fixes after: easy adjustments in stores, and tracking the return rate"
+      ]
+    },
+    {
+      "text": "How would you keep inventory accurate across warehouses, stores and the website?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "One source of truth updated by every sale, transfer and return",
+        "Regular stock counts and reconciling differences",
+        "Buffers so the website doesn't sell what a store can't supply"
+      ]
+    },
+    {
+      "text": "A customer in a store is unsure about spending more on lenses. How would you help them choose without pushing?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Asking about their prescription, screen time and lifestyle first",
+        "Explaining options and trade-offs in plain words",
+        "Respecting their budget and decision"
+      ]
+    },
+    {
+      "text": "Why Lenskart? What do you think it does differently from a traditional optician?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific: the store-plus-online model, technology or own manufacturing",
+        "What that changes for customers",
+        "What you'd like to contribute"
+      ]
+    },
+    {
+      "text": "Have you used Lenskart's app or visited a store? What would you improve?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A specific moment in the journey",
+        "One improvement and who it helps",
+        "How you'd test it"
+      ]
+    },
+    {
+      "text": "Some roles involve working in stores, on weekends, or moving to another city. How do you feel about that?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer about weekends and relocation",
+        "Any retail or customer-facing experience",
+        "Why the role is worth it to you"
+      ]
+    }
+  ],
+  "tips": [
+    "Visit a store and browse the app before the interview, and notice how online and offline connect: try-on, eye tests, store pickup.",
+    "For business cases, use retail metrics: footfall, conversion, average order value, repeat purchase and returns.",
+    "Show speed with judgement: what you'd test small first, and how you'd know to scale it.",
+    "For tech roles, think about performance on low-cost phones and patchy networks."
+  ],
+  "sources": [],
+  "reviewed": "2026-10-18"
+}

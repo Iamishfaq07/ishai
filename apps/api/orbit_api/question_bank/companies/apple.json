@@ -1,0 +1,178 @@
+{
+  "slug": "apple",
+  "name": "Apple",
+  "aliases": [
+    "apple inc"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Apple's interviews are usually run by the team you would join, and candidates commonly describe them as deep rather than broad: interviewers go several levels into your own projects and your area of expertise. Many report a loop with several team members and the hiring manager, with questions that probe quality, attention to detail and the user's experience.",
+  "rounds": [
+    "Recruiter screen",
+    "One or two phone or video interviews with the team",
+    "Onsite or virtual loop with several team members, often including the hiring manager"
+  ],
+  "looks_for": [
+    "Deep expertise in your area",
+    "Attention to detail and quality",
+    "Caring about the user's experience",
+    "Collaboration across teams",
+    "Discretion"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a product you love and what you'd change about it.",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A specific product and the detail that makes it great for you",
+        "One change, the user problem it solves, and what it might cost",
+        "How you'd know the change made the experience better"
+      ]
+    },
+    {
+      "text": "Walk me through the work you're proudest of, in detail.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The problem and why it was hard",
+        "Your own decisions, at the level of design, code or hardware details",
+        "The result, and what you'd improve if you did it again"
+      ]
+    },
+    {
+      "text": "Tell me about a time you pushed back on a decision because quality would suffer.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The decision and the quality risk you saw",
+        "How you made your case, with evidence rather than opinion",
+        "What was decided and what it meant for users"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked closely with another discipline, such as design or hardware, to ship something.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What each side needed and where the tension was",
+        "How you learned enough of their world to work well together",
+        "What shipped and how the collaboration shaped it"
+      ]
+    },
+    {
+      "text": "Tell me about a time you noticed a small detail that others had missed. Why did it matter?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The detail and how you spotted it",
+        "Why it mattered to users or to the product's quality",
+        "What you did about it and what changed"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to keep information confidential while still working well with others.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why the information had to stay private, without revealing it now",
+        "How you stayed helpful to colleagues without sharing too much",
+        "What you learned about balancing openness and discretion"
+      ]
+    },
+    {
+      "text": "Tell me about something you shipped that had a problem. What did you do?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The problem and how it was found",
+        "Your part in it, owned plainly, and the fix",
+        "What you now check before shipping"
+      ]
+    },
+    {
+      "text": "How would you make an app feel fast and smooth on a phone? What would you measure?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Launch time, dropped frames while scrolling, and responsiveness to taps",
+        "Keeping heavy work off the main thread, and profiling before optimising",
+        "Battery and memory use as guardrails"
+      ]
+    },
+    {
+      "text": "How would you protect a user's privacy when designing a feature that uses their location?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Collecting only what the feature needs, as coarsely as possible",
+        "Processing on the device where you can, and keeping data briefly",
+        "Clear permission prompts and controls the user understands"
+      ]
+    },
+    {
+      "text": "How would you test a camera feature across many lighting conditions, devices and users before release?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A test matrix: lighting, motion, skin tones, device models",
+        "Automated tests plus human review for what's hard to measure",
+        "Metrics and a release bar, and how you'd use feedback from early testers"
+      ]
+    },
+    {
+      "text": "Explain how memory is managed in a language you use, such as reference counting in Swift, and a bug it can cause.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "How the language frees memory: reference counting, garbage collection or manual",
+        "A typical bug, such as a retain cycle or a dangling pointer",
+        "How you'd find it with tools and fix it, for example with weak references"
+      ]
+    },
+    {
+      "text": "How would you make a feature usable for someone who relies on a screen reader?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Meaningful labels, a sensible reading order and grouping of elements",
+        "Testing with the screen reader yourself and with people who use one",
+        "Other needs too: text size, contrast, motion"
+      ]
+    },
+    {
+      "text": "Why Apple, and why this team in particular?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What the team works on, in your own words",
+        "A link to your expertise or something you've built",
+        "What you'd bring and what you want to learn"
+      ]
+    },
+    {
+      "text": "What questions do you have about the team and how it works?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Questions about how the team works with other teams",
+        "What great work looks like in the role after a year",
+        "Questions that respect confidentiality: ask about ways of working, not unreleased products"
+      ]
+    }
+  ],
+  "tips": [
+    "Go deep: expect follow-ups several levels into your own projects.",
+    "Show you care about the details users notice.",
+    "Know your résumé thoroughly: pick two projects and prepare to explain every decision, number and trade-off in them.",
+    "Apple's careers site lists shared values such as accessibility, privacy and the environment; if your team's work touches one, be ready to discuss it.",
+    "Don't share confidential details from past employers; interviewers notice discretion, and you can describe work without naming secrets."
+  ],
+  "sources": [
+    {
+      "title": "Careers at Apple",
+      "url": "https://www.apple.com/careers/us/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

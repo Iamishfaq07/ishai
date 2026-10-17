@@ -1,0 +1,179 @@
+{
+  "slug": "postman",
+  "name": "Postman",
+  "aliases": ["postman api", "postman api platform"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Postman builds an API platform that developers use to design, test, document and monitor APIs, and it started in Bengaluru. Candidates commonly report a recruiter screen, a coding or practical exercise, and interviews on design and collaboration, with its five published values (Create with curiosity, Earn trust, Embrace constraints, Win together, Own & deliver) shaping the behavioral questions.",
+  "rounds": [
+    "Recruiter screen",
+    "Coding round or a practical exercise, often close to real work",
+    "Technical deep dive on your past projects",
+    "System or API design round for experienced roles",
+    "Hiring manager and values conversation"
+  ],
+  "looks_for": [
+    "Create with curiosity",
+    "Earn trust",
+    "Embrace constraints",
+    "Win together",
+    "Own & deliver",
+    "Good API design sense: clear contracts, versioning and error handling",
+    "Empathy for developers as users"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you questioned an accepted best practice. What did you find?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The practice and why you doubted it in your context",
+        "How you tested your doubt rather than just arguing",
+        "What you and the team changed, or why you kept it"
+      ]
+    },
+    {
+      "text": "Describe a time you listened first and changed your plan because of what you heard.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Your original plan and who you asked for input",
+        "What they told you that you hadn't considered",
+        "How the changed plan worked out, and what it did for trust"
+      ]
+    },
+    {
+      "text": "Tell me about something good you shipped with less time, people or budget than you wanted.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The constraint and the goal you still had to meet",
+        "What you cut, reused or simplified",
+        "The result and what the constraint taught you"
+      ]
+    },
+    {
+      "text": "Tell me about a mistake you made at work and how you adapted afterwards.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The mistake, owned clearly",
+        "How you fixed the immediate problem",
+        "What you now do differently, with an example"
+      ]
+    },
+    {
+      "text": "Describe a time you helped a teammate succeed even though it slowed down your own task.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the teammate needed and why it mattered to the team",
+        "What you gave up and how you managed it",
+        "The outcome for the team"
+      ]
+    },
+    {
+      "text": "What makes a REST API easy to use? Walk me through an API you'd consider well designed.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Consistent resource names, HTTP methods and status codes",
+        "Helpful error messages, pagination and authentication that's easy to get right",
+        "Good docs and examples, with a real API you've used"
+      ]
+    },
+    {
+      "text": "How would you design a feature that runs a collection of API tests on a schedule and alerts the team when they fail?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A scheduler, workers that run tests in isolation, and stored results",
+        "Running from several regions, timeouts and retries for flaky endpoints",
+        "Alerting that's useful: grouping failures, avoiding noise, linking to the failed request"
+      ]
+    },
+    {
+      "text": "How would you let two people edit the same API request at once without overwriting each other's changes?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Options: locking, last-write-wins, operational transforms or CRDTs, and their trade-offs",
+        "Showing who else is editing, and handling offline edits",
+        "Keeping a history so changes can be reviewed or undone"
+      ]
+    },
+    {
+      "text": "How would you version an API that many external clients depend on without breaking them?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Additive changes first; what counts as a breaking change",
+        "A versioning scheme (path, header) and a deprecation timeline",
+        "Telling clients early, and measuring who still uses the old version"
+      ]
+    },
+    {
+      "text": "Explain the difference between REST, GraphQL and gRPC, and when you'd pick each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "REST: simple and cacheable, resources over HTTP",
+        "GraphQL: clients ask for exactly the fields they need",
+        "gRPC: fast, typed calls between services; a real case where you'd choose each"
+      ]
+    },
+    {
+      "text": "A new desktop app release is crashing for some users. How would you find the cause and respond?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Limiting the damage first: pause the rollout or roll back",
+        "Using crash reports to find what the affected users share: OS, version, settings",
+        "Fixing, testing on the affected setup, and telling users what happened"
+      ]
+    },
+    {
+      "text": "How would you find out whether developers are getting value from a new feature in its first weeks?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Usage that signals value, such as repeat use, not just first clicks",
+        "Talking to a few users and reading community feedback",
+        "A decision you'd make from the results: improve, promote or rethink"
+      ]
+    },
+    {
+      "text": "Why Postman? How have you used it, or tools like it, in your own work?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Specific use: testing, debugging, documenting or sharing APIs",
+        "What you like and one thing you'd improve",
+        "Why building for developers appeals to you"
+      ]
+    },
+    {
+      "text": "Which of Postman's values do you relate to most, and when have you lived it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One value, named once",
+        "A short story that shows it in action",
+        "Why that way of working suits you"
+      ]
+    }
+  ],
+  "tips": [
+    "Use Postman properly before the interview: build a collection, write a test script, and try a mock server or monitor.",
+    "Talk about developer experience: clear errors, good docs and sensible defaults matter as much as features.",
+    "Prepare a story for each of the five values; Embrace constraints suits a time-boxed or low-budget project.",
+    "In design rounds, think about teams: Postman is used for collaboration, so sync, sharing and permissions matter."
+  ],
+  "sources": [
+    {
+      "title": "Careers at Postman (values)",
+      "url": "https://www.postman.com/company/careers/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

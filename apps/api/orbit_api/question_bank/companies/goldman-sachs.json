@@ -1,0 +1,183 @@
+{
+  "slug": "goldman-sachs",
+  "name": "Goldman Sachs",
+  "aliases": [
+    "goldman",
+    "goldman sachs india"
+  ],
+  "group": "finance",
+  "market": "global",
+  "summary": "Goldman Sachs interviews usually test problem solving, attention to detail and why you want the specific division, with behavioural questions that reflect its core values of partnership, client service, integrity and excellence. For campus roles, candidates commonly report a recorded video interview and, for engineering, an online coding assessment, followed by a final round of several back-to-back interviews.",
+  "rounds": [
+    "Online assessment (coding, maths, aptitude)",
+    "Technical interviews: data structures, problem solving",
+    "'Superday': several back-to-back interviews including behavioral and fit"
+  ],
+  "looks_for": [
+    "Strong problem solving and maths",
+    "Attention to detail",
+    "Teamwork under pressure",
+    "Integrity and client focus",
+    "Partnership",
+    "Client Service",
+    "Integrity",
+    "Excellence"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you worked under real pressure. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What made it high pressure: the deadline, the stakes, who was relying on you",
+        "How you prioritised and kept the quality up",
+        "The result, and what you'd keep or change about how you handled it"
+      ]
+    },
+    {
+      "text": "Why Goldman Sachs, and why this division?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What the division does and who its clients are, in a sentence",
+        "Why that work suits your skills and interests, with an example",
+        "Something specific about Goldman Sachs you learnt from its people, events or publications"
+      ]
+    },
+    {
+      "text": "Tell me about a mistake you caught before it reached anyone else.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the mistake was and what it would have cost if missed",
+        "How you caught it: the check or habit that found it",
+        "What you changed so it wouldn't happen again"
+      ]
+    },
+    {
+      "text": "Tell me about a time you depended on others to hit a deadline. How did you keep the team on track?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who did what, and where the risk of delay was",
+        "How you communicated and helped others, not only your own part",
+        "The outcome and what you learnt about working in a team"
+      ]
+    },
+    {
+      "text": "Tell me about a time you went beyond what a client, user or professor expected.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What they asked for and what they actually needed",
+        "The extra step you took and why it was worth it",
+        "How they responded, with something concrete"
+      ]
+    },
+    {
+      "text": "Walk me through the three financial statements and how they link together.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Income statement, balance sheet and cash flow statement, and what each shows",
+        "How net income flows into retained earnings and the cash flow statement",
+        "An example: how a depreciation charge moves through all three"
+      ]
+    },
+    {
+      "text": "How would you value a company? Explain the main approaches and when you'd prefer each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Discounted cash flow, comparable companies and past transactions",
+        "What drives each: forecasts and discount rate, or market multiples",
+        "When each fits, for example a young growth firm versus a stable business"
+      ]
+    },
+    {
+      "text": "If interest rates rise sharply, what happens to bond prices, and why?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Prices fall, because existing fixed payments are worth less when new bonds pay more",
+        "Longer-dated bonds move more than short-dated ones",
+        "A quick note on who gains or loses: investors, borrowers, banks"
+      ]
+    },
+    {
+      "text": "Pitch me a company or stock you follow. What's your view, and what would change your mind?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "What the company does and how it makes money, in two sentences",
+        "Two or three reasons for your view, with numbers where you have them",
+        "The main risk and the signal that would make you change your view"
+      ]
+    },
+    {
+      "text": "Tell me about a recent market move or deal you followed. Why did it happen, and who did it affect?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A specific, recent event described accurately",
+        "The main cause in plain words",
+        "What it means for clients such as companies, investors or the firm's businesses"
+      ]
+    },
+    {
+      "text": "How would you design a system that shows traders live prices for thousands of instruments with very little delay?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying scale, update rate and how fresh prices must be",
+        "Streaming updates from market feeds through a fast in-memory layer to screens, sending only changes",
+        "Handling bursts, slow clients and a feed going down"
+      ]
+    },
+    {
+      "text": "Explain the difference between a process and a thread, and a problem you've seen from shared state.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Processes have separate memory; threads share memory within a process",
+        "A race condition or deadlock example and how it showed up",
+        "How you fixed or would fix it: locks, immutable data or message passing"
+      ]
+    },
+    {
+      "text": "You roll two fair dice. What's the chance the total is at least 10? Talk me through it.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Counting outcomes: 36 equally likely pairs",
+        "Totals of 10, 11 and 12 come from 3, 2 and 1 pairs, so 6 in all",
+        "The answer, 6 out of 36 or one in six, stated clearly"
+      ]
+    },
+    {
+      "text": "Where do you see yourself in five years, and how does this role get you there?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A realistic goal linked to this division",
+        "The skills you expect to build in the role",
+        "Commitment to learning the job well first"
+      ]
+    }
+  ],
+  "tips": [
+    "Expect probability and puzzle questions alongside coding.",
+    "Know why this division specifically, not just why finance.",
+    "For the recorded video interview, practise answering to a camera in a set time: a one-line answer first, then one example.",
+    "For engineering roles, practise explaining your approach to a coding problem and its time and space cost out loud before you write code.",
+    "Final rounds often mean several short interviews with different people; keep your story about why this division consistent and have a fresh question for each interviewer.",
+    "Read the financial news for a few weeks before; be ready to discuss one market move and one company in depth."
+  ],
+  "sources": [
+    {
+      "title": "Goldman Sachs: purpose and values",
+      "url": "https://www.goldmansachs.com/our-firm/purpose-and-values"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

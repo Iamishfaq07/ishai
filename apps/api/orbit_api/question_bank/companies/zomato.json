@@ -1,0 +1,181 @@
+{
+  "slug": "zomato",
+  "name": "Zomato",
+  "aliases": [
+    "blinkit",
+    "zomato india"
+  ],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Candidates commonly report that Zomato's engineering interviews combine coding and problem-solving rounds with a design round, often on delivery, search or restaurant-discovery problems, and that some roles also meet a hiring manager or the founder's office. Interviewers tend to look for ownership, speed and a clear product opinion. Zomato is part of Eternal, which also runs Blinkit, District and Hyperpure.",
+  "rounds": [
+    "Coding assessment",
+    "Problem solving / data structures",
+    "Design round",
+    "Hiring manager / founder's office round (some roles)"
+  ],
+  "looks_for": [
+    "Ownership",
+    "Speed of execution",
+    "Customer obsession",
+    "First-principles thinking",
+    "A clear product opinion, backed by how you'd measure it",
+    "Thinking about restaurants and delivery partners, not only customers"
+  ],
+  "questions": [
+    {
+      "text": "How would you design a system to show restaurants near a user, sorted by delivery time?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Finding restaurants within reach: a geo index and each restaurant's delivery area",
+        "Estimating delivery time per restaurant from preparation time, partner availability and distance",
+        "Keeping it fast: caching by area, and updating when a restaurant closes or gets busy"
+      ]
+    },
+    {
+      "text": "Tell me about something you built because you thought it should exist.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem you noticed and who had it",
+        "How you built it, with little or no one asking you to",
+        "Who used it and what you learned from them"
+      ]
+    },
+    {
+      "text": "What would you improve in the Zomato app, and how would you measure it?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A specific flow and the user problem with it, from your own use",
+        "The change you'd make and what you'd leave out",
+        "One main metric and a guardrail, such as order conversion and cancellations"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked a problem out from first principles instead of copying how others did it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The usual approach and why it didn't fit your case",
+        "How you broke the problem down to basics",
+        "What you built and how it compared with the usual way"
+      ]
+    },
+    {
+      "text": "Describe a mistake of yours that reached users. How did you handle it?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What went wrong, owned in the first person",
+        "How quickly you found it, fixed it and told people",
+        "What you changed so it wouldn't happen again"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to deliver with very little guidance. How did you decide what to do first?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was unclear and what was at stake",
+        "How you set priorities and who you checked with",
+        "The result, and what you'd do the same way again"
+      ]
+    },
+    {
+      "text": "How would you design search in a food app so that a misspelt dish, a cuisine and a restaurant name all return useful results?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Indexing dishes, restaurants and cuisines together",
+        "Typos, Hindi or regional spellings typed in English, and synonyms",
+        "Ranking by availability, distance and the user's past orders, within a tight time limit"
+      ]
+    },
+    {
+      "text": "How would you design restaurant ratings and reviews so they are hard to fake?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Linking reviews to real orders and weighting recent ones",
+        "Signals of abuse: new accounts, bursts of reviews, repeated text",
+        "Moderation and a way for restaurants to report unfair reviews"
+      ]
+    },
+    {
+      "text": "Walk me through how a ten-minute grocery order could work, from tap to doorstep. Where would you focus engineering effort?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Picking the store by stock and distance, then picking and packing inside it",
+        "Assigning a rider who is already near the store",
+        "Measuring each step to find the slowest one, and alerts when a store falls behind"
+      ]
+    },
+    {
+      "text": "Restaurants in one city say new orders appear late on their devices. How would you debug it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Confirming scope: which restaurants, devices or app versions, since when",
+        "Tracing an order through each step, from order service to notification to the device",
+        "The fix, plus monitoring of order-to-restaurant delay"
+      ]
+    },
+    {
+      "text": "Explain caching to a product manager. When could a cache show customers wrong information?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A plain-words explanation with an everyday example",
+        "Stale data: a changed menu price or a closed restaurant still showing",
+        "Fixes: short expiry times or clearing the cache when the data changes"
+      ]
+    },
+    {
+      "text": "How would you decide whether to lower the delivery fee in a city? What would you measure?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The goal: more orders, new users or winning back lapsed ones",
+        "Who pays for the cut and what it does to margins",
+        "A test in some areas first, with guardrails such as partner earnings and delivery times"
+      ]
+    },
+    {
+      "text": "Why Zomato, and why this team in particular?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about the team's problem or product",
+        "What you bring that fits it, with an example",
+        "What you want to learn there"
+      ]
+    },
+    {
+      "text": "Which Eternal business interests you most (Zomato, Blinkit, District or Hyperpure), and why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A clear pick and what you understand about its customers",
+        "A problem in it you'd like to work on",
+        "How your skills fit that problem"
+      ]
+    }
+  ],
+  "tips": [
+    "Have a product opinion about their app.",
+    "Use the app as a customer the week before and note one thing that annoyed you and how you'd fix it.",
+    "In design rounds, treat restaurants and delivery partners as users of the system too, not only customers.",
+    "For founder's office or business roles, expect open problems; structure your answer and end with a recommendation, not a list.",
+    "Expect to be asked why something should be built at all; start from the user problem before the architecture."
+  ],
+  "sources": [
+    {
+      "title": "Careers at Eternal (Zomato's parent company)",
+      "url": "https://www.eternal.com/careers/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

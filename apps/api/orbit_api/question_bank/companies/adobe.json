@@ -1,0 +1,193 @@
+{
+  "slug": "adobe",
+  "name": "Adobe",
+  "aliases": [
+    "adobe systems",
+    "adobe india"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Adobe's careers site describes a call with a Talent Partner, an interview with the hiring manager, then skills assessments and team interviews: coding challenges, system design or portfolio reviews for technical roles, and creative briefs or case studies for creative ones. Its published values are Create the future, Own the outcome, Raise the bar and Be genuine, and candidates commonly report strong focus on computer science fundamentals for engineering roles.",
+  "rounds": [
+    "Online application, often with a portfolio or GitHub link for technical and creative roles",
+    "Call with a Talent Partner about the role and your interest in Adobe",
+    "Online coding test or technical screen for many engineering and campus roles",
+    "Interview with the hiring manager on past work and measurable impact",
+    "Skills assessments and team interviews: coding, system design or portfolio review; creative briefs or case studies for creative roles"
+  ],
+  "looks_for": [
+    "Create the future",
+    "Own the outcome",
+    "Raise the bar",
+    "Be genuine",
+    "Fresh perspectives and creative thinking",
+    "Measurable impact from your past work",
+    "Strong fundamentals for engineering roles: data structures, algorithms, OS and object-oriented design",
+    "Care for the creators, businesses and document users who rely on Adobe's products"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you owned an outcome from start to finish, including the parts nobody asked you to do.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and what 'done' really meant for the user",
+        "The unglamorous parts you picked up: testing, docs, follow-up",
+        "The result, with a number if you have one"
+      ]
+    },
+    {
+      "text": "Tell me about a time you raised the quality bar on your team's work. What did you change?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What 'good enough' looked like before and why it fell short",
+        "The change you introduced, such as reviews, tests or a checklist, and how you got buy-in",
+        "What improved, shown with evidence"
+      ]
+    },
+    {
+      "text": "Tell me about a time you were candid that something wasn't working.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What wasn't working and why others hadn't said so",
+        "How you raised it honestly and respectfully, with a proposal",
+        "What changed as a result"
+      ]
+    },
+    {
+      "text": "Tell me about a project where you used AI tools to improve your work. What did you do yourself, and what did you check?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The task and why AI helped",
+        "Your own judgement: what you designed, rejected or rewrote",
+        "How you verified the output, and the impact on the work"
+      ]
+    },
+    {
+      "text": "Tell me about a time you got something wrong in a project. How did you put it right?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The mistake, owned plainly",
+        "How you fixed it and who you kept informed",
+        "What you do differently now"
+      ]
+    },
+    {
+      "text": "How would you design undo and redo for an image editor?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Storing commands versus storing snapshots, and the trade-off",
+        "Keeping memory in check for large images: changed tiles or diffs, history limits",
+        "Undo that works across layers, filters and multi-step edits"
+      ]
+    },
+    {
+      "text": "How would you let two people edit the same design file at the same time?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Syncing changes as small operations rather than whole files",
+        "Resolving conflicts, for example with operational transforms or CRDTs",
+        "Showing who is editing what, and handling offline edits"
+      ]
+    },
+    {
+      "text": "How would you make a web app open very large PDF files quickly?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Rendering the first visible pages first and loading the rest on demand",
+        "Doing heavy parsing off the main thread and caching rendered pages",
+        "Measuring time to first page and memory use on slower devices"
+      ]
+    },
+    {
+      "text": "Explain the difference between stack and heap memory in C++, and how the choice affects performance and safety.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Automatic lifetime on the stack versus manual or smart-pointer lifetime on the heap",
+        "Speed and size limits of each",
+        "Common bugs, such as leaks and dangling pointers, and how RAII and smart pointers help"
+      ]
+    },
+    {
+      "text": "A user says a filter in a desktop app gives different colours on Windows and macOS. How would you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Reproducing it with the same file, settings and app version on both systems",
+        "Likely causes: colour profiles, GPU versus CPU code paths, rounding differences",
+        "Confirming the cause, fixing it and adding a test that compares outputs"
+      ]
+    },
+    {
+      "text": "How would you help a first-time user get a good result in a design app within their first five minutes?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Who the new user is and what they're trying to make",
+        "Ideas such as templates, guided first steps or smart defaults, prioritised",
+        "A metric such as time to first export, with a guardrail for experienced users"
+      ]
+    },
+    {
+      "text": "How would you tell whether free trials are turning into paid subscriptions, and what would you try to improve it?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The funnel from sign-up to paid, tracked by cohort",
+        "Where users drop and why, using data and user feedback",
+        "Experiments to try and how you'd measure them"
+      ]
+    },
+    {
+      "text": "Why Adobe? Which Adobe product do you use, and what would you change about it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A product you actually use and what it does well",
+        "One change, who it helps and why",
+        "How this connects to the team you're interviewing for"
+      ]
+    },
+    {
+      "text": "Which of Adobe's values fits you best, and when have you lived it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One value, named accurately",
+        "A short example from your work or studies",
+        "Why that way of working suits you"
+      ]
+    }
+  ],
+  "tips": [
+    "Have a specific 'Why Adobe?' answer ready, tied to a product you actually use and the team you're interviewing for.",
+    "Add a portfolio or GitHub link to your application; Adobe's hiring page suggests it for technical and creative roles.",
+    "Prepare examples with measurable impact for the hiring manager interview; Adobe's hiring page asks for them.",
+    "Adobe asks candidates not to use AI recording, live-scribing or conversation-prompting tools in hiring conversations unless invited, and to show how they've used AI in their work instead.",
+    "For C++, graphics or imaging teams, revise memory management, multithreading and basic image processing.",
+    "For product or design roles, practise a short case presentation: the user, the problem, your options and why you chose one."
+  ],
+  "sources": [
+    {
+      "title": "Adobe Careers: how we hire",
+      "url": "https://careers.adobe.com/us/en/hiring-process"
+    },
+    {
+      "title": "Adobe Blog: evolving Adobe's values and culture",
+      "url": "https://blog.adobe.com/en/publish/2023/03/07/evolving-adobes-values-culture"
+    },
+    {
+      "title": "Adobe Careers: AI and your hiring experience",
+      "url": "https://careers.adobe.com/us/en/ai-and-your-hiring-experience"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

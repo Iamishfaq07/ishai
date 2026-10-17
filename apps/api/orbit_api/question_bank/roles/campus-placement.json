@@ -1,0 +1,219 @@
+{
+  "slug": "campus-placement",
+  "name": "Campus placement (freshers)",
+  "aliases": ["fresher", "freshers", "fresher interview", "campus interview", "campus hiring", "campus recruitment", "placement interview", "placement drive", "off campus drive", "graduate trainee", "graduate engineer trainee"],
+  "group": "early-career",
+  "summary": "Campus placement processes, especially in India, commonly run in stages: an online aptitude test, often with coding or subject questions, a technical interview on your subjects and projects, and an HR round, with a group discussion at some companies. Freshers are usually judged on fundamentals, how clearly they explain their own project, and attitude and communication rather than experience.",
+  "rounds": [
+    "Pre-placement talk by the company (often)",
+    "Online test: aptitude (quantitative, logical, verbal), often with coding or subject questions for technical roles",
+    "Group discussion for some companies and roles",
+    "Technical interview on core subjects, your final-year project and internships",
+    "HR round on your background, motivation, relocation and willingness to learn",
+    "Some companies combine the technical and HR rounds into one interview"
+  ],
+  "looks_for": [
+    "Strong basics in your main subjects, not advanced trivia",
+    "Owning your project: what you built, why, and what you'd change",
+    "Clear, structured communication",
+    "Willingness to learn, relocate or work on what the company needs (for many roles)",
+    "Honesty: 'I don't know, but here's how I'd work it out'",
+    "Teamwork and attitude, shown through college activities"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a team project at college. What was your part, and what went wrong?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The project and the team in a sentence or two",
+        "Your own part, separated from the team's",
+        "One problem, how it was solved and what you learned"
+      ]
+    },
+    {
+      "text": "Tell me about a time you taught yourself something difficult.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you learned and why",
+        "How you went about it: resources, practice, asking for help",
+        "Something you built or achieved with it"
+      ]
+    },
+    {
+      "text": "Describe a responsibility you took on outside your coursework, such as a club, a fest or an internship.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The role and what was expected of you",
+        "One challenge and how you handled it",
+        "The result, with a number if you have one"
+      ]
+    },
+    {
+      "text": "Tell me about a failure or a poor result at college and what you did next.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What happened, owned honestly",
+        "What you think caused it",
+        "What you changed and how things went after"
+      ]
+    },
+    {
+      "text": "Walk me through your final-year project: the problem, your part and what you'd do differently.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The problem and why it mattered, in two sentences",
+        "Your own part, the tools used and one hard decision",
+        "The results, the limits and what you'd change with more time"
+      ]
+    },
+    {
+      "text": "Pick the subject from your degree you're strongest in and explain one idea from it as if to a first-year student.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A clear, simple explanation without jargon",
+        "An everyday example",
+        "Where it's used in industry"
+      ]
+    },
+    {
+      "text": "Tell me about an internship or training you did. What did you do there yourself?",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "Where it was and what the team did",
+        "Your own tasks and one thing you delivered",
+        "What you learned about working in a company"
+      ]
+    },
+    {
+      "text": "Explain the difference between a stack and a queue, and give an everyday example of each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Stack: last in, first out; queue: first in, first out",
+        "Examples such as a pile of plates and a ticket line",
+        "Where each is used in software, such as undo or task scheduling"
+      ]
+    },
+    {
+      "text": "What happens, step by step, when you type a website address into a browser? Keep it simple.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Finding the server's address through DNS",
+        "Connecting, securely if it's HTTPS, and sending a request",
+        "The server's response and the browser showing the page"
+      ]
+    },
+    {
+      "text": "What's the difference between a primary key and a foreign key? Use a college database as your example.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A primary key uniquely identifies each row, such as a student ID",
+        "A foreign key links to another table's primary key, such as a student ID in a marks table",
+        "Why that link keeps data consistent"
+      ]
+    },
+    {
+      "text": "Which programming language are you most comfortable with, and what have you built in it?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "One language, named honestly",
+        "Something you built and a problem you solved in it",
+        "What you're learning next"
+      ]
+    },
+    {
+      "text": "Estimate how many students in your college bring a laptop to class each day. Talk me through your reasoning.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Starting from total students and splitting by year or branch",
+        "Clear, rounded assumptions said out loud",
+        "A quick sense-check of the final number"
+      ]
+    },
+    {
+      "text": "Group discussion: 'Should coding be taught in all schools?' Give your opening point and say how you'd bring others in.",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "A clear stand with one reason and an example",
+        "Building on or politely countering what others say",
+        "Summarising the discussion if you get the chance"
+      ]
+    },
+    {
+      "text": "Tell me about yourself.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your education and branch in a line or two",
+        "One or two things you've built, led or achieved",
+        "Why this company and role fit what you want next"
+      ]
+    },
+    {
+      "text": "Why should we hire you over other freshers?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Two or three strengths, each backed by an example",
+        "How they match what the role needs",
+        "Willingness to learn, said with a sign you mean it"
+      ]
+    },
+    {
+      "text": "Are you willing to relocate, work in shifts or work on a different technology from the one you studied?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with any real limits stated clearly",
+        "Openness to learning, with an example of picking up something new",
+        "What you'd want to grow into over time"
+      ]
+    },
+    {
+      "text": "Where do you see yourself in five years?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Growing skills and responsibility in this kind of role",
+        "A direction you're interested in, without sounding like you'll leave soon",
+        "What you're doing now to get there"
+      ]
+    },
+    {
+      "text": "Do you have any questions for us?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two thoughtful questions, such as training, the first project or team",
+        "Nothing you could have found on the company's website",
+        "A short thank-you"
+      ]
+    }
+  ],
+  "tips": [
+    "Revise your branch's core subjects (for computer science: data structures, OOP, DBMS, operating systems and networks) and know one programming language well.",
+    "Know every line of your CV; interviewers commonly pick a project or skill from it and go deep.",
+    "Practise aptitude regularly under time limits; speed comes from practice, not tricks.",
+    "In a group discussion, speak early, make one clear point with an example and let others speak; talking over people rarely helps.",
+    "Research each company before its pre-placement talk: what it does, its main clients or products, and the role on offer.",
+    "If you don't know an answer, say so and explain how you'd work it out; a confident guess usually does more harm.",
+    "Outside India, graduate schemes often use online tests, video interviews and assessment centres instead; the same basics and stories still apply."
+  ],
+  "mock": {
+    "interview_type": "mixed",
+    "persona": "recruiter"
+  },
+  "reviewed": "2026-10-18"
+}

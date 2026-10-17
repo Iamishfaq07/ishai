@@ -1,0 +1,185 @@
+{
+  "slug": "jpmorgan",
+  "name": "JPMorgan Chase",
+  "aliases": [
+    "jpmorgan",
+    "jp morgan",
+    "j p morgan",
+    "jpmc",
+    "chase"
+  ],
+  "group": "finance",
+  "market": "global",
+  "summary": "JPMorgan Chase's interviews usually combine behavioural questions with technical or business questions for the line you've applied to, from investment banking and markets to consumer banking and technology. For many student roles, candidates commonly report a recorded video interview before live interviews; the firm says on its careers site that it uses recorded interviews for certain roles. Its published Business Principles, such as exceptional client service and operational excellence, are a good guide to what interviewers listen for.",
+  "rounds": [
+    "Online application and assessments",
+    "Recorded video interview (HireVue)",
+    "'Superday' of back-to-back interviews, technical and behavioral"
+  ],
+  "looks_for": [
+    "Client focus",
+    "Teamwork",
+    "Integrity",
+    "Problem solving",
+    "Resilience under pressure",
+    "Exceptional client service",
+    "Operational excellence",
+    "A commitment to integrity, fairness and responsibility",
+    "A great team and winning culture"
+  ],
+  "questions": [
+    {
+      "text": "Why JPMorgan, and why this business?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What this business does and who its clients or customers are",
+        "Why that work fits your skills and interests, with an example",
+        "Something specific about the firm you learnt from its people, events or reports"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked under pressure.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The deadline or stakes, and who was relying on you",
+        "How you prioritised and kept your work accurate",
+        "The result, with a number or a clear outcome"
+      ]
+    },
+    {
+      "text": "Tell me about a time you made a mistake. How did you fix it?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "A real mistake, owned in the first person",
+        "How quickly you told the right people and what you did to fix it",
+        "The check or habit you've added since"
+      ]
+    },
+    {
+      "text": "Tell me about a time you put a customer's or user's needs first, even though it cost you time.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who they were and what they needed",
+        "The trade-off you made and why",
+        "The difference it made for them"
+      ]
+    },
+    {
+      "text": "Tell me about a time you improved a process so it ran faster or with fewer errors.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the process was and what was going wrong",
+        "The change you made and how you got others to use it",
+        "Time saved or errors avoided, measured if you can"
+      ]
+    },
+    {
+      "text": "Tell me about a time you did the right thing when an easier option was available.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The easier option and why it was tempting",
+        "Why you chose differently, and who you involved",
+        "What happened, and what it taught you"
+      ]
+    },
+    {
+      "text": "What's the difference between investment banking, commercial banking and asset management?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Investment banking: advising companies on deals and helping them raise money",
+        "Commercial banking: lending and cash management for businesses; asset management: investing money for clients",
+        "How the business you've applied to earns its revenue"
+      ]
+    },
+    {
+      "text": "Explain how a rise in interest rates affects a bank's lending business and its customers.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Loans and deposits reprice, which changes the bank's interest margin",
+        "Borrowers pay more, so demand and credit risk can change",
+        "Savers earn more, and what the bank would watch as a result"
+      ]
+    },
+    {
+      "text": "Explain, step by step, what happens when someone pays by card in a shop.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The parties: cardholder, merchant, the merchant's bank, the card network and the card issuer",
+        "Authorisation at the till, then clearing and settlement later",
+        "Where fraud checks happen and how fees are shared"
+      ]
+    },
+    {
+      "text": "A small-business customer says a new online banking feature is confusing. How would you work out what to fix first?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Talking to customers and looking at usage data and support calls",
+        "Finding the step where most people get stuck or drop off",
+        "A quick fix now, a proper redesign after, and how you'd measure improvement"
+      ]
+    },
+    {
+      "text": "How would you design a service that alerts customers about unusual transactions on their accounts?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying what 'unusual' means and how fast alerts must arrive",
+        "Streaming transactions through rules or a model, then sending alerts by app, SMS or email",
+        "Avoiding duplicate or missed alerts, protecting customer data, and handling peaks"
+      ]
+    },
+    {
+      "text": "You've inherited code with no tests, and it must change before a big release. How would you approach it safely?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Understanding what the code does and adding tests around current behaviour first",
+        "Making small changes, reviewed, behind a switch you can turn off",
+        "Monitoring after release and a plan to roll back"
+      ]
+    },
+    {
+      "text": "What do you know about the business you're applying to, and how does it make money?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "The business's clients and main products in plain words",
+        "Its main sources of revenue",
+        "One recent development and why it interests you"
+      ]
+    }
+  ],
+  "tips": [
+    "Practise recorded answers: the video round is timed and has no interviewer.",
+    "Know the business line you're applying to.",
+    "In the recorded round, look at the camera, answer in about a minute and finish on the result; practise with a timer.",
+    "Use numbers when you describe what you achieved; the firm's careers site asks candidates to show results with measurable data.",
+    "For technology roles, be ready to explain a project's design choices and how you tested it, not only what it does.",
+    "Learn the firm's main businesses and say clearly which one you want and why."
+  ],
+  "sources": [
+    {
+      "title": "JPMorganChase Business Principles (jpmorganchase.com)",
+      "url": "https://www.jpmorganchase.com/about/business-principles"
+    },
+    {
+      "title": "How we hire (jpmorganchase.com)",
+      "url": "https://www.jpmorganchase.com/careers/how-we-hire"
+    },
+    {
+      "title": "How we hire FAQ (jpmorganchase.com)",
+      "url": "https://www.jpmorganchase.com/careers/how-we-hire/faqs"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

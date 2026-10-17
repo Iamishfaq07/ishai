@@ -1,0 +1,207 @@
+{
+  "slug": "machine-learning-engineer",
+  "name": "Machine learning engineer",
+  "aliases": ["ml engineer", "ai engineer", "ai ml engineer", "mlops engineer", "deep learning engineer", "nlp engineer", "computer vision engineer", "llm engineer", "gen ai engineer", "generative ai engineer"],
+  "group": "data",
+  "summary": "Machine learning engineer interviews usually combine software engineering (coding and system design) with machine learning: how models are trained, evaluated, deployed and monitored. Candidates commonly report an ML system design round, questions on deep learning or classical models depending on the team, and for newer AI roles, questions on building with large language models, retrieval and evaluation.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Coding interview, often similar to a software engineer's",
+    "Machine learning fundamentals: models, training, evaluation and the maths behind them",
+    "ML system design: a recommendation, search or classification system end to end",
+    "Project deep dive on a model you trained or shipped",
+    "Hiring manager or behavioural round"
+  ],
+  "looks_for": [
+    "Sound ML basics: loss functions, optimisation, regularisation and evaluation",
+    "Engineering skill: clean code, data pipelines, serving and testing",
+    "Thinking about the whole system: data, training, serving, monitoring and retraining",
+    "Trade-offs between accuracy, latency and cost",
+    "Rigorous evaluation, both offline and with live users",
+    "Honesty about what a model can and can't do"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a model you took from experiment to production. What was harder than you expected?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem, the data and the model you chose",
+        "What changed on the way to production: latency, data mismatches, scale",
+        "How it performs now, and how you know"
+      ]
+    },
+    {
+      "text": "Describe an experiment you believed in that didn't work. What did you do next?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The hypothesis and why it looked promising",
+        "How you found out it didn't work, and whether you ruled out a bug first",
+        "What you learned and what you tried instead"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to explain a model's limits to a product team that expected more.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What they expected and what the model could actually do",
+        "How you showed it with examples or numbers",
+        "What you agreed: a narrower scope, a fallback, more data"
+      ]
+    },
+    {
+      "text": "Tell me about a time you found a bug in a training or data pipeline.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How it showed up: metrics too good, too bad or inconsistent between runs",
+        "How you traced it",
+        "The fix, and the check you added so it couldn't return"
+      ]
+    },
+    {
+      "text": "Walk me through how gradient descent trains a neural network.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A loss function, gradients from backpropagation, and updating the weights",
+        "Learning rate, batches and optimisers such as Adam",
+        "Signs of trouble: loss not falling, exploding or vanishing gradients"
+      ]
+    },
+    {
+      "text": "How would you design a system that recommends products or videos to users?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Candidate generation, then ranking, and the signals each step uses",
+        "Offline metrics, then an online A/B test",
+        "New users and new items, freshness, feedback loops, and serving latency"
+      ]
+    },
+    {
+      "text": "How do you serve a model with low latency at high traffic?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Batch versus real-time predictions, and which the product needs",
+        "Smaller or quantised models, caching, and batching requests",
+        "Monitoring latency, and a fallback if the model is slow or down"
+      ]
+    },
+    {
+      "text": "A model performs well offline but worse once it's live. What could explain it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Features computed differently in training and in serving",
+        "Training data that included information not known at prediction time",
+        "Shifts in the data or feedback effects, and how you'd check each"
+      ]
+    },
+    {
+      "text": "What would you monitor for a model in production?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Input data distributions and missing features",
+        "Prediction distributions and, once labels arrive, live accuracy",
+        "Latency, errors and cost, with alerts and a plan for retraining"
+      ]
+    },
+    {
+      "text": "Explain regularisation. How do L1, L2 and dropout differ?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Penalising complexity to reduce overfitting",
+        "L1 pushes some weights to exactly zero; L2 shrinks all weights",
+        "Dropout in neural networks, and when each helps"
+      ]
+    },
+    {
+      "text": "How do transformers handle sequences, and why did they replace recurrent networks for most language tasks?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Attention, letting each token look directly at every other token",
+        "Training in parallel instead of step by step",
+        "The cost: compute and memory grow quickly with sequence length"
+      ]
+    },
+    {
+      "text": "How would you build an assistant that answers questions from a company's internal documents using a large language model?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Retrieval: splitting documents, embeddings, a vector index and ranking",
+        "Putting the retrieved text in the prompt, citing sources, and saying 'I don't know' when unsure",
+        "Evaluating answers, and making sure people only see documents they're allowed to"
+      ]
+    },
+    {
+      "text": "How would you evaluate a generative model's outputs when there's no single right answer?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A test set of realistic cases with clear criteria for a good answer",
+        "Human review, automated checks, and model-based grading used with care",
+        "Tracking failures such as made-up facts or unsafe output across versions"
+      ]
+    },
+    {
+      "text": "How do you make training experiments reproducible?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Versioning code, data and configuration together",
+        "Fixed random seeds and recorded environments",
+        "Experiment tracking and saved model artefacts"
+      ]
+    },
+    {
+      "text": "You have very little labelled data for a new classification task. What are your options?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Fine-tuning a pre-trained model, or transfer learning",
+        "Labelling more data cleverly: active learning, weak labels",
+        "Data augmentation, and a simple baseline to compare against"
+      ]
+    },
+    {
+      "text": "Why machine learning engineering rather than research or data science?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Enjoying building models that run reliably for real users",
+        "An example from your work or projects that shows it",
+        "The balance of engineering and modelling you want"
+      ]
+    },
+    {
+      "text": "Which recent development in AI interests you most, and how might it be useful in our product?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific development, explained in plain words",
+        "A realistic use in the company's product",
+        "Its risks, and how you'd test it before relying on it"
+      ]
+    }
+  ],
+  "tips": [
+    "Prepare to code like a software engineer; many ML loops include a standard coding round.",
+    "Structure ML design answers: problem and metric, data, model, serving, monitoring. Saying the structure first helps the interviewer follow.",
+    "Know the maths behind what you claim; be ready to explain backpropagation or a loss function from scratch.",
+    "For each project, know the baseline, the metric and the gain over the baseline; a bare accuracy figure invites hard follow-ups.",
+    "If you've built with large language models, be ready to say how you evaluated the results, not just which models you used."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "engineer"
+  },
+  "reviewed": "2026-10-18"
+}

@@ -1,0 +1,188 @@
+{
+  "slug": "netflix",
+  "name": "Netflix",
+  "aliases": [
+    "netflix inc"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Netflix interviews lean heavily on its culture memo, which it publishes on its careers site and which names values such as Judgment, Candor, Courage and Selflessness. Its new-grad page says candidates may be asked which parts of the memo resonate with them, or don't, and candidates commonly report culture-focused conversations alongside technical or functional interviews.",
+  "rounds": [
+    "Recruiter screen",
+    "Hiring manager interview",
+    "Technical or functional interviews",
+    "Interviews on the culture: judgement, candor and how you work"
+  ],
+  "looks_for": [
+    "Judgement",
+    "Candor: giving and taking direct feedback",
+    "Courage",
+    "Ownership with freedom",
+    "High performance on a team",
+    "Selflessness: taking time to help others succeed",
+    "Creativity: welcoming new ideas",
+    "Inclusion: recognising your biases and working against them",
+    "Curiosity: learning rapidly and eagerly",
+    "Resilience: adapting quickly to change"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you gave someone difficult feedback.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why the feedback needed giving and why it was hard",
+        "How you gave it: specific, timely, aimed at helping them",
+        "What changed, and how the relationship held up"
+      ]
+    },
+    {
+      "text": "Tell me about a decision you made without asking for permission. How did it go?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The context you had and why you felt able to decide",
+        "Who you informed and how you managed the risk",
+        "The outcome, good or bad, and what you'd do next time"
+      ]
+    },
+    {
+      "text": "What feedback have you received that changed how you work?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The feedback itself, stated honestly",
+        "What you changed in your behaviour",
+        "Evidence the change stuck"
+      ]
+    },
+    {
+      "text": "Tell me about a time you made an important call with incomplete information.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you knew, what you didn't, and the cost of waiting",
+        "How you weighed the options and whose views you sought",
+        "The result and how you'd judge the decision now"
+      ]
+    },
+    {
+      "text": "Tell me about a time you disagreed with a decision, said so, and then committed to it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Your view and how you voiced it",
+        "Why the decision went the other way",
+        "How you fully supported it afterwards, and what happened"
+      ]
+    },
+    {
+      "text": "Tell me about a risk you took that didn't work out.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "Why the risk was worth taking at the time",
+        "What went wrong and how you responded",
+        "What you learned, and whether you'd take a similar risk again"
+      ]
+    },
+    {
+      "text": "Tell me about a time you put the team's goal ahead of your own.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you wanted and what the team needed",
+        "What you gave up or took on",
+        "The result for the team"
+      ]
+    },
+    {
+      "text": "How would you design a system that recommends what someone should watch next?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signals: viewing history, ratings, time of day, what similar members watch",
+        "Candidate generation then ranking, and handling new members and new titles",
+        "How you'd measure success beyond clicks, such as finishing what they start"
+      ]
+    },
+    {
+      "text": "How would you design video streaming so playback starts quickly and adapts to a weak connection?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Encoding each title at several qualities and splitting it into short chunks",
+        "The player choosing quality chunk by chunk, with caches close to viewers",
+        "Measuring start time, rebuffering and picture quality"
+      ]
+    },
+    {
+      "text": "How would you test a change to the home page with members before rolling it out to everyone?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "An A/B test with a clear main metric and guardrails",
+        "Sample size, test length and splitting by device or region",
+        "How you'd decide when results are mixed"
+      ]
+    },
+    {
+      "text": "How would you keep a service available when one of the services it depends on starts failing?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Timeouts, retries with backoff, and circuit breakers",
+        "Fallbacks that degrade gracefully, such as cached or default results",
+        "Testing failure on purpose before it happens for real"
+      ]
+    },
+    {
+      "text": "Which part of the Netflix culture memo resonates with you most, and which would you find hardest?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific part of the memo, named accurately",
+        "An example from your own work that shows it",
+        "An honest answer about the hard part and how you'd handle it"
+      ]
+    },
+    {
+      "text": "Why Netflix, and why this role now?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you to the team's work and to Netflix's way of working",
+        "Why this is the right step in your career now",
+        "What you'd contribute in the first months"
+      ]
+    },
+    {
+      "text": "What would you want to know about how this team works before deciding to join?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Questions about how decisions and feedback work on the team",
+        "What great performance looks like in the role",
+        "Questions that show you've read the culture memo"
+      ]
+    }
+  ],
+  "tips": [
+    "Read the Netflix culture memo before the interview.",
+    "Be direct and specific; they value candor over polish.",
+    "Form a view on parts of the memo such as the keeper test and 'disagree then commit'; interviewers may ask what you think.",
+    "Netflix's new-grad page says that process typically includes a take-home assessment and two rounds of interviews; experienced roles vary, so ask your recruiter.",
+    "When you describe a decision, give the context you had, the call you made, and how you'd decide again."
+  ],
+  "sources": [
+    {
+      "title": "Netflix Culture Memo (jobs.netflix.com)",
+      "url": "https://jobs.netflix.com/culture"
+    },
+    {
+      "title": "Netflix: new grads",
+      "url": "https://jobs.netflix.com/careers/new-grads"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

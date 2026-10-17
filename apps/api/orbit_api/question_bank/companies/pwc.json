@@ -1,0 +1,174 @@
+{
+  "slug": "pwc",
+  "name": "PwC",
+  "aliases": ["pricewaterhousecoopers", "pwc india", "pwc ac"],
+  "group": "consulting",
+  "market": "global",
+  "summary": "PwC's interviews usually mix behavioural questions with technical or case questions for the line of service you've applied to: assurance, tax or advisory. For many entry-level roles, candidates commonly report an online assessment first, then live interviews, with a case common for advisory roles. PwC publishes five values, from 'Act with integrity' to 'Reimagine the possible'.",
+  "rounds": [
+    "Online application, with an online assessment for many entry-level roles",
+    "Screening call with a recruiter (for some roles)",
+    "Competency or behavioural interview on your experience and motivation",
+    "Technical or case interview for the line of service (often a case for advisory)",
+    "Final conversation with a senior manager, director or partner"
+  ],
+  "looks_for": [
+    "Act with integrity",
+    "Make a difference",
+    "Care",
+    "Work together",
+    "Reimagine the possible",
+    "Curiosity about clients' businesses and how they're changing",
+    "Clear, structured reasoning in technical and case questions"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you spoke up about something that wasn't right.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was wrong and how you checked before raising it",
+        "Who you spoke to and how you put it",
+        "What happened next and what you learnt"
+      ]
+    },
+    {
+      "text": "Tell me about a time you helped a teammate grow or get through a hard patch.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What they were struggling with and how you noticed",
+        "What you did, without taking over their work",
+        "How things changed for them and the team"
+      ]
+    },
+    {
+      "text": "Describe a time you found a better way of doing something everyone was used to.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The old way and what it cost in time or errors",
+        "Your idea, and how you tested it and won people over",
+        "The improvement, measured if possible"
+      ]
+    },
+    {
+      "text": "Tell me about a time a group you were part of met a tough deadline. What was your part?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The deadline and what made it tough",
+        "Your specific contribution and how you worked with others",
+        "The result and what you'd do the same way again"
+      ]
+    },
+    {
+      "text": "A client's costs have risen faster than its revenue for two years. How would you structure the problem?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying the business, its markets and which costs have grown",
+        "Splitting costs into fixed and variable, then by area: people, materials, overheads",
+        "The likely drivers, the data you'd check, and practical first steps"
+      ]
+    },
+    {
+      "text": "What's the difference between profit and cash, and why can a profitable company run out of cash?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Profit is recorded when earned; cash moves when customers pay and bills are settled",
+        "Working capital: slow-paying customers, high stock, or big investments",
+        "A simple example and what a business can do about it"
+      ]
+    },
+    {
+      "text": "How would you test whether a company's expenses are recorded in the right period?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Cut-off testing: invoices and payments either side of the period end",
+        "Searching for unrecorded liabilities after the year end",
+        "Checking accruals and prepayments for reasonableness"
+      ]
+    },
+    {
+      "text": "A client wants to automate its invoice processing. What would you check before recommending it?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Volumes, how standard the invoices are, and where time and errors go today",
+        "Data quality, system links and the controls that must stay in place",
+        "Expected savings against cost, risks, and a pilot to prove it"
+      ]
+    },
+    {
+      "text": "What does a cyber security review of a company look at? Name the main areas.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Who has access to what, and how access is granted and removed",
+        "How systems are patched, monitored and backed up",
+        "How the company would detect and respond to an incident, and how staff are trained"
+      ]
+    },
+    {
+      "text": "Estimate how many laptops are sold in Bengaluru in a year. Talk me through your assumptions.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Splitting buyers into groups such as students, working people and businesses",
+        "How many own a laptop and how often they replace it, with round numbers",
+        "A final figure and a quick sense check"
+      ]
+    },
+    {
+      "text": "Why PwC, and why this line of service?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What the line of service does and who its clients are",
+        "Why it fits your skills and interests, with an example",
+        "Something specific about PwC you learnt from its people or work"
+      ]
+    },
+    {
+      "text": "Which of PwC's values matters most to you, and when have you shown it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One value, named once",
+        "A short, specific example of you living it",
+        "Why it matters for the work you'd do here"
+      ]
+    },
+    {
+      "text": "What questions do you have for us about the team or the work?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Specific questions on clients, the first year or how people learn on the job",
+        "A question that follows from something said in the interview",
+        "Nothing you could have found on the careers site in a minute"
+      ]
+    }
+  ],
+  "tips": [
+    "Prepare a story for each of PwC's five values; behavioural questions often map to them.",
+    "For a case, ask what the client wants to achieve, lay out your structure, and end with a recommendation and next steps.",
+    "Know the basics of your line of service: accounting and audit for assurance, tax principles for tax, a technology or process area for advisory.",
+    "Online assessments are timed; practise similar numerical and reasoning tests beforehand so the format isn't new on the day.",
+    "Read one or two recent business stories about the industry you'd like to serve and be ready to say what they mean for clients."
+  ],
+  "sources": [
+    {
+      "title": "PwC's purpose, values and behaviours (pwc.com careers)",
+      "url": "https://jobs-au.pwc.com/au/en/our-purpose-values-and-behaviours"
+    },
+    {
+      "title": "PwC Acceleration Center careers FAQ (pwc.com)",
+      "url": "https://jobs-ta.pwc.com/global/en/AC-Manila-Careers-FAQ"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

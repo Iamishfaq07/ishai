@@ -1,0 +1,187 @@
+{
+  "slug": "nvidia",
+  "name": "NVIDIA",
+  "aliases": [
+    "nvidia india"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "NVIDIA's hiring page describes phone interviews followed by virtual or in-person interviews with the hiring manager, team members and people from other groups, and says technical candidates may be asked to complete a coding exercise. Candidates commonly report deep technical interviews in their own area: GPU and computer architecture, chip design and verification, systems software, parallel programming or deep learning. NVIDIA publishes five core values, including Intellectual Honesty and Speed & Agility.",
+  "rounds": [
+    "Online application; NVIDIA suggests applying to the few roles that best match your background",
+    "Phone interviews with a recruiter, the hiring manager or engineers",
+    "Coding exercise for some technical roles, often on HackerRank",
+    "Virtual or in-person interviews: one-on-one, small-group or panel, usually 30–60 minutes each",
+    "NVIDIA's hiring page says an in-person interview at an office is needed before an offer; interns typically have phone interviews only"
+  ],
+  "looks_for": [
+    "Innovation",
+    "Intellectual Honesty: seek truth, learn from mistakes, share learnings",
+    "Speed & Agility",
+    "Excellence & Determination",
+    "One Team: do what's best for the company",
+    "Deep knowledge of your area, from computer architecture to deep learning",
+    "Clear reasoning out loud on technical problems",
+    "Projects that show you've applied your skills, not only studied them"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a mistake you made and how you shared what you learned with your team.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The mistake, stated plainly and without excuses",
+        "How you fixed it",
+        "How you shared the lesson so others wouldn't repeat it"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to change direction quickly because the situation changed.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What changed and how you noticed",
+        "How quickly you adjusted the plan and brought others along",
+        "The result, and what would have happened if you hadn't changed"
+      ]
+    },
+    {
+      "text": "Tell me about a time you kept going on a hard technical problem when an easy workaround was available.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and the tempting shortcut",
+        "Why the proper fix was worth the extra effort",
+        "How you solved it and what it made possible"
+      ]
+    },
+    {
+      "text": "Tell me about a time you put the wider company's goal ahead of your own team's plan.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The conflict between the two goals",
+        "How you decided and who you involved",
+        "The outcome for the company and for your team"
+      ]
+    },
+    {
+      "text": "Explain how a GPU differs from a CPU, and which kinds of work suit each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Few powerful cores tuned for low latency versus many simpler cores tuned for throughput",
+        "Memory bandwidth and the cost of moving data between host and device",
+        "Examples: branchy serial code on the CPU, data-parallel maths on the GPU"
+      ]
+    },
+    {
+      "text": "What is a GPU kernel in CUDA terms, and what usually limits its performance?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Threads, blocks and warps, and how work maps onto them",
+        "Memory access patterns such as coalescing, plus shared memory use",
+        "Occupancy and branch divergence, and how a profiler shows the limit"
+      ]
+    },
+    {
+      "text": "How would you speed up matrix multiplication on a GPU? Talk me through the ideas rather than the code.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Tiling so blocks reuse data from shared memory",
+        "Coalesced loads, and using specialised matrix hardware and lower precision where accuracy allows",
+        "Measuring against the hardware's peak to know how much is left"
+      ]
+    },
+    {
+      "text": "What is a race condition, how would you find one, and how would you prevent it in parallel code?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Two threads accessing shared data, at least one writing, without ordering",
+        "Finding it with careful review, stress tests and race-detection tools",
+        "Prevention: atomics, locks, barriers, or designs that avoid shared writes"
+      ]
+    },
+    {
+      "text": "How would you verify a hardware block such as an arbiter or cache controller? What would your test plan cover?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Features and corner cases: fairness, back-pressure, simultaneous requests, reset",
+        "Random stimulus with a reference model, plus assertions",
+        "Coverage goals and how you'd decide verification is complete"
+      ]
+    },
+    {
+      "text": "Training a model across many GPUs is slower than expected. How would you find the bottleneck?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Checking GPU utilisation first: are the GPUs waiting on data loading?",
+        "Communication cost between GPUs, batch size and how it scales",
+        "Profiling one step end to end, then fixing the biggest gap"
+      ]
+    },
+    {
+      "text": "Explain the trade-offs of running a neural network at lower precision, such as FP16 or INT8.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Gains: speed, memory and power",
+        "Risks: accuracy loss, overflow and underflow",
+        "Mitigations such as mixed precision, scaling and calibration, with accuracy checks"
+      ]
+    },
+    {
+      "text": "How would you debug a graphics driver crash that only happens in one game?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Reproducing it and collecting crash dumps and driver logs",
+        "Comparing driver versions, GPUs and settings to narrow it down",
+        "Capturing the frame or API calls that trigger it, then fixing and adding a regression test"
+      ]
+    },
+    {
+      "text": "Why NVIDIA, and which of its platforms or products would you most like to work on?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific platform, product or research area",
+        "A link to your own projects or studies",
+        "What you'd want to build or learn there"
+      ]
+    },
+    {
+      "text": "What recent development in GPUs, AI or graphics excites you, and why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One development, explained simply and accurately",
+        "Why it matters technically or for users",
+        "How it connects to the work you want to do"
+      ]
+    }
+  ],
+  "tips": [
+    "Know the fundamentals for your track deeply: computer architecture and parallel programming for GPU roles, digital design and verification for hardware, linear algebra and deep learning for AI.",
+    "NVIDIA's hiring page recommends applying to the top three to five roles that match your background rather than many.",
+    "NVIDIA's hiring page warns that using unapproved outside tools during an interview leads to disqualification.",
+    "For a coding exercise, practise writing tested, readable code in a browser-based editor under time limits.",
+    "Prepare one project in depth with its numbers: speed-ups, utilisation, accuracy, area or power."
+  ],
+  "sources": [
+    {
+      "title": "NVIDIA Careers: how we hire",
+      "url": "https://www.nvidia.com/en-us/about-nvidia/careers/how-we-hire/"
+    },
+    {
+      "title": "NVIDIA Sustainability Report, Fiscal Year 2026 (core values)",
+      "url": "https://images.nvidia.com/aem-dam/Solutions/documents/NVIDIA-Sustainability-Report-Fiscal-Year-2026.pdf"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

@@ -1,0 +1,175 @@
+{
+  "slug": "bcg",
+  "name": "BCG",
+  "aliases": ["boston consulting group"],
+  "group": "consulting",
+  "market": "global",
+  "summary": "BCG's interviews for client-facing roles centre on case interviews, which BCG says judge how you structure and reason through a realistic business problem rather than whether you reach one right answer. Its careers site describes a skills interview on your experience and motivation, a case interview and a team interview, and names the qualities its consulting interviewers look for: integrity, intellectual curiosity, creative thinking, a collaborative mindset and drive.",
+  "rounds": [
+    "Online application, with an online test or online case for some offices and roles",
+    "Skills interview on your experience, skills and motivation",
+    "Case interviews: a realistic business problem worked through with the interviewer",
+    "Team interview for client-facing roles, again on problem solving, analysis and communication"
+  ],
+  "looks_for": [
+    "Integrity",
+    "Intellectual Curiosity",
+    "Creative Thinking",
+    "Collaborative Mindset",
+    "Drive",
+    "Structuring a problem and stating assumptions",
+    "Quick, accurate calculations and reading data",
+    "Clear communication and a summary that ends in a recommendation"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself and what brings you to consulting.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your background in two or three lines, focused on what's relevant",
+        "One achievement that shows how you solve problems",
+        "What draws you to consulting now"
+      ]
+    },
+    {
+      "text": "Tell me about a time curiosity made you dig further into a problem than you needed to.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What caught your interest and why you kept going",
+        "What you found that others had missed",
+        "How it changed the result or your thinking"
+      ]
+    },
+    {
+      "text": "Tell me about a time you came up with an unusual solution to a problem.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and why the usual approaches didn't work",
+        "Your idea and how you tested it",
+        "The outcome and what you learnt about creative problem solving"
+      ]
+    },
+    {
+      "text": "Describe a time you helped a team work better together.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What wasn't working and how it showed",
+        "What you did to change it, including listening to others",
+        "How the team's results improved"
+      ]
+    },
+    {
+      "text": "Tell me about the achievement you're proudest of. What drove you?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why it was hard and what was at stake for you",
+        "What you did, in the first person, over time",
+        "The result and why it matters to you"
+      ]
+    },
+    {
+      "text": "A coffee chain's new stores are less profitable than its older ones. How would you find out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Comparing revenue (footfall, spend per visit) and costs (rent, staff, supplies) between old and new stores",
+        "Checking location, store age and local competition before blaming execution",
+        "The likely cause and what the chain should do about future openings"
+      ]
+    },
+    {
+      "text": "A car maker is deciding whether to launch a subscription service for its electric cars. How would you assess it?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Who would subscribe and why, compared with buying or leasing",
+        "Revenue per subscriber against the costs of cars, servicing and lower resale values",
+        "Risks, a recommendation, and a small pilot to test demand"
+      ]
+    },
+    {
+      "text": "Estimate the yearly demand for school notebooks in Bengaluru. Talk me through your assumptions.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Starting from the number of school pupils, by age group",
+        "Notebooks per pupil per year, with round numbers you say out loud",
+        "A final figure, a sense check, and the assumption that matters most"
+      ]
+    },
+    {
+      "text": "A client's costs are 70% of revenue, and it wants its margin up by 5 points next year with flat revenue. Roughly how much must costs fall, and where would you look?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The maths: costs must go from 70 to 65, a cut of about 7%",
+        "The biggest cost areas first, then quick wins versus structural changes",
+        "Whether the target is realistic, and the risks of cutting too fast"
+      ]
+    },
+    {
+      "text": "A software company can enter one of three new countries first. How would you decide which?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Criteria: market size and growth, competition, ease of entry, fit with the product",
+        "Rough numbers for each country and how they compare",
+        "A clear choice, the main risk, and what you'd check first"
+      ]
+    },
+    {
+      "text": "For a technology role: how would you help a retailer decide whether to build its own recommendation engine or buy one?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "What the retailer needs: scale, speed, control over data and customer experience",
+        "Cost, time and skills to build versus licence cost and limits of buying",
+        "A recommendation, often starting small, and how success would be measured"
+      ]
+    },
+    {
+      "text": "Why BCG, and why consulting?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What you want from consulting work, shown by something you've done",
+        "Something specific about BCG you learnt from its people, work or events",
+        "How it fits your longer-term goals"
+      ]
+    },
+    {
+      "text": "What would you want to learn in your first year here, and how would you know you're growing?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Two or three specific skills you want to build",
+        "The kind of projects or industries you'd seek out",
+        "How you'd use feedback to track your progress"
+      ]
+    }
+  ],
+  "tips": [
+    "BCG's case guidance asks you to clarify assumptions, show your thinking and summarise your recommendation at the end; practise all three out loud.",
+    "Don't force a memorised framework onto the case; build a structure for the specific problem in front of you.",
+    "If the interviewer nudges you mid-case, take it, adjust, and say how it changes your thinking.",
+    "Prepare a story for each quality BCG lists: integrity, curiosity, creative thinking, collaboration and drive.",
+    "BCG offers a free job simulation, OneDay@BCG, on its careers site; it's a useful way to see the kind of work cases are based on.",
+    "Practise mental maths with percentages and growth rates, and round sensibly as you go."
+  ],
+  "sources": [
+    {
+      "title": "BCG interview process (careers.bcg.com)",
+      "url": "https://careers.bcg.com/global/en/interview-process"
+    },
+    {
+      "title": "BCG case interview preparation (careers.bcg.com)",
+      "url": "https://careers.bcg.com/global/en/case-interview-preparation"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

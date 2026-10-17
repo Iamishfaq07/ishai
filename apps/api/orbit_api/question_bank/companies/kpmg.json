@@ -1,0 +1,191 @@
+{
+  "slug": "kpmg",
+  "name": "KPMG",
+  "aliases": ["kpmg india", "kpmg global services"],
+  "group": "consulting",
+  "market": "global",
+  "summary": "KPMG's interviews usually combine an assessment, technical questions for the practice you've applied to (audit, tax, advisory or consulting) and a conversation about fit and behaviour. KPMG in India publishes an indicative process: an online assessment, a group discussion, a case study round, then interviews with a recruiter and a technical panel. Elsewhere the steps vary by country and role.",
+  "rounds": [
+    "Online assessment: comprehension, reasoning and psychometric questions (quantitative or data questions for some practices)",
+    "Group discussion (some campus roles)",
+    "Case study round, written or as a discussion",
+    "Interview with a recruiter on fit and behaviour",
+    "Technical panel interview, sometimes with two or three interviewers"
+  ],
+  "looks_for": [
+    "Integrity: we do what is right",
+    "Excellence: we never stop learning and improving",
+    "Courage: we think and act boldly",
+    "Together: we respect each other and draw strength from our differences",
+    "For Better: we do what matters",
+    "Structured thinking and clear communication",
+    "Business awareness and resilience"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself and why you're interested in professional services.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your studies or current role in two or three lines",
+        "One achievement that shows the skills this practice needs",
+        "Why advisory, audit or tax work appeals to you"
+      ]
+    },
+    {
+      "text": "Tell me about a time you did the right thing when it would have been easier not to.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The easier path and why it was tempting",
+        "What you did instead and who you involved",
+        "The result and what it says about how you work"
+      ]
+    },
+    {
+      "text": "Tell me about a time you taught yourself something difficult so you could do better work.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you needed to learn and why",
+        "How you went about it, with specific resources or practice",
+        "How your work improved because of it"
+      ]
+    },
+    {
+      "text": "Describe a time you suggested a bold idea. How did people react, and what happened?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The idea and why it was a risk",
+        "How you made the case and handled doubts",
+        "The outcome, even if it didn't go your way, and what you learnt"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked closely with someone very different from you to get a result.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you differed: background, working style or views",
+        "What you did to understand them and use their strengths",
+        "What you achieved together"
+      ]
+    },
+    {
+      "text": "What is materiality in an audit, and how does it change what an auditor tests?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The size of error that could change a reader's decision",
+        "How it's set, often from a benchmark such as profit or revenue, with judgement",
+        "How it guides sample sizes and where the audit team spends effort"
+      ]
+    },
+    {
+      "text": "A client's inventory records don't match the warehouse count. How would you investigate?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Checking the count itself first: timing, goods in transit, items held for others",
+        "Tracing differences to records: receipts, dispatches, returns, write-offs",
+        "The likely causes, the control that failed, and what you'd recommend"
+      ]
+    },
+    {
+      "text": "Explain transfer pricing in simple terms, and why tax authorities care about it.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The prices one part of a group charges another, often across countries",
+        "The arm's length idea: prices as if the two were unrelated",
+        "Why it matters: where profit is taxed, and the risk of disputes"
+      ]
+    },
+    {
+      "text": "How would you assess whether a mid-sized company is ready to move to a new ERP system?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Its reasons and goals, and what systems and processes it has today",
+        "Readiness: clean data, people's time and skills, budget and leadership support",
+        "Main risks and a phased plan with clear checkpoints"
+      ]
+    },
+    {
+      "text": "A bank wants fewer false alarms from its anti-money-laundering checks without missing real cases. How would you approach it?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Understanding the current rules, alert volumes and what share turn out to be real",
+        "Tuning thresholds, adding customer context, or using better data or models",
+        "Testing changes safely and keeping regulators' expectations in view"
+      ]
+    },
+    {
+      "text": "A retail chain's sales grew this year but its profit stayed flat. Where would you look?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Costs rising faster than sales: stock, staff, rent, delivery",
+        "Lower margins from discounts or a shift towards cheaper products",
+        "One or two hypotheses, the data that would test them, and a first recommendation"
+      ]
+    },
+    {
+      "text": "Why KPMG, and why this practice?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What the practice does and the kind of clients it serves",
+        "Why that work fits your skills and interests",
+        "Something specific about KPMG you learnt from its people or work"
+      ]
+    },
+    {
+      "text": "Where do you see yourself in five years, and are you planning a professional qualification?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A realistic goal linked to the practice",
+        "Any qualification you're pursuing or considering, and why",
+        "How this role helps you get there"
+      ]
+    }
+  ],
+  "tips": [
+    "Practise reading a short business case and summarising it in a minute: the problem, the key facts, and what you'd recommend.",
+    "In a case round, state your structure first, then go area by area, saying your assumptions as you go.",
+    "For the technical panel, revise your subject's basics, such as accounting standards, tax or the tools on your CV, and be ready to apply them to an example.",
+    "In the group discussion, make two or three structured points, build on others' points rather than talking over them, and offer to summarise at the end.",
+    "Keep behavioural answers short: the situation, what you did, and the result, with a number if you can.",
+    "Read about one recent change in your field, such as a new accounting rule, a tax change or a technology trend, and what it means for clients."
+  ],
+  "sources": [
+    {
+      "title": "KPMG's values (kpmg.com)",
+      "url": "https://kpmg.com/xx/en/about/our-values.html"
+    },
+    {
+      "title": "How we recruit: KPMG in India (kpmg.com)",
+      "url": "https://kpmg.com/in/en/careers/how-we-recruit.html"
+    }
+  ],
+  "abroad": {
+    "rounds": [
+      "Online application, with online assessments for many graduate roles",
+      "Interview on your experience and motivation, often with behavioural questions",
+      "Technical or case discussion for the role",
+      "Final interview with a manager, director or partner (for some roles)"
+    ],
+    "tips": [
+      "Practise reading a short business case and summarising it in a minute: the problem, the key facts, and what you'd recommend.",
+      "In a case discussion, state your structure first, then go area by area, saying your assumptions as you go.",
+      "For technical questions, revise your subject's basics, such as accounting standards, tax or the tools on your CV, and be ready to apply them to an example.",
+      "Keep behavioural answers short: the situation, what you did, and the result, with a number if you can.",
+      "Check the careers site for the country you're applying in; KPMG's process and assessments vary by country.",
+      "Read about one recent change in your field, such as a new accounting rule, a tax change or a technology trend, and what it means for clients."
+    ]
+  },
+  "reviewed": "2026-10-18"
+}

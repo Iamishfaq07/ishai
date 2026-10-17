@@ -1,0 +1,206 @@
+{
+  "slug": "capgemini",
+  "name": "Capgemini",
+  "aliases": ["capgemini india", "capgemini engineering"],
+  "group": "it-services",
+  "market": "global",
+  "summary": "Capgemini's India careers site lists its fresher process as an online aptitude test, a coding or technical assessment, a group discussion for select roles, a technical interview and an HR interview. For experienced hires it describes an HR screening call, proctored technical and language assessments where applicable, one or two technical interviews and an HR behavioural interview. The group publishes seven values: Honesty, Boldness, Trust, Freedom, Fun, Modesty and Team spirit.",
+  "rounds": [
+    "Online aptitude test: logical reasoning, verbal ability and quantitative skills",
+    "Coding or technical assessment",
+    "Group discussion (select roles only)",
+    "Technical interview on domain knowledge and practical application",
+    "HR interview on behaviour, career goals and fit"
+  ],
+  "looks_for": [
+    "Honesty",
+    "Boldness",
+    "Trust",
+    "Freedom",
+    "Fun",
+    "Modesty",
+    "Team spirit",
+    "Fundamentals, and how you apply them in practice",
+    "Clear communication and listening",
+    "Career goals that fit the role"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself: your studies or work so far, and what you want to do next.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "A short path through your studies or jobs, with the skills you built",
+        "One achievement or challenge you overcame, with a lesson",
+        "What you want next and why this role fits"
+      ]
+    },
+    {
+      "text": "Tell me about a time you were honest about a problem even though it was uncomfortable.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and why raising it felt awkward",
+        "Who you told, how and when",
+        "What happened next and what it did for trust"
+      ]
+    },
+    {
+      "text": "Tell me about a time you took a calculated risk. How did you weigh it up?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The risk and the safer option you didn't take",
+        "How you judged what could go wrong and limited it",
+        "The outcome and what you'd do differently"
+      ]
+    },
+    {
+      "text": "Tell me about a team success where you made sure others got the credit they deserved.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The success and everyone's part in it, including yours",
+        "How you shared credit, for example in a demo or report",
+        "What it did for the team afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a time you were trusted to make a decision on your own. How did you use that freedom?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The decision and why it was left to you",
+        "How you gathered input and decided",
+        "The result and how you reported back"
+      ]
+    },
+    {
+      "text": "Explain the software development life cycle, and how agile changes it.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The stages: requirements, design, build, test, deploy, maintain",
+        "Waterfall does them once in order; agile repeats them in short sprints",
+        "Agile habits you've used: stand-ups, backlogs, demos, retrospectives"
+      ]
+    },
+    {
+      "text": "What is the difference between a class and an object? Give an everyday example.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A class is the blueprint; an object is one instance made from it",
+        "An example such as a Car class and two cars with different colours",
+        "How constructors and attributes fit in"
+      ]
+    },
+    {
+      "text": "How would you explain what a cloud migration involves to a client who is worried about risk?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The steps: assess what exists, plan, move in waves, test, switch over",
+        "Ways to lower risk: a pilot first, backups, a rollback plan",
+        "What the client gains and what they must decide"
+      ]
+    },
+    {
+      "text": "Walk me through how you'd test a payment feature before it goes live.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Normal payments, failed cards, timeouts and double clicks",
+        "Security and data checks: card details masked, amounts and currency correct",
+        "Testing with the bank or gateway's test mode, and monitoring after release"
+      ]
+    },
+    {
+      "text": "For engineering services roles: tell me about a project where you worked with embedded code, sensors or simulations.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The system and what the hardware or simulation had to do",
+        "Your part and the tools you used",
+        "A problem you hit between hardware and software, and how you solved it"
+      ]
+    },
+    {
+      "text": "For experienced candidates: describe a project that fell behind schedule. What did you change?",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "Why it slipped, stated honestly",
+        "What you changed: scope, people, process or communication with the client",
+        "The outcome and what you'd watch for earlier next time"
+      ]
+    },
+    {
+      "text": "Why Capgemini, and which of its values do you relate to most?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific reason: its services, an industry it serves or recent news",
+        "One value, with a short example from your own life",
+        "How that fits the way you like to work"
+      ]
+    },
+    {
+      "text": "Are you comfortable working with clients across different industries and time zones?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with any constraint stated clearly",
+        "An example of adapting to different people or schedules",
+        "What you'd enjoy about varied client work"
+      ]
+    },
+    {
+      "text": "What questions do you have about the role or the team?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two prepared questions about the team, the first projects or learning",
+        "A question that shows you listened during the interview",
+        "A brief thank-you"
+      ]
+    }
+  ],
+  "tips": [
+    "Capgemini's own interview tips suggest researching its services, values and recent news in its industry; do this before the HR round.",
+    "Practise aptitude sections under time: logical reasoning, verbal ability and quantitative questions.",
+    "In a group discussion, make one clear point early, build on others by name, and help sum up at the end.",
+    "Prepare questions for the interviewer and ask for clarification if something is unclear; Capgemini's tips encourage both.",
+    "Have a short story ready for two or three of the seven values, such as honesty or team spirit."
+  ],
+  "sources": [
+    {
+      "title": "Capgemini India recruitment process (capgemini.com)",
+      "url": "https://www.capgemini.com/in-en/careers/join-capgemini/recruitment-process/"
+    },
+    {
+      "title": "Capgemini values and ethics (capgemini.com)",
+      "url": "https://www.capgemini.com/about-us/who-we-are/values-and-ethics/"
+    },
+    {
+      "title": "How to prepare for Capgemini India interviews (capgemini.com)",
+      "url": "https://www.capgemini.com/in-en/careers/join-capgemini/interview-tips/"
+    }
+  ],
+  "abroad": {
+    "rounds": [
+      "Online application and screening",
+      "HR screening call by video or phone",
+      "Online technical and language assessments, where applicable",
+      "One or two technical interviews, depending on the role",
+      "HR behavioural interview, then an offer discussion"
+    ],
+    "tips": [
+      "Capgemini's own interview tips suggest researching its services, values and recent news in its industry; do this before the HR round.",
+      "Prepare questions for the interviewer and ask for clarification if something is unclear; Capgemini's tips encourage both.",
+      "Have a short story ready for two or three of the seven values, such as honesty or team spirit.",
+      "Describe the impact you had in past roles with numbers where you can."
+    ]
+  },
+  "reviewed": "2026-10-18"
+}

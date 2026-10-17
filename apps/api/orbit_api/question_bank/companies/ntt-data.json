@@ -1,0 +1,184 @@
+{
+  "slug": "ntt-data",
+  "name": "NTT DATA",
+  "aliases": ["ntt data services"],
+  "group": "it-services",
+  "market": "global",
+  "summary": "NTT DATA's careers FAQ describes a recruiter screen, a technical interview or assessment (a live technical discussion, a case-based conversation, a problem-solving exercise or a test on a third-party platform) and a hiring manager interview, usually between one and three interviews in all, with steps that vary by business unit, location and role. It publishes four values: Respect every voice, Think big. Be bold., Deliver the outcome, and Win together.",
+  "rounds": [
+    "Online application, with an online aptitude or coding test for some graduate roles",
+    "Recruiter screen on your background, career goals and fit for the role",
+    "Technical interview or assessment: a live discussion, a case-based conversation or an online test",
+    "Hiring manager interview on communication, adaptability, collaboration and client work",
+    "For some roles, a further conversation on strategic thinking and values"
+  ],
+  "looks_for": [
+    "Respect every voice",
+    "Think big. Be bold.",
+    "Deliver the outcome",
+    "Win together",
+    "Integrity and accountability",
+    "A collaboration mindset",
+    "Growth orientation",
+    "Readiness to work with clients"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself and what brings you to NTT DATA.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your background and the skills most relevant to this role",
+        "One achievement with a result",
+        "A specific reason for applying, in under two minutes"
+      ]
+    },
+    {
+      "text": "Tell me about a time you changed your mind because of someone else's input.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Your original view and whose input changed it",
+        "How you made room for their view, especially if they were junior or quiet",
+        "What the better decision led to"
+      ]
+    },
+    {
+      "text": "Tell me about a time you proposed a bolder solution than the one people expected.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The expected option and why it wasn't enough",
+        "Your proposal, and how you handled doubts and risks",
+        "What happened, including any part that didn't work"
+      ]
+    },
+    {
+      "text": "Tell me about a time you delivered under pressure when the outcome mattered to a client or user.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was at stake for them and how tight the time was",
+        "What you prioritised and what you dropped",
+        "The outcome, ideally with a number"
+      ]
+    },
+    {
+      "text": "Tell me about a win you shared with a team. What was your part?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and how the work was split",
+        "Your own contribution, in the first person",
+        "How the team celebrated or shared credit"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with colleagues in another country or time zone.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who they were and what made working together hard",
+        "The habits you used: written handovers, overlap hours, clear owners",
+        "What it achieved and what you'd do differently"
+      ]
+    },
+    {
+      "text": "Walk me through how you'd plan moving a client's on-premise application to the cloud.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Assessing the application, its data and its dependencies first",
+        "Choosing an approach: move as it is, re-platform or rebuild parts",
+        "Testing, a cut-over plan with rollback, and cost and security checks"
+      ]
+    },
+    {
+      "text": "A client reports that a nightly data load is missing records. What would you check first?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Which records, since when, and whether the source sent them",
+        "The job's logs, filters, rejected rows and any schema change",
+        "Fixing and reloading safely, then telling the client what happened"
+      ]
+    },
+    {
+      "text": "Explain microservices versus a monolith, and when you'd keep the monolith.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A monolith is one deployable application; microservices split it into small services",
+        "Microservices help teams scale and release separately but add network and operations complexity",
+        "Keeping a monolith for a small team or a simple, stable product"
+      ]
+    },
+    {
+      "text": "A client wants to cut support tickets by a third. How would you work out where they come from and what to fix?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Grouping tickets by type, product, channel and customer",
+        "Finding the few causes behind most tickets",
+        "Fixes such as product changes, self-service help or automation, and how you'd track the drop"
+      ]
+    },
+    {
+      "text": "How would you explain a serious technical risk to a client executive in two minutes?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "The risk in business terms: what could happen and how likely",
+        "The options, with cost and time for each",
+        "Your recommendation and the decision you need from them"
+      ]
+    },
+    {
+      "text": "For experienced candidates: describe an engagement where the client's priorities changed. How did you adjust the plan?",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "What changed and why",
+        "How you re-planned scope, people and dates with the client",
+        "The result and the relationship afterwards"
+      ]
+    },
+    {
+      "text": "Why NTT DATA, and what do you know about the industries it serves?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific: a service line, an industry or recent work you read about",
+        "How your skills fit it",
+        "What you hope to learn there"
+      ]
+    },
+    {
+      "text": "What would you want to achieve in your first six months here?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Learning the team, the client and the systems quickly",
+        "One or two concrete contributions you'd aim for",
+        "A question back about how success is judged in the role"
+      ]
+    }
+  ],
+  "tips": [
+    "NTT DATA's FAQ says the technical stage can be a live discussion, a case, a problem-solving exercise or an online test; ask your recruiter which to expect.",
+    "Prepare client stories: the hiring manager interview looks at client engagement, communication and adaptability.",
+    "Have a short example ready for each of the four values, especially delivering an outcome and winning as a team.",
+    "Steps vary by business unit, location and role, so read the job post closely and plan for each stage it names."
+  ],
+  "sources": [
+    {
+      "title": "NTT DATA careers and interview FAQ (careers.nttdata.com)",
+      "url": "https://careers.nttdata.com/global/en"
+    },
+    {
+      "title": "About NTT DATA, with its values (nttdata.com)",
+      "url": "https://www.nttdata.com/global/en/about-us"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

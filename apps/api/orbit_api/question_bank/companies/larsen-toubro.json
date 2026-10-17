@@ -1,0 +1,198 @@
+{
+  "slug": "larsen-toubro",
+  "name": "Larsen & Toubro",
+  "aliases": ["l&t", "l and t", "larsen and toubro", "lnt", "l&t construction"],
+  "group": "industry",
+  "market": "india",
+  "summary": "Larsen & Toubro is an Indian engineering, construction and manufacturing company whose campus hiring covers graduate engineer trainees (GETs), postgraduate engineer trainees (PGETs), management trainees and others. For GETs, its careers site describes an online test of domain knowledge and cognitive aptitude, a one-on-one interview and a health examination, and says it looks for strong technical foundations, conceptual clarity and alignment with L&T's values.",
+  "rounds": [
+    "Campus shortlisting, or an online application for some programmes",
+    "Online test of domain knowledge and cognitive aptitude (for GETs, per L&T's careers site)",
+    "A one-on-one interview, usually covering core subjects, projects and fit",
+    "Health examination before joining",
+    "For experienced hires: technical and managerial interviews with the business that's hiring"
+  ],
+  "looks_for": [
+    "Professionalism",
+    "Customer focus",
+    "Trust",
+    "Care",
+    "Empowerment",
+    "Innovation",
+    "Learning",
+    "Strong technical foundations and conceptual clarity in your discipline",
+    "Energy, commitment and a passion for excellence",
+    "Safety-first thinking on sites and in plants",
+    "Willingness to work at project sites across India"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a project or internship where something went wrong on the ground. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What went wrong and how it affected the work",
+        "What you did yourself, and who you involved",
+        "The outcome and what you'd do differently"
+      ]
+    },
+    {
+      "text": "Describe a time you worked in a team with a tight deadline and limited resources.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The deadline and what was in short supply",
+        "How the team split the work and set priorities",
+        "What you delivered, and what you learned about planning"
+      ]
+    },
+    {
+      "text": "Tell me about a time you noticed a safety risk or a quality problem and spoke up.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you noticed and why it mattered",
+        "How you raised it, and to whom",
+        "What changed as a result"
+      ]
+    },
+    {
+      "text": "Tell me about something you learned outside your syllabus because a project needed it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why the project needed it",
+        "How you learned it: books, software, a mentor, trial and error",
+        "How you used it and how well you understand it now"
+      ]
+    },
+    {
+      "text": "Explain the difference between working stress design and limit state design, and why design codes use safety factors.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Working stress keeps stresses within allowable limits under service loads",
+        "Limit state checks both collapse and serviceability using factored loads and strengths",
+        "Safety factors cover uncertainty in loads, materials and construction"
+      ]
+    },
+    {
+      "text": "How would you check that concrete poured on site will reach its design strength?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Mix design and water-cement ratio, with slump tests for workability",
+        "Cube samples tested at set ages",
+        "Proper compaction and curing, and what you'd do if results came back low"
+      ]
+    },
+    {
+      "text": "Explain how a three-phase induction motor starts, and why starting current matters.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A rotating magnetic field induces current in the rotor, producing torque",
+        "Starting current is several times the running current",
+        "Starting methods such as star-delta, soft starters or drives, and why they're used"
+      ]
+    },
+    {
+      "text": "Walk me through how you'd choose a material for a pressure vessel or a heavy fabricated part.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Operating conditions: pressure, temperature, corrosion, cyclic loading",
+        "Properties: strength, toughness, weldability, availability and cost",
+        "The design code that applies, and the testing and inspection needed"
+      ]
+    },
+    {
+      "text": "A construction project is running two weeks behind schedule. How would you recover time without compromising safety?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Finding which activities on the critical path caused the delay",
+        "Options: more crews or shifts, re-sequencing, prefabrication",
+        "Holding safety and quality checks, and keeping the client informed"
+      ]
+    },
+    {
+      "text": "Explain the critical path method and how you'd use it to plan a project.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Listing activities, their durations and dependencies",
+        "The critical path: the longest chain, where any delay delays the project",
+        "Using float to set priorities and update the plan as work progresses"
+      ]
+    },
+    {
+      "text": "Walk me through your final-year project: the problem, your part in it, and what you'd do differently.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The problem and why it mattered",
+        "Your own contribution, including calculations or design choices",
+        "Results, limits and what you'd change with more time"
+      ]
+    },
+    {
+      "text": "How would you estimate the quantity of steel needed for a simple building frame? Talk me through your approach.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Working from drawings: members, sizes and reinforcement details",
+        "Rules of thumb for a first estimate, then a proper bar bending schedule",
+        "Allowing for laps, wastage and checking against similar projects"
+      ]
+    },
+    {
+      "text": "Why L&T, and which of its businesses would you like to work in?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about L&T's work that interests you",
+        "One business you've read about and why it suits your branch",
+        "What you want to learn in your first years"
+      ]
+    },
+    {
+      "text": "Are you willing to work at project sites or plants anywhere in India, including remote locations?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with any genuine limits stated",
+        "Why site experience matters for an engineer",
+        "Any time you've lived or worked away from home"
+      ]
+    },
+    {
+      "text": "Where do you see yourself five years after joining as a trainee?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A realistic path: deeper technical skill, then more responsibility",
+        "Skills or certifications you'd build",
+        "Interest in growing within L&T"
+      ]
+    }
+  ],
+  "tips": [
+    "Revise your core subjects deeply; L&T's careers site says it looks for conceptual clarity, not just marks.",
+    "Know your final-year project and internships in detail, including the calculations and what didn't work.",
+    "Read about L&T's businesses on its website and be ready to say which one interests you and why.",
+    "Give an honest answer on site postings; projects can be far from cities, and interviewers want to see you've thought it through.",
+    "Expect a health examination before joining, which L&T's careers site notes for GETs."
+  ],
+  "sources": [
+    {
+      "title": "Campus Engage (L&T Careers)",
+      "url": "https://www.larsentoubro.com/careers/campus-engage/"
+    },
+    {
+      "title": "L&T Vision and Values",
+      "url": "https://www.larsentoubro.com/corporate/about-lt-group/vision"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

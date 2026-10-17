@@ -1,0 +1,177 @@
+{
+  "slug": "oracle",
+  "name": "Oracle",
+  "aliases": [
+    "oracle india",
+    "oracle cloud"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Oracle hires engineers across its database, cloud infrastructure and enterprise applications businesses, and candidates commonly report interviews built on computer science fundamentals, databases and SQL, and a close look at their own projects. For campus and early-career roles, many describe an online test followed by technical interviews and an HR round; experienced roles usually add design and hiring manager conversations.",
+  "rounds": [
+    "Online application and a recruiter or HR screen",
+    "Online test for many campus and early-career roles: aptitude, coding and computer science basics",
+    "One or two technical interviews: data structures, databases and SQL, operating systems, and your projects",
+    "Hiring manager interview on past work, design and how you'd fit the team",
+    "HR round for some roles"
+  ],
+  "looks_for": [
+    "Strong fundamentals: data structures, algorithms, operating systems and networks",
+    "Database knowledge: SQL, indexing, transactions and query performance",
+    "Cloud and distributed-systems thinking for cloud infrastructure roles",
+    "Clear explanations of your own projects and the decisions behind them",
+    "Care for enterprise customers: reliability, security and compatibility",
+    "Willingness to learn large, mature codebases"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you had to understand a large, unfamiliar codebase quickly.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you needed to change and how little time you had",
+        "How you found your way: tracing a request, reading tests, asking the right people",
+        "What you delivered and what you'd do faster next time"
+      ]
+    },
+    {
+      "text": "Tell me about a time you handled a problem that was affecting a customer in production.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The impact on the customer and how urgent it was",
+        "How you found the cause and kept people informed",
+        "The fix, and what stopped it happening again"
+      ]
+    },
+    {
+      "text": "Tell me about a time you disagreed with a more senior colleague on a technical approach.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Both approaches, described fairly",
+        "How you made your case with evidence",
+        "The decision and how you supported it"
+      ]
+    },
+    {
+      "text": "Tell me about the project that taught you the most, including what went wrong.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What the project was and your role in it",
+        "What went wrong and your share of it",
+        "The lesson and where you've used it since"
+      ]
+    },
+    {
+      "text": "Explain what happens inside a database when you run a query with a join and a filter.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Parsing, then the optimiser choosing a plan",
+        "Using indexes for the filter, and join methods such as nested loops, hash or merge joins",
+        "How to read an execution plan to see what it actually did"
+      ]
+    },
+    {
+      "text": "What are transactions and isolation levels, and which problems do they prevent?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "ACID in plain words",
+        "Problems such as dirty reads, non-repeatable reads and phantom rows",
+        "The trade-off between stricter isolation and concurrency"
+      ]
+    },
+    {
+      "text": "When would you add an index to a table, and when could an index make things worse?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Columns used in frequent filters, joins and sorting",
+        "The cost: slower writes, more storage, and indexes the optimiser ignores",
+        "Checking the effect with the query plan and real workloads"
+      ]
+    },
+    {
+      "text": "How would you design a multi-tenant cloud service so one customer's heavy use doesn't slow down others?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Isolation options: separate resources, shared resources with quotas, or a mix",
+        "Rate limits, fair scheduling and monitoring per tenant",
+        "What happens when a tenant hits its limit, and how you'd communicate it"
+      ]
+    },
+    {
+      "text": "Explain the difference between virtual machines and containers, and when you'd choose each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A VM runs a full operating system; containers share the host's kernel",
+        "Trade-offs in isolation, start-up time and density",
+        "Examples where each fits, such as strong isolation versus many small services"
+      ]
+    },
+    {
+      "text": "A customer's nightly batch job now takes twice as long as it used to. How would you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "What changed: data volume, code, configuration, or other jobs running at the same time",
+        "Comparing execution plans and resource use with an earlier run",
+        "A fix for tonight and a lasting fix"
+      ]
+    },
+    {
+      "text": "How would you design a service that backs up customer databases and restores them to any point in time?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Full backups plus continuous log capture, replayed to the chosen moment",
+        "Storage tiers, retention and encryption",
+        "Testing restores regularly, since an untested backup can't be trusted"
+      ]
+    },
+    {
+      "text": "Explain how garbage collection works in Java, and how you'd spot a memory leak in a Java service.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Reachability, generations, and why most objects die young",
+        "How a leak still happens: references kept in caches, listeners or static collections",
+        "Finding it with heap dumps, GC logs and memory trends over time"
+      ]
+    },
+    {
+      "text": "Tell me about yourself and the project you'd most like to discuss today.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "A short path: your studies or work so far and what you focus on now",
+        "One project, the problem it solved and your part in it",
+        "Why that leads you to this role"
+      ]
+    },
+    {
+      "text": "Why Oracle, and which part of its business (database, cloud or applications) interests you most?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific area and what you know about it",
+        "A link to your skills, coursework or projects",
+        "What you want to learn there"
+      ]
+    }
+  ],
+  "tips": [
+    "Revise SQL and database internals thoroughly; joins, indexes, transactions and query plans come up often for Oracle roles.",
+    "If your role uses Java, know collections, garbage collection and concurrency well; Oracle develops the Java platform.",
+    "For cloud infrastructure roles, practise designing for failure: replication, fault isolation, quotas and safe rollouts.",
+    "Be ready to explain every line of your résumé; technical interviews commonly start from your projects.",
+    "For campus roles, practise aptitude and coding questions under time limits before the online test."
+  ],
+  "sources": [],
+  "reviewed": "2026-10-18"
+}

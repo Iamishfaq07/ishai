@@ -1,0 +1,171 @@
+{
+  "slug": "phonepe",
+  "name": "PhonePe",
+  "aliases": ["phonepe india", "phone pe", "phonepe group"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Candidates commonly report that PhonePe's engineering interviews include problem-solving rounds, a machine coding or low-level design round and, for experienced roles, system design, often around payments at very large scale: reliability, latency and correctness. PhonePe publishes 14 value statements on its careers site, starting with integrity and honesty, and covering ownership, first-principles thinking and customers as its primary stakeholders.",
+  "rounds": [
+    "Online coding test or recruiter screen",
+    "Problem-solving / data structures interviews, often two",
+    "Machine coding or low-level design round (for many engineering roles)",
+    "System design (for experienced roles)",
+    "Hiring manager round, often on ownership and past work"
+  ],
+  "looks_for": [
+    "Integrity and honesty, which PhonePe calls the price of admission",
+    "Customers as the first and primary stakeholders",
+    "Owning problems fully, even across team boundaries",
+    "Understanding the whole problem and building from first principles",
+    "Removing complexity instead of living with it",
+    "Quality and impact of work over busywork",
+    "Sharing data and learnings openly",
+    "Open-mindedness, and voicing unpopular views backed by data and logic",
+    "Audacious goals and calculated risks"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you fixed a problem that wasn't strictly your team's job.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem, and why no one owned it",
+        "What you did, including working with the team that did own that area",
+        "The result, and how ownership was made clear afterwards"
+      ]
+    },
+    {
+      "text": "Describe a time you removed complexity from a system or process instead of working around it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was complex and what it cost: bugs, slow changes, confusion",
+        "How you simplified it and got others to agree",
+        "What was easier or faster afterwards, with a number if you have one"
+      ]
+    },
+    {
+      "text": "Tell me about a time you held an unpopular view at work. How did you make your case?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The view and why most people disagreed",
+        "The data or reasoning you used",
+        "What was decided, and whether you were right"
+      ]
+    },
+    {
+      "text": "Tell me about a time doing the right thing made a deadline harder. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The shortcut and why it wasn't right",
+        "How you explained the cost of doing it properly",
+        "The outcome and what others took from it"
+      ]
+    },
+    {
+      "text": "How would you design a UPI payment flow so the user can tell at every moment whether their money has gone?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clear states (started, pending, succeeded, failed) and what the screen says for each",
+        "Callbacks from the bank plus status checks when a reply is late",
+        "Timeouts, automatic reversals and a notification when a pending payment settles"
+      ]
+    },
+    {
+      "text": "How would you design a transaction history service for a payments app with a very large number of users?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Writing entries from payment events, stored by user and time",
+        "Fast reads: pagination, caching recent items, search and filters",
+        "Staying consistent with the payment records, and handling late updates"
+      ]
+    },
+    {
+      "text": "A request has to call five other services before it can reply. What happens to speed and reliability, and how would you design around it?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Slow calls and failures add up across the chain",
+        "Timeouts, limited retries and circuit breakers",
+        "Calling in parallel, caching, and moving work off the request path where possible"
+      ]
+    },
+    {
+      "text": "How would you design a rate limiter for a busy payments API that runs on many servers?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "An algorithm such as token bucket or sliding window, and why",
+        "Shared counters in a fast store, and whether approximate counts are acceptable",
+        "Limits per user or per merchant, and what the caller sees when limited"
+      ]
+    },
+    {
+      "text": "During a festival, payment success rates dip for a few minutes and then recover. How would you find the cause afterwards?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Building a timeline from metrics, logs and traces",
+        "Checking what changed: a deploy, a partner bank, a traffic spike, a database",
+        "The root cause and what prevents it next time: capacity, alerts, fallbacks"
+      ]
+    },
+    {
+      "text": "In a machine coding round, how would you model a simple wallet with add money, pay and refund so it's easy to extend?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Classes for wallet, transaction and ledger entries, with the balance derived from entries",
+        "Interfaces where new payment methods or rules could plug in",
+        "Two payments at once on one wallet, and a few tests that show it works"
+      ]
+    },
+    {
+      "text": "How would you measure whether a new bill-splitting feature is a success?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "One main metric, such as how many users split a bill again within a month",
+        "Guardrails: failed payments, complaints, effect on other payments",
+        "How you'd test it, and what result would make you change course"
+      ]
+    },
+    {
+      "text": "Why PhonePe? Which of its values matters most to you, and when have you lived it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason tied to the product or its users, not only the brand",
+        "One value in your own words, with a short example",
+        "Why that way of working suits you"
+      ]
+    },
+    {
+      "text": "Which PhonePe feature would you improve, and how would you know it helped users?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A specific feature and a real user problem with it",
+        "The change and what you'd leave out",
+        "The metric that would show it worked"
+      ]
+    }
+  ],
+  "tips": [
+    "PhonePe's values call integrity the price of admission; describe your real part in each story, including mistakes.",
+    "Prepare to talk about scale and failure: timeouts, retries, slow partner banks, and what users see while a payment is pending.",
+    "For machine coding, practise building a small, extensible system (a wallet, a rate limiter, a cache) in a set time, with clean classes and a quick demo.",
+    "Building from first principles is one of its stated values; restate the problem and its limits in your own words before you design."
+  ],
+  "sources": [
+    {
+      "title": "Life at PhonePe: Our Values (PhonePe Careers)",
+      "url": "https://www.phonepe.com/careers/life-at-phonepe/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

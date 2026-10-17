@@ -1,0 +1,357 @@
+{
+  "slug": "tcs",
+  "name": "TCS",
+  "aliases": [
+    "tata consultancy services",
+    "tata consultancy",
+    "tcs digital",
+    "tcs ninja",
+    "tcs nqt"
+  ],
+  "group": "it-services",
+  "market": "india-first",
+  "summary": "TCS hires most freshers in India through the TCS National Qualifier Test (NQT), a computer-based test run through TCS iON, followed by interviews that candidates commonly describe as technical, managerial and HR rounds, often on the same day. The interviews usually stay close to fundamentals (OOP, DBMS, SQL, one programming language), your resume and your final-year project, with HR questions on relocation and shifts.",
+  "rounds": [
+    "TCS NQT (aptitude, reasoning, verbal and coding)",
+    "Technical interview",
+    "Managerial interview",
+    "HR interview"
+  ],
+  "looks_for": [
+    "Fundamentals: OOP, DBMS, a programming language, your final-year project",
+    "Clear communication",
+    "Willingness to relocate and work in shifts",
+    "Learning attitude and teamwork",
+    "Integrity",
+    "Leading Change",
+    "Excellence",
+    "Respect for the Individual",
+    "Learning and Sharing"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your degree, college and the one or two skills you're strongest in",
+        "Your best project or internship in two sentences, with your own part in it",
+        "Why you're applying for this role, all in under two minutes"
+      ]
+    },
+    {
+      "text": "Explain your final-year project and your part in it.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The problem it solved and who would use it",
+        "How it works in plain words: front end, back end, database, any outside services",
+        "What you built yourself, one difficulty you hit and how you solved it"
+      ]
+    },
+    {
+      "text": "What is the difference between an abstract class and an interface?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "An abstract class can hold state and some implemented methods; an interface mainly defines a contract",
+        "A class extends one class but can implement many interfaces (in Java or C#), and how default methods blur the line",
+        "When you'd choose each, with a small example such as shapes or payment methods"
+      ]
+    },
+    {
+      "text": "Are you willing to relocate and work in any shift?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A clear, honest answer: yes, or yes with a real constraint stated politely",
+        "That you understand client work can follow other time zones",
+        "Something that shows you adapt well, such as studying or working away from home"
+      ]
+    },
+    {
+      "text": "Why do you want to join TCS?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One or two specific reasons: training for new joiners, the range of industries it serves, moving across technologies",
+        "How that fits what you want to learn in your first few years",
+        "Something you've read about its work, not general praise for its size"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to learn a new tool or language quickly.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why you needed it and how little time you had",
+        "How you learned it: documentation, small experiments, asking someone",
+        "What you delivered with it and what you'd do faster next time"
+      ]
+    },
+    {
+      "text": "Tell me about a disagreement in a team project and how it was resolved.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the disagreement was about, described fairly from both sides",
+        "What you said or did to move it forward, such as testing both ideas",
+        "How it ended and how the team worked together afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a time you balanced your studies with another big responsibility.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The two commitments, such as a club, sport, part-time work or family duty",
+        "How you planned your time and what you gave up",
+        "The result for both, and what it taught you about deadlines"
+      ]
+    },
+    {
+      "text": "What is one weakness you're working on, and what are you doing about it?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "A real weakness that matters at work, not a disguised strength",
+        "A specific example of when it caused a problem",
+        "The steps you're taking and the progress you can show"
+      ]
+    },
+    {
+      "text": "What is the difference between a primary key, a unique key and a foreign key?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Primary key: identifies each row, no nulls, one per table",
+        "Unique key: no duplicates but can usually allow a null; a table can have several",
+        "Foreign key: links to another table's key, with an example such as orders and customers"
+      ]
+    },
+    {
+      "text": "What happens, step by step, when you type a website address into a browser and press Enter?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "DNS lookup to find the server's IP address",
+        "Opening a connection (TCP, and TLS for HTTPS), then the HTTP request and response",
+        "The browser rendering HTML, CSS and JavaScript and fetching other files"
+      ]
+    },
+    {
+      "text": "A client's banking application becomes slow every month-end. How would you start finding the cause?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Asking what 'slow' means: which screens, which users, since when",
+        "Checking what is different at month-end: batch jobs, report queries, traffic",
+        "Looking at logs and database query times before guessing, then a fix and a check"
+      ]
+    },
+    {
+      "text": "For experienced candidates: tell me about a production issue on your project and how your team handled it.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "What broke, who was affected and how it was noticed",
+        "Your part in finding the cause and fixing it",
+        "What changed afterwards to stop it recurring, such as a test, alert or process"
+      ]
+    },
+    {
+      "text": "Do you have any questions for us?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two thoughtful questions about the training, the first project or the team",
+        "Nothing you could easily find on the careers site",
+        "A short thank-you and a line on why you're still keen"
+      ]
+    }
+  ],
+  "tips": [
+    "Know your project inside out: they'll ask what you built yourself.",
+    "Revise OOP, DBMS and SQL basics; expect one or two simple coding questions.",
+    "Answer HR questions honestly and briefly; relocation and bond questions are common.",
+    "Read the current NQT pattern on the official registration page before you prepare; sections and timings can change between cycles.",
+    "Draw your project's flow on paper beforehand: modules, database tables, and who did what.",
+    "In the managerial round, expect a 'what would you do' scenario; reason aloud and say how you'd keep the client informed.",
+    "If you don't know an answer, say so and explain how you'd find out; guessing on a basic concept costs more."
+  ],
+  "sources": [
+    {
+      "title": "TCS iON National Qualifier Test (tcsion.com)",
+      "url": "https://www.tcsion.com/hub/national-qualifier-test/"
+    }
+  ],
+  "abroad": {
+    "rounds": [
+      "Online application, with an online test for some graduate roles",
+      "Recruiter or HR screen",
+      "Technical interview on your skills and past projects",
+      "Managerial interview (for some roles, a client interview as well)",
+      "HR discussion"
+    ],
+    "looks_for": [
+      "Fundamentals: OOP, databases, a programming language, your recent projects",
+      "Clear communication",
+      "Working well with teams in other countries and time zones",
+      "Learning attitude and teamwork",
+      "Integrity",
+      "Leading Change",
+      "Excellence",
+      "Respect for the Individual",
+      "Learning and Sharing"
+    ],
+    "questions": [
+      {
+        "text": "Tell me about yourself.",
+        "type": "fit",
+        "kind": "intro",
+        "covers": [
+          "Your studies or work so far and the one or two skills you're strongest in",
+          "Your best recent project, with your own part in it",
+          "Why you're applying for this role, all in under two minutes"
+        ]
+      },
+      {
+        "text": "Explain your final-year project and your part in it.",
+        "type": "role",
+        "kind": "story",
+        "covers": [
+          "The problem it solved and who would use it",
+          "How it works in plain words: front end, back end, database, any outside services",
+          "What you built yourself, one difficulty you hit and how you solved it"
+        ]
+      },
+      {
+        "text": "What is the difference between an abstract class and an interface?",
+        "type": "role",
+        "kind": "knowledge",
+        "covers": [
+          "An abstract class can hold state and some implemented methods; an interface mainly defines a contract",
+          "A class extends one class but can implement many interfaces (in Java or C#), and how default methods blur the line",
+          "When you'd choose each, with a small example such as shapes or payment methods"
+        ]
+      },
+      {
+        "text": "Tell me about a time you had to explain a technical problem to a client or a non-technical colleague.",
+        "type": "behavioral",
+        "kind": "story",
+        "covers": [
+          "Who they were and what they needed to decide or understand",
+          "How you explained it without jargon, for example with an analogy or a picture",
+          "What they did next, and how you checked they'd understood"
+        ]
+      },
+      {
+        "text": "Why do you want to join TCS?",
+        "type": "fit",
+        "kind": "motivation",
+        "covers": [
+          "One or two specific reasons: the range of industries it serves, its clients in your region, moving across technologies",
+          "How that fits what you want to learn in your next few years",
+          "Something you've read about its work, not general praise for its size"
+        ]
+      },
+      {
+        "text": "Tell me about a time you had to learn a new tool or language quickly.",
+        "type": "behavioral",
+        "kind": "story",
+        "covers": [
+          "Why you needed it and how little time you had",
+          "How you learned it: documentation, small experiments, asking someone",
+          "What you delivered with it and what you'd do faster next time"
+        ]
+      },
+      {
+        "text": "Tell me about a disagreement in a team project and how it was resolved.",
+        "type": "behavioral",
+        "kind": "story",
+        "covers": [
+          "What the disagreement was about, described fairly from both sides",
+          "What you said or did to move it forward, such as testing both ideas",
+          "How it ended and how the team worked together afterwards"
+        ]
+      },
+      {
+        "text": "Tell me about a time you balanced your studies with another big responsibility.",
+        "type": "behavioral",
+        "kind": "story",
+        "covers": [
+          "The two commitments, such as a club, sport, part-time work or family duty",
+          "How you planned your time and what you gave up",
+          "The result for both, and what it taught you about deadlines"
+        ]
+      },
+      {
+        "text": "What is one weakness you're working on, and what are you doing about it?",
+        "type": "behavioral",
+        "kind": "reflection",
+        "covers": [
+          "A real weakness that matters at work, not a disguised strength",
+          "A specific example of when it caused a problem",
+          "The steps you're taking and the progress you can show"
+        ]
+      },
+      {
+        "text": "What is the difference between a primary key, a unique key and a foreign key?",
+        "type": "role",
+        "kind": "knowledge",
+        "covers": [
+          "Primary key: identifies each row, no nulls, one per table",
+          "Unique key: no duplicates but can usually allow a null; a table can have several",
+          "Foreign key: links to another table's key, with an example such as orders and customers"
+        ]
+      },
+      {
+        "text": "What happens, step by step, when you type a website address into a browser and press Enter?",
+        "type": "role",
+        "kind": "knowledge",
+        "covers": [
+          "DNS lookup to find the server's IP address",
+          "Opening a connection (TCP, and TLS for HTTPS), then the HTTP request and response",
+          "The browser rendering HTML, CSS and JavaScript and fetching other files"
+        ]
+      },
+      {
+        "text": "A client's banking application becomes slow every month-end. How would you start finding the cause?",
+        "type": "role",
+        "kind": "situational",
+        "covers": [
+          "Asking what 'slow' means: which screens, which users, since when",
+          "Checking what is different at month-end: batch jobs, report queries, traffic",
+          "Looking at logs and database query times before guessing, then a fix and a check"
+        ]
+      },
+      {
+        "text": "For experienced candidates: tell me about a production issue on your project and how your team handled it.",
+        "type": "role",
+        "kind": "story",
+        "covers": [
+          "What broke, who was affected and how it was noticed",
+          "Your part in finding the cause and fixing it",
+          "What changed afterwards to stop it recurring, such as a test, alert or process"
+        ]
+      },
+      {
+        "text": "Do you have any questions for us?",
+        "type": "fit",
+        "kind": "closing",
+        "covers": [
+          "One or two thoughtful questions about the team, the client or the first project",
+          "Nothing you could easily find on the careers site",
+          "A short thank-you and a line on why you're still keen"
+        ]
+      }
+    ],
+    "tips": [
+      "Know your recent project inside out: they'll ask what you built yourself.",
+      "Revise OOP, database and SQL basics; expect one or two simple coding questions.",
+      "Many TCS projects combine teams at the client's site with teams in other countries; have a story about working across time zones.",
+      "If you don't know an answer, say so and explain how you'd find out; guessing on a basic concept costs more."
+    ]
+  },
+  "reviewed": "2026-10-18"
+}

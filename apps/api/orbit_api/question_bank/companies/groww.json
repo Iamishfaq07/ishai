@@ -1,0 +1,184 @@
+{
+  "slug": "groww",
+  "name": "Groww",
+  "aliases": ["groww app"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Groww is an Indian investing platform for stocks, mutual funds, F&O and more, and it publishes three values: Customers First, Simple is Beautiful, and Honesty & Integrity. Its careers page describes a short process (apply, a screening call, interviews with the team you'd join that focus on \"skills, not trivia\", then an offer). Candidates commonly report coding and design rounds for engineers and case-style rounds for product, data and business roles.",
+  "rounds": [
+    "Application directly or through a referral",
+    "Screening call about you, the role and your goals",
+    "Team interviews on skills: coding and problem-solving for engineers, cases or functional depth for other roles",
+    "System design for experienced engineering roles (often)",
+    "Hiring manager or leadership conversation, often on ownership and customer focus",
+    "Offer; the careers page says Groww aims to move fast and reply within days"
+  ],
+  "looks_for": [
+    "Customers First",
+    "Simple is Beautiful",
+    "Honesty & Integrity",
+    "Transparency by default: sharing context openly across teams",
+    "Stepping outside your role to help the team (the careers page says a role is \"a starting point, not a fence\")",
+    "Building reliable, correct systems for a very large base of retail investors"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you made something simpler for a user who wasn't an expert.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who the user was and where they got stuck",
+        "What you removed, reworded or redesigned",
+        "How you knew it worked: fewer drop-offs, tickets or questions"
+      ]
+    },
+    {
+      "text": "Tell me about a decision where doing right by the customer cost you something in the short term.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The trade-off: a metric, a deadline or revenue against the customer's interest",
+        "How you argued for the customer and who you had to convince",
+        "What happened afterwards, short and long term"
+      ]
+    },
+    {
+      "text": "Describe a time you helped another team with a problem that wasn't yours.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you noticed the problem and why you stepped in",
+        "What you did without taking over or dropping your own work",
+        "The outcome and what the other team said or changed"
+      ]
+    },
+    {
+      "text": "Tell me about an experiment or idea you tried that didn't work. What did you learn and change?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What you expected and why",
+        "How you found out it failed, ideally with data",
+        "What you did next and how it changed your approach"
+      ]
+    },
+    {
+      "text": "How would you design the system behind a monthly SIP that invests automatically? What can go wrong?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Scheduling, payment mandates and placing the order before the day's cut-off",
+        "Failures: payment declined, holidays, retries that must not invest twice",
+        "Clear notifications to the user at each step, including when something fails"
+      ]
+    },
+    {
+      "text": "When a popular IPO opens, traffic to one page jumps sharply. How would you keep the app responsive?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Estimating the peak and caching what doesn't change often",
+        "Queueing applications and protecting core flows like login and orders",
+        "Load testing ahead of the date, and graceful messages if something slows"
+      ]
+    },
+    {
+      "text": "Explain idempotency and why it matters when a user taps \"Buy\" twice on a slow network.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Idempotent means repeating a request has the same effect as sending it once",
+        "An idempotency key sent by the client and checked by the server",
+        "How the app shows a pending state so the user doesn't retry blindly"
+      ]
+    },
+    {
+      "text": "Many new users sign up but never make their first investment. How would you find out why, and what would you try?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Mapping the funnel: sign-up, KYC, bank linking, first order",
+        "Segmenting the drop by step, device, source and type of user",
+        "Two or three ideas to test, and the metric that would show success"
+      ]
+    },
+    {
+      "text": "How would you explain the difference between a direct and a regular mutual fund plan to a first-time investor?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Same fund and portfolio; a regular plan includes a distributor's commission",
+        "How that shows up as a higher expense ratio and lower returns over time",
+        "A plain, honest explanation with no jargon or sales push"
+      ]
+    },
+    {
+      "text": "A customer says money has left their bank account but the investment doesn't show in the app. How would you handle it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Reassuring the customer and collecting the details: date, amount, reference",
+        "Checking where it is: payment pending, order not placed, or allotment due later",
+        "A clear timeline back to the customer, and flagging a pattern if you see one"
+      ]
+    },
+    {
+      "text": "What metrics would you track to know whether a new stock screener is helping users?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Adoption and repeat use, not just first-time clicks",
+        "Whether it leads to informed actions, such as adding stocks to a watchlist",
+        "Guardrails: confusion, support tickets, or encouraging rash trading"
+      ]
+    },
+    {
+      "text": "How would you design alerts for unusual login or trading activity on an account without annoying genuine users?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signals: new device, new location, odd timing, sudden large orders",
+        "Risk scores with actions in steps: notify, verify, block",
+        "Measuring false alarms and missed cases, and tuning over time"
+      ]
+    },
+    {
+      "text": "Why Groww? Which of its values do you connect with most, and when have you shown it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason tied to its users or products, not only its growth",
+        "One value, named once, with a short real example",
+        "What you want to build or learn in the role"
+      ]
+    },
+    {
+      "text": "What would you change in the Groww app, and how would you test whether it helped?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A specific screen or flow and the user problem with it",
+        "The change, kept simple, and what you'd leave out",
+        "An experiment and the metric that would decide it"
+      ]
+    }
+  ],
+  "tips": [
+    "Use the Groww app before the interview: browse a fund and a stock page, try the screens a beginner would, and note one thing you'd simplify.",
+    "Tie answers to the three published values; Simple is Beautiful is a natural lens for product and design questions.",
+    "For engineering, talk about correctness and failure: duplicate taps, partial payments, and traffic peaks at market open.",
+    "Know basic investing terms (SIP, NAV, demat, KYC, F&O) well enough to explain them in plain words.",
+    "Expect follow-ups that check whether you'd stay honest with customers when it's inconvenient."
+  ],
+  "sources": [
+    {
+      "title": "Careers at Groww",
+      "url": "https://groww.in/careers"
+    },
+    {
+      "title": "About Groww (values)",
+      "url": "https://groww.in/about-us"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

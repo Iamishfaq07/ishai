@@ -1,0 +1,188 @@
+{
+  "slug": "deutsche-bank",
+  "name": "Deutsche Bank",
+  "aliases": ["db", "deutsche bank india"],
+  "group": "finance",
+  "market": "global",
+  "summary": "Deutsche Bank's interviews usually combine competency questions, answered with examples, with technical or case questions for the division you apply to. For early careers its careers site describes online tests, a virtual interview (pre-recorded for some roles), then an assessment centre or super day; in India, graduate hiring is usually through campus. The bank publishes four behaviours it expects of its people, starting with 'We act responsibly to inspire trust'.",
+  "rounds": [
+    "Online application with a CV; in India, graduate applications usually go through your campus",
+    "Eligibility screen, then a set of online tests that vary by role and region",
+    "Virtual interview: pre-recorded for some roles, or a live call with the hiring division",
+    "Assessment centre or super day, often with competency interviews, case studies and a technical interview",
+    "For experienced hires, usually several interview rounds, including at least one with the business and one with HR"
+  ],
+  "looks_for": [
+    "We act responsibly to inspire trust",
+    "We think commercially for sustainable business outcomes",
+    "We take initiative to create solutions",
+    "We work collaboratively for the greatest impact",
+    "Genuine interest in Deutsche Bank and the specific division",
+    "Competency examples with a clear structure and your impact quantified"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you were trusted with something sensitive. How did you handle it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was sensitive about it: information, money, a relationship or a deadline",
+        "The care you took and the rules you followed",
+        "How you kept others informed without oversharing"
+      ]
+    },
+    {
+      "text": "Tell me about a time you spotted a problem nobody had asked you to fix, and solved it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you noticed it and why others hadn't",
+        "What you did, and who you brought in",
+        "The result, with a number if you have one"
+      ]
+    },
+    {
+      "text": "Describe a decision where you had to weigh a quick win against the longer-term cost.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The two options and what each would cost or bring",
+        "How you decided, and with whom",
+        "How it turned out and what you learned about trade-offs"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with teams that had different priorities to deliver one result.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Each team's goal and where they clashed",
+        "How you found common ground or escalated sensibly",
+        "What was delivered and how the relationship held up"
+      ]
+    },
+    {
+      "text": "Tell me about a piece of feedback that changed how you work.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The feedback, quoted fairly, and how it felt",
+        "What you changed in practice",
+        "Evidence that the change stuck"
+      ]
+    },
+    {
+      "text": "Walk me through what happens between a client placing a trade and the trade settling.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Execution and booking, then confirmation and matching with the counterparty",
+        "Clearing and settlement: cash and securities exchanged",
+        "Where breaks happen and how operations and controls catch them"
+      ]
+    },
+    {
+      "text": "How would you value a company? Talk me through one method and its weak points.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A discounted cash flow: forecast cash flows, a discount rate, a terminal value",
+        "Comparing with similar companies using multiples",
+        "How sensitive each method is to assumptions, and when you'd trust one over the other"
+      ]
+    },
+    {
+      "text": "How would you design a system that recalculates a trading desk's risk every few minutes during the day?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Inputs: positions and market data, taken as a consistent snapshot",
+        "Spreading the calculation across many machines and recalculating only what changed",
+        "Speed targets, failures mid-run, checking results and keeping an audit trail"
+      ]
+    },
+    {
+      "text": "An end-of-day reconciliation shows a cash difference between the bank's records and a custodian's. How would you investigate it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Sizing the break and checking timing differences first",
+        "Matching item by item to find the trades or payments behind it",
+        "Escalating if it's large or old, fixing the cause and recording it"
+      ]
+    },
+    {
+      "text": "Explain the link between a bond's price and its yield, and why they move in opposite directions.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A bond pays fixed coupons; the yield is the return at today's price",
+        "When market rates rise, existing bonds must get cheaper to compete",
+        "A simple numerical example and what duration adds"
+      ]
+    },
+    {
+      "text": "Pick a recent development in banking or markets and explain how it could affect the bank's clients.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The development, described accurately in a sentence or two",
+        "Which clients it affects and how: costs, risks or opportunities",
+        "What the bank could offer them in response"
+      ]
+    },
+    {
+      "text": "Why Deutsche Bank, and why this division rather than another?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about the bank or division that you've researched",
+        "How the work matches your skills and interests",
+        "Why this division over the others you considered"
+      ]
+    },
+    {
+      "text": "Which of Deutsche Bank's four behaviours comes most naturally to you, and which would you need to work on?",
+      "type": "fit",
+      "kind": "reflection",
+      "covers": [
+        "One behaviour with a short example",
+        "An honest area to develop, not a disguised strength",
+        "What you are already doing about it"
+      ]
+    },
+    {
+      "text": "What do you hope to learn in your first year here?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Specific skills or knowledge tied to the role",
+        "How you plan to learn them: people, projects, training",
+        "How that would make you more useful to the team"
+      ]
+    }
+  ],
+  "tips": [
+    "Use the STAR method for competency questions and quantify your impact, as Deutsche Bank's own early-careers advice suggests.",
+    "Research the division before you apply; Deutsche Bank's recruiters stress showing genuine interest in the bank and the specific role.",
+    "Take the practice tests before the online assessments, and read the feedback reports the bank sends afterwards.",
+    "If you get a pre-recorded video interview, practise answering out loud to a timer so your answers stay short and structured.",
+    "Learn the four behaviours and link each to an example from university, a society or part-time work.",
+    "For technology roles, be ready to explain the design choices in your own projects in detail, including what you would change."
+  ],
+  "sources": [
+    {
+      "title": "This is DB: the bank's behaviours (careers.db.com)",
+      "url": "https://careers.db.com/this-is-db/"
+    },
+    {
+      "title": "Deutsche Bank early careers: your application (careers.db.com)",
+      "url": "https://careers.db.com/students-graduates/your-application/"
+    },
+    {
+      "title": "Deutsche Bank professionals: your application (careers.db.com)",
+      "url": "https://careers.db.com/professionals/Your-Application/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

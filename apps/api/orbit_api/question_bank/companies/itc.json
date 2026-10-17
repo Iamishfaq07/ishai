@@ -1,0 +1,199 @@
+{
+  "slug": "itc",
+  "name": "ITC",
+  "aliases": ["itc limited", "itc ltd"],
+  "group": "industry",
+  "market": "india",
+  "summary": "ITC is a diversified Indian company spanning FMCG brands, paperboards and packaging, agri business and IT. For students it lists campus programmes on its careers site, including ITC AUT (its management trainee programme), the ITC KITES summer internship and the ITC Interrobang case study competition. Candidates commonly report interviews that probe business sense, leadership and fit, and ITC publishes six core values, including Trusteeship and Nation Orientation.",
+  "rounds": [
+    "Profile shortlisting on campus, or an application through the careers portal",
+    "For some students, a route in through the ITC KITES summer internship or the ITC Interrobang case study competition",
+    "Personal interviews, often with managers from the business or function",
+    "For technical roles, interviews on core engineering and manufacturing",
+    "HR discussion on fit, mobility and expectations"
+  ],
+  "looks_for": [
+    "Nation Orientation",
+    "Customer Obsession",
+    "Entrepreneurial Mindset",
+    "Empathy and Respect",
+    "Collaboration",
+    "Trusteeship",
+    "Readiness for cross-functional and cross-business work, which the AUT programme is built around",
+    "Structured business thinking about brands, distribution and rural markets"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you built something from scratch with very few resources.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you started and why",
+        "How you found people, money or tools",
+        "What it achieved, and what you'd do differently"
+      ]
+    },
+    {
+      "text": "Describe a time you were trusted with money, people or something valuable. How did you look after it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you were responsible for and who trusted you",
+        "A choice where the easy option would have been wrong",
+        "How you accounted for it afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a time you led people who didn't report to you.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and why you had no formal authority",
+        "How you won them over and kept them going",
+        "The result"
+      ]
+    },
+    {
+      "text": "Tell me about a decision where you chose long-term value over a quick win.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The quick win you gave up",
+        "Why the long-term option was better, and who you had to convince",
+        "How it turned out"
+      ]
+    },
+    {
+      "text": "How would you launch a new packaged snack in a crowded market? Talk me through your plan.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The target consumer and the gap the product fills",
+        "Product, price, pack sizes and positioning against rivals",
+        "Distribution, launch markets, and the metrics that decide whether to scale"
+      ]
+    },
+    {
+      "text": "How would you get a biscuit brand onto more shelves in small towns and villages?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "How general trade works: distributors, wholesalers, kirana stores",
+        "Levers: affordable pack sizes, retailer margins, schemes, visibility",
+        "Measuring reach, repeat orders and sales per outlet"
+      ]
+    },
+    {
+      "text": "How would you raise farmers' incomes while securing a steady supply of good-quality wheat for a foods business?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "What limits farmers today: inputs, information, prices, access to buyers",
+        "Ideas: direct sourcing, advice on quality, digital tools, fair pricing",
+        "How both sides benefit, and how you'd measure it"
+      ]
+    },
+    {
+      "text": "Sales of a personal care product have flattened in one region. How would you work out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Reach versus sales per outlet, and by channel",
+        "Competition, pricing and consumer changes in the region",
+        "A likely cause, how you'd confirm it, and one action to test"
+      ]
+    },
+    {
+      "text": "A machine in a paperboard plant has had more downtime this year than last. How would you approach it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Breaking downtime down by cause: breakdowns, changeovers, waiting for material",
+        "Finding the biggest cause and its root",
+        "Maintenance changes, and tracking availability afterwards"
+      ]
+    },
+    {
+      "text": "What does the triple bottom line mean, and how would you measure it for a business?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Economic, environmental and social value together",
+        "Example measures for each: profit, water or carbon use, jobs or livelihoods",
+        "Why a company might report on all three"
+      ]
+    },
+    {
+      "text": "Pick an ITC brand you know. Who is its customer, and what would you change about it?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A clear picture of the customer and why they buy",
+        "One specific change: product, pack, price or communication",
+        "How you'd test it before rolling it out"
+      ]
+    },
+    {
+      "text": "How would you make a product's packaging more sustainable without hurting cost or quality?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Options: less material, recyclable or paper-based materials",
+        "Testing shelf life, strength and line speed",
+        "The cost trade-off and how you'd present it"
+      ]
+    },
+    {
+      "text": "Why ITC, and which of its businesses would you like to start in?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about ITC's businesses or values",
+        "A preferred business with a reason, plus openness to others",
+        "What you hope to learn early on"
+      ]
+    },
+    {
+      "text": "How would you feel about moving across businesses, functions or cities early in your career?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest, positive answer with any real limits stated",
+        "Why varied exposure builds a stronger manager",
+        "A time you adapted well to a new setting"
+      ]
+    },
+    {
+      "text": "What questions do you have for us?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Questions about the role, the first year or how you'd be assessed",
+        "Something that shows you've read about ITC's businesses",
+        "Nothing easily found on the careers site"
+      ]
+    }
+  ],
+  "tips": [
+    "Read ITC's six published values and back one or two with a real story; Trusteeship and Entrepreneurial Mindset stand out.",
+    "Know ITC's spread of businesses (FMCG, paperboards and packaging, agri business, IT) and a few of its food and personal care brands.",
+    "For marketing cases, think about general trade: kirana stores, distributors and rural reach, not just e-commerce.",
+    "Expect depth on your CV: be ready to explain every project, leadership role and choice you've listed.",
+    "Engineering candidates should revise core subjects and basic manufacturing concepts for technical roles."
+  ],
+  "sources": [
+    {
+      "title": "ITC's Vision, Mission and Core Values",
+      "url": "https://itcportal.com/about-itc.html"
+    },
+    {
+      "title": "Careers at ITC (campus programmes)",
+      "url": "https://itcportal.com/careers.html"
+    },
+    {
+      "title": "ITC AUT programme (ITC Careers)",
+      "url": "https://www.itcportal.com/careers/itc-aut.aspx"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

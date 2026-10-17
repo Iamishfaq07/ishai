@@ -1,0 +1,188 @@
+{
+  "slug": "servicenow",
+  "name": "ServiceNow",
+  "aliases": ["servicenow india", "service now"],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "ServiceNow builds a cloud platform that companies use to run workflows in IT, HR, customer service and more. Its careers site describes three stages (application, interviews and a decision) and says some roles include a technical coding assessment or a presentation. Candidates commonly report several interviews covering technical depth, past work and how you fit its values, which include 'Wow our customers'.",
+  "rounds": [
+    "Recruiter screen after an application review",
+    "Online coding assessment for many engineering roles",
+    "Technical interviews, often two or three: coding, problem solving and system design for experienced roles",
+    "A presentation for some roles, such as pre-sales and consulting",
+    "Hiring manager interview on past work and values",
+    "Team debrief and decision"
+  ],
+  "looks_for": [
+    "Wow our customers",
+    "Working as one team across engineering, product and sales",
+    "Respect and inclusion towards colleagues",
+    "Drive to learn, with humility about what you don't know",
+    "Solid coding and design fundamentals",
+    "Understanding of how large organisations run IT, HR and service work"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you went beyond what a customer or user expected.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What they expected and what they really needed",
+        "What you did beyond it and why",
+        "How they reacted, with evidence if you have it"
+      ]
+    },
+    {
+      "text": "Tell me about a time you helped a teammate succeed, even though it wasn't your task.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the teammate was stuck on",
+        "What you did and how you balanced it with your own work",
+        "The result for them and for the team"
+      ]
+    },
+    {
+      "text": "Tell me about a time you were wrong about something technical. How did you find out, and what did you change?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What you believed and why it seemed right",
+        "How you found out: data, a review, a failure",
+        "How you handled it openly and what you do differently now"
+      ]
+    },
+    {
+      "text": "Tell me about a time you helped someone new to the team feel included.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who they were and what made joining hard",
+        "Specific things you did, beyond being friendly",
+        "How they settled in and what you learned"
+      ]
+    },
+    {
+      "text": "What is IT service management? Explain the difference between an incident and a problem to a new joiner.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Running IT as services for people, with requests, incidents and changes",
+        "An incident is one disruption to restore fast; a problem is its underlying cause",
+        "A simple example, such as repeated email outages traced to one server"
+      ]
+    },
+    {
+      "text": "How would you design a ticketing system that routes each request to the right team automatically?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "What a ticket holds and how requests come in: portal, email, chat",
+        "Routing by rules first, then learning from past tickets",
+        "Fallbacks when routing is unsure, and measuring time to resolution"
+      ]
+    },
+    {
+      "text": "How would you design approval workflows, such as a laptop request needing a manager's sign-off, so steps can change without new code?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Defining workflows as data: steps, conditions, approvers",
+        "A workflow engine that runs them and records each step",
+        "Versioning changes so requests already in progress aren't broken"
+      ]
+    },
+    {
+      "text": "A workflow that ran fine yesterday is now timing out for one large customer. How would you find the cause?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "What changed: data volume, a configuration, a release",
+        "Tracing the slow step with logs and timings",
+        "A safe fix for the customer and a guard so it doesn't recur"
+      ]
+    },
+    {
+      "text": "How would you make search fast across millions of records in a web application?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Indexes, or a search engine built on an inverted index",
+        "Keeping the index up to date as records change",
+        "Paging, caching and measuring slow queries"
+      ]
+    },
+    {
+      "text": "Walk me through how you'd present our platform to a customer's head of IT whose request process is slow and manual.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Starting from their pain: delays, lost requests, no visibility",
+        "Showing one workflow before and after, not every feature",
+        "The outcome they'd measure and a clear next step"
+      ]
+    },
+    {
+      "text": "Explain REST APIs, and how you'd connect two business systems so their data stays in sync.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Resources, HTTP methods and status codes in plain words",
+        "Choosing between events or webhooks and scheduled syncs",
+        "Handling failures: retries, duplicates and conflicting changes"
+      ]
+    },
+    {
+      "text": "Why ServiceNow? What do you think its platform does for the companies that use it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A clear picture of what the platform does, in a sentence or two",
+        "A reason tied to the role or team",
+        "What you'd bring to it"
+      ]
+    },
+    {
+      "text": "ServiceNow's purpose is to make the world work better for everyone. What would that mean in the work you'd do here?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Who benefits from the work: employees, customers, IT teams",
+        "An example of a frustrating process that software could fix",
+        "How your role would contribute"
+      ]
+    },
+    {
+      "text": "What questions do you have for us about the team or the role?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "Two or three questions you couldn't answer from the website",
+        "Questions about how success is measured and how the team works",
+        "Something that shows you've listened during the interview"
+      ]
+    }
+  ],
+  "tips": [
+    "ServiceNow says interviews, tests and technical challenges must be done without AI help unless it tells you otherwise, so practise solving problems on your own.",
+    "Learn the basics of IT service management (incidents, requests, changes) so you can talk about the problems the platform solves.",
+    "For a presentation, start with the customer's problem and the outcome, then show how the solution gets there.",
+    "Prepare a story about customer impact and one about helping your team; interviewers commonly probe both.",
+    "ServiceNow University offers no-cost courses and certifications on the platform; a short course can help you talk about it with confidence."
+  ],
+  "sources": [
+    {
+      "title": "How we hire (careers.servicenow.com)",
+      "url": "https://careers.servicenow.com/how-we-hire/"
+    },
+    {
+      "title": "Careers in sales: 'Wow our customers' (careers.servicenow.com)",
+      "url": "https://careers.servicenow.com/teams/sales/"
+    },
+    {
+      "title": "Early careers at ServiceNow (careers.servicenow.com)",
+      "url": "https://careers.servicenow.com/early-careers/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

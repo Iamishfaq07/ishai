@@ -1,0 +1,176 @@
+{
+  "slug": "shopify",
+  "name": "Shopify",
+  "aliases": [
+    "shopify inc"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Shopify builds commerce software for merchants, and its interviews are known for 'The Life Story', a conversation with a recruiter about the choices, wins and setbacks in your career, which Shopify describes on its careers site. For engineering roles, candidates commonly report a coding exercise, a pair-programming session and a technical deep dive into a past project; other crafts often have a craft assessment and team interviews.",
+  "rounds": [
+    "Recruiter screen",
+    "'Life story' conversation about your path and choices",
+    "Technical interviews, often pair programming",
+    "Team or lead interview"
+  ],
+  "looks_for": [
+    "Thriving on change",
+    "Building for merchants",
+    "Ownership",
+    "Learning fast",
+    "Accept our mission",
+    "Thrive on change",
+    "Chase excellence",
+    "Impact, readiness, trust, engagement and self-awareness (the traits Shopify's engineering blog says the Life Story looks for)"
+  ],
+  "questions": [
+    {
+      "text": "Walk me through your life story: the big choices and why you made them.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Three or four turning points, in order, not a list of every job",
+        "Why you made each choice and what you learned from it",
+        "How the path leads to this role at Shopify"
+      ]
+    },
+    {
+      "text": "Tell me about a time things changed fast at work. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What changed and how little notice you had",
+        "How you re-planned and what you let go of",
+        "The result, and what you'd do the same way next time"
+      ]
+    },
+    {
+      "text": "Who are Shopify's merchants, and what would you build for them?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The range of merchants, from first-time sellers to large brands",
+        "One specific merchant problem, such as selling across channels or managing stock",
+        "What you'd build first and how you'd know it helped merchants sell more"
+      ]
+    },
+    {
+      "text": "Tell me about one of your bruises: a decision that went wrong and what you learned from it.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "A real mistake, owned plainly",
+        "What you saw at the time and what you missed",
+        "What you do differently now, with an example"
+      ]
+    },
+    {
+      "text": "Tell me about the achievement you're proudest of. What impact did it have, and on whom?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why it was hard and what your part was",
+        "The impact on users, customers or the team, with a number if you have one",
+        "Why it matters to you more than other wins"
+      ]
+    },
+    {
+      "text": "Tell me about a time you taught yourself something hard because the work needed it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you had to learn and why it couldn't wait",
+        "How you learned it: building, reading, asking people",
+        "What you delivered and how you keep learning now"
+      ]
+    },
+    {
+      "text": "Walk me through a project you know well: the architecture, the trade-offs you made and what you'd do differently.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The business goal and a short picture of the architecture",
+        "Two or three decisions, the options you rejected and why",
+        "What broke or surprised you, and what you'd change now"
+      ]
+    },
+    {
+      "text": "In a pair-programming session, how do you share your thinking with your partner? Talk me through how you'd start a new task.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Restating the task and asking clarifying questions first",
+        "Thinking aloud, starting simple and running code early",
+        "Edge cases, tests, and inviting your partner's ideas"
+      ]
+    },
+    {
+      "text": "How would you design a checkout that keeps working when a merchant's flash sale brings ten times the usual traffic?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Where the load lands: product pages, carts, inventory, payments",
+        "Queues, caching and limits that protect the system without losing orders",
+        "Not overselling stock, and what shoppers see when things slow down"
+      ]
+    },
+    {
+      "text": "A merchant says orders stopped appearing in their admin an hour ago. How would you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Checking scope first: one merchant or many, since when",
+        "Following an order through the system using logs and metrics",
+        "Keeping the merchant updated and fixing the cause, not just the symptom"
+      ]
+    },
+    {
+      "text": "How would you design inventory tracking that keeps stock counts right across an online store and a physical shop?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "One source of truth for stock and how each channel updates it",
+        "Handling two sales of the last item at the same moment",
+        "What happens when a shop's connection drops, and how counts are reconciled"
+      ]
+    },
+    {
+      "text": "Why Shopify, and what does making commerce better for everyone mean to you?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason tied to merchants and the products, not only the brand",
+        "A personal link: a business you know, a store you built, a problem you saw",
+        "The kind of work you want to do here"
+      ]
+    },
+    {
+      "text": "What do you want to learn in your next role, and how will you know you're growing?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two specific skills, not a general wish to grow",
+        "How you plan to build them and the support you'd look for",
+        "A sign of progress you'd check after a year"
+      ]
+    }
+  ],
+  "tips": [
+    "For the life-story round, explain why you made each choice, not just what you did.",
+    "Before the Life Story, list your turning points, proudest wins and hardest moments; Shopify says it wants to hear about the trophies and the bruises.",
+    "In pair programming, think aloud and ask your partner questions. Shopify's engineering blog says a well-reasoned incomplete solution beats a fragile finished one.",
+    "For the technical deep dive, pick a project with real business trade-offs rather than a solo side project, and treat it as a conversation.",
+    "Try the product as a merchant would, for example by setting up a test store, so you can talk about it from experience."
+  ],
+  "sources": [
+    {
+      "title": "Shopify careers FAQ: the interview process (shopify.com)",
+      "url": "https://www.shopify.com/careers/faq"
+    },
+    {
+      "title": "Shopify's technical interview process (shopify.engineering)",
+      "url": "https://shopify.engineering/nail-your-technical-shopify-interview"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

@@ -1,0 +1,175 @@
+{
+  "slug": "dream11",
+  "name": "Dream11",
+  "aliases": ["dream sports", "dream sports group"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Dream11 is the best-known product of Dream Sports, a sports technology company whose platforms see sharp traffic peaks around live matches. Candidates commonly report coding, problem-solving and system design rounds for engineers, and conversations around the group's published DOPUT values: Data Driven, Ownership, Perseverance, User First and Transparency.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Online or live coding round for engineering roles (often)",
+    "Problem-solving or machine coding discussion",
+    "System design for experienced engineers, often around scale and traffic spikes",
+    "Hiring manager round on past work and ownership",
+    "Culture or HR conversation, often around the DOPUT values"
+  ],
+  "looks_for": [
+    "Data Driven",
+    "Ownership",
+    "Perseverance",
+    "User First",
+    "Transparency",
+    "Designing for sudden traffic peaks around match start times",
+    "Understanding sports fans and how they use the product"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a decision you made based on data that went against your first instinct.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you first believed and why",
+        "The data you looked at and how you checked it was sound",
+        "The decision you made and how it turned out"
+      ]
+    },
+    {
+      "text": "Tell me about a problem you owned end to end, from spotting it to fixing it for good.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you noticed it and why you took it on",
+        "The steps you drove yourself, and who you pulled in",
+        "The lasting fix and how you checked it held"
+      ]
+    },
+    {
+      "text": "Describe a time you kept going on something hard after your first attempts failed.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why the problem was hard and what you tried first",
+        "What you changed after each failure, not just trying harder",
+        "Where it ended up, including if it was only partly solved"
+      ]
+    },
+    {
+      "text": "Tell me about a time you shared bad news early with your team or manager.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the news was and why it would have been easy to wait",
+        "How and when you raised it, with the facts and options",
+        "What raising it early made possible"
+      ]
+    },
+    {
+      "text": "Describe a time you changed what you were building after seeing how users actually used it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you planned and what users really did",
+        "How you learned it: data, feedback, watching sessions",
+        "What you changed and the effect on users"
+      ]
+    },
+    {
+      "text": "Lineups are announced shortly before a match, and many users edit their teams in the last minutes. How would you design for that rush?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Estimating the peak and separating reads (player data) from writes (team saves)",
+        "Caching, queues and autoscaling ahead of known match times",
+        "Locking teams cleanly at the deadline, and what degrades first under strain"
+      ]
+    },
+    {
+      "text": "How would you design a live leaderboard that updates points for a very large contest as the match happens?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Turning match events into player points, then into team scores",
+        "Ranking at scale: sharding, sorted structures, updating in batches",
+        "Being honest in the UI about delay, and how the final result is confirmed"
+      ]
+    },
+    {
+      "text": "A big match is a week away. How would you prepare the platform and the team for the expected peak?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Capacity planning from past peaks, plus load tests at a higher level",
+        "A change freeze, runbooks and clear on-call roles for match day",
+        "What you'd switch off first if load exceeded the plan"
+      ]
+    },
+    {
+      "text": "Explain how you'd use caching for match and player data, and what can go wrong when the cache is stale.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "What to cache and for how long, based on how often it changes",
+        "Invalidation when a lineup or score changes",
+        "Problems such as users seeing old data, and a thundering herd when a cache expires"
+      ]
+    },
+    {
+      "text": "Many users drop off on the team-creation screen. How would you find out why and test a fix?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Finding exactly where in the flow they leave, by device and type of user",
+        "Watching sessions or asking users, not only reading dashboards",
+        "One fix to test with a clear success metric and a guardrail"
+      ]
+    },
+    {
+      "text": "How would you show that a new feature increased engagement, rather than just moving it from another part of the app?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "An A/B test or holdout group instead of a before-and-after view",
+        "Measuring total engagement per user, not just use of the new feature",
+        "Allowing for match schedules, since big games change behaviour on their own"
+      ]
+    },
+    {
+      "text": "Why Dream Sports? Which of the DOPUT values describes how you like to work?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason tied to sport, scale or the product, not only the brand",
+        "One value with a short, real example",
+        "What you want to learn or build here"
+      ]
+    },
+    {
+      "text": "Which sport do you follow most closely, and what would you build for its fans?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Genuine knowledge of how fans of that sport follow it",
+        "An idea framed around a fan's problem, not a feature list",
+        "How you'd know fans valued it"
+      ]
+    }
+  ],
+  "tips": [
+    "Use the product as a fan would before the interview: build a team, follow it through a match and notice where the experience could improve.",
+    "In design rounds, start with the traffic shape: quiet most of the time, then a sharp peak near match start.",
+    "Prepare one story for each DOPUT value; Ownership and User First are easy to show with real examples.",
+    "Bring numbers to data-driven stories: what you measured, the baseline and the change.",
+    "Show you care about sport, but keep answers about users and outcomes, not just your favourite team."
+  ],
+  "sources": [
+    {
+      "title": "Careers at Dream Sports",
+      "url": "https://www.dreamsports.group/careers"
+    },
+    {
+      "title": "Dream Sports",
+      "url": "https://www.dreamsports.group/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

@@ -1,0 +1,177 @@
+{
+  "slug": "procter-gamble",
+  "name": "P&G",
+  "aliases": ["procter and gamble", "procter & gamble", "p and g", "p&g india"],
+  "group": "industry",
+  "market": "global",
+  "summary": "P&G (Procter & Gamble) hires graduates and experienced people into brand management, sales, supply chain, finance, engineering and IT roles. Its careers site describes four steps: application, one or more online assessments (such as the Peak Performance Assessment and, for some roles, an Interactive Assessment of cognitive ability), behavioural interviews and an offer. P&G says its interviews show how you connect with its Purpose, Values and Principles.",
+  "rounds": [
+    "Online application with a short questionnaire",
+    "Online assessments: the Peak Performance Assessment, and for some roles an Interactive Assessment of cognitive ability",
+    "Behavioural interviews, one-on-one or panel, often a first round and a final round",
+    "Offer and onboarding"
+  ],
+  "looks_for": [
+    "Integrity",
+    "Leadership",
+    "Ownership",
+    "Passion for Winning",
+    "Trust",
+    "Specific examples: what you did, how you did it and the result",
+    "What motivates you and how you fit the role"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you led others to a result even though you weren't in charge.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and why leadership was needed",
+        "What you did to bring people along",
+        "The result, with a number if you have one"
+      ]
+    },
+    {
+      "text": "Tell me about a time you took ownership of something that was going wrong.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was going wrong and why it was easy to leave",
+        "The actions you took yourself",
+        "The outcome and what you learned"
+      ]
+    },
+    {
+      "text": "Tell me about a stretching goal you set yourself and how you went after it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and why it was a stretch",
+        "Your plan and how you tracked progress",
+        "Whether you hit it, and what you'd do differently"
+      ]
+    },
+    {
+      "text": "Tell me about a time you did the right thing when nobody would have noticed otherwise.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The situation and the shortcut available",
+        "What you did and why",
+        "What it cost you and what it protected"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with people who saw a problem differently from you. How did you reach a decision?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The different views and why each made sense",
+        "How you built trust and found common ground",
+        "The decision and how the relationship held up"
+      ]
+    },
+    {
+      "text": "Tell me about a new idea you came up with that improved how something was done.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The old way and its problem",
+        "Your idea and how you tested it",
+        "The improvement, measured if possible"
+      ]
+    },
+    {
+      "text": "A detergent brand's sales are flat. How would you find out why and decide what to do?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Splitting the problem: fewer buyers or less buying, and which channels and regions",
+        "Looking at price, distribution, advertising and competitors",
+        "One focused plan and the measure that would show it worked"
+      ]
+    },
+    {
+      "text": "How would you plan a promotion with a large retailer, and how would you judge whether it paid off?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Agreeing goals with the retailer: sales, new shoppers, stock levels",
+        "The mechanics: discount, display, timing, forecasting supply",
+        "Judging extra sales against the cost, including sales borrowed from later weeks"
+      ]
+    },
+    {
+      "text": "A plant is producing more defective packs than usual. How would you find and fix the cause?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Containing it first: stopping bad stock from reaching stores",
+        "Data by line, shift, material batch and machine setting",
+        "A root-cause fix and checks so it stays fixed"
+      ]
+    },
+    {
+      "text": "Estimate how many nappies are used in Bengaluru each day. Talk me through your logic.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Population, share of babies, share using disposable nappies",
+        "Nappies per baby per day, stated as an assumption",
+        "A final number and a quick sense check"
+      ]
+    },
+    {
+      "text": "How would you cut the time it takes to get products from a factory to stores without raising costs much?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Mapping the steps and where time is lost",
+        "Options: better forecasts, fewer handoffs, direct deliveries, smarter stock positioning",
+        "The trade-offs and which change you'd try first"
+      ]
+    },
+    {
+      "text": "Why P&G, and why this function?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about P&G's brands or way of working",
+        "Why the function fits your strengths, with evidence",
+        "What you want to learn early on"
+      ]
+    },
+    {
+      "text": "Which P&G brand would you like to work on, and what would you do for it?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A brand you know and who buys it",
+        "One clear opportunity",
+        "Your idea and how you'd measure it"
+      ]
+    }
+  ],
+  "tips": [
+    "Take the Peak Performance Assessment on your own, somewhere quiet; P&G says there are no right or wrong answers, so answer as you really are.",
+    "P&G uses behavioural interviews: prepare specific stories about what you did and the result, not what the team did in general.",
+    "Read P&G's Purpose, Values and Principles and be ready to show how your stories connect to them.",
+    "Use the interview to learn about P&G too; its hiring page says two-way communication starts from day one.",
+    "P&G says assessments must be done without real-time help from people or AI tools, so practise problem solving on your own."
+  ],
+  "sources": [
+    {
+      "title": "P&G hiring process (pgcareers.com)",
+      "url": "https://www.pgcareers.com/global/en/hiring-process"
+    },
+    {
+      "title": "P&G Purpose, Values and Principles (us.pg.com)",
+      "url": "https://us.pg.com/policies-and-practices/purpose-values-and-principles/"
+    },
+    {
+      "title": "Peak Performance Assessment overview (pgcareers.com)",
+      "url": "https://www.pgcareers.com/global/en/peak-performance-assessment"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

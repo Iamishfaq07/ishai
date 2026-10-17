@@ -1,0 +1,183 @@
+{
+  "slug": "google",
+  "name": "Google",
+  "aliases": [
+    "alphabet",
+    "google india",
+    "youtube",
+    "deepmind",
+    "google cloud"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Google says it uses structured interviews: candidates for a role get similar questions, scored against shared rubrics, and its re:Work guide to structured interviewing describes assessing role-related knowledge, problem solving and leadership. Candidates commonly report coding interviews in a shared doc, system design for experienced roles, a 'Googleyness and leadership' interview, and a hiring committee that reviews the feedback before an offer.",
+  "rounds": [
+    "Recruiter call",
+    "One or two technical phone screens (coding in a shared doc)",
+    "Onsite or virtual loop: coding, system design (for experienced roles), and a 'Googleyness and leadership' interview",
+    "Hiring committee review"
+  ],
+  "looks_for": [
+    "General cognitive ability: how you reason through an open problem",
+    "Role-related knowledge",
+    "Leadership: stepping up without authority",
+    "Googleyness: comfort with ambiguity, collaboration, doing the right thing"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you had to work through a problem with no clear owner or direction.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why nobody owned it and what it would cost if nobody acted",
+        "How you created structure: defined the problem, found the right people, agreed next steps",
+        "What happened, and what you'd do the same or differently"
+      ]
+    },
+    {
+      "text": "How would you estimate how many people use Google Maps on a weekday morning in Bengaluru?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A clear structure: population, share with smartphones, share travelling in the morning, share who open Maps",
+        "Assumptions stated out loud with round numbers, and a sanity check at the end",
+        "Which assumption moves the answer most, and how you'd check it with data"
+      ]
+    },
+    {
+      "text": "Tell me about a time you helped a teammate who was struggling.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you noticed, and what was really getting in their way",
+        "What you did that helped without taking over their work",
+        "How they and the work were doing afterwards"
+      ]
+    },
+    {
+      "text": "Walk me through the hardest technical decision you've made and the trade-offs you weighed.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The options you had and the constraints: time, scale, team skills, cost",
+        "How you compared them: data, a prototype, or advice from others",
+        "What you chose, what it cost you, and whether it held up later"
+      ]
+    },
+    {
+      "text": "Tell me about a time you changed your mind after getting new information.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Your original view and why it was reasonable at the time",
+        "The data or argument that changed it",
+        "How you told others and what changed in the work"
+      ]
+    },
+    {
+      "text": "Tell me about a time you led something without having any formal authority.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and why people didn't have to follow you",
+        "How you brought them along: listening, a clear plan, sharing credit",
+        "The outcome and what you learned about leading peers"
+      ]
+    },
+    {
+      "text": "How would you design a service that suggests search queries as someone types?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Requirements first: latency per keystroke, languages, freshness, personalisation",
+        "A prefix index ranked by popularity, with caching close to users",
+        "Filtering harmful suggestions, and how you'd measure whether suggestions help"
+      ]
+    },
+    {
+      "text": "A web page loads slowly for some users but not for others. How would you find out why?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Splitting by region, device, network and browser before guessing",
+        "Evidence from browser timings, server logs and tracing across services",
+        "Likely causes such as a slow dependency, a cache miss or heavy assets, and how you'd confirm one"
+      ]
+    },
+    {
+      "text": "How would you remove duplicates from a list too large to fit in memory? Talk me through the trade-offs.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The in-memory answer first, such as a hash set, and its time and space cost",
+        "Scaling out: sorting in chunks and merging, or hashing records into partitions",
+        "Approximate options like a Bloom filter when a small error rate is acceptable"
+      ]
+    },
+    {
+      "text": "How would you improve Google Maps for people who travel mostly by bus or metro?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "One user group and its biggest pain points, such as waiting times or crowding",
+        "Two or three ideas, ranked by impact and effort",
+        "A success metric, plus a guardrail so other users aren't worse off"
+      ]
+    },
+    {
+      "text": "How would you test whether a change to search results actually made them better for users?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Defining 'better': one main metric plus guardrails such as speed",
+        "An experiment design: who is in it, how long it runs, how large it must be",
+        "Watching for novelty effects and differences between user groups"
+      ]
+    },
+    {
+      "text": "Why Google, and which product or team would you most like to work on?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific product or team and the problem it solves",
+        "Something you've built or studied that connects to it",
+        "What you hope to learn or contribute there"
+      ]
+    },
+    {
+      "text": "Which Google product do you use most, and what would you change about it?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A product you know well and one clear problem with it",
+        "The change, who it helps, and what you'd leave out",
+        "How you'd know it worked"
+      ]
+    },
+    {
+      "text": "Where do you want your career to be in a few years, and how would this role help?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A realistic direction: the skills or scope you want to grow into",
+        "How this role builds towards it",
+        "What you'd bring to the team along the way"
+      ]
+    }
+  ],
+  "tips": [
+    "Think out loud: they score how you reason, not only the answer.",
+    "State assumptions, then test them; ask clarifying questions before you dive in.",
+    "For coding, talk through complexity and edge cases before you write.",
+    "Candidates commonly report coding in a plain shared doc: practise writing clean code without autocomplete or running it.",
+    "For the Googleyness and leadership interview, prepare stories about ambiguity, helping others and leading without a title.",
+    "Google says it scores structured interviews against rubrics, so answer the question you were asked fully before adding extras."
+  ],
+  "sources": [
+    {
+      "title": "Google re:Work: a guide to structured interviewing",
+      "url": "https://rework.withgoogle.com/intl/en/guides/a-guide-to-structured-interviewing-for-better-hiring-practices"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

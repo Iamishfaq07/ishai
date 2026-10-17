@@ -1,0 +1,172 @@
+{
+  "slug": "american-express",
+  "name": "American Express",
+  "aliases": ["amex", "american express india"],
+  "group": "finance",
+  "market": "global",
+  "summary": "American Express interviews usually combine behavioural questions on its Blue Box Values, such as 'We Back Our Customers' and 'We Do What's Right', with technical or case questions for the role, from software engineering to analytics, risk and marketing. Candidates commonly report a recruiter screen, interviews with the hiring manager, and a final round with the wider team.",
+  "rounds": [
+    "Online application, with an online assessment or coding test for some roles",
+    "Recruiter screen",
+    "Interviews with the hiring manager: your experience, behavioural questions and technical or case questions",
+    "Final round with the wider team; for some student programmes, an assessment centre with case studies"
+  ],
+  "looks_for": [
+    "We Do What's Right",
+    "We Back Our Customers",
+    "We Make It Great",
+    "We Respect People",
+    "We Embrace Diversity",
+    "We Stand for Equity and Inclusion",
+    "We Win As a Team",
+    "We Support Communities",
+    "Careful use of data and sound judgement on risk",
+    "Clear communication with colleagues, customers and partners"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself and why you're interested in this role.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your background in a few lines, focused on what's relevant",
+        "One achievement that shows the skills the role needs",
+        "Why this team at American Express is the next step"
+      ]
+    },
+    {
+      "text": "Tell me about a time you went out of your way to fix a problem for a customer or user.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who they were and what was going wrong for them",
+        "What you did beyond the usual, and why",
+        "The result for them, and anything you changed so it didn't recur"
+      ]
+    },
+    {
+      "text": "Tell me about a time you raised the quality bar on a piece of work.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What 'good enough' looked like and why you aimed higher",
+        "What you improved and how you checked it",
+        "The difference it made, ideally measured"
+      ]
+    },
+    {
+      "text": "Tell me about a time you chose the right course of action over the quickest one.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The shortcut and why it was tempting",
+        "Why you didn't take it, and who you involved",
+        "The outcome and what it taught you"
+      ]
+    },
+    {
+      "text": "Describe a time your team succeeded because of how you worked together, not only individual effort.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and who was on the team",
+        "How you shared work, helped each other and handled disagreement",
+        "The result and your part in it"
+      ]
+    },
+    {
+      "text": "How would you decide whether to approve a credit limit increase for a cardholder? What data would you use?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Repayment history, current balances, income signals and how the card is used",
+        "Weighing extra spending and customer loyalty against the risk of default",
+        "How you'd test the rule fairly and monitor it once live"
+      ]
+    },
+    {
+      "text": "A new card's sign-ups are strong, but spending per card is lower than expected. How would you investigate?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Checking whether new cardholders are activating the card and using it at all",
+        "Splitting by customer group, channel and merchant type",
+        "Likely causes and what you'd test: offers, reminders, or a change in who's being targeted"
+      ]
+    },
+    {
+      "text": "Explain how a card payment works from the moment a customer pays to when the merchant gets the money.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The parties: cardholder, merchant, card network and card issuer",
+        "Authorisation at the time of payment, then clearing and settlement",
+        "Where fees are charged and where fraud checks happen"
+      ]
+    },
+    {
+      "text": "How would you design a service that flags possibly fraudulent card transactions within a second?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A fast scoring step using rules and a model, with features such as location and spending pattern",
+        "What happens next: approve, decline or ask the customer to confirm",
+        "Keeping it fast and available, learning from confirmed fraud, and protecting customer data"
+      ]
+    },
+    {
+      "text": "Explain precision and recall to a business partner, and which matters more in fraud detection.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Precision: of the cases flagged, how many were really fraud; recall: of all fraud, how much was caught",
+        "The trade-off: catching more fraud versus annoying good customers",
+        "How you'd choose the balance using the cost of each kind of mistake"
+      ]
+    },
+    {
+      "text": "Walk me through a project where you used data to change a decision.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The decision and who was making it",
+        "The data and methods you used",
+        "What changed because of your work"
+      ]
+    },
+    {
+      "text": "Why American Express, and why this team?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about how American Express serves its customers",
+        "What the team does and why it fits your skills",
+        "What you'd want to learn in your first year"
+      ]
+    },
+    {
+      "text": "Which Blue Box Value means the most to you, and when have you shown it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One value, named once",
+        "A short, specific example",
+        "Why it matters in the role you've applied for"
+      ]
+    }
+  ],
+  "tips": [
+    "Prepare a story for each Blue Box Value, especially backing customers and doing what's right.",
+    "For analytics and risk roles, be ready to talk through how you'd measure a customer decision and what could go wrong with it.",
+    "For engineering roles, expect coding plus a design discussion; bring up security, reliability and protection of customer data.",
+    "Learn how card payments work end to end, and what makes a card valuable to both cardholders and merchants.",
+    "Ask the recruiter what each interview will focus on, so you can prepare the right mix of stories and technical work."
+  ],
+  "sources": [
+    {
+      "title": "American Express: who we are and our values",
+      "url": "https://www.americanexpress.com/en-us/company/who-we-are/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

@@ -1,0 +1,203 @@
+{
+  "slug": "accenture",
+  "name": "Accenture",
+  "aliases": [
+    "accenture india",
+    "accenture solutions"
+  ],
+  "group": "it-services",
+  "market": "global",
+  "summary": "For freshers in India, candidates commonly report online cognitive, technical and coding assessments and a spoken-English communication test, followed by one interview that mixes technical and HR questions. Accenture says its technical assessments evaluate problem-solving, logical reasoning and applied technical knowledge, and it publishes six core values, from Client Value Creation to Stewardship. Outside India, candidates usually report a recruiter screen and team interviews instead.",
+  "rounds": [
+    "Cognitive and technical assessment",
+    "Coding assessment",
+    "Communication assessment (spoken English)",
+    "Interview (technical and HR together)"
+  ],
+  "looks_for": [
+    "Communication and client-readiness",
+    "Technical basics",
+    "Adaptability",
+    "Teamwork and learning",
+    "Client Value Creation",
+    "One Global Network",
+    "Respect for the Individual",
+    "Best People",
+    "Integrity",
+    "Stewardship"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your studies or work so far and your strongest skills",
+        "One project or experience that shows how you work with others",
+        "Why this role at Accenture is your next step, in under two minutes"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked in a team to meet a deadline.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The deadline, what was at stake and what made it tight",
+        "Your own part: what you took on and how you kept others in step",
+        "Whether you made it, and what you'd plan differently next time"
+      ]
+    },
+    {
+      "text": "What do you know about Accenture?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What it does in a sentence: consulting, technology and operations services for clients",
+        "One recent piece of work or news in the area you're applying for",
+        "Why that makes you want to work there"
+      ]
+    },
+    {
+      "text": "How do you keep learning new technologies?",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "Your actual routine: courses, documentation, side projects, certifications",
+        "One recent example of something you learned and used",
+        "How you decide what's worth learning next"
+      ]
+    },
+    {
+      "text": "Tell me about a time a plan changed suddenly and you had to adapt.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What changed and why it mattered",
+        "How quickly you adjusted and what you dropped or re-planned",
+        "The result and what it taught you about handling change"
+      ]
+    },
+    {
+      "text": "Tell me about a time you helped someone from a different background feel included in a team.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who they were and why they were on the edge of the group",
+        "What you did, such as changing how meetings ran or pairing with them",
+        "How the team and their work changed afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a time you did more than you were asked to make a customer or user happy.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What they asked for and what they really needed",
+        "The extra step you took and why it was worth it",
+        "How you know it made a difference to them"
+      ]
+    },
+    {
+      "text": "Explain cloud computing to a client who has never used it, and name one risk they should know about.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A plain-words explanation: renting computing power and storage instead of owning servers",
+        "The main benefits: paying for what you use, scaling up and down, less maintenance",
+        "One honest risk, such as cost control, security settings or dependence on one provider"
+      ]
+    },
+    {
+      "text": "What is the difference between SQL and NoSQL databases, and when would you choose each?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "SQL: tables, fixed schema, joins and strong consistency",
+        "NoSQL: documents, key-value or other models, flexible schema, easier to spread across servers",
+        "An example for each, such as banking records versus a product catalogue"
+      ]
+    },
+    {
+      "text": "A client says their shopping website is down during a big sale. What are your first steps?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Confirming the problem and how many users it affects",
+        "Getting the site back first (roll back a release, add capacity) before the full root cause",
+        "Keeping the client updated regularly, then a review of what caused it"
+      ]
+    },
+    {
+      "text": "How would you estimate how many people in Bengaluru order food through an app in a week?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A clear structure: population, share with smartphones, share who order online",
+        "Sensible assumptions for how often each group orders, stated aloud",
+        "A final number with a quick sanity check against something you know"
+      ]
+    },
+    {
+      "text": "For experienced candidates: tell me about a project where you moved a client's system to the cloud or a new platform. What went wrong?",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The starting point, the target and why the client wanted the move",
+        "Your role and the problem that surprised the team",
+        "How it was fixed and what you'd plan differently on the next migration"
+      ]
+    },
+    {
+      "text": "Why do you want to work in consulting and technology services rather than at a product company?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What appeals about working for different clients and industries",
+        "The skills you expect to build faster that way",
+        "An honest view of the trade-off, such as less ownership of one product"
+      ]
+    },
+    {
+      "text": "Do you have any questions for us?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two thoughtful questions about the team, first projects or learning support",
+        "Nothing already answered on the careers site",
+        "A brief thank-you"
+      ]
+    }
+  ],
+  "tips": [
+    "Speak clearly and at an even pace: there's a separate spoken-English test.",
+    "Read Accenture's recent work in your area before the interview.",
+    "In the communication test, listen to the whole prompt before answering and keep your sentences short and complete.",
+    "Practise coding problems under time in the language you'll choose, including reading input and printing output correctly.",
+    "Prepare stories on teamwork, deadlines and adapting to change; the single interview mixes them with technical questions."
+  ],
+  "sources": [
+    {
+      "title": "Accenture recruitment process (accenture.com)",
+      "url": "https://www.accenture.com/in-en/careers/explore-careers/area-of-interest/journey-to-accenture"
+    },
+    {
+      "title": "Accenture Code of Business Ethics, with its core values (accenture.com)",
+      "url": "https://www.accenture.com/content/dam/accenture/final/a-com-migration/pdf/pdf-63/accenture-cobe-brochure-english.pdf"
+    }
+  ],
+  "abroad": {
+    "rounds": [
+      "Online application, with a short assessment for some roles",
+      "Recruiter screen",
+      "Interviews with the team: technical or case questions alongside behavioral ones",
+      "Final interview with a manager or senior leader"
+    ],
+    "tips": [
+      "Have stories ready about working with clients and in teams under deadlines.",
+      "Read Accenture's recent work in your area before the interview.",
+      "Prepare a story about adapting to change and one about including others; Accenture lists Respect for the Individual and Best People among its core values.",
+      "If you get an online assessment, expect problem-solving and logical reasoning; Accenture says it looks at how you approach the problem, not only the answer."
+    ]
+  },
+  "reviewed": "2026-10-18"
+}

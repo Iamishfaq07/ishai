@@ -1,0 +1,207 @@
+{
+  "slug": "digital-marketing",
+  "name": "Digital marketing",
+  "aliases": ["digital marketer", "digital marketing executive", "digital marketing manager", "marketing executive", "performance marketing", "performance marketer", "seo specialist", "seo executive", "sem specialist", "social media manager", "social media executive", "social media marketing"],
+  "group": "business",
+  "summary": "Digital marketing interviews usually mix three things: how well you know the channels (search, social, email, paid ads), whether you can read campaign numbers and act on them, and whether you can show work you've done, such as a campaign you ran or an account you grew. For many roles there is also a short task, like a campaign plan, ad copy or a website audit.",
+  "rounds": [
+    "Recruiter or HR screen on your background and the channels you've worked on",
+    "Portfolio or past-work discussion: campaigns, results and what you'd change",
+    "Assignment for many roles: a campaign plan, content calendar, ad copy or an audit of a website or ad account",
+    "Hiring manager interview on channel choices, metrics and budget",
+    "Final or HR round, sometimes with a senior marketing lead"
+  ],
+  "looks_for": [
+    "Knowing what each channel is good for, and when not to use it",
+    "Reading metrics like click-through rate, cost per acquisition, conversion rate and return on ad spend",
+    "Linking a campaign to a business goal, not just reach or likes",
+    "Testing and learning: small tests before big budgets",
+    "Clear, persuasive writing for ads, emails and posts",
+    "Honest results: what worked, what didn't, and why"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a campaign you ran or helped with. What was the goal, and how did it perform?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal in one line and the audience you targeted",
+        "The channels, the rough budget size and what you tested",
+        "The result against the goal, including what fell short"
+      ]
+    },
+    {
+      "text": "Tell me about a time a campaign underperformed. What did you do about it?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "How you spotted the problem in the numbers, and how early",
+        "What you changed: audience, creative, bids, landing page or timing",
+        "What you learned and now do differently"
+      ]
+    },
+    {
+      "text": "Describe a time you worked with a designer, the sales team or a product team to get a campaign out on time.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What each side needed and where you disagreed",
+        "How you agreed a brief, a timeline and who signs off",
+        "What went live and what you'd do differently next time"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to explain marketing results to someone who only cared about sales.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The number they cared about and the numbers you had",
+        "How you linked the two honestly, without overclaiming",
+        "The decision that came out of the conversation"
+      ]
+    },
+    {
+      "text": "How would you plan the digital launch of a new product with a small budget?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying the goal, the audience and what success looks like",
+        "Choosing two or three channels that fit, and saying why you'd skip others",
+        "A test-then-scale plan and the metrics you'd check each week"
+      ]
+    },
+    {
+      "text": "Explain the difference between SEO and paid search, and when you'd rely on each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "SEO builds organic traffic slowly; paid search buys visibility straight away",
+        "Cost, speed and how long the results last for each",
+        "A case where using both together makes sense"
+      ]
+    },
+    {
+      "text": "Our cost per acquisition on paid social has doubled in a month. How would you find out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Checking tracking and attribution first, then spend and competition changes",
+        "Breaking it down by campaign, audience, creative and placement",
+        "The fixes you'd try first and how you'd confirm they worked"
+      ]
+    },
+    {
+      "text": "Which metrics would you report for a brand awareness campaign, and which would you leave out?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Reach, frequency, video completion and branded search, plus recall studies where available",
+        "Why likes and impressions on their own can mislead",
+        "How you'd tie awareness back to a business result over time"
+      ]
+    },
+    {
+      "text": "A landing page gets plenty of traffic but very few sign-ups. How would you improve it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Finding where people drop off, using analytics or session recordings",
+        "Testing one change at a time: headline, form length, proof, page speed",
+        "Making the page match the ad or email that sent people there"
+      ]
+    },
+    {
+      "text": "Walk me through how you'd run an A/B test on an email subject line.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "One change, one main metric such as open or click rate, and a random split",
+        "Enough audience and time before you call a winner",
+        "Checking what happened after the open, such as clicks and purchases"
+      ]
+    },
+    {
+      "text": "A brand posts regularly on Instagram or LinkedIn but gets little engagement. How would you turn that around?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Auditing what's posted, who it's for and which posts have worked",
+        "A content mix and posting rhythm the team can keep up",
+        "Measuring progress by more than follower count"
+      ]
+    },
+    {
+      "text": "What is attribution, and why can two tools report different results for the same campaign?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Last-click, first-click and multi-touch models in plain words",
+        "Different tracking windows, cookies and privacy limits",
+        "Choosing one view for decisions and being clear about its limits"
+      ]
+    },
+    {
+      "text": "How do you decide how to split a monthly budget across channels?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Starting from the goal and what each channel costs per result",
+        "Keeping a small share for testing new options",
+        "Moving money based on results, and how often you'd review it"
+      ]
+    },
+    {
+      "text": "Which marketing tools have you used, and what did you do with each one?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Analytics, ads, email, social scheduling or SEO tools you've used hands-on",
+        "One concrete thing you did with each, not just the names",
+        "How you'd pick up a tool you haven't used yet"
+      ]
+    },
+    {
+      "text": "Tell me about yourself and how you got into marketing.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your background in two or three lines",
+        "The moment or project that got you into marketing",
+        "The kind of marketing work you want to do next"
+      ]
+    },
+    {
+      "text": "Why digital marketing, and which channel do you most want to get better at?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What you enjoy about the work, shown by something you've done",
+        "One channel you want to deepen and why",
+        "How you're already learning it"
+      ]
+    },
+    {
+      "text": "Pick a brand you follow online. What is it doing well, and what would you change?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A specific brand and the channel you're talking about",
+        "One thing that works and why you think it does",
+        "One change and how you'd measure whether it helped"
+      ]
+    }
+  ],
+  "tips": [
+    "Bring two or three campaigns you can talk through: the goal, the rough spend, the result and what you'd change.",
+    "Freshers: run something small yourself, such as a blog, a page or a tiny ad test, so you have results of your own to discuss.",
+    "Use the terms (CTR, CPC, CPA, ROAS), but explain what each number told you to do.",
+    "In a case question, ask about the goal, the audience and the budget before you pick channels.",
+    "Admit what didn't work; a failed test you can explain is a strong answer.",
+    "Free platform certifications can show a fresher knows the basics, but expect to be asked how you used what you learned."
+  ],
+  "mock": {
+    "interview_type": "mixed",
+    "persona": "hiring_manager"
+  },
+  "reviewed": "2026-10-18"
+}

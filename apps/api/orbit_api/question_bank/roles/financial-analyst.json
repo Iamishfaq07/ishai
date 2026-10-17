@@ -1,0 +1,207 @@
+{
+  "slug": "financial-analyst",
+  "name": "Financial analyst",
+  "aliases": ["finance analyst", "fp&a analyst", "fp&a", "financial planning and analysis", "corporate finance analyst", "equity research analyst", "equity research associate", "investment analyst", "valuation analyst", "credit analyst"],
+  "group": "business",
+  "summary": "Financial analyst interviews usually test whether you understand the three financial statements and how they connect, can build or read a model, and can turn numbers into a recommendation. FP&A roles lean towards budgeting, forecasting and explaining variances; equity research and investment roles lean towards valuation and a stock pitch. Many employers add an Excel test or a case for some roles.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Technical interview on accounting, the financial statements and valuation basics",
+    "Excel or modelling test, or a take-home case (for many roles)",
+    "Hiring manager interview on past work, a company you follow or, for research roles, a stock pitch",
+    "Final round with a senior finance leader or HR"
+  ],
+  "looks_for": [
+    "How the income statement, balance sheet and cash flow statement link",
+    "Comfort with Excel and building a clean model others can check",
+    "Explaining what's behind a number, not just the number",
+    "Valuation basics: discounted cash flow, multiples and their limits",
+    "Commercial sense: what drives revenue and costs in the business",
+    "Accuracy and checking your own work"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about an analysis or model you built that someone used to make a decision.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The decision and who was making it",
+        "What you built, the key assumptions and how you checked them",
+        "What was decided and what happened afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a time you found an error in your own numbers after you'd shared them.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "How you found it and how big it was",
+        "How quickly you told people and what you corrected",
+        "The check you added so it wouldn't happen again"
+      ]
+    },
+    {
+      "text": "Describe a time you explained a financial result to people outside finance.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who they were and what they needed to decide",
+        "How you simplified it without losing accuracy",
+        "How you knew they understood, and what they did next"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked to a hard finance deadline, such as a month-end close, a budget or a results date.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was due, and what made it tight",
+        "How you planned, prioritised and checked the work",
+        "What you delivered and what you'd do differently"
+      ]
+    },
+    {
+      "text": "Walk me through the three financial statements and how they connect.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "What each statement shows, in one line each",
+        "How net income flows into the cash flow statement and retained earnings",
+        "How the closing cash and debt tie back to the balance sheet"
+      ]
+    },
+    {
+      "text": "Depreciation goes up. Talk me through what changes on each of the three statements.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Lower operating profit and lower tax, so lower net income",
+        "Added back on the cash flow statement, so cash ends up higher by the tax saved",
+        "Lower asset value on the balance sheet, balanced by more cash and lower retained earnings"
+      ]
+    },
+    {
+      "text": "How would you value a company? Talk me through the main approaches and when you'd use each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Discounted cash flow: forecast cash flows, discount at the cost of capital (WACC), add a terminal value",
+        "Comparable companies and past deals, using multiples such as EV/EBITDA or P/E",
+        "Why you'd use more than one method and sense-check the range"
+      ]
+    },
+    {
+      "text": "What's the difference between enterprise value and equity value?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Equity value is what the shares are worth; enterprise value is the whole business, for all its funders",
+        "Moving between them: add debt and similar claims, subtract cash",
+        "Which multiples go with which, such as EV/EBITDA versus P/E"
+      ]
+    },
+    {
+      "text": "Costs came in well above budget this quarter. How would you explain the variance to leadership?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Splitting the variance into volume, price, mix, one-offs and timing",
+        "Which parts the business can control and which it can't",
+        "What it means for the forecast and what you'd recommend"
+      ]
+    },
+    {
+      "text": "How would you build a simple revenue forecast for a business like a café chain or an online store?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Breaking revenue into drivers, such as customers, orders per customer and average order value",
+        "Where each assumption comes from and how it might change",
+        "A base case with upside and downside, rather than one number"
+      ]
+    },
+    {
+      "text": "What's working capital, and why can a growing, profitable company run short of cash?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Current assets minus current liabilities: stock, money owed by customers, bills to pay",
+        "Growth ties up cash in stock and unpaid customer invoices before it comes back",
+        "Fixes such as faster collection, better supplier terms or less stock"
+      ]
+    },
+    {
+      "text": "Which ratios would you look at to judge whether a company can repay a loan?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Leverage, such as debt to EBITDA, and interest cover",
+        "Liquidity and cash: current ratio and cash flow from operations",
+        "Trends over several years and what's behind them"
+      ]
+    },
+    {
+      "text": "Pitch me a company you follow. Would you buy, hold or sell its shares, and why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "What the company does and how it makes money, briefly",
+        "Two or three reasons for your view, with numbers",
+        "The main risk and what would change your mind"
+      ]
+    },
+    {
+      "text": "Which Excel functions and habits do you rely on when you build a model?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Lookups such as XLOOKUP or INDEX-MATCH, SUMIFS and pivot tables",
+        "Separate inputs, calculations and outputs, with inputs clearly marked",
+        "Checks that totals tie and the balance sheet balances"
+      ]
+    },
+    {
+      "text": "Why finance, and why this side of it: FP&A, research, credit or corporate finance?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you to finance, shown by something you've done",
+        "Why this particular kind of role suits you",
+        "What you want to learn in it"
+      ]
+    },
+    {
+      "text": "What business or financial news have you followed recently, and what did you make of it?",
+      "type": "fit",
+      "kind": "knowledge",
+      "covers": [
+        "One specific story, summarised in two sentences",
+        "Your own view of what it means for the companies involved",
+        "How it connects to the role or the employer's business"
+      ]
+    },
+    {
+      "text": "Are you planning further qualifications, such as the CFA or an MBA, and how do they fit your plans?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "An honest answer about your plans",
+        "How the qualification would help in this role",
+        "How you'd balance study with the job"
+      ]
+    }
+  ],
+  "tips": [
+    "Practise the three-statement walk-through and the depreciation question out loud until both answers are short and clear.",
+    "Know one company well: its business model, recent results, valuation and main risks.",
+    "In an Excel test, accuracy beats speed: label inputs, check totals and say what you'd check with more time.",
+    "For FP&A roles, prepare a variance story: the drivers you found and what you recommended.",
+    "If you've done a finance course or certification, expect to be tested on it, not just asked about it.",
+    "End every case with a recommendation, then the risks."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "hiring_manager"
+  },
+  "reviewed": "2026-10-18"
+}

@@ -1,0 +1,178 @@
+{
+  "slug": "salesforce",
+  "name": "Salesforce",
+  "aliases": [
+    "salesforce com",
+    "slack",
+    "tableau",
+    "mulesoft"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Salesforce says its interviewers may ask behavioural, competency-based or situational questions about real situations from your experience, and that an on-site interview at one of its offices is required before an offer. Candidates commonly report that interviewers listen for its five core values, led by Trust, and that sales and some other roles include a presentation or pitch.",
+  "rounds": [
+    "Recruiter screen",
+    "Hiring manager interview",
+    "Technical or functional panel",
+    "A presentation or case in some roles"
+  ],
+  "looks_for": [
+    "Trust",
+    "Customer success",
+    "Innovation",
+    "Equality",
+    "Sustainability",
+    "Real examples that match the job description's requirements"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you turned around an unhappy customer.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why the customer was unhappy, in their words",
+        "What you did first to listen and fix the urgent problem",
+        "How the relationship ended up, with a sign such as renewal or feedback"
+      ]
+    },
+    {
+      "text": "How have you built trust with a team that was new to you?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The team and why trust didn't exist yet",
+        "Small, concrete things you did: listening, delivering early, being open",
+        "How you knew trust had grown"
+      ]
+    },
+    {
+      "text": "Tell me about something new you introduced at work.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem it solved and why the old way fell short",
+        "How you tested it and won people over",
+        "The result, and what you'd change if you did it again"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to choose between hitting a target and doing what was right for the customer.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The target and the pressure you were under",
+        "What you chose and how you explained it to your manager",
+        "The long-term effect on the customer and on trust"
+      ]
+    },
+    {
+      "text": "Tell me about a deal, project or launch that didn't go to plan. What did you learn?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What went wrong, owned in the first person",
+        "The signs you missed and when you spotted them",
+        "What you do differently now"
+      ]
+    },
+    {
+      "text": "What is a CRM, and how would you explain its value to a small business owner?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "One place for every customer, deal and conversation",
+        "Concrete gains: fewer lost leads, better follow-up, clearer forecasts",
+        "An everyday example in plain words, not product jargon"
+      ]
+    },
+    {
+      "text": "Salesforce runs many customers on shared infrastructure. How would you stop one customer's data or load from affecting another's?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Separating data by tenant and checking it on every request",
+        "Limits and quotas so one heavy customer can't slow others down",
+        "Monitoring per customer, and how you'd test the isolation"
+      ]
+    },
+    {
+      "text": "How would you design a system that alerts a sales team when a big account shows signs it might leave?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The signals: falling usage, support tickets, unpaid invoices",
+        "How the data is gathered, scored and turned into a clear alert",
+        "Avoiding too many false alarms, and measuring whether alerts help keep customers"
+      ]
+    },
+    {
+      "text": "Pitch a Salesforce product to me as if I lead sales at a retail company. Then handle my objection that it's too expensive.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Questions about my business before the pitch",
+        "Value tied to my problem, in outcomes rather than features",
+        "Handling the objection calmly: acknowledge it, reframe the cost, suggest a next step"
+      ]
+    },
+    {
+      "text": "A customer's integration with another system started failing after a release. How would you work out where the problem is?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Pinning down what changed and when the failures began",
+        "Checking each step: authentication, data format, limits, the other system's side",
+        "Keeping the customer informed and adding a test so it doesn't recur"
+      ]
+    },
+    {
+      "text": "On a platform like Salesforce, when would you build with point-and-click tools such as flows, and when would you write code?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Point-and-click for standard logic that admins should be able to change",
+        "Code for complex logic, heavy data processing or custom integrations",
+        "Maintenance, testing and platform limits as the deciding factors"
+      ]
+    },
+    {
+      "text": "Why Salesforce? Which of its core values matters most to you, and why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason tied to the role, team or products",
+        "One value, named once, with a short example from your life or work",
+        "What you'd bring to the team"
+      ]
+    },
+    {
+      "text": "Which Salesforce product, such as Slack or Tableau, would you most like to work on, and what would you improve?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A product you've used or studied, and who its customers are",
+        "One specific problem and your idea for it",
+        "How you'd measure whether the change helped"
+      ]
+    }
+  ],
+  "tips": [
+    "Connect your stories to Salesforce's core values.",
+    "Prepare stories in a clear situation, action and result shape; Salesforce says to expect behavioural, competency-based and situational questions.",
+    "Read the job description line by line and match a past example to each main requirement.",
+    "Learn the basics on Trailhead, Salesforce's free learning site, so you can talk about its products in your own words.",
+    "For a presentation round, keep it short, tie it to the customer's problem and leave time for questions and objections.",
+    "Expect virtual interviews to be on camera, and plan for an on-site interview before any offer."
+  ],
+  "sources": [
+    {
+      "title": "Salesforce's core values (salesforce.com)",
+      "url": "https://www.salesforce.com/company/our-story/"
+    },
+    {
+      "title": "How we hire at Salesforce (salesforce.com)",
+      "url": "https://www.salesforce.com/company/careers/culture/how-we-hire/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

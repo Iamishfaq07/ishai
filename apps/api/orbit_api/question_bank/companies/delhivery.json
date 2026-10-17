@@ -1,0 +1,173 @@
+{
+  "slug": "delhivery",
+  "name": "Delhivery",
+  "aliases": ["delhivery logistics"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Delhivery is an Indian logistics company offering express parcel delivery, part and full truckload freight, warehousing and supply chain services to businesses. Candidates commonly report problem-solving and design rounds for technology roles, and case-style or operational questions for supply chain, operations and business roles, often about networks, hubs and on-time delivery.",
+  "rounds": [
+    "Recruiter screen or campus shortlisting",
+    "Online test or coding round for technology roles (often)",
+    "Technical rounds on problem-solving, data and your projects",
+    "System design for experienced engineers",
+    "Case or operations round for supply chain, analytics and business roles",
+    "Hiring manager and HR round"
+  ],
+  "looks_for": [
+    "Operational thinking: hubs, routes, capacity and turnaround time",
+    "Comfort with large, messy data from real-world operations",
+    "Ownership on the ground: fixing problems at a facility or on a route",
+    "Care for both the business shipping a parcel and the person receiving it",
+    "Safety and process discipline in warehouses and on the road"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you improved how something worked on the ground, not just on paper.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you saw first-hand that the reports missed",
+        "The change you made with the people doing the work",
+        "The result: time, errors or cost, with a number if possible"
+      ]
+    },
+    {
+      "text": "Describe a time you had to deal with an operational crisis, such as a sudden backlog or breakdown.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What happened and how big the impact was",
+        "How you set priorities and who you brought in",
+        "How you cleared it and what you changed to prevent a repeat"
+      ]
+    },
+    {
+      "text": "Tell me about a time you used data to convince people who were sceptical.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What they believed and why",
+        "The data you gathered and how you presented it simply",
+        "Whether they changed their minds, and what happened next"
+      ]
+    },
+    {
+      "text": "Tell me about a time you managed a team or vendor who wasn't meeting expectations.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The gap, stated with facts",
+        "The conversation you had and the support or deadline you set",
+        "The outcome, including if you had to escalate or replace them"
+      ]
+    },
+    {
+      "text": "How would you design a system that tracks a parcel from pickup to delivery and shows customers an accurate status?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Scan events at each step flowing into an event stream",
+        "Handling late, missing or out-of-order scans without confusing the customer",
+        "Serving status and an estimated delivery time at scale"
+      ]
+    },
+    {
+      "text": "Deliveries from one hub have been running late all week. How would you find the cause?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Locating the delay: inbound, sorting, line haul or last mile",
+        "Comparing with other hubs and with the same hub last month",
+        "Likely causes (volume, staffing, vehicles, a process change) and a quick test of each"
+      ]
+    },
+    {
+      "text": "How would you plan delivery routes for riders in a busy part of Mumbai each morning?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Inputs: addresses, time windows, parcel sizes, rider capacity",
+        "A practical approach: cluster by area, then order stops; exact solutions don't scale",
+        "Adjusting for traffic and failed attempts during the day"
+      ]
+    },
+    {
+      "text": "Festive season volumes are coming. How would you prepare a sorting centre for the peak?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Forecasting volume by day and planning staff, shifts and vehicles",
+        "Space, equipment checks and training temporary staff early",
+        "Daily tracking during the peak and a plan if volume exceeds the forecast"
+      ]
+    },
+    {
+      "text": "Many deliveries fail because the customer isn't home. What would you try to reduce failed attempts?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Measuring where and when failures happen most",
+        "Ideas: confirming slots, live tracking links, calling ahead, pickup points",
+        "Testing one idea in a few areas and measuring the cost against the gain"
+      ]
+    },
+    {
+      "text": "How would you predict a sensible delivery date to show a buyer at checkout?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Inputs: pickup and drop pin codes, route history, cut-off times, current load",
+        "A simple model first, then improving it with data",
+        "Balancing a promise that's attractive with one that's reliable"
+      ]
+    },
+    {
+      "text": "Explain the difference between express parcel delivery and part truckload freight, and how their operations differ.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Express parcel: many small shipments, often to homes, speed matters",
+        "Part truckload: larger business loads that share a truck between customers",
+        "How sorting, vehicles and pricing differ between the two"
+      ]
+    },
+    {
+      "text": "How would you decide where to place a new warehouse for a brand that sells across India?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Where the demand is, and the delivery speed the brand wants to offer",
+        "Transport costs, land and labour availability",
+        "Comparing a few options with rough numbers, and the trade-off you'd accept"
+      ]
+    },
+    {
+      "text": "Why logistics, and why Delhivery?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What interests you about moving goods at scale",
+        "Something specific about Delhivery's services or network",
+        "The kind of problem you'd like to own"
+      ]
+    },
+    {
+      "text": "Are you comfortable working at a hub or warehouse, including shifts, if the role needs it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer about shifts and location",
+        "Any time you've worked in an operational setting",
+        "Why being close to the work would help you"
+      ]
+    }
+  ],
+  "tips": [
+    "Learn the vocabulary: first mile, middle mile, last mile, hub, sort centre, line haul, RTO (return to origin), turnaround time.",
+    "In cases, follow the parcel from pickup to sorting, line haul and last mile, and find where the delay or cost sits.",
+    "Mention seasonality: festive sales and shopping events change volumes sharply.",
+    "For tech roles, show you understand messy real-world data: missed scans, wrong addresses, late updates."
+  ],
+  "sources": [],
+  "reviewed": "2026-10-18"
+}

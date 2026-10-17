@@ -1,0 +1,193 @@
+{
+  "slug": "tech-mahindra",
+  "name": "Tech Mahindra",
+  "aliases": ["techm", "tech m"],
+  "group": "it-services",
+  "market": "india-first",
+  "summary": "Tech Mahindra, part of the Mahindra Group, is known for its telecom and communications work alongside wider IT services. Its fresher hiring in India is commonly reported as an online assessment followed by technical and HR interviews; candidates often say the test has aptitude, English and technical sections, sometimes with a short essay, and that interviews centre on basics, projects and how clearly you communicate.",
+  "rounds": [
+    "Campus drive or registration on its careers portal",
+    "Online assessment: aptitude, English and technical sections, with a short essay in some drives",
+    "Technical interview on fundamentals, your projects and the language you name",
+    "HR interview on communication, flexibility and motivation",
+    "For experienced roles: technical rounds with the team, then a manager or client discussion"
+  ],
+  "looks_for": [
+    "Integrity",
+    "Quality",
+    "Care",
+    "Clear spoken and written English",
+    "Programming fundamentals and a project you can explain end to end",
+    "Networking and telecom basics for some roles",
+    "Readiness to learn and to take on support or shift work"
+  ],
+  "questions": [
+    {
+      "text": "Introduce yourself and tell me what you're looking for in your first job.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your degree, strongest skills and one project, briefly",
+        "What you want from a first job: the kind of work and what you hope to learn",
+        "Why this company fits that, in under two minutes"
+      ]
+    },
+    {
+      "text": "Tell me about a time you did the right thing when no one was checking.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The situation and the easier option you didn't take",
+        "Why you chose the honest route",
+        "What it cost you, and what came of it"
+      ]
+    },
+    {
+      "text": "Tell me about a piece of work you redid because it wasn't good enough.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was wrong with the first version and how you noticed",
+        "What you changed and how long it took",
+        "How the better version was received"
+      ]
+    },
+    {
+      "text": "Tell me about a time you helped a classmate or colleague who was struggling.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you noticed they needed help",
+        "What you did, without taking over their work",
+        "How things turned out for them and for the task"
+      ]
+    },
+    {
+      "text": "What's the biggest mistake you've made in a project, and what did you learn?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "A real mistake, owned in the first person",
+        "How you found out and what you did to fix it",
+        "The habit you've changed since"
+      ]
+    },
+    {
+      "text": "Explain the OSI model briefly, and say which layers a router and a switch work at.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The seven layers in order, with one example each (such as IP at network, TCP at transport)",
+        "A switch works mainly at the data link layer using MAC addresses",
+        "A router works at the network layer using IP addresses to move traffic between networks"
+      ]
+    },
+    {
+      "text": "In plain words, what is 5G, and what changes for a mobile operator's network?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Faster speeds, lower delay and many more connected devices than 4G",
+        "New uses it allows, such as connected factories or remote monitoring",
+        "What operators need: new radio equipment, more software-run networks, more data to manage"
+      ]
+    },
+    {
+      "text": "What is the difference between a compiler and an interpreter?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A compiler translates the whole program before it runs; an interpreter runs it line by line",
+        "Effects on speed, error reporting and portability",
+        "Examples, and how Java or Python mix both approaches"
+      ]
+    },
+    {
+      "text": "How would you explain an API to a customer who isn't technical?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A simple picture, such as a waiter taking orders between you and the kitchen",
+        "A real example the customer uses, such as a payment or map in an app",
+        "Why it matters to them: systems can share data without being rebuilt"
+      ]
+    },
+    {
+      "text": "After an app update, login fails for some users but not others. How would you narrow it down?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Finding what the failing users share: device, app version, region, account type",
+        "Checking logs and error messages for those users",
+        "Rolling back or hot-fixing, then confirming with affected users"
+      ]
+    },
+    {
+      "text": "For experienced candidates: walk me through a release you delivered, from requirement to production.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The requirement and who it was for",
+        "Your part in design, build, testing and deployment",
+        "One problem along the way and how the team handled it"
+      ]
+    },
+    {
+      "text": "Why Tech Mahindra?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific: its telecom and communications work, another industry it serves, or recent news",
+        "How that matches your interests or skills",
+        "What you hope to learn there in the first few years"
+      ]
+    },
+    {
+      "text": "Are you open to working in any technology or domain at the start, including support roles?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest yes, with any preference stated politely",
+        "Why early support or testing work can teach you a lot",
+        "How you'd keep building the skills you most want"
+      ]
+    },
+    {
+      "text": "Do you have any questions for us?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two thoughtful questions about training, the first project or the team",
+        "Nothing already answered on the careers site",
+        "A brief thank-you"
+      ]
+    }
+  ],
+  "tips": [
+    "Practise a short essay with a clear opening, two points and a conclusion; some drives include written English.",
+    "For network or telecom-related roles, revise OSI layers, IP addressing and basic mobile-network terms.",
+    "Speak slowly and clearly: candidates say communication is judged in every round, not only in the test.",
+    "Treat any request for a fee, or an offer sent over a messaging app, as a warning sign; confirm offers through the official careers portal.",
+    "Tech Mahindra describes its values as Integrity, Quality and Care; prepare a short story for each."
+  ],
+  "sources": [
+    {
+      "title": "Tech Mahindra brand, purpose and values (techmahindra.com)",
+      "url": "https://www.techmahindra.com/about-us/our-brand/"
+    }
+  ],
+  "abroad": {
+    "rounds": [
+      "Online application and recruiter screen",
+      "Technical interviews with the team",
+      "Manager or client interview (for many roles)",
+      "HR discussion"
+    ],
+    "tips": [
+      "For network or telecom-related roles, revise OSI layers, IP addressing and basic mobile-network terms.",
+      "Tech Mahindra describes its values as Integrity, Quality and Care; prepare a short story for each.",
+      "Be ready to explain a recent project end to end: the requirement, your part and one problem you solved."
+    ]
+  },
+  "reviewed": "2026-10-18"
+}

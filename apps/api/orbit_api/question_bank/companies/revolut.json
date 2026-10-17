@@ -1,0 +1,175 @@
+{
+  "slug": "revolut",
+  "name": "Revolut",
+  "aliases": [],
+  "group": "finance",
+  "market": "global",
+  "summary": "Revolut's interviews are commonly described as fast-moving and demanding, with a strong focus on ownership, structured problem-solving and measurable results. Candidates usually report an early recruiter call and, for many roles, an online test or task, then interviews on their skills and a problem-solving case. Engineering candidates typically discuss coding and system design, and the exact stages vary by team.",
+  "rounds": [
+    "Recruiter or introductory call on your background and motivation",
+    "Online test or take-home task for many roles",
+    "Skills interview with the team on your experience and technical or functional depth",
+    "Problem-solving or case interview, often with numbers and a recommendation",
+    "Final interview with a senior team member for some roles"
+  ],
+  "looks_for": [
+    "Ownership: driving work to a result without waiting to be told",
+    "Speed with quality: moving quickly without cutting corners on risk or customers",
+    "Structured problem-solving and comfort with numbers",
+    "High standards and a habit of pushing for a better result",
+    "Building products customers enjoy using",
+    "For risk, fraud and compliance roles: sound judgement on financial crime and regulation"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about the achievement you're proudest of. What exactly did you do, and how did you measure it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Your own part, separated clearly from the team's",
+        "The metric that moved and by how much",
+        "Why it mattered to the customer or the business"
+      ]
+    },
+    {
+      "text": "Tell me about a time you delivered something much faster than people expected.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The usual timeline and why it was too slow",
+        "What you cut, automated or did in parallel",
+        "What you did to keep quality and risk under control"
+      ]
+    },
+    {
+      "text": "Tell me about a time you refused to settle for 'good enough' and pushed for a better result.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What 'good enough' looked like and why it fell short",
+        "How you raised the bar and brought others with you",
+        "The better result, with a number"
+      ]
+    },
+    {
+      "text": "Describe a time you dug into data to find the root cause of a problem everyone else had explained away.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The accepted explanation and why you doubted it",
+        "The data you went through yourself",
+        "The root cause, the fix and the effect"
+      ]
+    },
+    {
+      "text": "Tell me about a time you failed at something important. What did you change afterwards?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "A real failure, owned in the first person",
+        "What you'd do differently, specifically",
+        "Evidence that the change has worked since"
+      ]
+    },
+    {
+      "text": "How would you design a system that stops card fraud in real time without blocking too many good customers?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signals: amount, merchant, device, location and the customer's usual behaviour",
+        "Scoring within the payment's time limit, with rules and a model",
+        "Options beyond decline, such as an in-app confirmation, and learning from outcomes"
+      ]
+    },
+    {
+      "text": "A customer says money left their account for a payment they didn't make. Walk me through how you'd handle it.",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Protecting the account first: freezing the card and checking the customer's identity",
+        "Working out what happened: card misuse, a scam where they were tricked, or a merchant error",
+        "Explaining the next steps and timelines honestly, and recording the case"
+      ]
+    },
+    {
+      "text": "How would you make sure a money transfer is never processed twice, even if the app retries the request?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "An idempotency key sent with the request and stored with the result",
+        "An atomic check, such as a unique constraint, so two requests can't both win",
+        "Timeouts, retries from other systems and a reconciliation to catch anything missed"
+      ]
+    },
+    {
+      "text": "How would you estimate how many people in Bengaluru might use a multi-currency travel card in a year?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Starting from the adult population and the share who travel abroad",
+        "Assumptions for how many would use a card for it, and how often",
+        "A sanity check and the assumption that matters most"
+      ]
+    },
+    {
+      "text": "Which metrics would you track for a new savings feature in a banking app, and what would make you change course?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "One main metric, such as active savers or money saved",
+        "Guardrails: support contacts, complaints and customers leaving",
+        "The result, decided in advance, that would make you change or stop it"
+      ]
+    },
+    {
+      "text": "What is transaction monitoring, and how would you cut false alerts without missing true cases of money laundering?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Rules and models that flag unusual patterns for review",
+        "Tuning thresholds by customer type and risk, using past alert outcomes",
+        "Testing any change before release and documenting it for regulators"
+      ]
+    },
+    {
+      "text": "Why Revolut, and which part of the product would you most like to work on?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific product or team, not just the brand",
+        "What you'd bring to it from your experience",
+        "Why a fast-growing financial company suits you"
+      ]
+    },
+    {
+      "text": "Which Revolut feature would you improve, and how would you know your change worked?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A specific feature and a real customer problem with it",
+        "The change you'd make and what you'd leave out",
+        "The metric that would show it helped"
+      ]
+    },
+    {
+      "text": "This role moves fast and asks a lot. Why does that kind of environment suit you?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An example of you doing well under pace and pressure",
+        "How you keep quality up when moving quickly",
+        "What you want to learn from it"
+      ]
+    }
+  ],
+  "tips": [
+    "Bring numbers to every story: what changed, by how much and how quickly.",
+    "Practise a structured case answer out loud: clarify the goal, break the problem down, estimate, then recommend.",
+    "Use the app or read about its features, and come with one specific, realistic idea for improving a part of it.",
+    "For engineering roles, practise explaining payments trade-offs: consistency, retries, idempotency and audit trails.",
+    "Expect pushback on your answers; defend your reasoning calmly, and change your view if you're given a better fact.",
+    "The stages vary by team, so ask the recruiter what each interview will cover and prepare for that."
+  ],
+  "sources": [],
+  "reviewed": "2026-10-18"
+}

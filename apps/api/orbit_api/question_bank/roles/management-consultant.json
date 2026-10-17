@@ -1,0 +1,206 @@
+{
+  "slug": "management-consultant",
+  "name": "Management consultant",
+  "aliases": ["consultant", "management consulting", "strategy consultant", "strategy consulting", "business consultant", "associate consultant", "consulting analyst", "case interview"],
+  "group": "business",
+  "summary": "Management consulting interviews are known for the case interview: you're given a business problem, such as falling profits or whether to enter a new market, and talk through how you'd solve it, with some maths along the way. Firms commonly pair cases with questions on your past experience and leadership, and some add an online problem-solving test, such as McKinsey's Solve, or a written case.",
+  "rounds": [
+    "CV and cover letter screen, often with an online problem-solving test at some firms",
+    "First-round interviews: usually one or two cases plus questions on your experience",
+    "Final-round interviews with senior consultants or partners: harder cases and deeper questions on your experience",
+    "For some firms or offices, a written case or a group exercise"
+  ],
+  "looks_for": [
+    "Structuring a messy problem into clear parts",
+    "Quick, accurate mental maths and sense-checking numbers",
+    "Hypothesis-driven thinking: saying what you think and testing it",
+    "A clear recommendation and its 'so what' for the client",
+    "Leadership, teamwork and impact in your past experience",
+    "Calm, clear communication you'd trust in front of a client"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you led a team through a difficult situation.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The situation and why it was hard",
+        "What you did yourself to move the team forward",
+        "The result and what the team said or did afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a time you persuaded someone more senior to change their mind.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Their view and why they held it",
+        "How you built your case: data, timing, allies",
+        "What changed, and how you kept the relationship strong"
+      ]
+    },
+    {
+      "text": "What's the achievement you're most proud of, and what exactly was your part in it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why it was hard and why it mattered",
+        "Your own actions, separated from the team's",
+        "A measurable result"
+      ]
+    },
+    {
+      "text": "Tell me about a time you got something wrong under pressure.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "A real mistake, owned in the first person",
+        "How you noticed and what you did to fix it",
+        "What you now do differently"
+      ]
+    },
+    {
+      "text": "A regional coffee chain's profits have fallen for two years while its sales held steady. How would you find out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A clear structure: revenue versus costs, then digging into costs since sales held",
+        "Questions about rent, staff, ingredient prices, product mix and new stores",
+        "A hypothesis, how you'd test it and a recommendation"
+      ]
+    },
+    {
+      "text": "Estimate how many cups of tea are sold in Bengaluru each day.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "An approach: population times tea drinkers times cups, or outlets times cups per outlet",
+        "Rounded numbers, with each assumption said out loud",
+        "A sense-check of the answer against something you know"
+      ]
+    },
+    {
+      "text": "A two-wheeler maker is thinking of launching an electric scooter. What would you want to know before advising them?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The market: demand, growth, customers and competitors",
+        "The client's strengths: brand, dealers, technology, costs",
+        "The economics and risks: investment, margins, battery supply, regulation"
+      ]
+    },
+    {
+      "text": "A hospital wants to cut patient waiting times without hiring more doctors. How would you approach it?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Mapping the patient journey and measuring where the waits happen",
+        "Fixes such as scheduling, triage, moving tasks to other staff, faster test results",
+        "How you'd pilot changes and measure them, keeping quality of care safe"
+      ]
+    },
+    {
+      "text": "A product costs 40 to make and sells for 50. If costs rise by 10%, what price keeps the same percentage margin?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Working out today's margin first: 10 on 50, or 20%",
+        "The new cost of 44, and the price where 44 is 80% of it: 55",
+        "Saying the answer clearly, then what might stop the client raising prices"
+      ]
+    },
+    {
+      "text": "A client's sales are up 20% this year, but profit is down. What are your first three questions?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Have costs grown faster than sales, and which ones",
+        "Has the mix shifted to lower-margin products, customers or channels",
+        "Discounts, one-off costs or accounting changes"
+      ]
+    },
+    {
+      "text": "How would you size the market for online tutoring for school students in this country?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Choosing a route: students, the share who'd pay, and spend per student per year",
+        "Splitting by grade or city type where it changes the numbers",
+        "A range rather than one figure, and the assumption that matters most"
+      ]
+    },
+    {
+      "text": "What makes a good structure for a case, and when does a standard framework get in the way?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Parts that don't overlap and together cover the problem",
+        "Built for this problem, not recited from memory",
+        "Prioritising the branch most likely to explain the answer"
+      ]
+    },
+    {
+      "text": "You've found that a retailer's losses come mostly from two store formats. Give the CEO your recommendation in under a minute.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The answer first, then two or three reasons",
+        "The numbers that back it up",
+        "The risks and the next steps"
+      ]
+    },
+    {
+      "text": "A client manager disagrees with your findings in front of their boss. What would you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Staying calm and asking what they see differently",
+        "Going back to the data together, and admitting if they have a point",
+        "Following up afterwards so they don't feel ambushed"
+      ]
+    },
+    {
+      "text": "Walk me through your CV.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "A short, ordered story, not every line",
+        "Two or three moments that show leadership, problem-solving or impact",
+        "How it leads to consulting now"
+      ]
+    },
+    {
+      "text": "Why consulting, and why our firm rather than another?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What you want from the work: variety, problem-solving, learning fast",
+        "Something specific about the firm: its practices, people you've met, the work it publishes",
+        "Why you'd do well in the job, not just why you want it"
+      ]
+    },
+    {
+      "text": "Where do you see yourself in five years, and how does consulting fit into that?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "An honest direction, even if it isn't fixed",
+        "What you'd learn in consulting that you need for it",
+        "Showing you've thought about the job's demands"
+      ]
+    }
+  ],
+  "tips": [
+    "Practise cases out loud with a partner; reading cases isn't the same as solving one under time pressure.",
+    "Build a structure for each case rather than reciting a memorised framework.",
+    "Do mental maths every day: percentages, growth rates, large multiplications. Round sensibly and say your assumptions.",
+    "When you summarise, lead with the answer, then give the reasons.",
+    "Prepare three or four stories (leadership, persuasion, failure, teamwork) with your exact part and results; firms commonly probe them in depth.",
+    "Read each firm's own careers pages on how it interviews; some publish example cases to practise with."
+  ],
+  "mock": {
+    "interview_type": "mixed",
+    "persona": "executive"
+  },
+  "reviewed": "2026-10-18"
+}

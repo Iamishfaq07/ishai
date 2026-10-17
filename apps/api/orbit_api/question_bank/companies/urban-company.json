@@ -1,0 +1,173 @@
+{
+  "slug": "urban-company",
+  "name": "Urban Company",
+  "aliases": ["urbanclap", "urban clap"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Urban Company is a home-services platform that connects customers with trained service professionals for beauty, cleaning, repairs and more, and it also sells some of its own home products. Candidates commonly report coding and design rounds for engineers, case-style rounds for business and operations roles, and questions on how a two-sided marketplace keeps both customers and service professionals happy.",
+  "rounds": [
+    "Recruiter screen or campus shortlisting",
+    "Coding or problem-solving round for engineering roles",
+    "System design for experienced engineers (often)",
+    "Case or problem-solving round for business, operations and product roles, often about a city or a service category",
+    "Hiring manager round",
+    "Leadership or culture conversation for some roles"
+  ],
+  "looks_for": [
+    "Thinking about both sides of the marketplace: customers and service professionals",
+    "Ownership and a bias to act, even with incomplete information",
+    "Structured problem-solving for operations and city-level questions",
+    "Quality and trust for services delivered inside people's homes",
+    "Comfort with numbers: unit economics, supply and demand"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you owned a problem well beyond your job description.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and why no one else was handling it",
+        "What you did yourself and who you pulled in",
+        "The result, and whether it stayed fixed"
+      ]
+    },
+    {
+      "text": "Describe a time you had to make a call quickly with incomplete information. How did it turn out?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why you couldn't wait for more data",
+        "What you knew, what you assumed, and the risk you accepted",
+        "The outcome and what you'd do differently"
+      ]
+    },
+    {
+      "text": "Tell me about a time you balanced the needs of two groups who wanted different things.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What each group needed and why both mattered",
+        "The option you chose and how you explained it",
+        "How each side felt about it afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a process you set up that failed in practice. What did you change?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What you designed and what you expected",
+        "How it broke when real people used it",
+        "The changes you made and what you learned about designing processes"
+      ]
+    },
+    {
+      "text": "How would you design the system that assigns a booking to the right service professional?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Inputs: skills, location, travel time, availability, ratings",
+        "Fair distribution of work, so professionals can earn steadily",
+        "Fallbacks when no one accepts, and keeping the customer informed"
+      ]
+    },
+    {
+      "text": "Customers in one city are cancelling more bookings than usual. How would you find out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Who cancels and when: before assignment, after, or at the door",
+        "Splitting by service category, area and professional",
+        "Likely causes (late arrivals, price, supply gaps) and how you'd confirm one"
+      ]
+    },
+    {
+      "text": "Waiting times for AC repair spike every summer. How would you plan supply ahead of the season?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Forecasting demand by week and area from past seasons",
+        "Onboarding and training professionals early enough",
+        "Levers during the peak: slots, pricing, priorities, and checking quality holds up"
+      ]
+    },
+    {
+      "text": "How would you measure and improve service quality when the work happens inside customers' homes?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signals: ratings, complaints, repeat bookings, re-work",
+        "Training, standard kits and checklists for professionals",
+        "Acting on weak signals early without being unfair to professionals"
+      ]
+    },
+    {
+      "text": "How would you estimate the monthly demand for professional home cleaning in Pune?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Households, the share that would pay for cleaning, and how often",
+        "Different segments: deep cleans, kitchens, bathrooms",
+        "Rounded numbers, assumptions said out loud, and a sanity check"
+      ]
+    },
+    {
+      "text": "Explain how you'd make a booking API safe to retry if the network drops halfway through a request.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Idempotency keys so a retry doesn't create a second booking",
+        "Clear states for a booking: pending, confirmed, failed",
+        "What the app shows the user while the outcome is unknown"
+      ]
+    },
+    {
+      "text": "What would you look at to decide whether to launch a new service category in a city?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Demand signals: searches, requests, similar categories",
+        "Supply: can you find and train enough skilled professionals",
+        "Unit economics and quality risk, and a small pilot before scaling"
+      ]
+    },
+    {
+      "text": "Why Urban Company? What do you think makes a home-services platform hard to build?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason tied to the product or its two-sided model",
+        "One real difficulty: quality, trust, supply, or scheduling",
+        "What you'd want to work on"
+      ]
+    },
+    {
+      "text": "Tell me about a service you booked through Urban Company or a similar app. What would you improve?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A specific booking and how it went",
+        "One improvement for the customer or the professional",
+        "How you'd know the change worked"
+      ]
+    },
+    {
+      "text": "Some operations roles involve a lot of time on the ground with service professionals. How do you feel about that kind of work?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer about field work and its pace",
+        "Any experience working closely with frontline teams",
+        "What you'd learn from being on the ground"
+      ]
+    }
+  ],
+  "tips": [
+    "Book a service on the app if you can, and notice each step: choosing a slot, the professional's arrival, payment and rating.",
+    "In marketplace questions, cover both sides: what the customer experiences and what the service professional needs to earn and do well.",
+    "For city or operations cases, structure the answer by demand, supply, quality and cost before suggesting fixes.",
+    "Bring numbers to estimates, and say your assumptions out loud."
+  ],
+  "sources": [],
+  "reviewed": "2026-10-18"
+}

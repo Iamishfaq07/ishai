@@ -1,0 +1,189 @@
+{
+  "slug": "razorpay",
+  "name": "Razorpay",
+  "aliases": [
+    "razorpay india",
+    "razorpayx"
+  ],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Razorpay's engineering interviews usually include a coding or machine coding round and, for experienced roles, system design, where payments correctness (idempotency, retries, reconciliation) is a common theme. Razorpay says its interview process is closely tied to its six core values, and its careers page describes rounds on role fit, ways of working ('Synergy') and using AI in your work ('AI Edge').",
+  "rounds": [
+    "Recruiter screen",
+    "Coding or machine coding round",
+    "System design (for experienced roles)",
+    "Hiring manager and culture round"
+  ],
+  "looks_for": [
+    "Ownership",
+    "Customer (merchant) focus",
+    "Transparency",
+    "Building for scale and reliability",
+    "Customer First",
+    "Autonomy & ownership",
+    "Challenging the status quo",
+    "Agility with Integrity",
+    "Razorpay Grows with Razors",
+    "Using AI well in everyday work, which its careers page calls the 'AI Edge'"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a production issue you owned. What did you change afterwards?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What broke, who it affected and how you found out",
+        "Your part in fixing it, step by step",
+        "What you changed afterwards: alerts, tests or process, so it didn't recur"
+      ]
+    },
+    {
+      "text": "How would you design a payment retry system that never charges a customer twice?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "An idempotency key per payment attempt, stored with its result",
+        "Checking the payment's status with the bank before retrying a timed-out call",
+        "Retry limits and backoff, and reconciliation to catch and refund any duplicate"
+      ]
+    },
+    {
+      "text": "Why Razorpay?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific: the businesses it serves or a product you'd work on",
+        "How your experience fits payments or fintech",
+        "Which value you relate to, with a short example"
+      ]
+    },
+    {
+      "text": "Tell me about a time you challenged the way your team had always done something.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The old way and what it cost",
+        "How you made the case, with data, and handled pushback",
+        "What changed and the result"
+      ]
+    },
+    {
+      "text": "Describe a time you shared bad news early with a customer or your team. Why then?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The bad news and why it was tempting to wait",
+        "How and when you shared it, and with what plan",
+        "How people responded, and what being open made possible"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to move fast without cutting a corner that mattered.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The deadline and the corner that was tempting to cut",
+        "How you kept speed while protecting what mattered, such as data or money",
+        "The outcome"
+      ]
+    },
+    {
+      "text": "What is an idempotency key, and how would you use one in a payments API?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The idea: the same request sent twice gives the same result once",
+        "Client sends a key; server stores the key with the response and returns it on a repeat",
+        "Two copies arriving at once, how long to keep keys, and which requests need one"
+      ]
+    },
+    {
+      "text": "How would you design webhooks that tell merchants about payment events reliably?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Delivery at least once, with retries and backoff when the merchant's server fails",
+        "Signed payloads and event IDs so merchants can verify and ignore duplicates",
+        "Monitoring failures, and a way for merchants to see and replay missed events"
+      ]
+    },
+    {
+      "text": "How would you build daily reconciliation between your payment records and a bank's settlement file?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Matching records by transaction ID and amount",
+        "Sorting mismatches: missing on one side, wrong amount, arriving a day late",
+        "Alerts, a review queue for people to resolve the rest, and an audit trail"
+      ]
+    },
+    {
+      "text": "UPI success rates for one bank drop sharply at noon. What do you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Confirming it on dashboards and isolating it to the bank, not your own systems",
+        "Reducing the impact: informing merchants, a status page, other payment options",
+        "Following up with the partner afterwards and recording what happened"
+      ]
+    },
+    {
+      "text": "Why should money be stored as whole numbers in the smallest unit, such as paise, rather than as floating-point numbers?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Floating-point numbers can't hold many decimal amounts exactly, so totals drift",
+        "Integers in paise, or a decimal type, keep sums exact",
+        "Where rounding still happens (fees, taxes, currency conversion) and how to handle it"
+      ]
+    },
+    {
+      "text": "Walk me through how you use AI tools in your everyday work, and how you check what they produce.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "Two or three concrete tasks where it saves you time",
+        "How you check its output: tests, reviews, reading the code yourself",
+        "Where you choose not to use it, such as with secrets or customer data"
+      ]
+    },
+    {
+      "text": "A small online seller gave up halfway through setting up payments. How would you improve onboarding for sellers like them?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Finding where sellers drop off and why, from data and calls",
+        "Simplifying steps: documents, plain language, saving progress",
+        "Measuring time to first payment received"
+      ]
+    },
+    {
+      "text": "Which Razorpay product would you most like to work on, and what do you know about the businesses that use it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific product, such as payments, payouts or business banking",
+        "Who uses it and what problem it solves for them",
+        "What you'd want to improve or learn there"
+      ]
+    }
+  ],
+  "tips": [
+    "Payments care about correctness: talk about idempotency, retries and failure modes.",
+    "Razorpay says its interviews check for its six core values; prepare a short story for each, especially Customer First and Transparency.",
+    "Its careers page lists 'AI Edge' rounds on using AI in your work; bring a concrete example, including how you checked the output.",
+    "In design rounds, walk through failure cases out loud: timeouts, duplicate requests, a bank that replies late.",
+    "Know how a UPI or card payment flows between customer, merchant, payment gateway and bank before you go in."
+  ],
+  "sources": [
+    {
+      "title": "Razorpay's core values in interviews (Razorpay blog)",
+      "url": "https://razorpay.com/blog/beyond-resumes-setting-a-teams-through-values-driven-interviews/"
+    },
+    {
+      "title": "Razorpay Careers: How We Hire",
+      "url": "https://razorpay.com/jobs/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

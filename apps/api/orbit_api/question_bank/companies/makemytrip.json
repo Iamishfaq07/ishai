@@ -1,0 +1,174 @@
+{
+  "slug": "makemytrip",
+  "name": "MakeMyTrip",
+  "aliases": ["mmt", "goibibo", "make my trip", "go-mmt"],
+  "group": "india-product",
+  "market": "india",
+  "summary": "MakeMyTrip is an Indian online travel company whose brands include MakeMyTrip and Goibibo, selling flights, hotels, holidays, trains and buses. Candidates commonly report coding and system design rounds for engineering, and case or functional rounds for product, analytics and business roles that test how well you understand travellers, hotel and airline partners, and pricing.",
+  "rounds": [
+    "Recruiter or HR screen, or campus shortlisting for graduate roles",
+    "Online test or coding round for engineering roles (often)",
+    "One or two technical rounds on problem-solving, data structures and your projects",
+    "System design for experienced engineers",
+    "Case or functional round for product, analytics and business roles",
+    "Hiring manager and HR round"
+  ],
+  "looks_for": [
+    "Understanding travellers: price, trust, choice and convenience",
+    "Designing for spiky demand around holidays, long weekends and sales",
+    "Thinking about partners (hotels, airlines) as well as customers",
+    "Ownership and a drive for results",
+    "Curiosity and continuous improvement",
+    "Decisions backed by data"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you turned an unhappy customer or user into a satisfied one.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What went wrong for them and how they felt",
+        "What you did, beyond the standard response",
+        "How it ended, and what you changed so others didn't face it"
+      ]
+    },
+    {
+      "text": "Describe a time you improved a product or process step by step rather than all at once.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and why a big change was risky",
+        "The small changes you made and how you measured each",
+        "Where it ended up overall"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with a partner or another team whose goals were different from yours.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What each side wanted and where it clashed",
+        "How you found common ground",
+        "The result for both sides"
+      ]
+    },
+    {
+      "text": "Tell me about a deadline you nearly missed. What did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why it slipped, owned honestly",
+        "How you re-planned and who you told",
+        "What you delivered, and what you do differently now"
+      ]
+    },
+    {
+      "text": "How would you design flight search that pulls fares from many airlines and returns results quickly?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Calling suppliers in parallel with timeouts, and showing partial results",
+        "Caching fares briefly and re-checking the price before booking",
+        "Ranking results and coping when a supplier is slow or down"
+      ]
+    },
+    {
+      "text": "Two users try to book the last room in a hotel at the same moment. How would you stop it being sold twice?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Holding inventory for a short time during payment, with expiry",
+        "Atomic updates or locks on the inventory count",
+        "Keeping in sync with the hotel's own system, and what to do if it still goes wrong"
+      ]
+    },
+    {
+      "text": "A fare shown on the search page changes by the time the user reaches payment. How would you reduce this and handle it when it happens?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Why it happens: cached fares, seats selling out, supplier price changes",
+        "Fresher checks at key steps without slowing search too much",
+        "Telling the user clearly and offering choices, not a silent change"
+      ]
+    },
+    {
+      "text": "Hotel bookings in Goa fell sharply last week compared with the same week last year. How would you investigate?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Checking data and calendar effects first: holidays, events, weather",
+        "Demand side (searches, conversion) versus supply side (hotels listed, prices)",
+        "Splitting by app and web, channel and type of traveller, then the likely cause"
+      ]
+    },
+    {
+      "text": "How would you decide which hotels to show first for a search in Jaipur?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signals: relevance to the search, price, reviews, past conversion, location",
+        "Personalisation, and fairness to partners",
+        "Testing a new ranking with an experiment and the metric that decides it"
+      ]
+    },
+    {
+      "text": "How would you estimate the number of hotel room-nights booked in Goa during December?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A clear route: tourists, length of stay and rooms per group",
+        "Separating domestic and international visitors, or supply-side checks on rooms available",
+        "Rounded numbers, said out loud, with a sanity check"
+      ]
+    },
+    {
+      "text": "How would you design the refund journey for cancelled flights so customers stay informed at every step?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The steps: cancellation, airline confirmation, refund processing, money back",
+        "Status updates the customer can see, with realistic timelines",
+        "Handling delays from the airline or bank, and when to involve support"
+      ]
+    },
+    {
+      "text": "Why MakeMyTrip? Tell me about a trip you booked online and what you'd improve in that experience.",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific booking and the moment it was easy or frustrating",
+        "One improvement, and who it would help",
+        "Why travel is a business you want to work in"
+      ]
+    },
+    {
+      "text": "Which would you rather work on, flights, hotels or holidays, and why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What makes that business different: suppliers, margins, customer needs",
+        "A problem in it you'd like to solve",
+        "Openness to the other areas too"
+      ]
+    },
+    {
+      "text": "Where do you see yourself in five years, and how does this role help you get there?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A realistic direction, not a title",
+        "Skills this role builds towards it",
+        "Interest in growing with the company"
+      ]
+    }
+  ],
+  "tips": [
+    "Search for a flight and a hotel on MakeMyTrip and Goibibo, go up to the payment page, and note where a traveller might hesitate.",
+    "Travel demand is seasonal: bring festivals, long weekends and holiday seasons into case and design answers.",
+    "In design questions, remember third-party suppliers: airline and hotel systems can be slow, fail or change prices.",
+    "For analytics roles, practise breaking a drop down by city, device, channel, and supply as well as demand."
+  ],
+  "sources": [],
+  "reviewed": "2026-10-18"
+}

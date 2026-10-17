@@ -1,0 +1,179 @@
+{
+  "slug": "airtel",
+  "name": "Airtel",
+  "aliases": ["bharti airtel", "airtel india"],
+  "group": "industry",
+  "market": "india",
+  "summary": "Airtel (Bharti Airtel) provides mobile, broadband, DTH and enterprise connectivity services in India, and hires for sales and distribution, network, technology, marketing and customer roles, plus graduates from campuses. Candidates commonly report functional or technical interviews alongside behavioural questions, and Airtel publishes three core values it calls AIR: Alive, Inclusive and Respectful.",
+  "rounds": [
+    "Online application or campus shortlisting",
+    "Online assessment or aptitude test for some graduate and entry-level roles",
+    "Functional or technical interview with the hiring team",
+    "Case discussion or group exercise for some campus programmes",
+    "Hiring manager or senior leader interview",
+    "HR round"
+  ],
+  "looks_for": [
+    "Alive: energy, a can-do attitude, and finding a way when something seems impossible",
+    "Inclusive: championing diversity and adapting to the needs of very different communities",
+    "Respectful: humility, openness and honesty",
+    "Focus on the customer in sales, service and network work",
+    "Commercial sense about distribution, retail and market share in a territory",
+    "Analytical thinking with data on usage, churn and network quality"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time someone said something couldn't be done and you found a way.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was said to be impossible, and why",
+        "The approach you found and the risk you took",
+        "The result, with a number if possible"
+      ]
+    },
+    {
+      "text": "Describe a time you worked with people very different from you to get a result.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How they differed: background, language, function or seniority",
+        "What you adjusted in how you worked or communicated",
+        "What you achieved together"
+      ]
+    },
+    {
+      "text": "Tell me about a time you admitted a mistake openly. What happened next?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The mistake and why you chose to raise it",
+        "Who you told and how you fixed it",
+        "What it did for trust, and what you learned"
+      ]
+    },
+    {
+      "text": "Tell me about a time you went out of your way for a customer.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who the customer was and what they needed",
+        "What you did beyond the usual",
+        "The outcome for the customer and for the business"
+      ]
+    },
+    {
+      "text": "Postpaid customers in one circle are leaving faster than usual. How would you find out why and win them back?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Who is leaving: segment, tenure, plan, area",
+        "Likely reasons: network quality, price, billing issues, competitor offers",
+        "Retention actions to test, and how you'd measure whether they worked"
+      ]
+    },
+    {
+      "text": "How would you grow broadband connections in a city where a competitor is strong?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Where to focus: areas with fibre coverage, new buildings, unhappy customers",
+        "The offer: speed, bundles, installation time, service",
+        "Channels and the metrics to track: connections, installs, early churn"
+      ]
+    },
+    {
+      "text": "You manage distributors and retailers in a territory, and SIM sales are falling. What would you do in your first month?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Visiting the market and talking to retailers before deciding",
+        "Checking stock, schemes, competition and retailer coverage",
+        "A short plan with weekly targets, and how you'd follow it up"
+      ]
+    },
+    {
+      "text": "Explain what a mobile tower site needs to work, and what commonly causes outages.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Radio equipment, antennas, power with backup, and a transmission link",
+        "Common causes: power failure, fibre cuts, hardware faults, weather",
+        "How monitoring and quick field response reduce downtime"
+      ]
+    },
+    {
+      "text": "How would you build a model that flags customers likely to leave, and what would you do with that list?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Useful signals: usage drop, complaints, network issues, plan changes",
+        "A simple model first, checked on past data",
+        "Turning scores into actions, and testing that the actions reduce churn"
+      ]
+    },
+    {
+      "text": "How would you estimate the number of smartphone users in Lucknow?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Population, then the share by age group who use a phone",
+        "The share of those with a smartphone",
+        "Rounded numbers, stated assumptions and a sanity check"
+      ]
+    },
+    {
+      "text": "An enterprise client's leased line keeps dropping. How would you manage the issue and the relationship?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Acknowledging the impact and naming one point of contact",
+        "Working with the network team on the root cause, not just restoring service",
+        "Regular updates and a review once it's fixed"
+      ]
+    },
+    {
+      "text": "Explain ARPU and churn, and why a telecom company watches them closely.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "ARPU: average revenue per user over a period",
+        "Churn: the share of customers who leave",
+        "How the two together drive revenue growth, with a simple example"
+      ]
+    },
+    {
+      "text": "Why Airtel? Which of its values, Alive, Inclusive or Respectful, do you relate to most?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason tied to Airtel's services or the role",
+        "One value with a short, real example",
+        "What you want to learn in your first years"
+      ]
+    },
+    {
+      "text": "Are you comfortable starting in a field sales or circle role, possibly outside your home city?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer about moving and field work",
+        "Why time in the market would help you",
+        "Any past experience in sales or on the ground"
+      ]
+    }
+  ],
+  "tips": [
+    "Know the telecom metrics: ARPU, churn, subscriber growth, network availability and customer satisfaction.",
+    "For sales roles, understand distribution: distributors, retailers, activations and recharges.",
+    "Prepare one story for each AIR value; Alive suits stories of finding a way around an obstacle.",
+    "Use Airtel's products (prepaid, postpaid, broadband, DTH, Airtel Business) as examples so your case answers stay concrete."
+  ],
+  "sources": [
+    {
+      "title": "Our Core Values (Airtel)",
+      "url": "https://www.airtel.in/sustainability-file/our-core-values"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

@@ -1,0 +1,178 @@
+{
+  "slug": "bain",
+  "name": "Bain & Company",
+  "aliases": ["bain", "bain and company", "bain capability network"],
+  "group": "consulting",
+  "market": "global",
+  "summary": "Bain's consulting interviews usually start with a digital assessment and move to case interviews, which Bain says look at how you think and structure a problem as it unfolds rather than at a single right answer, alongside questions on your experience and why Bain. For other roles, Bain's careers site says interviews vary and may include a coding challenge, a portfolio walkthrough or a written assignment.",
+  "rounds": [
+    "Application review, sometimes with a recruiter call",
+    "Digital assessment for many consulting roles: problem solving, communication and analytical skills",
+    "First round: case interviews plus questions on your experience",
+    "Final round: more case and behavioural interviews, often with senior team members",
+    "For non-consulting roles: a coding challenge, portfolio walkthrough or written assignment instead of a case (varies)"
+  ],
+  "looks_for": [
+    "Passion & Commitment",
+    "Honesty & Openness",
+    "Practical",
+    "One Team",
+    "True North: doing the right thing by clients, people and communities",
+    "Curiosity and a love of solving problems",
+    "Focus on results for clients, not just analysis"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself and walk me through your CV.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "A short path through your studies and work, with the reason for each step",
+        "One or two results you're proud of",
+        "What brings you to Bain now"
+      ]
+    },
+    {
+      "text": "Tell me about a time you were open about a mistake or problem when it would have been easier to stay quiet.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What happened and why staying quiet was tempting",
+        "Who you told, how quickly, and what you proposed to fix it",
+        "How it turned out and what it did for trust"
+      ]
+    },
+    {
+      "text": "Tell me about a time you helped a teammate succeed, even though it wasn't your job.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What they were struggling with and why you stepped in",
+        "What you did and what it cost you in time",
+        "The result for them and the team"
+      ]
+    },
+    {
+      "text": "Tell me about a time you chose a practical solution over a perfect one. Was it the right call?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The perfect option and why it wasn't realistic",
+        "What you chose and how you made sure it was good enough",
+        "The result, and what you'd decide now"
+      ]
+    },
+    {
+      "text": "Describe something you committed to and saw through despite setbacks.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and why it mattered to you",
+        "The setbacks and how you kept going",
+        "What you achieved in the end"
+      ]
+    },
+    {
+      "text": "A private equity firm is thinking of buying a chain of dental clinics. What would you want to know before advising it?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The market: demand, growth, competition and regulation",
+        "The chain itself: revenue per clinic, margins, dentists' retention, room to open more",
+        "How the investor could add value, the main risks, and a clear view on whether to proceed"
+      ]
+    },
+    {
+      "text": "A sports shoe brand's profits fell while its sales stayed flat. How would you structure the problem?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Flat sales but lower profit points to costs or mix: say so early",
+        "Checking price discounts, product mix, materials, shipping and marketing spend",
+        "The likely cause, how to confirm it, and what you'd recommend"
+      ]
+    },
+    {
+      "text": "A food delivery company wants to launch in a new city. How would you decide whether it's worth it?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Demand: population, restaurants, online ordering habits",
+        "Economics per order: fees, delivery costs, discounts, and when the city breaks even",
+        "Competition, a recommendation, and a way to test before a full launch"
+      ]
+    },
+    {
+      "text": "Estimate how many hair salons there are in Bengaluru.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Starting from population and how often people get a haircut",
+        "How many customers one salon serves in a day, with round numbers",
+        "A final number and a quick sense check"
+      ]
+    },
+    {
+      "text": "Quick maths: if a product's price rises 10% and the volume sold falls 5%, what happens to revenue?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Multiplying the changes: 1.10 times 0.95",
+        "The answer: revenue rises by about 4.5%",
+        "What it means: the price rise pays off if costs don't change much"
+      ]
+    },
+    {
+      "text": "Your analysis points one way, but the client's chief executive strongly believes the opposite. How would you handle the next meeting?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Rechecking your analysis and understanding the reasons behind their view",
+        "Presenting the evidence clearly and respectfully, and inviting their challenge",
+        "Agreeing a way forward, such as a test or more data, with the client team"
+      ]
+    },
+    {
+      "text": "Why Bain, and what do you know about how it works with clients?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about Bain's approach or people that matters to you",
+        "How it fits the way you like to work",
+        "What you'd bring to a case team"
+      ]
+    },
+    {
+      "text": "Which industry or type of problem would you most like to work on, and why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific choice, not 'anything'",
+        "Why it interests you, shown by something you've studied or done",
+        "A question you'd want to answer for a client in that area"
+      ]
+    }
+  ],
+  "tips": [
+    "Bain says there isn't necessarily one right answer in a case; it watches how you structure the problem and build on ideas as the case moves.",
+    "Don't force a memorised framework; adapt your structure to the problem this client faces and say why.",
+    "Practise mental maths: percentages, growth rates and break-even, without a calculator.",
+    "Practise cases out loud with a partner and reflect on the feedback after each one, rather than cramming at the end.",
+    "Bain's careers site says it never interviews over instant messaging and never asks candidates to pay; treat messages like that as a warning sign."
+  ],
+  "sources": [
+    {
+      "title": "Bain's hiring process (bain.com)",
+      "url": "https://www.bain.com/careers/hiring-process/"
+    },
+    {
+      "title": "Interviewing at Bain (bain.com)",
+      "url": "https://www.bain.com/careers/hiring-process/interviewing/"
+    },
+    {
+      "title": "What we believe: Bain's values (bain.com)",
+      "url": "https://www.bain.com/about/what-we-believe/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

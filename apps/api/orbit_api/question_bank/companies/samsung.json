@@ -1,0 +1,205 @@
+{
+  "slug": "samsung",
+  "name": "Samsung",
+  "aliases": [
+    "samsung r&d",
+    "samsung research",
+    "samsung electronics",
+    "srib",
+    "sri-b",
+    "samsung r&d institute",
+    "samsung india",
+    "samsung semiconductor"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Samsung hires engineers across its electronics businesses and research centres, including Samsung R&D Institute India-Bangalore, which Samsung describes as its largest R&D centre outside South Korea. Candidates commonly report an online coding test for software roles that rewards fully working solutions, then technical interviews on data structures, operating systems and projects, and an HR round. Samsung publishes five core values: People, Excellence, Change, Integrity and Co-prosperity.",
+  "rounds": [
+    "Online application or campus drive",
+    "Online coding test for software roles; candidates commonly report it rewards fully correct, well-tested solutions",
+    "Technical screening in digital electronics or your stream for some hardware and VLSI roles",
+    "One or two technical interviews: data structures, algorithms, operating systems, networks and your projects",
+    "For experienced roles, a deeper interview on the team's domain, such as Android, multimedia, modem, AI or chip design",
+    "HR round on motivation and teamwork"
+  ],
+  "looks_for": [
+    "People",
+    "Excellence",
+    "Change",
+    "Integrity",
+    "Co-prosperity",
+    "Correct, working code and careful handling of edge cases",
+    "Solid computer science or electronics fundamentals",
+    "Depth in the team's domain: Android, multimedia, networks, AI or chip design"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you kept improving something that already worked because you knew it could be better.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What 'working' looked like and what still fell short",
+        "What you improved and how you measured it",
+        "Whether the extra effort paid off"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to adapt quickly to a big change in a project.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What changed and how it affected your plan",
+        "How you re-planned and kept the team moving",
+        "The outcome and what you learned about handling change"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with people from another country or culture on a shared goal.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and the differences you had to work across: language, time zones, styles",
+        "What you did to communicate clearly and build trust",
+        "What was delivered and what you'd do differently"
+      ]
+    },
+    {
+      "text": "Tell me about a time you submitted work with a bug you'd missed. What did you change in how you test?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The bug and why you missed it",
+        "How you fixed it and owned it",
+        "The testing habit you've built since"
+      ]
+    },
+    {
+      "text": "How do you make sure your code handles edge cases before you submit it in a timed coding test?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Reading the constraints carefully and listing edge cases: empty, smallest, largest, repeated values",
+        "Dry-running the logic by hand on a small example",
+        "Writing your own test inputs, including worst-case sizes for speed"
+      ]
+    },
+    {
+      "text": "Explain BFS and DFS, and describe a situation where you'd pick each.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Level-by-level search with a queue versus going deep with a stack or recursion",
+        "BFS for shortest paths in unweighted graphs; DFS for exploring all options or detecting cycles",
+        "Memory use and the risk of deep recursion"
+      ]
+    },
+    {
+      "text": "Explain virtual memory and paging, and what happens on a page fault.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Each process sees its own address space, mapped to physical memory by page tables",
+        "The TLB and why it matters for speed",
+        "A page fault: the OS loads the page or stops the process if the access is invalid"
+      ]
+    },
+    {
+      "text": "Explain how an Android app's activity lifecycle works, and describe a bug that comes from handling it badly.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The main states: created, started, resumed, paused, stopped, destroyed",
+        "What to save and release at each step",
+        "A typical bug, such as lost data on screen rotation or a leak from a held reference"
+      ]
+    },
+    {
+      "text": "How would you reduce the battery drain of a feature that runs in the background on a phone?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Measuring first: wake-ups, network use, location and sensor use",
+        "Batching work, using system schedulers, and doing less when the battery is low",
+        "Checking the feature still works well enough for users"
+      ]
+    },
+    {
+      "text": "How would you design the software update system for millions of TVs or phones so a bad update can't break them all?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Staged rollouts with monitoring and a pause button",
+        "Verifying update packages and keeping a fallback copy of the old version on the device",
+        "Handling poor connections, low storage and devices that are switched off"
+      ]
+    },
+    {
+      "text": "What is a memory leak in C or C++, and how would you find one in a device that runs for weeks?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Memory allocated and never freed, growing until the device slows or crashes",
+        "Finding it: tracking memory over time, leak-detection tools, allocation logs",
+        "Preventing it: clear ownership, RAII and smart pointers"
+      ]
+    },
+    {
+      "text": "How would you design a smart-home system that lets a phone control appliances from different makers?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A device model that describes what each appliance can do",
+        "Local control through a hub plus cloud control, and support for common standards",
+        "Security, pairing new devices, and what still works offline"
+      ]
+    },
+    {
+      "text": "Explain the difference between a latch and a flip-flop, and why designs usually prefer flip-flops.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Level-sensitive latches versus edge-triggered flip-flops",
+        "Why flip-flops make timing analysis simpler and more predictable",
+        "Where latches are still used, such as some low-power or high-speed designs"
+      ]
+    },
+    {
+      "text": "Tell me about yourself and your strongest technical project.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your background in a few sentences",
+        "One project, the code or design you did yourself, and its result",
+        "Why it makes you a fit for this role"
+      ]
+    },
+    {
+      "text": "Why Samsung, and which product or research area would you like to work on?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific product or research area, such as phones, TVs, smart home, chips or AI",
+        "A link to your skills or projects",
+        "What you'd want to build or learn"
+      ]
+    }
+  ],
+  "tips": [
+    "Practise solving one hard problem completely in a timed setting, with your own test cases; candidates commonly report that partial solutions score poorly.",
+    "For software tests, revise graph search, recursion with backtracking and simulation-style problems, which candidates often mention.",
+    "Know the product side, from Galaxy phones and TVs to SmartThings and semiconductors, and connect your interest to one area.",
+    "Samsung lists five core values, including Excellence and Co-prosperity; have a story about teamwork and one about improving quality.",
+    "Prepare to explain your projects in depth, especially the code you wrote yourself."
+  ],
+  "sources": [
+    {
+      "title": "Samsung Careers: life at Samsung (core values)",
+      "url": "https://www.samsung.com/us/careers/life-at-samsung/"
+    },
+    {
+      "title": "Samsung Research: SRI-Bangalore",
+      "url": "https://research.samsung.com/sri-b"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

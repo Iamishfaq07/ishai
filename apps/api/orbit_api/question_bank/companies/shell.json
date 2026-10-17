@@ -1,0 +1,163 @@
+{
+  "slug": "shell",
+  "name": "Shell",
+  "aliases": ["royal dutch shell", "shell india", "shell plc"],
+  "group": "industry",
+  "market": "global",
+  "summary": "Shell is a global energy company working in oil and gas, chemicals, power and lower-carbon energy, and it hires graduates into technical, commercial and corporate roles. For its graduate programme, candidates commonly report online assessments and a recorded interview, followed by a final virtual assessment built around a case study shared in advance, a short presentation and questions from assessors. Experienced hires often go through recruiter screening and competency-based interviews.",
+  "rounds": [
+    "Online application",
+    "Online assessments, often job simulations and questions about how you work",
+    "Recorded video interview",
+    "Final virtual assessment: a case study shared in advance, a short presentation and questions from assessors"
+  ],
+  "looks_for": [
+    "Analysing a situation and proposing practical solutions",
+    "Drive to achieve, and learning from feedback",
+    "Working well with people from different backgrounds",
+    "Honesty, integrity and respect for people",
+    "A strong safety mindset",
+    "Understanding of the energy transition and commercial trade-offs"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you analysed a messy situation and proposed a solution others adopted.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The situation and why it was unclear",
+        "How you broke it down and what information you used",
+        "Your recommendation, how you won support and the result"
+      ]
+    },
+    {
+      "text": "Tell me about an achievement you worked hard for. What drove you?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and why it was difficult",
+        "Setbacks and how you kept going",
+        "The result and what it says about you"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked in a team of people from different backgrounds. How did you make it work?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The team and the goal",
+        "A difference in views or styles and how you handled it",
+        "What the team achieved and your part in it"
+      ]
+    },
+    {
+      "text": "Tell me about feedback that was hard to hear and what you changed because of it.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The feedback and who gave it",
+        "Your honest first reaction",
+        "What you changed and the difference it made"
+      ]
+    },
+    {
+      "text": "Tell me about a time you stopped or questioned something because it didn't look safe or right.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you noticed",
+        "How you raised it, even though it was uncomfortable",
+        "What happened next and what you learned"
+      ]
+    },
+    {
+      "text": "How would you decide whether a company should invest in a new solar or wind project? Talk me through the factors.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Demand, prices and long-term contracts for the power",
+        "Costs, risks, permits and grid connection",
+        "Comparing returns with other options, and the strategic fit"
+      ]
+    },
+    {
+      "text": "Fuel sales at a group of service stations have dropped. How would you find out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Checking the data: which stations, since when, which fuels",
+        "Possible causes: prices, competitors, roadworks, local events, service quality",
+        "Testing the most likely causes and proposing actions"
+      ]
+    },
+    {
+      "text": "In two minutes, explain what the energy transition means for an energy company.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The shift from fossil fuels towards lower-carbon energy over time",
+        "Effects on investment, products and customers",
+        "Balancing today's energy needs with lower emissions"
+      ]
+    },
+    {
+      "text": "A pump at a plant keeps failing earlier than expected. How would you find the root cause?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Safety first, then the failure history and operating data",
+        "Checking design limits, installation, operating conditions and maintenance",
+        "A root-cause analysis, the fix and monitoring afterwards"
+      ]
+    },
+    {
+      "text": "You get a business case two days before a meeting. How would you prepare a five-minute recommendation?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Reading for the key question and the numbers that matter",
+        "A clear structure: recommendation, reasons, risks, next steps",
+        "Preparing for tough questions and changes to the facts"
+      ]
+    },
+    {
+      "text": "A project is behind schedule. How would you balance safety, cost and time to get it back on track?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Safety is not traded away",
+        "Options: re-sequencing work, adding resources, cutting scope",
+        "Telling stakeholders honestly and agreeing the plan"
+      ]
+    },
+    {
+      "text": "Why Shell, and why a career in energy?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about Shell's businesses",
+        "Why energy matters to you, with a personal link",
+        "What you'd like to work on"
+      ]
+    },
+    {
+      "text": "Which part of Shell's business interests you most, and why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One area, such as trading, retail, chemicals or lower-carbon energy",
+        "What you know about its challenges",
+        "How your skills fit"
+      ]
+    }
+  ],
+  "tips": [
+    "In a case presentation, give your recommendation first, then the reasons, the risks and the next steps.",
+    "Expect follow-up scenarios after a presentation; candidates commonly report assessors changing the facts to see how you adapt.",
+    "Prepare stories that show how you analyse problems, what you've achieved and how you work with others.",
+    "Read about Shell's businesses and its plans for lower-carbon energy so you can discuss them in your own words.",
+    "Test your camera, microphone and connection before any virtual interview or assessment."
+  ],
+  "sources": [],
+  "reviewed": "2026-10-18"
+}

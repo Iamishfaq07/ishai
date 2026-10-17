@@ -1,0 +1,189 @@
+{
+  "slug": "mastercard",
+  "name": "Mastercard",
+  "aliases": ["master card"],
+  "group": "finance",
+  "market": "global",
+  "summary": "Mastercard's interviews commonly combine role-specific technical or functional questions with behavioural questions tied to the Mastercard Way, its three principles: Create value, Grow together and Move fast. Its careers site says it wants to hear how candidates reason, work with others, learn and make decisions, not only what they achieved. Technology candidates usually report coding and design discussions, and some roles include a case or presentation.",
+  "rounds": [
+    "Online application; some technology and early-careers roles include an online assessment",
+    "Recruiter screen on your background and interest in the role",
+    "Interviews with the hiring manager and team, often mixing technical or functional and behavioural questions",
+    "A case study, coding exercise or presentation for some roles",
+    "A final conversation with a senior leader for some roles"
+  ],
+  "looks_for": [
+    "Create value",
+    "Grow together",
+    "Move fast",
+    "Think big and bold; innovate with intention",
+    "Say what you mean; bring in different perspectives",
+    "Help each other be great",
+    "Learn and pivot; own the outcome",
+    "Decency: doing the right thing with customers and each other",
+    "Curiosity and a growth mindset",
+    "Thinking critically and bringing structure to complexity",
+    "Adapting quickly when priorities shift"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you said what you meant, even though it was uncomfortable.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What needed saying and why it was hard",
+        "How you said it: timing, words, facts",
+        "What happened afterwards, including to the relationship"
+      ]
+    },
+    {
+      "text": "Tell me about a time you brought in someone with a different view and it improved the result.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why you looked beyond the usual people",
+        "What their view added that the group had missed",
+        "How the final result was better"
+      ]
+    },
+    {
+      "text": "Describe a time priorities changed suddenly. How did you adapt?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What changed and what it meant for work already under way",
+        "How you re-planned and what you dropped",
+        "What you delivered and what you learned"
+      ]
+    },
+    {
+      "text": "Tell me about a time you did the right thing when nobody would have noticed otherwise.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The situation and the easier option you didn't take",
+        "What you did and why",
+        "The effect on a customer, a colleague or the work"
+      ]
+    },
+    {
+      "text": "Tell me about a skill you're still developing. How are you working on it?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "A real gap, relevant to the role",
+        "The steps you're taking: practice, feedback, courses",
+        "Progress so far, with an example"
+      ]
+    },
+    {
+      "text": "Tell me about a project where you owned the outcome from start to finish.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and how you defined success",
+        "Decisions you made and problems you fixed along the way",
+        "The result and what you'd repeat"
+      ]
+    },
+    {
+      "text": "How would you design a service that lets a merchant accept card payments from many countries in different currencies?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Currency conversion: which rate, how long a quote lasts, who bears the difference",
+        "Authorisation, then settlement and reconciliation in each currency",
+        "Fraud checks, local rules and keeping the service reliable"
+      ]
+    },
+    {
+      "text": "Explain the roles of the issuer, the acquirer and the card network in a card payment.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Issuer: the cardholder's bank, which approves or declines",
+        "Acquirer: the merchant's bank; the network routes messages and sets the rules",
+        "How money moves later in clearing and settlement, and where disputes go"
+      ]
+    },
+    {
+      "text": "What is a chargeback, and how would you help a merchant reduce disputes?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A cardholder disputes a payment and the issuer reverses it, following network rules",
+        "Common causes: fraud, items not received, unclear billing names",
+        "Fixes: clear descriptors, easy refunds, stronger authentication, and tracking the dispute rate"
+      ]
+    },
+    {
+      "text": "How would you build a model to spot unusual transactions, and how would you know it's working?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Features such as amount, time, merchant, location and how fast transactions arrive",
+        "Few confirmed fraud labels: combining supervised models with anomaly detection",
+        "Precision and recall at the threshold the business will use, and monitoring for drift"
+      ]
+    },
+    {
+      "text": "An alert suggests unusual access to a system that holds card data. What would you do first?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Following the incident process and escalating straight away",
+        "Containing the access without destroying evidence",
+        "Working out what was touched, who must be told, and a review afterwards"
+      ]
+    },
+    {
+      "text": "Why Mastercard, and what draws you to payments?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific interest in payments or a Mastercard product or service",
+        "How your skills fit the team",
+        "What you want to learn there"
+      ]
+    },
+    {
+      "text": "Which part of the Mastercard Way fits how you like to work, and which would stretch you?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One principle that fits, with a short example",
+        "One that would stretch you, honestly",
+        "How you'd grow into it"
+      ]
+    },
+    {
+      "text": "What would you like to know about how this team measures success?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A question about goals for the first few months",
+        "How the team works with others",
+        "Something specific to the role, not answered in the job post"
+      ]
+    }
+  ],
+  "tips": [
+    "Mastercard's careers site lists six traits it looks for; prepare an honest example for each, since it says reflection matters more than being strong at all six.",
+    "Show how you think, not just what you achieved: talk through the options you weighed and why you chose one.",
+    "Map your stories to Create value, Grow together and Move fast before the interview.",
+    "Know the card payment terms: issuer, acquirer, authorisation, clearing, settlement and chargeback.",
+    "For technical roles, expect questions on security and data protection; card data handling is tightly regulated.",
+    "If a skill is still developing, say so and show what you're doing to build it."
+  ],
+  "sources": [
+    {
+      "title": "Mastercard values: the Mastercard Way (careers.mastercard.com)",
+      "url": "https://careers.mastercard.com/us/en/culture/values"
+    },
+    {
+      "title": "Key skills Mastercard looks for in candidates (careers.mastercard.com)",
+      "url": "https://careers.mastercard.com/us/en/key-skills-mastercard-looks-for-in-top-candidates-and-how-to-show-them-in-your-interview"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

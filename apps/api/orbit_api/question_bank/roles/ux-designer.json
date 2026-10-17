@@ -1,0 +1,207 @@
+{
+  "slug": "ux-designer",
+  "name": "UX designer",
+  "aliases": ["ui ux designer", "ux ui designer", "product designer", "ui designer", "user experience designer", "interaction designer", "ux researcher", "user researcher"],
+  "group": "product-design",
+  "summary": "UX design interviews usually centre on your portfolio: candidates commonly report walking through two or three projects and explaining the problem, the research and the decisions behind each design. Many companies add a design exercise (a take-home or a live whiteboard task) and questions on research methods, usability and working with product managers and engineers.",
+  "rounds": [
+    "Recruiter or HR screen, often with a quick look at your portfolio",
+    "Portfolio review: present two or three projects and answer questions on them",
+    "Design exercise: a take-home or a live task on a product problem",
+    "Collaboration round with a product manager or engineer (for some roles)",
+    "Hiring manager or design leader round"
+  ],
+  "looks_for": [
+    "A clear process: problem, research, ideas, testing, decision",
+    "Explaining why you made each decision, not just showing final screens",
+    "Research that changes the design: interviews, usability tests, data",
+    "Accessibility, and consistency through a design system",
+    "Taking feedback well and explaining trade-offs",
+    "Working within real limits: time, technology and business goals"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a design decision you defended with research when others disagreed.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The disagreement and who was involved",
+        "The evidence you used: a usability test, interviews, data",
+        "The outcome, and what you'd do the same or differently"
+      ]
+    },
+    {
+      "text": "Describe a time user testing showed that your design wasn't working.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What you expected and what users actually did",
+        "How you changed the design",
+        "What it taught you about testing earlier"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to design within a strict technical or time limit.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The limit, and what the ideal design would have needed",
+        "The compromise you made and how you kept it usable",
+        "What shipped, and any follow-up"
+      ]
+    },
+    {
+      "text": "Tell me about feedback on your work that was hard to hear. What did you do with it?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The feedback and your first reaction, honestly",
+        "What you did with it",
+        "How your work changed as a result"
+      ]
+    },
+    {
+      "text": "Walk me through one project in your portfolio, from the problem to the final design.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The problem, the users and your exact role",
+        "The research, the options you explored and why you chose one",
+        "The result, and what you learned"
+      ]
+    },
+    {
+      "text": "How would you redesign a shopping app's checkout so fewer people abandon their carts?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Finding where and why people drop off, from data and session recordings",
+        "Fixes such as fewer steps, guest checkout, showing all costs early, saved payment details",
+        "How you'd test the change and measure it"
+      ]
+    },
+    {
+      "text": "Design a way for patients to book doctor's appointments on their phone. Talk me through your process.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The users and their situations: patients, carers, clinic staff",
+        "The key flows: finding a doctor, choosing a slot, reminders, cancelling",
+        "Accessibility for older users, and how you'd test a prototype"
+      ]
+    },
+    {
+      "text": "Which research methods do you use, and how do you pick one for a project?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Interviews, usability tests, surveys, analytics and card sorting",
+        "Matching the method to the question: why people do something versus how many do it",
+        "What you do with little time or budget"
+      ]
+    },
+    {
+      "text": "How do you run a usability test, and how do you avoid influencing the participant?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Tasks based on real goals, worded so they don't give the answer away",
+        "Asking people to think aloud, and staying neutral",
+        "Turning findings into prioritised changes"
+      ]
+    },
+    {
+      "text": "What makes a design accessible? Name the checks you'd run on a new screen.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Colour contrast, text size, and not relying on colour alone",
+        "Labels, focus order and screen reader support",
+        "Touch target sizes and plain language"
+      ]
+    },
+    {
+      "text": "What is a design system, and how do you balance using it with designing something new?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Shared components, styles and rules that keep products consistent",
+        "When to reuse an existing pattern and when a new one is justified",
+        "How you'd propose adding to the system"
+      ]
+    },
+    {
+      "text": "A product manager wants another feature added to a screen that's already crowded. How do you respond?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Understanding the goal behind the request",
+        "Options: showing it only when needed, placing it elsewhere, removing something else",
+        "Testing with users and agreeing the outcome with the PM"
+      ]
+    },
+    {
+      "text": "How do you hand designs over to engineers so they get built as intended?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Specs covering every state (empty, error, loading), not just the happy path",
+        "Using shared components, and talking early about what's hard to build",
+        "Reviewing the build together and fixing gaps"
+      ]
+    },
+    {
+      "text": "How would you measure whether a redesign improved the user experience?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Task success, time on task and error rates",
+        "Business measures such as conversion or support tickets",
+        "User feedback, and comparing before and after fairly"
+      ]
+    },
+    {
+      "text": "What's the difference between UX and UI design, and where do your strengths lie?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "UX as the overall experience and flow; UI as the visual and interactive layer",
+        "How the two overlap in practice",
+        "Your strengths, shown with an example"
+      ]
+    },
+    {
+      "text": "Why UX design? What first made you care about how products feel to use?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A moment or project that drew you in",
+        "What you enjoy most: research, interaction design, visual craft",
+        "Where you want to grow"
+      ]
+    },
+    {
+      "text": "What's one thing you'd improve about our product's experience?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "Evidence that you've used the product",
+        "A specific issue, and who it affects",
+        "A focused change, and how you'd test it"
+      ]
+    }
+  ],
+  "tips": [
+    "Pick two or three portfolio projects and tell each as a story: the problem, your role, the research, the decisions, the result.",
+    "Show messy work too: sketches, rejected options and test findings show how you think.",
+    "In live exercises, ask who the user is and what success means before you draw anything.",
+    "Be clear about what you did yourself on team projects; interviewers often ask you to separate your work from the team's.",
+    "Have a short version of each case study ready in case the interviewer runs out of time.",
+    "If you're a fresher, a self-started project with genuine user testing can stand in for work experience."
+  ],
+  "mock": {
+    "interview_type": "mixed",
+    "persona": "hiring_manager"
+  },
+  "reviewed": "2026-10-18"
+}

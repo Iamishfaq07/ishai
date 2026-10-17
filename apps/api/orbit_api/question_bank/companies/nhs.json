@@ -1,0 +1,214 @@
+{
+  "slug": "nhs",
+  "name": "NHS",
+  "aliases": ["national health service", "nhs england", "nhs trust"],
+  "group": "industry",
+  "market": "global",
+  "summary": "NHS interviews are commonly values-based: panels ask for examples that show the six NHS values set out in the NHS Constitution, alongside questions on the skills in the job's person specification. Each NHS organisation recruits for itself and many add their own values, so the format varies. Clinical roles often include scenario questions, and some include an assessment centre with clinical simulations or numeracy and drug-calculation tests.",
+  "rounds": [
+    "Application through NHS Jobs or the employer's own site, with a written section on how you meet the person specification",
+    "Shortlisting, usually scored against the essential and desirable criteria",
+    "Panel interview, in person or by video, often with values-based and competency questions",
+    "Clinical roles: scenario or technical questions, and sometimes a practical, numeracy or drug-calculation test",
+    "Some roles: an assessment centre, presentation or group exercise",
+    "Pre-employment checks, such as references, occupational health and criminal record checks",
+    "International nurses: professional registration steps, such as an English test and a two-part test of competence, alongside the employer's interview"
+  ],
+  "looks_for": [
+    "Working together for patients",
+    "Respect and dignity",
+    "Commitment to quality of care",
+    "Compassion",
+    "Improving lives",
+    "Everyone counts",
+    "The employer's own values, often listed in the job advert",
+    "Safe practice: knowing your limits, escalating concerns and following guidance",
+    "Specific examples showing what you did and what you learned"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you put a patient's or service user's needs first when it was difficult to do so.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the person needed and what made it hard",
+        "What you did, including involving them or their family",
+        "The outcome for them, and what you learned"
+      ]
+    },
+    {
+      "text": "Describe a time you protected someone's dignity in a situation where that was hard.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The situation and why dignity was at risk",
+        "The small, specific things you did",
+        "How the person responded"
+      ]
+    },
+    {
+      "text": "Tell me about a time you raised a concern about safety or the quality of care.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you noticed and why it worried you",
+        "Who you raised it with, and how, following policy",
+        "What changed, and how you'd handle it if nothing had"
+      ]
+    },
+    {
+      "text": "Tell me about a mistake you made at work or on placement. What did you do, and what did you learn?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The mistake, owned honestly",
+        "What you did straight away to keep people safe and who you told",
+        "What you changed in your practice since"
+      ]
+    },
+    {
+      "text": "Describe a time you worked with colleagues from other professions to improve someone's care or experience.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who was involved and what each brought",
+        "Your own part in coordinating or communicating",
+        "The difference it made for the patient or service user"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had several urgent tasks at once. How did you decide what to do first?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The tasks and the risks of each",
+        "How you prioritised, and who you asked for help",
+        "The outcome and what you'd do differently"
+      ]
+    },
+    {
+      "text": "On a busy shift you notice a patient's condition getting worse while their nurse is on a break. What would you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Assessing using the early-warning tool your ward uses",
+        "Escalating promptly through the right route, and staying with the patient",
+        "Documenting clearly and handing over to the nurse on return"
+      ]
+    },
+    {
+      "text": "A relative is angry at the reception desk because an appointment was cancelled. How would you handle it?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Listening and acknowledging their frustration without arguing",
+        "Finding what you can do now: a new date, a call back, the right person",
+        "Keeping it safe and private, and logging the concern"
+      ]
+    },
+    {
+      "text": "How do you keep patient information confidential, and when might you need to share it?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Need-to-know access, secure systems, not discussing patients in public",
+        "Sharing for direct care, safeguarding or where the law requires it",
+        "Checking local policy or the information governance team when unsure"
+      ]
+    },
+    {
+      "text": "What does safeguarding mean in your role, and what would you do if you suspected abuse?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Protecting children and adults at risk from harm and neglect",
+        "Signs you might notice, and recording what you see and hear accurately",
+        "Reporting through the safeguarding lead or policy, without investigating yourself"
+      ]
+    },
+    {
+      "text": "Talk me through how you would work out a drug dose from a prescription, and the checks you'd make before giving it.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The calculation: what's prescribed, what's available, in what volume",
+        "Checks on patient, drug, dose, route and time, plus allergies",
+        "When a second check is needed and what you'd do if something didn't look right"
+      ]
+    },
+    {
+      "text": "If you trained outside the UK, how would you adapt to working in the NHS, and what support would you ask for?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Differences you expect: scope of practice, documentation, how patients are involved",
+        "Preparing for registration steps and the employer's induction",
+        "Support to ask for: mentoring, practice sessions, help settling in"
+      ]
+    },
+    {
+      "text": "Why do you want to work for the NHS, and for this organisation in particular?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A personal reason linked to the NHS values",
+        "Something specific about this organisation or service",
+        "How the role fits your plans"
+      ]
+    },
+    {
+      "text": "Which NHS value matters most in this role, and how would you show it on an ordinary working day?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One value, named correctly",
+        "Concrete everyday actions, not general statements",
+        "A short example of when you've done this before"
+      ]
+    },
+    {
+      "text": "What do you know about the pressures this service faces, and how could this role help?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One or two current pressures, described fairly",
+        "How this role contributes",
+        "Something you'd bring that helps"
+      ]
+    },
+    {
+      "text": "What questions would you like to ask the panel?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A question about the team or how new starters are supported",
+        "Something about training or development",
+        "A question that shows you read about the service"
+      ]
+    }
+  ],
+  "tips": [
+    "Read the job description and person specification line by line; your application and interview answers are often scored against them.",
+    "Learn the six NHS values and the employer's own values, and prepare an example for each.",
+    "Use the STAR method, say 'I' rather than 'we', and end with what you learned.",
+    "For nursing roles, practise drug calculations; NHS Health Careers notes they have a higher failure rate than other assessment-centre tests.",
+    "Examples can come from outside paid work, such as caring, volunteering or study, if they show the values.",
+    "International applicants: check your profession's registration steps early; the employer's interview is only one part of the process.",
+    "Ask for a question to be repeated if you need to; a relevant answer matters more than a quick one."
+  ],
+  "sources": [
+    {
+      "title": "The NHS values (NHS Health Careers)",
+      "url": "https://www.healthcareers.nhs.uk/working-health/working-nhs/nhs-constitution"
+    },
+    {
+      "title": "Interviews: information for overseas allied health professionals (NHS Health Careers)",
+      "url": "https://www.healthcareers.nhs.uk/explore-roles/allied-health-professionals/information-overseas-allied-health-professionals/interviews"
+    },
+    {
+      "title": "Assessment centres (NHS Health Careers)",
+      "url": "https://www.healthcareers.nhs.uk/career-planning/study-and-training/considering-or-university/support-university/your-first-job-after-university/assessment-centres"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

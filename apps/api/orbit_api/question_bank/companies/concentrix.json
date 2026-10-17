@@ -1,0 +1,200 @@
+{
+  "slug": "concentrix",
+  "name": "Concentrix",
+  "aliases": ["concentrix india"],
+  "group": "it-services",
+  "market": "global",
+  "summary": "Concentrix is a customer-experience company, and much of its hiring is for customer service, technical support and sales roles, alongside technology and analytics jobs. Its careers FAQ says candidates may be invited by email to online assessments covering language, computer skills, customer support and typing; candidates commonly report a spoken-language check for voice roles, a recruiter call and an operations interview after that, sometimes with a short mock customer call.",
+  "rounds": [
+    "Online application, walk-in or recruitment drive",
+    "Online assessment for many roles: language, computer skills, customer-support scenarios and typing",
+    "For voice roles, a spoken-language check, often automated and sometimes by phone",
+    "Recruiter or HR interview",
+    "Operations interview, sometimes with a short mock customer call"
+  ],
+  "looks_for": [
+    "It's about thinking differently",
+    "Our bar is high",
+    "Going beyond WOW!",
+    "Game-changers at the center",
+    "We do the right thing. Always",
+    "We make the right choice",
+    "Always looking for better outcomes",
+    "We are one",
+    "Clear, polite and patient communication",
+    "Listening and empathy with upset customers",
+    "Typing and note-taking accuracy while you talk",
+    "Reliability with attendance, shifts and schedules"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about yourself.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your studies or work so far, briefly",
+        "Any experience dealing with customers or the public, even informal",
+        "Why this role, in under two minutes"
+      ]
+    },
+    {
+      "text": "Tell me about a time you calmed down someone who was upset with you or your organisation.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why they were upset, described fairly",
+        "What you said and did: listening first, then a clear next step",
+        "How it ended and what you learned"
+      ]
+    },
+    {
+      "text": "Tell me about a time you went beyond what was expected to help someone.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What they needed and what the minimum would have been",
+        "The extra you did and why",
+        "How they reacted"
+      ]
+    },
+    {
+      "text": "Tell me about a time you followed a rule even though breaking it would have been easier.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The rule and why bending it was tempting",
+        "Why you followed it and how you explained that to the other person",
+        "What happened"
+      ]
+    },
+    {
+      "text": "What's one thing about how you communicate that you're working to improve?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "A real habit, such as speaking too fast or interrupting",
+        "An example of when it caused a problem",
+        "What you're doing to improve it"
+      ]
+    },
+    {
+      "text": "A customer has called three times about the same problem and is angry. Walk me through how you'd handle the call.",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Apologising for the repeat calls and letting them explain without interruption",
+        "Checking the account history so they don't repeat everything",
+        "Owning a clear next step and a follow-up, and noting it for the next agent"
+      ]
+    },
+    {
+      "text": "Let's role-play: I'm a customer whose internet stopped working this morning. Start the call.",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "A warm greeting, your name and verifying the customer",
+        "Questions to understand the problem, then simple checks in order",
+        "Summarising what you did, the next step and a polite close"
+      ]
+    },
+    {
+      "text": "How would you explain resetting a password to someone who isn't comfortable with technology?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "One step at a time, in plain words, waiting for them to finish each",
+        "Checking what they see on screen instead of assuming",
+        "Patience and reassurance, and confirming it worked at the end"
+      ]
+    },
+    {
+      "text": "A customer asks for a refund your policy doesn't allow. What do you say?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Acknowledging their frustration before explaining the policy",
+        "Offering what you can do instead, such as a replacement, credit or escalation",
+        "Staying calm and clear without promising what you can't deliver"
+      ]
+    },
+    {
+      "text": "For technical support roles: a customer's laptop won't connect to Wi-Fi. What would you check, in order?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Simple checks first: Wi-Fi switched on, airplane mode, the right network and password",
+        "Whether other devices connect, to tell a laptop problem from a router problem",
+        "Restarting the router or laptop, forgetting and rejoining the network, then escalating"
+      ]
+    },
+    {
+      "text": "How do you keep your notes accurate while talking to a customer and using several screens?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Typing key facts as you hear them: name, issue, steps tried",
+        "Using templates or shortcuts the team provides",
+        "Reading the summary back to the customer before closing"
+      ]
+    },
+    {
+      "text": "For team lead roles: how would you help an agent whose call quality scores keep dropping?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Listening to calls and finding the specific pattern",
+        "A private, supportive conversation and a short plan",
+        "Coaching, follow-up checks and recognising improvement"
+      ]
+    },
+    {
+      "text": "Why do you want to work in customer service, and why Concentrix?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What you enjoy about helping people, with an example",
+        "Something specific about Concentrix, such as its training or the kinds of clients it supports",
+        "Where you'd like to grow, such as team lead, quality or training roles"
+      ]
+    },
+    {
+      "text": "Are you comfortable with rotational shifts, including nights and weekends?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with any real constraint stated clearly",
+        "How you'd manage travel, sleep and routine",
+        "Any past experience with shifts or irregular hours"
+      ]
+    },
+    {
+      "text": "Do you have any questions about the role or the training?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two thoughtful questions, such as how training works or how performance is measured",
+        "Nothing already answered in the job post",
+        "A brief thank-you"
+      ]
+    }
+  ],
+  "tips": [
+    "Check your email, including spam, after applying: Concentrix's FAQ says assessment invitations arrive by email, and the clock starts once you open a module.",
+    "For voice roles, practise speaking clearly at an even pace; record yourself answering a short question and listen back.",
+    "Practise typing while listening: many roles test typing, and you'll take notes during calls.",
+    "In a mock call, greet, listen, repeat the problem back, give a clear next step and close politely.",
+    "Don't promise a customer what policy doesn't allow; offer what you can do instead.",
+    "For work-from-home roles, check that your internet speed and computer meet the stated requirements before the assessment."
+  ],
+  "sources": [
+    {
+      "title": "Concentrix careers FAQ (jobs.concentrix.com)",
+      "url": "https://jobs.concentrix.com/faqs/"
+    },
+    {
+      "title": "Our culture at Concentrix (jobs.concentrix.com)",
+      "url": "https://jobs.concentrix.com/about-us/our-culture/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

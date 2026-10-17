@@ -1,0 +1,218 @@
+{
+  "slug": "devops-engineer",
+  "name": "DevOps engineer",
+  "aliases": ["devops", "site reliability engineer", "sre", "cloud engineer", "platform engineer", "infrastructure engineer", "build and release engineer", "cloud devops engineer", "aws engineer", "azure engineer", "kubernetes engineer"],
+  "group": "engineering",
+  "summary": "DevOps and site reliability interviews usually cover Linux, networking, CI/CD, containers and at least one cloud platform, and lean heavily on troubleshooting: you're described a broken or slow system and asked how you'd find the problem. Candidates commonly report scripting tasks, questions on infrastructure as code and monitoring, and for SRE roles, discussion of incidents, on-call and reliability targets.",
+  "rounds": [
+    "Recruiter or HR screen",
+    "Technical screen on Linux, networking and scripting, often with a short coding or shell task",
+    "Troubleshooting round: talk through how you'd debug a failing service or server",
+    "CI/CD, containers, Kubernetes and cloud discussion, often based on setups you've built",
+    "Design round for experienced roles: a reliable deployment or infrastructure setup",
+    "Hiring manager or behavioural round on incidents and teamwork"
+  ],
+  "looks_for": [
+    "A methodical troubleshooting approach, from symptom to root cause",
+    "Strong Linux and networking basics: processes, files, DNS, TCP and HTTP",
+    "Automating instead of repeating manual steps: scripts, pipelines, infrastructure as code",
+    "Monitoring and alerting that catches problems before users do",
+    "Safe changes: rollbacks, gradual rollouts and least-privilege access",
+    "Calm, blameless handling of incidents"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about an outage you helped resolve. Walk me through the timeline.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How it was detected and how badly users were affected",
+        "What you checked, in what order, and what turned out to matter",
+        "The fix, the review afterwards, and what changed as a result"
+      ]
+    },
+    {
+      "text": "Describe a manual process you automated. What did it save?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The process and why it was slow or risky",
+        "The script, pipeline or tool you built, and how you got people to use it",
+        "Time saved or errors avoided, with a number"
+      ]
+    },
+    {
+      "text": "Tell me about a change you made that broke something. How did you handle it?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What you changed and what broke",
+        "How quickly you noticed, rolled back and told people",
+        "The safeguard you added: a review step, a test, a staged rollout"
+      ]
+    },
+    {
+      "text": "Tell me about a time developers pushed back on a process or tool you introduced.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Their concern, and whether it was fair",
+        "How you adjusted the change or explained it better",
+        "Whether it was adopted, and what you learned"
+      ]
+    },
+    {
+      "text": "A website starts returning 502 errors. Talk me through how you'd find the cause.",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Checking what changed recently and what the dashboards show",
+        "Following the request path: load balancer or proxy, web server, application processes, health checks",
+        "Reading logs, confirming the backend is up and reachable, then fixing or rolling back"
+      ]
+    },
+    {
+      "text": "A Linux server is running slowly. Which commands and checks would you start with?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "CPU, memory, disk and network with tools such as top, free, df and iostat",
+        "Finding the process responsible and reading its logs",
+        "Checking for a full disk, heavy swapping or too many open connections"
+      ]
+    },
+    {
+      "text": "Explain how DNS resolution works, and how you'd debug a 'site can't be reached' report.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Resolver, root, top-level domain and authoritative servers, and caching with TTLs",
+        "Using dig or nslookup to see what's actually returned",
+        "Common causes: a wrong record, an expired domain, old answers cached after a change"
+      ]
+    },
+    {
+      "text": "Walk me through a CI/CD pipeline you've built or used, from a commit to production.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "Build, test, security scan and packaging stages",
+        "How it deploys: environments, approvals and rollout strategy",
+        "How a bad release is caught and rolled back"
+      ]
+    },
+    {
+      "text": "What's the difference between a container and a virtual machine, and what does Kubernetes add on top of containers?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Containers share the host's kernel; virtual machines run their own operating system",
+        "What Kubernetes adds: scheduling, restarts, scaling and service discovery",
+        "When it's more than a small team needs"
+      ]
+    },
+    {
+      "text": "A pod in Kubernetes keeps restarting. How would you find out why?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "kubectl describe and logs, including the previous container's logs",
+        "Common causes: failing health checks, running out of memory, bad configuration or missing secrets",
+        "Fixing the cause rather than only raising limits"
+      ]
+    },
+    {
+      "text": "Why use infrastructure as code, and how do you make changes to it safely?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Repeatable, reviewable infrastructure with a tool such as Terraform",
+        "Reviewing the plan before applying, and handling state carefully",
+        "Separate environments, and avoiding manual changes that drift from the code"
+      ]
+    },
+    {
+      "text": "Compare blue-green, canary and rolling deployments. When would you use each?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "How each moves traffic to the new version",
+        "How fast you can roll back, and the extra cost of each",
+        "The metrics that decide whether a canary carries on"
+      ]
+    },
+    {
+      "text": "What would you monitor for a web service, and how do you avoid alerts that nobody acts on?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Latency, traffic, errors and saturation, plus a business signal such as orders",
+        "Alerting on what users feel, with a clear runbook for each alert",
+        "Reviewing noisy alerts regularly and tuning or removing them"
+      ]
+    },
+    {
+      "text": "Explain SLIs, SLOs and error budgets, and how they change what a team works on.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A measured indicator, a target for it, and the shortfall the target allows",
+        "Using the budget to balance new features against reliability work",
+        "An example target for a service you know"
+      ]
+    },
+    {
+      "text": "How would you set up a web app's infrastructure so it survives a server, or a whole zone, going down?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Several instances behind a load balancer, spread across zones",
+        "A database with replicas, backups and restores you've actually tested",
+        "Health checks, auto-scaling, and what would still fail if a whole region went down"
+      ]
+    },
+    {
+      "text": "How do you manage secrets and access permissions in the cloud?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A secrets manager or vault, never code or plain files committed to Git",
+        "Least-privilege roles for people and services, and rotating keys",
+        "Audit logs of who accessed what"
+      ]
+    },
+    {
+      "text": "Why DevOps or SRE? What do you enjoy about this kind of work?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you: automation, reliability, helping developers ship faster",
+        "An example of work you enjoyed",
+        "An honest view of on-call and how you handle it"
+      ]
+    },
+    {
+      "text": "How would you spend your first month getting to know our systems?",
+      "type": "fit",
+      "kind": "situational",
+      "covers": [
+        "Reading architecture notes, runbooks and recent incident reviews",
+        "Shadowing on-call and starting with small, safe changes",
+        "Spotting one repetitive task to automate and agreeing it with the team"
+      ]
+    }
+  ],
+  "tips": [
+    "Practise troubleshooting answers in a fixed order: what changed, what the metrics show, then layer by layer.",
+    "Know the commands you'd actually type; interviewers often ask for them by name.",
+    "Build a small setup of your own: a container, a pipeline and a cloud deployment you can describe end to end.",
+    "Whenever you describe a change, mention its blast radius and how you'd roll it back.",
+    "If you hold a cloud certification, expect questions that check you've used the services, not just studied them.",
+    "Describe incidents without blaming people; focus on the system and what changed."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "engineer"
+  },
+  "reviewed": "2026-10-18"
+}

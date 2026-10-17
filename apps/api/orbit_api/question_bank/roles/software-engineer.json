@@ -1,0 +1,208 @@
+{
+  "slug": "software-engineer",
+  "name": "Software engineer",
+  "aliases": ["sde", "swe", "software developer", "software development engineer", "programmer", "associate software engineer", "junior software engineer", "sde 1", "sde 2", "software engineering"],
+  "group": "engineering",
+  "summary": "Software engineer interviews usually combine coding (solving a problem out loud, often in a shared editor), computer science fundamentals and a discussion of your projects. For experienced roles, many companies add a system design round and ask how you've handled production issues and trade-offs; for freshers, expect more on data structures, OOP and final-year or internship work.",
+  "rounds": [
+    "Online coding test or recruiter screen (for campus hiring, often an aptitude and coding test)",
+    "One or two coding interviews: solve a problem out loud and discuss its complexity",
+    "Computer science fundamentals: data structures, OOP, databases, operating systems and networks",
+    "System design or low-level design round (mostly for experienced roles)",
+    "Hiring manager or behavioural round on projects, teamwork and ownership",
+    "HR round"
+  ],
+  "looks_for": [
+    "Clarifying the problem before writing code, and thinking out loud",
+    "Choosing a data structure for a reason and stating time and space complexity",
+    "Working, readable code, tested against edge cases you name yourself",
+    "Depth on your own projects: what you built, why, and what you'd change",
+    "Sensible design trade-offs: simplicity, scale, cost and failure",
+    "Owning bugs and mistakes honestly"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about the hardest bug you've fixed. How did you track it down?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The symptom and why it was hard to reproduce",
+        "How you narrowed it down: logs, a debugger, comparing a working and a broken version",
+        "The root cause, the fix, and the test you added so it couldn't return"
+      ]
+    },
+    {
+      "text": "Describe a time you disagreed with a teammate about how to build something.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Both approaches, described fairly",
+        "How you compared them: data, a quick prototype, a review with others",
+        "What was decided and how you worked together afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a time code you wrote caused a problem for users. What did you do?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What broke, who was affected, and how you found out",
+        "How you fixed or rolled back quickly and kept people informed",
+        "What you changed in testing or review afterwards"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to get productive in an unfamiliar codebase quickly.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "How you found your way around: entry points, running it locally, asking the right people",
+        "A small first change you made to learn safely",
+        "What you delivered and how long it took"
+      ]
+    },
+    {
+      "text": "Walk me through the project you're proudest of. What did you build yourself, and what would you change now?",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The problem and who it was for, in a sentence",
+        "Your own part, the stack, and one hard technical decision",
+        "What you'd redo with what you know now"
+      ]
+    },
+    {
+      "text": "Explain the difference between a process and a thread, and when you'd use more than one thread.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Processes have separate memory; threads share memory within a process",
+        "Why threads help: waiting on input and output, using several cores",
+        "The cost: race conditions, locks and deadlocks, with an example"
+      ]
+    },
+    {
+      "text": "How does a hash map work underneath, and when would you choose a different structure?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Hashing a key to a bucket, and how collisions are handled",
+        "Constant-time lookups on average, and what makes them slower",
+        "When an ordered structure such as a balanced tree or a sorted array is the better fit"
+      ]
+    },
+    {
+      "text": "Explain encapsulation, inheritance and polymorphism using an example from code you've written.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Each idea in plain words, plus abstraction",
+        "An example from your own project rather than a textbook animal or shape",
+        "When composition is a better choice than inheritance"
+      ]
+    },
+    {
+      "text": "What happens, step by step, when you type a web address into a browser and press Enter?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A DNS lookup, then a TCP connection and a TLS handshake for HTTPS",
+        "The HTTP request, the server's response and the browser rendering the page",
+        "Where caching happens along the way"
+      ]
+    },
+    {
+      "text": "Your solution works but is too slow for large inputs. How do you go about speeding it up?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Finding the repeated work with a complexity estimate rather than guessing",
+        "Typical fixes: a better data structure, sorting first, caching results, avoiding nested loops",
+        "Checking the faster version still handles the edge cases"
+      ]
+    },
+    {
+      "text": "Talk me through how you'd design a service that lets people share a file through a link that expires.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Requirements first: file sizes, how long links last, who can open them, rough traffic",
+        "Files in object storage, link details in a database",
+        "Hard-to-guess links, expiry, cleaning up old files, and what happens under heavy load"
+      ]
+    },
+    {
+      "text": "How would you design the database tables for an app where students enrol in courses? Which indexes would you add?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Tables for students, courses and enrolments, with keys linking them",
+        "Why a many-to-many relationship needs its own table, and normalisation in plain words",
+        "Indexes for the most common lookups, and their cost on writes"
+      ]
+    },
+    {
+      "text": "Your service became slow in production right after yesterday's release. How do you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Confirming the impact with metrics and checking exactly what changed in the release",
+        "Narrowing it down: database queries, calls to other services, memory or CPU limits",
+        "Rolling back if users are affected, then finding the root cause"
+      ]
+    },
+    {
+      "text": "How do you decide what to test, and what's the difference between unit and integration tests?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Unit tests check one piece in isolation; integration tests check pieces working together",
+        "Testing behaviour and edge cases rather than chasing a coverage number",
+        "An example of a test that caught a bug for you"
+      ]
+    },
+    {
+      "text": "What are Git branches and pull requests for, and how do you resolve a merge conflict?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Branches let work happen in parallel without breaking the main line",
+        "Pull requests for review and automated checks before merging",
+        "Resolving a conflict by understanding both changes, not just picking one side"
+      ]
+    },
+    {
+      "text": "Tell me about yourself and why you want to work as a software engineer.",
+      "type": "fit",
+      "kind": "intro",
+      "covers": [
+        "Your education or current role in a sentence or two",
+        "One or two projects or results that show how you build things",
+        "Why this kind of work, and why this team, briefly"
+      ]
+    },
+    {
+      "text": "Why do you want to join us? What do you know about our product and the engineering behind it?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about the product, its users or its technical challenges",
+        "How your skills or interests match the work the team does",
+        "What you hope to learn or own in your first year"
+      ]
+    }
+  ],
+  "tips": [
+    "Talk while you code: say your approach and its complexity before typing, so the interviewer can steer you early.",
+    "Before saying you're done, run your code by hand on a small example and one edge case: empty input, one element, duplicates.",
+    "Know every line of the projects on your resume; interviewers often pick one and ask why you built it that way.",
+    "In design rounds, spend the first few minutes on requirements and rough scale; they shape every choice after.",
+    "If you're stuck, say what you're trying and ask a focused question; silence is harder to help than a wrong idea.",
+    "Prepare stories about a bug, a disagreement and a deadline; behavioural questions come up in technical loops too."
+  ],
+  "mock": {
+    "interview_type": "technical",
+    "persona": "engineer"
+  },
+  "reviewed": "2026-10-18"
+}

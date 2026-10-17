@@ -1,0 +1,171 @@
+{
+  "slug": "spotify",
+  "name": "Spotify",
+  "aliases": ["spotify technology"],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Spotify describes its interviews on its careers site: a recruiter call, an interview with one or two team members, and a final round with several 'band members' from across the business. It says interviewers look at your values as well as your skills, asking whether you take ownership and are adaptable, collaborative and driven. For engineering roles, candidates commonly report coding and system design interviews, often in a shared online editor.",
+  "rounds": [
+    "Recruiter call by video or phone",
+    "Interview with one or two team members (for engineers, often a technical or coding interview)",
+    "Final round with several people from across the business: technical depth, system design for experienced roles, and values",
+    "Decision and feedback from the recruiter"
+  ],
+  "looks_for": [
+    "Values that align with Spotify's",
+    "Ownership and pride in what you deliver",
+    "Adaptability",
+    "Collaboration",
+    "Drive",
+    "The thinking behind your results, not just the results"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a piece of work you're proud of. What was your part, and what did it achieve?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The work and why it mattered",
+        "Your own part, with the decisions you made",
+        "The result, measured if you can"
+      ]
+    },
+    {
+      "text": "Tell me about a time plans changed suddenly. How did you adapt?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What changed and why",
+        "How you re-planned and kept others informed",
+        "What you delivered and what you learned"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked closely with people in other disciplines, such as design or data, to ship something.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who was involved and what each person cared about",
+        "A disagreement or trade-off and how you settled it",
+        "What shipped and how the collaboration improved it"
+      ]
+    },
+    {
+      "text": "Tell me about a goal you kept pushing towards even when it got hard.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and why it mattered to you",
+        "The hardest point and what kept you going",
+        "The outcome and what you'd do differently"
+      ]
+    },
+    {
+      "text": "Tell me about a time you tried a new approach that didn't work out. What did you learn?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "Why you tried it and what you expected",
+        "How you found out it wasn't working",
+        "What you kept, what you dropped and what you'd try next"
+      ]
+    },
+    {
+      "text": "How would you design a feature that builds a personalised playlist for each listener every week?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signals: listening history, skips, saves, similar listeners",
+        "Generating playlists in batch, storing them and serving them quickly",
+        "Balancing familiar and new music, and measuring success"
+      ]
+    },
+    {
+      "text": "How would you make a song start playing quickly, even on a weak mobile connection?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Content delivery networks and choosing bitrate to match the connection",
+        "Buffering or pre-fetching the start of likely next tracks",
+        "Caching on the device and measuring time to first play"
+      ]
+    },
+    {
+      "text": "How would you test whether a new home screen layout makes people listen more?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A clear main metric, such as listening time, plus guardrails",
+        "An A/B test with a fair split and enough time to settle",
+        "Checking effects on different listeners, not only the average"
+      ]
+    },
+    {
+      "text": "Explain the trade-offs of splitting a large app into many small services owned by different teams.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Gains: teams ship independently, services scale separately",
+        "Costs: network calls, harder debugging, data spread across services",
+        "What helps: clear ownership, good APIs, shared tooling and monitoring"
+      ]
+    },
+    {
+      "text": "Play counts for new releases look too low on an artist dashboard. How would you work out whether the data or the product is wrong?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Comparing the dashboard with the raw data for one release",
+        "Checking pipeline delays, filters and counting rules",
+        "Telling affected users and fixing the cause"
+      ]
+    },
+    {
+      "text": "Walk me through a system or project you know well: the design, what broke and what you learned.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The goal and a short picture of the design",
+        "A failure and how it was handled",
+        "What you'd design differently now"
+      ]
+    },
+    {
+      "text": "Why Spotify? How do you use it, and what would you change?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A real habit with the product, as a listener or creator",
+        "One specific change and who it would help",
+        "Why this team and role in particular"
+      ]
+    },
+    {
+      "text": "What do you want to learn here, and how does this role fit where you're heading?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "One or two specific things you want to learn",
+        "How the role builds them",
+        "What you'll bring in return"
+      ]
+    }
+  ],
+  "tips": [
+    "Spotify says it tells you who your interviewers are at each stage; look at their teams so your questions fit.",
+    "Make the things Spotify asks about easy to hear: shared values, ownership, adaptability, collaboration and drive. Prepare a story for each.",
+    "Explain the thinking behind your results, not just the results; Spotify says it wants to understand how you got there.",
+    "Technical interviews may use shared tools such as CoderPad; practise coding and explaining in a plain online editor."
+  ],
+  "sources": [
+    {
+      "title": "How we hire: the interview (lifeatspotify.com)",
+      "url": "https://www.lifeatspotify.com/how-we-hire/interview"
+    },
+    {
+      "title": "Start your journey (lifeatspotify.com)",
+      "url": "https://www.lifeatspotify.com/start-your-journey"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

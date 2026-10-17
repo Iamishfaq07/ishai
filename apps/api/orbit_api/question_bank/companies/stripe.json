@@ -1,0 +1,191 @@
+{
+  "slug": "stripe",
+  "name": "Stripe",
+  "aliases": [
+    "stripe inc"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Stripe publishes its operating principles, such as Users first and Move with urgency and focus, and says most hiring processes include a recruiter screen, a technical or skills-based assessment and interviews with the team. Its engineering interviews are known for practical work rather than whiteboard puzzles; Stripe has described a 'Bug Squash' interview in which candidates fix a historical bug in an open-source project.",
+  "rounds": [
+    "Recruiter screen",
+    "Technical screen with practical coding",
+    "Onsite: practical coding (debugging, building against an API), system design, and behavioral interviews"
+  ],
+  "looks_for": [
+    "Rigorous thinking",
+    "Users first",
+    "Moving with urgency",
+    "Clear written and spoken communication",
+    "Practical, working code",
+    "Move with urgency and focus",
+    "Create with craft and beauty",
+    "Collaborate egolessly",
+    "Stay curious",
+    "Obsess over talent"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a bug you tracked down that others couldn't.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The symptom and why it was hard to pin down",
+        "Your method: reproducing it, narrowing it down, testing ideas one at a time",
+        "The cause, the fix, and what stopped it coming back"
+      ]
+    },
+    {
+      "text": "How would you design an API that lets businesses refund a payment safely?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Idempotency keys so a retried request doesn't refund twice",
+        "Checks: refund no more than was paid, partial refunds, refunds while a payment is pending",
+        "Clear errors, status updates by webhook, and a record for reconciliation"
+      ]
+    },
+    {
+      "text": "Tell me about a time you did more for a user than your role asked.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who the user was and what they actually needed",
+        "What you did beyond your role, and why it was worth it",
+        "The result for the user"
+      ]
+    },
+    {
+      "text": "Tell me about something you wrote, such as a design doc or post-mortem, that changed what your team did.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The decision or problem the document addressed",
+        "How you structured it so busy readers got the point",
+        "What the team did differently because of it"
+      ]
+    },
+    {
+      "text": "Tell me about a piece of work you're proud of for its craft, not only its result.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What made it well made: the details users or teammates would notice",
+        "The extra effort it took and why you chose to spend it",
+        "How it held up over time"
+      ]
+    },
+    {
+      "text": "Tell me about a time you changed course because someone else's idea was better than yours.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Your idea and theirs, described fairly",
+        "What convinced you",
+        "How you supported their approach and credited them"
+      ]
+    },
+    {
+      "text": "What is idempotency, and how would you make a payment request safe to retry?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Idempotency in plain words: doing it twice has the same effect as once",
+        "A client-supplied key, stored with the result so a retry returns the same answer",
+        "Why it matters: timeouts and network failures leave the client unsure what happened"
+      ]
+    },
+    {
+      "text": "How would you design a system that delivers webhooks to merchants reliably, even when their servers are down?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A queue of events with retries and growing backoff",
+        "Signing payloads so merchants can verify them, and handling duplicates on their side",
+        "Visibility: delivery logs, alerts, and letting merchants replay missed events"
+      ]
+    },
+    {
+      "text": "You're handed an unfamiliar codebase and a failing test. Talk me through how you'd find the cause.",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Reading the test and the error first, then reproducing it",
+        "Narrowing down: logs, a debugger, recent changes",
+        "Stating a hypothesis, checking it, and fixing the cause rather than the symptom"
+      ]
+    },
+    {
+      "text": "How would you design a ledger that records money moving between accounts so the books balance?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Double-entry records: every movement debits one account and credits another",
+        "Entries that are never edited, only corrected by new entries",
+        "Reconciliation with banks, and handling currencies and rounding"
+      ]
+    },
+    {
+      "text": "What makes an API pleasant for developers to integrate? Give examples of good and bad design.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Consistent naming, predictable resources and useful error messages",
+        "Versioning so changes don't break existing integrations",
+        "Docs, test modes and examples that get someone to a first success quickly"
+      ]
+    },
+    {
+      "text": "How would you help a small online business reduce failed payments at checkout?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Finding where and why payments fail: declines, errors, abandoned steps",
+        "Fixes such as local payment methods, retrying soft declines and a simpler form",
+        "Measuring conversion while watching fraud and refunds"
+      ]
+    },
+    {
+      "text": "Why Stripe, and which of its products or users interest you most?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A specific product or user group and the problem Stripe solves for them",
+        "A link to your own experience",
+        "What you'd want to build or improve"
+      ]
+    },
+    {
+      "text": "Which of Stripe's operating principles fits how you like to work, and which would stretch you most?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "One principle, named accurately, with a short example",
+        "An honest stretch area and how you're working on it",
+        "Why Stripe's way of working suits you"
+      ]
+    }
+  ],
+  "tips": [
+    "Practise practical tasks (reading code, fixing bugs, calling an API), not just puzzles.",
+    "Talk about correctness: idempotency and failure modes matter in payments.",
+    "Stripe says it shares written guides before interviews; read yours closely, as it explains the format and how to prepare.",
+    "Stripe has written that engineers can use their own laptop and development environment; know your editor, tests and debugger well.",
+    "Try Stripe's API documentation and test mode before the interview so building against an API feels familiar."
+  ],
+  "sources": [
+    {
+      "title": "Stripe: culture and operating principles",
+      "url": "https://stripe.com/jobs/culture"
+    },
+    {
+      "title": "Stripe Careers (hiring process FAQ)",
+      "url": "https://stripe.com/in/careers"
+    },
+    {
+      "title": "Stripe Atlas: scaling engineering organisations (interview practices)",
+      "url": "https://stripe.com/guides/atlas/scaling-eng"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

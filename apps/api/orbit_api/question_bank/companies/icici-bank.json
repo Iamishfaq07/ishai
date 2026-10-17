@@ -1,0 +1,196 @@
+{
+  "slug": "icici-bank",
+  "name": "ICICI Bank",
+  "aliases": ["icici"],
+  "group": "finance",
+  "market": "india",
+  "summary": "ICICI Bank hires freshers into relationship-manager and sales roles, including through its Probationary Officers Program, and also hires for technology, data, operations and credit. Candidates commonly report an online aptitude test followed by an interview on attitude, communication and willingness to sell and relocate. The bank describes its hiring as 'hire for attitude, train for skill', and its ethos as 'Fair to Customer, Fair to Bank'.",
+  "rounds": [
+    "Application through the careers site, a campus drive or a programme such as the Probationary Officers Program",
+    "Online aptitude test for many entry-level roles, often covering English, numbers, reasoning and general awareness",
+    "Face-to-face or video interview on attitude, communication and banking awareness",
+    "For sales and relationship roles, often questions or a short role play on selling and handling customers",
+    "HR discussion on role, location and joining",
+    "For programme hires, a period of training before taking up the role"
+  ],
+  "looks_for": [
+    "Fair to Customer, Fair to Bank",
+    "One Bank, One Team: sharing credit and working across teams",
+    "Attitude and willingness to learn ('hire for attitude, train for skill')",
+    "Respect, humility and a wish to keep learning",
+    "Comfort with sales and building customer relationships",
+    "Flexibility about role and location",
+    "Working within risk and compliance rules while spotting business opportunities"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you shared credit for a success with others.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The success and who contributed what",
+        "How you made others' part visible",
+        "Why that mattered to the team afterwards"
+      ]
+    },
+    {
+      "text": "Describe a time you had to balance what someone wanted with what the rules allowed.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What they asked for and which rule stood in the way",
+        "How you explained it and what you could offer instead",
+        "How they reacted, and what you learned about fairness"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to learn something completely new in a short time.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you had to learn and why it was urgent",
+        "How you learned it: people, practice, reading",
+        "What you were able to do with it"
+      ]
+    },
+    {
+      "text": "Tell me about a time you faced repeated rejection and kept going.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The situation and how many times you heard no",
+        "What you changed in your approach each time",
+        "The eventual result and what kept you motivated"
+      ]
+    },
+    {
+      "text": "A customer asks you to waive a charge on their account. How would you decide what to do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Understanding why the charge applied and whether it was correct",
+        "What the policy allows, and who can approve an exception",
+        "Being fair to the customer and to the bank, and explaining the decision clearly"
+      ]
+    },
+    {
+      "text": "How would you win current-account customers among small businesses near your branch?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Mapping the local businesses and what they need: payments, cash handling, credit",
+        "Reaching them through visits, referrals and trade associations",
+        "A matched offer, follow-ups, and tracking how many you convert"
+      ]
+    },
+    {
+      "text": "What's the difference between a savings account and a current account, and who needs each?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Savings: for individuals, earns interest, limits on some transactions",
+        "Current: for businesses, many transactions, usually no interest, overdraft options",
+        "An example customer for each"
+      ]
+    },
+    {
+      "text": "What is a credit score, such as a CIBIL score, and how does a bank use it when deciding on a loan?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A bureau score built from repayment history, credit used and recent enquiries",
+        "How it affects approval and the rate offered",
+        "Other checks that also matter: income, existing EMIs and documents"
+      ]
+    },
+    {
+      "text": "How would you explain a fixed deposit and a mutual fund to a first-time investor, including the risks?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Fixed deposit: a fixed rate for a fixed term, with a penalty for breaking it early",
+        "Mutual fund: returns vary with the market, with no fixed return",
+        "Matching each to the customer's goal and time horizon, and stating risk honestly"
+      ]
+    },
+    {
+      "text": "For a technology role: how would you design a system that alerts customers within seconds of every debit on their account?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Debit events from the core banking system onto a queue",
+        "Sending by SMS, push or email, with retries and no duplicates",
+        "Handling peak volumes, keeping alerts in order, and protecting customer data"
+      ]
+    },
+    {
+      "text": "For a data role: how would you predict which customers are likely to close their accounts?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Defining 'closing' or going inactive, and building labels from history",
+        "Signals: falling balances, fewer transactions, complaints, products held",
+        "Checking the model, then testing whether a retention offer actually helps"
+      ]
+    },
+    {
+      "text": "Estimate how many UPI payments a busy neighbourhood grocery shop in Pune receives in a day.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Customers per day, split by busy and quiet hours",
+        "The share who pay by UPI rather than cash or card",
+        "A sanity check against the shop's size and opening hours"
+      ]
+    },
+    {
+      "text": "Why ICICI Bank, and why a career in banking?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about the bank: its digital banking, a programme or its ethos",
+        "Why banking suits you, with an example",
+        "What you want to learn in the first year"
+      ]
+    },
+    {
+      "text": "Are you open to a sales role and to being posted anywhere in India?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with any genuine constraint stated",
+        "Evidence you can do well in sales or with customers",
+        "How you would adapt to a new city"
+      ]
+    },
+    {
+      "text": "Where do you see yourself five years after joining?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A realistic path inside the bank",
+        "The skills and results that would get you there",
+        "Why ICICI Bank is where you want to build them"
+      ]
+    }
+  ],
+  "tips": [
+    "Expect attitude and communication to count as much as knowledge; ICICI Bank describes its approach as 'hire for attitude, train for skill'.",
+    "Be ready to explain 'Fair to Customer, Fair to Bank' in your own words, with an example of balancing both.",
+    "Revise general awareness: the RBI's role, key policy rates, UPI, KYC and recent banking news.",
+    "Practise a short pitch for a common product, such as a savings account or credit card, and how you'd respond to a no.",
+    "Answer location and role-flexibility questions honestly; relationship roles often involve postings across India.",
+    "For the aptitude test, practise timed reasoning and arithmetic sets, and watch accuracy as well as speed."
+  ],
+  "sources": [
+    {
+      "title": "ICICI Bank: our values (icici.bank.in)",
+      "url": "https://www.icici.bank.in/ms/aboutus/annual-reports/2022-23/icici/our-values.html"
+    },
+    {
+      "title": "ICICI Bank annual report 2024-25: human capital (icici.bank.in)",
+      "url": "https://www.icici.bank.in/ms/aboutus/annual-reports/2024-25/html/human-capital.html"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

@@ -1,0 +1,188 @@
+{
+  "slug": "swiggy",
+  "name": "Swiggy",
+  "aliases": [
+    "swiggy instamart",
+    "bundl technologies"
+  ],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Swiggy's engineering interviews usually mix problem-solving rounds, a machine coding or low-level design round and, for experienced roles, system design, with design topics often drawn from real-time delivery: tracking, dispatch and delivery-time estimates. Swiggy publishes its values, such as Consumer Comes First, Display a Founder Mentality and Stand-up & Disagree but Commit Fully, and candidates commonly report hiring manager rounds that probe ownership and speed.",
+  "rounds": [
+    "Online coding assessment",
+    "Problem solving / data structures",
+    "Machine coding or low-level design",
+    "System design (for experienced roles)",
+    "Hiring manager round"
+  ],
+  "looks_for": [
+    "Problem solving",
+    "Ownership and speed",
+    "Consumer focus",
+    "Designing for real-time scale",
+    "Consumer Comes First",
+    "Display a Founder Mentality",
+    "Be Humble",
+    "Always be Curious, Always be Learning",
+    "Stand-up & Disagree but Commit Fully",
+    "Do More with Less",
+    "Move Fast, Break Barriers and Deliver Results",
+    "Never Settle"
+  ],
+  "questions": [
+    {
+      "text": "How would you design order tracking for a food-delivery app?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The order's states (placed, accepted, picked up, delivered) and who updates each",
+        "Getting the partner's live location to the customer: update rate, push versus polling, battery",
+        "What the customer sees when data is late or a partner's phone goes offline"
+      ]
+    },
+    {
+      "text": "Tell me about a time you shipped something fast. What trade-offs did you make?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why speed mattered, in terms of users or the business",
+        "What you cut or simplified, and what you refused to cut",
+        "What you fixed or finished after launch"
+      ]
+    },
+    {
+      "text": "Tell me about a feature you built that users loved.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The user problem it solved, and how you knew it was a real problem",
+        "Your part in building it",
+        "How you knew users loved it: usage, ratings or feedback, ideally with a number"
+      ]
+    },
+    {
+      "text": "Tell me about a time you disagreed with a decision, said so, and then committed to it fully.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Your view and the evidence behind it",
+        "How and to whom you raised it",
+        "How you backed the final decision in practice, and how it turned out"
+      ]
+    },
+    {
+      "text": "Describe a time you delivered something useful with fewer people, less time or less money than you wanted.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The constraint and what the full version would have needed",
+        "How you simplified the problem or reused what existed",
+        "What you delivered and what it achieved"
+      ]
+    },
+    {
+      "text": "Tell me about feedback that was hard to hear. What did you change because of it?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The feedback, stated plainly, and who gave it",
+        "Your first reaction and how you checked whether it was fair",
+        "A concrete change in how you work since"
+      ]
+    },
+    {
+      "text": "How would you assign incoming orders to delivery partners in a busy area at dinner time?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Inputs: partner locations, restaurant preparation time, distance and current load",
+        "The goal you optimise: delivery time versus partner idle time, and when to batch two orders",
+        "What happens when a partner rejects or goes offline, and fairness in how work is shared"
+      ]
+    },
+    {
+      "text": "How would you estimate the delivery time shown to a customer before they place an order?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Splitting it into parts: preparation, partner reaching the restaurant, travel to the customer",
+        "Data for each part: past orders by restaurant and time, traffic, weather",
+        "Measuring accuracy, updating the estimate live, and the cost of promising too little or too much"
+      ]
+    },
+    {
+      "text": "How would you keep stock accurate in a quick-commerce app that serves customers from many small stores?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A source of truth per store, updated on orders, picking and restocking",
+        "Holding items at checkout so two customers don't buy the last one",
+        "Handling mismatches found while picking: substitutes, partial refunds, alerts"
+      ]
+    },
+    {
+      "text": "Payments in one city start failing during a cricket final. Walk me through your first 30 minutes.",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Confirming scope on dashboards: which city, payment method or gateway, since when",
+        "Mitigating first: routing to another gateway, switching off a heavy feature",
+        "Keeping others informed, then a blameless review of the cause"
+      ]
+    },
+    {
+      "text": "Explain the trade-offs between polling, WebSockets and push notifications for live updates in a mobile app.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Polling: simple but wasteful; WebSockets: live but many open connections to manage",
+        "Push notifications for when the app is in the background",
+        "Battery and data use on low-end phones and patchy networks"
+      ]
+    },
+    {
+      "text": "Repeat orders from new users in one city fell last month. How would you find out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Checking the data first, then splitting by area, platform and first-order experience",
+        "Likely causes: late deliveries, fees, fewer restaurants, a competitor's offer",
+        "The most likely cause and how you'd test a fix"
+      ]
+    },
+    {
+      "text": "Why Swiggy? Which of Swiggy's values fits how you like to work?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A reason tied to the product or the problems, not only the brand",
+        "One value, named once, with a short example from your work",
+        "What you hope to learn or build here"
+      ]
+    },
+    {
+      "text": "Which part of Swiggy (food delivery, Instamart or dining out) would you like to work on, and what would you improve first?",
+      "type": "fit",
+      "kind": "case",
+      "covers": [
+        "A clear pick and why it interests you",
+        "One specific improvement for customers, restaurants, stores or delivery partners",
+        "How you'd measure whether it worked"
+      ]
+    }
+  ],
+  "tips": [
+    "Real-time systems (tracking, dispatch, ETAs) are favourite design topics.",
+    "Swiggy groups its published values into heart, head and hands; prepare a story each for consumer focus, founder mentality and disagree-and-commit.",
+    "For machine coding, get a working version running early, then refactor into clear classes, and leave time to walk the interviewer through it.",
+    "In design answers, cover everyone the system serves: customers, restaurant partners and delivery partners.",
+    "Mention cheap phones and patchy networks when you talk about the apps; it shows you're thinking about real users across India."
+  ],
+  "sources": [
+    {
+      "title": "What We Value at Swiggy (Swiggy Diaries)",
+      "url": "https://blog.swiggy.com/life-at-swiggy/here-are-swiggys-values/"
+    }
+  ],
+  "reviewed": "2026-10-18"
+}

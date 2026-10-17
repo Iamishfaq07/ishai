@@ -1,0 +1,165 @@
+{
+  "slug": "meesho",
+  "name": "Meesho",
+  "aliases": [],
+  "group": "india-product",
+  "market": "india",
+  "summary": "Candidates commonly report that Meesho's engineering interviews include an online coding test, problem-solving rounds, a low-level design or machine coding round and, for experienced roles, system design, followed by a hiring manager conversation. Meesho's marketplace serves small sellers and value-conscious buyers, many in smaller towns, so questions often turn to those users, regional languages and keeping costs low at scale.",
+  "rounds": [
+    "Online coding test (for many engineering roles)",
+    "Problem-solving / data structures interviews",
+    "Low-level design or machine coding round",
+    "System design (for experienced roles)",
+    "Hiring manager round",
+    "HR or culture conversation"
+  ],
+  "looks_for": [
+    "Putting users first: buyers, sellers and delivery partners",
+    "Speed: shipping a first version fast and improving it",
+    "Acting like an owner of the outcome",
+    "Thinking big and long term, not only about the next quarter",
+    "Starting from the problem before the solution",
+    "Keeping costs low so the product stays affordable",
+    "Speaking up, and disagreeing respectfully"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you shipped a first version quickly and improved it based on what users did.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the first version included and what you left out on purpose",
+        "What users' behaviour showed you",
+        "The changes you made and the result"
+      ]
+    },
+    {
+      "text": "Describe a time you put your company's or team's goal ahead of your own project.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The conflict between the two",
+        "Why you chose the bigger goal and what it cost you",
+        "What it achieved for the team"
+      ]
+    },
+    {
+      "text": "Tell me about a time you spoke up because you thought a plan was wrong.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was wrong and how you knew",
+        "How you raised it, and with whom",
+        "What changed, or what you did if the plan went ahead"
+      ]
+    },
+    {
+      "text": "Tell me about a decision you got wrong. How did you find out, and what did you change?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The decision and why it seemed right then",
+        "The signal that showed it was wrong",
+        "The fix, and what you now check before deciding"
+      ]
+    },
+    {
+      "text": "How would you design a catalogue upload flow for small sellers who list products from their phones?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A simple mobile flow: photos, a few fields, bulk upload for many items",
+        "Checks: image quality, duplicates, banned items, with clear feedback to the seller",
+        "Processing in the background, and support for regional languages"
+      ]
+    },
+    {
+      "text": "How would you recommend products to buyers who are new to online shopping and browse in their own language?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Starting with little history: what is popular in their region and category",
+        "Learning quickly from views, wishlists and orders",
+        "Judging success by orders kept, not only clicks, so returns count against it"
+      ]
+    },
+    {
+      "text": "Returns are high in one clothing category. How would you reduce them without hurting sales?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Finding the reasons from return data: size, quality, product not as pictured",
+        "Fixes: better size guides, clearer photos, seller quality scores",
+        "Watching return rate, orders and ratings together"
+      ]
+    },
+    {
+      "text": "How would you keep infrastructure costs low for a service with heavy traffic and low-value orders?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Measuring cost per request or per order first",
+        "Caching, cheaper storage tiers, right-sized servers, batch jobs at quiet hours",
+        "Where you wouldn't save money: reliability of checkout and payments"
+      ]
+    },
+    {
+      "text": "How would you design an API and app to work well on slow mobile networks and low-end phones?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Small responses, pagination and compression",
+        "Images sized for the device, and caching on the phone",
+        "Safe retries for requests that time out"
+      ]
+    },
+    {
+      "text": "How would you detect sellers listing fake or misleading products across a very large catalogue?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signals: returns and complaints, copied images, prices far below normal",
+        "Automated rules or models first, then human review",
+        "Penalties and an appeal process, and the cost of wrongly flagging honest sellers"
+      ]
+    },
+    {
+      "text": "Estimate how many new sellers could be brought onto the platform from one textile hub, such as Surat, in a year.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A clear structure: businesses in the hub, the share ready to sell online, the share you can reach",
+        "Limits such as onboarding capacity and seller support",
+        "A sanity check on the final number"
+      ]
+    },
+    {
+      "text": "Why Meesho? What do you understand about the buyers and sellers it serves?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Who the buyers and sellers are, in a sentence each",
+        "Why building for them interests you",
+        "How your skills would help them"
+      ]
+    },
+    {
+      "text": "Are you comfortable building for users whose lives are very different from yours? How would you learn about them?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "An honest answer, with an example of learning about unfamiliar users",
+        "Methods: talking to users, watching recordings, reading support tickets",
+        "How what you learn would change what you build"
+      ]
+    }
+  ],
+  "tips": [
+    "Keep Meesho's users in mind: buyers watching every rupee and sellers running small businesses. Bring them into design and product answers.",
+    "Practise low-level design: clear classes and interfaces and a working demo within the time.",
+    "Treat cost as a design constraint; cost per order matters a lot for a marketplace built around low prices.",
+    "Use the app as a buyer before the interview, and look at the seller side if you can, so you can talk about real flows."
+  ],
+  "sources": [],
+  "reviewed": "2026-10-18"
+}
