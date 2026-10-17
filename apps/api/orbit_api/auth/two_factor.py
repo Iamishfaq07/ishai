@@ -236,6 +236,12 @@ async def _confirm_password(request: Request, user: User, password: str) -> None
         if not await verify_password(password, user.password_hash):
             raise HTTPException(status.HTTP_403_FORBIDDEN, "That password isn't right.")
         return
+    require_recent_sign_in(request)
+
+
+def require_recent_sign_in(request: Request) -> None:
+    """403 unless this request's session signed in within RECENT_SIGN_IN_S (the `auth` claim, kept across renewals):
+    what an account without a password (made with Google) shows instead of typing one."""
     claims = decode_claims(token_from_request(request) or "") or {}
     signed_in = int(claims.get("auth") or claims.get("iat") or 0)
     if time.time() - signed_in > RECENT_SIGN_IN_S:
