@@ -71,9 +71,9 @@ An order keeps what the pack gave when it was bought, so changing packs never ch
     buyers in India (a PayPal India account can't take payments from India anyway).
 - **Turning on dollar checkout (OWNER ACTION REQUIRED):**
   1. A way to take dollars: PayPal set up (the next section), or Razorpay's international card payments approved
-     on your account with `ORBIT_RAZORPAY_INTERNATIONAL=true` on Render. Until one of them is, dollar prices show
+     on your account with `ORBIT_RAZORPAY_INTERNATIONAL=true` on Railway. Until one of them is, dollar prices show
      with their Buy buttons off, and the API refuses a dollar order (409).
-  2. The web Worker has the same secret as Render's `ORBIT_PROXY_SECRET`:
+  2. The web Worker has the same secret as the API's `ORBIT_PROXY_SECRET` (Railway):
      `pnpm dlx wrangler@4 secret put PROXY_SECRET --name orbit`. Check with
      `pnpm dlx wrangler@4 secret list --name orbit`. Without it, nobody is ever shown dollars on the website.
 
@@ -182,12 +182,12 @@ used.
    payment whose page was closed first. Whichever arrives first credits it; a payment is credited once.
 
 Set-up, in the Razorpay dashboard:
-- **API keys** (Account & Settings → API Keys): the key id and secret go in Render as the two variables above.
-- **Webhook** (Account & Settings → Webhooks): URL `https://<api host>/v1/billing/webhook`, events `payment.captured`
+- **API keys** (Account & Settings → API Keys): the key id and secret go in Railway as the two variables above.
+- **Webhook** (Account & Settings → Webhooks): URL `https://api.orbitanswer.com/v1/billing/webhook`, events `payment.captured`
   and `order.paid`, a secret of your choice in `ORBIT_RAZORPAY_WEBHOOK_SECRET`.
 - **International cards:** ask Razorpay to enable international payments for the account. Buyers abroad are charged
   in rupees and their bank converts it; prices stay the ones above. Once Razorpay has enabled them, set
-  `ORBIT_RAZORPAY_INTERNATIONAL=true` in Render: until then the pricing, FAQ and Plan & billing tell visitors outside
+  `ORBIT_RAZORPAY_INTERNATIONAL=true` in Railway: until then the pricing, FAQ and Plan & billing tell visitors outside
   India that cards from other countries are coming soon, rather than promising a card that would be declined.
 
 Razorpay payments show in Settings → Payments as approved, with nothing to check.
@@ -210,9 +210,9 @@ through PayPal (`apps/api/orbit_api/billing/paypal.py`, Orders v2). Buyers in In
 
 Set-up (OWNER ACTION REQUIRED), at developer.paypal.com with your PayPal Business login:
 - **Apps & Credentials → Create App** (type Merchant), first under **Sandbox** to try it with PayPal's test buyers,
-  then under **Live**. The app's Client ID and Secret go in Render as `ORBIT_PAYPAL_CLIENT_ID` and
+  then under **Live**. The app's Client ID and Secret go in Railway as `ORBIT_PAYPAL_CLIENT_ID` and
   `ORBIT_PAYPAL_CLIENT_SECRET`, with `ORBIT_PAYPAL_ENV` = `sandbox` or `live` (one app, the same mode as its keys).
-- **The app → Webhooks → Add Webhook:** URL `https://orbit-api-sg.onrender.com/v1/billing/paypal/webhook`, events
+- **The app → Webhooks → Add Webhook:** URL `https://api.orbitanswer.com/v1/billing/paypal/webhook`, events
   *Checkout order approved*, *Payment capture completed*, *Payment capture pending*, *Payment capture refunded* and
   *Payment capture reversed*. PayPal then shows the webhook's ID: it goes in `ORBIT_PAYPAL_WEBHOOK_ID`. Without it
   webhooks are refused (logged at startup), and payments still land on the buyer's return or through the reconciler.

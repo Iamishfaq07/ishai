@@ -1,5 +1,14 @@
 # Implementation log
 
+## Render retired (2026-10-17)
+
+- The old Render service is suspended (DECISIONS D55): the API runs only on Railway, at `api.orbitanswer.com`.
+  Desktop 0.1.40 and older called Render directly and need a fresh install from orbitanswer.com; 0.1.41 and the
+  website are unaffected.
+- The Worker's cron no longer pings Render (`LEGACY_API_URL` removed), `render.yaml` is deleted, and the API no
+  longer reads `RENDER_GIT_COMMIT` / `RENDER_EXTERNAL_URL`. docs/DEPLOY.md and docs/BILLING.md name Railway and
+  `api.orbitanswer.com` (Razorpay and PayPal webhook URLs included).
+
 ## Screenshots of the whole problem, not its first screen (2026-10-17)
 
 - **"Scroll to the end"** on the desktop's screenshot screen (a switch, remembered; also a button on the preview of an

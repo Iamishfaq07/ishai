@@ -6,10 +6,9 @@
 // the app bounced to the login page. Live-session WebSockets don't need the cookie (single-use ticket in the URL), so
 // they still go straight to the API.
 //
-// The cron below: a free-tier host (Render's) sleeps after 15 min without traffic, and the 30–60 s cold start then
-// lands on whoever opens the app. /health never touches the DB, so pinging it keeps the API process warm without
-// keeping the (separately metered) Neon compute awake. LEGACY_API_URL, while set, is the old host that older desktop
-// apps still call directly (wrangler.jsonc): it's kept warm too.
+// The cron below: a host that sleeps when idle (free tiers do) would land its 30–60 s cold start on whoever opens the
+// app. /health never touches the DB, so pinging it keeps the API process warm without keeping the (separately
+// metered) Neon compute awake.
 import { metaFor, withPageMeta } from "./meta.js";
 
 const API_PREFIX = "/api";
@@ -61,8 +60,6 @@ export default {
     return env.ASSETS.fetch(request);
   },
   async scheduled(_event, env, ctx) {
-    for (const api of [env.API_URL, env.LEGACY_API_URL]) {
-      if (api) ctx.waitUntil(fetch(`${api}/health`, { headers: { "user-agent": "orbit-keep-warm" } }));
-    }
+    ctx.waitUntil(fetch(`${env.API_URL}/health`, { headers: { "user-agent": "orbit-keep-warm" } }));
   },
 };
