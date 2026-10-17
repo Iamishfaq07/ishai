@@ -31,7 +31,20 @@
 - **Accessibility**: a fuller axe sweep (every page, detail pages included, both themes) found three issues the old
   route list missed (names that didn't include the visible words, a scrolling preview the keyboard couldn't reach,
   Delete at 4.3:1); all fixed, 0 violations.
-- Docs: DESIGN.md (dark twin, live session, field heights, sentence case, page header, empty-state art), D58.
+- **One component system** (`packages/ui`, shared with the desktop app; DESIGN.md "Components"): elevation tokens
+  (menu < popover < dialog < toast) and a z-index scale; overlay motion (dialogs fade in from 97%, phone sheets rise,
+  menus drop, side panels slide; fades at Gentle). Button gains `destructive` and `link`, a spinner that keeps the
+  width, pressed styling and `block`; IconButton, ButtonGroup, MenuButton, SplitButton, Popover, Tooltip, Callout,
+  Badge, Kbd, Checkbox, RadioGroup, Slider, SearchInput, SegmentedControl, Table (sortable header, phone card view),
+  StatTile, Avatar, ProgressBar, Stepper, Pagination, Breadcrumbs, Tabs, DialogActions; Field gains `required`,
+  `error` (wired to the control) and `counter`. Adopted across the app: the confirm dialog, the New and account
+  menus, the command palette, toasts (info and warning tones), Documents and admin tables, status pills, the tracker's
+  numbers, a session's tabs, Settings' appearance switches, banners, shortcut hints, icon actions and dialog footers.
+- **An illustration per product**: six new Orbit scenes (copilot, offer, stories, answers, evidence, documents) join
+  the set, and every product's empty screen shows its own.
+- **`/dev/components`**: a gallery of every component in its states, in development builds only.
+- Docs: DESIGN.md (dark twin, live session, field heights, sentence case, page header, empty-state art, the component
+  inventory with tokens and do/don't), D58.
 
 ## API follow-ups: plans on their own clock, atomic allowances (2026-10-18)
 
