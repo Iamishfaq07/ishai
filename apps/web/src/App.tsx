@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useRef, type ReactNode } from "react";
 import { FlagGate } from "./components/FlagGate";
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { NotFoundPage } from "./pages/NotFound";
@@ -155,6 +155,11 @@ function GoogleClaimNotice() {
   return null;
 }
 
+// The component gallery: development builds only (the import sits in a branch the production build drops).
+const ComponentGalleryPage = import.meta.env.DEV
+  ? lazy(async () => ({ default: (await import("./pages/dev/ComponentGallery")).ComponentGalleryPage }))
+  : null;
+
 export function App() {
   useRouteTitle();
   return (
@@ -248,6 +253,7 @@ export function App() {
         <Route path="admin/audit" element={<AdminAuditPage />} />
         <Route path="admin/inbox" element={<AdminInboxPage />} />
         <Route path="admin/support" element={<AdminSupportPage />} />
+        {ComponentGalleryPage && <Route path="dev/components" element={<ComponentGalleryPage />} />}
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
