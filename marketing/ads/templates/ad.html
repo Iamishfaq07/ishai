@@ -1,0 +1,74 @@
+<!doctype html>
+<!-- One Orbit ad creative. export.mjs fills in the double-brace placeholders from copy.json for each product, size and region,
+     writes the result to marketing/ads/.build/ and screenshots it at the exact size. Open a built file in Chrome to
+     preview it. Layout per size is in ads.css; the script below only places the product window under the copy and
+     crops the screenshot into it. -->
+<html lang="{{lang}}">
+<head>
+  <meta charset="utf-8" />
+  <title>{{title}}</title>
+  <link rel="stylesheet" href="{{css}}" />
+</head>
+<body class="{{theme}} f-{{format}}" style="--product: {{color}}">
+  <div class="band"></div>
+  {{windows}}
+  <div class="top">
+    <img class="wordmark" src="{{wordmark}}" alt="Orbit" />
+    {{productChip}}
+  </div>
+  <div class="copy">
+    <h1>{{headline}}</h1>
+    <p class="sub">{{subline}}</p>
+    {{chips}}
+    <div class="action">
+      <div class="row"><span class="cta">{{cta}} <svg width="0.9em" height="0.9em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>{{price}}</div>
+      <p class="foot">{{foot}}</p>
+      {{honest}}
+    </div>
+  </div>
+  <script>
+    (async () => {
+      const fmt = document.body.className.match(/f-(\w+)/)[1];
+      await document.fonts.ready;
+      await Promise.all([...document.images].map((i) => i.decode().catch(() => undefined)));
+      const copy = document.querySelector(".copy");
+      const action = document.querySelector(".action");
+      const band = document.querySelector(".band");
+      const wins = [...document.querySelectorAll(".window")];
+      const box = (el) => el.getBoundingClientRect();
+      if (fmt === "story") {
+        // Copy at the top, the action at the bottom, the window between them.
+        action.style.cssText = "position:absolute;left:0;right:0;top:" + (1920 - 300 - 350) + "px;transform:translateY(-100%);display:flex;flex-direction:column;gap:18px";
+        const above = Math.max(...[...copy.children].filter((c) => c !== action).map((c) => box(c).bottom));
+        const top = above + 64, bottom = box(action).top - 64;
+        wins[0].style.top = top + "px";
+        wins[0].style.height = Math.max(300, bottom - top) + "px";
+        band.style.top = top + 110 + "px";
+      } else if (fmt === "square" || fmt === "portrait") {
+        const top = box(copy).bottom + 52;
+        wins[0].style.top = top + "px";
+        band.style.top = top + 120 + "px";
+        band.style.height = "auto";
+      } else {
+        action.style.cssText = "display:flex;flex-direction:column;gap:12px;margin-top:8px";
+      }
+      if (fmt === "square" || fmt === "portrait") action.style.cssText = "display:flex;flex-direction:column;gap:12px";
+      // Each window shows a crop of a 2x screenshot of a 1280 x 800 page: data-crop is "x,y,w" in page pixels.
+      for (const w of wins) {
+        const [x, y, cw] = w.dataset.crop.split(",").map(Number);
+        const s = w.getBoundingClientRect().width / cw;
+        w.style.backgroundImage = "url('" + w.dataset.src + "')";
+        w.style.backgroundSize = 1280 * s + "px auto";
+        w.style.backgroundPosition = -x * s + "px " + -y * s + "px";
+        // Never past the screenshot's bottom edge (800 page pixels): the window ends there instead.
+        const room = (800 - y) * s;
+        if (w.getBoundingClientRect().height > room) w.style.height = room + "px";
+      }
+      const img = new Image();
+      img.src = wins[0]?.dataset.src ?? "";
+      await img.decode().catch(() => undefined);
+      document.body.dataset.ready = "1";
+    })();
+  </script>
+</body>
+</html>

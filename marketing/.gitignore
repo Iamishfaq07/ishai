@@ -1,0 +1,9 @@
+# Regenerable outputs stay out of git. They are exported by the scripts beside them and handed to the owner outside
+# the repository (C:\Users\Ishfaq\Project\orbit-marketing-assets: ads/in, ads/global, store/).
+#   ads/out/       node marketing/ads/export.mjs
+#   store/*.png    node marketing/screens/capture.mjs --store
+#   screens/src/   node marketing/screens/capture.mjs (the raw captures; the website's WebP copies and the link
+#                  previews are made from them, and those are committed where they're served)
+ads/out/
+store/*.png
+screens/src/

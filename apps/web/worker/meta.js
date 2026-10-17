@@ -41,6 +41,28 @@ export const PAGE_META = {
   },
 };
 
+/**
+ * Each page's preview picture (public/og/, rendered by og/render.mjs). A page without one, or any other address,
+ * keeps the front page's (index.html's /og-image.jpg). Kept apart from PAGE_META so adding a page there never
+ * needs a picture first.
+ */
+export const PAGE_IMAGES = {
+  "/": "/og/home.jpg",
+  "/resume-ai": "/og/resume-ai.jpg",
+  "/jobs": "/og/jobs.jpg",
+  "/warmup": "/og/warmup.jpg",
+  "/contact": "/og/contact.jpg",
+  "/technical": "/og/technical.jpg",
+  "/companies": "/og/companies.jpg",
+  "/roles": "/og/roles.jpg",
+};
+
+/** The picture for a page's preview: its own, else the front page's. The built pages use it too
+ * (src/prerender/seo.ts): each company guide shows /companies's card, each role guide /roles's. */
+export function imageFor(path) {
+  return Object.prototype.hasOwnProperty.call(PAGE_IMAGES, path) ? PAGE_IMAGES[path] : "/og-image.jpg";
+}
+
 /** The page's own preview, or null for any other address (it keeps index.html's). "/jobs/" counts as "/jobs". */
 export function metaFor(pathname) {
   const path = pathname.replace(/\/+$/, "") || "/";
@@ -69,8 +91,8 @@ export function withPageMeta(response, url) {
     .on('meta[property="og:url"]', content(`${url.origin}${meta.path === "/" ? "/" : meta.path}`))
     .on('meta[name="twitter:title"]', content(meta.title))
     .on('meta[name="twitter:description"]', content(meta.description))
-    .on('meta[property="og:image"]', content(`${url.origin}/og-image.jpg`))
-    .on('meta[name="twitter:image"]', content(`${url.origin}/og-image.jpg`))
+    .on('meta[property="og:image"]', content(`${url.origin}${imageFor(meta.path)}`))
+    .on('meta[name="twitter:image"]', content(`${url.origin}${imageFor(meta.path)}`))
     .on('link[rel="canonical"]', {
       element(el) {
         el.setAttribute("href", `${url.origin}${meta.path === "/" ? "/" : meta.path}`);

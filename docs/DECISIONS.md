@@ -673,3 +673,27 @@ instead of the page's own title. The Worker running first for every page address
 click inside the app) is a Worker request on top of the API calls already proxied; static files stay free. On the
 Workers Free plan (100,000 requests a day) a busy day would take the whole site down with 429s until midnight UTC,
 not just the API, so the owner moves to Workers Paid before daily requests near 50,000 (DEPLOY.md).
+
+**D66 — The front door is enterprise and product-led: real screens, not the sky.** The signed-out site (the front
+page, the product pages, sign-in and sign-up, Contact, the warm-up, How Orbit works, the 404) kept the "Deep Space"
+look of the early app: an animated starfield, glass, glows and gradient headlines. Next to the flat workbench (D58)
+it read as a consumer toy, and the owner asked for the look of a large enterprise product. The front door now follows
+the model of Stripe, Linear and Vercel: a white canvas (dark mode the workbench's blue-grey twin), a strict 12-column
+grid with a lot of air, IBM Plex Sans for every heading (Space Grotesk survives only inside the logo's wordmark,
+outlined, so no page loads it), one accent, ink neutrals, and shadows only on floating product windows. Its pictures
+are the product itself: the hero draws the live session in HTML and streams an answer in once (crisp, both themes,
+every accent, no image to load above the fold), and each product section shows a real screen captured from a local
+stack seeded with fictional demo data (marketing/screens), as lazy, sized WebP per theme. Composing the real
+components live on the page was the alternative; screenshots won for the dense screens (Mission room, the resume
+editor) because their components fetch their own data and would pull the app's largest chunks into the front page,
+while the hero, where the first paint matters, is drawn. Everything shares one layout (marketing/PublicLayout: the
+header with a Products menu of all eight tools, the phone sheet, the footer), so new public pages (/companies,
+/roles) match by default. Conversion stays honest: one dismissible sticky bar on phones after the hero, no exit-intent
+pop-ups, timers or scarcity, and sign-up stays a page (it needs the captcha, the terms box and a way back), not a
+modal. Prices and counts come only from the server. The public pages are built as HTML too (D63), in the same look
+from the first byte (`<html class="site">`), and their link-preview cards come from one list (`PAGE_IMAGES`) for the
+Worker and the build alike. The cost: the product screens go stale when the workbench changes, so they're
+re-captured by script (capture.mjs, then the ads and Store sets) after such a change. Only what the site serves and
+the sources are in git; the ad and Store PNGs and the raw captures are exports, made again by those scripts and
+handed over outside the repository, so the repo doesn't grow by megabytes each time the screens change. The desktop
+app's icons are regenerated from the same 1024 px master and reach users with its next release.

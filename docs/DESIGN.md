@@ -5,8 +5,10 @@ Shared by the web and desktop apps. Source of truth: `packages/ui/tailwind.prese
 
 ## Two places: the front door and the workbench
 
-- **The front door** (signed-out pages: the front page, the public product pages, sign-in) keeps the sky: the
-  animated backdrop, glass, gradient headlines and the Orbit scenes. It's where Orbit introduces itself.
+- **The front door** (signed-out pages: the front page, the public product pages, sign-in and sign-up, Contact, the
+  warm-up, How Orbit works, the 404, and any new public page) is enterprise and product-led (D66): a white canvas
+  (`html.site`), a strict grid, IBM Plex Sans headings, one accent, real screens of the app as its pictures, and
+  restrained motion. No sky, no glass, no glows, no gradient headlines. Its rules are "The front door" below.
 - **The workbench** (everything signed in: `html.app-shell`, set by the web Layout and by the live session page) is
   where people run their job search every day, so it reads as professional software: one still canvas (`--canvas`,
   #F5F6F8 / #0D121C), opaque surfaces (`--surface`) with a hairline border (`--line`) and no shadow, headings in the
@@ -15,7 +17,8 @@ Shared by the web and desktop apps. Source of truth: `packages/ui/tailwind.prese
   it.
 - **Dark mode is the light theme's twin** (D58): inside the workbench the ink's darkest steps are the same blue-grey
   family as the canvas: `zinc-950` (what `dark:` pairs with `bg-white`: the bars, fields, dialogs, the live panel) is
-  the surface, `zinc-900` a raised step above it, `zinc-800` the line. The front door keeps its violet night.
+  the surface, `zinc-900` a raised step above it, `zinc-800` the line. The front door's dark mode is the same family
+  (D66).
 - **One accent, used sparingly**: the main action, links, focus and the page you're on. Everything else is ink: a
   heading's icon, an icon tile, a label, a loading placeholder. Status colours mean status only. Product colours mark a
   product's own content (its mark, its row on Home), not the nav.
@@ -73,7 +76,8 @@ Score rings: the fill says how it went, the track is a pale step of the same col
 
 `font-sans` is **IBM Plex Sans** everywhere: body, numbers (tabular) and, in the workbench, headings too (base.css
 maps `h1`–`h3` and `font-display` to it inside `html.app-shell`). Its engineered, institutional shapes read as a
-serious tool. `font-display` (Space Grotesk) stays for the front door's headlines; `font-mono` (JetBrains Mono) is
+serious tool. The front door uses it for every heading too (`html.site`); Space Grotesk lives on only inside the logo's
+wordmark, outlined (`BrandLogo`), so no page loads it for text. `font-mono` (JetBrains Mono) is
 for code only, never for small data labels. Self-hosted via Fontsource (`apps/web/src/fonts.css`, Latin only).
 
 ## Surfaces
@@ -90,7 +94,8 @@ for code only, never for small data labels. Self-hosted via Fontsource (`apps/we
 - `SpaceBackdrop` — the animated sky, mounted once per app.
 - **Calm inside the app**: the signed-in shell (`html.app-shell`, set by the web Layout) hides the starfield, dot
   grid and light orbs, and `glass-panel` / `orbit-card` / `orbit-panel` turn opaque there, so nothing shows through
-  text while people work. The cinematic sky is for public pages and empty states.
+  text while people work. The front door (`html.site`) hides the sky too; it remains only behind screens that set
+  neither scope.
 
 ## Components (the inventory)
 
@@ -249,5 +254,95 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
   decorative. One small motion each, at Full only. Pass them to `EmptyState` as `art`. A page gets one gradient
   headline and one glow at most; secondary cards stay flat.
 - Icons: lucide only, re-exported from `packages/ui/src/icons.ts`.
-- Static copies of the mark: `apps/*/public/favicon.svg`, web `apple-touch-icon.png` / `icon-*.png`,
-  desktop `src-tauri/icons/*` (regenerate with `pnpm --filter @orbit/desktop exec tauri icon <1024px png>`).
+- Static copies of the mark: `apps/*/public/favicon.svg`, web `apple-touch-icon.png` / `icon-*.png` /
+  `icon-maskable-512.png` (all from `marketing/brand/render-icons.mjs`: the mark on a flat ink tile), desktop
+  `src-tauri/icons/*` (from the same master: `pnpm --filter @orbit/desktop tauri icon
+  <repo>/marketing/brand/orbit-app-icon-1024.png`, then keep only `src-tauri/icons/*`, not the android/ios folders it
+  also writes).
+
+## The front door
+
+The public site: everything a visitor sees before signing in (D66). The model is Stripe, Linear, Vercel: it says
+plainly what Orbit is, shows the real product, and gets out of the way. Code: `apps/web/src/marketing/`.
+
+- **One frame**: `PublicLayout` (skip link, `PublicHeader`, the page, `PublicFooter`, and `html.site` while it's
+  mounted). Every public page uses it, the interview guides (/companies, /roles, pages/bank) included: a page just
+  puts its sections inside. Props: `authState` (where sign-in and sign-up come back to), `context` (a short label
+  after the logo), `actions` (replaces Sign in / Start free). `components/Footer` and `SiteMenu` render the same
+  footer and phone menu. A section with pages of its own gets tabs under the header (the guides' Companies, Roles,
+  Free warm-up).
+- **Header**: the logo, a **Products** menu (all eight tools from `marketing/catalog.ts`, grouped "Interview,
+  prepare, apply" / "More in your account", with the guides and the free question at its foot), Interview guides,
+  Pricing, Security, Contact (the current section in ink), then Sign in (ghost) and Start free (primary); "Open
+  Orbit" when signed in. Sticky, opaque, a hairline once scrolled. The menu is the shared one's behaviour and look
+  (`useDismiss`, `floatingClass` from @orbit/ui).
+  Phones: the logo, Start free and a menu button that opens the whole site as one full-screen sheet (a dialog: focus
+  stays inside, Escape closes, the page behind doesn't scroll). No menu item ends on a sign-in wall: the four tools
+  without a page of their own have anchors in the front page's "More in your account".
+- **Canvas**: white, with `--site-subtle` (#F7F8FA) bands for alternate sections; dark mode is the workbench's blue-
+  grey family (canvas #0B0F17, surface #141B27, line #232C3B, and the same ink steps, so shared components look the
+  same signed in or out). Tokens: `mk-canvas`, `mk-band`, `mk-surface`, `mk-line`, `mk-divide` (site.css).
+- **Grid and rhythm**: one container (`Container`: 72 rem, 20 px gutters, 32 px from `sm`), twelve columns on wide
+  screens (a section is 5 + 7, text beside its picture, alternating sides), sections of 64 / 96 / 112 px
+  (`Section`, a hairline above or a band). A section opens with `SectionIntro` (eyebrow, h2, one lead paragraph).
+- **Type scale** (IBM Plex Sans, weight 600 headings, tight tracking): `mk-display` 36 to 60 px (one per page, the
+  h1), `mk-h2` 28 to 40 px, `mk-h3` 20 px, `mk-lead` 17 to 20 px; body 15 to 16 px, secondary text ink-600. Eyebrows
+  are sentence case in the accent (`Eyebrow`; `plain` for ink with a product mark), never tracked capitals. Prose uses
+  proportional figures; prices and tables keep tabular ones. Keep a line from breaking with a no-wrap span: Plex has
+  no non-breaking hyphen (it would pull in a fallback font).
+- **Colour**: ink, and one accent for the main action, links and eyebrows. Product colours (copilot violet, Practice
+  orange, Resume AI emerald, Jobs AI sky) mark a product's own tile only. The only gradients are the logo's (the one
+  place cyan appears) and one still detail behind each hero (`mk-hero-detail`: a hairline grid that fades out and a
+  faint accent light at the top).
+- **Elevation**: flat. Only floating things cast a shadow: the product windows (`mk-float`), menus and the sticky bar
+  (`mk-menu-shadow`). Cards are a surface with a hairline, often in a hairline grid (`gap-px` over the line colour).
+- **Pictures are the product**: the hero is the live session drawn in HTML (`LiveAnswerDemo`: crisp, both themes,
+  every accent); each product section shows a real screen (`ProductShot`: WebP 1600 x 1000 per theme and an 800 x 600
+  crop for phones, plain markup: both themes' pictures are in the page and CSS hides the other one, so only the shown
+  one is fetched, lazily, its size reserved, and the built HTML is the same). Screens come from a local stack with
+  fictional demo data
+  (`marketing/screens`: `seed.py`, then `capture.mjs`, `--webp` for the site, `--store` for the Store); re-capture
+  them when those screens change. No stock photos, no people, no logos of companies that aren't customers. Sample
+  data is labelled as such.
+- **Icons**: lucide on a 40 px tile with a hairline ring (`IconTile`): the app's own neutral IconTile, or a main
+  product's tint at 1.75 stroke.
+  Line drawings (the 404's probe) use the line colour and one accent, no fills or glows.
+- **Buttons**: `buttonClass` (primary solid accent, secondary bordered, ghost). On the closing ink panel
+  (`CtaBand`), `inkButton.primary` (white) and `.secondary` (white outline). Google sign-in is `GoogleButton`, drawn
+  to Google's rules (the standard G from Google's assets, Google Sans Medium 14/20 from public/fonts, 40 px, 12 px
+  padding, 10 px gap, Google's light and dark fills); its label is "Sign in with Google" or "Sign up with Google".
+- **Motion**, restrained and the app's own levels: `Reveal` for sections as they scroll in, the hero's answer
+  streaming once at Full motion (Gentle, Off and data saver show the finished card), a 4 px nudge on a link's
+  arrow. No parallax, no looping decoration, nothing that moves while someone reads.
+- **Prompts**, never dark patterns: one inline sticky bar on phones and tablets (`StickyCta`: after the hero's
+  buttons scroll away, waits for the cookie note, steps aside near the end, `×` hides it for good). No exit-intent
+  or scroll-depth pop-ups, no timers, no "only N left", no confirm-shaming; Sign up is a page, not a modal (it needs
+  the captcha, the terms box and somewhere to come back to). The cookie note is a notice (one strictly necessary
+  sign-in cookie), a slim corner card, dismissed for good.
+- **Copy**: what's true and checkable. Prices only from the server (`/v1/billing/packs`, `/v1/billing/monthly`,
+  `/v1/plans`), never typed in; numbers only from the server (the job counts); the honest line (`USE_WHERE_ALLOWED`)
+  in the hero, the footer and the sign-in panel; no "undetectable", no outcome promises, no vendor names.
+- **Brand files** (`marketing/brand`): the wordmark and mark outlined (`orbit-wordmark-{light,dark}.svg`,
+  `orbit-mark-*.svg`), the app icons (`render-icons.mjs`: the mark on a flat ink tile, web icons, a maskable icon and
+  the 1024 px master for the desktop's `tauri icon`). Link previews: `apps/web/og/render.mjs` writes each public
+  page's SVG and renders it to `public/og/<page>.jpg` (1200 x 630, under 300 KB). `PAGE_IMAGES` in
+  `worker/meta.js` is the one list of which page shows which card: the Worker reads it, and so does the build's
+  `<head>` for every built page (src/prerender/seo.ts; a company or role guide shows its list's card). Ads:
+  `marketing/ads` (one template, `copy.json`, `export.mjs`; prices filled in at export only).
+- **What's in git**: the sources (templates, copy, the seed, capture and export scripts, the brand SVGs, the 1024 px
+  icon master) and what the site serves (the WebP screens, the link-preview JPGs, the icons). Exports that the
+  scripts make again (the ad PNGs, the Store PNGs, the raw captures) are ignored (`marketing/.gitignore`) and handed
+  over outside the repo.
+- **Built as HTML**: the public pages are also rendered at build time (src/prerender, D63), so the first paint is the
+  page itself. A built page opens with `<html class="site">`; when the app's copy takes over (lib/prerender.tsx) it
+  keeps the class on a public page and drops it for anything else. A front-door component must render without the
+  browser: no `window` or `document` at module scope or during render (effects are fine). Nothing is hydrated, so
+  the app's copy may differ (the visitor's own prices and country arrive then). Until Plex arrives, front-door text
+  is drawn in "Plex Fallback" (site.css: local Arial size-adjusted to Plex, a touch wide on purpose), so the built
+  copy's first paint is never smaller than the app's copy of the same text, which would otherwise count as a later,
+  larger paint (the LCP) when the app takes over.
+- **Speed**: the public pages are lazy chunks; on an address with a public face its chunk starts with the session
+  check, and a browser nobody has signed in on gets the page at once instead of a spinner. Pictures below the fold
+  are lazy and sized; the front door loads one text face (Plex) and no font for the logo.
+- **Checks**: `tools/e2e/public-pages.spec.ts` (axe WCAG 2.2 AA on every public page, light and dark, 1280 and 390 px,
+  no sideways scroll on a phone, the menus' keyboard behaviour).

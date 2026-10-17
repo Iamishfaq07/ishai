@@ -16,6 +16,7 @@ const loaders = {
   // The question bank's public pages: /companies, /roles and a guide per company and role.
   bank: () => import("./pages/bank/BankPages"),
   contact: () => import("./pages/Contact"),
+  notFound: () => import("./pages/NotFound"),
   technical: () => import("./pages/Technical"),
   setup: () => import("./pages/SessionSetup"),
   live: () => import("./pages/Live"),
@@ -61,6 +62,8 @@ export const CompanyPage = page(loaders.bank, (m) => m.CompanyPage);
 export const RolesPage = page(loaders.bank, (m) => m.RolesPage);
 export const RolePage = page(loaders.bank, (m) => m.RolePage);
 export const ContactPage = page(loaders.contact, (m) => m.ContactPage);
+// An address that isn't a page: rare, so its code (and the public layout it brings) stays out of the first download.
+export const NotFoundPage = page(loaders.notFound, (m) => m.NotFoundPage);
 export const TechnicalPage = page(loaders.technical, (m) => m.TechnicalPage);
 export const SessionSetupPage = page(loaders.setup, (m) => m.SessionSetupPage);
 export const LivePage = page(loaders.live, (m) => m.LivePage);
@@ -149,6 +152,16 @@ export function publicPageFor(pathname: string): "landing" | "resumeAiPublic" | 
   if (isResumeAiHome(pathname)) return "resumeAiPublic";
   if (isJobsAiHome(pathname)) return "jobsAiPublic";
   return null;
+}
+
+/**
+ * At startup, on an address with a public face: start its page's code at once, alongside the session check, rather
+ * than after it (the front page's first paint waits on that chunk). Harmless for someone signed in: it's small and
+ * cached.
+ */
+export function preloadPublicPage(pathname: string): void {
+  const key = publicPageFor(pathname);
+  if (key) void loaders[key]().catch(() => undefined);
 }
 
 /** Start downloading a page's code (no-op once loaded; the browser caches the module). */

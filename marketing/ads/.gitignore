@@ -1,0 +1,2 @@
+# export.mjs writes the filled-in HTML of each creative here before it renders them (and with --html, to keep).
+.build/

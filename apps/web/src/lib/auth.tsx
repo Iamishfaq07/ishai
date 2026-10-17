@@ -26,6 +26,18 @@ export const LAST_PREP_KEY = "orbit.lastPrep";
 const ACCOUNT_STORAGE_KEYS = [LAST_PREP_KEY];
 const ACCOUNT_ID_KEY = "orbit.browser-account-id";
 
+/**
+ * Whether anyone has signed in on this browser before. When nobody has, a signed-out page with a public face (the
+ * front page) can be drawn while the session check is still out, instead of a spinner: a first visit's first paint.
+ */
+export function signedInHereBefore(): boolean {
+  try {
+    return Boolean(safeLocal.getItem(ACCOUNT_ID_KEY));
+  } catch {
+    return true;
+  }
+}
+
 function acceptAccount(account: User): User {
   try {
     const previous = safeLocal.getItem(ACCOUNT_ID_KEY);

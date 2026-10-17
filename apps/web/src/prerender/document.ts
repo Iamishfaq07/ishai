@@ -23,10 +23,13 @@ function content(html: string, attr: "name" | "property", name: string, value: s
 }
 
 /** index.html as this page: its title, description, previews, canonical link and structured data, and its HTML
- *  in `<div id="prerender">` just before `<div id="root">` (lib/prerender.tsx hands over when the app is ready). */
+ *  in `<div id="prerender">` just before `<div id="root">` (lib/prerender.tsx hands over when the app is ready).
+ *  Every built page is a front-door page, so `<html>` carries `site` (marketing/site.css) from the first paint; the
+ *  app keeps it on a public page and drops it on hand-off to anything else. */
 export function pageDocument(template: string, page: { path: string; head: Head; html: string }): string {
   const { head } = page;
-  let out = swap(template, /<title>[^<]*<\/title>/, () => `<title>${escapeHtml(head.title)}</title>`, "<title>");
+  let out = swap(template, /<html lang="en">/, () => `<html lang="en" class="site">`, "<html lang=\"en\">");
+  out = swap(out, /<title>[^<]*<\/title>/, () => `<title>${escapeHtml(head.title)}</title>`, "<title>");
   out = content(out, "name", "description", head.description);
   out = content(out, "property", "og:title", head.title);
   out = content(out, "property", "og:description", head.description);

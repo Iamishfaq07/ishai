@@ -1,14 +1,13 @@
 import { Suspense, lazy, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { FlagGate } from "./components/FlagGate";
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
-import { NotFoundPage } from "./pages/NotFound";
 import { InviteLinkPage } from "./pages/InviteLink";
 import { Layout } from "./components/Layout";
 import { CookieNotice } from "./components/CookieNotice";
 import { SupportChat } from "./components/SupportChat";
 import { Spinner } from "./components/ui";
 import { Skeleton, toast } from "@orbit/ui";
-import { useAuth } from "./lib/auth";
+import { signedInHereBefore, useAuth } from "./lib/auth";
 import { routeDescription, routeTitle } from "./lib/routeTitle";
 import { servedHeadFor } from "./lib/servedHead";
 import { useDocumentTitle } from "./lib/useDocumentTitle";
@@ -68,6 +67,7 @@ import {
   AdminSupportPage,
   AdminReferralsPage,
   ContactPage,
+  NotFoundPage,
   TechnicalPage,
   CompaniesPage,
   CompanyPage,
@@ -95,6 +95,10 @@ function RequireAuth({ children, publicPage }: { children: ReactNode; publicPage
   const { user, loading } = useAuth();
   const location = useLocation();
   if (loading) {
+    // A browser nobody has signed in on: the public face now, not a spinner until the session check answers (the
+    // front page's first paint). Anyone who has signed in here waits, so a signed-in person never sees it flash.
+    const early = publicPage && !signedInHereBefore() ? publicPage(location.pathname) : null;
+    if (early) return early;
     return (
       <div className="flex h-full items-center justify-center">
         <Spinner />

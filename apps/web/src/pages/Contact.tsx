@@ -8,7 +8,6 @@ import {
   Clock,
   Mail,
   MessageCircle,
-  OrbitWordmark,
   Send,
   ShieldCheck,
   buttonClass,
@@ -18,11 +17,10 @@ import {
   scamReport,
 } from "@orbit/ui";
 import { Captcha, useCaptchaConfig } from "../components/Captcha";
-import { Footer } from "../components/Footer";
 import { RelayLaunch } from "../components/RelayLaunch";
-import { SiteMenu } from "../components/SiteMenu";
 import { Button, Card, ErrorNote, Input, Textarea } from "../components/ui";
 import { api } from "../lib/api";
+import { PublicLayout } from "../marketing/PublicLayout";
 import { useAuth } from "../lib/auth";
 import { useCountry } from "../lib/country";
 import { SUPPORT_EMAIL, mailLink, whatsappLink } from "../lib/contact";
@@ -156,36 +154,20 @@ export function ContactPage() {
   const mail = mailLink("Help with Orbit");
 
   return (
-    <div className="flex min-h-full flex-col overflow-x-clip">
-      <header className="relative mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-4 sm:px-6">
-        <Link to="/" className={cx("rounded-lg", focusRing)} aria-label="Orbit home">
-          <OrbitWordmark size={26} />
-        </Link>
-        <span className="hidden h-5 w-px bg-zinc-300 sm:block dark:bg-white/15" aria-hidden="true" />
-        <span className="hidden font-display text-sm font-semibold sm:inline">Contact</span>
-        <nav aria-label="Account" className="ml-auto flex items-center gap-2">
-          <SiteMenu />
-          {user ? (
-            <Link to={prefill.from ?? "/"} className={buttonClass("secondary", "md", "min-h-10")}>
-              <ArrowLeft className="h-4 w-4" aria-hidden /> Back to Orbit
-            </Link>
-          ) : (
-            <>
-              <Link to="/login" className={buttonClass("secondary", "md", "hidden min-h-10 sm:inline-flex")}>
-                Sign in
-              </Link>
-              <Link to="/register" className={buttonClass("primary", "md", "hidden min-h-10 min-[400px]:inline-flex")}>
-                Start free
-              </Link>
-            </>
-          )}
-        </nav>
-      </header>
-
-      <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 pb-16 pt-2 sm:px-6 sm:pt-6">
-        <div className="mb-6 max-w-2xl animate-fade-up">
-          <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Contact us</h1>
-          <p className="mt-2 text-zinc-600 dark:text-zinc-300">
+    <PublicLayout
+      context="Contact"
+      actions={
+        user ? (
+          <Link to={prefill.from ?? "/"} className={buttonClass("secondary", "md", "min-h-10")}>
+            <ArrowLeft className="h-4 w-4" aria-hidden /> Back to Orbit
+          </Link>
+        ) : undefined
+      }
+    >
+      <div className="mx-auto w-full max-w-6xl px-5 pb-20 pt-12 sm:px-8 sm:pt-16">
+        <div className="mb-10 max-w-2xl animate-fade-up">
+          <h1 className="mk-display text-zinc-950 dark:text-white">Contact us</h1>
+          <p className="mk-lead mt-5 text-zinc-600 dark:text-zinc-300">
             A question, a payment, a problem, or a job that looks wrong: tell us here and a person reads it. We reply by email.
           </p>
         </div>
@@ -412,9 +394,13 @@ export function ContactPage() {
             <Card>
               <h2 className="font-display text-base font-semibold">Who runs Orbit</h2>
               <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+                {/* Both currencies named either way: the page is also built as HTML (pinned to India) before the app knows
+                    where the visitor is, so neither version may claim one currency for everyone. */}
+                Orbit is an individual service based in India. The price on the site is the full amount you pay, in
+                your currency: rupees in India, US dollars elsewhere.{" "}
                 {india
-                  ? "Orbit is an individual service. The price on the site is the full amount in rupees. No fee is added at the last step, and these pages don't list a GSTIN."
-                  : "Orbit is an individual service based in India. The price on the site is the full amount in US dollars. No fee is added at the last step; your bank or card may add its own fee for a payment abroad."}{" "}
+                  ? "No fee is added at the last step, and these pages don't list a GSTIN."
+                  : "No fee is added at the last step; your bank or card may add its own fee for a payment abroad."}{" "}
                 Refunds, complaints and requests to delete your data come through this form. If you can sign in,
                 Settings also downloads your data or deletes the account.
               </p>
@@ -453,9 +439,8 @@ export function ContactPage() {
             </Card>
           </aside>
         </div>
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </PublicLayout>
   );
 }
 

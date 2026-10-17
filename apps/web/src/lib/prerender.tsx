@@ -1,4 +1,5 @@
 import { useLayoutEffect, type ReactNode } from "react";
+import { siteScopeMounted } from "../marketing/useSiteScope";
 
 /**
  * The public pages arrive as HTML (built by src/prerender): `<div id="prerender">` holds the page, and the app's own
@@ -14,9 +15,12 @@ export function prerenderedPath(): string | null {
   return document.getElementById(ID)?.dataset.path ?? null;
 }
 
-/** Hand the screen to the app: the built copy goes, `#root` shows. */
+/** Hand the screen to the app: the built copy goes, `#root` shows. The built page came in the front door's look
+ *  (html.site); unless a public page is what the app shows now, that goes too. */
 export function handOff(): void {
-  if (typeof document !== "undefined") document.getElementById(ID)?.remove();
+  if (typeof document === "undefined") return;
+  document.getElementById(ID)?.remove();
+  if (!siteScopeMounted()) document.documentElement.classList.remove("site");
 }
 
 /** Around a page that has a built copy: once this page is on screen (its code loaded), the app takes over. */

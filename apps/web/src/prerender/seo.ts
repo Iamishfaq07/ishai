@@ -8,6 +8,7 @@
 import { COMPANIES_PATH, ROLES_PATH, companyPath, rolePath, type BankKind } from "../pages/bank/content";
 import type { BankCard, BankCompany, BankRole } from "../pages/bank/types";
 import { SITE, breadcrumbs, graph, organization, siteUrl, structuredDataFor, webPage as sitePage, website } from "../../worker/site.js";
+import { imageFor } from "../../worker/meta.js";
 
 /** The site's own address: canonical links and the sitemap always name it (never a preview deployment). */
 export { SITE };
@@ -25,6 +26,9 @@ export interface Head {
 
 export const url = (path: string): string => siteUrl(path);
 
+/** A page's link-preview card, absolute: the one PAGE_IMAGES (worker/meta.js) names for it, as the Worker serves. */
+export const ogImage = (path: string): string => `${SITE}${imageFor(path)}`;
+
 const webPage = (path: string, title: string, description: string, extra: Record<string, unknown> = {}) =>
   sitePage({ path, name: title, description, extra });
 
@@ -40,7 +44,7 @@ function titled(...wordings: string[]): string {
 export function staticHead(path: string, meta: { title: string; description: string }): Head {
   // The page's structured data as the Worker states it (the apps on the front page, each product's own app).
   const jsonLd = structuredDataFor(path, meta) ?? graph(organization(), website(), webPage(path, meta.title, meta.description));
-  return { title: meta.title, description: meta.description, canonical: url(path), jsonLd };
+  return { title: meta.title, description: meta.description, canonical: url(path), ogImage: ogImage(path), jsonLd };
 }
 
 export function indexHead(kind: BankKind, cards: readonly BankCard[]): Head {
@@ -59,6 +63,7 @@ export function indexHead(kind: BankKind, cards: readonly BankCard[]): Head {
     title,
     description,
     canonical: url(path),
+    ogImage: ogImage(path),
     jsonLd: graph(
       organization(),
       website(),
@@ -97,6 +102,8 @@ export function guideHead(kind: BankKind, entry: BankCompany | BankRole): Head {
     title,
     description,
     canonical: url(path),
+    // Every guide shows its list's card (one for the companies, one for the roles).
+    ogImage: ogImage(company ? COMPANIES_PATH : ROLES_PATH),
     jsonLd: graph(
       organization(),
       website(),

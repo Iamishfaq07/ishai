@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { PAGE_META, metaFor, withPageMeta } from "./meta.js";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { PAGE_IMAGES, PAGE_META, imageFor, metaFor, withPageMeta } from "./meta.js";
 
 describe("metaFor (the Worker's per-page link previews)", () => {
   it("knows the public pages people share, with or without a trailing slash", () => {
@@ -20,6 +22,21 @@ describe("metaFor (the Worker's per-page link previews)", () => {
     for (const { title, description } of Object.values(PAGE_META)) {
       expect(title.length).toBeLessThanOrEqual(80);
       expect(description.length).toBeLessThanOrEqual(200);
+    }
+  });
+});
+
+describe("imageFor (each page's preview picture)", () => {
+  it("gives a page its own picture, and anything else the front page's", () => {
+    expect(imageFor("/resume-ai")).toBe("/og/resume-ai.jpg");
+    expect(imageFor("/jobs")).toBe("/og/jobs.jpg");
+    expect(imageFor("/somewhere-new")).toBe("/og-image.jpg");
+    expect(imageFor("__proto__")).toBe("/og-image.jpg");
+  });
+
+  it("points only at pictures that exist in public/", () => {
+    for (const file of [...Object.values(PAGE_IMAGES), "/og-image.jpg"]) {
+      expect(existsSync(fileURLToPath(new URL(`../public${file}`, import.meta.url))), file).toBe(true);
     }
   });
 });

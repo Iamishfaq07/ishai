@@ -1,11 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import type { EngineeringTelemetry } from "@orbit/types";
-import { OrbitWordmark, cx, focusRing } from "@orbit/ui";
 import { ArchitecturePipeline } from "../components/ArchitecturePipeline";
-import { Footer } from "../components/Footer";
-import { SiteMenu } from "../components/SiteMenu";
 import { api } from "../lib/api";
+import { PublicLayout } from "../marketing/PublicLayout";
 
 /** The desktop app's protections, each one something the shipped app does (apps/desktop/src-tauri). */
 const DESKTOP = [
@@ -40,19 +37,11 @@ export function TechnicalPage() {
   ];
 
   return (
-    <div className="flex min-h-full flex-col overflow-x-clip">
-      <header className="border-b border-zinc-200/70 bg-white dark:border-white/5 dark:bg-zinc-950">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
-          <Link to="/" className={cx("shrink-0 rounded-lg", focusRing)} aria-label="Orbit home">
-            <OrbitWordmark size={26} />
-          </Link>
-          <div className="ml-auto"><SiteMenu /></div>
-        </div>
-      </header>
-      <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 py-12 sm:px-6">
-        <p className="text-sm font-semibold text-sky-700 dark:text-sky-300">Technical details</p>
-        <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl">How Orbit answers in real time</h1>
-        <p className="mt-3 max-w-2xl text-zinc-600 dark:text-zinc-300">
+    <PublicLayout context="How Orbit works">
+      <div className="mx-auto w-full max-w-6xl px-5 pb-20 pt-12 sm:px-8 sm:pt-16">
+        <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Technical details</p>
+        <h1 className="mk-display mt-4 text-zinc-950 dark:text-white">How Orbit answers in real time</h1>
+        <p className="mk-lead mt-5 max-w-2xl text-zinc-600 dark:text-zinc-300">
           The numbers below are measured from real live sessions over the last {t?.window_days ?? 7} days. Nothing about who was in them, or what was said, is used.
         </p>
 
@@ -62,7 +51,7 @@ export function TechnicalPage() {
             {stats.map((s) => (
               <div key={s.label} className="orbit-card rounded-2xl p-4">
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">{s.label}</p>
-                <p className="mt-1 min-h-9 font-display text-3xl font-semibold tabular-nums">{s.value ?? (t || failed ? "—" : "…")}</p>
+                <p className="stat-value mt-1 min-h-9 text-3xl font-semibold tabular-nums tracking-tight">{s.value ?? (t || failed ? "—" : "…")}</p>
                 <p className="min-h-5 text-xs text-zinc-500 dark:text-zinc-400">{s.sub ?? (t && !s.value ? "Not enough sessions measured yet" : "")}</p>
               </div>
             ))}
@@ -72,13 +61,13 @@ export function TechnicalPage() {
         </section>
 
         <section aria-labelledby="pipe" className="mt-12">
-          <h2 id="pipe" className="font-display text-xl font-semibold">From the interviewer's question to your answer</h2>
+          <h2 id="pipe" className="mk-h3 text-zinc-950 dark:text-white">From the interviewer's question to your answer</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">Hover or tap a stage to see what it guarantees.</p>
           <div className="mt-5"><ArchitecturePipeline /></div>
         </section>
 
         <section aria-labelledby="desk" className="mt-12">
-          <h2 id="desk" className="font-display text-xl font-semibold">The desktop app's security</h2>
+          <h2 id="desk" className="mk-h3 text-zinc-950 dark:text-white">The desktop app's security</h2>
           <ul className="mt-4 grid gap-3 sm:grid-cols-2">
             {DESKTOP.map((d) => (
               <li key={d.title} className="orbit-card rounded-2xl p-4">
@@ -88,8 +77,7 @@ export function TechnicalPage() {
             ))}
           </ul>
         </section>
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </PublicLayout>
   );
 }

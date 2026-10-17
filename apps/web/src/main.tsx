@@ -5,14 +5,17 @@ import { ConfirmHost, ErrorBoundary, SpaceBackdrop, ToastHost, initDesign } from
 import { App } from "./App";
 import { AppError } from "./components/AppError";
 import { OutOfCreditsHost } from "./components/OutOfCreditsDialog";
-import { AuthProvider } from "./lib/auth";
+import { AuthProvider, signedInHereBefore } from "./lib/auth";
 import { captureRefFromUrl } from "./lib/referral";
 import { reloadForNewBuild } from "./lib/staleBuild";
+import { preloadPublicPage } from "./routes";
 import "./index.css";
 
 initDesign();
 // An invite or creator code in the address (?ref=): kept for the sign-up (lib/referral.ts).
 captureRefFromUrl();
+// A first visit to a page with a public face starts its code now; someone who has signed in here gets the app instead.
+if (!signedInHereBefore()) preloadPublicPage(window.location.pathname);
 
 // A tab opened before a deploy asks for page files that no longer exist: load the new build once (lib/staleBuild.ts).
 window.addEventListener("vite:preloadError", (event) => {
