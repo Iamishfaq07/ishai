@@ -312,7 +312,7 @@ function StoryCard({ story, onEdit, onDelete, onPractise, practising = false }: 
           <dl className="mt-2 space-y-2">
             {parts.map(({ key, label }) => (
               <div key={key}>
-                <dt className="text-xs font-semibold uppercase tracking-[0.1em] text-zinc-500">{label}</dt>
+                <dt className="text-xs font-semibold text-zinc-500">{label}</dt>
                 <dd className="whitespace-pre-line text-zinc-700 dark:text-zinc-300">
                   <WithPrompts text={story[key]} />
                 </dd>

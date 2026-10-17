@@ -130,11 +130,11 @@ export function ArchitecturePipeline() {
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{stage.what}</p>
         <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
           <div>
-            <dt className="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">Speed</dt>
+            <dt className="text-xs font-semibold text-sky-700 dark:text-sky-300">Speed</dt>
             <dd className="mt-0.5 text-zinc-700 dark:text-zinc-300">{stage.latency}</dd>
           </div>
           <div>
-            <dt className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Privacy & security</dt>
+            <dt className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Privacy & security</dt>
             <dd className="mt-0.5 text-zinc-700 dark:text-zinc-300">{stage.security}</dd>
           </div>
         </dl>

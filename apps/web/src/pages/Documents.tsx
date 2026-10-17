@@ -247,7 +247,7 @@ export function DocumentsPage() {
       ) : (
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-zinc-200 text-xs uppercase tracking-wider text-zinc-500 dark:border-white/5">
+            <thead className="border-b border-zinc-200 text-xs font-medium text-zinc-500 dark:border-white/5">
               <tr>
                 <th className="px-5 py-3 font-medium">Title</th>
                 <th className="hidden px-5 py-3 font-medium sm:table-cell">Type</th>

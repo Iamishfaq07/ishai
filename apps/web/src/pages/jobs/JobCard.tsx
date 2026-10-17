@@ -444,7 +444,7 @@ export function FitPanel({
           <FitList title="Gaps" items={fit.result.check.gaps} tone="text-amber-600 dark:text-amber-400" icon="gap" />
           {fit.result.check.tweaks.length > 0 && (
             <div>
-              <h5 className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Honest resume tweaks</h5>
+              <h5 className="mb-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">Honest resume tweaks</h5>
               <ul className="space-y-1.5">
                 {fit.result.check.tweaks.map((t) => (
                   <li key={t.change} className="flex gap-2">
@@ -493,7 +493,7 @@ function Requirements({ items }: { items: NonNullable<JobFitCheck["requirements"
   if (!items.length) return null;
   return (
     <div>
-      <h5 className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Requirement by requirement</h5>
+      <h5 className="mb-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">Requirement by requirement</h5>
       <ul className="divide-y divide-zinc-200 rounded-xl border border-zinc-200 dark:divide-white/10 dark:border-white/10">
         {items.map((r) => (
           <li key={r.requirement} className="flex flex-col gap-1 px-3 py-2 sm:flex-row sm:items-start sm:gap-3">
@@ -521,7 +521,7 @@ function FitList({ title, items, tone, icon }: { title: string; items: string[];
   if (!items.length) return null;
   return (
     <div>
-      <h5 className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{title}</h5>
+      <h5 className="mb-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">{title}</h5>
       <ul className="space-y-1">
         {items.map((s) => (
           <li key={s} className="flex gap-2">
