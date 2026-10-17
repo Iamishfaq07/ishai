@@ -170,7 +170,7 @@ function ProductsMenu() {
         <div
           ref={panel}
           id={id}
-          className="mk-popover mk-menu-shadow absolute left-0 top-full z-40 mt-2 w-[min(46rem,calc(100vw-4rem))] rounded-2xl border mk-line mk-surface p-3"
+          className="mk-popover mk-menu-shadow absolute left-0 top-full z-40 mt-2 w-[min(24rem,calc(100vw-2rem))] max-h-[calc(100dvh-5rem)] overflow-y-auto rounded-2xl border mk-line mk-surface p-3 lg:w-[46rem]"
         >
           <div className="grid gap-x-4 gap-y-1 lg:grid-cols-2">
             <div>
