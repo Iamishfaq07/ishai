@@ -7,12 +7,17 @@ import { money, offerTerms, unitFor } from "./model";
 
 const CURRENCIES = ["INR", "USD", "EUR", "GBP", "CAD", "AUD", "SGD", "AED"];
 
-/** A figure typed in lakhs (India) or thousands, as offers are written: "24.5" → 24,50,000. */
-function Amount({ id, label, value, currency, onChange, hint }: { id: string; label: string; value: number; currency: string; onChange: (v: number) => void; hint?: string }) {
+/**
+ * A figure typed in lakhs (India) or thousands, as offers are written: "24.5" → 24,50,000. The hint always says the
+ * unit (or reads the figure back): an equity or allowance figure typed in full would otherwise be taken as lakhs.
+ * `once`: paid once (a joining bonus), so not "a year".
+ */
+function Amount({ id, label, value, currency, onChange, hint, once = false }: { id: string; label: string; value: number; currency: string; onChange: (v: number) => void; hint?: string; once?: boolean }) {
   const { label: unit, factor } = unitFor(currency);
   const [text, setText] = useState(value ? String(Math.round((value / factor) * 100) / 100) : "");
+  const reading = value ? money(currency, value, true) : `In ${once ? unit.replace(/ a year$/, "") : unit}`;
   return (
-    <Field label={label} htmlFor={id} hint={hint ?? (value ? `${money(currency, value, true)}` : `In ${unit}`)}>
+    <Field label={label} htmlFor={id} hint={hint ? `${hint}. ${reading}` : reading}>
       <Input
         id={id}
         inputMode="decimal"
@@ -69,7 +74,7 @@ export function OfferForm({ initial, busy, error, onSave, onCancel }: { initial:
           </Field>
           <Amount key={`fixed-${o.currency}`} id="of-fixed" label={`${terms.fixed} a year`} value={o.fixed} currency={o.currency} onChange={(v) => set("fixed", v)} />
           <Amount key={`var-${o.currency}`} id="of-variable" label={terms.variableForm} value={o.variable} currency={o.currency} onChange={(v) => set("variable", v)} />
-          <Amount key={`jb-${o.currency}`} id="of-joining" label={`${terms.joining} (once)`} value={o.joining_bonus} currency={o.currency} onChange={(v) => set("joining_bonus", v)} />
+          <Amount key={`jb-${o.currency}`} id="of-joining" label={`${terms.joining} (once)`} value={o.joining_bonus} currency={o.currency} onChange={(v) => set("joining_bonus", v)} once />
           <Amount key={`eq-${o.currency}`} id="of-equity" label="Equity a year" value={o.equity_per_year} currency={o.currency} onChange={(v) => set("equity_per_year", v)}
                   hint="The grant's value divided by its vesting years, as the offer states it" />
           <Amount key={`ot-${o.currency}`} id="of-other" label="Other pay a year" value={o.other} currency={o.currency} onChange={(v) => set("other", v)}
